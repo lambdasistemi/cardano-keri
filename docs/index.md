@@ -8,14 +8,10 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
 
 ## What works today
 
-With Blake2b-256 digest agility in Veridian (a ~40-line fix):
-
 - Identity inception, rotation, close, freeze — fully on-chain verifiable
-- CESR AID self-cert — on-chain verifiable (no Blake3 needed)
+- CESR AID self-cert — on-chain verifiable via blake2b_256 builtin
 - Value-write authorization — on-chain verifiable
 - Super watcher convergence enforcement — with challenge period
-
-See [Blake3 requirement](design/blake3-requirement.md) for the full analysis.
 
 ---
 
@@ -41,8 +37,8 @@ flowchart LR
     D --> E["trie_key<br/>(Cardano on-chain key, 32 bytes)"]
     style E fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
 
-    A2["cesr_inception_event"] --> F["blake3"]
-    F --> G["CESR AID<br/>(KERI identifier, 32 bytes)"]
+    A2["cesr_inception_event"] --> F["blake2b_256"]
+    F --> G["CESR AID<br/>(KERI identifier, F-prefix, 32 bytes)"]
     style G fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
 
     G -->|"stored as metadata<br/>in KeyState"| E
@@ -50,7 +46,7 @@ flowchart LR
 
 The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) key used in the on-chain registry — Cardano-verifiable, front-run-proof, stable across rotations.
 
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. Cardano cannot verify it today (no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin). It is stored as metadata for off-chain KERI correlation. See [Blake3 requirement](design/blake3-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs, which Cardano can verify on-chain via the `blake2b_256` builtin. See [Blake2b-256 AID Requirement](design/blake3-requirement.md).
 
 ## System components
 

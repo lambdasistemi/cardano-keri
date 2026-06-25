@@ -31,8 +31,8 @@ Both agents were given the specification cold, with no prior context about the d
 | Canonical next-key encoding | `canonical_next_pubkey_bytes` now defined in `veridian-bridge.md` with test vector; SDK must implement exactly |
 | Deposit model | Resolved: Option A (`deposit : Lovelace` in `KeyState`); see `super-watcher.md` |
 | Freeze marker unification | Resolved: canonical 4-field `FreezeMarker` defined in `identity-ops.md` |
-| `cesr_aid` derivation code / on-chain verification | Resolved for F-prefix AIDs pending Veridian fix; open for existing Blake3 AIDs |
-| Convergence enforcement trustlessness | Open: burn mechanism is a proposal; not fully trustless without Blake3 on-chain |
+| `cesr_aid` derivation code / on-chain verification | Resolved: F-prefix (Blake2b-256) AIDs only; blake2b_256 builtin verifies on-chain |
+| Convergence enforcement trustlessness | Resolved: Blake2b-256 only design; super watcher with challenge period is the mechanism |
 | CIP-31 MEV coupling | Open |
 | Ed25519 canonical-S malleability | Open |
 | Settlement depth policy | Open |

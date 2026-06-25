@@ -7,7 +7,7 @@ Every registered identity has two identifiers that are always distinct:
 | Identifier | Derivation | Where used | Verified on-chain? |
 |---|---|---|---|
 | `trie_key` | `blake2b_256(cbor({cur_pubkey, next_digest}))` | MPF trie key, cage auth | Yes |
-| [CESR](https://github.com/WebOfTrust/ietf-cesr) AID | `blake3(cesr_inception_event)` | KERI witnesses, Veridian | No |
+| [CESR](https://github.com/WebOfTrust/ietf-cesr) AID | `blake2b_256(cesr_inception_event)` (F prefix) | KERI witnesses, Veridian | Yes — blake2b_256 builtin |
 
 The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at the `trie_key`. Off-chain tools correlate KERI identities to their on-chain state by scanning the trie metadata.
 
@@ -20,7 +20,7 @@ The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at th
 trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
 ```
 
-This is the MPF key for the on-chain registry. It is derived from the same inception material as the CESR AID but uses [`blake2b_256`](https://www.rfc-editor.org/rfc/rfc7693) — a Cardano-native Plutus builtin — instead of [Blake3](https://github.com/BLAKE3-team/BLAKE3).
+This is the MPF key for the on-chain registry. It is derived from the same inception material as the CESR AID and uses [`blake2b_256`](https://www.rfc-editor.org/rfc/rfc7693) — a Cardano-native Plutus builtin.
 
 **Stability:** The `trie_key` is derived from inception material only (`cur_pubkey` and `next_digest` from the very first event). It never changes across rotations. A cage holding a reference to a `trie_key` always refers to the same identity, regardless of how many times the key has rotated.
 
@@ -36,7 +36,7 @@ KeyState {
 }
 ```
 
-**Encoding note (open):** `cesr_aid` is currently typed as `ByteArray[32]` — the raw digest bytes. This discards the CESR derivation code that identifies the hash algorithm. Future versions should store the full 44-character CESR qualified prefix (`qb64`) to preserve digest agility semantics and support non-Blake3 AIDs. For now, the protocol assumes Veridian's Blake3 derivation code (`E` prefix) for stored AIDs, as this is Veridian's current default.
+**Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-aid requires F-prefix (Blake2b-256) AIDs; the derivation code is always `F` and is not stored separately.
 
 `cur_pubkey` is the raw public key, stored on-chain. This differs from earlier designs that stored only a hash. Storing the raw key enables the on-chain script to verify `trie_key` derivation and Ed25519 signatures without requiring the caller to re-supply the key in the redeemer.
 
@@ -55,28 +55,16 @@ KeyState {
 
 **Attack A — front-run metadata poisoning.** An adversary copies the victim's in-flight inception material (`cur_pubkey`, `next_digest`, `trie_key`) and submits first, substituting an attacker-chosen `cesr_aid`. Result: the victim's identity is registered under the wrong CESR prefix. **Fix:** include `cesr_aid` in `inc_msg` (the signed domain-separated message). The attacker cannot forge a signature over the victim's `cesr_aid` without the private key.
 
-**Attack B — first-party squatting.** An adversary uses their own keys, produces a valid inception, and asserts a `cesr_aid` they do not control (a well-known KERI prefix). Signing `inc_msg` does nothing here — they are honestly signing their own inception with false metadata. **This is irreducible on-chain.** The Blake3 gap means the chain can never verify `cesr_aid` derivation. The only defense is the off-chain KEL-derived resolution protocol — the bridge's authoritative identity is the `trie_key` recomputed from the real KEL, not the `cesr_aid` index.
+**Attack B — first-party squatting.** An adversary uses their own keys, produces a valid inception, and asserts a `cesr_aid` they do not control (a well-known KERI prefix). Signing `inc_msg` does nothing here — they are honestly signing their own inception with false metadata. The on-chain script verifies the F-prefix derivation of the caller's own `cesr_aid`, but cannot verify that the asserted AID belongs to a specific external KERI identity. The authoritative defense is the off-chain KEL-derived resolution protocol — the bridge's authoritative identity is the `trie_key` recomputed from the real KEL, not the `cesr_aid` index.
 
-## Blake3 gap
-
-!!! note "This gap is closed for F-prefix (Blake2b-256) AIDs"
-    If Veridian generates AIDs using Blake2b-256 digest agility (CESR `F` prefix), Cardano can verify the full chain today with no Plutus changes. The gap below applies only to existing Veridian users with Blake3 (`E` prefix) AIDs.
-
-The CESR AID is derived using [Blake3](https://github.com/BLAKE3-team/BLAKE3) (`blake3(cesr_inception_event)`). Cardano's Plutus builtins do not include Blake3. An on-chain script cannot verify that a presented `cesr_aid` value is correctly derived from the CESR inception event — it can only store it as controller-asserted data.
-
-This means:
-- The CESR self-cert property (AID is self-certifying via the hash) is off-chain only.
-- On-chain, KERI identity is represented by the `trie_key` (self-certifying via blake2b_256).
-- Off-chain correlation (`cesr_aid` → `trie_key`) requires the full KEL-derived recomputation below.
+cardano-aid requires Blake2b-256 (F-prefix) AIDs; Blake3 AIDs are not supported.
 
 ## Seq-0 binding gap
 
 !!! danger "Pre-rotation identity is unverifiable without the digest agility mandate"
     At seq 0, the `next_pubkey` is secret (by design — it has not been revealed in a rotation yet). An off-chain verifier holding only the KEL has access to `cur_pubkey` (from the KEL's `k` field) but cannot reproduce `next_digest` without knowing `next_pubkey`.
 
-    The problem is that Veridian commits its next key using Blake3 by default — the KERI protocol itself supports multiple algorithms via CESR digest agility, but Veridian's default is Blake3. This means a Blake3-qualified digest of the next key string, not `blake2b_256` of the raw key bytes. If the Cardano `next_digest = blake2b_256(next_pubkey)` and the KERI `n` field uses Blake3, the two commitments are incomparable from public data at seq 0.
-
-    A verifier cannot reconstruct `trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` because `next_digest` is not derivable from the public KEL at seq 0.
+    The bridge mandates Blake2b-256 digest agility so that the KERI `n` field and the Cardano `next_digest` are byte-for-byte equal. If this mandate is violated, the two commitments are incomparable from public data at seq 0, and a verifier cannot reconstruct `trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` from the public KEL.
 
 **Consequence:** a freshly-incepted, never-rotated identity is in a limbo state where the bridge binding is unverifiable for its entire pre-rotation lifetime. This is exactly when onboarding and authorization mistakes are most likely.
 

@@ -50,7 +50,7 @@ GLEIF vLEI chain (off-chain KERI)
                                   └─ value cages (MPFS)
 ```
 
-The binding is established at inception by the bridge's [digest agility mandate](../architecture/veridian-bridge.md#digest-agility-requirement): the KERI inception event's `n` field uses `blake2b_256` rather than the default Blake3, so the Cardano on-chain commitment and the KERI KEL commitment are byte-for-byte equal from day one.
+The binding is established at inception by the bridge's [digest agility requirement](../architecture/veridian-bridge.md#digest-agility-requirement): the KERI inception event's `n` field uses `blake2b_256`, so the Cardano on-chain commitment and the KERI KEL commitment are byte-for-byte equal from day one.
 
 Once registered, the legal entity's Cardano `trie_key` is stable across all subsequent key rotations. A Cardano smart contract that authorizes the entity at `trie_key` continues to work after the entity rotates its signing key — it reads the live `KeyState` from the registry reference input and sees the current `cur_pubkey`.
 
@@ -93,39 +93,18 @@ A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain 
 
 ---
 
-## Gap table: what works now vs what needs Blake3
+!!! note "Identity requirement"
+    cardano-aid requires Veridian identities to use Blake2b-256 (F-prefix) AID derivation. Existing Blake3 Veridian users must create a new identity.
 
-| Capability | Status | Blocker |
-|---|---|---|
-| Legal entity AID → Cardano registry binding | Available now | — |
-| Seq-0 KEL binding verifiable offline | Available now | Digest agility mandate in SDK |
-| Rotation tracked on-chain | Available now | — |
-| Emergency freeze (next-key) | Available now | — |
-| Compliance-gated cage writes | Available now | — |
-| ACDC hash anchoring in cage | Available now | — |
-| On-chain self-cert of CESR AID | Available now for F-prefix AIDs; needs Blake3 for existing Blake3 AIDs | Veridian F-prefix fix (~40 lines) |
-| Squatting attack (Attack B) eliminated | Available now for F-prefix AIDs; needs Blake3 for existing Blake3 AIDs | Veridian F-prefix fix (~40 lines) |
-| Super watcher burn fully trustless | Needs Blake3 or ZK proof | No Plutus Blake3 builtin |
-| Cardano-only vLEI resolution (no KERI network) | Available for F-prefix vLEI chain; needs GLEIF/QVI adoption | GLEIF/QVI adoption of F prefix + Veridian fix |
+## Gap table
 
-The first five rows cover the core vLEI bridge use cases. They work today. The remaining rows are the reason to push for a Blake3 Plutus builtin CIP.
-
-!!! note "F-prefix path"
-    The F-prefix path requires a ~40-line fix to Veridian's signify-ts. See [Blake3 requirement](blake3-requirement.md) for the full analysis and the proof-of-concept CLI.
-
----
-
-## The policy argument: vLEI strengthens the case for a Blake3 CIP
-
-The [Blake3 requirement](blake3-requirement.md) page makes the cryptographic argument for adding Blake3 as a Plutus builtin. The vLEI use case adds a regulatory-weight policy argument.
-
-Veridian uses Blake3 as its AID derivation algorithm. Existing Veridian AIDs — including those anchoring GLEIF vLEI credentials — are derived as `blake3(inception_event)`. This is Veridian's implementation choice: the KERI protocol supports digest agility and does not mandate Blake3. Without a Blake3 Plutus builtin:
-
-- Cardano cannot verify on-chain that a `cesr_aid` value is the correct KERI identifier for a key.
-- Applications requiring vLEI-grade assurance (MiFID II, Basel III, eIDAS 2.0 conformance) must rely on off-chain KERI infrastructure for the identity proof and use Cardano only for ordering and anchoring.
-- A Blake3 CIP would allow Cardano to serve as a fully self-contained vLEI resolution layer: present the KERI inception event, verify the CESR AID derivation on-chain, proceed with the authorized cage operation. No KERI network dependency at verification time.
-
-The growing adoption of vLEI for regulated financial and legal workflows — mandated by MiFID II and eIDAS 2.0 — represents a concrete, measurable target community for Cardano identity infrastructure. A CIP proposing Blake3 as a Plutus builtin can cite this demand directly.
+| Capability | Status |
+|---|---|
+| Seq-0 binding verifiable from KEL | Available — Blake2b-256 digest agility |
+| Full on-chain AID self-cert | Available — blake2b_256 Plutus builtin |
+| Value-write authorization | Available |
+| Super watcher convergence (with challenge period) | Available |
+| Cardano-only vLEI resolution | Available once GLEIF/QVIs adopt F-prefix |
 
 ---
 

@@ -18,7 +18,7 @@ The identity registry script enforces the following properties within a single b
 
 **Full KEL history.** The on-chain state holds only the current key-state. The full sequence of inception and rotation events is not stored or verified on-chain. There is no CESR encoding, no event receipt chain.
 
-**CESR self-cert verification.** Cardano cannot verify the [CESR](https://github.com/WebOfTrust/ietf-cesr) AID self-certifying property. The CESR AID (`blake3(cesr_inception_event)`) is stored in KeyState as controller-asserted metadata — the registrant supplies it at inception and the script stores it without checking the [Blake3](https://github.com/BLAKE3-team/BLAKE3) derivation (no Plutus Blake3 builtin exists). The CESR self-cert is an off-chain guarantee only.
+**CESR self-cert verification.** Cardano verifies the [CESR](https://github.com/WebOfTrust/ietf-cesr) AID self-certifying property for F-prefix (Blake2b-256) AIDs via the `blake2b_256` Plutus builtin. cardano-aid requires F-prefix AIDs; Blake3 AIDs are not supported.
 
 **Duplicity detection.** If an attacker and the legitimate holder both submit rotation transactions in the same block (or in competing forks), the chain will accept one and discard the other. There is no gossip or watcher network to detect and flag this.
 
@@ -26,17 +26,13 @@ The identity registry script enforces the following properties within a single b
 
 **Next-key compromise before rotation.** If `next_key` is stolen before rotation, the on-chain state provides no protection. The response is to rotate before the attacker does (a race condition outside the protocol).
 
-## CESR AID: controller-asserted metadata
+## CESR AID: verified for F-prefix, metadata for correlation
 
-The `cesr_aid` field in KeyState is asserted by the registrant at inception time. The on-chain script:
+The `cesr_aid` field in KeyState is the decoded CESR AID. For F-prefix (Blake2b-256) AIDs the on-chain script can verify the derivation via `blake2b_256`. The field is also carried forward through rotations for off-chain correlation.
 
-- Stores it in KeyState without verification
-- Carries it forward unchanged through rotations
-- Does not use it for any authorization check
+Off-chain correlation works as follows: given a CESR AID (e.g., `FKYLUMm...`), decode the base64url prefix to 32 bytes, scan KeyState values across the trie looking for a matching `cesr_aid` field, then use the associated `trie_key` for Cardano interactions.
 
-Off-chain correlation works as follows: given a CESR AID (e.g., `EKYLUMm...`), decode the base64url prefix to 32 bytes, scan KeyState values across the trie looking for a matching `cesr_aid` field, then use the associated `trie_key` for Cardano interactions.
-
-This is a one-way, non-authoritative mapping. A registrant could assert any `cesr_aid` value. The KERI KEL is the authoritative source for KERI identity — the on-chain `cesr_aid` is a convenience pointer.
+The authoritative resolution is always the KEL-derived `trie_key` recomputation — the `cesr_aid` field is a convenience index. Multiple registrants can assert the same `cesr_aid` (first-party squatting); the binding verification protocol in `veridian-bridge.md` is the authoritative check.
 
 ## On/off-chain boundary
 
@@ -45,7 +41,6 @@ This is a one-way, non-authoritative mapping. A registrant could assert any `ces
 | trie_key is unique | Yes — absence proof at inception | — |
 | trie_key derivation is correct | Yes — blake2b_256 verified on-chain | — |
 | CESR AID is correctly derived (F-prefix AIDs) | Yes — blake2b_256 builtin | Requires Veridian F-prefix fix |
-| CESR AID is correctly derived (Blake3 AIDs) | No — no Blake3 builtin | KERI KEL replay |
 | Key was not stolen | No | KEL replay + watchers |
 | Current key is the legitimate one | Yes — pre-rotation chain | — |
 | CESR AID matches trie_key holder | No — asserted metadata only | KERI KEL + metadata scan |

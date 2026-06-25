@@ -2,7 +2,7 @@
 
 ## What is Veridian
 
-Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value derived as `blake3(cesr_inception_event)`.
+Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value. cardano-aid requires F-prefix (Blake2b-256) derivation: `cesr_aid = blake2b_256(cesr_inception_event)`.
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
@@ -31,18 +31,13 @@ flowchart LR
 
 ## Digest agility requirement
 
-!!! danger "Required for seq-0 binding to be verifiable"
-    The Veridian bridge SDK **MUST** generate KERI inception events that use `blake2b_256` digest agility for the next-key commitment, over the same canonical next-key byte encoding that Cardano hashes.
+cardano-aid requires Blake2b-256 (F-prefix) digest agility. This is not optional. Veridian inception events MUST use `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` and the AID prefix MUST use the F-prefix derivation.
 
-    Standard KERI inception events use [Blake3](https://github.com/BLAKE3-team/BLAKE3) digest agility for the `n` (next key digest) field. Cardano uses [`blake2b_256`](https://www.rfc-editor.org/rfc/rfc7693). At seq 0, the `next_pubkey` is secret, so an off-chain verifier cannot derive `next_digest` from the public KEL unless both sides use the same hash.
+```
+KEL.inception.n decoded == Cardano.KeyState.next_digest  [byte-for-byte]
+```
 
-    **Mandate:** Veridian bridge inception events must set `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` instead of the default `n = base64url(blake3_256(canonical_next_pubkey_bytes))`. Then:
-
-    ```
-    KEL.inception.n decoded == Cardano.KeyState.next_digest  [byte-for-byte]
-    ```
-
-    Without this alignment, the bridge binding is unverifiable until first rotation — exactly the identity's most vulnerable period. See [Seq-0 binding gap](../design/aid-model.md#seq-0-binding-gap).
+Without this alignment, the bridge binding is unverifiable until first rotation — exactly the identity's most vulnerable period. See [Seq-0 binding gap](../design/aid-model.md#seq-0-binding-gap).
 
 ### Canonical encoding
 
@@ -288,6 +283,6 @@ The Cardano and KERI registries are two independently advancing pre-rotation sta
 
 ## Convergence enforcement
 
-Keeping the two registries in sync is not just good practice — it is proposed to be enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL would lose their registry deposit to the first watcher that presents the proof. Note: the burn mechanism is a design proposal; without Blake3 on-chain, the watcher's proof is not fully trustless. See [Super Watcher](../design/super-watcher.md#without-blake3-the-trust-problem).
+Keeping the two registries in sync is not just good practice — it is proposed to be enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL would lose their registry deposit to the first watcher that presents the proof. See [Super Watcher](../design/super-watcher.md).
 
 See [Super Watcher](../design/super-watcher.md) for the full design.

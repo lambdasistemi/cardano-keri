@@ -82,6 +82,35 @@ Without Blake3, the burn check is weaker. The script cannot verify that the pres
 
 Option 1 (challenge period) is the most trust-minimized and most consistent with the rest of the design.
 
+## Deposit mechanics
+
+The identity registry is a single UTxO holding the entire MPF trie (the MPFS model). Deposit ADA from all inceptions is pooled in that UTxO — there is no separate per-identity UTxO. The burn script must know exactly how much ADA to release per entry and to whom.
+
+Two options:
+
+**Option A — deposit recorded in `KeyState` (recommended)**
+
+The inception redeemer records the exact ADA amount locked at inception as a field in `KeyState`. The burn script reads this from the inclusion proof and releases that exact amount to the watcher. Allows variable deposit sizes — controllers choose their own convergence bond.
+
+```
+KeyState {
+  cur_pubkey   : ByteArray[32]
+  next_digest  : ByteArray[32]
+  seq          : Int
+  cesr_aid     : ByteArray[32]
+  deposit      : Lovelace          -- amount to release on burn or close
+}
+```
+
+**Option B — fixed deposit (simpler)**
+
+The script enforces a single protocol-wide deposit for every inception. The burn hardcodes that amount. Simpler to audit; no per-entry storage overhead.
+
+!!! note "Open design question"
+    Option A enables the variable convergence bond market described below. Option B is easier to implement and has a smaller attack surface. The choice affects the inception redeemer, the close redeemer (which already returns the deposit to the owner), and the burn redeemer.
+
+In both cases: the deposit is forfeited permanently on burn. It goes to the watcher, never back to the controller.
+
 ## Economic alignment
 
 The deposit size determines how aggressively watchers monitor:

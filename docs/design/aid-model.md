@@ -36,7 +36,7 @@ KeyState {
 }
 ```
 
-**Encoding note (open):** `cesr_aid` is currently typed as `ByteArray[32]` — the raw digest bytes. This discards the CESR derivation code that identifies the hash algorithm. Future versions should store the full 44-character CESR qualified prefix (`qb64`) to preserve digest agility semantics and support non-Blake3 AIDs. For now, the protocol assumes Blake3 derivation code (`E` prefix) for all stored AIDs.
+**Encoding note (open):** `cesr_aid` is currently typed as `ByteArray[32]` — the raw digest bytes. This discards the CESR derivation code that identifies the hash algorithm. Future versions should store the full 44-character CESR qualified prefix (`qb64`) to preserve digest agility semantics and support non-Blake3 AIDs. For now, the protocol assumes Veridian's Blake3 derivation code (`E` prefix) for stored AIDs, as this is Veridian's current default.
 
 `cur_pubkey` is the raw public key, stored on-chain. This differs from earlier designs that stored only a hash. Storing the raw key enables the on-chain script to verify `trie_key` derivation and Ed25519 signatures without requiring the caller to re-supply the key in the redeemer.
 
@@ -71,7 +71,7 @@ This means:
 !!! danger "Pre-rotation identity is unverifiable without the digest agility mandate"
     At seq 0, the `next_pubkey` is secret (by design — it has not been revealed in a rotation yet). An off-chain verifier holding only the KEL has access to `cur_pubkey` (from the KEL's `k` field) but cannot reproduce `next_digest` without knowing `next_pubkey`.
 
-    The problem is that KERI commits its next key with **digest agility** — typically a Blake3-qualified digest of the next key string, not `blake2b_256` of the raw key bytes. If the Cardano `next_digest = blake2b_256(next_pubkey)` and the KERI `n` field uses Blake3, the two commitments are incomparable from public data at seq 0.
+    The problem is that Veridian commits its next key using Blake3 by default — the KERI protocol itself supports multiple algorithms via CESR digest agility, but Veridian's default is Blake3. This means a Blake3-qualified digest of the next key string, not `blake2b_256` of the raw key bytes. If the Cardano `next_digest = blake2b_256(next_pubkey)` and the KERI `n` field uses Blake3, the two commitments are incomparable from public data at seq 0.
 
     A verifier cannot reconstruct `trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` because `next_digest` is not derivable from the public KEL at seq 0.
 

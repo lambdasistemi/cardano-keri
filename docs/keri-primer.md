@@ -65,6 +65,9 @@ AID = blake3(inception_event)
 
 It is self-certifying: the identifier itself encodes the cryptographic proof of who controls it. No third party issued it. No registry assigned it. You present the inception event and anyone can verify the AID is correct.
 
+!!! note "Digest agility"
+    KERI supports digest agility; Blake3 (`E` prefix) is Veridian's chosen algorithm. Other KERI implementations may use different hash functions.
+
 In Veridian and KERI generally, AIDs are encoded in [CESR](https://github.com/WebOfTrust/ietf-cesr) format — a compact Base64-based encoding that encodes the hash algorithm alongside the value.
 
 ---
@@ -149,7 +152,7 @@ The `cardano-aid` bridge reuses the same Ed25519 keys Veridian already manages. 
 
 ## The Blake3 frontier
 
-KERI AIDs are `blake3(inception_event)`. Plutus currently has no Blake3 builtin, so the on-chain script cannot verify that a presented AID is the correct KERI identifier for a given key. This means:
+Veridian AIDs are derived as `blake3(inception_event)` — this is Veridian's implementation choice, not a KERI protocol requirement. KERI's CESR encoding supports digest agility; the `E` prefix denotes Blake3, but other prefixes (e.g. `F` for Blake2b-256) are equally valid KERI. Plutus currently has no Blake3 builtin, so the on-chain script cannot verify that a presented AID is the correct Veridian identifier for a given key. This means:
 
 - Two Veridian users who already know each other's AID via KERI: **fully verifiable** — replay the KEL, derive the Cardano identity
 - A Cardano-only application trying to resolve a KERI identity without touching the KERI network: **cannot trust the AID field** until Blake3 lands in Plutus

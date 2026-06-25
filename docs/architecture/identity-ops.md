@@ -77,7 +77,7 @@ sequenceDiagram
     R->>R: Generate cur_pubkey, next_pubkey
     R->>R: next_digest = blake2b_256(next_pubkey) [same encoding as KERI n field]
     R->>R: trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
-    R->>R: cesr_aid = blake3(cesr_inception_event) [off-chain only]
+    R->>R: cesr_aid = blake3(cesr_inception_event) [Veridian default, off-chain only]
     R->>R: inc_msg = cbor({domain, network_id, registry_token, trie_key, cur_pubkey, next_digest, cesr_aid, identity_root})
     R->>R: sig = Ed25519.sign(cur_key, inc_msg)
     R->>R: absence_proof = MPF.prove_absent(current_root, trie_key)

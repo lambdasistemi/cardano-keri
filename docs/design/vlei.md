@@ -116,7 +116,7 @@ The first five rows cover the core vLEI bridge use cases. They work today. The r
 
 The [Blake3 requirement](blake3-requirement.md) page makes the cryptographic argument for adding Blake3 as a Plutus builtin. The vLEI use case adds a regulatory-weight policy argument.
 
-KERI uses Blake3 as its default digest algorithm. Every KERI AID — including the AIDs that anchor GLEIF vLEI credentials — is derived as `blake3(inception_event)`. Without a Blake3 Plutus builtin:
+Veridian uses Blake3 as its AID derivation algorithm. Existing Veridian AIDs — including those anchoring GLEIF vLEI credentials — are derived as `blake3(inception_event)`. This is Veridian's implementation choice: the KERI protocol supports digest agility and does not mandate Blake3. Without a Blake3 Plutus builtin:
 
 - Cardano cannot verify on-chain that a `cesr_aid` value is the correct KERI identifier for a key.
 - Applications requiring vLEI-grade assurance (MiFID II, Basel III, eIDAS 2.0 conformance) must rely on off-chain KERI infrastructure for the identity proof and use Cardano only for ordering and anchoring.

@@ -154,7 +154,7 @@ KERI AIDs are `blake3(inception_event)`. Plutus currently has no Blake3 builtin,
 - Two Veridian users who already know each other's AID via KERI: **fully verifiable** — replay the KEL, derive the Cardano identity
 - A Cardano-only application trying to resolve a KERI identity without touching the KERI network: **cannot trust the AID field** until Blake3 lands in Plutus
 
-With Blake3 as a Plutus builtin, Cardano could verify KERI events natively — the same CESR event bytes submitted to KERIA could be submitted to Cardano in one transaction, with Cardano block inclusion replacing the witness receipt entirely. For Cardano-anchored AIDs, the traditional KERI witness infrastructure becomes optional.
+With Blake3 as a Plutus builtin, Cardano could verify KERI AIDs natively — closing the squatting gap entirely. The next-key commitment chain is already Cardano-verifiable today via Blake2b-256 digest agility (KERI supports multiple hash algorithms). Full on-chain AID verification — one submission, no sync lag, Cardano block inclusion replacing the witness receipt — requires Blake3. For Cardano-anchored AIDs, the traditional KERI witness infrastructure becomes optional.
 
 See [Blake3 requirement](design/blake3-requirement.md) for the full analysis and the ZK proof interim path.
 

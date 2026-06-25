@@ -4,7 +4,11 @@ cardano-aid has two on-chain components. They are logically independent but desi
 
 ## Identity Registry
 
-A singleton, ownerless UTxO holding an [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) trie with the mapping `trie_key → KeyState`.
+A per-company [MPFS](https://github.com/aiken-lang/merkle-patricia-forestry) trie maintained exclusively by an oracle (the company). The trie maps:
+
+```
+name → IdentityLeaf { KeyState, status }
+```
 
 ```
 KeyState {
@@ -12,60 +16,92 @@ KeyState {
   next_digest : ByteArray[32]   -- blake2b_256(next pubkey), committed not yet revealed
   seq         : Int             -- monotonic rotation counter, starts at 0
   cesr_aid    : ByteArray[32]   -- decoded CESR AID, for off-chain KERI correlation
-  deposit     : Lovelace        -- ADA locked at inception; immutable; returned on close
+}
+
+IdentityStatus {
+  Active
+  FrozenFatal { event_1, sig_1, event_2, sig_2, seq }  -- duplicity proof, irrecoverable
 }
 ```
 
-The MPF trie key is `trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` — a Cardano-verifiable derivation from the inception material. It is NOT the CESR AID. See [AID Model](../design/aid-model.md) for the rationale.
+The registry UTxO datum holds a **sliding window of recent roots**:
 
-The registry UTxO carries a thread token (minted at bootstrap, never burned) that uniquely identifies the live registry. The datum holds the current MPF root.
+```
+RegistryDatum {
+  roots      : List<ByteArray>  -- [root_t, root_t-1, ..., root_t-k], newest first
+  oracle_pkh : ByteArray        -- blake2b_224 of oracle pubkey
+}
+```
 
-**Permissionless inception**: anyone can register an identity by providing valid inception material and an MPF absence proof. No gatekeeper.
+The sliding window decouples consumers from the oracle's write cadence — a value-write built against an older root remains valid as long as that root is still in the window.
 
-**Owner-only rotation**: only the holder of `next_key` (whose hash is stored in `next_digest`) can advance the key-state.
+Each company deploys its own registry; there is no shared global instance.
+
+## Oracle trust model
+
+The oracle (company) is the **sole writer** to the registry. Its permitted operations are:
+
+| Operation | Authorization |
+|---|---|
+| Insert `name → leaf` (inception) | Oracle key + user self-auth signature |
+| Rotate `KeyState` | Oracle key + reveal_key preimage |
+| Delete `name` (offboard) | Oracle key |
+| Freeze `Active → FrozenFatal` | Oracle key + DuplicityProof |
+
+Name reassignment (`name → trie_key` change) is **forbidden** — the validator rejects any redeemer that changes the `trie_key` for an existing name.
+
+The oracle cannot forge key material — inception requires a user-provided self-auth signature that the validator checks on-chain. The oracle can silence or remove an identity, but cannot impersonate one.
+
+## Inception: off-chain handover
+
+Identity registration is a two-party off-chain coordination:
+
+1. **User → Oracle**: desired name + KERI KEL + self-auth signature
+2. **Oracle**: verifies KEL, derives `trie_key`, submits inception on-chain
+
+The self-auth signature binds `{name, trie_key, oracle_pkh, network_id}` under the user's `cur_key`. The validator checks it on-chain, ensuring the user consented to the registration under that exact name.
+
+After inception the user has no direct Cardano write access. All subsequent on-chain operations (rotations, freeze) are driven by the oracle.
+
+## Rotation: oracle-driven KEL mirroring
+
+The oracle watches the user's KERI KEL. When a rotation event is observed, the oracle submits the corresponding on-chain rotation — revealing `next_key` (whose hash is stored as `next_digest`) and committing to the new `next_key`.
+
+The oracle cannot fabricate rotations: the validator checks `blake2b_256(reveal_key) == cur_state.next_digest`. Without knowing the preimage the user committed to at inception, no rotation is possible.
+
+This makes "Cardano ahead, KERI behind" structurally impossible — Cardano rotations can only follow observed KERI events.
 
 ## Value Cages
 
-Existing MPFS cage UTxOs that store domain-specific leaf data. Each cage holds its own MPF trie. Leaf operations (insert, update, delete) can optionally require AID-based authorization.
+Existing MPFS cage UTxOs storing domain-specific leaf data. Leaf operations can require AID-based authorization.
 
-When a cage requires AID auth, the cage script reads the identity registry via a CIP-31 reference input and checks the key-state for the relevant `trie_key` at the snapshot captured in that block. The cage resolves the signer by `trie_key` (derived from their `cur_pubkey` at inception — stable across all subsequent rotations) — it does not need the CESR AID at all.
+When a cage requires AID auth, the cage script takes the identity registry as a **CIP-31 reference input** and:
 
-## Veridian Bridge
+1. Checks the registry datum's root window for a root matching the supplied inclusion proof
+2. Verifies `name → leaf` where `leaf.status == Active`
+3. Reads `cur_pubkey` from `leaf.key_state`
+4. Verifies the transaction is signed by `blake2b_224(cur_pubkey)` (Option B, preferred) or carries a detached signature (Option A)
 
-The primary integration target is Veridian — a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet (TypeScript). The bridge uses the same [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) keys for both KERI and Cardano, with no re-keying.
-
-```
-Veridian wallet (Signify/TypeScript)
-  ↓ same Ed25519 keys
-cardano-aid-sdk (TypeScript)
-  ↓ pure proof/redeemer building
-cardano-aid-wasm (Haskell WASM)
-  ↓ on-chain registry
-cardano-aid identity UTxO
-  ↓ CIP-31 reference input
-MPFS value cages
-```
-
-See [Veridian Bridge](veridian-bridge.md) for the full specification.
+The cage is configured at deploy time with the specific company registry it trusts.
 
 ## On-chain interaction
 
 ```mermaid
 flowchart TD
-    subgraph "Identity Registry"
-        IR_UTxO["UTxO<br/>thread_token<br/>datum: identity_root<br/>MPF trie: trie_key → KeyState"]
-        IR_Script["Registry Script<br/>verify inception<br/>verify rotation"]
+    subgraph "Company Registry"
+        IR_UTxO["UTxO<br/>oracle thread token<br/>datum: {roots, oracle_pkh}<br/>MPFS trie: name → {KeyState, status}"]
+        IR_Script["Registry Script<br/>verify inception + self-auth<br/>verify rotation (reveal_key)<br/>verify freeze (DuplicityProof)"]
     end
 
     subgraph "Value Cage"
         VC_UTxO["UTxO<br/>cage_thread_token<br/>datum: value_root"]
-        VC_Script["Cage Script<br/>verify value-write<br/>check AID auth via trie_key"]
+        VC_Script["Cage Script<br/>verify value-write<br/>check AID auth via name lookup"]
     end
 
-    AID_Owner["AID Owner<br/>(cur_pubkey)"] -->|"signs transaction"| TX
-    TX -->|"spends (rotation/inception)"| IR_UTxO
-    TX -->|"spends (value-write)"| VC_UTxO
-    IR_UTxO -->|"CIP-31 reference input<br/>non-spending"| VC_Script
+    Oracle["Oracle<br/>(company)"] -->|"inception / rotation / freeze"| IR_UTxO
+    AID_Owner["AID Owner"] -->|"signs value-write tx"| TX
+    TX -->|"spends"| VC_UTxO
+    IR_UTxO -->|"CIP-31 reference input<br/>(root window + inclusion proof)"| VC_Script
 
     IR_Script --> IR_UTxO
     VC_Script --> VC_UTxO
@@ -74,14 +110,14 @@ flowchart TD
     style VC_UTxO fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
 ```
 
-The identity UTxO is not consumed by value-writes. The cage script sees the identity root from the reference input and validates the key-state against it using `trie_key`.
+The registry UTxO is not consumed by value-writes. Value-writes use it as a non-spending CIP-31 reference input.
 
 ## What lives off-chain
 
-- Full Key Event Log (KEL) history
-- CESR AID ↔ trie_key correlation (via KeyState metadata scan)
+- Full KERI KEL history
+- CESR AID ↔ name correlation
+- Oracle's KERI watcher (monitors KEL for rotations and duplicity)
 - Witness receipts and duplicity detection
-- KERI-style watcher/backer network
 - Settlement depth tracking
 
-These are future concerns. The on-chain layer is a minimal root of trust: AID uniqueness, pre-rotation binding, and key possession proofs.
+The on-chain layer is a minimal root of trust: name-keyed identity, pre-rotation binding, and key possession proofs with oracle-controlled membership.

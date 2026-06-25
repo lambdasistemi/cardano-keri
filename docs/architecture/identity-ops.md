@@ -143,6 +143,38 @@ There is no unfreeze path for `FrozenFatal`. The duplicity proof is permanently 
 
 The oracle must hold the key (DDoS protection) but cannot freeze without a machine-verifiable proof. An oracle that refuses to freeze a provably malicious identity has verifiably misbehaved — the proof is public.
 
+## Self-remove
+
+The user can remove themselves from the registry without oracle cooperation. This is the escape hatch when the oracle refuses to mirror a KERI rotation — leaving a stale `cur_pubkey` active while the user's real key has moved on.
+
+Self-removal is signed by the **on-chain `cur_pubkey`** — the key already in the trie leaf. The user must retain the private key for this until either the oracle mirrors their rotation or they have self-removed.
+
+**Self-remove message:**
+
+```
+self_remove_msg = cbor({
+  domain     : "cardano-aid/self-remove/v1",
+  name       : ByteArray,
+  oracle_pkh : ByteArray,
+  network_id : NetworkId,
+  nonce_utxo : TxOutRef    -- a UTxO consumed in this transaction
+})
+```
+
+The `nonce_utxo` is a UTxO the user spends in the same transaction. Since a UTxO can only be spent once, the signed message is inherently single-use — no counter or validity window needed.
+
+**On-chain checks — no oracle key required:**
+1. Inclusion proof: `name → leaf`
+2. `nonce_utxo ∈ tx.inputs`
+3. `Ed25519.verify(leaf.key_state.cur_pubkey, self_remove_msg, sig)`
+4. `name` removed from trie, new root pushed to window
+
+**Trust balance:**
+- Oracle controls entry — inclusion, name binding, rotation mirroring
+- User controls exit — self-removal via on-chain `cur_pubkey`, oracle cannot block
+
+Using `cur_pubkey` (not `next_key`) is deliberate: after a KERI rotation the old `next_key` is public in the KEL, making a `next_key`-based self-removal griefable by anyone who reads the witness network.
+
 ## AID lifecycle
 
 ```mermaid
@@ -150,6 +182,7 @@ stateDiagram-v2
     [*] --> Active: Inception<br/>(oracle submits, user self-auth)
     Active --> Active: Rotation<br/>(oracle mirrors KEL)
     Active --> Deleted: Delete<br/>(oracle offboards)
+    Active --> Deleted: Self-remove<br/>(user, cur_pubkey sig + nonce UTxO)
     Active --> FrozenFatal: Freeze<br/>(oracle + DuplicityProof)
     Deleted --> [*]
 
@@ -158,5 +191,12 @@ stateDiagram-v2
         permanent audit record.
         All value-write auth rejected.
         No unfreeze path.
+    end note
+
+    note right of Deleted
+        Self-remove requires user to
+        retain cur_key private key
+        until oracle mirrors rotation
+        or self-remove is submitted.
     end note
 ```

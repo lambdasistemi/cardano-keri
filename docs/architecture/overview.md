@@ -47,8 +47,11 @@ The oracle (company) is the **sole writer** to the registry. Its permitted opera
 | Rotate `KeyState` | Oracle key + reveal_key preimage |
 | Delete `name` (offboard) | Oracle key |
 | Freeze `Active → FrozenFatal` | Oracle key + DuplicityProof |
+| Self-remove | User `cur_pubkey` signature + nonce UTxO — no oracle key |
 
 Name reassignment (`name → trie_key` change) is **forbidden** — the validator rejects any redeemer that changes the `trie_key` for an existing name.
+
+The oracle controls entry but not exit. The user can always self-remove by signing with their on-chain `cur_pubkey` and consuming a nonce UTxO in the same transaction (single-use replay protection). The oracle cannot block this.
 
 The oracle cannot forge key material — inception requires a user-provided self-auth signature that the validator checks on-chain. The oracle can silence or remove an identity, but cannot impersonate one.
 

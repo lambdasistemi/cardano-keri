@@ -44,7 +44,7 @@ Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain s
 
 This means `cesr_aid → trie_key` is a one-to-many untrusted index. Multiple entries can claim the same Veridian AID. The KEL replay finds the unique legitimate `trie_key` and discards the rest.
 
-For applications that need to resolve KERI identity purely from Cardano state (without touching the KERI network), this is a hard limitation. They cannot be built securely until Blake3 lands in Plutus. See [Blake3 requirement](blake3-requirement.md).
+For applications that need to resolve KERI identity purely from Cardano state (without touching the KERI network), this is a hard limitation. They cannot be built securely until Blake3 lands in Plutus. See [Blake2b-256 requirement](blake2b256-requirement.md).
 
 ## Practical workflow (two Veridian users)
 

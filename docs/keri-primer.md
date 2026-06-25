@@ -152,7 +152,7 @@ The `cardano-aid` bridge reuses the same Ed25519 keys Veridian already manages. 
 
 ## Blake2b-256: the Cardano path
 
-cardano-aid takes a different path: it requires Blake2b-256 (F-prefix) AID derivation, which Cardano can verify natively today. Blake3 AIDs are not supported. See [Blake2b-256 AID Requirement](design/blake3-requirement.md).
+cardano-aid takes a different path: it requires Blake2b-256 (F-prefix) AID derivation, which Cardano can verify natively today. Blake3 AIDs are not supported. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ---
 

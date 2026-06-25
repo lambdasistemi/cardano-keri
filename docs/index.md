@@ -46,7 +46,7 @@ flowchart LR
 
 The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) key used in the on-chain registry — Cardano-verifiable, front-run-proof, stable across rotations.
 
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs, which Cardano can verify on-chain via the `blake2b_256` builtin. See [Blake2b-256 AID Requirement](design/blake3-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs, which Cardano can verify on-chain via the `blake2b_256` builtin. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ## System components
 

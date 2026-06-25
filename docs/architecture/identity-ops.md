@@ -186,13 +186,13 @@ Once the main registry rotation lands (`seq + 1`), the freeze marker no longer m
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active: Inception\n(trie_key registered, seq=0, deposit locked)
-    Active --> Active: Rotation\n(reveal next_key, commit new_next, seq++)
-    Active --> Frozen: Emergency freeze\n(next_key authorized, separate UTxO)
-    Frozen --> Active: Rotation\n(landing rotation auto-expires freeze marker)
-    Active --> Tombstoned: Rotation with new_next = 0x00...00\n(no further rotation possible)
-    Active --> [*]: Close\n(deposit reclaimed, trie entry removed)
-    Tombstoned --> [*]: Close\n(deposit reclaimed, trie entry removed)
+    [*] --> Active: Inception (seq=0, deposit locked)
+    Active --> Active: Rotation (reveal next_key, seq++)
+    Active --> Frozen: Emergency freeze (next_key authorized)
+    Frozen --> Active: Rotation (freeze marker expires)
+    Active --> Tombstoned: Rotation with new_next = 0x00...00
+    Active --> [*]: Close (deposit reclaimed)
+    Tombstoned --> [*]: Close (deposit reclaimed)
 
     note right of Frozen
         Frozen identity still exists in trie.

@@ -52,19 +52,19 @@ See [Veridian Bridge](veridian-bridge.md) for the full specification.
 ```mermaid
 flowchart TD
     subgraph "Identity Registry"
-        IR_UTxO["UTxO\nthread_token\ndatum: identity_root\nMPF trie: trie_key → KeyState"]
-        IR_Script["Registry Script\nverify inception\nverify rotation"]
+        IR_UTxO["UTxO<br/>thread_token<br/>datum: identity_root<br/>MPF trie: trie_key → KeyState"]
+        IR_Script["Registry Script<br/>verify inception<br/>verify rotation"]
     end
 
     subgraph "Value Cage"
-        VC_UTxO["UTxO\ncage_thread_token\ndatum: value_root"]
-        VC_Script["Cage Script\nverify value-write\ncheck AID auth via trie_key"]
+        VC_UTxO["UTxO<br/>cage_thread_token<br/>datum: value_root"]
+        VC_Script["Cage Script<br/>verify value-write<br/>check AID auth via trie_key"]
     end
 
-    AID_Owner["AID Owner\n(cur_pubkey)"] -->|"signs transaction"| TX
+    AID_Owner["AID Owner<br/>(cur_pubkey)"] -->|"signs transaction"| TX
     TX -->|"spends (rotation/inception)"| IR_UTxO
     TX -->|"spends (value-write)"| VC_UTxO
-    IR_UTxO -->|"CIP-31 reference input\nnon-spending"| VC_Script
+    IR_UTxO -->|"CIP-31 reference input<br/>non-spending"| VC_Script
 
     IR_Script --> IR_UTxO
     VC_Script --> VC_UTxO

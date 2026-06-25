@@ -18,15 +18,15 @@ No re-keying is required. The same private key that signs KERI events also signs
 
 ```mermaid
 flowchart LR
-    V["Veridian wallet\n(Signify / TypeScript)"]
-    K["KERI witnesses\n(off-chain)"]
-    C["Cardano node\n(on-chain)"]
+    V["Veridian wallet<br/>(Signify / TypeScript)"]
+    K["KERI witnesses<br/>(off-chain)"]
+    C["Cardano node<br/>(on-chain)"]
 
-    V -->|"CESR event\nsigned with cur_key"| K
-    V -->|"Cardano tx\nsigned with cur_key"| C
+    V -->|"CESR event<br/>signed with cur_key"| K
+    V -->|"Cardano tx<br/>signed with cur_key"| C
 
-    K -->|"receipt\n(KERI confirmation)"| V
-    C -->|"UTxO update\n(Cardano confirmation)"| V
+    K -->|"receipt<br/>(KERI confirmation)"| V
+    C -->|"UTxO update<br/>(Cardano confirmation)"| V
 ```
 
 ## Digest agility requirement

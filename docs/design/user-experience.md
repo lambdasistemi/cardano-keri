@@ -8,12 +8,12 @@ You know a peer by their Veridian AID — established out-of-band (OOBI exchange
 
 ```mermaid
 flowchart TD
-    A["You know Bob's CESR AID\n(from KERI / Veridian)"]
-    B["Replay Bob's KEL\nfrom KERI witnesses"]
-    C["Compute trie_key\nblake2b_256(cbor({cur_pubkey, next_digest}))"]
-    D["Look up trie_key\nin Cardano registry"]
-    E["Cardano key-state\nconfirmed = Bob's key"]
-    F["Any cage write signed by\nthat cur_pubkey = provably Bob"]
+    A["You know Bob's CESR AID<br/>(from KERI / Veridian)"]
+    B["Replay Bob's KEL<br/>from KERI witnesses"]
+    C["Compute trie_key<br/>blake2b_256(cbor({cur_pubkey, next_digest}))"]
+    D["Look up trie_key<br/>in Cardano registry"]
+    E["Cardano key-state<br/>confirmed = Bob's key"]
+    F["Any cage write signed by<br/>that cur_pubkey = provably Bob"]
 
     A --> B --> C --> D --> E --> F
 ```

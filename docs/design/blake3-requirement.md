@@ -9,13 +9,25 @@ The Blake3 requirement is often stated as a single gap, but there are actually t
 | CESR AID self-cert verification | On-chain proof that `cesr_aid = blake3(inception_event)` | Blake3 Plutus builtin or ZK proof |
 | Next-key commitment chain | Seq-0 binding verifiable from KEL alone | Blake2b-256 digest agility in KERI (available now) |
 
-## Gap 1: CESR AID self-cert (hard, needs Blake3)
+## Gap 1: CESR AID self-cert
 
-KERI AIDs are derived as `blake3(inception_event)`. This is what makes the [CESR](https://github.com/WebOfTrust/ietf-cesr) AID self-certifying — the identifier encodes the hash of the event that created it. Cardano's Plutus VM has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin, so a script cannot verify that a presented `cesr_aid` is the correct derivation.
+**For new F-prefix (Blake2b-256) AIDs, this gap is resolved.** If Veridian generates AIDs using Blake2b-256 digest agility (CESR `F` prefix), the full derivation chain is:
 
-**Consequence:** the `cesr_aid` field in the Cardano registry is controller-asserted metadata. The squatting attack (Attack B) is irreducible without Blake3 — anyone can assert any CESR AID. Off-chain KEL replay is the only authoritative resolution.
+```
+cesr_aid = blake2b_256(inception_event)   — Cardano has this builtin
+next_digest = blake2b_256(next_pubkey)    — same
+trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))  — same
+```
 
-**Fix:** Blake3 as a Plutus builtin (hard fork) or a ZK proof via BLS12-381. See below.
+All three steps use `blake2b_256`, a native Plutus builtin. The on-chain script can verify the full chain today, with no Plutus changes. This was demonstrated with a working CLI: https://github.com/lambdasistemi/cardano-keri-verify. The Veridian fix is a ~40-line change to `prefixer.ts` (branch: https://github.com/lambdasistemi/signify-ts/tree/feat/blake2b-256-prefix-derivation).
+
+**For existing Blake3 (`E` prefix) AIDs**, the original gap remains:
+
+KERI AIDs are derived as `blake3(inception_event)`. Cardano's Plutus VM has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin, so a script cannot verify that a presented `cesr_aid` is the correct derivation.
+
+**Consequence for Blake3 AIDs:** the `cesr_aid` field in the Cardano registry is controller-asserted metadata. The squatting attack (Attack B) is irreducible without Blake3 — anyone can assert any CESR AID. Off-chain KEL replay is the only authoritative resolution.
+
+**Fix for Blake3 AIDs:** Blake3 as a Plutus builtin (hard fork) or a ZK proof via BLS12-381. See below.
 
 ## Gap 2: Next-key commitment (soft, fixable now)
 
@@ -77,14 +89,28 @@ The on-chain verifier cost would be negligible. No trust assumptions. The clean 
 
 Blake3's bitwise operations make it a large circuit. PLONK avoids a trusted setup but the proof generation time and circuit size are non-trivial. Reasonable as an interim path if shipping before a Blake3 hard fork is a priority.
 
+## What's buildable today
+
+New Veridian identities created with F-prefix (Blake2b-256) derivation are fully Cardano-verifiable with no Plutus changes:
+
+- `cesr_aid = blake2b_256(inception_event)` — verified by Cardano's builtin
+- `next_digest = blake2b_256(next_pubkey)` — verified by Cardano's builtin
+- `trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` — verified by Cardano's builtin
+
+The only blocker is that Veridian's `prefixer.ts` does not yet implement the `F` prefix (~40 lines). Fix branch: https://github.com/lambdasistemi/signify-ts/tree/feat/blake2b-256-prefix-derivation. The full chain was verified by CLI: https://github.com/lambdasistemi/cardano-keri-verify.
+
+Existing Blake3 AID holders retain the squatting caveat until Blake3 lands in Plutus. The vLEI chain (GLEIF → QVI → LE) also requires GLEIF and QVIs to adopt F prefix for end-to-end on-chain verification.
+
 ## Current design position
 
 | Capability | Status |
 |---|---|
-| Seq-0 binding verifiable from KEL | Available now — Blake2b-256 digest agility mandate in SDK |
-| Next-key commitment chain Cardano-verifiable | Available now — same |
-| CESR AID self-cert on-chain | Needs Blake3 builtin or ZK proof |
-| Squatting attack (Attack B) eliminated | Needs Blake3 builtin or ZK proof |
+| Full on-chain verification for F-prefix (Blake2b-256) AIDs | **Available now** — no Plutus changes, just Veridian fix |
+| Seq-0 binding verifiable from KEL | Available now — Blake2b-256 digest agility |
+| Next-key commitment Cardano-verifiable | Available now |
+| Full on-chain verification for existing Blake3 AIDs | Needs Blake3 builtin or ZK proof |
+| Squatting attack eliminated for Blake3 AIDs | Needs Blake3 builtin or ZK proof |
 | Super watcher burn fully trustless | Needs Blake3 builtin or ZK proof |
+| vLEI chain fully on-chain (GLEIF→QVI→LE) | Needs GLEIF/QVI adoption of F prefix + Veridian fix |
 
-The design is upgrade-compatible: if Blake3 lands as a Plutus builtin, the inception script can start verifying `cesr_aid` on-chain. Existing registry entries remain valid — the `cesr_aid` field is already stored.
+The design is upgrade-compatible: if Blake3 lands as a Plutus builtin, the inception script can start verifying `cesr_aid` on-chain for existing Blake3 AIDs. Existing registry entries remain valid — the `cesr_aid` field is already stored.

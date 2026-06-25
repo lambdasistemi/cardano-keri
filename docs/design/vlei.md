@@ -103,12 +103,15 @@ A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain 
 | Emergency freeze (next-key) | Available now | — |
 | Compliance-gated cage writes | Available now | — |
 | ACDC hash anchoring in cage | Available now | — |
-| On-chain self-cert of CESR AID | Needs Blake3 or ZK proof | No Plutus Blake3 builtin |
-| Squatting attack (Attack B) eliminated | Needs Blake3 or ZK proof | No Plutus Blake3 builtin |
+| On-chain self-cert of CESR AID | Available now for F-prefix AIDs; needs Blake3 for existing Blake3 AIDs | Veridian F-prefix fix (~40 lines) |
+| Squatting attack (Attack B) eliminated | Available now for F-prefix AIDs; needs Blake3 for existing Blake3 AIDs | Veridian F-prefix fix (~40 lines) |
 | Super watcher burn fully trustless | Needs Blake3 or ZK proof | No Plutus Blake3 builtin |
-| Cardano-only vLEI resolution (no KERI network) | Needs Blake3 | No Plutus Blake3 builtin |
+| Cardano-only vLEI resolution (no KERI network) | Available for F-prefix vLEI chain; needs GLEIF/QVI adoption | GLEIF/QVI adoption of F prefix + Veridian fix |
 
 The first five rows cover the core vLEI bridge use cases. They work today. The remaining rows are the reason to push for a Blake3 Plutus builtin CIP.
+
+!!! note "F-prefix path"
+    The F-prefix path requires a ~40-line fix to Veridian's signify-ts. See [Blake3 requirement](blake3-requirement.md) for the full analysis and the proof-of-concept CLI.
 
 ---
 

@@ -59,6 +59,9 @@ KeyState {
 
 ## Blake3 gap
 
+!!! note "This gap is closed for F-prefix (Blake2b-256) AIDs"
+    If Veridian generates AIDs using Blake2b-256 digest agility (CESR `F` prefix), Cardano can verify the full chain today with no Plutus changes. The gap below applies only to existing Veridian users with Blake3 (`E` prefix) AIDs.
+
 The CESR AID is derived using [Blake3](https://github.com/BLAKE3-team/BLAKE3) (`blake3(cesr_inception_event)`). Cardano's Plutus builtins do not include Blake3. An on-chain script cannot verify that a presented `cesr_aid` value is correctly derived from the CESR inception event — it can only store it as controller-asserted data.
 
 This means:

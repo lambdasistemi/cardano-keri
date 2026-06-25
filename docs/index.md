@@ -6,6 +6,19 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
 
 ---
 
+## What works today
+
+With Blake2b-256 digest agility in Veridian (a ~40-line fix):
+
+- Identity inception, rotation, close, freeze — fully on-chain verifiable
+- CESR AID self-cert — on-chain verifiable (no Blake3 needed)
+- Value-write authorization — on-chain verifiable
+- Super watcher convergence enforcement — with challenge period
+
+See [Blake3 requirement](design/blake3-requirement.md) for the full analysis.
+
+---
+
 ## The one idea
 
 At inception, you commit to two things: the key you use now, and the *hash* of the key you will use next. That commitment lives on-chain. When you rotate, you reveal the pre-committed next key. A thief who steals your current key cannot rotate your identity — they do not know the pre-committed next key.

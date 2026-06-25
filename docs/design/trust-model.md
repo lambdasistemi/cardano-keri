@@ -44,7 +44,8 @@ This is a one-way, non-authoritative mapping. A registrant could assert any `ces
 |---|---|---|
 | trie_key is unique | Yes — absence proof at inception | — |
 | trie_key derivation is correct | Yes — blake2b_256 verified on-chain | — |
-| CESR AID is correctly derived | No — Veridian uses Blake3; no Plutus builtin | KERI KEL replay |
+| CESR AID is correctly derived (F-prefix AIDs) | Yes — blake2b_256 builtin | Requires Veridian F-prefix fix |
+| CESR AID is correctly derived (Blake3 AIDs) | No — no Blake3 builtin | KERI KEL replay |
 | Key was not stolen | No | KEL replay + watchers |
 | Current key is the legitimate one | Yes — pre-rotation chain | — |
 | CESR AID matches trie_key holder | No — asserted metadata only | KERI KEL + metadata scan |

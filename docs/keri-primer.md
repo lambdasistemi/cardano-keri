@@ -152,6 +152,8 @@ The `cardano-aid` bridge reuses the same Ed25519 keys Veridian already manages. 
 
 ## The Blake3 frontier
 
+**Near-term path (no hard fork):** if Veridian adds F-prefix (Blake2b-256) support for new AID creation — a ~40-line change to `prefixer.ts` — new identities are fully Cardano-verifiable today. See the [proof-of-concept CLI](https://github.com/lambdasistemi/cardano-keri-verify) and the [Veridian fix branch](https://github.com/lambdasistemi/signify-ts/tree/feat/blake2b-256-prefix-derivation).
+
 Veridian AIDs are derived as `blake3(inception_event)` — this is Veridian's implementation choice, not a KERI protocol requirement. KERI's CESR encoding supports digest agility; the `E` prefix denotes Blake3, but other prefixes (e.g. `F` for Blake2b-256) are equally valid KERI. Plutus currently has no Blake3 builtin, so the on-chain script cannot verify that a presented AID is the correct Veridian identifier for a given key. This means:
 
 - Two Veridian users who already know each other's AID via KERI: **fully verifiable** — replay the KEL, derive the Cardano identity

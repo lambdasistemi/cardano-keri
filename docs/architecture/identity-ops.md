@@ -64,6 +64,7 @@ Inception {
 , next_digest = next_digest
 , seq         = 0
 , cesr_aid    = cesr_aid
+, deposit     = deposit_amount
 }
 ```
 
@@ -128,6 +129,7 @@ rot_msg = cbor({
 , next_digest = new_next
 , seq         = cur_state.seq + 1
 , cesr_aid    = cur_state.cesr_aid   -- unchanged
+, deposit     = cur_state.deposit    -- unchanged, set at inception and immutable
 }
 ```
 
@@ -146,7 +148,9 @@ Removes the identity from the registry trie and returns the ADA deposit to the o
 1. MPF inclusion proof validates against current identity root
 2. `Ed25519.verify(cur_pubkey, close_msg, sig)` — possession of cur_key
 3. `trie_key` removed from trie, identity_root updated
-4. `deposit_amount` ADA returned to signer
+4. `deposit_amount` ADA paid to `beneficiary_pkh`
+
+Note: including `beneficiary_pkh` in `close_msg` prevents a mempool observer from copying the redeemer and redirecting the deposit to an attacker-controlled address.
 
 **Close message:**
 ```
@@ -156,7 +160,8 @@ close_msg = cbor({
   registry_policy_id   : PolicyId,
   registry_thread_token: AssetName,
   trie_key             : ByteArray[32],
-  seq                  : Int,   -- current seq (prevents stale close)
+  seq                  : Int,              -- current seq (prevents stale close)
+  beneficiary_pkh      : PubKeyHash,       -- deposit destination; bound in signature
   input_identity_root  : ByteArray[32]
 })
 ```
@@ -178,7 +183,16 @@ The freeze operation is written to a **separate freeze registry UTxO** (distinct
 1. Identity reference input yields `KeyState{cur_pubkey, next_digest, seq, cesr_aid}`.
 2. `blake2b_256(reveal_key) == next_digest` — binds to the pre-committed key.
 3. `Ed25519.verify(reveal_key, freeze_msg, sig)`.
-4. Freeze root updated to record `(trie_key, seq, blake2b_256(cur_pubkey), next_digest)`.
+4. Freeze root updated to record a `FreezeMarker`:
+
+```
+FreezeMarker {
+  trie_key       : ByteArray[32]
+  seq            : Int
+  cur_pubkey_hash: ByteArray[32]  -- blake2b_256(cur_pubkey)
+  next_digest    : ByteArray[32]  -- next_digest from KeyState at seq
+}
+```
 
 Once the main registry rotation lands (`seq + 1`), the freeze marker no longer matches the current `KeyState.seq` and expires automatically. No unfreeze operation is required.
 

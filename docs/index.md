@@ -1,6 +1,6 @@
 # cardano-aid
 
-Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) ecosystem.
+Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://github.com/WebOfTrust/ietf-keri) ecosystem.
 
 **New here? Start with the [KERI primer](keri-primer.md)** — it explains what KERI is, how pre-rotation works, what Veridian is, and what Cardano adds.
 
@@ -37,7 +37,7 @@ flowchart LR
 
 The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) key used in the on-chain registry — Cardano-verifiable, front-run-proof, stable across rotations.
 
-The **[CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) AID** is the KERI-native identifier used by Veridian and KERI witnesses. Cardano cannot verify it today (no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin). It is stored as metadata for off-chain KERI correlation. See [Blake3 requirement](design/blake3-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. Cardano cannot verify it today (no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin). It is stored as metadata for off-chain KERI correlation. See [Blake3 requirement](design/blake3-requirement.md).
 
 ## System components
 

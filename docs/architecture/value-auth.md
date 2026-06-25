@@ -7,16 +7,16 @@ A value-write operation mutates a leaf in a value cage MPF trie and must be auth
 
 ## Signer resolution
 
-The cage script resolves the authorizing identity by `trie_key` — derived from the signer's `cur_pubkey` — not by the CESR AID. The CESR AID is stored as metadata in KeyState for off-chain KERI correlation but plays no role in on-chain authorization. This matters for the Veridian bridge: Signify holds the `cur_pubkey` and the cage resolves auth from it directly.
+The cage script resolves the authorizing identity by `trie_key` — stable across rotations — not by the CESR AID. The CESR AID is stored as metadata in KeyState for off-chain KERI correlation but plays no role in on-chain authorization. This matters for the Veridian bridge: Signify holds the `cur_pubkey` and the cage resolves auth from it directly.
 
 ## Option A — Detached signature
 
 The transaction redeemer carries the raw public key and a detached [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) signature over a fully-bound authorization message.
 
 **On-chain checks:**
-1. `blake2b_256(cbor({vk, cur_state.next_digest})) == trie_key` — vk is the registered key for this trie_key
-2. `Ed25519.verify(vk, auth_msg, sig)` — possession and intent
-3. MPF inclusion proof validates identity root from reference input
+1. MPF inclusion proof proves `trie_key → cur_state` against identity root from reference input — uses the supplied stable `trie_key` unchanged from inception
+2. `vk == cur_state.cur_pubkey` — vk matches the registered current key for this trie_key
+3. `Ed25519.verify(vk, auth_msg, sig)` — possession and intent
 
 **Authorization message:**
 ```
@@ -44,13 +44,13 @@ The message binds to both registry and cage thread tokens, the `trie_key`, the k
 ```mermaid
 flowchart TD
     A["Redeemer: {vk, sig, inclusion_proof, auth_msg}"] --> B
-    B["trie_key == blake2b_256(cbor({vk, next_digest}))?"]
-    B -->|yes| C["Ed25519.verify(vk, auth_msg, sig)?"]
-    B -->|no| FAIL1["Fail: key mismatch"]
-    C -->|yes| D["inclusion_proof valid for identity_root?"]
-    C -->|no| FAIL2["Fail: bad signature"]
+    B["inclusion_proof valid for trie_key at identity_root?"]
+    B -->|yes| C["vk == cur_state.cur_pubkey?"]
+    B -->|no| FAIL1["Fail: bad inclusion proof"]
+    C -->|yes| D["Ed25519.verify(vk, auth_msg, sig)?"]
+    C -->|no| FAIL2["Fail: key mismatch"]
     D -->|yes| E["MPF update valid?"]
-    D -->|no| FAIL3["Fail: bad inclusion proof"]
+    D -->|no| FAIL3["Fail: bad signature"]
     E -->|yes| OK["Value-write authorized"]
     E -->|no| FAIL4["Fail: bad trie op"]
 

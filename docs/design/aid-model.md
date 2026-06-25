@@ -7,7 +7,7 @@ Every registered identity has two identifiers that are always distinct:
 | Identifier | Derivation | Where used | Verified on-chain? |
 |---|---|---|---|
 | `trie_key` | `blake2b_256(cbor({cur_pubkey, next_digest}))` | MPF trie key, cage auth | Yes |
-| [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) AID | `blake3(cesr_inception_event)` | KERI witnesses, Veridian | No |
+| [CESR](https://github.com/WebOfTrust/ietf-cesr) AID | `blake3(cesr_inception_event)` | KERI witnesses, Veridian | No |
 
 The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at the `trie_key`. Off-chain tools correlate KERI identities to their on-chain state by scanning the trie metadata.
 
@@ -32,8 +32,11 @@ KeyState {
   next_digest : ByteArray[32]   -- blake2b_256(next pubkey), committed not yet revealed
   seq         : Int             -- monotonic rotation counter, starts at 0
   cesr_aid    : ByteArray[32]   -- decoded CESR AID, stored as metadata only
+  deposit     : Lovelace        -- ADA locked at inception; immutable; returned on close
 }
 ```
+
+**Encoding note (open):** `cesr_aid` is currently typed as `ByteArray[32]` — the raw digest bytes. This discards the CESR derivation code that identifies the hash algorithm. Future versions should store the full 44-character CESR qualified prefix (`qb64`) to preserve digest agility semantics and support non-Blake3 AIDs. For now, the protocol assumes Blake3 derivation code (`E` prefix) for all stored AIDs.
 
 `cur_pubkey` is the raw public key, stored on-chain. This differs from earlier designs that stored only a hash. Storing the raw key enables the on-chain script to verify `trie_key` derivation and Ed25519 signatures without requiring the caller to re-supply the key in the redeemer.
 

@@ -28,9 +28,10 @@ This is more dangerous than rotation griefing: rotation griefing requires the at
 To make inception flooding economically prohibitive, each inception must lock a minimum ADA deposit in the registry UTxO. The deposit is irrecoverable except via a closing operation that requires the owner's current-key signature.
 
 **Deposit mechanism:**
-- Inception transaction: includes `deposit_amount` ADA (protocol-defined minimum, e.g. 20 ADA) locked in the registry UTxO value alongside the entry.
-- Close operation: removes `trie_key` from the trie and returns the deposit to the owner. Requires `Ed25519(cur_pubkey, close_msg)` ([Ed25519, RFC 8032](https://www.rfc-editor.org/rfc/rfc8032)).
+- Inception transaction: includes `deposit_amount` ADA locked in the registry UTxO value. The exact amount is recorded in `KeyState.deposit` — it is set at inception and immutable across all subsequent rotations.
+- Close operation: removes `trie_key` from the trie and returns `KeyState.deposit` ADA to `beneficiary_pkh` (as specified in `close_msg`). Requires `Ed25519(cur_pubkey, close_msg)` ([Ed25519, RFC 8032](https://www.rfc-editor.org/rfc/rfc8032)).
 - No partial withdrawal. The deposit is all-or-nothing.
+- The deposit amount is chosen by the controller at inception (subject to a protocol-defined minimum). There is no single protocol-wide fixed amount.
 
 **Economic analysis:**
 
@@ -42,7 +43,7 @@ To make inception flooding economically prohibitive, each inception must lock a 
 
 An attacker who wants to extend a stolen-key window by even one hour (~180 blocks) must lock ≥3,600 ADA. This is prohibitive for casual griefing. Against a sophisticated adversary the deposit alone is not sufficient — it must be combined with the freeze registry (see below) to give the legitimate holder an emergency revocation channel that does not compete with inceptions.
 
-**Deposit amount:** protocol-defined at deployment, stored in the registry script datum. Governance changes require a new script deployment. Recommended initial value: 20 ADA (high enough to deter casual flood attacks, low enough for legitimate users). Minimum enforced by the ledger's UTxO min-ADA is separate and smaller.
+**Deposit amount:** chosen by each controller at inception and stored in `KeyState.deposit`. The protocol enforces a minimum (stored in the registry script datum; governance changes require a new script deployment). Recommended minimum: 20 ADA (high enough to deter casual flood attacks, low enough for legitimate users). Controllers may lock more to strengthen their convergence bond. The ledger's UTxO min-ADA is a separate lower floor.
 
 **Interaction with the single-UTxO model:** both inception (locks deposit) and close (returns deposit) transactions spend and recreate the global registry UTxO. They compete in the same block queue. This is acceptable: the deposit discourages frivolous inceptions, so the steady-state queue is primarily legitimate operations. A close operation by the attacker also uses a block slot, self-limiting the flood.
 
@@ -84,7 +85,7 @@ freeze_msg = cbor({
 2. Inclusion proof yields `KeyState{cur_pubkey, next_digest, seq, cesr_aid}` for `trie_key`.
 3. `blake2b_256(reveal_key) == next_digest`.
 4. `Ed25519.verify(reveal_key, freeze_msg, sig)`.
-5. Freeze root records `(trie_key, seq, cur_pubkey_hash, next_digest)`.
+5. Freeze root records a `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` (see [Identity Operations — Emergency freeze](../architecture/identity-ops.md#emergency-freeze) for the canonical type definition).
 
 **Why next_key, not cur_key:** if `cur_key` is the compromised material, authorizing freeze with it gives the thief a permanent DoS (they can freeze the identity from the outside, and the legitimate holder has no counter). The pre-committed `next_key` is still under the legitimate holder's control precisely because the thief cannot derive it from `cur_key`.
 
@@ -92,12 +93,12 @@ freeze_msg = cbor({
 
 Value cages using Option B (native signer) check both the identity root and the freeze root:
 1. Identity inclusion proof yields `KeyState.cur_pubkey`.
-2. Freeze check: no active marker for `(trie_key, seq, cur_pubkey_hash, next_digest)` in freeze root.
+2. Freeze check: no active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` in freeze root.
 3. If a freeze marker exists, the value-write is rejected regardless of the native signer.
 
 Once the main registry rotation to `seq + 1` lands, the freeze marker no longer matches the current `KeyState.seq`, so the new key can write without requiring a separate unfreeze operation.
 
-**Same-block race:** a freeze tx and a stolen-key value-write in the same block can be ordered adversarially by the block producer. This collapses the revocation exposure to one block of ordering latency — a much smaller window than the unbounded contention on the global identity UTxO. For irreversible cages: wait for the freeze root to settle after a [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) emergency rotation signal before accepting high-value writes.
+**Same-block race:** a freeze tx and a stolen-key value-write in the same block can be ordered adversarially by the block producer. This collapses the revocation exposure to one block of ordering latency — a much smaller window than the unbounded contention on the global identity UTxO. For irreversible cages: wait for the freeze root to settle after a [KERI](https://github.com/WebOfTrust/ietf-keri) emergency rotation signal before accepting high-value writes.
 
 **Freeze-aware settlement policy:** after a KERI watcher signals that a key has been rotated/compromised, high-value applications should:
 1. Cease accepting value-writes for the affected `trie_key` immediately.
@@ -166,8 +167,8 @@ Mitigation options for extreme scale:
 
 For reasonable identity counts (tens of thousands), the deposit accumulation in a single UTxO is operationally fine. The min-ADA requirement for the UTxO itself scales slowly relative to the deposit pool.
 
-## Fork punishment (super watcher)
+## Fork punishment (super watcher) — proposed
 
-A controller who diverges their Cardano identity from their KERI KEL loses their registry deposit to the first watcher that presents the divergence proof. This makes the deposit a convergence bond, not just an anti-flood mechanism.
+A controller who diverges their Cardano identity from their KERI KEL would lose their registry deposit to the first watcher that presents the divergence proof, making the deposit a convergence bond. This is a design proposal; full trustless enforcement is not yet possible without Blake3 on-chain. Until then, the burn mechanism requires trust in the watcher's CESR parsing and event extraction.
 
 See [Super Watcher](super-watcher.md) for the full design: burn transaction spec, Blake3 dependency, challenge period mitigation, and economic alignment.

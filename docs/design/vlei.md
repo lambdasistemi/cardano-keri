@@ -2,7 +2,7 @@
 
 ## What is vLEI?
 
-The [verifiable Legal Entity Identifier (vLEI)](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) is [GLEIF's](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) extension of the traditional [Legal Entity Identifier (LEI)](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) into the world of cryptographic, self-certifying credentials. Where a classic LEI is a 20-character code assigned by a Local Operating Unit (LOU), a vLEI is a chain of [ACDC (Authentic Chained Data Containers)](https://datatracker.ietf.org/doc/draft-ssmith-acdc/) credentials anchored to [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) AIDs. Each credential in the chain is cryptographically signed and verifiable without consulting any central registry.
+The [verifiable Legal Entity Identifier (vLEI)](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) is [GLEIF's](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) extension of the traditional [Legal Entity Identifier (LEI)](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) into the world of cryptographic, self-certifying credentials. Where a classic LEI is a 20-character code assigned by a Local Operating Unit (LOU), a vLEI is a chain of [ACDC (Authentic Chained Data Containers)](https://github.com/WebOfTrust/ietf-acdc) credentials anchored to [KERI](https://github.com/WebOfTrust/ietf-keri) AIDs. Each credential in the chain is cryptographically signed and verifiable without consulting any central registry.
 
 ### The credential chain
 
@@ -62,7 +62,7 @@ The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains
 
 ### 1. Compliance-gated contracts
 
-A DeFi protocol or securities issuance platform can gate entry to a value cage by checking the entity's `trie_key` against a registry of vLEI-verified entities. The cage script reads the identity registry via a CIP-31 reference input; no oracle or centralized allowlist is needed. Any entity whose KERI AID has been verified off-chain by the platform and whose `trie_key` has been admitted to the cage's authorization set can interact.
+A DeFi protocol or securities issuance platform can gate entry to a value cage by checking the entity's `trie_key` against a registry of vLEI-verified entities. The cage script reads the identity registry via a CIP-31 reference input; no runtime oracle after admission is needed. The vLEI credential chain verification and cage admission are off-chain steps; once a `trie_key` is admitted, the cage enforces it on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and whose `trie_key` has been admitted to the cage's authorization set can interact.
 
 **What Cardano adds:** the gate check is atomic with the transaction. There is no race between the allowlist update and the transaction inclusion. The cage either sees the authorized key-state or it does not.
 
@@ -128,6 +128,6 @@ The growing adoption of vLEI for regulated financial and legal workflows — man
 
 [GLEIF vLEI page]: https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei
 [GLEIF LEI page]: https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei
-[KERI IETF draft]: https://datatracker.ietf.org/doc/draft-ssmith-keri/
-[ACDC IETF draft]: https://datatracker.ietf.org/doc/draft-ssmith-acdc/
+[KERI IETF draft]: https://github.com/WebOfTrust/ietf-keri
+[ACDC IETF draft]: https://github.com/WebOfTrust/ietf-acdc
 [eIDAS 2.0]: https://digital-strategy.ec.europa.eu/en/policies/eudi-regulation

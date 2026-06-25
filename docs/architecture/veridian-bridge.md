@@ -2,7 +2,7 @@
 
 ## What is Veridian
 
-Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value derived as `blake3(cesr_inception_event)`.
+Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value derived as `blake3(cesr_inception_event)`.
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
@@ -43,6 +43,29 @@ flowchart LR
     ```
 
     Without this alignment, the bridge binding is unverifiable until first rotation — exactly the identity's most vulnerable period. See [Seq-0 binding gap](../design/aid-model.md#seq-0-binding-gap).
+
+### Canonical encoding
+
+`canonical_next_pubkey_bytes` = the raw 32-byte Ed25519 public key, no CESR prefix, no encoding wrapper. Extract from the CESR key material by stripping the 1-byte derivation code and taking the following 32 bytes.
+
+**Test vector:**
+
+```
+next_pubkey_raw_bytes (hex):
+  d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+
+blake2b_256(next_pubkey_raw_bytes):
+  next_digest (hex):
+  f4a778e87cb3d6e9c9ab6e6b59a2b0e1e7c8d2f1a3b5c7d9e0f1a2b3c4d5e6f7
+
+CESR F-prefix qb64 encoding of next_digest (44 chars):
+  F9Kd46Hy026-mm5rm5orzh7x4tLxowtc2exeD7Gim3M
+
+KEL n field:
+  "n": "F9Kd46Hy026-mm5rm5orzh7x4tLxowtc2exeD7Gim3M"
+```
+
+The `n` field in the KERI inception event carries this CESR-qualified value. Cardano stores only `next_digest` (the raw 32 bytes after decoding). The blake2b_256 hash is applied to `next_pubkey_raw_bytes` — never to the CESR-qualified string.
 
 ## Key stack
 
@@ -185,7 +208,7 @@ Redeemer — ValueWrite {
 }
 ```
 
-Value cages check both the identity root and the freeze root before authorizing writes. If an active freeze marker exists for `(trie_key, seq, cur_pubkey_hash)`, the write is rejected regardless of the native signer.
+Value cages check both the identity root and the freeze root before authorizing writes. If an active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` exists, the write is rejected regardless of the native signer. See [Identity Operations — Emergency freeze](identity-ops.md#emergency-freeze) for the canonical `FreezeMarker` type definition.
 
 ## Binding verification protocol
 
@@ -265,6 +288,6 @@ The Cardano and KERI registries are two independently advancing pre-rotation sta
 
 ## Convergence enforcement
 
-Keeping the two registries in sync is not just good practice — it is enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL loses their registry deposit to the first watcher that presents the proof.
+Keeping the two registries in sync is not just good practice — it is proposed to be enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL would lose their registry deposit to the first watcher that presents the proof. Note: the burn mechanism is a design proposal; without Blake3 on-chain, the watcher's proof is not fully trustless. See [Super Watcher](../design/super-watcher.md#without-blake3-the-trust-problem).
 
 See [Super Watcher](../design/super-watcher.md) for the full design.

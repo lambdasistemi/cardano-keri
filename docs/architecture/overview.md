@@ -12,6 +12,7 @@ KeyState {
   next_digest : ByteArray[32]   -- blake2b_256(next pubkey), committed not yet revealed
   seq         : Int             -- monotonic rotation counter, starts at 0
   cesr_aid    : ByteArray[32]   -- decoded CESR AID, for off-chain KERI correlation
+  deposit     : Lovelace        -- ADA locked at inception; immutable; returned on close
 }
 ```
 
@@ -27,11 +28,11 @@ The registry UTxO carries a thread token (minted at bootstrap, never burned) tha
 
 Existing MPFS cage UTxOs that store domain-specific leaf data. Each cage holds its own MPF trie. Leaf operations (insert, update, delete) can optionally require AID-based authorization.
 
-When a cage requires AID auth, the cage script reads the identity registry via a CIP-31 reference input and checks the key-state for the relevant `trie_key` at the snapshot captured in that block. The cage resolves the signer by `trie_key` (derived from their `cur_pubkey`) — it does not need the CESR AID at all.
+When a cage requires AID auth, the cage script reads the identity registry via a CIP-31 reference input and checks the key-state for the relevant `trie_key` at the snapshot captured in that block. The cage resolves the signer by `trie_key` (derived from their `cur_pubkey` at inception — stable across all subsequent rotations) — it does not need the CESR AID at all.
 
 ## Veridian Bridge
 
-The primary integration target is Veridian — a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) wallet (TypeScript). The bridge uses the same [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) keys for both KERI and Cardano, with no re-keying.
+The primary integration target is Veridian — a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet (TypeScript). The bridge uses the same [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) keys for both KERI and Cardano, with no re-keying.
 
 ```
 Veridian wallet (Signify/TypeScript)

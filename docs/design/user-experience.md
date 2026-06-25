@@ -26,7 +26,7 @@ The KEL replay is not optional — it is the step that proves the Cardano entry 
 |---|---|---|
 | Bob wrote a specific MPFS leaf | Yes | Cage write signed by Bob's `trie_key` cur_pubkey, on-chain |
 | Bob rotated his key | Yes | On-chain rotation + KEL rotation mirror |
-| Bob has not been revoked | Yes | No active freeze marker for Bob's `(trie_key, seq)` |
+| Bob has not been revoked | Yes | No active freeze marker keyed by `(trie_key, seq, cur_pubkey_hash, next_digest)` for Bob |
 | This cage write happened before that one | Yes | Cardano ledger provides global total order |
 | Bob's key is currently live | Yes | Identity root KeyState + freeze root |
 

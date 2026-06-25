@@ -18,7 +18,7 @@ The identity registry script enforces the following properties within a single b
 
 **Full KEL history.** The on-chain state holds only the current key-state. The full sequence of inception and rotation events is not stored or verified on-chain. There is no CESR encoding, no event receipt chain.
 
-**CESR self-cert verification.** Cardano cannot verify the [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) AID self-certifying property. The CESR AID (`blake3(cesr_inception_event)`) is stored in KeyState as controller-asserted metadata — the registrant supplies it at inception and the script stores it without checking the [Blake3](https://github.com/BLAKE3-team/BLAKE3) derivation (no Plutus Blake3 builtin exists). The CESR self-cert is an off-chain guarantee only.
+**CESR self-cert verification.** Cardano cannot verify the [CESR](https://github.com/WebOfTrust/ietf-cesr) AID self-certifying property. The CESR AID (`blake3(cesr_inception_event)`) is stored in KeyState as controller-asserted metadata — the registrant supplies it at inception and the script stores it without checking the [Blake3](https://github.com/BLAKE3-team/BLAKE3) derivation (no Plutus Blake3 builtin exists). The CESR self-cert is an off-chain guarantee only.
 
 **Duplicity detection.** If an attacker and the legitimate holder both submit rotation transactions in the same block (or in competing forks), the chain will accept one and discard the other. There is no gossip or watcher network to detect and flag this.
 
@@ -66,7 +66,7 @@ Applications that need consistency across both registries must account for this 
 
 ## Relationship to KERI
 
-cardano-aid borrows the pre-rotation primitive from [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) (Key Event Receipt Infrastructure). It does not implement KERI. Specifically, there are no:
+cardano-aid borrows the pre-rotation primitive from [KERI](https://github.com/WebOfTrust/ietf-keri) (Key Event Receipt Infrastructure). It does not implement KERI. Specifically, there are no:
 
 - Witnesses or backer receipts
 - CESR encoding of the KEL

@@ -1,0 +1,17 @@
+name = "lambdasistemi/cardano-aid"
+version = "0.0.0"
+compiler = "v1.1.21"
+plutus = "v3"
+description = ""
+
+[repository]
+user = "lambdasistemi"
+project = "cardano-aid"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v2.2.0"
+source = "github"
+
+[config]

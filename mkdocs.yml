@@ -1,0 +1,42 @@
+site_name: cardano-aid
+site_description: Self-certifying identities on Cardano with pre-rotation
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+
+nav:
+  - Home: index.md
+  - KERI Primer: keri-primer.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Identity Operations: architecture/identity-ops.md
+      - Value Authorization: architecture/value-auth.md
+      - Veridian Bridge: architecture/veridian-bridge.md
+  - Design:
+      - AID Model: design/aid-model.md
+      - Trust Model: design/trust-model.md
+      - Operational: design/operational.md
+      - User Experience: design/user-experience.md
+      - Blake3 Requirement: design/blake3-requirement.md
+  - Vetting: vetting/index.md

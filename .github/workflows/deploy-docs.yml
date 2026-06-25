@@ -1,0 +1,77 @@
+name: Docs
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Docs build
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build docs
+        run: |
+          nix develop github:paolino/dev-assets?dir=mkdocs --quiet \
+            -c mkdocs build --strict --site-dir site
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/
+          retention-days: 7
+
+  deploy-main:
+    name: Deploy docs (main)
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: nixos
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - uses: paolino/dev-assets/static-preview@main
+        with:
+          path: site/
+          preview-host: dev.plutimus.com
+          pr-number: main
+          comment: false
+
+  preview:
+    name: PR preview
+    needs: build
+    if: github.event_name == 'pull_request'
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - uses: paolino/dev-assets/static-preview@main
+        with:
+          path: site/
+          preview-host: dev.plutimus.com
+          pr-number: ${{ github.event.pull_request.number }}
+
+  preview-cleanup:
+    name: PR preview cleanup
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: nixos
+    steps:
+      - uses: paolino/dev-assets/static-preview@main
+        with:
+          mode: cleanup
+          preview-host: dev.plutimus.com
+          pr-number: ${{ github.event.pull_request.number }}

@@ -12,7 +12,7 @@ The first step is to compute the `trie_key` — the on-chain MPF key, derived fr
 trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
 ```
 
-This is NOT the CESR AID. The CESR AID (`blake3(cesr_inception_event)`) cannot be verified on-chain (Cardano has no Blake3 builtin) and its use as the trie key enables a front-run attack. See [AID Model](../design/aid-model.md) for a full analysis.
+This is NOT the CESR AID. The CESR AID (`blake3(cesr_inception_event)`) cannot be verified on-chain (Cardano has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin) and its use as the trie key enables a front-run attack. See [AID Model](../design/aid-model.md) for a full analysis.
 
 **Inception message — must cover all inception claims:**
 
@@ -33,7 +33,7 @@ inc_msg = cbor({
 **Why `cesr_aid` must be in `inc_msg`:** an adversary can copy the victim's in-flight inception material (`cur_pubkey`, `next_digest`, `trie_key`) and submit first with an attacker-chosen `cesr_aid`. If `cesr_aid` is not signed, the attacker's inception passes all on-chain checks. Including `cesr_aid` in the signed message means the attacker cannot produce a valid signature for the victim's `trie_key` with a different CESR prefix — they would need the victim's private key.
 
 **Inputs:**
-- `cur_pubkey` — Ed25519 public key (raw 32 bytes)
+- `cur_pubkey` — [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) public key (raw 32 bytes)
 - `next_digest = blake2b_256(next_pubkey)` — pre-rotation commitment (Veridian MUST use blake2b_256 digest agility to make binding verifiable at seq 0; see [Seq-0 binding gap](../design/aid-model.md#seq-0-binding-gap))
 - `cesr_aid` — decoded CESR AID (32 bytes), stored as metadata only
 - `deposit_amount` — minimum ADA deposit (protocol-defined)

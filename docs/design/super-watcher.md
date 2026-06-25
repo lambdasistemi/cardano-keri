@@ -2,7 +2,7 @@
 
 ## The two-registry problem
 
-The Cardano identity registry and the KERI KEL are two independent state machines sharing inception material. Nothing at the protocol level forces them to stay in sync. A controller can rotate on KERI but not on Cardano, rotate to different keys on each, or deliberately fork the two chains while `cesr_aid` keeps asserting they represent the same identity.
+The Cardano identity registry and the [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) KEL are two independent state machines sharing inception material. Nothing at the protocol level forces them to stay in sync. A controller can rotate on KERI but not on Cardano, rotate to different keys on each, or deliberately fork the two chains while `cesr_aid` keeps asserting they represent the same identity.
 
 This is not a theoretical edge case — it is a structural property of the bridge. See [Veridian Bridge — Two independent state machines](../architecture/veridian-bridge.md#two-independent-state-machines).
 
@@ -67,7 +67,7 @@ BurnRedeemer {
 4. Ed25519 signature in `keri_event` is valid against the presented key
 5. Remove `trie_key` from trie, return deposit to tx submitter
 
-**The Blake3 gap here too:** checks 2–4 require parsing CESR event structure and verifying witness receipt signatures on-chain. Without Blake3 and CESR parsing builtins, the watcher must present the extracted fields and the script trusts the extraction — which a malicious watcher could forge against an innocent identity.
+**The [Blake3](https://github.com/BLAKE3-team/BLAKE3) gap here too:** checks 2–4 require parsing [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) event structure and verifying witness receipt signatures on-chain. Without Blake3 and CESR parsing builtins, the watcher must present the extracted fields and the script trusts the extraction — which a malicious watcher could forge against an innocent identity.
 
 **With Blake3:** the script verifies `blake3(keri_event) == expected_event_hash`, which the watcher derives from the KEL. Combined with witness receipt verification, the burn becomes fully trustless.
 

@@ -2,7 +2,7 @@
 
 ## What is Veridian
 
-Veridian is a Signify-based KERI wallet written in TypeScript. It manages Ed25519 key pairs, produces CESR-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value derived as `blake3(cesr_inception_event)`.
+Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value derived as `blake3(cesr_inception_event)`.
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
@@ -34,7 +34,7 @@ flowchart LR
 !!! danger "Required for seq-0 binding to be verifiable"
     The Veridian bridge SDK **MUST** generate KERI inception events that use `blake2b_256` digest agility for the next-key commitment, over the same canonical next-key byte encoding that Cardano hashes.
 
-    Standard KERI inception events use Blake3 digest agility for the `n` (next key digest) field. Cardano uses `blake2b_256`. At seq 0, the `next_pubkey` is secret, so an off-chain verifier cannot derive `next_digest` from the public KEL unless both sides use the same hash.
+    Standard KERI inception events use [Blake3](https://github.com/BLAKE3-team/BLAKE3) digest agility for the `n` (next key digest) field. Cardano uses [`blake2b_256`](https://www.rfc-editor.org/rfc/rfc7693). At seq 0, the `next_pubkey` is secret, so an off-chain verifier cannot derive `next_digest` from the public KEL unless both sides use the same hash.
 
     **Mandate:** Veridian bridge inception events must set `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` instead of the default `n = base64url(blake3_256(canonical_next_pubkey_bytes))`. Then:
 

@@ -40,4 +40,5 @@ nav:
       - User Experience: design/user-experience.md
       - Blake3 Requirement: design/blake3-requirement.md
       - Super Watcher: design/super-watcher.md
+      - vLEI Bridge: design/vlei.md
   - Vetting: vetting/index.md

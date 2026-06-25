@@ -21,7 +21,7 @@ Both agents were given the specification cold, with no prior context about the d
 | Domain separation missing on all signed/hashed objects | High | Open |
 | CIP-31 MEV reference-input coupling | Medium | Open |
 | No revocation / unbounded trie growth | Medium | Open |
-| Ed25519 canonical-S malleability | Low | Open |
+| [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) canonical-S malleability | Low | Open |
 | Settlement depth not specified | Medium | Open |
 
 ## Critical findings (closed)
@@ -46,7 +46,7 @@ The original spec did not require the registrant to prove possession of `cur_key
 
 ### MPF node domain separation
 
-Without distinct domain tags for leaf, branch, and empty MPF nodes, a structural second-preimage attack is possible. An adversary could craft a trie with different structure that hashes to the same root, breaking absence and inclusion proof soundness. This must be addressed in the MPF implementation used by the registry.
+Without distinct domain tags for leaf, branch, and empty [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) nodes, a structural second-preimage attack is possible. An adversary could craft a trie with different structure that hashes to the same root, breaking absence and inclusion proof soundness. This must be addressed in the MPF implementation used by the registry.
 
 ### Single-UTxO contention / recovery-rotation griefing
 

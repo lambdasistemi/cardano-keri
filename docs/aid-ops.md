@@ -7,8 +7,8 @@ cryptographic bindings. It is the primary input for correctness vetting.
 
 | Primitive | Function | Cost |
 |---|---|---|
-| Ed25519 signature verify | `verify_ed25519_signature(vk, msg, sig)` | ~1700 mem / ~900 cpu units |
-| Blake2b-256 hash | `blake2b_256(bytes)` | ~1 mem unit per byte |
+| [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) signature verify | `verify_ed25519_signature(vk, msg, sig)` | ~1700 mem / ~900 cpu units |
+| [Blake2b-256](https://www.rfc-editor.org/rfc/rfc7693) hash | `blake2b_256(bytes)` | ~1 mem unit per byte |
 | Equality | `==` on ByteArray | cheap |
 
 NOT available on-chain (unbounded / missing): SHA-3, secp256k1 schnorr (available but not used here), CESR parsing, list recursion over unbounded KEL.

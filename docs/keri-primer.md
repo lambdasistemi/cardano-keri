@@ -8,7 +8,7 @@ This is the recommended starting point for understanding `cardano-aid`. It cover
 
 Digital identity today relies on trusted intermediaries: certificate authorities issue your TLS certificate, domain registrars control your domain, platforms control your username. If any of them revoke your credentials — or get hacked — your identity is gone or compromised.
 
-KERI (Key Event Receipt Infrastructure) removes the intermediary. Your identity is derived directly from your cryptographic key material. No issuer, no registrar, no permission required.
+[KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) (Key Event Receipt Infrastructure) removes the intermediary. Your identity is derived directly from your cryptographic key material. No issuer, no registrar, no permission required.
 
 But there is a harder problem underneath: **what happens when your key is compromised?** In traditional PKI you call the CA and get a new certificate. In a self-certifying system there is no CA to call. KERI's answer is pre-rotation.
 
@@ -65,7 +65,7 @@ AID = blake3(inception_event)
 
 It is self-certifying: the identifier itself encodes the cryptographic proof of who controls it. No third party issued it. No registry assigned it. You present the inception event and anyone can verify the AID is correct.
 
-In Veridian and KERI generally, AIDs are encoded in CESR format — a compact Base64-based encoding that encodes the hash algorithm alongside the value.
+In Veridian and KERI generally, AIDs are encoded in [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) format — a compact Base64-based encoding that encodes the hash algorithm alongside the value.
 
 ---
 
@@ -112,11 +112,11 @@ Verifier trusts the result
 
 ## Veridian: signing at the edge
 
-Veridian is a consumer KERI wallet built on Signify (TypeScript). Its defining principle: **private keys never leave the device**. 
+Veridian is a consumer KERI wallet built on [Signify](https://github.com/WebOfTrust/signify-ts) (TypeScript). Its defining principle: **private keys never leave the device**. 
 
-The KERIA server handles networking, KEL storage, and witness interaction — but it cannot sign anything. It has no keys. Veridian is the sole signing oracle. A compromised server cannot forge events on your behalf.
+The [KERIA](https://github.com/WebOfTrust/keria) server handles networking, KEL storage, and witness interaction — but it cannot sign anything. It has no keys. Veridian is the sole signing oracle. A compromised server cannot forge events on your behalf.
 
-This makes Veridian suitable for real-world identity use cases — GLEIF vLEI credentials, legal entity identifiers, verifiable credentials — where key custody must stay with the controller.
+This makes Veridian suitable for real-world identity use cases — [GLEIF vLEI](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) credentials, legal entity identifiers, verifiable credentials — where key custody must stay with the controller.
 
 ---
 
@@ -130,7 +130,7 @@ This makes Veridian suitable for real-world identity use cases — GLEIF vLEI cr
 
 **Threshold multi-signature.** N-of-M keys required for any event. Natural for organisations, DAOs, legal entities.
 
-**Delegation.** Delegated AIDs let an organisation vouch for sub-identities (vLEI pattern: GLEIF → QVI → Legal Entity → department).
+**Delegation.** Delegated AIDs let an organisation vouch for sub-identities ([vLEI](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) pattern: GLEIF → QVI → Legal Entity → department).
 
 ---
 

@@ -11,7 +11,7 @@ The Blake3 requirement is often stated as a single gap, but there are actually t
 
 ## Gap 1: CESR AID self-cert (hard, needs Blake3)
 
-KERI AIDs are derived as `blake3(inception_event)`. This is what makes the CESR AID self-certifying — the identifier encodes the hash of the event that created it. Cardano's Plutus VM has no Blake3 builtin, so a script cannot verify that a presented `cesr_aid` is the correct derivation.
+KERI AIDs are derived as `blake3(inception_event)`. This is what makes the [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) AID self-certifying — the identifier encodes the hash of the event that created it. Cardano's Plutus VM has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin, so a script cannot verify that a presented `cesr_aid` is the correct derivation.
 
 **Consequence:** the `cesr_aid` field in the Cardano registry is controller-asserted metadata. The squatting attack (Attack B) is irreducible without Blake3 — anyone can assert any CESR AID. Off-chain KEL replay is the only authoritative resolution.
 
@@ -19,7 +19,7 @@ KERI AIDs are derived as `blake3(inception_event)`. This is what makes the CESR 
 
 ## Gap 2: Next-key commitment (soft, fixable now)
 
-KERI uses **digest agility** — the hash algorithm used for the next-key commitment is encoded alongside the value in CESR. Blake3-256 is the current default (CESR prefix `E`) but the protocol explicitly supports other algorithms including Blake2b-256 (prefix `F`), SHA3-256 (`G`), and others.
+KERI uses **digest agility** — the hash algorithm used for the next-key commitment is encoded alongside the value in CESR. Blake3-256 is the current default (CESR prefix `E`) but the protocol explicitly supports other algorithms including [Blake2b-256](https://www.rfc-editor.org/rfc/rfc7693) (prefix `F`), SHA3-256 (`G`), and others.
 
 Cardano already has `blake2b_256` as a native Plutus builtin. If the bridge mandates **Blake2b-256 digest agility** in KERI inception events, then:
 
@@ -61,7 +61,7 @@ The on-chain verifier cost would be negligible. No trust assumptions. The clean 
 
 ### Option 2 — ZK proof (interim, available now)
 
-CIP-0381 (BLS12-381 Plutus builtins) landed in PlutusV3 with Conway. BLS12-381 enables Groth16 and PLONK verifiers on-chain.
+[CIP-0381](https://cips.cardano.org/cip/CIP-0381) (BLS12-381 Plutus builtins) landed in PlutusV3 with Conway. BLS12-381 enables Groth16 and PLONK verifiers on-chain.
 
 **The circuit:** prove `blake3(preimage) == cesr_aid` in zero knowledge. The Plutus script verifies the proof using BLS12-381 pairings.
 

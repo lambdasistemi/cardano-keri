@@ -11,7 +11,7 @@ The cage script resolves the authorizing identity by `trie_key` — derived from
 
 ## Option A — Detached signature
 
-The transaction redeemer carries the raw public key and a detached Ed25519 signature over a fully-bound authorization message.
+The transaction redeemer carries the raw public key and a detached [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) signature over a fully-bound authorization message.
 
 **On-chain checks:**
 1. `blake2b_256(cbor({vk, cur_state.next_digest})) == trie_key` — vk is the registered key for this trie_key

@@ -4,7 +4,7 @@ cardano-aid has two on-chain components. They are logically independent but desi
 
 ## Identity Registry
 
-A singleton, ownerless UTxO holding an MPF trie with the mapping `trie_key → KeyState`.
+A singleton, ownerless UTxO holding an [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) trie with the mapping `trie_key → KeyState`.
 
 ```
 KeyState {
@@ -31,7 +31,7 @@ When a cage requires AID auth, the cage script reads the identity registry via a
 
 ## Veridian Bridge
 
-The primary integration target is Veridian — a Signify-based KERI wallet (TypeScript). The bridge uses the same Ed25519 keys for both KERI and Cardano, with no re-keying.
+The primary integration target is Veridian — a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) wallet (TypeScript). The bridge uses the same [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) keys for both KERI and Cardano, with no re-keying.
 
 ```
 Veridian wallet (Signify/TypeScript)

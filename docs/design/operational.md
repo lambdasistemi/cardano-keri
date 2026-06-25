@@ -4,7 +4,7 @@
 
 The identity registry is a single UTxO. Every inception and rotation transaction spends and recreates it. This means at most one such transaction can be included per block.
 
-All in-flight MPF inclusion and absence proofs are computed against the current identity root. The instant a block is produced that changes the root (an inception or rotation), every proof computed before that block is stale. Submitters must recompute their proofs before resubmitting.
+All in-flight [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) inclusion and absence proofs are computed against the current identity root. The instant a block is produced that changes the root (an inception or rotation), every proof computed before that block is stale. Submitters must recompute their proofs before resubmitting.
 
 **Effective throughput:** approximately one identity operation per 20 seconds (average Cardano block time). This is acceptable for a global identity registry that is not expected to onboard millions of identities rapidly. High-throughput use cases require a sharding strategy or a batched-relay architecture.
 
@@ -29,7 +29,7 @@ To make inception flooding economically prohibitive, each inception must lock a 
 
 **Deposit mechanism:**
 - Inception transaction: includes `deposit_amount` ADA (protocol-defined minimum, e.g. 20 ADA) locked in the registry UTxO value alongside the entry.
-- Close operation: removes `trie_key` from the trie and returns the deposit to the owner. Requires `Ed25519(cur_pubkey, close_msg)`.
+- Close operation: removes `trie_key` from the trie and returns the deposit to the owner. Requires `Ed25519(cur_pubkey, close_msg)` ([Ed25519, RFC 8032](https://www.rfc-editor.org/rfc/rfc8032)).
 - No partial withdrawal. The deposit is all-or-nothing.
 
 **Economic analysis:**
@@ -97,7 +97,7 @@ Value cages using Option B (native signer) check both the identity root and the 
 
 Once the main registry rotation to `seq + 1` lands, the freeze marker no longer matches the current `KeyState.seq`, so the new key can write without requiring a separate unfreeze operation.
 
-**Same-block race:** a freeze tx and a stolen-key value-write in the same block can be ordered adversarially by the block producer. This collapses the revocation exposure to one block of ordering latency — a much smaller window than the unbounded contention on the global identity UTxO. For irreversible cages: wait for the freeze root to settle after a KERI emergency rotation signal before accepting high-value writes.
+**Same-block race:** a freeze tx and a stolen-key value-write in the same block can be ordered adversarially by the block producer. This collapses the revocation exposure to one block of ordering latency — a much smaller window than the unbounded contention on the global identity UTxO. For irreversible cages: wait for the freeze root to settle after a [KERI](https://datatracker.ietf.org/doc/draft-ssmith-keri/) emergency rotation signal before accepting high-value writes.
 
 **Freeze-aware settlement policy:** after a KERI watcher signals that a key has been rotated/compromised, high-value applications should:
 1. Cease accepting value-writes for the affected `trie_key` immediately.

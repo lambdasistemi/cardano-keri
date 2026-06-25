@@ -40,7 +40,7 @@ The KEL replay is not optional — it is the step that proves the Cardano entry 
 
 ## The squatting limitation (current)
 
-Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification — Plutus has no Blake3 builtin, so it cannot check that `blake3(inception_event) == cesr_aid`.
+Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification — Plutus has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin, so it cannot check that `blake3(inception_event) == cesr_aid`.
 
 This means `cesr_aid → trie_key` is a one-to-many untrusted index. Multiple entries can claim the same Veridian AID. The KEL replay finds the unique legitimate `trie_key` and discards the rest.
 

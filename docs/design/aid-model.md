@@ -7,7 +7,7 @@ Every registered identity has two identifiers that are always distinct:
 | Identifier | Derivation | Where used | Verified on-chain? |
 |---|---|---|---|
 | `trie_key` | `blake2b_256(cbor({cur_pubkey, next_digest}))` | MPF trie key, cage auth | Yes |
-| CESR AID | `blake3(cesr_inception_event)` | KERI witnesses, Veridian | No |
+| [CESR](https://datatracker.ietf.org/doc/draft-ssmith-cesr/) AID | `blake3(cesr_inception_event)` | KERI witnesses, Veridian | No |
 
 The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at the `trie_key`. Off-chain tools correlate KERI identities to their on-chain state by scanning the trie metadata.
 
@@ -20,7 +20,7 @@ The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at th
 trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
 ```
 
-This is the MPF key for the on-chain registry. It is derived from the same inception material as the CESR AID but uses `blake2b_256` — a Cardano-native Plutus builtin — instead of Blake3.
+This is the MPF key for the on-chain registry. It is derived from the same inception material as the CESR AID but uses [`blake2b_256`](https://www.rfc-editor.org/rfc/rfc7693) — a Cardano-native Plutus builtin — instead of [Blake3](https://github.com/BLAKE3-team/BLAKE3).
 
 **Stability:** The `trie_key` is derived from inception material only (`cur_pubkey` and `next_digest` from the very first event). It never changes across rotations. A cage holding a reference to a `trie_key` always refers to the same identity, regardless of how many times the key has rotated.
 
@@ -56,7 +56,7 @@ KeyState {
 
 ## Blake3 gap
 
-The CESR AID is derived using Blake3 (`blake3(cesr_inception_event)`). Cardano's Plutus builtins do not include Blake3. An on-chain script cannot verify that a presented `cesr_aid` value is correctly derived from the CESR inception event — it can only store it as controller-asserted data.
+The CESR AID is derived using [Blake3](https://github.com/BLAKE3-team/BLAKE3) (`blake3(cesr_inception_event)`). Cardano's Plutus builtins do not include Blake3. An on-chain script cannot verify that a presented `cesr_aid` value is correctly derived from the CESR inception event — it can only store it as controller-asserted data.
 
 This means:
 - The CESR self-cert property (AID is self-certifying via the hash) is off-chain only.
@@ -118,7 +118,7 @@ This check is not a one-time event; it must be re-run at each rotation to confir
 
 ## CBOR determinism
 
-All hashed and signed objects — inception material, `inc_msg`, `rot_msg`, `close_msg`, `freeze_msg`, `auth_msg` — must be encoded in canonical CBOR (RFC 7049 §3.9 / RFC 8949 §4.2). Specifically:
+All hashed and signed objects — inception material, `inc_msg`, `rot_msg`, `close_msg`, `freeze_msg`, `auth_msg` — must be encoded in canonical CBOR ([RFC 7049](https://www.rfc-editor.org/rfc/rfc7049) §3.9 / [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949) §4.2). Specifically:
 
 - Integer encoding must use the shortest form.
 - Map keys must be sorted in canonical order (length-lexicographic).

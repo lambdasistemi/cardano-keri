@@ -165,3 +165,9 @@ Mitigation options for extreme scale:
 - Expiry with renewal (requires a new operation type)
 
 For reasonable identity counts (tens of thousands), the deposit accumulation in a single UTxO is operationally fine. The min-ADA requirement for the UTxO itself scales slowly relative to the deposit pool.
+
+## Fork punishment (super watcher)
+
+A controller who diverges their Cardano identity from their KERI KEL loses their registry deposit to the first watcher that presents the divergence proof. This makes the deposit a convergence bond, not just an anti-flood mechanism.
+
+See [Super Watcher](super-watcher.md) for the full design: burn transaction spec, Blake3 dependency, challenge period mitigation, and economic alignment.

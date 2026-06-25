@@ -262,3 +262,9 @@ The Cardano and KERI registries are two independently advancing pre-rotation sta
 - Cardano cages authorize against the Cardano key-state, not KERI state.
 - If Cardano rotations diverge from KERI rotations, cages may honor a key the Veridian identity does not govern.
 - Off-chain verifiers must run the full binding verification at each rotation, not just at inception.
+
+## Convergence enforcement
+
+Keeping the two registries in sync is not just good practice — it is enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL loses their registry deposit to the first watcher that presents the proof.
+
+See [Super Watcher](../design/super-watcher.md) for the full design.

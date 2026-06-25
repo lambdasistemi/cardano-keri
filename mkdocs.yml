@@ -39,4 +39,5 @@ nav:
       - Operational: design/operational.md
       - User Experience: design/user-experience.md
       - Blake3 Requirement: design/blake3-requirement.md
+      - Super Watcher: design/super-watcher.md
   - Vetting: vetting/index.md

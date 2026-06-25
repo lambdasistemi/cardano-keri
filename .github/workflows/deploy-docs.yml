@@ -42,7 +42,7 @@ jobs:
       - uses: paolino/dev-assets/static-preview@main
         with:
           path: site/
-          preview-host: dev.plutimus.com
+          preview-host: preview.dev.plutimus.com
           pr-number: main
           comment: false
 
@@ -62,7 +62,7 @@ jobs:
       - uses: paolino/dev-assets/static-preview@main
         with:
           path: site/
-          preview-host: dev.plutimus.com
+          preview-host: preview.dev.plutimus.com
           pr-number: ${{ github.event.pull_request.number }}
 
   preview-cleanup:
@@ -73,5 +73,5 @@ jobs:
       - uses: paolino/dev-assets/static-preview@main
         with:
           mode: cleanup
-          preview-host: dev.plutimus.com
+          preview-host: preview.dev.plutimus.com
           pr-number: ${{ github.event.pull_request.number }}

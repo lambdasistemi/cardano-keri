@@ -1,0 +1,65 @@
+cabal-version: 3.4
+name:          cardano-aid
+version:       0.0.0
+synopsis:      Haskell library for KERI-AID identity operations (wasm-portable)
+description:
+  Pure Haskell implementation of KERI Ed25519 verification and CESR
+  encoding/decoding. Targets native GHC, wasm32-wasi, and GHC-JS —
+  no IO, no FFI beyond cardano-crypto-class pure path (crypton backend,
+  -external-libsodium-vrf flag disabled).
+
+license:       Apache-2.0
+license-file:  LICENSE
+author:        Paolo Veronelli
+maintainer:    paolo.veronelli@gmail.com
+category:      Cardano
+build-type:    Simple
+
+common warnings
+  ghc-options:
+    -Wall -Werror -Wunused-imports -Wunused-packages
+    -Wmissing-export-lists -Wname-shadowing
+    -Wdeferred-out-of-scope-variables -Wpartial-type-signatures
+    -Wredundant-constraints
+
+  default-extensions:
+    DerivingStrategies
+    DuplicateRecordFields
+    LambdaCase
+    OverloadedStrings
+    RecordWildCards
+    StrictData
+
+library
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   lib
+  build-depends:
+    , base                  >=4.18 && <5
+    , bytestring            >=0.11 && <0.13
+    , cardano-crypto-class
+    , memory                >=0.18 && <0.19
+
+  exposed-modules:
+    Cardano.AID.CESR
+    Cardano.AID.Ed25519
+
+test-suite unit-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-aid
+    , cardano-crypto-class
+    , hspec                 >=2.11 && <2.12
+    , memory                >=0.18 && <0.19
+
+  other-modules:
+    Cardano.AID.CESRSpec
+    Cardano.AID.Ed25519Spec
+
+  ghc-options: -threaded -with-rtsopts=-N

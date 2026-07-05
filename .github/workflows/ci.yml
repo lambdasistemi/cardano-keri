@@ -11,10 +11,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-gate:
-    name: Build Gate
+  onchain:
+    name: Onchain (Aiken)
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
-      - name: Stub CI
-        run: echo "CI stub — will be replaced by real CI"
+      - name: Build
+        run: nix shell 'nixpkgs#aiken' --command aiken build
+        working-directory: onchain
+
+  offchain:
+    name: Offchain (Haskell)
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - name: Unit tests
+        run: nix build --no-link .#checks.x86_64-linux.unit-tests
+        working-directory: offchain

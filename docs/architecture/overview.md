@@ -101,9 +101,20 @@ flowchart TD
         VC_Script["Cage Script<br/>verify value-write<br/>check AID auth via name lookup"]
     end
 
+    subgraph "MPFS Plugin / Sidecar"
+        Snapshot["Cage UTxO snapshot<br/>tx_in + value_root @ chain point"]
+        Builder["Value-write builder<br/>proof + unsigned tx"]
+        Rebuild["If cage advanced first<br/>discard snapshot + rebuild"]
+    end
+
     Oracle["Oracle<br/>(company)"] -->|"inception / rotation / freeze"| IR_UTxO
-    AID_Owner["AID Owner"] -->|"signs value-write tx"| TX
-    TX -->|"spends"| VC_UTxO
+    VC_UTxO -->|"read stable pre-state"| Snapshot
+    Snapshot --> Builder
+    AID_Owner["AID Owner"] -->|"signs built tx"| TX
+    Builder -->|"builds value-write against snapshot"| TX
+    TX -->|"spends snapshotted tx_in"| VC_UTxO
+    VC_UTxO -->|"another write wins first"| Rebuild
+    Rebuild -->|"newer snapshot"| Snapshot
     IR_UTxO -->|"CIP-31 reference input<br/>(root window + inclusion proof)"| VC_Script
 
     IR_Script --> IR_UTxO
@@ -111,9 +122,14 @@ flowchart TD
 
     style IR_UTxO fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
     style VC_UTxO fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
+    style Snapshot fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
 ```
 
 The registry UTxO is not consumed by value-writes. Value-writes use it as a non-spending CIP-31 reference input.
+
+The cage UTxO is consumed, so the MPFS plugin/sidecar builds each value-write
+against a cage snapshot (`tx_in` + `value_root`) and rebuilds from a newer
+snapshot if another write spends that UTxO first.
 
 ## What lives off-chain
 

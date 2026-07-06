@@ -5,9 +5,20 @@ docs_dir: docs
 theme:
   name: material
   palette:
-    scheme: slate
-    primary: indigo
-    accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - content.code.copy
     - navigation.sections
@@ -33,6 +44,7 @@ nav:
       - Identity Operations: architecture/identity-ops.md
       - Value Authorization: architecture/value-auth.md
       - Veridian Bridge: architecture/veridian-bridge.md
+      - Amaru Integration Analysis: architecture/amaru-integration.md
   - Design:
       - AID Model: design/aid-model.md
       - Trust Model: design/trust-model.md

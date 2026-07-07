@@ -1,12 +1,11 @@
 cabal-version: 3.4
 name:          cardano-aid
 version:       0.0.0
-synopsis:      Haskell library for KERI-AID identity operations (wasm-portable)
+synopsis:      Haskell library for KERI-AID identity operations and cage validator types
 description:
-  Pure Haskell implementation of KERI Ed25519 verification and CESR
-  encoding/decoding. Targets native GHC, wasm32-wasi, and GHC-JS —
-  no IO, no FFI beyond cardano-crypto-class pure path (crypton backend,
-  -external-libsodium-vrf flag disabled).
+  Pure Haskell implementation of KERI Ed25519 verification, CESR
+  encoding/decoding, and PlutusData types matching the cardano-aid
+  extended cage validator (AIDOwnerAuth, AIDRequestAction, AIDOnChainTokenState).
 
 license:       Apache-2.0
 license-file:  LICENSE
@@ -39,9 +38,13 @@ library
     , bytestring            >=0.11 && <0.13
     , cardano-crypto-class
     , memory                >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
 
   exposed-modules:
     Cardano.AID.CESR
+    Cardano.AID.Cage.Sign
+    Cardano.AID.Cage.Types
     Cardano.AID.Ed25519
 
 test-suite unit-tests
@@ -57,9 +60,24 @@ test-suite unit-tests
     , cardano-crypto-class
     , hspec                 >=2.11 && <2.12
     , memory                >=0.18 && <0.19
+    , plutus-tx
+    , QuickCheck
 
   other-modules:
     Cardano.AID.CESRSpec
+    Cardano.AID.Cage.SignSpec
+    Cardano.AID.Cage.TypesSpec
     Cardano.AID.Ed25519Spec
 
   ghc-options: -threaded -with-rtsopts=-N
+
+executable gen-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-aid
+    , cardano-crypto-class

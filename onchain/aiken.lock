@@ -11,6 +11,11 @@ name = "cardano-foundation/cardano-mpfs-onchain"
 version = "v0.1.0"
 source = "github"
 
+[[requirements]]
+name = "aiken-lang/merkle-patricia-forestry"
+version = "v2.0.0"
+source = "github"
+
 [[packages]]
 name = "aiken-lang/stdlib"
 version = "v2.2.0"
@@ -20,6 +25,12 @@ source = "github"
 [[packages]]
 name = "cardano-foundation/cardano-mpfs-onchain"
 version = "v0.1.0"
+requirements = []
+source = "github"
+
+[[packages]]
+name = "aiken-lang/merkle-patricia-forestry"
+version = "v2.0.0"
 requirements = []
 source = "github"
 

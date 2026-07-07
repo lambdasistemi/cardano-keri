@@ -66,6 +66,8 @@ A DeFi protocol or securities issuance platform can gate entry to a value cage b
 
 **What Cardano adds:** the gate check is atomic with the transaction. There is no race between the allowlist update and the transaction inclusion. The cage either sees the authorized key-state or it does not.
 
+This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md) — covering the incumbent allowlist pattern, the full gate flow (on-chain admission rather than the off-chain admission described above), cardano-aid's bounded role, and the honest limits of gating.
+
 ### 2. Non-censorable key history
 
 An entity's complete Cardano key history — inception, every rotation, freeze events — is immutably recorded on-chain in slot order. No operator, including GLEIF or the QVI, can alter or suppress this record. A regulator or auditor can verify the entity's key custody chain from inception to the present without asking the entity or any intermediary.

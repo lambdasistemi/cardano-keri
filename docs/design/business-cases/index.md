@@ -1,5 +1,13 @@
 # Business Cases — Comparison and Factored Core
 
+!!! tip "Unfamiliar with the finance vocabulary?"
+    These pages assume Cardano literacy but **no** financial or institutional
+    background. Every market, legal, and compliance concept they use —
+    securities, registers, custody, KYC/AML, escrow, repo, batchers, MEV — is
+    explained from zero in the [Finance Primer](../../finance-primer.md), and
+    each page links there on first use. The identity-side concepts (AID, KEL,
+    ACDC, vLEI) are covered by the [KERI Primer](../../keri-primer.md).
+
 The [epic](https://github.com/lambdasistemi/cardano-aid/issues/21) names four
 use cases for ACDC verification on-chain. This section analyzes each as a
 concrete design — actors, enforcement point, components on top of the four

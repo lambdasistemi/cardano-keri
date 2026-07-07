@@ -6,20 +6,44 @@ corrects it on one load-bearing point (the batcher model, §2).
 
 ## 1. Actors & credential level
 
-The gated party is a **Legal Entity** (fund, bank desk, corporate treasury),
+The gated party is a **Legal Entity**
+([fund, bank desk, corporate treasury](../../finance-primer.md#fund-desk-treasury)),
 but the acting party is almost never the entity's root AID. GLEIF's framework
 puts LE AIDs under multi-sig group control (board-level custody); nobody signs
 swap orders with a 2-of-3 board key. The realistic check target is therefore
-the **third hop: an OOR/ECR credential** held by an individual trader or an
-operations service, chained LE → trader. This makes the full chain
-verification (GLEIF → QVI → LE → ECR) load-bearing — a gate that stops at the
-LE credential either forces hot custody of a governance-grade key or silently
-degrades to "whoever holds the entity key," which is the allowlist pattern
-again. Integrators: the DeFi protocol (imports the verifier), the venue
-operator (deploys the admission cage), QVIs (issue), the entity's compliance
-office (holds credentials in a KERI wallet).
+the **third hop: an
+[OOR/ECR credential](../../finance-primer.md#officer-and-why-oor-credentials-matter)**
+held by an individual trader or an operations service, chained LE → trader.
+This makes the full chain verification (GLEIF → QVI → LE → ECR) load-bearing —
+a gate that stops at the LE credential either forces hot custody of a
+governance-grade key or silently degrades to "whoever holds the entity key,"
+which is the [allowlist](../../finance-primer.md#allowlist) pattern again.
+Integrators: the DeFi protocol (imports the verifier), the venue operator
+(deploys the admission cage), QVIs (issue), the entity's compliance office
+(holds credentials in a KERI wallet).
+
+!!! info "Why the entity's own key never trades"
+    Think of the Legal Entity's root key as the company seal: it is kept
+    under [board-level custody](../../finance-primer.md#custody) — locked
+    away, multi-person controlled, used only for rare, weighty acts like
+    appointing officers. Day-to-day trading is done by *people* the company
+    has authorized, and the OOR/ECR credential is the cryptographic version
+    of "this person is our trader." A gate that only recognizes the company
+    seal would force the seal onto a trading desk — exactly the custody
+    failure the hierarchy exists to prevent.
 
 ## 2. Gated action & enforcement point
+
+!!! info "What is a batcher, and why it changes everything"
+    On a Cardano [DEX](../../finance-primer.md#dex-amm-liquidity-provider),
+    the trading pool is a single UTxO, and only one transaction can spend a
+    UTxO per block — so traders cannot all hit the pool directly. Instead a
+    trader posts an **order** ("swap X for at least Y") as a UTxO, like
+    leaving a signed instruction slip in a tray. An off-chain agent — the
+    **batcher** — periodically collects the slips and executes them against
+    the pool in one transaction *that the batcher signs*. The trader is not
+    present at execution. See
+    [Batcher model](../../finance-primer.md#batcher-model).
 
 "The entity signs the gated spend" is wrong for most Cardano DeFi. Major
 DEXes use the **batcher model**: the user locks an order UTxO at an order
@@ -35,13 +59,42 @@ transaction **signed by the batcher, not the entity**. Two consequences:
   a nonce/validity window, checked against the L1 registry reference input
   when the batcher spends the order.
 
+```mermaid
+sequenceDiagram
+    participant T as Trader (KERI wallet)
+    participant O as Order UTxO
+    participant B as Batcher (off-chain)
+    participant P as Pool + Order Validator
+    participant R as Registries (L1/L2 + admission cage, ref inputs)
+
+    T->>T: sign order terms + nonce/validity with registered key
+    T->>O: lock order — detached signature in datum
+    Note over O: order placement runs no validator —<br/>the gate cannot bite here
+    B->>O: collect many orders
+    B->>P: batch tx (signed by batcher)
+    P->>R: trie_key admitted? AID Active? TELs unrevoked?
+    P->>P: verify detached sig in each order datum
+    P-->>B: batch executes — every order identity-checked
+```
+
 Enforcement points, concretely: (a) the **pool/order spend validator**
 verifies the detached signature + admission proof per order; (b) for venues
 with many scripts, factor the identity check into a **withdraw-zero staking
 validator** (the CIP-112-documented pattern) so one script execution per
 transaction covers all orders in a batch; (c) a **minting policy on
-LP/position tokens** gates position creation, which catches deposits even when
-order flow is composed through aggregators.
+[LP/position tokens](../../finance-primer.md#dex-amm-liquidity-provider)**
+gates position creation, which catches deposits even when order flow is
+composed through
+[aggregators](../../finance-primer.md#aggregator-and-composability).
+
+!!! info "What is the withdraw-zero pattern?"
+    A Plutus trick for running one script once per transaction, however many
+    inputs the transaction has: the transaction includes a **withdrawal of 0
+    lovelace** from a script-controlled staking credential, and the ledger
+    must execute that script to approve the withdrawal. Spend validators then
+    just check "the withdraw-zero script is present in this tx," so a batch
+    of 10 orders pays for one identity check instead of 10. Documented in
+    [CIP-112](https://cips.cardano.org/cip/CIP-0112).
 
 ## 3. Design sketch
 
@@ -60,8 +113,9 @@ On top of L1–L4:
   **revocation**, not credential-internal expiry — so `not_after` is a venue
   policy knob (force re-admission every N days), while the authoritative kill
   switch is the TEL. Don't duplicate GLEIF semantics on-chain.
-- **L4 addition this case forces**: a signing bridge. LE/ECR keys live in KERI
-  wallets (Veridian), not CIP-30 Cardano wallets. The proof builder must
+- **L4 addition this case forces**: a signing bridge. LE/ECR keys live in
+  [KERI wallets](../../keri-primer.md) (Veridian), not CIP-30 Cardano wallets.
+  The proof builder must
   produce the order-datum detached signature via the KERI wallet — a real
   UX/integration component, not a library detail.
 
@@ -79,27 +133,42 @@ On top of L1–L4:
   the whole burden of linking them.
 - **Cascade/freshness**: all-TELs per action (three MPF proofs — cheap).
   Freshness floor = TEL root-update cadence + settlement, i.e., minutes. Fine
-  for "revoked entity loses access"; **not** sanctions-screening-grade, and
-  the docs must say so.
+  for "revoked entity loses access"; **not**
+  [sanctions-screening](../../finance-primer.md#aml-and-sanctions-screening)-grade,
+  and the docs must say so.
 - **Throughput**: gated *reads* scale (reference inputs are unlimited
   concurrent readers). Writes serialize per UTxO: one admission per block per
   venue, one rotation per block per L1 registry — acceptable here; order flow
   never writes the registries.
-- **Privacy**: worst of the four cases. Real-time, LEI-attributed order flow
-  enables front-running and copy-trading of named institutions; MiFID
-  transparency regimes have deferral windows, the chain does not. Pseudonymous
-  per-venue sub-AIDs would help traders and gut the audit story — a genuine
-  open trade-off.
+- **Privacy**: worst of the four cases. Real-time,
+  [LEI](../../finance-primer.md#lei-and-gleif)-attributed order flow enables
+  [front-running and copy-trading](../../finance-primer.md#mev) of named
+  institutions; [MiFID](../../finance-primer.md#mifid-ii-basel-iii-eidas-20-mica)
+  transparency regimes have deferral windows (large trades are published only
+  after a delay, precisely so others cannot trade against them), the chain
+  does not. Pseudonymous per-venue sub-AIDs would help traders and gut the
+  audit story — a genuine open trade-off.
 
 ## 5. Demand side
 
+!!! info "The precedent: Aave Arc"
+    Aave Arc (2022) was the highest-profile attempt at gated DeFi: a copy of
+    the Aave lending protocol where only addresses vetted by Fireblocks (a
+    custody firm acting as the [allowlist](../../finance-primer.md#allowlist)
+    operator) could participate. It worked technically and saw little uptake
+    — the institutions it was built for did not come. The lesson the demand
+    analysis below draws: a gate is bought when an *asset* legally needs it,
+    not when a venue offers it.
+
 The buyer is **not the DEX** (Aave Arc's lesson: venues build gates only when
-a paying user demands one) — it is the **RWA/tokenized-fund issuer** whose
-asset legally cannot trade unrestricted, and secondarily the institution
+a paying user demands one) — it is the
+**[RWA](../../finance-primer.md#rwa-real-world-assets)/tokenized-fund issuer**
+whose asset legally cannot trade unrestricted, and secondarily the institution
 needing demonstrable counterparties. The institutional on-chain activity that
-demonstrably exists is tokenized treasuries/money-market funds on other
-chains, all using issuer-controlled allowlists; none on Cardano at scale — a
-2026 Cardano RWA pipeline is a gap to research, not assert. Smallest real
+demonstrably exists is
+[tokenized treasuries/money-market funds](../../finance-primer.md#bond-fund-money-market-fund)
+on other chains, all using issuer-controlled allowlists; none on Cardano at
+scale — a 2026 Cardano RWA pipeline is a gap to research, not assert. Smallest real
 pilot: **one tokenized instrument + one venue on preprod**, synthetic
 GLEIF/QVI chain (dev-issued F-prefix credentials, since real F-prefix vLEIs do
 not exist until Veridian ships the ask), demonstrating admission, gated batch
@@ -107,13 +176,23 @@ execution, and revocation propagation end-to-end.
 
 ## 6. Case-specific risks
 
+!!! info "Why MEV is worse when traders are named"
+    [MEV](../../finance-primer.md#mev) is the profit whoever *orders*
+    transactions can extract by sequencing, inserting, or dropping them —
+    e.g. buying just before a large pending order and selling just after.
+    Against anonymous wallets this is opportunistic. Against gated flow it
+    becomes targeted: every order is attributable to a named institution, so
+    a batcher (or anyone watching the mempool) can build a strategy around
+    *that bank's* behavior specifically. The gate turns a statistical game
+    into directed surveillance of identified participants.
+
 - **The batcher becomes a compliance actor**: it selects and orders identified
   flow and can censor named entities — MEV against known institutions is
   qualitatively worse than against anonymous addresses. Is the batcher itself
   gated? Undesigned.
-- **Composability breakage**: gated pools cannot be routed through ungated
-  aggregators; liquidity fragments — the economic failure mode that killed the
-  precedent.
+- **[Composability](../../finance-primer.md#aggregator-and-composability)
+  breakage**: gated pools cannot be routed through ungated aggregators;
+  liquidity fragments — the economic failure mode that killed the precedent.
 - **Venue reclassification**: a venue enforcing per-counterparty identity
   starts resembling a regulated trading facility; the gate may *create*
   licensing questions for the protocol (regulation-vs-implementation flag:

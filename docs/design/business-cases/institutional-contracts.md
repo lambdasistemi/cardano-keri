@@ -4,6 +4,23 @@ Bilateral or few-party on-chain contracts — escrow, DvP settlement, repo,
 consortium disbursement — with counterparty identity enforced by the
 validator, not an oracle.
 
+!!! info "The contract types, in plain words"
+    All four are standard arrangements between institutions; the
+    [Finance Primer](../../finance-primer.md) covers each in depth.
+
+    - **[Escrow](../../finance-primer.md#escrow)** — funds held until agreed
+      conditions are met, then released (think house purchase).
+    - **[DvP settlement](../../finance-primer.md#settlement-and-dvp)** —
+      *delivery versus payment*: asset and payment change hands atomically,
+      so neither party can end up with nothing.
+    - **[Repo](../../finance-primer.md#repo)** — a pawn shop for bonds
+      between banks: sell now, buy back tomorrow at a slightly higher price.
+      Its lifecycle (open → roll → close) is a small state machine.
+    - **[Syndication](../../finance-primer.md#syndication)** — one large loan
+      split across several institutions, each holding a tradable share.
+    - **Consortium disbursement** — several member organizations jointly
+      approving payments from a shared treasury.
+
 ## 1. Actors & credential level
 
 Two to five legal entities per contract, each holding a vLEI chain
@@ -13,6 +30,18 @@ only if executed by someone *authorized to bind the entity* — so the signing
 credential is the **OOR** (Official Organizational Role: CEO, CFO, treasurer),
 issued by the QVI on behalf of the LE, or an **ECR** scoped to the specific
 engagement.
+
+!!! info "Why the officer credential is the whole point here"
+    Companies act through people. When a bank signs a contract, some *person*
+    signs it — and the counterparty needs proof that this person may legally
+    bind the company. Traditionally that proof is a certified board
+    resolution on paper. The vLEI
+    [OOR credential](../../finance-primer.md#officer-and-why-oor-credentials-matter)
+    is that board resolution, made cryptographic: a verifiable statement
+    "this key belongs to the CFO of entity X, and X's QVI vouches for it."
+    The entity's *root* key never signs day-to-day business — it is kept
+    under board-level, multi-person
+    [custody](../../finance-primer.md#custody) like a corporate seal.
 
 This makes delegation-of-authority the *central* design question, not a parity
 footnote. Two distinct delegation concepts must not be conflated:
@@ -34,13 +63,36 @@ contract law cares about.
 ## 2. Gated action & enforcement point
 
 The enforcement point is the **contract UTxO's spend validator** at each state
-transition of a bilateral/multiparty state machine: escrow release, DvP
-settlement legs, repo open/roll/close, syndicated-position transfers. Each
+transition of a bilateral/multiparty state machine:
+[escrow](../../finance-primer.md#escrow) release,
+[DvP](../../finance-primer.md#settlement-and-dvp) settlement legs,
+[repo](../../finance-primer.md#repo) open/roll/close,
+[syndicated](../../finance-primer.md#syndication)-position transfers. Each
 transition names which party (or quorum) must act; the validator checks that
 the acting signature verifies against the *current* key-state of the expected
 counterparty's `trie_key` (via the L1 registry CIP-31 reference input) and,
 where role-bound, that an unrevoked OOR links signer to entity (L2 TEL
 proofs).
+
+An escrow template, as a state machine — every arrow is a transaction whose
+validator verifies the named party's OOR-backed signature against the live
+registries before allowing the transition:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Formed: instantiation co-signed by both entities'<br/>OOR-verified officers (trie_keys fixed in datum)
+    Formed --> Funded: Buyer's officer deposits<br/>(Buyer OOR sig, live status check)
+    Funded --> Released: delivery confirmed<br/>(Buyer OOR sig → funds to Seller)
+    Funded --> Refunded: deal cancelled<br/>(both parties' OOR sigs → funds back to Buyer)
+    Formed --> Formed: re-designation —<br/>entity swaps its authorized officer
+    Funded --> Funded: re-designation —<br/>entity swaps its authorized officer
+    Released --> [*]
+    Refunded --> [*]
+```
+
+The self-loops are the **re-designation transition** discussed in §4: without
+it, an officer leaving their company (their OOR gets revoked) would strand the
+locked funds, since no remaining signer could fire the next transition.
 
 **Formation** is off-chain but uses the same rails: entities exchange
 `trie_key`s, replay each other's KELs, verify each other's credential chains
@@ -104,12 +156,16 @@ On top of L1–L4:
 
 ## 5. Demand side
 
-Buyers: funds and banks doing bilateral settlement/collateral operations;
+Buyers: [funds and banks](../../finance-primer.md#fund-desk-treasury) doing
+bilateral settlement and collateral operations (moving pledged assets that
+secure a loan — posting, releasing, or substituting them as exposures change);
 corporate treasuries; consortium disbursement operations. A **proto-customer
-already exists in the project's orbit**: the Amaru treasury — PRAGMA member
-organizations co-signing mainnet disbursements — is precisely a multi-entity
-institutional ceremony whose signers could be OOR-verified rather than "known
-key hashes in a registry file." **Smallest pilot**: re-implement one existing
+already exists in the project's orbit**: the Amaru treasury — a real
+multi-organization treasury on Cardano mainnet, whose disbursements are
+co-signed by the member organizations of PRAGMA (the consortium developing
+the Amaru node) — is precisely a multi-entity institutional ceremony whose
+signers could be OOR-verified rather than "known key hashes in a registry
+file." **Smallest pilot**: re-implement one existing
 multi-sig ceremony (one treasury disbursement flow) with vLEI-verified signers
 — no new counterparties to recruit, real mainnet value, and it exercises L1–L3
 plus one template.
@@ -121,6 +177,18 @@ plus one template.
   governing law). The template is evidence infrastructure, not a contract-law
   substitute — the regulation-vs-implementation line must be stated as in
   [The Regulated DeFi Gate](../defi-gate.md).
+
+    !!! info "What contract law requires that no signature check can prove"
+        For a contract to be legally valid, courts look for ingredients like
+        **offer and acceptance** (the parties actually agreed to these terms),
+        **capacity** (each party was legally able to enter the deal — not
+        insolvent, not acting outside its corporate purpose), and a
+        **governing law** (which jurisdiction's rules interpret the deal and
+        which court hears disputes). A cryptographic signature proves none of
+        these — it proves only that a particular key signed particular bytes.
+        That is powerful *evidence*, and OOR verification adds "the key
+        belonged to an authorized officer" — but validity of the agreement
+        itself remains a legal question, settled off-chain.
 - **OOR freshness**: role credentials churn faster than entity credentials;
   without the re-designation transition, every personnel change threatens
   liveness of locked funds.

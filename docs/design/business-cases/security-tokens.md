@@ -4,6 +4,16 @@ Transfers only between identified holders: the tokenized-securities case,
 where transfer restriction is a legal requirement of the asset class, not a
 policy preference.
 
+!!! info "What is a security, and why can't it just be a token?"
+    A [security](../../finance-primer.md#security) is a tradable claim — a
+    share, a bond, a slice of a fund. Unlike ordinary goods, the law
+    regulates *who may hold it and how it may change hands*: a security sold
+    under a [private placement](../../finance-primer.md#private-placement)
+    exemption, for example, typically may only be resold to other eligible
+    investors. So "put the security on-chain" is never just minting a token:
+    the transfer rules are part of the asset. An unrestricted token *is not a
+    lawful representation* of such a security — which is why this case exists.
+
 ## 1. Actors & credential level
 
 - **Issuer** — the legal entity issuing the security (or its tokenization
@@ -26,11 +36,51 @@ policy preference.
   next to GLEIF. Only (a) is defensible today.
 - **QVIs / GLEIF** — as in every case: credential issuance roots.
 
+!!! info "Who is a transfer agent?"
+    For traditional securities, ownership is not proven by holding a paper —
+    it is whatever the official register says. The
+    [transfer agent / registrar](../../finance-primer.md#transfer-agent-registrar)
+    is the company legally responsible for that register: it records
+    transfers, freezes positions, executes
+    [court orders](../../finance-primer.md#court-ordered-seizure-freeze-forced-transfer),
+    and corrects errors. On-chain, the *recording* part becomes the
+    validator's job — but the *override* part (freeze, seizure) is a legal
+    duty that cannot be dissolved, which is why it reappears below as a
+    deliberate design feature.
+
+!!! info "Omnibus positions — the traditional retail workaround"
+    An [omnibus position](../../finance-primer.md#omnibus-position) is one
+    account in a broker's name that commingles many end clients; who owns
+    what appears only in the broker's private books. It is how retail
+    investors traditionally reach markets they cannot enter directly — and if
+    used here, the on-chain register would only ever show "Broker X holds
+    1,000,000 units," giving up exactly the holder-level transparency this
+    design promises. That is why option (b) above weakens the pitch.
+
 ## 2. Gated action & enforcement point
 
 Cardano native assets have **no transfer hook** — a bearer token in a wallet
 moves with a key signature and no script runs. Transfer restriction therefore
 requires the token to *never be a plain bearer asset*. Two mechanisms:
+
+!!! info "Register vs bearer — the key distinction of this whole page"
+    Two opposite ways to prove you own something
+    ([primer](../../finance-primer.md#register-vs-bearer-instrument)):
+
+    - **Bearer**: whoever holds it, owns it. Cash works this way — and so
+      does a plain Cardano native token sitting in a wallet.
+    - **Register**: whoever the official ledger *says* owns it, owns it.
+      Land works this way — possession of the house keys means nothing; the
+      land registry entry is the truth. Modern securities are almost all
+      register-based.
+
+    A plain token is a bearer instrument, and bearer instruments cannot
+    carry transfer restrictions — nothing runs when they move. So the two
+    designs below are the two possible escapes: **(a)** make the token
+    stop being a plain bearer asset (wrap it in a script that always runs),
+    or **(b)** stop pretending there is a bearer instrument at all and put
+    the *register itself* on-chain, exactly as securities law already
+    models it.
 
 **CIP-113 programmable tokens**: all programmable tokens sit at a **shared
 script address**; ownership is expressed by the **stake credential** of the
@@ -81,6 +131,33 @@ move outside the gate); issuer override = an oracle-signed corrective write
 are not assets); a single register UTxO serializes all transfers; the oracle
 liveness dependency sits on the critical path of every trade.
 
+```mermaid
+flowchart TB
+    subgraph VA["Variant (a) — CIP-113 wrapped token: the token moves, always through a script"]
+        direction TB
+        SU["Sender UTxO at shared script address<br/>owner = sender stake credential"]
+        TXA["Transfer transaction<br/>token moves sender → receiver"]
+        SV["vLEI-transfer substandard validator"]
+        RU["Receiver UTxO at shared script address<br/>owner = receiver stake credential"]
+        SU --> TXA --> SV --> RU
+    end
+
+    subgraph VB["Variant (b) — register-as-cage: nothing moves, the register is rewritten"]
+        direction TB
+        TXB["Transfer transaction<br/>one authorized cage write"]
+        W["debit sender leaf<br/>credit receiver leaf"]
+        CG["Register cage UTxO<br/>MPF trie: trie_key → position"]
+        TXB --> W --> CG
+    end
+
+    REGS["L1 AID registry + L2 TELs<br/>(CIP-31 reference inputs)"]
+    SV -->|"sender AND receiver:<br/>admitted? Active? unrevoked?"| REGS
+    TXB -->|"sender AND receiver:<br/>admitted? Active? unrevoked?"| REGS
+
+    style CG fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
+    style REGS fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
+```
+
 The variants are not exclusive: (b) as pilot register, (a) as the
 standards-track product.
 
@@ -109,12 +186,33 @@ standards-track product.
   for private placements only) are unresolved design work — a first-class
   limitation.
 
-## 5. Demand side
+!!! info "Why must the issuer be able to seize an asset it sold?"
+    Because courts can order it
+    ([primer](../../finance-primer.md#court-ordered-seizure-freeze-forced-transfer)):
+    in fraud, insolvency, inheritance, or sanctions proceedings, a judge can
+    rule that a holder's position be frozen or handed to someone else — and
+    the register keeper is legally obliged to execute the ruling. A "nobody
+    can ever touch your position" register is not censorship-resistant
+    finance; it is a register no regulated issuer may lawfully use. The
+    design's answer is to make the power *scoped and auditable*: the issuer
+    can freeze or move positions, visibly, under its own signed AID — but can
+    never fabricate an identity or forge a holder's consent.
+
+!!! info "Why is a public list of holders a problem?"
+    Position confidentiality is standard market practice for good commercial
+    reasons: a fund's holdings reveal its strategy (competitors can copy or
+    trade against it), a company quietly building a stake in another would be
+    front-run, and counterparties gain negotiating leverage from knowing your
+    book. Public markets *do* have disclosure rules (large shareholdings must
+    be declared) — but those are thresholds and deadlines, not a live public
+    feed of everyone's balance. An on-chain register that broadcasts
+    LEI → holdings in real time discloses far more than any regulation asks.
 
 The most commercially concrete case: tokenized private credit/funds/bonds is a
 live market, and **every** issuance needs transfer restriction to be lawful.
 Buyers: tokenization platforms and issuer-side agents (they pay for rails that
-reduce their per-venue KYC cost), not end holders. Regulatory basis: transfer
+reduce their per-venue [KYC](../../finance-primer.md#kyc-know-your-customer)
+cost), not end holders. Regulatory basis: transfer
 restrictions derive from securities exemptions (private-placement resale
 restrictions) and AML obligations of the *issuer/intermediaries* — the EU
 basis (MiFID II financial-instrument qualification of tokenized securities,
@@ -122,6 +220,27 @@ the DLT Pilot Regime, prospectus exemptions) **needs article-level citation
 before any regulatory claim enters these docs**. Smallest pilot: one private
 placement, one issuer, N institutional holders, variant (b) register +
 freeze/seize — no CIP-113 dependency, no retail, no DEX.
+
+!!! info "Decoding the demand paragraph"
+    - **Tokenized private credit / funds / bonds** — on-chain versions of
+      loans to companies, investment-fund shares, and tradable debt
+      ([primer](../../finance-primer.md#bond-fund-money-market-fund)); the
+      live corner of the [RWA](../../finance-primer.md#rwa-real-world-assets)
+      market, where tokenized money-market funds already exist on other
+      chains — every one of them transfer-restricted.
+    - **[Private placement](../../finance-primer.md#private-placement)** — a
+      sale to a small circle of professional investors, allowed with light
+      paperwork precisely *because* resale is restricted. The restriction is
+      the price of the exemption — remove it and the exemption collapses.
+      That is why the pilot is lawful only with the gate working.
+    - **The EU frameworks** — whether a given token legally *is* a security
+      ([MiFID II](../../finance-primer.md#mifid-ii-basel-iii-eidas-20-mica)
+      financial-instrument qualification), which disclosure exemptions apply
+      (prospectus rules), and under what sandbox on-chain settlement may
+      operate (the
+      [DLT Pilot Regime](../../finance-primer.md#dlt-pilot-regime)) — are
+      exactly the claims that need article-level citation before entering
+      these docs as assertions.
 
 ## 6. Case-specific risks/limitations
 
@@ -137,3 +256,15 @@ freeze/seize — no CIP-113 dependency, no retail, no DEX.
 - **Securities-law perimeter**: running the register/validator could itself be
   a regulated activity (transfer-agent/CSD-like) in some jurisdictions — legal
   review needed before any mainnet pilot.
+
+!!! info "The 'perimeter' risk, in plain words"
+    Financial regulation defines a *perimeter*: cross it, and you need a
+    license. Keeping the authoritative record of who owns a security is
+    inside that perimeter in most jurisdictions — it is what
+    [transfer agents](../../finance-primer.md#transfer-agent-registrar) and
+    [CSDs](../../finance-primer.md#csd-central-securities-depository)
+    (the institutions holding master registers for entire markets, like
+    Euroclear) are licensed to do. If the cardano-aid register *is* the
+    authoritative record, whoever operates it may be doing licensed activity
+    without a license. This is a question about the *operator's* legal
+    status, not about the code — hence "legal review before mainnet."

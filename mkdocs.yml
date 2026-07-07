@@ -39,6 +39,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - KERI Primer: keri-primer.md
+  - Finance Primer: finance-primer.md
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md

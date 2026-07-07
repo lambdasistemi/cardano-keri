@@ -4,16 +4,25 @@ A primer on the flagship use case: what a compliance gate is, why the current
 industry pattern is weak, and precisely which part of the problem cardano-aid
 solves. Companion to the [vLEI Bridge](vlei.md) use-case analysis.
 
+!!! tip "No finance background needed"
+    Every financial and institutional concept used here (securities, KYC/AML,
+    custody, allowlists, batchers, MEV…) is explained from zero in the
+    [Finance Primer](../finance-primer.md); identity concepts (AID, KEL,
+    ACDC) are in the [KERI Primer](../keri-primer.md).
+
 ## The problem the gate solves
 
 DeFi protocols are permissionless: any address can supply liquidity, borrow,
-or trade. That is precisely why regulated institutions — banks, funds,
-corporate treasuries — largely cannot use them. Their obligations (KYC/AML,
+or trade. That is precisely why regulated institutions —
+[banks, funds, corporate treasuries](../finance-primer.md#fund-desk-treasury)
+— largely cannot use them. Their obligations
+([KYC](../finance-primer.md#kyc-know-your-customer)/[AML](../finance-primer.md#aml-and-sanctions-screening),
 counterparty risk rules, transaction reporting) attach to *them*, not to the
 pool: an institution that trades against anonymous counterparties cannot
-demonstrate to its supervisor who it transacted with. For tokenized securities
-the constraint is harder still — securities law imposes transfer restrictions,
-so the *asset itself* must refuse to move to a non-eligible holder.
+demonstrate to its supervisor who it transacted with. For
+[tokenized securities](../finance-primer.md#security) the constraint is harder
+still — securities law imposes transfer restrictions, so the *asset itself*
+must refuse to move to a non-eligible holder.
 
 A **gate** is the mechanical answer: a check, enforced at execution time, that
 every counterparty in a transaction is an identified, currently-valid legal
@@ -23,10 +32,10 @@ every state transition passing the gate.
 ## The incumbent pattern and its three weaknesses
 
 The existing pattern is the **permissioned pool with an operator-run
-allowlist**: a company verifies documents off-chain and writes approved
-addresses to a list the contract checks. Aave Arc — a whitelisted pool with
-Fireblocks as the permissioning agent — is the canonical precedent; it saw
-little uptake.
+[allowlist](../finance-primer.md#allowlist)**: a company verifies documents
+off-chain and writes approved addresses to a list the contract checks. Aave
+Arc — a whitelisted pool with Fireblocks as the permissioning agent — is the
+canonical precedent; it saw little uptake.
 
 1. **The allowlist operator is a new trusted intermediary** — exactly what the
    chain was supposed to remove. It can censor, err, or disappear.
@@ -51,7 +60,8 @@ Each link is an [ACDC](https://github.com/WebOfTrust/ietf-acdc) — a signed,
 content-addressed (SAID) credential naming its issuer's AID and its subject's
 AID. A verifier can check the whole chain *offline*: hash the content, verify
 the issuer's signature, confirm the issuer's key was current, confirm nothing
-in the chain is revoked. The LEI is the identifier regulators already accept
+in the chain is revoked. The [LEI](../finance-primer.md#lei-and-gleif) is the
+identifier regulators already accept
 for entity identification. The crucial import: **the trust root is not
 cardano-aid and not the DeFi protocol — it is the existing regulatory
 identification infrastructure, made cryptographic.**
@@ -179,7 +189,8 @@ external gate on the on-chain stack.
       Protocols and institutions still own their AML processes; the gate
       shrinks the identity problem, not the whole obligation.
     - **"Regulation requires DeFi gating" is not a claim this project makes.**
-      MiFID II, Basel III, and eIDAS 2.0 (see [vLEI Bridge](vlei.md))
+      [MiFID II, Basel III, and eIDAS 2.0](../finance-primer.md#mifid-ii-basel-iii-eidas-20-mica)
+      (see [vLEI Bridge](vlei.md))
       establish machine-verifiable *entity identification*. The demand for
       gates comes from institutions' own obligations and from
       tokenized-securities transfer restrictions — not from a rule that says

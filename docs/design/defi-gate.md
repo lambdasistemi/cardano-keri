@@ -56,6 +56,10 @@ GLEIF (root of trust, self-signed)
       → OOR / ECR               (named officers, role-in-context)
 ```
 
+(The last level is simplified: OOR credentials are issued by the QVI under an
+LE-signed authorization credential, so a full role chain is four ACDCs — see
+the [factored core](business-cases/index.md).)
+
 Each link is an [ACDC](https://github.com/WebOfTrust/ietf-acdc) — a signed,
 content-addressed (SAID) credential naming its issuer's AID and its subject's
 AID. A verifier can check the whole chain *offline*: hash the content, verify
@@ -90,6 +94,10 @@ walks the chain:
 
 ### Gate flow
 
+The flow below shows the **direct-signing** case — the entity itself signs the
+gated action. On batcher-based DEXes the gated-action leg differs; see the
+correction box after the diagram.
+
 ```mermaid
 sequenceDiagram
     participant LE as Legal Entity
@@ -99,21 +107,21 @@ sequenceDiagram
     participant TEL as Issuer TELs (L2, ref input)
 
     Note over LE,TEL: Admission — once per entity per protocol
-    LE->>PB: vLEI credential chain (3 ACDCs)
+    LE->>PB: vLEI credential chain (full ACDC chain)
     PB->>Cage: admission tx: raw credentials + AID/TEL proofs
     Cage->>Reg: issuer key-states current?
     Cage->>TEL: chain unrevoked?
     Cage->>Cage: SAIDs + signatures verify (L3)
     Cage-->>LE: trie_key admitted (cached in cage)
 
-    Note over LE,TEL: Gated action — every swap / borrow / transfer
+    Note over LE,TEL: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
     LE->>Cage: action tx, signed with cur_key
     Cage->>Reg: trie_key Active? cur_pubkey matches signer?
     Cage->>TEL: still unrevoked (all TELs in chain)?
     Cage-->>LE: trade executes — identity check atomic with it
 ```
 
-An entity is **admitted** by one transaction carrying its full 3-hop
+An entity is **admitted** by one transaction carrying its full
 credential chain plus proofs — verified entirely by the script,
 permissionless, with no admission committee. Every subsequent gated action
 checks three cheap things atomically with the trade: the entity's signature
@@ -190,7 +198,7 @@ external gate on the on-chain stack.
       shrinks the identity problem, not the whole obligation.
     - **"Regulation requires DeFi gating" is not a claim this project makes.**
       [MiFID II, Basel III, and eIDAS 2.0](../finance-primer.md#mifid-ii-basel-iii-eidas-20-mica)
-      (see [vLEI Bridge](vlei.md))
+      — surveyed in [vLEI Bridge](vlei.md) —
       establish machine-verifiable *entity identification*. The demand for
       gates comes from institutions' own obligations and from
       tokenized-securities transfer restrictions — not from a rule that says

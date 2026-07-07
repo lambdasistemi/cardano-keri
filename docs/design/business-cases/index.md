@@ -33,8 +33,13 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
 2. **Hop bound 4, parameterized.** Three of four cases gate on the *role*
    credential (trader ECR, officer OOR, transfer-agent OOR), not the Legal
    Entity credential — LE root AIDs are board-custody multisig and never sign
-   operations. The 3-hop bound is wrong for the actual actors. Scope change to
-   [#31](https://github.com/lambdasistemi/cardano-aid/issues/31).
+   operations. The epic's linear picture (GLEIF → QVI → LE → Individual)
+   undercounts the real chain: per the
+   [vLEI schemas](https://github.com/WebOfTrust/vLEI/tree/main/schema/acdc),
+   OOR credentials are issued by the QVI and chain to the LE credential
+   through an LE-signed OOR-AUTH credential — **four ACDCs**; ECRs may also be
+   issued by the LE directly — three. Hence a bound of 4, parameterized. Scope
+   change to [#31](https://github.com/lambdasistemi/cardano-aid/issues/31).
 3. **Layer-3 verifier with both modes.** The cases split exactly 2/2: DeFi and
    security tokens *require* the admission cache (batch size limits; receiver
    checks); SPO delegation and institutional contracts *afford* full

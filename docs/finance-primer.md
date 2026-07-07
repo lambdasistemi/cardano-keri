@@ -225,8 +225,10 @@ is one of the enforcement points where an identity gate can bite.
 
 ### Batcher model
 
-On Cardano, a pool is one UTxO, and only one transaction can spend a UTxO per
-block — so users cannot all hit the pool directly. Instead a user locks an
+On Cardano, a pool is one UTxO, and a UTxO can be consumed by only one
+transaction — concurrent traders would all race to spend the same pool UTxO,
+and all but one would conflict. So users cannot hit the pool directly.
+Instead a user locks an
 **order** (an intent: "swap X for at least Y") at an order script, and an
 off-chain agent — the **batcher** — collects many orders and executes them
 against the pool in a single transaction *that the batcher signs*. The
@@ -283,7 +285,7 @@ authority, traditionally a certified board resolution. The vLEI **OOR
 credential** (Official Organizational Role) is that proof in cryptographic
 form; **ECR** (Engagement Context Role) is the narrower "authorized for this
 specific engagement" variant. This is why the case studies insist the *acting*
-credential is the role credential — the fourth hop in the chain — and never
+credential is the role credential — the last hop in the chain — and never
 the entity's root key.
 
 ### Omnibus position

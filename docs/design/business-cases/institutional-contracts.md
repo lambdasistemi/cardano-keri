@@ -46,11 +46,14 @@ engagement.
 This makes delegation-of-authority the *central* design question, not a parity
 footnote. Two distinct delegation concepts must not be conflated:
 
-- **Credential-level delegation (ACDC)**: the LE issues/receives OOR/ECR
-  credentials naming officers. Verifying "the signer is the CFO" is one more
-  hop in the ACDC chain (four hops: GLEIF → QVI → LE → OOR), which exceeds the
-  epic's 3-hop bound — the verifier's hop budget is a case-driven parameter,
-  not a constant.
+- **Credential-level delegation (ACDC)**: role credentials name officers —
+  OORs are issued by the QVI under an LE-signed OOR-AUTH credential; ECRs may
+  be issued by the LE directly (per the
+  [vLEI schemas](https://github.com/WebOfTrust/vLEI/tree/main/schema/acdc)).
+  Verifying "the signer is the CFO" therefore walks **four ACDCs** for an OOR
+  (QVI vLEI, LE vLEI, OOR-AUTH, OOR) — one more than the epic's linear 3-hop
+  picture (GLEIF → QVI → LE → Individual) — so the verifier's hop budget is a
+  case-driven parameter, not a constant.
 - **KERI-level delegation (`dip`/`drt`)**: the officer's *AID itself* is
   delegated from the LE's AID, with cooperative anchoring. This binds key
   custody, not role authority.

@@ -110,6 +110,16 @@ checks three cheap things atomically with the trade: the entity's signature
 against its *current* registered key, its AID status `Active`, and
 non-revocation across the chain's TELs.
 
+!!! danger "Correction from the case analysis"
+    The flow above shows the entity signing the gated action directly. On most
+    Cardano DEXes it does not — an off-chain **batcher** signs the executing
+    transaction (the batch), so the gate must instead verify a **detached
+    signature carried in the order datum**, checked when the batcher spends
+    the order. See the deeper
+    [Regulated DeFi case analysis](business-cases/regulated-defi.md) for the
+    corrected enforcement points (order validator, withdraw-zero pattern,
+    LP-token minting policy).
+
 !!! note "Open design decisions"
     Two parameters of this flow are proposed, not settled:
 

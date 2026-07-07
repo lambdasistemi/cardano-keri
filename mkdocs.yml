@@ -54,4 +54,10 @@ nav:
       - Super Watcher: design/super-watcher.md
       - vLEI Bridge: design/vlei.md
       - Regulated DeFi Gate: design/defi-gate.md
+  - Business Cases:
+      - Comparison & Factored Core: design/business-cases/index.md
+      - Regulated DeFi: design/business-cases/regulated-defi.md
+      - Identified SPO Delegation: design/business-cases/spo-delegation.md
+      - KYC Security Tokens: design/business-cases/security-tokens.md
+      - Institutional Contracts: design/business-cases/institutional-contracts.md
   - Vetting: vetting/index.md

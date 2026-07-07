@@ -15,6 +15,9 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
   Veridian/KERI bridge are not shipped runtime infrastructure in this repo.
 - **Design target:** on-chain-verifiable key-state operations using
   `blake2b_256`, Ed25519, MPF proofs, and MPFS cage/plugin composition.
+- **Delivery plan:** see the [Roadmap](roadmap.md) — five milestones building
+  the use-case-invariant core first (identity, verification, signing bridge),
+  each closed by a vertical E2E demo, with the business-case adapters last.
 
 ---
 

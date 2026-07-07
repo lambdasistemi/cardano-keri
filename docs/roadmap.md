@@ -8,6 +8,11 @@ verifier, and authorization machinery, and the business pick only selects a
 last-mile adapter. So the milestones build the common core first and defer the
 app choice to the last responsible moment.
 
+!!! tip "Slide deck"
+    A [milestones deck](milestones-deck/index.html) covers the same layout
+    for a technical-peer audience: pre-rotation, the layer stack, and each
+    milestone's vertical demo.
+
 !!! note "Issue links"
     Milestone and issue links on this page point to the project's
     [internal tracker](https://github.com/lambdasistemi/cardano-keri/issues)

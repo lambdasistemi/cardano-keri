@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e1217; --bg2:#141a22; --panel:#1a212b; --panel2:#212a35; --line:#2b333e;
+    --fg:#e9edf1; --muted:#9aa5b1; --dim:#69737f;
+    --accent:#5cb8b0; --accent2:#86cec7; --accent-dim:#325a56;
+    --warn:#d8a75f; --warn-dim:#6a5230; --danger:#d97b6b;
+    --t-title:56px; --t-sub:36px; --t-body:28px; --t-small:24px; --t-kicker:24px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#05070a; }
+  h1,h2,h3,p,ul,ol,li{ margin:0; padding:0; }
+  section{
+    box-sizing:border-box; display:flex; flex-direction:column;
+    padding:74px 100px 68px; background:var(--bg); color:var(--fg);
+    font-family:'IBM Plex Sans',system-ui,sans-serif; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  code{
+    font-family:'IBM Plex Mono',monospace; color:var(--accent2);
+    background:rgba(92,184,176,.09); border:1px solid rgba(92,184,176,.18);
+    padding:1px 7px; border-radius:5px; white-space:nowrap;
+  }
+  a{ color:var(--accent); text-decoration:none; }
+  a:hover{ color:var(--accent2); }
+</style>
+</helmet>
+
+<x-import component-from-global-scope="deck-stage" from="./deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
+
+  <!-- 1 · TITLE -->
+  <section data-label="Title" data-speaker-notes="Set the frame: this is dependency order, not a calendar. Substrate (MPFS plugin support) is shipped; everything above is research/design and prototypes." style="background:var(--bg2); justify-content:center; gap:0;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.2em; text-transform:uppercase; color:var(--accent); font-weight:500; margin-bottom:34px;">Milestones · deep dive</div>
+    <h1 style="font-size:96px; font-weight:600; line-height:1.0; letter-spacing:-0.02em;"><span style="font-family:'IBM Plex Mono',monospace; color:var(--accent2);">cardano-keri</span><span style="color:var(--dim); font-weight:400;"> — </span><span>Milestones</span></h1>
+    <p style="font-size:34px; color:var(--muted); margin-top:30px; max-width:1200px; line-height:1.4;">Self-certifying identities on Cardano, bridged to the Veridian&nbsp;/&nbsp;KERI ecosystem.</p>
+    <div style="margin-top:96px; padding-top:28px; border-top:1px solid var(--line); display:flex; gap:14px; align-items:baseline; font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim);">
+      <span style="color:var(--accent);">status</span>
+      <span>Research/design + prototypes&nbsp; ·&nbsp; substrate: shipped MPFS plugin support</span>
+    </div>
+  </section>
+
+  <!-- 2 · PRE-ROTATION -->
+  <section data-label="Pre-rotation" data-speaker-notes="The single mechanism the whole system rests on. Inception commits to the current key AND the hash of the next key. A stolen current key is useless for rotation because the thief does not know the pre-committed next key.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">The one idea</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:18px; letter-spacing:-0.01em;">Pre-rotation</h2>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:40px; margin-top:8px;">
+      <div style="display:flex; align-items:stretch; gap:0;">
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:34px 38px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:22px;">Incept</div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; gap:16px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; background:rgba(92,184,176,.12); border:1px solid var(--accent-dim); color:var(--accent2); padding:8px 16px; border-radius:8px;">key&nbsp;now</span><span style="color:var(--muted); font-size:26px;">the key you sign with today</span></div>
+            <div style="display:flex; align-items:center; gap:16px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; background:rgba(216,167,95,.10); border:1px dashed var(--warn-dim); color:var(--warn); padding:8px 16px; border-radius:8px;">H(next&nbsp;key)</span><span style="color:var(--muted); font-size:26px;">a commitment to the next key</span></div>
+          </div>
+        </div>
+        <div style="width:120px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+          <div style="font-size:40px; color:var(--accent);">→</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim);">rotate</div>
+        </div>
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:34px 38px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:22px;">Rotate</div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; gap:16px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; background:rgba(92,184,176,.12); border:1px solid var(--accent-dim); color:var(--accent2); padding:8px 16px; border-radius:8px;">reveal&nbsp;next&nbsp;key</span><span style="color:var(--muted); font-size:26px;">pre-image of the earlier commitment</span></div>
+            <div style="display:flex; align-items:center; gap:16px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; background:rgba(216,167,95,.10); border:1px dashed var(--warn-dim); color:var(--warn); padding:8px 16px; border-radius:8px;">H(next-next)</span><span style="color:var(--muted); font-size:26px;">commit the following key</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:30px 36px; font-size:30px; line-height:1.45;">
+        A thief who steals your <em style="font-style:normal; color:var(--accent2);">current</em> key cannot rotate your identity — they do not know the pre-committed next key.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · LAYER STACK -->
+  <section data-label="Layer stack" data-speaker-notes="Four layers. Every milestone maps onto this stack. Case adapters sit on top, greyed — the last mile, deferred.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">Architecture</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:18px; letter-spacing:-0.01em;">The layer stack</h2>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:16px; margin-top:8px;">
+      <div style="display:flex; align-items:center; gap:26px; background:transparent; border:1px dashed var(--line); border-radius:12px; padding:22px 30px; opacity:.55;">
+        <div style="width:120px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim);">top</div>
+        <div><div style="font-size:30px; font-weight:600;">Case adapters — the last mile</div><div style="font-size:24px; color:var(--muted); margin-top:6px;">deferred; each business pick selects one adapter</div></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:26px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:24px 30px;">
+        <div style="width:120px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); font-weight:600;">L4</div>
+        <div><div style="font-size:32px; font-weight:600;">KERI-wallet ↔ Cardano signing bridge</div></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:26px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:24px 30px;">
+        <div style="width:120px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); font-weight:600;">L3</div>
+        <div><div style="font-size:32px; font-weight:600;">Verification + authorization</div><div style="font-size:24px; color:var(--muted); margin-top:6px;">verifies credential chains (<code>ACDC</code>) · caches who's admitted (admission cage) · checks signed permission slips (envelope)</div></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:26px; background:var(--panel2); border:1px solid var(--accent-dim); border-radius:12px; padding:24px 30px;">
+        <div style="width:120px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); font-weight:600;">L1–2</div>
+        <div><div style="font-size:32px; font-weight:600;">Identity core</div><div style="font-size:24px; color:var(--muted); margin-top:6px;">on-chain key registry · replays identity &amp; revocation history (<code>KEL</code>/<code>TEL</code>)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · HEADLINE -->
+  <section data-label="Headline" data-speaker-notes="The load-bearing claim. Every case needs the same registry, verifier, and authorization machinery. The business pick only selects a last-mile adapter. So build the common core first; defer the app choice to the last responsible moment.">
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; max-width:1500px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500; margin-bottom:36px;">The headline result</div>
+      <h2 style="font-size:80px; font-weight:600; line-height:1.05; letter-spacing:-0.02em;">Most of the open work is <span style="color:var(--accent2);">use-case-invariant</span>.</h2>
+      <p style="font-size:32px; color:var(--muted); margin-top:40px; line-height:1.45; max-width:1300px;">Every business case needs the same identity registry, verifier, and authorization machinery. The business pick only selects a last-mile adapter.</p>
+      <div style="margin-top:52px; display:flex; align-items:baseline; gap:20px; padding-top:30px; border-top:1px solid var(--line);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; flex-shrink:0;">the bet</span>
+        <span style="font-size:32px; line-height:1.4;">Build the common core first; defer the app choice to the last responsible moment.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · MILESTONE MAP -->
+  <section data-label="Milestone map" data-speaker-notes="Five milestones in dependency order. The acceptance rule is the through-line of the whole deck: every milestone ships a vertical demo — usable and demoable end-to-end, recorded as a terminal cast. No E2E demo, not done.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">Overview</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:18px; letter-spacing:-0.01em;">Milestone map</h2>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:44px; margin-top:8px;">
+      <div style="display:flex; align-items:stretch; gap:14px;">
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:var(--accent);">M1</div><div style="font-size:26px; font-weight:600; line-height:1.2;">Identity core</div><div style="font-size:24px; color:var(--dim); font-family:'IBM Plex Mono',monospace;">L1–2</div></div>
+        <div style="display:flex; align-items:center; color:var(--accent); font-size:32px;">→</div>
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:var(--accent);">M2</div><div style="font-size:26px; font-weight:600; line-height:1.2;">Verification + authorization core</div><div style="font-size:24px; color:var(--dim); font-family:'IBM Plex Mono',monospace;">L3</div></div>
+        <div style="display:flex; align-items:center; color:var(--accent); font-size:32px;">→</div>
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:var(--accent);">M3</div><div style="font-size:26px; font-weight:600; line-height:1.2;">Signing bridge</div><div style="font-size:24px; color:var(--dim); font-family:'IBM Plex Mono',monospace;">L4</div></div>
+        <div style="display:flex; align-items:center; color:var(--accent); font-size:32px;">→</div>
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:var(--accent);">M4</div><div style="font-size:26px; font-weight:600; line-height:1.2;">Pilots</div><div style="font-size:24px; color:var(--dim); font-family:'IBM Plex Mono',monospace;">preprod, E2E</div></div>
+        <div style="display:flex; align-items:center; color:var(--accent); font-size:32px;">→</div>
+        <div style="flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:var(--accent);">M5</div><div style="font-size:26px; font-weight:600; line-height:1.2;">Case adapters & hardening</div><div style="font-size:24px; color:var(--dim); font-family:'IBM Plex Mono',monospace;">&nbsp;</div></div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:30px 36px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;">The acceptance rule</div>
+        <p style="font-size:30px; line-height:1.45;">Every milestone ships a <strong style="font-weight:600; color:var(--accent2);">vertical demo</strong> — an end-to-end slice, not useful but usable and demoable, recorded as a terminal cast. If it cannot be demoed E2E, the milestone is not done.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · M1 -->
+  <section data-label="M1 · Identity core" data-speaker-notes="The identity core. The KeyState shape is frozen into trie_key at inception, so it must be right from v1 — that is why the shape carries threshold and delegator fields even when most identities are 1-of-1.">
+    <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M1</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">Layers 1–2</span></div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Identity core</h2>
+    <div style="flex:1; display:grid; grid-template-columns:1.15fr 1fr; gap:44px; margin-top:34px;">
+      <div style="display:flex; flex-direction:column; gap:34px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;">Key state</div>
+          <p style="font-size:28px; line-height:1.4;">Each identity is an on-chain record (key-state UTxO) whose owner can rotate keys with no gatekeeper (permissionless pre-rotation). It holds a list of weighted signers with an m-of-n threshold (<code>KeyState</code>, weighted multisig) and reserves a slot for a controlling parent identity (<code>delegator</code>).</p>
+          <p style="font-size:24px; line-height:1.45; color:var(--muted); margin-top:12px;">Its shape is locked in when the identity is created — hashed into the identity's on-chain key (<code>trie_key</code>) — so it must be right in v1. A plain single-key identity is just the 1-of-1 case.</p>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;">Vetting</div>
+          <p style="font-size:28px; line-height:1.4;">Re-check the design docs against the agreed no-gatekeeper model (canonical permissionless model) before writing code — vetting gates implementation.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;">Reconstruction & lifecycle</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:20px;">
+          <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Rebuild an identity's full history off-chain from two anchored roots (dual-root reconstruction, <code>KEL</code> replay).</span></li>
+          <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Rules for migrating and retiring old state <span style="color:var(--muted); font-size:24px;">(legacy-leaf policy, End/GC restriction).</span></span></li>
+          <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>A per-issuer registry of which credentials are still valid <span style="color:var(--muted); font-size:24px;">(<code>TEL</code> revocation registry, MPF-backed).</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · M1 DEMO -->
+  <section data-label="M1 demo" data-speaker-notes="Acceptance test for M1, on a local devnet. The last step is the point: a stolen current key cannot rotate the identity.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--warn); font-weight:500;">Vertical demo · acceptance test</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">M1 — Identity core</h2>
+    <div style="flex:1; margin-top:30px; background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:16px 24px; background:var(--panel2); border-bottom:1px solid var(--line);">
+        <span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span>
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim); margin-left:14px;">local devnet · terminal cast</span>
+      </div>
+      <div style="flex:1; padding:34px 44px; display:flex; flex-direction:column; justify-content:center; gap:26px; font-family:'IBM Plex Mono',monospace;">
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">01</span><div><div style="font-size:28px;"><span style="color:var(--accent);">$</span> keri incept --threshold 2-of-3</div><div style="font-size:24px; color:var(--muted); margin-top:8px;"><span style="color:var(--accent2);">✓</span> inception committed · <code>KeyState</code> frozen into <code>trie_key</code></div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">02</span><div><div style="font-size:28px;"><span style="color:var(--accent);">$</span> leaf write --owner self</div><div style="font-size:24px; color:var(--muted); margin-top:8px;"><span style="color:var(--accent2);">✓</span> owned leaf written under the <code>AID</code></div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">03</span><div><div style="font-size:28px;"><span style="color:var(--accent);">$</span> keri rotate --self</div><div style="font-size:24px; color:var(--muted); margin-top:8px;"><span style="color:var(--accent2);">✓</span> rotated without the oracle · pre-committed next key revealed</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--warn); font-size:26px; font-weight:600;">04</span><div><div style="font-size:28px;"><span style="color:var(--accent);">$</span> keri rotate --key stolen-current</div><div style="font-size:24px; color:var(--danger); margin-top:8px;">✗ rejected · a stolen current key cannot rotate — next key unknown</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · M2 -->
+  <section data-label="M2 · Verification + auth" data-speaker-notes="The verification and authorization core. Verify the full chain once, then gate on a cheap lookup via the admission cage. The scoped-override knob: forging is impossible everywhere; scoped, issuer-AID-signed intervention is per-cage policy — explicit and auditable.">
+    <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M2</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">Layer 3</span></div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Verification + authorization core</h2>
+    <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:44px; margin-top:30px;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:18px;">Verify</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:22px;">
+          <li style="font-size:27px; line-height:1.38;">Check that a credential and everything it depends on is valid (<code>ACDC</code> chain verifier), up to four links deep and configurable (hop bound 4). <span style="color:var(--muted); font-size:24px;">An officer credential (OOR) chains through an extra authorization signed by the legal entity (LE-signed OOR-AUTH) — four credentials, not three; every credential in the chain must be un-revoked (all-<code>TEL</code>s cascade) and recent (minutes-grade freshness floor).</span></li>
+          <li style="font-size:27px; line-height:1.38;">Turn a verified credential into an on-chain proof (<code>ACDC</code> proof builder). <span style="color:var(--muted); font-size:24px;">Decode the wire format (<code>CESR</code>) and build the transaction witness (redeemer).</span></li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:18px;">Admit & authorize</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:20px;">
+          <li style="font-size:27px; line-height:1.38;">Verify the whole chain once, record who's allowed, then gate every later action on a cheap lookup (admission cage). <span style="color:var(--muted); font-size:24px;"><code>trie_key → {credential_saids, role_level, admitted_at, not_after}</code></span></li>
+          <li style="font-size:27px; line-height:1.38;">A signed permission slip authorizing one action — tied to a purpose, single-use, time-limited (detached-signature envelope, Option A: domain-separated, nonce- and validity-bounded), checked against the on-chain registry (L1). <span style="color:var(--muted); font-size:24px;">Forced by the DeFi batcher model; also works for ceremonies and cage writes.</span></li>
+          <li style="font-size:27px; line-height:1.38;">A per-gate switch for narrow emergency intervention (scoped-override knob). <span style="color:var(--muted); font-size:24px;">Forging is impossible anywhere; each cage can grant scoped, issuer-signed (issuer-<code>AID</code>) powers that are explicit, on-chain, and auditable.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · TWO MODES -->
+  <section data-label="Two verification modes" data-speaker-notes="Two modes, both shipped in M2 regardless of the business pick. The case only decides which mode a given gate uses.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">M2 · design choice</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Two verification modes</h2>
+    <div style="flex:1; display:flex; flex-direction:column; gap:28px; margin-top:30px;">
+      <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:28px;">
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:36px 38px; display:flex; flex-direction:column; gap:20px;">
+          <div style="font-size:32px; font-weight:600;">Full per-transaction verification</div>
+          <p style="font-size:27px; line-height:1.42; color:var(--muted);">Re-check the entire credential chain at every gated action (full <code>ACDC</code> verification).</p>
+          <div style="margin-top:auto; padding-top:20px; border-top:1px solid var(--line); font-size:24px; color:var(--dim);">Afforded by SPO delegation and institutional contracts.</div>
+        </div>
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:36px 38px; display:flex; flex-direction:column; gap:20px;">
+          <div style="font-size:32px; font-weight:600;">Admission cache</div>
+          <p style="font-size:27px; line-height:1.42; color:var(--muted);">Verify once, record admission, then gate later actions on a cheap lookup (admission cache).</p>
+          <div style="margin-top:auto; padding-top:20px; border-top:1px solid var(--line); font-size:24px; color:var(--dim);">Mandatory for regulated DeFi and security tokens.</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:24px 32px; font-size:26px; line-height:1.4; color:var(--muted);">Both modes ship in M2 regardless of the business pick — the case only decides which mode a given gate <em style="font-style:normal; color:var(--accent2);">uses</em>.</div>
+    </div>
+  </section>
+
+  <!-- 10 · M2 DEMO -->
+  <section data-label="M2 demo" data-speaker-notes="Acceptance test for M2 on a devnet: a synthetic 4-hop vLEI chain, both gate paths, a mid-chain revocation that blocks both, and a scoped freeze verb exercised and audited.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--warn); font-weight:500;">Vertical demo · acceptance test</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">M2 — Verification + authorization</h2>
+    <div style="flex:1; margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:16px 24px; background:var(--panel2); border-bottom:1px solid var(--line);">
+        <span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span>
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim); margin-left:14px;">devnet · terminal cast</span>
+      </div>
+      <div style="flex:1; padding:28px 44px; display:flex; flex-direction:column; justify-content:center; gap:20px; font-family:'IBM Plex Mono',monospace;">
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">01</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> verify --chain vlei-4hop</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> synthetic 4-hop <code>vLEI</code> chain valid on-chain · all <code>TEL</code>s non-revoked</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">02</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> gate A --mode full</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> admitted via full per-transaction verification</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">03</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> gate B --mode cache</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> admitted via admission cache (cheap lookup)</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--warn); font-size:26px; font-weight:600;">04</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> tel revoke --mid-chain</div><div style="font-size:24px; color:var(--danger); margin-top:6px;">✗ both paths blocked · cascade non-revocation fails</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">05</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> cage freeze --scoped</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> scoped freeze verb exercised · intervention audited on-chain</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · M3 -->
+  <section data-label="M3 · Signing bridge" data-speaker-notes="The signing bridge. Every case's actors keep keys in KERI wallets, not CIP-30 wallets. Producing order/transition-bound detached signatures programmatically is on every design's critical path. The one external gate: Veridian issuing F-prefix Blake2b-256 SAIDs — Plutus has no Blake3, so E-prefix SAIDs are a wall.">
+    <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M3</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">Layer 4</span></div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">KERI-wallet ↔ Cardano signing bridge</h2>
+    <p style="font-size:27px; line-height:1.4; color:var(--muted); margin-top:20px; max-width:1500px;">Every case's actors keep keys in KERI wallets, not <code>CIP-30</code> wallets; producing order/transition-bound detached signatures programmatically is on the critical path of every design.</p>
+    <div style="flex:1; display:grid; grid-template-columns:1.35fr 1fr; gap:44px; margin-top:30px;">
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:24px;">
+        <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Bridge core: produce those signed permission slips from a KERI wallet (detached signatures from Signify/Veridian), in the format Layer 3 expects (envelope spec).</span></li>
+        <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>A developer kit to build the request and its proof (intent/proof SDK).</span></li>
+        <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Track the one thing we don't control: Veridian must issue credential IDs in a hash format Cardano can verify (<code>F-prefix</code>, <code>Blake2b-256</code> <code>SAID</code>s). <span style="color:var(--muted); font-size:24px;">Plutus can't do Blake3, so the default IDs (<code>E-prefix</code> SAIDs) are a wall.</span></span></li>
+      </ul>
+      <div style="background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:30px 34px; align-self:center;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;">Sequencing</div>
+        <p style="font-size:28px; line-height:1.42;">M3 can start as soon as the envelope spec is drafted — it does not wait for all of M2.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · M3 DEMO -->
+  <section data-label="M3 demo" data-speaker-notes="Acceptance test for M3: a gated action authorized entirely from a KERI wallet, no CIP-30 anywhere, with a batcher-style third party submitting; plus replay, expiry, and rotated-key rejections.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--warn); font-weight:500;">Vertical demo · acceptance test</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">M3 — Signing bridge</h2>
+    <div style="flex:1; margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:16px 24px; background:var(--panel2); border-bottom:1px solid var(--line);">
+        <span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#3a434e;"></span>
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--dim); margin-left:14px;">devnet · terminal cast</span>
+      </div>
+      <div style="flex:1; padding:28px 44px; display:flex; flex-direction:column; justify-content:center; gap:20px; font-family:'IBM Plex Mono',monospace;">
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">01</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> keri-wallet authorize --action gated</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> detached signature produced from Signify/Veridian · no <code>CIP-30</code></div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--accent); font-size:26px; font-weight:600;">02</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> batcher submit --tx</div><div style="font-size:24px; color:var(--muted); margin-top:6px;"><span style="color:var(--accent2);">✓</span> third party submits · accepted against the Layer-1 registry</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--warn); font-size:26px; font-weight:600;">03</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> submit --replay</div><div style="font-size:24px; color:var(--danger); margin-top:6px;">✗ rejected · nonce already spent</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--warn); font-size:26px; font-weight:600;">04</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> submit --expired-envelope</div><div style="font-size:24px; color:var(--danger); margin-top:6px;">✗ rejected · validity window closed</div></div></div>
+        <div style="display:grid; grid-template-columns:44px 1fr; gap:24px; align-items:baseline;"><span style="color:var(--warn); font-size:26px; font-weight:600;">05</span><div><div style="font-size:27px;"><span style="color:var(--accent);">$</span> sign --key rotated-out</div><div style="font-size:24px; color:var(--danger); margin-top:6px;">✗ rejected · key not in current <code>KeyState</code></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · M4 PILOTS -->
+  <section data-label="M4 · Pilots" data-speaker-notes="The two cheapest pilots on the ladder, both reachable through counterparties already in the network. Both share a runway workstream that starts during M2 — that is the calendar-sensitive part.">
+    <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M4</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">preprod · end-to-end</span></div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Pilots</h2>
+    <div style="flex:1; display:flex; flex-direction:column; gap:26px; margin-top:26px;">
+      <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:28px;">
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:32px 34px; display:flex; flex-direction:column; gap:16px;">
+          <div style="font-size:30px; font-weight:600;">Identified SPO delegation</div>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
+            <li style="font-size:26px; line-height:1.35;">One credentialed stake-pool operator (QVI-credentialed SPO) plus one institutional delegator.</li>
+            <li style="font-size:26px; line-height:1.35;">A stake script that enforces the rule when stake is published (delegator stake script, <code>publish</code> handler).</li>
+            <li style="font-size:26px; line-height:1.35; color:var(--muted);">Every delegation certificate fully verified.</li>
+          </ul>
+        </div>
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:32px 34px; display:flex; flex-direction:column; gap:16px;">
+          <div style="font-size:30px; font-weight:600;">Institutional contracts</div>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
+            <li style="font-size:26px; line-height:1.35;">One treasury payout signed by identity-verified officers (disbursement ceremony, <code>vLEI</code>-verified signers).</li>
+            <li style="font-size:26px; line-height:1.35;">Contracts that step through defined states (state-machine spend validators).</li>
+            <li style="font-size:26px; line-height:1.35; color:var(--muted);">Every state transition fully verified.</li>
+          </ul>
+        </div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:24px 32px;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase;">Shared runway</span>
+        <span style="font-size:25px; line-height:1.4; color:var(--muted); margin-left:14px;">Starts during M2 — confirm counterparties, get them credentialed (QVI issuance), build credential fixtures, stand up preprod, and clear the F-prefix gate.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · M5 -->
+  <section data-label="M5 · Case adapters" data-speaker-notes="Demand-driven, after the pilots prove the core. The super watcher item is gated by a design pass: without Blake3/CESR builtins the burn proof is not trustless.">
+    <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M5</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">demand-driven</span></div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Case adapters & hardening</h2>
+    <p style="font-size:26px; color:var(--muted); margin-top:16px;">Demand-driven, after the pilots prove the core.</p>
+    <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:44px; margin-top:26px;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:18px;">Adapters</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:22px;">
+          <li style="font-size:27px; line-height:1.38;">Compliant (KYC) security tokens: use the token standard's extension or model the token itself as a gated pool. <span style="color:var(--muted); font-size:24px;">(<code>CIP-113</code> substandard and/or register-as-cage.)</span></li>
+          <li style="font-size:27px; line-height:1.38;">A compliance gate in front of DeFi trading (order gate + admission cage). <span style="color:var(--muted); font-size:24px;">Its real buyer — the real-world-asset (RWA) issuer — is the same customer as the security-token case.</span></li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:18px;">Hardening</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:22px;">
+          <li style="font-size:27px; line-height:1.38;">An economic penalty for misbehaving watchers (super watcher enforcement) — hardening, not pilot-critical, and blocked on a design decision. <span style="color:var(--muted); font-size:24px;">Without Blake3/<code>CESR</code> built into the chain the fraud proof isn't trustless (a malicious watcher could fake a divergence proof), so a challenge period or watcher-threshold scheme must be chosen first.</span></li>
+          <li style="font-size:27px; line-height:1.38;">Publish the validators as a reusable Aiken package, <span style="color:var(--muted); font-size:24px;">once M2 freezes the validator API.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · WHERE COMMON CODE ENDS -->
+  <section data-label="Where common code ends" data-speaker-notes="Nothing in M1–M3 depends on the business pick. verify_acdc_chain, the admission cage, and the signature envelope are libraries; the last-mile adapter is the first code that imports them with an opinion.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">The boundary</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Where the common code ends</h2>
+    <p style="font-size:27px; line-height:1.4; color:var(--muted); margin-top:18px; max-width:1550px;">Nothing in M1–M3 depends on the business pick. The chain verifier (<code>verify_acdc_chain</code>), the admission cage, and the signature envelope are shared libraries; the last-mile adapter is the first code that uses them with an opinion.</p>
+    <div style="flex:1; margin-top:28px; display:flex; flex-direction:column; border:1px solid var(--line); border-radius:14px; overflow:hidden;">
+      <div style="display:grid; grid-template-columns:1fr 1.25fr 1.15fr; background:var(--panel2); font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent);">
+        <div style="padding:20px 28px;">Case</div><div style="padding:20px 28px; border-left:1px solid var(--line);">Adapter validator</div><div style="padding:20px 28px; border-left:1px solid var(--line);">Case-local problem</div>
+      </div>
+      <div style="flex:1; display:grid; grid-template-columns:1fr 1.25fr 1.15fr; grid-auto-rows:1fr; font-size:26px;">
+        <div style="padding:22px 28px; border-top:1px solid var(--line); font-weight:600; display:flex; align-items:center;">Regulated DeFi</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">order/pool gate (withdraw-zero, batcher)</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">attributed order-flow privacy</div>
+        <div style="padding:22px 28px; border-top:1px solid var(--line); font-weight:600; display:flex; align-items:center;">SPO delegation</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">delegator stake script + identified-pools registry</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">delegation stickiness after revocation</div>
+        <div style="padding:22px 28px; border-top:1px solid var(--line); font-weight:600; display:flex; align-items:center;">Security tokens</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;"><code>CIP-113</code> substandard or register-as-cage</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">position privacy</div>
+        <div style="padding:22px 28px; border-top:1px solid var(--line); font-weight:600; display:flex; align-items:center;">Institutional contracts</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">state-machine templates + ceremony tooling</div><div style="padding:22px 28px; border-top:1px solid var(--line); border-left:1px solid var(--line); color:var(--muted); display:flex; align-items:center;">OOR churn / re-designation</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · DEPENDENCY SPINE -->
+  <section data-label="Dependency spine" data-speaker-notes="The spine is dependency order, not a calendar. Solid edges are internal sequencing; the only dashed node is the Veridian F-prefix SAID gate, the single external dependency, feeding M4. Sequencing, not scheduling.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">Dependencies</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Dependency spine</h2>
+    <div style="flex:1; display:flex; flex-direction:column; margin-top:12px;">
+      <svg viewBox="0 0 1720 600" style="width:100%; flex:1;" font-family="'IBM Plex Sans', sans-serif">
+        <defs>
+          <marker id="arw" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#5cb8b0"></path></marker>
+          <marker id="arwW" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#d8a75f"></path></marker>
+        </defs>
+        <!-- edges -->
+        <line x1="260" y1="230" x2="326" y2="230" stroke="#5cb8b0" stroke-width="5" marker-end="url(#arw)"></line>
+        <line x1="580" y1="212" x2="694" y2="104" stroke="#5cb8b0" stroke-width="5" marker-end="url(#arw)"></line>
+        <line x1="580" y1="248" x2="694" y2="356" stroke="#5cb8b0" stroke-width="5" marker-end="url(#arw)"></line>
+        <line x1="950" y1="104" x2="1124" y2="212" stroke="#5cb8b0" stroke-width="5" marker-end="url(#arw)"></line>
+        <line x1="950" y1="356" x2="1124" y2="248" stroke="#5cb8b0" stroke-width="5" marker-end="url(#arw)"></line>
+        <line x1="825" y1="486" x2="825" y2="426" stroke="#d8a75f" stroke-width="4" stroke-dasharray="9 7" marker-end="url(#arwW)"></line>
+        <!-- edge labels -->
+        <text x="612" y="150" fill="#86cec7" font-size="22" font-family="'IBM Plex Mono', monospace">envelope spec</text>
+        <text x="842" y="466" fill="#d8a75f" font-size="21" font-family="'IBM Plex Mono', monospace">external</text>
+        <!-- M1 -->
+        <g><rect x="10" y="178" width="250" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="34" y="222" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M1</text><text x="34" y="256" fill="#e9edf1" font-size="21">Identity core · L1–2</text></g>
+        <!-- M2 -->
+        <g><rect x="330" y="178" width="250" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="354" y="218" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M2</text><text x="354" y="248" fill="#e9edf1" font-size="20">Verification +</text><text x="354" y="272" fill="#e9edf1" font-size="20">authorization · L3</text></g>
+        <!-- M3 -->
+        <g><rect x="700" y="40" width="250" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="724" y="84" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M3</text><text x="724" y="118" fill="#e9edf1" font-size="21">Signing bridge · L4</text></g>
+        <!-- M4 -->
+        <g><rect x="700" y="316" width="250" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="724" y="360" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M4</text><text x="724" y="394" fill="#e9edf1" font-size="21">Pilots · preprod E2E</text></g>
+        <!-- M5 -->
+        <g><rect x="1130" y="178" width="260" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="1154" y="218" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M5</text><text x="1154" y="248" fill="#e9edf1" font-size="20">Case adapters</text><text x="1154" y="272" fill="#e9edf1" font-size="20">& hardening</text></g>
+        <!-- External gate -->
+        <g><rect x="640" y="486" width="370" height="90" rx="12" fill="none" stroke="#d8a75f" stroke-width="2" stroke-dasharray="9 7"></rect><text x="666" y="524" fill="#d8a75f" font-size="20" font-weight="600" font-family="'IBM Plex Mono', monospace">Veridian F-prefix SAID gate</text><text x="666" y="552" fill="#9aa5b1" font-size="19">the only external dependency</text></g>
+      </svg>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:18px; padding-top:22px; border-top:1px solid var(--line);">
+        <div style="display:flex; gap:36px; font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--muted);">
+          <span style="display:flex; align-items:center; gap:12px;"><span style="width:34px; height:0; border-top:4px solid var(--accent);"></span>solid = internal sequencing</span>
+          <span style="display:flex; align-items:center; gap:12px;"><span style="width:34px; height:0; border-top:3px dashed var(--warn);"></span>dashed = external dependency</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent);">Sequencing, not scheduling.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · TIMING CAVEATS -->
+  <section data-label="Timing caveats" data-speaker-notes="Two caveats. First: the app choice is a calendar decision before a code decision — QVI issuance for a real legal entity has weeks-to-months of lead time, so the pilot pick happens during M2. Second: a soft leak backwards — the scoped-override spec is written with all four verb families in view.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">Caveats</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Timing caveats</h2>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:36px; margin-top:8px;">
+      <div style="display:flex; gap:36px; align-items:flex-start;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:64px; font-weight:600; color:var(--accent-dim); line-height:1; flex-shrink:0;">1</div>
+        <div>
+          <div style="font-size:32px; font-weight:600; line-height:1.3;">The app choice is a calendar decision before it is a code decision.</div>
+          <p style="font-size:27px; line-height:1.45; color:var(--muted); margin-top:14px; max-width:1450px;">The pilots need credentialed counterparties, and getting a real legal entity credentialed (QVI issuance) has weeks-to-months of lead time. For M4 to start when M3 ends, the pilot pick and the counterparty conversation happen during M2.</p>
+        </div>
+      </div>
+      <div style="height:1px; background:var(--line);"></div>
+      <div style="display:flex; gap:36px; align-items:flex-start;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:64px; font-weight:600; color:var(--accent-dim); line-height:1; flex-shrink:0;">2</div>
+        <div>
+          <div style="font-size:32px; font-weight:600; line-height:1.3;">One soft leak backwards.</div>
+          <p style="font-size:27px; line-height:1.45; color:var(--muted); margin-top:14px; max-width:1450px;">The scoped-override verbs are motivated differently per case — freeze/seize vs signer re-designation vs admission expiry. The mechanism is common, but the spec is written with all four verb families in view so the knob does not hard-code one app's semantics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · THE BET, RESTATED -->
+  <section data-label="The bet, restated" data-speaker-notes="Close on the three-line bet. The footnote records what the canonical permissionless model retired: the staking-withdrawal-validator registry and the oracle-controlled registry — their surviving concerns live on in the key-state and scoped-override designs.">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">In closing</div>
+    <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">The bet, restated</h2>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:30px; margin-top:8px; max-width:1550px;">
+      <div style="display:flex; gap:26px; align-items:baseline;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); flex-shrink:0; width:56px;">01</span><p style="font-size:34px; line-height:1.4;">The core is <span style="color:var(--accent2);">use-case-invariant</span> — build it once.</p></div>
+      <div style="height:1px; background:var(--line);"></div>
+      <div style="display:flex; gap:26px; align-items:baseline;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); flex-shrink:0; width:56px;">02</span><p style="font-size:34px; line-height:1.4;">Every milestone is closed by an <span style="color:var(--accent2);">E2E demo</span> — the demo is the acceptance test.</p></div>
+      <div style="height:1px; background:var(--line);"></div>
+      <div style="display:flex; gap:26px; align-items:baseline;"><span style="font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--accent); flex-shrink:0; width:56px;">03</span><p style="font-size:34px; line-height:1.4;">The app choice is deferred to the <span style="color:var(--accent2);">last responsible moment</span> — and its runway starts early.</p></div>
+    </div>
+    <p style="font-size:24px; line-height:1.45; color:var(--dim); margin-top:20px; padding-top:22px; border-top:1px solid var(--line); max-width:1600px;">The staking-withdrawal-validator registry and the oracle-controlled registry were retired by the canonical permissionless model; their surviving concerns live on in the key-state and scoped-override designs.</p>
+  </section>
+
+</x-import>
+</x-dc>
+</body>
+</html>

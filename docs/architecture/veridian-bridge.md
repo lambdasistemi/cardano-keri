@@ -203,7 +203,7 @@ Redeemer — ValueWrite {
 }
 ```
 
-Value cages check both the identity root and the freeze root before authorizing writes. If an active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` exists, the write is rejected regardless of the native signer. See [Identity Operations — Emergency freeze](identity-ops.md#emergency-freeze) for the canonical `FreezeMarker` type definition.
+Value cages check both the identity root and the freeze root before authorizing writes. If an active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` exists, the write is rejected regardless of the native signer. See [Identity Operations — Freeze](identity-ops.md#freeze) for the canonical `FreezeMarker` type definition.
 
 ## Binding verification protocol
 

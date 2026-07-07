@@ -168,7 +168,7 @@ exercises L1+L2+L3 end-to-end.
     anyone's spreadsheet — that verifiability, not the yield itself, is what
     the institution is buying.
 
-## 6. Case-specific risks/limitations
+## 6. Case-specific risks & limitations
 
 - **Gates the delegator, not the pool**: an unidentified world continues
   delegating to anyone; value exists only if identified stake is commercially

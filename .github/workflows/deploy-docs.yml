@@ -10,6 +10,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  links:
+    name: Docs links
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links (external URLs + local fragments)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          nix run nixpkgs#lychee -- \
+            --no-progress \
+            --include-fragments \
+            --user-agent "Mozilla/5.0 (X11; Linux x86_64) cardano-aid-linkcheck" \
+            --max-retries 3 \
+            docs
+
   build:
     name: Docs build
     runs-on: nixos

@@ -11,9 +11,11 @@ The gated party is a **Legal Entity**
 but the acting party is almost never the entity's root AID. GLEIF's framework
 puts LE AIDs under multi-sig group control (board-level custody); nobody signs
 swap orders with a 2-of-3 board key. The realistic check target is therefore
-the **third hop: an
-[OOR/ECR credential](../../finance-primer.md#officer-and-why-oor-credentials-matter)**
-held by an individual trader or an operations service, chained LE → trader.
+the **role credential: an
+[OOR/ECR](../../finance-primer.md#officer-and-why-oor-credentials-matter)**
+held by an individual trader or an operations service, chained to the LE
+(for OORs via an LE-signed authorization credential — see the
+[factored core](index.md)).
 This makes the full chain verification (GLEIF → QVI → LE → ECR) load-bearing —
 a gate that stops at the LE credential either forces hot custody of a
 governance-grade key or silently degrades to "whoever holds the entity key,"
@@ -36,8 +38,10 @@ Integrators: the DeFi protocol (imports the verifier), the venue operator
 
 !!! info "What is a batcher, and why it changes everything"
     On a Cardano [DEX](../../finance-primer.md#dex-amm-liquidity-provider),
-    the trading pool is a single UTxO, and only one transaction can spend a
-    UTxO per block — so traders cannot all hit the pool directly. Instead a
+    the trading pool is a single UTxO, and a UTxO can be consumed by only one
+    transaction — concurrent traders would all race to spend the same pool
+    UTxO, and all but one would conflict. So traders cannot hit the pool
+    directly. Instead a
     trader posts an **order** ("swap X for at least Y") as a UTxO, like
     leaving a signed instruction slip in a tray. An off-chain agent — the
     **batcher** — periodically collects the slips and executes them against
@@ -80,7 +84,9 @@ sequenceDiagram
 Enforcement points, concretely: (a) the **pool/order spend validator**
 verifies the detached signature + admission proof per order; (b) for venues
 with many scripts, factor the identity check into a **withdraw-zero staking
-validator** (the CIP-112-documented pattern) so one script execution per
+validator** (a community pattern;
+[CIP-112](https://cips.cardano.org/cip/CIP-0112) proposes an `observe` script
+purpose to replace it) so one script execution per
 transaction covers all orders in a batch; (c) a **minting policy on
 [LP/position tokens](../../finance-primer.md#dex-amm-liquidity-provider)**
 gates position creation, which catches deposits even when order flow is
@@ -93,15 +99,19 @@ composed through
     lovelace** from a script-controlled staking credential, and the ledger
     must execute that script to approve the withdrawal. Spend validators then
     just check "the withdraw-zero script is present in this tx," so a batch
-    of 10 orders pays for one identity check instead of 10. Documented in
-    [CIP-112](https://cips.cardano.org/cip/CIP-0112).
+    of 10 orders pays for one identity check instead of 10. The trick is a
+    community idiom; [CIP-112](https://cips.cardano.org/cip/CIP-0112)
+    (*Observe Script Type*, status Proposed) documents it — as the workaround
+    it proposes to replace with a dedicated `observe` script purpose.
 
 ## 3. Design sketch
 
 On top of L1–L4:
 
 - **Admission cage per venue** (an MPFS instance):
-  `trie_key → AdmissionLeaf { credential_saids: [qvi, le, ecr], role_level, admitted_at, not_after }`.
+  `trie_key → AdmissionLeaf { credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after }`
+  (three or four SAIDs, depending on the role-credential issuance path — see
+  the [factored core](index.md)).
   The admission transaction carries the raw ACDCs + proofs; the L3 verifier
   runs the full chain on-chain; permissionless.
 - **Per-action check** (in batch execution): MPF membership proof of
@@ -122,7 +132,7 @@ On top of L1–L4:
 ## 4. Pressure on the open decisions
 
 - **Admission-cached vs per-tx**: hybrid is **mandatory**, not preferred. A
-  batch of 10 orders × 3 raw ACDCs (~1–2 KB each) cannot fit 16 KB transaction
+  batch of 10 orders × 3–4 raw ACDCs (~1–2 KB each) cannot fit 16 KB transaction
   limits; full per-transaction verification is arithmetically out. Admission
   on-chain once; per-order checks are proofs + one signature.
 - **KeyState parity**: **thresholds required at L1** (LE and QVI AIDs are
@@ -174,7 +184,7 @@ GLEIF/QVI chain (dev-issued F-prefix credentials, since real F-prefix vLEIs do
 not exist until Veridian ships the ask), demonstrating admission, gated batch
 execution, and revocation propagation end-to-end.
 
-## 6. Case-specific risks
+## 6. Case-specific risks & limitations
 
 !!! info "Why MEV is worse when traders are named"
     [MEV](../../finance-primer.md#mev) is the profit whoever *orders*

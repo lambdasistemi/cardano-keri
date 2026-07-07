@@ -208,6 +208,8 @@ standards-track product.
     feed of everyone's balance. An on-chain register that broadcasts
     LEI → holdings in real time discloses far more than any regulation asks.
 
+## 5. Demand side
+
 The most commercially concrete case: tokenized private credit/funds/bonds is a
 live market, and **every** issuance needs transfer restriction to be lawful.
 Buyers: tokenization platforms and issuer-side agents (they pay for rails that
@@ -242,7 +244,7 @@ freeze/seize — no CIP-113 dependency, no retail, no DEX.
       exactly the claims that need article-level citation before entering
       these docs as assertions.
 
-## 6. Case-specific risks/limitations
+## 6. Case-specific risks & limitations
 
 - **Retail is out of scope** until a personal-identity credential root exists
   — "KYC-gated security tokens" over-promises otherwise.

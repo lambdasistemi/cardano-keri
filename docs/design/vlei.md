@@ -30,7 +30,7 @@ Every credential in the chain is an ACDC. ACDCs are chained: the Legal Entity cr
 
 Three regulatory frameworks are converging on machine-verifiable legal entity identity:
 
-**[MiFID II](https://www.esma.europa.eu/regulation/trading/mifid-ii-and-mifir)** (Markets in Financial Instruments Directive) requires LEI codes on all financial transactions. vLEI extends this: instead of a human-readable code, the entity identity travels as a cryptographically signed credential in every transaction. Automated compliance becomes possible end-to-end.
+**[MiFID II](https://eur-lex.europa.eu/eli/dir/2014/65/oj)** (Markets in Financial Instruments Directive) requires LEI codes on all financial transactions. vLEI extends this: instead of a human-readable code, the entity identity travels as a cryptographically signed credential in every transaction. Automated compliance becomes possible end-to-end.
 
 **Basel III** (Bank for International Settlements counterparty risk framework) requires robust entity identification for counterparty exposure calculations. vLEI provides a non-repudiable, rotation-tracked proof of entity identity that survives mergers, re-incorporations, and key rotations.
 

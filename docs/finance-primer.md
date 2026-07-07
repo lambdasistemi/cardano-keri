@@ -49,7 +49,7 @@ legal property of the asset class, not a policy choice, and why the
 [security-tokens case](design/business-cases/security-tokens.md) picks a
 private placement as the smallest lawful pilot.
 
-### RWA — real-world assets
+### RWA: real-world assets
 
 Crypto-industry shorthand for tokenized versions of off-chain assets: funds,
 bonds, private credit, real estate. The "RWA issuer" is the legal entity that
@@ -73,7 +73,7 @@ This distinction drives the two design variants in the
 token so it can never move unchecked (bearer-style, restricted), or make the
 on-chain trie *be* the register (register-style — closest to legal reality).
 
-### Transfer agent / registrar
+### Transfer agent (registrar)
 
 The entity legally responsible for keeping the register: recording transfers,
 freezing positions, executing court orders, fixing errors. See the U.S.
@@ -83,7 +83,7 @@ On-chain, most of this role dissolves into the validator — but not the
 override powers (freeze, court-ordered seizure), which is why the
 security-tokens design deliberately reintroduces a scoped issuer power.
 
-### CSD — central securities depository
+### CSD: central securities depository
 
 The institution at the top of a market's settlement plumbing: it holds the
 master register for entire markets and settles trades between banks (e.g.
@@ -143,7 +143,7 @@ templates target.
 
 ## Compliance — the rules the actors live under
 
-### KYC — know your customer
+### KYC: know your customer
 
 The obligation of a regulated business to verify who its customer is before
 serving them (identity documents for people, registry extracts and ownership

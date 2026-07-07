@@ -43,7 +43,7 @@ Without this alignment, the bridge binding is unverifiable until first rotation 
 
 `canonical_next_pubkey_bytes` = the raw 32-byte Ed25519 public key, no CESR prefix, no encoding wrapper. Extract from the CESR key material by stripping the 1-byte derivation code and taking the following 32 bytes.
 
-**Test vector:**
+**Test vector** (input is the RFC 8032 Ed25519 Test 1 public key):
 
 ```
 next_pubkey_raw_bytes (hex):
@@ -51,14 +51,35 @@ next_pubkey_raw_bytes (hex):
 
 blake2b_256(next_pubkey_raw_bytes):
   next_digest (hex):
-  f4a778e87cb3d6e9c9ab6e6b59a2b0e1e7c8d2f1a3b5c7d9e0f1a2b3c4d5e6f7
+  7849ac3049680be1ef762efe0d36e01733c3464eb0c7c558138acf24bb263bd3
 
 CESR F-prefix qb64 encoding of next_digest (44 chars):
-  F9Kd46Hy026-mm5rm5orzh7x4tLxowtc2exeD7Gim3M
+  FHhJrDBJaAvh73Yu_g024Bczw0ZOsMfFWBOKzyS7JjvT
 
 KEL n field:
-  "n": "F9Kd46Hy026-mm5rm5orzh7x4tLxowtc2exeD7Gim3M"
+  "n": "FHhJrDBJaAvh73Yu_g024Bczw0ZOsMfFWBOKzyS7JjvT"
 ```
+
+Regenerate with:
+
+```sh
+printf 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a' \
+  | xxd -r -p | b2sum -l 256
+```
+
+```python
+import hashlib, base64
+raw = bytes.fromhex('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a')
+digest = hashlib.blake2b(raw, digest_size=32).digest()
+# CESR qb64 for a 1-char code over a 32-byte raw value:
+# prepend one zero pad byte, base64url-encode, replace the leading pad char with the code
+qb64 = 'F' + base64.urlsafe_b64encode(b'\x00' + digest).decode().rstrip('=')[1:]
+```
+
+Any SDK implementation MUST reproduce this vector exactly before shipping —
+the digest with the same Blake2b-256 the Cardano/Aiken path uses, the qb64
+with CESR pad semantics (the 43 chars after `F` are **not** a plain
+`base64url(digest)`).
 
 The `n` field in the KERI inception event carries this CESR-qualified value. Cardano stores only `next_digest` (the raw 32 bytes after decoding). The blake2b_256 hash is applied to `next_pubkey_raw_bytes` — never to the CESR-qualified string.
 
@@ -165,7 +186,7 @@ On-chain checks:
   2. absence_proof valid against current identity_root
   3. Ed25519(cur_pubkey, inc_msg, sig) valid
   4. ADA value >= deposit_amount
-  5. Insert trie_key → {cur_pubkey, next_digest, seq=0, cesr_aid}
+  5. Insert trie_key → IdentityLeaf { KeyState {cur_pubkey, next_digest, seq=0, cesr_aid, deposit}, status: Active }
 ```
 
 ### Rotation transaction
@@ -177,7 +198,8 @@ Redeemer — Rotation {
   trie_key       : ByteArray[32]  -- unchanged from inception
   reveal_key     : ByteArray[32]  -- the next_key from the previous step, now revealed
   new_next       : ByteArray[32]  -- blake2b_256(new_next_key)
-  sig            : ByteArray[64]  -- Ed25519(reveal_key, rot_msg)
+  sig            : ByteArray[64]  -- Ed25519(reveal_key, rot_msg); rot_msg is defined
+                                  -- normatively in Identity Operations — Rotation
   inclusion_proof               -- MPF proof trie_key → current KeyState
 }
 
@@ -186,7 +208,7 @@ On-chain checks:
   2. Ed25519(reveal_key, rot_msg, sig) valid
   3. inclusion_proof valid against current identity_root
   4. seq_to == cur_state.seq + 1
-  5. Update trie_key → {reveal_key, new_next, seq+1, cur_state.cesr_aid}
+  5. Update trie_key → IdentityLeaf { KeyState {reveal_key, new_next, seq+1, cur_state.cesr_aid, cur_state.deposit}, status: Active }
 ```
 
 ### Value-write transaction
@@ -203,7 +225,7 @@ Redeemer — ValueWrite {
 }
 ```
 
-Value cages check both the identity root and the freeze root before authorizing writes. If an active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` exists, the write is rejected regardless of the native signer. See [Identity Operations — Freeze](identity-ops.md#freeze) for the canonical `FreezeMarker` type definition.
+Value cages check both the identity root and the freeze root before authorizing writes. If an active `FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }` exists, the write is rejected regardless of the native signer. See [Identity Operations — Emergency freeze](identity-ops.md#emergency-freeze) for the canonical `FreezeMarker` type definition.
 
 ## Binding verification protocol
 

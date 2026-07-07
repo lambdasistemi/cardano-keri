@@ -2,7 +2,7 @@
 
 ## Single-UTxO throughput
 
-The identity registry is a single UTxO. Every inception and rotation transaction spends and recreates it, so at most one such transaction can land per block.
+The identity registry is a single UTxO. Every inception, rotation, close, and duplicity-freeze transaction spends and recreates it, so at most one such transaction can land per block. (Emergency freezes go to the separate low-contention freeze registry precisely to bypass this queue.)
 
 All in-flight [MPF](https://github.com/aiken-lang/merkle-patricia-forestry) inclusion and absence proofs are computed against the current identity root. When a block changes the root (inception or rotation), proofs computed before that block are stale and must be recomputed before resubmission.
 

@@ -1,48 +1,66 @@
 # Identity Operations
 
-There are four operations on the identity registry: inception, rotation, delete, and freeze. All are submitted by the oracle (company). Value-write authorization is covered in [Value Authorization](value-auth.md).
+There are five operations on the identity plane: inception, rotation, close,
+duplicity freeze, and emergency freeze. All are **permissionless** — each is
+authorized by cryptographic material alone (signatures, preimages, proofs),
+never by an operator key. Value-write authorization is covered in
+[Value Authorization](value-auth.md).
+
+All signed messages are canonical CBOR with domain separation — see
+[AID Model](../design/aid-model.md#cbor-determinism).
 
 ## Inception
 
-Registers a new identity. Requires off-chain coordination between the user and oracle; not permissionless.
+Registers a new identity. Anyone can incept by posting the ADA deposit and
+proving possession of the current key.
 
-**Off-chain handover:**
-
-1. User provides the oracle with: desired `name`, KERI KEL, and a self-auth signature
-2. Oracle verifies the KEL is valid, derives `trie_key` from the inception event:
-   ```
-   trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
-   ```
-3. Oracle submits the inception transaction
-
-**Self-auth message — signed by user off-chain, verified on-chain:**
+The registrant derives:
 
 ```
-inc_auth_msg = cbor({
-  domain     : "cardano-aid/inception/v1",
-  name       : ByteArray,
-  trie_key   : ByteArray[32],
-  oracle_pkh : ByteArray[28],
-  network_id : NetworkId
+trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
+```
+
+**Inception message — signed by the registrant, verified on-chain:**
+
+```
+inc_msg = cbor({
+  domain               : "cardano-aid/inception/v1",
+  network_id           : NetworkId,
+  registry_policy_id   : PolicyId,
+  registry_thread_token: AssetName,
+  trie_key             : ByteArray[32],
+  cur_pubkey           : ByteArray[32],
+  next_digest          : ByteArray[32],
+  cesr_aid             : ByteArray[32],   -- signed to prevent front-run metadata poisoning
+  identity_root        : ByteArray[32]
 })
 ```
 
-Binding `name` in the signed message prevents the oracle from registering the user under a different name. Binding `oracle_pkh` scopes the authorization to this specific registry.
+Binding the registry identity (`registry_policy_id` + thread token) scopes the
+authorization to this specific registry; binding `cesr_aid` inside the signed
+message prevents an adversary from copying in-flight inception material and
+substituting their own CESR AID (see
+[AID Model — inception security](../design/aid-model.md#inception-security-two-attacks-different-fixes)).
 
 **On-chain checks:**
-1. Oracle key in `tx.signatories`
-2. Absence proof: `name` not yet in trie
-3. `Ed25519.verify(cur_pubkey, inc_auth_msg, user_sig)` — user consented to this registration
-4. New root pushed onto sliding window (oldest dropped if over depth)
+
+1. `trie_key == blake2b_256(cbor({cur_pubkey, next_digest}))`
+2. Absence proof: `trie_key` not in trie (any leaf — including `Closed` and
+   `FrozenFatal` tombstones — blocks re-registration)
+3. `Ed25519.verify(cur_pubkey, inc_msg, sig)`
+4. ADA value locked `>= deposit_amount`, recorded in `KeyState.deposit`
+5. New root pushed onto the sliding window (oldest dropped if over depth)
 
 **Resulting leaf:**
+
 ```
-name → IdentityLeaf {
+trie_key → IdentityLeaf {
   key_state: KeyState {
     cur_pubkey  = cur_pubkey
     next_digest = next_digest
     seq         = 0
-    cesr_aid    = cesr_aid    -- metadata only, not verified
+    cesr_aid    = cesr_aid    -- metadata only, never verified on-chain
+    deposit     = deposit
   }
   status: Active
 }
@@ -50,68 +68,125 @@ name → IdentityLeaf {
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Veridian)
-    participant O as Oracle (company)
+    participant U as Owner (Veridian)
     participant N as Cardano Node
     participant S as Registry Script
 
     U->>U: Generate cur_pubkey, next_pubkey
     U->>U: next_digest = blake2b_256(next_pubkey)
     U->>U: trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
-    U->>U: inc_auth_msg = cbor({domain, name, trie_key, oracle_pkh, network_id})
-    U->>U: user_sig = Ed25519.sign(cur_key, inc_auth_msg)
-    U->>O: name + KEL + user_sig
-    O->>O: Verify KEL, derive trie_key
-    O->>N: Submit inception tx (oracle signs)
+    U->>U: sig = Ed25519.sign(cur_key, inc_msg)
+    U->>N: Submit inception tx (deposit + redeemer)
     N->>S: Execute registry script
-    S->>S: Check oracle key in signatories
-    S->>S: Check absence proof for name
-    S->>S: Check Ed25519.verify(cur_pubkey, inc_auth_msg, user_sig)
+    S->>S: Check trie_key derivation
+    S->>S: Check absence proof for trie_key
+    S->>S: Check Ed25519.verify(cur_pubkey, inc_msg, sig)
+    S->>S: Check deposit locked
     S->>S: Insert leaf, push new root to window
-    S-->>O: Identity registered
+    S-->>U: Identity registered
 ```
 
 ## Rotation
 
-The oracle mirrors a KERI rotation event on-chain. Only the oracle can submit rotations; the user has no direct Cardano write access after inception.
+Advances the key-state by revealing the pre-committed next key and committing
+to a new one. The `trie_key` never changes.
 
-**Trigger:** oracle's KERI watcher observes a rotation event in the user's KEL. The event reveals `next_key` (now public) and commits to a new `new_next_key`.
+**Rotation message — this is the normative definition:**
+
+```
+rot_msg = cbor({
+  domain               : "cardano-aid/rotation/v1",
+  network_id           : NetworkId,
+  registry_policy_id   : PolicyId,
+  registry_thread_token: AssetName,
+  trie_key             : ByteArray[32],
+  reveal_key           : ByteArray[32],   -- the previously committed next key, now revealed
+  new_next             : ByteArray[32],   -- blake2b_256(new next key)
+  seq_to               : Int              -- must equal cur_state.seq + 1
+})
+```
 
 **On-chain checks:**
-1. Oracle key in `tx.signatories`
-2. Inclusion proof: `name → leaf` where `leaf.status == Active`
-3. `blake2b_256(reveal_key) == leaf.key_state.next_digest` — reveal binds to commitment
-4. `seq_to == leaf.key_state.seq + 1` — monotonic
+
+1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
+2. `blake2b_256(reveal_key) == leaf.key_state.next_digest` — reveal binds to commitment
+3. `seq_to == leaf.key_state.seq + 1` — monotonic
+4. `Ed25519.verify(reveal_key, rot_msg, sig)` — possession of the next key,
+   binding the **new** commitment
 
 **Resulting leaf:**
+
 ```
-name → IdentityLeaf {
+trie_key → IdentityLeaf {
   key_state: KeyState {
     cur_pubkey  = reveal_key
-    next_digest = new_next_digest
-    seq         = cur_state.seq + 1
+    next_digest = new_next
+    seq         = seq_to
     cesr_aid    = cur_state.cesr_aid   -- unchanged
+    deposit     = cur_state.deposit    -- unchanged
   }
   status: Active
 }
 ```
 
-The oracle cannot fabricate a rotation: without knowing the preimage of `next_digest`, the check `blake2b_256(reveal_key) == next_digest` cannot be satisfied.
+!!! danger "Why the preimage check alone is not authorization"
+    `reveal_key` stops being secret the moment the owner rotates in KERI — it
+    is published in the KEL. If the on-chain check were only
+    `blake2b_256(reveal_key) == next_digest`, anyone reading the witness
+    network could submit a Cardano rotation carrying the real `reveal_key`
+    and an **attacker-chosen** `new_next`, capturing the identity at the next
+    step. Check 4 closes this: the signature over `rot_msg` proves possession
+    of the next *private* key and binds the new commitment the owner actually
+    chose.
 
-## Delete
+## Close
 
-Removes the identity from the registry. Used for normal offboarding (employee leaves the company). No fraud proof required.
+Retires the identity and returns the deposit. This is the owner's exit; no
+operator exists who could offboard an identity or block the owner from
+leaving.
+
+**Close message:**
+
+```
+close_msg = cbor({
+  domain               : "cardano-aid/close/v1",
+  network_id           : NetworkId,
+  registry_policy_id   : PolicyId,
+  registry_thread_token: AssetName,
+  trie_key             : ByteArray[32],
+  refund_address       : Address        -- where the deposit goes
+})
+```
+
+Binding `refund_address` prevents whoever assembles the transaction from
+redirecting the deposit.
 
 **On-chain checks:**
-1. Oracle key in `tx.signatories`
-2. Inclusion proof: `name → leaf`
-3. `name` removed from trie, new root pushed to window
 
-## Freeze
+1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
+2. `Ed25519.verify(leaf.key_state.cur_pubkey, close_msg, sig)`
+3. Deposit paid to `refund_address`
+4. Leaf status updated to `Closed`, new root pushed to window
 
-Records a permanent duplicity proof in the trie leaf. The oracle submits this when it observes the user publishing two conflicting KERI rotation events at the same `seq` — a protocol violation that cannot be retracted.
+**Tombstone semantics.** The leaf is **not removed** — it remains in the trie
+with status `Closed` forever. Consequences:
+
+- The `trie_key` can never be re-registered (the inception absence proof
+  fails against a tombstone), so "a `trie_key` is registered at most once"
+  holds over the registry's whole lifetime.
+- A `close_msg` is inherently single-use: it verifies only against an
+  `Active` leaf, so no nonce or counter is needed.
+- Value cages reject `Closed` leaves (status check), so closing revokes
+  value-write authority at the same instant.
+
+## Duplicity freeze
+
+Records a permanent duplicity proof in the trie leaf: the identity holder
+published two conflicting KERI events at the same `seq` — a protocol
+violation that cannot be retracted.
 
 **DuplicityProof:**
+
 ```
 DuplicityProof {
   event_1 : ByteArray    -- first conflicting rotation event bytes
@@ -123,80 +198,108 @@ DuplicityProof {
 ```
 
 **On-chain checks:**
-1. Oracle key in `tx.signatories`
-2. Inclusion proof: `name → leaf` where `leaf.status == Active`
-3. `proof.seq == leaf.key_state.seq`
-4. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_1, proof.sig_1)`
-5. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_2, proof.sig_2)`
-6. `proof.event_1 != proof.event_2`
-7. Leaf updated to `FrozenFatal(proof)`, new root pushed to window
 
-**Resulting leaf:**
+1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
+2. `proof.seq == leaf.key_state.seq`
+3. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_1, proof.sig_1)`
+4. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_2, proof.sig_2)`
+5. `proof.event_1 != proof.event_2`
+6. Leaf updated to `FrozenFatal(proof)`, new root pushed to window
+
+There is no unfreeze path for `FrozenFatal`. The duplicity proof is
+permanently embedded in the trie and publicly inspectable. Value cages that
+encounter a `FrozenFatal` leaf reject the authorization. The deposit stays
+locked — a duplicitous identity does not get its bond back.
+
+!!! note "Open decision: who may submit"
+    Submission is specified here as **permissionless**: the proof is
+    self-authenticating (two verifying signatures by the identity's own
+    current key over conflicting events), so nothing is gained by gating it,
+    and no invalid freeze can pass. An earlier oracle-mediated draft required
+    an operator key as DDoS protection; in the permissionless model, proof
+    validity is the spam defense. Revisit if fee-level griefing proves real.
+
+## Emergency freeze
+
+The fast compromise-response channel, and the canonical definition of the
+`FreezeMarker`. It lives in the **separate freeze registry** so a response to
+key theft never queues behind inception/rotation traffic on the main
+registry (see
+[Veridian Bridge — synchronization lag](veridian-bridge.md#synchronization-lag)).
+
+Scenario: `cur_key` is stolen. The thief can authorize value-writes until the
+owner's rotation lands. The owner holds the *next* key — the thief does not
+(pre-rotation) — so possession of the next key is what authorizes the freeze.
+
+**FreezeMarker — stored in the freeze registry trie:**
+
 ```
-name → IdentityLeaf {
-  key_state: <unchanged>
-  status: FrozenFatal { event_1, sig_1, event_2, sig_2, seq }
+FreezeMarker {
+  trie_key        : ByteArray[32]
+  seq             : Int             -- the key-state sequence being frozen
+  cur_pubkey_hash : ByteArray[28]   -- blake2b_224 of the compromised current key
+  next_digest     : ByteArray[32]   -- the commitment the freeze signature proved
 }
 ```
 
-There is no unfreeze path for `FrozenFatal`. The duplicity proof is permanently embedded in the trie and publicly inspectable. Value cages that encounter a `FrozenFatal` leaf reject the authorization.
-
-The oracle must hold the key (DDoS protection) but cannot freeze without a machine-verifiable proof. An oracle that refuses to freeze a provably malicious identity has verifiably misbehaved — the proof is public.
-
-## Self-remove
-
-The user can remove themselves from the registry without oracle cooperation. This is the escape hatch when the oracle refuses to mirror a KERI rotation — leaving a stale `cur_pubkey` active while the user's real key has moved on.
-
-Self-removal is signed by the **on-chain `cur_pubkey`** — the key already in the trie leaf. The user must retain the private key for this until either the oracle mirrors their rotation or they have self-removed.
-
-**Self-remove message:**
+**Freeze message:**
 
 ```
-self_remove_msg = cbor({
-  domain     : "cardano-aid/self-remove/v1",
-  name       : ByteArray,
-  oracle_pkh : ByteArray,
-  network_id : NetworkId,
-  nonce_utxo : TxOutRef    -- a UTxO consumed in this transaction
+freeze_msg = cbor({
+  domain             : "cardano-aid/freeze/v1",
+  network_id         : NetworkId,
+  freeze_policy_id   : PolicyId,
+  freeze_thread_token: AssetName,
+  trie_key           : ByteArray[32],
+  seq                : Int
 })
 ```
 
-The `nonce_utxo` is a UTxO the user spends in the same transaction. Since a UTxO can only be spent once, the signed message is inherently single-use — no counter or validity window needed.
+**On-chain checks (freeze registry script):**
 
-**On-chain checks — no oracle key required:**
-1. Inclusion proof: `name → leaf`
-2. `nonce_utxo ∈ tx.inputs`
-3. `Ed25519.verify(leaf.key_state.cur_pubkey, self_remove_msg, sig)`
-4. `name` removed from trie, new root pushed to window
+1. Identity registry as CIP-31 reference input: inclusion proof
+   `trie_key → leaf`, `leaf.status == Active`
+2. `blake2b_256(reveal_key) == leaf.key_state.next_digest` — the signer holds
+   the pre-committed next key
+3. `Ed25519.verify(reveal_key, freeze_msg, sig)`
+4. `marker.seq == leaf.key_state.seq`
+5. Marker inserted at `trie_key`, new freeze root published
 
-**Trust balance:**
-- Oracle controls entry — inclusion, name binding, rotation mirroring
-- User controls exit — self-removal via on-chain `cur_pubkey`, oracle cannot block
+**Expiry is automatic.** The marker freezes one sequence number. Value cages
+treat a marker as active only while `marker.seq == key_state.seq`; once the
+owner's on-chain rotation lands (`seq` advances), the marker is spent
+evidence, not a live freeze. No unfreeze transaction exists or is needed.
 
-Using `cur_pubkey` (not `next_key`) is deliberate: after a KERI rotation the old `next_key` is public in the KEL, making a `next_key`-based self-removal griefable by anyone who reads the witness network.
+Value cages MUST check the freeze registry (absence of an active marker)
+alongside the identity registry — see
+[Value Authorization](value-auth.md) and the redeemer shape in
+[Veridian Bridge](veridian-bridge.md#value-write-transaction).
 
 ## AID lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active: Inception<br/>(oracle submits, user self-auth)
-    Active --> Active: Rotation<br/>(oracle mirrors KEL)
-    Active --> Deleted: Delete<br/>(oracle offboards)
-    Active --> Deleted: Self-remove<br/>(user, cur_pubkey sig + nonce UTxO)
-    Active --> FrozenFatal: Freeze<br/>(oracle + DuplicityProof)
-    Deleted --> [*]
+    [*] --> Active: Inception<br/>(self-auth sig + deposit)
+    Active --> Active: Rotation<br/>(preimage + rot_msg sig)
+    Active --> Closed: Close<br/>(cur_pubkey sig, deposit returned)
+    Active --> FrozenFatal: Duplicity freeze<br/>(DuplicityProof)
 
     note right of FrozenFatal
-        Leaf remains in trie as
-        permanent audit record.
+        Tombstone. Permanent audit record.
         All value-write auth rejected.
-        No unfreeze path.
+        Deposit stays locked. No unfreeze.
     end note
 
-    note right of Deleted
-        Self-remove requires user to
-        retain cur_key private key
-        until oracle mirrors rotation
-        or self-remove is submitted.
+    note right of Closed
+        Tombstone. trie_key can never
+        be re-registered. Value-write
+        auth rejected from this point.
+    end note
+
+    note left of Active
+        An emergency FreezeMarker
+        (separate registry) suspends
+        value-writes for the current seq
+        and dissolves when rotation lands.
     end note
 ```

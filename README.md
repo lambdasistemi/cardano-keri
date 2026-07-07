@@ -16,7 +16,11 @@ This repository builds a minimal on-chain identity registry that:
 
 ## Documentation
 
-The design and architecture docs are an MkDocs site rooted at
+The rendered documentation site:
+
+<https://lambdasistemi.github.io/cardano-keri/>
+
+The same content lives in the repository as an MkDocs site rooted at
 [`docs/index.md`](docs/index.md). Start there, or go straight to:
 
 - [`docs/roadmap.md`](docs/roadmap.md) — milestone layout and overall plan
@@ -32,9 +36,21 @@ The design and architecture docs are an MkDocs site rooted at
 - `offchain/` — Haskell library and test-vector generator
 - `specs/` — per-issue specifications
 - `docs/` — MkDocs documentation site
+- `vetting/`, `claude/`, `codex/` — adversarial cross-model design analyses
+- `discussion.md`, `system-discussion.md` — running design discussions
+
+## Building
+
+- `onchain/`: `aiken build` and `aiken check`
+- `offchain/`: `nix build .#checks.x86_64-linux.unit-tests` (or enter
+  `nix develop` for a GHC shell); `cabal run gen-vectors` regenerates the
+  Aiken test vectors
 
 ## Status
 
-Identity foundation in progress (dual-root cage landed); verification and
-signing-bridge layers planned. See the [roadmap](docs/roadmap.md) — every
-milestone closes with a runnable end-to-end demo.
+Work is planned in five GitHub
+[milestones](https://github.com/lambdasistemi/cardano-keri/milestones):
+identity core, verification + authorization core, KERI-wallet ↔ Cardano
+signing bridge, preprod pilots, and case adapters. The identity foundation
+is in progress (dual-root cage landed); every milestone closes with a
+runnable end-to-end demo — see the [roadmap](docs/roadmap.md).

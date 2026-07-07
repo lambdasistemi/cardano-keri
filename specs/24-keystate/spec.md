@@ -59,7 +59,8 @@ Out of scope, with stated boundaries:
 
 ```aiken
 pub type WeightedKeyDigest {
-  key_digest : ByteArray   -- blake2b_256(raw Ed25519 pubkey), 32 bytes
+  key_digest : ByteArray   -- blake2b_256(qb64(pubkey)), 32 bytes —
+                           -- KEL-aligned, see "KERI alignment"
   weight     : Int         -- >= 1
 }
 
@@ -79,7 +80,9 @@ A `KeySet` stores **per-key digests, not raw keys**. Rationale:
    introducing a second one.
 2. **KEL recomputability at seq 0** (`docs/design/aid-model.md`, "Seq-0
    binding gap"). KERI inception events expose the *next* commitment as
-   per-key digests plus a threshold — never raw next keys. If the Cardano
+   per-key digests plus a threshold — never raw next keys (verified: ToIP
+   KERI spec, "Next key digest list field" — `n` is "a list of strings that
+   are each a fully qualified digest of a public key"). If the Cardano
    commitment is a digest over `{threshold, per-key digests}`, an off-chain
    verifier can recompute it from public KEL data at seq 0. A digest over raw
    keys would be unverifiable until first rotation.
@@ -89,7 +92,8 @@ A `KeySet` stores **per-key digests, not raw keys**. Rationale:
 Satisfaction rule (used by every operation):
 
 > A set of signatures satisfies a `KeySet` iff each signature verifies under
-> a raw key whose `blake2b_256` equals a distinct `key_digest` in the set,
+> a raw key whose qualified digest — `blake2b_256(qb64(key))`, see "KERI
+> alignment" — equals a distinct `key_digest` in the set,
 > the signature list is indexed strictly increasing (no duplicates), and the
 > sum of the matched `weight`s is `>= threshold`.
 
@@ -103,6 +107,61 @@ inception `cur_set`, rotation reveal):
 - `keys` non-empty, no duplicate `key_digest` (duplicate digests would let
   one key's weight count twice)
 - `length(keys) <= max_keys` (Q2)
+
+### KERI alignment (v1, normative)
+
+Verified against the ToIP KERI specification
+(https://trustoverip.github.io/tswg-keri-specification/), 2026-07-07.
+
+**Next commitment shape.** The KEL exposes the next commitment as the `n`
+field — a list of fully qualified digests of public keys — plus the `nt`
+threshold; never raw next keys ("Next key digest list field"). The seq-0
+recomputability premise of this spec holds.
+
+**Digest preimage.** A KEL next-key digest is computed over the **CESR
+text-domain qualified form (qb64) of the public key, not its raw bytes**.
+Established by cryptographically reproducing the spec's own worked example:
+all three `n` entries of the example inception event equal
+`E‑code(blake3_256(qb64(key)))`, and none equals
+`E‑code(blake3_256(raw key))` (three exact-match test vectors). Therefore v1
+defines
+
+```
+qb64(k)    = "D" ++ b64url(0x00 ++ k)[1..]    -- 44 ASCII chars, code "D"
+key_digest = blake2b_256(qb64(k))
+```
+
+so that, under F-prefix (Blake2b-256) KEL digests, `key_digest` equals the
+KEL `n` entry's raw digest value byte-for-byte, and `next_digest` is
+recomputable from public KEL data at seq 0. A digest over raw key bytes
+would break this permanently: at seq 0 the raw next keys are secret, so no
+off-chain mapping could bridge the two digest families. On-chain preimage
+checks (inception I4, rotation R4) reconstruct `qb64(raw_key)` from the
+supplied raw key before digesting — a fixed 33-byte-to-44-char Base64url
+encoding, constant cost per signature. The #23 pattern (digest committed,
+raw key supplied per-operation with a preimage check) is unchanged; only the
+preimage moves from the raw key to its qualified form.
+
+**Threshold forms and the v1 mapping.** `kt`/`nt` are either a hex-encoded
+non-negative integer, or a *fractionally weighted threshold*: a list of one
+or more clauses of rational fractions, logically ANDed, each clause
+satisfied when the weights corresponding to verified signatures sum to at
+least 1; a weight may itself be a nested weighted list ("Fractionally
+weighted threshold"). v1 maps the KERI subset onto `KeySet`
+deterministically:
+
+| KERI form | v1 `KeySet` |
+|---|---|
+| hex integer `m`, key list length `n` | `n` keys of weight 1, `threshold = m` |
+| single clause `[f1..fn]`, no nesting, all `fi > 0` | reduce each `fi` to lowest terms, `L = lcm(denominators)`; `weight_i = fi·L`, `threshold = L`; no further reduction |
+| multi-clause, nested, or zero weights | **out of v1 scope** — the SDK refuses to incept or mirror; clause support is a v2 `KeySet` shape behind a new version tag |
+
+The single-clause mapping is exact (a clause sums to ≥ 1 iff the scaled
+integer weights sum to ≥ L — rational arithmetic, no rounding) and canonical
+(reduce-then-lcm makes `keyset_commit` independent of how the source wrote
+equivalent fractions). Zero weights occur in KERI only in reserve/custodial
+rotation patterns, which v1 also excludes (see the KERI subset restriction
+under Rotation).
 
 ### KeySet commitment
 
@@ -248,7 +307,8 @@ On-chain checks:
 3. Absence proof: `trie_key` not in the trie — any leaf, including `Closed`
    and `FrozenFatal` tombstones, blocks (re-)registration.
 4. Signatures satisfy `cur_set` over `inc_msg` (satisfaction rule): each
-   `(index, raw_key, sig)` has `blake2b_256(raw_key) == keys[index].key_digest`,
+   `(index, raw_key, sig)` has
+   `blake2b_256(qb64(raw_key)) == keys[index].key_digest`,
    indices strictly increasing, `Ed25519.verify(raw_key, inc_msg, sig)`,
    matched weights sum `>= threshold`.
 5. Deposit locked `>= deposit_amount`, recorded in `KeyState.deposit`.
@@ -287,7 +347,7 @@ On-chain checks:
    see attack A5.
 3. `seq_to == leaf.key_state.seq + 1`.
 4. Signatures satisfy `reveal_set_digests` over `rot_msg`: for each signing
-   `(index, raw_key, sig)`, `blake2b_256(raw_key) ==
+   `(index, raw_key, sig)`, `blake2b_256(qb64(raw_key)) ==
    reveal_set_digests.keys[index].key_digest`, indices strictly increasing,
    Ed25519 verifies, weights sum `>= reveal_set_digests.threshold`. The
    threshold met is the one **pre-committed in the previous event** — the
@@ -300,6 +360,18 @@ On-chain checks:
 
 Pre-rotation preserved: theft of every raw current key (a full quorum) yields
 neither the preimage of `next_digest` nor signatures under the next set.
+
+**KERI subset restriction (verified: ToIP spec, "Indexed signatures";
+"Partial, Reserve, and Custodial rotations").** A full KERI rotation event
+must satisfy *two* thresholds — the prior next threshold over the prior next
+key digest list *and* the new current signing threshold over the rotation
+event's own key list, which KERI allows to differ from the pre-committed set
+(reserve/custodial rotations may add keys or change weights at rotation
+time). v1 pins `cur_set := reveal_set_digests` — the new current set *is*
+the pre-committed set — so the two KERI thresholds coincide and check R4
+satisfies both. Consequence: KELs using reserve/custodial rotation are
+outside the v1 mirror scope; the SDK refuses them, like the threshold forms
+excluded in "KERI alignment".
 
 ## Interaction with #23 (cage `Modify`)
 
@@ -427,15 +499,20 @@ Per constitution II, all cross-layer vectors come from `offchain`
 
 ## Open questions
 
-- **Q1 — KERI weighted-threshold mapping.** KERI expresses signing thresholds
-  (`kt`/`nt`) including *fractional weighted* forms; this spec uses integer
-  weights with an integer threshold. The bundled doc corpus has no KERI
-  sources, so the exact KEL field semantics (per-key next digests, next
-  threshold encoding) are stated here from design intent, **unverified
-  against the KERI spec**. Before freezing v1: verify against
-  https://trustoverip.github.io/tswg-keri-specification/ and decide the
-  integer-weight mapping (e.g. common-denominator scaling) so the seq-0
-  recomputability claim holds byte-for-byte.
+- **Q1 — KERI weighted-threshold mapping. RESOLVED (2026-07-07).** Verified
+  against the ToIP KERI specification, including cryptographically
+  reproducing the spec's worked next-key-digest examples. Results are
+  normative in "KERI alignment": per-key digests + threshold confirmed; the
+  digest preimage is the **qb64 qualified key** — this changed `key_digest`
+  from `blake2b_256(raw)` to `blake2b_256(qb64(key))`; integer and
+  single-clause fractional thresholds map exactly via reduce-then-lcm
+  scaling; multi-clause, nested, and zero-weight forms plus
+  reserve/custodial rotations are declared out of v1 scope. Residuals:
+  (a) byte alignment of `n` entries requires F-prefix (Blake2b-256) KEL
+  digests — the external gate already tracked as #42, now known to cover
+  next-key digests as well as SAIDs; (b) the qb64-preimage convention was
+  verified on E-prefix (Blake3) vectors and should be spot-checked for
+  F-prefix codes in keripy/Signify when #41 lands.
 - **Q2 — `max_keys` bound.** Needs the exec-unit measurement from acceptance
   item 7; proposal: freeze the bound in the validator (not just the SDK) so
   an over-long set cannot brick rotation against the budget.

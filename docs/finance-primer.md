@@ -22,7 +22,7 @@ What makes securities special is that nearly every jurisdiction regulates who
 may issue them, who may buy them, and how they may change hands. That is why
 "put a security on a blockchain" is never just a token drop — the transfer
 rules come with the asset. See the U.S. regulator's plain-language
-introduction: https://www.investor.gov/introduction-investing
+[introduction to investing (investor.gov)](https://www.investor.gov/introduction-investing).
 
 ### Bond, fund, money-market fund
 
@@ -40,7 +40,9 @@ one of them restricts who may hold it.
 Selling a security directly to a small circle of professional investors
 instead of the general public. Regulators allow this with far lighter
 paperwork (in the EU, exemptions from the prospectus — the heavyweight public
-disclosure document: https://eur-lex.europa.eu/eli/reg/2017/1129/oj) — but in
+disclosure document governed by the
+[Prospectus Regulation (EU) 2017/1129](https://eur-lex.europa.eu/eli/reg/2017/1129/oj))
+— but in
 exchange the security typically **cannot be freely resold**: transfers are
 restricted to other eligible investors. This is why transfer restriction is a
 legal property of the asset class, not a policy choice, and why the
@@ -75,7 +77,8 @@ on-chain trie *be* the register (register-style — closest to legal reality).
 
 The entity legally responsible for keeping the register: recording transfers,
 freezing positions, executing court orders, fixing errors. See the U.S.
-regulator's description: https://www.sec.gov/about/divisions-offices/division-trading-markets/transfer-agents
+regulator's
+[transfer-agent glossary entry (investor.gov)](https://www.investor.gov/introduction-investing/investing-basics/glossary/transfer-agents).
 On-chain, most of this role dissolves into the validator — but not the
 override powers (freeze, court-ordered seizure), which is why the
 security-tokens design deliberately reintroduces a scoped issuer power.
@@ -84,8 +87,9 @@ security-tokens design deliberately reintroduces a scoped issuer power.
 
 The institution at the top of a market's settlement plumbing: it holds the
 master register for entire markets and settles trades between banks (e.g.
-Euroclear, or the ECB's T2S platform:
-https://www.ecb.europa.eu/paym/target/t2s/html/index.en.html). Mentioned in
+Euroclear, or the
+[ECB's T2S settlement platform](https://www.ecb.europa.eu/paym/target/t2s/html/index.en.html)).
+Mentioned in
 the case studies because operating a securities register can make *you* look
 like a CSD or transfer agent to a regulator — the "securities-law perimeter"
 risk.
@@ -105,8 +109,9 @@ is why the *acting* credential is always a role credential
 **Settlement** is the actual exchange of asset for payment after a trade is
 agreed. **DvP — delivery versus payment** — means the two legs happen
 atomically: you cannot end up having paid without receiving, or delivered
-without being paid (the risk otherwise is called settlement risk; see the BIS
-principles: https://www.bis.org/cpmi/publ/d101.htm). A blockchain transaction
+without being paid (the risk otherwise is called settlement risk; see the
+[BIS Principles for Financial Market Infrastructures](https://www.bis.org/cpmi/publ/d101.htm)).
+A blockchain transaction
 is naturally DvP — both legs in one atomic transaction — which is a genuine
 advantage the [institutional-contracts case](design/business-cases/institutional-contracts.md)
 builds on.
@@ -122,8 +127,8 @@ fires — no neutral *party* needed, only a neutral *script*.
 
 A **repurchase agreement**: party A sells securities to party B and commits to
 buying them back later at a slightly higher price — economically a
-collateralized short-term loan. A workhorse of interbank finance (see ICMA's
-explainer: https://www.icmagroup.org/market-practice-and-regulatory-policy/repo-and-collateral-markets/)
+collateralized short-term loan. A workhorse of interbank finance (see
+[ICMA's repo and collateral markets explainer](https://www.icmagroup.org/market-practice-and-regulatory-policy/repo-and-collateral-markets/))
 and a natural fit for a multi-transition contract state machine
 (open → roll → close).
 
@@ -142,8 +147,10 @@ templates target.
 
 The obligation of a regulated business to verify who its customer is before
 serving them (identity documents for people, registry extracts and ownership
-structure for companies). The global standard-setter is the FATF:
-https://www.fatf-gafi.org/en/topics/fatf-recommendations.html — but note
+structure for companies). The global standard-setter is the FATF; in the EU
+the customer-due-diligence rules are codified in the
+[Anti-Money-Laundering Regulation (EU) 2024/1624](https://eur-lex.europa.eu/eli/reg/2024/1624/oj)
+— but note
 carefully: the obligation sits on the *regulated business*, never on the
 blockchain. cardano-aid does not perform KYC; QVIs do, when they issue
 credentials.
@@ -153,7 +160,7 @@ credentials.
 **Anti-money-laundering**: the wider duty to monitor, detect and report
 suspicious flows — an ongoing process, not a one-time identity check.
 **Sanctions screening**: checking counterparties against government blocklists
-(e.g. the EU sanctions map: https://www.sanctionsmap.eu) that change on a
+(e.g. the [EU sanctions map](https://www.sanctionsmap.eu)) that change on a
 day's notice. The case studies repeatedly state that registry freshness is
 "minutes-grade, never sanctions-screening-grade": an on-chain gate can prove
 *who* someone is, but real-time blocklist compliance remains an off-chain
@@ -163,8 +170,8 @@ institutional process.
 
 The **Legal Entity Identifier** is a 20-character global company ID, created
 by the G20 after the 2008 crisis so that regulators could finally answer "who
-is exposed to whom." **GLEIF** is the foundation that operates the system:
-https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei
+is exposed to whom." **GLEIF** is the foundation that operates the system —
+see [GLEIF's introduction to the LEI](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei).
 The **vLEI** is GLEIF's cryptographic upgrade of the LEI — the credential
 chain at the heart of this project (see [vLEI Bridge](design/vlei.md)). When
 the docs say "the trust root regulators already accept," this is it.
@@ -175,10 +182,10 @@ The four regulatory frameworks named in these docs, in one line each:
 
 | Framework | One-liner | Reference |
 |---|---|---|
-| **MiFID II** | EU rulebook for investment services and trading venues; requires LEIs on transaction reports | https://www.esma.europa.eu/trading/mifid-ii-and-mifir |
-| **Basel III** | Global bank-capital standards; banks must identify counterparty exposure robustly | https://www.bis.org/bcbs/basel3.htm |
-| **eIDAS 2.0** | EU digital-identity regulation; member states must offer identity wallets | https://digital-strategy.ec.europa.eu/en/policies/eudi-regulation |
-| **MiCA** | EU regulation of crypto-asset services and issuers | https://eur-lex.europa.eu/eli/reg/2023/1114/oj |
+| **MiFID II** | EU rulebook for investment services and trading venues; requires LEIs on transaction reports | [Directive 2014/65/EU (EUR-Lex)](https://eur-lex.europa.eu/eli/dir/2014/65/oj) · [ESMA rulebook](https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mifid-ii) |
+| **Basel III** | Global bank-capital standards; banks must identify counterparty exposure robustly | [Basel III (BIS)](https://www.bis.org/bcbs/basel3.htm) |
+| **eIDAS 2.0** | EU digital-identity regulation; member states must offer identity wallets | [EU Digital Identity framework (European Commission)](https://digital-strategy.ec.europa.eu/en/policies/eudi-regulation) |
+| **MiCA** | EU regulation of crypto-asset services and issuers | [Regulation (EU) 2023/1114 (EUR-Lex)](https://eur-lex.europa.eu/eli/reg/2023/1114/oj) |
 
 !!! warning "These are identification frameworks, not gating mandates"
     None of these say "DeFi must gate." They establish that machine-verifiable
@@ -187,7 +194,9 @@ The four regulatory frameworks named in these docs, in one line each:
 
 ### DLT Pilot Regime
 
-An EU regulation (https://eur-lex.europa.eu/eli/reg/2022/858/oj) creating a
+An EU regulation
+([Regulation (EU) 2022/858 (EUR-Lex)](https://eur-lex.europa.eu/eli/reg/2022/858/oj))
+creating a
 sandbox in which market infrastructure for *tokenized* securities may operate
 with tailored exemptions — the current EU on-ramp for anything resembling an
 on-chain securities register.
@@ -239,7 +248,8 @@ economic failure mode of the gated-pool precedent.
 **Maximal extractable value**: profit whoever orders transactions (block
 producers, batchers) can extract by sequencing, inserting, or censoring them —
 e.g. front-running a large pending order. Background reading:
-https://ethereum.org/en/developers/docs/mev/ — it appears in these docs
+[ethereum.org's MEV documentation](https://ethereum.org/en/developers/docs/mev/)
+— it appears in these docs
 because attributed order flow makes MEV *worse*: front-running "a wallet" is a
 statistic, front-running "a named bank's order flow" is a targeted strategy.
 

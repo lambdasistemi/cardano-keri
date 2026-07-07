@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Cardano.AID.Cage.Sign (valueWriteMessage)
+import Cardano.KERI.AID.Cage.Sign (valueWriteMessage)
 import Cardano.Crypto.DSIGN
     ( SignKeyDSIGN
     , deriveVerKeyDSIGN

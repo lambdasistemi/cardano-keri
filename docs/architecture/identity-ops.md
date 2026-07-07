@@ -24,7 +24,7 @@ trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
 
 ```
 inc_msg = cbor({
-  domain               : "cardano-aid/inception/v1",
+  domain               : "cardano-keri/inception/v1",
   network_id           : NetworkId,
   registry_policy_id   : PolicyId,
   registry_thread_token: AssetName,
@@ -95,7 +95,7 @@ to a new one. The `trie_key` never changes.
 
 ```
 rot_msg = cbor({
-  domain               : "cardano-aid/rotation/v1",
+  domain               : "cardano-keri/rotation/v1",
   network_id           : NetworkId,
   registry_policy_id   : PolicyId,
   registry_thread_token: AssetName,
@@ -149,7 +149,7 @@ leaving.
 
 ```
 close_msg = cbor({
-  domain               : "cardano-aid/close/v1",
+  domain               : "cardano-keri/close/v1",
   network_id           : NetworkId,
   registry_policy_id   : PolicyId,
   registry_thread_token: AssetName,
@@ -246,7 +246,7 @@ FreezeMarker {
 
 ```
 freeze_msg = cbor({
-  domain             : "cardano-aid/freeze/v1",
+  domain             : "cardano-keri/freeze/v1",
   network_id         : NetworkId,
   freeze_policy_id   : PolicyId,
   freeze_thread_token: AssetName,

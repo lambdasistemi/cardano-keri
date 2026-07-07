@@ -1,5 +1,5 @@
 {
-  description = "cardano-aid Haskell library (Ed25519 + CESR, wasm-portable)";
+  description = "cardano-keri Haskell library (Ed25519 + CESR, wasm-portable)";
   nixConfig = {
     extra-substituters = [ "https://cache.iog.io" ];
     extra-trusted-public-keys =
@@ -42,7 +42,7 @@
           };
 
           project = pkgs.haskell-nix.cabalProject' {
-            name = "cardano-aid";
+            name = "cardano-keri";
             src = ./.;
             compiler-nix-name = "ghc9123";
             modules = [ fix-libs ];
@@ -50,7 +50,7 @@
           };
 
           unit-tests =
-            project.hsPkgs.cardano-aid.components.tests.unit-tests;
+            project.hsPkgs.cardano-keri.components.tests.unit-tests;
 
         in {
           packages.unit-tests = unit-tests;

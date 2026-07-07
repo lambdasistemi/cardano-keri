@@ -21,7 +21,7 @@ use types.{
 }
 
 /// Domain tag for value-write authorization messages.
-const value_write_domain: ByteArray = "cardano-aid/value-write/v1"
+const value_write_domain: ByteArray = "cardano-keri/value-write/v1"
 
 validator mpfCage(_version: Int) {
   mint(redeemer: MintRedeemer, policyId: PolicyId, tx: Transaction) {

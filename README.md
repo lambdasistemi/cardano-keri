@@ -1,4 +1,4 @@
-# cardano-aid
+# cardano-keri
 
 KERI-style self-certifying identifiers (AIDs) on Cardano.
 

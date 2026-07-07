@@ -24,7 +24,7 @@ test accept_owner_signed() {
     #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
   let owner_sig =
-    #"dbdbbfaaae26c1b8045ed68c1012ebb632d1e36c249f6299e2ecc95e6060d807a1e6aa4468e246d978d449b213eb2e71dffd8ddb2b4983f7ab4c9d766a912608"
+    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
   let identity_root =
     #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
   let tx_id =
@@ -49,7 +49,7 @@ test reject_bad_sig() {
     #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let tx_id =
     #"dededededededededededededededededededededededededededededededede"
-  let domain = "cardano-aid/value-write/v1"
+  let domain = "cardano-keri/value-write/v1"
   let msg =
     blake2b_256(
       domain
@@ -69,7 +69,7 @@ test reject_wrong_key() {
     #"0000000000000000000000000000000000000000000000000000000000000000"
   let tx_id =
     #"dededededededededededededededededededededededededededededededede"
-  let domain = "cardano-aid/value-write/v1"
+  let domain = "cardano-keri/value-write/v1"
   let msg =
     blake2b_256(
       domain
@@ -77,7 +77,7 @@ test reject_wrong_key() {
         |> bytearray.concat(#"0000"),
     )
   let sig =
-    #"dbdbbfaaae26c1b8045ed68c1012ebb632d1e36c249f6299e2ecc95e6060d807a1e6aa4468e246d978d449b213eb2e71dffd8ddb2b4983f7ab4c9d766a912608"
+    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
 
   // sig is valid for owner_key but wrong_key should reject it
   !verify_ed25519_signature(wrong_key, msg, sig) && verify_ed25519_signature(

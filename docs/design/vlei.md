@@ -48,9 +48,9 @@ Three regulatory frameworks are converging on machine-verifiable legal entity id
 
 ---
 
-## How cardano-aid is the bridge layer
+## How cardano-keri is the bridge layer
 
-A GLEIF vLEI Legal Entity credential is anchored to a KERI AID managed by the entity's authorized controllers. cardano-aid maps that KERI AID to a Cardano registry entry, creating a bilateral binding:
+A GLEIF vLEI Legal Entity credential is anchored to a KERI AID managed by the entity's authorized controllers. cardano-keri maps that KERI AID to a Cardano registry entry, creating a bilateral binding:
 
 ```
 GLEIF vLEI chain (off-chain KERI)
@@ -64,7 +64,7 @@ The binding is established at inception by the bridge's [digest agility requirem
 
 Once registered, the legal entity's Cardano `trie_key` is stable across all subsequent key rotations. A Cardano smart contract that authorizes the entity at `trie_key` continues to work after the entity rotates its signing key — it reads the live `KeyState` from the registry reference input and sees the current `cur_pubkey`.
 
-The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains the root of trust for credential issuance. cardano-aid adds Cardano-specific guarantees on top: exact slot ordering, structural duplicity prevention, and smart contract composability.
+The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains the root of trust for credential issuance. cardano-keri adds Cardano-specific guarantees on top: exact slot ordering, structural duplicity prevention, and smart contract composability.
 
 ---
 
@@ -76,7 +76,7 @@ A DeFi protocol or securities issuance platform can gate entry to a value cage b
 
 **What Cardano adds:** the gate check is atomic with the transaction. There is no race between the allowlist update and the transaction inclusion. The cage either sees the authorized key-state or it does not.
 
-This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md) — covering the incumbent allowlist pattern, the full gate flow (on-chain admission rather than the off-chain admission described above), cardano-aid's bounded role, and the honest limits of gating.
+This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md) — covering the incumbent allowlist pattern, the full gate flow (on-chain admission rather than the off-chain admission described above), cardano-keri's bounded role, and the honest limits of gating.
 
 ### 2. Non-censorable key history
 
@@ -106,7 +106,7 @@ A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain 
 ---
 
 !!! note "Identity requirement"
-    cardano-aid requires Veridian identities to use Blake2b-256 (F-prefix) AID derivation. Existing Blake3 Veridian users must create a new identity.
+    cardano-keri requires Veridian identities to use Blake2b-256 (F-prefix) AID derivation. Existing Blake3 Veridian users must create a new identity.
 
 ## Gap table
 

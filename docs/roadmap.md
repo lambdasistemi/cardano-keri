@@ -10,13 +10,13 @@ app choice to the last responsible moment.
 
 !!! note "Issue links"
     Milestone and issue links on this page point to the project's
-    [internal tracker](https://github.com/lambdasistemi/cardano-aid/issues)
+    [internal tracker](https://github.com/lambdasistemi/cardano-keri/issues)
     and are not publicly readable. The decisions themselves are stated inline.
 
 ## Milestone layout
 
 Tracked as GitHub
-[milestones](https://github.com/lambdasistemi/cardano-aid/milestones) M1–M5.
+[milestones](https://github.com/lambdasistemi/cardano-keri/milestones) M1–M5.
 
 !!! tip "Every milestone ships a vertical demo"
     Each epic closes with an **end-to-end application slice — not useful, but
@@ -31,57 +31,57 @@ Tracked as GitHub
 
 Everything every case needs to anchor identity, finishing the foundation of
 the umbrella epic
-[#21](https://github.com/lambdasistemi/cardano-aid/issues/21):
+[#21](https://github.com/lambdasistemi/cardano-keri/issues/21):
 
 - Identity key-state UTxO with permissionless pre-rotation
-  ([#24](https://github.com/lambdasistemi/cardano-aid/issues/24)), rescoped to
+  ([#24](https://github.com/lambdasistemi/cardano-keri/issues/24)), rescoped to
   a **list-shaped, threshold-capable KeyState** (k-of-n weighted multisig,
   reserved `delegator` field). The shape is frozen into `trie_key` at
   inception, so it must be right from v1; a single key is the 1-of-1
   degenerate case.
 - Dual-root reconstruction and KEL replay off-chain
-  ([#25](https://github.com/lambdasistemi/cardano-aid/issues/25)).
+  ([#25](https://github.com/lambdasistemi/cardano-keri/issues/25)).
 - Migration and lifecycle: legacy-leaf policy, End/GC restriction
-  ([#26](https://github.com/lambdasistemi/cardano-aid/issues/26)).
+  ([#26](https://github.com/lambdasistemi/cardano-keri/issues/26)).
 - TEL revocation registry — per-issuer MPF credential status
-  ([#30](https://github.com/lambdasistemi/cardano-aid/issues/30)).
+  ([#30](https://github.com/lambdasistemi/cardano-keri/issues/30)).
 - Docs re-vet against the canonical permissionless model
-  ([#15](https://github.com/lambdasistemi/cardano-aid/issues/15)) — vetting
+  ([#15](https://github.com/lambdasistemi/cardano-keri/issues/15)) — vetting
   gates implementation.
 - **Vertical demo
-  ([#44](https://github.com/lambdasistemi/cardano-aid/issues/44))**: incept a
+  ([#44](https://github.com/lambdasistemi/cardano-keri/issues/44))**: incept a
   2-of-3 threshold AID on a local devnet, write an owned leaf, self-rotate
   without the oracle, and show that a stolen current key cannot rotate.
 
 ### M2 — Verification + authorization core (Layer 3)
 
-Epic [#34](https://github.com/lambdasistemi/cardano-aid/issues/34). The
+Epic [#34](https://github.com/lambdasistemi/cardano-keri/issues/34). The
 use-case-invariant verifier and authorization machinery:
 
 - ACDC chain verifier
-  ([#31](https://github.com/lambdasistemi/cardano-aid/issues/31)), rescoped to
+  ([#31](https://github.com/lambdasistemi/cardano-keri/issues/31)), rescoped to
   **hop bound 4, parameterized** (OOR credentials chain through an LE-signed
   OOR-AUTH credential — four ACDCs, not three) with **all-TELs cascade
   non-revocation** and a stated minutes-grade freshness floor.
 - ACDC proof builder — CESR decode + redeemer generation
-  ([#32](https://github.com/lambdasistemi/cardano-aid/issues/32)).
+  ([#32](https://github.com/lambdasistemi/cardano-keri/issues/32)).
 - Admission-cage component
-  ([#38](https://github.com/lambdasistemi/cardano-aid/issues/38)):
+  ([#38](https://github.com/lambdasistemi/cardano-keri/issues/38)):
   `trie_key → {credential_saids, role_level, admitted_at, not_after}` —
   verify the full chain once, then gate on a cheap lookup. Mandatory for the
   cache-bound cases, reusable everywhere.
 - Detached-signature authorization envelope, Option A
-  ([#39](https://github.com/lambdasistemi/cardano-aid/issues/39)):
+  ([#39](https://github.com/lambdasistemi/cardano-keri/issues/39)):
   domain-separated, nonce- and validity-bounded, verified against the Layer-1
   registry. Forced by the DeFi batcher model; generalizes to ceremonies and
   cage writes.
 - Scoped-override policy knob per cage
-  ([#40](https://github.com/lambdasistemi/cardano-aid/issues/40)):
+  ([#40](https://github.com/lambdasistemi/cardano-keri/issues/40)):
   *forging is impossible everywhere; scoped, issuer-AID-signed intervention
   powers are per-cage policy — explicit, on-chain, auditable.*
 
 - **Vertical demo
-  ([#45](https://github.com/lambdasistemi/cardano-aid/issues/45))**: a
+  ([#45](https://github.com/lambdasistemi/cardano-keri/issues/45))**: a
   synthetic 4-hop vLEI chain verified on-chain on a devnet; one gated action
   through full verification and one through the admission cache; a mid-chain
   revocation blocking both paths; a scoped freeze verb exercised and audited.
@@ -93,25 +93,25 @@ contracts afford full per-transaction verification.
 
 ### M3 — KERI-wallet ↔ Cardano signing bridge (Layer 4)
 
-Epic [#35](https://github.com/lambdasistemi/cardano-aid/issues/35). Every
+Epic [#35](https://github.com/lambdasistemi/cardano-keri/issues/35). Every
 case's actors keep keys in KERI wallets, not CIP-30 wallets; producing
 order/transition-bound detached signatures programmatically is on the critical
 path of every design.
 
 - Bridge core: detached-signature production from Signify/Veridian
-  ([#41](https://github.com/lambdasistemi/cardano-aid/issues/41)),
+  ([#41](https://github.com/lambdasistemi/cardano-keri/issues/41)),
   conforming to the Layer-3 envelope spec.
 - Intent/proof SDK
-  ([#7](https://github.com/lambdasistemi/cardano-aid/issues/7), absorbed and
+  ([#7](https://github.com/lambdasistemi/cardano-keri/issues/7), absorbed and
   rescoped from the retired staking-validator design).
 - Tracking of the single external gate
-  ([#42](https://github.com/lambdasistemi/cardano-aid/issues/42)): Veridian
+  ([#42](https://github.com/lambdasistemi/cardano-keri/issues/42)): Veridian
   issuing **F-prefix (Blake2b-256) SAIDs** for Cardano-targeted credentials —
   Plutus has no Blake3, so E-prefix SAIDs are a wall. See
   [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 - **Vertical demo
-  ([#46](https://github.com/lambdasistemi/cardano-aid/issues/46))**: a gated
+  ([#46](https://github.com/lambdasistemi/cardano-keri/issues/46))**: a gated
   action authorized entirely from a KERI wallet — no CIP-30 anywhere — with a
   batcher-style third party submitting the transaction, plus replay/expiry/
   rotated-key rejections.
@@ -127,16 +127,16 @@ reachable through counterparties already in the project's network (the
 Amaru/Veridian channel; the Amaru treasury ceremony):
 
 - Identified SPO delegation
-  ([#36](https://github.com/lambdasistemi/cardano-aid/issues/36)): one
+  ([#36](https://github.com/lambdasistemi/cardano-keri/issues/36)): one
   QVI-credentialed SPO + one institutional delegator; delegator stake script
   enforcing at the `publish` handler; full per-certificate verification.
 - Institutional contracts
-  ([#37](https://github.com/lambdasistemi/cardano-aid/issues/37)): one
+  ([#37](https://github.com/lambdasistemi/cardano-keri/issues/37)): one
   treasury disbursement ceremony with vLEI-verified signers; state-machine
   spend validators, full per-transition verification.
 
 Both pilots share a **runway ticket
-([#48](https://github.com/lambdasistemi/cardano-aid/issues/48), milestoned
+([#48](https://github.com/lambdasistemi/cardano-keri/issues/48), milestoned
 M2)**: counterparty confirmation, QVI credential issuance, credential
 fixtures, preprod environment, and the F-prefix gate readiness check — started
 early because of the lead times below.
@@ -149,14 +149,14 @@ Demand-driven, after the pilots prove the core:
 - Regulated DeFi gate: order gate + admission cage. Its real buyer — the RWA
   issuer — converges with the security-token case.
 - Super watcher economic enforcement
-  ([#10](https://github.com/lambdasistemi/cardano-aid/issues/10)) — hardening,
+  ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) — hardening,
   not pilot-critical, and **gated by a design pass**: without Blake3/CESR
   builtins the burn proof is not trustless (a malicious watcher could forge a
   divergence proof), so a
   [challenge period or watcher-threshold scheme](design/super-watcher.md#without-blake3-the-trust-problem)
   must be chosen before implementation.
 - Aiken package registry publication
-  ([#18](https://github.com/lambdasistemi/cardano-aid/issues/18)), once M2
+  ([#18](https://github.com/lambdasistemi/cardano-keri/issues/18)), once M2
   freezes the validator API.
 
 ## Where the common code ends
@@ -194,7 +194,7 @@ flowchart LR
    entity through QVI issuance has weeks-to-months of lead time. For M4 to
    start when M3 ends, the pilot pick and the counterparty conversation
    should happen during M2. Tracked as
-   [#48](https://github.com/lambdasistemi/cardano-aid/issues/48).
+   [#48](https://github.com/lambdasistemi/cardano-keri/issues/48).
 2. **One soft leak backwards:** the scoped-override verbs (#40) are motivated
    differently per case — freeze/seize vs signer re-designation vs admission
    expiry. The mechanism is common, but the spec is written with all four

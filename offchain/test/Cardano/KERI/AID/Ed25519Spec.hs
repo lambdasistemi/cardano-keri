@@ -1,6 +1,6 @@
-module Cardano.AID.Ed25519Spec (spec) where
+module Cardano.KERI.AID.Ed25519Spec (spec) where
 
-import Cardano.AID.Ed25519 (verifyEd25519)
+import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Cardano.Crypto.DSIGN
     ( SignKeyDSIGN
     , genKeyDSIGN
@@ -21,7 +21,7 @@ spec :: Spec
 spec = describe "Ed25519" $ do
     let sk = deterministicKey
         vk = rawSerialiseVerKeyDSIGN (deriveVerKeyDSIGN sk)
-        msg = "hello cardano-aid" :: BS.ByteString
+        msg = "hello cardano-keri" :: BS.ByteString
         sig = rawSerialiseSigDSIGN (signDSIGN () msg sk)
 
     it "accepts a valid signature" $

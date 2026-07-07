@@ -1,6 +1,6 @@
 # Blake2b-256 AID Requirement
 
-cardano-aid requires Blake2b-256 (CESR `F` prefix) AID derivation. Blake3 AIDs are not supported.
+cardano-keri requires Blake2b-256 (CESR `F` prefix) AID derivation. Blake3 AIDs are not supported.
 
 ## Why Blake2b-256
 
@@ -31,10 +31,10 @@ The KERI inception event's `n` (next-key digest) field carries this CESR-qualifi
 
 Veridian's `prefixer.ts` does not yet implement the `F` prefix. The fix is approximately 40 lines. Fix branch: https://github.com/lambdasistemi/signify-ts/tree/feat/blake2b-256-prefix-derivation.
 
-Until this merges upstream, the cardano-aid SDK bridge must apply the patch when generating KERI inception events.
+Until this merges upstream, the cardano-keri SDK bridge must apply the patch when generating KERI inception events.
 
 ## Existing Blake3 AIDs
 
-Veridian users with existing Blake3 (`E` prefix) AIDs cannot use cardano-aid with those identities. They must create a new identity using F-prefix derivation.
+Veridian users with existing Blake3 (`E` prefix) AIDs cannot use cardano-keri with those identities. They must create a new identity using F-prefix derivation.
 
-Blake3 as a Plutus builtin is not planned and not needed. cardano-aid is fully functional with Blake2b-256.
+Blake3 as a Plutus builtin is not planned and not needed. cardano-keri is fully functional with Blake2b-256.

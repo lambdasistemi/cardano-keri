@@ -1,16 +1,16 @@
 {- |
-Module      : Cardano.AID.Cage.Types
-Description : PlutusData types for the cardano-aid cage extension
+Module      : Cardano.KERI.AID.Cage.Types
+Description : PlutusData types for the cardano-keri cage extension
 License     : Apache-2.0
 
-Haskell types matching the cardano-aid Aiken on-chain extensions.
+Haskell types matching the cardano-keri Aiken on-chain extensions.
 'ProofStep' mirrors @Cardano.MPFS.Cage.Types.ProofStep@ byte-for-byte;
 kept local to avoid pulling in the heavy cardano-mpfs-cage dep chain.
 
 Hand-written 'ToData'\/'FromData' instances guarantee constructor
 indices and field ordering match the Aiken source byte-for-byte.
 -}
-module Cardano.AID.Cage.Types
+module Cardano.KERI.AID.Cage.Types
     ( -- * MPF proof step (mirrors cardano-mpfs-cage)
       ProofStep (..)
     , Neighbor (..)

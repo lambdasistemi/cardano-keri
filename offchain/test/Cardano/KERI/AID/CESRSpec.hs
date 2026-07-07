@@ -1,6 +1,6 @@
-module Cardano.AID.CESRSpec (spec) where
+module Cardano.KERI.AID.CESRSpec (spec) where
 
-import Cardano.AID.CESR (Primitive (..), parsePrimitive)
+import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.Crypto.DSIGN
     ( SignKeyDSIGN
     , genKeyDSIGN

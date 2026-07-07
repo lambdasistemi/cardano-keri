@@ -18,7 +18,7 @@ The identity registry script enforces the following properties within a single b
 
 **Full KEL history.** The on-chain state holds only the current key-state. The full sequence of inception and rotation events is not stored or verified on-chain. There is no CESR encoding, no event receipt chain.
 
-**CESR self-cert verification.** The registry stores `cesr_aid` as controller-asserted metadata and never verifies it. The `blake2b_256` builtin *could* hash supplied inception-event bytes (which is why cardano-aid requires F-prefix, Blake2b-256 AIDs — Blake3 AIDs are not supported), but doing so would prove nothing: inception events are public, so anyone can supply bytes that hash to a victim's AID. Binding is off-chain — see [Binding verification protocol](../architecture/veridian-bridge.md#binding-verification-protocol).
+**CESR self-cert verification.** The registry stores `cesr_aid` as controller-asserted metadata and never verifies it. The `blake2b_256` builtin *could* hash supplied inception-event bytes (which is why cardano-keri requires F-prefix, Blake2b-256 AIDs — Blake3 AIDs are not supported), but doing so would prove nothing: inception events are public, so anyone can supply bytes that hash to a victim's AID. Binding is off-chain — see [Binding verification protocol](../architecture/veridian-bridge.md#binding-verification-protocol).
 
 **KERI duplicity detection.** Detecting that a controller published conflicting KERI events is off-chain work (watchers, witness receipts). Once detected, the evidence *can* be recorded on-chain as a permanent [duplicity freeze](../architecture/identity-ops.md#duplicity-freeze); the proposed [super watcher](super-watcher.md) adds economic enforcement. The chain itself never observes KERI.
 
@@ -62,11 +62,11 @@ Applications that need consistency across both registries must account for this 
 
 ## Relationship to KERI
 
-cardano-aid borrows the pre-rotation primitive from [KERI](https://github.com/WebOfTrust/ietf-keri) (Key Event Receipt Infrastructure). It does not implement KERI. Specifically, there are no:
+cardano-keri borrows the pre-rotation primitive from [KERI](https://github.com/WebOfTrust/ietf-keri) (Key Event Receipt Infrastructure). It does not implement KERI. Specifically, there are no:
 
 - Witnesses or backer receipts
 - CESR encoding of the KEL
 - Duplicity-evidence gossip
 - Watcher/judge roles
 
-The on-chain layer is a minimal root of trust. For applications that require the full KERI trust model, an off-chain KEL infrastructure must be built on top of cardano-aid, treating the on-chain state as the canonical current key-state anchor. The Cardano state mirrors Veridian — Cardano does not control KERI identity, it provides an additional on-chain binding for it.
+The on-chain layer is a minimal root of trust. For applications that require the full KERI trust model, an off-chain KEL infrastructure must be built on top of cardano-keri, treating the on-chain state as the canonical current key-state anchor. The Cardano state mirrors Veridian — Cardano does not control KERI identity, it provides an additional on-chain binding for it.

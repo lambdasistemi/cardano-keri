@@ -8,7 +8,7 @@
     each page links there on first use. The identity-side concepts (AID, KEL,
     ACDC, vLEI) are covered by the [KERI Primer](../../keri-primer.md).
 
-The [epic](https://github.com/lambdasistemi/cardano-aid/issues/21) names four
+The [epic](https://github.com/lambdasistemi/cardano-keri/issues/21) names four
 use cases for ACDC verification on-chain. This section analyzes each as a
 concrete design — actors, enforcement point, components on top of the four
 layers, and the pressure each puts on the open architectural decisions — then
@@ -29,7 +29,7 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
    `trie_key` is derived from inception material, the schema shape is frozen
    into the identity key — it must be list-shaped from v1 (a single key is the
    1-of-1 degenerate case), with a `delegator` field reserved. Scope change to
-   [#24](https://github.com/lambdasistemi/cardano-aid/issues/24).
+   [#24](https://github.com/lambdasistemi/cardano-keri/issues/24).
 2. **Hop bound 4, parameterized.** Three of four cases gate on the *role*
    credential (trader ECR, officer OOR, transfer-agent OOR), not the Legal
    Entity credential — LE root AIDs are board-custody multisig and never sign
@@ -39,7 +39,7 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
    OOR credentials are issued by the QVI and chain to the LE credential
    through an LE-signed OOR-AUTH credential — **four ACDCs**; ECRs may also be
    issued by the LE directly — three. Hence a bound of 4, parameterized. Scope
-   change to [#31](https://github.com/lambdasistemi/cardano-aid/issues/31).
+   change to [#31](https://github.com/lambdasistemi/cardano-keri/issues/31).
 3. **Layer-3 verifier with both modes.** The cases split exactly 2/2: DeFi and
    security tokens *require* the admission cache (batch size limits; receiver
    checks); SPO delegation and institutional contracts *afford* full

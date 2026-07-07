@@ -1,5 +1,5 @@
 {- |
-Module      : Cardano.AID.Cage.Sign
+Module      : Cardano.KERI.AID.Cage.Sign
 Description : Value-write message construction and Ed25519 signing
 License     : Apache-2.0
 
@@ -7,7 +7,7 @@ Constructs the domain-tagged message for AID owner authorization
 and signs it with an Ed25519 key. The signed message binds to the
 request UTxO's output reference, providing replay protection.
 -}
-module Cardano.AID.Cage.Sign
+module Cardano.KERI.AID.Cage.Sign
     ( -- * Domain tag
       valueWriteDomain
 
@@ -46,7 +46,7 @@ import Data.Proxy
 
 -- | Domain separator for value-write authorization messages.
 valueWriteDomain :: ByteString
-valueWriteDomain = "cardano-aid/value-write/v1"
+valueWriteDomain = "cardano-keri/value-write/v1"
 
 {- | Build the message to sign:
 @blake2b_256(domain ++ tx_id ++ be2(output_index))@.

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-cardano-aid is structured as four layers. This page covers Layer 1 — the
+cardano-keri is structured as four layers. This page covers Layer 1 — the
 identity plane — and the MPFS value-cage plane it authorizes. The credential
 layers (2–4) are analyzed in [vLEI Bridge](../design/vlei.md) and the
 [business cases](../design/business-cases/index.md).

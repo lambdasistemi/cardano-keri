@@ -1,4 +1,4 @@
-# System Analysis: KERI + cardano-aid + MPFS Value Cages
+# System Analysis: KERI + cardano-keri + MPFS Value Cages
 
 ## Executive summary
 
@@ -11,7 +11,7 @@ watcher gossip.
 The main architectural risk is the bridge invariant. The controller self-relays
 KERI rotations to Cardano, but the current documents do not define a mandatory
 binding between a Cardano registry update and a specific KERI key event. Without
-that binding, a Cardano key-state can be valid under the cardano-aid script while
+that binding, a Cardano key-state can be valid under the cardano-keri script while
 still being unaudited, stale, or divergent from the KERI witness pool. Smart
 contracts will follow the Cardano state; KERI-aware verifiers may reject it.
 
@@ -54,7 +54,7 @@ checkpoint matches.
 Cardano anchoring has no useful effect on equivocation detection if the registry
 stores only `{cur_digest, next_digest, seq}` with no KERI event binding. The same
 key-state can be reached, represented, or claimed outside the witnessed KEL
-context. The chain will show that some valid cardano-aid rotation occurred; it
+context. The chain will show that some valid cardano-keri rotation occurred; it
 will not show that the rotation is the witnessed KERI event.
 
 It can hinder the composed trust model socially and operationally if the data
@@ -120,9 +120,9 @@ to a specific KERI KEL event.
 
 ## 3. AID format compatibility
 
-KERI AIDs and the current cardano-aid identifiers are not the same object.
+KERI AIDs and the current cardano-keri identifiers are not the same object.
 KERI AIDs are CESR-qualified identifiers with derivation codes, often rendered
-as qb64 text such as `EKYLUMm...`. The current cardano-aid AID is a raw
+as qb64 text such as `EKYLUMm...`. The current cardano-keri AID is a raw
 `blake2b_256(canonical_cbor(InceptionEvent))` value. Treating these as
 interchangeable 32-byte identifiers would lose type information and can create
 ambiguous registry keys.
@@ -132,7 +132,7 @@ The bridge needs an explicit canonical mapping. A reasonable pattern is:
 ```text
 cardano_registry_key =
   blake2b_256(
-    "cardano-aid/keri-registry-key/v1" ||
+    "cardano-keri/keri-registry-key/v1" ||
     canonical_cesr_identifier_bytes
   )
 ```
@@ -153,7 +153,7 @@ Cardano scripts but couples KERI control keys to Cardano signing keys. If the
 system must support general KERI keys and CESR key material, use Option A with a
 redeemer-carried public key and a domain-separated digest over the canonical KERI
 public key representation. Do not mix KERI digests, Cardano key hashes, and
-cardano-aid `KeyDigest` under one unqualified field name.
+cardano-keri `KeyDigest` under one unqualified field name.
 
 ## 4. Threat model completeness
 
@@ -212,7 +212,7 @@ depth and a stale-checkpoint handling rule.
 
 ## 6. What Cardano adds vs plain KERI
 
-cardano-aid does not strengthen KERI's core identity guarantees by default. It
+cardano-keri does not strengthen KERI's core identity guarantees by default. It
 does not verify CESR, replay KELs, validate witness receipts, or detect
 duplicity. Those remain off-chain KERI responsibilities.
 
@@ -286,7 +286,7 @@ Cardano model is extended to encode those KERI rules.
    procedure to replay the KEL and compare it to the checkpoint.
 
 2. **Specify canonical AID and key mappings.** Do not treat KERI qb64 AIDs,
-   cardano-aid self-certifying hashes, Cardano payment key hashes, and KERI key
+   cardano-keri self-certifying hashes, Cardano payment key hashes, and KERI key
    digests as interchangeable byte strings. Define domain-separated registry
    keys and preserve enough CESR information for audit.
 

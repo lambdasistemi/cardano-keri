@@ -1,4 +1,4 @@
-module Cardano.AID.CESR
+module Cardano.KERI.AID.CESR
     ( Primitive (..)
     , parsePrimitive
     ) where

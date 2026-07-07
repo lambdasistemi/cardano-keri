@@ -2,7 +2,7 @@
 
 ## What is Veridian
 
-Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value. cardano-aid requires F-prefix (Blake2b-256) derivation: `cesr_aid = blake2b_256(cesr_inception_event)`.
+Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value. cardano-keri requires F-prefix (Blake2b-256) derivation: `cesr_aid = blake2b_256(cesr_inception_event)`.
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
@@ -31,7 +31,7 @@ flowchart LR
 
 ## Digest agility requirement
 
-cardano-aid requires Blake2b-256 (F-prefix) digest agility. This is not optional. Veridian inception events MUST use `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` and the AID prefix MUST use the F-prefix derivation.
+cardano-keri requires Blake2b-256 (F-prefix) digest agility. This is not optional. Veridian inception events MUST use `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` and the AID prefix MUST use the F-prefix derivation.
 
 ```
 KEL.inception.n decoded == Cardano.KeyState.next_digest  [byte-for-byte]
@@ -88,23 +88,23 @@ The `n` field in the KERI inception event carries this CESR-qualified value. Car
 ```
 Veridian wallet (Signify/TypeScript)
   ↓ same Ed25519 keys, no re-keying; blake2b_256 digest agility
-cardano-aid-sdk (TypeScript)
+cardano-keri-sdk (TypeScript)
   ↓ pure proof/redeemer building (no IO, no network)
-cardano-aid-wasm (Haskell WASM, pure)
+cardano-keri-wasm (Haskell WASM, pure)
   ↓ compiled to wasm32-wasi
-cardano-aid identity UTxO (on-chain)
+cardano-keri identity UTxO (on-chain)
   ↓ CIP-31 reference input (non-spending)
 MPFS value cages (on-chain)
   ↓ also consult freeze registry for revocation freshness
-cardano-aid freeze registry UTxO (on-chain)
+cardano-keri freeze registry UTxO (on-chain)
 ```
 
 ## WASM module
 
-`cardano-aid-wasm` is a pure Haskell module compiled to WASM via GHC-WASM. It contains no IO, no networking, and no filesystem access. All functions are deterministic given their inputs.
+`cardano-keri-wasm` is a pure Haskell module compiled to WASM via GHC-WASM. It contains no IO, no networking, and no filesystem access. All functions are deterministic given their inputs.
 
 ```
-cardano-aid-wasm (Haskell → GHC-WASM, pure)
+cardano-keri-wasm (Haskell → GHC-WASM, pure)
   ├── computeTrieKey(cur_pubkey, next_digest) → ByteArray[32]
   ├── buildIncMsg(trie_key, cur_pubkey, next_digest, cesr_aid, identity_root) → ByteArray
   ├── buildInceptionRedeemer(trie_key, cur_pubkey, next_digest, cesr_aid, sig, absence_proof) → CBOR
@@ -118,10 +118,10 @@ cardano-aid-wasm (Haskell → GHC-WASM, pure)
 
 The SDK exposes `buildIncMsg` as a separate function so the intent transcript (see WASM/TypeScript boundary below) can show the user what they are signing before the signature is produced.
 
-`cardano-aid-sdk` wraps the WASM module with TypeScript and adds live-data operations (fetching snapshots, submitting transactions):
+`cardano-keri-sdk` wraps the WASM module with TypeScript and adds live-data operations (fetching snapshots, submitting transactions):
 
 ```
-cardano-aid-sdk (TypeScript, wraps WASM)
+cardano-keri-sdk (TypeScript, wraps WASM)
   ├── fetchIdentitySnapshot(api) → trie snapshot
   ├── fetchFreezeSnapshot(api) → freeze trie snapshot
   ├── buildInceptionTx(wallet, curPubkey, nextDigest, cesrAid) → UnsignedTx + IntentTranscript
@@ -161,7 +161,7 @@ Registers the identity in the Cardano registry for the first time. Requires the 
 
 ```
 inc_msg = cbor({
-  domain               : "cardano-aid/inception/v1",
+  domain               : "cardano-keri/inception/v1",
   network_id           : NetworkId,
   registry_policy_id   : PolicyId,
   registry_thread_token: AssetName,
@@ -245,11 +245,11 @@ Value cages check both the identity root and the freeze root before authorizing 
 ## Signify integration
 
 ```typescript
-import { CardanoAidWasm } from 'cardano-aid-wasm'
-import { CardanoAidSdk } from 'cardano-aid-sdk'
+import { CardanoKeriWasm } from 'cardano-keri-wasm'
+import { CardanoKeriSdk } from 'cardano-keri-sdk'
 
-const wasm = await CardanoAidWasm.load()
-const sdk = new CardanoAidSdk(wasm, { apiUrl: 'https://mpfs.example.com' })
+const wasm = await CardanoKeriWasm.load()
+const sdk = new CardanoKeriSdk(wasm, { apiUrl: 'https://mpfs.example.com' })
 
 // At inception — first time linking KERI identity to Cardano
 // curPubkey and nextDigest come from Veridian's Signify key store

@@ -1,10 +1,10 @@
 cabal-version: 3.4
-name:          cardano-aid
+name:          cardano-keri
 version:       0.0.0
 synopsis:      Haskell library for KERI-AID identity operations and cage validator types
 description:
   Pure Haskell implementation of KERI Ed25519 verification, CESR
-  encoding/decoding, and PlutusData types matching the cardano-aid
+  encoding/decoding, and PlutusData types matching the cardano-keri
   extended cage validator (AIDOwnerAuth, AIDRequestAction, AIDOnChainTokenState).
 
 license:       Apache-2.0
@@ -42,10 +42,10 @@ library
     , plutus-tx
 
   exposed-modules:
-    Cardano.AID.CESR
-    Cardano.AID.Cage.Sign
-    Cardano.AID.Cage.Types
-    Cardano.AID.Ed25519
+    Cardano.KERI.AID.CESR
+    Cardano.KERI.AID.Cage.Sign
+    Cardano.KERI.AID.Cage.Types
+    Cardano.KERI.AID.Ed25519
 
 test-suite unit-tests
   import:           warnings
@@ -56,7 +56,7 @@ test-suite unit-tests
   build-depends:
     , base
     , bytestring
-    , cardano-aid
+    , cardano-keri
     , cardano-crypto-class
     , hspec                 >=2.11 && <2.12
     , memory                >=0.18 && <0.19
@@ -64,10 +64,10 @@ test-suite unit-tests
     , QuickCheck
 
   other-modules:
-    Cardano.AID.CESRSpec
-    Cardano.AID.Cage.SignSpec
-    Cardano.AID.Cage.TypesSpec
-    Cardano.AID.Ed25519Spec
+    Cardano.KERI.AID.CESRSpec
+    Cardano.KERI.AID.Cage.SignSpec
+    Cardano.KERI.AID.Cage.TypesSpec
+    Cardano.KERI.AID.Ed25519Spec
 
   ghc-options: -threaded -with-rtsopts=-N
 
@@ -79,5 +79,5 @@ executable gen-vectors
   build-depends:
     , base
     , bytestring
-    , cardano-aid
+    , cardano-keri
     , cardano-crypto-class

@@ -1,13 +1,13 @@
-module Cardano.AID.Cage.TypesSpec
+module Cardano.KERI.AID.Cage.TypesSpec
     ( spec
     ) where
 
-import Cardano.AID.Cage.Types
+import Cardano.KERI.AID.Cage.Types
     ( AIDOnChainTokenState (..)
     , AIDOwnerAuth (..)
     , AIDRequestAction (..)
     )
-import Cardano.AID.Cage.Types
+import Cardano.KERI.AID.Cage.Types
     ( Neighbor (..)
     , ProofStep (..)
     )

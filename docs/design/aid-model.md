@@ -48,7 +48,7 @@ The trie leaf wraps `KeyState` with a lifecycle status:
     reserved. The singleton shape above is the illustration. See the
     [factored core](business-cases/index.md#the-factored-core-required-by-every-case).
 
-**Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-aid requires F-prefix (Blake2b-256) AIDs; the derivation code is always `F` and is not stored separately.
+**Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-keri requires F-prefix (Blake2b-256) AIDs; the derivation code is always `F` and is not stored separately.
 
 `cur_pubkey` is the raw public key, stored on-chain. This differs from earlier designs that stored only a hash. Storing the raw key enables the on-chain script to verify `trie_key` derivation and Ed25519 signatures without requiring the caller to re-supply the key in the redeemer.
 
@@ -69,7 +69,7 @@ The trie leaf wraps `KeyState` with a lifecycle status:
 
 **Attack B — first-party squatting.** An adversary uses their own keys, produces a valid inception, and asserts a `cesr_aid` they do not control (a well-known KERI prefix). Signing `inc_msg` does nothing here — they are honestly signing their own inception with false metadata. Nor would on-chain derivation checking help: KERI inception events are public, so a squatter can always supply the victim's real event bytes and pass a `blake2b_256(event) == cesr_aid` check; binding the event to the *registrant* would require parsing CESR on-chain, which is out of scope by design. The authoritative defense is the off-chain KEL-derived resolution protocol — the bridge's authoritative identity is the `trie_key` recomputed from the real KEL, not the `cesr_aid` index.
 
-cardano-aid requires Blake2b-256 (F-prefix) AIDs; Blake3 AIDs are not supported.
+cardano-keri requires Blake2b-256 (F-prefix) AIDs; Blake3 AIDs are not supported.
 
 ## Seq-0 binding gap
 
@@ -139,11 +139,11 @@ Every hashed or signed value must carry a unique domain tag to prevent cross-pro
 
 | Object | Domain tag |
 |---|---|
-| Inception message | `"cardano-aid/inception/v1"` |
-| Rotation message | `"cardano-aid/rotation/v1"` |
-| Close message | `"cardano-aid/close/v1"` |
-| Freeze message | `"cardano-aid/freeze/v1"` |
-| Value-write auth (Option A) | `"cardano-aid/value-write/v1"` |
+| Inception message | `"cardano-keri/inception/v1"` |
+| Rotation message | `"cardano-keri/rotation/v1"` |
+| Close message | `"cardano-keri/close/v1"` |
+| Freeze message | `"cardano-keri/freeze/v1"` |
+| Value-write auth (Option A) | `"cardano-keri/value-write/v1"` |
 | MPF leaf node | `"mpf/leaf/v1"` (distinct from branch and empty) |
 | MPF branch node | `"mpf/branch/v1"` |
 | MPF empty node | `"mpf/empty/v1"` |

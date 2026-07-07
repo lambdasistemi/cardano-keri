@@ -1,7 +1,7 @@
 # Spec: dual-root State + per-leaf owner-sig at Modify
 
-Issue: https://github.com/lambdasistemi/cardano-aid/issues/23
-Epic: https://github.com/lambdasistemi/cardano-aid/issues/21
+Issue: https://github.com/lambdasistemi/cardano-keri/issues/23
+Epic: https://github.com/lambdasistemi/cardano-keri/issues/21
 
 ## Problem
 
@@ -13,7 +13,7 @@ longer sufficient.
 
 ## Scope
 
-cardano-aid writes its own cage validator (`validators/cage.ak`) extending the
+cardano-keri writes its own cage validator (`validators/cage.ak`) extending the
 mpfs-onchain pattern. Since mpfs-onchain's Aiken code lives in `validators/`
 (not importable as a package), the relevant files are copied and extended:
 
@@ -80,7 +80,7 @@ possession via hash-preimage check without exposing the raw key in the trie.
 2. **Owner signature** — verify the owner signed this specific request:
    ```aiken
    let msg = blake2b_256(
-     "cardano-aid/value-write/v1"
+     "cardano-keri/value-write/v1"
        |> bytearray.concat(input.output_reference.transaction_id)
        |> bytearray.concat(from_int_big_endian(input.output_reference.output_index, 2))
    )

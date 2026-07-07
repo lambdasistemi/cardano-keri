@@ -1,4 +1,4 @@
-name = "lambdasistemi/cardano-aid"
+name = "lambdasistemi/cardano-keri"
 version = "0.0.0"
 compiler = "v1.1.21"
 plutus = "v3"
@@ -6,7 +6,7 @@ description = ""
 
 [repository]
 user = "lambdasistemi"
-project = "cardano-aid"
+project = "cardano-keri"
 platform = "github"
 
 [[dependencies]]

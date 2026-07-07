@@ -40,7 +40,7 @@ The KEL replay is not optional — it is the step that proves the Cardano entry 
 
 ## The squatting limitation
 
-Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification. This is not a hash-agility problem — cardano-aid mandates F-prefix (Blake2b-256) AIDs precisely so the derivation uses a Cardano-native hash (see [Blake2b-256 requirement](blake2b256-requirement.md)) — it is structural: KERI inception events are public, so hash-checking supplied event bytes proves nothing about the registrant, and binding the event's key material to the registrant would require parsing CESR on-chain, which is out of scope by design (see [AID Model — attack B](aid-model.md#inception-security-two-attacks-different-fixes)).
+Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification. This is not a hash-agility problem — cardano-keri mandates F-prefix (Blake2b-256) AIDs precisely so the derivation uses a Cardano-native hash (see [Blake2b-256 requirement](blake2b256-requirement.md)) — it is structural: KERI inception events are public, so hash-checking supplied event bytes proves nothing about the registrant, and binding the event's key material to the registrant would require parsing CESR on-chain, which is out of scope by design (see [AID Model — attack B](aid-model.md#inception-security-two-attacks-different-fixes)).
 
 This means `cesr_aid → trie_key` is a one-to-many untrusted index. Multiple entries can claim the same Veridian AID. The KEL replay finds the unique legitimate `trie_key` and discards the rest.
 
@@ -52,7 +52,7 @@ For Veridian users who already interact via KERI, the KEL replay is a natural st
 
 1. You receive Bob's AID via Veridian (OOBI or contact share)
 2. Veridian already has Bob's KEL (you've verified his KERI identity)
-3. The `cardano-aid-sdk` computes Bob's `trie_key` from the KEL automatically
+3. The `cardano-keri-sdk` computes Bob's `trie_key` from the KEL automatically
 4. You look up Bob's `trie_key` in the Cardano registry
 5. Any cage write at that `trie_key` is as trustworthy as a KERI-signed message from Bob — same key, plus Cardano's immutability and global ordering
 

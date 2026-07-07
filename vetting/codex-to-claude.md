@@ -79,7 +79,7 @@ FreezeRedeemer {
 }
 
 freeze_msg = cbor({
-  domain                 : "cardano-aid/freeze/v1",
+  domain                 : "cardano-keri/freeze/v1",
   network_id,
   identity_registry_token,
   freeze_registry_token,

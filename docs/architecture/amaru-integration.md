@@ -12,8 +12,8 @@
     comparisons with that correction in mind.
 
 This document analyses the proposed **Veridian × Amaru** node-level attribution
-integration and positions cardano-aid within it. It is an architecture
-analysis, not a commitment: its purpose is to establish where cardano-aid
+integration and positions cardano-keri within it. It is an architecture
+analysis, not a commitment: its purpose is to establish where cardano-keri
 addresses the integration's open questions, what is genuinely missing, and —
 critically — whether any part of the design actually needs to live inside the
 [Amaru](https://github.com/pragma-org/amaru) node.
@@ -45,7 +45,7 @@ real from the parts that are narrative.
 Three KERI roles are routinely conflated in the discovery document. Keeping
 them apart dissolves most of its "biggest fork" questions.
 
-| Role | Function | Selected by | Commitment | cardano-aid analogue |
+| Role | Function | Selected by | Commitment | cardano-keri analogue |
 |---|---|---|---|---|
 | **Witness** | Receipts a controller's key events with a signature | Designated by each controller in their KEL | Heavy — availability SLA, part of others' identity trust | — |
 | **Watcher** | Observes KELs to detect duplicity / rotations | Anyone (permissionless) | Light — read-only observer | KERI watcher **inside the oracle**; the [super watcher](../design/super-watcher.md) |
@@ -70,14 +70,14 @@ duplicity resolution objective (which of two conflicting events came first is
 no longer a matter of whom you asked). The [super watcher](../design/super-watcher.md)
 convergence mechanism is built directly on this property.
 
-## Where cardano-aid fits
+## Where cardano-keri fits
 
-Nothing in cardano-aid is shipped runtime infrastructure today. The concrete
+Nothing in cardano-keri is shipped runtime infrastructure today. The concrete
 shipped substrate to build on is **MPFS plugin support**: MPFS can host
 domain-specific authorization logic at the cage/plugin layer without changing
 the Cardano node.
 
-cardano-aid is the research/design layer for what such a plugin could enforce:
+cardano-keri is the research/design layer for what such a plugin could enforce:
 
 - an MPFS-backed identity/key-state registry;
 - Aiken-side checks for key-state derivation, Ed25519 possession, and
@@ -94,16 +94,16 @@ shipped integration point is outside the node process.
 The discovery conversation silently conflates two architectures. They are not
 the same system.
 
-| | cardano-aid plugin design | CF `cardano-backer` model |
+| | cardano-keri plugin design | CF `cardano-backer` model |
 |---|---|---|
 | Shape | Proposed MPFS plugin / per-company identity registry, single trusted **oracle** writer | General KERI **backer** for any AID prefix |
 | Scope | Proposed key-state + pre-rotation + value-cage authorization | Anchors arbitrary KELs and schemas |
 | Trust | Oracle controls entry; user controls exit | Controller lists the backer in their KEL |
 | Best at | Compliance-gated contracts, stable `trie_key` handles | Broad, KERI-native anchoring across many identities |
 
-cardano-aid is the proposed answer to the **controller key-state** problem. It
+cardano-keri is the proposed answer to the **controller key-state** problem. It
 is *not* a general backer, and it is not shipped infrastructure. If the
-integration's goal is the general backer fleet, then cardano-aid is a design for
+integration's goal is the general backer fleet, then cardano-keri is a design for
 one MPFS plugin component (key-state anchoring + convergence enforcement), not
 the whole answer.
 
@@ -124,7 +124,7 @@ script-consumable** — a Plutus validator cannot read `cur_key` out of it. The
 anchor is a timestamped receipt you *trust the backer to have earned honestly*
 ("tertiary root of trust").
 
-The proposed cardano-aid MPFS plugin **would verify**. Its Aiken validators
+The proposed cardano-keri MPFS plugin **would verify**. Its Aiken validators
 would check the derivation (`trie_key == blake2b_256(cbor{cur_pubkey,
 next_digest})`), the Ed25519 self-auth / possession signatures, and the
 pre-rotation binding
@@ -137,7 +137,7 @@ requiring the spend to be signed by `blake2b_224(cur_pubkey)`. That is the
 target shape for a contract **consuming the live `cur_key` in on-chain
 verification**, trust-minimized.
 
-| | `cardano-backer` (anchor) | cardano-aid MPFS plugin design (verify + compose) |
+| | `cardano-backer` (anchor) | cardano-keri MPFS plugin design (verify + compose) |
 |---|---|---|
 | KERI event crypto checked on-chain? | ❌ off-chain; chain only orders + times + carries the backer's endorsement | Proposed: Ed25519 + pre-rotation + derivation in Aiken |
 | What the chain stores | opaque SAID / receipt | Proposed: script-readable `KeyState { cur_pubkey, next_digest, seq }` |
@@ -146,19 +146,19 @@ verification**, trust-minimized.
 | Gives KERI | ledger anchoring (order + availability) | Proposed: **composability** — on-chain authorization |
 
 The two are complementary, not competing: the backer gives KERI a *ledger
-receipt*; the proposed cardano-aid plugin would give Cardano contracts a
-verified, usable key-state. This is why cardano-aid is not "`cardano-backer` on
+receipt*; the proposed cardano-keri plugin would give Cardano contracts a
+verified, usable key-state. This is why cardano-keri is not "`cardano-backer` on
 Amaru" — it is a design for making anchored identity **actionable in smart
 contracts**, which the backer structurally cannot do.
 
 ## What is actually missing for ACDC
 
 Key-state anchoring — `cur_key` plus pre-rotation for the controller's AID — is
-the proposed cardano-aid plugin scope. A full ACDC / vLEI trust chain needs
-three further things anchored, and cardano-aid models none of them as
+the proposed cardano-keri plugin scope. A full ACDC / vLEI trust chain needs
+three further things anchored, and cardano-keri models none of them as
 first-class:
 
-| Piece | What it is | cardano-aid today | Needed for ACDC |
+| Piece | What it is | cardano-keri today | Needed for ACDC |
 |---|---|---|---|
 | Controller KEL / key-state | `cur_key` + pre-rotation | Proposed plugin scope | yes |
 | **Schemas** | ACDC schema SAIDs (the credential's shape) | ❌ not modeled | yes — `cardano-backer` anchors these |
@@ -169,7 +169,7 @@ first-class:
 now*?" lives in a Transaction Event Log: a monotonic issuance/revocation
 registry. That is exactly the state that benefits from ledger anchoring (public
 availability + global order), and it is the single most valuable thing a
-credential system provides. The cardano-aid design can place a credential *hash*
+credential system provides. The cardano-keri design can place a credential *hash*
 in an MPFS value cage ([vLEI use case 4](../design/vlei.md#four-concrete-use-cases)),
 but it has no revocation registry. **Designing the on-chain TEL is the real new
 work**, and nobody has done it yet.
@@ -193,7 +193,7 @@ point, construct the proof and transaction against that stable pre-state, and
 rebuild from a newer snapshot if another write advances the cage before
 submission. That handles contention in the MPFS transaction-building layer; it
 does not require Amaru to serialize attribution work or maintain a
-cardano-aid-specific index inside the node.
+cardano-keri-specific index inside the node.
 
 ```mermaid
 flowchart LR
@@ -219,7 +219,7 @@ pipeline, and packages via the node's distribution. This is what would make the
 word "node-level" literal, and it is where the resource-budget and
 consensus-isolation questions actually bite.
 
-The cardano-aid plugin design assumes **A**. Veridian's language ("identity at
+The cardano-keri plugin design assumes **A**. Veridian's language ("identity at
 the base layer", "operator trust service") reaches for **B**. Forcing that
 choice into the open is the single most clarifying outcome the discovery session
 can produce.
@@ -285,10 +285,10 @@ What stake-weighted selection actually requires:
    public on-chain.
 
 Every input is an offline signature or a public read. Better still, the
-"pool → backer" attestation *is* an ACDC / a cardano-aid registry entry: the
+"pool → backer" attestation *is* an ACDC / a cardano-keri registry entry: the
 pool identity is just another AID, the binding is anchored on-chain, and
 stake-weighted trust becomes "read the binding, read the stake". The entire
-mechanism is buildable with **cardano-aid + public stake reads + zero Amaru
+mechanism is buildable with **cardano-keri + public stake reads + zero Amaru
 changes**.
 
 ### Finding
@@ -316,8 +316,8 @@ deletes the ones after it.
 
 | # | Decision to settle | Why it goes first | Consumes docx items |
 |---|---|---|---|
-| 1 | **What does "node-level" mean** — code in the node process, or anchored on-chain with node-adjacent agents? | Gates everything. If on-chain + sidecar (cardano-aid's assumption), the architecture / isolation / resource blocks mostly evaporate. | §1, §4.2 |
-| 2 | **Which model** — per-company oracle registry plugin, or general KERI backer fleet? | These are different systems. cardano-aid describes the first; the "operator" narrative implies the second. | §4.2, §4.3 |
+| 1 | **What does "node-level" mean** — code in the node process, or anchored on-chain with node-adjacent agents? | Gates everything. If on-chain + sidecar (cardano-keri's assumption), the architecture / isolation / resource blocks mostly evaporate. | §1, §4.2 |
+| 2 | **Which model** — per-company oracle registry plugin, or general KERI backer fleet? | These are different systems. cardano-keri describes the first; the "operator" narrative implies the second. | §4.2, §4.3 |
 | 3 | **Phase-1 deliverable** — MPFS plugin support plus a key-state plugin design, or ACDC credential anchoring (schema + **TEL/revocation**)? | Names the actual new work. MPFS plugin support is the shipped substrate; revocation/TEL is the larger unsolved engineering problem beyond the proposed key-state plugin. | §4.1, §4.3 |
 | 4 | **The business reality** — a backer is not *selected*, *paid*, or *differentiated* by being an SPO. What does the integration add beyond supply? | The revenue model is the project's *why*. If it is only "bundle the backer," there is no market. | §1.1, §4.7 |
 | 5 | **Cage contention** — is snapshotting the cage UTxO the Scope A workaround? | Makes the MPFS-side contention story explicit before anyone reaches for an in-node scheduler or attribution index. | §4.2, §4.5 |
@@ -337,7 +337,7 @@ match the discussion order above.
 **Scope and framing**
 
 1. Does "at the node layer" mean *in the node process*, or *on the chain the
-   node serves, via node-adjacent agents*? cardano-aid assumes the latter.
+   node serves, via node-adjacent agents*? cardano-keri assumes the latter.
 2. Is phase-1 attribution **MPFS plugin support plus an identity/key-state
    plugin design**, the **ACDC credential anchoring** (schema + TEL/revocation),
    or both?
@@ -375,7 +375,7 @@ match the discussion order above.
 **The node boundary**
 
 10. What operation, concretely, must live *inside* Amaru as opposed to in a
-   sidecar, in cardano-aid, or on-chain? If the answer involves the SPO's
+   sidecar, in cardano-keri, or on-chain? If the answer involves the SPO's
    signing key, that is a reason to keep it *out* of the node, not in a plugin.
 
 **Dependencies**

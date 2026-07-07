@@ -1,4 +1,4 @@
-# Full-System Analysis — Real KERI ⇄ cardano-aid ⇄ MPFS Value Cages
+# Full-System Analysis — Real KERI ⇄ cardano-keri ⇄ MPFS Value Cages
 
 **Scope:** the *composed* system, not the on-chain crypto in isolation. Inputs:
 `docs/index.md`, `docs/architecture/*`, `docs/design/*`, `docs/vetting/index.md`,
@@ -22,7 +22,7 @@ that relationship.
 follows from it.** The brief describes a *bridge*: "a KERI AID controller maintains
 a full off-chain KEL … on each KERI rotation the controller ALSO submits a Cardano
 transaction updating their key-state." **The documented system is not that bridge.**
-`docs/design/trust-model.md` is explicit and honest: *"cardano-aid borrows the
+`docs/design/trust-model.md` is explicit and honest: *"cardano-keri borrows the
 pre-rotation primitive from KERI. It does not implement KERI."* What is specified is
 a **self-contained, KERI-inspired pre-rotation registry** whose AID is
 `blake2b_256(cbor({cur_key, next_digest}))`. A real KERI AID is a **Blake3-256 SAID
@@ -85,7 +85,7 @@ This reframes all seven dimensions:
    2-field CBOR record; keys and next-keys are *lists with thresholds*; the AID is
    delegated; events are witnessed and hash-chained by prior-event digest (`p`).
    Every one of those is a hard mismatch. The best achievable is a *separate*
-   cardano-aid AID plus an off-chain attestation binding it to the vLEI AID — at
+   cardano-keri AID plus an off-chain attestation binding it to the vLEI AID — at
    which point the chain is not anchoring KERI, it is a parallel identity claiming
    linkage, and the linkage trust lives entirely off-chain.
 
@@ -341,7 +341,7 @@ nightmare.
 **KERI is natively threshold.** Key-state is a *list* `k` with a (possibly
 weighted) threshold `kt`, and pre-rotation commits to a *list* `n` with threshold
 `nt`. `kt`/`nt` can be fractional weighted (`["1/2","1/2","1/2"]`, meaning any two
-of three). cardano-aid's `KeyState` is strictly single: one `cur_digest`, one
+of three). cardano-keri's `KeyState` is strictly single: one `cur_digest`, one
 `next_digest`. It cannot express `2-of-3` current or `3-of-5` next.
 
 **Is single-key sufficient for a DAO owning MPFS leaves? No.** Single-key means:
@@ -407,7 +407,7 @@ the event digest it corresponds to.
   property, anchoring event digests means the chain enforces *one* KEL prefix per
   AID. Two conflicting event-N's cannot both be anchored. This is the strongest
   duplicity guarantee in the system.
-- **A real link to KERI.** Anchoring the *KERI* event SAID (not a cardano-aid-native
+- **A real link to KERI.** Anchoring the *KERI* event SAID (not a cardano-keri-native
   digest) is also the natural place to bind the on-chain AID to the KERI AID (§7,
   §1): record the KERI AID/prefix at inception, anchor KERI event SAIDs thereafter.
 
@@ -438,10 +438,10 @@ the event digest it corresponds to.
 ## 7. Practical KERI adoption (vLEI / GLEIF)
 
 **Do real KERI networks use the AID format, key derivation, and event encoding
-cardano-aid assumes? No, on every axis.** Taking GLEIF's vLEI ecosystem
+cardano-keri assumes? No, on every axis.** Taking GLEIF's vLEI ecosystem
 (keripy/KERIA witnesses, ACDC credentials) as the reference:
 
-| Property | Real KERI / vLEI | cardano-aid assumes | Breaks? |
+| Property | Real KERI / vLEI | cardano-keri assumes | Breaks? |
 |---|---|---|---|
 | Digest for SAID/AID | **Blake3-256** default (CESR code `E`) | Blake2b-256 | **Hard** — PlutusV3 has no Blake3; the AID is unrecomputable on-chain |
 | Identifier value | SAID over the **full `icp` event** | `blake2b_256(cbor({cur_key, next_digest}))` | **Hard** — different function, different bytes |
@@ -456,7 +456,7 @@ cardano-aid assumes? No, on every axis.** Taking GLEIF's vLEI ecosystem
 **What breaks if a vLEI controller tries to anchor their AID here:**
 
 1. **The AID won't match.** Their real AID is a Blake3-256 SAID over a JSON `icp`
-   event. cardano-aid would compute a *different* 32-byte value from a 2-field CBOR
+   event. cardano-keri would compute a *different* 32-byte value from a 2-field CBOR
    record. The on-chain inception self-cert check (`AID == blake2b_256(cbor(…))`)
    *cannot be made to equal* the vLEI AID. PlutusV3 has no Blake3 builtin, so the
    script cannot even recompute the real SAID to check it. The controller is forced
@@ -465,7 +465,7 @@ cardano-aid assumes? No, on every axis.** Taking GLEIF's vLEI ecosystem
    single-`cur_digest`/single-`next_digest` slot cannot hold a `2-of-3` set or a
    delegator.
 3. **The history won't anchor.** vLEI relies on the full KEL (with `ixn` anchors for
-   credential issuance/revocation seals). cardano-aid has no event-digest anchor and
+   credential issuance/revocation seals). cardano-keri has no event-digest anchor and
    no interaction event, so credential-anchoring seals (the thing vLEI actually uses
    the KEL for) have nowhere to go.
 4. **Witnessing semantics don't carry over.** vLEI events are only accountable when
@@ -473,21 +473,21 @@ cardano-aid assumes? No, on every axis.** Taking GLEIF's vLEI ecosystem
    semantics; a vLEI verifier will not accept a Cardano anchor as witnessing.
 
 **The only coherent integration** is therefore *not* "anchor the vLEI AID" but
-"register a **distinct** cardano-aid AID and publish an **off-chain attestation**
+"register a **distinct** cardano-keri AID and publish an **off-chain attestation**
 (naturally an ACDC issued by the vLEI AID) binding `cardano_aid ↔ vLEI_aid`." That
 attestation, verified off-chain, is what lets a cross-checking RP say "these two
 identifiers are the same controller." Consequences:
 
 - The binding's trust is **entirely off-chain** (the ACDC and its KEL anchoring),
   so RP-MPFS — who reads only the chain — never sees it. This is §1/§2 again: the
-  data-plane is governed by the cardano-aid key-state, and the vLEI authority only
+  data-plane is governed by the cardano-keri key-state, and the vLEI authority only
   reaches it through the controller's discipline in keeping the two in step.
 - If you instead want the *on-chain* side to reference the vLEI AID, store the vLEI
   prefix in the inception datum and anchor vLEI event SAIDs (§6) — but the chain
   still can't *verify* them (no Blake3), so it's a controller-asserted link, not a
   script-checked one.
 
-> **Verdict:** cardano-aid is **KERI-*inspired*, not KERI-*interoperable***, and the
+> **Verdict:** cardano-keri is **KERI-*inspired*, not KERI-*interoperable***, and the
 > docs say so. For real vLEI adoption the honest story is: (a) it cannot host the
 > real AID; (b) integration is via a separate AID + an off-chain (ACDC) binding;
 > (c) closing the gap to true interop would require Blake3 on-chain (a Plutus

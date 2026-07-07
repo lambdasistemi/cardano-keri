@@ -1,4 +1,4 @@
-use cardano_aid/base64url
+use cardano_keri/base64url
 
 // RFC 4648 §5 test vectors
 

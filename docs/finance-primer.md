@@ -152,7 +152,7 @@ the customer-due-diligence rules are codified in the
 [Anti-Money-Laundering Regulation (EU) 2024/1624](https://eur-lex.europa.eu/eli/reg/2024/1624/oj)
 — but note
 carefully: the obligation sits on the *regulated business*, never on the
-blockchain. cardano-aid does not perform KYC; QVIs do, when they issue
+blockchain. cardano-keri does not perform KYC; QVIs do, when they issue
 credentials.
 
 ### AML and sanctions screening
@@ -206,7 +206,7 @@ on-chain securities register.
 Legal system powers over registered assets: a court can order a holder's
 position frozen or transferred (fraud, insolvency, sanctions). A securities
 register that *cannot* execute such orders is not legally operable — which is
-why "the oracle cannot touch leaves," a virtue everywhere else in cardano-aid,
+why "the oracle cannot touch leaves," a virtue everywhere else in cardano-keri,
 must be deliberately relaxed into a scoped, auditable issuer power for the
 security-tokens case.
 

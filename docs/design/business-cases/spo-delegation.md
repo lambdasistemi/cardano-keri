@@ -20,7 +20,7 @@ ever back operators with a valid Legal Entity vLEI.
   under compliance constraints) that must demonstrate its stake only ever
   backs identified operators.
 - **The verifier** is the delegator's own *stake credential script* — not the
-  pool, not an oracle. cardano-aid supplies the registries and the verifier
+  pool, not an oracle. cardano-keri supplies the registries and the verifier
   library it imports.
 
 !!! info "What is an 'institution under compliance constraints'?"

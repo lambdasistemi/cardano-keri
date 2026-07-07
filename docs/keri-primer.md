@@ -1,6 +1,6 @@
 # What is KERI, and what does Cardano add?
 
-This is the recommended starting point for understanding `cardano-aid`. It covers what KERI is, how it works, what Veridian is, and what Cardano brings to the picture.
+This is the recommended starting point for understanding `cardano-keri`. It covers what KERI is, how it works, what Veridian is, and what Cardano brings to the picture.
 
 ---
 
@@ -148,11 +148,11 @@ KERI solves identity portability and key rotation. It does not solve:
 | No composability with contracts | Smart contract integration, DeFi, governance |
 | Off-chain only | On-chain data anchoring via MPFS value cages |
 
-The `cardano-aid` bridge reuses the same Ed25519 keys Veridian already manages. No re-keying. The same signing operation that advances the KERI KEL also advances the Cardano registry. Cardano becomes an additional witness — one with stronger ordering and composability guarantees than any witness pool.
+The `cardano-keri` bridge reuses the same Ed25519 keys Veridian already manages. No re-keying. The same signing operation that advances the KERI KEL also advances the Cardano registry. Cardano becomes an additional witness — one with stronger ordering and composability guarantees than any witness pool.
 
 ## Blake2b-256: the Cardano path
 
-cardano-aid takes a different path: it requires Blake2b-256 (F-prefix) AID derivation, which Cardano can verify natively today. Blake3 AIDs are not supported. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+cardano-keri takes a different path: it requires Blake2b-256 (F-prefix) AID derivation, which Cardano can verify natively today. Blake3 AIDs are not supported. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ---
 

@@ -1,4 +1,4 @@
-module Cardano.AID.Ed25519
+module Cardano.KERI.AID.Ed25519
     ( verifyEd25519
     ) where
 

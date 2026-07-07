@@ -1,7 +1,7 @@
 # The Regulated DeFi Gate
 
 A primer on the flagship use case: what a compliance gate is, why the current
-industry pattern is weak, and precisely which part of the problem cardano-aid
+industry pattern is weak, and precisely which part of the problem cardano-keri
 solves. Companion to the [vLEI Bridge](vlei.md) use-case analysis.
 
 !!! tip "No finance background needed"
@@ -67,26 +67,26 @@ the issuer's signature, confirm the issuer's key was current, confirm nothing
 in the chain is revoked. The [LEI](../finance-primer.md#lei-and-gleif) is the
 identifier regulators already accept
 for entity identification. The crucial import: **the trust root is not
-cardano-aid and not the DeFi protocol — it is the existing regulatory
+cardano-keri and not the DeFi protocol — it is the existing regulatory
 identification infrastructure, made cryptographic.**
 
 What is missing from that picture: a blockchain cannot run it. Verification
 requires walking KERI KELs (are the issuer keys current?) and TELs (is the
 credential revoked?) — live, off-chain data structures. Today, "verify a vLEI"
 is something a *server* does. Any smart contract that gates on it is back to
-trusting whoever runs that server. That is the hole cardano-aid fills.
+trusting whoever runs that server. That is the hole cardano-keri fills.
 
-## What cardano-aid contributes: the chain runs the gate itself
+## What cardano-keri contributes: the chain runs the gate itself
 
 The four layers of the
 [on-chain architecture](../architecture/overview.md)
-(tracked in [#21](https://github.com/lambdasistemi/cardano-aid/issues/21),
+(tracked in [#21](https://github.com/lambdasistemi/cardano-keri/issues/21),
 internal) put the two moving parts of vLEI verification — current key-state and
 revocation status — on-chain, as MPF-rooted registries a Plutus script
 consumes via CIP-31 reference inputs, and provide the Aiken verifier that
 walks the chain:
 
-| vLEI verification step | Off-chain world | With cardano-aid |
+| vLEI verification step | Off-chain world | With cardano-keri |
 |---|---|---|
 | Issuer key is current | KERI KEL replay via witnesses | **Layer 1** AID registry proof |
 | Credential not revoked | Query issuer's TEL | **Layer 2** TEL registry proof |
@@ -174,9 +174,9 @@ non-revocation across the chain's TELs.
   chain sees it at the next root update, with no per-protocol operational
   step.
 
-## cardano-aid's role, precisely bounded
+## cardano-keri's role, precisely bounded
 
-cardano-aid is **the verification rails, not any of the actors**:
+cardano-keri is **the verification rails, not any of the actors**:
 
 | Responsibility | Owner |
 |---|---|
@@ -184,9 +184,9 @@ cardano-aid is **the verification rails, not any of the actors**:
 | Credential issuance and revocation | Issuers, in their TELs |
 | Operating the DeFi protocol | The protocol — imports Layer 3 as a library |
 | Holder key custody and wallets | Veridian / any KERI wallet |
-| Registry + TEL validators, Aiken verifier, proof-builder SDK | **cardano-aid** |
+| Registry + TEL validators, Aiken verifier, proof-builder SDK | **cardano-keri** |
 
-The one thing cardano-aid needs from others and cannot build: Veridian issuing
+The one thing cardano-keri needs from others and cannot build: Veridian issuing
 **F-prefix (Blake2b-256)** SAIDs for Cardano-targeted credentials — see
 [Blake2b-256 Requirement](blake2b256-requirement.md). This is the single
 external gate on the on-chain stack.
@@ -221,6 +221,6 @@ external gate on the on-chain stack.
 
 ## One-line summary
 
-cardano-aid makes "verify a vLEI" something a Plutus validator can do, so
+cardano-keri makes "verify a vLEI" something a Plutus validator can do, so
 identity gating inherits the trust profile of the chain plus GLEIF — instead
 of the trust profile of whoever runs the allowlist.

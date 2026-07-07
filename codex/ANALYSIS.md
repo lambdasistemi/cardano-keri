@@ -138,8 +138,8 @@ and key digests interchangeably. The spec should make `AID` and `KeyDigest`
 domain-separated hash types:
 
 ```
-AID       = blake2b_256("cardano-aid:aid:v1" || canonical_inception_event)
-KeyDigest = blake2b_256("cardano-aid:key-digest:v1" || pubkey)
+AID       = blake2b_256("cardano-keri:aid:v1" || canonical_inception_event)
+KeyDigest = blake2b_256("cardano-keri:key-digest:v1" || pubkey)
 ```
 
 It should also make clear that `new_next` is allowed to be any 32 bytes only at
@@ -160,7 +160,7 @@ the AID hash:
 
 ```
 inc_msg = cbor({
-  domain: "cardano-aid/inception/v1",
+  domain: "cardano-keri/inception/v1",
   network_id,
   registry_policy_id,
   registry_thread_token,
@@ -365,7 +365,7 @@ Collision vectors:
 
 ```
 rot_msg = cbor({
-  domain: "cardano-aid/rotation/v1",
+  domain: "cardano-keri/rotation/v1",
   network_id,
   registry_policy_id,
   registry_thread_token,
@@ -386,7 +386,7 @@ the proposed update.
 
 ```
 auth_msg = cbor({
-  domain: "cardano-aid/value-write/v1",
+  domain: "cardano-keri/value-write/v1",
   network_id,
   identity_registry_policy_id,
   identity_thread_token,

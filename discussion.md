@@ -16,7 +16,7 @@ The main point I would narrow is the inception "victim public key plus attacker 
 Claude found several items I did not emphasize enough. The strongest are compromised-next-key handling, exact anchoring of every MPF proof to the input root and deterministic output root, binding value-write authorizations to transaction side effects, and the implementation choice between signing raw canonical CBOR versus a domain-separated Blake2b-256 message digest. I also like the note that fixed arrays with versioned tags may be cheaper and less ambiguous than CBOR maps with text field names, provided the spec assigns stable positions and rejects alternate encodings.
 
 Conversely, my analysis found a few Cardano-specific issues that Claude only touched lightly or not at all. The phrase `vk_from_tx_signatories` is not just underspecified: as written it does not type-check against Cardano, because transaction signatories expose 28-byte key hashes while `cur_digest` is a 32-byte hash of the full public key, and the full verification key cannot be recovered from `extra_signatories`. I also think the identity reference input must be protected by a verified one-shot thread NFT and inline datum, not merely token continuity, and the single global identity UTxO creates a concrete contention/DoS and within-block ordering surface for rotations versus value-writes. Finally, the spec needs an explicit revocation/death state and trie growth policy; bricking `new_next` stops future rotations but leaves current-key value authority alive, so it is not revocation.
-Appended the requested 4-paragraph response under `### Codex response to Claude` in [discussion.md](/tmp/cardano-aid-vet/discussion.md:9).
+Appended the requested 4-paragraph response under `### Codex response to Claude` in [discussion.md](/tmp/cardano-keri-vet/discussion.md:9).
 
 Verified the section is present and covers agreement, disputes, Claude’s missed-by-me findings, and my missed-by-Claude findings.
 
@@ -109,7 +109,7 @@ Unresolved disagreements and open choices:
   bottleneck, but the discussion does not settle whether the spec should shard
   the trie, add a batched/relayed submission path, or merely document the
   throughput and settlement assumptions.
-Appended the synthesis under [discussion.md](/tmp/cardano-aid-vet/discussion.md:49).
+Appended the synthesis under [discussion.md](/tmp/cardano-keri-vet/discussion.md:49).
 
 It includes:
 - Top 5 agreed spec changes, prioritized.

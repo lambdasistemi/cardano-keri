@@ -90,11 +90,11 @@ final** — under active development (CIPs PR #444, superseding CIP-143), with
 the reference implementation explicitly R&D. Crucially, the platform
 implementation already ships `kyc`, `kyc-extended`, and `freeze-and-seize`
 substandards — and the existing KYC substandard is exactly the pattern
-cardano-aid exists to replace: a **trusted-entity attestation** (an
+cardano-keri exists to replace: a **trusted-entity attestation** (an
 Ed25519-signed `user_pkh‖role‖valid_until` payload, signed by a key from an
 admin-maintained trusted-entities list in a global-state datum). That is the
 allowlist-operator model with a signature instead of a database row — a
-precise, standards-track product wedge for cardano-aid.
+precise, standards-track product wedge for cardano-keri.
 
 **Fallback if CIP-113 stalls**: the token never leaves a bespoke script; every
 spend is the gate. The degenerate form of the same idea — which leads to
@@ -105,7 +105,7 @@ variant (b) below.
 Common base: L1 AID registry, L2 TELs, L3 verifier, L4 proof builder;
 admission cache `trie_key → {credential_saids, expiry}`.
 
-**Variant (a) — CIP-113 substandard "vLEI-transfer".** cardano-aid ships a
+**Variant (a) — CIP-113 substandard "vLEI-transfer".** cardano-keri ships a
 substandard replacing trusted-entity signatures with registry proofs: the
 transfer validator takes L1/L2 as CIP-31 reference inputs and requires, for
 **both** the spending stake credentials and every receiving stake credential,
@@ -122,7 +122,7 @@ the security register is an MPFS trie `trie_key → position`; a transfer is one
 cage write mutating two leaves (debit/credit), authorized by the sender's AID
 key and gated on both parties' admission. This mirrors legal reality — for
 registered securities **the register is authoritative, not the bearer
-instrument** — and it is the most cardano-aid-native design: transfer
+instrument** — and it is the most cardano-keri-native design: transfer
 authorization is exactly the value-write path of
 [Value Authorization](../../architecture/value-auth.md). Pros: no CIP-113
 dependency; restriction enforcement is trivially total (there is nothing to
@@ -266,7 +266,7 @@ freeze/seize — no CIP-113 dependency, no retail, no DEX.
     [transfer agents](../../finance-primer.md#transfer-agent-registrar) and
     [CSDs](../../finance-primer.md#csd-central-securities-depository)
     (the institutions holding master registers for entire markets, like
-    Euroclear) are licensed to do. If the cardano-aid register *is* the
+    Euroclear) are licensed to do. If the cardano-keri register *is* the
     authoritative record, whoever operates it may be doing licensed activity
     without a license. This is a question about the *operator's* legal
     status, not about the code — hence "legal review before mainnet."

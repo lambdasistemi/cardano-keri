@@ -44,7 +44,7 @@ transaction itself — the authorization travels as data.
 
 ```
 auth_msg = cbor({
-  domain                     : "cardano-aid/value-write/v1",
+  domain                     : "cardano-keri/value-write/v1",
   network_id                 : NetworkId,
   value_cage_policy_id       : PolicyId,
   value_cage_thread_token    : AssetName,

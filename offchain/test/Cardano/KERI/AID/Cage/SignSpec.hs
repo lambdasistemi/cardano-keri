@@ -1,12 +1,12 @@
-module Cardano.AID.Cage.SignSpec
+module Cardano.KERI.AID.Cage.SignSpec
     ( spec
     ) where
 
-import Cardano.AID.Cage.Sign
+import Cardano.KERI.AID.Cage.Sign
     ( signValueWrite
     , valueWriteMessage
     )
-import Cardano.AID.Ed25519
+import Cardano.KERI.AID.Ed25519
     ( verifyEd25519
     )
 import Cardano.Crypto.DSIGN

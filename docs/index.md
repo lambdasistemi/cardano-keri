@@ -1,4 +1,4 @@
-# cardano-aid
+# cardano-keri
 
 Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://github.com/WebOfTrust/ietf-keri) ecosystem.
 
@@ -10,7 +10,7 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
 
 - **Shipped substrate:** MPFS plugin support. This is the concrete extension
   point for domain-specific value-cage authorization.
-- **cardano-aid status:** research/design and prototypes for an MPFS identity
+- **cardano-keri status:** research/design and prototypes for an MPFS identity
   plugin. The identity registry, freeze registry, super watcher, and
   Veridian/KERI bridge are not shipped runtime infrastructure in this repo.
 - **Design target:** on-chain-verifiable key-state operations using
@@ -31,7 +31,7 @@ pre-committed next key.
 
 ## Real-world use case: vLEI
 
-cardano-aid explores an MPFS plugin bridge for [GLEIF vLEI](design/vlei.md) —
+cardano-keri explores an MPFS plugin bridge for [GLEIF vLEI](design/vlei.md) —
 the cryptographic extension of the Legal Entity Identifier, the entity ID
 that MiFID II, Basel III, and eIDAS 2.0 already rely on for identification.
 (Identity evidence, not compliance: nothing here satisfies AML, sanctions
@@ -44,7 +44,7 @@ for the full use-case analysis.
 
 ## Node-level attribution: the Amaru question
 
-Where does cardano-aid sit relative to the proposed Veridian × Amaru node-level attribution work, what is still missing for full ACDC support (schema + revocation/TEL anchoring), and does anything actually need to live *inside* the node? See [Amaru Integration Analysis](architecture/amaru-integration.md).
+Where does cardano-keri sit relative to the proposed Veridian × Amaru node-level attribution work, what is still missing for full ACDC support (schema + revocation/TEL anchoring), and does anything actually need to live *inside* the node? See [Amaru Integration Analysis](architecture/amaru-integration.md).
 
 That analysis also records the MPFS-side contention pattern: snapshot the cage
 UTxO datum/value root for a value-write, then rebuild from a newer snapshot if
@@ -75,7 +75,7 @@ The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-fore
 key used by the proposed on-chain registry — Cardano-verifiable,
 front-run-proof, stable across rotations.
 
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs so the derivation uses a hash Cardano scripts and off-chain verifiers share; on-chain it is stored as unverified metadata — the binding is proven off-chain by KEL replay. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-keri requires F-prefix (Blake2b-256) AIDs so the derivation uses a hash Cardano scripts and off-chain verifiers share; on-chain it is stored as unverified metadata — the binding is proven off-chain by KEL replay. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ## System components
 

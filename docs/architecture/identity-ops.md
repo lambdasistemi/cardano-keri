@@ -211,13 +211,13 @@ permanently embedded in the trie and publicly inspectable. Value cages that
 encounter a `FrozenFatal` leaf reject the authorization. The deposit stays
 locked — a duplicitous identity does not get its bond back.
 
-!!! note "Open decision: who may submit"
-    Submission is specified here as **permissionless**: the proof is
-    self-authenticating (two verifying signatures by the identity's own
-    current key over conflicting events), so nothing is gained by gating it,
-    and no invalid freeze can pass. An earlier oracle-mediated draft required
-    an operator key as DDoS protection; in the permissionless model, proof
-    validity is the spam defense. Revisit if fee-level griefing proves real.
+!!! note "Decision: submission is permissionless"
+    The proof is self-authenticating (two verifying signatures by the
+    identity's own current key over conflicting events), so nothing is
+    gained by gating it, and no invalid freeze can pass. An earlier
+    oracle-mediated draft required an operator key as DDoS protection; in
+    the permissionless model, proof validity is the spam defense. Ratified
+    2026-07-07; revisit only if fee-level griefing proves real in practice.
 
 ## Emergency freeze
 

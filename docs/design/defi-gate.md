@@ -79,8 +79,9 @@ trusting whoever runs that server. That is the hole cardano-aid fills.
 ## What cardano-aid contributes: the chain runs the gate itself
 
 The four layers of the
-[on-chain architecture](https://github.com/lambdasistemi/cardano-aid/issues/21)
-put the two moving parts of vLEI verification — current key-state and
+[on-chain architecture](../architecture/overview.md)
+(tracked in [#21](https://github.com/lambdasistemi/cardano-aid/issues/21),
+internal) put the two moving parts of vLEI verification — current key-state and
 revocation status — on-chain, as MPF-rooted registries a Plutus script
 consumes via CIP-31 reference inputs, and provide the Aiken verifier that
 walks the chain:
@@ -160,8 +161,9 @@ non-revocation across the chain's TELs.
   list.
 - **No allowlist operator.** Admission is script-verified. The residual
   trusted parties are GLEIF/QVIs — already the regulator-accepted roots — and,
-  for liveness only, the registry oracle, who cannot forge an identity, only
-  fail to update one (see [Trust Model](trust-model.md)).
+  for liveness only, the MPFS oracles of the L2 TEL registries and the
+  admission cage (the issuers and the venue), who cannot forge an identity,
+  only fail to update one (see [Trust Model](trust-model.md)).
 - **Portable admission.** The same credentials admit the entity to any
   protocol that imports the Layer-3 verifier. KYC once, at the QVI, not per
   venue.

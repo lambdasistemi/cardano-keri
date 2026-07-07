@@ -1,5 +1,16 @@
 # Amaru Integration Analysis
 
+!!! warning "Written against the earlier oracle-mediated identity model"
+    This analysis predates the permissionless identity plane now specified in
+    [Architecture Overview](overview.md) and
+    [Identity Operations](identity-ops.md). Where it says the identity
+    registry has a "single trusted oracle writer" or "oracle controls entry",
+    it describes the superseded draft — identity operations are now
+    permissionless and deposit-bonded; only the *value-cage* plane keeps an
+    oracle (necessary-not-sufficient). The comparative conclusions about
+    node-level attribution are unaffected, but read the registry-shape
+    comparisons with that correction in mind.
+
 This document analyses the proposed **Veridian × Amaru** node-level attribution
 integration and positions cardano-aid within it. It is an architecture
 analysis, not a commitment: its purpose is to establish where cardano-aid

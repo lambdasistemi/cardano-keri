@@ -38,13 +38,13 @@ The KEL replay is not optional — it is the step that proves the Cardano entry 
 | First registration is the real Bob | No | Yes |
 | The registry entry is not a forgery | No | Yes |
 
-## The squatting limitation (current)
+## The squatting limitation
 
-Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification — Plutus has no [Blake3](https://github.com/BLAKE3-team/BLAKE3) builtin, so it cannot check that `blake3(inception_event) == cesr_aid`.
+Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification. This is not a hash-agility problem — cardano-aid mandates F-prefix (Blake2b-256) AIDs precisely so the derivation uses a Cardano-native hash (see [Blake2b-256 requirement](blake2b256-requirement.md)) — it is structural: KERI inception events are public, so hash-checking supplied event bytes proves nothing about the registrant, and binding the event's key material to the registrant would require parsing CESR on-chain, which is out of scope by design (see [AID Model — attack B](aid-model.md#inception-security-two-attacks-different-fixes)).
 
 This means `cesr_aid → trie_key` is a one-to-many untrusted index. Multiple entries can claim the same Veridian AID. The KEL replay finds the unique legitimate `trie_key` and discards the rest.
 
-For applications that need to resolve KERI identity purely from Cardano state (without touching the KERI network), this is a hard limitation. They cannot be built securely until Blake3 lands in Plutus. See [Blake2b-256 requirement](blake2b256-requirement.md).
+Applications that need to resolve KERI identity purely from Cardano state (without touching the KERI network) cannot be built securely — KEL replay is a permanent part of the trust chain, not a temporary gap.
 
 ## Practical workflow (two Veridian users)
 

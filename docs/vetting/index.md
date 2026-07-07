@@ -1,5 +1,14 @@
 # Vetting Summary
 
+!!! warning "Historical material — do not implement from this section"
+    Everything under Vetting (including the analyses and cross-agent
+    transcripts linked below) is a **design-history record** of an archived
+    specification. It preserves superseded assumptions next to the findings
+    that killed them. The normative model lives in the Architecture and
+    Design sections — start from
+    [Architecture Overview](../architecture/overview.md) and
+    [Identity Operations](../architecture/identity-ops.md).
+
 Two agents independently vetted the `docs/aid-ops.md` specification (now archived as [`aid-ops-historical.md`](aid-ops-historical.md)):
 
 - **Codex gpt-5.5** — full report in [`analysis-codex.md`](analysis-codex.md)
@@ -31,7 +40,7 @@ Both agents were given the specification cold, with no prior context about the d
 | Canonical next-key encoding | `canonical_next_pubkey_bytes` now defined in `veridian-bridge.md` with test vector; SDK must implement exactly |
 | Deposit model | Resolved: Option A (`deposit : Lovelace` in `KeyState`); see `super-watcher.md` |
 | Freeze marker unification | Resolved: canonical 4-field `FreezeMarker` defined in `identity-ops.md` |
-| `cesr_aid` derivation code / on-chain verification | Resolved: F-prefix (Blake2b-256) AIDs only; blake2b_256 builtin verifies on-chain |
+| `cesr_aid` derivation code / on-chain verification | Resolved: F-prefix (Blake2b-256) AIDs only; stored as metadata, binding verified off-chain by KEL replay (see `aid-model.md`) |
 | Convergence enforcement trustlessness | Resolved: Blake2b-256 only design; super watcher with challenge period is the mechanism |
 | CIP-31 MEV coupling | Open |
 | Ed25519 canonical-S malleability | Open |

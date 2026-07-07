@@ -29,8 +29,11 @@ pre-committed next key.
 ## Real-world use case: vLEI
 
 cardano-aid explores an MPFS plugin bridge for [GLEIF vLEI](design/vlei.md) —
-the cryptographic extension of the Legal Entity Identifier used for MiFID II,
-Basel III, and eIDAS 2.0 compliance. In the design, a legal entity's KERI AID
+the cryptographic extension of the Legal Entity Identifier, the entity ID
+that MiFID II, Basel III, and eIDAS 2.0 already rely on for identification.
+(Identity evidence, not compliance: nothing here satisfies AML, sanctions
+screening, or reporting obligations by itself.) In the design, a legal
+entity's KERI AID
 (the root of its vLEI credential chain) maps to a stable Cardano `trie_key`,
 enabling compliance-gated contracts, non-censorable key history, governance
 eligibility, and on-chain ACDC notarization. See [vLEI Bridge](design/vlei.md)
@@ -69,7 +72,7 @@ The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-fore
 key used by the proposed on-chain registry — Cardano-verifiable,
 front-run-proof, stable across rotations.
 
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs, which Cardano can verify on-chain via the `blake2b_256` builtin. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-aid requires F-prefix (Blake2b-256) AIDs so the derivation uses a hash Cardano scripts and off-chain verifiers share; on-chain it is stored as unverified metadata — the binding is proven off-chain by KEL replay. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ## System components
 

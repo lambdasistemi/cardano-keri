@@ -18,17 +18,17 @@ The identity registry script enforces the following properties within a single b
 
 **Full KEL history.** The on-chain state holds only the current key-state. The full sequence of inception and rotation events is not stored or verified on-chain. There is no CESR encoding, no event receipt chain.
 
-**CESR self-cert verification.** Cardano verifies the [CESR](https://github.com/WebOfTrust/ietf-cesr) AID self-certifying property for F-prefix (Blake2b-256) AIDs via the `blake2b_256` Plutus builtin. cardano-aid requires F-prefix AIDs; Blake3 AIDs are not supported.
+**CESR self-cert verification.** The registry stores `cesr_aid` as controller-asserted metadata and never verifies it. The `blake2b_256` builtin *could* hash supplied inception-event bytes (which is why cardano-aid requires F-prefix, Blake2b-256 AIDs — Blake3 AIDs are not supported), but doing so would prove nothing: inception events are public, so anyone can supply bytes that hash to a victim's AID. Binding is off-chain — see [Binding verification protocol](../architecture/veridian-bridge.md#binding-verification-protocol).
 
-**Duplicity detection.** If an attacker and the legitimate holder both submit rotation transactions in the same block (or in competing forks), the chain will accept one and discard the other. There is no gossip or watcher network to detect and flag this.
+**KERI duplicity detection.** Detecting that a controller published conflicting KERI events is off-chain work (watchers, witness receipts). Once detected, the evidence *can* be recorded on-chain as a permanent [duplicity freeze](../architecture/identity-ops.md#duplicity-freeze); the proposed [super watcher](super-watcher.md) adds economic enforcement. The chain itself never observes KERI.
 
-**Revocation of data-plane authority after key compromise.** A tombstoned AID stops future rotations but does not revoke value-write authority for the current key. A compromised current key retains value-write capability until a revocation flag is added to KeyState and cage scripts are updated to check it.
+**Instant revocation of data-plane authority.** Closing or freezing an identity revokes value-write authority at the next root update — cages require `status == Active` plus freeze-registry absence — but a compromised `cur_key` retains value-write capability during the [synchronization lag](#synchronization-lag) window until the [emergency freeze](../architecture/identity-ops.md#emergency-freeze) or rotation lands.
 
 **Next-key compromise before rotation.** If `next_key` is stolen before rotation, the on-chain state provides no protection. The response is to rotate before the attacker does (a race condition outside the protocol).
 
-## CESR AID: verified for F-prefix, metadata for correlation
+## CESR AID: metadata for correlation
 
-The `cesr_aid` field in KeyState is the decoded CESR AID. For F-prefix (Blake2b-256) AIDs the on-chain script can verify the derivation via `blake2b_256`. The field is also carried forward through rotations for off-chain correlation.
+The `cesr_aid` field in KeyState is the decoded CESR AID, stored unverified and carried forward through rotations for off-chain correlation. The F-prefix (Blake2b-256) requirement exists so that *off-chain* verifiers recompute the derivation with the same hash Cardano scripts use elsewhere — see [Blake2b-256 Requirement](blake2b256-requirement.md).
 
 Off-chain correlation works as follows: given a CESR AID (e.g., `FKYLUMm...`), decode the base64url prefix to 32 bytes, scan KeyState values across the trie looking for a matching `cesr_aid` field, then use the associated `trie_key` for Cardano interactions.
 
@@ -40,13 +40,13 @@ The authoritative resolution is always the KEL-derived `trie_key` recomputation 
 |---|---|---|
 | trie_key is unique | Yes — absence proof at inception | — |
 | trie_key derivation is correct | Yes — blake2b_256 verified on-chain | — |
-| CESR AID is correctly derived (F-prefix AIDs) | Yes — blake2b_256 builtin | Requires Veridian F-prefix fix |
+| CESR AID is correctly derived (F-prefix AIDs) | No — asserted metadata only | KEL replay + trie_key recomputation (needs Veridian F-prefix issuance) |
 | Key was not stolen | No | KEL replay + watchers |
 | Current key is the legitimate one | Yes — pre-rotation chain | — |
 | CESR AID matches trie_key holder | No — asserted metadata only | KERI KEL + metadata scan |
 | AID is not compromised | No | KERI duplicity detection |
 | Value-write was authorized | Yes — against a key-state snapshot | — |
-| Identity has not been tombstoned | Yes — seq and next_digest checks | — |
+| Identity has not been closed or frozen | Yes — leaf status is part of the proven KeyState; freeze registry checked alongside | — |
 | KEL is complete and un-forked | No | Witness receipts |
 | Settlement is final | No | Praos/Genesis finality depth |
 | Cardano state mirrors Veridian | No | Synchronization lag (~20s) |

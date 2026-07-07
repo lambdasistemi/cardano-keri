@@ -36,6 +36,16 @@ Three regulatory frameworks are converging on machine-verifiable legal entity id
 
 **[eIDAS 2.0](https://digital-strategy.ec.europa.eu/en/policies/eudi-regulation)** (EU Digital Identity regulation, Regulation (EU) 2024/1183) mandates that EU member states provide digital identity wallets by end-2026. vLEI credentials issued to legal entities qualify as organizational identity credentials under the eIDAS 2.0 framework, bridging corporate and citizen identity.
 
+!!! warning "Identity evidence, not compliance"
+    These frameworks establish that machine-verifiable *entity
+    identification* is what regulators run on. vLEI — and anything built on
+    it here — provides cryptographic evidence of legal-entity identity, role,
+    and authority. It does not by itself satisfy AML, sanctions screening,
+    transaction reporting, suitability, or market-abuse obligations, and
+    none of these frameworks mandates gating. Any stronger regulatory claim
+    in these docs requires an article-level citation first — see
+    [The Regulated DeFi Gate — honest limits](defi-gate.md#what-the-gate-is-not).
+
 ---
 
 ## How cardano-aid is the bridge layer

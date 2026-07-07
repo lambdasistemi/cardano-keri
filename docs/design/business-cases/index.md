@@ -22,7 +22,7 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
 | [KYC security tokens](security-tokens.md) | CIP-113 substandard, or register-as-cage | admission cache **mandatory** (receiver check) | private placement on register-as-cage |
 | [Institutional contracts](institutional-contracts.md) | contract state-machine spend validators | full per-transition **affordable** | one treasury disbursement ceremony, vLEI-verified signers |
 
-## The factored core — required by every case
+## The factored core: required by every case
 
 1. **List-shaped, threshold-capable KeyState.** Unanimous: every case has
    organizational actors whose AIDs are k-of-n weighted multisig. Because
@@ -94,4 +94,6 @@ issuer — converges with the security-token case anyway.
     (actors, enforcement point, design sketch, decision pressure, demand,
     risks) and then factored. Where they contradict earlier documents — e.g.
     the batcher-model correction to [The Regulated DeFi Gate](../defi-gate.md)
-    — the case study is the more recent analysis.
+    — the case study is the more recent analysis. Issue links on this page
+    (#21, #24, #31) point to the project's internal tracker and are not
+    publicly readable; the decisions themselves are stated inline.

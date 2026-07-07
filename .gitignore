@@ -1,0 +1,8 @@
+# LLM investigation notes (local only)
+.llm/
+
+# Build artifacts
+offchain/dist-newstyle/
+onchain/build/
+onchain/plutus.json
+site/

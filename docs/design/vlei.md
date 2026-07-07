@@ -110,13 +110,18 @@ A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain 
 
 ## Gap table
 
+Status is milestone-based — see the [Roadmap](../roadmap.md). Nothing below is
+shipped runtime infrastructure yet (see the
+[implementation status](../index.md#implementation-status)); "designed" means
+the cryptographic path exists and the work is scheduled.
+
 | Capability | Status |
 |---|---|
-| Seq-0 binding verifiable from KEL | Available — Blake2b-256 digest agility |
-| Full on-chain AID self-cert | Available — blake2b_256 Plutus builtin |
-| Value-write authorization | Available |
-| Super watcher convergence (with challenge period) | Available |
-| Cardano-only vLEI resolution | Available once GLEIF/QVIs adopt F-prefix |
+| Seq-0 binding verifiable from KEL | Designed — Blake2b-256 digest agility; ships with M1 |
+| Full on-chain AID self-cert | Designed — `blake2b_256` Plutus builtin; ships with M1 |
+| Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
+| Super watcher convergence | Open design question — the burn proof is not trustless without Blake3/CESR; a [challenge period or watcher threshold](super-watcher.md#without-blake3-the-trust-problem) must be chosen first; M5 |
+| Cardano-only vLEI resolution | Blocked externally — requires GLEIF/QVI adoption of F-prefix SAIDs |
 
 ---
 

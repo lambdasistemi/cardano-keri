@@ -135,6 +135,12 @@ Amaru/Veridian channel; the Amaru treasury ceremony):
   treasury disbursement ceremony with vLEI-verified signers; state-machine
   spend validators, full per-transition verification.
 
+Both pilots share a **runway ticket
+([#48](https://github.com/lambdasistemi/cardano-aid/issues/48), milestoned
+M2)**: counterparty confirmation, QVI credential issuance, credential
+fixtures, preprod environment, and the F-prefix gate readiness check — started
+early because of the lead times below.
+
 ### M5 — Case adapters & hardening
 
 Demand-driven, after the pilots prove the core:
@@ -144,7 +150,11 @@ Demand-driven, after the pilots prove the core:
   issuer — converges with the security-token case.
 - Super watcher economic enforcement
   ([#10](https://github.com/lambdasistemi/cardano-aid/issues/10)) — hardening,
-  not pilot-critical.
+  not pilot-critical, and **gated by a design pass**: without Blake3/CESR
+  builtins the burn proof is not trustless (a malicious watcher could forge a
+  divergence proof), so a
+  [challenge period or watcher-threshold scheme](design/super-watcher.md#without-blake3-the-trust-problem)
+  must be chosen before implementation.
 - Aiken package registry publication
   ([#18](https://github.com/lambdasistemi/cardano-aid/issues/18)), once M2
   freezes the validator API.
@@ -183,7 +193,8 @@ flowchart LR
    The pilots need credentialed counterparties, and getting a real legal
    entity through QVI issuance has weeks-to-months of lead time. For M4 to
    start when M3 ends, the pilot pick and the counterparty conversation
-   should happen during M2.
+   should happen during M2. Tracked as
+   [#48](https://github.com/lambdasistemi/cardano-aid/issues/48).
 2. **One soft leak backwards:** the scoped-override verbs (#40) are motivated
    differently per case — freeze/seize vs signer re-designation vs admission
    expiry. The mechanism is common, but the spec is written with all four

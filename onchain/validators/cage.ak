@@ -1,4 +1,3 @@
-use aiken/collection/list
 use aiken/collection/list.{find, foldl, has, head}
 use aiken/crypto.{VerificationKeyHash, blake2b_256, verify_ed25519_signature}
 use aiken/interval
@@ -7,7 +6,6 @@ use aiken/merkle_patricia_forestry as mpf
 use aiken/option.{is_some}
 use aiken/primitive/bytearray.{from_int_big_endian}
 use cardano/address
-use cardano/assets
 use cardano/assets.{PolicyId}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, find_input,
@@ -128,13 +126,12 @@ fn validRequest(request: Request, tokenRef: OutputReference, tx: Transaction) {
   let State { process_time, retract_time, .. } = readState(input)
   let Transaction { validity_range, .. } = tx
   expect
-    in_phase1(validity_range, submitted_at, process_time)
-      || is_rejectable(
-          validity_range,
-          submitted_at,
-          process_time,
-          retract_time,
-        )
+    in_phase1(validity_range, submitted_at, process_time) || is_rejectable(
+      validity_range,
+      submitted_at,
+      process_time,
+      retract_time,
+    )
   True
 }
 
@@ -155,14 +152,10 @@ pub fn in_phase2(
   process_time,
   retract_time,
 ) -> Bool {
-  interval.is_entirely_after(
+  interval.is_entirely_after(validity_range, submitted_at + process_time - 1) && interval.is_entirely_before(
     validity_range,
-    submitted_at + process_time - 1,
+    submitted_at + process_time + retract_time,
   )
-    && interval.is_entirely_before(
-        validity_range,
-        submitted_at + process_time + retract_time,
-      )
 }
 
 pub fn is_rejectable(
@@ -174,8 +167,7 @@ pub fn is_rejectable(
   interval.is_entirely_after(
     validity_range,
     submitted_at + process_time + retract_time - 1,
-  )
-    || interval.is_entirely_before(validity_range, submitted_at)
+  ) || interval.is_entirely_before(validity_range, submitted_at)
 }
 
 /// Verify that the owner of a request has authorized this specific value-write.
@@ -194,7 +186,13 @@ pub fn verifyOwnerAuth(
   let id_trie = mpf.from_root(identity_root)
   let cur_key_digest = blake2b_256(owner_key)
   expect _ =
-    mpf.update(id_trie, owner_aid, identity_proof, cur_key_digest, cur_key_digest)
+    mpf.update(
+      id_trie,
+      owner_aid,
+      identity_proof,
+      cur_key_digest,
+      cur_key_digest,
+    )
   // Step 2: verify owner signature over domain ++ request output reference
   let msg =
     blake2b_256(
@@ -247,10 +245,10 @@ fn mkAction(
             let newTrie =
               when action is {
                 UpdateAction { value_proof, auth } -> {
-                  expect
-                    in_phase1(validity_range, submitted_at, process_time)
+                  expect in_phase1(validity_range, submitted_at, process_time)
                   // Verify AID owner authorization before applying MPF op
-                  expect verifyOwnerAuth(auth, identity_root, input.output_reference)
+                  expect
+                    verifyOwnerAuth(auth, identity_root, input.output_reference)
                   when requestValue is {
                     Insert(value) ->
                       mpf.insert(trie, requestKey, value, value_proof)
@@ -283,7 +281,12 @@ fn mkAction(
               } else {
                 owners
               }
-            (newTrie, actionsTail, newOwners, totalInputLovelace + inputLovelace)
+            (
+              newTrie,
+              actionsTail,
+              newOwners,
+              totalInputLovelace + inputLovelace,
+            )
           } else {
             acc
           }
@@ -303,12 +306,9 @@ fn sumRefunds(
     [] -> 0
     [Pair(owner, _), ..rest] -> {
       expect [output, ..remaining] = outputs
-      expect
-        address.VerificationKey(vkh) =
-          output.address.payment_credential
+      expect address.VerificationKey(vkh) = output.address.payment_credential
       expect vkh == owner
-      assets.lovelace_of(output.value)
-        + sumRefunds(remaining, rest)
+      assets.lovelace_of(output.value) + sumRefunds(remaining, rest)
     }
   }
 }
@@ -324,22 +324,19 @@ fn validModify(
   let State { root, tip, process_time, retract_time, .. } = state
   expect Some(output) = head(outputs)
   expect InlineDatum(outDatum) = output.datum
-  expect
-    StateDatum(
-      State {
-        root: newRoot,
-        process_time: outProcessTime,
-        retract_time: outRetractTime,
-        identity_root: outIdentityRoot,
-        ..
-      },
-    ) = outDatum
+  expect StateDatum(State {
+    root: newRoot,
+    process_time: outProcessTime,
+    retract_time: outRetractTime,
+    identity_root: outIdentityRoot,
+    ..
+  }) = outDatum
   // Enforce immutability of time params
   expect process_time == outProcessTime
   expect retract_time == outRetractTime
+
   // identity_root may advance (oracle updates it) but must not silently regress
   // (handled by oracle governance; not checked here — oracle signs the tx)
-
   let (expectedNewTrie, remainingActions, owners, totalInputLovelace) =
     inputs
       |> foldl(

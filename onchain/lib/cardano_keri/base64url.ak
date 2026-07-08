@@ -62,11 +62,7 @@ pub fn encode(bytes: ByteArray) -> ByteArray {
           }
         } else {
           // new_bits == 8
-          State {
-            acc: new_acc % 4,
-            bits: 2,
-            out: emit(state.out, new_acc / 4),
-          }
+          State { acc: new_acc % 4, bits: 2, out: emit(state.out, new_acc / 4) }
         }
       },
     )

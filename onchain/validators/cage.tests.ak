@@ -30,15 +30,8 @@ test accept_owner_signed() {
   let tx_id =
     #"dededededededededededededededededededededededededededededededede"
 
-  let auth =
-    OwnerAuth {
-      owner_aid,
-      identity_proof: [],
-      owner_key,
-      owner_sig,
-    }
-  let out_ref =
-    OutputReference { transaction_id: tx_id, output_index: 0 }
+  let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
+  let out_ref = OutputReference { transaction_id: tx_id, output_index: 0 }
 
   verifyOwnerAuth(auth, identity_root, out_ref)
 }
@@ -56,7 +49,8 @@ test reject_bad_sig() {
         |> bytearray.concat(tx_id)
         |> bytearray.concat(#"0000"),
     )
-  let bad_sig = #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  let bad_sig =
+    #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
   !verify_ed25519_signature(owner_key, msg, bad_sig)
 }

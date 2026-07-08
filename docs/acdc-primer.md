@@ -34,11 +34,15 @@ An ACDC is a structured document. Its core fields:
 v  — version string
 d  — SAID: the self-addressing identifier (digest of this credential)
 i  — issuer AID          (who is making the claim)
+ri — registry identifier (the credential's status registry — its TEL; the current ACDC spec labels this rd)
 s  — schema SAID         (the shape the claim must conform to)
-a  — attributes          (the claim itself; carries the issuee AID)
+a  — attributes          (the claim itself; targeted credentials carry the issuee AID in a.i)
 e  — edges               (links to other ACDCs this one depends on)
 r  — rules               (legal/operational terms)
 ```
+
+(A credential also carries `u`, a salty nonce for disclosure control; the list
+above is the part that matters here.)
 
 Two things make it verifiable without an issuer:
 
@@ -64,18 +68,21 @@ pre-rotation, duplicity detection, portable history.
 ## Chaining: edges make a graph of authority
 
 The "Chained" in ACDC is the `e` field. An edge references another ACDC **by
-its SAID**, so a credential can point to the credential that authorized it:
+its SAID**, pointing from a credential to the one it depends on — so the chain
+is built leaf-first, each credential naming its parent:
 
 ```
-QVI credential          e: → GLEIF root       "GLEIF accredited me"
-LE credential           e: → QVI credential    "an accredited QVI issued me"
-OOR credential          e: → LE authorization  "the entity authorized this role"
+OOR credential    e.auth → OOR-AUTH credential   "issued on this authorization"
+OOR-AUTH cred     e.le   → LE credential          "the entity authorized this role"
+LE credential     e.qvi  → QVI credential         "an accredited QVI issued me"
+QVI credential    (no edge)                        root — trusted because GLEIF's AID issued it
 ```
 
 Because every edge is a SAID and every SAID is a digest, the chain is
 tamper-evident end to end: you cannot swap in a different parent credential
-without breaking the edge. A verifier follows the edges from a leaf credential
-back to a **root of trust it already accepts** — for vLEI, GLEIF's AID.
+without breaking the edge. A verifier walks the edges from a leaf credential up
+to a link it already trusts — for vLEI, the QVI credential issued directly by
+**GLEIF's AID**, the root of trust.
 
 ---
 
@@ -83,25 +90,27 @@ back to a **root of trust it already accepts** — for vLEI, GLEIF's AID.
 
 [vLEI](design/vlei.md) is the ACDC chain this project targets. GLEIF defines a
 strict hierarchy, and the role chain is **four ACDCs**, not three — the detail
-that sets the verifier's hop bound:
+that sets the verifier's hop bound. The arrows below are the ACDC edges: each
+credential points *up* to its parent, the direction a verifier walks.
 
 ```mermaid
 flowchart LR
-    G["GLEIF Root<br/>(self-signed)"] --> Q["QVI<br/>credential"]
-    Q --> LE["Legal Entity<br/>credential"]
-    LE --> AUTH["OOR-AUTH<br/>(LE authorizes)"]
-    AUTH --> OOR["OOR<br/>(named officer)"]
-    style G fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
+    OOR["OOR<br/>(named officer)"] -->|"e.auth"| AUTH["OOR-AUTH"]
+    AUTH -->|"e.le"| LE["Legal Entity"]
+    LE -->|"e.qvi"| QVI["QVI"]
+    QVI -.->|"issued by"| G["GLEIF Root AID<br/>(trust anchor)"]
+    style QVI fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
     style OOR fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
 ```
 
 The subtlety: an Official Organizational Role (OOR) credential is **issued by
-the QVI**, not by the Legal Entity — but only after the LE signs an **OOR-AUTH**
-credential authorizing that specific role. So a full role chain from GLEIF to a
-named officer traverses four credentials: QVI → LE → OOR-AUTH → OOR. This is
-why the on-chain verifier is scoped to **hop bound 4, parameterized** rather
-than assuming the naive three-level tree. (An Engagement Context Role, ECR, is
-a shorter path issued directly by the LE.)
+the QVI**, not by the Legal Entity — but only after the LE issues an **OOR-AUTH**
+credential (to the QVI) authorizing that specific role. So a full role chain
+from GLEIF to a named officer traverses four credentials — QVI → LE → OOR-AUTH →
+OOR — which is why the on-chain verifier is scoped to **hop bound 4,
+parameterized** rather than assuming the naive three-level tree. (An Engagement
+Context Role, ECR, can be issued directly by the LE — a shorter path — or by the
+QVI via an ECR-AUTH credential.)
 
 Most gates care about the *role* credential at the leaf (a trader ECR, an
 officer OOR) — proof that a specific person holds a specific authority under a

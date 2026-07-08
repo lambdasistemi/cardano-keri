@@ -1,46 +1,44 @@
-module Cardano.KERI.AID.Cage.TypesSpec
-    ( spec
-    ) where
+module Cardano.KERI.AID.Cage.TypesSpec (
+    spec,
+) where
 
-import Cardano.KERI.AID.Cage.Types
-    ( AIDOnChainTokenState (..)
-    , AIDOwnerAuth (..)
-    , AIDRequestAction (..)
-    )
-import Cardano.KERI.AID.Cage.Types
-    ( Neighbor (..)
-    , ProofStep (..)
-    )
-import Data.ByteString
-    ( ByteString
-    )
-import qualified Data.ByteString as BS
-import PlutusTx.Builtins.Internal
-    ( BuiltinByteString (..)
-    )
-import PlutusTx.IsData.Class
-    ( FromData (..)
-    , ToData (..)
-    , fromBuiltinData
-    , toBuiltinData
-    )
-import Test.Hspec
-    ( Expectation
-    , Spec
-    , describe
-    , it
-    , shouldBe
-    )
-import Test.QuickCheck
-    ( Arbitrary (..)
-    , Gen
-    , Property
-    , elements
-    , forAll
-    , listOf
-    , property
-    , vectorOf
-    )
+import Cardano.KERI.AID.Cage.Types (
+    AIDOnChainTokenState (..),
+    AIDOwnerAuth (..),
+    AIDRequestAction (..),
+    Neighbor (..),
+    ProofStep (..),
+ )
+import Data.ByteString (
+    ByteString,
+ )
+import Data.ByteString qualified as BS
+import PlutusTx.Builtins.Internal (
+    BuiltinByteString (..),
+ )
+import PlutusTx.IsData.Class (
+    FromData (..),
+    ToData (..),
+    fromBuiltinData,
+    toBuiltinData,
+ )
+import Test.Hspec (
+    Expectation,
+    Spec,
+    describe,
+    it,
+    shouldBe,
+ )
+import Test.QuickCheck (
+    Arbitrary (..),
+    Gen,
+    Property,
+    elements,
+    forAll,
+    listOf,
+    property,
+    vectorOf,
+ )
 
 -- ---------------------------------------------------------
 -- Arbitrary helpers
@@ -121,7 +119,8 @@ spec = do
                     , ownerSig = BS.replicate 64 0x40
                     }
         it "roundtrips QuickCheck" $
-            property $ roundtripProp genOwnerAuth
+            property $
+                roundtripProp genOwnerAuth
 
     describe "AIDRequestAction ToData/FromData" $ do
         it "Rejected roundtrips" $

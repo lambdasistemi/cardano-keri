@@ -1,23 +1,23 @@
 module Main (main) where
 
-import Cardano.KERI.AID.Cage.Sign (valueWriteMessage)
-import Cardano.Crypto.DSIGN
-    ( SignKeyDSIGN
-    , deriveVerKeyDSIGN
-    , genKeyDSIGN
-    , rawSerialiseSigDSIGN
-    , rawSerialiseVerKeyDSIGN
-    , signDSIGN
-    )
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    deriveVerKeyDSIGN,
+    genKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    rawSerialiseVerKeyDSIGN,
+    signDSIGN,
+ )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Crypto.Hash.Class (digest)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.KERI.AID.Cage.Sign (valueWriteMessage)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Data.Proxy (Proxy (..))
-import Numeric (showHex)
 import Data.Word (Word8)
+import Numeric (showHex)
 
 blake :: ByteString -> ByteString
 blake = digest (Proxy @Blake2b_256)
@@ -28,7 +28,7 @@ combine a b = blake (a <> b)
 
 -- Aiken MPF suffix(path, cursor=0): [0xff] ++ path  (cursor even, push prepends)
 suffix0 :: ByteString -> ByteString
-suffix0 path = BS.cons 0xff path
+suffix0 = BS.cons 0xff
 
 -- Identity trie root for a single-element trie:
 -- root = combine(suffix(blake2b_256(owner_aid), 0), blake2b_256(blake2b_256(owner_key)))
@@ -42,7 +42,7 @@ toHex bs = concatMap showByte (BS.unpack bs)
     showByte :: Word8 -> String
     showByte w =
         let s = showHex w ""
-        in if length s == 1 then '0' : s else s
+         in if length s == 1 then '0' : s else s
 
 main :: IO ()
 main = do

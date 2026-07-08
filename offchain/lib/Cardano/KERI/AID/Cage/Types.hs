@@ -10,32 +10,32 @@ kept local to avoid pulling in the heavy cardano-mpfs-cage dep chain.
 Hand-written 'ToData'\/'FromData' instances guarantee constructor
 indices and field ordering match the Aiken source byte-for-byte.
 -}
-module Cardano.KERI.AID.Cage.Types
-    ( -- * MPF proof step (mirrors cardano-mpfs-cage)
-      ProofStep (..)
-    , Neighbor (..)
+module Cardano.KERI.AID.Cage.Types (
+    -- * MPF proof step (mirrors cardano-mpfs-cage)
+    ProofStep (..),
+    Neighbor (..),
 
-      -- * AID-specific types
-    , AIDOwnerAuth (..)
-    , AIDRequestAction (..)
-    , AIDOnChainTokenState (..)
-    ) where
+    -- * AID-specific types
+    AIDOwnerAuth (..),
+    AIDRequestAction (..),
+    AIDOnChainTokenState (..),
+) where
 
-import Data.ByteString
-    ( ByteString
-    )
-import PlutusCore.Data
-    ( Data (..)
-    )
-import PlutusTx.Builtins.Internal
-    ( BuiltinByteString (..)
-    , BuiltinData (..)
-    )
-import PlutusTx.IsData.Class
-    ( FromData (..)
-    , ToData (..)
-    , UnsafeFromData (..)
-    )
+import Data.ByteString (
+    ByteString,
+ )
+import PlutusCore.Data (
+    Data (..),
+ )
+import PlutusTx.Builtins.Internal (
+    BuiltinByteString (..),
+    BuiltinData (..),
+ )
+import PlutusTx.IsData.Class (
+    FromData (..),
+    ToData (..),
+    UnsafeFromData (..),
+ )
 
 -- ---------------------------------------------------------
 -- MPF proof step types (mirrors Cardano.MPFS.Cage.Types)

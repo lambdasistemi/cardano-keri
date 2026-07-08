@@ -1,30 +1,87 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  build-gate:
+    name: Build Gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Warm offchain store (derivations + dev shell)
+        working-directory: offchain
+        run: >-
+          nix build --quiet
+          .#checks.x86_64-linux.unit-tests
+          .#packages.x86_64-linux.format
+          .#packages.x86_64-linux.format-check
+          .#packages.x86_64-linux.hlint
+          .#devShells.x86_64-linux.default.inputDerivation
+
   onchain:
     name: Onchain (Aiken)
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
-      - name: Build
-        run: nix shell 'nixpkgs#aiken' --command aiken build
+      - name: Format check
         working-directory: onchain
+        run: nix shell nixpkgs#aiken --command aiken fmt --check
+      - name: Check (tests + type-check)
+        working-directory: onchain
+        run: nix shell nixpkgs#aiken --command aiken check
 
   offchain:
     name: Offchain (Haskell)
+    needs: build-gate
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
-      - name: Unit tests
-        run: nix build --no-link .#checks.x86_64-linux.unit-tests
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Run unit tests
         working-directory: offchain
+        run: nix run --quiet .#unit-tests
+      - name: Check formatting
+        working-directory: offchain
+        run: nix run --quiet .#format-check
+      - name: Lint
+        working-directory: offchain
+        run: nix run --quiet .#hlint
+
+  devshell:
+    name: Dev shell
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Prove `nix develop` yields a working toolchain (closes #57). We do
+      # NOT run `cabal build` here: a fresh runner has no dist-newstyle plan
+      # and cabal cannot fetch the CHaP index over https, so we exercise the
+      # shell's own cabal / fourmolu / cabal-fmt / hlint instead — all offline.
+      - name: Dev-shell toolchain
+        working-directory: offchain
+        run: |
+          nix develop --quiet -c bash -euc '
+            cabal --version
+            fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
+            find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
+            hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
+          '

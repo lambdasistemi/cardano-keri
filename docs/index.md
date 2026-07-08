@@ -2,7 +2,7 @@
 
 Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://github.com/WebOfTrust/ietf-keri) ecosystem.
 
-**New here? Start with the [KERI primer](keri-primer.md)** — it explains what KERI is, how pre-rotation works, what Veridian is, and what Cardano adds. For the financial and institutional concepts behind the use cases (securities, KYC/AML, custody, escrow, batchers…), see the **[Finance primer](finance-primer.md)**.
+**New here? Start with the [KERI primer](keri-primer.md)** — it explains what KERI is, how pre-rotation works, what Veridian is, and what Cardano adds. Then the **[ACDC primer](acdc-primer.md)** covers the credential layer — how vLEI credentials chain, how revocation works, and how Cardano verifies a chain on-chain. For the financial and institutional concepts behind the use cases (securities, KYC/AML, custody, escrow, batchers…), see the **[Finance primer](finance-primer.md)**.
 
 ---
 

@@ -54,6 +54,24 @@ orchestrator directly against the doc text.
 | F31 | Naming/type drift: `POSIXTime` vs `Slot` validity; `counter` vs `nonce`; `inception_event` vs `cesr_inception_event`; window-depth constant only in prose; `op_hash`/`CageOp` under-specified | Low | B·L1–L4 | |
 | F32 | Scoped-override / issuer freeze-seize power repeatedly flagged as contradicting the "cannot forge" headline but never designed (#40) | Low | B·Q5, A·OC1 | |
 
+## Issues filed
+
+Critical + High findings are tracked as issues (KERI / Work on the planner):
+
+| F | Issue | | F | Issue |
+|---|---|---|---|---|
+| F1 | [#68](https://github.com/lambdasistemi/cardano-keri/issues/68) · blocks #24 | | F8 | [#75](https://github.com/lambdasistemi/cardano-keri/issues/75) |
+| F2 | [#69](https://github.com/lambdasistemi/cardano-keri/issues/69) | | F9 | [#76](https://github.com/lambdasistemi/cardano-keri/issues/76) |
+| F3 | [#70](https://github.com/lambdasistemi/cardano-keri/issues/70) | | F10 | [#77](https://github.com/lambdasistemi/cardano-keri/issues/77) · blocks #24 |
+| F4 | [#71](https://github.com/lambdasistemi/cardano-keri/issues/71) | | F11 | [#78](https://github.com/lambdasistemi/cardano-keri/issues/78) |
+| F5 | [#72](https://github.com/lambdasistemi/cardano-keri/issues/72) | | F12 | [#79](https://github.com/lambdasistemi/cardano-keri/issues/79) · blocks #24 |
+| F6 | [#73](https://github.com/lambdasistemi/cardano-keri/issues/73) | | F13 | [#80](https://github.com/lambdasistemi/cardano-keri/issues/80) |
+| F7 | [#74](https://github.com/lambdasistemi/cardano-keri/issues/74) | | F14 | [#81](https://github.com/lambdasistemi/cardano-keri/issues/81) · blocks #24 |
+
+**#24 is now marked blocked-by #68, #77, #79, #81.** F18 and F30 also gate #24 but are
+folded into F1/#68 (they are facets of defining the list-shaped preimage). Medium/Low
+findings (F15–F32) are tracked in the table above pending triage, not yet filed.
+
 ## The two structural themes
 
 Nearly every High rolls up into two root causes:

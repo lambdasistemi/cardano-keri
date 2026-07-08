@@ -34,9 +34,17 @@ unit match="":
 build-offchain:
     cd offchain && nix build --quiet .#checks.x86_64-linux.unit-tests
 
-# Assert the offchain dev shell can build with cabal
+# Assert the offchain dev shell yields a working toolchain (offline)
 devshell-offchain:
-    cd offchain && nix develop --quiet -c cabal build all -O0
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd offchain
+    nix develop --quiet -c bash -euc '
+      cabal --version
+      fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
+      find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
+      hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
+    '
 
 # --- onchain (Aiken) ---
 

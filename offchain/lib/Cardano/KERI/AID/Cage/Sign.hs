@@ -7,42 +7,42 @@ Constructs the domain-tagged message for AID owner authorization
 and signs it with an Ed25519 key. The signed message binds to the
 request UTxO's output reference, providing replay protection.
 -}
-module Cardano.KERI.AID.Cage.Sign
-    ( -- * Domain tag
-      valueWriteDomain
+module Cardano.KERI.AID.Cage.Sign (
+    -- * Domain tag
+    valueWriteDomain,
 
-      -- * Message construction
-    , valueWriteMessage
+    -- * Message construction
+    valueWriteMessage,
 
-      -- * Signing
-    , signValueWrite
-    ) where
+    -- * Signing
+    signValueWrite,
+) where
 
-import Cardano.Crypto.DSIGN
-    ( SignKeyDSIGN
-    , rawSerialiseSigDSIGN
-    , signDSIGN
-    )
-import Cardano.Crypto.DSIGN.Ed25519
-    ( Ed25519DSIGN
-    )
-import Cardano.Crypto.Hash.Blake2b
-    ( Blake2b_256
-    )
-import Cardano.Crypto.Hash.Class
-    ( digest
-    )
-import Data.Bits
-    ( shiftR
-    , (.&.)
-    )
-import Data.ByteString
-    ( ByteString
-    )
-import qualified Data.ByteString as BS
-import Data.Proxy
-    ( Proxy (..)
-    )
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.Ed25519 (
+    Ed25519DSIGN,
+ )
+import Cardano.Crypto.Hash.Blake2b (
+    Blake2b_256,
+ )
+import Cardano.Crypto.Hash.Class (
+    digest,
+ )
+import Data.Bits (
+    shiftR,
+    (.&.),
+ )
+import Data.ByteString (
+    ByteString,
+ )
+import Data.ByteString qualified as BS
+import Data.Proxy (
+    Proxy (..),
+ )
 
 -- | Domain separator for value-write authorization messages.
 valueWriteDomain :: ByteString
@@ -54,13 +54,13 @@ valueWriteDomain = "cardano-keri/value-write/v1"
 The 2-byte big-endian output index matches Aiken's
 @from_int_big_endian(output_index, 2)@.
 -}
-valueWriteMessage
-    :: ByteString
-    -- ^ Transaction id (32 bytes)
-    -> Integer
-    -- ^ Output index within the transaction
-    -> ByteString
-    -- ^ 32-byte blake2b_256 digest
+valueWriteMessage ::
+    -- | Transaction id (32 bytes)
+    ByteString ->
+    -- | Output index within the transaction
+    Integer ->
+    -- | 32-byte blake2b_256 digest
+    ByteString
 valueWriteMessage txId idx =
     let hi = fromIntegral (idx `shiftR` 8 .&. 0xFF)
         lo = fromIntegral (idx .&. 0xFF)
@@ -71,14 +71,14 @@ valueWriteMessage txId idx =
 
 Returns the 64-byte raw Ed25519 signature.
 -}
-signValueWrite
-    :: SignKeyDSIGN Ed25519DSIGN
-    -- ^ Signing key
-    -> ByteString
-    -- ^ Transaction id of the request UTxO (32 bytes)
-    -> Integer
-    -- ^ Output index of the request UTxO
-    -> ByteString
-    -- ^ Raw 64-byte Ed25519 signature
+signValueWrite ::
+    -- | Signing key
+    SignKeyDSIGN Ed25519DSIGN ->
+    -- | Transaction id of the request UTxO (32 bytes)
+    ByteString ->
+    -- | Output index of the request UTxO
+    Integer ->
+    -- | Raw 64-byte Ed25519 signature
+    ByteString
 signValueWrite sk txId idx =
     rawSerialiseSigDSIGN $ signDSIGN () (valueWriteMessage txId idx) sk

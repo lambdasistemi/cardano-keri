@@ -1,7 +1,7 @@
-module Cardano.KERI.AID.CESR
-    ( Primitive (..)
-    , parsePrimitive
-    ) where
+module Cardano.KERI.AID.CESR (
+    Primitive (..),
+    parsePrimitive,
+) where
 
 import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertFromBase)
 import Data.ByteString (ByteString)
@@ -17,13 +17,14 @@ data Primitive
       SelfAddressing !ByteString
     deriving stock (Show, Eq)
 
--- | Parse one CESR primitive from the front of a Base64url text stream.
--- Returns the primitive and any unconsumed input.
+{- | Parse one CESR primitive from the front of a Base64url text stream.
+Returns the primitive and any unconsumed input.
+-}
 parsePrimitive :: ByteString -> Either String (Primitive, ByteString)
 parsePrimitive bs = case BS.uncons bs of
     Nothing -> Left "empty input"
     Just (c0, _) -> case c0 of
-        0x30 -> parse2char bs  -- '0'
+        0x30 -> parse2char bs -- '0'
         _ -> parse1char bs
 
 -- 1-char code: 44 chars total, 1 lead byte stripped → 32 bytes.
@@ -33,11 +34,11 @@ parse1char bs
     | BS.length bs < 44 = Left "truncated 1-char primitive"
     | otherwise = do
         let (tok, rest) = BS.splitAt 44 bs
-        raw <- decodeB64Url (BS.cons 0x41 (BS.tail tok))  -- 'A' + rest
-        let payload = BS.drop 1 raw  -- strip 1 lead byte
+        raw <- decodeB64Url (BS.cons 0x41 (BS.tail tok)) -- 'A' + rest
+        let payload = BS.drop 1 raw -- strip 1 lead byte
         case BS.index tok 0 of
-            0x42 -> Right (Ed25519PublicKey payload, rest)  -- 'B'
-            0x45 -> Right (SelfAddressing payload, rest)    -- 'E'
+            0x42 -> Right (Ed25519PublicKey payload, rest) -- 'B'
+            0x45 -> Right (SelfAddressing payload, rest) -- 'E'
             code -> Left $ "unknown 1-char code: " <> show code
 
 -- 2-char code: 88 chars total, 2 lead bytes stripped → 64 bytes.
@@ -48,7 +49,7 @@ parse2char bs
     | otherwise = do
         let (tok, rest) = BS.splitAt 88 bs
         raw <- decodeB64Url ("AA" <> BS.drop 2 tok)
-        let payload = BS.drop 2 raw  -- strip 2 lead bytes
+        let payload = BS.drop 2 raw -- strip 2 lead bytes
         case BS.take 2 tok of
             "0B" -> Right (Ed25519Signature payload, rest)
             code -> Left $ "unknown 2-char code: " <> show code

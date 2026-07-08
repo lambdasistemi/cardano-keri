@@ -1,16 +1,16 @@
 module Cardano.KERI.AID.CESRSpec (spec) where
 
-import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
-import Cardano.Crypto.DSIGN
-    ( SignKeyDSIGN
-    , genKeyDSIGN
-    , rawSerialiseSigDSIGN
-    , rawSerialiseVerKeyDSIGN
-    , signDSIGN
-    , deriveVerKeyDSIGN
-    )
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    deriveVerKeyDSIGN,
+    genKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    rawSerialiseVerKeyDSIGN,
+    signDSIGN,
+ )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -22,18 +22,18 @@ deterministicKey = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0x01))
 -- Encode bytes as a CESR 1-char primitive: prefix + unpadded base64url
 cesr1 :: Char -> ByteString -> ByteString
 cesr1 code payload =
-    let lead = BS.singleton 0x00  -- 1 lead byte
+    let lead = BS.singleton 0x00 -- 1 lead byte
         raw = lead <> payload
         encoded = convertToBase Base64URLUnpadded raw :: ByteString
-    in BS.singleton (fromIntegral (fromEnum code)) <> BS.tail encoded
+     in BS.singleton (fromIntegral (fromEnum code)) <> BS.tail encoded
 
 -- Encode bytes as a CESR 2-char primitive: prefix + unpadded base64url
 cesr2 :: ByteString -> ByteString -> ByteString
 cesr2 code payload =
-    let lead = BS.replicate 2 0x00  -- 2 lead bytes
+    let lead = BS.replicate 2 0x00 -- 2 lead bytes
         raw = lead <> payload
         encoded = convertToBase Base64URLUnpadded raw :: ByteString
-    in code <> BS.drop 2 encoded
+     in code <> BS.drop 2 encoded
 
 spec :: Spec
 spec = describe "CESR" $ do

@@ -1,16 +1,16 @@
 module Cardano.KERI.AID.Ed25519Spec (spec) where
 
-import Cardano.KERI.AID.Ed25519 (verifyEd25519)
-import Cardano.Crypto.DSIGN
-    ( SignKeyDSIGN
-    , genKeyDSIGN
-    , rawSerialiseSigDSIGN
-    , rawSerialiseVerKeyDSIGN
-    , signDSIGN
-    , deriveVerKeyDSIGN
-    )
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    deriveVerKeyDSIGN,
+    genKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    rawSerialiseVerKeyDSIGN,
+    signDSIGN,
+ )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Data.ByteString qualified as BS
 import Test.Hspec (Spec, describe, it, shouldBe)
 

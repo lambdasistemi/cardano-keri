@@ -43,6 +43,7 @@ nav:
   - Home: index.md
   - Roadmap: roadmap.md
   - KERI Primer: keri-primer.md
+  - ACDC Primer: acdc-primer.md
   - Finance Primer: finance-primer.md
   - Architecture:
       - Overview: architecture/overview.md

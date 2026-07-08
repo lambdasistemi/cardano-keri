@@ -1,5 +1,14 @@
 # Vetting Summary
 
+!!! danger "Current vetting — round 2 (canonical permissionless model)"
+    The independent re-vet of the **current** design lives in
+    [Canonical Permissionless Model — Vetting Round 2](canonical-model-findings.md),
+    with the two cold passes in
+    [analysis-2-soundness.md](analysis-2-soundness.md) and
+    [analysis-2-consistency.md](analysis-2-consistency.md). Findings tagged
+    **blocks #24** must be resolved before the identity key-state validator is
+    written. **Everything below this box is the older, archived-spec vetting.**
+
 !!! warning "Historical material — do not implement from this section"
     Everything under Vetting (including the analyses and cross-agent
     transcripts linked below) is a **design-history record** of an archived

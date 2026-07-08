@@ -6,3 +6,10 @@ offchain/dist-newstyle/
 onchain/build/
 onchain/plutus.json
 site/
+
+# Nix build result symlinks
+result
+result-*
+
+# resolve-ticket live log
+WIP.md

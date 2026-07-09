@@ -68,7 +68,7 @@ data CheckpointDatum = CheckpointDatum
     , checkpointCv :: !ByteString
     , checkpointOffset :: !Integer
     , checkpointLength :: !Integer
-    , expectedPrefix :: !ByteString
+    , expectedDigest :: !ByteString
     }
     deriving stock (Show, Eq)
 
@@ -350,7 +350,7 @@ bsFromD _ = Nothing
 -- ToData / FromData instances
 -- ---------------------------------------------------------
 
--- | Constr 0 [B input_commitment, B cv, I offset, I len, B expected_prefix]
+-- | Constr 0 [B input_commitment, B cv, I offset, I len, B expected_digest]
 instance ToData CheckpointDatum where
     toBuiltinData CheckpointDatum{..} =
         mkD $
@@ -360,15 +360,15 @@ instance ToData CheckpointDatum where
                 , bsToD checkpointCv
                 , I checkpointOffset
                 , I checkpointLength
-                , bsToD expectedPrefix
+                , bsToD expectedDigest
                 ]
 
 instance FromData CheckpointDatum where
     fromBuiltinData bd = case unD bd of
-        Constr 0 [inputD, cvD, I offset, I len, prefixD] -> do
+        Constr 0 [inputD, cvD, I offset, I len, digestD] -> do
             inputCommitment <- bsFromD inputD
             checkpointCv <- bsFromD cvD
-            expectedPrefix <- bsFromD prefixD
+            expectedDigest <- bsFromD digestD
             Just
                 CheckpointDatum
                     { checkpointOffset = offset
@@ -379,7 +379,7 @@ instance FromData CheckpointDatum where
 
 instance UnsafeFromData CheckpointDatum where
     unsafeFromBuiltinData bd = case unD bd of
-        Constr 0 [B inputCommitment, B checkpointCv, I checkpointOffset, I checkpointLength, B expectedPrefix] ->
+        Constr 0 [B inputCommitment, B checkpointCv, I checkpointOffset, I checkpointLength, B expectedDigest] ->
             CheckpointDatum{..}
         _ -> error "unsafeFromBuiltinData: CheckpointDatum"
 

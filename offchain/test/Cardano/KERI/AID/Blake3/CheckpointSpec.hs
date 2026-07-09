@@ -79,7 +79,7 @@ spec = do
                         , checkpointCv = initialChainingValue
                         , checkpointOffset = 512
                         , checkpointLength = 1024
-                        , expectedPrefix = BS.take 4 $ blake3Hash $ vectorInput 1024
+                        , expectedDigest = blake3Hash $ vectorInput 1024
                         }
                 encoded = toBuiltinData datum
             fromBuiltinData encoded `shouldBe` Just datum
@@ -101,7 +101,7 @@ spec = do
                     , B $ checkpointCv sampleDatum
                     , I $ checkpointOffset sampleDatum
                     , I $ checkpointLength sampleDatum
-                    , B $ expectedPrefix sampleDatum
+                    , B $ expectedDigest sampleDatum
                     ]
 
         it "encodes Step constructor index and field order exactly" $
@@ -154,7 +154,8 @@ sampleDatum =
         , checkpointCv = BS.replicate 32 0x22
         , checkpointOffset = 512
         , checkpointLength = 1024
-        , expectedPrefix = BS.pack [0x42, 0x21, 0x47, 0x39]
+        , expectedDigest =
+            hex "42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7"
         }
 
 sampleStep :: CheckpointRedeemer

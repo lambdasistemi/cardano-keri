@@ -164,7 +164,12 @@ genesis leaf asserts. Whoever writes the genesis leaf can bind someone else's AI
 attacker keys and an attacker "witness set", and every later advance is then flawlessly
 "cryptographic" on top of a forged base. Genesis therefore stays at **registration
 grade: oracle-asserted, publicly falsifiable** (`system-architecture.md` §6) — the same
-trust class as R-MAP, moved to registration time, not escaped.
+trust class as R-MAP, moved to registration time, not escaped. Two mitigating facts:
+the trust is **one-shot** (one event per identity lifetime, vs every-read in the
+watcher-mirror), and a forged binding is **objectively provable** off-chain (recompute
+the Blake3 prefix) — the ideal shape for bond + challenge-window mechanics. A possible
+full closure — one-shot **in-script blake3** at genesis via the Plutus V3 bitwise
+builtins — is spike #88 (open thread 3).
 
 **Witnesses receipt events, not truth.** Receipts attest ordering and duplicity-freedom;
 nobody validates that a seal's *claimed* key-state matches the native Blake3 `k`/`n`
@@ -220,9 +225,15 @@ integrity the checkpoint provides.
    seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"
    thread, **dissolved** — the seal keeps its native Blake3 SAID.)
-3. **Genesis binding (§7a)** — the trusted base case: exact registration flow, who attests
-   `cesr_aid ↔ (keys, witnesses)@inception`, the falsification/challenge path, and whether
-   controller-signed evidence (OOBI-style) can tighten it.
+3. **Genesis binding (§7a)** — the trusted base case. Two tracks:
+   - **Spike #88 — in-script blake3 at genesis.** Plutus V3's bitwise builtins
+     (CIP-121/122/123) may make a one-shot `blake3(icp) == cesr_aid` check feasible inside
+     the registration tx (genesis is once per identity, own tx — not hot-path). If it fits
+     the budget, this limit **disappears** for native Blake3 vLEI holders and the
+     registration oracle keeps only liveness. Measure before designing track two's teeth.
+   - **Fallback: attested registration** — exact flow, who attests
+     `cesr_aid ↔ (keys, witnesses)@inception`, bond + challenge window before the leaf is
+     usable + freeze fast-path; whether controller-signed evidence (OOBI-style) tightens it.
 4. **Seal ↔ native key-state correspondence (§7a)** — accept it (documented "Cardano
    operating keys" semantics) or close it (watchers spot-check seal vs native `k`/`n` —
    falsifiable + slashable, watcher-grade); decide per use case.

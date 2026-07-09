@@ -7,14 +7,21 @@ Blake2b, served by a network of watchers, and anchored by a coordinator.
 !!! note "Emerging design"
     This page presents the current architecture. Several choices are still open; the
     working design record with the open decisions lives in
-    `specs/68-keystate-shape/system-architecture.md`.
+    `specs/68-keystate-shape/system-architecture.md`. **Identity update (2026-07-09):**
+    per `specs/68-keystate-shape/identity-model.md` (PR #87), the identity key-state
+    (R-KEL) is an **on-chain cryptographic checkpoint** advanced by witness-receipted
+    anchoring seals from the controller's own KEL — *not* a watcher-attested mirror.
+    The watcher-mirror framing on this page applies to the **credential plane**
+    (R-TEL · R-MAP) only.
 
 ## The planes
 
 Four things cooperate: the **off-chain KERI world** (where identities and credentials
-actually live), a **watcher network** run by stake-pool operators (which mirrors the parts
-of that world we care about), the **coordinator** (Cardano Foundation, which anchors the
-mirror on-chain), and the **on-chain** validators and state.
+actually live), a **watcher network** run by stake-pool operators (which mirrors the
+**credential-plane** state we care about — R-TEL · R-MAP), the **coordinator** (Cardano
+Foundation, which anchors the credential mirror on-chain), and the **on-chain** validators
+and state. Identity key-state takes a different path: the controller's **witnessed
+anchoring seal** drives an on-chain checkpoint directly — no watcher in that loop.
 
 ```mermaid
 flowchart TB
@@ -30,7 +37,8 @@ flowchart TB
     end
     subgraph CHAIN["On-chain — Cardano"]
         direction LR
-        MIRROR["Anchored mirror roots<br/>R-KEL · R-TEL · R-MAP"]
+        MIRROR["Anchored credential mirror roots<br/>R-TEL · R-MAP"]
+        IDCK["Identity checkpoint<br/>R-KEL — advanced by<br/>witness-receipted seals"]
         NATIVE["Native app state<br/>R-ID · R-VAL · R-FRZ"]
         VAL["Validators<br/>proof vs root + authorization"]
     end
@@ -38,6 +46,7 @@ flowchart TB
 
     WIT -->|observe| W
     U -->|register AID| NATIVE
+    U -->|"advance tx:<br/>anchoring seal + witness receipts"| IDCK
     NATIVE -->|closure computable| W
     W -->|signed roots| C
     C -->|anchor R_N| MIRROR
@@ -45,6 +54,7 @@ flowchart TB
     W -->|proof vs R_N| U
     U -->|gated action + proof| VAL
     VAL --> MIRROR
+    VAL --> IDCK
     VAL --> NATIVE
 ```
 
@@ -61,14 +71,14 @@ flowchart TB
     subgraph L4["Market — off-chain, competitive"]
         M["serving · micropayments · reward distribution"]
     end
-    subgraph L3["State mirror — anchored, SPO-consensus, falsifiable"]
-        S["R-KEL · R-TEL · R-MAP, over the closure"]
+    subgraph L3["Credential mirror — anchored, SPO-consensus, falsifiable"]
+        S["R-TEL · R-MAP, over the closure"]
     end
     subgraph L2["Closure — computed, pinned to a settled R-ID checkpoint"]
         CL["the deterministic watch set"]
     end
-    subgraph L1["Native state — on-chain, trustless"]
-        N["R-ID · R-VAL · R-FRZ + validators"]
+    subgraph L1["Native + checkpoint state — on-chain"]
+        N["R-ID · R-VAL · R-FRZ + validators<br/>R-KEL identity checkpoint (witnessed seals)"]
     end
     L4 --> L3 --> L2 --> L1
 ```
@@ -76,8 +86,9 @@ flowchart TB
 | Layer | Roots | Trust |
 |---|---|---|
 | Native app state | R-ID · R-VAL · R-FRZ (· R-POOL · R-REG) | trustless on-chain |
+| Identity checkpoint | R-KEL | **cryptographic from a registration-attested genesis** — advances only through witness-receipted anchoring seals (identity-model §5–7a) |
 | Closure | *computed*, pinned to `R-ID@N` | deterministic — everyone recomputes the same |
-| State mirror | R-KEL · R-TEL · R-MAP | falsifiable, SPO-consensus + slash-for-wrong-root |
+| Credential mirror | R-TEL · R-MAP | falsifiable, SPO-consensus + slash-for-wrong-root |
 | Market | — | off-chain, competitive |
 
 ## The closure — what gets watched
@@ -98,7 +109,10 @@ flowchart BT
 When Alice registers, her whole chain is pulled into the watch set; another holder under a
 different QVI pulls that QVI in; shared issuers dedup; GLEIF is always the root.
 
-## Registration and the proof flow
+## Registration and the proof flow (credential plane)
+
+This flow covers **registration and credential proofs** — the watcher-mirrored plane.
+Identity key-state advances are a separate, watcher-free flow (next section).
 
 ```mermaid
 sequenceDiagram
@@ -121,6 +135,32 @@ sequenceDiagram
 
 The proof the holder presents is **watcher-agnostic** — a plain inclusion proof against the
 anchored root. The validator neither knows nor cares which watcher computed it.
+
+## Identity checkpoint advance (no watcher in the loop)
+
+Identity key-state never rides the mirror. The controller emits a **witnessed anchoring
+seal** into her own KEL — a plain native event whose payload carries blake2b commitments
+to the new key-state — and the on-chain checkpoint advances only through it
+(`specs/68-keystate-shape/identity-model.md` §§3–6a):
+
+```mermaid
+sequenceDiagram
+    participant CT as Controller (wallet)
+    participant KW as Her KERI witnesses
+    participant V as Validator
+    participant CK as Checkpoint (R-KEL leaf)
+    CT->>KW: anchoring seal (blake2b payload commitments)
+    KW-->>CT: threshold witness receipts (over raw seal bytes)
+    CT->>V: advance tx — seal + receipts
+    V->>CK: read stored keys · next_digest · witnesses · toad
+    V->>V: blake2b(revealed) == next_digest, threshold sig,<br/>Ed25519 receipts vs stored witness set
+    V->>CK: seq+1 — new keys, new next_digest
+    Note over CT,CK: witness-set change: two-seal handoff —<br/>outgoing set receipts the pre-announcement,<br/>incoming set receipts the activation (§6a)
+```
+
+Genesis (the first leaf) is the one non-cryptographic step: registration-attested,
+publicly falsifiable (identity-model §7a; in-script blake3 was measured and does not fit —
+spike #88).
 
 ## Two Blake worlds, one system
 

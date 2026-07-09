@@ -1,10 +1,21 @@
 # Super Watcher: Convergence Enforcement
 
+!!! warning "Superseded for identity — the KERI-sovereign model (2026-07-09)"
+    This design was written against the **two-independent-state-machines** premise. The
+    identity model (`specs/68-keystate-shape/identity-model.md`, PR #87) retires it:
+    there is **one** state machine (the witnessed KEL) and Cardano advances an on-chain
+    checkpoint only through **witness-receipted anchoring seals** — an identity cannot
+    fork, so **divergence-burn is no longer needed for identity**. What survives of the
+    super-watcher role: freshness/liveness of anchoring, credential-plane (R-TEL) mirror
+    policing, genesis-binding challenges during the registration window (§7a), and —
+    if open thread 4 closes that way — seal↔native **correspondence spot-checks**, for
+    which the divergence-proof/burn mechanics below remain the reference design.
+
 ## The two-registry problem
 
 The Cardano identity registry and the [KERI](https://github.com/WebOfTrust/ietf-keri) KEL are two independent state machines sharing inception material. Nothing at the protocol level forces them to stay in sync. A controller can rotate on KERI but not on Cardano, rotate to different keys on each, or deliberately fork the two chains while `cesr_aid` keeps asserting they represent the same identity.
 
-This is not a theoretical edge case — it is a structural property of the bridge. See [Veridian Bridge — Two independent state machines](../architecture/veridian-bridge.md#two-independent-state-machines).
+This is not a theoretical edge case — it is a structural property of the bridge. See [Veridian Bridge — One state machine, one stated limit](../architecture/veridian-bridge.md#one-state-machine-one-stated-limit) (which now records why the fork premise is retired).
 
 ## The super watcher role
 

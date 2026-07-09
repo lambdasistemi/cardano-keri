@@ -6,19 +6,25 @@ You know a peer by their Veridian AID — established out-of-band (OOBI exchange
 
 ## The verification chain
 
+!!! warning "Updated for the checkpoint model (2026-07-09)"
+    Previously this chain required you to **replay Bob's KEL** and recompute a
+    `trie_key`. Per `specs/68-keystate-shape/identity-model.md` (PR #87), the on-chain
+    entry is a **checkpoint keyed by Bob's `cesr_aid`** that advances only through
+    seals receipted by Bob's own witnesses — so post-genesis, the chain itself proves
+    the key-state. What replay no longer buys you: nothing for rotations. What you may
+    still care about: the **genesis binding** is registration-attested (falsifiable, not
+    cryptographic — §7a), and **freshness** (the checkpoint may lag a very recent
+    rotation — §9).
+
 ```mermaid
 flowchart TD
     A["You know Bob's CESR AID<br/>(from KERI / Veridian)"]
-    B["Replay Bob's KEL<br/>from KERI witnesses"]
-    C["Compute trie_key<br/>blake2b_256(cbor({cur_pubkey, next_digest}))"]
-    D["Look up trie_key<br/>in Cardano registry"]
-    E["Cardano key-state<br/>confirmed = Bob's key"]
-    F["Any cage write signed by<br/>that cur_pubkey = provably Bob"]
+    D["Look up cesr_aid leaf in the<br/>on-chain identity checkpoint"]
+    E["Key-state confirmed = Bob's keys<br/>(every advance was witness-receipted;<br/>genesis registration-attested — §7a)"]
+    F["Any cage write meeting the weighted<br/>threshold of those keys = provably Bob"]
 
-    A --> B --> C --> D --> E --> F
+    A --> D --> E --> F
 ```
-
-The KEL replay is not optional — it is the step that proves the Cardano entry belongs to Bob and not a squatter. If you skip it and trust the `cesr_aid` field in the registry directly, the guarantee breaks.
 
 ## What you can trust (with KEL replay)
 

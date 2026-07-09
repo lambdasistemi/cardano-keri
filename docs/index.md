@@ -52,30 +52,30 @@ another write advances the cage before submission.
 
 ---
 
-## Key derivation: trie_key vs CESR AID
+## Key derivation: the AID keys the checkpoint
 
-Two separate identifiers exist for the same identity. They serve different roles.
+One identifier keys the on-chain identity: the **CESR AID**. The former separate
+`trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` derivation is superseded — the
+identity leaf is keyed by `cesr_aid` and holds a KERI-shaped checkpoint, advanced only by
+witness-receipted anchoring seals (`specs/68-keystate-shape/identity-model.md`, PR #87).
 
 ```mermaid
 flowchart LR
-    A["cur_pubkey<br/>(Ed25519, 32 bytes)"] --> C["cbor({cur_pubkey, next_digest})"]
-    B["next_digest<br/>blake2b_256(next_pubkey)"] --> C
-    C --> D["blake2b_256"]
-    D --> E["trie_key<br/>(Cardano on-chain key, 32 bytes)"]
-    style E fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-
-    A2["cesr_inception_event"] --> F["blake2b_256"]
-    F --> G["CESR AID<br/>(KERI identifier, F-prefix, 32 bytes)"]
-    style G fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
-
-    G -->|"stored as metadata<br/>in KeyState"| E
+    ICP["cesr_inception_event"] --> H["blake3 (native vLEI)<br/>or blake2b (F-prefix, CF sidecar)"]
+    H --> AID["cesr_aid<br/>(KERI identifier, 32 bytes)"]
+    style AID fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
+    AID -->|"leaf key"| CK["Checkpoint leaf<br/>keys+weights · kt · next_digest (blake2b)<br/>witnesses · toad · seq"]
+    style CK fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
+    SEAL["witnessed anchoring seal<br/>(blake2b payload commitments)"] -->|"advance tx:<br/>seal + threshold receipts"| CK
 ```
 
-The **trie_key** is the [MPF](https://github.com/aiken-lang/merkle-patricia-forestry)
-key used by the proposed on-chain registry — Cardano-verifiable,
-front-run-proof, stable across rotations.
-
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier used by Veridian and KERI witnesses. cardano-keri requires F-prefix (Blake2b-256) AIDs so the derivation uses a hash Cardano scripts and off-chain verifiers share; on-chain it is stored as unverified metadata — the binding is proven off-chain by KEL replay. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier
+used by Veridian and KERI witnesses. Native **Blake3** AIDs are served as-is — the seal
+carries the blake2b commitments Cardano needs, so no digest-agility patch is required for
+identity. The genesis binding `cesr_aid ↔ (keys, witnesses)@inception` is
+registration-attested (falsifiable — identity-model §7a); every later advance is
+cryptographic. F-prefix (Blake2b) AIDs remain the CF-as-QVI sidecar option — see
+[Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 ## System components
 

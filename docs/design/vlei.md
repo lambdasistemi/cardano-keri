@@ -117,10 +117,10 @@ the cryptographic path exists and the work is scheduled.
 
 | Capability | Status |
 |---|---|
-| Seq-0 binding verifiable from KEL | Designed — Blake2b-256 digest agility; ships with M1 |
-| Full on-chain AID self-cert | Designed — `blake2b_256` Plutus builtin; ships with M1 |
+| Seq-0 binding verifiable from KEL | Reframed 2026-07-09 — native Blake3 AIDs: genesis is registration-attested (identity-model §7a; in-script blake3 does not fit — spike #88); F-prefix AIDs (CF sidecar): on-chain self-cert |
+| Full on-chain AID self-cert | F-prefix (CF sidecar) only — `blake2b_256` builtin; native Blake3 AIDs get cryptographic *advances* via witnessed seals, attested genesis |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
-| Super watcher convergence | Open design question — the burn proof is not trustless without Blake3/CESR; a [challenge period or watcher threshold](super-watcher.md#without-blake3-the-trust-problem) must be chosen first; M5 |
+| Super watcher convergence | Retired for identity (no fork possible under the checkpoint — identity-model §1/§8); residual: freshness/liveness, R-TEL policing, correspondence spot-checks (open thread 4); M5 |
 | Cardano-only vLEI resolution | Blocked externally — requires GLEIF/QVI adoption of F-prefix SAIDs |
 
 ---

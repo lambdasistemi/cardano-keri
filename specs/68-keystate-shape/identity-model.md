@@ -7,8 +7,10 @@ checkpoint, not a watcher-attested mirror). Open threads to drill are listed at 
 Amended 2026-07-09 after adversarial validation: two limits of the "cryptographic"
 claim stated explicitly (§7a — genesis binding, seal↔native correspondence); receipt
 mechanics corrected against keripy (receipts sign **raw event bytes**, so the blake2b-SAID
-requirement is **dropped** — §5); witness-set rotation elevated to a **ratification
-blocker** (§6, open thread 1).
+requirement is **dropped** — §5); witness-set rotation elevated to a ratification blocker
+and then **drilled to resolution the same day** (§6a — the two-seal handoff); spike #88
+resolved the genesis in-script-blake3 question **negative** (open thread 3), so genesis
+stays on the attested-registration track.
 
 ---
 
@@ -100,7 +102,7 @@ What does Cardano check on the seal?
 **The no-fork decision (§1) forces witness-receipted.** Signature-only re-opens the fork.
 
 Cost of witness-receipting: Cardano must (a) track the **witness set + toad** as part of
-the checkpoint (they can change on rotation — a **blocker**, open thread 1), and (b) verify
+the checkpoint (they change through the two-seal handoff — §6a), and (b) verify
 threshold Ed25519 receipts over the seal.
 
 **Corrected against keripy (2026-07-09).** Witness receipts sign the **raw serialized
@@ -132,16 +134,68 @@ Checkpoint {
 ```
 
 Both the signing keys **and** the witness set advance through witness-receipted seals.
-**Which set receipts a witness-set change is a ratification blocker, not an edge case**
-(open thread 1). Verified keripy behavior cuts both ways:
+Which set receipts a witness-set change was the sharp question — verified keripy behavior
+cuts both ways:
 
 - KERI counts a rotation's receipts against the **new** set and new toad
   (`Kever.update` → `self.rotate(serder)` → `valSigsWigsDel(wits=new)`), and a
   post-rotation seal is receipted by the **then-current (new)** set.
-- So a "receipted by the *old* threshold" rule **deadlocks** — cut witnesses have no duty
-  to receipt anything after removal — while accepting the new set's receipts lets the
+- So a naive "receipted by the *old* threshold" rule **deadlocks** — cut witnesses have no
+  duty to receipt anything after removal — while accepting the new set's receipts lets the
   checking set be **swapped inside the very event being checked**, voiding the duplicity
   argument behind no-fork (§5).
+
+The resolution is the two-seal handoff, drilled in §6a.
+
+### 6a. Witness-set rotation: the two-seal handoff
+
+**Rule: every checking set endorses its successor.** The chain of witness custody must be
+unbroken from genesis — Cardano never checks receipts against a set that was not itself
+endorsed by the previously checked set. The mechanism exploits timing: a witness change is
+announced *while the outgoing set is still in office*.
+
+1. **Seal W (handoff pre-announcement).** Before the native rotation, the controller emits
+   an interaction event whose seal data carries a blake2b commitment to the incoming
+   configuration `(W', toad')`. Signed by the current keys; receipted by the **outgoing**
+   set — natively and willingly, because at this sequence number they *are* the current
+   witnesses (no post-removal duty is ever invoked, which is what killed the naive
+   old-set rule).
+2. **Native rotation** follows in the KEL (Blake3, receipted per KERI by the new set —
+   Cardano never reads it).
+3. **Seal K (the §4 advance seal).** Post-rotation: reveals the pre-committed new keys,
+   commits the next digest, signed by the new keys, receipted by the **incoming** set
+   `W'`.
+
+**One Cardano tx can carry both seals**: the validator checks Seal W against the *stored*
+`(witnesses, toad)`, then Seal K against the just-endorsed `(W', toad')`, and advances the
+checkpoint once. No "pending" state needs to persist on-chain, and a pure key rotation
+(witness set unchanged) needs only Seal K, exactly as in §4–5.
+
+**Why no-fork survives.** The checking set can no longer be swapped inside the checked
+event: introducing a disjoint set requires the outgoing threshold to receipt the handoff,
+and two conflicting handoffs at one sequence number are duplicity against the *same*
+outgoing set — the very protection §5 already relies on. Induction restored: every
+checking set is endorsed by its predecessor, back to genesis (whose own binding is §7a's
+stated limit).
+
+**Cost: stricter than native KERI.** KERI lets key authority alone rotate witnesses; this
+rule adds outgoing-set consent for the *Cardano-facing* handoff. The consequence is a
+liveness dependence: an outgoing set that withholds receipts (dead or hostile beyond the
+toad margin) can hold the checkpoint's witness evolution hostage — it cannot forge, only
+freeze. Note this scenario already breaks the model's *existing* trust assumption (§5:
+honest threshold of the controller's own witnesses), and it degrades plain KERI liveness
+for that AID too (the same witnesses gate native receipting).
+
+**Liveness fallback (explicit, time-locked degradation).** If the outgoing threshold is
+unreachable, allow a **signature-only witness reset**: a seal signed by the current keys
+without outgoing receipts, which activates only after a challenge window Δ; during Δ, any
+conflicting outgoing-receipted seal wins, and watchers can raise the alarm. Trust during
+the fallback degrades exactly to "the controller's keys + time + public observability" —
+bounded, visible, and only reachable when the model's base assumption has already failed.
+
+**Out of scope here:** KERI superseding/delegated recovery (no delegated AIDs in this
+model yet); divergence between the announced `W'` and the native rotation's actual set is
+the §7a correspondence limit (open thread 4), unchanged.
 
 ## 7. What this settles: the integrity hazard
 
@@ -213,14 +267,13 @@ integrity the checkpoint provides.
 
 ## 10. Open threads to drill
 
-1. **Witness-set rotation in the seal — RATIFICATION BLOCKER.** Keripy-verified facts (§6):
-   rotation receipts count against the **new** set/toad, and a post-rotation seal is
-   receipted by the then-current set. Old-set rule ⇒ **deadlock** (cut witnesses won't
-   receipt); new-set rule ⇒ the checking set swaps inside the checked event, **voiding the
-   no-fork duplicity argument**. Candidate: a **two-phase seal** — announce the incoming
-   set in a seal receipted by the *outgoing* threshold *before* the native witness
-   rotation, confirm after. Nail the rule + recovery/superseding edge cases before this
-   doc ratifies.
+1. **Witness-set rotation — drilled 2026-07-09, resolution in §6a** (two-seal handoff:
+   pre-announcement receipted by the outgoing set while still in office, activation
+   receipted by the incoming set; both seals in one advance tx). No longer a blocker.
+   Residual knobs: **Δ sizing** for the time-locked signature-only fallback (relates to
+   thread 6's freshness windows), whether Seal W and Seal K must be KEL-adjacent or may
+   be separated by interaction events, and the delegated/superseding-recovery case when
+   delegated AIDs enter the model.
 2. **Pin the seal's serialization** — receipts sign raw bytes (§5), so Plutus parses the
    seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"

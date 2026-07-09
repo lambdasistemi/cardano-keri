@@ -4,6 +4,12 @@ Status: **design decision, drillable.** Captured 2026-07-09. This reshapes #24, 
 and #10, and refines `system-architecture.md` (identity key-state is now an on-chain
 checkpoint, not a watcher-attested mirror). Open threads to drill are listed at the end.
 
+Amended 2026-07-09 after adversarial validation: two limits of the "cryptographic"
+claim stated explicitly (§7a — genesis binding, seal↔native correspondence); receipt
+mechanics corrected against keripy (receipts sign **raw event bytes**, so the blake2b-SAID
+requirement is **dropped** — §5); witness-set rotation elevated to a **ratification
+blocker** (§6, open thread 1).
+
 ---
 
 ## 1. The decision: identities are KERI-sovereign
@@ -13,6 +19,10 @@ There must be **no chance of forking an identity.** So an identity lives in the
 **anchors** it, never runs a second, independently-rotating copy. One state machine.
 This retires the "two independent state machines" tension (and the divergence-burn that
 policed it).
+
+Precision: "one state machine" holds at the **event-log** level — the seal chain lives
+inside the one witnessed KEL. Whether the seal chain's *claimed key-state* matches the
+native Blake3 key-state in that same KEL is a separate, weaker guarantee — see §7a.
 
 ## 2. How Alice consumes her identity in a transaction (bring-your-own-proof)
 
@@ -44,19 +54,29 @@ threshold sig, advance seq). #24 is therefore revived as the **integrity backbon
 retired idea: the state only advances through validator-checked rotations, so no party can
 inject fake keys — there is nothing to trust.
 
+One caveat travels with the revival: original #24 derived `trie_key` from inception
+material, so its **base case was self-certifying** in blake2b. Here the leaf key is an
+external **Blake3** AID — the induction *step* is unchanged, but the base case (genesis)
+is no longer self-certifying on-chain. See §7a.
+
 ## 4. The special anchoring event that drives the checkpoint
 
 For a **Blake3** (real vLEI) controller, Cardano cannot verify the native rotation event
 (no `blake3` builtin). Resolution: the controller emits a **special anchoring seal** into
-her own KEL — a **blake2b-SAID'd, witnessed** interaction/anchor event that carries a
-**blake2b** commitment to the new key-state (reveal pre-committed next keys, commit the new
-`next_digest` in blake2b), signed by the (new) keys.
+her own KEL — a **witnessed** interaction/anchor event (a plain native event, **Blake3
+SAID like any other** — see §5 for why no blake2b SAID is needed) whose seal data carries
+a **blake2b** commitment to the new key-state (reveal pre-committed next keys, commit the
+new `next_digest` in blake2b), signed by the (new) keys.
 
 - **KERI-sovereign** — the seal is in the one witnessed KEL; no separate machine, no fork.
-- **Cardano-cryptographic without a builtin** — Cardano verifies the **blake2b** seal, not
-  the Blake3 rotation. The invent-key-material hazard (§7) closes.
+- **Cardano-cryptographic without a builtin** — Cardano verifies the seal's **blake2b
+  payload commitments** and its **Ed25519 witness receipts** (§5), never the Blake3
+  rotation. The invent-key-material hazard (§7) closes *for every advance after genesis*
+  (§7a).
 - **Ecosystem-compatible** — the native AID/KEL stays Blake3; the controller merely *adds*
-  a blake2b seal. Far lighter than mandating blake2b digest agility on the whole `n` field.
+  a seal whose *payload digests* are blake2b. The event itself needs **no digest-agility
+  patch anywhere** (§5) — far lighter than mandating blake2b agility on the whole `n`
+  field, and lighter than this doc's first draft assumed.
 - **KERI-idiomatic** — seals/anchors are native KERI; this is the "normative KERI
   checkpoint / event anchor" the original two-agent analysis (`system-discussion.md`)
   already recommended, re-derived from the integrity angle.
@@ -79,10 +99,21 @@ What does Cardano check on the seal?
 
 **The no-fork decision (§1) forces witness-receipted.** Signature-only re-opens the fork.
 
-Cost of witness-receipting: Cardano must (a) track the **witness set + witness-threshold**
-as part of the checkpoint (they can change on rotation), and (b) verify threshold Ed25519
-receipts over the seal's SAID — which requires the seal to be **blake2b-SAID'd** so Cardano
-recomputes `blake2b(seal)==SAID` and confirms the receipts are over *that*. All builtins.
+Cost of witness-receipting: Cardano must (a) track the **witness set + toad** as part of
+the checkpoint (they can change on rotation — a **blocker**, open thread 1), and (b) verify
+threshold Ed25519 receipts over the seal.
+
+**Corrected against keripy (2026-07-09).** Witness receipts sign the **raw serialized
+event bytes**, not the SAID — `Kevery.processReceipt` / `valSigsWigsDel` verify
+`verfer.verify(sig, serder.raw)`. So Cardano checks
+`Ed25519.verify(witness_pk, seal_bytes, receipt_sig)` **directly over the seal bytes it
+already holds — no SAID recomputation at all**. Consequences:
+
+- the seal keeps its **native Blake3 SAID**; the former "blake2b-SAID'd seal" requirement
+  and its digest-agility open thread **dissolve**;
+- the real on-chain cost moves to **parsing** the seal's serialization to extract the AID,
+  `s`, and the payload commitments — so the seal's serialization kind + field layout must
+  be **pinned** (open thread 2).
 
 ## 6. The checkpoint state (what the leaf holds)
 
@@ -90,36 +121,69 @@ The advancing checkpoint per `cesr_aid` holds more than keys:
 
 ```
 Checkpoint {
-  keys            : [(pubkey, weight)...]   -- current establishment keys (KERI k)
-  threshold       : kt                       -- weighted k-of-n
-  next_digest     : blake2b(next key config) -- pre-rotation commitment (blake2b)
-  witnesses       : [witness_pubkey...]      -- current witness set
-  witness_thresh  : nt-of-m                  -- witness threshold
-  seq             : Int
+  keys        : [(pubkey, weight)...]   -- current establishment keys (KERI k)
+  threshold   : kt                       -- weighted k-of-n (KERI kt; fractional clauses — F18)
+  next_digest : blake2b(next key config) -- pre-rotation commitment (blake2b)
+  witnesses   : [witness_pubkey...]      -- current witness set (KERI b)
+  toad        : Int                      -- witness threshold (KERI bt; NOT nt — nt is the
+                                         --   next-KEY threshold, don't reuse the name)
+  seq         : Int
 }
 ```
 
-Both the signing keys **and** the witness set advance through witness-receipted seals; a
-witness-set change is itself a rotation whose seal must be receipted by the *old* witness
-threshold (the mechanic to nail down — §"open threads").
+Both the signing keys **and** the witness set advance through witness-receipted seals.
+**Which set receipts a witness-set change is a ratification blocker, not an edge case**
+(open thread 1). Verified keripy behavior cuts both ways:
+
+- KERI counts a rotation's receipts against the **new** set and new toad
+  (`Kever.update` → `self.rotate(serder)` → `valSigsWigsDel(wits=new)`), and a
+  post-rotation seal is receipted by the **then-current (new)** set.
+- So a "receipted by the *old* threshold" rule **deadlocks** — cut witnesses have no duty
+  to receipt anything after removal — while accepting the new set's receipts lets the
+  checking set be **swapped inside the very event being checked**, voiding the duplicity
+  argument behind no-fork (§5).
 
 ## 7. What this settles: the integrity hazard
 
 The sharpest residual risk was **forged key material**: a colluding watcher/SPO quorum
 anchoring fake keys for `cesr_aid` (impersonation), which in the watcher-mirror model is
 neither preventable nor punishable on-chain (both need Blake3). The on-chain checkpoint
-**closes it**: the key-state advances only through **validator-verified, witness-receipted**
-seals, so integrity is **cryptographic**, resting on the controller's own witnesses — not on
-watcher honesty.
+**closes it for every advance after genesis**: the key-state advances only through
+**validator-verified, witness-receipted** seals, so third parties cannot inject keys —
+integrity of *advances* is **cryptographic**, resting on the controller's own witnesses,
+not on watcher honesty. The two places where "cryptographic" does **not** reach are stated
+next.
+
+### 7a. Two stated limits
+
+**Genesis is not cryptographic.** The checkpoint is an induction with a **trusted base
+case**. The binding `cesr_aid` (a Blake3-derived prefix) ↔ initial keys ↔ **initial
+witness set** cannot be verified in blake2b, and the receipt check is **circular at
+inception** — the witness set Cardano would verify receipts against is exactly what the
+genesis leaf asserts. Whoever writes the genesis leaf can bind someone else's AID to
+attacker keys and an attacker "witness set", and every later advance is then flawlessly
+"cryptographic" on top of a forged base. Genesis therefore stays at **registration
+grade: oracle-asserted, publicly falsifiable** (`system-architecture.md` §6) — the same
+trust class as R-MAP, moved to registration time, not escaped.
+
+**Witnesses receipt events, not truth.** Receipts attest ordering and duplicity-freedom;
+nobody validates that a seal's *claimed* key-state matches the native Blake3 `k`/`n`
+fields in the same KEL. The seal chain is internally enforced (blake2b pre-rotation), but
+its **correspondence to the native key-state rests on controller honesty**: a controller
+can maintain two divergent key-state threads in one witnessed KEL with zero duplicity —
+**self-equivocation, not third-party forgery**. Whether that is a feature ("Cardano
+operating keys" designated distinct from native KERI keys) or a hazard (vLEI role
+credentials assume the KEL keys are the acting keys; a KERI-side auditor computes a
+different current key-state than Cardano enforces) is open thread 4.
 
 Corollary that refines "Blake2/Blake3 doesn't fork the system": it doesn't change the
 *shape*, but it **does** change the *integrity model*:
 
 | Path | Identity integrity |
 |---|---|
-| On-chain checkpoint via **blake2b seal** (this doc) | **cryptographic** — rests on the controller's witnesses |
-| Watcher-**mirror** of native Blake3, no seal | **honest-majority-trusted** — the invent-hazard |
-| Native Blake3 + a future Plutus `blake3` builtin | cryptographic (verify the KEL directly) |
+| On-chain checkpoint via **blake2b seal** (this doc) | **cryptographic from genesis** — advances rest on the controller's witnesses; the genesis binding itself is registration-attested, falsifiable (§7a) |
+| Watcher-**mirror** of native Blake3, no seal | **honest-majority-trusted** — the invent-hazard, on every read |
+| Native Blake3 + a future Plutus `blake3` builtin | cryptographic (verify the KEL directly; genesis self-certifies via the AID prefix) |
 
 ## 8. Cascade — what changes elsewhere
 
@@ -129,10 +193,11 @@ Corollary that refines "Blake2/Blake3 doesn't fork the system": it doesn't chang
   **weighted-threshold verification** (F18 rational-weight arithmetic) still stands — it's
   the sig check, not a frozen shape.
 - **#10 (super-watcher)** — divergence-burn is **not needed** for identity forks (one
-  machine). Its role shrinks to freshness/liveness of anchoring.
+  machine). Its role shrinks to freshness/liveness of anchoring — plus, if open thread 4
+  closes via spot-checks, policing seal↔native correspondence.
 - **`system-architecture.md`** — R-KEL *for identity* is the on-chain checkpoint
-  (cryptographic), not a watcher-attested mirror. R-TEL (credential status) remains
-  watcher-mirrored — see the open thread below.
+  (cryptographic from a registration-attested genesis — §7a), not a watcher-attested
+  mirror. R-TEL (credential status) remains watcher-mirrored — see the open thread below.
 
 ## 9. Freshness ≠ integrity
 
@@ -143,16 +208,32 @@ integrity the checkpoint provides.
 
 ## 10. Open threads to drill
 
-1. **Witness-set rotation in the seal** — verifying a witness-set change: the seal must be
-   receipted by the *outgoing* witness threshold; exact rule + edge cases.
-2. **blake2b-SAID digest agility on the seal** — a blake2b-SAID'd event whose `p` chains off
-   Blake3 priors; validate this is sound KERI and how witnesses receipt it.
-3. **Credential-side integrity (R-TEL)** — identity is now cryptographic via seals; are
-   credential issuance/revocation events analogously anchorable (issuer seals), or do they
-   stay watcher-mirrored (trusted)? This is the parallel question for the credential plane.
-4. **Freshness window sizing** — submission-liveness incentive + freeze fast-path vs the
+1. **Witness-set rotation in the seal — RATIFICATION BLOCKER.** Keripy-verified facts (§6):
+   rotation receipts count against the **new** set/toad, and a post-rotation seal is
+   receipted by the then-current set. Old-set rule ⇒ **deadlock** (cut witnesses won't
+   receipt); new-set rule ⇒ the checking set swaps inside the checked event, **voiding the
+   no-fork duplicity argument**. Candidate: a **two-phase seal** — announce the incoming
+   set in a seal receipted by the *outgoing* threshold *before* the native witness
+   rotation, confirm after. Nail the rule + recovery/superseding edge cases before this
+   doc ratifies.
+2. **Pin the seal's serialization** — receipts sign raw bytes (§5), so Plutus parses the
+   seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
+   parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"
+   thread, **dissolved** — the seal keeps its native Blake3 SAID.)
+3. **Genesis binding (§7a)** — the trusted base case: exact registration flow, who attests
+   `cesr_aid ↔ (keys, witnesses)@inception`, the falsification/challenge path, and whether
+   controller-signed evidence (OOBI-style) can tighten it.
+4. **Seal ↔ native key-state correspondence (§7a)** — accept it (documented "Cardano
+   operating keys" semantics) or close it (watchers spot-check seal vs native `k`/`n` —
+   falsifiable + slashable, watcher-grade); decide per use case.
+5. **Credential-side integrity (R-TEL)** — identity advances are now cryptographic via
+   seals; are credential issuance/revocation events analogously anchorable (issuer seals),
+   or do they stay watcher-mirrored (trusted)? Note the action-level guarantee is the
+   **min over both planes** (§2 still carries admission + non-revocation).
+6. **Freshness window sizing** — submission-liveness incentive + freeze fast-path vs the
    stolen-key window; per-use-case floor.
-5. **SDK requirement** — the controller's KERI wallet/bridge must emit the seal per rotation
-   (#42 family); who submits the Cardano advance tx (controller vs relayer/watcher).
-6. **Who pays / contention** — per-`cesr_aid` checkpoint UTxO (ordered, no global
+7. **SDK requirement** — the controller's KERI wallet/bridge must emit the seal per
+   rotation (#42 family; no SAID patching — the seal is a plain native event); who submits
+   the Cardano advance tx (controller vs relayer/watcher).
+8. **Who pays / contention** — per-`cesr_aid` checkpoint UTxO (ordered, no global
    contention) vs an MPFS checkpoint trie (aggregate root, batched writes).

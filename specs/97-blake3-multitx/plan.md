@@ -13,7 +13,10 @@ The Aiken checkpoint API should keep the on-chain datum compact:
 - `offset`: number of input bytes already absorbed.
 - `len`: committed input length, capped to one BLAKE3 chunk.
 - `input_commitment`: `blake2b_256(input)` checked against the redeemer input.
-- `expected_prefix`: digest prefix to compare at finish time.
+- `expected_digest`: the complete 32-byte BLAKE3 digest to compare at finish
+  time. Its length is pinned to exactly 32 bytes in `shape_is_valid`; short or
+  oversized values are rejected in both Step and Finish. The Haskell mirror field
+  is `expectedDigest`; PlutusData stays positional so wire parity is unchanged.
 
 For 1024 bytes, the target measurement path is:
 
@@ -82,3 +85,51 @@ Commit subject: `docs(spike): report blake3 multitx measurements`
 Update the PR body, rerun the gate, run the finalization audit, drop `gate.sh`,
 mark the PR ready only after local gate and CI are green, and leave merge to the
 parent.
+
+## Remediation (reopened after parent review)
+
+The PR was reported complete and independently reran green, but parent review
+found two acceptance gaps. History repair by folding into the origin commits is
+not safely practical here: this environment forbids interactive rebase, the
+fixes span three published, independently-verified commits, and an autosquash of
+a reviewed branch carries real corruption risk. Per the brief's explicit
+fallback, the remediation lands as focused, bisect-safe commits on top, each
+with its own RED/GREEN evidence, rather than rewritten history.
+
+### Slice R1: Require the full 32-byte checkpoint digest
+
+Rename `expected_prefix` -> `expected_digest` (Aiken `checkpoint.Datum`,
+`measurements.ak` usages, Haskell `CheckpointDatum.expectedDigest`), pin its
+length to exactly 32 bytes in `shape_is_valid`, and reduce the digest comparison
+to full equality. Add attack-shaped RED-first tests that a length-permissive
+implementation fails: Step and Finish MUST reject short (e.g. 8-byte, 31-byte)
+and oversized (33-byte) `expected_digest` values. Update every existing fixture
+that relied on a short prefix to use a real 32-byte digest, and drop the
+`finish_accepts_partial_prefix` test that enshrined the broken behavior. Update
+the Haskell golden/roundtrip fixtures to 32-byte digests and the renamed field;
+PlutusData stays positional, so the constructor-index/field-order golden test is
+unchanged in shape.
+
+Commit subject: `fix(spike): require full 32-byte checkpoint digest`
+
+### Slice R2: Full spend-validator context measurements
+
+Add measurement tests that invoke the validator handler
+`checkpoint.spend(Some(datum), redeemer, own_ref, tx)` for both the Step and
+Finish 1024-byte 8+8 paths, using top-level `const` fixtures (built from
+`transaction.placeholder` with literal inputs/outputs) so fixture construction is
+folded at compile time and not counted as validator cost. The Step fixture
+carries an input at `own_ref` and a continuing output at the same address/value
+whose inline datum is the stepped datum (advanced `cv`, `offset = 512`). Record
+both the core-helper and full spend-context ex-units separately in `REPORT.md`,
+compare the full path to the 14,000,000 memory / 10,000,000,000 CPU budgets, make
+the verdict follow the full numbers, and add the issue #99 authenticity caveat.
+
+Commit subject: `docs(spike): measure full spend-validator context`
+
+### Slice R3: Orchestrator re-finalization
+
+Restore `gate.sh` for the reopened PR life; after R1 and R2 are green, update the
+PR body to describe the corrected evidence, rerun `./gate.sh` and `just ci`, run
+the finalization audit, drop `gate.sh`, and mark ready only after local gate and
+CI are green. Merge stays with the parent; #98 merges before any #99 PR.

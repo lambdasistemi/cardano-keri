@@ -165,9 +165,9 @@ cd spikes/97-blake3-multitx && nix shell nixpkgs#aiken --command aiken check --p
 
 ### Slice R3 - Orchestrator re-finalization
 
-- [ ] T097-R3 Restore `gate.sh` for the reopened PR life (done at reopen).
-- [ ] T097-R3 Update the PR body with corrected evidence and full-context numbers.
-- [ ] T097-R3 Rerun `./gate.sh` and `just ci` at HEAD and record results.
-- [ ] T097-R3 Run the finalization audit for this PR and this task file.
-- [ ] T097-R3 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
-- [ ] T097-R3 Mark the PR ready only after local gate and CI are green; leave merge to the parent.
+- [X] T097-R3 Restore `gate.sh` for the reopened PR life (done at reopen).
+- [X] T097-R3 Update the PR body with corrected evidence and full-context numbers.
+- [X] T097-R3 Rerun `./gate.sh` and `just ci` at HEAD and record results.
+- [X] T097-R3 Run the finalization audit for this PR and this task file.
+- [X] T097-R3 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
+- [X] T097-R3 Mark the PR ready only after local gate and CI are green; leave merge to the parent.

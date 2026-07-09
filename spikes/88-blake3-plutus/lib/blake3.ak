@@ -1,43 +1,32 @@
 use aiken/builtin
 use aiken/primitive/bytearray
 
-const word_mod = 4294967296
-
 const chunk_start = 1
 
 const chunk_end = 2
 
 const root = 8
 
-type Cv {
-  v0: Int,
-  v1: Int,
-  v2: Int,
-  v3: Int,
-  v4: Int,
-  v5: Int,
-  v6: Int,
-  v7: Int,
-}
+const iv0 = 1779033703
 
-type Block {
-  m0: Int,
-  m1: Int,
-  m2: Int,
-  m3: Int,
-  m4: Int,
-  m5: Int,
-  m6: Int,
-  m7: Int,
-  m8: Int,
-  m9: Int,
-  m10: Int,
-  m11: Int,
-  m12: Int,
-  m13: Int,
-  m14: Int,
-  m15: Int,
-}
+const iv1 = 3144134277
+
+const iv2 = 1013904242
+
+const iv3 = 2773480762
+
+const iv4 = 1359893119
+
+const iv5 = 2600822924
+
+const iv6 = 528734635
+
+const iv7 = 1541459225
+
+// 64 zero bytes: padding so every block read stays in bounds and
+// out-of-range message words read as zero.
+const zero_block =
+  #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 type State {
   s0: Int,
@@ -58,103 +47,80 @@ type State {
   s15: Int,
 }
 
-type Quad {
-  a: Int,
-  b: Int,
-  c: Int,
-  d: Int,
+// Additions are left un-reduced mod 2^32; over 7 rounds a word
+// accumulates at most ~57 * 2^32 < 2^40, so a width-5 big-endian
+// conversion plus dropping the top byte recovers the exact u32.
+fn truncate32(x: Int) -> ByteArray {
+  builtin.slice_bytearray(1, 4, builtin.integer_to_bytearray(True, 5, x))
 }
 
-fn iv() -> Cv {
-  Cv {
-    v0: 1779033703,
-    v1: 3144134277,
-    v2: 1013904242,
-    v3: 2773480762,
-    v4: 1359893119,
-    v5: 2600822924,
-    v6: 528734635,
-    v7: 1541459225,
-  }
-}
-
-fn u32(n: Int) -> Int {
-  n % word_mod
-}
-
-fn xor32(left: Int, right: Int) -> Int {
-  builtin.xor_bytearray(
-    False,
-    bytearray.from_int_little_endian(left, 4),
-    bytearray.from_int_little_endian(right, 4),
+// rotr16(xor32(y, x)); x may be un-reduced, y must be an exact u32.
+fn xr16(x: Int, y: Int) -> Int {
+  builtin.bytearray_to_integer(
+    True,
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(
+        False,
+        truncate32(x),
+        builtin.integer_to_bytearray(True, 4, y),
+      ),
+      -16,
+    ),
   )
-    |> bytearray.to_int_little_endian
 }
 
-fn rotr16(x: Int) -> Int {
-  x / 65536 + x % 65536 * 65536
+fn xr12(x: Int, y: Int) -> Int {
+  builtin.bytearray_to_integer(
+    True,
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(
+        False,
+        truncate32(x),
+        builtin.integer_to_bytearray(True, 4, y),
+      ),
+      -12,
+    ),
+  )
 }
 
-fn rotr12(x: Int) -> Int {
-  x / 4096 + x % 4096 * 1048576
+fn xr8(x: Int, y: Int) -> Int {
+  builtin.bytearray_to_integer(
+    True,
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(
+        False,
+        truncate32(x),
+        builtin.integer_to_bytearray(True, 4, y),
+      ),
+      -8,
+    ),
+  )
 }
 
-fn rotr8(x: Int) -> Int {
-  x / 256 + x % 256 * 16777216
+fn xr7(x: Int, y: Int) -> Int {
+  builtin.bytearray_to_integer(
+    True,
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(
+        False,
+        truncate32(x),
+        builtin.integer_to_bytearray(True, 4, y),
+      ),
+      -7,
+    ),
+  )
 }
 
-fn rotr7(x: Int) -> Int {
-  x / 128 + x % 128 * 33554432
+// xor of two possibly un-reduced words, back to an exact u32.
+fn xor32(x: Int, y: Int) -> Int {
+  builtin.bytearray_to_integer(
+    True,
+    builtin.xor_bytearray(False, truncate32(x), truncate32(y)),
+  )
 }
 
-fn byte_at_or_zero(input: ByteArray, ix: Int, len: Int) -> Int {
-  if ix < len {
-    bytearray.at(input, ix)
-  } else {
-    0
-  }
-}
-
-fn read_word(input: ByteArray, offset: Int, len: Int) -> Int {
-  byte_at_or_zero(input, offset, len) + byte_at_or_zero(input, offset + 1, len) * 256 + byte_at_or_zero(
-    input,
-    offset + 2,
-    len,
-  ) * 65536 + byte_at_or_zero(input, offset + 3, len) * 16777216
-}
-
-fn block(input: ByteArray, offset: Int, len: Int) -> Block {
-  Block {
-    m0: read_word(input, offset, len),
-    m1: read_word(input, offset + 4, len),
-    m2: read_word(input, offset + 8, len),
-    m3: read_word(input, offset + 12, len),
-    m4: read_word(input, offset + 16, len),
-    m5: read_word(input, offset + 20, len),
-    m6: read_word(input, offset + 24, len),
-    m7: read_word(input, offset + 28, len),
-    m8: read_word(input, offset + 32, len),
-    m9: read_word(input, offset + 36, len),
-    m10: read_word(input, offset + 40, len),
-    m11: read_word(input, offset + 44, len),
-    m12: read_word(input, offset + 48, len),
-    m13: read_word(input, offset + 52, len),
-    m14: read_word(input, offset + 56, len),
-    m15: read_word(input, offset + 60, len),
-  }
-}
-
-fn mix(a0: Int, b0: Int, c0: Int, d0: Int, mx: Int, my: Int) -> Quad {
-  let a1 = u32(a0 + b0 + mx)
-  let d1 = rotr16(xor32(d0, a1))
-  let c1 = u32(c0 + d1)
-  let b1 = rotr12(xor32(b0, c1))
-  let a2 = u32(a1 + b1 + my)
-  let d2 = rotr8(xor32(d1, a2))
-  let c2 = u32(c1 + d2)
-  let b2 = rotr7(xor32(b1, c2))
-
-  Quad { a: a2, b: b2, c: c2, d: d2 }
+fn word(padded: ByteArray, offset: Int) -> Int {
+  builtin.bytearray_to_integer(False, builtin.slice_bytearray(offset, 4, padded))
 }
 
 fn round(
@@ -176,260 +142,227 @@ fn round(
   m14: Int,
   m15: Int,
 ) -> State {
-  let q = mix(state.s0, state.s4, state.s8, state.s12, m0, m1)
-  let state = State { ..state, s0: q.a, s4: q.b, s8: q.c, s12: q.d }
+  let State {
+    s0,
+    s1,
+    s2,
+    s3,
+    s4,
+    s5,
+    s6,
+    s7,
+    s8,
+    s9,
+    s10,
+    s11,
+    s12,
+    s13,
+    s14,
+    s15,
+  } = state
 
-  let q = mix(state.s1, state.s5, state.s9, state.s13, m2, m3)
-  let state = State { ..state, s1: q.a, s5: q.b, s9: q.c, s13: q.d }
+  // column 0: G(s0, s4, s8, s12)
+  let va = s0 + s4 + m0
+  let vd = xr16(va, s12)
+  let vc = s8 + vd
+  let vb = xr12(vc, s4)
+  let ca0 = va + vb + m1
+  let cd0 = xr8(ca0, vd)
+  let cc0 = vc + cd0
+  let cb0 = xr7(cc0, vb)
 
-  let q = mix(state.s2, state.s6, state.s10, state.s14, m4, m5)
-  let state = State { ..state, s2: q.a, s6: q.b, s10: q.c, s14: q.d }
+  // column 1: G(s1, s5, s9, s13)
+  let va = s1 + s5 + m2
+  let vd = xr16(va, s13)
+  let vc = s9 + vd
+  let vb = xr12(vc, s5)
+  let ca1 = va + vb + m3
+  let cd1 = xr8(ca1, vd)
+  let cc1 = vc + cd1
+  let cb1 = xr7(cc1, vb)
 
-  let q = mix(state.s3, state.s7, state.s11, state.s15, m6, m7)
-  let state = State { ..state, s3: q.a, s7: q.b, s11: q.c, s15: q.d }
+  // column 2: G(s2, s6, s10, s14)
+  let va = s2 + s6 + m4
+  let vd = xr16(va, s14)
+  let vc = s10 + vd
+  let vb = xr12(vc, s6)
+  let ca2 = va + vb + m5
+  let cd2 = xr8(ca2, vd)
+  let cc2 = vc + cd2
+  let cb2 = xr7(cc2, vb)
 
-  let q = mix(state.s0, state.s5, state.s10, state.s15, m8, m9)
-  let state = State { ..state, s0: q.a, s5: q.b, s10: q.c, s15: q.d }
+  // column 3: G(s3, s7, s11, s15)
+  let va = s3 + s7 + m6
+  let vd = xr16(va, s15)
+  let vc = s11 + vd
+  let vb = xr12(vc, s7)
+  let ca3 = va + vb + m7
+  let cd3 = xr8(ca3, vd)
+  let cc3 = vc + cd3
+  let cb3 = xr7(cc3, vb)
 
-  let q = mix(state.s1, state.s6, state.s11, state.s12, m10, m11)
-  let state = State { ..state, s1: q.a, s6: q.b, s11: q.c, s12: q.d }
+  // diagonal 0: G(s0, s5, s10, s15)
+  let va = ca0 + cb1 + m8
+  let vd = xr16(va, cd3)
+  let vc = cc2 + vd
+  let vb = xr12(vc, cb1)
+  let da0 = va + vb + m9
+  let dd0 = xr8(da0, vd)
+  let dc0 = vc + dd0
+  let db0 = xr7(dc0, vb)
 
-  let q = mix(state.s2, state.s7, state.s8, state.s13, m12, m13)
-  let state = State { ..state, s2: q.a, s7: q.b, s8: q.c, s13: q.d }
+  // diagonal 1: G(s1, s6, s11, s12)
+  let va = ca1 + cb2 + m10
+  let vd = xr16(va, cd0)
+  let vc = cc3 + vd
+  let vb = xr12(vc, cb2)
+  let da1 = va + vb + m11
+  let dd1 = xr8(da1, vd)
+  let dc1 = vc + dd1
+  let db1 = xr7(dc1, vb)
 
-  let q = mix(state.s3, state.s4, state.s9, state.s14, m14, m15)
+  // diagonal 2: G(s2, s7, s8, s13)
+  let va = ca2 + cb3 + m12
+  let vd = xr16(va, cd1)
+  let vc = cc0 + vd
+  let vb = xr12(vc, cb3)
+  let da2 = va + vb + m13
+  let dd2 = xr8(da2, vd)
+  let dc2 = vc + dd2
+  let db2 = xr7(dc2, vb)
 
-  State { ..state, s3: q.a, s4: q.b, s9: q.c, s14: q.d }
+  // diagonal 3: G(s3, s4, s9, s14)
+  let va = ca3 + cb0 + m14
+  let vd = xr16(va, cd2)
+  let vc = cc1 + vd
+  let vb = xr12(vc, cb0)
+  let da3 = va + vb + m15
+  let dd3 = xr8(da3, vd)
+  let dc3 = vc + dd3
+  let db3 = xr7(dc3, vb)
+
+  State {
+    s0: da0,
+    s1: da1,
+    s2: da2,
+    s3: da3,
+    s4: db3,
+    s5: db0,
+    s6: db1,
+    s7: db2,
+    s8: dc2,
+    s9: dc3,
+    s10: dc0,
+    s11: dc1,
+    s12: dd1,
+    s13: dd2,
+    s14: dd3,
+    s15: dd0,
+  }
 }
 
-fn permute(state: State, msg: Block) -> State {
-  let state =
-    round(
-      state,
-      msg.m0,
-      msg.m1,
-      msg.m2,
-      msg.m3,
-      msg.m4,
-      msg.m5,
-      msg.m6,
-      msg.m7,
-      msg.m8,
-      msg.m9,
-      msg.m10,
-      msg.m11,
-      msg.m12,
-      msg.m13,
-      msg.m14,
-      msg.m15,
-    )
-  let state =
-    round(
-      state,
-      msg.m2,
-      msg.m6,
-      msg.m3,
-      msg.m10,
-      msg.m7,
-      msg.m0,
-      msg.m4,
-      msg.m13,
-      msg.m1,
-      msg.m11,
-      msg.m12,
-      msg.m5,
-      msg.m9,
-      msg.m14,
-      msg.m15,
-      msg.m8,
-    )
-  let state =
-    round(
-      state,
-      msg.m3,
-      msg.m4,
-      msg.m10,
-      msg.m12,
-      msg.m13,
-      msg.m2,
-      msg.m7,
-      msg.m14,
-      msg.m6,
-      msg.m5,
-      msg.m9,
-      msg.m0,
-      msg.m11,
-      msg.m15,
-      msg.m8,
-      msg.m1,
-    )
-  let state =
-    round(
-      state,
-      msg.m10,
-      msg.m7,
-      msg.m12,
-      msg.m9,
-      msg.m14,
-      msg.m3,
-      msg.m13,
-      msg.m15,
-      msg.m4,
-      msg.m0,
-      msg.m11,
-      msg.m2,
-      msg.m5,
-      msg.m8,
-      msg.m1,
-      msg.m6,
-    )
-  let state =
-    round(
-      state,
-      msg.m12,
-      msg.m13,
-      msg.m9,
-      msg.m11,
-      msg.m15,
-      msg.m10,
-      msg.m14,
-      msg.m8,
-      msg.m7,
-      msg.m2,
-      msg.m5,
-      msg.m3,
-      msg.m0,
-      msg.m1,
-      msg.m6,
-      msg.m4,
-    )
-  let state =
-    round(
-      state,
-      msg.m9,
-      msg.m14,
-      msg.m11,
-      msg.m5,
-      msg.m8,
-      msg.m12,
-      msg.m15,
-      msg.m1,
-      msg.m13,
-      msg.m3,
-      msg.m0,
-      msg.m10,
-      msg.m2,
-      msg.m6,
-      msg.m4,
-      msg.m7,
-    )
+fn permute(
+  state: State,
+  m0: Int,
+  m1: Int,
+  m2: Int,
+  m3: Int,
+  m4: Int,
+  m5: Int,
+  m6: Int,
+  m7: Int,
+  m8: Int,
+  m9: Int,
+  m10: Int,
+  m11: Int,
+  m12: Int,
+  m13: Int,
+  m14: Int,
+  m15: Int,
+) -> State {
+  round(state, m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15)
+    |> round(m2, m6, m3, m10, m7, m0, m4, m13, m1, m11, m12, m5, m9, m14, m15, m8)
+    |> round(m3, m4, m10, m12, m13, m2, m7, m14, m6, m5, m9, m0, m11, m15, m8, m1)
+    |> round(m10, m7, m12, m9, m14, m3, m13, m15, m4, m0, m11, m2, m5, m8, m1, m6)
+    |> round(m12, m13, m9, m11, m15, m10, m14, m8, m7, m2, m5, m3, m0, m1, m6, m4)
+    |> round(m9, m14, m11, m5, m8, m12, m15, m1, m13, m3, m0, m10, m2, m6, m4, m7)
+    |> round(m11, m15, m5, m0, m1, m9, m8, m6, m14, m10, m2, m12, m3, m4, m7, m13)
+}
 
-  round(
+// Single-chunk compression: the chunk counter is always 0 for
+// inputs <= 1024 bytes, so s12/s13 are fixed at 0.
+fn compress(
+  padded: ByteArray,
+  offset: Int,
+  h0: Int,
+  h1: Int,
+  h2: Int,
+  h3: Int,
+  h4: Int,
+  h5: Int,
+  h6: Int,
+  h7: Int,
+  block_len: Int,
+  flags: Int,
+) -> State {
+  let state =
+    State {
+      s0: h0,
+      s1: h1,
+      s2: h2,
+      s3: h3,
+      s4: h4,
+      s5: h5,
+      s6: h6,
+      s7: h7,
+      s8: iv0,
+      s9: iv1,
+      s10: iv2,
+      s11: iv3,
+      s12: 0,
+      s13: 0,
+      s14: block_len,
+      s15: flags,
+    }
+
+  permute(
     state,
-    msg.m11,
-    msg.m15,
-    msg.m5,
-    msg.m0,
-    msg.m1,
-    msg.m9,
-    msg.m8,
-    msg.m6,
-    msg.m14,
-    msg.m10,
-    msg.m2,
-    msg.m12,
-    msg.m3,
-    msg.m4,
-    msg.m7,
-    msg.m13,
+    word(padded, offset),
+    word(padded, offset + 4),
+    word(padded, offset + 8),
+    word(padded, offset + 12),
+    word(padded, offset + 16),
+    word(padded, offset + 20),
+    word(padded, offset + 24),
+    word(padded, offset + 28),
+    word(padded, offset + 32),
+    word(padded, offset + 36),
+    word(padded, offset + 40),
+    word(padded, offset + 44),
+    word(padded, offset + 48),
+    word(padded, offset + 52),
+    word(padded, offset + 56),
+    word(padded, offset + 60),
   )
 }
 
-fn initial_state(cv: Cv, counter: Int, block_len: Int, flags: Int) -> State {
-  State {
-    s0: cv.v0,
-    s1: cv.v1,
-    s2: cv.v2,
-    s3: cv.v3,
-    s4: cv.v4,
-    s5: cv.v5,
-    s6: cv.v6,
-    s7: cv.v7,
-    s8: 1779033703,
-    s9: 3144134277,
-    s10: 1013904242,
-    s11: 2773480762,
-    s12: counter % word_mod,
-    s13: counter / word_mod,
-    s14: block_len,
-    s15: flags,
-  }
-}
-
-fn compress_state(
-  cv: Cv,
-  msg: Block,
-  block_len: Int,
-  counter: Int,
-  flags: Int,
-) -> State {
-  initial_state(cv, counter, block_len, flags)
-    |> permute(msg)
-}
-
-fn compress_cv(
-  cv: Cv,
-  msg: Block,
-  block_len: Int,
-  counter: Int,
-  flags: Int,
-) -> Cv {
-  let state = compress_state(cv, msg, block_len, counter, flags)
-
-  Cv {
-    v0: xor32(state.s0, state.s8),
-    v1: xor32(state.s1, state.s9),
-    v2: xor32(state.s2, state.s10),
-    v3: xor32(state.s3, state.s11),
-    v4: xor32(state.s4, state.s12),
-    v5: xor32(state.s5, state.s13),
-    v6: xor32(state.s6, state.s14),
-    v7: xor32(state.s7, state.s15),
-  }
-}
-
-fn root_cv(cv: Cv, msg: Block, block_len: Int, counter: Int, flags: Int) -> Cv {
-  let state = compress_state(cv, msg, block_len, counter, flags + root)
-
-  Cv {
-    v0: xor32(state.s0, state.s8),
-    v1: xor32(state.s1, state.s9),
-    v2: xor32(state.s2, state.s10),
-    v3: xor32(state.s3, state.s11),
-    v4: xor32(state.s4, state.s12),
-    v5: xor32(state.s5, state.s13),
-    v6: xor32(state.s6, state.s14),
-    v7: xor32(state.s7, state.s15),
-  }
-}
-
-fn bytes_from_cv(cv: Cv) -> ByteArray {
-  bytearray.from_int_little_endian(cv.v0, 4)
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v1, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v2, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v3, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v4, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v5, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v6, 4))
-    |> bytearray.concat(bytearray.from_int_little_endian(cv.v7, 4))
+fn digest_word(x: Int, y: Int) -> ByteArray {
+  builtin.integer_to_bytearray(False, 4, xor32(x, y))
 }
 
 fn hash_go(
-  input: ByteArray,
+  padded: ByteArray,
   len: Int,
   offset: Int,
   blocks_compressed: Int,
-  cv: Cv,
+  h0: Int,
+  h1: Int,
+  h2: Int,
+  h3: Int,
+  h4: Int,
+  h5: Int,
+  h6: Int,
+  h7: Int,
 ) -> ByteArray {
   if len - offset > 64 {
     let flags =
@@ -438,18 +371,87 @@ fn hash_go(
       } else {
         0
       }
-    let cv = compress_cv(cv, block(input, offset, len), 64, 0, flags)
+    let State {
+      s0,
+      s1,
+      s2,
+      s3,
+      s4,
+      s5,
+      s6,
+      s7,
+      s8,
+      s9,
+      s10,
+      s11,
+      s12,
+      s13,
+      s14,
+      s15,
+    } = compress(padded, offset, h0, h1, h2, h3, h4, h5, h6, h7, 64, flags)
 
-    hash_go(input, len, offset + 64, blocks_compressed + 1, cv)
+    hash_go(
+      padded,
+      len,
+      offset + 64,
+      blocks_compressed + 1,
+      xor32(s0, s8),
+      xor32(s1, s9),
+      xor32(s2, s10),
+      xor32(s3, s11),
+      xor32(s4, s12),
+      xor32(s5, s13),
+      xor32(s6, s14),
+      xor32(s7, s15),
+    )
   } else {
     let flags =
       if blocks_compressed == 0 {
-        chunk_start + chunk_end
+        chunk_start + chunk_end + root
       } else {
-        chunk_end
+        chunk_end + root
       }
-    root_cv(cv, block(input, offset, len), len - offset, 0, flags)
-      |> bytes_from_cv
+    let State {
+      s0,
+      s1,
+      s2,
+      s3,
+      s4,
+      s5,
+      s6,
+      s7,
+      s8,
+      s9,
+      s10,
+      s11,
+      s12,
+      s13,
+      s14,
+      s15,
+    } =
+      compress(
+        padded,
+        offset,
+        h0,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        h7,
+        len - offset,
+        flags,
+      )
+
+    digest_word(s0, s8)
+      |> bytearray.concat(digest_word(s1, s9))
+      |> bytearray.concat(digest_word(s2, s10))
+      |> bytearray.concat(digest_word(s3, s11))
+      |> bytearray.concat(digest_word(s4, s12))
+      |> bytearray.concat(digest_word(s5, s13))
+      |> bytearray.concat(digest_word(s6, s14))
+      |> bytearray.concat(digest_word(s7, s15))
   }
 }
 
@@ -457,7 +459,9 @@ pub fn hash(input: ByteArray) -> ByteArray {
   let len = bytearray.length(input)
   expect len <= 1024
 
-  hash_go(input, len, 0, 0, iv())
+  let padded = bytearray.concat(input, zero_block)
+
+  hash_go(padded, len, 0, 0, iv0, iv1, iv2, iv3, iv4, iv5, iv6, iv7)
 }
 
 pub fn verify(input: ByteArray, expected_digest: ByteArray) -> Bool {

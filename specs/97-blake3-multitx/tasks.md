@@ -43,11 +43,11 @@ Owned files:
 
 Tasks:
 
-- [ ] T097-S2 Add datum and redeemer types matching the issue shape.
-- [ ] T097-S2 Add the checkpoint spend validator and pure transition helpers.
-- [ ] T097-S2 Add RED-first tests for accepted Step/Finish and all required rejections.
-- [ ] T097-S2 Run the focused spike command and `./gate.sh`.
-- [ ] T097-S2 Commit as `feat(spike): add blake3 checkpoint validator`.
+- [X] T097-S2 Add datum and redeemer types matching the issue shape.
+- [X] T097-S2 Add the checkpoint spend validator and pure transition helpers.
+- [X] T097-S2 Add RED-first tests for accepted Step/Finish and all required rejections.
+- [X] T097-S2 Run the focused spike command and `./gate.sh`.
+- [X] T097-S2 Commit as `feat(spike): add blake3 checkpoint validator`.
 
 Focused command:
 

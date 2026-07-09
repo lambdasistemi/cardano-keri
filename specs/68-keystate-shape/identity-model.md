@@ -225,13 +225,15 @@ integrity the checkpoint provides.
    seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"
    thread, **dissolved** — the seal keeps its native Blake3 SAID.)
-3. **Genesis binding (§7a)** — the trusted base case. Two tracks:
-   - **Spike #88 — in-script blake3 at genesis.** Plutus V3's bitwise builtins
-     (CIP-121/122/123) may make a one-shot `blake3(icp) == cesr_aid` check feasible inside
-     the registration tx (genesis is once per identity, own tx — not hot-path). If it fits
-     the budget, this limit **disappears** for native Blake3 vLEI holders and the
-     registration oracle keeps only liveness. Measure before designing track two's teeth.
-   - **Fallback: attested registration** — exact flow, who attests
+3. **Genesis binding (§7a)** — the trusted base case.
+   - ~~Spike #88 — in-script blake3 at genesis~~ — **resolved 2026-07-09: DOES NOT FIT**
+     (PR #89, `spikes/88-blake3-plutus/REPORT.md`). A correct, vector-validated,
+     unrolled BLAKE3 in Aiken/Plutus V3 costs 114.9% cpu / 147.3% mem of the mainnet
+     per-tx budget at 300-byte inceptions — over budget before the rest of the
+     registration validator runs. Full closure therefore needs a **native `blake3`
+     builtin**; no CIP exists for one — authoring it (with #88's benchmarks as evidence)
+     is the sunset follow-up.
+   - **The live track: attested registration** — exact flow, who attests
      `cesr_aid ↔ (keys, witnesses)@inception`, bond + challenge window before the leaf is
      usable + freeze fast-path; whether controller-signed evidence (OOBI-style) tightens it.
 4. **Seal ↔ native key-state correspondence (§7a)** — accept it (documented "Cardano

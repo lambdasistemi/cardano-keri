@@ -23,11 +23,28 @@ const iv6 = 528734635
 
 const iv7 = 1541459225
 
+// Big-endian bytes of iv4..iv7, the initial b-column of the state.
+const ivb4 = #"510e527f"
+
+const ivb5 = #"9b05688c"
+
+const ivb6 = #"1f83d9ab"
+
+const ivb7 = #"5be0cd19"
+
+const zero_word = #"00000000"
+
 // 64 zero bytes: padding so every block read stays in bounds and
 // out-of-range message words read as zero.
 const zero_block =
   #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
+// The a-rows (s0..s3) and c-rows (s8..s11) accumulate un-reduced
+// additions and live as integers. The b-rows and d-rows are always
+// exact u32 rotation outputs and live as 4-byte big-endian words so
+// the next xor can consume them without an integer round-trip; the
+// b-rows keep an integer shadow (s4..s7) because they also feed
+// additions.
 type State {
   s0: Int,
   s1: Int,
@@ -37,14 +54,18 @@ type State {
   s5: Int,
   s6: Int,
   s7: Int,
+  b4: ByteArray,
+  b5: ByteArray,
+  b6: ByteArray,
+  b7: ByteArray,
   s8: Int,
   s9: Int,
   s10: Int,
   s11: Int,
-  s12: Int,
-  s13: Int,
-  s14: Int,
-  s15: Int,
+  d12: ByteArray,
+  d13: ByteArray,
+  d14: ByteArray,
+  d15: ByteArray,
 }
 
 // Additions are left un-reduced mod 2^32; over 7 rounds a word
@@ -52,63 +73,6 @@ type State {
 // conversion plus dropping the top byte recovers the exact u32.
 fn truncate32(x: Int) -> ByteArray {
   builtin.slice_bytearray(1, 4, builtin.integer_to_bytearray(True, 5, x))
-}
-
-// rotr16(xor32(y, x)); x may be un-reduced, y must be an exact u32.
-fn xr16(x: Int, y: Int) -> Int {
-  builtin.bytearray_to_integer(
-    True,
-    builtin.rotate_bytearray(
-      builtin.xor_bytearray(
-        False,
-        truncate32(x),
-        builtin.integer_to_bytearray(True, 4, y),
-      ),
-      -16,
-    ),
-  )
-}
-
-fn xr12(x: Int, y: Int) -> Int {
-  builtin.bytearray_to_integer(
-    True,
-    builtin.rotate_bytearray(
-      builtin.xor_bytearray(
-        False,
-        truncate32(x),
-        builtin.integer_to_bytearray(True, 4, y),
-      ),
-      -12,
-    ),
-  )
-}
-
-fn xr8(x: Int, y: Int) -> Int {
-  builtin.bytearray_to_integer(
-    True,
-    builtin.rotate_bytearray(
-      builtin.xor_bytearray(
-        False,
-        truncate32(x),
-        builtin.integer_to_bytearray(True, 4, y),
-      ),
-      -8,
-    ),
-  )
-}
-
-fn xr7(x: Int, y: Int) -> Int {
-  builtin.bytearray_to_integer(
-    True,
-    builtin.rotate_bytearray(
-      builtin.xor_bytearray(
-        False,
-        truncate32(x),
-        builtin.integer_to_bytearray(True, 4, y),
-      ),
-      -7,
-    ),
-  )
 }
 
 // xor of two possibly un-reduced words, back to an exact u32.
@@ -151,95 +115,251 @@ fn round(
     s5,
     s6,
     s7,
+    b4,
+    b5,
+    b6,
+    b7,
     s8,
     s9,
     s10,
     s11,
-    s12,
-    s13,
-    s14,
-    s15,
+    d12,
+    d13,
+    d14,
+    d15,
   } = state
 
   // column 0: G(s0, s4, s8, s12)
   let va = s0 + s4 + m0
-  let vd = xr16(va, s12)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), d12),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = s8 + vd
-  let vb = xr12(vc, s4)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), b4),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let ca0 = va + vb + m1
-  let cd0 = xr8(ca0, vd)
-  let cc0 = vc + cd0
-  let cb0 = xr7(cc0, vb)
+  let cdb0 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(ca0), vdb),
+      -8,
+    )
+  let cc0 = vc + builtin.bytearray_to_integer(True, cdb0)
+  let cbb0 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(cc0), vbb),
+      -7,
+    )
+  let cb0 = builtin.bytearray_to_integer(True, cbb0)
 
   // column 1: G(s1, s5, s9, s13)
   let va = s1 + s5 + m2
-  let vd = xr16(va, s13)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), d13),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = s9 + vd
-  let vb = xr12(vc, s5)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), b5),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let ca1 = va + vb + m3
-  let cd1 = xr8(ca1, vd)
-  let cc1 = vc + cd1
-  let cb1 = xr7(cc1, vb)
+  let cdb1 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(ca1), vdb),
+      -8,
+    )
+  let cc1 = vc + builtin.bytearray_to_integer(True, cdb1)
+  let cbb1 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(cc1), vbb),
+      -7,
+    )
+  let cb1 = builtin.bytearray_to_integer(True, cbb1)
 
   // column 2: G(s2, s6, s10, s14)
   let va = s2 + s6 + m4
-  let vd = xr16(va, s14)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), d14),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = s10 + vd
-  let vb = xr12(vc, s6)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), b6),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let ca2 = va + vb + m5
-  let cd2 = xr8(ca2, vd)
-  let cc2 = vc + cd2
-  let cb2 = xr7(cc2, vb)
+  let cdb2 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(ca2), vdb),
+      -8,
+    )
+  let cc2 = vc + builtin.bytearray_to_integer(True, cdb2)
+  let cbb2 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(cc2), vbb),
+      -7,
+    )
+  let cb2 = builtin.bytearray_to_integer(True, cbb2)
 
   // column 3: G(s3, s7, s11, s15)
   let va = s3 + s7 + m6
-  let vd = xr16(va, s15)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), d15),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = s11 + vd
-  let vb = xr12(vc, s7)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), b7),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let ca3 = va + vb + m7
-  let cd3 = xr8(ca3, vd)
-  let cc3 = vc + cd3
-  let cb3 = xr7(cc3, vb)
+  let cdb3 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(ca3), vdb),
+      -8,
+    )
+  let cc3 = vc + builtin.bytearray_to_integer(True, cdb3)
+  let cbb3 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(cc3), vbb),
+      -7,
+    )
+  let cb3 = builtin.bytearray_to_integer(True, cbb3)
 
   // diagonal 0: G(s0, s5, s10, s15)
   let va = ca0 + cb1 + m8
-  let vd = xr16(va, cd3)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), cdb3),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = cc2 + vd
-  let vb = xr12(vc, cb1)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), cbb1),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let da0 = va + vb + m9
-  let dd0 = xr8(da0, vd)
-  let dc0 = vc + dd0
-  let db0 = xr7(dc0, vb)
+  let ddb0 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(da0), vdb),
+      -8,
+    )
+  let dc0 = vc + builtin.bytearray_to_integer(True, ddb0)
+  let dbb0 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(dc0), vbb),
+      -7,
+    )
+  let db0 = builtin.bytearray_to_integer(True, dbb0)
 
   // diagonal 1: G(s1, s6, s11, s12)
   let va = ca1 + cb2 + m10
-  let vd = xr16(va, cd0)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), cdb0),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = cc3 + vd
-  let vb = xr12(vc, cb2)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), cbb2),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let da1 = va + vb + m11
-  let dd1 = xr8(da1, vd)
-  let dc1 = vc + dd1
-  let db1 = xr7(dc1, vb)
+  let ddb1 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(da1), vdb),
+      -8,
+    )
+  let dc1 = vc + builtin.bytearray_to_integer(True, ddb1)
+  let dbb1 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(dc1), vbb),
+      -7,
+    )
+  let db1 = builtin.bytearray_to_integer(True, dbb1)
 
   // diagonal 2: G(s2, s7, s8, s13)
   let va = ca2 + cb3 + m12
-  let vd = xr16(va, cd1)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), cdb1),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = cc0 + vd
-  let vb = xr12(vc, cb3)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), cbb3),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let da2 = va + vb + m13
-  let dd2 = xr8(da2, vd)
-  let dc2 = vc + dd2
-  let db2 = xr7(dc2, vb)
+  let ddb2 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(da2), vdb),
+      -8,
+    )
+  let dc2 = vc + builtin.bytearray_to_integer(True, ddb2)
+  let dbb2 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(dc2), vbb),
+      -7,
+    )
+  let db2 = builtin.bytearray_to_integer(True, dbb2)
 
   // diagonal 3: G(s3, s4, s9, s14)
   let va = ca3 + cb0 + m14
-  let vd = xr16(va, cd2)
+  let vdb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(va), cdb2),
+      -16,
+    )
+  let vd = builtin.bytearray_to_integer(True, vdb)
   let vc = cc1 + vd
-  let vb = xr12(vc, cb0)
+  let vbb =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(vc), cbb0),
+      -12,
+    )
+  let vb = builtin.bytearray_to_integer(True, vbb)
   let da3 = va + vb + m15
-  let dd3 = xr8(da3, vd)
-  let dc3 = vc + dd3
-  let db3 = xr7(dc3, vb)
+  let ddb3 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(da3), vdb),
+      -8,
+    )
+  let dc3 = vc + builtin.bytearray_to_integer(True, ddb3)
+  let dbb3 =
+    builtin.rotate_bytearray(
+      builtin.xor_bytearray(False, truncate32(dc3), vbb),
+      -7,
+    )
+  let db3 = builtin.bytearray_to_integer(True, dbb3)
 
   State {
     s0: da0,
@@ -250,14 +370,18 @@ fn round(
     s5: db0,
     s6: db1,
     s7: db2,
+    b4: dbb3,
+    b5: dbb0,
+    b6: dbb1,
+    b7: dbb2,
     s8: dc2,
     s9: dc3,
     s10: dc0,
     s11: dc1,
-    s12: dd1,
-    s13: dd2,
-    s14: dd3,
-    s15: dd0,
+    d12: ddb1,
+    d13: ddb2,
+    d14: ddb3,
+    d15: ddb0,
   }
 }
 
@@ -302,6 +426,10 @@ fn compress(
   h5: Int,
   h6: Int,
   h7: Int,
+  hb4: ByteArray,
+  hb5: ByteArray,
+  hb6: ByteArray,
+  hb7: ByteArray,
   block_len: Int,
   flags: Int,
 ) -> State {
@@ -315,14 +443,18 @@ fn compress(
       s5: h5,
       s6: h6,
       s7: h7,
+      b4: hb4,
+      b5: hb5,
+      b6: hb6,
+      b7: hb7,
       s8: iv0,
       s9: iv1,
       s10: iv2,
       s11: iv3,
-      s12: 0,
-      s13: 0,
-      s14: block_len,
-      s15: flags,
+      d12: zero_word,
+      d13: zero_word,
+      d14: builtin.integer_to_bytearray(True, 4, block_len),
+      d15: builtin.integer_to_bytearray(True, 4, flags),
     }
 
   permute(
@@ -350,6 +482,11 @@ fn digest_word(x: Int, y: Int) -> ByteArray {
   builtin.integer_to_bytearray(False, 4, xor32(x, y))
 }
 
+// Reverse a 4-byte big-endian word into digest (little-endian) order.
+fn le4(be: ByteArray) -> ByteArray {
+  builtin.integer_to_bytearray(False, 4, builtin.bytearray_to_integer(True, be))
+}
+
 fn hash_go(
   padded: ByteArray,
   len: Int,
@@ -363,6 +500,10 @@ fn hash_go(
   h5: Int,
   h6: Int,
   h7: Int,
+  hb4: ByteArray,
+  hb5: ByteArray,
+  hb6: ByteArray,
+  hb7: ByteArray,
 ) -> ByteArray {
   if len - offset > 64 {
     let flags =
@@ -376,19 +517,46 @@ fn hash_go(
       s1,
       s2,
       s3,
-      s4,
-      s5,
-      s6,
-      s7,
+      s4: _,
+      s5: _,
+      s6: _,
+      s7: _,
+      b4,
+      b5,
+      b6,
+      b7,
       s8,
       s9,
       s10,
       s11,
-      s12,
-      s13,
-      s14,
-      s15,
-    } = compress(padded, offset, h0, h1, h2, h3, h4, h5, h6, h7, 64, flags)
+      d12,
+      d13,
+      d14,
+      d15,
+    } =
+      compress(
+        padded,
+        offset,
+        h0,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        h7,
+        hb4,
+        hb5,
+        hb6,
+        hb7,
+        64,
+        flags,
+      )
+
+    let n4 = builtin.xor_bytearray(False, b4, d12)
+    let n5 = builtin.xor_bytearray(False, b5, d13)
+    let n6 = builtin.xor_bytearray(False, b6, d14)
+    let n7 = builtin.xor_bytearray(False, b7, d15)
 
     hash_go(
       padded,
@@ -399,10 +567,14 @@ fn hash_go(
       xor32(s1, s9),
       xor32(s2, s10),
       xor32(s3, s11),
-      xor32(s4, s12),
-      xor32(s5, s13),
-      xor32(s6, s14),
-      xor32(s7, s15),
+      builtin.bytearray_to_integer(True, n4),
+      builtin.bytearray_to_integer(True, n5),
+      builtin.bytearray_to_integer(True, n6),
+      builtin.bytearray_to_integer(True, n7),
+      n4,
+      n5,
+      n6,
+      n7,
     )
   } else {
     let flags =
@@ -416,18 +588,22 @@ fn hash_go(
       s1,
       s2,
       s3,
-      s4,
-      s5,
-      s6,
-      s7,
+      s4: _,
+      s5: _,
+      s6: _,
+      s7: _,
+      b4,
+      b5,
+      b6,
+      b7,
       s8,
       s9,
       s10,
       s11,
-      s12,
-      s13,
-      s14,
-      s15,
+      d12,
+      d13,
+      d14,
+      d15,
     } =
       compress(
         padded,
@@ -440,6 +616,10 @@ fn hash_go(
         h5,
         h6,
         h7,
+        hb4,
+        hb5,
+        hb6,
+        hb7,
         len - offset,
         flags,
       )
@@ -448,10 +628,10 @@ fn hash_go(
       |> bytearray.concat(digest_word(s1, s9))
       |> bytearray.concat(digest_word(s2, s10))
       |> bytearray.concat(digest_word(s3, s11))
-      |> bytearray.concat(digest_word(s4, s12))
-      |> bytearray.concat(digest_word(s5, s13))
-      |> bytearray.concat(digest_word(s6, s14))
-      |> bytearray.concat(digest_word(s7, s15))
+      |> bytearray.concat(le4(builtin.xor_bytearray(False, b4, d12)))
+      |> bytearray.concat(le4(builtin.xor_bytearray(False, b5, d13)))
+      |> bytearray.concat(le4(builtin.xor_bytearray(False, b6, d14)))
+      |> bytearray.concat(le4(builtin.xor_bytearray(False, b7, d15)))
   }
 }
 
@@ -461,7 +641,24 @@ pub fn hash(input: ByteArray) -> ByteArray {
 
   let padded = bytearray.concat(input, zero_block)
 
-  hash_go(padded, len, 0, 0, iv0, iv1, iv2, iv3, iv4, iv5, iv6, iv7)
+  hash_go(
+    padded,
+    len,
+    0,
+    0,
+    iv0,
+    iv1,
+    iv2,
+    iv3,
+    iv4,
+    iv5,
+    iv6,
+    iv7,
+    ivb4,
+    ivb5,
+    ivb6,
+    ivb7,
+  )
 }
 
 pub fn verify(input: ByteArray, expected_digest: ByteArray) -> Bool {

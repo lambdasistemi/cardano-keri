@@ -10,7 +10,9 @@ mechanics corrected against keripy (receipts sign **raw event bytes**, so the bl
 requirement is **dropped** — §5); witness-set rotation elevated to a ratification blocker
 and then **drilled to resolution the same day** (§6a — the two-seal handoff); spike #88
 resolved the genesis in-script-blake3 question **negative** (open thread 3), so genesis
-stays on the attested-registration track.
+stays on the attested-registration track. Correspondence (open thread 4) **drilled via
+#90** (§7b — required, fraud-proof policed). Remaining pre-ratification thread: **3
+(registration & genesis package, #91)**; contention (thread 8) is #92.
 
 ---
 
@@ -228,12 +230,12 @@ builtins — is spike #88 (open thread 3).
 **Witnesses receipt events, not truth.** Receipts attest ordering and duplicity-freedom;
 nobody validates that a seal's *claimed* key-state matches the native Blake3 `k`/`n`
 fields in the same KEL. The seal chain is internally enforced (blake2b pre-rotation), but
-its **correspondence to the native key-state rests on controller honesty**: a controller
+its correspondence to the native key-state is not witnessed-into-truth: a controller
 can maintain two divergent key-state threads in one witnessed KEL with zero duplicity —
-**self-equivocation, not third-party forgery**. Whether that is a feature ("Cardano
-operating keys" designated distinct from native KERI keys) or a hazard (vLEI role
-credentials assume the KEL keys are the acting keys; a KERI-side auditor computes a
-different current key-state than Cardano enforces) is open thread 4.
+**self-equivocation, not third-party forgery**. *Drilled (#90):* this is **policed via
+on-chain divergence fraud proofs** — objective wherever the stored witness threshold
+receipted the divergent native event, watcher-attested for the witness-swap residual.
+See §7b.
 
 Corollary that refines "Blake2/Blake3 doesn't fork the system": it doesn't change the
 *shape*, but it **does** change the *integrity model*:
@@ -244,6 +246,61 @@ Corollary that refines "Blake2/Blake3 doesn't fork the system": it doesn't chang
 | Watcher-**mirror** of native Blake3, no seal | **honest-majority-trusted** — the invent-hazard, on every read |
 | Native Blake3 + a future Plutus `blake3` builtin | cryptographic (verify the KEL directly; genesis self-certifies via the AID prefix) |
 
+### 7b. Correspondence policy: police, via on-chain fraud proofs (drilled — #90)
+
+**Decision: correspondence is required** — the seal's claimed key-state must equal the
+native establishment key-state at the bound sequence number. Divergence is not an
+"operating keys" feature; the regulated business cases gate actions on *the credentialed
+identity's* keys, and a silent split between "who KERI says acts" and "who Cardano lets
+act" breaks exactly the attribution the product sells. (Institutions that genuinely need
+distinct signing infrastructure have KERI's own idiomatic answer — **delegated AIDs** —
+out of scope until delegation enters the model.)
+
+**The upgrade that makes policing cheap:** the §5 raw-bytes fact applies to *native*
+events too. A native rotation is bytes; its `k` field is parseable; its witness receipts
+are Ed25519 signatures **over those bytes**. So Cardano can verify a **divergence fraud
+proof** with no Blake3 anywhere:
+
+```
+FraudProof {
+  native_event   : ByteArray        -- the establishment event at the seal-bound sn
+  receipts       : [(idx, sig)...]  -- threshold witness receipts over native_event
+}
+-- validator: parse sn and k from native_event;
+--   sn == checkpoint.native_sn,
+--   threshold receipts verify against checkpoint.witnesses/toad,
+--   parsed k ≠ checkpoint.keys  →  divergence proven
+```
+
+The proof is **objective and witness-attributable**: the controller's own stored witness
+threshold receipted an establishment event whose keys contradict what her seal told
+Cardano. Consequence on success: **freeze the leaf** (safe default; whether a deposit
+slash rides on top is a knob for the registration package, #91). The controller can
+recover by advancing the checkpoint with a corrective seal.
+
+**Requirement on the seal (new):** the seal payload must bind the **native sequence
+number** (`native_sn`) of the establishment event it mirrors — otherwise the
+correspondence claim is not precise enough to be falsifiable on-chain. (It may also carry
+the native event's SAID as opaque bytes for off-chain audit; Cardano never verifies it.)
+
+**Stated residual — the witness-swap escape.** A single native rotation that *both*
+diverges the keys *and* replaces the witness set beyond the stored toad is receipted only
+by the new set (keripy counts receipts against the post-rotation set, §6), so the fraud
+proof cannot verify its receipts against the stored set. That divergence remains
+**off-chain falsifiable** (anyone replaying the KEL sees it) but not on-chain-provable —
+it degrades to the watcher-attested freeze path, the same trust grade as genesis (§7a).
+Under the model's base assumption (honest threshold of the *stored* set) the escape
+requires the controller to burn her entire witness relationship in one event — loud,
+attributable, and exactly what the §6a handoff refuses to endorse on the Cardano side.
+
+**Role assignment:** submitting fraud proofs is the super-watcher's identity-plane job
+(#10) — permissionless, bounty-compatible, and the divergence-proof/burn mechanics
+already designed there transfer with the receipts-over-raw-bytes simplification.
+
+This upgrades §7a's second limit from "rests on controller honesty" to **"fraud-proof
+policed — objective wherever the stored witness threshold receipted the divergent event;
+watcher-attested for the witness-swap residual."**
+
 ## 8. Cascade — what changes elsewhere
 
 - **#24** — *revived* as the incremental checkpoint (§3), now driven by witnessed seals.
@@ -252,8 +309,9 @@ Corollary that refines "Blake2/Blake3 doesn't fork the system": it doesn't chang
   **weighted-threshold verification** (F18 rational-weight arithmetic) still stands — it's
   the sig check, not a frozen shape.
 - **#10 (super-watcher)** — divergence-burn is **not needed** for identity forks (one
-  machine). Its role shrinks to freshness/liveness of anchoring — plus, if open thread 4
-  closes via spot-checks, policing seal↔native correspondence.
+  machine). Its identity-plane role is now (§7b): submit **correspondence fraud proofs**
+  (permissionless, bounty-compatible — the old divergence-proof mechanics transfer, with
+  the receipts-over-raw-bytes simplification), plus freshness/liveness of anchoring.
 - **`system-architecture.md`** — R-KEL *for identity* is the on-chain checkpoint
   (cryptographic from a registration-attested genesis — §7a), not a watcher-attested
   mirror. R-TEL (credential status) remains watcher-mirrored — see the open thread below.
@@ -289,9 +347,13 @@ integrity the checkpoint provides.
    - **The live track: attested registration** — exact flow, who attests
      `cesr_aid ↔ (keys, witnesses)@inception`, bond + challenge window before the leaf is
      usable + freeze fast-path; whether controller-signed evidence (OOBI-style) tightens it.
-4. **Seal ↔ native key-state correspondence (§7a)** — accept it (documented "Cardano
-   operating keys" semantics) or close it (watchers spot-check seal vs native `k`/`n` —
-   falsifiable + slashable, watcher-grade); decide per use case.
+4. **Seal ↔ native key-state correspondence — drilled 2026-07-09 (#90), resolution in
+   §7b**: correspondence is **required** and **policed via on-chain divergence fraud
+   proofs** (native event bytes + threshold receipts vs the stored witness set — no
+   Blake3 needed); freeze on proof, slash knob deferred to the registration package
+   (#91); witness-swap residual degrades to the watcher-attested path. New seal-payload
+   requirement: bind `native_sn`. Residual knobs: slash-vs-freeze-only (#91), and the
+   delegated-AID "operating keys" question when delegation enters the model.
 5. **Credential-side integrity (R-TEL)** — identity advances are now cryptographic via
    seals; are credential issuance/revocation events analogously anchorable (issuer seals),
    or do they stay watcher-mirrored (trusted)? Note the action-level guarantee is the

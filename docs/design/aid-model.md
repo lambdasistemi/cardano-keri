@@ -107,6 +107,18 @@ The legitimate holder commits to `next_key` at inception (or at each rotation) a
 
 ## Continuous binding re-verification
 
+!!! warning "Superseded framing (2026-07-09)"
+    The two-machines premise below is retired by
+    `specs/68-keystate-shape/identity-model.md` (PR #87): the Cardano key-state is an
+    **on-chain checkpoint of the one witnessed KEL**, advanced only by witness-receipted
+    anchoring seals — the event log cannot fork. What *remains* to verify continuously is
+    the **seal↔native key-state correspondence** (§7a, open thread 4): witnesses receipt
+    events, not truth, so a controller can self-equivocate about her own keys across the
+    two views. The per-rotation invariant below survives as that correspondence check
+    (falsifiable, watcher-performable) — no longer as the only thing holding the bridge
+    together. Note also the leaf is now keyed by `cesr_aid`, not the frozen `trie_key`
+    preimage (the derivation below is the superseded #24-original shape).
+
 **The bridge is two independently advancing pre-rotation state machines that share inception material.** On-chain, each registry (the Cardano key-state chain; the KERI KEL) is internally sound, but nothing on-chain forces Cardano rotations to track KERI rotations. The binding is established once at inception and must be re-proven off-chain at every rotation.
 
 After seq 0, the Cardano chain and the KERI KEL can diverge while `cesr_aid` (carried forward unchanged) keeps asserting they represent the same identity. A verifier that stops watching accepts the divergence silently. A verifier that re-checks at each rotation can detect and reject a forked chain.

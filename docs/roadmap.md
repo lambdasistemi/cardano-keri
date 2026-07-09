@@ -154,12 +154,15 @@ Demand-driven, after the pilots prove the core:
 - Regulated DeFi gate: order gate + admission cage. Its real buyer — the RWA
   issuer — converges with the security-token case.
 - Super watcher economic enforcement
-  ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) — hardening,
-  not pilot-critical, and **gated by a design pass**: without Blake3/CESR
-  builtins the burn proof is not trustless (a malicious watcher could forge a
-  divergence proof), so a
-  [challenge period or watcher-threshold scheme](design/super-watcher.md#without-blake3-the-trust-problem)
-  must be chosen before implementation.
+  ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) — **scope
+  shrunk by the identity model (2026-07-09)**: identity forks are structurally
+  impossible under the KERI-sovereign checkpoint, so divergence-burn is no
+  longer needed for identity; the residual roles are anchoring
+  freshness/liveness, credential-plane (R-TEL) policing, and optional
+  seal↔native correspondence spot-checks
+  (`specs/68-keystate-shape/identity-model.md` §8, open thread 4). Note the
+  in-script blake3 question is settled: spike #88 measured it as not fitting
+  the tx budget (PR #89) — a native `blake3` builtin CIP is the sunset path.
 - Aiken package registry publication
   ([#18](https://github.com/lambdasistemi/cardano-keri/issues/18)), once M2
   freezes the validator API.

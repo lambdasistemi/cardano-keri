@@ -9,7 +9,11 @@
     permissionless and deposit-bonded; only the *value-cage* plane keeps an
     oracle (necessary-not-sufficient). The comparative conclusions about
     node-level attribution are unaffected, but read the registry-shape
-    comparisons with that correction in mind.
+    comparisons with that correction in mind. **Further (2026-07-09):** the
+    "two independent state machines" framing is also superseded — identity is
+    a single state machine (the witnessed KEL) with an on-chain checkpoint
+    advanced by witness-receipted seals; see
+    `specs/68-keystate-shape/identity-model.md` (PR #87).
 
 This document analyses the proposed **Veridian × Amaru** node-level attribution
 integration and positions cardano-keri within it. It is an architecture

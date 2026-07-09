@@ -1,9 +1,22 @@
 # Identity Operations
 
+!!! warning "Written against the Cardano-native key-state model (superseded 2026-07-09)"
+    The operations below use the self-certifying `trie_key` inception and a
+    Cardano-native rotation redeemer — the original #24 shape. Per
+    `specs/68-keystate-shape/identity-model.md` (PR #87): the leaf is now keyed by
+    `cesr_aid`; **rotation is driven by a witnessed anchoring seal** from the
+    controller's KEL (the reveal / `next_digest` / threshold-sig / `seq+1` mechanics
+    below survive as the induction step, plus Ed25519 witness-receipt verification and
+    the §6a two-seal handoff for witness changes); and **inception (genesis) is
+    registration-attested, not self-certifying** (§7a — the Blake3 AID preimage cannot
+    be checked on-chain; spike #88 measured in-script blake3 as not fitting the budget).
+    The operation taxonomy and the freeze paths remain current.
+
 There are five operations on the identity plane: inception, rotation, close,
-duplicity freeze, and emergency freeze. All are **permissionless** — each is
-authorized by cryptographic material alone (signatures, preimages, proofs),
-never by an operator key. Value-write authorization is covered in
+duplicity freeze, and emergency freeze. All except inception are authorized by
+cryptographic material alone (signatures, preimages, receipts, proofs), never
+by an operator key; inception's AID binding is registration-attested (see the
+banner above). Value-write authorization is covered in
 [Value Authorization](value-auth.md).
 
 All signed messages are canonical CBOR with domain separation — see

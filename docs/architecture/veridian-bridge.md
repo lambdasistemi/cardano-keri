@@ -6,15 +6,30 @@ Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](h
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
-## The bridge approach: same keys, two registries
+## The bridge approach: same keys, one state machine
 
-The core insight of the Veridian bridge is that the same Ed25519 keys serve two independently advancing pre-rotation state machines:
+!!! warning "Superseded framing (2026-07-09)"
+    This page was written against the **two-independently-advancing-machines** model.
+    Per `specs/68-keystate-shape/identity-model.md` (PR #87) there is **one** state
+    machine — the witnessed KEL — and Cardano holds a **checkpoint** advanced only by
+    witness-receipted **anchoring seals**. The wallet's bridge duty changes accordingly:
+    emit the anchoring seal per rotation (and the §6a handoff pre-announcement on witness
+    changes), collect witness receipts, and submit/relay the checkpoint-advance tx.
+    "Same keys" survives; "two registries" does not.
 
-1. **KERI registry (off-chain):** The KEL, broadcast to witnesses, identifies the AID by its CESR AID. Witnesses collect and return receipts. Rotations advance the KEL.
+The core insight of the Veridian bridge is that the same Ed25519 keys serve both worlds:
 
-2. **Cardano registry (on-chain):** The identity UTxO, updated via Cardano transactions, identifies the same identity by its `trie_key`. Rotations update the on-chain KeyState.
+1. **KERI (off-chain):** The KEL, broadcast to witnesses, identifies the AID by its CESR
+   AID. Witnesses collect and return receipts. Rotations advance the KEL — and each
+   rotation is followed by an **anchoring seal** carrying blake2b commitments to the new
+   key-state.
 
-No re-keying is required. The same private key that signs KERI events also signs Cardano transactions. The on-chain binding is established at inception and must be re-verified off-chain at every rotation — see [Binding verification protocol](#binding-verification-protocol).
+2. **Cardano (on-chain):** The identity **checkpoint**, keyed by `cesr_aid`, advances
+   when the seal plus its threshold witness receipts are presented in an advance tx.
+
+No re-keying is required. The same private key that signs KERI events signs the Cardano
+advance; the chain verifies the seal's blake2b commitments and the Ed25519 receipts over
+the raw seal bytes.
 
 ```mermaid
 flowchart LR
@@ -22,14 +37,20 @@ flowchart LR
     K["KERI witnesses<br/>(off-chain)"]
     C["Cardano node<br/>(on-chain)"]
 
-    V -->|"CESR event<br/>signed with cur_key"| K
-    V -->|"Cardano tx<br/>signed with cur_key"| C
-
-    K -->|"receipt<br/>(KERI confirmation)"| V
-    C -->|"UTxO update<br/>(Cardano confirmation)"| V
+    V -->|"1 · CESR events, incl.<br/>anchoring seal (blake2b payload)"| K
+    K -->|"2 · threshold witness receipts<br/>over the raw seal bytes"| V
+    V -->|"3 · checkpoint-advance tx<br/>seal + receipts"| C
+    C -->|"UTxO update<br/>(checkpoint seq+1)"| V
 ```
 
 ## Digest agility requirement
+
+!!! warning "Scope narrowed (2026-07-09)"
+    The F-prefix mandate below now applies only to the **CF-as-QVI sidecar** path
+    (Blake2b-issued credentials). The spine path serves **native Blake3 vLEI** identities
+    with **no digest-agility patch at all**: the anchoring seal is a plain Blake3-SAID'd
+    event whose *payload* carries blake2b commitments, and witness receipts verify over
+    raw bytes (identity-model §4–5).
 
 cardano-keri requires Blake2b-256 (F-prefix) digest agility. This is not optional. Veridian inception events MUST use `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` and the AID prefix MUST use the F-prefix derivation.
 
@@ -295,16 +316,25 @@ Cardano block time is approximately 20 seconds. After a KERI rotation in Veridia
 5. After freeze lands: cages reject the stolen `cur_key`.
 6. After rotation lands: freeze marker expires automatically (`seq` advances).
 
-## Two independent state machines
+## One state machine, one stated limit
 
-The Cardano and KERI registries are two independently advancing pre-rotation state machines sharing inception material. Nothing on-chain forces Cardano rotations to track KERI rotations. The binding is established once at inception and must be re-proven off-chain at every rotation.
+*(This section previously described "two independent state machines" — superseded, see
+the banner above.)* The witnessed KEL is the single source of truth; the on-chain
+checkpoint advances only through witness-receipted seals, so the event log **cannot
+fork**. The residual gap is narrower (identity-model §7a): witnesses receipt events, not
+truth, so the seal's *claimed* key-state corresponds to the native Blake3 key-state only
+by controller honesty — self-equivocation, not third-party forgery.
 
-- Cardano cages authorize against the Cardano key-state, not KERI state.
-- If Cardano rotations diverge from KERI rotations, cages may honor a key the Veridian identity does not govern.
-- Off-chain verifiers must run the full binding verification at each rotation, not just at inception.
+- Cardano cages authorize against the checkpoint key-state, which advanced under witness
+  receipts — not against an independently-rotating copy.
+- A controller *can* designate Cardano-facing keys distinct from her native KERI keys;
+  whether to accept that (operating-keys semantics) or police it with correspondence
+  spot-checks is identity-model open thread 4.
 
 ## Convergence enforcement
 
-Keeping the two registries in sync is not just good practice — it is proposed to be enforced by the protocol via the super watcher mechanism. A controller who diverges their Cardano key-state from their KERI KEL would lose their registry deposit to the first watcher that presents the proof. See [Super Watcher](../design/super-watcher.md).
-
-See [Super Watcher](../design/super-watcher.md) for the full design.
+Retired for identity (2026-07-09): forks are structurally impossible under the checkpoint
+model, so divergence-burn is no longer needed. The super-watcher's residual roles are
+freshness/liveness, credential-plane policing, and — pending open thread 4 —
+correspondence spot-checks. See [Super Watcher](../design/super-watcher.md) (carries the
+same supersession banner).

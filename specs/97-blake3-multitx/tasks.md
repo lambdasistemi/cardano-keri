@@ -150,12 +150,12 @@ Owned files:
 
 Tasks:
 
-- [ ] T097-R2 Add full-context measurement tests calling `checkpoint.spend(..)` for Step and Finish with literal `const` fixtures.
-- [ ] T097-R2 Run `aiken check --plain-numbers` and record core AND full-context ex-units separately.
-- [ ] T097-R2 Rewrite `REPORT.md`: separate core/full numbers, compare full path to budget, verdict follows full evidence.
-- [ ] T097-R2 Add the issue #99 authenticity caveat (state/thread-token + pinned lifecycle) as a caveat only.
-- [ ] T097-R2 Run `./gate.sh`.
-- [ ] T097-R2 Commit as `docs(spike): measure full spend-validator context`.
+- [X] T097-R2 Add full-context measurement tests calling `checkpoint.spend(..)` for Step and Finish with literal `const` fixtures.
+- [X] T097-R2 Run `aiken check --plain-numbers` and record core AND full-context ex-units separately.
+- [X] T097-R2 Rewrite `REPORT.md`: separate core/full numbers, compare full path to budget, verdict follows full evidence.
+- [X] T097-R2 Add the issue #99 authenticity caveat (state/thread-token + pinned lifecycle) as a caveat only.
+- [X] T097-R2 Run `./gate.sh`.
+- [X] T097-R2 Commit as `docs(spike): measure full spend-validator context`.
 
 Focused command:
 

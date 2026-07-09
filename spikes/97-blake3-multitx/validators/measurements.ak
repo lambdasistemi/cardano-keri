@@ -1,4 +1,9 @@
 use blake3
+use cardano/address.{Address}
+use cardano/assets.{Value}
+use cardano/transaction.{
+  InlineDatum, Input, Output, OutputReference, Transaction,
+}
 use checkpoint
 
 const input_1024 =
@@ -13,30 +18,132 @@ const cv512 =
 const expected_digest =
   #"42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7"
 
-test measure_step_1024_offset0_absorb8() {
-  let before =
-    checkpoint.Datum {
-      input_commitment,
-      cv: blake3.initial_chaining_value(),
-      offset: 0,
-      len: 1024,
-      expected_digest,
-    }
+// Real BLAKE3 initial chaining value. Folded to a literal at compile time, so
+// its construction is not charged to any measured validator cost. The
+// `cv_initial_is_blake3_iv` test below pins it to `blake3.initial_chaining_value()`.
+const cv_initial: ByteArray = blake3.initial_chaining_value()
 
+test cv_initial_is_blake3_iv() {
+  cv_initial == blake3.initial_chaining_value()
+}
+
+// ## Full-context fixtures
+//
+// All fixtures are top-level `const`s so their construction is folded at compile
+// time and NOT charged to the measured validator cost.
+
+// The datum being spent: offset 0 with the real initial chaining value, which
+// `anchored_cv` requires at offset 0.
+const before: checkpoint.Datum =
+  checkpoint.Datum {
+    input_commitment,
+    cv: cv_initial,
+    offset: 0,
+    len: 1024,
+    expected_digest,
+  }
+
+// The stepped datum expected in the continuing output (offset 512, cv512).
+const next: checkpoint.Datum =
+  checkpoint.Datum {
+    input_commitment,
+    cv: cv512,
+    offset: 512,
+    len: 1024,
+    expected_digest,
+  }
+
+// The datum being spent by the Finish transaction (offset 512, cv512).
+const finish_datum: checkpoint.Datum =
+  checkpoint.Datum {
+    input_commitment,
+    cv: cv512,
+    offset: 512,
+    len: 1024,
+    expected_digest,
+  }
+
+const addr: Address =
+  address.from_verification_key(
+    #"00000000000000000000000000000000000000000000000000000000",
+  )
+
+const val: Value = assets.from_lovelace(2_000_000)
+
+const self_ref: OutputReference =
+  OutputReference {
+    transaction_id: #"1111111111111111111111111111111111111111111111111111111111111111",
+    output_index: 0,
+  }
+
+// Step transaction: one input at `self_ref` and one continuing output at the
+// SAME address and value whose inline datum is the stepped datum `next`.
+const tx_step: Transaction =
+  Transaction {
+    ..transaction.placeholder,
+    inputs: [
+      Input {
+        output_reference: self_ref,
+        output: Output {
+          address: addr,
+          value: val,
+          datum: InlineDatum(before),
+          reference_script: None,
+        },
+      },
+    ],
+    outputs: [
+      Output {
+        address: addr,
+        value: val,
+        datum: InlineDatum(next),
+        reference_script: None,
+      },
+    ],
+  }
+
+// The Finish branch ignores the transaction, so an empty placeholder suffices.
+const tx_finish: Transaction = transaction.placeholder
+
+// Handler arguments, const-lifted so ONLY the `checkpoint.spend` call is charged
+// to the measured cost (no `Some`/redeemer construction in the test bodies).
+const maybe_before: Option<checkpoint.Datum> = Some(before)
+
+const step_redeemer: checkpoint.Redeemer =
+  checkpoint.Step { input: input_1024, blocks: 8 }
+
+const maybe_finish: Option<checkpoint.Datum> = Some(finish_datum)
+
+const finish_redeemer: checkpoint.Redeemer =
+  checkpoint.Finish { input: input_1024 }
+
+// ## Core-helper measurements (Step/Finish core BLAKE3 work only)
+
+test measure_step_1024_offset0_absorb8() {
   expect Some(after) = checkpoint.step(before, input_1024, 8)
 
   after.offset == 512
 }
 
 test measure_finish_1024_offset512_after_8_blocks() {
-  let before =
-    checkpoint.Datum {
-      input_commitment,
-      cv: cv512,
-      offset: 512,
-      len: 1024,
-      expected_digest,
-    }
+  checkpoint.finish(finish_datum, input_1024)
+}
 
-  checkpoint.finish(before, input_1024)
+// ## Full spend-validator context measurements
+//
+// These invoke the validator handler `checkpoint.spend`, so the measured cost
+// includes the core BLAKE3 work PLUS (for Step) `find_input` + the output
+// traversal and inline-datum decode of `has_continuing_output`.
+
+test measure_step_full_context_1024_8blocks() {
+  checkpoint.checkpoint.spend(maybe_before, step_redeemer, self_ref, tx_step)
+}
+
+test measure_finish_full_context_1024() {
+  checkpoint.checkpoint.spend(
+    maybe_finish,
+    finish_redeemer,
+    self_ref,
+    tx_finish,
+  )
 }

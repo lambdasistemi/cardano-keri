@@ -20,7 +20,7 @@ test measure_step_1024_offset0_absorb8() {
       cv: blake3.initial_chaining_value(),
       offset: 0,
       len: 1024,
-      expected_prefix: expected_digest,
+      expected_digest,
     }
 
   expect Some(after) = checkpoint.step(before, input_1024, 8)
@@ -35,7 +35,7 @@ test measure_finish_1024_offset512_after_8_blocks() {
       cv: cv512,
       offset: 512,
       len: 1024,
-      expected_prefix: expected_digest,
+      expected_digest,
     }
 
   checkpoint.finish(before, input_1024)

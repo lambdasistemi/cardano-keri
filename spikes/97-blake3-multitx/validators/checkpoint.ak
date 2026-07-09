@@ -1,4 +1,3 @@
-use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
 use aiken/primitive/bytearray
@@ -10,7 +9,7 @@ pub type Datum {
   cv: ByteArray,
   offset: Int,
   len: Int,
-  expected_prefix: ByteArray,
+  expected_digest: ByteArray,
 }
 
 pub type Redeemer {
@@ -19,10 +18,11 @@ pub type Redeemer {
 }
 
 fn shape_is_valid(datum: Datum) -> Bool {
-  let Datum { cv, offset, len, expected_prefix, .. } = datum
-  let expected_prefix_len = bytearray.length(expected_prefix)
+  let Datum { cv, offset, len, expected_digest, .. } = datum
 
-  bytearray.length(cv) == 32 && offset >= 0 && offset <= len && offset % 64 == 0 && len <= 1024 && expected_prefix_len > 0 && expected_prefix_len <= 32
+  bytearray.length(cv) == 32 && offset >= 0 && offset <= len && offset % 64 == 0 && len <= 1024 && bytearray.length(
+    expected_digest,
+  ) == 32
 }
 
 fn input_matches(datum: Datum, input: ByteArray) -> Bool {
@@ -37,12 +37,12 @@ fn anchored_cv(datum: Datum) -> Bool {
   offset > 0 || cv == blake3.initial_chaining_value()
 }
 
-fn digest_matches_prefix(digest: ByteArray, prefix: ByteArray) -> Bool {
-  builtin.slice_bytearray(0, bytearray.length(prefix), digest) == prefix
+fn digest_matches(digest: ByteArray, expected_digest: ByteArray) -> Bool {
+  digest == expected_digest
 }
 
 pub fn step(datum: Datum, input: ByteArray, blocks: Int) -> Option<Datum> {
-  let Datum { input_commitment, cv, offset, len, expected_prefix } = datum
+  let Datum { input_commitment, cv, offset, len, expected_digest } = datum
   let valid =
     shape_is_valid(datum) && input_matches(datum, input) && anchored_cv(datum) && blocks > 0 && blocks <= 8 && offset + blocks * 64 < len
 
@@ -56,7 +56,7 @@ pub fn step(datum: Datum, input: ByteArray, blocks: Int) -> Option<Datum> {
         cv: chaining_value,
         offset: next_offset,
         len,
-        expected_prefix,
+        expected_digest,
       },
     )
   } else {
@@ -65,11 +65,11 @@ pub fn step(datum: Datum, input: ByteArray, blocks: Int) -> Option<Datum> {
 }
 
 pub fn finish(datum: Datum, input: ByteArray) -> Bool {
-  let Datum { cv, offset, len, expected_prefix, .. } = datum
+  let Datum { cv, offset, len, expected_digest, .. } = datum
   let remaining = len - offset
 
   if shape_is_valid(datum) && input_matches(datum, input) && remaining > 0 && remaining <= 512 {
-    digest_matches_prefix(blake3.finish(cv, input, offset), expected_prefix)
+    digest_matches(blake3.finish(cv, input, offset), expected_digest)
   } else {
     False
   }
@@ -81,7 +81,7 @@ fn has_continuing_output(
   tx: Transaction,
 ) -> Bool {
   expect Some(spent) = find_input(tx.inputs, self)
-  let Datum { input_commitment, cv, offset, len, expected_prefix } = datum
+  let Datum { input_commitment, cv, offset, len, expected_digest } = datum
 
   when
     list.find(
@@ -97,9 +97,9 @@ fn has_continuing_output(
               cv: next_cv,
               offset: next_offset,
               len: next_len,
-              expected_prefix: next_expected_prefix,
+              expected_digest: next_expected_digest,
             }: Datum {
-              next_input_commitment == input_commitment && next_cv == cv && next_offset == offset && next_len == len && next_expected_prefix == expected_prefix
+              next_input_commitment == input_commitment && next_cv == cv && next_offset == offset && next_len == len && next_expected_digest == expected_digest
             } else {
               False
             }

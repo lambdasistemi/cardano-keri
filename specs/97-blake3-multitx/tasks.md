@@ -126,13 +126,13 @@ Owned files:
 
 Tasks:
 
-- [ ] T097-R1 Rename `expected_prefix` -> `expected_digest` across Aiken and Haskell (positional PlutusData unchanged).
-- [ ] T097-R1 Pin `expected_digest` length to exactly 32 bytes in `shape_is_valid`; reduce comparison to full equality.
-- [ ] T097-R1 Add RED-first attack tests: Step and Finish reject short (8, 31) and oversized (33) digests.
-- [ ] T097-R1 Update every short-prefix fixture to a real 32-byte digest; drop `finish_accepts_partial_prefix`.
-- [ ] T097-R1 Update Haskell golden/roundtrip fixtures to 32-byte digests and the renamed field.
-- [ ] T097-R1 Run the focused spike + Haskell commands and `./gate.sh`.
-- [ ] T097-R1 Commit as `fix(spike): require full 32-byte checkpoint digest`.
+- [X] T097-R1 Rename `expected_prefix` -> `expected_digest` across Aiken and Haskell (positional PlutusData unchanged).
+- [X] T097-R1 Pin `expected_digest` length to exactly 32 bytes in `shape_is_valid`; reduce comparison to full equality.
+- [X] T097-R1 Add RED-first attack tests: Step and Finish reject short (8, 31) and oversized (33) digests.
+- [X] T097-R1 Update every short-prefix fixture to a real 32-byte digest; drop `finish_accepts_partial_prefix`.
+- [X] T097-R1 Update Haskell golden/roundtrip fixtures to 32-byte digests and the renamed field.
+- [X] T097-R1 Run the focused spike + Haskell commands and `./gate.sh`.
+- [X] T097-R1 Commit as `fix(spike): require full 32-byte checkpoint digest`.
 
 Focused commands:
 

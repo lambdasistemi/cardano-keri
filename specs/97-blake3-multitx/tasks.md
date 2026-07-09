@@ -102,8 +102,8 @@ cd spikes/97-blake3-multitx && nix shell nixpkgs#aiken --command aiken check --p
 
 ## Finalization
 
-- [ ] T097-F1 Update the draft PR body with delivered behavior, report link, and verification evidence.
-- [ ] T097-F2 Rerun `./gate.sh` at HEAD and record the result.
-- [ ] T097-F3 Run the finalization audit for this PR and this task file.
-- [ ] T097-F4 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
-- [ ] T097-F5 Mark the PR ready only after local gate and CI are green.
+- [X] T097-F1 Update the draft PR body with delivered behavior, report link, and verification evidence.
+- [X] T097-F2 Rerun `./gate.sh` at HEAD and record the result.
+- [X] T097-F3 Run the finalization audit for this PR and this task file.
+- [X] T097-F4 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
+- [X] T097-F5 Mark the PR ready only after local gate and CI are green.

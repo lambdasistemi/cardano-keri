@@ -12,8 +12,9 @@ Entities that want a Cardano-verifiable identity **register their KERI AID** on-
 The set of KERI identities and credentials the system must track is the **closure** of
 those registrations up to GLEIF — a pure, derived set, not a curated one. **Proof
 builders** watch the KERI witnesses of everything in the closure and maintain
-**Merkle-mirror trees** of that off-chain state; **Cardano Foundation**, as
-**coordinator**, anchors the agreed tree roots on-chain per checkpoint. On-chain
+**Merkle-mirror trees** of that off-chain *state* (the **closure itself is computed, not
+stored** — see §5); **Cardano Foundation**, as **coordinator**, anchors the agreed
+*state-mirror* roots on-chain per checkpoint. On-chain
 **validators** then verify user actions against (a) native on-chain state and (b) the
 anchored mirror roots — all in **Blake2b**, never Blake3.
 
@@ -154,8 +155,12 @@ hot path** then consults only:
 
 ```
 R-VAL (admission membership) + R-ID (key-state) + R-FRZ (freeze absence)  [all native]
-  + R-TEL (non-revocation cascade)                                        [the ONE anchored root]
+  + R-TEL (non-revocation cascade)              [anchored under the forecast — §9 open #4]
 ```
+
+(Here R-ACDC is treated as still distinct from R-TEL; if folded — §9 open #3 — the
+admission list loses R-ACDC. R-TEL is "anchored" per the operator forecast, formally
+open per §9 #4.)
 
 ⇒ **In the hot path the only proof-builder-anchored dependency is R-TEL.** The heavy
 anchored roots are admission-time only. This concentrates the entire per-transaction

@@ -69,6 +69,20 @@ must be stated plainly wherever the docs claim "on-chain verifiable vLEI."
   (ecosystem-standard) and an `F` (Cardano-verifiable) credential for the same facts;
   or (b) CF, as a QVI/foundation, gets GLEIF to bless `F` acceptance in writing.
 
+## Working assumption (operator forecast, 2026-07-09)
+
+The positioning call ("CF-anchored Blake2b" vs "real Blake3 ecosystem") is **org-level,
+not the engineer's to settle**. Operator forecast, adopted as the working assumption
+(both options kept open in the design):
+
+> Target users already hold vLEI credentials from **other QVIs**, in **Blake3**.
+> Re-issuing them CF Blake2b credentials is a **big ask**. So the realistic path is the
+> **watcher workaround (Blake3→Blake2b bridge) until Plutus has native Blake3** — the
+> CF-as-QVI Blake2b path is a fallback/sidecar, not the spine.
+
+Design consequence: build for the **watcher-bridge** path first; keep CF-Blake2b viable
+but do not assume re-issuance. The watcher-oracle model below is therefore load-bearing.
+
 ## Serving the native Blake3 ecosystem: the watcher as a Blake3-digest oracle
 
 The CF-as-QVI path (Blake2b issuance) is self-sufficient. To *also* verify **native

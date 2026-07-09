@@ -52,20 +52,27 @@ Out of scope:
   BLAKE3 chunk, including initial chaining value, full-block absorb, finish, and
   whole-input hash verification helpers.
 - FR-003: The checkpoint datum MUST carry `input_commitment`, `cv`, `offset`,
-  `len`, and `expected_prefix`.
+  `len`, and `expected_digest`. `expected_digest` MUST be exactly the 32-byte
+  BLAKE3 digest. KERI E-prefix identifiers carry the complete 32-byte digest, so
+  a caller-selected short or oversized value MUST be rejected — accepting a short
+  prefix would let a caller bind identity to a truncated digest and destroy the
+  cryptographic genesis binding.
 - FR-004: The checkpoint redeemer MUST support `Step` and `Finish`. `Step`
   absorbs one or more full 64-byte blocks from the supplied input and requires a
   continuing output at the same validator address, with preserved value and
-  preserved `input_commitment`, `len`, and `expected_prefix`. `Finish` absorbs
-  the remaining segment and compares the resulting digest prefix with
-  `expected_prefix`.
+  preserved `input_commitment`, `len`, and `expected_digest`. `Finish` absorbs
+  the remaining segment and compares the resulting 32-byte digest with
+  `expected_digest` for full equality.
 - FR-005: Every Step and Finish validation MUST reject a redeemer input whose
   `blake2b_256` digest differs from the datum's `input_commitment`.
 - FR-006: A Step transition MUST reject an incorrect previous chaining value,
   incorrect output offset, changed preserved datum fields, missing continuing
   output, or changed continuing value.
-- FR-007: Finish MUST reject early finish attempts, wrong expected digest
-  prefixes, and inconsistent offsets or lengths.
+- FR-007: Finish MUST reject early finish attempts, wrong expected digests, and
+  inconsistent offsets or lengths.
+- FR-007a: Both Step and Finish MUST reject any datum whose `expected_digest` is
+  not exactly 32 bytes long (shorter or longer), with attack-shaped tests that
+  fail against a length-permissive implementation before the fix.
 - FR-008: Aiken tests MUST cover official BLAKE3 hash vectors and the 1024-byte
   split where the first transaction absorbs 8 blocks and the finish transaction
   absorbs the remaining 8 blocks.
@@ -76,8 +83,18 @@ Out of scope:
   for the checkpoint datum and redeemer matching the Aiken constructor indices
   and field order.
 - FR-011: `REPORT.md` MUST state Step and Finish ex-units for the 1024-byte 8+8
-  split, compare them to the 14,000,000 memory and 10,000,000,000 CPU mainnet
-  per-transaction budgets, and give a fit/no-fit verdict.
+  split at TWO levels, recorded separately: (a) the core `checkpoint.step` /
+  `checkpoint.finish` helpers, and (b) the full spend validator invoked through
+  its script-context arguments (`spend(datum, redeemer, own_ref, tx)`), so that
+  the continuing-output traversal and datum decode are counted and fixture setup
+  is not mistaken for validator cost. Both levels MUST be compared to the
+  14,000,000 memory and 10,000,000,000 CPU mainnet per-transaction budgets.
+- FR-012: The `REPORT.md` verdict MUST follow the FULL spend-validator numbers,
+  not the core-helper numbers. If the full path does not fit, the report MUST say
+  so honestly rather than declaring a fit from the core helpers alone.
+- FR-013: `REPORT.md` MUST record, as a caveat only, that production checkpoint
+  authenticity still requires the unique state/thread-token and pinned lifecycle
+  work owned by issue #99; this spike does not implement #99.
 
 ## Success Criteria
 

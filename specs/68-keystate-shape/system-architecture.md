@@ -202,3 +202,106 @@ which Merkle root each proof comes from.** Applied to all four business cases:
 - **CF-parallel interop caveat** — Blake2b creds are spec-compliant but ecosystem-novel.
 - The maximal "trustless on-chain verification of the real Blake3 ecosystem" is **bonded-
   bridge until Plutus gains blake3**, not pure-trustless. State it plainly.
+
+---
+
+## 11. Economics & the watcher layer
+
+Added 2026-07-09. Supersedes the earlier "verify data-possession on-chain in every
+action" exploration — that was a layering mistake; possession-for-service is a **market**,
+not a consensus, concern.
+
+### 11.1 The layering principle (correctness vs service)
+
+- **Correctness is on-chain and watcher-agnostic.** A validator checks a proof against the
+  anchored root; a valid proof is valid *regardless of who computed it*. The on-chain layer
+  never needs to know a watcher exists to establish correctness.
+- **Service is an off-chain market.** Who serves a proof, whether they hold the data,
+  promptness, availability — a market concern. A watcher that lacks the data simply can't
+  serve a valid proof, the holder goes elsewhere, it earns nothing. **The customer is the
+  challenge**; no on-chain possession check is needed for correctness.
+
+The complexity walls we hit earlier (mandatory per-action signatures, liveness coupling,
+self-signer tiers) were the symptom of putting the market in the consensus layer. Don't.
+
+### 11.2 Cost structure → who pays (fixed vs marginal)
+
+Two costs, two payers:
+
+- **Watching = fixed / infrastructure cost** (ingest witnesses, maintain the closure's
+  mirror trees). Scales with closure size, not usage. → covered by the **issuer** (who
+  benefits from mere *availability* of its credentials on Cardano). Issuer payment *gates
+  whether its subtree is watched at all*, which is the lever behind "increase certificate
+  production" — no free-riding, because no payment ⇒ no watching ⇒ its holders can't produce
+  proofs.
+- **Serving proofs = marginal cost** (fresh inclusion proof against the current root, on
+  demand). Scales with usage. → covered by **holder micropayments**.
+
+Proofs are **public, recomputable, competitive** data, so you can't charge per-proof
+atomically. Charge for the **service** (fresh proof, current checkpoint, on demand, without
+running your own watcher) via **prepaid accounts / payment channels** — excludability is
+per-*relationship*, not per-proof. Competition floors the price at marginal cost, which is
+fine because the fixed cost is already issuer-covered.
+
+### 11.3 What stays on-chain: the trust layer only
+
+- the anchored roots + **root-consensus** (agreement that `R_N` reflects real KERI state),
+- **slashing for a provably-wrong anchored root**,
+- validators checking proofs against the root — **plain, watcher-agnostic**.
+
+Everything about serving and paying is off-chain.
+
+### 11.4 Paid watchers are SPOs (on-chain reward-qualification)
+
+The **one** place on-chain possession-checking earns its keep is gating **who draws the
+on-chain reward pool** — decoupled from user actions, periodic and batched. And the paid set
+is **stake-pool operators**:
+
+SPOs already are everything a bonded watcher needs — **bonded** (stake = skin-in-the-game),
+**high-availability** (24/7 block infra), **on-chain identity** (the stake-pool registry, no
+new watcher registry to bootstrap), **VRF-native** (leader-election keys reused directly),
+and **sybil-resistant + decentralized** (inherit Cardano's operator-set properties). Reward
+is an **additional SPO revenue stream**. And because paid watchers = SPOs, **root-consensus
+rides on the SPO set** — the same operators that produce Cardano blocks anchor the
+KERI-mirror roots, so the mirror inherits Cardano's decentralization.
+
+**VRF-batched challenge/response:**
+1. Coordinator posts **one** challenge tx carrying a VRF seed.
+2. Each SPO-watcher derives *its own* challenged key from `(its VRF, the seed, its stake)`.
+3. Each responds with a tx that **spends the challenge and makes the validator check its
+   proof on-chain** — passing is the on-chain witness that it holds the data.
+4. Passing SPOs draw the issuer pool (by stake / performance).
+
+One challenge, N independent unpredictable responses; efficient for the coordinator,
+un-precomputable for the watcher.
+
+**Anti-collusion (critical):** the per-watcher key must derive from a seed the **coordinator
+cannot grind** — the SPO's *own* VRF over a **public unpredictable beacon** (recent block
+hash / on-chain randomness). Then neither coordinator nor SPO picks the challenge; it's
+forced. This keeps the coordinator **mechanical** (posts a seed, reads verifiable responses,
+never chooses) — consistent with §5. The residual risk collapses to "did it use the honest
+beacon," itself publicly checkable.
+
+### 11.5 Reconciliation with §2/§5
+
+- User actions never carry a watcher signature — they carry a plain proof against `R_N`.
+- The possession challenge is a **separate periodic protocol** between coordinator and
+  SPO-watchers, off the user's critical path.
+- Non-SPOs may still serve proofs off-chain for direct micropayments (proofs are
+  watcher-agnostic); "SPO-only" gates the **on-chain pool**, not the **market**.
+
+### 11.6 Open knobs
+
+- **VRF/beacon source** — must be un-grindable by the coordinator; pin it (it's what kills
+  collusion).
+- **Sampling cadence** — one round proves one key; over rounds the VRF covers the keyspace,
+  so an SPO must hold its whole (shard of the) tree to keep passing. Set cadence for the
+  statistical guarantee wanted.
+- **Failure semantics** — consensus stake can't be slashed by this protocol, so a failed
+  challenge most naturally = **forfeit that round's reward**, not a slash; teeth beyond that
+  need a separate watcher-bond.
+- **Stake-weighting** — challenge frequency / reward share by stake is natural but tilts
+  toward big pools; decide if desired.
+- **Cold availability** — usage + on-demand rebuild covers hot data; a thin cold-probe only
+  if a use case needs a dormant credential instantly serveable (§7 open question).
+- **Micropayment mechanism** — prepaid accounts vs payment channels for holder→watcher.

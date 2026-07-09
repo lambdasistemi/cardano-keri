@@ -20,11 +20,11 @@ Owned files:
 
 Tasks:
 
-- [ ] T097-S1 Create the standalone spike Aiken project without editing spike 88.
-- [ ] T097-S1 Refactor the optimized BLAKE3 core into checkpointable absorb and finish helpers.
-- [ ] T097-S1 Add RED-first Aiken tests for official vectors and the 1024-byte 8+8 split.
-- [ ] T097-S1 Run the focused spike command and `./gate.sh`.
-- [ ] T097-S1 Commit as `feat(spike): add checkpointed blake3 core`.
+- [X] T097-S1 Create the standalone spike Aiken project without editing spike 88.
+- [X] T097-S1 Refactor the optimized BLAKE3 core into checkpointable absorb and finish helpers.
+- [X] T097-S1 Add RED-first Aiken tests for official vectors and the 1024-byte 8+8 split.
+- [X] T097-S1 Run the focused spike command and `./gate.sh`.
+- [X] T097-S1 Commit as `feat(spike): add checkpointed blake3 core`.
 
 Focused command:
 

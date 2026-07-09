@@ -65,7 +65,7 @@ CF-anchored; watcher-consensus; falsifiable):
 | Root | Contents | Notes |
 |---|---|---|
 | **R-MAP** | Blake3 ↔ Blake2b for AIDs and credential SAIDs | present only while Plutus lacks blake3; AID slice can be absorbed by the registration oracle |
-| **R-KEL** | AID → current KERI key-state (KEL checkpoint) | the *external* key-state; distinct from R-ID's Cardano-native key-state |
+| **R-KEL** | AID → current KERI key-state (KEL checkpoint) | **for identity, this is an on-chain *cryptographic checkpoint*, not a watcher-attested mirror** — advanced by witnessed blake2b anchoring seals; see [identity-model.md](identity-model.md). The watcher-mirror framing below applies to the credential plane (R-TEL), not identity. |
 | **R-TEL** | credential SAID → issued/revoked status | **the hot root** — see §7 |
 | **R-ACDC** | credential existence / SAID | **likely folds into R-TEL** (`SAID → issued\|revoked` carries both) |
 

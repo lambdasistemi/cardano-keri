@@ -1,6 +1,9 @@
 # Design discussion — the frozen KeyState / trie_key shape (#68)
 
-Status: **discussion phase** (design loop step 1). Nothing here is decided.
+Status: **discussion phase** (design loop step 1). Two decisions are now settled by
+facts (D-D weighted thresholds **required**; D-E `delegator` **reserved nullable** — see
+§4/§7 and [acdc-zoo.md](acdc-zoo.md)); the remaining *structural* choices (D-A/D-B/D-C,
+the exact bytes) are open pending an exec-budget check and Lean.
 Goal: agree, in plain language, on what the identity key commits to — then
 formalize the security invariants in Lean, then write the spec.
 

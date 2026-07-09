@@ -4,6 +4,14 @@ Status: **verified feasible; awaiting ratification.** Broader than #68 — this
 reframes `blake2b256-requirement.md`, the verification core (#31/#32/#38), and the
 "trustless" framing. Should graduate into a `docs/design/` doc once ratified.
 
+!!! warning "Canonical view is `system-architecture.md`"
+    The affirmative "resolution" below reads CF-as-QVI Blake2b as *the* answer to the
+    Blake3 wall. That framing is **superseded** by the operator forecast (see the
+    Working-assumption section, and `system-architecture.md` §1): the **watcher-bridge
+    is the spine, CF-as-QVI Blake2b is a sidecar**, and the Blake2b-vs-Blake3 split is
+    **not** a fork — it only adds one root (R-MAP) that sunsets when Plutus gains blake3.
+    Read this doc's "resolution" as *the sidecar option*, not the primary path.
+
 ## The problem
 
 Plutus has a `blake2b_256` builtin but **no `blake3`**. The vLEI ecosystem — AIDs

@@ -47,6 +47,7 @@ nav:
   - Finance Primer: finance-primer.md
   - Architecture:
       - Overview: architecture/overview.md
+      - System Architecture: architecture/system.md
       - Identity Operations: architecture/identity-ops.md
       - Value Authorization: architecture/value-auth.md
       - Veridian Bridge: architecture/veridian-bridge.md

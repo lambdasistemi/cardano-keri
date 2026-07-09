@@ -82,17 +82,17 @@ just unit "Blake3 checkpoint"
 
 Owned files:
 
-- `spikes/97-blake3-multitx/lib/measurements.ak`
+- `spikes/97-blake3-multitx/validators/measurements.ak`
 - `spikes/97-blake3-multitx/REPORT.md`
 
 Tasks:
 
-- [ ] T097-S4 Add measurement tests for Step and Finish at the 1024-byte 8+8 split.
-- [ ] T097-S4 Run `aiken check --plain-numbers` and record Step/Finish ex-units.
-- [ ] T097-S4 Compare each measurement to 14,000,000 memory and 10,000,000,000 CPU.
-- [ ] T097-S4 Write `REPORT.md` with the fit/no-fit verdict and follow-up notes.
-- [ ] T097-S4 Run `./gate.sh`.
-- [ ] T097-S4 Commit as `docs(spike): report blake3 multitx measurements`.
+- [X] T097-S4 Add measurement tests for Step and Finish at the 1024-byte 8+8 split.
+- [X] T097-S4 Run `aiken check --plain-numbers` and record Step/Finish ex-units.
+- [X] T097-S4 Compare each measurement to 14,000,000 memory and 10,000,000,000 CPU.
+- [X] T097-S4 Write `REPORT.md` with the fit/no-fit verdict and follow-up notes.
+- [X] T097-S4 Run `./gate.sh`.
+- [X] T097-S4 Commit as `docs(spike): report blake3 multitx measurements`.
 
 Focused command:
 

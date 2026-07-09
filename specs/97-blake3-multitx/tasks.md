@@ -66,11 +66,11 @@ Owned files:
 
 Tasks:
 
-- [ ] T097-S3 Add pure Haskell single-chunk BLAKE3 chaining-value support.
-- [ ] T097-S3 Add checkpoint datum/redeemer PlutusData encoders matching Aiken.
-- [ ] T097-S3 Add RED-first tests for vectors, the 1024-byte split, and PlutusData roundtrips.
-- [ ] T097-S3 Run focused Haskell tests and `./gate.sh`.
-- [ ] T097-S3 Commit as `feat(offchain): add blake3 checkpoint support`.
+- [X] T097-S3 Add pure Haskell single-chunk BLAKE3 chaining-value support.
+- [X] T097-S3 Add checkpoint datum/redeemer PlutusData encoders matching Aiken.
+- [X] T097-S3 Add RED-first tests for vectors, the 1024-byte split, and PlutusData roundtrips.
+- [X] T097-S3 Run focused Haskell tests and `./gate.sh`.
+- [X] T097-S3 Commit as `feat(offchain): add blake3 checkpoint support`.
 
 Focused command:
 

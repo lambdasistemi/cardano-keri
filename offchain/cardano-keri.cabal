@@ -44,6 +44,7 @@ library
     , plutus-tx
 
   exposed-modules:
+    Cardano.KERI.AID.Blake3.Checkpoint
     Cardano.KERI.AID.Cage.Sign
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
@@ -62,10 +63,12 @@ test-suite unit-tests
     , cardano-keri
     , hspec                 >=2.11 && <2.12
     , memory                >=0.18 && <0.19
+    , plutus-core
     , plutus-tx
     , QuickCheck
 
   other-modules:
+    Cardano.KERI.AID.Blake3.CheckpointSpec
     Cardano.KERI.AID.Cage.SignSpec
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec

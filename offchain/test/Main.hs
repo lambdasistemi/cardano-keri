@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Cardano.KERI.AID.Blake3.CheckpointSpec qualified as CheckpointSpec
 import Cardano.KERI.AID.CESRSpec qualified as CESRSpec
 import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
@@ -8,6 +9,7 @@ import Test.Hspec (hspec)
 
 main :: IO ()
 main = hspec $ do
+    CheckpointSpec.spec
     Ed25519Spec.spec
     CESRSpec.spec
     TypesSpec.spec

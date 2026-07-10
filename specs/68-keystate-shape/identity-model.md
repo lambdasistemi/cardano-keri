@@ -8,13 +8,14 @@ Amended 2026-07-09 after adversarial validation: two limits of the "cryptographi
 claim stated explicitly (§7a — genesis binding, seal↔native correspondence); receipt
 mechanics corrected against keripy (receipts sign **raw event bytes**, so the blake2b-SAID
 requirement is **dropped** — §5); witness-set rotation elevated to a ratification blocker
-and then **drilled to resolution the same day** (§6a — the two-seal handoff). Re-optimized
-spike #88 reopened the genesis in-script-blake3 performance question on 2026-07-10: its
-core now fits representative inputs, but the full registration context remains unmeasured
-and the 1024-byte case exceeds CPU. Genesis therefore stays on the attested-registration
-track pending that proof. Correspondence (open thread 4) **drilled via #90** (§7b —
-required, fraud-proof policed). Remaining pre-ratification thread: **3 (registration &
-genesis package, #91)**; contention (thread 8) is #92.
+and then **drilled to resolution the same day** (§6a — the two-seal handoff). Spike #88
+reopened the genesis in-script-blake3 performance question on 2026-07-10, and the
+lane-packed second pass the same day extended the fit to the whole single-chunk domain
+(17.3% cpu / 23.5% mem at 300 bytes, 55.1% cpu / 75.2% mem at 1024); the full
+registration context remains unmeasured. Genesis therefore stays on the
+attested-registration track pending that proof. Correspondence (open thread 4)
+**drilled via #90** (§7b — required, fraud-proof policed). Remaining pre-ratification
+thread: **3 (registration & genesis package, #91)**; contention (thread 8) is #92.
 
 ---
 
@@ -227,9 +228,9 @@ the trust is **one-shot** (one event per identity lifetime, vs every-read in the
 watcher-mirror), and a forged binding is **objectively provable** off-chain (recompute
 the Blake3 prefix) — the ideal shape for bond + challenge-window mechanics. A possible
 full closure — one-shot **in-script blake3** at genesis via the Plutus V3 bitwise
-builtins — is spike #88 (open thread 3). Its optimized core is now viable at
-representative inception sizes; a full registration-context measurement is the remaining
-test before changing the trust model.
+builtins — is spike #88 (open thread 3). Its lane-packed core is now viable across the
+whole single-chunk domain (inputs up to 1024 bytes); a full registration-context
+measurement is the remaining test before changing the trust model.
 
 **Witnesses receipt events, not truth.** Receipts attest ordering and duplicity-freedom;
 nobody validates that a seal's *claimed* key-state matches the native Blake3 `k`/`n`
@@ -341,12 +342,12 @@ integrity the checkpoint provides.
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"
    thread, **dissolved** — the seal keeps its native Blake3 SAID.)
 3. **Genesis binding (§7a)** — the trusted base case.
-   - **Spike #88 — in-script blake3 at genesis — reopened 2026-07-10.** The CPS-optimized,
-     vector-validated core costs 39.7% cpu / 28.1% mem at 300-byte inceptions, invalidating
-     the earlier claim that the core alone exceeded budget. At the full 1024-byte chunk it
-     costs 126.7% cpu / 89.9% mem. Measure the complete single-transaction registration
-     path before changing the attested base case. A native `blake3` builtin remains the
-     full-range sunset path; no CIP exists yet.
+   - **Spike #88 — in-script blake3 at genesis — reopened 2026-07-10.** The lane-packed,
+     vector-validated core costs 17.3% cpu / 23.5% mem at 300-byte inceptions and 55.1%
+     cpu / 75.2% mem at the full 1024-byte chunk — the whole single-chunk domain fits.
+     Measure the complete single-transaction registration path before changing the
+     attested base case. A native `blake3` builtin remains the sunset path for
+     multi-chunk inputs; no CIP exists yet.
    - **The live track: attested registration** — exact flow, who attests
      `cesr_aid ↔ (keys, witnesses)@inception`, bond + challenge window before the leaf is
      usable + freeze fast-path; whether controller-signed evidence (OOBI-style) tightens it.

@@ -19,13 +19,13 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S1 Add reusable `Transaction`/`Input`/`Output`/`OutputReference`/
+- [X] T099-S1 Add reusable `Transaction`/`Input`/`Output`/`OutputReference`/
   `Value`/datum constructors built on `transaction.placeholder`.
-- [ ] T099-S1 Add full-tx happy-path fixtures + accept tests for Mint, Migrate,
+- [X] T099-S1 Add full-tx happy-path fixtures + accept tests for Mint, Migrate,
   Modify, End that pass on current code (regression baseline).
-- [ ] T099-S1 No `mpfCage` behavior change in this slice.
-- [ ] T099-S1 Run the focused command and `./gate.sh`.
-- [ ] T099-S1 Commit as `test(onchain): add full-transaction cage test harness`.
+- [X] T099-S1 No `mpfCage` behavior change in this slice.
+- [X] T099-S1 Run the focused command and `./gate.sh`.
+- [X] T099-S1 Commit as `test(onchain): add full-transaction cage test harness`.
 
 Focused command:
 

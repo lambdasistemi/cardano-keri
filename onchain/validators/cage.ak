@@ -5,7 +5,7 @@ use aiken/interval
 use aiken/merkle_patricia_forestry.{MerklePatriciaForestry, empty, root}
 use aiken/merkle_patricia_forestry as mpf
 use aiken/option.{is_some}
-use aiken/primitive/bytearray.{from_int_big_endian}
+use aiken/primitive/bytearray.{from_int_big_endian, length, take}
 use cardano/address
 use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{
@@ -282,6 +282,14 @@ fn mkAction(
               when action is {
                 UpdateAction { value_proof, auth } -> {
                   expect in_phase1(validity_range, submitted_at, process_time)
+                  // FR6 (H5): bind the authenticated AID to the mutated key. The
+                  // key's first 32 bytes must be `blake2b_256(owner_aid)` — the
+                  // owner cell is exactly that digest (length 32); a longer key is
+                  // a namespaced child under it. This rejects both an unrelated
+                  // authenticated AID (digest differs) and a raw-`owner_aid` prefix
+                  // (the AID bytes are not their own digest).
+                  expect length(requestKey) >= 32
+                  expect take(requestKey, 32) == blake2b_256(auth.owner_aid)
                   // Verify AID owner authorization before applying MPF op
                   expect
                     verifyOwnerAuth(auth, identity_root, input.output_reference)
@@ -371,15 +379,21 @@ fn validModify(
     root: newRoot,
     process_time: outProcessTime,
     retract_time: outRetractTime,
-    identity_root: outIdentityRoot,
     ..
   }) = outDatum
   // Enforce immutability of time params
   expect process_time == outProcessTime
   expect retract_time == outRetractTime
+  // FR4 (H3-modify): confine the thread token in the continuing state output. A
+  // no-burn Modify must re-create the state UTxO carrying its exact thread token —
+  // it cannot move the token out to a non-cage output. Additive to the S3
+  // no-mint/burn reverse guard above (which only blocks minting/burning it).
+  expect quantity(scriptPolicy, output.value, tokenId) == Some(1)
 
-  // identity_root may advance (oracle updates it) but must not silently regress
-  // (handled by oracle governance; not checked here — oracle signs the tx)
+  // FR5 (H4): authenticate against the INPUT state's `identity_root` (the spent
+  // StateDatum, `state`), NOT the output datum's root — a tx must not introduce
+  // its own authority via its own output. `identity_root` may advance (oracle
+  // updates it in the output) but authorization is proven against the input root.
   let (expectedNewTrie, remainingActions, owners, totalInputLovelace) =
     inputs
       |> foldl(
@@ -390,7 +404,7 @@ fn validModify(
             process_time,
             retract_time,
             validity_range,
-            outIdentityRoot,
+            state.identity_root,
           ),
         )
   // Fold gap fix: all actions must be consumed

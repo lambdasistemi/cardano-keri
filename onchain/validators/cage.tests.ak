@@ -10,7 +10,7 @@ use cage_context.{
 }
 use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{from_asset, from_lovelace, merge, zero}
-use cardano/transaction.{OutputReference}
+use cardano/transaction.{NoDatum, Output, OutputReference}
 use types.{
   Burning, End, Insert, Migrating, Migration, Mint, Minting, Modify, OwnerAuth,
   RequestAction, UpdateAction,
@@ -103,9 +103,12 @@ test accept_modify_insert_full_tx() {
   let process_time = 10_000
   let retract_time = 10_000
 
-  // Insert key "42" -> value "42" into the empty value trie (proof []); the
-  // continuing state carries the recomputed root.
-  let new_root = insert_root(empty_root(), "42", "42", [])
+  // FR6 binds the mutated key to the authenticated AID: the key's first 32 bytes
+  // must be `blake2b_256(owner_aid)`. Use that digest as the request key so the
+  // legitimate owner still authorizes. Insert key -> value "42" into the empty
+  // value trie (proof []); the continuing state carries the recomputed root.
+  let requestKey = blake2b_256(owner_aid)
+  let new_root = insert_root(empty_root(), requestKey, "42", [])
   let in_state =
     state_datum(
       owner_vkh,
@@ -140,7 +143,7 @@ test accept_modify_insert_full_tx() {
       inline_output(
         from_script(cage_policy),
         from_lovelace(2_000_000),
-        request_datum(tokenId, owner_vkh, "42", Insert("42"), tip, 0),
+        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
       ),
     )
 
@@ -579,6 +582,374 @@ test reject_migrate_successor_token_absent_from_state_output() fail {
     old_cage_policy,
     Migrating(Migration { tokenId }),
     cage_policy,
+    tx,
+  )
+}
+
+// ---- Slice 5 attack tests: Modify confinement + authorization ----------------
+//                            (FR4+FR5+FR6 / H3-modify+H4+H5)
+//
+// Same RED→GREEN convention: each `fail` test asserts the DESIRED post-fix
+// rejection. On the current `validModify`/`mkAction` (which never requires the
+// thread token in the continuing output, authenticates against the tx's OWN
+// OUTPUT identity_root, and never binds the authenticated `owner_aid` to the
+// mutated `requestKey`) each malicious tx is ACCEPTED (handler returns True
+// without failing), so the `fail`-annotated test FAILS = RED. After the Slice-5
+// hardening the tx is REJECTED (handler fails), so the test PASSES = GREEN.
+//
+// (b)/(c)/(d) reuse the gen-vectors owner-auth fixture (valid Ed25519 signature
+// over request_ref `0xde*32,0` and a genuine single-leaf identity trie), so the
+// authorization path is genuinely reached; each perturbs exactly one axis so it
+// isolates one invariant: token confinement (a / FR4), input-root auth (b / FR5),
+// and aid↔key binding (c, d / FR6).
+
+// (a) TOKEN MOVED OUT (FR4/H3-modify). A no-burn empty-batch `Modify`: the thread
+// token is NOT burned (`mint` is empty, so the S3 reverse guard passes) but the
+// continuing state output at the cage script is TOKENLESS — the token is sent to
+// an attacker's non-cage output instead. Current `validModify` never requires the
+// token in the continuing output, so it accepts. The FR4 fix requires
+// `quantity(scriptPolicy, output.value, tokenId) == Some(1)` on that output.
+test reject_modify_token_moved_out_of_state_output() fail {
+  let own_ref = out_ref(seed_tx_id, 2)
+  let tokenId = token_of(own_ref)
+  let root0 = empty_root()
+  let in_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
+  let out_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
+  let attacker_vkh = #"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+  let state_input =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        in_state,
+      ),
+    )
+  // Continuing state output at the cage script but TOKENLESS (ada only).
+  let state_out =
+    inline_output(from_script(cage_policy), from_lovelace(min_ada), out_state)
+  // The thread token is moved OUT to an attacker's non-cage output (not burned).
+  let attacker_out =
+    Output {
+      address: from_verification_key(attacker_vkh),
+      value: state_value(cage_policy, tokenId),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  let tx =
+    spend_context(
+      [state_input],
+      [],
+      [state_out, attacker_out],
+      zero,
+      [owner_vkh],
+      interval.everything,
+      0,
+    )
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([]),
+    own_ref,
+    tx,
+  )
+}
+
+// (b) OUTPUT-ROOT SELF-AUTHORIZATION (FR5/H4). The aid→key mapping the owner auth
+// proves membership in is placed ONLY in the tx's OWN OUTPUT identity_root; the
+// spent state's INPUT identity_root is an empty trie that does NOT contain it.
+// `requestKey` is FR6-valid (`blake2b_256(owner_aid)`), so the only reason to
+// reject is FR5. Current `mkAction` authenticates against the OUTPUT root, so a
+// tx can introduce its own authority and is accepted. The FR5 fix authenticates
+// against `state.identity_root` (the spent input), where the mapping is absent.
+test reject_modify_output_identity_root_self_auth() fail {
+  let owner_key =
+    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_aid = #"746573742d616964"
+  let owner_sig =
+    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  // Fabricated aid→key mapping — placed ONLY in the tx's own OUTPUT datum.
+  let fabricated_root =
+    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref =
+    out_ref(
+      #"dededededededededededededededededededededededededededededededede",
+      0,
+    )
+
+  let own_ref = out_ref(seed_tx_id, 2)
+  let tokenId = token_of(own_ref)
+  let tip = 1_000_000
+  let process_time = 10_000
+  let retract_time = 10_000
+
+  // FR6-valid key so the ONLY defect is the FR5 input-vs-output root swap.
+  let requestKey = blake2b_256(owner_aid)
+  let new_root = insert_root(empty_root(), requestKey, "42", [])
+
+  // INPUT identity_root does NOT contain the aid→key mapping (empty trie);
+  // OUTPUT identity_root is the fabricated root that DOES contain it.
+  let in_state =
+    state_datum(
+      owner_vkh,
+      empty_root(),
+      empty_root(),
+      tip,
+      process_time,
+      retract_time,
+    )
+  let out_state =
+    state_datum(
+      owner_vkh,
+      new_root,
+      fabricated_root,
+      tip,
+      process_time,
+      retract_time,
+    )
+
+  let state_in =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        in_state,
+      ),
+    )
+  let request_in =
+    input_at(
+      request_ref,
+      inline_output(
+        from_script(cage_policy),
+        from_lovelace(2_000_000),
+        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+      ),
+    )
+
+  let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
+  let action = UpdateAction { value_proof: [], auth }
+  let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      out_state,
+    )
+  let tx =
+    spend_context(
+      [state_in, request_in],
+      [],
+      [state_out, refund],
+      zero,
+      [owner_vkh],
+      interval.between(0, 5_000),
+      0,
+    )
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([action]),
+    own_ref,
+    tx,
+  )
+}
+
+// (c) UNRELATED AID AUTHORIZES THE KEY (FR6/H5). A genuinely authenticated owner
+// (owner_aid `test-aid`, valid identity inclusion in BOTH input and output roots,
+// valid signature) authorizes a `requestKey` in a DIFFERENT namespace: a 32-byte
+// key whose first 32 bytes are NOT `blake2b_256(owner_aid)`. Current `mkAction`
+// never binds `owner_aid` to `requestKey`, so any registered AID authorizes any
+// key. The FR6 fix requires `bytearray.take(requestKey, 32) == blake2b_256(owner_aid)`.
+test reject_modify_unrelated_aid_authorizes_key() fail {
+  let owner_key =
+    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_aid = #"746573742d616964"
+  let owner_sig =
+    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root =
+    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref =
+    out_ref(
+      #"dededededededededededededededededededededededededededededededede",
+      0,
+    )
+
+  let own_ref = out_ref(seed_tx_id, 2)
+  let tokenId = token_of(own_ref)
+  let tip = 1_000_000
+  let process_time = 10_000
+  let retract_time = 10_000
+
+  // A 32-byte key in a DIFFERENT namespace: first 32 bytes ≠ blake2b_256(owner_aid).
+  let requestKey =
+    #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  let new_root = insert_root(empty_root(), requestKey, "42", [])
+
+  // Genuine identity_root in BOTH input and output (isolates FR6 from FR5).
+  let in_state =
+    state_datum(
+      owner_vkh,
+      empty_root(),
+      identity_root,
+      tip,
+      process_time,
+      retract_time,
+    )
+  let out_state =
+    state_datum(
+      owner_vkh,
+      new_root,
+      identity_root,
+      tip,
+      process_time,
+      retract_time,
+    )
+
+  let state_in =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        in_state,
+      ),
+    )
+  let request_in =
+    input_at(
+      request_ref,
+      inline_output(
+        from_script(cage_policy),
+        from_lovelace(2_000_000),
+        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+      ),
+    )
+
+  let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
+  let action = UpdateAction { value_proof: [], auth }
+  let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      out_state,
+    )
+  let tx =
+    spend_context(
+      [state_in, request_in],
+      [],
+      [state_out, refund],
+      zero,
+      [owner_vkh],
+      interval.between(0, 5_000),
+      0,
+    )
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([action]),
+    own_ref,
+    tx,
+  )
+}
+
+// (d) RAW-AID PREFIX AUTHORIZES THE KEY (FR6/H5). Like (c) but the `requestKey`
+// prefix is the RAW `owner_aid` bytes themselves (padded to 32 bytes), NOT their
+// `blake2b_256`. A naive binding that compared the raw AID prefix would wrongly
+// accept this; the frozen FR6 rule requires the first 32 bytes to equal
+// `blake2b_256(owner_aid)`, and the AID bytes are not their own digest — reject.
+test reject_modify_raw_aid_prefix_authorizes_key() fail {
+  let owner_key =
+    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_aid = #"746573742d616964"
+  let owner_sig =
+    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root =
+    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref =
+    out_ref(
+      #"dededededededededededededededededededededededededededededededede",
+      0,
+    )
+
+  let own_ref = out_ref(seed_tx_id, 2)
+  let tokenId = token_of(own_ref)
+  let tip = 1_000_000
+  let process_time = 10_000
+  let retract_time = 10_000
+
+  // requestKey = raw owner_aid (`test-aid`, 8 bytes) padded to 32 bytes. Its
+  // first 32 bytes are the AID itself, NOT blake2b_256(owner_aid).
+  let requestKey =
+    #"746573742d616964000000000000000000000000000000000000000000000000"
+  let new_root = insert_root(empty_root(), requestKey, "42", [])
+
+  let in_state =
+    state_datum(
+      owner_vkh,
+      empty_root(),
+      identity_root,
+      tip,
+      process_time,
+      retract_time,
+    )
+  let out_state =
+    state_datum(
+      owner_vkh,
+      new_root,
+      identity_root,
+      tip,
+      process_time,
+      retract_time,
+    )
+
+  let state_in =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        in_state,
+      ),
+    )
+  let request_in =
+    input_at(
+      request_ref,
+      inline_output(
+        from_script(cage_policy),
+        from_lovelace(2_000_000),
+        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+      ),
+    )
+
+  let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
+  let action = UpdateAction { value_proof: [], auth }
+  let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      out_state,
+    )
+  let tx =
+    spend_context(
+      [state_in, request_in],
+      [],
+      [state_out, refund],
+      zero,
+      [owner_vkh],
+      interval.between(0, 5_000),
+      0,
+    )
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([action]),
+    own_ref,
     tx,
   )
 }

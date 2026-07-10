@@ -153,25 +153,25 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S5 RED (a): a no-burn `Modify` moving the thread token OUT of the
+- [X] T099-S5 RED (a): a no-burn `Modify` moving the thread token OUT of the
   continuing state output accepted (FR4/H3-modify — the S3 reverse guard only
   blocks minting/burning the token, so this move-out is still open).
-- [ ] T099-S5 RED (b): output-`identity_root` self-authorization accepted (auth
+- [X] T099-S5 RED (b): output-`identity_root` self-authorization accepted (auth
   proven against the tx's own output root).
-- [ ] T099-S5 RED (c): an unrelated authenticated AID authorizes the key.
-- [ ] T099-S5 RED (d): a raw-`owner_aid` prefix (the AID bytes, not their
+- [X] T099-S5 RED (c): an unrelated authenticated AID authorizes the key.
+- [X] T099-S5 RED (d): a raw-`owner_aid` prefix (the AID bytes, not their
   `blake2b_256`) authorizes the key.
-- [ ] T099-S5 GREEN: require the exact thread token in the continuing state
+- [X] T099-S5 GREEN: require the exact thread token in the continuing state
   output (FR4); authenticate against the input/reference identity root (FR5);
   require `bytearray.length(requestKey) >= 32` and
   `bytearray.take(requestKey, 32) == blake2b_256(owner_aid)` (FR6); keep the S3
   no-mint/burn guard intact.
-- [ ] T099-S5 Keep the happy-path Modify accept test green.
-- [ ] T099-S5 If a mirrored type wire shape changes, update the Haskell mirror +
+- [X] T099-S5 Keep the happy-path Modify accept test green.
+- [X] T099-S5 If a mirrored type wire shape changes, update the Haskell mirror +
   `TypesSpec.hs` (+ regen vectors) in this same commit; else keep existing
   golden green and note "no cross-layer change" in `WIP.md`.
-- [ ] T099-S5 Run the focused commands and `./gate.sh`.
-- [ ] T099-S5 Commit as `fix(onchain): authenticate cage modify against input identity state`.
+- [X] T099-S5 Run the focused commands and `./gate.sh`.
+- [X] T099-S5 Commit as `fix(onchain): authenticate cage modify against input identity state`.
 
 Focused commands:
 

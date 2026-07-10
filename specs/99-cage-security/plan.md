@@ -250,6 +250,107 @@ The pair reviews any fixture/report/smoke change.
 (+ optional `test(onchain): add cage uplc data-boundary smoke` /
 `chore: extend gate.sh with cage boundary smoke`)
 
+### AC9 live-boundary proof on real cardano-node Phase-2 (FR9/AC9) — Slices 9a + 9b
+Per **amended A-002 / NOTE-013 / NOTE-014 / NOTE-015** (Paolo means the in-house
+**real cardano-node** devnet, NOT Yaci), close AC9 **in-PR** by measuring the real
+node **Phase-2** supported `Modify` batch bound via the **`cardano-node-clients`
+`devnet` public sublibrary** (`Cardano.Node.Client.E2E.Setup.withDevnet`) — the
+pin + nix wiring are reused from `/code/cardano-tx-tools`. **Do NOT** use/restart
+the shared Yaci container, preprod, mainnet, or any unrelated container.
+
+**READ-ONLY precedent** (copy/adapt the minimum into the #99 worktree; never
+edit/clean/reset/commit there — both hold unrelated user changes):
+- `/code/cardano-mpfs-onchain/cardano-mpfs-onchain/e2e-test/CageTxBuilder.hs`
+  (real Boot/Request/`Modify`/End tx build+eval, ledger types),
+  `.../CageE2ESpec.hs` (`withDevnet` start/submit/observe);
+- `/code/mpfs/off_chain/src/trie/proof.ts` + MPF lib (non-zero-depth proof
+  gen / Plutus-Data serialization precedent).
+
+**Dependency rule:** pin `cardano-node-clients` (owns the `devnet` sublibrary) via
+an **immutable** `source-repository-package` in `offchain/cabal.project`, reusing
+`cardano-tx-tools`'s exact rev + nix32 `--sha256:` comments (`nix flake prefetch`
+→ `nix hash convert --to nix32`). Use the **exact proven tx-tools pair**:
+`cardano-node` **10.7.0** and `cardano-node-clients`
+**`ca86f11d27b34e37d3814e4d3c3d66e256400403`**, pinned in `offchain/flake.lock`;
+the Cabal `source-repository-package` pin and the flake source used for
+`E2E_GENESIS_DIR` MUST agree on that `cardano-node-clients` rev. Do **NOT** add
+`cardano-tx-tools` as a package dependency unless the code genuinely imports a
+`Cardano.Tx.*` module. No dependency on any mutable local checkout.
+
+**Flake wiring (model on `/code/cardano-tx-tools/nix/checks.nix`):** one
+strict-PATH `writeShellApplication` app exposed twice — `apps.<sys>.e2e`
+(`nix run`) and `checks.<sys>.e2e` (a `runCommand` invoking it via `getExe`, so
+`nix flake check` executes it). `runtimeInputs` = `cardano-node` + the built E2E
+executable (+ every std util the script calls). `E2E_GENESIS_DIR` comes from the
+pinned `cardano-node-clients` source. The live E2E check/app may be **Linux-only**
+(NixOS CI runner); keep normal build/unit/lint checks on all supported systems.
+
+**Gate/CI must actually invoke it** — a checked-in transcript alone is
+insufficient. `gate.sh` (orchestrator-owned) is extended to run the E2E check;
+`.github/workflows/ci.yml` gains an E2E job.
+
+**Dev-shell build gate (NOTE-015 + operator evidence):** the repo's current
+dev-shell job runs only tool versions + format/lint (no `cabal build`) and its CI
+comment claiming `cabal build` cannot run is **stale** — the operator proved
+`cd offchain && nix develop --quiet -c cabal build all --enable-tests -O0` exits 0
+in ~16s (GHC 9.12.3), building the unit test suite. S9a **upgrades** `just
+devshell-offchain` + the CI dev-shell job to exactly that command
+(`nix develop --quiet -c cabal build all --enable-tests -O0`) — `--enable-tests`
+is required so the gate covers the new `offchain/e2e` test component and the
+`devnet` sublibrary (plain `cabal build all` omits tests). Remove the stale
+"tool/format checks substitute for a build" comment. If the `devnet` public
+sublibrary is missing from the shell DB when the e2e component is added, expose it
+via haskell.nix shell `additional` (`components.sublibs.devnet`); use the SAME
+proven command in `just` and CI.
+
+**Script provenance + settlement (NOTE-016):**
+- `onchain/plutus.json` is generated + gitignored — the E2E check MUST NOT
+  silently consume whatever mutable copy is in the worktree. Prefer a
+  **flake-owned `plutus-blueprint` derivation** built from tracked `../onchain`
+  sources + the versions locked in `aiken.lock`, passing that immutable path to
+  the E2E executable. A committed compiled fixture is an acceptable fallback ONLY
+  with a **gate-invoked byte-for-byte freshness check** against a fresh
+  `aiken build`.
+- The builder applies **BOTH** validator params (`version` and the pinned
+  `predecessorPolicy`) and derives the mint/spend policy id from those exact
+  applied bytes; **record the script hash** in the artifact.
+- A green S9a smoke means the signed tx is **submitted and observed settled** on
+  `withDevnet` — `evaluateTx = Right exunits` alone is NOT live settlement proof.
+  Record the **tx id + per-redeemer execution units**.
+- A failing S9b boundary point must **preserve and report the actual Phase-2
+  evaluation/rejection diagnostic**; do NOT silently retain placeholder ExUnits
+  (the read-only precedent does that on `Left` — do not copy that).
+
+#### Slice 9a — toolchain + `withDevnet` cage builder + one real Phase-2 smoke
+Pin `cardano-node-clients`; add the Haskell E2E component under `offchain/e2e/**`
+adapting the read-only precedent to the hardened #99 wire (`StateDatum` w/
+`identity_root`, `OwnerAuth`, `RequestAction`, `requestKey ==
+blake2b_256(owner_aid)`-bound, parameterized `mpfCage(version,
+predecessorPolicy)`); build ONE real `Modify` tx and submit it through
+`withDevnet` for a single green Phase-2 smoke (capture accept + ex-units); add the
+flake app + `runCommand` check; the pair wires it into **CI** (`ci.yml`) — the
+`gate.sh` extension is a **separate** orchestrator commit after S9a acceptance
+(S9a-GATE), not part of the pair commit; upgrade the dev-shell build gate. S9a is
+RED→GREEN (no RED-SKIP): a navigator-reviewed **failing settled-`Modify` E2E
+spec** first, then made green. Focused proof: `nix flake check` runs the E2E check
+green + `nix develop --quiet -c cabal build all --enable-tests -O0` green.
+`test(e2e): add withDevnet #99 cage phase-2 smoke and dev-shell build gate`
+
+#### Slice 9b — non-zero-depth proof, batch sweep, artifact + report
+Generate representative **non-zero-depth** MPF inclusion proofs; sweep `Modify`
+batch sizes at a **declared** proof depth + state shape through `withDevnet` until
+the pass/fail boundary is observed; record node Phase-2 results + ex-units as the
+repo-owned reproducible artifact (produced/verified by the flake check); update
+`REPORT.md` with the **qualified** bound (no extrapolation as a universal cap) and
+PR #100.
+`test(e2e): sweep #99 modify phase-2 batch bound at declared proof depth`
+
+`cardano-tx-tools tx-validate` is Phase-1 preflight only — it does NOT replace
+real `withDevnet` submission. Keep PR #100 draft + `gate.sh` installed until both
+slices are pair-reviewed, green, and independently verified. Q-file the
+orchestrator on any ambiguous pin, toolchain, `additional`-wiring, or #99 wire
+adaptation.
+
 ## Finalization
 Update PR #100 body with delivered behavior, execution units, supported bound,
 attack paths proven RED→GREEN, and verification evidence; rerun `./gate.sh` +

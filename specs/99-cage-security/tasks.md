@@ -264,6 +264,122 @@ Focused command:
 cd onchain && nix shell nixpkgs#aiken --command aiken check
 ```
 
+READ-ONLY precedent for Slices 9a/9b (never edit/clean/reset/commit — unrelated
+user changes): `/code/cardano-mpfs-onchain` (`CageTxBuilder.hs`, `CageE2ESpec.hs`),
+`/code/mpfs` (`trie/proof.ts`). All delivered edits live in the #99 worktree.
+Do NOT use/restart the shared Yaci container, preprod, or mainnet.
+
+## Slice 9a — toolchain + withDevnet cage builder + one real Phase-2 smoke (FR9/AC9)
+
+Owned files:
+
+- `offchain/cabal.project` (immutable `source-repository-package` pin of
+  `cardano-node-clients` — owns the `devnet` sublibrary — reusing
+  `cardano-tx-tools`'s exact rev + nix32 `--sha256:` comments; NOT
+  `cardano-tx-tools` as a package dep unless a `Cardano.Tx.*` module is imported)
+- `offchain/cardano-keri.cabal` (new e2e test/exe component + deps incl.
+  `cardano-node-clients` `devnet` sublibrary)
+- `offchain/e2e/**` (new Haskell — adapt read-only CageTxBuilder/CageE2ESpec to
+  the hardened #99 wire)
+- offchain flake wiring (`offchain/flake.nix`, `offchain/flake.lock`, + its `nix/`
+  — E2E app + runCommand check modeled on `/code/cardano-tx-tools/nix/checks.nix`)
+- `offchain/justfile`/`justfile`, `.github/workflows/ci.yml` (e2e job + upgraded
+  dev-shell build job)
+
+Tasks:
+
+- [ ] T099-S9a Pin the exact proven tx-tools pair: `cardano-node` **10.7.0** +
+  `cardano-node-clients` **`ca86f11d27b34e37d3814e4d3c3d66e256400403`** in
+  `offchain/flake.lock` and as an immutable `source-repository-package` (nix32
+  `--sha256`) in `cabal.project`; the Cabal pin and the flake source for
+  `E2E_GENESIS_DIR` MUST agree on that rev; no mutable-checkout dep.
+- [ ] T099-S9a RED→GREEN (NO RED-SKIP): first land a navigator-reviewed **failing**
+  settled-`Modify` E2E spec (proves the boundary: submit + observe settlement),
+  then make it green with the builder + wiring below.
+- [ ] T099-S9a Blueprint provenance (NOTE-016): the E2E must NOT consume the
+  gitignored mutable `onchain/plutus.json`. Prefer a flake-owned `plutus-blueprint`
+  derivation from tracked `../onchain` + `aiken.lock`, passed as an immutable path;
+  fallback = committed fixture + a gate-invoked byte-for-byte freshness check vs a
+  fresh `aiken build`.
+- [ ] T099-S9a Add the Haskell E2E component (`offchain/e2e/**`) adapting the
+  read-only `CageTxBuilder.hs`/`CageE2ESpec.hs` to build a real `Modify` tx against
+  the hardened #99 validator blueprint + current KERI cage wire; apply **BOTH**
+  validator params (`version` + pinned `predecessorPolicy`), derive the mint/spend
+  policy id from the applied bytes, and record the script hash in the artifact.
+- [ ] T099-S9a Submit ONE real `Modify` tx through `withDevnet` (real
+  cardano-node) — NEVER Yaci/preprod/mainnet/unrelated containers — and observe it
+  **settled** (not merely `evaluateTx = Right`); record the **tx id + per-redeemer
+  execution units** (single smoke).
+- [ ] T099-S9a Flake wiring (model `cardano-tx-tools/nix/checks.nix`): one
+  strict-PATH app exposed as `apps.<sys>.e2e` + `checks.<sys>.e2e` (runCommand
+  invokes it via `getExe`); `runtimeInputs` = `cardano-node` + the E2E exe + std
+  utils; `E2E_GENESIS_DIR` from the pinned `cardano-node-clients` source. E2E
+  check/app may be Linux-only; keep other checks on all systems.
+- [ ] T099-S9a Add an E2E job to `.github/workflows/ci.yml` that INVOKES the E2E
+  check (`nix flake check` / `nix run .#e2e`) — driver-owned. (The `gate.sh`
+  extension is a SEPARATE orchestrator commit — task T099-S9a-GATE below — not
+  part of this pair commit.)
+- [ ] T099-S9a Upgrade the dev-shell gate: replace the stale tool/format-only
+  `just devshell-offchain` + CI dev-shell job with the proven
+  `nix develop --quiet -c cabal build all --enable-tests -O0` (SAME command in
+  `just` + CI); remove the stale "cabal build can't run" comment. Expose the
+  `devnet` sublibrary via haskell.nix shell `additional` if the shell DB lacks it.
+- [ ] T099-S9a Keep PR #100 draft, `gate.sh` installed. Q-file the orchestrator on
+  any ambiguous pin/`additional`-wiring/#99-wire adaptation.
+- [ ] T099-S9a Focused proof + `./gate.sh`; commit
+  `test(e2e): add withDevnet #99 cage phase-2 smoke and dev-shell build gate`.
+
+### Slice 9a-GATE — orchestrator-owned gate extension (after S9a acceptance)
+
+- [ ] T099-S9a-GATE After S9a is navigator-verified and accepted, the ticket
+  owner extends `gate.sh` in its own mechanical commit
+  `chore: extend gate.sh with #99 withDevnet e2e smoke` to invoke the repo-owned
+  E2E app/check + the upgraded dev-shell build; run it immediately; keep it
+  installed through S9b and final verification. (Separate from the pair's S9a
+  code commit for truthful ownership/history; `ci.yml` is pair-owned, not part of
+  this exception.)
+
+Focused command:
+
+```sh
+cd offchain && nix flake check --no-eval-cache   # runs the e2e runCommand check
+cd offchain && nix develop --quiet -c cabal build all --enable-tests -O0
+```
+
+## Slice 9b — non-zero-depth proof, batch sweep, artifact + report (FR9/AC9)
+
+Owned files:
+
+- `offchain/e2e/**` (proof generation + batch sweep)
+- `specs/99-cage-security/REPORT.md`
+- `.github/workflows/ci.yml` / flake check (if the sweep artifact needs its own job)
+
+Tasks:
+
+- [ ] T099-S9b RED→GREEN: first land a navigator-reviewed **failing**
+  non-zero-depth proof case, then make it green. The subsequent numerical batch
+  sweep itself may use an explicitly logged measurement RED-SKIP.
+- [ ] T099-S9b Generate representative **non-zero-depth** MPF inclusion proofs
+  (mpfs `trie/proof.ts` is a read-only precedent for fixtures/oracle).
+- [ ] T099-S9b Sweep `Modify` batch sizes at a **declared** proof depth + state
+  shape through `withDevnet` until the pass/fail boundary is observed; record node
+  Phase-2 results + ex-units as a repo-owned reproducible artifact (produced/
+  verified by the flake check).
+- [ ] T099-S9b Failing boundary points (NOTE-016) preserve and report the ACTUAL
+  Phase-2 evaluation/rejection diagnostic; do NOT retain placeholder ExUnits on
+  `Left` (the read-only precedent does that — do not copy it).
+- [ ] T099-S9b Update `REPORT.md` with the **qualified** production bound (at the
+  declared depth/state) + Phase-2 ex-units; no extrapolation as a universal cap.
+- [ ] T099-S9b Keep PR #100 draft. Rerun `./gate.sh` + `just ci`.
+- [ ] T099-S9b Commit
+  `test(e2e): sweep #99 modify phase-2 batch bound at declared proof depth`.
+
+Focused command:
+
+```sh
+cd offchain && nix flake check --no-eval-cache   # e2e sweep check
+```
+
 ## Finalization
 
 - [ ] T099-F1 Update PR #100 body with delivered behavior, execution units,

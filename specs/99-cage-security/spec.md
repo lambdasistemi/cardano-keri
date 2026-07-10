@@ -98,12 +98,13 @@ hypothesis it closes (H1–H6).
   hardened happy paths and the supported batch/output bound. The **measured
   handler ceiling** (source-level typed fixtures — direct handler calls, empty
   single-leaf MPF proofs, ledger `Data` deserialization excluded; e.g. Modify=65)
-  MUST be distinguished from a **production-supported bound**. The latter requires
-  exercising the serialized-`Data` / real-MPF-proof-depth script boundary — an
-  in-PR `aiken export` + `aiken uplc eval` smoke at a declared representative/max
-  proof depth, and/or a named operator follow-up for the full cardano-node
-  phase-2 boundary if it cannot be exercised locally. The PR must not present the
-  measured handler ceiling as a safe on-chain cap.
+  MUST be distinguished from a **production-supported bound**. The production
+  bound is established **in-PR** (Slice 9, per amended A-002) by a real
+  **cardano-node Phase-2** evaluation of a real `Modify` transaction via the
+  `cardano-tx-tools` `withDevnet` harness at a declared MPF proof depth + state
+  shape (the S8 `aiken uplc eval` depth-0 smoke is an intermediate, superseded by
+  the live-node result). The PR must not present any measured handler ceiling or
+  extrapolation as a universal safe on-chain cap.
 - **FR10 (status).** Public implementation-status text continues to label the
   system a prototype. #99 is described as one completed security gate among the
   work still required — never as the sole remaining reason for prototype status,
@@ -129,10 +130,16 @@ hypothesis it closes (H1–H6).
 - [ ] AC8 — Cross-layer wire changes have golden parity; `just ci` + gate green
   from a clean worktree. (FR8)
 - [ ] AC9 — PR records execution units and the supported batch bound. (FR9)
-  Fully satisfied only once the production-supported bound is either proven via
-  the serialized-`Data`/real-MPF-proof boundary smoke OR carried as a named
-  operator follow-up (with the missing tooling and required artifact stated); the
-  measured handler ceiling alone does not satisfy it. (Slice 8)
+  Closed **in-PR** (per amended A-002 / NOTE-013 / NOTE-014) by a **real
+  cardano-node Phase-2** evaluation of a real `Modify` transaction against the
+  hardened #99 validator via the `cardano-node-clients` `devnet` sublibrary
+  (`Cardano.Node.Client.E2E.Setup.withDevnet`; pin + nix wiring reused from
+  `/code/cardano-tx-tools`) at a **declared** MPF proof depth + state shape,
+  sweeping batch sizes to the observed pass/fail boundary and recording node
+  Phase-2 results + execution units as a **repo-owned, gate-invoked reproducible
+  artifact**. The measured handler ceiling (65) and the depth-0 `Data`-boundary
+  estimate (≈59) alone do NOT satisfy it, and no extrapolation is presented as a
+  universal production cap. (Slices 9a + 9b)
 
 ## Out of scope (issue non-goals)
 

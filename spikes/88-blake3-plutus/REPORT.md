@@ -56,6 +56,27 @@ nix shell nixpkgs#aiken --command aiken export --module blake3 --name verify --t
 The lane-packed program is also smaller than the CPS one (8,017 vs 9,782
 flat bytes): one packed step replaces four scalar copies of the same code.
 
+## Result History
+
+Five implementations across four PRs. Budget percentages are against the
+mainnet limits above; the step column is the cpu/mem improvement over the
+previous row, measured at 300 bytes. Raw numbers for every generation are
+in the detailed tables further down.
+
+| implementation | landed | flat UPLC | 300 B cpu | 300 B mem | 1024 B cpu | 1024 B mem | step (cpu / mem) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| naive: `List<Int>` state, indexed | #89 (measured, replaced in-flight) | — | 358.1% | 771.1% | 1144.8% | 2465.4% | — |
+| fixed records, int xor, div/mod rotates | #89 | 4,697 | 114.9% | 147.3% | 367.2% | 471.1% | 3.12x / 5.23x |
+| bytes-oriented rounds, fused xor+rotate | #96 | 2,669 | 45.2% | 42.5% | 144.4% | 135.8% | 2.54x / 3.47x |
+| CPS rounds, no state records | #101 | 9,782 | 39.7% | 28.1% | 126.7% | 89.9% | 1.14x / 1.51x |
+| lane-packed rounds, batched conversions | #102 | 8,017 | 17.3% | 23.5% | 55.1% | 75.2% | 2.29x / 1.20x |
+
+Cumulative: 20.6x cpu and 32.8x mem at 300 bytes. The full 1024-byte chunk
+went from 11.4x the CPU budget to fitting with 44.9% CPU headroom; each
+verdict edge moved with it — #89 concluded DOES NOT FIT, #96 flipped it to
+fits-at-representative-sizes, #102 extends it to the whole single-chunk
+domain.
+
 ## What the Lane Packing Changed
 
 The CPS rounds spent about two thirds of their budget on int <-> bytes

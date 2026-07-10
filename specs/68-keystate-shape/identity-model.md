@@ -11,7 +11,7 @@ requirement is **dropped** — §5); witness-set rotation elevated to a ratifica
 and then **drilled to resolution the same day** (§6a — the two-seal handoff). Spike #88
 reopened the genesis in-script-blake3 performance question on 2026-07-10, and the
 lane-packed second pass the same day extended the fit to the whole single-chunk domain
-(17.3% cpu / 23.5% mem at 300 bytes, 55.1% cpu / 75.2% mem at 1024); the full
+(17.1% cpu / 22.4% mem at 300 bytes, 54.3% cpu / 71.7% mem at 1024); the full
 registration context remains unmeasured. Genesis therefore stays on the
 attested-registration track pending that proof. Correspondence (open thread 4)
 **drilled via #90** (§7b — required, fraud-proof policed). Remaining pre-ratification
@@ -343,8 +343,8 @@ integrity the checkpoint provides.
    thread, **dissolved** — the seal keeps its native Blake3 SAID.)
 3. **Genesis binding (§7a)** — the trusted base case.
    - **Spike #88 — in-script blake3 at genesis — reopened 2026-07-10.** The lane-packed,
-     vector-validated core costs 17.3% cpu / 23.5% mem at 300-byte inceptions and 55.1%
-     cpu / 75.2% mem at the full 1024-byte chunk — the whole single-chunk domain fits.
+     vector-validated core costs 17.1% cpu / 22.4% mem at 300-byte inceptions and 54.3%
+     cpu / 71.7% mem at the full 1024-byte chunk — the whole single-chunk domain fits.
      Measure the complete single-transaction registration path before changing the
      attested base case. A native `blake3` builtin remains the sunset path for
      multi-chunk inputs; no CIP exists yet.

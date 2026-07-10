@@ -78,7 +78,7 @@ down.
 | bytes-oriented rounds, fused xor+rotate | #96 | 2,669 | 45.2% | 42.5% | 144.4% | 135.8% | 2.54x / 3.47x |
 | CPS rounds, no state records | #101 | 9,782 | 39.7% | 28.1% | 126.7% | 89.9% | 1.14x / 1.51x |
 | lane-packed rounds, batched conversions | #102 | 8,017 | 17.3% | 23.5% | 55.1% | 75.2% | 2.29x / 1.20x |
-| lane-packed rounds, Aiken v1.1.23 | compiler bump | 7,527 | 17.1% | 22.4% | 54.3% | 71.7% | 1.01x / 1.05x |
+| lane-packed rounds, Aiken v1.1.23 | #103 | 7,527 | 17.1% | 22.4% | 54.3% | 71.7% | 1.01x / 1.05x |
 
 Cumulative: 20.9x cpu and 34.4x mem at 300 bytes. The full 1024-byte chunk
 went from 11.4x the CPU budget to fitting with 45.7% CPU headroom; each

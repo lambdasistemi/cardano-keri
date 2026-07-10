@@ -5,15 +5,15 @@
 **FITS for representative inception-event sizes; not for the full 1024-byte
 chunk.**
 
-After a bytes-oriented rewrite of the compression hot path, single-chunk
-BLAKE3 verification is within the mainnet per-transaction budget up to
-roughly 700 bytes of input. At 300 bytes it uses **5,949,561 mem** and
-**4,520,087,651 cpu**: 42.5% of memory and 45.2% of CPU, leaving the
-majority of the budget for the rest of a registration validator (digest and
-prefix handling, inclusion proof checks, receipt and key verification). At
-500 bytes the margin is tighter (67.9% / 72.2%) but still plausible; at 700
-bytes BLAKE3 alone consumes essentially the whole CPU budget (99.3%), and at
-1024 bytes it exceeds both budgets.
+After a CPS rewrite of the compression rounds, single-chunk BLAKE3
+verification is within the mainnet per-transaction budget up to roughly 700
+bytes of input. At 300 bytes it uses **3,940,904 mem** and **3,969,377,996
+cpu**: 28.1% of memory and 39.7% of CPU, leaving the majority of the budget
+for the rest of a registration validator (digest and prefix handling,
+inclusion proof checks, receipt and key verification). At 500 bytes the CPU
+margin is tighter (45.0% mem / 63.4% CPU) but still plausible; at 700 bytes
+BLAKE3 consumes 61.8% of memory and 87.2% of CPU. At 1024 bytes memory now
+fits, but CPU remains over budget.
 
 Mainnet budget used here:
 
@@ -31,18 +31,18 @@ include test-vector generation.
 
 | input bytes | mem | mem budget | cpu | cpu budget |
 | ---: | ---: | ---: | ---: | ---: |
-| 300 | 5,949,561 | 42.5% | 4,520,087,651 | 45.2% |
-| 500 | 9,510,579 | 67.9% | 7,224,403,186 | 72.2% |
-| 700 | 13,071,597 | 93.4% | 9,928,721,121 | 99.3% |
-| 1024 | 19,006,627 | 135.8% | 14,435,922,586 | 144.4% |
+| 300 | 3,940,904 | 28.1% | 3,969,377,996 | 39.7% |
+| 500 | 6,299,246 | 45.0% | 6,342,816,649 | 63.4% |
+| 700 | 8,657,588 | 61.8% | 8,716,257,702 | 87.2% |
+| 1024 | 12,588,158 | 89.9% | 12,671,997,697 | 126.7% |
 
 Exported `blake3.verify` size:
 
 | artifact | size |
 | --- | ---: |
-| exported JSON | 6,215 bytes |
-| `compiledCode` payload | 5,338 hex chars |
-| flat UPLC bytes | 2,669 bytes |
+| exported JSON | 20,441 bytes |
+| `compiledCode` payload | 19,564 hex chars |
+| flat UPLC bytes | 9,782 bytes |
 
 Measured with:
 
@@ -50,7 +50,28 @@ Measured with:
 nix shell nixpkgs#aiken --command aiken export --module blake3 --name verify --trace-level silent
 ```
 
-## What the Optimization Changed
+## What the CPS Optimization Changed
+
+Relative to the previous repository implementation, the CPS rewrite reduces
+memory by 33.8% and CPU by 12.2% across the measured input sizes. It trades
+execution units for a larger compiled program: 9,782 flat UPLC bytes versus
+2,669 bytes previously.
+
+1. **No round-boundary state records.** The 20 live values flow through
+   continuations across all seven rounds. This removes six `State`
+   constructions and destructurings per compressed block.
+2. **Final byte forms are reused.** The last diagonal mixes already compute
+   four-byte forms of the final a- and c-rows. The final continuation carries
+   those bytes directly into the eight output words instead of converting the
+   same integers again.
+3. **Hot helpers and rounds are compile-time inlined.** Function-valued
+   constants make Aiken inline the fixed compression path. Fixed block-length
+   and flag words are passed as byte literals, avoiding repeated conversions.
+4. **No explicit input padding.** Short little-endian word slices already
+   decode as zero-extended values, so hashing no longer appends a 64-byte zero
+   block.
+
+## Earlier Bytes-Oriented Optimization
 
 Relative to the first fixed-record implementation (below), the rewrite is a
 2.5x cpu / 3.5x mem improvement at 300 bytes, from three sources:
@@ -74,6 +95,16 @@ Relative to the first fixed-record implementation (below), the rewrite is a
    from a zero-padded input instead of per-byte `bytearray.at`.
 
 ## Earlier Measurements
+
+Previous repository implementation (bytes-oriented rounds with one `State`
+record per round):
+
+| input bytes | mem | mem budget | cpu | cpu budget |
+| ---: | ---: | ---: | ---: | ---: |
+| 300 | 5,949,561 | 42.5% | 4,520,087,651 | 45.2% |
+| 500 | 9,510,579 | 67.9% | 7,224,403,186 | 72.2% |
+| 700 | 13,071,597 | 93.4% | 9,928,721,121 | 99.3% |
+| 1024 | 19,006,627 | 135.8% | 14,435,922,586 | 144.4% |
 
 First refined implementation (fixed record fields, unrolled state updates,
 integer xor32 with div/mod rotates):
@@ -130,8 +161,8 @@ modes are intentionally out of scope.
 Genesis is once per identity, in its own registration tx, so the relevant
 question is whether BLAKE3 plus the rest of the registration validator fits
 at realistic inception-event sizes. At ~300 bytes the answer is now
-plausibly yes; the 55-60% remaining headroom has to cover the rest of the
-validator logic, which this spike does not measure. Inception events that
-approach the 1024-byte chunk limit remain out of reach without a native
-`blake3` builtin, which would still collapse genesis binding to one
-primitive hash check.
+plausibly yes; the remaining 71.9% memory and 60.3% CPU headroom has to cover
+the rest of the validator logic, which this spike does not measure.
+Inception events that approach the 1024-byte chunk limit remain out of reach
+on CPU without a native `blake3` builtin, which would still collapse genesis
+binding to one primitive hash check.

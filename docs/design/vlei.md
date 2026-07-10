@@ -117,7 +117,7 @@ the cryptographic path exists and the work is scheduled.
 
 | Capability | Status |
 |---|---|
-| Seq-0 binding verifiable from KEL | Reframed 2026-07-09 — native Blake3 AIDs: genesis is registration-attested (identity-model §7a; in-script blake3 does not fit — spike #88); F-prefix AIDs (CF sidecar): on-chain self-cert |
+| Seq-0 binding verifiable from KEL | Native Blake3 AIDs: genesis remains registration-attested pending a full-context single-tx measurement (identity-model §7a; re-optimized spike #88 core fits representative inputs but not the full 1024-byte CPU budget); F-prefix AIDs (CF sidecar): on-chain self-cert |
 | Full on-chain AID self-cert | F-prefix (CF sidecar) only — `blake2b_256` builtin; native Blake3 AIDs get cryptographic *advances* via witnessed seals, attested genesis |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
 | Super watcher convergence | Retired for identity (no fork possible under the checkpoint — identity-model §1/§8); residual: freshness/liveness, R-TEL policing, correspondence spot-checks (open thread 4); M5 |

@@ -158,9 +158,10 @@ sequenceDiagram
     Note over CT,CK: witness-set change: two-seal handoff —<br/>outgoing set receipts the pre-announcement,<br/>incoming set receipts the activation (§6a)
 ```
 
-Genesis (the first leaf) is the one non-cryptographic step: registration-attested,
-publicly falsifiable (identity-model §7a; in-script blake3 was measured and does not fit —
-spike #88).
+Genesis (the first leaf) remains registration-attested and publicly falsifiable pending a
+full-context single-transaction measurement (identity-model §7a). Re-optimized spike #88
+now fits the BLAKE3 core for representative inputs, while a full 1024-byte chunk still
+exceeds the CPU budget.
 
 ## Two Blake worlds, one system
 

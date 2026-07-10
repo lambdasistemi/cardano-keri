@@ -4,12 +4,12 @@ use aiken/primitive/bytearray
 use cage.{verifyOwnerAuth}
 use cage_context.{
   ada_output, cage_policy, empty_root, end_tx, inline_output, input_at,
-  insert_root, migrate_tx, mint_tx, modify_tx, old_cage_policy, out_ref,
-  owner_vkh, request_datum, seed_tx_id, spend_context, state_datum, state_value,
-  token_of,
+  insert_root, migrate_tx, min_ada, mint_context, mint_tx, modify_tx,
+  old_cage_policy, out_ref, owner_vkh, request_datum, seed_tx_id, spend_context,
+  state_datum, state_value, token_of,
 }
 use cardano/address.{from_script, from_verification_key}
-use cardano/assets.{from_lovelace, zero}
+use cardano/assets.{from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{OutputReference}
 use types.{
   End, Insert, Migrating, Migration, Mint, Minting, Modify, OwnerAuth,
@@ -165,6 +165,70 @@ test accept_end_full_tx() {
     state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
   let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
   cage.mpfCage.spend(0, Some(state), End, own_ref, tx)
+}
+
+// ---- Slice 2 attack tests: minting confinement (FR1 / H3-mint) --------------
+//
+// RED→GREEN convention (plan.md): each attack asserts the DESIRED post-fix
+// rejection with the `fail` form. On current permissive `validateMint` the
+// malicious tx is ACCEPTED (handler returns without failing), so the
+// `fail`-annotated test FAILS = RED. After the FR1 fix the tx is REJECTED
+// (handler fails), so the test PASSES = GREEN.
+
+// RED (a): a mint tx where exactly one cage token is minted (mint field carries
+// the derived asset name at qty 1, consumed out-ref present) but the designated
+// state output at the cage script does NOT contain that token — its value is
+// ada-only (the token was sent elsewhere / omitted). Current `validateMint`
+// never checks the token is confined in the state output, so it accepts. The
+// FR1 fix requires `quantity(policyId, output.value, tokenId) == Some(1)`.
+test reject_mint_token_absent_from_state_output() fail {
+  let asset = out_ref(seed_tx_id, 0)
+  let tokenId = token_of(asset)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  // State output sits at the cage script with an empty-root StateDatum, but its
+  // value is ada-only: the minted thread token is NOT confined here.
+  let state_out =
+    inline_output(from_script(cage_policy), from_lovelace(min_ada), state)
+  let tx =
+    mint_context(
+      [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
+      [state_out],
+      from_asset(cage_policy, tokenId.assetName, 1),
+    )
+  cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
+}
+
+// RED (b): a mint tx that mints the derived thread token AND an additional asset
+// name ("extra") under the SAME cage policy. The state output honestly confines
+// the derived token, so only the extra-asset-name check must reject. Current
+// `validateMint` only checks the derived token's quantity via
+// `quantity(policyId, mint, tokenId)` and never inspects the full
+// `tokens(mint, policyId)` map, so it accepts. The FR1 fix requires exactly one
+// asset name under the cage policy at qty 1.
+test reject_mint_extra_asset_name_under_policy() fail {
+  let asset = out_ref(seed_tx_id, 0)
+  let tokenId = token_of(asset)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    )
+  // Mint the derived token at qty 1 AND an unrelated asset name under the same
+  // policy — an extra token minted alongside the thread token.
+  let mint =
+    from_asset(cage_policy, tokenId.assetName, 1)
+      |> merge(from_asset(cage_policy, "extra", 1))
+  let tx =
+    mint_context(
+      [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
+      [state_out],
+      mint,
+    )
+  cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
 }
 
 // ---- Tests ------------------------------------------------------------------

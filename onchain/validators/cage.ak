@@ -1,3 +1,4 @@
+use aiken/collection/dict
 use aiken/collection/list.{find, foldl, has, head}
 use aiken/crypto.{VerificationKeyHash, blake2b_256, verify_ed25519_signature}
 use aiken/interval
@@ -6,7 +7,7 @@ use aiken/merkle_patricia_forestry as mpf
 use aiken/option.{is_some}
 use aiken/primitive/bytearray.{from_int_big_endian}
 use cardano/address
-use cardano/assets.{PolicyId}
+use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, find_input,
 }
@@ -369,17 +370,21 @@ pub fn validateMint(minting: Mint, policyId: PolicyId, tx: Transaction) {
   let Transaction { outputs, mint, inputs, .. } = tx
   let tokenId = TokenId { assetName: assetName(asset) }
   expect is_some(find_input(inputs, asset))
-  expect
-    when quantity(policyId, mint, tokenId) is {
-      Some(quantity) -> quantity == 1
-      None -> False
-    }
+  // Exactly one asset name under the cage policy, and it is the derived thread
+  // token at quantity 1. Inspecting the full `tokens(mint, policyId)` map (not
+  // just the derived token's quantity) rejects any extra asset name or extra
+  // quantity minted under the cage policy.
+  expect [Pair(mintedName, mintedQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect mintedName == tokenId.assetName
+  expect mintedQty == 1
   expect Some(output) = head(outputs)
   expect address.Script(targetScriptHash) = output.address.payment_credential
   expect targetScriptHash == policyId
   expect InlineDatum(tokenState) = output.datum
   expect StateDatum(State { root: tokenRoot, .. }) = tokenState
   expect tokenRoot == root(empty)
+  // Confine the minted thread token in the designated state output.
+  expect quantity(policyId, output.value, tokenId) == Some(1)
   True
 }
 

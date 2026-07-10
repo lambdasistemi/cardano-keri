@@ -42,16 +42,16 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S2 RED (a): full-tx attack test — mint accepted with the thread
+- [X] T099-S2 RED (a): full-tx attack test — mint accepted with the thread
   token absent from / outside the designated state output.
-- [ ] T099-S2 RED (b): full-tx attack test — mint accepted with an additional
+- [X] T099-S2 RED (b): full-tx attack test — mint accepted with an additional
   asset name (or extra quantity) under the cage policy.
-- [ ] T099-S2 GREEN: require exactly one cage-policy asset at quantity 1
+- [X] T099-S2 GREEN: require exactly one cage-policy asset at quantity 1
   (derived from the consumed output reference) present in the state output at
   the cage script; reject any extra asset name/quantity under the policy.
-- [ ] T099-S2 Keep the happy-path Mint accept test green.
-- [ ] T099-S2 Run the focused command and `./gate.sh`.
-- [ ] T099-S2 Commit as `fix(onchain): confine minted cage token to the state output`.
+- [X] T099-S2 Keep the happy-path Mint accept test green.
+- [X] T099-S2 Run the focused command and `./gate.sh`.
+- [X] T099-S2 Commit as `fix(onchain): confine minted cage token to the state output`.
 
 Focused command:
 

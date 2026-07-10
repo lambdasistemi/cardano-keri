@@ -213,12 +213,12 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S7 Keep the system labelled a prototype; describe #99 as one
+- [X] T099-S7 Keep the system labelled a prototype; describe #99 as one
   completed security gate among the work still required. Do NOT frame #99 as the
   sole remaining reason for prototype status, and do NOT claim production
   readiness; closing #99 does not lift the prototype label.
-- [ ] T099-S7 Run `./gate.sh`.
-- [ ] T099-S7 Commit as `docs: record cage security gate; keep prototype label`.
+- [X] T099-S7 Run `./gate.sh`.
+- [X] T099-S7 Commit as `docs: record cage security gate; keep prototype label`.
 
 Focused command:
 

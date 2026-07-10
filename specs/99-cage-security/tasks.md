@@ -425,11 +425,11 @@ CABAL_DIR=$(mktemp -d) nix develop --quiet -c cabal build all --enable-tests -O0
 
 ## Finalization
 
-- [ ] T099-F1 Update PR #100 body with delivered behavior, execution units,
+- [X] T099-F1 Update PR #100 body with delivered behavior, execution units,
   supported bound, attack paths proven RED→GREEN, and verification evidence.
-- [ ] T099-F2 Rerun `./gate.sh` and `just ci` at HEAD and record results.
-- [ ] T099-F3 Run the finalization audit for PR #100 and
+- [X] T099-F2 Rerun `./gate.sh` and `just ci` at HEAD and record results.
+- [X] T099-F3 Run the finalization audit for PR #100 and
   `specs/99-cage-security/tasks.md`.
-- [ ] T099-F4 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
-- [ ] T099-F5 Mark the PR ready only after local gate and CI are green; leave
+- [X] T099-F4 Drop `gate.sh` in `chore: drop gate.sh (ready for review)`.
+- [X] T099-F5 Mark the PR ready only after local gate and CI are green; leave
   merge to the epic owner.

@@ -95,7 +95,15 @@ hypothesis it closes (H1–H6).
   Haskell↔Aiken golden parity check; `just ci` and the ticket gate pass from a
   clean worktree.
 - **FR9 (measurement).** The PR records Plutus V3 execution units for the
-  hardened happy paths and the supported batch/output bound.
+  hardened happy paths and the supported batch/output bound. The **measured
+  handler ceiling** (source-level typed fixtures — direct handler calls, empty
+  single-leaf MPF proofs, ledger `Data` deserialization excluded; e.g. Modify=65)
+  MUST be distinguished from a **production-supported bound**. The latter requires
+  exercising the serialized-`Data` / real-MPF-proof-depth script boundary — an
+  in-PR `aiken export` + `aiken uplc eval` smoke at a declared representative/max
+  proof depth, and/or a named operator follow-up for the full cardano-node
+  phase-2 boundary if it cannot be exercised locally. The PR must not present the
+  measured handler ceiling as a safe on-chain cap.
 - **FR10 (status).** Public implementation-status text continues to label the
   system a prototype. #99 is described as one completed security gate among the
   work still required — never as the sole remaining reason for prototype status,
@@ -121,6 +129,10 @@ hypothesis it closes (H1–H6).
 - [ ] AC8 — Cross-layer wire changes have golden parity; `just ci` + gate green
   from a clean worktree. (FR8)
 - [ ] AC9 — PR records execution units and the supported batch bound. (FR9)
+  Fully satisfied only once the production-supported bound is either proven via
+  the serialized-`Data`/real-MPF-proof boundary smoke OR carried as a named
+  operator follow-up (with the missing tooling and required artifact stated); the
+  measured handler ceiling alone does not satisfy it. (Slice 8)
 
 ## Out of scope (issue non-goals)
 

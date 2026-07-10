@@ -221,6 +221,35 @@ the sole remaining reason for prototype status, and do not claim production
 readiness. Closing #99 does not lift the prototype label.
 `docs: record cage security gate; keep prototype label`
 
+### Slice 8 — Live-boundary measurement follow-up (FR9/AC9 boundary proof)
+The S6 measurement (`bc8d9b2`) uses source-level typed `const` fixtures — direct
+handler calls, empty single-leaf MPF proofs, ledger `Data` deserialization
+excluded — so **Modify=65 is a measured HANDLER CEILING, not a production
+bound**. This slice, on a fresh commit (do NOT alter `bc8d9b2`):
+1. **Amend `REPORT.md` wording** to distinguish "measured handler ceiling = 65"
+   from a production-supported bound, and remove any guidance that treats 65 as a
+   safe on-chain cap.
+2. **Attempt an in-PR live-boundary smoke** that evaluates the COMPILED validator
+   through the serialized-`Data` boundary at a **declared** representative/maximum
+   MPF proof depth: `aiken build`/`aiken export` the Modify spend handler to UPLC
+   with `Data`-encoded datum/redeemer/script-context applied, then
+   `aiken uplc eval` (reports real mem/cpu INCLUDING `Data` deserialization). If
+   it runs deterministically, record the boundary-inclusive number and (if stable)
+   extend `gate.sh` with it.
+3. **Full node phase-2 boundary is out of local scope:** host has no
+   `cardano-cli`/`node`/`uplc`; the repo has **no #99 transaction builder**, so a
+   fully-built #99 tx cannot be produced for `yaci-devkit` evaluation without new
+   offchain builder work. If the UPLC-eval smoke is also infeasible in-scope, the
+   driver reports the exact missing step and the orchestrator writes a **parent
+   Q-file** to the epic owner naming the missing tooling (offchain #99 tx builder
+   + `yaci-devkit` evaluation), a **named operator artifact required before the PR
+   leaves draft**, and a conservative recommendation — NOT deferring silently to
+   #44 or claiming AC9 fully satisfied.
+The pair reviews any fixture/report/smoke change.
+`docs(onchain): distinguish measured cage ceiling from production bound`
+(+ optional `test(onchain): add cage uplc data-boundary smoke` /
+`chore: extend gate.sh with cage boundary smoke`)
+
 ## Finalization
 Update PR #100 body with delivered behavior, execution units, supported bound,
 attack paths proven RED→GREEN, and verification evidence; rerun `./gate.sh` +

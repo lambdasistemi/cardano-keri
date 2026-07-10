@@ -226,6 +226,44 @@ Focused command:
 ./gate.sh
 ```
 
+## Slice 8 — Live-boundary measurement follow-up (FR9/AC9 boundary proof)
+
+Owned files:
+
+- `specs/99-cage-security/REPORT.md`
+- `onchain/validators/cage_boundary.ak` (new — only if the UPLC-eval smoke is added)
+
+Tasks:
+
+- [ ] T099-S8 Amend `REPORT.md`: distinguish "measured handler ceiling = 65"
+  (source-level typed fixtures, empty single-leaf MPF proofs, ledger `Data`
+  deserialization excluded) from a production-supported bound; remove guidance
+  treating 65 as a safe on-chain cap.
+- [ ] T099-S8 Attempt an in-PR live-boundary smoke: `aiken build`/`aiken export`
+  the Modify spend handler to UPLC with `Data`-encoded datum/redeemer/context
+  applied, then `aiken uplc eval` (real mem/cpu incl. `Data` deserialization) at
+  a **declared** representative/maximum MPF proof depth; record the
+  boundary-inclusive number. Extend `gate.sh` with it only if it runs
+  deterministically.
+- [ ] T099-S8 If the UPLC-eval smoke is infeasible in-scope, report the exact
+  missing evaluator step (do not fake it).
+- [ ] T099-S8 Full node phase-2 boundary is out of local scope (no host
+  `cardano-cli`/`node`/`uplc`; no #99 tx builder in repo). If neither smoke can
+  be exercised safely in-scope, the orchestrator writes a parent Q-file naming
+  the missing offchain #99 tx builder + `yaci-devkit` evaluation, a named
+  operator artifact required before the PR leaves draft, and a conservative
+  recommendation; AC9 is carried as that named follow-up, NOT claimed satisfied.
+- [ ] T099-S8 Do NOT alter the S6 commit `bc8d9b2` in place; fresh commit(s),
+  pair-reviewed.
+- [ ] T099-S8 Run `./gate.sh`.
+- [ ] T099-S8 Commit as `docs(onchain): distinguish measured cage ceiling from production bound`.
+
+Focused command:
+
+```sh
+cd onchain && nix shell nixpkgs#aiken --command aiken check
+```
+
 ## Finalization
 
 - [ ] T099-F1 Update PR #100 body with delivered behavior, execution units,

@@ -41,7 +41,7 @@ Measurements live in the production onchain tree
   binding (FR6).
 - **Modify batch sweep.** `Modify` folds over a list of request inputs and emits
   one refund output per owner. To measure the per-request cost and locate the
-  supported bound, the batch is built from `n` identical request inputs
+  handler-ceiling crossing, the batch is built from `n` identical request inputs
   (`list.repeat`), each carrying a genuine `UpdateAction`: a real Ed25519
   signature (the `gen-vectors` owner-auth fixture) verified over the request
   output reference, an MPF `Update`, and refund accounting. The MPF operation is
@@ -86,21 +86,63 @@ The cost is linear in the batch size `n`:
 So `Modify(n)` ≈ `225,990 + 209,332·n` memory and `73,072,528 + 122,370,488·n`
 CPU.
 
-## Supported batch / output bound
+## Measured handler ceiling (NOT a production bound)
 
-**The supported Modify bound is 65 request inputs and 65 refund outputs.**
+**65 is a measured HANDLER ceiling, not a production-supported on-chain bound.**
+The figures above are produced by calling the `mpfCage.spend` handler directly on
+top-level typed `const` fixtures (see Method). Two real on-chain costs are
+therefore **excluded** from the 65 figure:
+
+1. **Ledger→script `fromData` deserialization** of the datum, redeemer and
+   transaction at the script boundary (the handler is handed already-typed
+   values, so no `fromData` runs). Partially measured in the next section.
+2. **Real MPF proof depth** — every request uses an empty single-leaf inclusion
+   proof (`[]`); a real value trie carries a longer, costlier proof. This cost is
+   **unquantified** in-scope (see Caveats).
+
+Both excluded costs are positive, so the production-supported bound is lower than
+the 65 handler ceiling — the depth-0 boundary measurement below already puts the
+memory crossing near 59 — but its exact value is **not proven by this report**.
+The handler-ceiling crossing itself:
 
 - At **65** requests: 13,832,570 memory (98.80% of budget) and 8,027,154,248 CPU
   (80.27%) — both within budget.
 - At **66** requests: 14,041,902 memory (**100.30%** of budget) — the memory
-  budget is **exceeded**, so 66 does not fit. CPU at 66 is 8,149,524,736
-  (81.50%), still within budget.
+  budget is **exceeded**. The binding constraint is **memory**; CPU still has
+  ~19.7% headroom at 65.
 
-The **binding constraint is memory**: it saturates at 65 while CPU still has
-~19.7% headroom. Extrapolating the linear CPU cost, the CPU budget alone would
-not be reached until ~81 requests, but memory caps the transaction first. The
-sweep was stopped at 66 because that is the first batch size over budget; this
-cap is recorded as the supported bound.
+## Data-boundary measurement (S8, MPF proof depth 0)
+
+To charge the excluded `fromData` cost (item 1 above), the **compiled** `mpfCage`
+validator is evaluated against a serialized `ScriptContext` — the real
+ledger→script boundary — instead of the handler being called on typed fixtures.
+The context is built by `onchain/validators/cage_boundary.ak` and evaluated with
+`aiken uplc eval`; the validator's own built-in context decode charges the full
+`fromData` traversal. **The MPF proof depth is held at 0 (the same empty
+single-leaf proof as S6)**, so this isolates the `fromData` axis only; it does
+**not** address excluded cost item 2.
+
+| Batch | S6 handler-only (mem / CPU) | Boundary incl. `fromData` (mem / CPU) | `fromData` delta (mem / CPU) |
+| ----: | --------------------------: | ------------------------------------: | ---------------------------: |
+| 0     | 225,990 / 73,072,528        | 227,825 / 74,158,815                   | +1,835 / +1,086,287          |
+| 1     | 435,322 / 195,443,016       | 459,081 / 202,906,291                  | +23,759 / +7,463,275         |
+
+Both boundary evaluations return `(con unit ())` (accept). The per-request
+`fromData` increment is **+21,924 memory / +6,376,988 CPU**, i.e. each request
+costs ~10.5% more memory once boundary deserialization is charged
+(209,332 → ~231,256 per request).
+
+**Revised memory crossing (still excluding MPF proof depth):** applying the
+per-request boundary increment linearly,
+`227,825 + 231,256·n ≥ 14,000,000` at **n ≈ 60**, so the boundary-inclusive
+memory bound is **≈ 59 requests — down from the 65 handler ceiling.** This ≈59 is
+an **extrapolation**, not a direct measurement: materializing a near-ceiling
+`ScriptContext` as a `Data` term itself exceeds the standalone `aiken uplc eval`
+memory budget (which has no override), so batches beyond ~30 cannot be evaluated
+this way. This ≈59 also **still excludes MPF proof depth**: a non-empty proof adds
+a positive but **unmeasured** per-request cost that *may* push the ceiling below
+59, but nothing here proves it does. **The production-supported bound therefore
+remains unproven** — ≈59 is the depth-0 boundary estimate, not a proven cap.
 
 ## Verdict
 
@@ -111,11 +153,16 @@ figures #99 FR9 asks for:
   End each consume under **1%** of both the memory and CPU budgets (worst case:
   End at 0.90% memory / 0.39% CPU) — abundant headroom for the single-token
   lifecycle transitions.
-- **Modify fits and scales linearly.** A single `Modify` transaction supports up
-  to **65** request inputs / refund outputs within the mainnet per-tx budget,
-  memory-bound at 98.80% (CPU 80.27%). Batches at or below 65 fit; 66 exceeds the
-  memory budget. Off-chain batching should therefore cap a single settlement
-  transaction at 65 requests and split larger request sets across transactions.
+- **Modify scales linearly, but 65 is a handler ceiling — not a safe on-chain
+  cap.** 65 is the crossing when the handler is measured on typed fixtures with
+  empty MPF proofs; it excludes ledger `fromData` deserialization and real MPF
+  proof depth. The S8 boundary measurement shows `fromData` alone lowers the
+  extrapolated memory crossing to **≈ 59** (MPF depth 0). The MPF-proof-depth cost
+  is unmeasured and may lower the ceiling further, so the **production-supported
+  bound remains unproven**. Off-chain batching must **not** treat 65 as a safe cap.
+  As a conservative **operator policy** (not a proven bound), stay comfortably
+  under the ≈59 depth-0 estimate and leave headroom until the boundary is proven
+  end-to-end on a node at a stated MPF depth.
 
 The hardening added by Slices 2–5 does not push any happy path outside the
 budget; the dominant Modify cost is the per-request Ed25519 verification and MPF
@@ -124,16 +171,31 @@ not overhead.
 
 ## Caveats and follow-ups
 
-- **Ledger-level `Data` deserialization excluded (close lower bound).** As in
-  #97, the measurement calls the handler directly, so it **includes** the full
-  transaction-context traversal (input/output folds, MPF operations, Ed25519
-  verification) but **excludes** the ledger-level deserialization of the redeemer
-  and datums from `Data` at the script boundary. The reported figures are a close
-  **lower bound** on true on-chain cost. For `Modify`, the redeemer grows with
-  the batch (one `UpdateAction` per request), so the excluded deserialization
-  also grows with `n`; the real supported bound may be marginally below 65 once
-  boundary deserialization is charged. Off-chain builders should treat 65 as a
-  ceiling and leave margin.
+- **Ledger `Data` deserialization — now partially measured (S8, MPF depth 0).**
+  The S6 handler figures exclude the ledger→script `fromData` conversion. The S8
+  Data-boundary measurement charges it by evaluating the **compiled** validator
+  against a serialized `ScriptContext` (`cage_boundary.ak`), at batches 0 and 1,
+  MPF proof depth 0. Result: `fromData` adds **+21,924 memory / +6,376,988 CPU per
+  request**, which lowers the memory crossing from 65 to **≈ 59** (extrapolated).
+  This closes the `fromData` axis at depth 0 but not beyond ~batch 30 directly
+  (the standalone eval budget caps context materialization).
+- **MPF proof depth is UNQUANTIFIED — the dominant open follow-up.** Every request
+  in both S6 and S8 uses an empty single-leaf inclusion proof (`[]`). A real value
+  trie carries a longer, costlier proof, adding a positive but **unmeasured**
+  per-request cost on top of the ≈59 depth-0 figure; it may push the ceiling below
+  59, but this report does not measure it, so the true production bound is
+  **unproven** (not shown to be above or below 59). Quantifying it needs an
+  **off-chain depth-N MPF inclusion-proof generator**: `gen-vectors`
+  (`offchain/app/GenVectors.hs`) emits only the single-element trie
+  (`identity_proof: Proof = []`), and no depth-N generator exists in this repo.
+  **This report does not establish a safe on-chain Modify bound.**
+- **Full node phase-2 boundary not exercised (operator follow-up before merge).**
+  The S8 smoke evaluates UPLC in isolation, not a real transaction through a node.
+  A full node phase-2 evaluation needs an **off-chain #99 transaction builder** to
+  feed a devnet (e.g. `yaci-devkit`); no such builder exists in the repo, so it is
+  out of local scope. AC9 is carried as this named operator follow-up (a devnet
+  phase-2 evaluation of a real Modify tx at a stated MPF depth), **not** claimed
+  satisfied.
 - **Batch fixtures reuse one owner-auth witness (cost-faithful, uniqueness
   relaxed).** Every request input in a batch reuses the single `gen-vectors`
   output reference and signature, so all `n` Ed25519 verifications run over the
@@ -141,13 +203,3 @@ not overhead.
   references (the dominant fixed per-request cost is measured faithfully); only
   the real-transaction requirement that inputs have distinct output references is
   relaxed, which is cost-neutral for this measurement.
-- **MPF updates use single-leaf empty proofs (per-request MPF cost is a floor).**
-  Each request applies a no-op `Update` on a single-leaf value trie with an empty
-  inclusion proof, so the MPF portion of the per-request cost is minimal. A real
-  request against a larger, deeper value trie carries a longer inclusion proof
-  and costs more per operation. The Ed25519 verification (the larger fixed
-  component) is measured faithfully, but the MPF component is a floor; the
-  reported per-request cost is therefore a lower bound and the derived batch bound
-  (65) is an optimistic ceiling on the MPF axis. This is the same
-  "close lower bound" posture as #97 and does not change the verdict that
-  Mint/Migrate/End sit far under budget.

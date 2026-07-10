@@ -73,7 +73,12 @@ hypothesis it closes (H1–H6).
   predecessor/successor policy quantity or asset name.
 - **FR4 (AC4, H3-modify).** `Modify` requires the exact cage thread token in the
   designated continuing state output; address or datum preservation alone is
-  insufficient.
+  insufficient. This output-confinement guard is delivered in **Slice 5** (it
+  blocks a no-burn `Modify` from moving the token out of the cage). It is
+  **distinct from and additive to** the Slice 3 reverse guard — Slice 3 forbids a
+  `Modify` from minting or burning its own thread token (required for H6
+  Burn↔End exclusivity); Slice 5 forbids a `Modify` from moving it out. Slice 5
+  must preserve the Slice 3 check, not replace or revert it.
 - **FR5 (AC5, H4).** Owner authorization is evaluated against an authenticated
   input/reference identity root; changing the output `identity_root` cannot
   introduce new authority in the same transaction.

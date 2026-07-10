@@ -12,7 +12,7 @@ use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{OutputReference}
 use types.{
-  End, Insert, Migrating, Migration, Mint, Minting, Modify, OwnerAuth,
+  Burning, End, Insert, Migrating, Migration, Mint, Minting, Modify, OwnerAuth,
   RequestAction, UpdateAction,
 }
 
@@ -167,6 +167,20 @@ test accept_end_full_tx() {
   cage.mpfCage.spend(0, Some(state), End, own_ref, tx)
 }
 
+// Accept: a Burning mint coupled to an owner-authorized End. The owner spends the
+// cage state UTxO holding the thread token and burns it at -1 — the mint side of
+// the same lifecycle transition `accept_end_full_tx` authorizes. `end_tx` already
+// assembles exactly this shape (state input carrying the token, owner signs, mint
+// -1), so the hardened `validateBurn` accepts it.
+test accept_burning_full_tx() {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
+  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+}
+
 // ---- Slice 2 attack tests: minting confinement (FR1 / H3-mint) --------------
 //
 // RED→GREEN convention (plan.md): each attack asserts the DESIRED post-fix
@@ -229,6 +243,194 @@ test reject_mint_extra_asset_name_under_policy() fail {
       mint,
     )
   cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
+}
+
+// ---- Slice 3 attack tests: burn/End lifecycle (FR2 / H1+H6) -----------------
+//
+// Same RED→GREEN convention: each `fail` test asserts the DESIRED post-fix
+// rejection. On the current permissive `Burning -> True` mint handler the
+// malicious tx is ACCEPTED (handler returns True without failing), so the
+// `fail`-annotated test FAILS = RED. After coupling the burn to an owner-
+// authorized End the tx is REJECTED (handler fails), so the test PASSES = GREEN.
+//
+// The FR2 fix carries four separable invariants — the single cage-policy mint
+// entry must be (i) the burned token's asset name at (ii) exactly -1, coupled to
+// (iii) a spent cage-script state UTxO that carries *that* token, spent (iv) with
+// the owner's signature. Each attack below is a well-formed owner-authorized End
+// EXCEPT for one defect, so it isolates exactly one invariant: a weak
+// implementation that skips any single check leaves that test RED.
+
+// (a) POSITIVE mint. Everything is a well-formed owner-authorized End (matching
+// state UTxO spent, owner signs, one cage-policy entry) EXCEPT the quantity is
+// +1 — a counterfeit inflation, not a burn. Isolates the `qty == -1` check.
+test reject_burning_positive_mint() fail {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_input =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        state,
+      ),
+    )
+  let tx =
+    spend_context(
+      [state_input],
+      [],
+      [],
+      from_asset(cage_policy, tokenId.assetName, 1),
+      [owner_vkh],
+      interval.everything,
+      0,
+    )
+  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+}
+
+// (b) NO matching End spend. Owner signs and the burn is a well-formed single -1
+// entry, but the only spent cage-script state UTxO carries a DIFFERENT token
+// than the one being burned — there is no End spend of the burned token's state.
+// Isolates the token-matched coupling: a weak "any cage input / any signer"
+// coupling would accept this, so requiring an arbitrary signer cannot masquerade
+// as lifecycle coupling.
+test reject_burn_state_input_token_mismatch() fail {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  // A different token sits in the spent cage state UTxO.
+  let otherId = token_of(out_ref(seed_tx_id, 99))
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let mismatched_input =
+    input_at(
+      out_ref(seed_tx_id, 4),
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, otherId),
+        state,
+      ),
+    )
+  let tx =
+    spend_context(
+      [mismatched_input],
+      [],
+      [],
+      from_asset(cage_policy, tokenId.assetName, -1),
+      [owner_vkh],
+      interval.everything,
+      0,
+    )
+  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+}
+
+// (b′) End spend LACKS owner authorization. The matching state UTxO is spent and
+// the burn is a well-formed single -1 entry, but nobody signs — the End is not
+// owner-authorized. Isolates the owner-signature requirement.
+test reject_burn_without_owner_signature() fail {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_input =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        state,
+      ),
+    )
+  let tx =
+    spend_context(
+      [state_input],
+      [],
+      [],
+      from_asset(cage_policy, tokenId.assetName, -1),
+      [],
+      interval.everything,
+      0,
+    )
+  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+}
+
+// (c) EXTRA cage-policy entry. A well-formed owner-authorized End (matching state
+// UTxO spent, owner signs) EXCEPT the cage-policy mint map carries an extra asset
+// name alongside the -1 burn. Isolates the exactly-one-cage-policy-entry check.
+test reject_burning_extra_cage_entry() fail {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_input =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        state,
+      ),
+    )
+  let mint =
+    from_asset(cage_policy, tokenId.assetName, -1)
+      |> merge(from_asset(cage_policy, "extra", -1))
+  let tx =
+    spend_context(
+      [state_input],
+      [],
+      [],
+      mint,
+      [owner_vkh],
+      interval.everything,
+      0,
+    )
+  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+}
+
+// (d) BURN LAUNDERED THROUGH MODIFY. The mint handler alone cannot tell which
+// branch the spent state UTxO takes, so `validateBurn` accepts an owner-signed
+// `Burning(tokenId)` whenever a matching cage state input is spent — even if that
+// input is spent via `Modify`, not `End`. The coupling to End is completed on the
+// SPEND side: every non-End state spend must refuse to co-occur with the matching
+// -1 burn. Here the owner spends the state UTxO via `Modify([])` (dropping the
+// token into a TOKENLESS continuing output) while burning it via `Burning`. Both
+// handlers must not simultaneously succeed. This runs BOTH handlers on one tx:
+// RED against a `validateBurn`-only fix (both pass), GREEN once `validModify`
+// rejects a burn of its own thread token.
+test reject_burn_via_modify_not_end() fail {
+  let own_ref = out_ref(seed_tx_id, 3)
+  let tokenId = token_of(own_ref)
+  let in_state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let out_state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_input =
+    input_at(
+      own_ref,
+      inline_output(
+        from_script(cage_policy),
+        state_value(cage_policy, tokenId),
+        in_state,
+      ),
+    )
+  // Continuing state output at the cage script but TOKENLESS (ada only): the
+  // thread token is dropped here and separately burned by the mint below.
+  let state_out =
+    inline_output(from_script(cage_policy), from_lovelace(min_ada), out_state)
+  let tx =
+    spend_context(
+      [state_input],
+      [],
+      [state_out],
+      from_asset(cage_policy, tokenId.assetName, -1),
+      [owner_vkh],
+      interval.everything,
+      0,
+    )
+  let mint_ok = cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  let spend_ok = cage.mpfCage.spend(0, Some(in_state), Modify([]), own_ref, tx)
+  mint_ok && spend_ok
 }
 
 // ---- Tests ------------------------------------------------------------------

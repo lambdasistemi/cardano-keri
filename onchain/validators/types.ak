@@ -16,7 +16,7 @@ pub type Migration {
 pub type MintRedeemer {
   Minting(Mint)
   Migrating(Migration)
-  Burning
+  Burning(TokenId)
 }
 
 /// Owner authorization for a value-write operation.

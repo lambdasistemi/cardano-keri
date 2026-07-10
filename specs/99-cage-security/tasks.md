@@ -64,26 +64,41 @@ cd onchain && nix shell nixpkgs#aiken --command aiken check
 Owned files:
 
 - `onchain/validators/cage.ak`
-- `onchain/validators/types.ak` (only if `Burning` gains a `TokenId`)
+- `onchain/validators/types.ak` (`Burning` gains a `TokenId`)
 - `onchain/validators/cage.tests.ak`
 
 Tasks:
 
-- [ ] T099-S3 RED (a): full-tx attack test — positive mint accepted under
-  `Burning`.
-- [ ] T099-S3 RED (b): full-tx attack test — burn/`End` accepted without the
-  matching owner-authorized `End` spend.
-- [ ] T099-S3 RED (c): full-tx attack test — a mismatched or extra cage-policy
-  mint entry accepted alongside the burn.
-- [ ] T099-S3 GREEN: `Burning` rejects every positive cage-policy quantity and
+- [X] T099-S3 RED (a): full-tx attack — positive mint accepted under `Burning`
+  (otherwise-valid owner-authorized End; only defect is `+q`).
+- [X] T099-S3 RED (b): full-tx attack — burn accepted with a mismatched /
+  absent matching cage-state End spend (coupling defect, not merely absent
+  signer).
+- [X] T099-S3 RED (c): full-tx attack — burn accepted without the owner
+  signature on the matching End spend.
+- [X] T099-S3 RED (d): full-tx attack — mismatched / extra cage-policy mint
+  entry accepted alongside the `-1`.
+- [X] T099-S3 RED (e): full-tx attack — owner-signed `Burning(TokenId)` +
+  `Modify([])` token-dropping burn accepted (burn via a non-`End` state spend;
+  H6 reverse guard). Record observed counts RED→GREEN.
+- [X] T099-S3 GREEN: `Burning` rejects every positive cage-policy quantity and
   accepts only exactly one cage-policy mint entry (the matching thread token at
-  `-1`) coupled to the owner-authorized `End` spend (one exact lifecycle
-  transition).
-- [ ] T099-S3 Keep the happy-path End accept test green.
-- [ ] T099-S3 If `Burning` wire shape changes, it is Aiken-only (no Haskell
-  mirror today); record the reasoning in `WIP.md`.
-- [ ] T099-S3 Run the focused command and `./gate.sh`.
-- [ ] T099-S3 Commit as `fix(onchain): couple cage burn to owner-authorized end`.
+  `-1`) coupled to the owner-authorized `End` spend; AND a `validModify`
+  **reverse guard** — `Modify` may not mint or burn its own thread token — so an
+  exact burn can coexist only with the owner-authorized `End` branch (one exact
+  lifecycle transition; H6 exclusivity).
+- [X] T099-S3 This reverse guard is **distinct from FR4**: it does NOT require
+  the token in the continuing output. FR4/H3-modify output confinement (blocking
+  a no-burn `Modify` from moving the token out) is a separate Slice-5 target,
+  additive to this guard; S5 must preserve this S3 check, not revert it.
+- [X] T099-S3 Keep the happy-path End + Modify accept tests green; keep Slice-2
+  `validateMint` green.
+- [X] T099-S3 `Burning(TokenId)` wire change is Aiken-only (no Haskell mirror);
+  record the reasoning in `WIP.md`.
+- [X] T099-S3 Run the focused command and `./gate.sh`.
+- [X] T099-S3 Commit as `fix(onchain): couple cage burn to owner-authorized end`;
+  commit body states the reverse guard (`validModify` refuses to mint/burn its
+  own thread token) completing exact Burn↔End coupling.
 
 Focused command:
 
@@ -123,6 +138,10 @@ cd onchain && nix shell nixpkgs#aiken --command aiken check
 
 ## Slice 5 — Harden Modify confinement + authorization (FR4+FR5+FR6 / H3-modify+H4+H5)
 
+FR4/H3-modify output confinement is a **genuine S5 RED→GREEN** target (distinct
+from the S3 reverse guard). S5 must keep the S3 `validModify` no-mint/burn guard
+intact (additive — not weaken/revert).
+
 Owned files:
 
 - `onchain/validators/cage.ak`
@@ -134,17 +153,19 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S5 RED (a): token-dropping Modify accepted (thread token absent from
-  the continuing state output).
+- [ ] T099-S5 RED (a): a no-burn `Modify` moving the thread token OUT of the
+  continuing state output accepted (FR4/H3-modify — the S3 reverse guard only
+  blocks minting/burning the token, so this move-out is still open).
 - [ ] T099-S5 RED (b): output-`identity_root` self-authorization accepted (auth
   proven against the tx's own output root).
 - [ ] T099-S5 RED (c): an unrelated authenticated AID authorizes the key.
 - [ ] T099-S5 RED (d): a raw-`owner_aid` prefix (the AID bytes, not their
   `blake2b_256`) authorizes the key.
 - [ ] T099-S5 GREEN: require the exact thread token in the continuing state
-  output; authenticate against the input/reference identity root; require
-  `bytearray.length(requestKey) >= 32` and
-  `bytearray.take(requestKey, 32) == blake2b_256(owner_aid)`.
+  output (FR4); authenticate against the input/reference identity root (FR5);
+  require `bytearray.length(requestKey) >= 32` and
+  `bytearray.take(requestKey, 32) == blake2b_256(owner_aid)` (FR6); keep the S3
+  no-mint/burn guard intact.
 - [ ] T099-S5 Keep the happy-path Modify accept test green.
 - [ ] T099-S5 If a mirrored type wire shape changes, update the Haskell mirror +
   `TypesSpec.hs` (+ regen vectors) in this same commit; else keep existing

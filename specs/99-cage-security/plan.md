@@ -169,12 +169,19 @@ quantity 1 and that exact token in the designated state output.
 `fix(onchain): confine minted cage token to the state output`
 
 ### Slice 3 — Harden Burn/End lifecycle (FR2 / H1+H6)
-Attack RED ×3: (a) positive mint accepted under `Burning`; (b) `End`/burn
-accepted without the matching owner-authorized `End` spend; (c) a mismatched or
-extra cage-policy mint entry accepted alongside the burn. GREEN: reject positive;
-require exactly one cage-policy mint entry (the matching token at `-1`) coupled
-to the owner-authorized `End`. (Aiken-only wire change if `Burning` gains a
-`TokenId`.)
+Attack RED ×5: (a) positive mint under `Burning`; (b) burn with an absent/
+mismatched matching `End` state spend; (c) burn without the owner signature on
+the matching `End` spend; (d) mismatched/extra cage-policy mint entry alongside
+the `-1`; (e) an owner-signed `Burning(TokenId)` + `Modify([])` token-dropping
+burn (burn through a non-`End` state spend). GREEN: reject positive; require
+exactly one cage-policy mint entry (the matching token at `-1`) coupled to the
+owner-authorized `End`; AND a `validModify` **reverse guard** — `Modify` may not
+mint or burn its own thread token — so an exact burn can coexist only with the
+owner-authorized `End` branch (H6 exclusivity). This reverse guard is **distinct
+from FR4**: it does not require the token in the continuing output; FR4
+output-confinement (blocking a no-burn `Modify` from moving the token out) is a
+separate Slice-5 target, additive to this guard. (Aiken-only wire change:
+`Burning` gains a `TokenId`.)
 `fix(onchain): couple cage burn to owner-authorized end`
 
 ### Slice 4 — Harden Migrating pin + confinement (FR3 / H2+H3-migration)
@@ -186,15 +193,18 @@ output.
 `fix(onchain): pin cage migration predecessor and confine successor`
 
 ### Slice 5 — Harden Modify confinement + authorization (FR4+FR5+FR6 / H3-modify+H4+H5)
-Attack RED ×4: (a) token-dropping Modify accepted; (b) output-`identity_root`
-self-authorization accepted; (c) unrelated authenticated AID authorizes the key;
-(d) a raw-`owner_aid` prefix (not its `blake2b_256`) authorizes the key. GREEN:
-exact thread token in continuing state output; authenticate against the
-input/reference identity root; require `requestKey` length ≥ 32 and its first 32
-bytes == `blake2b_256(owner_aid)`. Includes Haskell parity + `TypesSpec.hs`
+Attack RED ×4: (a) a no-burn `Modify` moving the thread token OUT of the
+continuing state output accepted (FR4/H3-modify — distinct from the S3 reverse
+guard, which only blocks minting/burning the token); (b) output-`identity_root`
+self-authorization accepted (FR5/H4); (c) unrelated authenticated AID authorizes
+the key (FR6/H5); (d) a raw-`owner_aid` prefix (not its `blake2b_256`) authorizes
+the key (FR6/H5). GREEN: require the exact thread token in the continuing state
+output (FR4); authenticate against the input/reference identity root (FR5);
+require `requestKey` length ≥ 32 and its first 32 bytes == `blake2b_256(owner_aid)`
+(FR6). S5 **preserves the S3 `validModify` no-mint/burn reverse guard intact**
+(additive — must not weaken/revert it). Includes Haskell parity + `TypesSpec.hs`
 update **only if** a mirrored type's wire shape changes. (May split into 5a
-confinement / 5b authorization if the commit grows unwieldy — orchestrator
-decides at dispatch.)
+confinement / 5b authorization if the commit grows unwieldy.)
 `fix(onchain): authenticate cage modify against input identity state`
 
 ### Slice 6 — Execution-unit measurements + supported bound (FR9)

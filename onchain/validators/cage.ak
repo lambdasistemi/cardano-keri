@@ -27,7 +27,7 @@ validator mpfCage(_version: Int) {
     when redeemer is {
       Minting(mint) -> validateMint(mint, policyId, tx)
       Migrating(migration) -> validateMigration(migration, policyId, tx)
-      Burning -> True
+      Burning(tokenId) -> validateBurn(tokenId, policyId, tx)
     }
   }
 
@@ -98,6 +98,40 @@ fn validateEnd(policyId, tokenId, tx) {
   let Transaction { mint, .. } = tx
   expect Some(q) = quantity(policyId, mint, tokenId)
   expect q == -1
+  True
+}
+
+/// Validate a `Burning` mint: the burn of a cage thread token must be exactly one
+/// owner-authorized End lifecycle transition.
+///
+/// - The cage policy must mint **exactly one** entry — the burned `tokenId`'s
+///   asset name at quantity **-1**. Inspecting the full `tokens(mint, policyId)`
+///   map (not just the derived token's quantity) rejects any positive quantity
+///   (a counterfeit), any extra asset name, and any mismatched entry (H1).
+/// - The burn must be **coupled** to an owner-authorized `End`: a cage-script
+///   state UTxO holding the burned token must be spent, and that state's owner
+///   must sign. The `End` spend path independently re-checks the -1 burn, so a
+///   `Burning` mint and its `End` spend are one exact lifecycle transition — a
+///   burn with no matching state UTxO, or one the owner did not authorize, is
+///   rejected (H6).
+fn validateBurn(tokenId: TokenId, policyId: PolicyId, tx: Transaction) {
+  let Transaction { mint, inputs, extra_signatories, .. } = tx
+  expect [Pair(burnedName, burnedQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect burnedName == tokenId.assetName
+  expect burnedQty == -1
+  expect Some(stateInput) =
+    find(
+      inputs,
+      fn(input) {
+        input.output.address.payment_credential == address.Script(policyId) && quantity(
+          policyId,
+          input.output.value,
+          tokenId,
+        ) == Some(1)
+      },
+    )
+  let State { owner, .. } = readState(stateInput)
+  expect has(extra_signatories, owner)
   True
 }
 
@@ -321,7 +355,14 @@ fn validModify(
   tx: Transaction,
   actions: List<RequestAction>,
 ) {
-  let Transaction { outputs, inputs, validity_range, fee: tx_fee, .. } = tx
+  let Transaction { outputs, inputs, validity_range, fee: tx_fee, mint, .. } =
+    tx
+  // Spend-side half of the H6 mint↔End coupling (see `validateBurn`): a Modify
+  // continues the cage lifecycle, so it must NOT mint or burn its own thread
+  // token. Burning is exclusively the owner-authorized End path, so a burn
+  // cannot be laundered through a Modify of the same state UTxO.
+  expect address.Script(scriptPolicy) = input.output.address.payment_credential
+  expect None = quantity(scriptPolicy, mint, tokenId)
   let State { root, tip, process_time, retract_time, .. } = state
   expect Some(output) = head(outputs)
   expect InlineDatum(outDatum) = output.datum

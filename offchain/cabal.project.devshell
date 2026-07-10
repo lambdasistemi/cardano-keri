@@ -1,0 +1,122 @@
+-- Dev-shell-only project view (issue #99, Slice 9c) — CHaP-offline full gate.
+--
+-- `just devshell-offchain` and the CI "Dev shell" job build the FULL local
+-- project (library + unit-tests + e2e-tests + gen-vectors) from inside
+-- `nix develop` with:
+--   cabal build all --enable-tests -O0 --project-file=cabal.project.devshell
+--
+-- This is a copy of cabal.project with ONE change: the
+-- `https://chap.intersectmbo.org/` CHaP `repository` stanza is REMOVED (both
+-- index-state lines are kept). A CHaP-empty CI runner cannot fetch that secure
+-- https index. Instead the flake devShell shellHook (offchain/flake.nix) injects
+-- a Nix-LOCAL CHaP repository — a SECURE `file:` repo sourced from the `CHaP`
+-- haskell.nix flake input in the nix store — into CABAL_CONFIG, so cabal
+-- resolves the CHaP package set and builds the sublibrary-providing stack
+-- (io-classes, typed-protocols, ouroboros-network, cardano-node-clients:devnet,
+-- …) from that LOCAL CHaP source with NO network fetch of the CHaP index. This
+-- is CHaP-offline, not fully network-offline: hackage (plain http) and the
+-- source-repository-package git clones are still fetched live, as they already
+-- were on the passing runner — only the secure https CHaP index was the failure.
+-- The full offchain/cabal.project (with the https CHaP repository) is unchanged
+-- and is what haskell.nix reads at eval time via its inputMap; this view is
+-- consumed only by the explicit --project-file flag.
+--
+index-state:
+  , hackage.haskell.org 2026-04-17T00:00:00Z
+  , cardano-haskell-packages 2026-04-15T11:20:53Z
+
+packages: .
+
+
+-- ----------------------------------------------------------------------
+-- cardano-node-clients owns the `devnet` public sublibrary
+-- (Cardano.Node.Client.E2E.Setup.withDevnet) used by the offchain/e2e
+-- live-boundary smoke. Immutable pin; the rev matches the flake source
+-- input used for E2E_GENESIS_DIR (they MUST agree). cardano-node itself
+-- is a flake RUNTIME input (the node binary) only — never a Cabal
+-- source-repository-package. The Cardano ledger/node LIBRARY versions
+-- stay resolved from CHaP under the constraints block below.
+-- ----------------------------------------------------------------------
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/cardano-node-clients
+  tag: ca86f11d27b34e37d3814e4d3c3d66e256400403
+  --sha256: 01ic1620d3qs1y224qgvx21k1i4jzf5z6ygprwajsnrgjzacni5y
+
+-- ----------------------------------------------------------------------
+-- Transitive git deps of cardano-node-clients. Mirrored verbatim from
+-- the proven cardano-tx-tools pin set so cabal can resolve a build plan
+-- without pulling these from elsewhere.
+-- ----------------------------------------------------------------------
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/chain-follower
+  tag: 371b5930976ac3bb4e8a4ef576d5098d706984ee
+  --sha256: 1rks78zmgmxz5cg4v82vnc6hwib8vrylwk2m7y82iqaymmnskdvf
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/rocksdb-kv-transactions
+  tag: e2e77579888ebbd832ea750ebf2635dfc3307025
+  --sha256: 0nd1yz6k3xh1p7nlswp2jbw74bzqr7bvz11kcfyhhimqmjhkqvwm
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/rocksdb-haskell.git
+  tag: a3e86b39f9510fea54abf734ee84aec33d0d683f
+  --sha256: 1gjzqhf81fy3bpc79ndmx3s77x3s1gf0lsk762acbfnpfh6g1hd0
+
+source-repository-package
+  type: git
+  location: https://github.com/cardano-foundation/cardano-ledger-read
+  tag: 34d0767bd5c3648ab77ecbc00db0ad0a2a5316a5
+  --sha256: 0v357pbw2s22lsizxidq67pn4dcjkajips6mlcskd1zna35nyyv6
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: typed-protocols-1.2.0.0
+  --sha256: 0v9rjf0q8wbhscfyvbwbwpzjq078l4il3i4vyyghqxahy293whwq
+  subdir: typed-protocols
+
+source-repository-package
+  type: git
+  location: https://github.com/stevana/quickcheck-state-machine
+  tag: v0.10.3
+  --sha256: 1v7pk509ysbfkbkvf8sppf0pgp866vyviah5gsihlsvlb08lnrfg
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cuddle
+  tag: cuddle-1.1.1.0
+  --sha256: 1f4wk3kgb68bg97gfb9wycv5zkv0dsghlkf9pj64z0bpcr0wkxrc
+
+-- Pin Cardano and Ouroboros packages for the cardano-node 10.7.0 line
+-- (matches cardano-node-clients' constraint set for binary
+-- interoperability with the pinned cardano-node runtime input).
+constraints:
+    cardano-ledger-allegra == 1.9.0.0
+  , cardano-ledger-alonzo == 1.15.0.0
+  , cardano-ledger-api == 1.13.0.0
+  , cardano-ledger-babbage == 1.13.0.0
+  , cardano-ledger-byron == 1.3.0.0
+  , cardano-ledger-conway == 1.21.0.0
+  , cardano-ledger-core == 1.19.0.0
+  , cardano-ledger-mary == 1.10.0.0
+  , cardano-ledger-shelley == 1.18.0.0
+  , cardano-crypto-class == 2.3.1.0
+  , cardano-crypto-praos == 2.2.2.0
+  , cardano-protocol-tpraos == 1.5.0.0
+  , cuddle == 1.1.1.0
+  , quickcheck-state-machine == 0.10.3
+  , ouroboros-consensus == 1.0.0.0
+  , ouroboros-network == 1.1.0.0
+  , typed-protocols == 1.2.0.0
+
+package ouroboros-consensus
+  tests: False
+  benchmarks: False
+
+package ouroboros-network
+  tests: False
+  benchmarks: False

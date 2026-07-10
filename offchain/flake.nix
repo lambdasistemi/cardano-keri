@@ -113,6 +113,79 @@
                 ++ pkgs.lib.optionals
                 (pkgs.lib.elem system [ "x86_64-linux" "aarch64-linux" ])
                 [ pkgs.liburing ];
+              # Make the in-shell `cabal build` resolve+build CHaP-offline (issue
+              # #99, S9c) — i.e. with NO fetch of the secure https CHaP index
+              # (hackage over http and the git SRP clones stay live). exactDeps has
+              # haskell.nix generate a CABAL_CONFIG that pins the native-lib search
+              # paths and the GHC package DB for this shell — the base cabal config
+              # the shellHook below augments. It does NOT let cabal reuse the
+              # prebuilt CHaP packages wholesale: cabal's solver cannot consume a
+              # sublibrary (cardano-node-clients:devnet, io-classes:strict-stm, …)
+              # from an already-installed unit, so the full gate must rebuild the
+              # CHaP stack from source — which the nix-local CHaP repo (shellHook)
+              # then supplies from local source, no CHaP fetch.
+              exactDeps = true;
+              # Give the in-shell cabal a Nix-LOCAL CHaP repository so the full
+              # `cabal build all --enable-tests --project-file=cabal.project.devshell`
+              # resolves the CHaP package set and builds the sublibrary-providing
+              # stack (io-classes, typed-protocols, ouroboros-network,
+              # cardano-node-clients:devnet, …) from LOCAL source, with NO network
+              # fetch of the CHaP index (this is CHaP-offline, not fully
+              # network-offline — see the hackage/git note below). cabal.project.devshell
+              # drops the https CHaP `repository`; here we append a SECURE `file:`
+              # repository of the same name pointing at the `CHaP` flake input in the
+              # nix store (a complete cabal secure-repo layout: 01-index.tar.gz +
+              # root/snapshot/timestamp.json + package/ sources). A secure `file:`
+              # repo honours the CHaP index-state (so the solver sees the SAME
+              # consistent snapshot as the packaged build — a `file+noindex` repo
+              # would instead expose every version and mis-resolve), reads the
+              # index/sources from the read-only store, and writes its generated
+              # index cache under the explicit `remote-repo-cache`
+              # (dist-newstyle/keri-repo-cache) set below — NOT $CABAL_DIR, since the
+              # nix-store repo is read-only. We also re-declare hackage: exactDeps'
+              # CABAL_CONFIG replaces cabal's default config, and a few CHaP-package
+              # deps (e.g. transformers-except, a dep of ouroboros-network) live on
+              # hackage; hackage is plain http, which the CHaP-empty runner CAN reach
+              # (only the secure https CHaP index was ever the failure), and the
+              # source-repository-package git clones stay live too. `just
+              # devshell-offchain` and CI run `cabal update
+              # --project-file=cabal.project.devshell` first (hackage over http + the
+              # local CHaP index generated offline). The augmented config is written
+              # under the gitignored dist-newstyle/, never the tracked tree. root-keys
+              # mirror offchain/cabal.project.
+              shellHook = ''
+                if [ -n "$CABAL_CONFIG" ] && [ -f "$CABAL_CONFIG" ]; then
+                  mkdir -p "$PWD/dist-newstyle"
+                  # Dedicated writable repo-index cache. cabal's secure-repo lock
+                  # does not create its parent dir, so pre-create both repos'
+                  # subdirs here (empty on a fresh checkout — the CHaP index is
+                  # regenerated offline from the nix-local repo, hackage over http).
+                  __keri_cache="$PWD/dist-newstyle/keri-repo-cache"
+                  mkdir -p "$__keri_cache/hackage.haskell.org" \
+                           "$__keri_cache/cardano-haskell-packages"
+                  __keri_cfg="$PWD/dist-newstyle/keri-devshell-cabal.config"
+                  cat "$CABAL_CONFIG" > "$__keri_cfg"
+                  printf '%s\n' \
+                    ''' \
+                    "remote-repo-cache: $__keri_cache" \
+                    ''' \
+                    'repository hackage.haskell.org' \
+                    '  url: http://hackage.haskell.org/' \
+                    ''' \
+                    'repository cardano-haskell-packages' \
+                    "  url: file:${inputs.CHaP}" \
+                    '  secure: True' \
+                    '  root-keys:' \
+                    '    3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f' \
+                    '    443abb7fb497a134c343faf52f0b659bd7999bc06b7f63fa76dc99d631f9bea1' \
+                    '    a86a1f6ce86c449c46666bda44268677abf29b5b2d2eb5ec7af903ec2f117a82' \
+                    '    bcec67e8e99cabfa7764d75ad9b158d72bfacf70ca1d0ec8bc6b4406d1bf8413' \
+                    '    c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56' \
+                    '    d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee' \
+                    >> "$__keri_cfg"
+                  export CABAL_CONFIG="$__keri_cfg"
+                fi
+              '';
             };
           };
 

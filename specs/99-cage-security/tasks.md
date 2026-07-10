@@ -402,19 +402,19 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S9c RED (reproduce FIRST): with an ISOLATED empty cabal cache
+- [X] T099-S9c RED (reproduce FIRST): with an ISOLATED empty cabal cache
   (`CABAL_DIR`/`HOME`/`XDG_*` → a fresh temp dir, no CHaP index) run
   `nix develop --quiet -c cabal build all --enable-tests -O0` and observe the SAME
   CHaP-fetch failure the CI runner hits (`DnsHostNotFound` / `https not supported`).
   Navigator confirms it authentically reproduces the CI failure (not a stub).
-- [ ] T099-S9c GREEN: make the dev-shell cabal build resolve **offline** (no CHaP
+- [X] T099-S9c GREEN: make the dev-shell cabal build resolve **offline** (no CHaP
   network fetch) — e.g. `active-repositories: :none` for the dev-shell build, a
   nix-provided cabal index / package DB, or a pre-warm step from a nix source.
   **KEEP** the gate (do not delete or weaken it — it must still prove a working
   dev-shell `cabal build`). Prove GREEN locally with the isolated empty cache.
-- [ ] T099-S9c Keep the SAME command in `just devshell-offchain` and the CI Dev
+- [X] T099-S9c Keep the SAME command in `just devshell-offchain` and the CI Dev
   shell job (or update both identically). Do NOT touch `gate.sh` (orchestrator).
-- [ ] T099-S9c Run `./gate.sh` + the isolated-cache focused proof; commit
+- [X] T099-S9c Run `./gate.sh` + the isolated-cache focused proof; commit
   `build(offchain): resolve dev-shell cabal build offline for CHaP-empty CI`.
 
 Focused command:

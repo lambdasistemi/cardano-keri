@@ -72,14 +72,19 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # Prove `nix develop` yields a working toolchain AND that the project
-      # compiles from the dev shell (the haskell.nix package DB provides all
-      # deps prebuilt, so cabal only compiles the local packages). --enable-tests
-      # covers the offchain/e2e test component + the cardano-node-clients
-      # `devnet` sublibrary.
+      # Prove `nix develop` yields a working toolchain AND that the full project
+      # compiles from the dev shell CHaP-offline — without fetching the secure
+      # https CHaP index a fresh CHaP-empty runner cannot reach (issue #99 S9c).
+      # (hackage over http + the git SRPs stay live, as on the passing runner;
+      # only the secure https CHaP index was the failure.) The dev shell injects a
+      # Nix-LOCAL CHaP repository (from the CHaP flake input); `cabal update`
+      # generates its index cache offline + refreshes hackage (plain http), then
+      # the build compiles the CHaP stack + local project from local source.
+      # --enable-tests covers the offchain/e2e test component + the
+      # cardano-node-clients `devnet` sublibrary (a real full build, not reduced).
       - name: Dev-shell cabal build
         working-directory: offchain
-        run: nix develop --quiet -c cabal build all --enable-tests -O0
+        run: nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
 
   e2e:
     name: E2E (withDevnet)

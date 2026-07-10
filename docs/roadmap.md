@@ -162,7 +162,7 @@ Demand-driven, after the pilots prove the core:
   seal↔native correspondence spot-checks
   (`specs/68-keystate-shape/identity-model.md` §8, open thread 4). The
   in-script blake3 question is reopened: the lane-packed spike #88 core fits
-  the whole single-chunk domain (55.1% cpu / 75.2% mem at 1024 bytes), and
+  the whole single-chunk domain (54.3% cpu / 71.7% mem at 1024 bytes), and
   the full single-tx registration context is the remaining measurement. A
   native `blake3` builtin CIP remains the sunset path for multi-chunk inputs
   and for reclaiming the budget.

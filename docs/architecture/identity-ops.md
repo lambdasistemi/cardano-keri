@@ -9,7 +9,7 @@
     below survive as the induction step, plus Ed25519 witness-receipt verification and
     the §6a two-seal handoff for witness changes); and **inception (genesis) is
     registration-attested, not yet self-certifying** (§7a — the lane-packed spike #88
-    core now fits the whole single-chunk domain, 55.1% cpu / 75.2% mem at the full
+    core now fits the whole single-chunk domain, 54.3% cpu / 71.7% mem at the full
     1024-byte chunk, but the full single-transaction registration path has not been
     measured).
     The operation taxonomy and the freeze paths remain current.

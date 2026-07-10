@@ -8,8 +8,9 @@
     controller's KEL (the reveal / `next_digest` / threshold-sig / `seq+1` mechanics
     below survive as the induction step, plus Ed25519 witness-receipt verification and
     the §6a two-seal handoff for witness changes); and **inception (genesis) is
-    registration-attested, not self-certifying** (§7a — the Blake3 AID preimage cannot
-    be checked on-chain; spike #88 measured in-script blake3 as not fitting the budget).
+    registration-attested, not yet self-certifying** (§7a — the re-optimized spike #88
+    core fits representative inputs, but the full single-transaction registration path
+    has not been measured and a full 1024-byte chunk still exceeds the CPU budget).
     The operation taxonomy and the freeze paths remain current.
 
 There are five operations on the identity plane: inception, rotation, close,

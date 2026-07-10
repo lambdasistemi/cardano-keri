@@ -160,9 +160,11 @@ Demand-driven, after the pilots prove the core:
   longer needed for identity; the residual roles are anchoring
   freshness/liveness, credential-plane (R-TEL) policing, and optional
   seal↔native correspondence spot-checks
-  (`specs/68-keystate-shape/identity-model.md` §8, open thread 4). Note the
-  in-script blake3 question is settled: spike #88 measured it as not fitting
-  the tx budget (PR #89) — a native `blake3` builtin CIP is the sunset path.
+  (`specs/68-keystate-shape/identity-model.md` §8, open thread 4). The
+  in-script blake3 question is reopened: the re-optimized spike #88 core fits
+  representative inputs, but the full single-tx registration context remains
+  unmeasured and a 1024-byte chunk exceeds the CPU budget. A native `blake3`
+  builtin CIP remains the full-range sunset path.
 - Aiken package registry publication
   ([#18](https://github.com/lambdasistemi/cardano-keri/issues/18)), once M2
   freezes the validator API.

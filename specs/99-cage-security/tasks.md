@@ -331,7 +331,7 @@ Tasks:
 
 ### Slice 9a-GATE — orchestrator-owned gate extension (after S9a acceptance)
 
-- [ ] T099-S9a-GATE After S9a is navigator-verified and accepted, the ticket
+- [X] T099-S9a-GATE After S9a is navigator-verified and accepted, the ticket
   owner extends `gate.sh` in its own mechanical commit
   `chore: extend gate.sh with #99 withDevnet e2e smoke` to invoke the repo-owned
   E2E app/check + the upgraded dev-shell build; run it immediately; keep it

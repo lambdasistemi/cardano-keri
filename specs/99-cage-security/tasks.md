@@ -189,15 +189,15 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S6 Add full-context `const` measurement fixtures invoking the
+- [X] T099-S6 Add full-context `const` measurement fixtures invoking the
   hardened handlers on their accept path (Mint, Migrate, Modify at the supported
   batch size, End).
-- [ ] T099-S6 Run `aiken check --plain-numbers` and record memory/CPU per path.
-- [ ] T099-S6 Compare each to the mainnet per-tx budget (mem 14,000,000; CPU
+- [X] T099-S6 Run `aiken check --plain-numbers` and record memory/CPU per path.
+- [X] T099-S6 Compare each to the mainnet per-tx budget (mem 14,000,000; CPU
   10,000,000,000); state the supported Modify batch/output bound.
-- [ ] T099-S6 Write `REPORT.md` with the fit verdict and the supported bound.
-- [ ] T099-S6 Run `./gate.sh`.
-- [ ] T099-S6 Commit as `docs(onchain): measure hardened cage execution units`.
+- [X] T099-S6 Write `REPORT.md` with the fit verdict and the supported bound.
+- [X] T099-S6 Run `./gate.sh`.
+- [X] T099-S6 Commit as `docs(onchain): measure hardened cage execution units`.
 
 Focused command:
 

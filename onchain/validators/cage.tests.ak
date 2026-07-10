@@ -32,7 +32,13 @@ test accept_mint_full_tx() {
   let state =
     state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
   let tx = mint_tx(cage_policy, asset, state)
-  cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Minting(Mint { asset }),
+    cage_policy,
+    tx,
+  )
 }
 
 // Accept: migrate a token from a predecessor policy — burn one old-policy token
@@ -45,7 +51,8 @@ test accept_migrate_full_tx() {
   let tx = migrate_tx(cage_policy, old_cage_policy, tokenId, state)
   cage.mpfCage.mint(
     0,
-    Migrating(Migration { oldPolicy: old_cage_policy, tokenId }),
+    old_cage_policy,
+    Migrating(Migration { tokenId }),
     cage_policy,
     tx,
   )
@@ -61,7 +68,14 @@ test accept_modify_empty_batch_full_tx() {
   let out_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
   let tx =
     modify_tx(cage_policy, own_ref, tokenId, owner_vkh, in_state, out_state)
-  cage.mpfCage.spend(0, Some(in_state), Modify([]), own_ref, tx)
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([]),
+    own_ref,
+    tx,
+  )
 }
 
 // Accept: a non-empty Modify that folds one Insert request into the value trie.
@@ -153,7 +167,14 @@ test accept_modify_insert_full_tx() {
       0,
     )
 
-  cage.mpfCage.spend(0, Some(in_state), Modify([action]), own_ref, tx)
+  cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([action]),
+    own_ref,
+    tx,
+  )
 }
 
 // Accept: End the cage — owner-signed spend of the state UTxO that burns its
@@ -164,7 +185,7 @@ test accept_end_full_tx() {
   let state =
     state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
   let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
-  cage.mpfCage.spend(0, Some(state), End, own_ref, tx)
+  cage.mpfCage.spend(0, old_cage_policy, Some(state), End, own_ref, tx)
 }
 
 // Accept: a Burning mint coupled to an owner-authorized End. The owner spends the
@@ -178,7 +199,7 @@ test accept_burning_full_tx() {
   let state =
     state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
   let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
-  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
 // ---- Slice 2 attack tests: minting confinement (FR1 / H3-mint) --------------
@@ -210,7 +231,13 @@ test reject_mint_token_absent_from_state_output() fail {
       [state_out],
       from_asset(cage_policy, tokenId.assetName, 1),
     )
-  cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Minting(Mint { asset }),
+    cage_policy,
+    tx,
+  )
 }
 
 // RED (b): a mint tx that mints the derived thread token AND an additional asset
@@ -242,7 +269,13 @@ test reject_mint_extra_asset_name_under_policy() fail {
       [state_out],
       mint,
     )
-  cage.mpfCage.mint(0, Minting(Mint { asset }), cage_policy, tx)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Minting(Mint { asset }),
+    cage_policy,
+    tx,
+  )
 }
 
 // ---- Slice 3 attack tests: burn/End lifecycle (FR2 / H1+H6) -----------------
@@ -287,7 +320,7 @@ test reject_burning_positive_mint() fail {
       interval.everything,
       0,
     )
-  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
 // (b) NO matching End spend. Owner signs and the burn is a well-formed single -1
@@ -322,7 +355,7 @@ test reject_burn_state_input_token_mismatch() fail {
       interval.everything,
       0,
     )
-  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
 // (b′) End spend LACKS owner authorization. The matching state UTxO is spent and
@@ -352,7 +385,7 @@ test reject_burn_without_owner_signature() fail {
       interval.everything,
       0,
     )
-  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
 // (c) EXTRA cage-policy entry. A well-formed owner-authorized End (matching state
@@ -385,7 +418,7 @@ test reject_burning_extra_cage_entry() fail {
       interval.everything,
       0,
     )
-  cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
+  cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
 // (d) BURN LAUNDERED THROUGH MODIFY. The mint handler alone cannot tell which
@@ -428,9 +461,126 @@ test reject_burn_via_modify_not_end() fail {
       interval.everything,
       0,
     )
-  let mint_ok = cage.mpfCage.mint(0, Burning(tokenId), cage_policy, tx)
-  let spend_ok = cage.mpfCage.spend(0, Some(in_state), Modify([]), own_ref, tx)
+  let mint_ok =
+    cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
+  let spend_ok =
+    cage.mpfCage.spend(
+      0,
+      old_cage_policy,
+      Some(in_state),
+      Modify([]),
+      own_ref,
+      tx,
+    )
   mint_ok && spend_ok
+}
+
+// ---- Slice 4 attack tests: migration pin + confinement (FR3 / H2+H3-migration)
+//
+// Same RED→GREEN convention: each `fail` test asserts the DESIRED post-fix
+// rejection. On the current `validateMigration` (which trusts the caller-supplied
+// `oldPolicy` and never inspects the full per-policy mint maps or confines the
+// successor token in the state output) each malicious tx is ACCEPTED (handler
+// returns True without failing), so the `fail`-annotated test FAILS = RED. After
+// pinning the predecessor policy and hardening the exact-mint + confinement checks
+// the tx is REJECTED (handler fails), so the test PASSES = GREEN.
+//
+// Each attack is an otherwise-well-formed migration EXCEPT for one defect, so it
+// isolates exactly one invariant: the pinned predecessor (a), the exact single
+// successor entry (b), and successor-token confinement in the state output (c).
+
+// (a) ATTACKER-CREATED PREDECESSOR POLICY. The attacker controls their own policy
+// `attacker_policy`, mints a token under it, "burns" it at -1, and mints a
+// genuine successor at +1 under the real cage policy — opening a real cage state
+// they did not migrate from any prior cage. Current `validateMigration` trusts
+// the redeemer's `oldPolicy`, so it accepts. The FR3 fix pins the predecessor
+// policy by construction so an attacker-created predecessor cannot satisfy it.
+test reject_migrate_attacker_predecessor_policy() fail {
+  let asset = out_ref(seed_tx_id, 1)
+  let tokenId = token_of(asset)
+  let attacker_policy =
+    #"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  // Successor token honestly confined in the state output, so only the
+  // predecessor pin can reject.
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    )
+  let mint =
+    from_asset(attacker_policy, tokenId.assetName, -1)
+      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+  let tx = mint_context([], [state_out], mint)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Migrating(Migration { tokenId }),
+    cage_policy,
+    tx,
+  )
+}
+
+// (b) EXTRA SUCCESSOR-POLICY ASSET NAME. A genuine predecessor burn at -1, the
+// successor token minted at +1 AND confined in the state output, but the cage
+// policy ALSO mints an unrelated asset name ("evil") — an extra token minted
+// alongside the successor thread token. Current `validateMigration` only checks
+// the named token's quantity via `quantity(policyId, mint, tokenId)` and never
+// inspects the full `tokens(mint, policyId)` map, so it accepts. The FR3 fix
+// requires exactly one asset name under the successor policy at qty 1.
+test reject_migrate_extra_successor_asset() fail {
+  let asset = out_ref(seed_tx_id, 1)
+  let tokenId = token_of(asset)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state_out =
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    )
+  let mint =
+    from_asset(old_cage_policy, tokenId.assetName, -1)
+      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+      |> merge(from_asset(cage_policy, "evil", 1))
+  let tx = mint_context([], [state_out], mint)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Migrating(Migration { tokenId }),
+    cage_policy,
+    tx,
+  )
+}
+
+// (c) SUCCESSOR TOKEN ABSENT FROM STATE OUTPUT. A genuine predecessor burn at -1
+// and exactly one successor mint at +1, but the designated state output is
+// ada-only — the successor thread token is not confined where the state lives
+// (it was sent elsewhere / omitted). Current `validateMigration` never checks the
+// token is present in the state output, so it accepts. The FR3 fix requires
+// `quantity(policyId, output.value, tokenId) == Some(1)` on the state output.
+test reject_migrate_successor_token_absent_from_state_output() fail {
+  let asset = out_ref(seed_tx_id, 1)
+  let tokenId = token_of(asset)
+  let state =
+    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  // State output at the cage script with an empty-root StateDatum, but ada-only:
+  // the successor token is NOT confined here.
+  let state_out =
+    inline_output(from_script(cage_policy), from_lovelace(min_ada), state)
+  let mint =
+    from_asset(old_cage_policy, tokenId.assetName, -1)
+      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+  let tx = mint_context([], [state_out], mint)
+  cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Migrating(Migration { tokenId }),
+    cage_policy,
+    tx,
+  )
 }
 
 // ---- Tests ------------------------------------------------------------------

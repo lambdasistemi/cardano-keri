@@ -22,11 +22,12 @@ use types.{
 /// Domain tag for value-write authorization messages.
 const value_write_domain: ByteArray = "cardano-keri/value-write/v1"
 
-validator mpfCage(_version: Int) {
+validator mpfCage(_version: Int, predecessorPolicy: PolicyId) {
   mint(redeemer: MintRedeemer, policyId: PolicyId, tx: Transaction) {
     when redeemer is {
       Minting(mint) -> validateMint(mint, policyId, tx)
-      Migrating(migration) -> validateMigration(migration, policyId, tx)
+      Migrating(migration) ->
+        validateMigration(migration, predecessorPolicy, policyId, tx)
       Burning(tokenId) -> validateBurn(tokenId, policyId, tx)
     }
   }
@@ -429,27 +430,44 @@ pub fn validateMint(minting: Mint, policyId: PolicyId, tx: Transaction) {
   True
 }
 
+/// Validate a `Migrating` mint: move a cage thread token from the **pinned**
+/// predecessor policy to this cage policy, one exact lifecycle transition.
+///
+/// - The predecessor policy is `predecessorPolicy`, a `mpfCage` validator
+///   parameter (H2 fix). Because a different parameter changes the script hash,
+///   an attacker-created predecessor policy cannot satisfy this by construction —
+///   the caller can no longer supply an arbitrary `oldPolicy`. Genesis cages have
+///   no predecessor and are created via `Minting`, never this path.
+/// - The predecessor policy must burn **exactly one** entry: the migrated token's
+///   asset name at quantity -1. Inspecting the full `tokens(mint, predecessorPolicy)`
+///   map (not just the named token) rejects any extra asset name or extra quantity.
+/// - The successor (this) policy must mint **exactly one** entry: the same asset
+///   name at quantity 1 (same full-map check).
+/// - The minted successor token is **confined** in the designated state output
+///   (H3-migration), reusing the `validateMint` confinement shape.
 pub fn validateMigration(
   migration: Migration,
+  predecessorPolicy: PolicyId,
   policyId: PolicyId,
   tx: Transaction,
 ) {
-  let Migration { oldPolicy, tokenId } = migration
+  let Migration { tokenId } = migration
   let Transaction { outputs, mint, .. } = tx
-  expect
-    when quantity(oldPolicy, mint, tokenId) is {
-      Some(qty) -> qty == -1
-      None -> False
-    }
-  expect
-    when quantity(policyId, mint, tokenId) is {
-      Some(qty) -> qty == 1
-      None -> False
-    }
+  // Exactly one predecessor-policy burn of the migrated token at -1.
+  expect [Pair(oldName, oldQty)] =
+    dict.to_pairs(tokens(mint, predecessorPolicy))
+  expect oldName == tokenId.assetName
+  expect oldQty == -1
+  // Exactly one successor-policy mint of the migrated token at +1.
+  expect [Pair(newName, newQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect newName == tokenId.assetName
+  expect newQty == 1
   expect Some(output) = head(outputs)
   expect address.Script(targetScriptHash) = output.address.payment_credential
   expect targetScriptHash == policyId
   expect InlineDatum(tokenState) = output.datum
   expect StateDatum(State { .. }) = tokenState
+  // Confine the minted successor thread token in the designated state output.
+  expect quantity(policyId, output.value, tokenId) == Some(1)
   True
 }

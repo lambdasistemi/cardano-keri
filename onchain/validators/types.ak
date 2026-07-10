@@ -1,6 +1,5 @@
 use aiken/crypto.{VerificationKeyHash}
 use aiken/merkle_patricia_forestry.{Proof}
-use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference}
 use lib.{TokenId}
 
@@ -8,8 +7,11 @@ pub type Mint {
   asset: OutputReference,
 }
 
+/// Migration of a cage thread token from the pinned predecessor policy to this
+/// cage policy. The predecessor policy is a `mpfCage` validator parameter (not a
+/// caller-supplied field), so an attacker-created predecessor cannot satisfy the
+/// migration by construction.
 pub type Migration {
-  oldPolicy: PolicyId,
   tokenId: TokenId,
 }
 

@@ -116,19 +116,19 @@ Owned files:
 
 Tasks:
 
-- [ ] T099-S4 RED (a): full-tx attack test — migration accepted from an
+- [X] T099-S4 RED (a): full-tx attack test — migration accepted from an
   attacker-created predecessor policy.
-- [ ] T099-S4 RED (b): full-tx attack test — extra or non-exact
+- [X] T099-S4 RED (b): full-tx attack test — extra or non-exact
   predecessor/successor policy quantity or asset name accepted.
-- [ ] T099-S4 GREEN: pin the predecessor policy/version (validator parameter or
+- [X] T099-S4 GREEN: pin the predecessor policy/version (validator parameter or
   genuine-predecessor-spend at pinned version-1); exactly 1 predecessor burn /
   1 successor mint, rejecting extra entries under either policy; confine the
   successor token in the state output.
-- [ ] T099-S4 Keep the happy-path Migrate accept test green.
-- [ ] T099-S4 If the pinning mechanism cannot reject an attacker predecessor
+- [X] T099-S4 Keep the happy-path Migrate accept test green.
+- [X] T099-S4 If the pinning mechanism cannot reject an attacker predecessor
   within AC3, BLOCK to the epic owner (do not weaken acceptance).
-- [ ] T099-S4 Run the focused command and `./gate.sh`.
-- [ ] T099-S4 Commit as `fix(onchain): pin cage migration predecessor and confine successor`.
+- [X] T099-S4 Run the focused command and `./gate.sh`.
+- [X] T099-S4 Commit as `fix(onchain): pin cage migration predecessor and confine successor`.
 
 Focused command:
 

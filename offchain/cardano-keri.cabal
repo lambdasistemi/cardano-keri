@@ -86,3 +86,58 @@ executable gen-vectors
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+
+-- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
+-- submits it to a real cardano-node started via cardano-node-clients'
+-- `devnet` public sublibrary (Cardano.Node.Client.E2E.Setup.withDevnet),
+-- observing it settle on-chain. Linux-only in the flake wiring; the
+-- `build-node-tools` flag lets non-Linux `cabal build all` skip it.
+flag build-node-tools
+  description: Build the cardano-node-clients-backed e2e smoke.
+  default:     True
+  manual:      True
+
+test-suite e2e-tests
+  import:           warnings
+
+  if !flag(build-node-tools)
+    buildable: False
+
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   e2e
+  main-is:          e2e-main.hs
+  other-modules:
+    CageE2ESpec
+    CageTxBuilder
+    Cardano.KERI.AID.E2E.AssetName
+    Cardano.KERI.AID.E2E.Datum
+    Cardano.KERI.AID.E2E.Mpf
+    Cardano.KERI.AID.E2E.Script
+    Cardano.KERI.AID.E2E.Wire
+
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-ledger-allegra
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:devnet
+    , cardano-strict-containers
+    , containers
+    , hspec                        >=2.11 && <2.12
+    , microlens
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , text
+    , time
+
+  ghc-options:      -threaded -with-rtsopts=-N

@@ -34,17 +34,13 @@ unit match="":
 build-offchain:
     cd offchain && nix build --quiet .#checks.x86_64-linux.unit-tests
 
-# Assert the offchain dev shell yields a working toolchain (offline)
+# Build the whole offchain project (incl. e2e test component) from the dev shell
 devshell-offchain:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd offchain
-    nix develop --quiet -c bash -euc '
-      cabal --version
-      fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-      find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
-      hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-    '
+    cd offchain && nix develop --quiet -c cabal build all --enable-tests -O0
+
+# Run the live-boundary withDevnet #99 cage Phase-2 smoke (Linux-only)
+e2e:
+    cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
 
 # --- onchain (Aiken) ---
 

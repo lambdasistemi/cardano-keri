@@ -72,16 +72,28 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # Prove `nix develop` yields a working toolchain (closes #57). We do
-      # NOT run `cabal build` here: a fresh runner has no dist-newstyle plan
-      # and cabal cannot fetch the CHaP index over https, so we exercise the
-      # shell's own cabal / fourmolu / cabal-fmt / hlint instead — all offline.
-      - name: Dev-shell toolchain
+      # Prove `nix develop` yields a working toolchain AND that the project
+      # compiles from the dev shell (the haskell.nix package DB provides all
+      # deps prebuilt, so cabal only compiles the local packages). --enable-tests
+      # covers the offchain/e2e test component + the cardano-node-clients
+      # `devnet` sublibrary.
+      - name: Dev-shell cabal build
         working-directory: offchain
-        run: |
-          nix develop --quiet -c bash -euc '
-            cabal --version
-            fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-            find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
-            hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-          '
+        run: nix develop --quiet -c cabal build all --enable-tests -O0
+
+  e2e:
+    name: E2E (withDevnet)
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Live-boundary #99 cage Phase-2 smoke: the runCommand check starts a real
+      # cardano-node via withDevnet, mints/requests/modifies against the hardened
+      # validator and observes the Modify settle. Linux-only.
+      - name: withDevnet cage Phase-2 smoke
+        working-directory: offchain
+        run: nix build --quiet -L .#checks.x86_64-linux.e2e

@@ -384,6 +384,45 @@ Focused command:
 cd offchain && nix flake check --no-eval-cache   # e2e sweep check
 ```
 
+## Slice 9c — dev-shell cabal-build CI gate resolves CHaP offline (finalization CI fix, Q-003)
+
+Discovered at finalization: the S9a `nix develop --quiet -c cabal build all
+--enable-tests -O0` CI **"Dev shell"** job fails from a fresh CHaP-empty runner —
+cabal tries to fetch the CHaP index (`chap.intersectmbo.org`) and dies with
+`DnsHostNotFound` / `user error (https not supported)`. It passes locally only via
+a cached CHaP index (a local/CI divergence). All other CI jobs (incl. E2E
+withDevnet + batch sweep) pass. **Keep the gate; make it resolve offline.**
+
+Owned files:
+
+- `offchain/cabal.project` (repositories / `active-repositories` / index-state)
+- `offchain/flake.nix` + its `nix/` (dev-shell cabal index / offline provisioning)
+- `offchain/justfile` / `justfile` (`devshell-offchain` recipe, if the command changes)
+- `.github/workflows/ci.yml` (Dev shell job pre-warm / env, if needed)
+
+Tasks:
+
+- [ ] T099-S9c RED (reproduce FIRST): with an ISOLATED empty cabal cache
+  (`CABAL_DIR`/`HOME`/`XDG_*` → a fresh temp dir, no CHaP index) run
+  `nix develop --quiet -c cabal build all --enable-tests -O0` and observe the SAME
+  CHaP-fetch failure the CI runner hits (`DnsHostNotFound` / `https not supported`).
+  Navigator confirms it authentically reproduces the CI failure (not a stub).
+- [ ] T099-S9c GREEN: make the dev-shell cabal build resolve **offline** (no CHaP
+  network fetch) — e.g. `active-repositories: :none` for the dev-shell build, a
+  nix-provided cabal index / package DB, or a pre-warm step from a nix source.
+  **KEEP** the gate (do not delete or weaken it — it must still prove a working
+  dev-shell `cabal build`). Prove GREEN locally with the isolated empty cache.
+- [ ] T099-S9c Keep the SAME command in `just devshell-offchain` and the CI Dev
+  shell job (or update both identically). Do NOT touch `gate.sh` (orchestrator).
+- [ ] T099-S9c Run `./gate.sh` + the isolated-cache focused proof; commit
+  `build(offchain): resolve dev-shell cabal build offline for CHaP-empty CI`.
+
+Focused command:
+
+```sh
+CABAL_DIR=$(mktemp -d) nix develop --quiet -c cabal build all --enable-tests -O0
+```
+
 ## Finalization
 
 - [ ] T099-F1 Update PR #100 body with delivered behavior, execution units,

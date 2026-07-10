@@ -11,23 +11,29 @@ const chunk_start_end_root = #"0000000b"
 
 const full_block_len = #"00000040"
 
-const iv0 = 1779033703
+const zero_word = #"00000000"
 
-const iv1 = 3144134277
+const z1 = #"00"
 
-const iv2 = 1013904242
+// One spare zero block appended to the input so every 4-byte message-word
+// slice is exact; lane packing concatenates raw slices, so short tail
+// slices would shift lane positions.
+const zeros64 =
+  #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
-const iv3 = 2773480762
+// The four state rows live as lane-packed integers: lane j occupies bits
+// [40*(3-j), 40*(3-j)+40) — 5-byte stride, one spare byte per lane. A lane
+// accumulates un-reduced additions up to ~57 * 2^32 < 2^40, so lanes never
+// carry into each other and the width-20 big-endian image keeps each exact
+// u32 at bytes [5j+1, 5j+5).
+//
+// iv0..iv3 packed: 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a
+const iv0123 = 2364741403476308302023339026566427071707346234
 
-const iv4 = 1359893119
+// iv4..iv7 packed: 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+const iv4567 = 1807608005053212301540835567932073015297232153
 
-const iv5 = 2600822924
-
-const iv6 = 528734635
-
-const iv7 = 1541459225
-
-// Big-endian bytes of iv4..iv7, the initial b-column of the state.
+// Big-endian bytes of iv4..iv7, the initial b-row byte shadows.
 const ivb4 = #"510e527f"
 
 const ivb5 = #"9b05688c"
@@ -35,36 +41,6 @@ const ivb5 = #"9b05688c"
 const ivb6 = #"1f83d9ab"
 
 const ivb7 = #"5be0cd19"
-
-const zero_word = #"00000000"
-
-// Initial compression state. Round-to-round values do not rebuild this
-// record: `permute` passes the live fields through continuations instead.
-// The a-rows (s0..s3) and c-rows (s8..s11) accumulate un-reduced additions
-// as integers. The b-rows and d-rows stay as exact 4-byte big-endian words;
-// b also keeps an integer shadow (s4..s7) because it feeds additions.
-type State {
-  s0: Int,
-  s1: Int,
-  s2: Int,
-  s3: Int,
-  s4: Int,
-  s5: Int,
-  s6: Int,
-  s7: Int,
-  b4: ByteArray,
-  b5: ByteArray,
-  b6: ByteArray,
-  b7: ByteArray,
-  s8: Int,
-  s9: Int,
-  s10: Int,
-  s11: Int,
-  d12: ByteArray,
-  d13: ByteArray,
-  d14: ByteArray,
-  d15: ByteArray,
-}
 
 type Output {
   w0: ByteArray,
@@ -77,90 +53,100 @@ type Output {
   w7: ByteArray,
 }
 
-// Additions are left un-reduced mod 2^32; over 7 rounds a word
-// accumulates at most ~57 * 2^32 < 2^40, so a width-5 big-endian
-// conversion plus dropping the top byte recovers the exact u32. This and
-// the other hot helpers are function-valued constants deliberately: Aiken
+// The hot helpers are function-valued constants deliberately: Aiken
 // inlines constants but keeps named functions out of line.
-const truncate32 =
-  fn(x: Int) {
-    builtin.slice_bytearray(1, 4, builtin.integer_to_bytearray(True, 5, x))
-  }
+//
+// 4-byte word at `offset`; doubles as message-word load and lane
+// extraction from a width-20 image.
+const lane =
+  fn(x: ByteArray, offset: Int) { builtin.slice_bytearray(offset, 4, x) }
 
-const word =
-  fn(padded: ByteArray, offset: Int) {
-    builtin.bytearray_to_integer(
-      False,
-      builtin.slice_bytearray(offset, 4, padded),
+// Four 4-byte words joined on a 5-byte stride (19 bytes): p q r s sit at
+// offsets 0, 5, 10, 15. appendByteString is ~3 orders of magnitude
+// cheaper than an integer conversion, which is what makes lane packing
+// pay off.
+const gap19 =
+  fn(p: ByteArray, q: ByteArray, r: ByteArray, s: ByteArray) {
+    builtin.append_bytearray(
+      builtin.append_bytearray(p, builtin.append_bytearray(z1, q)),
+      builtin.append_bytearray(
+        builtin.append_bytearray(z1, r),
+        builtin.append_bytearray(z1, s),
+      ),
     )
   }
 
-// CPS keeps the 20 live state values out of a State record between rounds.
-// The final eight arguments are byte shadows already computed by the last
-// diagonal mixes. Intermediate continuations discard them; the seventh
-// continuation uses them to form Output without converting the final a/c
-// integers a second time. Aiken erases those discarded arguments.
+// One conversion packs four big-endian row words: p lands in lane 0,
+// s in lane 3.
+const pack_be =
+  fn(p: ByteArray, q: ByteArray, r: ByteArray, s: ByteArray) {
+    builtin.bytearray_to_integer(True, gap19(p, q, r, s))
+  }
+
+// Same layout read little-endian for raw message-word slices: the
+// LE-read reverses lane order, so s lands in lane 0 and p in lane 3.
+const pack_le =
+  fn(p: ByteArray, q: ByteArray, r: ByteArray, s: ByteArray) {
+    builtin.bytearray_to_integer(False, gap19(p, q, r, s))
+  }
+
+// Width-20 xor operand with each word at its lane's u32 position
+// [5j+1, 5j+5); the spare bytes xor against un-reduced high bits and are
+// sliced off with them.
+const gap20 =
+  fn(p: ByteArray, q: ByteArray, r: ByteArray, s: ByteArray) {
+    builtin.append_bytearray(z1, gap19(p, q, r, s))
+  }
+
+// One compression round over lane-packed rows. All four G functions of a
+// step run in one integer: one packed addition, one width-20 conversion,
+// one width-20 xor, then per-lane slice+rotate and a cheap re-pack.
+//
+// a: a-rows s0..s3, packed.  bp: b-rows s4..s7, packed, with byte
+// shadows b0..b3.  c: c-rows s8..s11, packed; c lanes never move —
+// diagonal mixing permutes addend pack order and extraction offsets
+// instead.  e0..e3: d-row byte words s12..s15.  m0..m15: raw 4-byte
+// little-endian message-word slices.
+//
+// The continuation receives the next round's state plus the final
+// width-20 a/c images, which only the last round reads.
 const round =
   fn(
-    s0: Int,
-    s1: Int,
-    s2: Int,
-    s3: Int,
-    s4: Int,
-    s5: Int,
-    s6: Int,
-    s7: Int,
-    b4: ByteArray,
-    b5: ByteArray,
-    b6: ByteArray,
-    b7: ByteArray,
-    s8: Int,
-    s9: Int,
-    s10: Int,
-    s11: Int,
-    d12: ByteArray,
-    d13: ByteArray,
-    d14: ByteArray,
-    d15: ByteArray,
-    m0: Int,
-    m1: Int,
-    m2: Int,
-    m3: Int,
-    m4: Int,
-    m5: Int,
-    m6: Int,
-    m7: Int,
-    m8: Int,
-    m9: Int,
-    m10: Int,
-    m11: Int,
-    m12: Int,
-    m13: Int,
-    m14: Int,
-    m15: Int,
+    a: Int,
+    bp: Int,
+    b0: ByteArray,
+    b1: ByteArray,
+    b2: ByteArray,
+    b3: ByteArray,
+    c: Int,
+    e0: ByteArray,
+    e1: ByteArray,
+    e2: ByteArray,
+    e3: ByteArray,
+    m0: ByteArray,
+    m1: ByteArray,
+    m2: ByteArray,
+    m3: ByteArray,
+    m4: ByteArray,
+    m5: ByteArray,
+    m6: ByteArray,
+    m7: ByteArray,
+    m8: ByteArray,
+    m9: ByteArray,
+    m10: ByteArray,
+    m11: ByteArray,
+    m12: ByteArray,
+    m13: ByteArray,
+    m14: ByteArray,
+    m15: ByteArray,
     then: fn(
       Int,
       Int,
-      Int,
-      Int,
-      Int,
-      Int,
-      Int,
-      Int,
       ByteArray,
       ByteArray,
       ByteArray,
       ByteArray,
       Int,
-      Int,
-      Int,
-      Int,
-      ByteArray,
-      ByteArray,
-      ByteArray,
-      ByteArray,
-      ByteArray,
-      ByteArray,
       ByteArray,
       ByteArray,
       ByteArray,
@@ -170,317 +156,129 @@ const round =
     ) ->
       Output,
   ) {
-    // column 0: G(s0, s4, s8, s12)
-    let va = s0 + s4 + m0
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), d12),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = s8 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), b4),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let ca0 = va + vb + m1
-    let cdb0 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(ca0), vdb),
-        -8,
-      )
-    let cc0 = vc + builtin.bytearray_to_integer(True, cdb0)
-    let cbb0 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(cc0), vbb),
-        -7,
-      )
-    let cb0 = builtin.bytearray_to_integer(True, cbb0)
+    // columns: G_j mixes (s_j, s_{4+j}, s_{8+j}, s_{12+j}); every packed
+    // integer and every gap20 operand is in lane order j = 0..3.
+    let va = a + bp + pack_le(m6, m4, m2, m0)
+    let vab = builtin.integer_to_bytearray(True, 20, va)
+    let vx = builtin.xor_bytearray(False, vab, gap20(e0, e1, e2, e3))
+    let vd0 = builtin.rotate_bytearray(lane(vx, 1), -16)
+    let vd1 = builtin.rotate_bytearray(lane(vx, 6), -16)
+    let vd2 = builtin.rotate_bytearray(lane(vx, 11), -16)
+    let vd3 = builtin.rotate_bytearray(lane(vx, 16), -16)
+    let vc = c + pack_be(vd0, vd1, vd2, vd3)
+    let vcb = builtin.integer_to_bytearray(True, 20, vc)
+    let wx = builtin.xor_bytearray(False, vcb, gap20(b0, b1, b2, b3))
+    let vb0 = builtin.rotate_bytearray(lane(wx, 1), -12)
+    let vb1 = builtin.rotate_bytearray(lane(wx, 6), -12)
+    let vb2 = builtin.rotate_bytearray(lane(wx, 11), -12)
+    let vb3 = builtin.rotate_bytearray(lane(wx, 16), -12)
+    let ca = va + pack_be(vb0, vb1, vb2, vb3) + pack_le(m7, m5, m3, m1)
+    let cab = builtin.integer_to_bytearray(True, 20, ca)
+    let cx = builtin.xor_bytearray(False, cab, gap20(vd0, vd1, vd2, vd3))
+    let cd0 = builtin.rotate_bytearray(lane(cx, 1), -8)
+    let cd1 = builtin.rotate_bytearray(lane(cx, 6), -8)
+    let cd2 = builtin.rotate_bytearray(lane(cx, 11), -8)
+    let cd3 = builtin.rotate_bytearray(lane(cx, 16), -8)
+    let cc = vc + pack_be(cd0, cd1, cd2, cd3)
+    let ccb = builtin.integer_to_bytearray(True, 20, cc)
+    let dx = builtin.xor_bytearray(False, ccb, gap20(vb0, vb1, vb2, vb3))
+    let cb0 = builtin.rotate_bytearray(lane(dx, 1), -7)
+    let cb1 = builtin.rotate_bytearray(lane(dx, 6), -7)
+    let cb2 = builtin.rotate_bytearray(lane(dx, 11), -7)
+    let cb3 = builtin.rotate_bytearray(lane(dx, 16), -7)
 
-    // column 1: G(s1, s5, s9, s13)
-    let va = s1 + s5 + m2
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), d13),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = s9 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), b5),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let ca1 = va + vb + m3
-    let cdb1 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(ca1), vdb),
-        -8,
-      )
-    let cc1 = vc + builtin.bytearray_to_integer(True, cdb1)
-    let cbb1 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(cc1), vbb),
-        -7,
-      )
-    let cb1 = builtin.bytearray_to_integer(True, cbb1)
+    // diagonals: G'_j mixes (s_j, s_{4+(j+1)%4}, s_{8+(j+2)%4},
+    // s_{12+(j+3)%4}). a-space values stay in lane order j; c-space
+    // addends pack as (G'_2, G'_3, G'_0, G'_1) and c-space extractions
+    // for G'_j read lane (j+2)%4, i.e. offsets 11, 16, 1, 6.
+    let ha = ca + pack_be(cb1, cb2, cb3, cb0) + pack_le(m14, m12, m10, m8)
+    let hab = builtin.integer_to_bytearray(True, 20, ha)
+    let hx = builtin.xor_bytearray(False, hab, gap20(cd3, cd0, cd1, cd2))
+    let hd0 = builtin.rotate_bytearray(lane(hx, 1), -16)
+    let hd1 = builtin.rotate_bytearray(lane(hx, 6), -16)
+    let hd2 = builtin.rotate_bytearray(lane(hx, 11), -16)
+    let hd3 = builtin.rotate_bytearray(lane(hx, 16), -16)
+    let hc = cc + pack_be(hd2, hd3, hd0, hd1)
+    let hcb = builtin.integer_to_bytearray(True, 20, hc)
+    let ix = builtin.xor_bytearray(False, hcb, gap20(cb3, cb0, cb1, cb2))
+    let hb0 = builtin.rotate_bytearray(lane(ix, 11), -12)
+    let hb1 = builtin.rotate_bytearray(lane(ix, 16), -12)
+    let hb2 = builtin.rotate_bytearray(lane(ix, 1), -12)
+    let hb3 = builtin.rotate_bytearray(lane(ix, 6), -12)
+    let ja = ha + pack_be(hb0, hb1, hb2, hb3) + pack_le(m15, m13, m11, m9)
+    let jab = builtin.integer_to_bytearray(True, 20, ja)
+    let jx = builtin.xor_bytearray(False, jab, gap20(hd0, hd1, hd2, hd3))
+    let jd0 = builtin.rotate_bytearray(lane(jx, 1), -8)
+    let jd1 = builtin.rotate_bytearray(lane(jx, 6), -8)
+    let jd2 = builtin.rotate_bytearray(lane(jx, 11), -8)
+    let jd3 = builtin.rotate_bytearray(lane(jx, 16), -8)
+    let jc = hc + pack_be(jd2, jd3, jd0, jd1)
+    let jcb = builtin.integer_to_bytearray(True, 20, jc)
+    let kx = builtin.xor_bytearray(False, jcb, gap20(hb2, hb3, hb0, hb1))
+    let jb0 = builtin.rotate_bytearray(lane(kx, 11), -7)
+    let jb1 = builtin.rotate_bytearray(lane(kx, 16), -7)
+    let jb2 = builtin.rotate_bytearray(lane(kx, 1), -7)
+    let jb3 = builtin.rotate_bytearray(lane(kx, 6), -7)
 
-    // column 2: G(s2, s6, s10, s14)
-    let va = s2 + s6 + m4
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), d14),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = s10 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), b6),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let ca2 = va + vb + m5
-    let cdb2 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(ca2), vdb),
-        -8,
-      )
-    let cc2 = vc + builtin.bytearray_to_integer(True, cdb2)
-    let cbb2 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(cc2), vbb),
-        -7,
-      )
-    let cb2 = builtin.bytearray_to_integer(True, cbb2)
-
-    // column 3: G(s3, s7, s11, s15)
-    let va = s3 + s7 + m6
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), d15),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = s11 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), b7),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let ca3 = va + vb + m7
-    let cdb3 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(ca3), vdb),
-        -8,
-      )
-    let cc3 = vc + builtin.bytearray_to_integer(True, cdb3)
-    let cbb3 =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(cc3), vbb),
-        -7,
-      )
-    let cb3 = builtin.bytearray_to_integer(True, cbb3)
-
-    // diagonal 0: G(s0, s5, s10, s15)
-    let va = ca0 + cb1 + m8
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), cdb3),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = cc2 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), cbb1),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let da0 = va + vb + m9
-    let dab0 = truncate32(da0)
-    let ddb0 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dab0, vdb), -8)
-    let dc0 = vc + builtin.bytearray_to_integer(True, ddb0)
-    let dcb0 = truncate32(dc0)
-    let dbb0 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dcb0, vbb), -7)
-    let db0 = builtin.bytearray_to_integer(True, dbb0)
-
-    // diagonal 1: G(s1, s6, s11, s12)
-    let va = ca1 + cb2 + m10
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), cdb0),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = cc3 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), cbb2),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let da1 = va + vb + m11
-    let dab1 = truncate32(da1)
-    let ddb1 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dab1, vdb), -8)
-    let dc1 = vc + builtin.bytearray_to_integer(True, ddb1)
-    let dcb1 = truncate32(dc1)
-    let dbb1 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dcb1, vbb), -7)
-    let db1 = builtin.bytearray_to_integer(True, dbb1)
-
-    // diagonal 2: G(s2, s7, s8, s13)
-    let va = ca2 + cb3 + m12
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), cdb1),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = cc0 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), cbb3),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let da2 = va + vb + m13
-    let dab2 = truncate32(da2)
-    let ddb2 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dab2, vdb), -8)
-    let dc2 = vc + builtin.bytearray_to_integer(True, ddb2)
-    let dcb2 = truncate32(dc2)
-    let dbb2 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dcb2, vbb), -7)
-    let db2 = builtin.bytearray_to_integer(True, dbb2)
-
-    // diagonal 3: G(s3, s4, s9, s14)
-    let va = ca3 + cb0 + m14
-    let vdb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(va), cdb2),
-        -16,
-      )
-    let vd = builtin.bytearray_to_integer(True, vdb)
-    let vc = cc1 + vd
-    let vbb =
-      builtin.rotate_bytearray(
-        builtin.xor_bytearray(False, truncate32(vc), cbb0),
-        -12,
-      )
-    let vb = builtin.bytearray_to_integer(True, vbb)
-    let da3 = va + vb + m15
-    let dab3 = truncate32(da3)
-    let ddb3 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dab3, vdb), -8)
-    let dc3 = vc + builtin.bytearray_to_integer(True, ddb3)
-    let dcb3 = truncate32(dc3)
-    let dbb3 =
-      builtin.rotate_bytearray(builtin.xor_bytearray(False, dcb3, vbb), -7)
-    let db3 = builtin.bytearray_to_integer(True, dbb3)
-
+    // G'_j writes its b to s_{4+(j+1)%4} and its d to s_{12+(j+3)%4}.
     then(
-      da0,
-      da1,
-      da2,
-      da3,
-      db3,
-      db0,
-      db1,
-      db2,
-      dbb3,
-      dbb0,
-      dbb1,
-      dbb2,
-      dc2,
-      dc3,
-      dc0,
-      dc1,
-      ddb1,
-      ddb2,
-      ddb3,
-      ddb0,
-      dab0,
-      dab1,
-      dab2,
-      dab3,
-      dcb2,
-      dcb3,
-      dcb0,
-      dcb1,
+      ja,
+      pack_be(jb3, jb0, jb1, jb2),
+      jb3,
+      jb0,
+      jb1,
+      jb2,
+      jc,
+      jd1,
+      jd2,
+      jd3,
+      jd0,
+      jab,
+      jcb,
     )
   }
 
 fn permute(
-  state: State,
-  m0: Int,
-  m1: Int,
-  m2: Int,
-  m3: Int,
-  m4: Int,
-  m5: Int,
-  m6: Int,
-  m7: Int,
-  m8: Int,
-  m9: Int,
-  m10: Int,
-  m11: Int,
-  m12: Int,
-  m13: Int,
-  m14: Int,
-  m15: Int,
+  a: Int,
+  bp: Int,
+  b0: ByteArray,
+  b1: ByteArray,
+  b2: ByteArray,
+  b3: ByteArray,
+  c: Int,
+  e0: ByteArray,
+  e1: ByteArray,
+  e2: ByteArray,
+  e3: ByteArray,
+  m0: ByteArray,
+  m1: ByteArray,
+  m2: ByteArray,
+  m3: ByteArray,
+  m4: ByteArray,
+  m5: ByteArray,
+  m6: ByteArray,
+  m7: ByteArray,
+  m8: ByteArray,
+  m9: ByteArray,
+  m10: ByteArray,
+  m11: ByteArray,
+  m12: ByteArray,
+  m13: ByteArray,
+  m14: ByteArray,
+  m15: ByteArray,
 ) -> Output {
-  let State {
-    s0,
-    s1,
-    s2,
-    s3,
-    s4,
-    s5,
-    s6,
-    s7,
-    b4,
-    b5,
-    b6,
-    b7,
-    s8,
-    s9,
-    s10,
-    s11,
-    d12,
-    d13,
-    d14,
-    d15,
-  } = state
-
   round(
-    s0,
-    s1,
-    s2,
-    s3,
-    s4,
-    s5,
-    s6,
-    s7,
-    b4,
-    b5,
-    b6,
-    b7,
-    s8,
-    s9,
-    s10,
-    s11,
-    d12,
-    d13,
-    d14,
-    d15,
+    a,
+    bp,
+    b0,
+    b1,
+    b2,
+    b3,
+    c,
+    e0,
+    e1,
+    e2,
+    e3,
     m0,
     m1,
     m2,
@@ -497,57 +295,19 @@ fn permute(
     m13,
     m14,
     m15,
-    fn(
-      s0,
-      s1,
-      s2,
-      s3,
-      s4,
-      s5,
-      s6,
-      s7,
-      b4,
-      b5,
-      b6,
-      b7,
-      s8,
-      s9,
-      s10,
-      s11,
-      d12,
-      d13,
-      d14,
-      d15,
-      _ab0,
-      _ab1,
-      _ab2,
-      _ab3,
-      _cb8,
-      _cb9,
-      _cb10,
-      _cb11,
-    ) {
+    fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
       round(
-        s0,
-        s1,
-        s2,
-        s3,
-        s4,
-        s5,
-        s6,
-        s7,
-        b4,
-        b5,
-        b6,
-        b7,
-        s8,
-        s9,
-        s10,
-        s11,
-        d12,
-        d13,
-        d14,
-        d15,
+        a,
+        bp,
+        b0,
+        b1,
+        b2,
+        b3,
+        c,
+        e0,
+        e1,
+        e2,
+        e3,
         m2,
         m6,
         m3,
@@ -564,57 +324,19 @@ fn permute(
         m14,
         m15,
         m8,
-        fn(
-          s0,
-          s1,
-          s2,
-          s3,
-          s4,
-          s5,
-          s6,
-          s7,
-          b4,
-          b5,
-          b6,
-          b7,
-          s8,
-          s9,
-          s10,
-          s11,
-          d12,
-          d13,
-          d14,
-          d15,
-          _ab0,
-          _ab1,
-          _ab2,
-          _ab3,
-          _cb8,
-          _cb9,
-          _cb10,
-          _cb11,
-        ) {
+        fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
           round(
-            s0,
-            s1,
-            s2,
-            s3,
-            s4,
-            s5,
-            s6,
-            s7,
-            b4,
-            b5,
-            b6,
-            b7,
-            s8,
-            s9,
-            s10,
-            s11,
-            d12,
-            d13,
-            d14,
-            d15,
+            a,
+            bp,
+            b0,
+            b1,
+            b2,
+            b3,
+            c,
+            e0,
+            e1,
+            e2,
+            e3,
             m3,
             m4,
             m10,
@@ -631,57 +353,19 @@ fn permute(
             m15,
             m8,
             m1,
-            fn(
-              s0,
-              s1,
-              s2,
-              s3,
-              s4,
-              s5,
-              s6,
-              s7,
-              b4,
-              b5,
-              b6,
-              b7,
-              s8,
-              s9,
-              s10,
-              s11,
-              d12,
-              d13,
-              d14,
-              d15,
-              _ab0,
-              _ab1,
-              _ab2,
-              _ab3,
-              _cb8,
-              _cb9,
-              _cb10,
-              _cb11,
-            ) {
+            fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
               round(
-                s0,
-                s1,
-                s2,
-                s3,
-                s4,
-                s5,
-                s6,
-                s7,
-                b4,
-                b5,
-                b6,
-                b7,
-                s8,
-                s9,
-                s10,
-                s11,
-                d12,
-                d13,
-                d14,
-                d15,
+                a,
+                bp,
+                b0,
+                b1,
+                b2,
+                b3,
+                c,
+                e0,
+                e1,
+                e2,
+                e3,
                 m10,
                 m7,
                 m12,
@@ -698,57 +382,19 @@ fn permute(
                 m8,
                 m1,
                 m6,
-                fn(
-                  s0,
-                  s1,
-                  s2,
-                  s3,
-                  s4,
-                  s5,
-                  s6,
-                  s7,
-                  b4,
-                  b5,
-                  b6,
-                  b7,
-                  s8,
-                  s9,
-                  s10,
-                  s11,
-                  d12,
-                  d13,
-                  d14,
-                  d15,
-                  _ab0,
-                  _ab1,
-                  _ab2,
-                  _ab3,
-                  _cb8,
-                  _cb9,
-                  _cb10,
-                  _cb11,
-                ) {
+                fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
                   round(
-                    s0,
-                    s1,
-                    s2,
-                    s3,
-                    s4,
-                    s5,
-                    s6,
-                    s7,
-                    b4,
-                    b5,
-                    b6,
-                    b7,
-                    s8,
-                    s9,
-                    s10,
-                    s11,
-                    d12,
-                    d13,
-                    d14,
-                    d15,
+                    a,
+                    bp,
+                    b0,
+                    b1,
+                    b2,
+                    b3,
+                    c,
+                    e0,
+                    e1,
+                    e2,
+                    e3,
                     m12,
                     m13,
                     m9,
@@ -765,57 +411,19 @@ fn permute(
                     m1,
                     m6,
                     m4,
-                    fn(
-                      s0,
-                      s1,
-                      s2,
-                      s3,
-                      s4,
-                      s5,
-                      s6,
-                      s7,
-                      b4,
-                      b5,
-                      b6,
-                      b7,
-                      s8,
-                      s9,
-                      s10,
-                      s11,
-                      d12,
-                      d13,
-                      d14,
-                      d15,
-                      _ab0,
-                      _ab1,
-                      _ab2,
-                      _ab3,
-                      _cb8,
-                      _cb9,
-                      _cb10,
-                      _cb11,
-                    ) {
+                    fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
                       round(
-                        s0,
-                        s1,
-                        s2,
-                        s3,
-                        s4,
-                        s5,
-                        s6,
-                        s7,
-                        b4,
-                        b5,
-                        b6,
-                        b7,
-                        s8,
-                        s9,
-                        s10,
-                        s11,
-                        d12,
-                        d13,
-                        d14,
-                        d15,
+                        a,
+                        bp,
+                        b0,
+                        b1,
+                        b2,
+                        b3,
+                        c,
+                        e0,
+                        e1,
+                        e2,
+                        e3,
                         m9,
                         m14,
                         m11,
@@ -832,57 +440,19 @@ fn permute(
                         m6,
                         m4,
                         m7,
-                        fn(
-                          s0,
-                          s1,
-                          s2,
-                          s3,
-                          s4,
-                          s5,
-                          s6,
-                          s7,
-                          b4,
-                          b5,
-                          b6,
-                          b7,
-                          s8,
-                          s9,
-                          s10,
-                          s11,
-                          d12,
-                          d13,
-                          d14,
-                          d15,
-                          _ab0,
-                          _ab1,
-                          _ab2,
-                          _ab3,
-                          _cb8,
-                          _cb9,
-                          _cb10,
-                          _cb11,
-                        ) {
+                        fn(a, bp, b0, b1, b2, b3, c, e0, e1, e2, e3, _ab, _cb) {
                           round(
-                            s0,
-                            s1,
-                            s2,
-                            s3,
-                            s4,
-                            s5,
-                            s6,
-                            s7,
-                            b4,
-                            b5,
-                            b6,
-                            b7,
-                            s8,
-                            s9,
-                            s10,
-                            s11,
-                            d12,
-                            d13,
-                            d14,
-                            d15,
+                            a,
+                            bp,
+                            b0,
+                            b1,
+                            b2,
+                            b3,
+                            c,
+                            e0,
+                            e1,
+                            e2,
+                            e3,
                             m11,
                             m15,
                             m5,
@@ -900,44 +470,45 @@ fn permute(
                             m7,
                             m13,
                             fn(
-                              _s0,
-                              _s1,
-                              _s2,
-                              _s3,
-                              _s4,
-                              _s5,
-                              _s6,
-                              _s7,
-                              b4,
-                              b5,
-                              b6,
-                              b7,
-                              _s8,
-                              _s9,
-                              _s10,
-                              _s11,
-                              d12,
-                              d13,
-                              d14,
-                              d15,
-                              ab0,
-                              ab1,
-                              ab2,
-                              ab3,
-                              cb8,
-                              cb9,
-                              cb10,
-                              cb11,
+                              _a,
+                              _bp,
+                              fb0,
+                              fb1,
+                              fb2,
+                              fb3,
+                              _c,
+                              fe0,
+                              fe1,
+                              fe2,
+                              fe3,
+                              fab,
+                              fcb,
                             ) {
                               Output {
-                                w0: builtin.xor_bytearray(False, ab0, cb8),
-                                w1: builtin.xor_bytearray(False, ab1, cb9),
-                                w2: builtin.xor_bytearray(False, ab2, cb10),
-                                w3: builtin.xor_bytearray(False, ab3, cb11),
-                                w4: builtin.xor_bytearray(False, b4, d12),
-                                w5: builtin.xor_bytearray(False, b5, d13),
-                                w6: builtin.xor_bytearray(False, b6, d14),
-                                w7: builtin.xor_bytearray(False, b7, d15),
+                                w0: builtin.xor_bytearray(
+                                  False,
+                                  lane(fab, 1),
+                                  lane(fcb, 1),
+                                ),
+                                w1: builtin.xor_bytearray(
+                                  False,
+                                  lane(fab, 6),
+                                  lane(fcb, 6),
+                                ),
+                                w2: builtin.xor_bytearray(
+                                  False,
+                                  lane(fab, 11),
+                                  lane(fcb, 11),
+                                ),
+                                w3: builtin.xor_bytearray(
+                                  False,
+                                  lane(fab, 16),
+                                  lane(fcb, 16),
+                                ),
+                                w4: builtin.xor_bytearray(False, fb0, fe0),
+                                w5: builtin.xor_bytearray(False, fb1, fe1),
+                                w6: builtin.xor_bytearray(False, fb2, fe2),
+                                w7: builtin.xor_bytearray(False, fb3, fe3),
                               }
                             },
                           )
@@ -956,67 +527,48 @@ fn permute(
 }
 
 // Single-chunk compression: the chunk counter is always 0 for
-// inputs <= 1024 bytes, so s12/s13 are fixed at 0.
+// inputs <= 1024 bytes, so the first two d-rows are fixed at 0 and the
+// c-rows always start at iv0..iv3.
 fn compress(
   padded: ByteArray,
   offset: Int,
-  h0: Int,
-  h1: Int,
-  h2: Int,
-  h3: Int,
-  h4: Int,
-  h5: Int,
-  h6: Int,
-  h7: Int,
-  hb4: ByteArray,
-  hb5: ByteArray,
-  hb6: ByteArray,
-  hb7: ByteArray,
+  a: Int,
+  bp: Int,
+  b0: ByteArray,
+  b1: ByteArray,
+  b2: ByteArray,
+  b3: ByteArray,
   block_len: ByteArray,
   flags: ByteArray,
 ) -> Output {
-  let state =
-    State {
-      s0: h0,
-      s1: h1,
-      s2: h2,
-      s3: h3,
-      s4: h4,
-      s5: h5,
-      s6: h6,
-      s7: h7,
-      b4: hb4,
-      b5: hb5,
-      b6: hb6,
-      b7: hb7,
-      s8: iv0,
-      s9: iv1,
-      s10: iv2,
-      s11: iv3,
-      d12: zero_word,
-      d13: zero_word,
-      d14: block_len,
-      d15: flags,
-    }
-
   permute(
-    state,
-    word(padded, offset),
-    word(padded, offset + 4),
-    word(padded, offset + 8),
-    word(padded, offset + 12),
-    word(padded, offset + 16),
-    word(padded, offset + 20),
-    word(padded, offset + 24),
-    word(padded, offset + 28),
-    word(padded, offset + 32),
-    word(padded, offset + 36),
-    word(padded, offset + 40),
-    word(padded, offset + 44),
-    word(padded, offset + 48),
-    word(padded, offset + 52),
-    word(padded, offset + 56),
-    word(padded, offset + 60),
+    a,
+    bp,
+    b0,
+    b1,
+    b2,
+    b3,
+    iv0123,
+    zero_word,
+    zero_word,
+    block_len,
+    flags,
+    lane(padded, offset),
+    lane(padded, offset + 4),
+    lane(padded, offset + 8),
+    lane(padded, offset + 12),
+    lane(padded, offset + 16),
+    lane(padded, offset + 20),
+    lane(padded, offset + 24),
+    lane(padded, offset + 28),
+    lane(padded, offset + 32),
+    lane(padded, offset + 36),
+    lane(padded, offset + 40),
+    lane(padded, offset + 44),
+    lane(padded, offset + 48),
+    lane(padded, offset + 52),
+    lane(padded, offset + 56),
+    lane(padded, offset + 60),
   )
 }
 
@@ -1034,18 +586,12 @@ fn hash_go(
   padded: ByteArray,
   len: Int,
   offset: Int,
-  h0: Int,
-  h1: Int,
-  h2: Int,
-  h3: Int,
-  h4: Int,
-  h5: Int,
-  h6: Int,
-  h7: Int,
-  hb4: ByteArray,
-  hb5: ByteArray,
-  hb6: ByteArray,
-  hb7: ByteArray,
+  a: Int,
+  bp: Int,
+  b0: ByteArray,
+  b1: ByteArray,
+  b2: ByteArray,
+  b3: ByteArray,
 ) -> ByteArray {
   if len - offset > 64 {
     let flags =
@@ -1055,37 +601,14 @@ fn hash_go(
         no_flags
       }
     let Output { w0, w1, w2, w3, w4, w5, w6, w7 } =
-      compress(
-        padded,
-        offset,
-        h0,
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
-        h7,
-        hb4,
-        hb5,
-        hb6,
-        hb7,
-        full_block_len,
-        flags,
-      )
+      compress(padded, offset, a, bp, b0, b1, b2, b3, full_block_len, flags)
 
     hash_go(
       padded,
       len,
       offset + 64,
-      builtin.bytearray_to_integer(True, w0),
-      builtin.bytearray_to_integer(True, w1),
-      builtin.bytearray_to_integer(True, w2),
-      builtin.bytearray_to_integer(True, w3),
-      builtin.bytearray_to_integer(True, w4),
-      builtin.bytearray_to_integer(True, w5),
-      builtin.bytearray_to_integer(True, w6),
-      builtin.bytearray_to_integer(True, w7),
+      pack_be(w0, w1, w2, w3),
+      pack_be(w4, w5, w6, w7),
       w4,
       w5,
       w6,
@@ -1102,18 +625,12 @@ fn hash_go(
       compress(
         padded,
         offset,
-        h0,
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
-        h7,
-        hb4,
-        hb5,
-        hb6,
-        hb7,
+        a,
+        bp,
+        b0,
+        b1,
+        b2,
+        b3,
         builtin.integer_to_bytearray(True, 4, len - offset),
         flags,
       )
@@ -1134,17 +651,11 @@ pub fn hash(input: ByteArray) -> ByteArray {
   expect len <= 1024
 
   hash_go(
-    input,
+    builtin.append_bytearray(input, zeros64),
     len,
     0,
-    iv0,
-    iv1,
-    iv2,
-    iv3,
-    iv4,
-    iv5,
-    iv6,
-    iv7,
+    iv0123,
+    iv4567,
     ivb4,
     ivb5,
     ivb6,

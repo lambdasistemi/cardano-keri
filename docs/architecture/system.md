@@ -159,9 +159,9 @@ sequenceDiagram
 ```
 
 Genesis (the first leaf) remains registration-attested and publicly falsifiable pending a
-full-context single-transaction measurement (identity-model §7a). Re-optimized spike #88
-now fits the BLAKE3 core for representative inputs, while a full 1024-byte chunk still
-exceeds the CPU budget.
+full-context single-transaction measurement (identity-model §7a). Lane-packed spike #88
+now fits the BLAKE3 core across the whole single-chunk domain — 17.3% cpu / 23.5% mem at
+300 bytes, 55.1% cpu / 75.2% mem at the full 1024-byte chunk.
 
 ## Two Blake worlds, one system
 

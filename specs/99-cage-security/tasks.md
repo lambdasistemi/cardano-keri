@@ -350,28 +350,32 @@ cd offchain && nix develop --quiet -c cabal build all --enable-tests -O0
 
 Owned files:
 
-- `offchain/e2e/**` (proof generation + batch sweep)
+- `offchain/e2e/**` (proof generation + batch sweep; new modules ok)
+- `offchain/cardano-keri.cabal` (mechanical `other-modules` registration of new
+  `offchain/e2e/**` modules; A-001)
+- `offchain/flake.nix` + `.github/workflows/ci.yml` (flake-owned `apps.e2e-sweep` +
+  lightweight `checks.sweep-consistency` + dedicated CI job; A-002 — `gate.sh`
+  untouched, heavy sweep kept out of the routine gate)
 - `specs/99-cage-security/REPORT.md`
-- `.github/workflows/ci.yml` / flake check (if the sweep artifact needs its own job)
 
 Tasks:
 
-- [ ] T099-S9b RED→GREEN: first land a navigator-reviewed **failing**
+- [X] T099-S9b RED→GREEN: first land a navigator-reviewed **failing**
   non-zero-depth proof case, then make it green. The subsequent numerical batch
   sweep itself may use an explicitly logged measurement RED-SKIP.
-- [ ] T099-S9b Generate representative **non-zero-depth** MPF inclusion proofs
+- [X] T099-S9b Generate representative **non-zero-depth** MPF inclusion proofs
   (mpfs `trie/proof.ts` is a read-only precedent for fixtures/oracle).
-- [ ] T099-S9b Sweep `Modify` batch sizes at a **declared** proof depth + state
+- [X] T099-S9b Sweep `Modify` batch sizes at a **declared** proof depth + state
   shape through `withDevnet` until the pass/fail boundary is observed; record node
   Phase-2 results + ex-units as a repo-owned reproducible artifact (produced/
   verified by the flake check).
-- [ ] T099-S9b Failing boundary points (NOTE-016) preserve and report the ACTUAL
+- [X] T099-S9b Failing boundary points (NOTE-016) preserve and report the ACTUAL
   Phase-2 evaluation/rejection diagnostic; do NOT retain placeholder ExUnits on
   `Left` (the read-only precedent does that — do not copy it).
-- [ ] T099-S9b Update `REPORT.md` with the **qualified** production bound (at the
+- [X] T099-S9b Update `REPORT.md` with the **qualified** production bound (at the
   declared depth/state) + Phase-2 ex-units; no extrapolation as a universal cap.
-- [ ] T099-S9b Keep PR #100 draft. Rerun `./gate.sh` + `just ci`.
-- [ ] T099-S9b Commit
+- [X] T099-S9b Keep PR #100 draft. Rerun `./gate.sh` + `just ci`.
+- [X] T099-S9b Commit
   `test(e2e): sweep #99 modify phase-2 batch bound at declared proof depth`.
 
 Focused command:

@@ -29,7 +29,9 @@ module CageTxBuilder (
     buildSplitTx,
     buildMintTx,
     buildRequestTx,
+    buildRequestsTx,
     buildModifyTx,
+    valueProofDepths,
 
     -- * Settlement helpers
     hasThreadToken,
@@ -41,8 +43,10 @@ module CageTxBuilder (
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
+import Data.List (maximumBy, sortOn)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
+import Data.Ord (comparing)
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -126,6 +130,7 @@ import PlutusCore.Data qualified as PLC
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 
 import Cardano.KERI.AID.Cage.Sign (signValueWrite)
+import Cardano.KERI.AID.Cage.Types (ProofStep)
 import Cardano.KERI.AID.E2E.AssetName (computeAssetName)
 import Cardano.KERI.AID.E2E.Datum (
     mkInlineDatum,
@@ -137,8 +142,9 @@ import Cardano.KERI.AID.E2E.Mpf (
     blake2b256,
     emptyRoot,
     identityRoot,
-    insertRootFromEmpty,
  )
+import Cardano.KERI.AID.E2E.MpfProof (prove)
+import Cardano.KERI.AID.E2E.MpfTrie (Trie, build, rootOf)
 import Cardano.KERI.AID.E2E.Script (
     applyParams,
     cagePolicyId,
@@ -238,12 +244,77 @@ minAda = 2_000_000
 requestAda :: Integer
 requestAda = 5_000_000
 
-{- | Fixed fee overestimate for the manually balanced Modify (the ledger
-accepts an overpaid fee; validModify's refund invariant uses this exact
-value). Generous enough for two Plutus script executions on the devnet.
+{- | Base fee overestimate for the manually balanced Modify (the ledger
+accepts an overpaid fee; validModify's refund invariant uses the exact fee
+value the tx carries). Generous enough for the Modify script execution plus
+the base tx on the devnet; the per-request component is added on top.
 -}
 modifyFee :: Integer
 modifyFee = 2_000_000
+
+{- | Per-request fee increment. A larger batch carries more redeemers, proof
+data, and inputs/outputs, so the min fee grows with @n@ (the declared
+ex-unit cost of each extra Contribute redeemer dominates). This keeps the
+fixed-fee overestimate above the ledger min fee across the batch sweep, so a
+rejection reflects the ex-unit / size limits rather than a too-small fee.
+-}
+modifyFeePerReq :: Integer
+modifyFeePerReq = 700_000
+
+-- ---------------------------------------------------------------------------
+-- Batch (S9b) parameters
+-- ---------------------------------------------------------------------------
+
+{- | The i-th value-write key for a batch: a NAMESPACED child of the owner
+cell — @blake2b_256(owner_aid) ++ be2(i)@ (length 34). Its first 32 bytes
+equal @blake2b_256(owner_aid)@ so FR6 accepts it; distinct @i@ give
+distinct keys (and distinct @blake2b_256(key)@ trie paths).
+-}
+namespacedKey :: Int -> ByteString
+namespacedKey i =
+    cageRequestKey <> BS.pack [fromIntegral (i `div` 256), fromIntegral (i `mod` 256)]
+
+-- | The i-th value inserted by a batch @Modify@.
+namespacedValue :: Int -> ByteString
+namespacedValue i =
+    "keri-value-" <> BS.pack [fromIntegral (i `div` 256), fromIntegral (i `mod` 256)]
+
+{- | Extract @(requestKey, insertValue)@ from a spent request UTxO's inline
+@RequestDatum@ (@Insert@ operations only), matching the Aiken wire:
+@Constr 0 [Constr 0 [_token, _owner, B key, Constr 0 [B value], _tip, _at]]@.
+-}
+parseRequestKV :: PLC.Data -> Maybe (ByteString, ByteString)
+parseRequestKV d = case d of
+    PLC.Constr 0 [PLC.Constr 0 [_tok, _own, PLC.B key, PLC.Constr 0 [PLC.B value], _tip, _at]] ->
+        Just (key, value)
+    _ -> Nothing
+
+{- | Value-trie inclusion-proof generator per insert: the real non-zero-depth
+MPF proof for @key@ in @trie@ (@Cardano.KERI.AID.E2E.MpfProof.prove@,
+producing Branch/Fork/Leaf steps). For the i-th insert the proof is
+generated against @T_i@ (the trie with the first @i@ keys), so the on-chain
+@mpf.insert@ recomputes @excluding(k_i, proof) == T_{i-1}.root@ then
+@including(k_i, v_i, proof) == T_i.root@ and the batch @Modify@ settles. For
+a single-leaf trie this is the empty proof (the S9a zero-depth case).
+-}
+valueProofGen :: Trie -> ByteString -> [ProofStep]
+valueProofGen = prove
+
+{- | The ACTUAL proof-depth profile of an @n@-request batch inserted into an
+EMPTY value trie: the number of proof steps carried by the i-th insert
+(i = 1..n), each generated against the trie holding the first @i@ namespaced
+keys — the exact proofs 'buildModifyTx' places in the @Modify@ (the request
+UTxOs are spent in namespaced-index order). The 1st insert is @0@ (an empty
+proof into the empty trie, the S9a zero-depth case); the 2nd+ inserts are
+@> 0@ (genuine non-zero-depth Branch/Fork/Leaf proofs).
+-}
+valueProofDepths :: Int -> [Int]
+valueProofDepths n =
+    [ length (valueProofGen (build (take i kvs)) (fst (kvs !! (i - 1))))
+    | i <- [1 .. n]
+    ]
+  where
+    kvs = [(namespacedKey j, namespacedValue j) | j <- [0 .. n - 1]]
 
 -- ---------------------------------------------------------------------------
 -- Environment
@@ -502,6 +573,50 @@ buildRequestTx env _ownerKh ownerAddr tokenNameBs = do
         Left err -> error ("buildRequestTx: balance failed: " <> show err)
         Right r -> pure (balancedTx r)
 
+{- | Open a BATCH of @count@ distinct value-write requests in one tx (S9b):
+each output carries a @RequestDatum@ with a distinct namespaced key
+('namespacedKey') and value ('namespacedValue') under the same owner cell,
+so a subsequent @Modify@ inserts them all into the value trie and the
+2nd+ inserts require non-zero-depth proofs.
+-}
+buildRequestsTx ::
+    CageEnv ->
+    KeyHash Payment ->
+    Addr ->
+    ByteString ->
+    Int ->
+    IO ConwayTx
+buildRequestsTx env _ownerKh ownerAddr tokenNameBs count = do
+    pp <- queryProtocolParams (envProvider env)
+    walletUtxos <- queryUTxOs (envProvider env) ownerAddr
+    submittedAt <- currentPosixMs
+    let feeUtxo = case walletUtxos of
+            [] -> error "buildRequestsTx: no wallet UTxO"
+            us -> maximumBy (comparing (unCoin . (^. coinTxOutL) . snd)) us
+        mkReqOut i =
+            mkBasicTxOut (envScriptAddr env) (inject (Coin requestAda))
+                & datumTxOutL
+                    .~ mkInlineDatum
+                        ( toPlcData
+                            ( RequestDatum
+                                Request
+                                    { requestToken = TokenId tokenNameBs
+                                    , requestOwner = ownerKeyHashBytes ownerAddr
+                                    , requestKey = namespacedKey i
+                                    , requestValue = Insert (namespacedValue i)
+                                    , requestTip = cageTip
+                                    , requestSubmittedAt = submittedAt
+                                    }
+                            )
+                        )
+        body =
+            mkBasicTxBody
+                & outputsTxBodyL .~ StrictSeq.fromList [mkReqOut i | i <- [0 .. count - 1]]
+        tx = mkBasicTx body
+    case balanceTx pp [feeUtxo] [] ownerAddr tx of
+        Left err -> error ("buildRequestsTx: balance failed: " <> show err)
+        Right r -> pure (balancedTx r)
+
 -- ---------------------------------------------------------------------------
 -- Modify
 -- ---------------------------------------------------------------------------
@@ -536,12 +651,32 @@ buildModifyTx env ownerKh ownerAddr stateUtxo reqUtxos = do
     lowerSlot <- posixMsCeilSlot (envProvider env) (now - 10_000)
     upperSlot <- posixMsToSlot (envProvider env) (now + 30_000)
     let (stateIn, stateOut) = stateUtxo
-        reqIns = map fst reqUtxos
-        -- Fee input and collateral must be TWO DISJOINT wallet UTxOs (and both
-        -- disjoint from the script inputs): reusing one as the other is a
-        -- Phase-1 collateral-structure error.
+        -- Sort request inputs by TxIn so the per-request actions match the
+        -- on-chain fold order (mkAction folds over the sorted input set).
+        sortedReqs = sortOn fst reqUtxos
+        reqIns = map fst sortedReqs
+        -- (requestKey, insertValue) for each request, in fold order.
+        kvs =
+            [ fromMaybe (error "buildModifyTx: unparseable request datum") $
+                rawInlineData o >>= parseRequestKV
+            | (_, o) <- sortedReqs
+            ]
+        -- Incremental value tries: T_i = build (first i inserts). The i-th
+        -- insert's proof is generated against T_i (empty in RED, real
+        -- non-zero-depth in GREEN via valueProofGen). The continuing-state
+        -- root is the root of the full trie.
+        tries = [build (take i kvs) | i <- [1 .. length kvs]]
+        finalRoot = case reverse tries of
+            (t : _) -> rootOf t
+            [] -> emptyRoot
+        valueProofs = zipWith (\t (k, _) -> valueProofGen t k) tries kvs
+        -- Fee input and collateral: the TWO LARGEST disjoint wallet UTxOs (both
+        -- disjoint from the script inputs; reusing one is a Phase-1 structure
+        -- error). Largest-first so both cover the batch-scaled fee and the
+        -- collateral floor (150% of the fee) as the batch size grows.
         walletAvail =
-            filter (\(t, _) -> t /= stateIn && t `notElem` reqIns) walletUtxos
+            sortOn (negate . unCoin . (^. coinTxOutL) . snd) $
+                filter (\(t, _) -> t /= stateIn && t `notElem` reqIns) walletUtxos
         (feeUtxo, collateralUtxo) = case walletAvail of
             (f : c : _) -> (f, c)
             _ ->
@@ -555,16 +690,29 @@ buildModifyTx env ownerKh ownerAddr stateUtxo reqUtxos = do
                 threadTokenName env stateOut
         anLedger = AssetName (SBS.toShort tokenNameBs)
         policyId = envPolicyId env
-        reqLovelace =
-            sum [unCoin (o ^. coinTxOutL) | (_, o) <- reqUtxos]
-        refundLovelace = reqLovelace - modifyFee - cageTip
-        newRoot = insertRootFromEmpty cageRequestKey cageValue
-        -- Continuing state output (index 0), token confined.
+        n = length sortedReqs
+        -- Fee scales with the batch size (more redeemers/proof data/inputs);
+        -- kept above the ledger min fee so a rejection reflects ex-unit/size
+        -- limits, not a too-small fee.
+        modFee = modifyFee + fromIntegral n * modifyFeePerReq
+        totalReqLovelace = sum [unCoin (o ^. coinTxOutL) | (_, o) <- sortedReqs]
+        -- Refund accounting: N outputs to the requester summing to
+        -- totalReqLovelace - fee - N*tip (the on-chain sumRefunds invariant).
+        totalRefund = totalReqLovelace - modFee - fromIntegral n * cageTip
+        perRefund = if n > 0 then totalRefund `div` fromIntegral n else 0
+        refundRemainder = if n > 0 then totalRefund `mod` fromIntegral n else 0
+        refundOuts =
+            [ mkBasicTxOut
+                ownerAddr
+                (inject (Coin (perRefund + if i == 0 then refundRemainder else 0)))
+            | i <- [0 .. n - 1]
+            ]
+        -- Continuing state output (index 0): advanced root, token confined.
         newStateDat =
             StateDatum
                 AIDOnChainTokenState
                     { aidStateOwner = toBBS (ownerKeyHashBytes ownerAddr)
-                    , aidStateRoot = newRoot
+                    , aidStateRoot = finalRoot
                     , aidIdentityRoot = cageIdentityRoot
                     , aidStateTip = cageTip
                     , aidStateProcessTime = cageProcessTime
@@ -577,38 +725,35 @@ buildModifyTx env ownerKh ownerAddr stateUtxo reqUtxos = do
         newStateOut =
             mkBasicTxOut (envScriptAddr env) stateValue
                 & datumTxOutL .~ mkInlineDatum (toPlcData newStateDat)
-        -- Refund output (index 1) back to the requester (owner).
-        refundOut = mkBasicTxOut ownerAddr (inject (Coin refundLovelace))
-        -- Change output (index 2), absorbing the fee UTxO remainder; ignored
-        -- by validModify's sumRefunds (only one owner).
+        -- Change output (last) absorbs the fee UTxO remainder; ignored by
+        -- validModify's sumRefunds (which consumes exactly N refund outputs).
         changeLovelace =
-            (minAda + reqLovelace + feeUtxoLovelace)
+            (minAda + totalReqLovelace + feeUtxoLovelace)
                 - minAda -- new state out
-                - refundLovelace
-                - modifyFee
+                - totalRefund
+                - modFee
         changeOut = mkBasicTxOut ownerAddr (inject (Coin changeLovelace))
-        allOuts = StrictSeq.fromList [newStateOut, refundOut, changeOut]
+        allOuts = StrictSeq.fromList (newStateOut : refundOuts ++ [changeOut])
         -- Inputs: state + requests + fee/collateral.
         allScriptIns = Set.fromList (stateIn : reqIns)
         allIns = Set.insert feeIn allScriptIns
         -- Redeemers: Modify on the state input, Contribute on each request.
         stateRef = txInToRef stateIn
-        -- Owner authorization signature over the request UTxO's output
-        -- reference (the ref the on-chain verifyOwnerAuth binds to, for
-        -- replay protection): blake2b_256(domain ++ tx_id ++ be2(idx)).
-        reqRef = case reqIns of
-            (r : _) -> txInToRef r
-            [] -> error "buildModifyTx: no request input"
-        ownerSig' =
-            signValueWrite authSignKey (refTxId reqRef) (refIdx reqRef)
-        auth =
-            AIDOwnerAuth
-                { ownerAid = cageOwnerAid
-                , identityProof = [] -- single-leaf trie -> empty proof
-                , ownerKey = authOwnerKey
-                , ownerSig = ownerSig'
-                }
-        modifyRedeemer = Modify [AIDUpdateAction{valueProof = [], auth = auth}]
+        -- Per-request UpdateAction: its value proof + an owner-authorization
+        -- signature over THAT request UTxO's output reference (replay binding).
+        mkAuth rIn =
+            let rr = txInToRef rIn
+             in AIDOwnerAuth
+                    { ownerAid = cageOwnerAid
+                    , identityProof = [] -- single-leaf identity trie -> empty
+                    , ownerKey = authOwnerKey
+                    , ownerSig = signValueWrite authSignKey (refTxId rr) (refIdx rr)
+                    }
+        actions =
+            [ AIDUpdateAction{valueProof = pf, auth = mkAuth rIn}
+            | (rIn, pf) <- zip reqIns valueProofs
+            ]
+        modifyRedeemer = Modify actions
         stateIx = spendingIndex stateIn allIns
         contributeEntries =
             [ ( ConwaySpending (AsIx (spendingIndex rIn allIns))
@@ -633,7 +778,7 @@ buildModifyTx env ownerKh ownerAddr stateUtxo reqUtxos = do
             mkBasicTxBody
                 & inputsTxBodyL .~ allIns
                 & outputsTxBodyL .~ allOuts
-                & feeTxBodyL .~ Coin modifyFee
+                & feeTxBodyL .~ Coin modFee
                 & collateralInputsTxBodyL .~ Set.singleton collateralIn
                 & reqSignerHashesTxBodyL .~ Set.singleton witnessKh
                 & vldtTxBodyL .~ vldt
@@ -650,10 +795,9 @@ buildModifyTx env ownerKh ownerAddr stateUtxo reqUtxos = do
     -- budget-capped Phase-2 accepts the owner-authorized Modify and it
     -- settles. The declared budgets are reported as the exunits record.
     let declared =
-            [ ("Modify", modifyExUnits)
-            , ("Contribute", contributeExUnits)
-            ]
-    pure (tx, newRoot, declared)
+            ("Modify", modifyExUnits)
+                : [("Contribute", contributeExUnits) | _ <- [1 .. n]]
+    pure (tx, finalRoot, declared)
 
 -- | Wrap raw bytes as the @BuiltinByteString@ the mirrored State datum uses.
 toBBS :: ByteString -> BuiltinByteString

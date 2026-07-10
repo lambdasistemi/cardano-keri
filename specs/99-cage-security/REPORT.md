@@ -144,6 +144,95 @@ a positive but **unmeasured** per-request cost that *may* push the ceiling below
 59, but nothing here proves it does. **The production-supported bound therefore
 remains unproven** — ≈59 is the depth-0 boundary estimate, not a proven cap.
 
+## Live-boundary batch sweep (S9b — real non-zero-depth MPF proofs on a node)
+
+S6/S8 measure the **Aiken handler / data-boundary** execution ceiling in
+isolation, at MPF proof depth 0. S9a then settled a single hardened `Modify`
+on a real `cardano-node` via `withDevnet`, still with an **empty (zero-depth)**
+proof. S9b closes the two follow-ups the caveats below named — a depth-N proof
+generator and a live node Phase-2 exercise — and measures the live per-tx bound.
+
+- **Off-chain depth-N MPF inclusion-proof generator — now delivered.**
+  `offchain/e2e/Cardano/KERI/AID/E2E/MpfProof.prove` (a faithful port of the
+  Aiken/mpfs `Trie.walk` + `Proof.rewind` + `merkleProof`) emits the real
+  `Branch` / `Fork` / `Leaf` steps the on-chain `mpfCage` recomputes. Batching
+  `N` distinct namespaced requests
+  (`requestKey_i = blake2b_256(owner_aid) ++ be(i)`) into one `Modify` inserts
+  each into an initially-empty value trie. The **1st insert is depth 0** (an
+  empty proof into the empty trie — the S9a zero-depth case); the **2nd..N
+  inserts are depth > 0** (genuine non-zero-depth proofs). The artifact records
+  the ACTUAL per-insert proof-step count for each batch (`proof depths (1..N)`),
+  so the depth>0 exercise is measured, not assumed.
+
+- **Phase-2 non-zero-depth CORRECTNESS — proven live (RED→GREEN).** The SAME
+  batch-2 `Modify` is **rejected** by the cage script at node Phase-2 when the
+  2nd insert carries an empty proof (`excluding(k2, []) != root(T1)` fails MPF
+  verification), and **settles** once `prove` supplies the real depth-1 proof.
+  This is a genuine node Phase-2 pass/fail on proof correctness, not a fixture.
+
+### Live sweep — supported per-tx bound (artifact `offchain/e2e/sweep-boundary.md`)
+
+`cageSweepOne` (the flake-owned `nix run .#e2e-sweep`, opt-in
+`KERI_CAGE_SWEEP=1`) submits, per batch size `N`, one `Modify` carrying the real
+per-insert MPF proofs (insert 1 empty / depth 0; inserts 2..N depth > 0) through
+`withDevnet`. It **asserts** each batch's expected node outcome (N = 1..4 settle;
+N ≥ 5 reject at the specific Phase-1 limit), so a harness or boundary regression
+fails the run. It records the node's Phase-1/Phase-2 result, the actual
+per-insert proof depths, and — since the client `evalTxExUnits` hangs on
+this script — the **declared, not measured**, deliberately **conservative**
+per-redeemer ex-units (Modify 8,000,000 mem / 4,000,000,000 CPU; each Contribute
+3,000,000 mem / 1,500,000,000 CPU). A settled batch therefore proves the ACTUAL
+execution fit **within** those declared budgets and the aggregate fit the per-tx
+limit; the reported aggregate is a conservative **over**-estimate of the real
+cost (S6/S8 measure the far-smaller real handler cost).
+
+Observed devnet limits (from the raw rejection diagnostics):
+**`maxTxExUnits` = 140,000,000 mem / 10,000,000,000 CPU** (memory 10× mainnet,
+**CPU identical to mainnet**), **`maxTxSize` = 16,384 bytes**.
+
+| batch N | node result | declared agg mem | declared agg CPU | binding limit (Phase-1/Phase-2) |
+|--------:|:-----------:|-----------------:|-----------------:|:--------------------------------|
+| 1  | settled (Phase-2 pass) | 11,000,000 | 5,500,000,000 | — |
+| 2  | settled (Phase-2 pass) | 14,000,000 | 7,000,000,000 | — |
+| 3  | settled (Phase-2 pass) | 17,000,000 | 8,500,000,000 | — |
+| 4  | settled (Phase-2 pass) | 20,000,000 | 10,000,000,000 | — (agg CPU at the 10G limit) |
+| 5  | rejected | 23,000,000 | 11,500,000,000 | Phase-1 `ExUnitsTooBigUTxO` (CPU 11.5G > 10G) |
+| 8  | rejected | 32,000,000 | 16,000,000,000 | Phase-1 `ExUnitsTooBigUTxO` |
+| 16 | rejected | 56,000,000 | 28,000,000,000 | Phase-1 `ExUnitsTooBigUTxO` |
+| 24 | rejected | 80,000,000 | 40,000,000,000 | Phase-1 `ExUnitsTooBigUTxO` + `MaxTxSizeUTxO` (19,723 > 16,384 B) |
+| 44 | rejected | 140,000,000 | 70,000,000,000 | Phase-1 `ExUnitsTooBigUTxO` + `MaxTxSizeUTxO` (29,637 > 16,384 B) |
+
+Every reject is **Phase-1** (structural tx limit), never Phase-2 — as expected:
+Phase-2 only enforces `actual ≤ declared`, so at the declared budgets the tx
+ex-unit / size ceiling binds first. The supported bound is therefore the largest
+`N` that passes Phase-1 **and** settles Phase-2:
+
+- **On the observed devnet** (140M mem / 10G CPU): the aggregate declared CPU
+  (`4G + 1.5G·N`) reaches 10G at **N = 4** — the largest batch that settles —
+  and exceeds it from N = 5. (Memory would allow N ≤ 44.) The observed tx-size
+  data points: **N = 16 has no reported size failure; N = 24 is 19,723 B >
+  16,384 B**, so the `maxTxSize` limit is crossed somewhere in `16 < N ≤ 24`
+  (not measured more precisely here — this report does not extrapolate a
+  per-request byte rate or an exact size-limited N).
+- **Projected to the mainnet per-tx budget (14,000,000 mem / 10,000,000,000
+  CPU):** the aggregate declared **memory** (`8M + 3M·N`) reaches 14M at
+  **N = 2**, so at these conservative declared budgets a mainnet `Modify` is
+  bounded to **N = 2** (memory-bound; CPU alone would allow N = 4).
+
+**Qualified bound (NOT a universal cap).** N = 2 (mainnet) / N = 4 (devnet) is the
+bound **at the fixed, conservative, over-declared per-redeemer budgets** and the
+empty-start state — a *lower* bound on real capacity, not a production cap. The
+real handler cost is much smaller than these declared budgets (S6/S8: base ~226k
+mem + ~209k mem/request at depth 0), so S6/S8 **suggest** the real mainnet
+capacity is higher than N = 2; this report does not prove a higher figure. The
+upper references remain **estimates, not proven caps**: the S6/S8 Aiken **depth-0
+memory ceiling of ≈ 59 (an estimate)**, which non-zero proof depth only lowers,
+and the `maxTxSize` 16,384 B limit, whose size-limited batch is bracketed only to
+`16 < N ≤ 24` above (**not** a precise `~17`). **No extrapolation gives a
+universal safe cap.** The end-to-end contribution of S9b is the **live Phase-2
+correctness proof** for real non-zero-depth proofs (RED→GREEN) plus the
+**tx-ex-unit/size-limited** live bound above.
+
 ## Verdict
 
 Judged on the **full mint/spend validator context** — the per-transaction
@@ -179,23 +268,25 @@ not overhead.
   request**, which lowers the memory crossing from 65 to **≈ 59** (extrapolated).
   This closes the `fromData` axis at depth 0 but not beyond ~batch 30 directly
   (the standalone eval budget caps context materialization).
-- **MPF proof depth is UNQUANTIFIED — the dominant open follow-up.** Every request
-  in both S6 and S8 uses an empty single-leaf inclusion proof (`[]`). A real value
-  trie carries a longer, costlier proof, adding a positive but **unmeasured**
-  per-request cost on top of the ≈59 depth-0 figure; it may push the ceiling below
-  59, but this report does not measure it, so the true production bound is
-  **unproven** (not shown to be above or below 59). Quantifying it needs an
-  **off-chain depth-N MPF inclusion-proof generator**: `gen-vectors`
-  (`offchain/app/GenVectors.hs`) emits only the single-element trie
-  (`identity_proof: Proof = []`), and no depth-N generator exists in this repo.
-  **This report does not establish a safe on-chain Modify bound.**
-- **Full node phase-2 boundary not exercised (operator follow-up before merge).**
-  The S8 smoke evaluates UPLC in isolation, not a real transaction through a node.
-  A full node phase-2 evaluation needs an **off-chain #99 transaction builder** to
-  feed a devnet (e.g. `yaci-devkit`); no such builder exists in the repo, so it is
-  out of local scope. AC9 is carried as this named operator follow-up (a devnet
-  phase-2 evaluation of a real Modify tx at a stated MPF depth), **not** claimed
-  satisfied.
+- **MPF proof depth — the S6/S8 measurement is still depth 0; a depth-N generator
+  now exists (S9b).** Every request in S6 and S8 uses an empty single-leaf proof
+  (`[]`), so the ≈59 depth-0 ceiling still **excludes** the real per-request proof
+  cost. S9b delivers the previously-missing **off-chain depth-N MPF
+  inclusion-proof generator** (`Cardano.KERI.AID.E2E.MpfProof.prove`, real
+  `Branch`/`Fork`/`Leaf` steps) and proves those depth-N proofs **validate at node
+  Phase-2** (see the live sweep). It does not re-measure the S6/S8 Aiken handler
+  cost at depth N, so the exact depth-N handler ceiling remains unquantified and
+  the ≈59 figure stays a depth-0 estimate; non-zero depth only lowers it.
+- **Full node Phase-2 boundary — now exercised (S9a/S9b), tx-limited not
+  script-limited.** A real `Modify` (with real non-zero-depth proofs) is built by
+  the off-chain `withDevnet` builder (`offchain/e2e/**`) and **submitted to a
+  cardano-node**, settling on-chain — AC9's live evaluation, no longer an operator
+  follow-up. The live per-tx bound is the **tx ex-unit / size (Phase-1) limit**,
+  not a separate Phase-2 script-cost boundary: Phase-2 only enforces
+  `actual ≤ declared`, so there is no distinct Phase-2 size ceiling below the tx
+  max, and inflating the devnet `maxTxExUnits` to expose one would yield a number
+  that does not apply to mainnet. See the live-boundary sweep section above for the
+  qualified bound and the RED→GREEN Phase-2 correctness proof.
 - **Batch fixtures reuse one owner-auth witness (cost-faithful, uniqueness
   relaxed).** Every request input in a batch reuses the single `gen-vectors`
   output reference and signature, so all `n` Ed25519 verifications run over the

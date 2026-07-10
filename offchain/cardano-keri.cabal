@@ -113,6 +113,8 @@ test-suite e2e-tests
     Cardano.KERI.AID.E2E.AssetName
     Cardano.KERI.AID.E2E.Datum
     Cardano.KERI.AID.E2E.Mpf
+    Cardano.KERI.AID.E2E.MpfProof
+    Cardano.KERI.AID.E2E.MpfTrie
     Cardano.KERI.AID.E2E.Script
     Cardano.KERI.AID.E2E.Wire
 

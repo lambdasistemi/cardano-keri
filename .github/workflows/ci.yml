@@ -97,3 +97,27 @@ jobs:
       - name: withDevnet cage Phase-2 smoke
         working-directory: offchain
         run: nix build --quiet -L .#checks.x86_64-linux.e2e
+
+  e2e-sweep:
+    name: E2E batch sweep (withDevnet)
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Fast guard: the committed sweep-boundary.md must be internally
+      # consistent (declared-aggregate arithmetic + cage script hash present),
+      # so a hand-edit of the artifact is caught without a devnet.
+      - name: Verify committed sweep artifact
+        working-directory: offchain
+        run: nix build --quiet -L .#checks.x86_64-linux.sweep-consistency
+      # Heavy reproducible verification: regenerate the artifact by submitting
+      # one Modify per batch size through withDevnet, ASSERTING each expected
+      # node outcome (N=1..4 settle; N>=5 reject at the specific Phase-1 limit).
+      # A boundary/harness regression fails the run. Not in the routine gate.
+      - name: Regenerate + assert #99 Modify batch sweep
+        working-directory: offchain
+        run: nix run --quiet .#e2e-sweep

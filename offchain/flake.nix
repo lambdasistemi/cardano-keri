@@ -238,7 +238,53 @@
               ${pkgs.lib.getExe runner}
               touch "$out"
             '';
-          in { inherit blueprint runner check; });
+            # Flake-owned reproducible sweep: same strict-PATH app as `runner`
+            # but with the sweep enabled, running ONLY the `cageSweepOne`
+            # examples and (re)writing the repo artifact. Heavy (one withDevnet
+            # per batch), so it is a dedicated app/CI job — NOT part of the
+            # routine `checks.e2e` (which stays the batch-2 correctness smoke).
+            # `nix run .#e2e-sweep` from `offchain/` regenerates
+            # `e2e/sweep-boundary.md`; each batch ASSERTS its expected node
+            # outcome, so a boundary/harness regression fails the run.
+            sweepRunner = pkgs.writeShellApplication {
+              name = "e2e-sweep";
+              runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
+              text = ''
+                export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
+                export KERI_CAGE_BLUEPRINT="${blueprint}"
+                export KERI_CAGE_SWEEP=1
+                export KERI_CAGE_SWEEP_OUT="''${KERI_CAGE_SWEEP_OUT:-$PWD/e2e/sweep-boundary.md}"
+                exec e2e-tests --match "sweeps batch size" "$@"
+              '';
+            };
+            # LIGHTWEIGHT consistency check (no devnet): guards the COMMITTED
+            # artifact against hand-edits by re-deriving each row's declared
+            # aggregate ex-units (8,000,000 + 3,000,000*N mem /
+            # 4,000,000,000 + 1,500,000,000*N CPU) and requiring the cage
+            # script hash to be present. Safe to run in routine `nix flake
+            # check` / CI.
+            sweepConsistency = pkgs.runCommand "sweep-consistency" { } ''
+              f=${./e2e/sweep-boundary.md}
+              ${pkgs.gnugrep}/bin/grep -qE "Cage script hash:.*[0-9a-f]{56}" "$f" \
+                || { echo "sweep-boundary.md: missing/short cage script hash"; exit 1; }
+              ${pkgs.gawk}/bin/awk -F'|' '
+                $2 ~ /^ *[0-9]+ *$/ {
+                  n=$2+0; mem=$5+0; cpu=$6+0;
+                  emem=8000000+3000000*n; ecpu=4000000000+1500000000*n;
+                  if (mem != emem) {
+                    printf "row N=%d: agg mem %d != expected %d\n", n, mem, emem; bad=1 }
+                  if (cpu != ecpu) {
+                    printf "row N=%d: agg cpu %d != expected %d\n", n, cpu, ecpu; bad=1 }
+                  rows++
+                }
+                END {
+                  if (rows < 1) { print "sweep-boundary.md: no data rows"; exit 1 }
+                  exit bad
+                }
+              ' "$f"
+              touch "$out"
+            '';
+          in { inherit blueprint runner check sweepRunner sweepConsistency; });
 
         in {
           packages = {
@@ -248,12 +294,14 @@
             hlint = hlint-runner;
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             e2e = e2eWiring.runner;
+            e2e-sweep = e2eWiring.sweepRunner;
             plutus-blueprint = e2eWiring.blueprint;
           };
           checks = {
             unit-tests = unit-tests-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             e2e = e2eWiring.check;
+            sweep-consistency = e2eWiring.sweepConsistency;
           };
           apps = {
             format = {
@@ -276,6 +324,10 @@
             e2e = {
               type = "app";
               program = "${e2eWiring.runner}/bin/e2e";
+            };
+            e2e-sweep = {
+              type = "app";
+              program = "${e2eWiring.sweepRunner}/bin/e2e-sweep";
             };
           };
           devShells.default = project.shell;

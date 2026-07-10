@@ -594,14 +594,23 @@ fn hash_go(
   b3: ByteArray,
 ) -> ByteArray {
   if len - offset > 64 {
-    let flags =
-      if offset == 0 {
-        chunk_start
-      } else {
-        no_flags
-      }
-    let Output { w0, w1, w2, w3, w4, w5, w6, w7 } =
-      compress(padded, offset, a, bp, b0, b1, b2, b3, full_block_len, flags)
+    let flags = if offset == 0 {
+      chunk_start
+    } else {
+      no_flags
+    }
+    let Output { w0, w1, w2, w3, w4, w5, w6, w7 } = compress(
+      padded,
+      offset,
+      a,
+      bp,
+      b0,
+      b1,
+      b2,
+      b3,
+      full_block_len,
+      flags,
+    )
 
     hash_go(
       padded,
@@ -615,25 +624,23 @@ fn hash_go(
       w7,
     )
   } else {
-    let flags =
-      if offset == 0 {
-        chunk_start_end_root
-      } else {
-        chunk_end_root
-      }
-    let Output { w0, w1, w2, w3, w4, w5, w6, w7 } =
-      compress(
-        padded,
-        offset,
-        a,
-        bp,
-        b0,
-        b1,
-        b2,
-        b3,
-        builtin.integer_to_bytearray(True, 4, len - offset),
-        flags,
-      )
+    let flags = if offset == 0 {
+      chunk_start_end_root
+    } else {
+      chunk_end_root
+    }
+    let Output { w0, w1, w2, w3, w4, w5, w6, w7 } = compress(
+      padded,
+      offset,
+      a,
+      bp,
+      b0,
+      b1,
+      b2,
+      b3,
+      builtin.integer_to_bytearray(True, 4, len - offset),
+      flags,
+    )
 
     le4(w0)
       |> bytearray.concat(le4(w1))

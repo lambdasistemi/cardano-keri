@@ -60,19 +60,40 @@ format-check-onchain:
 check-onchain:
     cd onchain && nix shell nixpkgs#aiken --command aiken check
 
+# --- BLAKE3 spike (pinned Aiken) ---
+
+# Format the BLAKE3 spike with its pinned compiler
+format-blake3:
+    cd spikes/88-blake3-plutus && nix develop --quiet -c bash -euc 'nixfmt flake.nix; aiken fmt'
+
+# Check BLAKE3 spike formatting with its pinned compiler
+format-check-blake3:
+    cd spikes/88-blake3-plutus && nix develop --quiet -c bash -euc 'nixfmt --check flake.nix; aiken fmt --check'
+
+# Run BLAKE3 spike tests + type-check with its pinned compiler
+check-blake3:
+    cd spikes/88-blake3-plutus && nix develop --quiet -c aiken check
+
+# Verify the pinned BLAKE3 compiler artifact and version
+compiler-check-blake3:
+    cd spikes/88-blake3-plutus && nix flake check --no-eval-cache
+
 # --- aggregate ---
 
 # Format everything
-format: format-offchain format-onchain
+format: format-offchain format-onchain format-blake3
 
 # Check formatting everywhere
-format-check: format-check-offchain format-check-onchain
+format-check: format-check-offchain format-check-onchain format-check-blake3
 
 # Onchain CI gate (mirrors the Onchain job)
 ci-onchain: format-check-onchain check-onchain
+
+# BLAKE3 spike CI gate (mirrors the BLAKE3 job)
+ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
 ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
-ci: ci-onchain ci-offchain
+ci: ci-onchain ci-blake3 ci-offchain

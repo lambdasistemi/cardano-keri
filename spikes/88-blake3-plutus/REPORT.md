@@ -6,12 +6,12 @@
 
 After a lane-packed rewrite of the compression rounds, single-chunk BLAKE3
 verification is within the mainnet per-transaction budget at every input
-size the implementation accepts. At 300 bytes it uses **3,296,028 mem** and
-**1,734,684,874 cpu**: 23.5% of memory and 17.3% of CPU, leaving more than
+size the implementation accepts. At 300 bytes it uses **3,141,028 mem** and
+**1,709,986,879 cpu**: 22.4% of memory and 17.1% of CPU, leaving more than
 three quarters of the budget for the rest of a registration validator
 (digest and prefix handling, inclusion proof checks, receipt and key
 verification). The full 1024-byte chunk — over CPU budget in every previous
-round of this spike — now costs 75.2% of memory and 55.1% of CPU. Memory is
+round of this spike — now costs 71.7% of memory and 54.3% of CPU. Memory is
 the binding constraint at the top of the range.
 
 Mainnet budget used here:
@@ -23,45 +23,53 @@ Mainnet budget used here:
 
 ## Optimized Measurements
 
-Measured with `nix shell nixpkgs#aiken --command aiken check --plain-numbers`.
+Measured with `nix develop --quiet -c aiken check --plain-numbers`. The
+spike-local flake pins the official Aiken v1.1.23 release binary and verifies
+its published SHA-256.
 The measurement tests call `blake3.verify(input, expected_digest)` with literal
 bytearrays, so the numbers cover the hash plus digest equality check and do not
 include test-vector generation.
 
 | input bytes | mem | mem budget | cpu | cpu budget |
 | ---: | ---: | ---: | ---: | ---: |
-| 300 | 3,296,028 | 23.5% | 1,734,684,874 | 17.3% |
-| 500 | 5,267,940 | 37.6% | 2,763,721,971 | 27.6% |
-| 700 | 7,239,852 | 51.7% | 3,792,761,468 | 37.9% |
-| 1024 | 10,526,372 | 75.2% | 5,507,832,203 | 55.1% |
+| 300 | 3,141,028 | 22.4% | 1,709,986,879 | 17.1% |
+| 500 | 5,021,260 | 35.9% | 2,724,416,736 | 27.2% |
+| 700 | 6,901,492 | 49.3% | 3,738,848,993 | 37.4% |
+| 1024 | 10,035,212 | 71.7% | 5,429,574,328 | 54.3% |
 
-Relative to the CPS rounds this is a further 2.29–2.30x cpu and 1.20x mem
-improvement, uniform across input sizes: roughly 347M cpu per compressed
+Relative to the CPS rounds this is a further 2.32–2.33x cpu and 1.25x mem
+improvement, uniform across input sizes: roughly 342M cpu per compressed
 block, down from 794M.
+
+The compiler bump alone, with the lane-packed Aiken source unchanged, saves
+4.7% memory, 1.42% cpu, and 6.1% of the serialized verifier. Cross-evaluating
+both compiler outputs in the v1.1.23 machine gives the same delta, so the gain
+comes from generated UPLC rather than a changed cost model.
 
 Exported `blake3.verify` size:
 
 | artifact | size |
 | --- | ---: |
-| exported JSON | 16,911 bytes |
-| `compiledCode` payload | 16,034 hex chars |
-| flat UPLC bytes | 8,017 bytes |
+| exported JSON | 15,931 bytes |
+| `compiledCode` payload | 15,054 hex chars |
+| flat UPLC bytes | 7,527 bytes |
 
 Measured with:
 
 ```sh
-nix shell nixpkgs#aiken --command aiken export --module blake3 --name verify --trace-level silent
+nix develop --quiet -c aiken export --module blake3 --name verify --trace-level silent
 ```
 
-The lane-packed program is also smaller than the CPS one (8,017 vs 9,782
+The lane-packed program is also smaller than the CPS one (7,527 vs 9,782
 flat bytes): one packed step replaces four scalar copies of the same code.
 
 ## Result History
 
-Five implementations across four PRs. Budget percentages are against the
-mainnet limits above; the step column is the cpu/mem improvement over the
-previous row, measured at 300 bytes. Raw numbers for every generation are
-in the detailed tables further down.
+Six measured configurations across four optimization PRs plus the compiler
+bump. Budget percentages are against the mainnet limits above; the step
+column is the cpu/mem improvement over the previous row, measured at 300
+bytes. Raw numbers for every generation are in the detailed tables further
+down.
 
 | implementation | landed | flat UPLC | 300 B cpu | 300 B mem | 1024 B cpu | 1024 B mem | step (cpu / mem) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -70,9 +78,10 @@ in the detailed tables further down.
 | bytes-oriented rounds, fused xor+rotate | #96 | 2,669 | 45.2% | 42.5% | 144.4% | 135.8% | 2.54x / 3.47x |
 | CPS rounds, no state records | #101 | 9,782 | 39.7% | 28.1% | 126.7% | 89.9% | 1.14x / 1.51x |
 | lane-packed rounds, batched conversions | #102 | 8,017 | 17.3% | 23.5% | 55.1% | 75.2% | 2.29x / 1.20x |
+| lane-packed rounds, Aiken v1.1.23 | compiler bump | 7,527 | 17.1% | 22.4% | 54.3% | 71.7% | 1.01x / 1.05x |
 
-Cumulative: 20.6x cpu and 32.8x mem at 300 bytes. The full 1024-byte chunk
-went from 11.4x the CPU budget to fitting with 44.9% CPU headroom; each
+Cumulative: 20.9x cpu and 34.4x mem at 300 bytes. The full 1024-byte chunk
+went from 11.4x the CPU budget to fitting with 45.7% CPU headroom; each
 verdict edge moved with it — #89 concluded DOES NOT FIT, #96 flipped it to
 fits-at-representative-sizes, #102 extends it to the whole single-chunk
 domain.
@@ -236,7 +245,7 @@ modes are intentionally out of scope.
 - `aiken/primitive/bytearray` in stdlib `v2.2.0` exposes CIP-121 integer/byte
   conversions (`from_int_little_endian`, `to_int_little_endian`, etc.).
 - The stdlib does not wrap the bytearray bitwise helpers in this pinned stack,
-  but Aiken `v1.1.21` exposes them directly through `aiken/builtin`.
+  but Aiken `v1.1.23` exposes them directly through `aiken/builtin`.
 - `builtin.xor_bytearray` works and is used for 32-bit XOR — in the
   lane-packed round as one width-20 xor over four gap-aligned words.
 - `builtin.rotate_bytearray(bytes, -n)` on a 4-byte big-endian word is an
@@ -257,9 +266,9 @@ modes are intentionally out of scope.
 Genesis is once per identity, in its own registration tx, so the relevant
 question is whether BLAKE3 plus the rest of the registration validator fits
 at realistic inception-event sizes. At ~300 bytes the answer is now clearly
-plausible: 76.5% of memory and 82.7% of CPU remain for the rest of the
+plausible: 77.6% of memory and 82.9% of CPU remain for the rest of the
 validator logic, which this spike does not measure. Even the full 1024-byte
-chunk fits with 24.8% memory and 44.9% CPU to spare, so the single-chunk
+chunk fits with 28.3% memory and 45.7% CPU to spare, so the single-chunk
 domain no longer needs the multi-transaction checkpointing explored in spike
 #97 — that machinery remains relevant only for inputs beyond 1024 bytes,
 where BLAKE3's tree mode starts and a native `blake3` builtin remains the

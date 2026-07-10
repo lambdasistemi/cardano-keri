@@ -83,11 +83,10 @@ fn p_pack(i: Int, w: ByteArray, acc: Int) -> Int {
     let p1 = builtin.append_bytearray(z1, w)
     let p2 = builtin.append_bytearray(z1, w)
     let p3 = builtin.append_bytearray(z1, w)
-    let packed =
-      builtin.append_bytearray(
-        builtin.append_bytearray(p0, p1),
-        builtin.append_bytearray(p2, p3),
-      )
+    let packed = builtin.append_bytearray(
+      builtin.append_bytearray(p0, p1),
+      builtin.append_bytearray(p2, p3),
+    )
     p_pack(i - 1, w, acc + builtin.bytearray_to_integer(True, packed) % 7)
   }
 }

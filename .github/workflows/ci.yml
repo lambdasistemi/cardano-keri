@@ -42,6 +42,21 @@ jobs:
         working-directory: onchain
         run: nix shell nixpkgs#aiken --command aiken check
 
+  blake3-spike:
+    name: BLAKE3 spike (Aiken 1.1.23)
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify pinned compiler
+        working-directory: spikes/88-blake3-plutus
+        run: nix flake check --no-eval-cache
+      - name: Format check
+        working-directory: spikes/88-blake3-plutus
+        run: nix develop --quiet -c aiken fmt --check
+      - name: Check (tests + type-check)
+        working-directory: spikes/88-blake3-plutus
+        run: nix develop --quiet -c aiken check
+
   offchain:
     name: Offchain (Haskell)
     needs: build-gate

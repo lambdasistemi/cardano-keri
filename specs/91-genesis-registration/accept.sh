@@ -311,6 +311,125 @@ forbid_lit "production-readiness claim" "$IM $SA" \
 forbid_lit "generic-KERI interop claim" "$IM $SA" \
     'generic[- ]keri'
 
+# ============================================================================
+# FR10 / NOTE-008 — canonical-doc consistency correction (Slice 2).
+# RED on 8babc57 (current HEAD docs); GREEN after the three fixes. NOT a #92
+# storage-layout choice: these assert *classification/qualification* wording
+# only, never a per-AID-UTxO vs trie physical-storage selection.
+#
+# Guards tightened per navigator Q-001: each positive check requires the
+# *specific* intended wording (not a loose keyword), is negation-aware where a
+# misclassifying/negated sentence could otherwise pass, and is scoped to the
+# owning section (§0 / §3) so an out-of-section sentence cannot satisfy it.
+# Section slices below are line-based: heading "## N." opens, next "## N."
+# closes; the pattern must be satisfied on one physical line within the slice.
+# ============================================================================
+
+IM_S3=$(awk '/^## 3\./{f=1;next} /^## [0-9]/{f=0} f' "$IM")
+SA_S0=$(awk '/^## 0\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+SA_S3=$(awk '/^## 3\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+
+# (1) identity-model.md §3: the bare "nothing to trust" overclaim must be
+#     QUALIFIED to "no additional watcher/oracle trust for post-genesis
+#     advances" (genesis projection stays attester-trusted per §7a/§7c). Two
+#     sided: (a) any bare "no … to trust" line lacking that *specific*
+#     qualification is flagged — so "nothing to trust in the oracle" still
+#     fails; (b) the specific positive qualification must be present.
+_n008_bare=$(printf '%s\n' "$IM_S3" | grep -iE 'no[a-z ]* to trust' \
+             | grep -ivE 'no additional[^.]*(watcher|oracle)[^.]*trust[^.]*post-genesis' || true)
+if [ -n "$_n008_bare" ]; then
+  printf 'FAIL[forbid]: %s\n' "IM §3: unqualified 'nothing to trust' overclaim (must scope to no additional watcher/oracle trust for post-genesis advances)"
+  printf '  %s\n' "$_n008_bare"
+  fail=1
+fi
+if ! printf '%s\n' "$IM_S3" | grep -iEq \
+     'no additional[^.]*(watcher|oracle)[^.]*trust[^.]*post-genesis|post-genesis[^.]*no additional[^.]*(watcher|oracle)[^.]*trust'; then
+  printf 'FAIL[present]: %s\n' "IM §3: 'no additional watcher/oracle trust for post-genesis advances' qualification present"
+  fail=1
+fi
+
+# (2) system-architecture.md §3: identity R-KEL SET APART from the
+#     watcher-consensus "Proof-builder-anchored" mirror family — positive
+#     classification, negation-aware (a "R-KEL is not set apart …" sentence fails).
+if ! printf '%s\n' "$SA_S3" | grep -iEq 'R-KEL[^.]*set apart[^.]*(proof-builder|mirror)'; then
+  printf 'FAIL[present]: %s\n' "SA §3: identity R-KEL set apart from the Proof-builder-anchored mirror family"
+  fail=1
+fi
+_n008_kelneg=$(printf '%s\n' "$SA_S3" \
+  | grep -iE 'R-KEL[^.]*(\bnot\b|\bnever\b|isn['"'"'’]t|\bis not\b)[^.]*(set apart|separat|reclassif)|(\bnot\b|\bnever\b)[^.]*(part of|within|member of)[^.]*(proof-builder|mirror)[^.]*R-KEL' || true)
+if [ -n "$_n008_kelneg" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §3: R-KEL classification must not be negated/misclassified"
+  printf '  %s\n' "$_n008_kelneg"
+  fail=1
+fi
+
+# (2b) STRUCTURAL (Q-002/Q-003): identity R-KEL must NOT remain a row inside the
+#      Proof-builder-anchored mirror table specifically. Scoped to that ONE table
+#      block (its "Proof-builder-anchored" heading through the end of its
+#      contiguous "|"-row run) so a valid FR10 relocation — an R-KEL row in a
+#      *separate* on-chain-checkpoint table, or a prose-only classification — is
+#      NOT falsely rejected. FR10 forbids the row under the mirror family only,
+#      not table representation as such.
+_pba_table=$(awk '
+  /Proof-builder-anchored/ {inpba=1}
+  inpba && /^\|/ {intable=1; print; next}
+  inpba && intable && !/^\|/ {exit}
+' "$SA")
+if printf '%s\n' "$_pba_table" | grep -qiE '^\|[[:space:]]*\**R-KEL\**[[:space:]]*\|'; then
+  printf 'FAIL[forbid]: %s\n' "SA §3: identity R-KEL still a row inside the Proof-builder-anchored mirror table (must be relocated out)"
+  fail=1
+fi
+
+# (3) system-architecture.md §3: identity R-KEL positively RELATED to the native
+#     R-ID registry (checkpoint over the R-ID-seeded key-state) — storage-neutral,
+#     negation-aware ("R-ID unrelated to R-KEL" fails).
+if ! printf '%s\n' "$SA_S3" | grep -iEq \
+     'R-KEL[^.]*(checkpoint|advance|advances|over|seeded|seeds)[^.]*R-ID|R-ID[^.]*(seed|seeds|register|registry|key-state)[^.]*R-KEL'; then
+  printf 'FAIL[present]: %s\n' "SA §3: identity R-KEL related to the native R-ID registry (checkpoint over the R-ID seeds)"
+  fail=1
+fi
+_n008_idneg=$(printf '%s\n' "$SA_S3" \
+  | grep -iE 'R-KEL[^.]*(\bnot\b|\bnever\b|isn['"'"'’]t|\bis not\b|\bunrelated\b|\bindependent\b)[^.]*(over|checkpoint|advance|advances|seed|seeds|seeded|related|register|registry|key-state)[^.]*R-ID|R-ID[^.]*(\bnot\b|\bnever\b|isn['"'"'’]t|\bis not\b|\bunrelated\b|\bindependent\b)[^.]*(over|checkpoint|advance|advances|seed|seeds|seeded|related|register|registry|key-state)[^.]*R-KEL|R-KEL[^.]*(\bunrelated\b|not related|independent of)[^.]*R-ID|R-ID[^.]*(\bunrelated\b|not related|independent of)[^.]*R-KEL' || true)
+if [ -n "$_n008_idneg" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §3: R-KEL↔R-ID relation must be positive (no 'not over'/unrelated/independent)"
+  printf '  %s\n' "$_n008_idneg"
+  fail=1
+fi
+
+# (4) system-architecture.md §0 ONLY: the closure Merkle-mirror framing EXCLUDES
+#     identity R-KEL. Scoped to §0 so a §3 exclusion cannot satisfy it.
+if ! printf '%s\n' "$SA_S0" | grep -iEq 'R-KEL[^.]*exclud[a-z]*[^.]*mirror|exclud[a-z]*[^.]*mirror[^.]*R-KEL'; then
+  printf 'FAIL[present]: %s\n' "SA §0: closure Merkle-mirror framing excludes identity R-KEL"
+  fail=1
+fi
+# negation-aware (Q-002): reject "R-KEL must not be excluded …" and its inverse.
+_n008_s0neg=$(printf '%s\n' "$SA_S0" \
+  | grep -iE 'R-KEL[^.]*(\bnot\b|\bnever\b|isn['"'"'’]t|\bis not\b)[^.]*exclud|exclud[a-z]*[^.]*(\bnot\b|\bnever\b)[^.]*(from )?(the )?(closure|merkle|mirror)?[^.]*R-KEL' || true)
+if [ -n "$_n008_s0neg" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §0: R-KEL mirror-exclusion must not be negated (no 'must not be excluded')"
+  printf '  %s\n' "$_n008_s0neg"
+  fail=1
+fi
+
+# (5) system-architecture.md §3 ONLY: the R-MAP AID note is TIER-SCOPED — the
+#     SAME R-MAP row must carry BOTH tiers (≤1-chunk byte binding on-chain /
+#     >1-chunk residual oracle mapping). R-MAP adjacency required, so the R-KEL
+#     row's tier wording cannot satisfy it.
+if ! printf '%s\n' "$SA_S3" | grep -iE 'R-MAP' \
+     | grep -iEq '1-chunk[^.]*(byte binding|on-chain)[^.]*>[^.]*1-chunk[^.]*residual[^.]*(oracle|map)'; then
+  printf 'FAIL[present]: %s\n' "SA §3: R-MAP AID note tier-scoped (R-MAP row: ≤1-chunk byte binding on-chain / >1-chunk residual oracle mapping)"
+  fail=1
+fi
+# negation-aware (Q-002): on the R-MAP row, neither tier clause may be negated —
+# reject "byte binding is not on-chain" and "residual oracle mapping is not required".
+_n008_mapneg=$(printf '%s\n' "$SA_S3" | grep -iE 'R-MAP' \
+  | grep -iE '(\bnot\b|\bnever\b|n['"'"'’]t)[^.]*(on-chain|residual|byte binding|required|mapping)|(on-chain|residual|byte binding|mapping|required)[^.]*(\bis\b|\bare\b|stays|\bbe\b)?[[:space:]]*(\bnot\b|\bnever\b|n['"'"'’]t)' || true)
+if [ -n "$_n008_mapneg" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §3: R-MAP tier clauses must not be negated (positive on-chain / residual-oracle claims required)"
+  printf '  %s\n' "$_n008_mapneg"
+  fail=1
+fi
+
 # --- verdict ---------------------------------------------------------------
 
 if [ "$fail" -ne 0 ]; then

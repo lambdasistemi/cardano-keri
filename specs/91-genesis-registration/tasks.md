@@ -150,7 +150,7 @@ Epic-owner final audit found §11.1/§11.3 generic anchored-root/root-consensus 
 wording unscoped. Owned files: `system-architecture.md`, `accept.sh`. One bisect-safe
 commit. **No economics/payer/reward redesign, no #92 storage.**
 
-- [ ] T921 — **RED.** Strengthen `accept.sh` (FR10-cont2) so removing the §11
+- [X] T921 — **RED.** Strengthen `accept.sh` (FR10-cont2) so removing the §11
   trust-layer scope is RED; demonstrate RED on `c495901`. Assertions (section-scoped,
   negation-aware, anchored-polysemy-aware per NOTE-011):
   - §11.1's proof-against-anchored-root correctness statement is scoped to the
@@ -162,7 +162,7 @@ commit. **No economics/payer/reward redesign, no #92 storage.**
   - legitimate "R-KEL … anchored by witnessed seals, not a watcher mirror" + "identity
     checkpoint advances are validator-checked; watchers serve/submit" survive.
   No #92 storage assertion, no economics assertion.
-- [ ] T922 — **GREEN.** Scope §11.1 (proof-against-anchored-root → credential/external
+- [X] T922 — **GREEN.** Scope §11.1 (proof-against-anchored-root → credential/external
   mirror plane; preserve "identity checkpoint advances validator-checked, watchers
   serve/submit") and §11.3 (anchored roots / root-consensus / provably-wrong-root
   slashing / proof-checking → credential/external mirror roots; identity R-KEL outside

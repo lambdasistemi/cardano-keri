@@ -42,13 +42,21 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
   - **evidence/integration separation** present: intermediate-value confinement
     phrased as a **required #24/#92 integration invariant** (not "is confined");
     explicit that #99 Modify N is **not** a genesis batch bound and the integrated
-    path must be remeasured;
+    path must be remeasured; **#99 insufficiency scoped to post-genesis mutation**,
+    not genesis projection admission;
+  - **NOTE-006 scope** present: byte binding prevents **inception-byte substitution**
+    (not overall impersonation); **overall genesis authority attester-trusted** at
+    the projection boundary; censorship **detectable only with signed-receipt/SLA**
+    (else availability failure); on adjudication timeout **both bonds stay escrowed**
+    + **indefinite frozen-state griefing under quorum failure** named;
   - **forbidden**: "objectively provable on-chain" (or close variant) adjacent to
-    *projection* or *>1-chunk* binding; any present-tense "is confined" implemented
-    claim; any production-readiness / generic-KERI claim;
-  - trust-assumption enumeration present (controller, witnesses, oracle/attester,
-    challenge/fraud-proof, gating/censorship, slashing/bonds, adjudicator
-    liveness/collusion, activation timing, on-chain-checkable-or-not);
+    *projection* or *>1-chunk* binding; byte binding alone "prevents … impersonation";
+    "provable censorship"; "makes … freeze … safe"; any present-tense "is confined"
+    implemented claim; any production-readiness / generic-KERI claim;
+  - trust-assumption enumeration present (overall-genesis-authority, controller,
+    witnesses, oracle/attester, challenge/fraud-proof, gating/censorship,
+    slashing/bonds, adjudicator liveness/collusion, activation timing,
+    on-chain-checkable-or-not);
   - #92, #68, #24 consequences present; #97 and #99 links present.
 - [ ] T912 — **GREEN (identity-model.md).** Rewrite §7c to the full hybrid decision:
   both axes; decisions 1 & 2; the teeth state machine; the signed-package shape; the

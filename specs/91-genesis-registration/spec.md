@@ -304,6 +304,18 @@ framing must **exclude identity R-KEL**, and the **R-MAP AID note** must be
 additional watcher/oracle trust for post-genesis advances** — the genesis projection
 stays attester-trusted (§7a/§7c).
 
+### 2026-07-11 — NOTE-010 (whole-document R-KEL scan — Slice 3)
+Slice 2 fixed §0/§3, but the epic-owner whole-diff scan found further live
+R-KEL-as-mirror statements in `system-architecture.md` **§4** (closure "must mirror" /
+`closure identities → R-KEL` / "the mirror roots" key-domain), **§5** (grouping
+`R-TEL_N, R-KEL_N` as watcher-computed state roots under one watcher-consensus trust
+layer), and later summaries (**§8** "anchored" root list, **§11** "mirror trees" /
+anchored-root trust, the concluding "KERI-mirror roots"). FR10-cont requires each of
+these scoped to credential/external mirror roots (R-TEL/R-ACDC/R-MAP), with identity
+R-KEL kept as the on-chain checkpoint over settled R-ID (freshness/submission concern),
+while retaining watchers' role of serving/submitting identity checkpoint material.
+Documentation-consistency only: no economics change, no #92 storage choice.
+
 ## P1 user story
 
 As a protocol designer ratifying the identity model, I read the amended
@@ -361,6 +373,36 @@ obsolete "BLAKE3 cannot fit" premise.
   additional watcher/oracle trust for post-genesis advances** (genesis projection
   attester-trusted). `accept.sh` is strengthened to assert (a) and (b) — RED on
   `8babc57`, GREEN after Slice 2 — without asserting any #92 storage choice.
+- **FR10-cont (NOTE-010 whole-document R-KEL scan; Slice 3).** No section
+  **anywhere** in `system-architecture.md` may classify identity **R-KEL** as a
+  watcher-attested mirror / anchored mirror root. Specifically: (c) §4 (closure) —
+  distinguish the planes: identity KELs are watched to **assemble/serve/submit
+  validator-checked R-KEL checkpoint advances**, while credential/external state is
+  mirrored into R-TEL/R-ACDC/R-MAP; the closure computation and its key-domain over
+  settled R-ID are preserved, but R-KEL is not called a watcher mirror; (d) §5
+  (determinism/trust) — split the state-root grouping so R-TEL/other external roots
+  keep the deterministic watcher-mirror + coordinator-boundary path, while identity
+  R-KEL is the on-chain checkpoint over settled R-ID with a **freshness/submission**
+  concern (not watcher-root integrity); (e) later summaries — §8 ("anchored"
+  root list), §11 (closure "mirror trees" / anchored-root trust wording), and the
+  concluding "KERI-mirror roots" wording are scoped to **credential/external mirror
+  roots**, retaining watchers' role of serving/submitting identity **checkpoint**
+  material. `accept.sh` is strengthened so a live R-KEL-as-watcher-mirror
+  classification in §4/§5/later summaries fails while legitimate phrases ("R-KEL is
+  not a watcher-attested mirror", "watch KELs to submit checkpoint advances")
+  survive — RED on `b22d794`, GREEN after Slice 3 — without altering economics or
+  selecting #92 storage.
+  **`anchored` is polysemous (NOTE-011):** the retired classification is identity
+  R-KEL as a **proof-builder / watcher-attested / anchored *mirror root*** (its
+  need/anchoring following from Blake3/third-party credentials or the proof-builder
+  layer, grouped with R-MAP/R-ACDC). Identity R-KEL **remains** the on-chain
+  cryptographic checkpoint over settled R-ID and **may** be described as
+  advanced/anchored **by witnessed seals** — the guard MUST NOT reject that
+  legitimate checkpoint language merely because `R-KEL` and `anchored` co-occur in a
+  section. `accept.sh` must test **both directions**: (RED) §8 grouping R-KEL with
+  R-MAP/R-ACDC as proof-builder-layer/credential-driven roots fails; (survive)
+  "R-KEL is an on-chain checkpoint advanced/anchored by witnessed seals and **not** a
+  watcher mirror" passes.
 
 ## Success criteria
 

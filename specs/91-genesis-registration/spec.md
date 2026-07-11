@@ -434,11 +434,13 @@ obsolete "BLAKE3 cannot fit" premise.
 
 ## Success criteria
 
-- [ ] `./gate.sh` passes locally at HEAD before mark-ready.
-- [ ] `accept.sh` demonstrably RED on the pre-decision tree, GREEN after the slice.
-- [ ] One bisect-safe decision commit carrying `Tasks: T911, T912, T913, T914`.
-- [ ] PR #95 body and issue #91 drop the obsolete premise and link #97/#98, #99/#100.
-- [ ] Fresh GitHub CI green; PR-life `gate.sh` dropped before mark-ready.
+- [X] `./gate.sh` passes locally at HEAD before mark-ready.
+- [X] `accept.sh` demonstrably RED on the pre-decision tree, GREEN after each slice.
+- [X] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer — decision slice
+  `8babc57` (`T911, T912, T913, T914`) plus the NOTE-008/010/012 consistency-audit
+  corrections `b22d794` (T917, T918), `c495901` (T919, T920), `d234838` (T921, T922).
+- [X] PR #95 body and issue #91 drop the obsolete premise and link #97/#98, #99/#100.
+- [X] Fresh GitHub CI green; PR-life `gate.sh` dropped before mark-ready.
 
 ## Out of scope (do not implement)
 

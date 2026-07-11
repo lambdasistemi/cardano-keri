@@ -175,10 +175,10 @@ commit. **No economics/payer/reward redesign, no #92 storage.**
 
 ## Orchestrator finalization (post-slice, after review + push)
 
-- [ ] T915 — Update PR #95 body and issue #91: remove the obsolete premise, state
+- [X] T915 — Update PR #95 body and issue #91: remove the obsolete premise, state
   the hybrid decision + the two boundaries, link #97/#98 and #99/#100. (`gh`, no
   file commit.)
-- [ ] T916 — Finalization audit (commit-gate over all commits + no open tasks);
+- [X] T916 — Finalization audit (commit-gate over all commits + no open tasks);
   **stamp the satisfied `spec.md` success criteria and T915/T916** (do not leave
   completed criteria presented as open); drop `gate.sh` **last** (`chore: drop
   gate.sh (ready for review)`); `gh pr ready 95`; confirm fresh CI green (re-run if a

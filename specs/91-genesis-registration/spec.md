@@ -316,6 +316,18 @@ R-KEL kept as the on-chain checkpoint over settled R-ID (freshness/submission co
 while retaining watchers' role of serving/submitting identity checkpoint material.
 Documentation-consistency only: no economics change, no #92 storage choice.
 
+### 2026-07-11 — NOTE-012 (§11 anchored-root trust scope — Slice 4)
+Slice 3 fixed §4/§5/§8/§11.2/§11.4, but the §11 **trust-layer** wording remained
+generic: §11.1 ("a validator checks a proof against the anchored root") and §11.3
+("the anchored roots + root-consensus", "slashing for a provably-wrong anchored root",
+"validators checking proofs against the root"). Because NOTE-011 permits R-KEL to be
+"anchored by witnessed seals", leaving these generic can still sweep identity R-KEL
+into watcher-root integrity. FR10-cont2 scopes them to the credential/external mirror
+plane (R-TEL/R-ACDC/R-MAP), keeping identity R-KEL outside the root-consensus/slashing
+path (freshness/submission concern), while preserving that identity checkpoint advances
+are validator-checked. Wording-scope only: no economics/payer/reward redesign, no #92
+storage.
+
 ## P1 user story
 
 As a protocol designer ratifying the identity model, I read the amended
@@ -403,6 +415,22 @@ obsolete "BLAKE3 cannot fit" premise.
   R-MAP/R-ACDC as proof-builder-layer/credential-driven roots fails; (survive)
   "R-KEL is an on-chain checkpoint advanced/anchored by witnessed seals and **not** a
   watcher mirror" passes.
+- **FR10-cont2 (NOTE-012 §11 anchored-root trust scope; Slice 4).** The §11 economics
+  **trust-layer** wording must scope the generic "anchored root" trust to the
+  **credential/external mirror plane** so it cannot sweep identity R-KEL into
+  watcher-root integrity (NOTE-011 permits R-KEL "anchored by witnessed seals").
+  Specifically: (f) §11.1's "a validator checks a proof against the anchored root"
+  correctness statement is scoped to the credential/external mirror plane, preserving
+  the separate fact that identity **checkpoint advances are validator-checked** and
+  watchers only serve/submit their material; (g) §11.3's "anchored roots +
+  root-consensus", "slashing for a provably-wrong anchored root", and "validators
+  checking proofs against the root" are scoped to **credential/external mirror roots
+  (R-TEL/R-ACDC/R-MAP)**, with identity R-KEL explicitly **outside** that
+  root-consensus/slashing path (its watcher concern remains freshness/submission).
+  **No economics redesign**, no payer/reward-mechanism change, no #92 storage.
+  `accept.sh` is strengthened so removing that §11 trust-layer scope is RED while
+  legitimate "R-KEL … anchored by witnessed seals, not a watcher mirror" survives —
+  RED on `c495901`, GREEN after Slice 4.
 
 ## Success criteria
 

@@ -144,6 +144,35 @@ storage decision; not scope expansion; no economics change.
   trailer `Tasks: T919, T920`. **After push: STOP — do not drop gate / mark ready until
   the epic owner sends FINAL-AUDIT-ACCEPTED.**
 
+## Slice 4 — NOTE-012 §11 anchored-root trust scope  (driver + navigator, RED→GREEN)
+
+Epic-owner final audit found §11.1/§11.3 generic anchored-root/root-consensus trust
+wording unscoped. Owned files: `system-architecture.md`, `accept.sh`. One bisect-safe
+commit. **No economics/payer/reward redesign, no #92 storage.**
+
+- [ ] T921 — **RED.** Strengthen `accept.sh` (FR10-cont2) so removing the §11
+  trust-layer scope is RED; demonstrate RED on `c495901`. Assertions (section-scoped,
+  negation-aware, anchored-polysemy-aware per NOTE-011):
+  - §11.1's proof-against-anchored-root correctness statement is scoped to the
+    **credential/external mirror plane** (not a generic "the anchored root");
+  - §11.3's "anchored roots + root-consensus", "provably-wrong anchored root" slashing,
+    and "proofs against the root" are scoped to **credential/external mirror roots
+    (R-TEL/R-ACDC/R-MAP)**, with identity R-KEL explicitly **outside** that
+    root-consensus/slashing path;
+  - legitimate "R-KEL … anchored by witnessed seals, not a watcher mirror" + "identity
+    checkpoint advances are validator-checked; watchers serve/submit" survive.
+  No #92 storage assertion, no economics assertion.
+- [ ] T922 — **GREEN.** Scope §11.1 (proof-against-anchored-root → credential/external
+  mirror plane; preserve "identity checkpoint advances validator-checked, watchers
+  serve/submit") and §11.3 (anchored roots / root-consensus / provably-wrong-root
+  slashing / proof-checking → credential/external mirror roots; identity R-KEL outside
+  the root-consensus/slashing path, freshness/submission concern). Check §11.4/§11.5 for
+  the same generic-root sweep and scope if needed. Preserve the payer/reward mechanism
+  verbatim. `accept.sh` + `./gate.sh` pass. Commit once: `docs(system-architecture):
+  scope §11 anchored-root trust to the credential/external mirror plane (NOTE-012)`,
+  body trailer `Tasks: T921, T922`. **After push: STOP — do not drop gate / mark ready
+  until the epic owner sends FINAL-AUDIT-ACCEPTED.**
+
 ## Orchestrator finalization (post-slice, after review + push)
 
 - [ ] T915 — Update PR #95 body and issue #91: remove the obsolete premise, state
@@ -156,7 +185,8 @@ storage decision; not scope expansion; no economics change.
   spurious infra failure like "No space left on device" appears). Do **not** merge —
   epic owner performs guarded merge. Report `COMPLETE` on STATUS.
   **GATE: do not start T916 until the epic owner sends an explicit
-  `FINAL-AUDIT-ACCEPTED` after the reviewed S3 SHA is pushed (NOTE-010).**
+  `FINAL-AUDIT-ACCEPTED` after the LATEST reviewed correction SHA is pushed
+  (currently Slice 4 / NOTE-012; supersedes the earlier S3/NOTE-010 stop).**
 
 ## Explicitly out of scope (guard rails)
 

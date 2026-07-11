@@ -20,7 +20,7 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
 `specs/68-keystate-shape/system-architecture.md`,
 `specs/91-genesis-registration/accept.sh`. One bisect-safe commit.
 
-- [ ] T911 — **RED.** Author `accept.sh` asserting the decision content markers
+- [X] T911 — **RED.** Author `accept.sh` asserting the decision content markers
   below; demonstrate it fails on the pre-decision tree; log RED in `WIP.md`.
   Assertions (all from `spec.md`):
   - §7c present and selects **hybrid** (byte binding: crypto ≤1-chunk / attested
@@ -59,19 +59,19 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
     slashing/bonds, adjudicator liveness/collusion, activation timing,
     on-chain-checkable-or-not);
   - #92, #68, #24 consequences present; #97 and #99 links present.
-- [ ] T912 — **GREEN (identity-model.md).** Rewrite §7c to the full hybrid decision:
+- [X] T912 — **GREEN (identity-model.md).** Rewrite §7c to the full hybrid decision:
   both axes; decisions 1 & 2; the teeth state machine; the signed-package shape; the
   evidence/integration separation; the trust enumeration; #92/#68/#24 consequences;
   honest capability language. Update the intro line and §10 open-thread 3 (genesis
   no longer "attested-only, pending"); update §7a to reflect #97 (≤1-chunk byte
   binding on-chain, projection attested) instead of the flat "genesis is not
   cryptographic"; update §8 cascade (#24/#68 bullets) to the new base case.
-- [ ] T913 — **GREEN (system-architecture.md).** Update §6 (decision note),
+- [X] T913 — **GREEN (system-architecture.md).** Update §6 (decision note),
   §9 decision 1 (oracle-gated registration / permissionless challenge) & decision 2
   (MPFS-with-oracle) consistently with the shifted mandatory-attester premise, and
   the §3 R-KEL note. No decision left on the obsolete mandatory-attester-for-
   everything rationale.
-- [ ] T914 — **GREEN (completeness + gate).** `accept.sh` + `./gate.sh` pass; both
+- [X] T914 — **GREEN (completeness + gate).** `accept.sh` + `./gate.sh` pass; both
   docs internally consistent. Commit once: `docs(identity-model): select hybrid
   genesis — crypto byte binding + attested/challengeable projection (§7c)`, body
   trailer `Tasks: T911, T912, T913, T914`.

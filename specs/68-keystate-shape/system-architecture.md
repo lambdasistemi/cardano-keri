@@ -16,13 +16,20 @@ builders** watch the KERI witnesses of everything in the closure and maintain
 stored** — see §5); **Cardano Foundation**, as **coordinator**, anchors the agreed
 *state-mirror* roots on-chain per checkpoint. On-chain
 **validators** then verify user actions against (a) native on-chain state and (b) the
-anchored mirror roots — all in **Blake2b**, never Blake3.
+anchored mirror roots — predominantly in **Blake2b**, with one checkpointed BLAKE3
+exception: the ≤1-chunk AID **byte binding** `blake3(icp) == cesr_aid` is now verified
+on-chain via the #97 Step/Finish chain (#91 §7c). Multi-chunk/tree hashing and the wider
+credential-SAID plane stay outside that proof.
 
 ## 1. Strategic frame
 
-- **The wall:** Plutus has `blake2b_256`, no `blake3`. The vLEI ecosystem (AIDs *and*
-  ACDC SAIDs) is Blake3, rooted at GLEIF. You cannot recompute a Blake3 SAID on-chain,
-  and you cannot re-hash GLEIF's tree.
+- **The wall (now partial):** Plutus has `blake2b_256`, no native `blake3`. The vLEI
+  ecosystem (AIDs *and* ACDC SAIDs) is Blake3, rooted at GLEIF. The #97 checkpointed
+  Step/Finish path **does** recompute the complete 32-byte BLAKE3 predicate on-chain **for
+  the single-chunk domain** (≤1024-byte AID inceptions), which is what makes the ≤1-chunk
+  genesis byte binding cryptographic (§7c). Beyond that the wall stands: you cannot yet
+  recompute a **multi-chunk / tree** Blake3 SAID on-chain, and you cannot re-hash GLEIF's
+  tree — so the credential-SAID plane and >1-chunk inceptions stay watcher/oracle-attested.
 - **Two tiers:** (1) CF-as-QVI issues **Blake2b** credentials — self-sufficient, no
   Plutus change, but "CF-parallel," not the existing ecosystem. (2) Verify the **real
   Blake3** vLEI ecosystem — needs the watcher bridge.
@@ -38,8 +45,8 @@ anchored mirror roots — all in **Blake2b**, never Blake3.
 
 | Role | Who | Does | Trust |
 |---|---|---|---|
-| **Registration oracle** | CF | accepts AID registrations (+ declared credential chain); provides liveness; in the MPFS model, batches writes and attests the AID Blake-mapping at registration | liveness; **censorship is the risk** (F7) if gated |
-| **Proof builders** (watchers) | many operators | watch the KERI witnesses of everything in the **closure**; build the mirror trees (R-KEL/R-TEL/R-ACDC/R-MAP); serve inclusion-proof APIs; sign per-checkpoint roots | falsifiable + **bonded/slashable** (F8) |
+| **Registration oracle** | CF | accepts AID registrations (+ declared credential chain); provides liveness; in the MPFS model, batches writes and attests the **semantic projection** at registration (all tiers) plus the **byte binding** only for >1-chunk inceptions — the ≤1-chunk byte binding is verified on-chain (#97), not oracle-attested (§7c) | liveness; registration **is** oracle-gated (#91 §7c decision 1), so **censorship is a live risk** (F7), mitigated only by the deferred k-of-n SPO-watcher escape |
+| **Proof builders** (watchers) | many operators | watch the KERI witnesses of everything in the **closure**; build the mirror trees for the **credential / external-state plane** (R-TEL/R-ACDC/R-MAP) — identity **R-KEL is an on-chain cryptographic checkpoint, not a watcher-attested mirror** (§3), so here builders only watch/serve/submit identity advance material; serve inclusion-proof APIs; sign per-checkpoint roots | falsifiable + **bonded/slashable** (F8) |
 | **Coordinator** | CF | anchors the agreed mirror roots on-chain, per checkpoint | **mechanical, never a judge** (see §5) |
 
 The watcher is a **hash/state oracle, not a verifier** — the ACDC verification *logic*
@@ -65,7 +72,7 @@ CF-anchored; watcher-consensus; falsifiable):
 | Root | Contents | Notes |
 |---|---|---|
 | **R-MAP** | Blake3 ↔ Blake2b for AIDs and credential SAIDs | present only while Plutus lacks blake3; AID slice can be absorbed by the registration oracle |
-| **R-KEL** | AID → current KERI key-state (KEL checkpoint) | **for identity, this is an on-chain *cryptographic checkpoint*, not a watcher-attested mirror** — advanced by witnessed anchoring seals carrying blake2b commitments; cryptographic **from a registration-attested genesis** (the genesis binding stays oracle-asserted/falsifiable — [identity-model.md](identity-model.md) §7a). The watcher-mirror framing below applies to the credential plane (R-TEL), not identity. |
+| **R-KEL** | AID → current KERI key-state (KEL checkpoint) | **for identity, this is an on-chain *cryptographic checkpoint*, not a watcher-attested mirror** — advanced by witnessed anchoring seals carrying blake2b commitments. Genesis is the §7c **hybrid** (#91): the **byte binding** `blake3(icp) == cesr_aid` is cryptographic on-chain for ≤1-chunk inceptions (#97), attested for >1-chunk; the **semantic projection** is attested / challengeable at every tier (see [identity-model.md](identity-model.md) §7a/§7c). The watcher-mirror framing below applies to the credential plane (R-TEL), not identity. |
 | **R-TEL** | credential SAID → issued/revoked status | **the hot root** — see §7 |
 | **R-ACDC** | credential existence / SAID | **likely folds into R-TEL** (`SAID → issued\|revoked` carries both) |
 
@@ -125,27 +132,44 @@ Trust layering, end to end: native app state (trustless) → closure pinned to s
 (deterministic) → state mirror over pinned inputs (falsifiable, bonded watcher-consensus)
 → CF anchors, never adjudicates.
 
-## 6. Identity registry: MPFS-with-oracle vs token-per-AID  (OPEN — leaning MPFS-oracle)
+## 6. Identity registry: MPFS-with-oracle vs token-per-AID  (DECIDED #91 — MPFS-with-oracle)
+
+**Decision note (2026-07-11, #91): MPFS-with-oracle.** The oracle is still required for
+the semantic-projection attestation (all tiers) and the >1-chunk byte-binding
+attestation, so the mandatory-attester argument that retired the token model's self-cert
+mint **still holds for the projection** — even though the ≤1-chunk **byte binding** now
+self-certifies on-chain (#97). MPFS-with-oracle consolidates unicity, the projection
+attestation, and batching in one write; the partial ≤1-chunk self-cert is recorded as an
+**input to #92's** storage-shape choice, not a reversal. See
+[identity-model.md](identity-model.md) §7c (decision 2). The two models remain below for
+the record.
 
 The current design is a **single MPFS UTxO** (contention-flagged by vetting). Two models:
 
 - **Token-per-AID** (mint from a known policy): parallel (no shared-UTxO bottleneck),
   proof-simple (reference the AID UTxO directly, datum carries key-state — no MPF proof),
   more permissionless (self-cert mint, no oracle). Loses **global "registered at most
-  once"** — though self-cert (Ed25519 mint check) means only the key-holder can mint their
-  AID, so no squatting; the residual loss is a single canonical entry for
-  freeze/revocation/burn targeting.
+  once"**. The old "self-cert (Ed25519 mint check) ⇒ only the key-holder can mint their
+  AID, so no squatting" claim is **retired** (#91 §7c / NOTE-006): the mint signature is
+  only against the **claimed** keys — **attribution, not genesis truth** — so without the
+  projection verifier it does not prove those keys are encoded in the genuine inception;
+  the residual loss is also a single canonical entry for freeze/revocation/burn targeting.
 - **MPFS-with-oracle:** the oracle consolidates **three** things in one write —
-  **unicity** (on-chain absence proof), the **AID Blake-mapping** (attested at
-  registration; the token model would need the watcher for this), and **batching** (many
-  registrations per MPFS update, amortizing the single-UTxO contention that was the
-  token model's main win). Cost: **censorable registration** (F7).
+  **unicity** (on-chain absence proof), the **semantic-projection attestation** (all
+  tiers) plus the **byte-binding attestation for >1-chunk** — while the ≤1-chunk byte
+  binding is on-chain (#97), so the token model would still need the watcher/oracle for
+  the projection — and **batching** (many registrations per MPFS update, amortizing the
+  single-UTxO contention that was the token model's main win). Cost: **censorable
+  registration** (F7).
 
 Since CF is already the trusted coordinator, the marginal centralization of the oracle is
-small; **lean MPFS-oracle unless permissionless/un-censorable registration is a hard
-requirement.** Boundary: the oracle absorbs only the *AID* mapping — credential SAID
-mappings still come from the watcher (issued over time by third parties). The blake3 side
-of the AID mapping is oracle-*asserted* (falsifiable), same trust grade as the watcher.
+small. The mandatory-attester premise has **shifted** (#91): the oracle is no longer
+required to attest the *whole* AID binding — the ≤1-chunk **byte binding** is
+on-chain-verifiable (#97) — but it **is** still required for the **semantic projection**
+(all tiers) and the >1-chunk byte binding, which is why MPFS-with-oracle is retained.
+Boundary: the oracle absorbs the *AID projection* attestation — credential SAID mappings
+still come from the watcher. For ≤1-chunk the byte binding is on-chain (not merely
+oracle-asserted); the semantic projection stays oracle-*asserted* and challengeable (§7c).
 
 ## 7. Cold path vs hot path (the performance/trust concentration)
 
@@ -182,10 +206,18 @@ which Merkle root each proof comes from.** Applied to all four business cases:
 - **Admission cache** pays the expensive verify once; receiver-admission (security tokens)
   is a *cached fact*, not a signature.
 
-## 9. Open decisions
+## 9. Decisions and open questions
 
-1. Registration: **permissionless vs CF-gated** (the last trust knob).
-2. Identity registry: **MPFS-oracle vs token** (leaning MPFS-oracle).
+1. **Registration gating — DECIDED (#91): oracle-gated registration, permissionless challenge.**
+   Activation requires the oracle's projection attestation (both tiers)
+   and, for >1-chunk, its byte-binding attestation — so registration is **oracle-gated** —
+   while opening a bonded challenge → freeze is fully **permissionless**. The ≤1-chunk
+   byte-binding computation is on-chain, so *submission* of the Step/Finish txs is
+   permissionless, but the leaf cannot activate without the projection attestation.
+   Residual: censorship + single-attester liveness, with a deferred k-of-n SPO-watcher
+   escape (see [identity-model.md](identity-model.md) §7c, decision 1 / NOTE-006).
+2. **Identity registry — DECIDED (#91): MPFS-with-oracle** (§6 decision note, §7c decision
+   2); the ≤1-chunk byte-binding self-cert is an input to #92, not a reversal.
 3. **R-ACDC folds into R-TEL?** (likely yes).
 4. **R-TEL native vs anchored** — pivots on issuer origin; forecast ⇒ anchored.
 5. Closure declaration: **full-path vs inductive**.
@@ -198,7 +230,8 @@ which Merkle root each proof comes from.** Applied to all four business cases:
 - CF actually obtaining **GLEIF QVI accreditation** (a business/governance step).
 - **Bond soundness (F8)** — the slashing/challenge machinery that keeps proof builders
   honest is the one real cryptographic-design task underneath.
-- **Censorable registration (F7)** if the oracle is gated.
+- **Censorable registration (F7)** — registration **is** oracle-gated (#91 §7c decision
+  1), so this is a live residual, mitigated only by the deferred k-of-n SPO-watcher escape.
 - **CF-parallel interop caveat** — Blake2b creds are spec-compliant but ecosystem-novel.
 - The maximal "trustless on-chain verification of the real Blake3 ecosystem" is **bonded-
   bridge until Plutus gains blake3**, not pure-trustless. State it plainly.

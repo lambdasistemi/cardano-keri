@@ -110,6 +110,40 @@ owned files. Same owned-file set (`identity-model.md`, `system-architecture.md`,
   classification + post-genesis trust qualification (NOTE-008)`, body trailer
   `Tasks: T917, T918`.
 
+## Slice 3 — NOTE-010 whole-document R-KEL scan  (driver + navigator, RED→GREEN)
+
+Epic-owner whole-diff scan found residual R-KEL-as-mirror statements beyond §0/§3.
+Same owned-file set (`system-architecture.md`, `accept.sh`; `identity-model.md` only if
+a stray R-KEL-mirror statement is found there). One bisect-safe commit. Not a #92
+storage decision; not scope expansion; no economics change.
+
+- [ ] T919 — **RED.** Strengthen `accept.sh` (FR10-cont) so a live R-KEL-as-watcher-
+  mirror classification in §4/§5/later summaries **fails**; demonstrate RED on
+  `b22d794`. Assertions (section-scoped, negation-aware):
+  - §4 does not call identity R-KEL a watcher mirror / does not map `closure
+    identities → R-KEL` as a mirror root (closure computation preserved);
+  - §5 does not group `R-KEL_N` with `R-TEL_N` as watcher-computed state roots under a
+    single watcher-consensus trust layer (identity R-KEL = on-chain checkpoint over
+    settled R-ID, freshness/submission concern);
+  - §8/§11/concluding summaries do not classify R-KEL as a **proof-builder/
+    watcher-attested/anchored mirror root** (grouped with R-MAP/R-ACDC as roots whose
+    need/anchoring follows from Blake3/third-party credentials or the proof-builder layer);
+  - **`anchored` polysemy (NOTE-011) — test BOTH directions:** (RED) §8 grouping R-KEL
+    with R-MAP/R-ACDC as proof-builder-layer/credential-driven roots **fails**;
+    (survive) "R-KEL is an on-chain checkpoint advanced/**anchored by witnessed seals**
+    and **not** a watcher mirror" **passes** — do NOT reject legitimate checkpoint
+    language just because `R-KEL` + `anchored` co-occur;
+  - legitimate phrases survive ("R-KEL is not a watcher-attested mirror", "watch KELs
+    to submit checkpoint advances"). No #92 storage assertion, no economics change.
+- [ ] T920 — **GREEN.** Reconcile `system-architecture.md` §4 (plane distinction),
+  §5 (split state-root grouping / trust layer; preserve coordinator boundary for the
+  actual mirror roots), §8/§11/conclusion (scope "anchored"/"mirror"/"KERI-mirror" to
+  credential/external roots; retain watchers serving/submitting identity checkpoint
+  material). `accept.sh` + `./gate.sh` pass. Commit once: `docs(system-architecture):
+  scope R-KEL out of the watcher-mirror roots across §4/§5/summaries (NOTE-010)`, body
+  trailer `Tasks: T919, T920`. **After push: STOP — do not drop gate / mark ready until
+  the epic owner sends FINAL-AUDIT-ACCEPTED.**
+
 ## Orchestrator finalization (post-slice, after review + push)
 
 - [ ] T915 — Update PR #95 body and issue #91: remove the obsolete premise, state
@@ -118,8 +152,11 @@ owned files. Same owned-file set (`identity-model.md`, `system-architecture.md`,
 - [ ] T916 — Finalization audit (commit-gate over all commits + no open tasks);
   **stamp the satisfied `spec.md` success criteria and T915/T916** (do not leave
   completed criteria presented as open); drop `gate.sh` **last** (`chore: drop
-  gate.sh (ready for review)`); `gh pr ready 95`; confirm fresh CI green. Do **not**
-  merge — epic owner performs guarded merge. Report `COMPLETE` on STATUS.
+  gate.sh (ready for review)`); `gh pr ready 95`; confirm fresh CI green (re-run if a
+  spurious infra failure like "No space left on device" appears). Do **not** merge —
+  epic owner performs guarded merge. Report `COMPLETE` on STATUS.
+  **GATE: do not start T916 until the epic owner sends an explicit
+  `FINAL-AUDIT-ACCEPTED` after the reviewed S3 SHA is pushed (NOTE-010).**
 
 ## Explicitly out of scope (guard rails)
 

@@ -97,6 +97,28 @@ fresh navigator approval + `NAVIGATOR-VERIFIED`:
 These are decision-consistency corrections, **not** a #92 storage-layout decision or
 scope expansion.
 
+### Slice 3 — NOTE-010 whole-document R-KEL scan (driver+navigator)
+
+Epic-owner whole-diff scan found residual R-KEL-as-mirror statements beyond §0/§3.
+Re-opened as a bisect-safe correction slice, RED→GREEN, fresh navigator approval +
+`NAVIGATOR-VERIFIED` (FR10-cont, tasks T919/T920):
+
+- `system-architecture.md` §4 (closure) — distinguish planes: identity KELs watched to
+  assemble/serve/submit validator-checked R-KEL **checkpoint advances**; credential/
+  external state mirrored into R-TEL/R-ACDC/R-MAP. Preserve the closure computation;
+  don't call R-KEL a watcher mirror.
+- §5 (determinism/trust) — split the state-root grouping: R-TEL/external roots keep the
+  deterministic watcher-mirror + coordinator-boundary path; identity R-KEL is the
+  on-chain checkpoint over settled R-ID (freshness/submission concern).
+- §8/§11/conclusion — scope "anchored"/"mirror trees"/"KERI-mirror roots" to
+  credential/external roots; retain watchers serving/submitting identity checkpoint
+  material.
+- Strengthen `accept.sh` (§4/§5/summaries R-KEL-mirror guard), RED on `b22d794`.
+
+Documentation-consistency only; no economics change, no #92 storage choice. **After the
+reviewed S3 SHA is pushed, STOP — do not finalize until the epic owner sends an explicit
+`FINAL-AUDIT-ACCEPTED` (NOTE-010).**
+
 ## Orchestrator-owned finalization (post-slice)
 
 - Extend/verify `gate.sh` already invokes `accept.sh` (it does, tolerant-then-strict).

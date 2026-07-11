@@ -272,8 +272,11 @@ not a consensus, concern.
 
 ### 11.1 The layering principle (correctness vs service)
 
-- **Correctness is on-chain and watcher-agnostic.** A validator checks a proof against the
-  anchored root; a valid proof is valid *regardless of who computed it*. The on-chain layer
+- **Correctness is on-chain and watcher-agnostic.** For the credential/external mirror
+  plane, a validator checks a proof against the **credential/external mirror root**
+  (R-TEL/R-ACDC/R-MAP); a valid proof is valid *regardless of who computed it*. Identity
+  **checkpoint advances are validator-checked** on submission;
+  watchers only serve/submit that identity checkpoint material. The on-chain layer
   never needs to know a watcher exists to establish correctness.
 - **Service is an off-chain market.** Who serves a proof, whether they hold the data,
   promptness, availability — a market concern. A watcher that lacks the data simply can't
@@ -305,9 +308,15 @@ fine because the fixed cost is already issuer-covered.
 
 ### 11.3 What stays on-chain: the trust layer only
 
-- the anchored roots + **root-consensus** (agreement that `R_N` reflects real KERI state),
-- **slashing for a provably-wrong anchored root**,
-- validators checking proofs against the root — **plain, watcher-agnostic**.
+For the **credential/external mirror roots (R-TEL/R-ACDC/R-MAP)**:
+
+- the credential/external mirror roots (R-TEL/R-ACDC/R-MAP) + **root-consensus** (agreement that `R_N` reflects real KERI state),
+- **slashing for a provably-wrong credential/external mirror root**,
+- validators checking proofs against the credential/external mirror root — **plain, watcher-agnostic**.
+
+Identity **R-KEL is outside this root-consensus/slashing path** — its checkpoint advances
+are validator-checked on submission. Its only residual watcher concern is
+**freshness/submission** of identity R-KEL, not watcher-root integrity.
 
 Everything about serving and paying is off-chain.
 

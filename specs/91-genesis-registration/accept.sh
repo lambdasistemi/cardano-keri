@@ -611,6 +611,198 @@ fi
 either "NOTE-011 survive: R-KEL advanced/anchored by witnessed seals (legitimate checkpoint co-occurrence)" \
     'R-KEL.*witnessed.*seal|witnessed.*seal.*R-KEL'
 
+# ============================================================================
+# FR10-cont2 / NOTE-012 — §11 anchored-root trust-layer scope (Slice 4).
+# Slice 3 fixed §4/§5/§8/§11.2/§11.4, but the §11 *trust-layer* wording stayed
+# generic: §11.1 ("a validator checks a proof against the anchored root") and
+# §11.3 ("the anchored roots + root-consensus", "slashing for a provably-wrong
+# anchored root", "validators checking proofs against the root"). Because
+# NOTE-011 permits identity R-KEL to be "anchored by witnessed seals", leaving
+# these generic still sweeps identity R-KEL into watcher-root integrity. RED on
+# c495901/9f57b24, GREEN after the scope. Wording-scope only: no economics /
+# payer / reward redesign, no #92 storage choice — these assert *plane scoping*
+# of the trust layer, never a market or storage change.
+#
+# Same rigor as the S3 guards: sub-section-scoped (§11.1 / §11.3 awk slices),
+# clause-scoped, negation/polysemy-aware. Each generic phrase carries a mechanical
+# positive (scoped wording PRESENT) and negative (unscoped phrase FORBIDDEN, with
+# a credential/external/mirror-plane exemption) pair. The *seal* sense of
+# "anchored" ("R-KEL … anchored by witnessed seals") carries no "anchored root"
+# noun, so the NOTE-011 survive direction never trips these forbids.
+# ============================================================================
+
+# Sub-section slices: a "### 11.N" heading opens, the next "### " heading closes.
+SA_S111=$(awk '/^### 11\.1([^0-9]|$)/{f=1;next} /^### /{f=0} f' "$SA")
+SA_S113=$(awk '/^### 11\.3([^0-9]|$)/{f=1;next} /^### /{f=0} f' "$SA")
+
+# --- (f) §11.1 — correctness statement scoped to the credential/external plane ---
+# Guards tightened per navigator Q-001 (clause-scoped / negation-aware, S3 rigor):
+#   - the scope exemption on the generic "anchored root" forbid ATTACHES to the
+#     root noun (a scope word within a tight window immediately before it), so a
+#     scope token dropped into a *different* clause on the same line cannot rescue
+#     a bare generic "anchored root";
+#   - the watcher-role positive binds watchers + only + serve/submit + identity
+#     checkpoint material in ONE clause, and a companion forbid rejects any line
+#     that assigns validator/root-correctness work (compute/attest/validate) for
+#     identity checkpoint material TO the watchers.
+# All guards are exercised mechanically in handoffs/c2_s11_harness.* (Q-001
+# bypasses MUST FLAG; legitimate survivors MUST PASS).
+#
+# (f-neg) FORBID: a bare generic "anchored root" in the §11.1 correctness
+#   statement not scoped to the credential/external mirror plane. Line-based (the
+#   prose wraps "checks a proof against the / anchored root" across two physical
+#   lines, so the noun "anchored root" is the stable single-line token). The
+#   exemption requires a scope qualifier ADJACENT to (≤20 chars before) the
+#   "anchored root" noun, so "The anchored root … ; R-TEL is a credential mirror
+#   root" (scope in a separate clause) is still flagged.
+_c2_s111_generic=$(printf '%s\n' "$SA_S111" \
+  | grep -iE 'anchored root' \
+  | grep -ivE '(credential|external|R-TEL|R-ACDC|R-MAP|mirror)[[:space:]/a-z-]{0,20}anchored root' || true)
+if [ -n "$_c2_s111_generic" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.1: 'proof against the anchored root' unscoped (scope the correctness statement to the credential/external mirror plane)"
+  printf '  %s\n' "$_c2_s111_generic"
+  fail=1
+fi
+# (f-pos1) PRESENT: the scoped correctness statement (proof checked against the
+#   credential/external mirror root).
+if ! printf '%s\n' "$SA_S111" | grep -iEq \
+     '(proof|proofs) against[^.]*(credential/external|R-TEL/R-ACDC|mirror root)|(credential/external|mirror)[^.]*root[^.]*(proof|valid)'; then
+  printf 'FAIL[present]: %s\n' "SA §11.1: correctness statement scoped to the credential/external mirror plane (proof against the credential/external mirror root)"
+  fail=1
+fi
+# (f-pos2) PRESENT + negation-aware: identity checkpoint advances are
+#   validator-checked (preserved separately from the mirror-plane correctness).
+if ! printf '%s\n' "$SA_S111" | grep -iEq \
+     '(identity )?checkpoint advance[a-z]*[^.]*validator-checked|validator-checked[^.]*(identity )?checkpoint advance'; then
+  printf 'FAIL[present]: %s\n' "SA §11.1: identity checkpoint advances are validator-checked (preserved)"
+  fail=1
+fi
+_c2_s111_ckneg=$(printf '%s\n' "$SA_S111" \
+  | grep -iE 'checkpoint advance[a-z]*[^.]*(not|never|isn['"'"'’]t)[^.]*validator-checked|(not|never)[^.]*validator-checked[^.]*checkpoint advance' || true)
+if [ -n "$_c2_s111_ckneg" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.1: identity-checkpoint validator-checked fact must not be negated"
+  printf '  %s\n' "$_c2_s111_ckneg"
+  fail=1
+fi
+# (f-pos3) PRESENT (Q-001.1): watchers + "only" + serve/submit + identity
+#   checkpoint material bound in ONE clause. A line that ties watchers to
+#   *credential* proofs (not identity checkpoint material), or drops "only", no
+#   longer satisfies it.
+if ! printf '%s\n' "$SA_S111" | grep -iEq \
+     'watchers?[^.]{0,20}only[^.]{0,20}(serve|submit|serve/submit)[^.]{0,45}(identity )?checkpoint (material|advance)|(identity )?checkpoint (material|advance)[a-z]*[^.]{0,45}watchers?[^.]{0,20}only[^.]{0,20}(serve|submit|serve/submit)'; then
+  printf 'FAIL[present]: %s\n' "SA §11.1: watchers ONLY serve/submit the identity checkpoint material (bound in one clause)"
+  fail=1
+fi
+# (f-neg-wrole) FORBID (Q-001.1): validator/root-correctness work assigned TO the
+#   watchers for identity checkpoint material — "checkpoint material is computed
+#   by watchers" and "watchers compute/attest/validate … checkpoint".
+_c2_s111_wrole=$(printf '%s\n' "$SA_S111" \
+  | grep -iE 'checkpoint (material|advance)[a-z]*[^.]{0,35}(computed|attested|validated|checked|established)[^.]{0,15}by[^.]{0,10}watcher|watchers?[^.]{0,25}(compute|attest|validate|establish)[a-z]*[^.]{0,35}(identity )?checkpoint (material|advance)' || true)
+if [ -n "$_c2_s111_wrole" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.1: identity checkpoint material must not be computed/attested/validated BY watchers (they only serve/submit)"
+  printf '  %s\n' "$_c2_s111_wrole"
+  fail=1
+fi
+
+# --- (g) §11.3 — anchored-root trust layer scoped to credential/external roots ---
+# Guards tightened per navigator Q-001 (points 2–5):
+#   - each generic-phrase forbid's scope exemption ATTACHES to the anchored-root /
+#     proof-checking clause (scope adjacent to the root noun, ≤18 chars before),
+#     so a scope token in a *later* clause on the same line cannot exempt it
+#     (Q-001.2);
+#   - the R-KEL-inside guard is split PER NOUN with a PREDICATE-LOCAL negation
+#     (the "outside"/"not" must sit next to the very noun it exempts), so
+#     "R-KEL is outside root-consensus but subject to slashing" is still flagged
+#     on the slashing limb (Q-001.3);
+#   - the scoped-root positive mechanically requires the full R-TEL/R-ACDC/R-MAP
+#     name set (Q-001.5);
+#   - the outside-path positive requires R-KEL outside BOTH root-consensus AND
+#     slashing (the combined "root-consensus/slashing path", or both named)
+#     (Q-001.3);
+#   - freshness/submission must sit in the SAME clause as R-KEL/identity (Q-001.4).
+#
+# (g-neg1) FORBID: "anchored roots + root-consensus" whose "anchored roots" noun
+#   is not scope-adjacent.
+_c2_s113_rc=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'anchored roots?' | grep -iE 'root-consensus' \
+  | grep -ivE '(credential|external|R-TEL|R-ACDC|R-MAP|mirror)[[:space:]/a-z-]{0,18}anchored roots?' || true)
+if [ -n "$_c2_s113_rc" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.3: 'anchored roots + root-consensus' unscoped (scope must attach to the anchored-root clause: credential/external mirror roots R-TEL/R-ACDC/R-MAP)"
+  printf '  %s\n' "$_c2_s113_rc"
+  fail=1
+fi
+# (g-neg2) FORBID: "slashing for a provably-wrong anchored root" whose root noun
+#   is not scope-adjacent.
+_c2_s113_slash=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'provably[- ]wrong anchored root|slashing for[^.]*anchored root' \
+  | grep -ivE '(credential|external|R-TEL|R-ACDC|R-MAP|mirror)[[:space:]/a-z-]{0,18}(anchored )?root' || true)
+if [ -n "$_c2_s113_slash" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.3: 'slashing for a provably-wrong anchored root' unscoped (scope must attach to the anchored-root clause)"
+  printf '  %s\n' "$_c2_s113_slash"
+  fail=1
+fi
+# (g-neg3) FORBID: "proofs against the root" where "the root" is not scoped to a
+#   credential/external mirror root in the same clause.
+_c2_s113_proof=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'proofs? against the root|checking proofs? against the root' \
+  | grep -ivE 'against the[[:space:]/a-z-]{0,20}(credential|external|R-TEL|R-ACDC|R-MAP|mirror)[[:space:]/a-z-]{0,20}root' || true)
+if [ -n "$_c2_s113_proof" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.3: 'proofs against the root' unscoped (scope validators' proof-checking clause to the credential/external mirror root)"
+  printf '  %s\n' "$_c2_s113_proof"
+  fail=1
+fi
+# (g-pos1) PRESENT (Q-001.5): one §11.3 line carries the credential/external
+#   scope AND the full R-TEL/R-ACDC/R-MAP name set AND root-consensus.
+_c2_s113_scoped=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'root-consensus' | grep -iE 'R-TEL/R-ACDC/R-MAP' \
+  | grep -iE 'credential|external' || true)
+if [ -z "$_c2_s113_scoped" ]; then
+  printf 'FAIL[present]: %s\n' "SA §11.3: anchored-root trust layer scoped to the credential/external mirror roots R-TEL/R-ACDC/R-MAP + root-consensus (all three named)"
+  fail=1
+fi
+# (g-pos2) PRESENT + negation-aware (Q-001.3): identity R-KEL explicitly OUTSIDE
+#   BOTH root-consensus AND slashing — the combined "root-consensus/slashing
+#   path", or both named as excluded.
+if ! printf '%s\n' "$SA_S113" | grep -iEq \
+     'R-KEL[^.]{0,40}(outside|not (on|in|part of)|no part of)[^.]{0,30}root-consensus/slashing|R-KEL[^.]{0,40}(outside|not part of|no part of)[^.]{0,30}root-consensus[^.]{0,25}(and|/|nor|or)[^.]{0,20}slashing'; then
+  printf 'FAIL[present]: %s\n' "SA §11.3: identity R-KEL explicitly outside the root-consensus/slashing path (both limbs)"
+  fail=1
+fi
+# (g-inv-rc) FORBID (predicate-local): R-KEL declared INSIDE root-consensus via an
+#   INCLUSION verb (bare "is/are" is NOT enough — else the legitimate combined
+#   "R-KEL is outside this root-consensus/slashing path" would self-trip). The
+#   exempting negation must sit adjacent to "root-consensus".
+_c2_s113_kel_rc=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'R-KEL[^.]{0,45}(subject to|part of|within|inside|included in|among|covered by)[^.]{0,20}root-consensus|root-consensus[^.]{0,45}(include[ds]?|among|covers?|applies to)[^.]{0,20}R-KEL' \
+  | grep -ivE '(outside|not|never|no part of|exclud)[[:space:]/a-z-]{0,20}root-consensus' || true)
+if [ -n "$_c2_s113_kel_rc" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.3: identity R-KEL must not be placed inside root-consensus (exempting negation must attach to 'root-consensus')"
+  printf '  %s\n' "$_c2_s113_kel_rc"
+  fail=1
+fi
+# (g-inv-slash) FORBID (predicate-local): R-KEL declared subject to slashing via an
+#   INCLUSION verb, with the exempting negation adjacent to "slashing" only — so
+#   "R-KEL is outside root-consensus but remains subject to slashing" is flagged on
+#   this limb (Q-001.3), while "R-KEL is outside this root-consensus/slashing path"
+#   (no inclusion verb) survives.
+_c2_s113_kel_slash=$(printf '%s\n' "$SA_S113" \
+  | grep -iE 'R-KEL[^.]{0,45}(subject to|part of|within|liable to|faces?|remains? (subject|liable))[^.]{0,20}slashing|slashing[^.]{0,45}(applies to|include[ds]?|covers?|among)[^.]{0,20}R-KEL' \
+  | grep -ivE '(outside|not|never|no|exclud|free from|immune (to|from))[[:space:]/a-z-]{0,20}slashing' || true)
+if [ -n "$_c2_s113_kel_slash" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11.3: identity R-KEL must not be placed inside the slashing path (exempting negation must attach to 'slashing')"
+  printf '  %s\n' "$_c2_s113_kel_slash"
+  fail=1
+fi
+# (g-pos3) PRESENT (Q-001.4): identity R-KEL's residual watcher concern is
+#   freshness/submission, bound to R-KEL/identity in the SAME clause — the window
+#   excludes '.' and ';' so a credential-proof-freshness clause elsewhere on the
+#   line cannot satisfy it.
+if ! printf '%s\n' "$SA_S113" | grep -iEq \
+     '(R-KEL|identity)[^.;]{0,60}freshness/submission|freshness/submission[^.;]{0,60}(R-KEL|identity)'; then
+  printf 'FAIL[present]: %s\n' "SA §11.3: identity R-KEL watcher concern stated as freshness/submission in the same clause (not watcher-root integrity)"
+  fail=1
+fi
+
 # --- verdict ---------------------------------------------------------------
 
 if [ "$fail" -ne 0 ]; then

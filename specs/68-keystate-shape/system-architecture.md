@@ -14,7 +14,10 @@ those registrations up to GLEIF — a pure, derived set, not a curated one. **Pr
 builders** watch the KERI witnesses of everything in the closure and maintain
 **Merkle-mirror trees** of that off-chain *state* (the **closure itself is computed, not
 stored** — see §5); **Cardano Foundation**, as **coordinator**, anchors the agreed
-*state-mirror* roots on-chain per checkpoint. On-chain
+*state-mirror* roots on-chain per checkpoint.
+Identity **R-KEL is excluded from this closure Merkle-mirror family** — it is the on-chain
+cryptographic *checkpoint* (§3), advanced by witnessed anchoring seals, not a watcher-anchored
+mirror. On-chain
 **validators** then verify user actions against (a) native on-chain state and (b) the
 anchored mirror roots — predominantly in **Blake2b**, with one checkpointed BLAKE3
 exception: the ≤1-chunk AID **byte binding** `blake3(icp) == cesr_aid` is now verified
@@ -71,10 +74,21 @@ CF-anchored; watcher-consensus; falsifiable):
 
 | Root | Contents | Notes |
 |---|---|---|
-| **R-MAP** | Blake3 ↔ Blake2b for AIDs and credential SAIDs | present only while Plutus lacks blake3; AID slice can be absorbed by the registration oracle |
-| **R-KEL** | AID → current KERI key-state (KEL checkpoint) | **for identity, this is an on-chain *cryptographic checkpoint*, not a watcher-attested mirror** — advanced by witnessed anchoring seals carrying blake2b commitments. Genesis is the §7c **hybrid** (#91): the **byte binding** `blake3(icp) == cesr_aid` is cryptographic on-chain for ≤1-chunk inceptions (#97), attested for >1-chunk; the **semantic projection** is attested / challengeable at every tier (see [identity-model.md](identity-model.md) §7a/§7c). The watcher-mirror framing below applies to the credential plane (R-TEL), not identity. |
+| **R-MAP** | Blake3 ↔ Blake2b for AIDs and credential SAIDs | present only while Plutus lacks a blake3 builtin. **AID note is tier-scoped** (#91 §7c): the ≤1-chunk AID **byte binding** is on-chain (#97), so only the **>1-chunk residual AID mapping** stays oracle-attested; the credential-SAID mapping stays watcher/oracle-attested at every size. The AID slice can be absorbed by the registration oracle. |
 | **R-TEL** | credential SAID → issued/revoked status | **the hot root** — see §7 |
 | **R-ACDC** | credential existence / SAID | **likely folds into R-TEL** (`SAID → issued\|revoked` carries both) |
+
+**Identity R-KEL — on-chain cryptographic checkpoint, set apart from the mirror family.**
+Identity **R-KEL is set apart from the Proof-builder-anchored / watcher-consensus mirror family**;
+it is an on-chain cryptographic *checkpoint*, never a watcher-attested mirror. Its relation to the
+native registry is direct: the native **R-ID** registry seeds the genesis key-state and **R-KEL is
+the advance-layer checkpoint over R-ID's** validator-checked rotations (R-ID holds the registered
+AID → genesis key-state; R-KEL carries it forward per §4). Advance is by witnessed anchoring seals
+carrying blake2b commitments. Genesis is the §7c **hybrid** (#91): the **byte binding**
+`blake3(icp) == cesr_aid` is cryptographic on-chain for ≤1-chunk inceptions (#97), attested for
+>1-chunk; the **semantic projection** is attested / challengeable at every tier (see
+[identity-model.md](identity-model.md) §7a/§7c). This is a *classification*, not a physical-storage
+choice — the advance-path storage shape is **#92's** to decide, not selected here.
 
 ## 4. The closure
 

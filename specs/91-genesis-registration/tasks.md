@@ -88,7 +88,7 @@ Epic-owner final audit found residual decision-consistency contradictions in the
 owned files. Same owned-file set (`identity-model.md`, `system-architecture.md`,
 `accept.sh`). One bisect-safe commit. Not a #92 storage decision; not scope expansion.
 
-- [ ] T917 — **RED.** Strengthen `accept.sh` with assertions for the NOTE-008 fixes,
+- [X] T917 — **RED.** Strengthen `accept.sh` with assertions for the NOTE-008 fixes,
   demonstrate they fail on the current (8babc57) docs, log RED. Assertions:
   - identity-model §3 has **no unqualified "there is nothing to trust"** — must be
     qualified to *no additional watcher/oracle trust for post-genesis advances*
@@ -99,7 +99,7 @@ owned files. Same owned-file set (`identity-model.md`, `system-architecture.md`,
     **excludes identity R-KEL**;
   - the **R-MAP AID note is tier-scoped** (≤1-chunk byte binding on-chain / >1-chunk
     residual oracle mapping), not flat historical wording.
-- [ ] T918 — **GREEN.** Apply the three canonical-doc fixes:
+- [X] T918 — **GREEN.** Apply the three canonical-doc fixes:
   - `system-architecture.md` §0 (exclude identity R-KEL from the closure mirror
     framing); §3 (reclassify/separate the R-KEL on-chain checkpoint from the
     Proof-builder-anchored family + clarify relation to R-ID **without** selecting

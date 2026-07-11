@@ -64,7 +64,8 @@ don't — so the on-chain cadence is *one tx per rotation* (rare), not per KERI 
 **This is exactly #24** (reveal pre-committed next key, check `hash(revealed)==next_digest`,
 threshold sig, advance seq). #24 is therefore revived as the **integrity backbone**, not a
 retired idea: the state only advances through validator-checked rotations, so no party can
-inject fake keys — there is nothing to trust.
+inject fake keys — there is **no additional watcher/oracle trust to add for post-genesis
+advances** (the genesis projection stays attester-trusted per §7a/§7c).
 
 One caveat travels with the revival: original #24 derived `trie_key` from inception
 material, so its **base case was self-certifying** in blake2b. Here the leaf key is an

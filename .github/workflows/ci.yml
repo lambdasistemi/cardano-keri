@@ -87,16 +87,57 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # Prove `nix develop` yields a working toolchain (closes #57). We do
-      # NOT run `cabal build` here: a fresh runner has no dist-newstyle plan
-      # and cabal cannot fetch the CHaP index over https, so we exercise the
-      # shell's own cabal / fourmolu / cabal-fmt / hlint instead — all offline.
-      - name: Dev-shell toolchain
+      # Prove `nix develop` yields a working toolchain AND that the full project
+      # compiles from the dev shell CHaP-offline — without fetching the secure
+      # https CHaP index a fresh CHaP-empty runner cannot reach (issue #99 S9c).
+      # (hackage over http + the git SRPs stay live, as on the passing runner;
+      # only the secure https CHaP index was the failure.) The dev shell injects a
+      # Nix-LOCAL CHaP repository (from the CHaP flake input); `cabal update`
+      # generates its index cache offline + refreshes hackage (plain http), then
+      # the build compiles the CHaP stack + local project from local source.
+      # --enable-tests covers the offchain/e2e test component + the
+      # cardano-node-clients `devnet` sublibrary (a real full build, not reduced).
+      - name: Dev-shell cabal build
         working-directory: offchain
-        run: |
-          nix develop --quiet -c bash -euc '
-            cabal --version
-            fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-            find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
-            hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-          '
+        run: nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
+
+  e2e:
+    name: E2E (withDevnet)
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Live-boundary #99 cage Phase-2 smoke: the runCommand check starts a real
+      # cardano-node via withDevnet, mints/requests/modifies against the hardened
+      # validator and observes the Modify settle. Linux-only.
+      - name: withDevnet cage Phase-2 smoke
+        working-directory: offchain
+        run: nix build --quiet -L .#checks.x86_64-linux.e2e
+
+  e2e-sweep:
+    name: E2E batch sweep (withDevnet)
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Fast guard: the committed sweep-boundary.md must be internally
+      # consistent (declared-aggregate arithmetic + cage script hash present),
+      # so a hand-edit of the artifact is caught without a devnet.
+      - name: Verify committed sweep artifact
+        working-directory: offchain
+        run: nix build --quiet -L .#checks.x86_64-linux.sweep-consistency
+      # Heavy reproducible verification: regenerate the artifact by submitting
+      # one Modify per batch size through withDevnet, ASSERTING each expected
+      # node outcome (N=1..4 settle; N>=5 reject at the specific Phase-1 limit).
+      # A boundary/harness regression fails the run. Not in the routine gate.
+      - name: Regenerate + assert #99 Modify batch sweep
+        working-directory: offchain
+        run: nix run --quiet .#e2e-sweep

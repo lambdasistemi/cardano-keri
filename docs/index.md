@@ -13,6 +13,13 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
 - **cardano-keri status:** research/design and prototypes for an MPFS identity
   plugin. The identity registry, freeze registry, super watcher, and
   Veridian/KERI bridge are not shipped runtime infrastructure in this repo.
+- **Security gates:** issue #99 hardened the value-cage validator's token and
+  AID-ownership invariants — a unique thread token confined to its state output,
+  a pinned migration predecessor, and an oracle that is necessary but not
+  sufficient for AID authority. This is **one** completed security gate among the
+  verification, hardening, bridge, and runtime work still required; it does not
+  make the cage production- or mainnet-ready, and closing it does not lift the
+  prototype label.
 - **Design target:** on-chain-verifiable key-state operations using
   `blake2b_256`, Ed25519, MPF proofs, and MPFS cage/plugin composition.
 - **Delivery plan:** see the [Roadmap](roadmap.md) — five milestones building

@@ -1,12 +1,13 @@
+use aiken/collection/dict
 use aiken/collection/list.{find, foldl, has, head}
 use aiken/crypto.{VerificationKeyHash, blake2b_256, verify_ed25519_signature}
 use aiken/interval
 use aiken/merkle_patricia_forestry.{MerklePatriciaForestry, empty, root}
 use aiken/merkle_patricia_forestry as mpf
 use aiken/option.{is_some}
-use aiken/primitive/bytearray.{from_int_big_endian}
+use aiken/primitive/bytearray.{from_int_big_endian, length, take}
 use cardano/address
-use cardano/assets.{PolicyId}
+use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, find_input,
 }
@@ -21,12 +22,13 @@ use types.{
 /// Domain tag for value-write authorization messages.
 const value_write_domain: ByteArray = "cardano-keri/value-write/v1"
 
-validator mpfCage(_version: Int) {
+validator mpfCage(_version: Int, predecessorPolicy: PolicyId) {
   mint(redeemer: MintRedeemer, policyId: PolicyId, tx: Transaction) {
     when redeemer is {
       Minting(mint) -> validateMint(mint, policyId, tx)
-      Migrating(migration) -> validateMigration(migration, policyId, tx)
-      Burning -> True
+      Migrating(migration) ->
+        validateMigration(migration, predecessorPolicy, policyId, tx)
+      Burning(tokenId) -> validateBurn(tokenId, policyId, tx)
     }
   }
 
@@ -97,6 +99,40 @@ fn validateEnd(policyId, tokenId, tx) {
   let Transaction { mint, .. } = tx
   expect Some(q) = quantity(policyId, mint, tokenId)
   expect q == -1
+  True
+}
+
+/// Validate a `Burning` mint: the burn of a cage thread token must be exactly one
+/// owner-authorized End lifecycle transition.
+///
+/// - The cage policy must mint **exactly one** entry — the burned `tokenId`'s
+///   asset name at quantity **-1**. Inspecting the full `tokens(mint, policyId)`
+///   map (not just the derived token's quantity) rejects any positive quantity
+///   (a counterfeit), any extra asset name, and any mismatched entry (H1).
+/// - The burn must be **coupled** to an owner-authorized `End`: a cage-script
+///   state UTxO holding the burned token must be spent, and that state's owner
+///   must sign. The `End` spend path independently re-checks the -1 burn, so a
+///   `Burning` mint and its `End` spend are one exact lifecycle transition — a
+///   burn with no matching state UTxO, or one the owner did not authorize, is
+///   rejected (H6).
+fn validateBurn(tokenId: TokenId, policyId: PolicyId, tx: Transaction) {
+  let Transaction { mint, inputs, extra_signatories, .. } = tx
+  expect [Pair(burnedName, burnedQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect burnedName == tokenId.assetName
+  expect burnedQty == -1
+  expect Some(stateInput) =
+    find(
+      inputs,
+      fn(input) {
+        input.output.address.payment_credential == address.Script(policyId) && quantity(
+          policyId,
+          input.output.value,
+          tokenId,
+        ) == Some(1)
+      },
+    )
+  let State { owner, .. } = readState(stateInput)
+  expect has(extra_signatories, owner)
   True
 }
 
@@ -246,6 +282,14 @@ fn mkAction(
               when action is {
                 UpdateAction { value_proof, auth } -> {
                   expect in_phase1(validity_range, submitted_at, process_time)
+                  // FR6 (H5): bind the authenticated AID to the mutated key. The
+                  // key's first 32 bytes must be `blake2b_256(owner_aid)` — the
+                  // owner cell is exactly that digest (length 32); a longer key is
+                  // a namespaced child under it. This rejects both an unrelated
+                  // authenticated AID (digest differs) and a raw-`owner_aid` prefix
+                  // (the AID bytes are not their own digest).
+                  expect length(requestKey) >= 32
+                  expect take(requestKey, 32) == blake2b_256(auth.owner_aid)
                   // Verify AID owner authorization before applying MPF op
                   expect
                     verifyOwnerAuth(auth, identity_root, input.output_reference)
@@ -320,7 +364,14 @@ fn validModify(
   tx: Transaction,
   actions: List<RequestAction>,
 ) {
-  let Transaction { outputs, inputs, validity_range, fee: tx_fee, .. } = tx
+  let Transaction { outputs, inputs, validity_range, fee: tx_fee, mint, .. } =
+    tx
+  // Spend-side half of the H6 mint↔End coupling (see `validateBurn`): a Modify
+  // continues the cage lifecycle, so it must NOT mint or burn its own thread
+  // token. Burning is exclusively the owner-authorized End path, so a burn
+  // cannot be laundered through a Modify of the same state UTxO.
+  expect address.Script(scriptPolicy) = input.output.address.payment_credential
+  expect None = quantity(scriptPolicy, mint, tokenId)
   let State { root, tip, process_time, retract_time, .. } = state
   expect Some(output) = head(outputs)
   expect InlineDatum(outDatum) = output.datum
@@ -328,15 +379,21 @@ fn validModify(
     root: newRoot,
     process_time: outProcessTime,
     retract_time: outRetractTime,
-    identity_root: outIdentityRoot,
     ..
   }) = outDatum
   // Enforce immutability of time params
   expect process_time == outProcessTime
   expect retract_time == outRetractTime
+  // FR4 (H3-modify): confine the thread token in the continuing state output. A
+  // no-burn Modify must re-create the state UTxO carrying its exact thread token —
+  // it cannot move the token out to a non-cage output. Additive to the S3
+  // no-mint/burn reverse guard above (which only blocks minting/burning it).
+  expect quantity(scriptPolicy, output.value, tokenId) == Some(1)
 
-  // identity_root may advance (oracle updates it) but must not silently regress
-  // (handled by oracle governance; not checked here — oracle signs the tx)
+  // FR5 (H4): authenticate against the INPUT state's `identity_root` (the spent
+  // StateDatum, `state`), NOT the output datum's root — a tx must not introduce
+  // its own authority via its own output. `identity_root` may advance (oracle
+  // updates it in the output) but authorization is proven against the input root.
   let (expectedNewTrie, remainingActions, owners, totalInputLovelace) =
     inputs
       |> foldl(
@@ -347,7 +404,7 @@ fn validModify(
             process_time,
             retract_time,
             validity_range,
-            outIdentityRoot,
+            state.identity_root,
           ),
         )
   // Fold gap fix: all actions must be consumed
@@ -369,41 +426,62 @@ pub fn validateMint(minting: Mint, policyId: PolicyId, tx: Transaction) {
   let Transaction { outputs, mint, inputs, .. } = tx
   let tokenId = TokenId { assetName: assetName(asset) }
   expect is_some(find_input(inputs, asset))
-  expect
-    when quantity(policyId, mint, tokenId) is {
-      Some(quantity) -> quantity == 1
-      None -> False
-    }
+  // Exactly one asset name under the cage policy, and it is the derived thread
+  // token at quantity 1. Inspecting the full `tokens(mint, policyId)` map (not
+  // just the derived token's quantity) rejects any extra asset name or extra
+  // quantity minted under the cage policy.
+  expect [Pair(mintedName, mintedQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect mintedName == tokenId.assetName
+  expect mintedQty == 1
   expect Some(output) = head(outputs)
   expect address.Script(targetScriptHash) = output.address.payment_credential
   expect targetScriptHash == policyId
   expect InlineDatum(tokenState) = output.datum
   expect StateDatum(State { root: tokenRoot, .. }) = tokenState
   expect tokenRoot == root(empty)
+  // Confine the minted thread token in the designated state output.
+  expect quantity(policyId, output.value, tokenId) == Some(1)
   True
 }
 
+/// Validate a `Migrating` mint: move a cage thread token from the **pinned**
+/// predecessor policy to this cage policy, one exact lifecycle transition.
+///
+/// - The predecessor policy is `predecessorPolicy`, a `mpfCage` validator
+///   parameter (H2 fix). Because a different parameter changes the script hash,
+///   an attacker-created predecessor policy cannot satisfy this by construction —
+///   the caller can no longer supply an arbitrary `oldPolicy`. Genesis cages have
+///   no predecessor and are created via `Minting`, never this path.
+/// - The predecessor policy must burn **exactly one** entry: the migrated token's
+///   asset name at quantity -1. Inspecting the full `tokens(mint, predecessorPolicy)`
+///   map (not just the named token) rejects any extra asset name or extra quantity.
+/// - The successor (this) policy must mint **exactly one** entry: the same asset
+///   name at quantity 1 (same full-map check).
+/// - The minted successor token is **confined** in the designated state output
+///   (H3-migration), reusing the `validateMint` confinement shape.
 pub fn validateMigration(
   migration: Migration,
+  predecessorPolicy: PolicyId,
   policyId: PolicyId,
   tx: Transaction,
 ) {
-  let Migration { oldPolicy, tokenId } = migration
+  let Migration { tokenId } = migration
   let Transaction { outputs, mint, .. } = tx
-  expect
-    when quantity(oldPolicy, mint, tokenId) is {
-      Some(qty) -> qty == -1
-      None -> False
-    }
-  expect
-    when quantity(policyId, mint, tokenId) is {
-      Some(qty) -> qty == 1
-      None -> False
-    }
+  // Exactly one predecessor-policy burn of the migrated token at -1.
+  expect [Pair(oldName, oldQty)] =
+    dict.to_pairs(tokens(mint, predecessorPolicy))
+  expect oldName == tokenId.assetName
+  expect oldQty == -1
+  // Exactly one successor-policy mint of the migrated token at +1.
+  expect [Pair(newName, newQty)] = dict.to_pairs(tokens(mint, policyId))
+  expect newName == tokenId.assetName
+  expect newQty == 1
   expect Some(output) = head(outputs)
   expect address.Script(targetScriptHash) = output.address.payment_credential
   expect targetScriptHash == policyId
   expect InlineDatum(tokenState) = output.datum
   expect StateDatum(State { .. }) = tokenState
+  // Confine the minted successor thread token in the designated state output.
+  expect quantity(policyId, output.value, tokenId) == Some(1)
   True
 }

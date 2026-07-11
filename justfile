@@ -34,17 +34,19 @@ unit match="":
 build-offchain:
     cd offchain && nix build --quiet .#checks.x86_64-linux.unit-tests
 
-# Assert the offchain dev shell yields a working toolchain (offline)
+# Build the whole offchain project (incl. e2e test component) from the dev shell,
+# CHaP-offline via the Nix-local CHaP repo (issue #99 S9c) — no fetch of the
+# secure https CHaP index (hackage over http + the git SRPs stay live). `cabal
+# update` first generates the CHaP index cache from the nix-store repo (offline)
+# and refreshes hackage (http); the build then compiles the CHaP stack + local
+# project + e2e-tests from local source. cabal.project.devshell drops the https
+# CHaP repository.
 devshell-offchain:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd offchain
-    nix develop --quiet -c bash -euc '
-      cabal --version
-      fourmolu -m check $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-      find . -name "*.cabal" -not -path "./dist-newstyle/*" | xargs cabal-fmt -c
-      hlint $(find . -name "*.hs" -not -path "./dist-newstyle/*")
-    '
+    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
+
+# Run the live-boundary withDevnet #99 cage Phase-2 smoke (Linux-only)
+e2e:
+    cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
 
 # --- onchain (Aiken) ---
 

@@ -29,8 +29,10 @@ Two merged evidence gates make that premise obsolete:
   whose intermediate chaining value must be authenticated — the spike explicitly
   says it does **not** implement that lifecycle (owned by #99/#24/#92).
 - **#99 / PR #100** (merged) restored the cage/thread-token boundary: an oracle is
-  **necessary but never sufficient** to manufacture AID authority or mutate
-  another AID's leaf; owner auth is against **authenticated** state; keys are bound
+  **necessary but never sufficient for an unauthorized post-genesis mutation
+  against authenticated prior owner state** (the false-genesis-projection exception
+  is documented under the projection boundary below); owner auth is against
+  **authenticated** state; keys are bound
   via `blake2b_256(owner_aid)`; a **real cardano-node Phase-2** proof settled a
   real `Modify`; batch bound **qualified** (mainnet ≈ N=2 at conservative declared
   budgets). #99 proves cage invariants; it does **not** integrate the #97
@@ -146,10 +148,12 @@ Transitions / invariants:
    `Δ_post` to fund post-activation challenges, then released.
 5. **Post-activation fraud:** remains **challengeable during `Δ_post`** with
    `bond_reg` still available. After `Δ_post` the *bonded remedy* ends — an honest
-   **finite assurance window**. Detectability is not finite: for ≤1-chunk the byte
-   binding is cryptographic (cross-AID impersonation impossible), and any projection
-   inconsistency stays **off-chain-reproducible forever** over the on-chain-bound
-   bytes; only the *automated* remedy is time-boxed.
+   **finite assurance window**. Detectability is not finite: for ≤1-chunk,
+   substitution of *different* inception bytes under the AID is cryptographically
+   impossible (overall authority/impersonation remains attester-trusted at the
+   projection boundary), and any projection inconsistency stays
+   **off-chain-reproducible forever** over the on-chain-bound bytes; only the
+   *automated* remedy is time-boxed.
 
 ### Adjudication boundary (NOTE-004) — trusted, not trustless
 
@@ -327,11 +331,12 @@ obsolete "BLAKE3 cannot fit" premise.
   decisions 1 & 2, the teeth parameters/transitions, the signed-package fields, the
   trust enumeration (incl. overall-genesis-authority attester-trusted), the
   #92/#68/#24 consequences, the evidence/integration separation, the #97/#99 links;
-  **absence** of the obsolete conclusion and of the over-strong phrases NOTE-006
-  forbids — no "objectively provable on-chain" adjacent to projection / >1-chunk
+  **absence** of the obsolete conclusion and of the over-strong phrases NOTE-006/007
+  forbid — no "objectively provable on-chain" adjacent to projection / >1-chunk
   binding; no claim that the byte binding alone "prevents … impersonation"; no
-  "provable censorship"; no "makes … freeze … safe". RED on `origin/main`, GREEN
-  after the slice.
+  "cross-AID impersonation impossible" (or equivalent asserting form); no "provable
+  censorship"; no "makes … freeze … safe". RED on `origin/main`, GREEN after the
+  slice.
 
 ## Success criteria
 

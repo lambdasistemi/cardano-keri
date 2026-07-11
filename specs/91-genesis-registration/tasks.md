@@ -51,6 +51,7 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
     + **indefinite frozen-state griefing under quorum failure** named;
   - **forbidden**: "objectively provable on-chain" (or close variant) adjacent to
     *projection* or *>1-chunk* binding; byte binding alone "prevents … impersonation";
+    "cross-AID impersonation impossible" (or equivalent asserting form);
     "provable censorship"; "makes … freeze … safe"; any present-tense "is confined"
     implemented claim; any production-readiness / generic-KERI claim;
   - trust-assumption enumeration present (overall-genesis-authority, controller,

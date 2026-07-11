@@ -45,8 +45,15 @@ across both docs at every commit (the gate's `accept.sh` asserts both).
   in `WIP.md`.
 - **GREEN.** Amend `identity-model.md` (§ intro line, §7a, new §7c, §8 cascade,
   §10 open-thread 3) and `system-architecture.md` (§3 R-KEL note, §6, §9 decisions
-  1 & 2) to the hybrid decision with the NOTE-003/NOTE-004 boundaries, the trust
-  enumeration, and the #92/#68/#24 consequences. `accept.sh` and `./gate.sh` pass.
+  1 & 2) to the full hybrid decision: both axes; NOTE-003/NOTE-004 boundaries;
+  **decision 1** (oracle-gated registration / permissionless challenge) and
+  **decision 2** (MPFS-with-oracle); the **teeth state machine** (bonds, windows,
+  tier rule, false-challenge forfeiture, adjudication timeout); the **signed
+  registration package** shape; the **evidence/integration separation** (cage
+  confinement as a required #24/#92 invariant, #99 Modify N not a genesis bound);
+  the trust enumeration; the #92/#68/#24 consequences. `accept.sh` and `./gate.sh`
+  pass. All decision shapes are pre-specified in `spec.md`; the driver must not
+  re-open them or invent new ones.
 - **One commit.** Subject `docs(identity-model): select hybrid genesis — crypto
   byte binding + attested/challengeable projection (§7c)`; body carries
   `Tasks: T91-S1`.

@@ -119,6 +119,27 @@ Documentation-consistency only; no economics change, no #92 storage choice. **Af
 reviewed S3 SHA is pushed, STOP — do not finalize until the epic owner sends an explicit
 `FINAL-AUDIT-ACCEPTED` (NOTE-010).**
 
+### Slice 4 — NOTE-012 §11 anchored-root trust scope (driver+navigator)
+
+Epic-owner final audit found §11.1/§11.3 generic anchored-root/root-consensus trust
+wording still unscoped (S3 fixed §11.2/§11.4). Bisect-safe correction slice, RED→GREEN,
+fresh navigator approval + `NAVIGATOR-VERIFIED` (FR10-cont2, tasks T921/T922):
+
+- `system-architecture.md` §11.1 — scope the proof-against-anchored-root correctness
+  statement to the credential/external mirror plane; preserve "identity checkpoint
+  advances are validator-checked; watchers only serve/submit".
+- §11.3 — scope "anchored roots + root-consensus", "provably-wrong anchored root"
+  slashing, and "proofs against the root" to credential/external mirror roots
+  (R-TEL/R-ACDC/R-MAP); identity R-KEL explicitly outside the root-consensus/slashing
+  path (freshness/submission concern). Check §11.4/§11.5 for the same generic sweep.
+- Strengthen `accept.sh` (FR10-cont2) so removing that §11 trust-layer scope is RED,
+  legitimate "R-KEL … anchored by witnessed seals, not a watcher mirror" survives; RED on
+  `c495901`.
+
+Wording-scope only; **preserve the payer/reward mechanism verbatim**, no economics
+change, no #92 storage. **After the reviewed S4 SHA is pushed, STOP — do not finalize
+until the epic owner sends an explicit `FINAL-AUDIT-ACCEPTED` (NOTE-012).**
+
 ## Orchestrator-owned finalization (post-slice)
 
 - Extend/verify `gate.sh` already invokes `accept.sh` (it does, tolerant-then-strict).

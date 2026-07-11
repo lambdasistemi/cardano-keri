@@ -92,8 +92,11 @@ choice — the advance-path storage shape is **#92's** to decide, not selected h
 
 ## 4. The closure
 
-The **minimal set of KERI identities + credentials the watchers must mirror in order to
-verify everyone who registered** — nothing more, nothing less.
+The **minimal set of KERI identities + credentials the watchers must track in order to
+verify everyone who registered** — nothing more, nothing less. The two planes differ:
+identity KELs are watched to **assemble/serve/submit validator-checked R-KEL checkpoint advances**,
+while credential/external state is **mirrored** into R-TEL/R-ACDC/R-MAP. R-KEL is not a
+watcher mirror.
 
 - **Nodes:** AIDs (identities) and ACDCs (credentials).
 - **Seeds:** the AIDs registered on-chain (R-ID entries).
@@ -108,14 +111,15 @@ closure = registered AIDs ∪ { every AID + credential reachable by walking
 Example — Alice (individual, OOR credential) registers:
 ```
 Alice-AID → OOR → OOR-AUTH(+LE-AID) → LE-cred(+QVI-AID) → QVI-cred(+GLEIF-AID)
-closure identities  = {Alice, LE, QVI, GLEIF}     → watch their KELs   (R-KEL)
-closure credentials = {OOR, OOR-AUTH, LE, QVI}    → watch their status (R-TEL)
+closure identities  = {Alice, LE, QVI, GLEIF}     → watch their KELs to submit R-KEL checkpoint advances
+closure credentials = {OOR, OOR-AUTH, LE, QVI}    → mirror their status (R-TEL)
 ```
 
 Properties: **closed** (a chain missing a hop is unverifiable), **minimal** (only what a
 registrant depends on; unrelated vLEI identities never enter), **derived not chosen** (a
-pure function of R-ID, so CF can't curate it). The closure is exactly the **key-domain of
-the mirror roots**.
+pure function of R-ID, so CF can't curate it). The closure is exactly the **key-domain over
+settled R-ID** — of the credential/external mirror roots (R-TEL/R-ACDC/R-MAP) and of the
+identity R-KEL checkpoint advances alike.
 
 **Minimum registration payload** (so the closure is computable without fetching): the
 registrant's AID + its credential-chain path `[(credential_SAID, issuer_AID), …]`
@@ -133,9 +137,14 @@ it a *judge* and breaking bounded trust. Fix: **pin every computation to settled
   settled R-ID checkpoint**. Every watcher computes the *same* set. Late registrations
   roll into N+1. (No separate "closure structure" is stored/anchored — the commitment you
   need is the R-ID root you already have on chain.)
-- State roots are `R-TEL_N`, `R-KEL_N` = "state of `closure_N` as of **freshness cutoff
-  `T_N`**" (a slot / KEL-checkpoint). A watcher disagreeing with the anchored root is
-  **provably wrong or provably lagging** — falsifiable against the pinned inputs.
+- **Credential/external mirror roots** `R-TEL_N` (and R-ACDC/R-MAP) = "state of `closure_N`
+  as of **freshness cutoff `T_N`**" (a slot). A watcher disagreeing with an anchored
+  **mirror** root is **provably wrong or provably lagging** — falsifiable against the pinned
+  inputs (bonded watcher-consensus).
+- **Identity `R-KEL`** is the **on-chain checkpoint over settled R-ID** — a validator-checked
+  advance, not a watcher-computed mirror. Watchers serve/submit its checkpoint material, so
+  its residual concern is **freshness/submission** of that material, not watcher-root
+  integrity.
 
 > **Invariant:** the coordinator only ever anchors a *deterministic function of settled
 > inputs* (`R-ID@N`, `T_N`). It never decides; it commits what anyone can independently
@@ -210,10 +219,13 @@ design matters most and why every business case gated on it.
 Methodology: **use case → which validator → which redeemer → what proofs it carries →
 which Merkle root each proof comes from.** Applied to all four business cases:
 
-- The four cases only disagreed on whether R-MAP/R-KEL/R-ACDC are needed — and the
-  disagreement traced to one assumption: **Blake2b vs Blake3 credentials.** In a
-  CF-Blake2b world they collapse to native; in the Blake3 world (the forecast) they're
-  anchored. So the methodology *proved* the proof-builder layer exists ⇔ Blake3/third-party.
+- The four cases only disagreed on whether the credential-mirror roots **R-MAP/R-ACDC** (and
+  R-TEL) are needed — and the disagreement traced to one assumption: **Blake2b vs Blake3
+  credentials.** In a CF-Blake2b world they collapse to native; in the Blake3 world (the
+  forecast) they're **anchored mirrors**. So the methodology *proved* the proof-builder layer
+  exists ⇔ Blake3/third-party. Identity **R-KEL** is orthogonal to that axis: the on-chain
+  checkpoint over settled R-ID, advanced/anchored by witnessed seals and not a watcher
+  mirror — its need does not follow from Blake3/third-party credentials.
 - **R-TEL is the universal hot root** (every case gates on it).
 - **R-POOL** (SPO) and **R-REG** (securities variant b) are new **native** registers
   (matching vetting F13's "missing core components").
@@ -276,7 +288,8 @@ self-signer tiers) were the symptom of putting the market in the consensus layer
 Two costs, two payers:
 
 - **Watching = fixed / infrastructure cost** (ingest witnesses, maintain the closure's
-  mirror trees). Scales with closure size, not usage. → covered by the **issuer** (who
+  credential/external mirror trees — R-TEL/R-ACDC/R-MAP — and serve/submit identity
+  checkpoint material). Scales with closure size, not usage. → covered by the **issuer** (who
   benefits from mere *availability* of its credentials on Cardano). Issuer payment *gates
   whether its subtree is watched at all*, which is the lever behind "increase certificate
   production" — no free-riding, because no payment ⇒ no watching ⇒ its holders can't produce
@@ -310,7 +323,8 @@ new watcher registry to bootstrap), **VRF-native** (leader-election keys reused 
 and **sybil-resistant + decentralized** (inherit Cardano's operator-set properties). Reward
 is an **additional SPO revenue stream**. And because paid watchers = SPOs, **root-consensus
 rides on the SPO set** — the same operators that produce Cardano blocks anchor the
-KERI-mirror roots, so the mirror inherits Cardano's decentralization.
+KERI-mirror roots (the credential/external mirror plane — R-TEL/R-ACDC/R-MAP) and
+serve/submit identity checkpoint material, so the mirror inherits Cardano's decentralization.
 
 **VRF-batched challenge/response:**
 1. Coordinator posts **one** challenge tx carrying a VRF seed.

@@ -430,6 +430,187 @@ if [ -n "$_n008_mapneg" ]; then
   fail=1
 fi
 
+# ============================================================================
+# FR10-cont / NOTE-010 — whole-document R-KEL scan (Slice 3).
+# Slice 2 fixed §0/§3; the epic-owner whole-diff scan found further live
+# R-KEL-as-watcher-mirror statements in §4 (closure), §5 (state-root grouping)
+# and the later summaries (§8 anchored-root list, §11 "mirror trees" /
+# "KERI-mirror roots"). RED on b22d794, GREEN after the reconciliation.
+# Documentation-consistency only: NOT a #92 storage-layout choice, no economics
+# change — these assert *classification* wording, never a physical-storage or
+# reward-market change.
+#
+# Guards tightened per navigator Q-001 so an explicit opposite classification
+# cannot slip through:
+#   - exemptions attach to the *classification itself* (a "not"/"never" adjacent
+#     to the mirror-root/grouping verb), never a bare line-level "not"/"checkpoint"
+#     that a co-clause could satisfy;
+#   - grouping guards cover comma / "and" grouping as well as slash grouping;
+#   - NOTE-011 both directions are mechanically exercised — the retired
+#     "R-KEL … (proof-builder-)mirror root/family" classification is flagged,
+#     while "R-KEL … advanced/anchored by witnessed seals … not a watcher mirror"
+#     survives (the *seal* sense of "anchored", which carries no mirror-root noun).
+# Section-scoped via the awk slices below.
+# ============================================================================
+
+SA_S4=$(awk '/^## 4\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+SA_S5=$(awk '/^## 5\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+SA_S8=$(awk '/^## 8\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+SA_S11=$(awk '/^## 11\./{f=1;next} /^## [0-9]/{f=0} f' "$SA")
+
+# (c) §4 (closure) — planes distinguished. Identity KELs are watched to
+#     assemble/serve/submit validator-checked R-KEL *checkpoint advances*;
+#     credential/external state is *mirrored* into R-TEL/R-ACDC/R-MAP. Only the
+#     IDENTITY plane must not be lumped into "must mirror": the guard fires on a
+#     `must mirror` whose object is identity/KEL/R-KEL (Q-003), so the required
+#     credential-plane sentence "watchers must mirror credential/external state
+#     into R-TEL/R-ACDC/R-MAP" survives; an identity-as-mirror exclusion/negation
+#     also survives.
+_n010_s4mirror=$(printf '%s\n' "$SA_S4" \
+  | grep -iE 'must[[:space:]*_]+mirror' \
+  | grep -iE 'identit(y|ies)|\bKELs?\b|R-KEL' \
+  | grep -ivE 'exclud|(identit(y|ies)|KELs?|R-KEL)[^.]{0,40}(not|never|isn['"'"'’]t)[^.]{0,25}mirror|not[[:space:]*_]+mirror[^.]{0,25}(identit|KEL)' || true)
+if [ -n "$_n010_s4mirror" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §4: identity/KEL plane lumped into 'must mirror' (identity KELs feed R-KEL checkpoint advances, not a mirror)"
+  printf '  %s\n' "$_n010_s4mirror"
+  fail=1
+fi
+if ! printf '%s\n' "$SA_S4" | grep -iEq \
+     'R-KEL checkpoint advance|(assemble|serve|submit)[^.]*(validator-checked )?(R-KEL )?checkpoint advance'; then
+  printf 'FAIL[present]: %s\n' "SA §4: identity KELs watched to assemble/serve/submit R-KEL checkpoint advances (plane distinction)"
+  fail=1
+fi
+# (c-map) §4 — the live `closure identities … → R-KEL` example mapping must NOT
+#     present R-KEL as the identity-plane *mirror* parallel to `credentials → R-TEL`
+#     (Q-002). It has an independent guard from the intro sentence above: a
+#     `closure identit…`+`R-KEL` line is flagged when it either lacks the
+#     `checkpoint advance` qualifier or carries a `mirror` verb — so
+#     "closure identities … → watch their KELs (R-KEL)" fails, while
+#     "watch their KELs to submit R-KEL checkpoint advances" survives.
+_s4map_cand=$(printf '%s\n' "$SA_S4" | grep -iE 'closure identit' | grep -iE 'R-KEL')
+_n010_s4map=$( { printf '%s\n' "$_s4map_cand" | grep -ivE 'checkpoint advance'
+                 printf '%s\n' "$_s4map_cand" | grep -iE '\bmirror'; } | grep -v '^$' | sort -u)
+if [ -n "$_n010_s4map" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §4: 'closure identities → R-KEL' mapped as a mirror (must read: watch KELs to submit R-KEL checkpoint advances)"
+  printf '  %s\n' "$_n010_s4map"
+  fail=1
+fi
+
+# (d) §5 (determinism/trust) — split the state-root grouping. Identity R-KEL must
+#     NOT be co-listed with R-TEL as a watcher-computed state root (slash / comma /
+#     "and"); identity R-KEL is the on-chain checkpoint over settled R-ID with a
+#     freshness/submission concern. Exemption attaches to the classification: only
+#     an explicit distinction word, or a negation adjacent to the state-root/mirror
+#     noun, exempts — a bare unrelated "not" (e.g. "…, not optional") does NOT.
+_n010_s5group=$(printf '%s\n' "$SA_S5" \
+  | grep -iE 'R-KEL' | grep -iE '\bR-TEL' \
+  | grep -iE 'watcher-computed|state root' \
+  | grep -ivE 'separat|apart|unlike|distinct|not[[:space:]]+([a-z’'"'"'/-]+[[:space:]]+){0,4}(watcher-computed|state root|mirror|group)' || true)
+if [ -n "$_n010_s5group" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §5: identity R-KEL co-listed with R-TEL as a watcher-computed state root (split it out)"
+  printf '  %s\n' "$_n010_s5group"
+  fail=1
+fi
+if ! printf '%s\n' "$SA_S5" | grep -iEq \
+     'R-KEL[^.]*on-chain checkpoint[^.]*R-ID|R-KEL[^.]*checkpoint over[^.]*R-ID'; then
+  printf 'FAIL[present]: %s\n' "SA §5: identity R-KEL = on-chain checkpoint over settled R-ID (not a watcher-computed mirror root)"
+  fail=1
+fi
+if ! printf '%s\n' "$SA_S5" | grep -iEq 'freshness/submission'; then
+  printf 'FAIL[present]: %s\n' "SA §5: identity R-KEL residual concern is freshness/submission (not watcher-root integrity)"
+  fail=1
+fi
+# preservation (survive): the credential/external mirror plane keeps its
+# falsifiable bonded-watcher-consensus path (coordinator boundary intact).
+if ! printf '%s\n' "$SA_S5" | grep -iEq \
+     'mirror[^.]*(falsifiable|watcher-consensus)|(falsifiable|watcher-consensus)[^.]*mirror'; then
+  printf 'FAIL[present]: %s\n' "SA §5: mirror roots keep the falsifiable bonded watcher-consensus path (coordinator boundary preserved)"
+  fail=1
+fi
+
+# (e) §8 (methodology) — identity R-KEL must NOT be grouped with R-MAP/R-ACDC as
+#     anchored proof-builder-layer roots whose need follows from Blake3/third-party
+#     credentials (NOTE-011 RED direction). Any adjacency — slash, comma, "and" —
+#     counts: flag a §8 line carrying R-KEL together with R-MAP or R-ACDC, unless
+#     an explicit distinction (orthogonal / unlike / separate / "not …
+#     anchored|mirror|grouped") attaches.
+_n010_s8group=$(printf '%s\n' "$SA_S8" \
+  | grep -iE 'R-KEL' | grep -iE 'R-MAP|R-ACDC' \
+  | grep -ivE 'orthogonal|unlike|separat|apart|distinct|not[[:space:]]+([a-z’'"'"'/-]+[[:space:]]+){0,4}(anchored|mirror|group)' || true)
+if [ -n "$_n010_s8group" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §8: identity R-KEL grouped with R-MAP/R-ACDC as a Blake3-credential-driven anchored root (separate it)"
+  printf '  %s\n' "$_n010_s8group"
+  fail=1
+fi
+if ! printf '%s\n' "$SA_S8" | grep -iEq \
+     'R-KEL[^.]*orthogonal|R-KEL[^.]*on-chain checkpoint over settled R-ID'; then
+  printf 'FAIL[present]: %s\n' "SA §8: identity R-KEL set orthogonal to the Blake3-credential anchored-mirror axis (checkpoint over settled R-ID)"
+  fail=1
+fi
+
+# (e) §11 (economics summary) — "mirror trees" / "KERI-mirror roots" wording
+#     scoped to the credential/external mirror plane; watchers retain the role of
+#     serving/submitting identity *checkpoint* material. Scoping requires an
+#     explicit credential/external marker (NOT the mere presence of "checkpoint",
+#     which a "KERI-mirror roots include R-KEL checkpoint material" line abuses).
+_n010_s11unscoped=$(printf '%s\n' "$SA_S11" \
+  | grep -iE 'mirror trees|KERI-mirror roots?' \
+  | grep -ivE 'credential/external|R-TEL/R-ACDC|\bR-TEL\b' || true)
+if [ -n "$_n010_s11unscoped" ]; then
+  printf 'FAIL[forbid]: %s\n' "SA §11: 'mirror trees'/'KERI-mirror roots' not scoped to the credential/external mirror plane (identity R-KEL is a checkpoint, not a mirror)"
+  printf '  %s\n' "$_n010_s11unscoped"
+  fail=1
+fi
+if ! printf '%s\n' "$SA_S11" | grep -iEq 'identity[^.]*checkpoint|checkpoint material'; then
+  printf 'FAIL[present]: %s\n' "SA §11: watchers retain the role of serving/submitting identity checkpoint material"
+  fail=1
+fi
+
+# NOTE-010/011 — R-KEL must NOT be classified as a mirror ANYWHERE (whole-doc).
+# Two guards, both with the exemption ATTACHED TO THE CLASSIFICATION (a negation
+# / distinction immediately before the mirror noun) so a bare "checkpoint" or an
+# unrelated "not …" elsewhere on the line cannot exempt a real classification:
+#
+#   (i)  mirror ROOT / FAMILY / TREE — "R-KEL is … a proof-builder-anchored
+#        mirror root" is flagged even when the line also says "checkpoint";
+#        "R-KEL is set apart from the … mirror family" (§3) survives. A decoy
+#        "R-KEL is a mirror root … not a safe mirror of state" is still flagged
+#        (the "not" is not adjacent to the mirror-*root* noun).
+#   (ii) bare watcher(-attested/-computed) MIRROR — the exact opposite of the
+#        brief's legitimate phrase: "R-KEL is a watcher-attested mirror" is
+#        flagged, "R-KEL is not a watcher-attested mirror" / "… not a watcher
+#        mirror" survives (negation adjacent to the mirror noun).
+#
+# The *seal* sense of "anchored" carries no mirror noun, so "R-KEL … anchored by
+# witnessed seals … not a watcher mirror" never matches either verb — the
+# NOTE-011 survive direction. Both directions are exercised mechanically in the
+# RED handoff (handoffs/note011_harness.*).
+forbid "R-KEL classified as a mirror root / mirror family / proof-builder mirror (NOTE-010/011 retired)" \
+    "$SA" \
+    'R-KEL' \
+    '(mirror|proof-builder)[- ]?(roots?|famil(y|ies)|trees?)' \
+    '(set[[:space:]*_]+apart|separated?[[:space:]*_]+from|apart[[:space:]*_]+from|exclud|orthogonal|unlike|distinct[[:space:]*_]+from|(not|never|isn['"'"'’]t|no[[:space:]*_]+longer)[[:space:]*_]+(an?[[:space:]*_]+)?([a-z’'"'"'-]+[[:space:]*_]+){0,2}(mirror|proof-builder)[- ]?(roots?|famil|trees?)|anchored[[:space:]*_]+by[^.]*seal|(credential|external)[^.]{0,30}(mirror|proof-builder)[- ]?(roots?|famil(y|ies)|trees?)|(mirror|proof-builder)[- ]?(roots?|famil(y|ies)|trees?)[^.]{0,30}(credential|external))'
+# CLAUSE-SCOPED (Q-003): R-KEL DIRECTLY PREDICATED as a mirror (bare
+# "watcher-attested mirror" OR "mirror root/family/tree") within a tight window,
+# so neither a credential/external scoping elsewhere on the line nor an unrelated
+# later negation ("… R-TEL is not a watcher mirror") can rescue it. The exempting
+# negation/distinction MUST sit BETWEEN R-KEL and the mirror noun — so
+# "R-KEL is not a watcher-attested mirror" survives while "R-KEL: a mirror root
+# for credential state" and "R-KEL is a watcher-attested mirror; R-TEL is not a
+# watcher mirror" both fail. R-KEL predicated as a *checkpoint* keeps the mirror
+# noun far away (>28 chars), so the §2/§4-GREEN legitimate lines survive.
+_n011_pred=$(grep -iE 'R-KEL[^.]{0,28}(watcher[- ]?(attested|computed)?[- ]?)?mirror' "$SA" \
+  | grep -ivE 'R-KEL[^.]{0,20}(not|never|isn['"'"'’]t|no[[:space:]*_]+longer|set[[:space:]*_]+apart|separated?|apart[[:space:]*_]+from|orthogonal|distinct|unlike|exclud)' || true)
+if [ -n "$_n011_pred" ]; then
+  printf 'FAIL[forbid]: %s\n' "R-KEL directly predicated as a (watcher/mirror-root) mirror (NOTE-010/011; the negation must attach to the R-KEL clause itself)"
+  printf '  %s\n' "$_n011_pred"
+  fail=1
+fi
+# survive spot-check (must already hold via §3): R-KEL advanced/anchored by
+# witnessed seals — legitimate checkpoint language that MUST pass.
+either "NOTE-011 survive: R-KEL advanced/anchored by witnessed seals (legitimate checkpoint co-occurrence)" \
+    'R-KEL.*witnessed.*seal|witnessed.*seal.*R-KEL'
+
 # --- verdict ---------------------------------------------------------------
 
 if [ "$fail" -ne 0 ]; then

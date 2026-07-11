@@ -117,7 +117,7 @@ Same owned-file set (`system-architecture.md`, `accept.sh`; `identity-model.md` 
 a stray R-KEL-mirror statement is found there). One bisect-safe commit. Not a #92
 storage decision; not scope expansion; no economics change.
 
-- [ ] T919 — **RED.** Strengthen `accept.sh` (FR10-cont) so a live R-KEL-as-watcher-
+- [X] T919 — **RED.** Strengthen `accept.sh` (FR10-cont) so a live R-KEL-as-watcher-
   mirror classification in §4/§5/later summaries **fails**; demonstrate RED on
   `b22d794`. Assertions (section-scoped, negation-aware):
   - §4 does not call identity R-KEL a watcher mirror / does not map `closure
@@ -135,7 +135,7 @@ storage decision; not scope expansion; no economics change.
     language just because `R-KEL` + `anchored` co-occur;
   - legitimate phrases survive ("R-KEL is not a watcher-attested mirror", "watch KELs
     to submit checkpoint advances"). No #92 storage assertion, no economics change.
-- [ ] T920 — **GREEN.** Reconcile `system-architecture.md` §4 (plane distinction),
+- [X] T920 — **GREEN.** Reconcile `system-architecture.md` §4 (plane distinction),
   §5 (split state-root grouping / trust layer; preserve coordinator boundary for the
   actual mirror roots), §8/§11/conclusion (scope "anchored"/"mirror"/"KERI-mirror" to
   credential/external roots; retain watchers serving/submitting identity checkpoint

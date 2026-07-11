@@ -291,6 +291,19 @@ false-challenge forfeiture **mitigates, not eliminates** freeze-griefing; on
 adjudication timeout both bonds stay escrowed and indefinite frozen-state griefing
 under quorum failure is a residual liveness risk.
 
+### 2026-07-11 — NOTE-008 (epic-owner final audit — canonical-doc consistency)
+Decision accepted; three residual consistency contradictions must be reconciled
+(FR10), as a **documentation-consistency correction, not a #92 storage-layout
+choice**: (1) `system-architecture.md` §0/§3 must not present the identity **R-KEL
+on-chain checkpoint** as part of the watcher-consensus / falsifiable
+"Proof-builder-anchored" **mirror family** — separate/reclassify it and relate it to
+R-ID without selecting #92's physical layout; (2) the **§0 closure Merkle-mirror**
+framing must **exclude identity R-KEL**, and the **R-MAP AID note** must be
+**tier-scoped** (≤1-chunk byte binding on-chain / >1-chunk residual oracle mapping);
+(3) `identity-model.md` §3 "there is nothing to trust" must be qualified to **no
+additional watcher/oracle trust for post-genesis advances** — the genesis projection
+stays attester-trusted (§7a/§7c).
+
 ## P1 user story
 
 As a protocol designer ratifying the identity model, I read the amended
@@ -337,6 +350,17 @@ obsolete "BLAKE3 cannot fit" premise.
   "cross-AID impersonation impossible" (or equivalent asserting form); no "provable
   censorship"; no "makes … freeze … safe". RED on `origin/main`, GREEN after the
   slice.
+- **FR10 (NOTE-008 canonical-doc consistency; Slice 2).** The two design docs must
+  not leave any section contradicting the selection. Specifically: (a)
+  `system-architecture.md` separates/reclassifies the identity **R-KEL on-chain
+  checkpoint** out of the watcher-consensus "Proof-builder-anchored" **mirror
+  family** (§3), excludes identity R-KEL from the §0 closure Merkle-mirror framing,
+  relates R-KEL to R-ID **without** choosing #92's physical storage, and
+  **tier-scopes** the R-MAP AID note (≤1-chunk on-chain / >1-chunk residual oracle
+  mapping); (b) `identity-model.md` §3 qualifies "there is nothing to trust" to **no
+  additional watcher/oracle trust for post-genesis advances** (genesis projection
+  attester-trusted). `accept.sh` is strengthened to assert (a) and (b) — RED on
+  `8babc57`, GREEN after Slice 2 — without asserting any #92 storage choice.
 
 ## Success criteria
 

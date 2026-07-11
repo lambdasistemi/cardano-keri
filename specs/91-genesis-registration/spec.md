@@ -51,9 +51,16 @@ enumerating every remaining trust assumption honestly.
   intermediate chaining-value state in a #99-style cage/thread-token so no attacker
   can inject a forged mid-chunk value; #97's spike does not implement this and its
   measurements exclude it — the integration and its remeasurement are **#24/#92
-  work**. Given that invariant holds, this axis **cryptographically prevents
-  cross-AID impersonation** (nobody can present bytes hashing to a victim's AID)
-  and is **on-chain-decidable and autonomous** — no trusted party.
+  work**. Given that invariant holds, this axis cryptographically **prevents
+  substitution of *different* inception bytes under a given AID** (nobody can
+  present *other* bytes that hash to the AID) and is on-chain-decidable and
+  autonomous **for the byte binding itself**. It does **not** by itself prevent
+  impersonation: the separately-stored projection `(keys₀, witnesses₀, …)` that
+  actually confers authority is **not** parsed/compared against the bytes on-chain,
+  so a corrupt attester can co-sign attacker `keys₀`/`witnesses₀` *beside* the
+  victim's genuine raw bytes. **Overall genesis authority therefore remains
+  attester-trusted at the projection boundary** until the deferred on-chain
+  projection verifier exists.
 - **Multi-chunk inceptions (> 1024 B): attested,** pending a native `blake3`
   builtin (multi-chunk tree hashing is out of #97 scope). The oracle attests
   `blake3(icp) == cesr_aid` off-chain; its fraud is **off-chain-recomputable**,
@@ -78,11 +85,12 @@ verifiable, so **submission** of the Step/Finish byte-binding txs is permissionl
 but the leaf cannot **activate** without the oracle's projection attestation. In
 contrast, **challenging** a registration is fully permissionless (anyone posts a
 bonded challenge → freeze). Residual trust: **censorship** — the oracle can refuse
-to attest; bounded by mechanicalness (a correct projection is off-chain-
-reproducible, so refusal is *provable* censorship — reputational/contractual, not
-epistemic) with a **deferred k-of-n SPO-watcher attestation** escape hatch (the
-§11 bonded set); and a **single-attester liveness** dependence the escape hatch
-mitigates.
+to attest. Off-chain reproducibility of a *correct* projection does **not** by
+itself make refusal provable; refusal is publicly **detectable/attributable only
+when the request channel carries an auditable signed receipt / SLA**, otherwise it
+is indistinguishable from an **availability failure**. A **deferred k-of-n
+SPO-watcher attestation** escape hatch (the §11 bonded set) mitigates both the
+censorship and the **single-attester liveness** dependence.
 
 ### Decision 2 (registry) — SELECTED: MPFS-with-oracle
 
@@ -124,12 +132,15 @@ Transitions / invariants:
    evidence):**
    - *upheld* (fraud confirmed): `bond_reg` slashed → bounty to challenger;
      `bond_chal` returned; leaf retracted (controller may re-register correctly).
-   - *rejected* (false challenge): `bond_chal` **forfeited → registrant** (this is
-     the anti-griefing lever that makes permissionless freeze safe); `bond_reg`
-     retained; leaf → prior state (`provisional`/`active`), timer resumes.
-   - *timeout* (`Δ_adjud` elapses with no verdict): **safe default = leaf stays
-     `frozen`** (fail-safe, favors the possible victim); liveness escalation to the
-     SPO-watcher quorum is the deferred path.
+   - *rejected* (false challenge): `bond_chal` **forfeited → registrant** (this
+     **mitigates** freeze-griefing — it does **not** make it *safe*: a griefer with
+     capital can still force repeated freezes); `bond_reg` retained; leaf → prior
+     state (`provisional`/`active`), timer resumes.
+   - *timeout* (`Δ_adjud` elapses with no verdict): **both bonds stay escrowed and
+     the leaf stays `frozen`** (fail-safe, favors the possible victim); liveness
+     escalation to the SPO-watcher quorum is the deferred path. **Indefinite
+     frozen-state griefing under adjudicator-quorum failure is a residual liveness
+     risk.**
 4. **Activate:** after `Δ_challenge` with no upheld challenge, `provisional →
    active`; gated actions (§2) require `active`. `bond_reg` is **retained** through
    `Δ_post` to fund post-activation challenges, then released.
@@ -164,18 +175,23 @@ here — #68 freezes serialization):
   mint deriving its asset name from the consumed ref);
 - the **tier** (≤1-chunk cryptographic vs >1-chunk attested).
 
-Signatures: **controller** signs with `keys₀` (Ed25519, on-chain-verifiable
-against `keys₀`) — proves control of the registered keys; **oracle/attester**
-co-signs the same binding — attests the projection is a faithful CESR decode (both
-tiers) and, for >1-chunk, `blake3(icp)==cesr_aid` off-chain.
+Signatures: **controller** signs with the **claimed** `keys₀` (Ed25519, verifiable
+against the claimed `keys₀`) — proves **possession of the claimed keys
+(attribution)**, **not** that they are the keys embedded in the genuine inception
+bytes (that gap is the projection boundary); **oracle/attester** co-signs the same
+binding — attests the projection is a faithful CESR decode (both tiers) and, for
+>1-chunk, `blake3(icp)==cesr_aid` off-chain.
 
 **Witness role / genesis circularity:** the genesis seal's threshold receipts are
 verified against the *claimed* `witnesses₀` — circular for truth, but proves the
 claimed set exists, cooperates, and receipted this exact claim (one more artifact a
-forger must fabricate). For ≤1-chunk the byte binding makes the claimed set the
-**genuine** set (only genuine bytes hash to the AID), **breaking the circularity
-for the binding**; the receipts corroborate, they are not the root of trust. For
->1-chunk the circularity persists (attested).
+forger must fabricate). Byte binding makes the witness set **encoded inside the
+genuine bytes** genuine, but does **not** make the separately-stored/claimed
+`witnesses₀` (against which receipts are checked) genuine — those are never compared
+to the bytes on-chain. So the receipts remain **circular/corroborating for both keys
+and witnesses at every tier**, and the **oracle's semantic-projection attestation is
+the genesis trust bridge**. The ≤1-chunk byte binding narrows the surface (the raw
+bytes are pinned genuine) but does not, alone, make the stored authority genuine.
 
 ### Activation timing (summary)
 
@@ -190,19 +206,27 @@ for the binding**; the receipts corroborate, they are not the root of trust. For
 - **witnesses** — honest threshold (unchanged KERI assumption) for advances; at
   ≤1-chunk genesis the byte binding does not rest on them; at >1-chunk it does not
   either (attested by oracle) — receipts are corroborating evidence.
-- **oracle/attester** — attests projection (all tiers) + byte binding (>1-chunk);
-  **necessary but not sufficient** (#99) — cannot forge authority; can **censor**
+- **overall genesis authority** — **attester-trusted at the projection boundary**:
+  a colluding registration oracle can admit a **false genesis projection** (attacker
+  `keys₀`/`witnesses₀` beside genuine bytes). The ≤1-chunk byte binding only prevents
+  *inception-byte substitution*, not impersonation. Closed only by the deferred
+  on-chain projection verifier.
+- **oracle/attester** — attests projection (all tiers) + byte binding (>1-chunk).
+  #99's "necessary but not sufficient" scopes to **post-genesis mutation vs
+  authenticated prior state**, **not** genesis projection admission; can **censor**
   by refusing to attest, and is a **liveness** dependency.
 - **challenge / fraud proof** — ≤1-chunk byte binding is trustless on-chain;
   projection and >1-chunk byte binding are permissionless-challenge / mechanical-
   freeze but **trusted-adjudicated** slash/unfreeze.
-- **gating / censorship** — registration gated (oracle attestation); censorship is
-  *provable* (mechanicalness-bounded) with a deferred SPO-watcher escape.
+- **gating / censorship** — registration gated (oracle attestation); refusal is
+  **detectable/attributable only with an auditable signed receipt / SLA**, else an
+  **availability failure**; deferred SPO-watcher escape.
 - **slashing / bonds** — `bond_reg`/`bond_chal` teeth are **trusted-adjudicated**,
   not a trustless fraud proof, until the on-chain CESR projection verifier exists;
-  false-challenge forfeiture deters freeze-griefing.
+  false-challenge forfeiture **mitigates (does not eliminate)** freeze-griefing.
 - **adjudicator liveness / collusion** — the trusted governance/quorum can stall
-  (mitigated by the `Δ_adjud` fail-safe freeze) or collude to wrongly slash/unfreeze
+  (on timeout both bonds stay escrowed and the leaf stays frozen → **indefinite
+  frozen-state griefing under quorum failure**) or collude to wrongly slash/unfreeze
   — an explicit, bounded, visible trust (bond a decentralized quorum to reduce it).
 - **activation timing** — provisional→active after Δ; frozen while challenged.
 - **objectively checkable on-chain** — ≤1-chunk byte binding: **yes**; semantic
@@ -216,6 +240,12 @@ for the binding**; the receipts corroborate, they are not the root of trust. For
 - #99 proves cage invariants and a real-node `Modify` boundary; its Modify **N ≈ 2**
   (mainnet, conservative declared budgets) is **not** a genesis-registration batch
   bound.
+- **#99 scope, precisely:** it makes the oracle **insufficient for an unauthorized
+  post-genesis mutation against authenticated prior owner state**, and supplies the
+  lifecycle invariant to integrate. It does **not** make a malicious registration
+  oracle insufficient to admit a **false genesis projection** when the "controller"
+  signs with attacker-selected *claimed* keys — that genesis residual is closed only
+  by the deferred on-chain projection verifier.
 - The **integrated genesis path** (checkpoint Step/Finish + cage confinement +
   projection attestation + teeth) is **unbuilt and unmeasured**. Any statement that
   the intermediate value "is confined" is a **required #24/#92 integration
@@ -243,6 +273,19 @@ permissionless challenge; MPFS-with-oracle) with residual censorship/liveness
 trust. (2) Bonds/windows/activation promoted to a named state machine. (3) The
 signed OOBI-style registration package pinned as a design shape. (4) Merged
 evidence separated from the unbuilt, unmeasured integrated path.
+
+### 2026-07-11 — NOTE-006 (byte-binding scope)
+(1) The ≤1-chunk byte binding prevents **inception-byte substitution under a given
+AID**, **not** overall impersonation; overall genesis authority stays
+attester-trusted at the projection boundary until the deferred verifier exists.
+(2) Controller signatures and witness receipts are **attribution, not genesis
+truth** — the receipt circularity persists at every tier and the oracle's
+projection attestation is the trust bridge; #99's insufficiency is scoped to
+post-genesis mutation, not genesis projection admission. (3) Censorship is provable
+only with a signed-receipt/SLA channel (else an availability failure);
+false-challenge forfeiture **mitigates, not eliminates** freeze-griefing; on
+adjudication timeout both bonds stay escrowed and indefinite frozen-state griefing
+under quorum failure is a residual liveness risk.
 
 ## P1 user story
 
@@ -282,10 +325,13 @@ obsolete "BLAKE3 cannot fit" premise.
   signatures + witness circularity) present in §7c.
 - **FR9.** `accept.sh` mechanically asserts FR1–FR8: presence of decision markers,
   decisions 1 & 2, the teeth parameters/transitions, the signed-package fields, the
-  trust enumeration, the #92/#68/#24 consequences, the evidence/integration
-  separation, the #97/#99 links; **absence** of the obsolete conclusion and of any
-  "objectively provable on-chain" claim adjacent to projection / >1-chunk binding.
-  RED on `origin/main`, GREEN after the slice.
+  trust enumeration (incl. overall-genesis-authority attester-trusted), the
+  #92/#68/#24 consequences, the evidence/integration separation, the #97/#99 links;
+  **absence** of the obsolete conclusion and of the over-strong phrases NOTE-006
+  forbids — no "objectively provable on-chain" adjacent to projection / >1-chunk
+  binding; no claim that the byte binding alone "prevents … impersonation"; no
+  "provable censorship"; no "makes … freeze … safe". RED on `origin/main`, GREEN
+  after the slice.
 
 ## Success criteria
 

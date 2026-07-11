@@ -74,16 +74,52 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
 - [X] T914 — **GREEN (completeness + gate).** `accept.sh` + `./gate.sh` pass; both
   docs internally consistent. Commit once: `docs(identity-model): select hybrid
   genesis — crypto byte binding + attested/challengeable projection (§7c)`, body
-  trailer `Tasks: T911, T912, T913, T914`.
+  trailer `Tasks: T911, T912, T913, T914`. **Executed:** 3 RED rounds (Q-001/002 +
+  spot-check) and **3 GREEN passes** (2 blocks Q-003/Q-004; approval on pass 3).
+  Q-003/Q-004 were **in-scope whole-file consistency
+  fixes** — the navigator caught stale premises outside §7c (identity-model
+  intro/§3/§7b/§8/§10; system-architecture §0/§1/§2/§9) that contradicted the
+  selection; reconciling them is part of the same owned-file deliverable, not scope
+  expansion. Committed at `8babc57`; accept.sh = 66 assertions + spot-check.
+
+## Slice 2 — NOTE-008 canonical-doc consistency correction  (driver + navigator, RED→GREEN)
+
+Epic-owner final audit found residual decision-consistency contradictions in the two
+owned files. Same owned-file set (`identity-model.md`, `system-architecture.md`,
+`accept.sh`). One bisect-safe commit. Not a #92 storage decision; not scope expansion.
+
+- [ ] T917 — **RED.** Strengthen `accept.sh` with assertions for the NOTE-008 fixes,
+  demonstrate they fail on the current (8babc57) docs, log RED. Assertions:
+  - identity-model §3 has **no unqualified "there is nothing to trust"** — must be
+    qualified to *no additional watcher/oracle trust for post-genesis advances*
+    (genesis projection stays attester-trusted per §7a/§7c);
+  - system-architecture **R-KEL (identity) is not listed under the
+    watcher-consensus/falsifiable "Proof-builder-anchored" mirror family** without an
+    explicit checkpoint-vs-mirror separation; §0 closure Merkle-mirror framing
+    **excludes identity R-KEL**;
+  - the **R-MAP AID note is tier-scoped** (≤1-chunk byte binding on-chain / >1-chunk
+    residual oracle mapping), not flat historical wording.
+- [ ] T918 — **GREEN.** Apply the three canonical-doc fixes:
+  - `system-architecture.md` §0 (exclude identity R-KEL from the closure mirror
+    framing); §3 (reclassify/separate the R-KEL on-chain checkpoint from the
+    Proof-builder-anchored family + clarify relation to R-ID **without** selecting
+    #92 storage; tier-scope the R-MAP AID note);
+  - `identity-model.md` §3 (qualify "there is nothing to trust" to post-genesis
+    advances only).
+  `accept.sh` + `./gate.sh` pass. Commit once: `docs(identity-model): reconcile R-KEL
+  classification + post-genesis trust qualification (NOTE-008)`, body trailer
+  `Tasks: T917, T918`.
 
 ## Orchestrator finalization (post-slice, after review + push)
 
 - [ ] T915 — Update PR #95 body and issue #91: remove the obsolete premise, state
   the hybrid decision + the two boundaries, link #97/#98 and #99/#100. (`gh`, no
   file commit.)
-- [ ] T916 — Finalization audit; drop `gate.sh` (`chore: drop gate.sh (ready for
-  review)`); `gh pr ready 95`; confirm fresh CI green. Do **not** merge — epic
-  owner performs guarded merge. Report `COMPLETE` on STATUS.
+- [ ] T916 — Finalization audit (commit-gate over all commits + no open tasks);
+  **stamp the satisfied `spec.md` success criteria and T915/T916** (do not leave
+  completed criteria presented as open); drop `gate.sh` **last** (`chore: drop
+  gate.sh (ready for review)`); `gh pr ready 95`; confirm fresh CI green. Do **not**
+  merge — epic owner performs guarded merge. Report `COMPLETE` on STATUS.
 
 ## Explicitly out of scope (guard rails)
 

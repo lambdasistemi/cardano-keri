@@ -1,5 +1,14 @@
 # AID Cryptographic Model
 
+!!! warning "`trie_key` / current-cage-auth here is the superseded Candidate-B lineage (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, the `trie_key` / `KeyState` /
+    current-cage-auth and `cesr_aid`-squatting-resolution material in this document is the
+    **superseded Candidate-B lineage**. Live **current authority and discovery** are the
+    **per-AID, AID-derived, quantity-one checkpoint token** — asset id
+    `(checkpoint_policy_id, aid_asset_name)`, the sovereign per-AID checkpoint UTxO. The
+    **genesis binding, front-run defense, and pre-rotation analysis below remain valid** and
+    are unchanged.
+
 ## Two identifiers, two roles
 
 Every registered identity has two identifiers that are always distinct:
@@ -117,7 +126,13 @@ The legitimate holder commits to `next_key` at inception (or at each rotation) a
     two views. The per-rotation invariant below survives as that correspondence check
     (falsifiable, watcher-performable) — no longer as the only thing holding the bridge
     together. Note also the leaf is now keyed by `cesr_aid`, not the frozen `trie_key`
-    preimage (the derivation below is the superseded #24-original shape).
+    preimage (the derivation below is the superseded #24-original shape). Extending this to
+    #92 (`specs/92-checkpoint-contention/DECISION.md`): the `trie_key`-as-current-cage-auth
+    framing (including the "cage auth" role in the two-identifier table above) is superseded
+    — an AID's current authority is now its **own sovereign, per-AID, quantity-one
+    uniquely-tokenized checkpoint UTxO** `(checkpoint_policy_id, aid_asset_name)` read as a
+    CIP-31 reference input, discovered by a generic `(policy_id, asset_name)` asset lookup.
+    The genesis-binding / front-run-defense material below is unaffected and stands.
 
 **The bridge is two independently advancing pre-rotation state machines that share inception material.** On-chain, each registry (the Cardano key-state chain; the KERI KEL) is internally sound, but nothing on-chain forces Cardano rotations to track KERI rotations. The binding is established once at inception and must be re-proven off-chain at every rotation.
 

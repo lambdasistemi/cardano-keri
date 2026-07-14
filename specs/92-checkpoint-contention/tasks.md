@@ -152,7 +152,7 @@ One bisect-safe commit.
 `docs(92): superseded-pointer #24/#23 + business-case current-auth audit`,
 `Tasks: T9214`.
 
-- [ ] T9214 — Per-file disposition:
+- [X] T9214 — Per-file disposition:
   - `specs/24-keystate/spec.md`, `specs/23-identity-auth/spec.md` —
     **superseded-pointer**: the single-registry + MPF-trie + depth-10 window /
     `identity_root` inclusion is the Candidate-B legacy the sovereign decision re-cuts;

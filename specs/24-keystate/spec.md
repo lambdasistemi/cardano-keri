@@ -1,5 +1,31 @@
 # Spec: identity key-state UTxO + permissionless pre-rotation (list-shaped KeyState)
 
+!!! warning "Superseded storage/discovery: the single MPF identity registry here is the rejected Candidate-B lineage (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, the **physical storage and discovery**
+    layer of this spec — the **standalone single/shared identity-registry UTxO**, the **MPF
+    identity trie** keyed by `trie_key`, the **depth-10 sliding `root_window`**, and
+    **`identity_root` inclusion proofs** as the current-authority read (including A12 registry
+    contention) — is the **rejected Candidate-B legacy**. The #92 sovereign per-AID decision
+    (Candidate A) re-cuts it: each AID's current authority lives in its **own sovereign,
+    per-AID, quantity-one uniquely-tokenized checkpoint UTxO** — asset id
+    `(checkpoint_policy_id, aid_asset_name)`, current weighted key state in the inline
+    `CheckpointDatum`, normal rotation a `delta = 0` continuing-output transition (`seq + 1`),
+    discovery a **generic exact-asset `(policy_id, asset_name)` lookup** (candidate outref for
+    liveness only, re-validated against the ledger — **not** an authoritative registry root).
+    This removes **cross-AID contention on the per-AID current-authority storage / rotation
+    path**: because each AID advances only through its **own** quantity-one checkpoint UTxO, an
+    unrelated or hostile AID cannot contend for, consume, serialize, or delay **that AID's
+    checkpoint UTxO or its rotation throughput**, and the A12 single-UTxO contention residual on
+    this path falls away. It does **not** make an AID immune to every hostile actor: the
+    **emergency freeze (R-FRZ) remains a separate, shared, attacker-contendable residual** — not
+    eliminated by the per-AID storage split — and re-cutting it sovereign is a named downstream
+    dependency. The **mechanical re-cut of these validators is downstream #24** — not performed
+    in this document. What
+    **remains valid and unchanged**: the **list-shaped, threshold-capable `KeySet`/`KeyState`
+    shape**, the **KERI alignment** (qb64 digest preimage, weighted-threshold mapping), and the
+    **permissionless pre-rotation** analysis — this is the current weighted key state the
+    per-AID `CheckpointDatum` now carries, not a store keyed into a shared trie.
+
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/24
 Epic: https://github.com/lambdasistemi/cardano-keri/issues/21
 Ratified design inputs: `docs/design/business-cases/index.md` (factored-core

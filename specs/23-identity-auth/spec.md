@@ -1,5 +1,32 @@
 # Spec: dual-root State + per-leaf owner-sig at Modify
 
+!!! warning "Superseded current-auth resolution: `identity_root` inclusion + `cur_pubkey` digest here is the rejected Candidate-B lineage (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, the **current-authority resolution** of
+    this spec — the cage snapshotting `identity_root` and proving `identity_root[owner_aid] =
+    blake2b_256(cur_pubkey)` against a single/shared MPF identity registry, with `OwnerAuth`
+    supplying an inclusion proof into that shared root — is the **rejected Candidate-B legacy**.
+    The #92 sovereign per-AID decision (Candidate A) re-cuts current-actor resolution: the cage
+    resolves an AID's current authority by reading that AID's **own sovereign, per-AID,
+    quantity-one uniquely-tokenized checkpoint UTxO** — asset id `(checkpoint_policy_id,
+    aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum` — as a
+    **CIP-31 reference input**, discovered by a **generic exact-asset `(policy_id, asset_name)`
+    lookup** (candidate outref for liveness only, re-validated against the ledger). A `delta =
+    0` rotation (`seq + 1`) **consumes** the referenced checkpoint UTxO, so a pending
+    value-write authorization is **stale** and cannot merely be re-pointed at the fresh
+    checkpoint: it MUST be **discarded and re-signed** by the AID's **current weighted keys**
+    over the fully bound write + current sequence (value-bearing flows carry the explicit
+    **Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup** lifecycle) — there is no
+    shared `root_window` freshness floor. Lifecycle (close) and freeze are **not** fields of
+    the `CheckpointDatum` (which carries only the AID/sequence binding + current weighted key
+    state): close is the checkpoint's **mint/spend lineage** and freeze is the **separate,
+    shared, attacker-contendable R-FRZ** registry. The **mechanical re-cut of `cage.ak` /
+    `OwnerAuth` is downstream
+    #23** — not performed in this document. **Unchanged**: that the **oracle alone cannot
+    authorize a write to an AID-owned leaf** (a **witness set meeting the checkpoint's current
+    weighted threshold** over the fully bound write + current sequence is still required, not a
+    single current-key signature) — only the surface that *resolves* the current keys moves
+    from a shared registry root to the AID's sovereign checkpoint.
+
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/23
 Epic: https://github.com/lambdasistemi/cardano-keri/issues/21
 

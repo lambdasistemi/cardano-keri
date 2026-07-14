@@ -80,7 +80,7 @@ Owned file: `docs/acdc-primer.md`. One bisect-safe commit.
 `docs(acdc): correct the ACDC issuance-seal boundary (not signed under current keys)`,
 `Tasks: T9211`.
 
-- [ ] T9211 — **Correct.** Rewrite the "signed by the issuer's current key / signing
+- [X] T9211 — **Correct.** Rewrite the "signed by the issuer's current key / signing
   key was the issuer's current key at issuance" claim (L54–56): an ACDC is **not
   normally directly signed**; its **issuance / TEL state event is sealed into the
   issuer's KEL**, binding it to the **key state at that historical change** and

@@ -19,7 +19,7 @@ opened with: it can be down, hacked, coerced, or simply refuse.
 
 [ACDC](https://github.com/WebOfTrust/ietf-acdc) (Authentic Chained Data
 Container) removes that call. A credential becomes a **self-contained,
-cryptographically signed object** that a verifier checks offline against KERI
+cryptographically verifiable object** that a verifier checks offline against KERI
 key state — no issuer API at verification time. And because credentials
 reference each other, a verifier can walk an entire **chain of authority** back
 to a root it trusts.
@@ -51,11 +51,25 @@ of the attributes and the SAID no longer matches — the credential is
 content-addressed and tamper-evident by construction. SAID stands for
 Self-Addressing IDentifier.
 
-**The issuer (`i`) is a KERI AID.** The credential is signed by the issuer's
-current key. A verifier confirms the signature *and* — via the issuer's KEL —
-that the signing key was the issuer's current key at issuance and has not since
-been rotated away under compromise. ACDC inherits every KERI guarantee:
-pre-rotation, duplicity detection, portable history.
+**The issuer (`i`) is a KERI AID.** Verifying an ACDC against that AID rests on
+**two separate requirements** from the [ACDC
+specification](https://trustoverip.github.io/kswg-acdc-specification/):
+
+- **Issuer commitment.** The issuer provides a **signature or seal on the SAID** —
+  MUST on the SAID of the *most compact form*, and SHOULD on the SAIDs/SADs of the
+  other variants. This is the issuer's commitment to the credential's content; it
+  is *not* the same as anchoring it to key state.
+- **Binding to key state.** The issuer **also anchors an issuance-proof digest
+  seal in its KEL** — directly, or indirectly through the TEL — binding the
+  issuance to the issuer's **historical key state** (the key state in force at
+  that point in its key history). It is the *seal* that is anchored in the KEL,
+  not the signature itself.
+
+A verifier confirms that **issuance seal** against the issuer's KEL. Because the
+seal is anchored to a fixed historical key state, the credential **remains
+verifiable through later key rotation**: rotating the issuer's keys afterward
+does not invalidate credentials already sealed. ACDC inherits every KERI
+guarantee: pre-rotation, duplicity detection, portable history.
 
 !!! note "Digest agility, again"
     Like AIDs, SAIDs carry a prefix naming their digest algorithm. KERI's
@@ -171,8 +185,11 @@ repeated at every hop back to the trust root:
    each edge SAID must match the parent it points to.
 2. **Schema** — the credential conforms to the expected schema SAID for its
    position in the chain.
-3. **Issuer authority** — the issuer's signature verifies against the issuer's
-   *current* key, confirmed via the issuer's KEL (KERI key state).
+3. **Issuer authority** — the issuer commits with a **signature or seal on the
+   SAID**, and **separately** anchors a **KEL-anchored issuance-proof seal** at
+   the key state in force when it was issued (its *historical* key state),
+   confirmed via the issuer's KEL (KERI key state); the seal stays valid through
+   later rotations.
 4. **Non-revocation** — no revocation event for this credential's SAID in the
    issuer's TEL, and the same holds for every credential above it (cascade).
 
@@ -190,10 +207,23 @@ the hole cardano-keri fills.
 
 | ACDC verification step | Off-chain world | With cardano-keri |
 |---|---|---|
-| SAID / signature integrity | CESR tooling | Aiken verifier: `blake2b_256` + `verify_ed25519_signature` |
-| Issuer key is current | KEL replay via witnesses | Layer-1 AID registry proof (CIP-31 ref input) |
-| Credential not revoked | Query issuer's TEL | Layer-2 TEL registry proof (all-TELs cascade) |
+| SAID / content integrity | CESR tooling | Aiken verifier: `blake2b_256` recompute of the content-addressed SAID — content integrity only, **not** issuer commitment |
+| Issuer commitment | issuer signature/seal on the SAID | issuer **signature or seal on the SAID** (MUST on the most-compact form; SHOULD on the other variants' SAIDs/SADs). A **direct signature** is verified with the **SAID as the signed message** (`verify_ed25519_signature` at the issuer's key state); a **seal** is a digest/reference — **followed to the KEL event** (or via **TEL state** to its **KEL anchoring seal**), with the **KEL event signatures verified at the historical key state** — not an Ed25519 signature over the seal (TEL events need not be signed) |
+| Historical state/key binding (*issued then*) | KEL replay via witnesses | a **KEL-anchored issuance-proof digest seal** — anchored directly, or indirectly via the TEL — binding the issuance to the issuer's **historical** key state, via historical KEL / R-ACDC / admission evidence; **not** the signature itself and **not** the current Layer-1 checkpoint |
+| Current non-revocation (*unrevoked now*) | Query issuer's TEL | Layer-2 TEL registry proof (all-TELs cascade) |
+| Current dApp actor authorization (*authorizes now*) | KEL current key state | Layer-1 sovereign per-AID checkpoint (CIP-31 ref input) — current weighted keys/threshold; proves current control, **not** historical issuance |
 | Assemble the evidence | verifier server | Layer-4 proof builder (CESR decode → redeemer) |
+
+These are three *distinct* questions, and cardano-keri keeps them apart:
+
+- **Was it issued then?** — the issuer's **signature or seal on the SAID**
+  (commitment) *plus* the separate **KEL-anchored issuance-proof seal** binding it
+  to that historical key state; it stays valid through later rotations.
+- **Is it still unrevoked now?** — current **TEL** status (the non-revocation
+  cascade above).
+- **Does the actor authorize this action now?** — current authority, resolved
+  via the sovereign per-AID checkpoint, not by re-reading the historical
+  issuance seal.
 
 The chain runs the gate itself: the whole four-hop verification is atomic with
 the transaction that relies on it. Because the verification is expensive, an

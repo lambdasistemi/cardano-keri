@@ -1247,7 +1247,7 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
 
 ## Success criteria (the sovereign decision + its consistency pass)
 
-- [ ] `accept.sh` mechanically asserts the **sovereign** #92 deliverable. Its `final`
+- [X] `accept.sh` mechanically asserts the **sovereign** #92 deliverable. Its `final`
   target goes GREEN **only** when **all** hold: **`DECISION.md` records the
   operator-ratified sovereign selection** (`SELECTED_CANDIDATE=A`,
   `REJECTED_CANDIDATES=B,C`, `SELECTION_BASIS=sovereignty`, the sovereignty invariant,
@@ -1268,13 +1268,13 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   downstream-consequence specs + business-case audit) — it cannot go GREEN while any
   DS surface stays stale. **RED on `origin/main`; GREEN once `DECISION.md` (ticket
   owner) and every DS1–DS5 documentation slice (pair) land.**
-- [ ] The **measurements are honest**: Candidate-A cost/tx-size/min-ADA/batch-fan-in +
+- [X] The **measurements are honest**: Candidate-A cost/tx-size/min-ADA/batch-fan-in +
   the live-boundary smoke are recorded as a **downstream implementation-sizing gate**,
   **never fabricated, back-filled, or presented as the selection reason**; B/C
   comparison artifacts are deferred/withdrawn honestly.
-- [ ] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
+- [X] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
   mark-ready (finalization, after epic-owner acceptance).
-- [ ] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI
+- [X] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI
   green. The canonical/consistency documentation edits are **reviewed pair slices**,
   not authored by the ticket owner.
 

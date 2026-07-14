@@ -6,8 +6,40 @@ authorization against the identity registry key-state, and the cage oracle's
 co-signature (necessary-not-sufficient — the oracle provides liveness and
 cannot forge; see [Architecture Overview](overview.md#residual-oracle-trust-value-plane-only)).
 
-The cage script resolves the authorizing identity by `trie_key` — the stable
-identity handle derived at inception (see [AID Model](../design/aid-model.md)).
+!!! warning "Current-authorization path reframed to the sovereign per-AID checkpoint (#92)"
+    The `trie_key` / sliding-root-window resolution described on this page is the
+    **rejected Candidate-B shared/global MPFS registry** shape. Per the #92 decision
+    (`specs/92-checkpoint-contention/DECISION.md`), each AID's current authority now lives
+    in its **own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** —
+    asset id `(checkpoint_policy_id, aid_asset_name)`, current keys in the inline
+    `CheckpointDatum`. A cage resolves current authority by reading that AID's checkpoint as
+    a CIP-31 **reference input**; a `delta = 0` rotation (`seq + 1`) advances it and makes
+    pending authorizations **stale** (universal re-authorization). Discovery is a **generic
+    `(policy_id, asset_name)` multi-asset index lookup** (any indexer / node / sidecar), not
+    a shared-registry inclusion proof against a windowed root. The mechanical redeemer/proof
+    re-cut is downstream #24.
+
+    **Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index
+    lookup supplies **only a candidate outref / location for liveness — never identity or
+    current-authority truth**. The **consuming transaction validates** the returned UTxO
+    against the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint
+    script / version / lineage**; a **well-formed inline datum with the expected AID /
+    sequence binding and the current weighted key state**; and the **applicable active /
+    freeze rules** (validation rules, **not** datum fields). The returned TxOut is **locked
+    at the designated script-hash address**; the **datum itself does not own an address**. A
+    **stale or false outref fails ledger validation** (it no longer exists, or no longer
+    matches) → refresh / retry; it can never yield forged authority. An **indexer outage
+    only blocks transaction construction (liveness)** — it never grants false authority.
+
+    The **freeze registry** below is preserved, but note honestly: it is a **shared,
+    attacker-contendable** UTxO — **not** sovereign. The sovereign emergency path must not
+    reintroduce a shared attacker-contendable UTxO; re-cutting R-FRZ sovereign is a
+    downstream residual.
+
+Under the superseded shared-registry shape the cage script resolved the authorizing
+identity by `trie_key`; under the sovereign per-AID checkpoint (#92) it instead reads the
+AID's own `(checkpoint_policy_id, aid_asset_name)` checkpoint UTxO (see
+[AID Model](../design/aid-model.md)).
 
 ## Registry reference
 

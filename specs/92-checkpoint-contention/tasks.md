@@ -169,10 +169,10 @@ One bisect-safe commit.
 
 ## Orchestrator finalization (ticket owner; after all DS slices + epic acceptance)
 
-- [ ] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
+- [X] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
   (Candidate A)** decision, link #97/#99, note R-KEL classification + #99 invariants
   preserved, and the honest measurement / R-FRZ residuals. (`gh`, no file commit.)
-- [ ] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
+- [X] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
   satisfied `spec.md` success criteria); confirm `accept.sh final` GREEN + `./gate.sh`
   GREEN + fresh CI green; make `gate.sh` `final` strict, then drop `gate.sh`
   (`chore: drop gate.sh (ready for review)`); `gh pr ready 104`. **Do not merge** — the

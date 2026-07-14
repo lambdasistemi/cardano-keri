@@ -1,4 +1,4 @@
-# Feature Specification: R-KEL checkpoint advance-storage & contention model — decision framework (open pending evidence)
+# Feature Specification: R-KEL checkpoint advance-storage & contention model — the SOVEREIGN per-AID checkpoint decision (Candidate A, operator-ratified)
 
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/92
 Parent epic: https://github.com/lambdasistemi/cardano-keri/issues/21
@@ -8,25 +8,171 @@ This is a **design-decision ticket**, not implementation. It resolves
 `identity-model.md` **open thread 8** ("who pays / contention"): the **physical
 storage and contention model for the identity R-KEL checkpoint advance path**.
 
-#92's ultimate deliverable is a **decision + validator-shape sketch**: the ticket
-**must select one physical model**, record the rejected alternatives and their
-residual risks, and update the canonical docs (`identity-model.md` thread 8,
-`system-architecture.md`) with the decision. Planning **begins OPEN pending
-evidence** — this record fixes the candidate set, the falsifiable matrix, and the
-evidence that will close it — but **OPEN is a pre-evidence state, not the final
-state**: a later, evidence-gated **decision slice** fills the matrix, applies the
-selection rule, and names the selected candidate. This planning record itself does
-not invent the deciding numbers or pick a winner from the framing alone; it lays
-the rails for the decision slice to do so.
+#92's deliverable is a **decision + validator-shape sketch**: the ticket **selects
+one physical model**, records the rejected alternatives and their residual risks,
+and updates the canonical docs (`identity-model.md` thread 8,
+`system-architecture.md`) with the decision. **That decision has now been made by
+the operator** (`answers/A-001-thresholds.md`, ratified 2026-07-14): **Candidate A —
+one sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO — is
+selected.** This is a **normative security/product decision**; it is **not**
+conditional on A beating B or C on a throughput/capital/cost score, and it does
+**not** wait on ratifying arbitrary B/C measurement thresholds. This record no
+longer keeps the storage shape "open pending evidence"; the operator decision
+below supersedes that premise (NOTE-021).
 
-The deliverable of *this planning record* is (a) the boundary between the
-**already-fixed logical** registration/unicity decision and the **still-open (pre-
-evidence) physical** advance-storage shape, (b) a comparison of **three** physical
-candidates in a **falsifiable decision matrix**, and (c) the **evidence** — whole-
-transaction-boundary measurement (the **registration pipeline** and the **rotation
-advance** measured at their real, separate tx boundaries) plus a live-devnet smoke
-— that will close the matrix. No validator, Haskell, wire-schema, storage-layout,
-CESR-parser, or #24 lifecycle code is written here.
+The deliverable of *this record* is therefore (a) the boundary between the
+**already-fixed logical** registration/unicity decision and the **now-decided
+physical** advance-storage shape, (b) the **operator-ratified sovereignty invariant**
+that selects A and the **explicit, sovereign reasoning** that rejects B and C, and
+(c) the **Candidate-A implementation-sizing + live-boundary measurement plan** —
+retained honestly as a **downstream implementation gate**, **not** as the reason A
+was chosen and **not** invented here. No validator, Haskell, wire-schema,
+storage-layout, CESR-parser, or #24 lifecycle code is written here.
+
+## Operator decision — sovereignty selects Candidate A
+
+The operator has selected **Candidate A** — each KERI AID's current-authority
+checkpoint lives in its **own sovereign, per-AID, quantity-one uniquely-tokenized
+UTxO** — as a **product/security architecture**, expressly **not** as the winner of
+a throughput-cost contest. The load-bearing, **operator-ratified sovereignty
+invariant** is:
+
+> **Sovereignty / unrelated-AID isolation.** Unrelated issuers and attacker-created
+> AIDs **cannot contend with, consume, serialize, or delay** an AID's
+> current-authority checkpoint, rotation, recovery, or re-authorization path. Each
+> AID's current-authority state advances **only** through its **own uniquely
+> tokenized** `(checkpoint_policy_id, aid_asset_name)` UTxO; no other AID can spend
+> or block it.
+
+**Sovereignty and unrelated-AID isolation are the load-bearing selection criteria**
+— not a cost/throughput matrix. The rejected candidates are rejected for **sovereign
+reasons**, stated explicitly:
+
+- **B is rejected** because a single/global/singleton MPFS checkpoint-root UTxO
+  **serializes unrelated identities**. A shared global UTxO serializes unrelated
+  identities: honest and hostile writers alike queue behind the same tip, so one
+  AID's liveness depends on every other AID's write cadence. That is the opposite of
+  sovereignty.
+- **C is rejected** because its lane assignment `lane = f(cesr_aid)` is a **public,
+  grindable** function: a permissionless attacker can grind AIDs until `f` lands in a
+  **chosen victim's lane** and then spam it, and, more fundamentally, C makes an
+  AID's sovereignty **depend on shard machinery** (K, `f`, re-shard migration)
+  rather than on the AID owning its own state. Sovereignty that is contingent on
+  shard parameters is not sovereignty.
+- **A is selected** because each AID's current-authority state advances through its
+  **own** uniquely-tokenized UTxO; unrelated AIDs **cannot** consume or serialize
+  that state, so the sovereignty invariant holds **by construction**, independent of
+  any throughput measurement.
+
+**Measurements are retained as Candidate-A implementation sizing, not as the
+selection reason.** Candidate-A **cost / transaction-size / min-ADA / batch fan-in**
+figures and the **live-boundary smoke** remain **required** — but as **A's
+implementation-sizing and live-boundary honesty**, a **downstream implementation
+gate**. They are **not** the reason A was selected, are **not** selection evidence,
+and **must not be fabricated, back-filled, or represented as the selection basis**.
+The B/C **comparison** artifacts are **deferred / withdrawn honestly** (the operator
+decision does not rest on them). This design ticket writes **no validators**; the
+A-implementation-sizing prototype/measurement is a named downstream obligation, not
+a precondition of this decision.
+
+### Rotation and universal re-authorization
+
+Sovereignty is the *isolation* property; **universal re-authorization** is the
+*freshness* property the sovereign per-AID UTxO delivers:
+
+1. **Normal rotation** consumes the current checkpoint UTxO and recreates the **same**
+   token (`delta = 0`) with `seq + 1` and the new authenticated key state.
+2. **The spent checkpoint is not available as a CIP-31 reference input.** Every
+   still-pending protocol authorization made under the **prior** key state is
+   **stale by construction** — it referenced a UTxO that no longer exists.
+3. **Every future dApp action must resolve and reference the current checkpoint** and
+   require the authorization envelope's **AID/key sequence to match the datum**, then
+   verify the current weighted **threshold** over a fully bound action. There is no
+   ambient "still authorized" state that survives a rotation.
+4. **Cross-protocol lifecycle requirement** for long-lived objects: **Execute,
+   Refresh/Re-sign, Cancel/Reclaim by the AID's current keys, and Expire/Cleanup.**
+   "Re-sign by AID" is user language; the validator language is **re-authorization by
+   the AID's current weighted key set at the current sequence**.
+5. **Rotation does not erase bytes.** Pending authorizations become **powerless**;
+   existing protocol state remains but its **next transition needs current
+   authorization**; executed transactions remain history. **Value-bearing stale
+   UTxOs need a current-AID reclaim path**, while off-chain or immutable metadata can
+   only be marked **superseded/expired**, not reliably deleted.
+6. **Distinguish this from historical credential evidence.** ACDC issuance / TEL
+   seals remain **historical evidence** through issuer rotation until revoked — they
+   are **not** pending dApp actions and are **not** invalidated by rotation.
+
+### Indexer / discovery trust boundary (explicit)
+
+Discovery uses a **generic Cardano multi-asset index**, and its trust boundary is
+stated precisely:
+
+1. Given the AID and network/protocol configuration, any wallet/proof builder derives
+   the exact asset id `(checkpoint_policy_id, aid_asset_name)` and asks a **generic
+   multi-asset index** for the current unspent output carrying it. The service may be a
+   public indexer, a local chain-sync/node database, a wallet sidecar, or a replicated
+   resolver — **not** a bespoke or authoritative QVI-owned AID directory.
+2. **The indexer supplies location and freshness for liveness only. It never supplies
+   identity truth or authority.** The consumer re-checks the returned UTxO against the
+   ledger: exact policy/name and quantity one, accepted script address/version/lineage,
+   well-formed inline datum, AID/sequence binding, and active/freeze/lifecycle rules.
+3. **Plutus cannot query the global UTxO set by asset name.** The **off-chain resolver
+   supplies the outref**; the **on-chain validator establishes truth from the real
+   reference input** it is handed — the resolver's answer is only a pointer.
+4. **A forged answer fails the boundary check.** A **cached/stale outref that rotation
+   already consumed fails ledger validation** and triggers **refresh/retry**. An
+   **unavailable/censoring indexer causes inability to construct the transaction
+   (liveness), not false authorization**; clients need cache plus resolver failover or
+   local chain-sync.
+5. **Migration lineage and closed-state semantics.** A policy/script migration is
+   discoverable through accepted protocol configuration and predecessor/successor
+   lineage. **"No current asset found" fails closed for authorization**, while wallet UX
+   must distinguish *never registered*, *explicitly closed/tombstoned*, *stale index
+   data*, and *resolver outage* — without trusting the resolver's assertion alone.
+
+### ACDC boundary correction
+
+Any claim that a holder verifies an ACDC "signature under the issuer's authenticated
+**current** keys" is **incorrect** and is corrected here. The ACDC specification
+states that an ACDC is **not normally directly signed**; its **issuance or TEL state
+event is sealed into the issuer's KEL**, binding it to the issuer **key state at that
+historical state change** and **preserved through later key rotations** (its
+verifiability is preserved through later key rotations):
+https://trustoverip.github.io/kswg-acdc-specification/
+
+The architecture therefore separates **three questions**:
+
+- **Candidate A answers who controls/authorizes for this AID now** (the current
+  sovereign checkpoint).
+- **ACDC issuance-seal / R-TEL-R-ACDC evidence answers was this credential issued
+  then, and is it still unrevoked now** (historical KEL/TEL evidence).
+- **the dApp answers does that identity/credential authorize this action.**
+
+The current checkpoint alone does **not** prove historical ACDC issuance, and KEL
+replay is **not** reintroduced into every hot action. The **admission-cache split**
+is preserved where appropriate: **historical credential-chain validation at
+admission**; the **current-actor checkpoint plus admission/TEL status on subsequent
+actions**.
+
+### Emergency freeze (R-FRZ) — honest boundary + downstream residual
+
+The existing **separate emergency-freeze mechanism (R-FRZ)** is preserved, with an
+**honest statement of its contention/trust boundary**: a **shared freeze registry is
+attacker-contendable** — it is not itself sovereign — and today's freeze path does not
+inherit A's per-AID isolation. It is recorded here as a **downstream requirement**:
+**the sovereign emergency path must not reintroduce a shared attacker-contendable UTxO.**
+Re-cutting R-FRZ to a sovereign shape is **not** absorbed into #92; it is a
+named **dependency/residual** on the #24 re-cut and the freeze-registry owner, not
+silently implemented here.
+
+### Batched dApp fan-in
+
+Candidate A **removes the MPF inclusion proofs** B/C carry, but a transaction acting
+on several AIDs at once needs **one CIP-31 reference input per distinct acting AID**
+(each AID's sovereign checkpoint is read independently). The resulting
+**transaction-size / ex-unit / live-node** cost of many-AID fan-in is kept as a
+**Candidate-A implementation gate** (measured downstream, not fabricated here), not a
+selection criterion.
 
 ## Background — what is already fixed vs what this ticket opens
 
@@ -92,9 +238,9 @@ is a logical property that a physical layout must *carry*, not *become*.**
 | Registration unicity ("registered at most once") | **MPFS-with-oracle absence proof** | #91 §7c decision 2 | **No** — logical, fixed |
 | Registration gating / challenge | oracle-gated / permissionless challenge | #91 §7c decision 1 | **No** — logical, fixed |
 | Projection attestation & teeth | attested + bonded state machine | #91 §7c | **No** — logical, fixed |
-| **Physical R-KEL *advance* storage shape** | **per-AID UTxO vs singleton MPFS vs sharded/hybrid** | **#92 (this ticket)** | **This is the open decision** |
-| Where the AID-owned checkpoint physically lives / is located | candidate-dependent | #92 | **Open** |
-| How advances contend, batch, and grow state | candidate-dependent | #92 | **Open** |
+| **Physical R-KEL *advance* storage shape** | **sovereign per-AID UTxO (Candidate A)** — operator-ratified (§Operator decision, NOTE-021) | **#92 (this ticket)** | **Decided (A)** |
+| Where the AID-owned checkpoint physically lives / is located | its own uniquely-tokenized `(checkpoint_policy_id, aid_asset_name)` UTxO (A) | #92 | **Decided (A)** |
+| How advances contend, batch, and grow state | per-AID: no unrelated-AID contention (A); costs sized downstream | #92 | **Decided (A); sizing downstream** |
 
 A per-AID UTxO advance store **does not remove the logical MPFS registration
 gate**: unicity remains an MPFS absence proof at registration (decision 2); the
@@ -104,7 +250,14 @@ A sharded store partitions the registration trie. **This record keeps all three
 compatible with the fixed logical decisions and lets evidence choose the
 physical shape.**
 
-## Candidates (all three carried; none selected here)
+## Candidates (A selected on the sovereignty invariant; B/C rejected, kept for the record)
+
+The operator has selected **Candidate A** (§Operator decision, NOTE-021). All three
+candidate write-ups are retained for the record — A as the **selected** sovereign
+shape, B and C as the **rejected** alternatives whose sovereign residual risks are
+documented. The per-candidate cost/throughput notes below are **descriptive
+characterization** (and, for A, **implementation-sizing** input), **not** the
+selection mechanism — selection is the operator-ratified sovereignty invariant.
 
 Notation: the advancing per-AID checkpoint holds (identity-model.md §6)
 `Checkpoint { keys, threshold, next_digest, witnesses, toad, seq }` (and the §7b
@@ -213,16 +366,25 @@ reads.
     (payment credential + policy-version lineage), a **well-formed inline
     `CheckpointDatum`** with the expected **AID/sequence binding**, and the
     active/freeze/lineage rules relevant to the protocol;
-  - **application-specific facts created later remain application work** — e.g.
-    verifying the presented **ACDC/payload signature under the authenticated current
-    keys**, plus schema, TEL/revocation, or business rules. **The checkpoint cannot
-    pre-prove a future payload.**
+  - **application-specific facts created later remain application work**, and they
+    split into two distinct planes that must not be conflated:
+    - **A new dApp payload/action** is authorized **under the authenticated *current*
+      keys** the checkpoint datum carries — the current weighted threshold over a
+      fully bound action. **The checkpoint cannot pre-prove a future payload.**
+    - **Historical ACDC issuance / TEL status verification stays historical** and is
+      **not** re-checked under current keys: an ACDC is not normally directly signed —
+      its **issuance/TEL state event was sealed into the issuer's KEL at that
+      historical key state** and remains verifiable through later rotations
+      (§ACDC boundary correction). The current checkpoint answers *who authorizes for
+      this AID now*; the ACDC issuance-seal / R-TEL evidence answers *was it issued
+      then and unrevoked now*. Plus schema and business rules.
 
   So the consumer **may trust the authenticated current key state** the datum carries
-  **after** the bounded boundary check succeeds; it **must not** trust an arbitrary
-  datum **merely because** someone sent it to the same script address (a stray output
-  at that address, lacking the singleton asset and AID/sequence binding, fails the
-  boundary check).
+  **after** the bounded boundary check succeeds — and uses it to authorize **new**
+  actions, never to re-derive historical credential issuance; it **must not** trust an
+  arbitrary datum **merely because** someone sent it to the same script address (a
+  stray output at that address, lacking the singleton asset and AID/sequence binding,
+  fails the boundary check).
 - **State-output shape and the address/datum distinction.** The conceptual
   continuing output is:
 
@@ -459,22 +621,28 @@ This transient-cage surface — **peak concurrent live attempts** and
 steady stores (A's per-AID UTxOs, B/C's tries) and is **measured by the evidence
 slice** (matrix C3b, §Evidence), not assumed.
 
-## Decision matrix — falsifiable selection criteria
+## Characterization matrix — descriptive criteria (NOT the selection mechanism)
 
-Each criterion has a **falsifier** that *eliminates* a candidate. Cells marked
-`MEASURE` are **not filled here** — they are produced by the delegated
-whole-transaction-boundary measurement slice (§Evidence). **No values are invented
-in this record.**
+> **The selection was made on the sovereignty invariant, not on this matrix**
+> (§Operator decision, NOTE-021). This matrix is retained as **descriptive
+> characterization** of the three shapes and, for Candidate A, as an **enumeration
+> of the implementation-sizing quantities to measure downstream**. It is **not** a
+> selection scoreboard: no candidate is chosen or rejected here on a `MEASURE` cell,
+> and **B/C measurement is not required** for the decision. The cells below therefore
+> stay honest placeholders — the A-sizing figures are measured **downstream** (a
+> Candidate-A implementation gate, §Candidate-A implementation-sizing plan), and the
+> B/C comparison figures are **deferred/withdrawn** with the rejected candidates.
 
-**Thresholds are ratified before measurement, not after.** Criteria that read
-"target / budget / bounded / SLO / cap" below are **not yet falsifiable** until each
-names a concrete number (mainnet ex-unit budget, advances/block SLO, capital-lock
-cap, emergency-latency SLO, read-cost cap, downstream-recut bound). The decision
-slice **must first ratify these thresholds** — with provenance, routing any operator
-decision through `questions/` — and only **then** measure against the **fixed**
-thresholds. **Choosing a threshold after seeing a candidate's result is forbidden**
-(NOTE-016; `accept.sh` guards the ordering: ratified thresholds carry a
-provenance/timestamp predating the measurement).
+Each criterion originally carried a **falsifier** (kept for the record of what each
+shape's failure mode would have been). Cells marked `MEASURE` are **not filled here**
+and are **not** a blocker on the decision. **No values are invented in this record.**
+
+**Any thresholds/measurement discipline below applies only to the downstream
+Candidate-A implementation-sizing work** — thresholds ratified with provenance
+*before* the A-sizing measurement, never chosen after seeing a result (NOTE-016, now
+scoped to A-sizing only). **These thresholds are not a precondition of the sovereign
+decision** and do not gate this record; the old evidence-gated B/C selection premise
+is superseded by the operator decision (NOTE-021).
 
 | Criterion (falsifier) | A per-AID UTxO | B singleton MPFS | C lane-shard |
 |---|---|---|---|
@@ -490,19 +658,21 @@ provenance/timestamp predating the measurement).
 | **C8 Migration/downstream cost to #68/#24/#25/#44 within ratified re-cut bound & bisect-safe.** *Falsifier: any downstream re-cut exceeds the ratified bound or is not expressible as a versioned, additive change.* | MEASURE | MEASURE | MEASURE |
 | **C9 Trust-minimized generic discovery** — an AID's current checkpoint state is located by an **exact `(policy_id, asset_name) → current unspent output` lookup** answerable by **any** generic Cardano asset index (indexer/node/sidecar/replica), and the design **tracks rotation successors**, **follows migration/policy-version lineage**, **rejects stale/forged resolver answers against the ledger** (singleton asset + designated script address + inline datum/AID binding), and gives **closed/tombstone** state an unambiguous discovery story — the resolver supplies availability/freshness, **not** identity truth. *Falsifier: discovery depends on an exclusive/authoritative issuer/QVI database, OR lacks exact-asset lookup, rotation-successor tracking, migration lineage, stale-result rejection, or closed-state semantics.* This is a **design-property proof (no numeric threshold)** — recorded `PASS`/`FAIL` with a real evidence class, **not** `class=proved`. | VERIFY (generic `(checkpoint_policy_id, aid_asset_name)` asset lookup; §5) | VERIFY (MPF inclusion vs windowed root **+ off-chain MPFS state materializer/proof builder**) | VERIFY (per-lane MPF inclusion **+ off-chain MPFS state materializer/proof builder**) |
 
-**Selection rule (run by the decision slice, after thresholds are ratified and the
-matrix is filled):** eliminate every candidate a falsifier kills — **including the C9
-trust-minimized-discovery falsifier** (a candidate whose discovery depends on an
-exclusive/authoritative issuer/QVI database, or lacks exact-asset lookup, rotation
-tracking, migration lineage, stale-result rejection, or closed-state semantics, is
-eliminated); among survivors pick the one dominating on C2/C3/C4 at the lowest C6/C8
-cost. If two survive within
-measurement noise, prefer the **smaller downstream re-cut** (C8) and record the tie
-honestly. The decision slice **must end with exactly one selected candidate**, the
-rejected alternatives and their residual risks recorded, and the canonical docs
-updated. **This planning record does not run that rule — it fixes the rule and the
-evidence that feeds it; a selection asserted here, without the evidence, would be
-fabrication.**
+**Selection rule (applied): the operator-ratified sovereignty invariant.** The
+selection is **not** run over this matrix. The operator selected **Candidate A**
+because it is the only shape under which each AID's current-authority state advances
+through its **own uniquely-tokenized UTxO**, so **unrelated and hostile AIDs cannot
+contend with, consume, serialize, or delay** it (§Operator decision). **B is rejected**
+because its shared/global checkpoint UTxO serializes unrelated identities; **C is
+rejected** because a public/grindable lane lets hostile AIDs target a victim's lane
+and makes sovereignty depend on shard machinery. The **C9 trust-minimized-discovery**
+property is a **hard requirement A satisfies** (generic `(policy_id, asset_name)`
+lookup; no exclusive/authoritative issuer/QVI database). The canonical docs are
+updated with this decision. **The A-implementation-sizing measurements and
+live-boundary smoke are a downstream implementation gate, retained honestly and never
+represented as the selection reason** — a claim that A "won" a measured
+throughput/capital/cost contest would misrepresent the sovereign basis and is
+forbidden.
 
 ## Cross-cutting concern coverage (mapped to brief.md)
 
@@ -568,7 +738,17 @@ fabrication.**
   work.** §Honesty below.
 - **Live-boundary-smoke limitation.** §Evidence below.
 
-## Evidence & measurement plan (provenance — no invented numbers)
+## Candidate-A implementation-sizing & live-boundary measurement plan (downstream; not selection evidence)
+
+> **These measurements are Candidate-A implementation sizing and live-boundary
+> honesty, a downstream implementation gate — not the reason A was chosen and not a
+> precondition of this decision** (§Operator decision, NOTE-021). No value here is
+> invented, fabricated, or back-filled, and none is presented as the selection basis.
+> The **B/C comparison** measurements are **deferred/withdrawn** with the rejected
+> candidates; what survives is the sizing of the **selected** shape (A) plus the honest
+> characterization already stated. The prototype/harness/measurement that produces
+> these figures is **behavior-changing** and belongs to a downstream implementation
+> ticket, **not** authored in this design record.
 
 ### What exists (provenance + honesty caveats)
 
@@ -584,18 +764,19 @@ fabrication.**
   value-write measurement; none of it is a checkpoint-advance or genesis batch
   bound** (NOTE-013).
 
-### What MUST be measured (the delegated slice that closes the matrix)
+### What must be sized downstream for Candidate A (not a decision precondition)
 
-**Order of work (thresholds before measurement, NOTE-016).** The slice **first
-ratifies** the concrete thresholds every "target/budget/bounded/SLO/cap" criterion
-names (C2 SLO, C3 capital-lock cap, C4 emergency-latency SLO, C6 read-cost cap, C8
-re-cut bound), with provenance and any operator decision routed through
-`questions/`, **then** measures against those **fixed** thresholds. Choosing a
-threshold after seeing a result is forbidden.
+**This is the downstream Candidate-A implementation-sizing scope** — it does **not**
+gate the sovereign decision (NOTE-021). If that downstream work adopts SLO/cap
+thresholds, they are ratified **with provenance before** the A-sizing measurement,
+never chosen after seeing a result (NOTE-016, rescoped to A-sizing). The **B/C**
+figures below are retained only as historical characterization of the rejected shapes;
+the required sizing is **Candidate A's**.
 
-For **each candidate**, produce measured `C1a/C1b/C2/C3/C4/C6/C8` at the **actual
-transaction boundary of each distinct transaction**, not a primitive in isolation
-and **never by summing disjoint transactions into one per-tx claim**:
+For **Candidate A** (and, where noted, historical B/C characterization), produce
+measured figures at the **actual transaction boundary of each distinct transaction**,
+not a primitive in isolation and **never by summing disjoint transactions into one
+per-tx claim**:
 
 1. **Registration pipeline** — measure each of its transactions at its **own**
    boundary: the ≤1-chunk **Step(s)**, **Finish**, and **activation/promotion**
@@ -657,12 +838,16 @@ measurement (C1), and the smoke is its live corroboration, not its replacement.
 
 ## Honesty boundaries & residual risks
 
-- **No candidate is selected in *this planning record* — but #92 must select one.**
-  The matrix is open **pending evidence**; selection is the job of the later
-  evidence-gated decision slice (fill the matrix, apply the rule, name the winner,
-  record rejected alternatives/residual risks, update canonical docs). Any "A/B/C is
-  best" statement **in this record**, before that evidence, would be fabrication;
-  **leaving the matrix permanently open would fail #92's deliverable.**
+- **Candidate A is selected by the operator-ratified sovereignty invariant; B and C
+  are rejected.** The selection is a normative security/product decision (§Operator
+  decision, NOTE-021), **not** a measured throughput/capital/cost-matrix win, and it
+  does **not** wait on ratifying B/C thresholds. **B/C comparison measurement is
+  deferred/withdrawn honestly.** The Candidate-A cost/tx-size/min-ADA/fan-in figures
+  and the live-boundary smoke are a **downstream implementation-sizing gate**, retained
+  honestly and **never** represented as the reason A was chosen; presenting a
+  fabricated/back-filled measurement as the selection basis is forbidden. The earlier
+  "no candidate is selected / matrix open pending evidence" premise is **superseded**
+  (NOTE-021).
 - **The advance path is unbuilt and unmeasured, and its transactions are
   distinct.** The registration pipeline (Step/Finish confinement → Finish → oracle +
   MPFS unicity + store materialization) and the **separate** rotation-advance tx
@@ -724,26 +909,28 @@ unicity stays an MPFS absence proof at registration; the per-AID UTxO is only th
 promoted advance store. The decision matrix keeps all three physical candidates
 compatible with the fixed logical decisions.
 
-### 2026-07-11 — NOTE-015 (decision left open *pending evidence*, not permanently)
-Per the ticket's charter, **this planning record** does not select the physical
-shape: it fixes the candidate set, the falsifiable criteria, and the evidence
-provenance, and leaves the matrix cells `MEASURE`. **OPEN here is a pre-evidence
-state, not #92's final state** — the GitHub deliverable is a **decision +
-validator-shape sketch**, so a later **evidence-gated decision slice** fills the
-matrix (from the whole-transaction-boundary measurement + live-devnet smoke),
-applies the selection rule, **names exactly one selected candidate**, records the
-rejected alternatives and residual risks, and updates the canonical docs. Selection
-without that evidence is forbidden; *permanent* non-selection would fail the ticket.
+### 2026-07-11 — NOTE-015 (decision left open *pending evidence*, not permanently) — **SUPERSEDED by NOTE-021**
+**Superseded 2026-07-14 (NOTE-021):** the decision is no longer left open pending
+evidence. The operator selected **Candidate A** on the sovereignty invariant, so
+there is no evidence-gated decision slice and no "OPEN pre-evidence state." The
+historical intent of this note — that #92's deliverable is a *decision*, not a
+permanently-open matrix — is honoured by the sovereign decision itself. *Original
+text (historical):* this planning record does not select the physical shape; it
+fixes the candidate set, the falsifiable criteria, and the evidence provenance, and
+leaves the matrix cells `MEASURE`; a later evidence-gated decision slice would fill
+the matrix and name one candidate.
 
-### 2026-07-11 — NOTE-016 (thresholds ratified before measurement)
-The matrix criteria that read "target / budget / bounded / SLO / cap" (C2/C3/C4/C6/
-C8) are **not falsifiable until each names a concrete number**. The decision slice
-**ratifies** those thresholds first — mainnet ex-unit budgets, an advances/block
-SLO, a capital-lock cap, an emergency-latency SLO, a read-cost cap, a
-downstream-recut bound — **with provenance**, routing any operator decision through
-`questions/`, and only **then** measures against the fixed thresholds. **Choosing a
-threshold after seeing a candidate's result is forbidden**, and `accept.sh` checks
-that ratified thresholds predate the measurement.
+### 2026-07-11 — NOTE-016 (thresholds ratified before measurement) — **RESCOPED to A-implementation sizing (NOTE-021)**
+**Rescoped 2026-07-14 (NOTE-021):** thresholds-before-measurement is **no longer a
+precondition of the #92 decision** (the decision is the sovereignty invariant, not a
+threshold contest). The discipline survives **only** for the **downstream
+Candidate-A implementation-sizing** work: if that work adopts SLO/cap thresholds,
+they are ratified with provenance **before** the A-sizing measurement, never chosen
+after seeing a result. It does **not** gate this record, and `accept.sh` no longer
+blocks the decision on any B/C threshold ratification. *Original text (historical):*
+the matrix "target/budget/bounded/SLO/cap" criteria are not falsifiable until each
+names a concrete number, which the decision slice would ratify with provenance before
+measuring.
 
 ### 2026-07-11 — NOTE-017 (lane assignment is grindable — average ≠ adversarial)
 Because `lane = f(cesr_aid)` is a **public, deterministic** function, a
@@ -842,31 +1029,58 @@ inherited from the genuine singleton token's mint/spend history. The consumer pe
 only a **bounded provenance/state boundary check** (exact `(policy_id, asset_name)`,
 quantity one, accepted checkpoint script/version, well-formed inline datum with
 AID/sequence binding, active/freeze/lineage). **Application** facts created later stay
-application work (the presented ACDC/payload signature under the **authenticated current
-keys**, plus schema/TEL/business rules) — the checkpoint **cannot pre-prove a future
-payload**. The consumer may trust the **authenticated current key state** after the
-boundary check; it must **not** trust an arbitrary datum merely because it sits at the
-same script address.
+application work and split by plane: a **new** dApp payload/action is authorized under
+the **authenticated current keys** (schema/business rules alongside) — the checkpoint
+**cannot pre-prove a future payload** — while **historical ACDC issuance / TEL status
+stays historical** (sealed into the issuer's KEL at that past key state, verifiable
+through later rotations; §ACDC boundary correction), **not** re-checked under current
+keys. The consumer may trust the **authenticated current key state** after the boundary
+check to authorize new actions; it must **not** trust an arbitrary datum merely because
+it sits at the same script address.
+
+### 2026-07-14 — NOTE-021 (operator decision: sovereignty selects Candidate A)
+**The operator selected Candidate A** (`answers/A-001-thresholds.md`, ratified
+2026-07-14) as a **normative security/product decision**, not the winner of a
+throughput/capital/cost contest. The **load-bearing, operator-ratified sovereignty
+invariant**: unrelated issuers and attacker-created AIDs **cannot contend with,
+consume, serialize, or delay** an AID's current-authority checkpoint / rotation /
+recovery / re-authorization path, because each AID advances **only** through its own
+uniquely-tokenized `(checkpoint_policy_id, aid_asset_name)` UTxO.
+- **B is rejected** — a single/global/shared checkpoint-root UTxO serializes unrelated
+  identities on one contended UTxO.
+- **C is rejected** — a public/grindable lane `f(cesr_aid)` lets hostile AIDs target a
+  victim's lane, and makes sovereignty depend on shard machinery.
+- **A is selected** — sovereignty holds by construction (own uniquely-tokenized UTxO).
+
+This **supersedes** the evidence-gated selection premise (NOTE-015) and the
+threshold-hard-stop (QUESTION-001, NOTE-016 rescoped): B/C threshold ratification and
+the filled A/B/C selection matrix **no longer gate** the decision, and `accept.sh` no
+longer requires them. **Candidate-A cost/tx-size/min-ADA/batch-fan-in measurements and
+the live-boundary smoke remain required as a downstream implementation-sizing gate** —
+**never** fabricated, back-filled, or represented as the reason A was chosen. The
+B/C **comparison** artifacts are deferred/withdrawn honestly. R-KEL's on-chain
+checkpoint classification and the #99 cage invariants are **preserved**.
 
 ## P1 user story
 
 As a protocol designer ratifying the identity storage model, I read this record
 and find (1) an explicit split between the **fixed logical** registration/unicity
-decision and the **open physical** advance-storage shape; (2) **three** concrete
-candidates — a per-AID **minted steady checkpoint asset** (`(checkpoint_policy_id,
-aid_asset_name)`, discoverable by a **generic** multi-asset lookup, C9), singleton
-MPFS, and lane-sharded hybrid — each with its
-uniqueness/token/confinement/rotation/griefing/cost story; (3) a **falsifiable
-decision matrix** (including the C9 trust-minimized-discovery falsifier) whose
-deciding cells are honestly marked `MEASURE`/`VERIFY` (open **pending evidence**, with
-a later evidence-gated decision slice that will select one model);
-(4) an evidence plan that measures the **registration pipeline** and the **rotation
-advance** at their **own** tx boundaries (not a single fictitious combined tx, and
-never summed) with a live-devnet smoke and its stated limitation; (5) every brief.md
-concern covered; and (6) no invented numbers and no *premature* selection **in this
-record** — while the record makes explicit that #92's final deliverable is a
-**selected model** from the decision slice — with no disturbance to the R-KEL
-classification or the #99 invariants.
+decision and the **now-decided physical** advance-storage shape; (2) the
+**operator-ratified sovereignty invariant** that selects **Candidate A** — a per-AID
+**minted steady checkpoint asset** (`(checkpoint_policy_id, aid_asset_name)`,
+discoverable by a **generic** multi-asset lookup, C9) — and the **explicit sovereign
+reasoning** rejecting **B** (shared/global UTxO serializes unrelated identities) and
+**C** (grindable public lane; sovereignty depends on shard machinery); (3) the
+**universal re-authorization** and **ACDC boundary** semantics — rotation makes pending
+authorizations stale, every future action re-references the current checkpoint, and
+historical ACDC issuance/TEL evidence stays historical (not re-signed under current
+keys); (4) a **Candidate-A implementation-sizing + live-boundary measurement plan**
+retained honestly as a **downstream implementation gate** — measured at the
+**registration pipeline** and **rotation advance** own tx boundaries (never summed),
+with the live-devnet smoke and its stated limitation, and **never** fabricated or
+presented as the selection reason; (5) every brief.md concern covered; and (6) no
+invented numbers — with no disturbance to the R-KEL classification or the #99
+invariants.
 
 ## ACDC holder user story — generic checkpoint-asset discovery (Candidate A)
 
@@ -897,11 +1111,15 @@ contacting each QVI:
    prior-rotation / two-seal re-verification, no genesis-BLAKE3 recompute, and no MPF
    inclusion proof** — those transition facts are **inherited inductively** from the
    singleton token's mint/spend history, leaving only the **bounded boundary check** of
-   step 3. She then does the **application** work the checkpoint **cannot pre-prove**:
-   **verify the presented ACDC's signature under those authenticated current keys**,
-   plus schema and TEL/revocation. She may trust the **authenticated current key state**
-   after the boundary check; she must **not** trust a datum merely because it sits at
-   the same script address.
+   step 3. She then does the **application** work the checkpoint **cannot pre-prove**,
+   and it splits by plane: **historical ACDC issuance / TEL status stays historical** —
+   she verifies the credential's **issuance seal against the issuer's KEL at that past
+   key state** (not re-signed under the issuer's current keys) and its TEL non-revocation;
+   while a **new** action she submits **on behalf of the current AID** is authorized
+   **under the current authenticated keys** the checkpoint carries. She may trust the
+   **authenticated current key state** after the boundary check to authorize new actions;
+   she must **not** trust a datum merely because it sits at the same script address, and
+   she must **not** re-derive historical credential issuance from the current keys.
 
 This story is what criterion **C9** falsifies for any candidate whose discovery
 depends on an exclusive/authoritative issuer/QVI database or lacks exact-asset lookup,
@@ -912,23 +1130,25 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
 ## Functional requirements
 
 - **FR1.** The record **distinguishes the fixed logical** MPFS registration/unicity
-  decision (#91 §7c decisions 1 & 2) **from the open physical** R-KEL advance-
+  decision (#91 §7c decisions 1 & 2) **from the now-decided physical** R-KEL advance-
   storage shape, in an explicit table, and states that a per-AID UTxO does not
   reopen logical unicity (NOTE-014).
-- **FR2.** *This planning record* **keeps the physical storage decision open pending
-  evidence** — no candidate is selected here and deciding matrix cells are marked
-  `MEASURE` (NOTE-015) — **but records that #92's final deliverable is a selected
-  model**: a later evidence-gated decision slice fills the matrix, applies the
-  selection rule, names exactly one candidate, records rejected alternatives +
-  residual risks, and updates the canonical docs. OPEN is a **pre-evidence** state,
-  not the final state.
-- **FR3.** **Three candidates** are compared: (A) per-`cesr_aid` checkpoint UTxO,
-  (B) singleton MPFS checkpoint/root UTxO, (C) a **concrete** hybrid/shard/lane
-  candidate (lane-sharded MPFS), each with a validator-shape sketch.
-- **FR4.** A **decision matrix with falsifiable criteria** (each criterion carries
-  an elimination falsifier) whose "target/budget/bounded/SLO/cap" thresholds are
-  **ratified with provenance before measurement** (NOTE-016), plus the selection
-  rule applied only post-evidence to **name exactly one candidate**.
+- **FR2.** The record **selects the physical storage shape: Candidate A** — the
+  sovereign per-AID uniquely-tokenized checkpoint UTxO — by the **operator-ratified
+  sovereignty invariant** (§Operator decision, NOTE-021), records **B and C as
+  rejected** with their sovereign reasons and residual risks, and drives the canonical
+  docs to carry the decision. The selection is **not** an evidence-gated matrix win and
+  does **not** wait on B/C threshold ratification; the earlier "open pending evidence"
+  premise is superseded (NOTE-015).
+- **FR3.** **Three candidates** are documented: (A, **selected**) per-`cesr_aid`
+  sovereign checkpoint UTxO, (B, **rejected**) singleton MPFS checkpoint/root UTxO,
+  (C, **rejected**) lane-sharded MPFS — each with a validator-shape sketch and, for the
+  rejected pair, its sovereign residual risk.
+- **FR4.** The **selection rule is the sovereignty invariant** (unrelated-AID
+  isolation), not a cost/throughput matrix; the retained characterization matrix is
+  **descriptive**, and any thresholds/measurement discipline it carries applies **only**
+  to the **downstream Candidate-A implementation-sizing** work (NOTE-016 rescoped),
+  never as a decision precondition.
 - **FR5.** **Uniqueness/authenticity** and **how an AID-owned checkpoint is
   located** are covered per candidate, and **discovery trust-minimization is a
   falsifiable matrix criterion (C9)**: exact `(policy_id, asset_name)` lookup,
@@ -939,10 +1159,13 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   reference-input read runs **no** checkpoint spending validator and replays **no**
   KERI history / prior rotations / genesis BLAKE3 / MPF proof — those are inherited
   from the singleton token's mint/spend history — leaving only a **bounded
-  provenance/state boundary check**; the presented ACDC/payload signature under the
-  **authenticated current keys** (plus schema/TEL/business rules) stays **application
-  work** the checkpoint cannot pre-prove, and a datum is **not** trusted merely for
-  sitting at the same script address.
+  provenance/state boundary check**. Downstream application work splits by plane: a
+  **new** dApp payload/action is authorized under the **authenticated current keys**
+  (the checkpoint cannot pre-prove a future payload), while **historical ACDC
+  issuance / TEL status stays historical** (issuance sealed into the issuer's KEL at
+  that past key state, verifiable through later rotations — §ACDC boundary
+  correction), **not** re-checked under current keys; a datum is **not** trusted
+  merely for sitting at the same script address.
 - **FR6.** **Token/policy-token shape, predecessor/version binding, exact output
   placement, close/burn/migration, and #99 cage-invariant interaction** are covered
   per candidate; #99 invariants are a preservation requirement. The **transient
@@ -1022,56 +1245,51 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   stated. The datum/address distinction is made precise (a datum does not own an
   address; the TxOut carrying the inline datum is locked at the script-hash address).
 
-## Success criteria (measurable; satisfied by later slices, not this run)
+## Success criteria (the sovereign decision + its consistency pass)
 
-- [ ] `accept.sh` (authored in the tasks slice, not here) mechanically asserts the
-  **final** #92 deliverable and is **RED now / GREEN only after the decision slice**.
-  It goes GREEN **only** when **all** hold: evidence provenance exists, the material
-  matrix cells are **filled** (no longer `MEASURE`) from the delegated
-  whole-transaction-boundary measurement, **exactly one** candidate is selected, the
-  selection rule is applied with rejected alternatives + residual risks recorded, and
-  the **downstream/canonical docs carry the decision**. It **must not** assert
-  `MEASURE` cells or absence-of-selection as the success state (that would make #92's
-  deliverable impossible). It **separately forbids a selection *without* evidence** —
-  a named candidate with unfilled cells or missing provenance is RED. It also checks
-  the structural FRs (logical/physical split + table, three named candidates,
-  falsifiable matrix + ratified thresholds, per-candidate concern coverage, the
-  **transient inception-cage lifecycle & cleanup** — mint tied to attempt input,
-  Step-preserves-one, Finish-burns/promotes-once, bounded deposit-funded
-  timeout/reclaim, plus its C3b bloat/abandoned-attempt criterion — the **Candidate A
-  minted AID-bound steady checkpoint asset** — `(checkpoint_policy_id, aid_asset_name)`
-  with the domain-separated 32-byte `aid_asset_name` derivation, #99 combined
-  policy-id=script-hash, the `CheckpointStateOutput` shape, the `delta = 0` rotation
-  transition — the **C9 generic-discovery criterion + falsifier** with a **negative
-  guard rejecting the bespoke/authoritative QVI-owned `AID → UTxO` database framing**,
-  the ACDC holder user story, #68/#24/#25/#44
-  consequences, evidence-provenance section, R-KEL-classification-preserved /
-  #99-not-a-bound NOTE-013). **RED on `origin/main` and RED at this planning HEAD;
-  GREEN only at the decision slice's HEAD.**
-- [ ] The decision matrix's `MEASURE` cells are filled **only** from a delegated
-  measurement of the **registration pipeline** (Step / Finish / activation-promotion)
-  and the **rotation advance** (two-seal Ed25519 + non-zero-depth MPF update + `Data`
-  boundary) **at their own tx boundaries** — never summing disjoint transactions —
-  and **only against thresholds ratified beforehand** (NOTE-016), with stated
-  provenance — **no fabricated numbers**.
-- [ ] A **named live-boundary smoke** submits a real checkpoint-advance tx on the
-  tx-tool devnet (`withDevnet`) and asserts the node Phase-1/Phase-2 outcome, with
-  its limitation recorded; a unit/golden-only proof does not satisfy this.
-- [ ] `./gate.sh` passes locally at HEAD before mark-ready; PR-life `gate.sh`
-  dropped before mark-ready.
-- [ ] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub
-  CI green.
+- [ ] `accept.sh` mechanically asserts the **sovereign** #92 deliverable. Its `final`
+  target goes GREEN **only** when **all** hold: **`DECISION.md` records the
+  operator-ratified sovereign selection** (`SELECTED_CANDIDATE=A`,
+  `REJECTED_CANDIDATES=B,C`, `SELECTION_BASIS=sovereignty`, the sovereignty invariant,
+  the B/C sovereign rejection reasons, the operator ratification provenance, non-empty
+  residual risks, and the **measurement residual** framed as downstream
+  A-implementation sizing); the **canonical docs carry the sovereign per-AID decision**
+  (identity-model thread 8 resolved, system-architecture) with the **R-KEL
+  classification and #99 cage invariants preserved**; and the structural spec checks
+  pass (logical/physical split, three candidates, the Candidate-A minted AID-bound
+  steady checkpoint asset with native-`blake2b_256` locator + inductive caging +
+  inductive downstream trust boundary + C9 generic-discovery + the QVI-database
+  negative guard, universal re-authorization, the ACDC boundary correction, the
+  emergency-freeze residual, batched fan-in). It **forbids** representing the decision
+  as a measured throughput/capital/cost win and forbids reopening the shape as
+  "unselected/open pending evidence." `final` requires **all five DS1–DS5
+  repository-consistency documentation slices** (canonical model, ACDC boundary,
+  architecture current-auth/discovery, design trust/UX/DeFi/aid, and the
+  downstream-consequence specs + business-case audit) — it cannot go GREEN while any
+  DS surface stays stale. **RED on `origin/main`; GREEN once `DECISION.md` (ticket
+  owner) and every DS1–DS5 documentation slice (pair) land.**
+- [ ] The **measurements are honest**: Candidate-A cost/tx-size/min-ADA/batch-fan-in +
+  the live-boundary smoke are recorded as a **downstream implementation-sizing gate**,
+  **never fabricated, back-filled, or presented as the selection reason**; B/C
+  comparison artifacts are deferred/withdrawn honestly.
+- [ ] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
+  mark-ready (finalization, after epic-owner acceptance).
+- [ ] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI
+  green. The canonical/consistency documentation edits are **reviewed pair slices**,
+  not authored by the ticket owner.
 
 ## Out of scope (do not implement)
 
-- **Selecting the physical storage shape *in this planning record*** — selection is
-  **in #92's scope** but **evidence-gated**: it happens in the later decision slice,
-  after threshold ratification and the delegated measurement, **not** here and
-  **not** from the framing alone. (Leaving it permanently unselected is **not** an
-  acceptable outcome — see FR2 / NOTE-015.)
-- Any validator, Haskell, wire-schema, or storage-layout **code** (measurement
-  harness/prototypes are dispatched to the driver+navigator pair, not authored by
-  the ticket owner).
+- **Re-opening the storage-shape selection** — it is **decided (Candidate A)** by the
+  operator sovereignty invariant (§Operator decision, NOTE-021). Re-deriving it from a
+  B/C measurement contest, or leaving it "open pending evidence," is out of scope.
+- **Actually performing the Candidate-A implementation-sizing measurements / building a
+  validator prototype** — those are a **downstream implementation gate** (behavior-
+  changing; a downstream ticket), not authored in this design record; nor is any B/C
+  comparison measurement.
+- **Re-cutting the emergency-freeze (R-FRZ) mechanism** to a sovereign shape — recorded
+  as a downstream residual/dependency (§Emergency freeze), not implemented here.
+- Any validator, Haskell, wire-schema, or storage-layout **code**.
 - Absorbing **#68** (schema freeze), the full **#24** lifecycle/protocol, **#25**
   proof construction, or **#44** — only their **consequences** are documented.
 - Reopening **hybrid genesis, oracle gating, semantic-projection trust, the #91
@@ -1079,4 +1297,3 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   inputs; a concrete contradiction is escalated to the epic owner.
 - An on-chain/off-chain **CESR parser / projection verifier**, the **adjudicator/
   governance-quorum** mechanism, and reverting merged #97/#99 — out of scope.
-- `plan.md`, `tasks.md`, and `accept.sh` — not created in this planning run.

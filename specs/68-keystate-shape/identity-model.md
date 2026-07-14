@@ -20,7 +20,8 @@ hybrid** selection (§7c): cryptographic byte binding for ≤1-chunk inceptions,
 for >1-chunk, with the semantic projection attested and challengeable at every tier.
 Correspondence (open thread 4) **drilled via #90** (§7b — required, fraud-proof
 policed). All pre-ratification threads are now drilled: the genesis/registration
-package (thread 3, #91) is resolved in §7c; contention (thread 8) is #92.
+package (thread 3, #91) is resolved in §7c; contention (thread 8) is **resolved by #92** —
+the sovereign per-AID checkpoint (§10).
 
 ---
 
@@ -60,6 +61,8 @@ A KEL is **unbounded** — no validator can replay it from inception. So identit
 checks the single event against the current state → `state@seq N+1`. **O(1) per event**,
 bounded. And only **establishment (rotation) events** change keys — interaction events
 don't — so the on-chain cadence is *one tx per rotation* (rare), not per KERI event.
+That per-rotation advance now has a **decided physical home**: each AID's **own** sovereign
+per-AID checkpoint UTxO (#92, 2026-07-14 — §10 thread 8).
 
 **This is exactly #24** (reveal pre-committed next key, check `hash(revealed)==next_digest`,
 threshold sig, advance seq). #24 is therefore revived as the **integrity backbone**, not a
@@ -145,6 +148,12 @@ Checkpoint {
   seq         : Int
 }
 ```
+
+**Physical storage (decided — #92, 2026-07-14).** This advancing checkpoint per `cesr_aid`
+lives in its **own** sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO
+(Candidate A — §10 thread 8): the state above is that UTxO's inline datum, and unrelated
+AIDs cannot consume or serialize it. This is a *physical-storage* selection only; it does
+not alter the R-KEL classification (§7c / `system-architecture.md`).
 
 Both the signing keys **and** the witness set advance through witness-receipted seals.
 Which set receipts a witness-set change was the sharp question — verified keripy behavior
@@ -394,7 +403,7 @@ The **integrated genesis path** (checkpoint Step/Finish + cage confinement + pro
 
 #### Consequences (documented, not absorbed)
 
-- **#92** — the **2-tx Step/Finish checkpoint chain**; the cage-confined intermediate as a **required #24/#92 integration invariant**; the `provisional`/`active`/`frozen` states; **remeasure** (the #99 Modify N is **not** the genesis bound); the trie-vs-per-AID-UTxO storage shape stays #92's call.
+- **#92** — the **2-tx Step/Finish checkpoint chain**; the cage-confined intermediate as a **required #24/#92 integration invariant**; the `provisional`/`active`/`frozen` states; **remeasure** (the #99 Modify N is **not** the genesis bound); the trie-vs-per-AID-UTxO storage shape is **now decided (sovereign per-AID)** — #92 selected the sovereign, per-AID, uniquely-tokenized checkpoint UTxO (Candidate A; §10 thread 8).
 - **#68** — **#68** must pin the inception **CESR serialization**, the #97 checkpoint **datum/redeemer**, and the **projection fields**, with **Haskell/Aiken golden parity**; on-chain projection verification is flagged **deferred**.
 - **#24** — **#24 is re-cut**: base case = cryptographic byte-binding genesis + challengeable projection + cage integration; the attested residual for >1-chunk travels with it.
 
@@ -482,5 +491,17 @@ integrity the checkpoint provides.
 7. **SDK requirement** — the controller's KERI wallet/bridge must emit the seal per
    rotation (#42 family; no SAID patching — the seal is a plain native event); who submits
    the Cardano advance tx (controller vs relayer/watcher).
-8. **Who pays / contention** — per-`cesr_aid` checkpoint UTxO (ordered, no global
-   contention) vs an MPFS checkpoint trie (aggregate root, batched writes).
+8. **Who pays / contention — thread 8 is RESOLVED 2026-07-14 (#92).** The physical R-KEL
+   checkpoint storage is now **decided**:
+   the sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO (Candidate A).
+   Each `cesr_aid` advances its current-authority state through its **own** checkpoint UTxO,
+   so unrelated issuers and attacker-created AIDs cannot consume, serialize, or delay it —
+   sovereignty and unrelated-AID isolation are the load-bearing selection criteria. The
+   rejected shapes are kept for the record: a single/global/shared checkpoint-root UTxO (B)
+   serializes unrelated identities on one contended UTxO; a grindable public lane
+   `lane = f(cesr_aid)` (C) lets hostile AIDs target a victim's lane, making sovereignty
+   depend on shard machinery. The selection is **not** conditional on A winning a
+   throughput/capital/cost contest; Candidate-A cost / tx-size / min-ada / batch-fan-in
+   measurements plus the live-boundary smoke remain a **downstream implementation gate**,
+   not the reason A was chosen. See `specs/92-checkpoint-contention/{spec.md,DECISION.md}`
+   (NOTE-021) and §7c.

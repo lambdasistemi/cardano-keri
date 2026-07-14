@@ -65,7 +65,7 @@ Owned files: `specs/68-keystate-shape/identity-model.md`,
 `docs(92): resolve identity-model thread 8 + system-architecture to the sovereign
 per-AID checkpoint`, `Tasks: T9210`.
 
-- [ ] T9210 — **Correct.** Resolve `identity-model.md` §10 **thread 8** (per-`cesr_aid`
+- [X] T9210 — **Correct.** Resolve `identity-model.md` §10 **thread 8** (per-`cesr_aid`
   UTxO vs MPFS trie) to the **sovereign per-AID uniquely-tokenized checkpoint UTxO**
   (Candidate A, operator-ratified sovereignty invariant); update the §7c consequence
   line ("the trie-vs-per-AID-UTxO storage shape stays #92's call" → decided) and the

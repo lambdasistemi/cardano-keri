@@ -6,61 +6,117 @@ You know a peer by their Veridian AID — established out-of-band (OOBI exchange
 
 ## The verification chain
 
-!!! warning "Updated for the checkpoint model (2026-07-09)"
+!!! warning "Updated for the checkpoint model (2026-07-09) — asset-derived under #92"
     Previously this chain required you to **replay Bob's KEL** and recompute a
     `trie_key`. Per `specs/68-keystate-shape/identity-model.md` (PR #87), the on-chain
-    entry is a **checkpoint keyed by Bob's `cesr_aid`** that advances only through
+    entry is a **per-AID checkpoint** that advances only through
     seals receipted by Bob's own witnesses — so post-genesis, the chain itself proves
     the key-state. What replay no longer buys you: nothing for rotations. What you may
-    still care about: the **genesis binding** is registration-attested (falsifiable, not
-    cryptographic — §7a), and **freshness** (the checkpoint may lag a very recent
-    rotation — §9).
+    still care about: the **genesis binding** splits — the **byte binding** (inception bytes
+    hash to the qualified AID) is **cryptographic on-chain for ≤1-chunk inceptions**
+    (attested for >1-chunk), while the **semantic projection** (keys/threshold decoded) is
+    **attested and permissionlessly challengeable** — §7a — and **freshness** (the checkpoint
+    may lag a very recent rotation — §9). **Superseded by #92** (box below): the current-authority store is
+    the **sovereign per-AID checkpoint UTxO** whose asset id
+    `(checkpoint_policy_id, aid_asset_name)` is **derived from the qualified AID**; the
+    earlier `cesr_aid`-keyed leaf shape is the rejected Candidate-B form.
+
+!!! warning "Current-authority + discovery reframed to the sovereign per-AID checkpoint (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, an AID's current authority is its
+    **own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** — asset id
+    `(checkpoint_policy_id, aid_asset_name)`, current weighted keys/threshold in the inline
+    `CheckpointDatum`, read as a CIP-31 reference input; a `delta = 0` rotation advances it.
+    You **discover** Bob's checkpoint by a **generic `(policy_id, asset_name)` asset lookup**
+    (any indexer / node) that yields a candidate outref **for liveness only** — the
+    consuming transaction revalidates it against the ledger, never trusting the indexer for
+    identity truth. **Failure behavior:** a **stale / cached outref consumed by a rotation
+    fails ledger validation** (it no longer exists or no longer matches) → **refresh and
+    retry**, never forged authority; an **unavailable or censoring resolver blocks only
+    transaction construction (liveness)** — mitigated by cache + resolver failover or a local
+    chain-sync — and **never yields false authorization**. So the "with KEL replay" framing below no longer describes the
+    **current-actor authority** path: **KEL replay is not in the hot path**. It stays only
+    for **historical credential issuance / admission** (the KEL/TEL credential chain) and
+    does **not** select the current checkpoint identity — the admission-cache split is
+    preserved. **AID uniqueness** is enforced on-chain by the **#91 gate** (the steady per-AID
+    checkpoint token is minted exactly once), not by a KEL-replay squatting resolution. The
+    mechanical `trie_key` / freeze re-cut is downstream #24.
 
 ```mermaid
 flowchart TD
-    A["You know Bob's CESR AID<br/>(from KERI / Veridian)"]
-    D["Look up cesr_aid leaf in the<br/>on-chain identity checkpoint"]
-    E["Key-state confirmed = Bob's keys<br/>(every advance was witness-receipted;<br/>genesis registration-attested — §7a)"]
+    A["You know Bob's CESR AID<br/>(from KERI / Veridian, via OOBI)"]
+    B["Derive the exact asset id<br/>(checkpoint_policy_id, aid_asset_name)<br/>from Bob's qualified AID"]
+    C["Generic (policy_id, asset_name) lookup<br/>for the current checkpoint UTxO<br/>(candidate outref — liveness only)"]
+    D["Ledger boundary validation:<br/>quantity-one policy+asset, accepted<br/>script/version/lineage, inline datum<br/>AID/sequence binding + current weighted key state"]
+    E["Key-state confirmed = Bob's keys<br/>(genesis registration-attested — §7a)"]
     F["Any cage write meeting the weighted<br/>threshold of those keys = provably Bob"]
 
-    A --> D --> E --> F
+    A --> B --> C --> D --> E --> F
 ```
 
-## What you can trust (with KEL replay)
+## What you can trust (current authority — no KEL replay)
+
+Current-actor authority resolves from Cardano state alone via Bob's **sovereign per-AID
+checkpoint** — no KEL replay in this path:
 
 | Claim | Verifiable? | How |
 |---|---|---|
-| Bob wrote a specific MPFS leaf | Yes | Cage write signed by Bob's `trie_key` cur_pubkey, on-chain |
-| Bob rotated his key | Yes | On-chain rotation + KEL rotation mirror |
-| Bob has not been revoked | Yes | No active freeze marker keyed by `(trie_key, seq, cur_pubkey_hash, next_digest)` for Bob |
+| Bob wrote a specific value | Yes | Cage write meeting the weighted threshold of the keys in Bob's checkpoint `CheckpointDatum`, on-chain |
+| Bob rotated his key | Yes | Bob's checkpoint advanced (`delta = 0`, `seq + 1`); pending authorizations went stale |
+| Bob has not been frozen | Yes | No active marker for Bob in the shared **R-FRZ** freeze registry (attacker-contendable, **not** sovereign — the sovereign emergency path must not reintroduce a shared attacker-contendable UTxO; downstream #24) |
 | This cage write happened before that one | Yes | Cardano ledger provides global total order |
-| Bob's key is currently live | Yes | Identity root KeyState + freeze root |
+| Bob's key is currently live | Yes | The current weighted key state in Bob's checkpoint UTxO datum |
 
-## What you cannot trust without KEL replay
+## AID uniqueness and genesis — the #91 on-chain gate
 
-| Claim | Without replay | With replay |
-|---|---|---|
-| `cesr_aid` in registry is really Bob | No — squatter can assert any AID | Yes — KEL derivation is unique |
-| First registration is the real Bob | No | Yes |
-| The registry entry is not a forgery | No | Yes |
+*Which* checkpoint is Bob's is settled **on-chain**, not by replaying KELs. Under Candidate A
+(`specs/92-checkpoint-contention/DECISION.md`) a registered AID has **exactly one** steady
+per-AID checkpoint token: it is minted **exactly once, `+1`, only after** the #91
+**Step/Finish byte binding** + the **oracle / projection gate** + the **MPFS absence /
+unicity** proof. There is no pool of rival registrants for the same AID to disambiguate later.
+
+- **Discovery is the AID-derived asset, revalidated by lineage.** The asset id
+  `(checkpoint_policy_id, aid_asset_name)` is **deterministically derived from the AID**; the
+  **ledger revalidates** the AID-derived asset and its **mint / spend lineage** (quantity-one,
+  accepted checkpoint script / version / lineage, inline datum AID/sequence binding + current
+  weighted key state). No off-chain "scan for a matching `cesr_aid`, pick a `trie_key`".
+- **KEL / TEL replay is solely for historical credential issuance / admission** (the vLEI
+  credential chain — see [The Regulated DeFi Gate](defi-gate.md)); it does **not** select the
+  current checkpoint identity.
+
+!!! note "Honest #91 residual"
+    The genesis **projection is attester-trusted** (the oracle / projection gate), with a
+    **permissionless-challenge / censorship** residual — a challenger can contest a bad
+    projection, and censorship of a genuine registration remains the residual risk. This is a
+    falsifiable trust boundary, not a fully trustless one.
 
 ## The squatting limitation
 
-Anyone can register any `cesr_aid` value in the Cardano registry. The on-chain script stores it as metadata without verification. This is not a hash-agility problem — cardano-keri mandates F-prefix (Blake2b-256) AIDs precisely so the derivation uses a Cardano-native hash (see [Blake2b-256 requirement](blake2b256-requirement.md)) — it is structural: KERI inception events are public, so hash-checking supplied event bytes proves nothing about the registrant, and binding the event's key material to the registrant would require parsing CESR on-chain, which is out of scope by design (see [AID Model — attack B](aid-model.md#inception-security-two-attacks-different-fixes)).
+!!! warning "Superseded by Candidate A (#92 / #91) — rejected Candidate-B framing"
+    The earlier framing here — *anyone can register any `cesr_aid`; multiple entries claim
+    the same AID; a one-time KEL / admission binding then selects the legitimate controller*
+    — was the **rejected Candidate-B** shared-registry metadata/index model. Under Candidate
+    A there is **no rival-registrant pool**: uniqueness is enforced by the **on-chain #91
+    gate** (the steady per-AID checkpoint token is minted exactly once — see the *AID
+    uniqueness and genesis* section above). The old Candidate-B `cesr_aid` *metadata field*
+    was a convenience correlation label, never an identity selector; under Candidate A the
+    **qualified AID deterministically derives** the asset id `(checkpoint_policy_id,
+    aid_asset_name)` and **binds the checkpoint datum** (AID/sequence binding) — identity is
+    settled on-chain, not by a label. The reason on-chain CESR self-cert cannot help (KERI
+    inception events are public; binding event bytes to the registrant would need CESR
+    parsing, out of scope) is preserved in [AID Model — attack
+    B](aid-model.md#inception-security-two-attacks-different-fixes).
 
-This means `cesr_aid → trie_key` is a one-to-many untrusted index. Multiple entries can claim the same Veridian AID. The KEL replay finds the unique legitimate `trie_key` and discards the rest.
-
-Applications that need to resolve KERI identity purely from Cardano state (without touching the KERI network) cannot be built securely — KEL replay is a permanent part of the trust chain, not a temporary gap.
+**Current-actor** authority resolves from Cardano state alone — via the AID's sovereign per-AID checkpoint, discovered by a generic `(policy_id, asset_name)` asset lookup and re-validated against the ledger. The only thing outside that hot path is **historical credential issuance / admission** (the KEL/TEL credential chain), which never selects the current checkpoint identity.
 
 ## Practical workflow (two Veridian users)
 
-For Veridian users who already interact via KERI, the KEL replay is a natural step:
+**OOBI already establishes Bob's AID** — sufficient to **resolve his current checkpoint**, so credential admission never *selects* his current authority (that is always the sovereign checkpoint). Distinguish **authority selection** from **protocol eligibility**: a dApp may nonetheless *require* KEL / TEL credential admission as a **separate eligibility gate** — OOBI resolving the checkpoint does **not** by itself satisfy every dApp policy:
 
-1. You receive Bob's AID via Veridian (OOBI or contact share)
-2. Veridian already has Bob's KEL (you've verified his KERI identity)
-3. The `cardano-keri-sdk` computes Bob's `trie_key` from the KEL automatically
-4. You look up Bob's `trie_key` in the Cardano registry
-5. Any cage write at that `trie_key` is as trustworthy as a KERI-signed message from Bob — same key, plus Cardano's immutability and global ordering
+1. You receive Bob's AID via Veridian (OOBI or contact share) — the AID is established
+2. *(If the dApp requires credential admission as an eligibility gate)* verify Bob's KEL / credential chain once at admission — a distinct precondition to act; it never *selects* his current authority (the checkpoint does that)
+3. The `cardano-keri-sdk` derives Bob's asset id `(checkpoint_policy_id, aid_asset_name)` from his AID automatically
+4. You resolve Bob's current checkpoint UTxO by a generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only), re-validated against the ledger
+5. Any cage write meeting the weighted threshold of the keys in that checkpoint is **authoritatively authorized *for Cardano*** by the current live checkpoint (a fully bound threshold signature), **subject to the stated KERI→Cardano sync lag**, plus Cardano's immutability and global ordering. (During the lag the checkpoint keys may trail a very recent KERI rotation, so this does not assert they are necessarily Bob's identical *current* KERI keys.)
 
 Steps 3–5 are handled by the SDK. The user experience is: "verify Bob in Veridian, then Bob's Cardano actions are automatically trusted."
 
@@ -68,9 +124,9 @@ Steps 3–5 are handled by the SDK. The user experience is: "verify Bob in Verid
 
 | Property | KERI alone | + Cardano registry |
 |---|---|---|
-| Key ownership proof | Yes (CESR self-cert) | Yes (trie_key + Ed25519) |
+| Key ownership proof | Yes (CESR self-cert) | Yes (checkpoint weighted keys + Ed25519) |
 | Global event ordering | Approximate (witness receipts) | Exact (ledger slot order) |
 | Immutable event history | Yes (append-only KEL) | Yes (on-chain, permanent) |
 | Finality | Sub-second (witness receipts) | ~20s (Praos block) |
 | Data anchoring | Off-chain only | On-chain MPFS leaf writes |
-| Interop with non-KERI apps | Hard | Natural (Cardano-native apps see trie_key) |
+| Interop with non-KERI apps | Hard | Natural (Cardano-native apps read the AID's checkpoint UTxO) |

@@ -127,7 +127,7 @@ Owned files: `docs/design/trust-model.md`, `docs/design/user-experience.md`,
 `docs(design): reframe trust/UX/DeFi/aid current-auth to sovereign discovery`,
 `Tasks: T9213`.
 
-- [ ] T9213 — Per-file disposition:
+- [X] T9213 — Per-file disposition:
   - `trust-model.md` — **correct**: "value-write authorization against a key-state
     snapshot … checks the key-state at `trie_key` at that snapshot" → the **sovereign
     per-AID checkpoint reference**; the "KEL-replay-authoritative cesr_aid→trie_key

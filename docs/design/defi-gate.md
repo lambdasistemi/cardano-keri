@@ -60,38 +60,69 @@ GLEIF (root of trust, self-signed)
 LE-signed authorization credential, so a full role chain is four ACDCs — see
 the [factored core](business-cases/index.md).)
 
-Each link is an [ACDC](https://github.com/WebOfTrust/ietf-acdc) — a signed,
+Each link is an [ACDC](https://github.com/WebOfTrust/ietf-acdc) — a
 content-addressed (SAID) credential naming its issuer's AID and its subject's
-AID. A verifier can check the whole chain *offline*: hash the content, verify
-the issuer's signature, confirm the issuer's key was current, confirm nothing
-in the chain is revoked. The [LEI](../finance-primer.md#lei-and-gleif) is the
+AID, whose issuer commitment is a **signature or a seal on the SAID** (issuance
+is anchored — sealed — into the issuer's KEL at the issuer's key-state *at the
+time of issuance*). A verifier can check the whole chain *offline*: hash the
+content (SAID), verify the issuer's commitment against the issuer's **historical
+key-state at issuance** (not the issuer's current key — the binding survives
+later rotations), confirm nothing in the chain is revoked. The
+[LEI](../finance-primer.md#lei-and-gleif) is the
 identifier regulators already accept
 for entity identification. The crucial import: **the trust root is not
 cardano-keri and not the DeFi protocol — it is the existing regulatory
 identification infrastructure, made cryptographic.**
 
 What is missing from that picture: a blockchain cannot run it. Verification
-requires walking KERI KELs (are the issuer keys current?) and TELs (is the
-credential revoked?) — live, off-chain data structures. Today, "verify a vLEI"
+requires walking KERI KELs (to establish each issuer's **historical key state**
+and its **issuance commitment at issuance**) and TELs (is the credential
+**currently revoked?**) — live, off-chain data structures. Today, "verify a vLEI"
 is something a *server* does. Any smart contract that gates on it is back to
 trusting whoever runs that server. That is the hole cardano-keri fills.
 
 ## What cardano-keri contributes: the chain runs the gate itself
 
-The four layers of the
+The layers of the
 [on-chain architecture](../architecture/overview.md)
 (tracked in [#21](https://github.com/lambdasistemi/cardano-keri/issues/21),
-internal) put the two moving parts of vLEI verification — current key-state and
-revocation status — on-chain, as MPF-rooted registries a Plutus script
-consumes via CIP-31 reference inputs, and provide the Aiken verifier that
-walks the chain:
+internal) put the moving parts of vLEI verification on-chain — the acting
+entity's **current authority** as its sovereign per-AID checkpoint (read via a
+CIP-31 reference input), and the credential chain's **issuance evidence and
+revocation status** as KEL-anchored seals and MPF-rooted TEL registries — and
+provide the Aiken verifier that walks the chain. The steps span two planes:
 
 | vLEI verification step | Off-chain world | With cardano-keri |
 |---|---|---|
-| Issuer key is current | KERI KEL replay via witnesses | **Layer 1** AID registry proof |
-| Credential not revoked | Query issuer's TEL | **Layer 2** TEL registry proof |
-| Content/signature integrity | CESR tooling | **Layer 3** Aiken verifier: `blake2b_256` + `verify_ed25519_signature` |
+| Historical issuance authority (*issued then*) | KERI KEL replay via witnesses | Issuer's **signature or seal on the SAID** (MUST on the most-compact form; SHOULD on other variants) + a **KEL-anchored issuance-proof seal at the issuer's historical key state** — **rotation does not invalidate it** |
+| Current non-revocation (*unrevoked now*) | Query issuer's TEL | **Layer 2** TEL registry proof |
+| Current dApp actor authorization (*authorizes now*) | — | The **acting entity's sovereign per-AID checkpoint** — current weighted keys/threshold read via CIP-31 reference input (#92) |
+| Content / signature integrity | CESR tooling | **Layer 3** Aiken verifier: `blake2b_256` recompute proves **content integrity** (SAID) only; a **direct signature** is verified with the SAID as the signed message, a **seal** is followed to its KEL event (or via TEL state to its KEL anchoring seal) and the KEL signatures verified **at the historical key state** |
 | Assemble the evidence | verifier server | **Layer 4** proof builder (WASM SDK in the holder's flow) |
+
+!!! warning "Two planes: historical credential admission vs current-actor authority (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md` the rows above span **two distinct
+    planes**, and the sovereign per-AID checkpoint answers **only** the current-actor one:
+
+    - **Admission / credential plane (historical, per ACDC).** Each credential is verified by
+      the issuer's **historical issuance commitment** (signature or seal on the SAID) + its
+      **KEL-anchored issuance-proof seal at the issuer's historical key state** + the issuer's
+      **TEL** non-revocation. This uses **KEL / TEL evidence** — the admission-cache credential
+      plane — and does **not** consult each issuer's current checkpoint. **Rotation does not
+      invalidate prior issuance.** The GLEIF → QVI → Legal Entity hierarchy is the trust root,
+      preserved unchanged.
+    - **Current-actor plane (the acting entity, now).** The entity submitting the new action is
+      authorized by **its own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint
+      UTxO** — asset id `(checkpoint_policy_id, aid_asset_name)`, current weighted keys/threshold
+      in the inline `CheckpointDatum`, read as a CIP-31 reference input and discovered by a
+      generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only,
+      revalidated by the consuming tx).
+
+    **Lifecycle / freeze are not datum fields.** The `CheckpointDatum` carries only the
+    AID/sequence binding + current weighted key state. Close / lifecycle is enforced by the
+    checkpoint's **asset mint/spend lineage** (the referenced checkpoint must be the current
+    live UTxO, not closed/tombstoned/migrated); freeze is the **separate shared R-FRZ** rule
+    (attacker-contendable residual). The mechanical re-cut is downstream #24.
 
 ### Gate flow
 
@@ -104,30 +135,38 @@ sequenceDiagram
     participant LE as Legal Entity
     participant PB as Proof Builder (L4)
     participant Cage as Protocol Cage Script
-    participant Reg as AID Registry (L1, ref input)
-    participant TEL as Issuer TELs (L2, ref input)
+    participant Cred as Issuer KEL/TEL evidence (credential plane)
+    participant Chk as Acting AID Checkpoint (per-AID, ref input)
+    participant FRZ as Shared R-FRZ registry (ref input)
 
-    Note over LE,TEL: Admission — once per entity per protocol
+    Note over LE,FRZ: Admission — once per entity (historical credential plane)
     LE->>PB: vLEI credential chain (full ACDC chain)
-    PB->>Cage: admission tx: raw credentials + AID/TEL proofs
-    Cage->>Reg: issuer key-states current?
-    Cage->>TEL: chain unrevoked?
-    Cage->>Cage: SAIDs + signatures verify (L3)
-    Cage-->>LE: trie_key admitted (cached in cage)
+    PB->>Cage: admission tx: raw credentials + KEL/TEL proofs
+    Cage->>Cred: each ACDC's historical issuance commitment (signature/seal on SAID) + KEL-anchored issuance-proof seal at the issuer's historical key state?
+    Cage->>Cred: chain unrevoked (issuer TELs)?
+    Cage->>Cage: SAIDs recompute — content integrity (L3)
+    Cage-->>LE: admitted — credential chain cached (trie_key → AdmissionLeaf)
 
-    Note over LE,TEL: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
-    LE->>Cage: action tx, signed with cur_key
-    Cage->>Reg: trie_key Active? cur_pubkey matches signer?
-    Cage->>TEL: still unrevoked (all TELs in chain)?
+    Note over LE,FRZ: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
+    LE->>Cage: action tx, signed with the acting AID's current key(s)
+    Cage->>Chk: acting entity's sovereign per-AID checkpoint (ref input): signer(s) meet current weighted threshold? current live UTxO in the accepted lineage?
+    Cage->>FRZ: acting AID absent from the shared R-FRZ freeze registry?
+    Cage->>Cred: still unrevoked (all issuer TELs in chain)?
     Cage-->>LE: trade executes — identity check atomic with it
 ```
 
 An entity is **admitted** by one transaction carrying its full
-credential chain plus proofs — verified entirely by the script,
-permissionless, with no admission committee. Every subsequent gated action
-checks three cheap things atomically with the trade: the entity's signature
-against its *current* registered key, its AID status `Active`, and
-non-revocation across the chain's TELs.
+credential chain plus proofs — verified entirely by the script against the
+**historical** credential plane (issuance commitments + KEL-anchored issuance
+proofs at each issuer's historical key state + TEL status), permissionless, with
+no admission committee, and **without consulting any issuer's current
+checkpoint**. Every subsequent gated action then checks, atomically with the
+trade: the **acting entity's** signature(s) meeting the weighted threshold of the
+current keys in its **sovereign per-AID checkpoint** (read as a CIP-31 reference
+input); that the referenced checkpoint is the **current live UTxO in the accepted
+lineage** (not closed/tombstoned); **absence from the separate shared R-FRZ
+freeze registry**; and non-revocation across the credential chain's issuer TELs.
+Lifecycle and freeze are **validation rules**, not `CheckpointDatum` fields.
 
 !!! danger "Correction from the case analysis"
     The flow above shows the entity signing the gated action directly. On most
@@ -143,11 +182,15 @@ non-revocation across the chain's TELs.
     Two parameters of this flow are proposed, not settled:
 
     1. **Admission-cached vs full per-transaction verification.** The flow
-       above is the hybrid: pay the full chain walk once at admission, check
-       only key-state + revocation per action. The alternative — re-running
-       all three hops inside every gated spend — is purer but ex-unit-heavy
-       and exposes every trade to proof invalidation whenever any issuer in
-       the chain rotates.
+       above is the hybrid: pay the full credential-chain walk once at
+       admission, then per action check only the acting entity's current
+       checkpoint + revocation. The alternative — re-running all the
+       credential-chain hops inside every gated spend — is purer but
+       ex-unit-heavy: each trade must re-walk the full chain against the
+       latest TEL / revocation-root evidence. (This is **not** about issuer
+       key rotation — the historical issuance proof is anchored at the
+       issuer's historical key state and **survives** later issuer rotations;
+       only revocation status changes over time.)
     2. **Revocation cascade depth.** If GLEIF revokes a QVI, do entities
        credentialed by that QVI lose access? Checking all three TELs per
        action (three MPF proofs) makes revocation bite anywhere in the chain
@@ -167,9 +210,21 @@ non-revocation across the chain's TELs.
 - **Portable admission.** The same credentials admit the entity to any
   protocol that imports the Layer-3 verifier. KYC once, at the QVI, not per
   venue.
-- **Rotation-proof references.** The protocol authorizes the `trie_key`, which
-  is stable across key rotations — the entity rotates keys without
-  re-onboarding anywhere.
+- **Rotation-proof references, with universal re-authorization.** The protocol
+  references the AID's stable identity — its **sovereign per-AID checkpoint**
+  `(checkpoint_policy_id, aid_asset_name)` — so the entity rotates keys without
+  re-onboarding. But rotation is **not** transparent to pending actions: a
+  `delta = 0` rotation (`seq + 1`) **consumes** the referenced checkpoint UTxO,
+  so the spent checkpoint is **no longer available as a CIP-31 reference input**
+  and any in-flight authorization made under the prior key state is **stale by
+  construction** — changing the reference input alone cannot revive an old
+  signature. The action **must be re-signed** by the AID's current weighted keys
+  at the new sequence over a fully bound action. Long-lived protocol state
+  follows the cross-protocol lifecycle (**Execute / Refresh-Re-sign /
+  Cancel-Reclaim by the current keys / Expire-Cleanup**); value-bearing stale
+  UTxOs need a **current-AID reclaim path**. This does **not** touch historical
+  credential evidence — ACDC issuance / TEL seals remain historical evidence
+  through issuer rotation until revoked, and are not pending dApp actions.
 - **Cryptographic revocation.** The QVI flips one TEL entry; every gate on the
   chain sees it at the next root update, with no per-protocol operational
   step.

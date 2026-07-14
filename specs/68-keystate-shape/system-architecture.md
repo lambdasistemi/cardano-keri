@@ -87,8 +87,14 @@ AID → genesis key-state; R-KEL carries it forward per §4). Advance is by witn
 carrying blake2b commitments. Genesis is the §7c **hybrid** (#91): the **byte binding**
 `blake3(icp) == cesr_aid` is cryptographic on-chain for ≤1-chunk inceptions (#97), attested for
 >1-chunk; the **semantic projection** is attested / challengeable at every tier (see
-[identity-model.md](identity-model.md) §7a/§7c). This is a *classification*, not a physical-storage
-choice — the advance-path storage shape is **#92's** to decide, not selected here.
+[identity-model.md](identity-model.md) §7a/§7c). This *classification* is preserved and
+unchanged; the physical storage shape it deferred is now selected:
+**#92 decided the R-KEL checkpoint advance-storage shape (2026-07-14): the sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** (Candidate A).
+Each AID's current-authority state advances through its **own** per-AID checkpoint UTxO, so
+unrelated issuers and attacker-created AIDs cannot consume, serialize, or delay it;
+sovereignty / unrelated-AID isolation is the load-bearing selection criterion, not a
+throughput/cost win. See `specs/92-checkpoint-contention/{spec.md,DECISION.md}` and
+[identity-model.md](identity-model.md) §10 thread 8.
 
 ## 4. The closure
 

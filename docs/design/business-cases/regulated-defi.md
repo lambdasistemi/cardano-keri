@@ -4,6 +4,28 @@ Gate protocol entry and actions on a valid Legal Entity vLEI. This deepens
 [The Regulated DeFi Gate](../defi-gate.md) primer into a design analysis — and
 corrects it on one load-bearing point (the batcher model, §2).
 
+!!! warning "Current-actor resolution is the sovereign per-AID checkpoint (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, wherever this case resolves the acting
+    trader's **current authority** — the detached-signature check "against the L1 registry
+    reference input" (§2), the mermaid "AID Active?" step, and the "`cur_pubkey` from L1" of
+    the per-action check (§3) — the live surface is the acting AID's **own sovereign, per-AID,
+    quantity-one uniquely-tokenized checkpoint UTxO**: asset id `(checkpoint_policy_id,
+    aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum`, read as
+    a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
+    asset_name)` lookup** (candidate outref for liveness only, re-validated against the
+    ledger). A `delta = 0` rotation (`seq + 1`) **consumes** that checkpoint UTxO, so a
+    detached order signed under the prior sequence is **stale** and cannot merely be re-pointed
+    at the fresh checkpoint: the trader MUST **re-sign** the order under the current weighted
+    keys + current sequence (value-bearing order flow carries the explicit **Execute /
+    Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup** lifecycle — a rotated-away order is
+    reclaimed or re-signed, never silently re-pointed).
+    **Preserved as written**: the **admission cache** (`trie_key → AdmissionLeaf
+    {aid, credential_saids…}`, carrying the verified stable qualified `aid` from which the
+    checkpoint asset is derived; `trie_key` stays a historical-only key), the
+    **GLEIF → QVI → LE → ECR** chain, and the all-TELs cascade —
+    the historical credential/admission plane, which may still gate venue *eligibility* but
+    never selects the current checkpoint identity.
+
 ## 1. Actors & credential level
 
 The gated party is a **Legal Entity**
@@ -58,10 +80,18 @@ transaction **signed by the batcher, not the entity**. Two consequences:
   address runs no validator; anyone can lock funds at the order script.
 - **Required-signer checks (Option B) fail at execution time** — the entity's
   key is not among the transaction signatories of the batch. The gate must
-  verify a **detached Ed25519 signature carried in the order datum**
-  (Option A), signed by the trader's registered key over the order terms plus
-  a nonce/validity window, checked against the L1 registry reference input
-  when the batcher spends the order.
+  verify a **detached witness set carried in the order datum** (Option A) — a
+  set of Ed25519 signatures **meeting the trader AID's current weighted
+  threshold** over the order terms plus a nonce/validity window, checked against
+  that AID's **sovereign per-AID checkpoint** (current weighted keys/threshold in
+  the inline `CheckpointDatum`, read as a CIP-31 reference input; #92) when the
+  batcher spends the order — not a single registered key against a shared L1
+  registry root. A `delta = 0` rotation **consumes** that checkpoint UTxO, so a
+  witness set signed under the prior sequence is **stale** and must be
+  **re-signed** — a fresh set meeting the current weighted threshold over the
+  order + current sequence — not merely re-pointed at the fresh checkpoint
+  (a rotated-away order is reclaimed or re-signed, per the Execute /
+  Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup lifecycle).
 
 ```mermaid
 sequenceDiagram
@@ -69,15 +99,17 @@ sequenceDiagram
     participant O as Order UTxO
     participant B as Batcher (off-chain)
     participant P as Pool + Order Validator
-    participant R as Registries (L1/L2 + admission cage, ref inputs)
+    participant R as Admission cage + L2 TELs (historical plane, ref inputs)
+    participant C as Trader AID sovereign checkpoint (per-AID, ref input)
 
-    T->>T: sign order terms + nonce/validity with registered key
-    T->>O: lock order — detached signature in datum
+    T->>T: sign order terms + nonce/validity — witness set meeting current weighted threshold
+    T->>O: lock order — detached witness set in datum
     Note over O: order placement runs no validator —<br/>the gate cannot bite here
     B->>O: collect many orders
     B->>P: batch tx (signed by batcher)
-    P->>R: trie_key admitted? AID Active? TELs unrevoked?
-    P->>P: verify detached sig in each order datum
+    P->>R: admission plane: trie_key admitted? TELs unrevoked? (historical)
+    P->>C: current authority: witnesses meet current weighted threshold in the AID's live checkpoint? (#92)
+    P->>P: verify detached witness set in each order datum
     P-->>B: batch executes — every order identity-checked
 ```
 
@@ -109,16 +141,26 @@ composed through
 On top of L1–L4:
 
 - **Admission cage per venue** (an MPFS instance):
-  `trie_key → AdmissionLeaf { credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after }`
+  `trie_key → AdmissionLeaf { aid, credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after }`
   (three or four SAIDs, depending on the role-credential issuance path — see
-  the [factored core](index.md)).
+  the [factored core](index.md)); the leaf carries the verified stable qualified
+  `aid`, bound at admission, so the sovereign checkpoint asset
+  `(checkpoint_policy_id, aid_asset_name)` is derived from it (historical
+  `trie_key` alone cannot select the current checkpoint).
   The admission transaction carries the raw ACDCs + proofs; the L3 verifier
   runs the full chain on-chain; permissionless.
 - **Per-action check** (in batch execution): MPF membership proof of
-  `trie_key` in the admission cage (reference input) + AID `Active` +
-  `cur_pubkey` from L1 (reference input) + detached signature verification +
-  TEL non-revocation proofs (reference input) +
-  `tx validity range ⊂ not_after`.
+  `trie_key` in the admission cage (reference input; historical credential
+  plane) + the acting AID's **sovereign per-AID checkpoint** as a CIP-31
+  reference input — current weighted keys/threshold in the inline
+  `CheckpointDatum`, discovered by a generic exact-asset `(policy_id,
+  asset_name)` lookup, its live UTxO in the accepted mint/spend lineage (not a
+  closed/tombstoned one) and the AID absent from the shared R-FRZ freeze
+  registry — + verification that the order's **detached witness set meets that
+  checkpoint's current weighted threshold** +
+  TEL non-revocation proofs (reference input) + `tx validity range ⊂
+  not_after`. A `delta = 0` rotation consumes the checkpoint, staling any order
+  whose witness set was signed under a superseded sequence.
 - **Expiry**: vLEI ecosystem governance handles lapse (annual LEI renewal) via
   **revocation**, not credential-internal expiry — so `not_after` is a venue
   policy knob (force re-admission every N days), while the authoritative kill
@@ -126,15 +168,16 @@ On top of L1–L4:
 - **L4 addition this case forces**: a signing bridge. LE/ECR keys live in
   [KERI wallets](../../keri-primer.md) (Veridian), not CIP-30 Cardano wallets.
   The proof builder must
-  produce the order-datum detached signature via the KERI wallet — a real
-  UX/integration component, not a library detail.
+  gather the order-datum detached witness set (each member's signature) via the
+  KERI wallet(s) — a real UX/integration component, not a library detail.
 
 ## 4. Pressure on the open decisions
 
 - **Admission-cached vs per-tx**: hybrid is **mandatory**, not preferred. A
   batch of 10 orders × 3–4 raw ACDCs (~1–2 KB each) cannot fit 16 KB transaction
   limits; full per-transaction verification is arithmetically out. Admission
-  on-chain once; per-order checks are proofs + one signature.
+  on-chain once; per-order checks are proofs + a **detached witness set meeting
+  the trader AID's current weighted threshold**.
 - **KeyState parity**: **thresholds required at L1** (LE and QVI AIDs are
   multisig in practice — a singleton KeyState cannot checkpoint them, breaking
   the bridge claim for the anchor actors). **Delegation pressure is high**:
@@ -147,9 +190,14 @@ On top of L1–L4:
   [sanctions-screening](../../finance-primer.md#aml-and-sanctions-screening)-grade,
   and the docs must say so.
 - **Throughput**: gated *reads* scale (reference inputs are unlimited
-  concurrent readers). Writes serialize per UTxO: one admission per block per
-  venue, one rotation per block per L1 registry — acceptable here; order flow
-  never writes the registries.
+  concurrent readers); each gated action takes **one CIP-31 reference input per
+  distinct checked/acting AID** (its sovereign checkpoint). Rotation is
+  **sovereign and independent** — each AID rotates on its **own** per-AID
+  checkpoint UTxO, so there is **no shared one-rotation-per-block registry
+  ceiling** (#92). What genuinely still serializes are the **shared** write
+  planes: **one admission per block per venue** (the admission cache) and any
+  business/registry UTxO — those are honestly contended; order flow never writes
+  them.
 - **Privacy**: worst of the four cases. Real-time,
   [LEI](../../finance-primer.md#lei-and-gleif)-attributed order flow enables
   [front-running and copy-trading](../../finance-primer.md#mev) of named
@@ -209,5 +257,6 @@ execution, and revocation propagation end-to-end.
   needs counsel-grade citation, not our inference).
 - **KERI-wallet ↔ Cardano-wallet split** (§3): the signing bridge is on the
   critical path of every order; if Veridian cannot produce order-bound
-  detached signatures programmatically, the UX collapses to custodial signing
-  services.
+  detached witness sets (each member's signature, meeting the trader AID's
+  current weighted threshold) programmatically, the UX collapses to custodial
+  signing services.

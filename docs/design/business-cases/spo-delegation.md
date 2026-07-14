@@ -3,14 +3,38 @@
 "Only delegate to legally identified pools" — an institution's stake may only
 ever back operators with a valid Legal Entity vLEI.
 
+!!! warning "Current-actor resolution is the sovereign per-AID checkpoint (#92)"
+    Per `specs/92-checkpoint-contention/DECISION.md`, wherever this case resolves the SPO Legal
+    Entity's **current authority** — "`PoolBinding.trie_key` Active in the L1 AID registry"
+    (§2), the mermaid "trie_key Active?" step, and the LE `cur_key` owner-signature on
+    pool-side registration — the live surface is that LE AID's **own sovereign, per-AID,
+    quantity-one uniquely-tokenized checkpoint UTxO**: asset id `(checkpoint_policy_id,
+    aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum`, read as
+    a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
+    asset_name)` lookup** (candidate outref for liveness only, re-validated against the
+    ledger). "Active" is enforced as its **live UTxO in the accepted mint/spend lineage** (not
+    a closed/tombstoned one) **and** the AID **absent from the separate, shared,
+    attacker-contendable R-FRZ freeze registry** — not a status field in the datum. A
+    `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so an owner signature
+    made under the prior sequence is **stale** and must be **re-signed** by the current
+    weighted keys over the fully bound message + current sequence, never merely re-pointed at
+    the fresh checkpoint. **Preserved as written**: the separate **identified-pools registry**
+    (`pool_id → PoolBinding`, its own key space and cold-key-rotation lifecycle), the
+    **GLEIF → QVI → LE** hierarchy, and L2 TEL non-revocation — the pool-binding and
+    credential planes, which gate *eligibility* but never select the LE's current checkpoint
+    identity.
+
 ## 1. Actors & credential level
 
 - **The SPO** is a legal entity holding a
   [vLEI Legal Entity credential](../vlei.md) (QVI-issued). Its identity anchor
-  is its **pool cold key**: the binding
-  object is `{pool_id, trie_key}` where `pool_id = blake2b_224(cold_vkey)` —
-  the same hash the ledger uses in delegation and registration certificates
-  (Aiken stdlib: `StakePoolId = Hash<Blake2b_224, VerificationKey>`). Binding
+  is its **pool cold key**: the binding object is
+  `{pool_id, cold_vkey, aid, trie_key}` where `pool_id = blake2b_224(cold_vkey)`
+  — the same hash the ledger uses in delegation and registration certificates
+  (Aiken stdlib: `StakePoolId = Hash<Blake2b_224, VerificationKey>`) — carrying
+  the LE's **stable qualified `aid`** (from which the sovereign checkpoint asset
+  id is derived) alongside `cold_vkey` and the historical **`trie_key`**
+  (admission-cache key only). Binding
   to `pool_id` rather than to a wallet key matters: it survives relay changes,
   reward-address changes, and pledge moves; it dies only with cold-key
   rotation (a pool re-registration event, which is the correct time to
@@ -48,8 +72,11 @@ Verified against the Aiken validator and certificate documentation:
   handler**, whose target is the full `Certificate` value.
 - The handler **sees**:
   `DelegateCredential { credential, delegate: DelegateBlockProduction { stake_pool } }`
-  — i.e. the exact target `pool_id` — plus the whole transaction (so CIP-31
-  reference inputs to the L1/L2 registries are visible). Same for
+  — i.e. the exact target `pool_id` — plus the whole transaction, so the
+  distinct CIP-31 reference inputs are visible: the **identified-pools
+  registry** (pool binding), the bound LE's **sovereign per-AID checkpoint**
+  (current authority), and the **L2 TELs** (credential non-revocation) — plus an
+  **admission cache** where a venue uses one (this case does not; see §4). Same for
   `DelegateVote`/`DelegateBoth` (DRep analog) and
   `RegisterAndDelegateCredential`.
 - The handler **cannot see**: the *current* delegation of the credential
@@ -59,16 +86,30 @@ Verified against the Aiken validator and certificate documentation:
 So the design is: **the institution's stake credential is a script that
 witnesses a delegation certificate only if the redeemer proves `stake_pool` is
 bound to an Active, unrevoked vLEI entity.** The script checks: membership
-proof of `pool_id → PoolBinding` in the identified-pools registry,
-`PoolBinding.trie_key` Active in the L1 AID registry, TEL non-revocation (L2),
-all against reference-input roots.
+proof of `pool_id → PoolBinding` in the identified-pools registry, and — since
+the binding carries the LE's **stable qualified AID** — resolves the bound LE
+AID's **current authority live in its sovereign per-AID checkpoint** — asset id
+`(checkpoint_policy_id, aid_asset_name)` derived from that qualified AID, read
+as a CIP-31 reference input, its live UTxO in the accepted mint/spend lineage
+and the AID absent from the shared R-FRZ freeze registry (#92) — and TEL
+non-revocation (L2), all against reference inputs.
 
 **Pool-side registration** is mutual attestation: the SPO submits
-`PoolBinding { pool_id, cold_vkey, trie_key }` with (a) an Ed25519 signature
-by `cold_vkey` over a domain-separated `{pool_id, trie_key, network_id}`
-message, verified on-chain (`blake2b_224(cold_vkey) == pool_id` — blake2b_224
-is a PlutusV3 builtin), and (b) the LE's `cur_key` signature per the per-leaf
-owner-sig rule. Neither party can bind the other unilaterally.
+`PoolBinding { pool_id, cold_vkey, aid, trie_key }` — carrying the LE's
+**stable qualified AID** `aid` (from which the checkpoint asset id
+`(checkpoint_policy_id, aid_asset_name)` is derived) alongside the historical
+`trie_key` (admission-cache key only; it cannot by itself select the current
+checkpoint) — with (a) an Ed25519 signature by `cold_vkey` over a
+domain-separated `{pool_id, cold_vkey, aid, trie_key, network_id}` message,
+verified on-chain (`blake2b_224(cold_vkey) == pool_id` — blake2b_224 is a
+PlutusV3 builtin), and (b) the LE AID's **witness set meeting its current
+weighted threshold** — read from its sovereign per-AID checkpoint — over the
+**same full payload** (`{pool_id, cold_vkey, aid, trie_key, network_id}`) plus
+the current sequence (not a single `cur_key` signature). Both signatures bind
+the identical full payload — including **both** `aid` and `trie_key` **and**
+`network_id` — so neither party can bind the other unilaterally, no field can be
+swapped after attestation, and the binding cannot be replayed onto another
+network.
 
 The two flows side by side — binding happens once per cold key; the gate fires
 at every delegation certificate:
@@ -76,10 +117,10 @@ at every delegation certificate:
 ```mermaid
 flowchart TB
     subgraph bind["Pool-side binding — once per cold key"]
-        COLD["SPO cold-key signature over<br/>{pool_id, trie_key, network_id}"]
-        LESIG["SPO's Legal Entity AID<br/>owner signature (per-leaf rule)"]
+        COLD["SPO cold-key signature over<br/>{pool_id, cold_vkey, aid, trie_key, network_id}"]
+        LESIG["SPO's Legal Entity AID witness set (current weighted threshold)<br/>over {pool_id, cold_vkey, aid, trie_key, network_id} + current sequence"]
     end
-    IPR["Identified-pools registry<br/>pool_id → PoolBinding"]
+    IPR["Identified-pools registry<br/>pool_id → PoolBinding {pool_id, cold_vkey, aid, trie_key}"]
     COLD --> IPR
     LESIG --> IPR
 
@@ -89,7 +130,7 @@ flowchart TB
         INST --> PUB
     end
     PUB -->|"pool_id bound?<br/>(membership proof)"| IPR
-    PUB -->|"trie_key Active?"| L1["L1 AID registry<br/>(reference input)"]
+    PUB -->|"LE current authority live<br/>in its own checkpoint? (#92)"| CHK["LE AID sovereign checkpoint<br/>(per-AID, reference input)"]
     PUB -->|"LE credential unrevoked?"| L2["L2 issuer TELs<br/>(reference input)"]
 
     style IPR fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
@@ -139,8 +180,12 @@ New components on top of L1–L4:
 - **Revocation freshness**: strong at the gate, **structurally weak after it**
   (stickiness). Cascade depth matters at certificate time (revoked QVI ⇒ pool
   not delegatable).
-- **Throughput**: negligible. The single-UTxO registry ceiling is irrelevant
-  here.
+- **Throughput**: negligible. Current-AID rotation has **no shared registry
+  ceiling** — the SPO LE rotates on its **own** sovereign per-AID checkpoint
+  UTxO (#92). The shared **identified-pools registry**, the **admission** plane,
+  and any **R-FRZ** freeze UTxO **retain their own serialization** as separate
+  contended objects, but at this case's certificate frequency (a few per year)
+  it is immaterial, not absent.
 - **Privacy**: pool identity is *meant* to be public (differentiation); the
   delegator's identity need not be on-chain at all — only its policy is.
   Mildest privacy profile of the four cases.

@@ -66,6 +66,26 @@ One identifier keys the on-chain identity: the **CESR AID**. The former separate
 identity leaf is keyed by `cesr_aid` and holds a KERI-shaped checkpoint, advanced only by
 witness-receipted anchoring seals (`specs/68-keystate-shape/identity-model.md`, PR #87).
 
+Its **physical current-authority store** is the **sovereign per-AID checkpoint UTxO** —
+each AID's own `(checkpoint_policy_id, aid_asset_name)` UTxO (inline `CheckpointDatum`,
+`delta = 0` rotation), discovered by a **generic `(policy_id, asset_name)` multi-asset
+lookup**, **not** a shared `identity_root` registry with a sliding-root window (the
+rejected Candidate B); see `specs/92-checkpoint-contention/DECISION.md`. The
+`trie_key → KeyState` / `identity_root` framing in the **System components** mermaid below
+is that superseded shared-registry shape; the mechanical re-cut is downstream #24, and the
+**freeze registry** stays a shared, attacker-contendable UTxO (not sovereign).
+
+**Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index lookup
+supplies **only a candidate outref / location for liveness — never identity or
+current-authority truth**. The **consuming transaction validates** the returned UTxO against
+the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint script /
+version / lineage**; a **well-formed inline datum with the expected AID / sequence binding
+and the current weighted key state**; and the **applicable active / freeze rules**
+(validation rules, **not** datum fields). A **stale or false outref fails ledger validation**
+(it no longer exists, or no longer matches) → refresh / retry; it can never yield forged
+authority. An **indexer outage only blocks transaction construction (liveness)** — it never
+grants false authority.
+
 ```mermaid
 flowchart LR
     ICP["cesr_inception_event"] --> H["blake3 (native vLEI)<br/>or blake2b (F-prefix, CF sidecar)"]

@@ -12,6 +12,33 @@ Layer 3 — ACDC Chain Verifier       (Aiken: SAID + signature + MPF proofs, bou
 Layer 4 — Off-chain Proof Builder   (Haskell/WASM: CESR decode + proof generation)
 ```
 
+!!! warning "Layer-1 current-authority storage reframed to the sovereign per-AID checkpoint (#92)"
+    The single-UTxO MPF-trie registry (`trie_key → IdentityLeaf`, `identity_root`, the
+    sliding-root window) described below is the **rejected Candidate-B shared/global**
+    shape. Per `specs/92-checkpoint-contention/DECISION.md`, each AID's current authority is
+    a **sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** — asset id
+    `(checkpoint_policy_id, aid_asset_name)`, current keys in the inline `CheckpointDatum`,
+    `delta = 0` rotation (`seq + 1`). Consumers **discover** it by a **generic
+    `(policy_id, asset_name)` multi-asset index lookup** (any indexer / node / sidecar) and
+    read it as a CIP-31 reference input — no shared-registry inclusion proof against a
+    windowed root, and no bespoke QVI-owned `AID → UTxO` directory. The mechanical MPF-trie
+    re-cut is downstream #24.
+
+    **Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index
+    lookup supplies **only a candidate outref / location for liveness — never identity or
+    current-authority truth**. The **consuming transaction validates** the returned UTxO
+    against the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint
+    script / version / lineage**; a **well-formed inline datum with the expected AID /
+    sequence binding and the current weighted key state**; and the **applicable active /
+    freeze rules** (validation rules, **not** datum fields). A **stale or false outref fails
+    ledger validation** (it no longer exists, or no longer matches) → refresh / retry; it
+    can never yield forged authority. An **indexer outage only blocks transaction
+    construction (liveness)** — it never grants false authority.
+
+    The **freeze registry** stays a **shared, attacker-contendable**
+    UTxO (**not** sovereign) — the sovereign emergency path must not reintroduce one; a
+    downstream residual.
+
 Two planes with different trust models:
 
 - The **identity plane** (Layer 1 + the freeze registry) is **permissionless**:

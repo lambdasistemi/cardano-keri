@@ -14,6 +14,23 @@
     measured).
     The operation taxonomy and the freeze paths remain current.
 
+    **Storage / contention (#92):** the physical current-authority store is now the
+    **sovereign per-AID checkpoint UTxO** — each AID's own
+    `(checkpoint_policy_id, aid_asset_name)` UTxO (inline `CheckpointDatum`, `delta = 0`
+    rotation; generic `(policy_id, asset_name)` discovery) — **not** the shared single-UTxO
+    MPF registry / sliding-root window the inception, rotation, close, and duplicity checks
+    below describe (`specs/92-checkpoint-contention/DECISION.md`, the rejected Candidate B).
+    The mechanical re-cut is downstream #24; the emergency **freeze registry** stays a
+    **shared, attacker-contendable** UTxO (not sovereign), a downstream residual. The generic
+    `(policy_id, asset_name)` discovery supplies **only a candidate outref for liveness,
+    never current-authority truth** — the consuming tx revalidates the quantity-one
+    policy+asset, an accepted checkpoint script/version/lineage, a well-formed inline datum
+    with the expected AID/sequence binding and current weighted key state, and the applicable
+    active/freeze rules against the ledger; a stale/false outref fails validation, and an
+    indexer outage blocks construction only, not authority (see
+    [Value Authorization](value-auth.md) and
+    `specs/92-checkpoint-contention/spec.md` §Indexer / discovery trust boundary).
+
 There are five operations on the identity plane: inception, rotation, close,
 duplicity freeze, and emergency freeze. All except inception are authorized by
 cryptographic material alone (signatures, preimages, receipts, proofs), never

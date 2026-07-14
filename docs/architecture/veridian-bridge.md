@@ -6,6 +6,25 @@ Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](h
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
+!!! warning "Redeemer/proof shapes reframed to the sovereign per-AID checkpoint (#92)"
+    The SDK redeemers and the `inclusion_proof` / `absence_proof` / `identity_root`-window
+    flows on this page are the old #24 shared-registry shape. Per
+    `specs/92-checkpoint-contention/DECISION.md`, current authority is the AID's **sovereign
+    per-AID checkpoint UTxO** — asset id `(checkpoint_policy_id, aid_asset_name)`, current
+    keys in the inline `CheckpointDatum`, `delta = 0` rotation — discovered by a **generic
+    `(policy_id, asset_name)` multi-asset lookup** and read as a CIP-31 reference input, not
+    an MPF inclusion proof against a windowed root. The mechanical redeemer/SDK re-cut is
+    downstream #24. That generic lookup supplies **only a candidate outref for liveness,
+    never identity/current-authority truth** — the consuming tx revalidates the quantity-one
+    policy+asset, an accepted checkpoint script/version/lineage, a well-formed inline datum
+    with the expected AID/sequence binding and current weighted key state, and the applicable
+    active/freeze rules against the ledger, so a stale/false outref fails validation
+    (refresh/retry) and an indexer outage blocks construction only, not authority (see
+    [Architecture Overview](overview.md#architecture-overview) and
+    `specs/92-checkpoint-contention/spec.md` §Indexer / discovery trust boundary). The
+    **freeze registry** remains a **shared, attacker-contendable** UTxO
+    (**not** sovereign) — a downstream residual to re-cut sovereign.
+
 ## The bridge approach: same keys, one state machine
 
 !!! warning "Superseded framing (2026-07-09)"

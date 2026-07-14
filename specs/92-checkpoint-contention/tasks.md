@@ -100,7 +100,7 @@ Owned files: `docs/architecture/overview.md`, `docs/architecture/value-auth.md`,
 `docs(architecture): reframe current-auth + discovery to the sovereign per-AID
 checkpoint`, `Tasks: T9212`.
 
-- [ ] T9212 — Per-file disposition:
+- [X] T9212 — Per-file disposition:
   - `value-auth.md` — **correct/supersede**: the cage "resolves the authorizing
     identity by `trie_key`" + "inclusion proof valid … against a root in the window"
     current-authorization path → the **sovereign per-AID checkpoint reference** (read

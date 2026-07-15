@@ -1357,14 +1357,15 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   the live-boundary smoke are recorded as a **downstream implementation-sizing gate**,
   **never fabricated, back-filled, or presented as the selection reason**; B/C
   comparison artifacts are deferred/withdrawn honestly.
-- [ ] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
-  mark-ready (finalization, after epic-owner acceptance). *(Re-opened: `gate.sh` restored
-  by `revert: restore gate.sh for the DS6 CI-link repair slice`; re-dropped in the final
-  `chore: drop gate.sh (ready for review)` commit after the T9216 repair + epic acceptance.)*
-- [ ] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI green
+- [X] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
+  mark-ready (finalization, after epic-owner acceptance). *(Reopened once for the T9216
+  CI-link repair — `gate.sh` restored by `revert: restore gate.sh for the DS6 CI-link
+  repair slice`, then re-dropped in the final `chore: drop gate.sh (ready for review)`
+  commit after the repair + epic acceptance.)*
+- [X] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI green
   (incl. `Docs links`); every commit passes the Conventional-Commit + `Tasks:` gate. The
-  canonical/consistency documentation edits are **reviewed pair slices**, not authored by
-  the ticket owner. *(Re-opened for the T9216 CI-link repair slice + fresh CI.)*
+  canonical/consistency documentation edits (incl. the T9216 CI-link repair) are **reviewed
+  pair slices**, not authored by the ticket owner.
 
 ## Out of scope (do not implement)
 

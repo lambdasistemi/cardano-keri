@@ -24,10 +24,10 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 2 — Haskell threshold codec (PAIR)
 
-- [ ] T6802 `Cardano.KERI.AID.Checkpoint.Threshold`: `Threshold`/`Weight` types,
+- [X] T6802 `Cardano.KERI.AID.Checkpoint.Threshold`: `Threshold`/`Weight` types,
       `toData`/`fromData`, canonical CBOR, F18 well-formedness (rules 1–14),
       `evaluate`; expose in `cardano-keri.cabal`.
-- [ ] T6802t Hspec (RED-first): golden (integer m-of-n, single-clause weighted,
+- [X] T6802t Hspec (RED-first): golden (integer m-of-n, single-clause weighted,
       multi-clause weighted, 1-of-1) + one negative per F18 rule 1–14 — with the
       exact `MAX_WEIGHT_DENOM = 2^32` bound (rule 11) and unreduced-rational
       rejection (rule 10) as explicit RED assertions — + **positional-order

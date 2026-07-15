@@ -39,6 +39,7 @@ library
     , base                  >=4.18 && <5
     , bytestring            >=0.11 && <0.13
     , cardano-crypto-class
+    , containers
     , memory                >=0.18 && <0.19
     , plutus-core
     , plutus-tx
@@ -48,6 +49,7 @@ library
     Cardano.KERI.AID.Cage.Sign
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
+    Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Ed25519
 
 test-suite unit-tests
@@ -61,6 +63,7 @@ test-suite unit-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , containers
     , hspec                 >=2.11 && <2.12
     , memory                >=0.18 && <0.19
     , plutus-core
@@ -72,6 +75,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Cage.SignSpec
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec
+    Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Ed25519Spec
 
   ghc-options:      -threaded -with-rtsopts=-N

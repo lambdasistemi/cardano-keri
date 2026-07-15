@@ -1,9 +1,11 @@
 # Design discussion — the frozen KeyState / trie_key shape (#68)
 
-Status: **discussion phase** (design loop step 1). Two decisions are now settled by
-facts (D-D weighted thresholds **required**; D-E `delegator` **reserved nullable** — see
-§4/§7 and [acdc-zoo.md](acdc-zoo.md)); the remaining *structural* choices (D-A/D-B/D-C,
-the exact bytes) are open pending an exec-budget check and Lean.
+Status: **historical discussion, partially superseded**. The external
+`cesr_aid` + sovereign per-AID checkpoint decision removed the frozen Cardano
+`trie_key` preimage that framed D-A/D-B/D-C. D-D survives: weighted thresholds are
+required. D-E is now decided as **independent AIDs only in V1, with no passive
+`delegator` field**; see
+[delegation-boundary-decision.md](delegation-boundary-decision.md).
 Goal: agree, in plain language, on what the identity key commits to — then
 formalize the security invariants in Lean, then write the spec.
 
@@ -39,7 +41,7 @@ wrong for the actors that matter (legal entities, QVIs, SPOs, DAOs): those are
 cannot retrofit it. Hence #68 must be resolved before #24 writes the validator.
 
 The design already committed to the *intent* ("list-shaped, threshold-capable,
-`delegator` reserved, 1-of-1 is the degenerate case") but **never wrote down the
+1-of-1 is the degenerate case") but **never wrote down the
 actual bytes**. That gap is the finding. This doc fills it.
 
 ---
@@ -110,8 +112,8 @@ have to hold all five at once.
 **Choice:** which parts of the establishment config are "identity DNA" (in the
 frozen preimage) vs mutable state (in the leaf value, changeable at rotation).
 
-- Frozen (candidate): current keys+weights, current threshold, next commitment,
-  and *maybe* `delegator` (D-E).
+- Frozen (historical candidate): current keys+weights, current threshold, and
+  next commitment.
 - Mutable (in the leaf value, not the key): `seq`, `cesr_aid`, `deposit`, status.
 
 **Trade-off:** more in the frozen preimage = more bound to identity but less
@@ -125,9 +127,9 @@ next-commitment}; keep seq/cesr_aid/deposit/status mutable. Reversible? **No.**
 ### D-B. Inline the config, or hash a digest of it (structural)
 **Choice:** two ways to get the same identity binding:
 
-- **Flat/inline:** `trie_key = blake2b_256(cbor({keys, threshold, next, delegator}))`
+- **Flat/inline:** `trie_key = blake2b_256(cbor({keys, threshold, next}))`
   — the whole config is the preimage.
-- **Two-level:** `config_digest = blake2b_256(cbor({keys, threshold, delegator}))`;
+- **Two-level:** `config_digest = blake2b_256(cbor({keys, threshold}))`;
   `trie_key = blake2b_256(cbor({config_digest, next_digest}))` — trie_key stays a
   fixed two-field preimage; the config lives in the leaf value, checked against
   the digest on-chain.
@@ -178,47 +180,38 @@ KERI forms: an integer count `"2"` **or** a fraction-weight list `["1/2","1/2"]`
 (satisfied when signed weights sum ≥ 1). This pulls in on-chain rational-weight
 arithmetic and the F18 well-formedness predicate. Reversible? **No.**
 
-### D-E. `delegator` in the frozen preimage, or not
-**Choice:** KERI delegated AIDs (GLEIF→QVI→LE→dept) name a delegator. Does the
-delegator binding go into `trie_key` (frozen) or a mutable field?
+### D-E. KERI delegation in V1
 
-- **In the frozen preimage:** a delegated AID's identity is cryptographically
-  bound to its delegator forever. Cannot be added later — so if *any* case needs
-  delegated AIDs, the field must exist from v1 (nullable for non-delegated AIDs).
-- **Mutable / separate registry:** smaller preimage; delegation is state, not
-  identity; but then the delegator isn't part of the self-certifying identifier.
+**DECIDED — independent AIDs only; no passive `delegator` field.** The vLEI
+credential chain uses ACDC edges and does not require the acting LE/OOR/ECR AIDs in
+the four Cardano use cases to be KERI-delegated. QVI infrastructure is commonly
+delegated, but validating it requires the parent's anchor and recursively valid KEL,
+not merely a stored `di`.
 
-**Trade-off:** this is the sharpest "reserve-now-or-never." Reserving a *nullable*
-field costs one CBOR slot per AID and buys the option. Excluding it saves bytes
-but forecloses cryptographically-bound delegation.
-**DECIDED BY FACTS → reserve nullable, don't privilege it.** [acdc-zoo.md](acdc-zoo.md)
-§C: the vLEI trust chain is ACDC credential edges (Layer-3 verifier), *not* KERI
-delegation. Of AIDs that would register on-chain, **only QVI-tier AIDs are
-delegated**; the dominant registrants (Legal Entities, individual role-holders,
-SPOs) are **independent**. But a delegated AID's identity is *inseparable* from its
-delegator (`di` field), so if we ever register one it must bind. Frozen-forever +
-one nullable slot ⇒ **reserve `delegator` nullable** (`null` for the 99%), full
-delegated-inception verification deferred. Reversible? **No** — hence reserve.
+Candidate A also dissolved the frozen Cardano `trie_key`; the qualified KERI AID is
+the identity handle and the checkpoint datum is versioned. V1 therefore rejects
+`dip`/`drt`. A future delegated-AID version must carry and verify the cooperative
+delegation proof described in
+[delegation-boundary-decision.md](delegation-boundary-decision.md).
 
 ---
 
 ## 5. The shape these recommendations assemble to (straw man, now fact-grounded)
 
-Taking the evidence-based decisions (flat; single next-digest covering `nt`;
-**weighted-or-integer** threshold per the vLEI mandate; **nullable delegator**
-reserved), and mirroring KERI's `k`/`kt`/`n`/`nt` faithfully:
+The historical straw man below took the evidence-based threshold decisions (flat;
+single next-digest covering `nt`; **weighted-or-integer** threshold per the vLEI
+mandate). Candidate A later removed this `trie_key` object entirely:
 
 ```
 inception_config = {
   0: [ pk_1, pk_2, ... ],   -- current establishment keys (KERI k), positional list of raw Ed25519 keys
   1: kt,                    -- current threshold (KERI kt): integer "2"  OR  weight list ["1/2","1/2"]
   2: next_digest,           -- blake2b_256(cbor({ 0: next_keys, 1: next_kt })): commits next keys AND next threshold
-  3: delegator              -- null (independent AID)  |  delegator AID   (KERI di)
 }
 trie_key = blake2b_256(cbor(inception_config))     -- integer map keys, canonical CBOR (F30)
 
 -- solo user, 1-of-1 (genuinely n=1 of the same shape):
---   { 0: [pk], 1: "1", 2: next_digest, 3: null }
+--   { 0: [pk], 1: "1", 2: next_digest }
 ```
 
 Weights live in `kt` positionally (KERI-faithful: a key's weight is its entry in
@@ -251,8 +244,8 @@ These are the invariants the docs will then cite by predicate name.
 ## 7. Status after the zoo (both scope calls now answered by facts)
 
 - **D-D — weighted thresholds: REQUIRED** (vLEI EGF mandate; real GLEIF/QVI configs).
-- **D-E — `delegator`: reserve nullable** (delegation is the exception, but frozen
-  key ⇒ keep the option cheaply).
+- **D-E — KERI delegation: V1 independent-only, no passive field.** Full
+  cooperative delegation is a versioned extension because `di` alone is not proof.
 
 So there is **no remaining product-scope question** — the evidence settled both.
 What's left is engineering, which the design loop drives:

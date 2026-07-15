@@ -51,22 +51,24 @@ weights sum to ≥ 1. Real vLEI issuer/GLEIF AIDs use the **fraction** form. →
 integer-only KeyState would **reject production GLEIF/QVI AIDs**. We must support
 both forms, including non-uniform weights.
 
-## C. Delegation: only issuer-tier AIDs are delegated
+## C. Delegation: required at the issuer tier, optional below it
 
 | AID type | Delegated? | Registers on a Cardano registry? |
 |---|---|---|
 | GLEIF Root | independent (root of trust) | no (GLEIF-internal) |
 | GEDA / GIDA (GLEIF ext/int) | **delegated** by Root | no (GLEIF-internal) |
 | **QVI AID** | **delegated** by GEDA | maybe (issuer tier) |
-| **Legal Entity AID** | independent (holds LE credential) | **yes — common** |
-| **OOR / ECR individual** | independent (holds role credential) | **yes — common** |
+| **Legal Entity AID** | not required to be delegated; current cases use independent AIDs | **yes — common** |
+| **OOR / ECR individual** | not required to be delegated; current cases use independent AIDs | **yes — common** |
 | SPO / counterparty | independent (not vLEI) | **yes — common** |
 
 **Fact 3.** A delegated AID (`dip` inception) carries a mandatory `di` = delegator
-AID; its identity is **inseparable from its delegator**. But of the AIDs that would
-register on a Cardano registry, **only QVI-tier AIDs are delegated** — the dominant
-registrants (LE, individuals, SPOs) are all **independent**. Delegation is the
-exception, not the common case.
+AID; its validity is **inseparable from the delegator's anchoring KEL event**.
+GLEIF's QVI workflow requires the QVI group AID to be delegated from the GLEIF
+External AID. The vLEI credential schemas do **not** require the LE or role-holder
+AIDs to be cooperatively delegated: those holders may be independent, and every
+current Cardano use case chooses that independent shape. Delegation is therefore a
+real issuer-infrastructure requirement, not a hot-path requirement of the four dApps.
 
 ## What the facts decide
 
@@ -75,12 +77,13 @@ exception, not the common case.
   Consequence: on-chain rational-weight arithmetic + a well-formedness predicate
   (finding F18), and the pre-rotation proof must cover the *next threshold*, not
   just the next keys.
-- **D-E — `delegator`: reserve nullable, don't privilege it.** `null` for the
-  dominant independent case; populated only for a delegated (QVI-tier) AID, whose
-  identity KERI binds to its delegator. Frozen-forever + cheap (one nullable slot)
-  ⇒ reserving the option is the conservative call; full delegated-inception
-  verification is deferred (like the credential verifier), the field just holds the
-  binding.
+- **D-E — `delegator`: do not reserve an unchecked V1 field.** This supersedes
+  the earlier “nullable is cheap” conclusion. `di` is only the immediate parent;
+  validity also requires the parent's anchor and recursively valid KEL. Candidate A
+  removed the frozen Cardano `trie_key` that made this look like a now-or-never slot.
+  V1 accepts independent AIDs only and rejects `dip`; delegated AIDs require an
+  explicitly versioned proof protocol. See
+  [delegation-boundary-decision.md](delegation-boundary-decision.md).
 
 ## Sources
 - https://github.com/WebOfTrust/vLEI/tree/main/schema/acdc

@@ -99,9 +99,18 @@ throughput/cost win. See `specs/92-checkpoint-contention/{spec.md,DECISION.md}` 
 ## 4. The closure
 
 The **minimal set of KERI identities + credentials the watchers must track in order to
-verify everyone who registered** — nothing more, nothing less. The two planes differ:
-identity KELs are watched to **assemble/serve/submit validator-checked R-KEL checkpoint advances**,
-while credential/external state is **mirrored** into R-TEL/R-ACDC/R-MAP. R-KEL is not a
+verify everyone who registered** — nothing more, nothing less. Two derived sets MUST
+remain distinct:
+
+- the **credential closure** contains issuer AIDs, historical KEL evidence, ACDCs, and
+  TELs needed to prove issuance and current non-revocation; and
+- the **current-actor checkpoint set** contains only AIDs explicitly registered to
+  authorize new Cardano actions.
+
+An issuer does not acquire a current Cardano checkpoint merely because it issued a
+credential in the past. Identity KELs for registered actors are watched to
+**assemble/serve/submit validator-checked R-KEL checkpoint advances**, while historical
+issuer/credential state is served or mirrored into R-TEL/R-ACDC/R-MAP. R-KEL is not a
 watcher mirror.
 
 - **Nodes:** AIDs (identities) and ACDCs (credentials).
@@ -117,15 +126,21 @@ closure = registered AIDs ∪ { every AID + credential reachable by walking
 Example — Alice (individual, OOR credential) registers:
 ```
 Alice-AID → OOR → OOR-AUTH(+LE-AID) → LE-cred(+QVI-AID) → QVI-cred(+GLEIF-AID)
-closure identities  = {Alice, LE, QVI, GLEIF}     → watch their KELs to submit R-KEL checkpoint advances
-closure credentials = {OOR, OOR-AUTH, LE, QVI}    → mirror their status (R-TEL)
+credential identities = {Alice, LE, QVI, GLEIF}  → historical KEL / delegation evidence
+closure credentials   = {OOR, OOR-AUTH, LE, QVI} → mirror their status (R-TEL)
+current checkpoints   = {Alice}                  → advance only Alice's current authority
 ```
 
-Properties: **closed** (a chain missing a hop is unverifiable), **minimal** (only what a
-registrant depends on; unrelated vLEI identities never enter), **derived not chosen** (a
-pure function of R-ID, so CF can't curate it). The closure is exactly the **key-domain over
-settled R-ID** — of the credential/external mirror roots (R-TEL/R-ACDC/R-MAP) and of the
-identity R-KEL checkpoint advances alike.
+If the LE, QVI, or another officer later needs to authorize a new Cardano action, that
+AID registers its own checkpoint and joins the current-actor set. A delegated QVI KEL
+may still be recursively required by the historical verifier; that does not make the
+QVI's current keys part of Alice's hot authorization path.
+
+Properties: **closed** (a credential chain missing a hop is unverifiable), **minimal**
+(only what a registrant depends on; unrelated vLEI identities never enter), **derived
+not chosen** (a pure function of R-ID, so CF can't curate it). The credential closure is
+the key-domain of R-TEL/R-ACDC/R-MAP. R-KEL checkpoint advances instead follow the
+explicit current-actor registrations; the two domains may overlap but are not identical.
 
 **Minimum registration payload** (so the closure is computable without fetching): the
 registrant's AID + its credential-chain path `[(credential_SAID, issuer_AID), …]`

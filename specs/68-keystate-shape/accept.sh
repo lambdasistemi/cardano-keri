@@ -96,6 +96,14 @@ need_symbol() {
   pending "$1" "$4 (missing symbol in ${2#$REPO/})"
 }
 
+# docs24 LABEL PATTERN — assert PATTERN present in specs/24 (case-insensitive ERE).
+# Each `docs24` line is an independently load-bearing anchor of `check_docs`.
+docs24() {
+  if ! grep -iEq -- "$2" "$SPEC24"; then
+    printf 'FAIL[docs]: %s\n' "$1"; fail=1
+  fi
+}
+
 # ============================================================================
 # `spec` — Layer-1 STRUCTURAL self-check of the frozen wire contract.
 # ============================================================================
@@ -223,22 +231,63 @@ check_parity() {
   need_symbol parity "$AK_MESSAGE" 'deriveAidAssetName|Message' "Aiken message module lacks the message/derivation wiring"
 }
 
-# docs — the #24 recut onto the frozen contract. GREEN once specs/24 carries a #68
-# frozen-contract pointer AND no longer presents the rejected Candidate-B lineage
-# (`identity_root` / `root_window` / depth-10 `trie_key`) as live current-authority.
+# docs — `specs/24-keystate/spec.md` reconciled onto the frozen #68 contract.
+#
+# LOAD-BEARING over FOUR independent elements — removing or weakening ANY one of
+# them makes `docs` RED (mutation-tested at slice time):
+#
+#   1. the strengthened supersession banner: the Candidate-B registry/trie/root
+#      storage & discovery mechanics are HISTORICAL, NON-NORMATIVE, and superseded
+#      WHOLESALE for current-authority storage and discovery;
+#   2. the sovereign per-AID quantity-one checkpoint currentness + exact-asset
+#      discovery story (the index/outref is a liveness hint; ledger revalidation is
+#      authority — a stale answer is retry/failure, not forged authority);
+#   3. a pointer to the frozen #68 `CheckpointDatumV1` / message contract
+#      (`specs/68-keystate-shape/spec.md`);
+#   4. the named downstream #24 mechanical-recut obligation.
+#
+# It is deliberately PURELY POSITIVE: it does NOT scan the retained, annotated
+# Candidate-B body for `identity_root` / `root_window` / `trie_key` terms, so the
+# historical validator body kept for the #24 recut never fails the gate. `just ci`
+# (Docs-links) supplies the link-integrity half in `gate.sh`.
 check_docs() {
   need_file docs "$SPEC24" "downstream #24 recut surface (specs/24-keystate/spec.md)" || return
-  if ! grep -iEq -- '#68|CheckpointDatumV1' "$SPEC24"; then
-    pending docs "specs/24-keystate/spec.md carries no #68 frozen-contract recut pointer"
-    return
-  fi
-  # Any surviving LIVE (non-superseded) trie/identity-root current-authority line.
-  _stale=$(grep -iE -- 'identity_root|root_window|trie_key' "$SPEC24" 2>/dev/null \
-    | grep -ivE -- 'superseded|no longer|removed|delete|dissolv|historical|formerly|previously|withdrawn|rejected|#68|#92|instead|rather|not [a-z]|Candidate B|recut|re-cut' \
-    || true)
-  if [ -n "$_stale" ]; then
-    pending docs "specs/24-keystate/spec.md still carries live rejected-Candidate-B (identity_root/root_window/trie_key) current-authority language"
-  fi
+
+  # -- Element 1 — Candidate-B storage/trie/root mechanics marked historical,
+  #    non-normative, superseded WHOLESALE for current-authority storage+discovery.
+  docs24 "el1 supersession: historical, non-normative, superseded wholesale" \
+      'historical, non-normative, and supersed[a-z]* wholesale'
+  docs24 "el1 supersession: superseded for current-authority storage and discovery" \
+      'current-authority storage and discovery'
+  docs24 "el1 supersession: the retained body is the rejected Candidate-B lineage" \
+      'rejected Candidate-B lineage'
+
+  # -- Element 2 — sovereign per-AID quantity-one checkpoint currentness + exact-asset
+  #    discovery; index/outref = liveness hint, ledger revalidation = authority.
+  docs24 "el2 currentness: sovereign per-AID quantity-one checkpoint" \
+      'per-AID, quantity-one[^.]*checkpoint'
+  docs24 "el2 currentness: currentness is the unspent checkpoint tip" \
+      'unspent checkpoint tip'
+  docs24 "el2 discovery: exact-asset lookup enforces the (policy_id, asset_name) shape" \
+      'exact-asset[^.]*\(policy_id, asset_name\)'
+  docs24 "el2 authority: the index/outref is a liveness hint ONLY (not authoritative)" \
+      'liveness hint only'
+  docs24 "el2 authority: the resolved checkpoint is re-validated against the ledger" \
+      're-validated against the ledger'
+
+  # -- Element 3 — pointer to the frozen #68 CheckpointDatumV1 / message contract.
+  docs24 "el3 pointer: names the frozen #68 spec file specs/68-keystate-shape/spec.md" \
+      'specs/68-keystate-shape/spec\.md'
+  docs24 "el3 pointer: names the frozen CheckpointDatumV1 datum" \
+      'CheckpointDatumV1'
+  docs24 "el3 pointer: names the frozen InceptionMessage message type" \
+      'InceptionMessage'
+  docs24 "el3 pointer: names the frozen AdvanceMessage message type" \
+      'AdvanceMessage'
+
+  # -- Element 4 — the named downstream #24 mechanical-recut obligation.
+  docs24 "el4 obligation: the mechanical recut is downstream #24" \
+      'mechanical re-?cut is downstream #24'
 }
 
 # ============================================================================

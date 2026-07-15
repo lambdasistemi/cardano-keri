@@ -82,7 +82,7 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 7 — specs reconciliation (PAIR)
 
-- [ ] T6807 Reconcile the transferred draft to the frozen contract in
+- [X] T6807 Reconcile the transferred draft to the frozen contract in
       `specs/24-keystate/spec.md`, `specs/92-checkpoint-contention/spec.md`, and
       pre-existing `specs/68-keystate-shape/{acdc-zoo,discussion,system-architecture}.md`
       (delegator removed, weighted-threshold survives, `trie_key`/global-trie

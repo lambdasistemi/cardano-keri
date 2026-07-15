@@ -38,12 +38,17 @@ Everything every case needs to anchor identity, finishing the foundation of
 the umbrella epic
 [#21](https://github.com/lambdasistemi/cardano-keri/issues/21):
 
-- Identity key-state UTxO with permissionless pre-rotation
-  ([#24](https://github.com/lambdasistemi/cardano-keri/issues/24)), rescoped to
-  a **list-shaped, threshold-capable KeyState** (k-of-n weighted multisig,
-  reserved `delegator` field). The shape is frozen into `trie_key` at
-  inception, so it must be right from v1; a single key is the 1-of-1
-  degenerate case.
+- Sovereign per-AID checkpoint schema
+  ([#68](https://github.com/lambdasistemi/cardano-keri/issues/68),
+  [#81](https://github.com/lambdasistemi/cardano-keri/issues/81)): a
+  **list-shaped, threshold-capable `CheckpointDatumV1`** supporting integer and
+  fractionally weighted KERI thresholds. V1 accepts **independent AIDs only**
+  and has no passive `delegator` / `di` slot; cooperative KERI delegation is a
+  separately versioned proof protocol, not unchecked metadata.
+- Checkpoint mint/spend lineage and permissionless pre-rotation
+  ([#24](https://github.com/lambdasistemi/cardano-keri/issues/24)), mechanically
+  re-cut to each AID's quantity-one checkpoint-token UTxO. A single key remains
+  the 1-of-1 degenerate threshold case.
 - Dual-root reconstruction and KEL replay off-chain
   ([#25](https://github.com/lambdasistemi/cardano-keri/issues/25)).
 - Migration and lifecycle: legacy-leaf policy, End/GC restriction
@@ -68,6 +73,10 @@ use-case-invariant verifier and authorization machinery:
   **hop bound 4, parameterized** (OOR credentials chain through an LE-signed
   OOR-AUTH credential — four ACDCs, not three) with **all-TELs cascade
   non-revocation** and a stated minutes-grade freshness floor.
+  The verifier MUST name its issuer trust root: V1 pins a QVI or GLEIF External
+  AID and discloses the omitted upstream KERI-delegation proof. Full recursive
+  GLEIF-Root-to-QVI cooperative-delegation verification is not implied by an
+  ACDC edge chain and is deferred to the delegated-AID extension.
 - ACDC proof builder — CESR decode + redeemer generation
   ([#32](https://github.com/lambdasistemi/cardano-keri/issues/32)).
 - Admission-cage component
@@ -90,6 +99,9 @@ use-case-invariant verifier and authorization machinery:
   synthetic 4-hop vLEI chain verified on-chain on a devnet; one gated action
   through full verification and one through the admission cache; a mid-chain
   revocation blocking both paths; a scoped freeze verb exercised and audited.
+  Unless the delegated-AID extension has landed, the synthetic chain uses an
+  explicitly pinned issuer root and does not claim recursive KERI delegation
+  from the GLEIF Root.
 
 Both verification modes ship here regardless of the business pick: the case
 only decides which mode a given gate *uses* — the admission cache is mandatory
@@ -146,6 +158,10 @@ M2)**: counterparty confirmation, QVI credential issuance, credential
 fixtures, preprod environment, and the F-prefix gate readiness check — started
 early because of the lead times below.
 
+The actors exercised by both pilots are independent AIDs whose business
+authority comes from ACDC credentials. Neither pilot depends on a passive
+`di` field or on-chain KERI cooperative delegation.
+
 ### M5 — Case adapters & hardening
 
 Demand-driven, after the pilots prove the core:
@@ -171,6 +187,11 @@ Demand-driven, after the pilots prove the core:
   the full single-tx registration context is the remaining measurement. A
   native `blake3` builtin CIP remains the sunset path for multi-chunk inputs
   and for reclaiming the budget.
+- **Delegated-AID and recovery extension**: a versioned checkpoint protocol for
+  `dip` / `drt`, recursive parent-anchor proofs, resource bounds, and
+  delegated/superseding recovery. This moves earlier only if a concrete
+  controller-custody or production-QVI pilot requires it; it is not a hidden
+  prerequisite of the M1 independent-AID checkpoint.
 - Aiken package registry publication
   ([#18](https://github.com/lambdasistemi/cardano-keri/issues/18)), once M2
   freezes the validator API.

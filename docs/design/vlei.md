@@ -6,7 +6,7 @@ The [verifiable Legal Entity Identifier (vLEI)](https://www.gleif.org/en/organiz
 
 ### The credential chain
 
-GLEIF defines a strict four-level delegation hierarchy:
+GLEIF defines a strict credential-authority chain:
 
 ```
 GLEIF Root AID
@@ -24,7 +24,33 @@ GLEIF Root AID
 | OOR | QVI on behalf of LE | Named officers: CEO, CFO, board member |
 | ECR | LE (or QVI) | Role-in-context credentials for specific engagements |
 
-Every credential in the chain is an ACDC. ACDCs are chained: the Legal Entity credential references the QVI credential, which references the GLEIF Root. A verifier walks the chain and checks each KERI KEL to confirm that the issuing AID has not been rotated away, revoked, or forked.
+Every credential in the chain is an ACDC. ACDCs are chained: the Legal Entity
+credential references the QVI credential, which terminates at the configured
+GLEIF/QVI trust root. A verifier checks the issuance against the issuer's
+**historical** KERI key state and checks TEL non-revocation at every credential
+hop. Later issuer key rotation does not invalidate an issuance that was validly
+anchored at that historical state.
+
+### Credential authority is not KERI AID delegation
+
+Two recursive relationships coexist but are not interchangeable:
+
+- **ACDC authority chaining** is the GLEIF → QVI → LE → OOR/ECR credential
+  graph above. It proves accreditation, legal-entity identity, and role
+  authority.
+- **KERI cooperative delegation** (`dip` / `drt`, with immediate parent `di`)
+  lets a parent AID retain establishment authority over a child AID. Production
+  QVI group AIDs are normally delegated from the GLEIF External AID, but LE and
+  role-holder AIDs do not have to be delegated for their vLEI credentials to
+  work.
+
+The first Cardano checkpoint version (`CheckpointDatumV1`) accepts a
+non-delegated inception (`icp`) only; it **rejects** a delegated inception
+(`dip`) and delegated rotation (`drt`), and carries **no passive `di` /
+`delegator` field**. A verifier that starts at the GLEIF Root must
+eventually prove the recursive QVI delegation chain; a V1 verifier may instead
+pin a QVI or GLEIF External AID as its disclosed trust root. The four current
+dApp use cases require the ACDC relationship, not KERI-delegated acting AIDs.
 
 ### Why it matters: regulatory obligations
 
@@ -50,19 +76,20 @@ Three regulatory frameworks are converging on machine-verifiable legal entity id
 
 ## How cardano-keri is the bridge layer
 
-A GLEIF vLEI Legal Entity credential is anchored to a KERI AID managed by the entity's authorized controllers. cardano-keri maps that KERI AID to a Cardano registry entry, creating a bilateral binding:
+A GLEIF vLEI Legal Entity credential is anchored to a KERI AID managed by the entity's authorized controllers. cardano-keri gives that KERI AID a Cardano presence through its **sovereign per-AID checkpoint** — a quantity-one checkpoint token whose asset name is derived from the AID — creating a bilateral binding:
 
 ```
 GLEIF vLEI chain (off-chain KERI)
-  └─ Legal Entity AID
-       └─ cesr_aid ←→ trie_key (Cardano registry)
-                             └─ KeyState { cur_pubkey, next_digest, seq }
-                                  └─ value cages (MPFS)
+  └─ Legal Entity AID  (the stable identity handle)
+       └─ aid_asset_name = deriveAidAssetName(cesr_aid)
+            └─ quantity-one per-AID checkpoint UTxO (checkpoint_policy_id, aid_asset_name)
+                 └─ CheckpointDatumV1 { cur_keys, cur_threshold, next_digest, seq }
+                      └─ value cages (MPFS)
 ```
 
 The binding is established at inception by the bridge's [digest agility requirement](../architecture/veridian-bridge.md#digest-agility-requirement): the KERI inception event's `n` field uses `blake2b_256`, so the Cardano on-chain commitment and the KERI KEL commitment are byte-for-byte equal from day one.
 
-Once registered, the legal entity's Cardano `trie_key` is stable across all subsequent key rotations. A Cardano smart contract that authorizes the entity at `trie_key` continues to work after the entity rotates its signing key — it reads the live `KeyState` from the registry reference input and sees the current `cur_pubkey`.
+Once registered, the legal entity's **qualified KERI AID — and the checkpoint asset name derived from it — is the stable handle** across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by `(checkpoint_policy_id, aid_asset_name)` as a CIP-31 reference input and reads the **current weighted keys/threshold** from its `CheckpointDatumV1`. It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.
 
 The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains the root of trust for credential issuance. cardano-keri adds Cardano-specific guarantees on top: exact slot ordering, structural duplicity prevention, and smart contract composability.
 
@@ -72,7 +99,7 @@ The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains
 
 ### 1. Compliance-gated contracts
 
-A DeFi protocol or securities issuance platform can gate entry to a value cage by checking the entity's `trie_key` against a registry of vLEI-verified entities. The cage script reads the identity registry via a CIP-31 reference input; no runtime oracle after admission is needed. The vLEI credential chain verification and cage admission are off-chain steps; once a `trie_key` is admitted, the cage enforces it on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and whose `trie_key` has been admitted to the cage's authorization set can interact.
+A DeFi protocol or securities issuance platform can gate entry to a value cage by checking the entity's **AID** against a registry of vLEI-verified entities. The cage resolves the entity's current authority from its **quantity-one per-AID checkpoint** via a CIP-31 reference input keyed by `(checkpoint_policy_id, aid_asset_name)`; the credential-admission allowlist is a separate historical cache, never the current-authority lookup. The vLEI credential chain verification and admission are off-chain steps; once an entity's **AID** is admitted, the cage enforces its current checkpoint key-state on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and admitted to the cage's authorization set can interact.
 
 **What Cardano adds:** the gate check is atomic with the transaction. There is no race between the allowlist update and the transaction inclusion. The cage either sees the authorized key-state or it does not.
 
@@ -86,22 +113,22 @@ This complements the KERI KEL: the on-chain record is a globally ordered, spend-
 
 ### 3. Governance eligibility
 
-On-chain governance protocols (CIP-1694-style or bespoke) can require vLEI-verified legal entity identity as a precondition for voting or proposal submission. The entity's `trie_key` serves as its governance handle. Voting weight or eligibility thresholds can be encoded in cage leaves authorized by the entity's signing key.
+On-chain governance protocols (CIP-1694-style or bespoke) can require vLEI-verified legal entity identity as a precondition for voting or proposal submission. The entity's **qualified AID** serves as its governance handle. Voting weight or eligibility thresholds can be encoded in cage leaves authorized by the keys meeting the AID's **current checkpoint threshold**.
 
-Entities can rotate their signing keys (for security) without losing their governance position — the `trie_key` is stable. A freeze event triggers automatic suspension of the entity's governance rights until the rotation settles, without requiring a governance council vote.
+Entities can rotate their signing keys (for security) without losing their governance position — the **AID (and its checkpoint asset name) is stable**, while the checkpoint it locates advances to the new keys. A freeze event triggers automatic suspension of the entity's governance rights until the rotation settles, without requiring a governance council vote.
 
 ### 4. ACDC notarization on-chain
 
-ACDC credentials (OOR, ECR) are issued by the QVI off-chain. Their content can be anchored to the Cardano chain by writing a credential hash into an MPFS value cage authorized by the Legal Entity's `trie_key`. This creates a timestamped, tamper-evident on-chain anchor:
+ACDC credentials (OOR, ECR) are issued by the QVI off-chain. Their content can be anchored to the Cardano chain by writing a credential hash into an MPFS value cage authorized by the Legal Entity's **AID checkpoint** (its current weighted keys/threshold). This creates a timestamped, tamper-evident on-chain anchor:
 
 ```
 ACDC credential hash  →  cage leaf
-  ↑ signed by cur_pubkey (trie_key verified)
+  ↑ signed by keys meeting the AID's current checkpoint threshold
   ↑ slot-ordered in ledger
   ↑ immutable — cage leaf cannot be deleted without a further authorized write
 ```
 
-A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written by the correct `trie_key`; (c) the `trie_key` is the one that maps to the issuer's KERI AID. All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.
+A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written under the issuer AID's current checkpoint authority; (c) the checkpoint asset resolves to the issuer's KERI AID (`aid_asset_name = deriveAidAssetName(cesr_aid)`). All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.
 
 ---
 

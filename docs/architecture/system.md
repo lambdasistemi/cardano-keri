@@ -109,6 +109,12 @@ flowchart BT
 When Alice registers, her whole chain is pulled into the watch set; another holder under a
 different QVI pulls that QVI in; shared issuers dedup; GLEIF is always the root.
 
+This is the **historical credential closure**, not a command to create a live
+checkpoint for every issuer. Alice's current Cardano action reads Alice's checkpoint.
+The LE/QVI/GLEIF KELs are followed as historical issuance/delegation evidence; those
+issuers need their own current checkpoints only if they separately authorize a new
+Cardano action.
+
 ## Registration and the proof flow (credential plane)
 
 This flow covers **registration and credential proofs** — the watcher-mirrored plane.

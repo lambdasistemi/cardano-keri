@@ -53,8 +53,9 @@ The trie leaf wraps `KeyState` with a lifecycle status:
 !!! note "Scope change: list-shaped KeyState"
     The business-case analyses require `KeyState` to be list-shaped and
     threshold-capable from v1 (organizational AIDs are k-of-n multisig; a
-    single key is the 1-of-1 degenerate case), with a `delegator` field
-    reserved. The singleton shape above is the illustration. See the
+    single key is the 1-of-1 degenerate case). V1 accepts independent AIDs only
+    and has no passive `delegator` field; cooperative delegation is a versioned
+    proof extension. The singleton shape above is the illustration. See the
     [factored core](business-cases/index.md#the-factored-core-required-by-every-case).
 
 **Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-keri requires F-prefix (Blake2b-256) AIDs; the derivation code is always `F` and is not stored separately.

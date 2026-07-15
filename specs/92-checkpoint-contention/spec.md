@@ -174,6 +174,72 @@ on several AIDs at once needs **one CIP-31 reference input per distinct acting A
 **Candidate-A implementation gate** (measured downstream, not fabricated here), not a
 selection criterion.
 
+### Loss / fork semantics and the superwatcher live-duty contract (reopen 2026-07-15)
+
+*Normative for the live documentation.* After the first finalization the operator found
+the loss/fork/superwatcher surfaces still carried the **retired
+two-independent-state-machines / divergence-burn** framing (`docs/design/super-watcher.md`
+kept a live convergence-enforcement body under a supersession banner; the loss/recovery
+and fork/divergence user outcomes were unstated). This contract corrects it (**NOTE-022**);
+the reviewed **DS6** documentation slice lands it across the live surfaces. The
+sovereign per-AID checkpoint decision (Candidate A) is **unchanged** — this is a
+**documentation-consistency correction**, not a decision change.
+
+1. **KERI is the sole identity state machine.** The Cardano per-AID checkpoint is a
+   **globally ordered, spend-linearized projection of current authority**, **not a second
+   independently sovereign identity history**. It cannot fork the identity; it can only lag.
+2. **Sovereignty does not eliminate synchronization lag.** When KERI rotates but the
+   checkpoint has not been advanced or frozen, a **Cardano-only consumer still sees, and
+   may accept, the old checkpoint key**. The old key is **stale in KERI** immediately, but
+   **Cardano enforcement changes only when a successor checkpoint, an applicable freeze, or
+   valid evidence reaches the ledger** — never "operationally stale everywhere immediately."
+3. **A superwatcher is a first-class, permissionless cross-plane relayer and evidence
+   submitter** — **not** a trusted oracle, identity authority, key custodian, backup
+   service, recovery authority, or authoritative indexer. Ordinary KERI watchers police
+   **intra-KEL** duplicity; a superwatcher spans **KERI ↔ Cardano** and the
+   **credential-status (R-TEL) mirror**.
+4. **Live duties (explicit).** Observe witnessed KERI events against the Cardano
+   checkpoint; **relay** a fully witnessed anchoring transition when valid; **submit**
+   objective duplicity or seal↔native-correspondence proofs; **request or trigger the
+   applicable freeze path** when safe advancement is impossible; **police** stale/false
+   R-TEL credential mirrors; support **permissionless, bounty-compatible** operation.
+   **A watcher never chooses truth when cryptographic evidence is absent.**
+5. **Loss / recovery outcomes (kept separate).**
+   - **lost local public KEL** — recover from KERIA / witness / watcher replicas; Cardano
+     preserves a checkpoint/audit anchor but **cannot reconstruct the full KEL**;
+   - **lost AID / OOBI or semantic locator** — exact-asset lookup works **once the
+     qualified AID is known**, but Cardano does **not** guarantee recovery of the forgotten
+     semantic identity mapping; wallet / contact / KERIA / witness backups own that
+     availability;
+   - **lost current private key with valid next/recovery material** — perform KERI
+     recovery/rotation, then relay the checkpoint transition or freeze the old projection
+     during the lag;
+   - **lost current and all next/recovery material** — **no Cardano recovery exists in the
+     current scope**; KERI superseding/delegated recovery is explicitly **out of scope**,
+     so the AID is **unrecoverable/abandonable under this design**;
+   - **witness-threshold collusion** — the KERI trust assumption has failed; a superwatcher
+     may **expose and submit objective evidence** but **cannot manufacture a canonical
+     truth branch**.
+6. **Fork / divergence outcomes (kept separate).**
+   - an **unreceipted local KEL fork** has **no accepted authority**;
+   - **conflicting threshold-receipted events** are **duplicity evidence** → a fatal
+     **freeze/slashing** path where objectively verifiable;
+   - **native-KERI state vs Cardano-facing seal/checkpoint mismatch** is **semantic
+     correspondence fraud**, handled by the permissionless proof/freeze path;
+   - **KERI-ahead / Cardano-behind** is **synchronization lag, not a second valid identity
+     branch** — but it is a **real safety window** for Cardano-only consumers.
+7. **Consumer contract (honest).** Every future protected action must reference the
+   **current unspent per-AID checkpoint** and meet its **current weighted threshold**;
+   historical credentials still use KEL/TEL admission evidence. A Cardano transaction
+   **cannot know about an unseen off-chain KERI event**. High-security protocols therefore
+   **fail closed** once a later witnessed event, an active freeze, or a valid
+   mismatch/duplicity proof is presented, and **must publish an anchoring-freshness
+   policy/SLA** rather than pretending replay protection alone supplies revocation
+   freshness. **#92 does not invent one universal numeric timeout.**
+8. **Generic asset-indexer boundary intact.** Locator/freshness availability is for
+   **liveness only, never identity truth**; the superwatcher is **not** turned into an
+   **authoritative resolver**.
+
 ## Background — what is already fixed vs what this ticket opens
 
 The genesis/registration package (#91) and the two evidence gates it rests on
@@ -1061,6 +1127,24 @@ the live-boundary smoke remain required as a downstream implementation-sizing ga
 B/C **comparison** artifacts are deferred/withdrawn honestly. R-KEL's on-chain
 checkpoint classification and the #99 cage invariants are **preserved**.
 
+### 2026-07-15 — NOTE-022 (reopen: normative loss/fork semantics + the superwatcher live-duty contract)
+After the first finalization (PR #104 marked ready at `5fd5f2e`), the operator found a
+**blocking documentation-consistency gap**: the loss/fork/superwatcher surfaces still
+carried the **retired two-independent-state-machines / divergence-burn** framing — most
+visibly `docs/design/super-watcher.md`, whose supersession banner sat atop a **still-live
+convergence-enforcement-by-burn body** (`trie_key`, "Fork = forfeit", bounty burn) — and
+the **loss/recovery and fork/divergence user outcomes were unstated**. The epic owner
+(before re-checking the pane hierarchy) reverted the gate-drop (`d3964a3`, `gate.sh`
+restored) and returned PR #104 to **draft**. This reopens #92 for a **documentation-only
+consistency correction**: the eight-point **loss / fork semantics and superwatcher
+live-duty contract** (§"Loss / fork semantics …") is made **normative** and reconciled
+across the live docs by a reviewed **DS6** slice. **The sovereign per-AID checkpoint
+decision (Candidate A) is unchanged** — `DECISION.md` and the selection stand; this adds
+no candidate, no validator, and does **not** re-cut R-FRZ. The correspondence duty
+(identity-model §7b, drilled via #90) is a **defined superwatcher duty**, not a "pending
+open thread 4," and the generic indexer boundary (liveness only, never identity truth)
+stays intact — the superwatcher is **not** an authoritative resolver.
+
 ## P1 user story
 
 As a protocol designer ratifying the identity storage model, I read this record
@@ -1247,7 +1331,7 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
 
 ## Success criteria (the sovereign decision + its consistency pass)
 
-- [X] `accept.sh` mechanically asserts the **sovereign** #92 deliverable. Its `final`
+- [ ] `accept.sh` mechanically asserts the **sovereign** #92 deliverable. Its `final`
   target goes GREEN **only** when **all** hold: **`DECISION.md` records the
   operator-ratified sovereign selection** (`SELECTED_CANDIDATE=A`,
   `REJECTED_CANDIDATES=B,C`, `SELECTION_BASIS=sovereignty`, the sovereignty invariant,
@@ -1262,21 +1346,23 @@ against a windowed root **plus** an off-chain MPFS state materializer/proof buil
   negative guard, universal re-authorization, the ACDC boundary correction, the
   emergency-freeze residual, batched fan-in). It **forbids** representing the decision
   as a measured throughput/capital/cost win and forbids reopening the shape as
-  "unselected/open pending evidence." `final` requires **all five DS1–DS5
+  "unselected/open pending evidence." `final` requires **all six DS1–DS6
   repository-consistency documentation slices** (canonical model, ACDC boundary,
-  architecture current-auth/discovery, design trust/UX/DeFi/aid, and the
-  downstream-consequence specs + business-case audit) — it cannot go GREEN while any
-  DS surface stays stale. **RED on `origin/main`; GREEN once `DECISION.md` (ticket
-  owner) and every DS1–DS5 documentation slice (pair) land.**
+  architecture current-auth/discovery, design trust/UX/DeFi/aid, the
+  downstream-consequence specs + business-case audit, and the **loss/fork semantics +
+  superwatcher live-duty contract**) — it cannot go GREEN while any DS surface stays
+  stale. **RED on `origin/main`; GREEN once `DECISION.md` (ticket owner) and every
+  DS1–DS6 documentation slice (pair) land.** (Reopened 2026-07-15 for DS6, NOTE-022.)
 - [X] The **measurements are honest**: Candidate-A cost/tx-size/min-ADA/batch-fan-in +
   the live-boundary smoke are recorded as a **downstream implementation-sizing gate**,
   **never fabricated, back-filled, or presented as the selection reason**; B/C
   comparison artifacts are deferred/withdrawn honestly.
-- [X] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
-  mark-ready (finalization, after epic-owner acceptance).
-- [X] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI
+- [ ] `./gate.sh` passes locally at committed HEAD; PR-life `gate.sh` dropped before
+  mark-ready (finalization, after epic-owner acceptance). *(Reopened: gate-drop reverted
+  at `d3964a3`, `gate.sh` restored; re-dropped only after DS6 + epic-owner acceptance.)*
+- [ ] Bisect-safe reviewed slices, each carrying a `Tasks:` trailer; fresh GitHub CI
   green. The canonical/consistency documentation edits are **reviewed pair slices**,
-  not authored by the ticket owner.
+  not authored by the ticket owner. *(Reopened for the DS6 slice + fresh CI.)*
 
 ## Out of scope (do not implement)
 

@@ -167,12 +167,86 @@ One bisect-safe commit.
   - Each named file must carry the `accept.sh ds5` sovereign `#92` forward-pointer
     marker; each preserved (untouched-mechanism) occurrence has a recorded reason.
 
+## Reopen (2026-07-15) — loss/fork semantics + superwatcher live-duty contract
+
+The first finalization (PR #104 ready at `5fd5f2e`) shipped a **blocking
+documentation-consistency gap**: the loss/fork/superwatcher surfaces still carried the
+retired two-independent-state-machines / divergence-burn framing and the loss/recovery +
+fork/divergence user outcomes were unstated. The epic owner (before re-checking the pane
+hierarchy) reverted the gate-drop (`d3964a3`, `gate.sh` restored) and returned PR #104 to
+**draft**. The ticket owner continues from those facts and lands one more reviewed slice
+(**DS6**). **The sovereign per-AID Candidate-A decision is unchanged** (`DECISION.md`
+stands) — this is a documentation-only correction (NOTE-022).
+
+### Reopen planning correction (ticket owner; this run)
+
+One ticket-owner commit: `docs(92): reopen — normative loss/fork/superwatcher contract +
+DS6 acceptance`, `Tasks: T9203`.
+
+- [X] T9203 — Ticket-owner reopen planning correction: `spec.md` gains the normative
+  eight-point **loss / fork semantics and superwatcher live-duty contract** (§"Loss / fork
+  semantics …") + **NOTE-022**, and its success criteria reopened; `accept.sh` gains a
+  `ds6` target (`check_ds6_superwatcher`: per-surface positives + narrow negative guards)
+  and `layer1_spec` structural checks for the contract; `plan.md`/`tasks.md` carry the DS6
+  owned-file set + dispositions + the reopen commit history. **Verified:** `accept.sh spec`
+  GREEN; `ds1..ds5` GREEN (no regression); `ds6`/`final` RED (22 FAILs = the DS6
+  RED-before baseline); `sh -n` clean; `git diff --check` clean. No `DECISION.md`, code,
+  or canonical-doc edits in this commit; PR body reopened (no completion claim).
+
+### DS6 — loss/fork semantics + superwatcher live-duty contract (reviewed pair; `accept.sh ds6` RED→GREEN)
+
+Owned files (8): `docs/design/super-watcher.md`,
+`specs/68-keystate-shape/identity-model.md`, `docs/design/trust-model.md`,
+`docs/design/user-experience.md`, `docs/architecture/veridian-bridge.md`,
+`docs/architecture/amaru-integration.md`, `docs/roadmap.md`, `docs/design/vlei.md`.
+One bisect-safe commit. `docs(92): normative loss/fork semantics + superwatcher live-duty
+contract`, `Tasks: T9215`.
+
+- [ ] T9215 — Per-file disposition (make `accept.sh ds6` GREEN; 22 FAILs → 0):
+  - `super-watcher.md` — **rewrite** the live body to the superwatcher live-duty contract
+    (permissionless cross-plane relayer + evidence submitter; NOT
+    oracle/authority/custodian/backup/recovery/indexer; enumerated live duties: observe /
+    relay fully-witnessed anchoring / submit duplicity or correspondence proofs /
+    request-or-trigger the freeze path / police R-TEL mirrors; never choose truth without
+    cryptographic evidence); **quarantine** the divergence-burn / deposit / `trie_key`
+    mechanics into a clearly-labelled **historical appendix**; drop the live "enforces
+    convergence by punishing forks" and "two independent state machines" claims.
+  - `identity-model.md` — add the normative **loss/recovery** and **fork/divergence**
+    outcomes + the **sync-lag honesty** (old key stale in KERI, Cardano enforces only on
+    successor/freeze/evidence); reconcile §8 #10 + §7b/§10 thread-4 so correspondence is a
+    **defined superwatcher duty** (drilled via #90), superwatcher = relayer/evidence
+    submitter; **preserve** #90/#91/R-FRZ (no re-cut), R-KEL classification.
+  - `trust-model.md` — reframe the "super watcher adds economic enforcement" line to the
+    relayer/evidence contract; §sync-lag states the point-2 Cardano-only safety window;
+    add the honest consumer contract (fail closed + anchoring-freshness policy/SLA; no
+    universal numeric timeout). **Preserve** the admission/credential planes.
+  - `user-experience.md` — add the loss/recovery + fork/divergence user outcomes and the
+    honest sync-lag (a Cardano-only consumer may still accept the old key during lag).
+  - `veridian-bridge.md` — §Convergence-enforcement + §one-state-machine → the superwatcher
+    live-duty contract; correspondence a defined duty (drop the "pending open thread 4"
+    hedge).
+  - `amaru-integration.md` — the watcher-table role + "super watcher convergence mechanism
+    is built …" → permissionless cross-plane relayer/evidence submitter.
+  - `roadmap.md` — M5 "Super watcher economic enforcement" → the live-duty contract
+    (relay/evidence/freeze/R-TEL policing; bounty-compatible, not the defining role); keep
+    the honest blake3/measurement residual.
+  - `vlei.md` — the checkpoint is a globally-ordered projection the superwatcher
+    relays/evidences, **not** a "second, independently ordered record … detect divergence."
+  - Preserve `aid-model.md` L124 (reconciled at the source; untouched) and `docs/index.md`
+    (neutral enumeration). RED-before / GREEN-after `accept.sh ds6`.
+
 ## Orchestrator finalization (ticket owner; after all DS slices + epic acceptance)
 
-- [X] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
-  (Candidate A)** decision, link #97/#99, note R-KEL classification + #99 invariants
-  preserved, and the honest measurement / R-FRZ residuals. (`gh`, no file commit.)
-- [X] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
+The first finalization (T92-F1/T92-F2 below) **completed then was reverted** for the DS6
+reopen (`96a8b34`/`5fd5f2e` → `d3964a3`); both are **re-opened** and re-run after DS6 is
+accepted.
+
+- [ ] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
+  (Candidate A)** decision, the reopen (normative loss/fork/superwatcher contract), link
+  #97/#99, note R-KEL classification + #99 invariants preserved, and the honest
+  measurement / R-FRZ residuals. (`gh`, no file commit.) *(First done, then reverted for
+  the reopen; the interim PR body must NOT claim completion.)*
+- [ ] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
   satisfied `spec.md` success criteria); confirm `accept.sh final` GREEN + `./gate.sh`
   GREEN + fresh CI green; make `gate.sh` `final` strict, then drop `gate.sh`
   (`chore: drop gate.sh (ready for review)`); `gh pr ready 104`. **Do not merge** — the

@@ -43,7 +43,10 @@
 #               aid-model.
 #     ds5       DS5 downstream-consequence specs + business cases — specs/24-keystate,
 #               specs/23-identity-auth + docs/design/business-cases/*.
-#     docs      decision + ALL FIVE DS groups (ds1..ds5) carry the sovereign decision.
+#     ds6       DS6 loss/fork semantics + superwatcher live-duty contract (reopen,
+#               NOTE-022) — super-watcher/identity-model/trust-model/user-experience/
+#               veridian-bridge/amaru-integration/roadmap/vlei.
+#     docs      decision + ALL SIX DS groups (ds1..ds6) carry the sovereign decision.
 #     final     (default) docs + selection-integrity negative guards.
 #
 # EXPECTED RESULT while the documentation slices are still pending:
@@ -51,7 +54,7 @@
 #   - `decision` -> GREEN once DECISION.md is present and well-formed.
 #   - each `ds<N>` -> RED, safely, until its group's surfaces are reconciled; GREEN
 #     after that reviewed slice lands.
-#   - `docs`/`final` -> RED until ALL FIVE DS groups (every exact surface) land; final
+#   - `docs`/`final` -> RED until ALL SIX DS groups (every exact surface) land; final
 #     cannot go GREEN while any DS surface stays stale.
 #   - RED on origin/main (no spec dir at all).
 #
@@ -103,6 +106,12 @@ BC_REGDEFI="$REPO/docs/design/business-cases/regulated-defi.md"
 BC_INST="$REPO/docs/design/business-cases/institutional-contracts.md"
 BC_SECURITY="$REPO/docs/design/business-cases/security-tokens.md"
 BC_SPO="$REPO/docs/design/business-cases/spo-delegation.md"
+# DS6 — loss/fork semantics + superwatcher live-duty contract (reopen 2026-07-15, NOTE-022).
+SW="$REPO/docs/design/super-watcher.md"
+ARCH_AMARU="$REPO/docs/architecture/amaru-integration.md"
+DOC_ROADMAP="$REPO/docs/roadmap.md"
+DSG_VLEI="$REPO/docs/design/vlei.md"
+# (IM, SA, DSG_TRUST, DSG_UX, DSG_AID, ARCH_VERIDIAN reused from DS1/DS3/DS4.)
 
 # SPTR — a forward pointer to the #92 sovereign per-AID checkpoint decision. The
 # reviewed documentation slices add this (a correction or a superseded+pointer note),
@@ -317,6 +326,41 @@ layer1_spec() {
   # --- R-KEL classification preserved -------------------------------------
   present "spec: R-KEL preserved as on-chain checkpoint over settled R-ID" "$SPEC" \
       'checkpoint over settled R-ID'
+
+  # --- Reopen: loss/fork semantics + superwatcher live-duty contract (NOTE-022) ---
+  present "spec: NOTE-022 (reopen — normative loss/fork + superwatcher contract)" "$SPEC" 'NOTE-022'
+  present "spec: reopen section — loss/fork semantics + superwatcher live-duty contract" "$SPEC" \
+      'Loss / fork semantics and the superwatcher live-duty contract|superwatcher live-duty contract'
+  present "spec: (1) KERI sole state machine; checkpoint is a projection, not a second sovereign history" "$SPEC" \
+      'sole identity state machine'
+  present "spec: (1) spend-linearized projection of current authority, not a second independently sovereign history" "$SPEC" \
+      'spend-linearized projection of current authority|not a second[^.]*independently sovereign identity history'
+  present "spec: (2) sync-lag honesty — old key stale in KERI; Cardano enforces only on successor/freeze/evidence" "$SPEC" \
+      'Cardano enforcement changes only when a successor'
+  present "spec: (2) NOT operationally stale everywhere immediately" "$SPEC" \
+      'operationally stale everywhere immediately'
+  present "spec: (3) superwatcher = permissionless cross-plane relayer + evidence submitter" "$SPEC" \
+      'permissionless cross-plane relayer'
+  present "spec: (3) superwatcher is NOT oracle/authority/custodian/backup/recovery/indexer" "$SPEC" \
+      'not[^.]*(trusted oracle|identity authority|key custodian|backup service|recovery authority|authoritative indexer)'
+  present "spec: (4) never chooses truth when cryptographic evidence is absent" "$SPEC" \
+      'never chooses truth when cryptographic evidence is absent'
+  present "spec: (5) loss/recovery — lost all next/recovery material is unrecoverable/abandonable" "$SPEC" \
+      'lost current and all[^.]*(next|recovery) material[^.]*(no Cardano recovery|unrecoverable/abandonable)|unrecoverable/abandonable under this design'
+  present "spec: (5) witness-threshold collusion — cannot manufacture a canonical truth branch" "$SPEC" \
+      'cannot manufacture a canonical'
+  present "spec: (6) fork/divergence — unreceipted local KEL fork has no accepted authority" "$SPEC" \
+      'unreceipted[^.]*KEL fork[^.]*no accepted authority'
+  present "spec: (6) KERI-ahead/Cardano-behind is sync lag, not a second valid identity branch" "$SPEC" \
+      'synchronization lag, not a second valid identity'
+  present "spec: (7) consumer contract fails closed once a later event/freeze/proof is presented" "$SPEC" \
+      'fail closed[^.]*(later witnessed event|active freeze)'
+  present "spec: (7) publish an anchoring-freshness policy/SLA; #92 invents no universal numeric timeout" "$SPEC" \
+      'publish an anchoring-freshness'
+  present "spec: (7) #92 does not invent one universal numeric timeout" "$SPEC" \
+      'does not invent one universal numeric timeout|no universal numeric timeout'
+  present "spec: (8) generic indexer boundary — liveness only, never identity truth; not an authoritative resolver" "$SPEC" \
+      'not[^.]*(turned into an )?authoritative resolver'
 }
 
 # ============================================================================
@@ -484,6 +528,103 @@ check_ds5_downstream() {
 }
 
 # ============================================================================
+# DS6 — loss/fork semantics + superwatcher live-duty contract (reopen, NOTE-022).
+#   Positive: each surface carries the normative contract (KERI-sole-machine +
+#   projection-not-second-history, honest sync-lag, superwatcher = permissionless
+#   cross-plane relayer/evidence submitter, enumerated live duties, loss/recovery +
+#   fork/divergence outcomes, fail-closed consumer contract, indexer boundary intact).
+#   Negative: the retired convergence-enforcer-by-burn LIVE role, the "two independent
+#   state machines" live claim, "old key stale everywhere immediately," the
+#   "pending open thread 4" correspondence hedge, a live "convergence mechanism"
+#   framing, and the "second, independently ordered record for divergence" claim must
+#   all be gone (superseded/historical-exempt).
+# ============================================================================
+check_ds6_superwatcher() {
+  # --- super-watcher.md: live-duty contract; legacy divergence-burn quarantined ---
+  present "DS6 super-watcher: superwatcher = permissionless cross-plane relayer + evidence submitter" "$SW" \
+      'permissionless cross-plane relayer'
+  present "DS6 super-watcher: NOT oracle/authority/custodian/backup/recovery/indexer" "$SW" \
+      'not[^.]*(trusted oracle|identity authority|key custodian|backup service|recovery authority|authoritative indexer)'
+  present "DS6 super-watcher: enumerated live duties (relay / submit-proof / trigger-freeze / R-TEL)" "$SW" \
+      'relay a fully witnessed anchoring|request or trigger the applicable freeze|submit[^.]*(duplicity|correspondence)[^.]*proof'
+  present "DS6 super-watcher: never chooses truth when cryptographic evidence is absent" "$SW" \
+      'never chooses truth when cryptographic evidence'
+  present "DS6 super-watcher: legacy divergence-burn quarantined as a historical appendix" "$SW" \
+      'historical appendix|legacy[^.]*divergence[- ]?burn'
+  # NEGATIVE — the LIVE role must NOT be the convergence-enforcer-by-burn.
+  forbid_pred "DS6 super-watcher: LIVE role must NOT be 'enforces convergence by punishing forks'" \
+      "$SW" \
+      'is a permissionless off-chain agent that monitors both registries and enforces convergence by punishing forks' \
+      "$EXEMPT"
+  # NEGATIVE — 'two independent state machines' must be superseded/historical, not live.
+  forbid_pred "DS6 super-watcher: 'two independent state machines' must be superseded/historical" \
+      "$SW" \
+      'are two independent state machines' \
+      "$EXEMPT"
+
+  # --- identity-model.md: loss/recovery + fork/divergence + superwatcher + sync-lag ---
+  present "DS6 identity-model: loss/recovery outcomes enumerated (no next/recovery ⇒ unrecoverable)" "$IM" \
+      'unrecoverable/abandonable|lost current and all[^.]*(next|recovery) material'
+  present "DS6 identity-model: witness-threshold collusion — cannot manufacture a canonical truth branch" "$IM" \
+      'cannot manufacture a canonical'
+  present "DS6 identity-model: fork/divergence outcomes (unreceipted fork ⇒ no authority; KERI-ahead = lag)" "$IM" \
+      'unreceipted[^.]*KEL fork[^.]*no accepted authority|synchronization lag, not a second valid identity'
+  present "DS6 identity-model: superwatcher = permissionless cross-plane relayer/evidence submitter" "$IM" \
+      'permissionless cross-plane relayer|relayer and evidence submitter'
+  present "DS6 identity-model: sync-lag honesty — Cardano enforces only on successor/freeze/evidence" "$IM" \
+      'Cardano enforcement changes only when a successor|stale in KERI[^.]*Cardano[^.]*(enforce|change)[^.]*only'
+
+  # --- trust-model.md: superwatcher relayer reframe + honest consumer contract ---
+  present "DS6 trust-model: superwatcher = cross-plane relayer/evidence submitter" "$DSG_TRUST" \
+      'cross-plane relayer|relayer and evidence submitter'
+  present "DS6 trust-model: honest consumer contract — fail closed + anchoring-freshness policy/SLA" "$DSG_TRUST" \
+      'fail[ -]?closed[^.]*(later|witnessed|freeze|proof|event)|anchoring-freshness[^.]*(policy|SLA)'
+  # NEGATIVE — the old key must NOT be claimed operationally stale everywhere immediately.
+  forbid_pred "DS6 trust-model: must NOT claim the old key is operationally stale everywhere immediately" \
+      "$DSG_TRUST" \
+      '(old|prior|stolen)[^.]*key[^.]*(immediately|instantly)[^.]*(stale|inert|invalid|revoked)[^.]*everywhere|(immediately|instantly)[^.]*(stale|inert|invalid|revoked) everywhere' \
+      "$EXEMPT"
+
+  # --- user-experience.md: loss/recovery + fork UX + honest consumer sync-lag ---
+  present "DS6 user-experience: loss/recovery + fork user outcomes present" "$DSG_UX" \
+      'lost[^.]*(private )?key|forgot[^.]*(AID|OOBI)|lost.*(next|recovery) material|unrecoverable'
+  present "DS6 user-experience: honest — a Cardano-only consumer may still accept the old key during lag" "$DSG_UX" \
+      'may (still )?accept the old[^.]*key|old checkpoint key[^.]*until[^.]*(successor|freeze|rotation)[^.]*land'
+
+  # --- veridian-bridge.md: superwatcher live duties; correspondence a defined duty ---
+  present "DS6 veridian-bridge: superwatcher live-duty contract (relayer/evidence/correspondence)" "$ARCH_VERIDIAN" \
+      'cross-plane relayer|relayer and evidence submitter|correspondence[^.]*(proof|fraud)[^.]*(permissionless|freeze|defined)'
+  # NEGATIVE — correspondence policing must NOT be hedged as "pending open thread 4".
+  # Narrow exemption (NOT the full EXEMPT — its 'credential-plane' token co-occurs on
+  # the live hedge line and would falsely neutralise this guard).
+  forbid_pred "DS6 veridian-bridge: correspondence must NOT be hedged as 'pending open thread 4'" \
+      "$ARCH_VERIDIAN" \
+      'pending open thread 4' \
+      'superseded|historical|no longer|formerly|resolved|defined (live )?duty|#92'
+
+  # --- amaru-integration.md: superwatcher = cross-plane relayer/evidence, not 'convergence mechanism' ---
+  present "DS6 amaru-integration: superwatcher = permissionless cross-plane relayer/evidence submitter" "$ARCH_AMARU" \
+      'cross-plane relayer|relayer and evidence submitter'
+  # NEGATIVE — must NOT frame the superwatcher as a live 'convergence mechanism/enforcement'
+  # (the live "super watcher convergence mechanism is built directly on this property"
+  # wraps across lines, so match the single-line "convergence mechanism is built" too).
+  forbid_pred "DS6 amaru-integration: must NOT frame the superwatcher as a live convergence mechanism" \
+      "$ARCH_AMARU" \
+      'convergence mechanism is built|super.?watcher[^.]*convergence (mechanism|enforcement)|convergence (mechanism|enforcement)[^.]*super.?watcher' \
+      "$EXEMPT"
+
+  # --- roadmap.md: M5 reframed to the live-duty contract ---
+  present "DS6 roadmap: superwatcher M5 = relayer/evidence/freeze/R-TEL live duties" "$DOC_ROADMAP" \
+      'cross-plane relayer|relayer and evidence submitter|anchoring[^.]*freshness[^.]*(relay|evidence|freeze|R-TEL|polic)'
+
+  # --- vlei.md: checkpoint is a projection the superwatcher relays, not a 'second record for divergence' ---
+  forbid_pred "DS6 vlei: must NOT frame the checkpoint as a 'second, independently ordered record ... detect divergence'" \
+      "$DSG_VLEI" \
+      'second, independently ordered record' \
+      "$EXEMPT"
+}
+
+# ============================================================================
 # NEGATIVE guards (selection integrity for the sovereign decision).
 # ============================================================================
 negative_guards() {
@@ -540,7 +681,11 @@ case "$MODE" in
     layer1_spec
     check_ds5_downstream
     ;;
-  docs)  # the full documentation pass — all five DS groups
+  ds6)  # loss/fork semantics + superwatcher live-duty contract (reopen, NOTE-022)
+    layer1_spec
+    check_ds6_superwatcher
+    ;;
+  docs)  # the full documentation pass — all six DS groups
     layer1_spec
     check_decision_sovereign
     check_canonical
@@ -548,6 +693,7 @@ case "$MODE" in
     check_ds3_arch
     check_ds4_design
     check_ds5_downstream
+    check_ds6_superwatcher
     ;;
   final)
     layer1_spec
@@ -557,11 +703,12 @@ case "$MODE" in
     check_ds3_arch
     check_ds4_design
     check_ds5_downstream
+    check_ds6_superwatcher
     negative_guards
     ;;
   *)
     echo "accept.sh: unknown target '$MODE'"
-    echo "usage: accept.sh [spec|decision|ds1|ds2|ds3|ds4|ds5|docs|final]"
+    echo "usage: accept.sh [spec|decision|ds1|ds2|ds3|ds4|ds5|ds6|docs|final]"
     exit 2
     ;;
 esac

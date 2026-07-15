@@ -100,10 +100,10 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 9 — finalization (ORCH)
 
-- [ ] T6809 Extend `gate.sh` to call `accept.sh final` strictly (remove the `final`
+- [X] T6809 Extend `gate.sh` to call `accept.sh final` strictly (remove the `final`
       tolerance); run full `./gate.sh` + Docs-links + `finalization_audit 105 <this
       tasks.md>` GREEN.
-- [ ] T6809b `git rm gate.sh` (`chore: drop gate.sh (ready for review)`); push;
+- [X] T6809b `git rm gate.sh` (`chore: drop gate.sh (ready for review)`); push;
       `gh pr ready 105`; write parent handoff (residual risks + exact #77/#79/#81
       closure text + #24 recut). Drop the retained stash after all transferred work
       is committed + verified.

@@ -43,12 +43,15 @@ library
     , memory                >=0.18 && <0.19
     , plutus-core
     , plutus-tx
+    , text
 
   exposed-modules:
     Cardano.KERI.AID.Blake3.Checkpoint
     Cardano.KERI.AID.Cage.Sign
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
+    Cardano.KERI.AID.Checkpoint.Datum
+    Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Ed25519
 
@@ -75,6 +78,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Cage.SignSpec
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec
+    Cardano.KERI.AID.Checkpoint.DatumSpec
+    Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Ed25519Spec
 

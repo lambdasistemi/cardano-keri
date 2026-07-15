@@ -36,14 +36,14 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 3 — Haskell datum + messages (PAIR)
 
-- [ ] T6803 `Checkpoint.V1` (`CheckpointDatumV1`, `NextCommitment`, `keyset_commit`,
+- [X] T6803 `Checkpoint.V1` (`CheckpointDatumV1`, `NextCommitment`, `keyset_commit`,
       `next_digest`, **`deriveAidAssetName`** with frozen `CHECKPOINT_ASSET_DOMAIN_TAG`
       + `0x46 ‖ cesr_aid` preimage) + `Checkpoint.Message` (`InceptionMessage`/
       `AdvanceMessage` builders incl. the frozen `network_id`/`checkpoint_policy_id`/
       `aid_asset_name`/`spent_txid`/`spent_index` context fields + the equalities as
       pure predicates, advance authorized by the **revealed successor set** and
       `aid_asset_name == deriveAidAssetName(cesr_aid)`); cabal exposure.
-- [ ] T6803t Hspec (RED-first): datum goldens (1-of-1, m-of-n, weighted,
+- [X] T6803t Hspec (RED-first): datum goldens (1-of-1, m-of-n, weighted,
       multi-clause, witnessed, witnessless); message goldens; the `deriveAidAssetName`
       golden + wrong-code/truncated/mutated-AID/substituted-asset negatives; and
       negatives — **stolen-current-quorum rejection** (full spent-current quorum

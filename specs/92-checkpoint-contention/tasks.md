@@ -264,12 +264,12 @@ reopen (`96a8b34`/`5fd5f2e` → `d3964a3`/`860ba99`) and for the CI-link repair 
 `3fde29a`, then `gate.sh` restored by `revert: restore gate.sh for the DS6 CI-link repair
 slice`). Both are **re-opened** and re-run after the T9216 repair slice is epic-accepted.
 
-- [ ] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
+- [X] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
   (Candidate A)** decision, the reopen (normative loss/fork/superwatcher contract), link
   #97/#99, note R-KEL classification + #99 invariants preserved, and the honest
   measurement / R-FRZ residuals. (`gh`, no file commit.) *(Restated to the finalized
-  contract; re-opened while the CI-link repair slice is in flight.)*
-- [ ] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
+  contract; confirmed accurate after the T9216 CI-link repair.)*
+- [X] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
   satisfied `spec.md` success criteria); confirm `accept.sh final` GREEN + `./gate.sh`
   GREEN + fresh CI green (incl. `Docs links`); drop `gate.sh`
   (`chore: drop gate.sh (ready for review)`); `gh pr ready 104`. **Do not merge** — the

@@ -26,6 +26,24 @@ a precondition of this decision. The prototype/harness/measurement that would pr
 them is **behavior-changing** and belongs to a **downstream implementation ticket**;
 this design ticket writes **no validators**.
 
+### Reopen (2026-07-15) — normative loss/fork semantics + the superwatcher contract
+
+After the first finalization (PR #104 marked ready at `5fd5f2e`), the operator found a
+**blocking documentation-consistency gap**: the loss/fork/superwatcher surfaces still
+carried the **retired two-independent-state-machines / divergence-burn** framing, and the
+loss/recovery and fork/divergence user outcomes were unstated. The epic owner (before
+re-checking the pane hierarchy) performed the first two child-owned lifecycle actions —
+reverting the gate-drop (`d3964a3`, `gate.sh` **restored**) and returning PR #104 to
+**draft**. The ticket owner continues from those facts (does not undo them) and adds one
+more reviewed documentation slice, **DS6**, that makes the eight-point **loss / fork
+semantics and superwatcher live-duty contract** (spec.md §"Loss / fork semantics …",
+NOTE-022) normative and reconciles it across the live docs. **The sovereign per-AID
+checkpoint decision (Candidate A) is unchanged** — `DECISION.md` and the selection stand;
+this is a documentation-only correction: **no candidate change, no validator, no R-FRZ
+re-cut, no reopening of #91 / the R-KEL classification / the indexer trust boundary.**
+`accept.sh` gains a `ds6` target + `layer1_spec` structural checks for the contract; the
+finalization tasks (T92-F1/F2) are re-opened.
+
 The ticket owner (`%1292`) authors the ticket-local `spec/plan/tasks/accept.sh` **and
 `DECISION.md`** (all under `specs/92-checkpoint-contention/`), `gate.sh`, PR/issue
 metadata, verification, and status. It **never** writes production or evidence code,
@@ -101,6 +119,42 @@ inspects, runs `accept.sh docs`/`final` + `./gate.sh`, and pushes.
   (record why each untouched occurrence is legitimate/historical), correct/superseded-
   pointer the current-actor "L1 registry proof / `trie_key` Active" resolution to the
   sovereign per-AID checkpoint.
+- **DS6 — loss/fork semantics + superwatcher live-duty contract** (reopen 2026-07-15;
+  **correct** the live body, **quarantine** the legacy; gate `accept.sh ds6`): the
+  normative eight-point contract (spec.md §"Loss / fork semantics …", NOTE-022) landed
+  across the live docs. Owned files (8):
+  - `docs/design/super-watcher.md` — **rewrite** the live body to the superwatcher
+    live-duty contract (permissionless cross-plane relayer + evidence submitter; NOT
+    oracle/authority/custodian/backup/recovery/indexer; enumerated live duties; never
+    choose truth without cryptographic evidence); **quarantine** the divergence-burn /
+    deposit / `trie_key` mechanics into a clearly-labelled **historical appendix**;
+  - `specs/68-keystate-shape/identity-model.md` — make loss/recovery + fork/divergence
+    outcomes + the sync-lag honesty normative; reconcile §8 #10 + §7b/§10 thread-4 so
+    correspondence is a **defined superwatcher duty** (drilled via #90), not a "pending
+    open thread 4"; **preserve** #90/#91/R-FRZ references (no re-cut);
+  - `docs/design/trust-model.md` — reframe the "super watcher adds economic enforcement"
+    line to the relayer/evidence contract; make §sync-lag state the point-2 Cardano-only
+    safety window; add the honest consumer contract (fail-closed + anchoring-freshness
+    policy/SLA; no universal numeric timeout);
+  - `docs/design/user-experience.md` — add the loss/recovery + fork/divergence user
+    outcomes and the honest sync-lag (a Cardano-only consumer may still accept the old
+    key during lag);
+  - `docs/architecture/veridian-bridge.md` — §Convergence-enforcement + §one-state-machine
+    → the superwatcher live-duty contract; correspondence a defined duty (drop the
+    "pending open thread 4" hedge);
+  - `docs/architecture/amaru-integration.md` — the watcher-table role + "super watcher
+    convergence mechanism" → permissionless cross-plane relayer/evidence submitter;
+  - `docs/roadmap.md` — M5 "Super watcher economic enforcement" → the live-duty contract
+    (relay/evidence/freeze/R-TEL policing; bounty-compatible, not the defining role);
+    keep the honest blake3/measurement residual;
+  - `docs/design/vlei.md` — the checkpoint is a globally-ordered projection the
+    superwatcher relays/evidences, **not** a "second, independently ordered record …
+    detect divergence."
+  **Preserve** the historical vetting/analysis records, the #99-cage "burn", and the
+  GLEIF/QVI/genesis planes. `docs/design/aid-model.md`'s L124 "(§7a, open thread 4)"
+  cross-reference is **reconciled at the source** (identity-model §7b/§8/§10 in DS6) and
+  left untouched to keep the slice bounded; `docs/index.md`'s superwatcher mention is a
+  neutral feature enumeration (no stale role claim) and is left as-is.
 
 **Do not blindly rewrite legitimate material**: the GLEIF→QVI→LE credential-issuance
 hierarchy, the pre-rotation genesis binding, the front-run defense, and the
@@ -167,9 +221,9 @@ that gates the **sovereign** #92 deliverable. It exposes four targets — `spec`
   rejection reasons are **sovereign** (B serializes unrelated identities; C is a
   grindable public lane / sovereignty-depends-on-shard); the measurement residual is
   framed as **downstream A-implementation sizing**; and R-KEL + #99 are preserved;
-- **DS documentation (`ds1`..`ds5`, then `docs`/`final`)** — each of the FIVE DS
+- **DS documentation (`ds1`..`ds6`, then `docs`/`final`)** — each of the SIX DS
   groups has its own RED-before/GREEN-after target, and `docs`/`final` go GREEN **only
-  when all five** land (never after one canonical slice):
+  when all six** land (never after one canonical slice):
   - `ds1` (`check_canonical`) — `identity-model.md` §10 thread 8 resolved + per-AID
     sovereign checkpoint; `system-architecture.md` registry/checkpoint; **R-KEL
     on-chain-checkpoint classification preserved** (a `forbid_pred` rejects an
@@ -183,6 +237,14 @@ that gates the **sovereign** #92 deliverable. It exposes four targets — `spec`
     a narrow negative guard on the live "key-state snapshot at `trie_key`" claim.
   - `ds5` — `specs/24-keystate`, `specs/23-identity-auth`, and all five
     `business-cases/*`: per-file sovereign `#92` forward-pointer markers.
+  - `ds6` (reopen) — `super-watcher`/`identity-model`/`trust-model`/`user-experience`/
+    `veridian-bridge`/`amaru-integration`/`roadmap`/`vlei`: per-surface positive
+    present-checks for the loss/fork/superwatcher contract + narrow negative guards on
+    the retired convergence-enforcer-by-burn LIVE role, the "two independent state
+    machines" live claim, "operationally stale everywhere immediately," the "pending
+    open thread 4" hedge, a live "convergence mechanism" framing, and the "second,
+    independently ordered record for divergence" claim. `layer1_spec` also gains
+    structural checks for the eight contract points + NOTE-022 in `spec.md`.
 - **negatively guarded (`final`)** — the decision must **not** be represented as a
   measured throughput/capital/cost-matrix win (a `forbid_pred` on `DECISION.md`), and
   the spec must **not** re-frame the storage shape as "unselected / open pending
@@ -251,6 +313,12 @@ exact owned files and per-file dispositions are in `tasks.md` DS1–DS5.
   `docs/design/business-cases/{index,institutional-contracts,regulated-defi,security-tokens,spo-delegation}.md`
   (downstream-consequence superseded-pointers + business-case current-auth audit;
   gate `accept.sh ds5`).
+- **DS6** (reopen) — `docs/design/super-watcher.md`,
+  `specs/68-keystate-shape/identity-model.md`, `docs/design/trust-model.md`,
+  `docs/design/user-experience.md`, `docs/architecture/veridian-bridge.md`,
+  `docs/architecture/amaru-integration.md`, `docs/roadmap.md`, `docs/design/vlei.md`
+  (normative loss/fork semantics + superwatcher live-duty contract; gate
+  `accept.sh ds6`; see the DS6 owned-file dispositions above and in `tasks.md`).
 
 ## Commit history (explicit — conventional subjects + numeric task IDs)
 
@@ -263,8 +331,13 @@ exact owned files and per-file dispositions are in `tasks.md` DS1–DS5.
 | DS2 | `docs(acdc): correct the ACDC issuance-seal boundary (not signed under current keys)` | pair | T9211 | `accept.sh ds2` GREEN |
 | DS3 | `docs(architecture): reframe current-auth + discovery to the sovereign per-AID checkpoint` | pair | T9212 | `accept.sh ds3` GREEN |
 | DS4 | `docs(design): reframe trust/UX/DeFi/aid current-auth to sovereign discovery` | pair | T9213 | `accept.sh ds4` GREEN |
-| DS5 | `docs(92): superseded-pointer #24/#23 + business-case current-auth audit` | pair | T9214 | `accept.sh ds5` GREEN |
-| — | `chore: drop gate.sh (ready for review)` | ticket owner | — | (finalize, after epic acceptance) |
+| DS5 | `docs(92): superseded-pointer #24/#23 + business-case current-auth audit` | pair | T9214 | `accept.sh ds5` GREEN (landed `4be1198`) |
+| F | `docs(92): stamp satisfied success criteria + close finalization tasks` | ticket owner | — | first finalization (landed `96a8b34`) |
+| F | `chore: drop gate.sh (ready for review)` | ticket owner | — | first finalization (`5fd5f2e`) — later reverted |
+| R | `Revert "chore: drop gate.sh (ready for review)"` | epic owner | — | reopen: `gate.sh` restored (`d3964a3`) |
+| 0c | `docs(92): reopen — normative loss/fork/superwatcher contract + DS6 acceptance` | ticket owner | T9203 | `spec` GREEN; `ds6`/`final` RED (22 FAILs, docs unedited) |
+| DS6 | `docs(92): normative loss/fork semantics + superwatcher live-duty contract` | pair | T9215 | `accept.sh ds6` GREEN |
+| — | `chore: drop gate.sh (ready for review)` | ticket owner | — | (re-finalize, after epic acceptance) |
 
 Each documentation slice is one bisect-safe reviewed commit with a **real
 RED-before/GREEN-after `accept.sh` target** — `ds1` (`check_canonical`), `ds2`
@@ -272,7 +345,7 @@ RED-before/GREEN-after `accept.sh` target** — `ds1` (`check_canonical`), `ds2`
 "signature under the issuer's current key" claim), `ds3`/`ds4`/`ds5` (per-file
 sovereign `#92` forward-pointer markers + narrow negative guards on the load-bearing
 live current-auth claims, with historical/admission/QVI/genesis exemptions). `final`
-requires **all five groups** — it cannot go GREEN while any DS surface stays stale.
+requires **all six groups** — it cannot go GREEN while any DS surface stays stale.
 The pair does not push; the ticket owner verifies the exact committed SHA, runs the
 slice's staged `accept.sh ds<N>` (RED-before → GREEN-after) plus `./gate.sh`, and
 pushes.

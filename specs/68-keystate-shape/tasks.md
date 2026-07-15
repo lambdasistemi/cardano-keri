@@ -55,11 +55,11 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 4 — generator + committed fixtures (PAIR)
 
-- [ ] T6804 `offchain/app/GenCheckpointVectors.hs` emitting committed JSON
+- [X] T6804 `offchain/app/GenCheckpointVectors.hs` emitting committed JSON
       golden/negative vectors (datum, threshold, messages, **`deriveAidAssetName`**)
       + the Aiken fixtures module from one computation; `just gen-checkpoint-vectors`
       recipe.
-- [ ] T6804d Drift check (`regen && git diff --exit-code`); commit the generated
+- [X] T6804d Drift check (`regen && git diff --exit-code`); commit the generated
       fixtures. `accept.sh vectors` GREEN.
 
 ## Slice 5 — Aiken threshold codec (PAIR)

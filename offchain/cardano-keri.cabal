@@ -96,6 +96,17 @@ executable gen-vectors
     , cardano-crypto-class
     , cardano-keri
 
+executable gen-checkpoint-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenCheckpointVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'
 -- `devnet` public sublibrary (Cardano.Node.Client.E2E.Setup.withDevnet),

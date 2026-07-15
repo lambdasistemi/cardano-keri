@@ -48,6 +48,22 @@ devshell-offchain:
 e2e:
     cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
 
+# --- checkpoint fixtures (#68) ---
+
+# Regenerate the committed Aiken checkpoint fixtures from the Haskell encoder.
+# One Haskell computation (reusing the Slice-2/3 codec modules) is the sole
+# source of truth for every canonical byte string; `aiken fmt` then canonicalizes
+# the emitted module so it also satisfies `format-check-onchain`.
+gen-checkpoint-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-vectors -- ../onchain/lib/cardano_keri/checkpoint/vectors.ak'
+    cd onchain && nix shell nixpkgs#aiken --command aiken fmt lib/cardano_keri/checkpoint/vectors.ak
+
+# Drift check: regenerate the fixtures and fail if the committed copy diverges
+# from a fresh regenerate (stale fixtures must FAIL the gate).
+check-checkpoint-vectors: gen-checkpoint-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/vectors.ak
+
 # --- onchain (Aiken) ---
 
 # Format Aiken sources
@@ -95,7 +111,7 @@ ci-onchain: format-check-onchain check-onchain
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain
+ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

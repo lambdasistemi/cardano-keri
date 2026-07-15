@@ -72,10 +72,10 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 6 — Aiken datum + messages + parity (PAIR)
 
-- [ ] T6806 `onchain/lib/cardano_keri/checkpoint/{datum,message}.ak`: mirrored
+- [X] T6806 `onchain/lib/cardano_keri/checkpoint/{datum,message}.ak`: mirrored
       `CheckpointDatumV1`/`NextCommitment`/messages compiling to the same PlutusData
       + `deriveAidAssetName` (Aiken `blake2b_256` over the same frozen preimage).
-- [ ] T6806t Tests: `cbor.serialise` byte-identity vs every datum/message fixture,
+- [X] T6806t Tests: `cbor.serialise` byte-identity vs every datum/message fixture,
       the same derived asset name vs the derivation golden, + identical F10 verdicts.
       `accept.sh parity` GREEN (cross-language byte-identity proven with executable
       evidence).

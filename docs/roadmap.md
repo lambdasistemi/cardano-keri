@@ -153,14 +153,19 @@ Demand-driven, after the pilots prove the core:
 - KYC security tokens: CIP-113 substandard and/or register-as-cage.
 - Regulated DeFi gate: order gate + admission cage. Its real buyer — the RWA
   issuer — converges with the security-token case.
-- Super watcher economic enforcement
-  ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) — **scope
-  shrunk by the identity model (2026-07-09)**: identity forks are structurally
-  impossible under the KERI-sovereign checkpoint, so divergence-burn is no
-  longer needed for identity; the residual roles are anchoring
-  freshness/liveness, credential-plane (R-TEL) policing, and optional
-  seal↔native correspondence spot-checks
-  (`specs/68-keystate-shape/identity-model.md` §8, open thread 4). The
+- Super watcher — permissionless cross-plane relayer & evidence submitter
+  ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) —
+  **reframed by the identity model (2026-07-09) and #92 / NOTE-022
+  (2026-07-15)**: identity forks are structurally impossible under the
+  KERI-sovereign checkpoint, so divergence-burn is retired. The live role is a
+  **permissionless cross-plane relayer and evidence submitter** (KERI ↔ Cardano
+  + the R-TEL mirror), **not** a live economic convergence enforcer: relay a
+  fully witnessed anchoring transition, submit duplicity / correspondence fraud
+  proofs (a defined duty, drilled via #90), request or trigger the applicable
+  freeze path, and police stale / false R-TEL credential mirrors — anchoring
+  freshness / liveness, R-TEL policing, and freeze relay, all bounty-compatible
+  but never truth-choosing when evidence is absent
+  (`specs/68-keystate-shape/identity-model.md` §7b / §11). The
   in-script blake3 question is reopened: the lane-packed spike #88 core fits
   the whole single-chunk domain (54.3% cpu / 71.7% mem at 1024 bytes), and
   the full single-tx registration context is the remaining measurement. A

@@ -217,7 +217,9 @@ bounded, visible, and only reachable when the model's base assumption has alread
 
 **Out of scope here:** KERI superseding/delegated recovery (no delegated AIDs in this
 model yet); divergence between the announced `W'` and the native rotation's actual set is
-the §7a correspondence limit (open thread 4), unchanged.
+the §7a correspondence limit — **required and policed as a defined superwatcher duty via
+on-chain fraud proofs (drilled #90, §7b)**, degrading only for the precise witness-swap
+residual (§7b) to the watcher-attested path.
 
 ## 7. What this settles: the integrity hazard
 
@@ -437,9 +439,16 @@ This stays prototype design — it does not claim production maturity, nor inter
   serialization, the #97 checkpoint datum/redeemer, and the projection fields with
   Haskell/Aiken golden parity; an on-chain projection verifier stays **deferred**.
 - **#10 (super-watcher)** — divergence-burn is **not needed** for identity forks (one
-  machine). Its identity-plane role is now (§7b): submit **correspondence fraud proofs**
-  (permissionless, bounty-compatible — the old divergence-proof mechanics transfer, with
-  the receipts-over-raw-bytes simplification), plus freshness/liveness of anchoring.
+  machine). The super-watcher is reframed as a **permissionless cross-plane relayer and
+  evidence submitter** (KERI ↔ Cardano + the R-TEL mirror), **not** a trusted oracle,
+  identity authority, key custodian, backup service, recovery authority, or authoritative
+  indexer. Its live duties are (§7b, §11): **relay** a fully witnessed anchoring transition;
+  **submit** correspondence / duplicity fraud proofs (a **defined duty**, drilled via #90 —
+  permissionless, bounty-compatible, inheriting the old divergence-proof mechanics with the
+  receipts-over-raw-bytes simplification); **request or trigger the applicable freeze** path
+  when safe advancement is impossible; **police** stale / false R-TEL mirrors; plus
+  freshness / liveness of anchoring. It **never chooses truth when cryptographic evidence is
+  absent**.
 - **`system-architecture.md`** — R-KEL *for identity* is the on-chain checkpoint
   (advances cryptographic; genesis is the §7c hybrid — byte binding cryptographic on-chain
   for ≤1-chunk (#97), attested for >1-chunk, projection attested/challengeable), not a
@@ -505,3 +514,59 @@ integrity the checkpoint provides.
    measurements plus the live-boundary smoke remain a **downstream implementation gate**,
    not the reason A was chosen. See `specs/92-checkpoint-contention/{spec.md,DECISION.md}`
    (NOTE-021) and §7c.
+
+## 11. Loss / fork semantics and the superwatcher live-duty contract (reopen — #92, NOTE-022)
+
+Reopened 2026-07-15 (**NOTE-022**). The loss/recovery and fork/divergence user outcomes
+were unstated, and the loss/fork/superwatcher surfaces still carried the retired
+two-independent-state-machines / divergence-burn framing. This section states the normative
+outcomes. The sovereign per-AID checkpoint decision (Candidate A, §10 thread 8, NOTE-021) is
+**unchanged** — this is a documentation-consistency correction, not a decision change.
+
+**Projection, not a second sovereign history.** KERI is the **sole identity state machine**;
+the Cardano per-AID checkpoint is a globally ordered, **spend-linearized projection of
+current authority**, **not a second independently sovereign identity history**. It cannot
+fork the identity; it can only lag.
+
+**Sovereignty does not eliminate synchronization lag.** When KERI rotates but the checkpoint
+has not been advanced or frozen, a **Cardano-only consumer still sees, and may accept, the
+old checkpoint key**. The old key is **stale in KERI** immediately, but:
+
+> **Cardano enforcement changes only when a successor checkpoint, an applicable freeze, or valid evidence reaches the ledger** — never "operationally stale everywhere immediately."
+
+**The superwatcher.** A superwatcher is a **first-class, permissionless cross-plane relayer
+and evidence submitter** spanning **KERI ↔ Cardano** and the **credential-status (R-TEL)
+mirror** — **not** a trusted oracle, identity authority, key custodian, backup service,
+recovery authority, or authoritative indexer. Its live duties: observe witnessed KERI events
+against the checkpoint; **relay a fully witnessed anchoring** transition when valid;
+**submit** objective duplicity or seal↔native-correspondence proofs (a defined duty, §7b,
+drilled via #90); **request or trigger the applicable freeze** path when safe advancement is
+impossible; **police** stale / false R-TEL mirrors; support permissionless, bounty-compatible
+operation. **A watcher never chooses truth when cryptographic evidence is absent.**
+
+### 11a. Loss / recovery outcomes (kept separate)
+
+- **lost local public KEL** — recover from KERIA / witness / watcher replicas; Cardano preserves a checkpoint / audit anchor but **cannot reconstruct the full KEL**;
+- **lost AID / OOBI or semantic locator** — exact-asset lookup works **once the qualified AID is known**, but Cardano does **not** guarantee recovery of the forgotten semantic identity mapping; wallet / contact / KERIA / witness backups own that availability;
+- **lost current private key with valid next / recovery material** — perform KERI recovery / rotation, then relay the checkpoint transition or freeze the old projection during the lag;
+- **lost current and all next / recovery material** — **no Cardano recovery exists in the current scope**; KERI superseding / delegated recovery is explicitly **out of scope** (no delegated AIDs in this model yet, §6a), so the AID is **unrecoverable/abandonable under this design**;
+- **witness-threshold collusion** — the KERI trust assumption has failed; a superwatcher may **expose and submit objective evidence** but **cannot manufacture a canonical truth branch**.
+
+### 11b. Fork / divergence outcomes (kept separate)
+
+- an **unreceipted local KEL fork has no accepted authority** (no threshold receipts ⇒ nothing Cardano or any watcher will admit);
+- **conflicting threshold-receipted events** are **duplicity evidence** → a fatal **freeze / slashing** path where objectively verifiable (§7b teeth, #91);
+- **native-KERI state vs Cardano-facing seal / checkpoint mismatch** is **semantic correspondence fraud**, handled by the permissionless proof / freeze path (§7b, drilled via #90);
+- **KERI-ahead / Cardano-behind** is **synchronization lag, not a second valid identity branch** — but it is a **real safety window** for Cardano-only consumers.
+
+### 11c. Consumer contract (honest)
+
+Every future protected action must reference the **current unspent per-AID checkpoint** and
+meet its **current weighted threshold**; historical credentials still use KEL / TEL admission
+evidence. A Cardano transaction **cannot know about an unseen off-chain KERI event**, so
+high-security protocols **fail closed** once a later witnessed event, an active freeze, or a
+valid mismatch / duplicity proof is presented, and **must publish an anchoring-freshness
+policy / SLA** rather than pretend replay protection alone supplies revocation freshness.
+**#92 invents no universal numeric timeout.** The generic asset-indexer boundary stays intact:
+locator / freshness availability is for **liveness only, never identity truth**; the
+superwatcher is **not** an authoritative resolver.

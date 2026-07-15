@@ -64,9 +64,9 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 5 — Aiken threshold codec (PAIR)
 
-- [ ] T6805 `onchain/lib/cardano_keri/checkpoint/threshold.ak`: mirrored `Threshold`,
+- [X] T6805 `onchain/lib/cardano_keri/checkpoint/threshold.ak`: mirrored `Threshold`,
       F18 predicate, `evaluate`.
-- [ ] T6805t `threshold_tests.ak`: `cbor.serialise` byte-identity vs fixtures +
+- [X] T6805t `threshold_tests.ak`: `cbor.serialise` byte-identity vs fixtures +
       identical verdicts/rejections (RED-first). `aiken check` GREEN; `accept.sh
       aiken` (threshold) GREEN.
 

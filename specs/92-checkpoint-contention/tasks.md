@@ -246,7 +246,7 @@ repair under `docs/`**, so it is a **reviewed driver+navigator slice**, not a ti
 edit. The PR-life `gate.sh` sentinel was reopened (`revert: restore gate.sh for the DS6
 CI-link repair slice`) so the pair runs the complete gate.
 
-- [ ] T9216 — **Correct (reviewed pair).** Owned file: **exactly** `docs/design/super-watcher.md`.
+- [X] T9216 — **Correct (reviewed pair).** Owned file: **exactly** `docs/design/super-watcher.md`.
   Expected semantic delta: **only** the em dash → colon in the `## Historical appendix …`
   heading (so the auto-slug becomes `historical-appendix-the-retired-divergence-burn-design`,
   matching the existing link). **RED/GREEN proof is the exact CI command:**

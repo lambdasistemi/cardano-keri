@@ -99,7 +99,7 @@ and bounty-compatible, no coordination or governance is needed to bootstrap the 
 
 ---
 
-## Historical appendix — the retired divergence-burn design
+## Historical appendix: the retired divergence-burn design
 
 !!! warning "Historical / superseded — retained for reference only (do not implement)"
     Everything in this appendix is the **legacy divergence-burn design**, written against the

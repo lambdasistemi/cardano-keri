@@ -347,13 +347,21 @@ by controller honesty — self-equivocation, not third-party forgery.
 - Cardano cages authorize against the checkpoint key-state, which advanced under witness
   receipts — not against an independently-rotating copy.
 - A controller *can* designate Cardano-facing keys distinct from her native KERI keys;
-  whether to accept that (operating-keys semantics) or police it with correspondence
-  spot-checks is identity-model open thread 4.
+  correspondence between the seal's claimed key-state and the native establishment
+  key-state is a **required, defined duty** — **drilled and resolved via #90**
+  (identity-model §7b), policed by permissionless on-chain fraud proofs, not an open
+  spot-check option.
 
-## Convergence enforcement
+## Super-watcher live-duty contract
 
-Retired for identity (2026-07-09): forks are structurally impossible under the checkpoint
-model, so divergence-burn is no longer needed. The super-watcher's residual roles are
-freshness/liveness, credential-plane policing, and — pending open thread 4 —
-correspondence spot-checks. See [Super Watcher](../design/super-watcher.md) (carries the
-same supersession banner).
+Under the KERI-sovereign checkpoint (identity-model §11, #92 / NOTE-022) the super watcher is
+a **first-class, permissionless cross-plane relayer and evidence submitter** across
+**KERI ↔ Cardano** and the credential-status (R-TEL) mirror — **not** a trusted oracle,
+identity authority, key custodian, backup service, recovery authority, or authoritative
+indexer. Divergence-burn is retired: forks are structurally impossible under the checkpoint,
+so there is nothing to burn. Its live duties are: **relay a fully witnessed anchoring**
+transition when valid; **submit** duplicity or seal↔native-**correspondence proofs** (a
+**defined duty** — permissionlessly falsifiable and freeze-backed, identity-model §7b, #90);
+**request or trigger the applicable freeze** path when safe advancement is impossible; and
+**police** stale / false R-TEL credential mirrors. It **never chooses truth when
+cryptographic evidence is absent**. See [Super Watcher](../design/super-watcher.md).

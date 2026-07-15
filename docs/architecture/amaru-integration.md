@@ -52,7 +52,7 @@ them apart dissolves most of its "biggest fork" questions.
 | Role | Function | Selected by | Commitment | cardano-keri analogue |
 |---|---|---|---|---|
 | **Witness** | Receipts a controller's key events with a signature | Designated by each controller in their KEL | Heavy — availability SLA, part of others' identity trust | — |
-| **Watcher** | Observes KELs to detect duplicity / rotations | Anyone (permissionless) | Light — read-only observer | KERI watcher **inside the oracle**; the [super watcher](../design/super-watcher.md) |
+| **Watcher** | Observes KELs to detect duplicity / rotations | Anyone (permissionless) | Light — read-only observer | KERI watcher **inside the oracle**; the [super watcher](../design/super-watcher.md) as a permissionless cross-plane relayer / evidence submitter |
 | **Ledger (registrar) backer** | Expresses support by anchoring a key event (or its SAID) on a ledger | Designated by the controller in their backer list | Medium — must submit and confirm on-chain | The on-chain identity registry (for key-state only) |
 
 The Cardano Foundation already ships a ledger backer:
@@ -72,7 +72,10 @@ ledger provides **global total order** and public availability. This is the one
 genuinely valuable thing Cardano contributes to the KERI trust model: it makes
 duplicity resolution objective (which of two conflicting events came first is
 no longer a matter of whom you asked). The [super watcher](../design/super-watcher.md)
-convergence mechanism is built directly on this property.
+is a **permissionless cross-plane relayer and evidence submitter** whose duplicity /
+correspondence fraud proofs rely directly on this property — it relays witnessed
+transitions and submits objective evidence, it does not enforce convergence by burning
+forks.
 
 ## Where cardano-keri fits
 
@@ -108,8 +111,8 @@ the same system.
 cardano-keri is the proposed answer to the **controller key-state** problem. It
 is *not* a general backer, and it is not shipped infrastructure. If the
 integration's goal is the general backer fleet, then cardano-keri is a design for
-one MPFS plugin component (key-state anchoring + convergence enforcement), not
-the whole answer.
+one MPFS plugin component (key-state anchoring + the super watcher's cross-plane
+relay / evidence-submission role), not the whole answer.
 
 ### Anchor versus verify: the decisive difference
 

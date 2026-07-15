@@ -202,7 +202,7 @@ Owned files (8): `docs/design/super-watcher.md`,
 One bisect-safe commit. `docs(92): normative loss/fork semantics + superwatcher live-duty
 contract`, `Tasks: T9215`.
 
-- [ ] T9215 — Per-file disposition (make `accept.sh ds6` GREEN; 22 FAILs → 0):
+- [X] T9215 — Per-file disposition (make `accept.sh ds6` GREEN; 22 FAILs → 0):
   - `super-watcher.md` — **rewrite** the live body to the superwatcher live-duty contract
     (permissionless cross-plane relayer + evidence submitter; NOT
     oracle/authority/custodian/backup/recovery/indexer; enumerated live duties: observe /

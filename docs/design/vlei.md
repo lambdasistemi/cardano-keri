@@ -82,7 +82,7 @@ This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md)
 
 An entity's complete Cardano key history — inception, every rotation, freeze events — is immutably recorded on-chain in slot order. No operator, including GLEIF or the QVI, can alter or suppress this record. A regulator or auditor can verify the entity's key custody chain from inception to the present without asking the entity or any intermediary.
 
-This complements the KERI KEL: the on-chain record provides a second, independently ordered record that a super watcher can use to detect divergence (see [Super Watcher](super-watcher.md)).
+This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized **projection of current authority** that a super watcher **relays and evidences** — not a second, independently sovereign identity history. Identity is KERI-sovereign (one witnessed KEL); the checkpoint cannot fork, it can only lag, so the super watcher relays valid anchoring transitions and submits duplicity / correspondence proofs rather than policing divergence between two rival records (see [Super Watcher](super-watcher.md)).
 
 ### 3. Governance eligibility
 
@@ -120,7 +120,7 @@ the cryptographic path exists and the work is scheduled.
 | Seq-0 binding verifiable from KEL | Native Blake3 AIDs: genesis remains registration-attested pending a full-context single-tx measurement (identity-model §7a; lane-packed spike #88 core fits the whole single-chunk domain, 54.3% cpu / 71.7% mem at 1024 bytes); F-prefix AIDs (CF sidecar): on-chain self-cert |
 | Full on-chain AID self-cert | F-prefix (CF sidecar) only — `blake2b_256` builtin; native Blake3 AIDs get cryptographic *advances* via witnessed seals, attested genesis |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
-| Super watcher convergence | Retired for identity (no fork possible under the checkpoint — identity-model §1/§8); residual: freshness/liveness, R-TEL policing, correspondence spot-checks (open thread 4); M5 |
+| Super watcher (cross-plane relayer / evidence submitter) | Divergence-burn retired for identity (no fork possible under the checkpoint — identity-model §1/§11); live duties: relay witnessed anchoring, submit duplicity / correspondence proofs (a defined duty, drilled via #90 — identity-model §7b), request/trigger freeze, police R-TEL; permissionless, bounty-compatible; M5 |
 | Cardano-only vLEI resolution | Blocked externally — requires GLEIF/QVI adoption of F-prefix SAIDs |
 
 ---

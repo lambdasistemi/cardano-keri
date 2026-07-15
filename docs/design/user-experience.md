@@ -120,6 +120,39 @@ unicity** proof. There is no pool of rival registrants for the same AID to disam
 
 Steps 3–5 are handled by the SDK. The user experience is: "verify Bob in Veridian, then Bob's Cardano actions are automatically trusted."
 
+## What happens when things go wrong — loss, recovery, and forks
+
+Identity lives in KERI; the Cardano checkpoint is a **projection of current authority**, not
+a second sovereign copy. So loss and fork outcomes are KERI outcomes first — Cardano keeps a
+checkpoint / audit anchor but cannot reconstruct what only KERI holds.
+
+**If you lose something (recovery):**
+
+| What you lost | Outcome |
+|---|---|
+| Your **local public KEL** | Recover it from your KERIA / witness / watcher replicas. Cardano keeps a checkpoint / audit anchor but **cannot reconstruct the full KEL**. |
+| A peer's **AID / OOBI or the semantic locator** (you forgot *which* AID) | Once the qualified AID is known, exact-asset lookup finds its checkpoint — but Cardano does **not** guarantee recovery of the forgotten mapping. Your wallet / contact / KERIA / witness backups own that. |
+| Your **current private key**, but you still hold valid next / recovery material | Perform KERI recovery / rotation, then relay the checkpoint transition (or freeze the old projection during the lag). |
+| Your **current key *and* all next / recovery material** | **No Cardano recovery exists in the current scope.** KERI superseding / delegated recovery is out of scope here, so the AID is **unrecoverable** / abandonable under this design. |
+
+**If keys or events conflict (forks):** an **unreceipted local KEL fork has no accepted
+authority** — nothing Cardano or any watcher will admit it. Conflicting threshold-receipted
+events are duplicity evidence that a super watcher can submit, driving a freeze / slashing
+path. A native-KERI vs Cardano-facing mismatch is correspondence fraud, handled by the same
+permissionless proof / freeze path. What a super watcher **cannot** do is manufacture a
+canonical truth branch when the cryptographic evidence is absent — it relays and evidences,
+it never adjudicates.
+
+## The honest sync-lag caveat
+
+After you rotate in KERI, there is a window before the Cardano checkpoint advances. During
+that window a **Cardano-only consumer may still accept the old checkpoint key** — the old
+key is stale in KERI immediately, but the **old checkpoint key stays enforceable on Cardano
+until a successor checkpoint, an applicable freeze, or valid evidence reaches the ledger**.
+This is a real safety window, not a second identity branch. High-security protocols should **fail
+closed** on a presented later event / freeze / proof and publish an anchoring-freshness
+policy rather than assume instant global revocation.
+
 ## What Cardano adds on top of KERI
 
 | Property | KERI alone | + Cardano registry |

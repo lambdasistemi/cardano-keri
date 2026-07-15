@@ -1,44 +1,129 @@
-# Super Watcher: Convergence Enforcement
+# Super Watcher: Permissionless Cross-Plane Relayer & Evidence Submitter
 
-!!! warning "Superseded for identity — the KERI-sovereign model (2026-07-09)"
-    This design was written against the **two-independent-state-machines** premise. The
-    identity model (`specs/68-keystate-shape/identity-model.md`, PR #87) retires it:
-    there is **one** state machine (the witnessed KEL) and Cardano advances an on-chain
-    checkpoint only through **witness-receipted anchoring seals** — an identity cannot
-    fork, so **divergence-burn is no longer needed for identity**. What survives of the
-    super-watcher role: freshness/liveness of anchoring, credential-plane (R-TEL) mirror
-    policing, genesis-binding challenges during the registration window (§7a), and —
-    if open thread 4 closes that way — seal↔native **correspondence spot-checks**, for
-    which the divergence-proof/burn mechanics below remain the reference design.
+!!! note "Live role (2026-07-15, #92 / NOTE-022) — a relayer + evidence submitter, not a convergence enforcer"
+    The live super-watcher role is a **first-class, permissionless cross-plane relayer and
+    evidence submitter** spanning **KERI ↔ Cardano** and the **credential-status (R-TEL)
+    mirror** — **not** the divergence-burn convergence enforcer this page was originally
+    written around. Identity is KERI-sovereign (one witnessed KEL); the Cardano per-AID
+    checkpoint is a globally ordered, **spend-linearized projection of current authority**,
+    **not a second independently sovereign identity history** — it cannot fork the identity,
+    it can only lag. The retired divergence-burn / deposit / `trie_key` / "Fork = forfeit" /
+    bounty-burn mechanics are quarantined, in the past tense, in the
+    [historical appendix](#historical-appendix-the-retired-divergence-burn-design) at the
+    foot of this page.
 
-## The two-registry problem
+## The two-plane relay problem
 
-The Cardano identity registry and the [KERI](https://github.com/WebOfTrust/ietf-keri) KEL are two independent state machines sharing inception material. Nothing at the protocol level forces them to stay in sync. A controller can rotate on KERI but not on Cardano, rotate to different keys on each, or deliberately fork the two chains while `cesr_aid` keeps asserting they represent the same identity.
+The witnessed [KERI](https://github.com/WebOfTrust/ietf-keri) KEL is the sole identity
+state machine; Cardano carries a per-AID **checkpoint** that projects the current authority
+KERI has settled. This page formerly described the two as independently advancing machines
+sharing inception material — that framing is **superseded**: the checkpoint is a
+**projection of current authority, not a rival history**, so an identity **cannot fork; it
+can only lag** a very recent KERI event. What remains is a real cross-plane
+**synchronization** and **evidence** problem — witnessed KERI events must be relayed onto
+the checkpoint, objective duplicity / correspondence fraud must be submitted, and
+stale / false credential-status mirrors must be policed.
 
-This is not a theoretical edge case — it is a structural property of the bridge. See [Veridian Bridge — One state machine, one stated limit](../architecture/veridian-bridge.md#one-state-machine-one-stated-limit) (which now records why the fork premise is retired).
+See [Veridian Bridge — One state machine, one stated limit](../architecture/veridian-bridge.md#one-state-machine-one-stated-limit)
+and `specs/68-keystate-shape/identity-model.md` §11.
 
-## The super watcher role
+## What the super watcher is — and is not
 
-The super watcher is a permissionless off-chain agent that monitors both registries and enforces convergence by punishing forks.
-
-!!! note "Design hypothesis"
-    This is a proposed interpretation of the super watcher role based on the bridge's structural properties. It is consistent with the Veridian team's direction but not yet a confirmed specification.
-
-**It is not:**
-- A passive monitor that alerts humans
-- A trusted actor with freeze key custody
-- A governance body that adjudicates disputes
+A super watcher is a **first-class, permissionless cross-plane relayer and evidence
+submitter**. It is **not** a trusted oracle, identity authority, key custodian, backup
+service, recovery authority, or authoritative indexer. Ordinary KERI watchers police
+**intra-KEL** duplicity for a single AID; a super watcher spans **KERI ↔ Cardano** and the
+**credential-status (R-TEL) mirror**.
 
 **It is:**
-- A bounty hunter — detects divergence and submits a burn transaction to collect the deposit
-- Permissionless — anyone can run one, no registration or trust required
-- Economically aligned — the deposit is the incentive; larger deposits attract more watchers
+- A **permissionless cross-plane relayer and evidence submitter** — anyone can run one, no registration or trust required.
+- **Bounty-compatible** — its submissions can carry incentives, but incentives are not what confer its standing.
+- **Evidence-bound** — it only ever relays witnessed events or submits cryptographic proofs; it never adjudicates.
 
-## Fork = forfeit
+**It is not:**
+- A trusted oracle, identity authority, or key custodian — it holds no freeze key and speaks for no one's identity.
+- A backup service or recovery authority — it cannot reconstruct a lost KEL or manufacture keys.
+- An authoritative indexer or resolver — locator / freshness lookups are for **liveness only, never identity truth**.
 
-The core invariant: **a controller who diverges their Cardano identity from their KERI KEL loses their registry deposit to the first watcher that detects it.**
+!!! note "Normative live-duty contract (#92 / NOTE-022)"
+    The relayer / evidence-submitter role and the live duties below are the **normative**
+    super-watcher contract (`specs/92-checkpoint-contention/spec.md` §"Loss / fork semantics
+    and the superwatcher live-duty contract", NOTE-022; `specs/68-keystate-shape/identity-model.md`
+    §11). What remains design-stage is the **implementation surface** — the SDK / relayer
+    wiring and the submission transaction shapes — not the role itself.
 
-This makes convergence the rational choice. A controller considering a fork must weigh the deposit loss against whatever benefit the fork provides. The deposit is therefore not just an anti-flood mechanism — it is a convergence bond.
+## Live duties
+
+A super watcher observes witnessed KERI events against the Cardano checkpoint and acts only
+on evidence:
+
+- **Relay a fully witnessed anchoring** transition onto the checkpoint when the seal and its threshold witness receipts are valid (the §4 / §6a two-seal handoff).
+- **Submit** objective **duplicity** or seal↔native-**correspondence proofs** — the §7b fraud-proof shape, drilled via #90 — wherever the stored witness threshold receipted the divergent establishment event.
+- **Request or trigger the applicable freeze** path when safe advancement is impossible: an upheld correspondence-fraud verdict, or a compromise signal that only a freeze can contain during the synchronization lag.
+- **Police stale or false R-TEL** credential-status mirrors, submitting evidence when a mirror misreports issuance / revocation.
+- Support **permissionless, bounty-compatible** operation across all of the above.
+
+**A super watcher never chooses truth when cryptographic evidence is absent.** Where no
+threshold-receipted proof exists — for example the §7b witness-swap residual, or a
+witness-threshold collusion — the super watcher can **expose and forward** the discrepancy
+off-chain, but it **cannot manufacture a canonical truth branch** on-chain. It relays and
+evidences; it does not adjudicate.
+
+## Relationship to the freeze registry
+
+The freeze registry (R-FRZ) and the super watcher serve different purposes:
+
+| Mechanism | Authorized by | Purpose | Initiated by |
+|---|---|---|---|
+| Freeze registry (R-FRZ) | next_key (legitimate holder) | Emergency revocation of a stolen cur_key | Identity owner |
+| Super-watcher freeze request | Objective fraud / duplicity proof | Contain an unrecoverable divergence pending correction | Anyone (permissionless) |
+
+They are complementary and both **evidence-gated**: a controller whose `cur_key` is stolen
+uses the freeze registry directly; a super watcher **requests or triggers the applicable
+freeze** only on an objective proof. The super watcher never holds a freeze key of its own —
+it submits the evidence that authorizes the freeze path.
+
+## Super watcher as a KERI infrastructure extension
+
+KERI watchers already monitor KELs for duplicity — two conflicting events for the same AID
+at the same sequence number. A super watcher extends this across planes:
+
+- **Existing watcher:** observes one plane (KERI witnesses), detects **intra-KEL** duplicity.
+- **Super watcher:** spans **KERI ↔ Cardano** and the R-TEL mirror, **relays** valid anchoring transitions, and **submits** cross-plane duplicity / correspondence evidence.
+
+The implementation delta is: subscribe to Cardano checkpoint events, compare the checkpoint
+against witnessed KEL state at each bound sequence number, and know how to construct and
+submit the relay / fraud-proof / freeze-request transactions. Any existing KERI watcher
+operator is a natural candidate to run a super watcher; because operation is permissionless
+and bounty-compatible, no coordination or governance is needed to bootstrap the fleet.
+
+---
+
+## Historical appendix — the retired divergence-burn design
+
+!!! warning "Historical / superseded — retained for reference only (do not implement)"
+    Everything in this appendix is the **legacy divergence-burn design**, written against the
+    retired **two-independent-state-machines** premise. It is **no longer** the live role
+    (see the top of this page and `specs/68-keystate-shape/identity-model.md` §11): under the
+    KERI-sovereign checkpoint an identity cannot fork, so a divergence-burn is not needed for
+    identity. It is preserved, in the past tense, only as a reference for the proof / freeze
+    mechanics that the live evidence-submission duties inherit.
+
+### The retired two-registry framing
+
+Formerly, the Cardano identity registry and the KERI KEL were described as two independently
+advancing machines sharing inception material, and the super watcher was cast as a
+permissionless off-chain agent that **monitored** both registries and **enforced convergence
+by punishing forks**. That premise is superseded: the checkpoint is a projection of current
+authority, not a second sovereign history.
+
+### Fork = forfeit (retired)
+
+The core invariant of the retired design was: *a controller who diverged their Cardano
+identity from their KERI KEL lost their registry deposit to the first watcher that detected
+it.* The deposit was framed as a convergence bond, making convergence the rational choice.
+Under the sovereign checkpoint this mechanism is unnecessary — the identity cannot fork —
+so it is retained only for the proof mechanics below.
 
 ```mermaid
 sequenceDiagram
@@ -46,19 +131,20 @@ sequenceDiagram
     participant K as KERI Witnesses
     participant C as Cardano Registry
 
-    W->>K: Monitor KEL for trie_key's cesr_aid
-    W->>C: Monitor KeyState for trie_key
+    W->>K: (retired) Monitor KEL for trie_key's cesr_aid
+    W->>C: (retired) Monitor KeyState for trie_key
     Note over W: At seq N:
     Note over W: KEL.cur_pubkey ≠ Cardano.cur_pubkey
-    W->>W: Construct divergence proof
-    W->>C: Submit BurnTx (trie_key, divergence_proof)
-    C->>W: Deposit returned as bounty
+    W->>W: (retired) Construct divergence proof
+    W->>C: (retired) Submit BurnTx (trie_key, divergence_proof)
+    C->>W: (retired) Deposit returned as bounty
     Note over C: trie_key entry removed from registry
 ```
 
-## Burn transaction
+### Burn transaction (retired)
 
-The burn transaction removes a diverged identity from the Cardano registry and transfers the deposit to the presenter.
+The retired burn transaction removed a diverged identity from the Cardano registry and
+transferred the deposit to the presenter.
 
 ```
 BurnRedeemer {
@@ -71,82 +157,38 @@ BurnRedeemer {
 }
 ```
 
-**On-chain checks (current, without Blake3):**
-1. Inclusion proof validates `trie_key → cardano_key_state` against current identity root
-2. `keri_event` contains a `cur_pubkey` field (extracted and presented by the watcher)
-3. That `cur_pubkey ≠ cardano_key_state.cur_pubkey` at the same `seq`
-4. Ed25519 signature in `keri_event` is valid against the presented key
-5. Remove `trie_key` from trie, return deposit to tx submitter
+**On-chain checks (as designed, without Blake3):**
+1. Inclusion proof validated `trie_key → cardano_key_state` against the current identity root.
+2. `keri_event` contained a `cur_pubkey` field (extracted and presented by the watcher).
+3. That `cur_pubkey ≠ cardano_key_state.cur_pubkey` at the same `seq`.
+4. Ed25519 signature in `keri_event` was valid against the presented key.
+5. Remove `trie_key` from the trie, return the deposit to the tx submitter.
 
-**The [Blake3](https://github.com/BLAKE3-team/BLAKE3) gap here too:** checks 2–4 require parsing [CESR](https://github.com/WebOfTrust/ietf-cesr) event structure and verifying witness receipt signatures on-chain. Without Blake3 and CESR parsing builtins, the watcher must present the extracted fields and the script trusts the extraction — which a malicious watcher could forge against an innocent identity.
+**The [Blake3](https://github.com/BLAKE3-team/BLAKE3) gap here too:** checks 2–4 required
+parsing [CESR](https://github.com/WebOfTrust/ietf-cesr) event structure and verifying
+witness receipt signatures on-chain. Without Blake3 and CESR parsing builtins, the watcher
+had to present the extracted fields and the script trusted the extraction — which a
+malicious watcher could have forged against an innocent identity. The receipts-over-raw-bytes
+fact (§5) later simplified the *correspondence* proof the live design keeps.
 
-**With Blake3:** the script verifies `blake3(keri_event) == expected_event_hash`, which the watcher derives from the KEL. Combined with witness receipt verification, the burn becomes fully trustless.
+### Without Blake3: the trust problem (retired)
 
-## Without Blake3: the trust problem
+Without Blake3, the burn check was weaker: the script could not verify that the presented
+`keri_event` bytes were a legitimate KERI event or that the witness receipts were genuine,
+so a malicious watcher could have constructed a fake divergence proof against a controller
+who had **not** forked.
 
-Without Blake3, the burn check is weaker. The script cannot verify that the presented `keri_event` bytes are a legitimate KERI event or that the witness receipts are genuine. A malicious watcher could construct a fake divergence proof against a controller who has NOT forked.
+**Mitigations that were considered (without Blake3):**
+1. **Challenge period** — the burn was not immediate; the controller had N blocks to refute with a signed counter-proof, turning a one-sided burn into dispute resolution.
+2. **Threshold watcher agreement** — N independent watchers had to present the same divergence proof before the burn executed.
+3. **Governance veto** — a governance token holder could veto a burn within the challenge period.
 
-**Mitigations without Blake3:**
-1. **Require a challenge period** — the burn is not immediate; the controller has N blocks to refute by presenting their own signed counter-proof. This turns a one-sided burn into a dispute resolution process.
-2. **Require threshold watcher agreement** — N independent watchers must all present the same divergence proof before the burn executes. Colluding to burn an innocent identity requires compromising N watcher operators.
-3. **Governance veto** — a governance token holder can veto a burn within the challenge period. Adds a trusted party but protects against malicious watchers.
+Option 1 (challenge period) was judged the most trust-minimized.
 
-Option 1 (challenge period) is the most trust-minimized and most consistent with the rest of the design.
+### Deposit mechanics, economic alignment (retired)
 
-## Deposit mechanics
-
-The identity registry is a single UTxO holding the entire MPF trie (the MPFS model). Deposit ADA from all inceptions is pooled in that UTxO — there is no separate per-identity UTxO. The burn script must know exactly how much ADA to release per entry and to whom.
-
-**Chosen: Option A — deposit recorded in `KeyState`**
-
-The inception redeemer records the exact ADA amount locked at inception as a field in `KeyState`. The burn script reads this from the inclusion proof and releases that exact amount to the watcher. Allows variable deposit sizes — controllers choose their own convergence bond.
-
-```
-KeyState {
-  cur_pubkey   : ByteArray[32]
-  next_digest  : ByteArray[32]
-  seq          : Int
-  cesr_aid     : ByteArray[32]
-  deposit      : Lovelace          -- amount to release on burn or close
-}
-```
-
-In all cases: the deposit is forfeited permanently on burn. It goes to the watcher, never back to the controller.
-
-!!! note "Option B not adopted"
-    Option B (fixed protocol-wide deposit) was considered but rejected to allow variable convergence bonds. A fixed deposit would be simpler to audit but prevents controllers from signaling their own bond strength.
-
-## Economic alignment
-
-The deposit size determines how aggressively watchers monitor:
-
-| Deposit | Watcher incentive | Fork deterrence |
-|---|---|---|
-| 5 ADA | Weak — barely worth the tx fee | Low |
-| 20 ADA | Moderate | Meaningful |
-| 100 ADA | Strong — attracts dedicated watchers | High |
-| 1000 ADA | Very strong — professional watchers | Very high |
-
-The deposit creates a market for convergence enforcement. Controllers who want strong guarantees that their fork will be detected quickly should use a higher deposit. The protocol does not mandate a specific amount beyond the minimum — controllers choose their own convergence bond size.
-
-## Relationship to the freeze registry
-
-The freeze registry and the super watcher serve different purposes:
-
-| Mechanism | Authorized by | Purpose | Initiated by |
-|---|---|---|---|
-| Freeze registry | next_key (legitimate holder) | Emergency revocation of stolen cur_key | Identity owner |
-| Super watcher burn | Divergence proof | Punishment for forking | Anyone |
-
-They are complementary. A controller whose `cur_key` is stolen uses the freeze registry. A watcher that detects a fork uses the burn. Neither requires the other.
-
-## Super watcher as KERI infrastructure extension
-
-KERI watchers already monitor KELs for duplicity — two conflicting events for the same AID at the same sequence number. A super watcher extends this:
-
-- **Existing watcher:** monitors one registry (KERI witnesses), detects intra-registry duplicity
-- **Super watcher:** monitors two registries (KERI + Cardano), detects inter-registry divergence
-
-The implementation delta is: subscribe to Cardano registry events, compare Cardano KeyState against KEL state at each seq, know how to construct and submit a Cardano burn transaction.
-
-Any existing KERI watcher operator is a natural candidate to run a super watcher. The bounty mechanism means no coordination or governance is needed to bootstrap the network of watchers.
+The retired design recorded the exact ADA locked at inception as a `deposit` field in
+`KeyState`; the burn script released that amount to the watcher, and larger deposits were
+meant to attract more watchers. The deposit-size / watcher-incentive market was purely a
+convergence-bond mechanism and does **not** apply under the sovereign checkpoint — the live
+super watcher is bounty-compatible for **evidence submission**, not for burning forks.

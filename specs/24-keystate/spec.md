@@ -1,30 +1,67 @@
 # Spec: identity key-state UTxO + permissionless pre-rotation (list-shaped KeyState)
 
-!!! warning "Superseded storage/discovery: the single MPF identity registry here is the rejected Candidate-B lineage (#92)"
-    Per `specs/92-checkpoint-contention/DECISION.md`, the **physical storage and discovery**
-    layer of this spec — the **standalone single/shared identity-registry UTxO**, the **MPF
-    identity trie** keyed by `trie_key`, the **depth-10 sliding `root_window`**, and
-    **`identity_root` inclusion proofs** as the current-authority read (including A12 registry
-    contention) — is the **rejected Candidate-B legacy**. The #92 sovereign per-AID decision
-    (Candidate A) re-cuts it: each AID's current authority lives in its **own sovereign,
-    per-AID, quantity-one uniquely-tokenized checkpoint UTxO** — asset id
-    `(checkpoint_policy_id, aid_asset_name)`, current weighted key state in the inline
-    `CheckpointDatum`, normal rotation a `delta = 0` continuing-output transition (`seq + 1`),
-    discovery a **generic exact-asset `(policy_id, asset_name)` lookup** (candidate outref for
-    liveness only, re-validated against the ledger — **not** an authoritative registry root).
-    This removes **cross-AID contention on the per-AID current-authority storage / rotation
-    path**: because each AID advances only through its **own** quantity-one checkpoint UTxO, an
-    unrelated or hostile AID cannot contend for, consume, serialize, or delay **that AID's
-    checkpoint UTxO or its rotation throughput**, and the A12 single-UTxO contention residual on
-    this path falls away. It does **not** make an AID immune to every hostile actor: the
-    **emergency freeze (R-FRZ) remains a separate, shared, attacker-contendable residual** — not
-    eliminated by the per-AID storage split — and re-cutting it sovereign is a named downstream
-    dependency. The **mechanical re-cut of these validators is downstream #24** — not performed
-    in this document. What
-    **remains valid and unchanged**: the **list-shaped, threshold-capable `KeySet`/`KeyState`
-    shape**, the **KERI alignment** (qb64 digest preimage, weighted-threshold mapping), and the
-    **permissionless pre-rotation** analysis — this is the current weighted key state the
-    per-AID `CheckpointDatum` now carries, not a store keyed into a shared trie.
+!!! warning "Historical & non-normative: the single-MPF identity-registry storage/discovery here is the rejected Candidate-B lineage (#92)"
+    **Normative status of this document (read this first).** The **physical storage
+    and discovery** layer described below — the **standalone single/shared
+    identity-registry UTxO**, the **MPF identity trie** keyed by `trie_key`, the
+    **depth-10 sliding `root_window`**, and **`identity_root` inclusion proofs**
+    (including the A12 registry-contention read) — is
+    **historical, non-normative, and superseded wholesale**
+    for **current-authority storage and discovery**
+    by the **sovereign per-AID checkpoint contract**. It is retained only per
+    constitution I (superseded analyses are annotated, never deleted) as the
+    **rejected Candidate-B lineage**; nothing in the `RegistryDatum` / `trie_key` /
+    `identity_root` / `root_window` body below may be read as current normative
+    design.
+
+    **Current normative authority (what replaces it).** Per
+    `specs/92-checkpoint-contention/DECISION.md` (Candidate A), each AID's current
+    authority lives in its
+    **own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** —
+    asset id `(checkpoint_policy_id, aid_asset_name)`, current weighted key state in
+    the inline `CheckpointDatumV1`, normal rotation a `delta = 0` continuing-output
+    transition (`seq + 1`). **Currentness = the unspent checkpoint tip**; discovery
+    is a **generic exact-asset `(policy_id, asset_name)` lookup**. The index /
+    candidate outref is a **liveness hint only**, and is
+    **re-validated against the ledger** — never an authoritative registry root — so
+    a stale index answer yields retry/failure, not forged authority. This removes
+    cross-AID contention on the
+    per-AID current-authority storage/rotation path: because each AID advances only
+    through its **own** quantity-one checkpoint UTxO, an unrelated or hostile AID
+    cannot contend for, consume, serialize, or delay that AID's checkpoint UTxO or
+    its rotation throughput, and the A12 single-UTxO contention residual on this
+    path falls away. It does **not** make an AID immune to every hostile actor: the
+    **emergency freeze (R-FRZ) remains a separate, shared, attacker-contendable
+    residual** — re-cutting it sovereign is a named downstream dependency.
+
+    **Frozen wire contract (the schema the recut implements).** The
+    `CheckpointDatumV1` datum, the `Threshold` sum + F18 rule table, both message
+    domains (`InceptionMessage` / `AdvanceMessage`), the seven F10 advance
+    equalities (incl. the revealed-successor authorization), and the pinned
+    `deriveAidAssetName` / `CHECKPOINT_ASSET_DOMAIN_TAG` locator derivation are
+    frozen in `specs/68-keystate-shape/spec.md` ("The frozen surface" +
+    "Downstream obligation for #24"); #24 imports those types verbatim and does
+    **not** re-derive the shape.
+
+    **Downstream #24 obligation (the mechanical recut).** The mechanical recut of
+    these validators onto the frozen #68 contract — deleting the standalone MPF
+    identity-registry / `identity_root` / `root_window` / depth-10 `trie_key` path
+    from this document — is the downstream #24 deliverable, not performed here. In
+    short: this **mechanical recut is downstream #24**, not part of this record.
+
+    **Reusable analysis, identified separately (still valid).** Independent of the
+    rejected storage/discovery layer above, the **list-shaped, threshold-capable
+    `KeySet` / `KeyState` shape**, the **KERI alignment** (qb64 digest preimage,
+    weighted-threshold mapping), and the **permissionless pre-rotation** analysis
+    **remain valid and unchanged** — this is the current weighted key state the
+    per-AID `CheckpointDatumV1` now carries, not a store keyed into a shared trie.
+
+    **Delegation boundary (#68/#81, 2026-07-15):** V1 accepts independent
+    `icp` AIDs only, rejects `dip` / `drt`, and its `CheckpointDatumV1` has no
+    passive `delegator` / `di` field. Cooperative KERI delegation is a separately
+    versioned proof protocol because `di` alone does not prove the recursive parent
+    anchors. Any contrary `delegator` shape in older revisions of this spec is
+    superseded by `specs/68-keystate-shape/delegation-boundary-decision.md`.
 
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/24
 Epic: https://github.com/lambdasistemi/cardano-keri/issues/21
@@ -43,9 +80,9 @@ preimages, proofs), never by an operator key
 The business-case factoring ratified a scope change
 (`docs/design/business-cases/index.md`, factored-core item 1): every case has
 organizational actors whose AIDs are **k-of-n weighted multisig**. Because
-`trie_key` is derived from inception material and can never be retrofitted,
-the KeyState must be **list-shaped and threshold-capable from v1**, with a
-reserved `delegator` field. A single key is the 1-of-1 degenerate case.
+the KeyState must be **list-shaped and threshold-capable from v1**. A single
+key is the 1-of-1 degenerate case. V1 supports independent AIDs only; it does
+not reserve unchecked delegation metadata.
 
 This spec freezes that shape. Everything in **The frozen surface** is protocol
 surface per constitution principle III: it changes only by introducing a new
@@ -207,7 +244,6 @@ pub type KeyState {
   cur_set     : KeySet             -- current signing set, in clear (digest form)
   next_digest : ByteArray          -- keyset_commit(next KeySet), opaque until rotation
   seq         : Int                -- monotonic, starts at 0
-  delegator   : Option<ByteArray>  -- RESERVED: must be None in v1 (Q3)
   cesr_aid    : ByteArray          -- 32 bytes, metadata only, never verified on-chain
   deposit     : Lovelace           -- locked at inception, immutable
 }
@@ -230,12 +266,6 @@ Field rationale (nothing here is retrofittable):
   threshold) under the digest-agility mandate.
 - `seq` — monotonic rotation counter; freeze-marker expiry and verifier
   resynchronization key on it (`docs/architecture/identity-ops.md`).
-- `delegator` — reserved for KERI delegated AIDs (vLEI pattern). It sits
-  inside the `trie_key` preimage so that, when delegation is specified,
-  delegated identities occupy a distinct key space by construction. In v1 it
-  MUST be `None`: inception with `Some(_)` is rejected, and no v1 code path
-  interprets it. Squatting on future semantics is thereby impossible (attack
-  A7).
 - `cesr_aid` — controller-asserted hint for off-chain correlation, exactly as
   in `docs/design/aid-model.md`; signed inside `inc_msg` to prevent front-run
   metadata poisoning, never verified on-chain.
@@ -248,8 +278,7 @@ cur_commit = keyset_commit(cur_set)                    -- at inception
 trie_key   = blake2b_256(cbor({
   domain      : "cardano-keri/trie-key/v1",
   cur_commit  : ByteArray[32],
-  next_digest : ByteArray[32],
-  delegator   : Option<ByteArray>    -- None in v1, inside the preimage
+  next_digest : ByteArray[32]
 }))
 ```
 
@@ -260,7 +289,7 @@ not special-cased: it is a `KeySet` with one key of weight 1 and threshold 1.
 This supersedes the illustrative singleton derivation
 `blake2b_256(cbor({cur_pubkey, next_digest}))` in `docs/design/aid-model.md`
 in three ways: a domain tag is added, the key material is committed via
-`cur_commit`, and `delegator` enters the preimage. The docs re-vet (#15) must
+and `cur_commit` enters the preimage. The docs re-vet (#15) must
 reconcile the docs to this normative layout.
 
 **Versioning story (constitution III):** the domain tag
@@ -307,7 +336,7 @@ message bytes as reconstructed by the script.
 
 ### Inception
 
-Redeemer: `{ cur_set, next_digest, cesr_aid, delegator, absence_proof,
+Redeemer: `{ cur_set, next_digest, cesr_aid, absence_proof,
 sigs: List<(Int, RawKey, Sig)> }`.
 
 ```
@@ -320,16 +349,16 @@ inc_msg = cbor({
   cur_commit           : ByteArray[32],
   next_digest          : ByteArray[32],
   cesr_aid             : ByteArray[32],
-  delegator            : Option<ByteArray>,
   identity_root        : ByteArray[32]
 })
 ```
 
 On-chain checks:
 
-1. `cur_set` well-formed (rules above); `delegator == None` (v1).
+1. `cur_set` well-formed (rules above); the attested inception event type is
+   non-delegated `icp` (V1 rejects `dip`).
 2. `trie_key` recomputed by the script from `keyset_commit(cur_set)`,
-   `next_digest`, `delegator` — never taken from the redeemer.
+   `next_digest` — never taken from the redeemer.
 3. Absence proof: `trie_key` not in the trie — any leaf, including `Closed`
    and `FrozenFatal` tombstones, blocks (re-)registration.
 4. Signatures satisfy `cur_set` over `inc_msg` (satisfaction rule): each
@@ -382,7 +411,7 @@ On-chain checks:
    authorization: `docs/architecture/identity-ops.md`, rotation danger note).
 5. `mpf.update` of the leaf: `cur_set = reveal_set_digests`,
    `next_digest = new_next`, `seq = seq_to`; `cesr_aid`, `deposit`,
-   `delegator` unchanged; new root pushed onto the window.
+   unchanged; new root pushed onto the window.
 
 Pre-rotation preserved: theft of every raw current key (a full quorum) yields
 neither the preimage of `next_digest` nor signatures under the next set.
@@ -459,9 +488,9 @@ mainnet deployment; #23's spec gets a superseding note, per constitution I
   preimage (per-key digests + threshold) becomes public in the KEL by design
   (seq-0 recomputability). Knowing it yields nothing: satisfying a rotation
   still requires raw-key preimages of the digests and private-key signatures.
-- **A7 — delegator squatting.** Inception with `delegator != None` is
-  rejected in v1; the field is inside the `trie_key` preimage, so future
-  delegated identities cannot collide with v1 identities.
+- **A7 — delegated-event confusion.** V1 registration rejects `dip`, and the
+  advance path rejects `drt` / delegated recovery. A future delegated-AID
+  version cannot be activated by supplying metadata to the V1 validator.
 - **A8 — encoding malleability.** All hashed/signed material is serialized by
   the script from structured values (canonical CBOR); caller-supplied bytes
   are never hashed directly. Non-canonical encodings of the same logical set
@@ -511,7 +540,7 @@ Per constitution II, all cross-layer vectors come from `offchain`
 3. Below-threshold signature sets rejected: 1-of-3 on inception, rotation,
    and cage write.
 4. Edge-case rejections: duplicate signature index, duplicate key digest,
-   threshold > sum(weights), `delegator = Some(_)`, wrong `seq_to`, reveal
+   threshold > sum(weights), delegated `dip` inception, wrong `seq_to`, reveal
    set not matching `next_digest`, signature by a revealed key over a
    mutated `new_next`.
 5. Stolen-quorum demo: all three current raw keys sign a rotation attempt
@@ -542,10 +571,10 @@ Per constitution II, all cross-layer vectors come from `offchain`
 - **Q2 — `max_keys` bound.** Needs the exec-unit measurement from acceptance
   item 7; proposal: freeze the bound in the validator (not just the SDK) so
   an over-long set cannot brick rotation against the budget.
-- **Q3 — `delegator` content type.** Reserved as `Option<ByteArray>`; whether
-  it will hold a delegator `trie_key` (32 bytes) or richer material affects
-  nothing in v1 (must be `None`) but should be recorded when delegation is
-  specified.
+- **Q3 — delegated-AID support — RESOLVED for V1.** V1 has no `delegator`
+  field and rejects `dip` / `drt`. A future version must verify the immediate
+  parent anchor and recursive trust chain; see
+  `specs/68-keystate-shape/delegation-boundary-decision.md`.
 - **Q4 — contention policy.** Whether registry griefing (A12) warrants
   batched identity ops or a per-op fee beyond the inception deposit —
   deferred until observed.

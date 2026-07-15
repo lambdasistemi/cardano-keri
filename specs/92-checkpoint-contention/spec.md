@@ -1166,50 +1166,44 @@ presented as the selection reason; (5) every brief.md concern covered; and (6) n
 invented numbers — with no disturbance to the R-KEL classification or the #99
 invariants.
 
-## ACDC holder user story — generic checkpoint-asset discovery (Candidate A)
+## ACDC holder user story — historical issuers vs current actors (Candidate A)
 
 As an ACDC holder presenting a credential, **Alice** (her wallet / proof builder)
-needs the **current weighted signing keys** of each relevant **issuer AID** without
-contacting each QVI:
+keeps two evidence paths separate:
 
-1. For each issuer AID, she **derives the asset id** `(checkpoint_policy_id,
-   aid_asset_name)` deterministically from the AID (`aid_asset_name =
-   blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ canonical_qualified_aid_bytes)`, the
-   **native `blake2b_256` Plutus builtin**, not BLAKE3;
-   `checkpoint_policy_id` is protocol/network configuration).
-2. She **resolves each current checkpoint UTxO** with a **generic multi-asset index**
-   (any indexer / local node / sidecar / replicated resolver), using **cached
-   outrefs with failover** — no bespoke, authoritative, QVI-owned `AID → UTxO`
-   database, and no QVI online at presentation time.
-3. She **supplies the resolved UTxOs as real CIP-31 reference inputs**, and the
-   verifier/validator **re-checks** each against the ledger — **singleton asset**,
-   **designated script address**, **inline `CheckpointDatum`/AID binding**, **policy
-   lineage**, and freshness/freeze — so a **stale index answer** yields
-   **retry/failure, not forged authority**.
-4. She thereby obtains the **current weighted issuer keys** directly from the datum.
-   **After an issuer rotation** (`delta = 0`; `new.seq = old.seq + 1`), the **same
-   asset id** points to the **successor UTxO** and the **refreshed `CheckpointDatum`**
-   supplies the new keys — Alice does **not** consult a QVI-owned directory.
-5. Because each checkpoint is a **reference input (read, not spent)**, **no checkpoint
-   spending validator runs** in her transaction and she needs **no KERI replay, no
-   prior-rotation / two-seal re-verification, no genesis-BLAKE3 recompute, and no MPF
-   inclusion proof** — those transition facts are **inherited inductively** from the
-   singleton token's mint/spend history, leaving only the **bounded boundary check** of
-   step 3. She then does the **application** work the checkpoint **cannot pre-prove**,
-   and it splits by plane: **historical ACDC issuance / TEL status stays historical** —
-   she verifies the credential's **issuance seal against the issuer's KEL at that past
-   key state** (not re-signed under the issuer's current keys) and its TEL non-revocation;
-   while a **new** action she submits **on behalf of the current AID** is authorized
-   **under the current authenticated keys** the checkpoint carries. She may trust the
-   **authenticated current key state** after the boundary check to authorize new actions;
-   she must **not** trust a datum merely because it sits at the same script address, and
-   she must **not** re-derive historical credential issuance from the current keys.
+1. For each credential issuer, she supplies **historical issuance evidence**: the
+   issuer commitment and KEL/TEL anchor at the key state in force when the credential
+   was issued, plus current all-TELs non-revocation. She does **not** resolve an
+   issuer's current checkpoint merely because that issuer appears in the credential
+   chain. Later issuer rotation does not invalidate the historical issuance.
+2. For each AID that authorizes a **new action in this transaction** — Alice, a
+   sender, officer, transfer agent, or other acting AID — she derives the asset id
+   `(checkpoint_policy_id, aid_asset_name)` deterministically from the qualified AID
+   (`aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖
+   canonical_qualified_aid_bytes)`; `checkpoint_policy_id` is protocol/network
+   configuration).
+3. She resolves each acting AID's current checkpoint UTxO with a **generic
+   multi-asset index** (any indexer / local node / sidecar / replicated resolver),
+   using cached outrefs with failover — never a bespoke, authoritative QVI-owned
+   `AID → UTxO` directory.
+4. She supplies those UTxOs as real CIP-31 reference inputs. The validator re-checks
+   singleton asset, designated script/version/lineage, inline datum/AID binding, and
+   freshness/freeze rules. A stale answer yields retry/failure, not forged authority.
+5. The acting AID's `CheckpointDatum` supplies its current weighted keys and sequence.
+   Rotation consumes that checkpoint and makes a pending authorization stale; the
+   action must be re-signed under the successor state. Historical credentials are not
+   re-signed.
+6. Because a checkpoint is read as a reference input, no checkpoint spending
+   validator runs in the gated transaction. Its accepted mint/spend lineage carries
+   the bounded current-authority induction; historical credential verification still
+   follows the separate KEL/TEL evidence path.
 
-This story is what criterion **C9** falsifies for any candidate whose discovery
-depends on an exclusive/authoritative issuer/QVI database or lacks exact-asset lookup,
-rotation-successor tracking, migration lineage, stale-result rejection, or
-closed/tombstone semantics. (B/C answer the same story via an MPF inclusion proof
-against a windowed root **plus** an off-chain MPFS state materializer/proof builder.)
+Criterion **C9** has an explicit **exclusive/authoritative issuer/QVI database
+falsifier**. A candidate fails C9 when current-actor checkpoint discovery is not
+answerable by a generic exact-asset lookup, or lacks rotation-successor tracking,
+migration lineage, stale-result rejection, or closed/tombstone semantics. B/C
+answer the same current-actor story via an MPF inclusion proof against a windowed
+root plus an off-chain MPFS state materializer/proof builder.
 
 ## Functional requirements
 

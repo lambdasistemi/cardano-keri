@@ -241,12 +241,12 @@ The first finalization (T92-F1/T92-F2 below) **completed then was reverted** for
 reopen (`96a8b34`/`5fd5f2e` → `d3964a3`); both are **re-opened** and re-run after DS6 is
 accepted.
 
-- [ ] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
+- [X] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
   (Candidate A)** decision, the reopen (normative loss/fork/superwatcher contract), link
   #97/#99, note R-KEL classification + #99 invariants preserved, and the honest
-  measurement / R-FRZ residuals. (`gh`, no file commit.) *(First done, then reverted for
-  the reopen; the interim PR body must NOT claim completion.)*
-- [ ] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
+  measurement / R-FRZ residuals. (`gh`, no file commit.) *(First done, reverted for the
+  reopen, then restated to the finalized contract with DS6 landed.)*
+- [X] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
   satisfied `spec.md` success criteria); confirm `accept.sh final` GREEN + `./gate.sh`
   GREEN + fresh CI green; make `gate.sh` `final` strict, then drop `gate.sh`
   (`chore: drop gate.sh (ready for review)`); `gh pr ready 104`. **Do not merge** — the

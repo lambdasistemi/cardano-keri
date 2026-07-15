@@ -12,13 +12,13 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 1 — acceptance harness (PAIR)
 
-- [ ] T6801 Create `specs/68-keystate-shape/accept.sh` RED-first: `spec` structural
+- [X] T6801 Create `specs/68-keystate-shape/accept.sh` RED-first: `spec` structural
       target GREEN (asserts the frozen field list, `Threshold` forms, F18 rule
       table, both message domains + literal strings, the seven F10 equalities, the
       Freshness no-sliding-root statement, the #81 no-`delegator` statement); staged
       fail-safe targets (`threshold`,`datum`,`messages`,`vectors`,`aiken`,`parity`,
       `docs`,`final`) RED until their slice; `final` = conjunction.
-- [ ] T6801b (ORCH) Extend `gate.sh` only if a strict line beyond `just ci` is
+- [X] T6801b (ORCH) Extend `gate.sh` only if a strict line beyond `just ci` is
       warranted; otherwise leave the existing `accept.sh spec` strict + `final`
       tolerated wiring.
 

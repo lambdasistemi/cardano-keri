@@ -235,20 +235,43 @@ contract`, `Tasks: T9215`.
   - Preserve `aid-model.md` L124 (reconciled at the source; untouched) and `docs/index.md`
     (neutral enumeration). RED-before / GREEN-after `accept.sh ds6`.
 
-## Orchestrator finalization (ticket owner; after all DS slices + epic acceptance)
+## CI-link repair (reopen 2026-07-15) — DS6 super-watcher fragment (reviewed pair)
 
-The first finalization (T92-F1/T92-F2 below) **completed then was reverted** for the DS6
-reopen (`96a8b34`/`5fd5f2e` → `d3964a3`); both are **re-opened** and re-run after DS6 is
-accepted.
+Fresh CI on the finalized HEAD (`3fde29a`) exposed one DS6-owned docs-link defect: the
+`Docs links` job (lychee `--include-fragments`) could not resolve
+`docs/design/super-watcher.md#historical-appendix-the-retired-divergence-burn-design` —
+the DS6 heading `## Historical appendix — the retired divergence-burn design` (em dash)
+auto-slugs differently than the intra-page link. This is a **behaviour-changing docs
+repair under `docs/`**, so it is a **reviewed driver+navigator slice**, not a ticket-owner
+edit. The PR-life `gate.sh` sentinel was reopened (`revert: restore gate.sh for the DS6
+CI-link repair slice`) so the pair runs the complete gate.
 
-- [X] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
+- [ ] T9216 — **Correct (reviewed pair).** Owned file: **exactly** `docs/design/super-watcher.md`.
+  Expected semantic delta: **only** the em dash → colon in the `## Historical appendix …`
+  heading (so the auto-slug becomes `historical-appendix-the-retired-divergence-burn-design`,
+  matching the existing link). **RED/GREEN proof is the exact CI command:**
+  `nix run nixpkgs#lychee -- --no-progress --include-fragments docs/design/super-watcher.md`
+  (RED = 1 error on the fragment; GREEN = 0 errors). Commit
+  `docs(92): fix super-watcher historical-appendix anchor for the link checker`,
+  `Tasks: T9216`. The pair does **not** push; the ticket owner reviews/stamps, runs the
+  complete `./gate.sh` (gate.sh present) + the lychee proof, and returns the reviewed
+  UNPUSHED SHA for epic acceptance.
+
+## Orchestrator finalization (ticket owner; after the CI-link repair slice + epic acceptance)
+
+The first finalization (T92-F1/T92-F2) **completed then was reverted** twice: for the DS6
+reopen (`96a8b34`/`5fd5f2e` → `d3964a3`/`860ba99`) and for the CI-link repair (finalized at
+`3fde29a`, then `gate.sh` restored by `revert: restore gate.sh for the DS6 CI-link repair
+slice`). Both are **re-opened** and re-run after the T9216 repair slice is epic-accepted.
+
+- [ ] T92-F1 — Update PR #104 body + issue #92: state the **sovereign per-AID
   (Candidate A)** decision, the reopen (normative loss/fork/superwatcher contract), link
   #97/#99, note R-KEL classification + #99 invariants preserved, and the honest
-  measurement / R-FRZ residuals. (`gh`, no file commit.) *(First done, reverted for the
-  reopen, then restated to the finalized contract with DS6 landed.)*
-- [X] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
+  measurement / R-FRZ residuals. (`gh`, no file commit.) *(Restated to the finalized
+  contract; re-opened while the CI-link repair slice is in flight.)*
+- [ ] T92-F2 — Finalization audit (commit-gate over all commits; no open tasks; stamp
   satisfied `spec.md` success criteria); confirm `accept.sh final` GREEN + `./gate.sh`
-  GREEN + fresh CI green; make `gate.sh` `final` strict, then drop `gate.sh`
+  GREEN + fresh CI green (incl. `Docs links`); drop `gate.sh`
   (`chore: drop gate.sh (ready for review)`); `gh pr ready 104`. **Do not merge** — the
   epic owner performs the guarded merge. **GATE: finalization runs only after explicit
   epic-owner acceptance.** Report `COMPLETE`.

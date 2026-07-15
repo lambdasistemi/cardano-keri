@@ -133,7 +133,11 @@ This makes Veridian suitable for real-world identity use cases — [GLEIF vLEI](
 
 **Threshold multi-signature.** N-of-M keys required for any event. Natural for organisations, DAOs, legal entities.
 
-**Delegation.** Delegated AIDs let an organisation vouch for sub-identities ([vLEI](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) pattern: GLEIF → QVI → Legal Entity → department).
+**Delegation.** A KERI delegated AID lets a parent retain establishment control
+over a child through cooperative anchoring. In vLEI this is used in the issuer
+infrastructure (GLEIF Root → GLEIF External → QVI). The QVI → Legal Entity →
+officer authority hierarchy is primarily an **ACDC credential chain**; those
+holder AIDs need not be KERI-delegated.
 
 ---
 

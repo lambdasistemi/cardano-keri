@@ -178,12 +178,13 @@ On top of L1–L4:
   limits; full per-transaction verification is arithmetically out. Admission
   on-chain once; per-order checks are proofs + a **detached witness set meeting
   the trader AID's current weighted threshold**.
-- **KeyState parity**: **thresholds required at L1** (LE and QVI AIDs are
-  multisig in practice — a singleton KeyState cannot checkpoint them, breaking
-  the bridge claim for the anchor actors). **Delegation pressure is high**:
-  the LE→ECR hop *is* delegation in spirit; if L1 cannot represent delegated
-  AIDs, ECR holders must incept independent AIDs and the chain check carries
-  the whole burden of linking them.
+- **KeyState parity**: **thresholds required at L1** (organizational and service
+  AIDs use multisig in practice — a singleton KeyState cannot represent them).
+  **KERI delegation is not in this hot path**: the trader/service AID is an
+  independent AID, and the LE→ECR/OOR authority link is deliberately carried by
+  the ACDC credential/TEL chain. A production QVI AID may itself be
+  cooperatively delegated, but that is issuer-history/admission evidence, not
+  the current trader checkpoint.
 - **Cascade/freshness**: all-TELs per action (three MPF proofs — cheap).
   Freshness floor = TEL root-update cadence + settlement, i.e., minutes. Fine
   for "revoked entity loses access"; **not**

@@ -54,8 +54,10 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
    organizational actors whose AIDs are k-of-n weighted multisig. The
    list-shaped, weighted key state is **carried in each AID's per-AID
    `CheckpointDatum`** — the current weighted keys/threshold that the sovereign
-   checkpoint advances (#92) — a single key being the 1-of-1 degenerate case,
-   with a `delegator` field reserved. The admission `trie_key` is only a
+   checkpoint advances (#92) — a single key being the 1-of-1 degenerate case.
+   V1 accepts independent AIDs only and carries no passive `delegator` / `di`
+   field: cooperative KERI delegation needs parent-anchor proofs and is a
+   separately versioned extension. The admission `trie_key` is only a
    **stable historical-cache key** into the credential/admission plane; it is
    **never** the current-authority schema or lookup, which is the sovereign
    per-AID checkpoint (asset id `(checkpoint_policy_id, aid_asset_name)`,

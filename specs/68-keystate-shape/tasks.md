@@ -91,7 +91,7 @@ carry a `Tasks: T68NN` trailer; orchestrator doc/gate commits are marked (ORCH).
 
 ## Slice 8 — docs/ reconciliation (PAIR)
 
-- [ ] T6808 Reconcile the transferred draft to the frozen contract in
+- [X] T6808 Reconcile the transferred draft to the frozen contract in
       `docs/architecture/system.md`, `docs/design/aid-model.md`, `docs/keri-primer.md`,
       `docs/design/vlei.md`, `docs/design/business-cases/{index,regulated-defi}.md`,
       `docs/roadmap.md` (credential-authority-chain vs KERI-delegation distinction;

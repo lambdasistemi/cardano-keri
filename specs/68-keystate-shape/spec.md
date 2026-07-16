@@ -157,11 +157,12 @@ CheckpointDatumV1 { -- Constr 0 of the inner record; fields in EXACTLY this orde
   0  cesr_aid       : CesrAid                 -- external AID; the identity binding (KERI `i`)
   1  cur_keys       : List<KeyDigest>         -- current establishment key digests (KERI `k`), positional
   2  cur_threshold  : Threshold               -- current signing threshold (KERI `kt`)
-  3  next_digest    : Digest32                -- pre-rotation commitment: keyset_commit over (n, nt)
-  4  witnesses      : List<Verkey>            -- current witness verkeys (KERI `b`), positional
-  5  toad           : Int                     -- witness threshold (KERI `bt`); 0 <= toad <= len(witnesses)
-  6  seq            : Int                     -- Cardano checkpoint projection counter; starts 0, +1 per advance
-  7  native_sn      : Int                     -- KERI native sequence number `s` of the reflected est. event
+  3  next_keys      : List<KeyDigest>         -- pre-rotation next-key digests (KERI `n`), positional
+  4  next_threshold : Threshold               -- pre-rotation next threshold (KERI `nt`)
+  5  witnesses      : List<Verkey>            -- current witness verkeys (KERI `b`), positional
+  6  toad           : Int                     -- witness threshold (KERI `bt`); 0 iff no witnesses, else 1 <= toad <= len(witnesses)
+  7  seq            : Int                     -- Cardano checkpoint projection counter; starts 0, +1 per advance
+  8  native_sn      : Int                     -- KERI native sequence number `s` of the reflected est. event
 }
 ```
 
@@ -178,15 +179,25 @@ Field notes (nothing here is retrofittable):
 - **`cur_threshold`** — see "Threshold". Carries the KERI `kt` faithfully
   (integer **or** fractionally weighted multi-clause), so real GLEIF/QVI configs
   round-trip byte-identically.
-- **`next_digest`** — `keyset_commit(NextCommitment { next_keys, next_threshold })`
-  (definition below). Commits the next **keys AND next threshold** (`n` + `nt`),
-  opaque until the rotation reveal. Recomputable off-chain from public KEL data.
+- **`next_keys` / `next_threshold`** — the **explicit** pre-rotation commitment:
+  the KERI `n` digest list and `nt` threshold, stored as-is (each entry is a
+  `KeyDigest`, so raw next keys stay secret until reveal). Storing the pair
+  explicitly — instead of an aggregate hash over it — is what makes KERI
+  **partial (reserve) rotation** representable: an advance may reveal any
+  satisfiable subset of the committed digests and restate its own current
+  threshold, exactly the KERI dual-threshold rotation rule (GLEIF's production
+  Root AID rotates this way: 7 committed digests at `nt = ["1/3"×7]`, revealing
+  3 with `kt = ["1/3"×3]`, carrying unexposed reserves forward). Byte-for-byte
+  equal to public KEL data under F-code KELs.
 - **`witnesses`** — current witness **verkeys** (raw 32-byte Ed25519), because
   Cardano verifies receipts as `Ed25519.verify(witness_pk, seal_bytes, sig)`
   directly over seal bytes (`identity-model.md` §5). A non-transferable KERI
   witness AID's verkey is recoverable from its `B`-prefixed qb64; store the raw
   verkey. Positional. May be empty only if `toad = 0`.
-- **`toad`** — integer witness threshold (KERI `bt`). `0 <= toad <= len(witnesses)`.
+- **`toad`** — integer witness threshold (KERI `bt`). KERI-faithful bounds
+  (keripy `Kever` enforcement): `toad == 0` iff `witnesses` is empty, else
+  `1 <= toad <= len(witnesses)`. A witnessed state with `toad = 0` is not a
+  reachable KERI state and is rejected.
 - **`seq`** — the **projection** counter. Starts at `0` at inception; each accepted
   advance sets `new.seq = old.seq + 1` (`delta = 0`; `specs/92-checkpoint-contention/spec.md`).
   This is the anti-replay/monotonic key #24 A11 and #77 bind.
@@ -214,7 +225,7 @@ KeyDigest = blake2b_256(qb64(k))              -- 32 bytes; equals the KEL `n`-en
 ```
 
 So under F-prefix (Blake2b-256) KELs a `KeyDigest` equals the KEL next-key digest
-byte-for-byte and `next_digest` is recomputable from public KEL data at seq 0.
+byte-for-byte and the stored `next_keys` entries equal the KEL `n` list from public KEL data at seq 0.
 On-chain preimage checks reconstruct `qb64(raw_key)` from a supplied raw key before
 digesting (a fixed 33-byte → 44-char Base64url encoding) — that reconstruction is
 #24's redeemer path; #68 fixes only the digest **definition** and its width.
@@ -278,8 +289,11 @@ Semantics (KERI-faithful):
   form; multi-clause `Weighted([[..],[..]])` is the KERI "fractionally weighted
   threshold with multiple clauses".
 
-`Weight` **canonical form** (enforced by `fromData`, see F18): `den > 0`, `num > 0`,
-`num <= den` (weight in `(0, 1]`), and `gcd(num, den) = 1` (reduced). An unreduced
+`Weight` **canonical form** (enforced by `fromData`, see F18): `den > 0`, `num >= 0`,
+`num <= den` (weight in `[0, 1]`), and `gcd(num, den) = 1` (reduced). Zero weights
+are **legal KERI** — keripy's `Tholder` accepts `0 <= w <= 1` and the spec's
+reserve/custodial-rotation examples use them — and the gcd rule makes `0/1` the
+unique canonical zero spelling (`0/2` is rejected as unreduced). An unreduced
 input (`2/4`) is **rejected**, not silently normalized — canonicalization is the
 caller's obligation before constructing a typed V1 value. What is canonical is the
 **reduced rational spelling** only: `1/2` and `2/4` cannot both be present because
@@ -288,10 +302,11 @@ the latter is rejected, so equal weights have one byte representation.
 **Order is positional and security-significant.** `cur_keys` and the weights/clauses
 of a `Weighted` threshold are aligned by position; reordering the key list, the
 weights within a clause, or the clauses themselves is **not** a no-op — it changes
-`keyset_commit`, `next_digest`, and the authority, and #24 must treat a reordered
-input as a different (and typically failing) commitment. `keyset_commit` is
-independent only of reduced-vs-unreduced *spelling* (moot, since unreduced is
-rejected), never of order.
+the datum bytes and the authority. The one KERI-mandated exception: the
+dual-threshold advance maps signer evidence into `next_keys` by **digest
+membership**, so a revealed subset need not preserve the committed order (the
+KERI spec explicitly allows reordering between the prior-next and current key
+lists).
 
 This **supersedes** the `specs/24-keystate/spec.md` v1 restriction ("multi-clause,
 nested, or zero weights — out of v1 scope"): #68 supports multi-clause weighted
@@ -303,21 +318,24 @@ current AID requires them and they are a genuine v2 shape.
 `toad` (witness threshold) is always `Unweighted`-style integer arithmetic and is
 stored as a bare `Int`; KERI `bt` has no weighted form.
 
-### Next-key commitment
+### The explicit pre-rotation pair (KERI `n` + `nt`)
 
-```
-NextCommitment { 0 next_keys : List<KeyDigest>, 1 next_threshold : Threshold }
-keyset_commit(c) = blake2b_256(canonical_cbor(c))
-next_digest      = keyset_commit(NextCommitment { next_keys, next_threshold })
-```
-
-`keyset_commit` is also used to bind the **prior** (spent) key-state inside the
-advance message (below). The bytes are produced by the script's own serialization
-of the structured value.
+The pre-rotation commitment is the **explicit** `(next_keys, next_threshold)`
+pair inside the datum — no aggregate `keyset_commit` hash. Each `next_keys`
+entry is a `KeyDigest` (the KEL `n` entry byte-for-byte under F-code KELs), so
+raw next keys remain secret until reveal, while the structure supports the KERI
+**dual-threshold rotation rule**: at advance time the signer evidence must
+satisfy the rotation's own `(new_cur_keys, new_cur_threshold)` **and** the
+spent checkpoint's committed `(next_keys, next_threshold)`. This admits partial
+(reserve) rotation, augmented rotation (new keys that were never pre-committed
+count only toward the current threshold), and a restated current threshold —
+all normative KERI. The pair must itself be F18-well-formed at every write
+(inception and advance), so an AID can never commit to an unsatisfiable next
+state.
 
 ### Canonical PlutusData / CBOR rules (F30)
 
-The datum, `NextCommitment`, and every message preimage are **PlutusData** values
+The datum and every message preimage are **PlutusData** values
 serialized with the **deterministic Plutus `Data` encoding** that both the Cardano
 ledger's canonical encoder (Haskell) and Aiken's `aiken/cbor` `serialise` builtin
 emit. The pinned rules:
@@ -361,13 +379,13 @@ Let `n = len(keys)`.
 | 5 | `Weighted`: `clauses` non-empty; each clause non-empty | empty clause set / empty clause |
 | 6 | `Weighted`: `sum(len(clause_i)) == n` (partition covers keys exactly, once) | clause-structure/partition mismatch |
 | 7 | every `Weight`: `den > 0` | zero/negative denominator (invalid fraction) |
-| 8 | every `Weight`: `num > 0` | zero weight (dead key) |
+| 8 | every `Weight`: `num >= 0` | negative weight (zero is legal KERI — reserve pattern) |
 | 9 | every `Weight`: `num <= den` (weight `<= 1`) | over-unity weight |
 | 10 | every `Weight`: `gcd(num, den) == 1` | non-canonical (unreduced) rational |
 | 11 | every `Weight`: `1 <= num <= den <= MAX_WEIGHT_DENOM` | out-of-bound / grief-sized rational magnitude |
 | 12 | every clause: `sum(all weights in clause) >= 1` | impossible threshold (unsatisfiable even if all sign) |
 | 13 | no `Weight` is itself a nested weighted list | nested weighted threshold (v2 shape) |
-| 14 | `toad`: `0 <= toad <= len(witnesses)`; `witnesses` has no duplicate `Verkey` | malformed witness threshold / set |
+| 14 | `toad == 0` iff `witnesses` empty, else `1 <= toad <= len(witnesses)`; no duplicate `Verkey`; the `(next_keys, next_threshold)` pair passes rules 1–13 | malformed witness threshold / set; ill-formed next pair |
 
 `MAX_WEIGHT_DENOM` is a **frozen V1 constant = `4294967296` (`2^32`)**. Rationale:
 real GLEIF/QVI weights use tiny denominators (`/2`, `/3`, `/5`, `/12`); `2^32` is
@@ -421,19 +439,24 @@ InceptionMessage { -- Constr 0; fields in EXACTLY this order:
   4  cesr_aid              : CesrAid
   5  cur_keys              : List<KeyDigest>
   6  cur_threshold         : Threshold
-  7  next_digest           : Digest32
-  8  witnesses             : List<Verkey>
-  9  toad                  : Int
-  10 native_sn             : Int            -- the KERI inception event's `s` (0 for a plain icp)
+  7  next_keys             : List<KeyDigest>  -- KERI `n`
+  8  next_threshold        : Threshold        -- KERI `nt`
+  9  witnesses             : List<Verkey>
+  10 toad                  : Int
+  11 native_sn             : Int            -- MUST be 0 (a KERI icp always has s = 0)
 }
 ```
 
 Bound at registration; `seq` is implicitly `0` (an inception may only mint the
-genesis checkpoint). Registration is accepted iff the supplied signatures satisfy
-`(cur_keys, cur_threshold)` over `InceptionMessage` — an `icp` is self-signed by
-its own establishment keys — **and** the attested inception event type is a
-non-delegated `icp`. A `dip` (delegated inception) is **rejected**: accepting it
-would silently discard the delegator's establishment authority
+genesis checkpoint) and `native_sn` MUST be `0` — a KERI `icp` always has
+`s = 0`, so a non-zero value is rejected. Registration is accepted iff the
+supplied signatures satisfy `(cur_keys, cur_threshold)` over
+`InceptionMessage` — an `icp` is self-signed by its own establishment keys —
+**and** the attested inception event type is a non-delegated `icp` **and** the
+implied genesis datum (the message's key-state fields at `seq = 0`) passes the
+full datum well-formedness predicate (F18 rules 1–13 on both the current and
+next pairs, plus rule 14). A `dip` (delegated inception) is **rejected**:
+accepting it would silently discard the delegator's establishment authority
 (`delegation-boundary-decision.md`). There is no `delegator` field to populate.
 
 `network_id`, `checkpoint_policy_id`, and `aid_asset_name` bind the **deployment
@@ -457,12 +480,12 @@ AdvanceMessage { -- Constr 0; fields in EXACTLY this order:
   4  cesr_aid              : CesrAid        -- MUST equal the spent checkpoint's cesr_aid (AID invariant)
   5  spent_txid           : ByteArray[32]  -- tx id of the exact spent checkpoint UTxO (its TxOutRef)
   6  spent_index          : Int            -- output index of the exact spent checkpoint UTxO (its TxOutRef)
-  7  prior_commit         : Digest32       -- keyset_commit(NextCommitment{new_cur_keys,new_cur_threshold}); == spent.next_digest
-  8  prior_seq            : Int            -- = spent.seq
-  9  prior_native_sn      : Int            -- = spent.native_sn
-  10 new_cur_keys         : List<KeyDigest>  -- the REVEALED successor keys (pre-committed at the prior step)
-  11 new_cur_threshold    : Threshold
-  12 new_next_digest      : Digest32         -- the new pre-rotation commitment
+  7  prior_seq            : Int            -- = spent.seq
+  8  prior_native_sn      : Int            -- = spent.native_sn
+  9  new_cur_keys         : List<KeyDigest>  -- the revealed keys (any satisfiable subset of spent.next_keys, plus optional augmented keys)
+  10 new_cur_threshold    : Threshold        -- the rotation's own kt (may differ from spent.next_threshold)
+  11 new_next_keys        : List<KeyDigest>  -- the new pre-rotation commitment (KERI `n`)
+  12 new_next_threshold   : Threshold        -- the new pre-rotation threshold (KERI `nt`)
   13 new_witnesses        : List<Verkey>
   14 new_toad             : Int
   15 seq_to               : Int            -- MUST equal prior_seq + 1
@@ -470,13 +493,16 @@ AdvanceMessage { -- Constr 0; fields in EXACTLY this order:
 }
 ```
 
-`prior_commit = keyset_commit(NextCommitment { new_cur_keys, new_cur_threshold })`
-is the **pre-rotation reveal**: it MUST equal the spent checkpoint's `next_digest`.
-This is the pre-rotation binding — a party revealing the (public, at rotation)
-successor keys cannot substitute a *different* successor set, because only the set
-committed at the prior step hashes to the stored `next_digest`.
+The pre-rotation binding is the KERI **dual-threshold rule** (check 6 below): the
+signer evidence must satisfy the spent checkpoint's committed
+`(next_keys, next_threshold)` — evidence is mapped onto committed positions by
+**digest membership**, and only keys revealed in `new_cur_keys` count, mirroring
+keripy's index/ondex signature validation. A party holding no pre-committed key
+cannot substitute a successor set: their evidence maps to no committed position.
+Partial (reserve) rotation, augmented keys, and a restated current threshold are
+all admitted, exactly as the KERI spec's rotation-validation rule requires.
 
-The equalities #24 MUST enforce on the **reconstructed** message (F10 fix — the
+The checks #24 MUST enforce on the **reconstructed** message (F10 fix — the
 signed message binds the successor, defeating "capture the identity at `seq+2`"):
 
 1. `network_id` equals the deployment network id and `checkpoint_policy_id` equals
@@ -490,21 +516,29 @@ signed message binds the successor, defeating "capture the identity at `seq+2`")
    being spent — binds THIS unspent tip, not a stale sibling; a wrong-outref fails.
    This is the #68 acceptance target that the signature binds the spent
    checkpoint/token.
-4. `prior_commit == spent.next_digest` (the reveal matches the pre-committed
-   successor), `prior_seq == spent.seq`, and `prior_native_sn == spent.native_sn`.
+4. `prior_seq == spent.seq` and `prior_native_sn == spent.native_sn` — the message
+   binds the exact prior projection state.
 5. `seq_to == spent.seq + 1` (exact successor sequence; no skips, no `seq+2`) and
    `native_sn_to > spent.native_sn` (KERI events advance).
-6. **The signatures satisfy the REVEALED successor set `(new_cur_keys,
-   new_cur_threshold)` — NOT the spent current set (KERI pre-rotation; parent #21
-   invariant).** Combined with equality 4, only the holder of the private keys
-   pre-committed as `spent.next_digest` can authorize the rotation; theft of every
-   raw *current* key yields neither the next-set preimage nor next-set signatures,
-   so a full spent-current quorum signing an advance is **rejected** (negative
-   vector). Partial reveal holds: only the successor members that actually sign
-   reveal their raw keys; the rest stay digest-committed.
+6. **The dual-threshold rule (KERI pre-rotation; parent #21 invariant).** The
+   signer evidence MUST satisfy **both** (a) the rotation's own
+   `(new_cur_keys, new_cur_threshold)` and (b) the spent checkpoint's committed
+   `(next_keys, next_threshold)`, where for (b) only evidence from keys revealed
+   in `new_cur_keys` counts and positions are found by digest membership in
+   `spent.next_keys`. Theft of every raw *current* key contributes no committed
+   next position, so a full spent-current quorum signing an advance is
+   **rejected** (negative vector) — whether it signs the honest message or an
+   attacker-crafted one. Partial reveal holds: only the members that actually
+   sign reveal their raw keys; unexposed reserves stay digest-committed and may
+   be carried forward into `new_next_keys` (the GLEIF production Root pattern —
+   positive vector).
 7. The created checkpoint datum equals `V1{ cesr_aid, new_cur_keys,
-   new_cur_threshold, new_next_digest, new_witnesses, new_toad, seq_to,
-   native_sn_to }` (message ≡ resulting state; nothing written that was not signed).
+   new_cur_threshold, new_next_keys, new_next_threshold, new_witnesses,
+   new_toad, seq_to, native_sn_to }` (message ≡ resulting state; nothing written
+   that was not signed).
+8. The created datum passes the full datum well-formedness predicate (F18 rules
+   1–13 on both pairs + rule 14) — nothing ill-formed can be written, so the
+   next tip is always advanceable and never bricked.
 
 **Witness rotation (two-seal handoff, `identity-model.md` §6a).** When
 `new_witnesses/new_toad` differ from the spent set, #24 additionally requires the
@@ -581,8 +615,8 @@ material (pair-owned doc slices).
 ## The 1-of-1 degenerate vector
 
 A solo user is **not** a special path: `cur_keys = [d0]` (one key digest),
-`cur_threshold = Unweighted(1)`, and `next_digest` commits a one-key
-`NextCommitment`. The equivalent single-clause weighted form
+`cur_threshold = Unweighted(1)`, and a one-entry
+`(next_keys, next_threshold)` pair. The equivalent single-clause weighted form
 `Weighted([[ {num:1,den:1} ]])` evaluates identically. Both are shipped as golden
 vectors and asserted byte-identical across Aiken and Haskell, proving the degenerate
 case is a true instance of the general schema.
@@ -595,9 +629,10 @@ This ticket ships **executable** proof, not design-only prose, because the pure
 schema layer compiles before #24. Two independent encoders and a shared vector set:
 
 - **Haskell** (`offchain`) — a validator-free library: the `CheckpointDatumV1`,
-  `Threshold`, `NextCommitment`, and message types with `toData`/`fromData`
+  `Threshold`, and message types with `toData`/`fromData`
   (PlutusData) + canonical CBOR serialization; the F18 well-formedness predicate +
-  `evaluate`; `deriveAidAssetName`; the `InceptionMessage`/`AdvanceMessage` preimage
+  `evaluate` + the datum-level predicate; `deriveAidAssetName`; the
+  `InceptionMessage`/`AdvanceMessage` preimage
   builders. Hspec suites assert each golden vector's bytes and each negative
   vector's rejection.
 - **Aiken** (`onchain/lib`) — the mirrored `CheckpointDatumV1`/`Threshold`/message
@@ -621,19 +656,25 @@ Vector families (each positive + adversarial):
 2. Threshold well-formedness: one negative vector per F18 rule 1–14, including the
    exact `MAX_WEIGHT_DENOM` bound (rule 11) and unreduced-rational rejection (rule
    10).
-3. `next_digest`/`keyset_commit` **positional-order sensitivity**: reordering keys,
-   reordering weights within a clause, and reordering clauses each yield a
-   **different** commitment (a positive equal-spelling pair `1/1` vs a rejected
-   `2/2` covers the reduced-spelling rule).
+3. **Positional-order sensitivity**: reordering keys, reordering weights within
+   a clause, and reordering clauses each yield **different** datum bytes (a
+   positive equal-spelling pair `1/1` vs a rejected `2/2` covers the
+   reduced-spelling rule; zero weights get a positive vector and a rejected
+   non-canonical `0/2`).
 4. `InceptionMessage` bytes: accept `icp` (positive); negatives = `dip`-typed
    attested inception, wrong `network_id`, wrong `checkpoint_policy_id`, crossed
-   `aid_asset_name`.
-5. `AdvanceMessage` bytes + the equalities: valid succession signed by the revealed
-   successor set (positive); negatives = **full spent-current quorum signing the
-   advance (stolen-quorum rejection)**, `seq_to != prior_seq+1`, substituted
-   `new_next`, wrong `prior_commit`, crossed `cesr_aid`, cross-`network_id`,
+   `aid_asset_name`, non-zero `native_sn`, ill-formed genesis state.
+5. `AdvanceMessage` bytes + the checks: valid full-reveal succession (positive);
+   valid **partial (reserve) rotation** on the GLEIF production Root shape —
+   3-of-7 subset reveal, restated `kt`, carried-forward reserves — plus an
+   augmented-key acceptance (positives); negatives = **full spent-current quorum
+   (stolen-quorum rejection, on both the honest and an attacker-crafted
+   message)**, substituted never-committed successor set, insufficient subset
+   reveal, `seq_to != prior_seq+1`, substituted `new_next_keys`, wrong
+   `prior_seq`/`prior_native_sn`, crossed `cesr_aid`, cross-`network_id`,
    cross-`checkpoint_policy_id`, cross-`aid_asset_name`, **wrong
-   `(spent_txid, spent_index)`**, and non-increasing `native_sn`.
+   `(spent_txid, spent_index)`**, non-increasing `native_sn`, and an ill-formed
+   created state (eq8).
 6. `deriveAidAssetName(cesr_aid)` — one fixed derivation golden (a known `cesr_aid`
    → its exact 32-byte `aid_asset_name`, byte-identical Aiken/Haskell); negatives =
    wrong derivation code (not `0x46`), truncated / over-long `cesr_aid` (≠ 32 bytes),
@@ -660,7 +701,7 @@ implements:
   never trust a caller-provided asset name.
 - Implement the checkpoint mint/spend validator: genesis registration (mint
   quantity-one token, `seq=0`, `icp` only, `dip`/`drt` rejected), normal rotation
-  (`delta=0`, `seq+1`, the seven F10 equalities, two-seal witness handoff),
+  (`delta=0`, `seq+1`, the eight F10 checks incl. the dual-threshold rule, two-seal witness handoff),
   migration (#99 predecessor binding), and close (#99 `validateEnd` `-1` burn) with
   a closed/tombstone discovery story.
 - Wire witness-receipt verification (`Ed25519.verify(witness_pk, seal_bytes, sig)`)
@@ -679,21 +720,30 @@ implements:
 - [ ] The exact `CheckpointDatumV1` PlutusData shape — constructor tags, field
       order, byte widths/domains, canonical CBOR rules — is frozen and unambiguous
       for #24.
-- [ ] Current keys/threshold, next-key commitment (over `n`+`nt`), witnesses/`toad`,
+- [ ] Current keys/threshold, the explicit pre-rotation pair (`n`+`nt` as
+      `next_keys`/`next_threshold`), witnesses/`toad`,
       `seq`, `native_sn`, and `cesr_aid` are each represented and bound.
 - [ ] Integer **and** fractionally-weighted multi-clause thresholds are supported
-      with one deterministic normalization/evaluation; the F18 predicate rejects
-      empty sets, duplicate keys, zero/invalid fractions, over-unity/non-canonical
+      with one deterministic normalization/evaluation; zero weights are accepted
+      (KERI reserve pattern); the F18 predicate rejects
+      empty sets, duplicate keys, negative/invalid fractions, over-unity/non-canonical
       rationals, overflow, unsatisfied clause structure, nested weights, and
       impossible thresholds — one negative vector each.
 - [ ] The 1-of-1 vector is the degenerate instance of the same schema (not a
       separate path), shipped and byte-identical across languages.
 - [ ] `InceptionMessage` and `AdvanceMessage` domains are frozen; the advance
-      message binds the successor state and the seven equalities; #77 is translated
+      message binds the successor state and the eight checks; #77 is translated
       from `trie_key` wording into successor-substitution/replay resistance.
-- [ ] **Pre-rotation authorization (parent #21):** the advance is signed by the
-      **revealed successor** set (`new_cur_keys`/`new_cur_threshold`), not the spent
-      current set; a full stolen current quorum is rejected — negative vector.
+- [ ] **Pre-rotation authorization (parent #21):** the advance satisfies the KERI
+      **dual-threshold rule** — the rotation's own `(new_cur_keys,
+      new_cur_threshold)` **and** the spent checkpoint's committed `(next_keys,
+      next_threshold)`; a full stolen current quorum is rejected — negative
+      vectors on both the honest and an attacker-crafted message.
+- [ ] **Partial (reserve) rotation (KERI-faithful):** a satisfiable subset reveal
+      with a restated current threshold and carried-forward reserves — the GLEIF
+      production Root pattern — is accepted; an insufficient reveal is rejected;
+      augmented keys count only toward the current threshold — positive and
+      negative vectors.
 - [ ] **Deployment/token binding:** both messages bind `network_id`,
       `checkpoint_policy_id`, and `aid_asset_name`, and the advance binds the exact
       spent `TxOutRef` (`spent_txid`/`spent_index`); cross-network, cross-policy,

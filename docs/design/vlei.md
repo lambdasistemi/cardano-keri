@@ -83,7 +83,7 @@ GLEIF vLEI chain (off-chain KERI)
   └─ Legal Entity AID  (the stable identity handle)
        └─ aid_asset_name = deriveAidAssetName(cesr_aid)
             └─ quantity-one per-AID checkpoint UTxO (checkpoint_policy_id, aid_asset_name)
-                 └─ CheckpointDatumV1 { cur_keys, cur_threshold, next_digest, seq }
+                 └─ CheckpointDatumV1 { cur_keys, cur_threshold, next_keys, next_threshold, seq }
                       └─ value cages (MPFS)
 ```
 

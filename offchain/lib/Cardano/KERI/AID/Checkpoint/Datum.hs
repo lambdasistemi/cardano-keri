@@ -3,21 +3,23 @@ Module      : Cardano.KERI.AID.Checkpoint.Datum
 Description : Frozen sovereign per-AID @CheckpointDatumV1@ wire codec, #68
 
 The versioned checkpoint datum as a validator-free schema-support layer: the
-'CheckpointDatum' version sum, the 'CheckpointDatumV1' record, the
-'NextCommitment' pre-rotation commitment, and the canonical Plutus 'Data' /
-CBOR serialization the Aiken encoder mirrors byte-for-byte.
+'CheckpointDatum' version sum, the 'CheckpointDatumV1' record, and the
+canonical Plutus 'Data' / CBOR serialization the Aiken encoder mirrors
+byte-for-byte.
 
 @
 CheckpointDatum   = V1 CheckpointDatumV1   -- Constr 0, wrapping the inner record
-CheckpointDatumV1                          -- Constr 0, 8 fields in frozen order:
-  { cesr_aid, cur_keys, cur_threshold, next_digest,
+CheckpointDatumV1                          -- Constr 0, 9 fields in frozen order:
+  { cesr_aid, cur_keys, cur_threshold, next_keys, next_threshold,
     witnesses, toad, seq, native_sn }
-NextCommitment    = { next_keys, next_threshold }   -- Constr 0
 @
 
 Constructor indices and field order are protocol surface (spec #68); they
-change only by minting a new version tag. @next_digest@ commits the next keys
-AND next threshold via @keyset_commit@ = @blake2b_256@ of the canonical CBOR.
+change only by minting a new version tag. The pre-rotation commitment is the
+explicit @(next_keys, next_threshold)@ pair — the KERI @n@ digest list plus
+@nt@ — so a rotation may reveal any satisfiable subset of the committed
+digests (KERI partial\/reserve rotation) and restate its own current
+threshold, exactly as the KERI dual-threshold rule allows.
 -}
 module Cardano.KERI.AID.Checkpoint.Datum (
     -- * Fixed-width field aliases
@@ -29,13 +31,10 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     -- * The versioned datum
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
-    NextCommitment (..),
 
-    -- * Canonical serialization + commitments
+    -- * Canonical serialization
     canonicalCbor,
     blake2b_256,
-    keysetCommit,
-    nextDigest,
 
     -- * Datum-level well-formedness (rule 14)
     DatumError (..),
@@ -113,7 +112,7 @@ newtype CheckpointDatum
       V1 CheckpointDatumV1
     deriving stock (Show, Eq)
 
-{- | The frozen sovereign per-AID checkpoint state (Constr 0). The 8 fields
+{- | The frozen sovereign per-AID checkpoint state (Constr 0). The 9 fields
 are positional and security-significant; reordering changes the bytes.
 -}
 data CheckpointDatumV1 = CheckpointDatumV1
@@ -123,25 +122,18 @@ data CheckpointDatumV1 = CheckpointDatumV1
     -- ^ current establishment key digests (KERI @k@), positional
     , cdCurThreshold :: !Threshold
     -- ^ current signing threshold (KERI @kt@)
-    , cdNextDigest :: !Digest32
-    -- ^ pre-rotation commitment: @keyset_commit@ over @(n, nt)@
+    , cdNextKeys :: ![KeyDigest]
+    -- ^ pre-rotation next-key digests (KERI @n@), positional
+    , cdNextThreshold :: !Threshold
+    -- ^ pre-rotation next threshold (KERI @nt@)
     , cdWitnesses :: ![Verkey]
     -- ^ current witness verkeys (KERI @b@), positional
     , cdToad :: !Integer
-    -- ^ witness threshold (KERI @bt@); @0 <= toad <= len(witnesses)@
+    -- ^ witness threshold (KERI @bt@); 0 iff no witnesses, else in [1, len]
     , cdSeq :: !Integer
     -- ^ Cardano checkpoint projection counter; starts 0, +1 per advance
     , cdNativeSn :: !Integer
     -- ^ KERI native sequence number @s@ of the reflected est. event
-    }
-    deriving stock (Show, Eq)
-
-{- | The pre-rotation next-key commitment preimage (Constr 0): the next keys
-and next threshold whose @keyset_commit@ is stored as @next_digest@.
--}
-data NextCommitment = NextCommitment
-    { ncNextKeys :: ![KeyDigest]
-    , ncNextThreshold :: !Threshold
     }
     deriving stock (Show, Eq)
 
@@ -167,7 +159,7 @@ instance FromData CheckpointDatum where
         V1 <$> fromBuiltinData (BuiltinData d)
     fromBuiltinData _ = Nothing
 
--- | @CheckpointDatumV1@ -> @Constr 0 [8 fields in frozen order]@.
+-- | @CheckpointDatumV1@ -> @Constr 0 [9 fields in frozen order]@.
 instance ToData CheckpointDatumV1 where
     toBuiltinData CheckpointDatumV1{..} =
         BuiltinData $
@@ -176,7 +168,8 @@ instance ToData CheckpointDatumV1 where
                 [ B cdCesrAid
                 , List (map B cdCurKeys)
                 , asData cdCurThreshold
-                , B cdNextDigest
+                , List (map B cdNextKeys)
+                , asData cdNextThreshold
                 , List (map B cdWitnesses)
                 , I cdToad
                 , I cdSeq
@@ -186,17 +179,32 @@ instance ToData CheckpointDatumV1 where
 instance FromData CheckpointDatumV1 where
     fromBuiltinData
         ( BuiltinData
-                (Constr 0 [B cesr, List keys, thr, B nxt, List wits, I toad, I s, I nsn])
+                ( Constr
+                        0
+                        [ B cesr
+                            , List keys
+                            , thr
+                            , List nkeys
+                            , nthr
+                            , List wits
+                            , I toad
+                            , I s
+                            , I nsn
+                            ]
+                    )
             ) = do
             cdCurKeys <- traverse unB keys
+            cdNextKeys <- traverse unB nkeys
             cdWitnesses <- traverse unB wits
             cdCurThreshold <- fromBuiltinData (BuiltinData thr)
+            cdNextThreshold <- fromBuiltinData (BuiltinData nthr)
             pure
                 CheckpointDatumV1
                     { cdCesrAid = cesr
                     , cdCurKeys = cdCurKeys
                     , cdCurThreshold = cdCurThreshold
-                    , cdNextDigest = nxt
+                    , cdNextKeys = cdNextKeys
+                    , cdNextThreshold = cdNextThreshold
                     , cdWitnesses = cdWitnesses
                     , cdToad = toad
                     , cdSeq = s
@@ -204,29 +212,8 @@ instance FromData CheckpointDatumV1 where
                     }
     fromBuiltinData _ = Nothing
 
--- | @NextCommitment@ -> @Constr 0 [List next_keys, next_threshold]@.
-instance ToData NextCommitment where
-    toBuiltinData NextCommitment{..} =
-        BuiltinData $
-            Constr
-                0
-                [ List (map B ncNextKeys)
-                , asData ncNextThreshold
-                ]
-
-instance FromData NextCommitment where
-    fromBuiltinData (BuiltinData (Constr 0 [List keys, thr])) = do
-        ncNextKeys <- traverse unB keys
-        ncNextThreshold <- fromBuiltinData (BuiltinData thr)
-        pure
-            NextCommitment
-                { ncNextKeys = ncNextKeys
-                , ncNextThreshold = ncNextThreshold
-                }
-    fromBuiltinData _ = Nothing
-
 -- ---------------------------------------------------------
--- Canonical serialization + commitments
+-- Canonical serialization
 -- ---------------------------------------------------------
 
 {- | Canonical Plutus 'Data' CBOR bytes of a value — the cross-language,
@@ -240,16 +227,6 @@ canonicalCbor x =
 blake2b_256 :: ByteString -> Digest32
 blake2b_256 = digest (Proxy @Blake2b_256)
 
-{- | @keyset_commit(c) = blake2b_256(canonical_cbor(c))@ — binds the next
-(or, in the advance message, the revealed successor) key-state.
--}
-keysetCommit :: NextCommitment -> Digest32
-keysetCommit c = blake2b_256 (canonicalCbor c)
-
--- | @next_digest = keyset_commit(NextCommitment next_keys next_threshold)@.
-nextDigest :: [KeyDigest] -> Threshold -> Digest32
-nextDigest nk nt = keysetCommit (NextCommitment nk nt)
-
 -- ---------------------------------------------------------
 -- Datum-level well-formedness (spec rule 14)
 -- ---------------------------------------------------------
@@ -258,34 +235,42 @@ nextDigest nk nt = keysetCommit (NextCommitment nk nt)
 data DatumError
     = -- | @cesr_aid@ is not exactly 32 bytes.
       CesrAidWidth
-    | -- | @next_digest@ is not exactly 32 bytes.
-      NextDigestWidth
-    | {- | The key set\/threshold failed Slice-2 F18 'wellFormed'
+    | {- | The current key set\/threshold failed Slice-2 F18 'wellFormed'
       (empty\/duplicate keys, key width, threshold F18 rules 1–13).
       -}
       ThresholdIllFormed ThresholdError
+    | {- | The pre-rotation @(next_keys, next_threshold)@ pair failed the
+      same F18 'wellFormed' predicate.
+      -}
+      NextIllFormed ThresholdError
     | -- | A witness verkey is not exactly 32 bytes.
       WitnessWidth
     | -- | The witness set has a duplicate 'Verkey'.
       DuplicateWitness
-    | -- | @toad@ is outside @[0, len(witnesses)]@ (rule 14).
+    | {- | @toad@ violates the KERI @bt@ rule: @toad == 0@ iff @witnesses@
+      is empty, else @1 <= toad <= len(witnesses)@ (rule 14).
+      -}
       ToadRange
     deriving stock (Show, Eq)
 
-{- | Full datum well-formedness. Delegates the key-set + threshold F18 checks
-(empty\/duplicate keys, key width, threshold rules 1–13) to Slice-2
-'wellFormed', and additionally pins the fixed-width primitive domains
-(@cesr_aid@, @next_digest@, witness verkeys all exactly 32 bytes) and the
-rule-14 witness\/@toad@ constraints. Nothing malformed can serialize past it.
+{- | Full datum well-formedness. Delegates the current and next key-set +
+threshold F18 checks (empty\/duplicate keys, key width, threshold rules 1–13)
+to Slice-2 'wellFormed', and additionally pins the fixed-width primitive
+domains (@cesr_aid@, witness verkeys all exactly 32 bytes) and the rule-14
+witness\/@toad@ constraints. Nothing malformed can serialize past it.
 -}
 datumWellFormed :: CheckpointDatumV1 -> Either DatumError ()
 datumWellFormed CheckpointDatumV1{..} = do
     unless (BS.length cdCesrAid == 32) (Left CesrAidWidth)
-    unless (BS.length cdNextDigest == 32) (Left NextDigestWidth)
     -- Delegate cur_keys + cur_threshold to the reused Slice-2 F18 predicate.
     first ThresholdIllFormed (wellFormed cdCurKeys cdCurThreshold)
+    -- The committed next pair obeys the same F18 predicate (KERI n + nt).
+    first NextIllFormed (wellFormed cdNextKeys cdNextThreshold)
     unless (all ((== 32) . BS.length) cdWitnesses) (Left WitnessWidth)
     when (length (nub cdWitnesses) /= length cdWitnesses) (Left DuplicateWitness)
-    unless
-        (0 <= cdToad && cdToad <= fromIntegral (length cdWitnesses))
-        (Left ToadRange)
+    unless toadOk (Left ToadRange)
+  where
+    -- KERI bt rule: 0 iff the witness list is empty, else in [1, len].
+    toadOk
+        | null cdWitnesses = cdToad == 0
+        | otherwise = 1 <= cdToad && cdToad <= fromIntegral (length cdWitnesses)

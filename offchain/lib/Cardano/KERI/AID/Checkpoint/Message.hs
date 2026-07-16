@@ -3,15 +3,21 @@ Module      : Cardano.KERI.AID.Checkpoint.Message
 Description : Frozen signed inception\/advance message domains + F10 equalities, #68
 
 The two domain-separated signed preimages ('InceptionMessage', 'AdvanceMessage')
-and the locator asset-name derivation ('deriveAidAssetName'), plus the seven F10
-advance equalities as pure predicates. Validator-free: this fixes the message
+and the locator asset-name derivation ('deriveAidAssetName'), plus the F10
+advance checks as pure predicates. Validator-free: this fixes the message
 bytes and the equality checks #24 runs over them, not the transaction context.
 
-The advance is authorized by the __revealed successor set__
-(@new_cur_keys@\/@new_cur_threshold@), never the spent current set (KERI
-pre-rotation; parent #21). Each message binds the deployment (@network_id@,
-@checkpoint_policy_id@) and token (@aid_asset_name@), and every carried
-@aid_asset_name@ must equal @deriveAidAssetName(cesr_aid)@.
+The advance is authorized by the KERI __dual-threshold rule__: the attached
+signer evidence must satisfy the rotation's own current threshold over
+@new_cur_keys@ __and__ the spent checkpoint's pre-rotation threshold
+(@next_threshold@) over the committed @next_keys@ digests. The spent current
+set never authorizes (KERI pre-rotation; parent #21). Partial\/reserve
+rotation is supported: any satisfiable subset of the committed digests may be
+revealed, and @new_cur_threshold@ may differ from the committed
+@next_threshold@ — exactly the KERI rotation-validation rule. Each message
+binds the deployment (@network_id@, @checkpoint_policy_id@) and token
+(@aid_asset_name@), and every carried @aid_asset_name@ must equal
+@deriveAidAssetName(cesr_aid)@.
 -}
 module Cardano.KERI.AID.Checkpoint.Message (
     -- * Frozen constants
@@ -26,6 +32,7 @@ module Cardano.KERI.AID.Checkpoint.Message (
     EventType (..),
     InceptionMessage (..),
     inceptionMessage,
+    inceptionDatum,
     InceptionError (..),
     validateInception,
 
@@ -41,28 +48,29 @@ module Cardano.KERI.AID.Checkpoint.Message (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     CheckpointDatumV1 (..),
-    Digest32,
+    DatumError,
     KeyDigest,
-    NextCommitment (..),
     Verkey,
     blake2b_256,
-    keysetCommit,
+    datumWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     evaluate,
-    wellFormed,
-  )
+ )
 import Control.Monad (
     unless,
  )
+import Data.Bifunctor (
+    first,
+ )
 import Data.ByteString (
     ByteString,
-  )
+ )
 import Data.ByteString qualified as BS
-import Data.Either (
-    isRight,
-  )
+import Data.IntSet (
+    IntSet,
+ )
 import Data.IntSet qualified as IntSet
 import Data.Text.Encoding qualified as TE
 import PlutusCore.Data (
@@ -123,7 +131,7 @@ asData x = let BuiltinData d = toBuiltinData x in d
 data EventType = Icp | Dip | Drt
     deriving stock (Show, Eq)
 
--- | The signed inception preimage (Constr 0; 11 fields in frozen order).
+-- | The signed inception preimage (Constr 0; 12 fields in frozen order).
 data InceptionMessage = InceptionMessage
     { imDomain :: !ByteString
     , imNetworkId :: !Integer
@@ -132,7 +140,8 @@ data InceptionMessage = InceptionMessage
     , imCesrAid :: !CesrAid
     , imCurKeys :: ![KeyDigest]
     , imCurThreshold :: !Threshold
-    , imNextDigest :: !Digest32
+    , imNextKeys :: ![KeyDigest]
+    , imNextThreshold :: !Threshold
     , imWitnesses :: ![Verkey]
     , imToad :: !Integer
     , imNativeSn :: !Integer
@@ -151,7 +160,8 @@ instance ToData InceptionMessage where
                 , B imCesrAid
                 , List (map B imCurKeys)
                 , asData imCurThreshold
-                , B imNextDigest
+                , List (map B imNextKeys)
+                , asData imNextThreshold
                 , List (map B imWitnesses)
                 , I imToad
                 , I imNativeSn
@@ -167,12 +177,13 @@ inceptionMessage ::
     CesrAid ->
     [KeyDigest] ->
     Threshold ->
-    Digest32 ->
+    [KeyDigest] ->
+    Threshold ->
     [Verkey] ->
     Integer ->
     Integer ->
     InceptionMessage
-inceptionMessage net pol asset cesr keys thr nxt wits toad nsn =
+inceptionMessage net pol asset cesr keys thr nkeys nthr wits toad nsn =
     InceptionMessage
         { imDomain = inceptionDomain
         , imNetworkId = net
@@ -181,10 +192,28 @@ inceptionMessage net pol asset cesr keys thr nxt wits toad nsn =
         , imCesrAid = cesr
         , imCurKeys = keys
         , imCurThreshold = thr
-        , imNextDigest = nxt
+        , imNextKeys = nkeys
+        , imNextThreshold = nthr
         , imWitnesses = wits
         , imToad = toad
         , imNativeSn = nsn
+        }
+
+{- | The genesis checkpoint datum an accepted inception message mints:
+the message's key-state fields at @seq = 0@.
+-}
+inceptionDatum :: InceptionMessage -> CheckpointDatumV1
+inceptionDatum m =
+    CheckpointDatumV1
+        { cdCesrAid = imCesrAid m
+        , cdCurKeys = imCurKeys m
+        , cdCurThreshold = imCurThreshold m
+        , cdNextKeys = imNextKeys m
+        , cdNextThreshold = imNextThreshold m
+        , cdWitnesses = imWitnesses m
+        , cdToad = imToad m
+        , cdSeq = 0
+        , cdNativeSn = imNativeSn m
         }
 
 -- | An inception rejection reason.
@@ -197,13 +226,19 @@ data InceptionError
       InceptionAidWidth
     | -- | @aid_asset_name /= deriveAidAssetName(cesr_aid)@.
       InceptionAssetMismatch
+    | -- | @native_sn /= 0@: a KERI @icp@ always has @s = 0@.
+      InceptionNativeSnNonZero
+    | -- | The implied genesis datum failed 'datumWellFormed' (F18 + rule 14).
+      InceptionIllFormed DatumError
     deriving stock (Show, Eq)
 
 {- | Registration acceptance predicate: the attested event must be a
-non-delegated @icp@, the @cesr_aid@ must be a well-formed 32-byte AID, and the
+non-delegated @icp@, the @cesr_aid@ must be a well-formed 32-byte AID, the
 carried asset name must be the AID's own derived locator (a copied caller name
-is insufficient). The width check precedes the derivation check so a malformed
-AID is rejected on width, not on a coincidental derivation.
+is insufficient), @native_sn@ must be @0@ (a KERI @icp@ always has @s = 0@),
+and the implied genesis datum must be fully well-formed (F18 + rule 14). The
+width check precedes the derivation check so a malformed AID is rejected on
+width, not on a coincidental derivation.
 -}
 validateInception ::
     EventType -> InceptionMessage -> Either InceptionError ()
@@ -214,6 +249,8 @@ validateInception et m = do
     unless
         (imAidAssetName m == deriveAidAssetName (imCesrAid m))
         (Left InceptionAssetMismatch)
+    unless (imNativeSn m == 0) (Left InceptionNativeSnNonZero)
+    first InceptionIllFormed (datumWellFormed (inceptionDatum m))
 
 -- ---------------------------------------------------------
 -- Advance message (rotation / two-seal handoff) — F10 / #77
@@ -228,12 +265,12 @@ data AdvanceMessage = AdvanceMessage
     , amCesrAid :: !CesrAid
     , amSpentTxid :: !ByteString
     , amSpentIndex :: !Integer
-    , amPriorCommit :: !Digest32
     , amPriorSeq :: !Integer
     , amPriorNativeSn :: !Integer
     , amNewCurKeys :: ![KeyDigest]
     , amNewCurThreshold :: !Threshold
-    , amNewNextDigest :: !Digest32
+    , amNewNextKeys :: ![KeyDigest]
+    , amNewNextThreshold :: !Threshold
     , amNewWitnesses :: ![Verkey]
     , amNewToad :: !Integer
     , amSeqTo :: !Integer
@@ -253,12 +290,12 @@ instance ToData AdvanceMessage where
                 , B amCesrAid
                 , B amSpentTxid
                 , I amSpentIndex
-                , B amPriorCommit
                 , I amPriorSeq
                 , I amPriorNativeSn
                 , List (map B amNewCurKeys)
                 , asData amNewCurThreshold
-                , B amNewNextDigest
+                , List (map B amNewNextKeys)
+                , asData amNewNextThreshold
                 , List (map B amNewWitnesses)
                 , I amNewToad
                 , I amSeqTo
@@ -275,12 +312,12 @@ advanceMessage ::
     CesrAid ->
     ByteString ->
     Integer ->
-    Digest32 ->
     Integer ->
     Integer ->
     [KeyDigest] ->
     Threshold ->
-    Digest32 ->
+    [KeyDigest] ->
+    Threshold ->
     [Verkey] ->
     Integer ->
     Integer ->
@@ -293,12 +330,12 @@ advanceMessage
     cesr
     spentTxid
     spentIndex
-    priorCommit
     priorSeq
     priorNativeSn
     newKeys
     newThr
-    newNext
+    newNextKeys
+    newNextThr
     newWits
     newToad
     seqTo
@@ -311,12 +348,12 @@ advanceMessage
             , amCesrAid = cesr
             , amSpentTxid = spentTxid
             , amSpentIndex = spentIndex
-            , amPriorCommit = priorCommit
             , amPriorSeq = priorSeq
             , amPriorNativeSn = priorNativeSn
             , amNewCurKeys = newKeys
             , amNewCurThreshold = newThr
-            , amNewNextDigest = newNext
+            , amNewNextKeys = newNextKeys
+            , amNewNextThreshold = newNextThr
             , amNewWitnesses = newWits
             , amNewToad = newToad
             , amSeqTo = seqTo
@@ -325,7 +362,8 @@ advanceMessage
 
 {- | The spent checkpoint context the advance is validated against: its
 deployment, identity-asset name, exact @TxOutRef@, and prior key-state
-projection fields.
+projection fields — including the committed @(next_keys, next_threshold)@
+pair the dual-threshold rule evaluates.
 -}
 data SpentCheckpoint = SpentCheckpoint
     { scNetworkId :: !Integer
@@ -334,51 +372,65 @@ data SpentCheckpoint = SpentCheckpoint
     , scTxid :: !ByteString
     , scIndex :: !Integer
     , scCesrAid :: !CesrAid
-    , scNextDigest :: !Digest32
+    , scNextKeys :: ![KeyDigest]
+    , scNextThreshold :: !Threshold
     , scSeq :: !Integer
     , scNativeSn :: !Integer
     }
     deriving stock (Show, Eq)
 
 {- | The key digests of the raw keys that produced valid signatures (the
-signer evidence). eq6 maps this evidence onto @new_cur_keys@ positions and
-'evaluate's the __revealed successor__ threshold. Because the evidence is
-key-based, the SAME evidence can be evaluated against the spent-current set:
-a stolen spent-current quorum satisfies the spent-current threshold yet maps
-to no successor position, so it fails the successor threshold and is rejected.
+signer evidence). eq6 maps this evidence onto @new_cur_keys@ positions (the
+rotation's own threshold) __and__ onto the spent checkpoint's committed
+@next_keys@ positions (the pre-rotation threshold) — KERI's dual-threshold
+rule. Because the evidence is key-based, a stolen spent-current quorum maps
+to no committed @next_keys@ position, so it fails the pre-rotation threshold
+and is rejected.
 -}
 newtype RevealedSuccessorSigners = RevealedSuccessorSigners [KeyDigest]
     deriving stock (Show, Eq)
 
--- | Which advance validation rejected: the frozen domain gate or one of eq1-eq7.
+-- | Which advance validation rejected: the frozen domain gate or one of eq1-eq8.
 data AdvanceError
     = -- | The signed preimage domain was not the frozen @adv@ literal.
       AdvanceDomainMismatch
-    | -- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
-      --
-      -- The numbered constructors below still mirror the seven F10 equalities.
+    | {- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
+
+      The numbered constructors below mirror the eight F10 advance checks.
+      -}
       Eq1NetworkPolicyMismatch
     | -- | eq2: asset name is not the AID's derived locator, or the AID crossed.
       Eq2AssetOrAidMismatch
     | -- | eq3: @(spent_txid, spent_index)@ is not the spent @TxOutRef@.
       Eq3OutRefMismatch
-    | -- | eq4: the reveal does not match @spent.next_digest@ / prior fields.
+    | -- | eq4: @prior_seq@ / @prior_native_sn@ do not match the spent datum.
       Eq4PriorMismatch
     | -- | eq5: @seq_to /= spent.seq + 1@ or @native_sn_to@ did not advance.
       Eq5SequenceMismatch
-    | -- | eq6: the __revealed successor__ set did not authorize the advance.
-      Eq6SuccessorQuorumUnsatisfied
+    | -- | eq6: the revealed set did not satisfy its own current threshold.
+      Eq6CurrentQuorumUnsatisfied
+    | {- | eq6: the evidence did not satisfy the spent checkpoint's committed
+      @(next_keys, next_threshold)@ — the KERI pre-rotation gate.
+      -}
+      Eq6PriorNextQuorumUnsatisfied
     | -- | eq7: the created datum does not equal the message's new-state fields.
       Eq7CreatedStateMismatch
+    | -- | eq8: the created datum failed 'datumWellFormed' (F18 + rule 14).
+      Eq8CreatedIllFormed DatumError
     deriving stock (Show, Eq)
 
-{- | The seven F10 advance equalities as pure predicates, checked in order,
-against the actual created checkpoint datum. Crucially eq6 evaluates the
-signer evidence against the __revealed successor set__
-(@new_cur_keys@\/@new_cur_threshold@), not the spent current set — so a full
-stolen spent-current quorum yields no successor authorization and is rejected.
-eq7 requires the created datum to equal the message's new-state fields exactly
-(nothing written that was not signed).
+{- | The F10 advance checks as pure predicates, checked in order, against the
+actual created checkpoint datum. eq6 is the KERI __dual-threshold rule__: the
+signer evidence must satisfy the rotation's own @new_cur_threshold@ over
+@new_cur_keys@ __and__ the spent checkpoint's committed @next_threshold@ over
+its @next_keys@ digests — where only evidence from keys revealed in
+@new_cur_keys@ counts toward the pre-rotation gate (in KERI, rotation
+signatures are indexed over the event's own key list). A full stolen
+spent-current quorum maps to no committed @next_keys@ position and is
+rejected; partial\/reserve rotation (a satisfiable subset reveal, with a
+restated current threshold) is accepted. eq7 requires the created datum to
+equal the message's new-state fields exactly (nothing written that was not
+signed); eq8 requires that state to be well-formed.
 -}
 advanceEqualities ::
     SpentCheckpoint ->
@@ -405,13 +457,9 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
     unless
         (amSpentTxid am == scTxid sc && amSpentIndex am == scIndex sc)
         (Left Eq3OutRefMismatch)
-    -- eq4: the reveal matches the pre-committed successor and prior fields.
+    -- eq4: the message binds the exact prior projection state.
     unless
-        ( amPriorCommit am == scNextDigest sc
-            && amPriorCommit am
-                == keysetCommit
-                    (NextCommitment (amNewCurKeys am) (amNewCurThreshold am))
-            && amPriorSeq am == scSeq sc
+        ( amPriorSeq am == scSeq sc
             && amPriorNativeSn am == scNativeSn sc
         )
         (Left Eq4PriorMismatch)
@@ -419,30 +467,48 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
     unless
         (amSeqTo am == scSeq sc + 1 && amNativeSnTo am > scNativeSn sc)
         (Left Eq5SequenceMismatch)
-    -- eq6: the REVEALED successor set authorizes (NOT the spent current set).
-    -- Map the key-based signer evidence onto new_cur_keys positions.
-    let sigPositions =
-            IntSet.fromList
-                [ i
-                | (i, k) <- zip [0 ..] (amNewCurKeys am)
-                , k `elem` controlled
-                ]
+    -- eq6 (dual threshold, KERI rotation rule):
+    -- (a) the evidence satisfies the rotation's own current threshold over
+    --     new_cur_keys;
     unless
-        (isRight (wellFormed (amNewCurKeys am) (amNewCurThreshold am)))
-        (Left Eq6SuccessorQuorumUnsatisfied)
+        ( evaluate
+            (amNewCurThreshold am)
+            (length (amNewCurKeys am))
+            (positionsIn (amNewCurKeys am) controlled)
+        )
+        (Left Eq6CurrentQuorumUnsatisfied)
+    -- (b) the evidence revealed in new_cur_keys satisfies the spent
+    --     checkpoint's committed (next_keys, next_threshold) — pre-rotation.
+    let revealed = filter (`elem` amNewCurKeys am) controlled
     unless
-        (evaluate (amNewCurThreshold am) (length (amNewCurKeys am)) sigPositions)
-        (Left Eq6SuccessorQuorumUnsatisfied)
+        ( evaluate
+            (scNextThreshold sc)
+            (length (scNextKeys sc))
+            (positionsIn (scNextKeys sc) revealed)
+        )
+        (Left Eq6PriorNextQuorumUnsatisfied)
     -- eq7: the created datum equals the message's new-state fields exactly.
     let expected =
             CheckpointDatumV1
                 { cdCesrAid = amCesrAid am
                 , cdCurKeys = amNewCurKeys am
                 , cdCurThreshold = amNewCurThreshold am
-                , cdNextDigest = amNewNextDigest am
+                , cdNextKeys = amNewNextKeys am
+                , cdNextThreshold = amNewNextThreshold am
                 , cdWitnesses = amNewWitnesses am
                 , cdToad = amNewToad am
                 , cdSeq = amSeqTo am
                 , cdNativeSn = amNativeSnTo am
                 }
     unless (created == expected) (Left Eq7CreatedStateMismatch)
+    -- eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
+    first Eq8CreatedIllFormed (datumWellFormed created)
+
+-- | Positions in @keys@ whose digest appears in the signer evidence.
+positionsIn :: [KeyDigest] -> [KeyDigest] -> IntSet
+positionsIn keys controlled =
+    IntSet.fromList
+        [ i
+        | (i, k) <- zip [0 ..] keys
+        , k `elem` controlled
+        ]

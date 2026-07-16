@@ -158,9 +158,9 @@ sequenceDiagram
     CT->>KW: anchoring seal (blake2b payload commitments)
     KW-->>CT: threshold witness receipts (over raw seal bytes)
     CT->>V: advance tx — seal + receipts
-    V->>CK: read stored keys · next_digest · witnesses · toad
-    V->>V: blake2b(revealed) == next_digest, threshold sig,<br/>Ed25519 receipts vs stored witness set
-    V->>CK: seq+1 — new keys, new next_digest
+    V->>CK: read stored keys · next_keys · next_threshold · witnesses · toad
+    V->>V: revealed digests ∈ next_keys + dual thresholds,<br/>Ed25519 receipts vs stored witness set
+    V->>CK: seq+1 — new keys, new next_keys/next_threshold
     Note over CT,CK: witness-set change: two-seal handoff —<br/>outgoing set receipts the pre-announcement,<br/>incoming set receipts the activation (§6a)
 ```
 

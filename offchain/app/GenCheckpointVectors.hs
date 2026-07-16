@@ -23,10 +23,8 @@ module Main (main) where
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
-    NextCommitment (..),
     blake2b_256,
     canonicalCbor,
-    keysetCommit,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceMessage,
@@ -69,12 +67,12 @@ b28 :: Word8 -> ByteString
 b28 = BS.replicate 28
 
 -- Key digests / fixed material shared with DatumSpec.
-k1, k2, k3, cesrDatum, nextConst, w1, w2 :: ByteString
+k1, k2, k3, cesrDatum, nk1, w1, w2 :: ByteString
 k1 = b32 0x01
 k2 = b32 0x02
 k3 = b32 0x03
 cesrDatum = b32 0xaa
-nextConst = b32 0x0a
+nk1 = b32 0x0a
 w1 = b32 0xb1
 w2 = b32 0xb2
 
@@ -93,19 +91,21 @@ mkV1 ::
     ByteString ->
     [ByteString] ->
     Threshold ->
-    ByteString ->
+    [ByteString] ->
+    Threshold ->
     [ByteString] ->
     Integer ->
     Integer ->
     Integer ->
     CheckpointDatum
-mkV1 cesr keys thr nxt wits toad seqn nsn =
+mkV1 cesr keys thr nkeys nthr wits toad seqn nsn =
     V1
         CheckpointDatumV1
             { cdCesrAid = cesr
             , cdCurKeys = keys
             , cdCurThreshold = thr
-            , cdNextDigest = nxt
+            , cdNextKeys = nkeys
+            , cdNextThreshold = nthr
             , cdWitnesses = wits
             , cdToad = toad
             , cdSeq = seqn
@@ -122,7 +122,8 @@ validIcp =
         cesrA
         [k1] -- cur_keys
         (Unweighted 1) -- cur_threshold
-        (keysetCommit (NextCommitment [k2] (Unweighted 1))) -- next_digest
+        [k2] -- next_keys (KERI n)
+        (Unweighted 1) -- next_threshold (KERI nt)
         [] -- witnesses
         0 -- toad
         0 -- native_sn
@@ -137,19 +138,44 @@ validAdv =
         cesrA
         (b32 0xd0) -- spent_txid
         1 -- spent_index
-        (keysetCommit (NextCommitment newKeys newThr)) -- prior_commit
         0 -- prior_seq
         0 -- prior_native_sn
-        newKeys
-        newThr
-        (keysetCommit (NextCommitment [b32 0x22] (Unweighted 1))) -- new_next
+        [b32 0x11] -- new_cur_keys (the revealed committed set)
+        (Unweighted 1) -- new_cur_threshold
+        [b32 0x22] -- new_next_keys
+        (Unweighted 1) -- new_next_threshold
         [] -- new_witnesses
         0 -- new_toad
         1 -- seq_to
         1 -- native_sn_to
+
+{- | The partial (reserve) rotation fixture, matched to MessageSpec: the GLEIF
+production Root shape — 7 committed digests at @nt = [[1\/3 x7]]@, revealing
+indices {0, 5, 6} with a restated @kt = [[1\/3 x3]]@, re-committing the 4
+unexposed reserves plus 3 fresh digests.
+-}
+reserveAdv :: AdvanceMessage
+reserveAdv =
+    advanceMessage
+        1
+        policy
+        (deriveAidAssetName cesrA)
+        cesrA
+        (b32 0xd0)
+        1
+        0
+        0
+        [rn 0, rn 5, rn 6]
+        (third 3)
+        ([rn 1, rn 2, rn 3, rn 4] <> map b32 [0x71, 0x72, 0x73])
+        (third 7)
+        []
+        0
+        1
+        1
   where
-    newKeys = [b32 0x11]
-    newThr = Unweighted 1
+    rn i = b32 (0x30 + i)
+    third n = Weighted [replicate n (Weight 1 3)]
 
 -- | The @deriveAidAssetName@ negative computed with the WRONG code (@0x45@).
 wrongCodeAsset :: ByteString
@@ -192,16 +218,22 @@ vectors =
         "golden_threshold_weighted_1of1"
         "threshold: 1-of-1 as Weighted [[1/1]]"
         (canonicalCbor (Weighted [[Weight 1 1]]))
+    , Vec
+        "golden_threshold_zero_weight"
+        "threshold: zero-weight clause member [[0/1, 1/1]] (KERI reserve)"
+        (canonicalCbor (Weighted [[Weight 0 1, Weight 1 1]]))
     , -- Datum canonical CBOR (Slice 6 mirror).
       Vec
         "golden_datum_1of1"
         "datum: 1-of-1 (Unweighted 1, witnessless)"
-        (canonicalCbor (mkV1 cesrDatum [k1] (Unweighted 1) nextConst [] 0 0 0))
+        ( canonicalCbor
+            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [] 0 0 0)
+        )
     , Vec
         "golden_datum_integer_m_of_n"
         "datum: integer m-of-n (Unweighted 2, 3 keys)"
         ( canonicalCbor
-            (mkV1 cesrDatum [k1, k2, k3] (Unweighted 2) nextConst [] 0 5 7)
+            (mkV1 cesrDatum [k1, k2, k3] (Unweighted 2) [nk1] (Unweighted 1) [] 0 5 7)
         )
     , Vec
         "golden_datum_weighted"
@@ -211,7 +243,8 @@ vectors =
                 cesrDatum
                 [k1, k2]
                 (Weighted [[Weight 1 2, Weight 1 2]])
-                nextConst
+                [nk1]
+                (Unweighted 1)
                 []
                 0
                 2
@@ -226,7 +259,8 @@ vectors =
                 cesrDatum
                 [k1, k2]
                 (Weighted [[Weight 1 1], [Weight 1 1]])
-                nextConst
+                [nk1]
+                (Unweighted 1)
                 []
                 0
                 1
@@ -234,24 +268,33 @@ vectors =
             )
         )
     , Vec
+        "golden_datum_zero_weight"
+        "datum: zero-weight clause member [[0/1, 1/1]] (KERI reserve)"
+        ( canonicalCbor
+            ( mkV1
+                cesrDatum
+                [k1, k2]
+                (Weighted [[Weight 0 1, Weight 1 1]])
+                [nk1]
+                (Unweighted 1)
+                []
+                0
+                0
+                0
+            )
+        )
+    , Vec
         "golden_datum_witnessed"
         "datum: witnessed (non-empty witnesses, toad=2)"
         ( canonicalCbor
-            (mkV1 cesrDatum [k1] (Unweighted 1) nextConst [w1, w2] 2 3 9)
+            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [w1, w2] 2 3 9)
         )
     , Vec
         "golden_datum_witnessless"
         "datum: witnessless (toad=0, empty witnesses)"
-        (canonicalCbor (mkV1 cesrDatum [k1] (Unweighted 1) nextConst [] 0 0 0))
-    , -- NextCommitment: the pre-rotation commitment preimage + its digest.
-      Vec
-        "golden_next_commitment_cbor"
-        "next_commitment: canonical CBOR of NextCommitment [k2] (Unweighted 1)"
-        (canonicalCbor (NextCommitment [k2] (Unweighted 1)))
-    , Vec
-        "golden_next_commitment_digest"
-        "next_commitment: keyset_commit (blake2b_256 of the canonical CBOR)"
-        (keysetCommit (NextCommitment [k2] (Unweighted 1)))
+        ( canonicalCbor
+            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [] 0 0 0)
+        )
     , -- deriveAidAssetName: the golden derivation + its key negatives.
       Vec
         "golden_derivation_cesr_aid"
@@ -278,6 +321,10 @@ vectors =
         "golden_advance_message"
         "message: AdvanceMessage (valid succession) canonical CBOR"
         (canonicalCbor validAdv)
+    , Vec
+        "golden_advance_reserve_message"
+        "message: AdvanceMessage (partial/reserve rotation, GLEIF Root shape)"
+        (canonicalCbor reserveAdv)
     ]
 
 -- ---------------------------------------------------------

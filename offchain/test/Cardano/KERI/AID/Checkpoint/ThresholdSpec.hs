@@ -60,10 +60,12 @@ bbs :: [Word8] -> BuiltinByteString
 bbs = BuiltinByteString . BS.pack
 
 -- | A distinct, correctly-sized 32-byte 'KeyDigest'.
-k1, k2, k3 :: ByteString
+k1, k2, k3, k4, k5 :: ByteString
 k1 = BS.replicate 32 0x01
 k2 = BS.replicate 32 0x02
 k3 = BS.replicate 32 0x03
+k4 = BS.replicate 32 0x04
+k5 = BS.replicate 32 0x05
 
 isLeft :: Either a b -> Bool
 isLeft = either (const True) (const False)
@@ -215,6 +217,16 @@ spec = do
         it "rejects an over-unity weight 3/2" $
             decode (Constr 1 [List [List [Constr 0 [I 3, I 2]]]])
                 `shouldBe` Nothing
+        it "accepts the canonical zero weight 0/1" $
+            decode
+                ( Constr
+                    1
+                    [List [List [Constr 0 [I 0, I 1], Constr 0 [I 1, I 1]]]]
+                )
+                `shouldBe` Just (Weighted [[Weight 0 1, Weight 1 1]])
+        it "rejects a non-canonical zero weight 0/2 (rule 10)" $
+            decode (Constr 1 [List [List [Constr 0 [I 0, I 2]]]])
+                `shouldBe` Nothing
 
     -- ------------------------------------------------------
     -- Positional order sensitivity (security-significant)
@@ -247,6 +259,19 @@ spec = do
             wellFormed [k1] (Unweighted 1) `shouldBe` Right ()
         it "1-of-1 Weighted well-formed" $
             wellFormed [k1] (Weighted [[Weight 1 1]]) `shouldBe` Right ()
+        it "zero weight in a satisfiable clause well-formed (KERI reserve)" $
+            wellFormed [k1, k2] (Weighted [[Weight 0 1, Weight 1 1]])
+                `shouldBe` Right ()
+        it "keripy multi-clause vector [[1/2,1/2,1/2],[1,1]] well-formed" $
+            -- WebOfTrust/keripy tests/core/test_weighted_threshold.py
+            wellFormed
+                [k1, k2, k3, k4, k5]
+                ( Weighted
+                    [ [Weight 1 2, Weight 1 2, Weight 1 2]
+                    , [Weight 1 1, Weight 1 1]
+                    ]
+                )
+                `shouldBe` Right ()
 
     describe "wellFormed F18 rejections" $ do
         it "rule 1: empty key set" $
@@ -275,9 +300,12 @@ spec = do
         it "rule 7: non-positive denominator" $
             wellFormed [k1] (Weighted [[Weight 1 0]])
                 `shouldBe` Left NonPositiveDen
-        it "rule 8: zero numerator (dead key)" $
+        it "rule 8: negative numerator" $
+            wellFormed [k1] (Weighted [[Weight (-1) 2]])
+                `shouldBe` Left NegativeNum
+        it "an all-zero clause is unsatisfiable (rule 12, not rule 8)" $
             wellFormed [k1] (Weighted [[Weight 0 1]])
-                `shouldBe` Left NonPositiveNum
+                `shouldBe` Left UnsatisfiableClause
         it "rule 9: over-unity weight" $
             wellFormed [k1] (Weighted [[Weight 3 2]])
                 `shouldBe` Left OverUnityWeight
@@ -367,6 +395,23 @@ spec = do
         it "order-independent within a clause (sum is commutative)" $
             evaluate half3 3 (IntSet.fromList [2, 0])
                 `shouldBe` evaluate half3 3 (IntSet.fromList [0, 2])
+        let reserve = Weighted [[Weight 0 1, Weight 1 1]]
+        it "a zero-weight signer contributes nothing" $
+            evaluate reserve 2 (IntSet.fromList [0]) `shouldBe` False
+        it "a full-weight signer satisfies despite a zero-weight peer" $
+            evaluate reserve 2 (IntSet.fromList [1]) `shouldBe` True
+        let keripyMc =
+                Weighted
+                    [ [Weight 1 2, Weight 1 2, Weight 1 2]
+                    , [Weight 1 1, Weight 1 1]
+                    ]
+        it "keripy multi-clause vector: both clauses reached" $
+            -- clause 0 needs two of three halves; clause 1 needs both ones
+            evaluate keripyMc 5 (IntSet.fromList [0, 2, 3, 4])
+                `shouldBe` True
+        it "keripy multi-clause vector: unsigned second clause fails" $
+            evaluate keripyMc 5 (IntSet.fromList [0, 1, 2])
+                `shouldBe` False
 
     -- ------------------------------------------------------
     -- 1-of-1 degenerate equivalence

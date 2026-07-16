@@ -4,10 +4,9 @@ module Cardano.KERI.AID.Checkpoint.MessageSpec (
 
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
-    NextCommitment (..),
+    DatumError (..),
     blake2b_256,
     canonicalCbor,
-    keysetCommit,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
@@ -28,6 +27,8 @@ import Cardano.KERI.AID.Checkpoint.Message (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
+    ThresholdError (..),
+    Weight (..),
     evaluate,
  )
 import Data.ByteArray.Encoding (
@@ -70,7 +71,7 @@ b28 = BS.replicate 28
 {- | Positions in @keyset@ whose digest is among the @controlled@ signer
 evidence — the same mapping eq6 performs, used here to demonstrate that one
 attacker evidence satisfies the spent-current threshold yet fails the
-revealed-successor threshold.
+pre-rotation threshold over the committed next keys.
 -}
 positionsIn :: [ByteString] -> [ByteString] -> IntSet
 positionsIn keyset controlled =
@@ -100,9 +101,6 @@ wrongCodeAsset = blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x45 cesrA)
 -- Inception fixture (matched to the generator)
 -- ---------------------------------------------------------
 
-icpNext :: ByteString
-icpNext = keysetCommit (NextCommitment [k2] (Unweighted 1))
-
 validIcp :: InceptionMessage
 validIcp =
     inceptionMessage
@@ -112,13 +110,14 @@ validIcp =
         cesrA
         [k1] -- cur_keys
         (Unweighted 1) -- cur_threshold
-        icpNext
+        [k2] -- next_keys (KERI n)
+        (Unweighted 1) -- next_threshold (KERI nt)
         [] -- witnesses
         0 -- toad
         0 -- native_sn
 
 -- ---------------------------------------------------------
--- Advance fixture (valid succession) + eq6 stolen-quorum setup
+-- Advance fixture (valid succession) + eq6 dual-threshold setup
 -- ---------------------------------------------------------
 
 -- The REVEALED successor set (pre-committed at the prior step).
@@ -129,19 +128,19 @@ newThr :: Threshold
 newThr = Unweighted 1
 
 -- A spent-current set DISTINCT from the successor set: a 2-of-2 quorum whose
--- keys never appear in the successor set.
+-- keys never appear in the committed next set.
 spentCurKeys :: [ByteString]
 spentCurKeys = [k1, k2]
 
 spentCurThr :: Threshold
 spentCurThr = Unweighted 2
 
--- spent.next_digest == keyset_commit over the REVEALED successor set.
-spentNext :: ByteString
-spentNext = keysetCommit (NextCommitment newKeys newThr)
+-- The new pre-rotation commitment written by the advance.
+newNextKeys :: [ByteString]
+newNextKeys = [b32 0x22]
 
-newNext :: ByteString
-newNext = keysetCommit (NextCommitment [b32 0x22] (Unweighted 1))
+newNextThr :: Threshold
+newNextThr = Unweighted 1
 
 spentTxid :: ByteString
 spentTxid = b32 0xd0
@@ -155,7 +154,8 @@ spent =
         , scTxid = spentTxid
         , scIndex = 1
         , scCesrAid = cesrA
-        , scNextDigest = spentNext
+        , scNextKeys = newKeys
+        , scNextThreshold = newThr
         , scSeq = 0
         , scNativeSn = 0
         }
@@ -169,12 +169,12 @@ validAdv =
         cesrA
         spentTxid
         1 -- spent_index
-        spentNext -- prior_commit
         0 -- prior_seq
         0 -- prior_native_sn
         newKeys
         newThr
-        newNext
+        newNextKeys
+        newNextThr
         [] -- new_witnesses
         0 -- new_toad
         1 -- seq_to
@@ -187,7 +187,8 @@ createdValid =
         { cdCesrAid = cesrA
         , cdCurKeys = newKeys
         , cdCurThreshold = newThr
-        , cdNextDigest = newNext
+        , cdNextKeys = newNextKeys
+        , cdNextThreshold = newNextThr
         , cdWitnesses = []
         , cdToad = 0
         , cdSeq = 1
@@ -204,6 +205,58 @@ attackerKeys = spentCurKeys
 
 sigsStolenCurrent :: RevealedSuccessorSigners
 sigsStolenCurrent = RevealedSuccessorSigners attackerKeys
+
+-- ---------------------------------------------------------
+-- Partial (reserve) rotation fixture — the GLEIF production Root shape:
+-- 7 committed digests at nt = [[1/3 x7]]; the rotation reveals 3 of them
+-- with its own restated kt = [[1/3 x3]] and re-commits the 4 unexposed
+-- reserves plus 3 fresh digests. Verified against the live Root KEL
+-- (icp -> rot s=1, indices {0,5,6}).
+-- ---------------------------------------------------------
+
+rn :: Word8 -> ByteString
+rn i = b32 (0x30 + i)
+
+reserveN :: [ByteString]
+reserveN = map rn [0 .. 6]
+
+third :: Integer -> Threshold
+third n = Weighted [replicate (fromIntegral n) (Weight 1 3)]
+
+-- Revealed subset: indices {0, 5, 6} of the committed set.
+reserveRevealed :: [ByteString]
+reserveRevealed = [rn 0, rn 5, rn 6]
+
+-- Re-commitment: the 4 unexposed reserves carried forward + 3 fresh.
+reserveNextN :: [ByteString]
+reserveNextN =
+    [rn 1, rn 2, rn 3, rn 4]
+        <> map b32 [0x71, 0x72, 0x73]
+
+reserveSpent :: SpentCheckpoint
+reserveSpent =
+    spent
+        { scNextKeys = reserveN
+        , scNextThreshold = third 7
+        }
+
+reserveAdv :: AdvanceMessage
+reserveAdv =
+    validAdv
+        { amNewCurKeys = reserveRevealed
+        , amNewCurThreshold = third 3
+        , amNewNextKeys = reserveNextN
+        , amNewNextThreshold = third 7
+        }
+
+reserveCreated :: CheckpointDatumV1
+reserveCreated =
+    createdValid
+        { cdCurKeys = reserveRevealed
+        , cdCurThreshold = third 3
+        , cdNextKeys = reserveNextN
+        , cdNextThreshold = third 7
+        }
 
 spec :: Spec
 spec = do
@@ -252,7 +305,7 @@ spec = do
         it "icp canonical CBOR golden" $
             canonicalCbor validIcp
                 `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff58207a3a5a75a5237ec477925c6cc500f6db3aa85cdb341295e5d78c81bdf278a8eb800000ff"
+                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200202020202020202020202020202020202020202020202020202020202020202ffd8799f01ff800000ff"
         it "builder fills the frozen icp domain" $
             imDomain validIcp `shouldBe` inceptionDomain
 
@@ -294,6 +347,15 @@ spec = do
         it "rejects a mutated AID carrying the original asset -> InceptionAssetMismatch" $
             validateInception Icp validIcp{imCesrAid = cesrAFlipped}
                 `shouldBe` Left InceptionAssetMismatch
+        it "rejects native_sn /= 0 -> InceptionNativeSnNonZero (icp has s=0)" $
+            validateInception Icp validIcp{imNativeSn = 1}
+                `shouldBe` Left InceptionNativeSnNonZero
+        it "rejects an ill-formed genesis (toad=1, no witnesses) -> InceptionIllFormed" $
+            validateInception Icp validIcp{imToad = 1}
+                `shouldBe` Left (InceptionIllFormed ToadRange)
+        it "rejects an ill-formed genesis (empty next keys) -> InceptionIllFormed" $
+            validateInception Icp validIcp{imNextKeys = []}
+                `shouldBe` Left (InceptionIllFormed (NextIllFormed EmptyKeys))
 
     -- ------------------------------------------------------
     -- AdvanceMessage golden
@@ -302,12 +364,12 @@ spec = do
         it "advance (valid succession) canonical CBOR golden" $
             canonicalCbor validAdv
                 `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00158206100bd9bb638fdadbe0727294eb099f38a3698b643a15f24023acd14cb310d6d00009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff582024e5e385402220b63c92320512d818037a7f7cc24d9ec03bff16a7d4f1afbe9e80000101ff"
+                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff80000101ff"
         it "builder fills the frozen adv domain" $
             amDomain validAdv `shouldBe` advanceDomain
 
     -- ------------------------------------------------------
-    -- The seven F10 advance equalities (exact rejections).
+    -- The F10 advance checks (exact rejections).
     -- ------------------------------------------------------
     describe "advanceEqualities" $ do
         it "valid succession signed by the revealed successor set" $
@@ -318,38 +380,42 @@ spec = do
                 `shouldBe` Left AdvanceDomainMismatch
 
         -- eq6 — the parent #21 pre-rotation invariant (security-critical).
-        -- The SAME attacker evidence satisfies the spent-current quorum but
-        -- maps to no successor position, so the advance is rejected.
+        -- The SAME attacker evidence satisfies the spent-current threshold but
+        -- maps to no committed next-key position, so the advance is rejected.
         it "the stolen quorum satisfies the spent-current threshold" $
             evaluate spentCurThr (length spentCurKeys) (positionsIn spentCurKeys attackerKeys)
                 `shouldBe` True
-        it "the same evidence fails the revealed-successor threshold" $
-            evaluate newThr (length newKeys) (positionsIn newKeys attackerKeys)
+        it "the same evidence maps to no committed next-key position" $
+            evaluate (scNextThreshold spent) (length (scNextKeys spent)) (positionsIn (scNextKeys spent) attackerKeys)
                 `shouldBe` False
-        it "stolen current quorum signing the advance -> Eq6SuccessorQuorumUnsatisfied" $
+        it "stolen current quorum on the honest message -> Eq6CurrentQuorumUnsatisfied" $
             advanceEqualities spent validAdv createdValid sigsStolenCurrent
-                `shouldBe` Left Eq6SuccessorQuorumUnsatisfied
-        it "duplicated successor key cannot satisfy an unweighted quorum alone" $
-            let dupKey = b32 0x44
-                dupThr = Unweighted 2
-                dupCommit = keysetCommit (NextCommitment [dupKey, dupKey] dupThr)
-                dupAdv =
+                `shouldBe` Left Eq6CurrentQuorumUnsatisfied
+        it "stolen current quorum on an attacker-crafted message -> Eq6PriorNextQuorumUnsatisfied" $
+            -- The attacker reveals THEIR OWN keys as the successor set and
+            -- satisfies their own threshold, but none of their keys was
+            -- pre-committed, so the pre-rotation gate rejects.
+            let atkAdv =
                     validAdv
-                        { amPriorCommit = dupCommit
-                        , amNewCurKeys = [dupKey, dupKey]
-                        , amNewCurThreshold = dupThr
+                        { amNewCurKeys = attackerKeys
+                        , amNewCurThreshold = spentCurThr
                         }
-                dupCreated =
+                atkCreated =
                     createdValid
-                        { cdCurKeys = [dupKey, dupKey]
-                        , cdCurThreshold = dupThr
+                        { cdCurKeys = attackerKeys
+                        , cdCurThreshold = spentCurThr
                         }
-             in advanceEqualities
-                    spent{scNextDigest = dupCommit}
-                    dupAdv
-                    dupCreated
-                    (RevealedSuccessorSigners [dupKey])
-                    `shouldBe` Left Eq6SuccessorQuorumUnsatisfied
+             in advanceEqualities spent atkAdv atkCreated sigsStolenCurrent
+                    `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
+        it "substituted successor set with fresh keys -> Eq6PriorNextQuorumUnsatisfied" $
+            let subKeys = [b32 0x99]
+                subAdv =
+                    validAdv
+                        { amNewCurKeys = subKeys
+                        }
+                subCreated = createdValid{cdCurKeys = subKeys}
+             in advanceEqualities spent subAdv subCreated (RevealedSuccessorSigners subKeys)
+                    `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
 
         -- eq5 — sequence advance.
         it "bad seq_to (!= prior_seq + 1) -> Eq5SequenceMismatch" $
@@ -359,12 +425,12 @@ spec = do
             advanceEqualities spent validAdv{amNativeSnTo = 0} createdValid sigsRevealed
                 `shouldBe` Left Eq5SequenceMismatch
 
-        -- eq4 — reveal binds the successor to spent.next_digest.
-        it "wrong prior_commit -> Eq4PriorMismatch" $
-            advanceEqualities spent validAdv{amPriorCommit = b32 0x00} createdValid sigsRevealed
+        -- eq4 — the message binds the exact prior projection state.
+        it "wrong prior_seq -> Eq4PriorMismatch" $
+            advanceEqualities spent validAdv{amPriorSeq = 3} createdValid sigsRevealed
                 `shouldBe` Left Eq4PriorMismatch
-        it "substituted successor keys (reveal != commitment) -> Eq4PriorMismatch" $
-            advanceEqualities spent validAdv{amNewCurKeys = [b32 0x99]} createdValid sigsRevealed
+        it "wrong prior_native_sn -> Eq4PriorMismatch" $
+            advanceEqualities spent validAdv{amPriorNativeSn = 3} createdValid sigsRevealed
                 `shouldBe` Left Eq4PriorMismatch
 
         -- eq2 — AID / asset binding.
@@ -395,6 +461,87 @@ spec = do
         it "created datum disagreeing with the message (seq) -> Eq7CreatedStateMismatch" $
             advanceEqualities spent validAdv createdValid{cdSeq = 9} sigsRevealed
                 `shouldBe` Left Eq7CreatedStateMismatch
-        it "substituted new_next in the message (created unchanged) -> Eq7CreatedStateMismatch" $
-            advanceEqualities spent validAdv{amNewNextDigest = b32 0x00} createdValid sigsRevealed
+        it "substituted new next keys in the message (created unchanged) -> Eq7CreatedStateMismatch" $
+            advanceEqualities spent validAdv{amNewNextKeys = [b32 0x00]} createdValid sigsRevealed
                 `shouldBe` Left Eq7CreatedStateMismatch
+
+        -- eq8 — nothing ill-formed can be written.
+        it "message and created agreeing on toad=1 with no witnesses -> Eq8CreatedIllFormed" $
+            advanceEqualities
+                spent
+                validAdv{amNewToad = 1}
+                createdValid{cdToad = 1}
+                sigsRevealed
+                `shouldBe` Left (Eq8CreatedIllFormed ToadRange)
+        it "duplicated successor key in the written state -> Eq8CreatedIllFormed" $
+            let dupKey = b32 0x11 -- the committed key, listed twice
+                dupAdv =
+                    validAdv
+                        { amNewCurKeys = [dupKey, dupKey]
+                        , amNewCurThreshold = Unweighted 2
+                        }
+                dupCreated =
+                    createdValid
+                        { cdCurKeys = [dupKey, dupKey]
+                        , cdCurThreshold = Unweighted 2
+                        }
+             in advanceEqualities spent dupAdv dupCreated (RevealedSuccessorSigners [dupKey])
+                    `shouldBe` Left (Eq8CreatedIllFormed (ThresholdIllFormed DuplicateKey))
+
+    -- ------------------------------------------------------
+    -- Partial (reserve) rotation — the KERI dual-threshold rule on the
+    -- GLEIF production Root shape (verified against the live Root KEL).
+    -- ------------------------------------------------------
+    describe "advanceEqualities partial (reserve) rotation" $ do
+        it "revealing 3 of 7 committed digests with a restated kt is accepted" $
+            advanceEqualities
+                reserveSpent
+                reserveAdv
+                reserveCreated
+                (RevealedSuccessorSigners reserveRevealed)
+                `shouldBe` Right ()
+        it "the restated kt differs from the committed nt (KERI-legal)" $
+            amNewCurThreshold reserveAdv `shouldSatisfy` (/= scNextThreshold reserveSpent)
+        it "an insufficient reveal fails the pre-rotation gate" $
+            -- Two committed keys + one augmented fresh key satisfy the
+            -- rotation's own lenient threshold, but only 2/3 of the
+            -- committed weight signs: the pre-rotation gate rejects.
+            let aug = b32 0x77
+                curKeys = [rn 0, rn 5, aug]
+                shortAdv =
+                    reserveAdv
+                        { amNewCurKeys = curKeys
+                        , amNewCurThreshold = Unweighted 1
+                        }
+                shortCreated =
+                    reserveCreated
+                        { cdCurKeys = curKeys
+                        , cdCurThreshold = Unweighted 1
+                        }
+             in advanceEqualities
+                    reserveSpent
+                    shortAdv
+                    shortCreated
+                    (RevealedSuccessorSigners [rn 0, aug])
+                    `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
+        it "an augmented (never-committed) key counts only toward the current threshold" $
+            -- Same shape, but all three committed positions sign too: the
+            -- augmented key's signature is harmless and the advance passes.
+            let aug = b32 0x77
+                curKeys = [rn 0, rn 5, rn 6, aug]
+                augAdv =
+                    reserveAdv
+                        { amNewCurKeys = curKeys
+                        , amNewCurThreshold = Unweighted 3
+                        }
+                augCreated =
+                    reserveCreated
+                        { cdCurKeys = curKeys
+                        , cdCurThreshold = Unweighted 3
+                        }
+             in advanceEqualities
+                    reserveSpent
+                    augAdv
+                    augCreated
+                    (RevealedSuccessorSigners (aug : reserveRevealed))
+                    `shouldBe` Right ()

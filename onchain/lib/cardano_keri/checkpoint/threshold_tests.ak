@@ -7,8 +7,8 @@
 
 use aiken/cbor
 use cardano_keri/checkpoint/threshold.{
-  DuplicateKey, EmptyClause, EmptyKeys, Invalid, KeyWidth, NonPositiveDen,
-  NonPositiveNum, OverUnityWeight, PartitionMismatch, Threshold, UnreducedWeight,
+  DuplicateKey, EmptyClause, EmptyKeys, Invalid, KeyWidth, NegativeNum,
+  NonPositiveDen, OverUnityWeight, PartitionMismatch, Threshold, UnreducedWeight,
   UnsatisfiableClause, Unweighted, UnweightedRange, Valid, Weight,
   WeightOutOfBound, Weighted, evaluate, max_weight_denom, well_formed,
 }
@@ -26,6 +26,12 @@ const k2: ByteArray =
 
 const k3: ByteArray =
   #"0303030303030303030303030303030303030303030303030303030303030303"
+
+const k4: ByteArray =
+  #"0404040404040404040404040404040404040404040404040404040404040404"
+
+const k5: ByteArray =
+  #"0505050505050505050505050505050505050505050505050505050505050505"
 
 const k31: ByteArray =
   #"01010101010101010101010101010101010101010101010101010101010101"
@@ -58,6 +64,12 @@ test cbor_1of1_unweighted() {
 
 test cbor_1of1_weighted() {
   cbor.serialise(Weighted([[Weight { num: 1, den: 1 }]])) == vectors.golden_threshold_weighted_1of1
+}
+
+test cbor_zero_weight() {
+  cbor.serialise(
+    Weighted([[Weight { num: 0, den: 1 }, Weight { num: 1, den: 1 }]]),
+  ) == vectors.golden_threshold_zero_weight
 }
 
 // ---------------------------------------------------------
@@ -96,6 +108,32 @@ test wf_1of1_unweighted() {
 
 test wf_1of1_weighted() {
   well_formed([k1], Weighted([[Weight { num: 1, den: 1 }]])) == Valid
+}
+
+test wf_zero_weight_in_satisfiable_clause() {
+  // Zero weights are legal KERI (the reserve/custodial-rotation pattern).
+  well_formed(
+    [k1, k2],
+    Weighted([[Weight { num: 0, den: 1 }, Weight { num: 1, den: 1 }]]),
+  ) == Valid
+}
+
+test wf_keripy_multi_clause_vector() {
+  // WebOfTrust/keripy tests/core/test_weighted_threshold.py:
+  // [["1/2","1/2","1/2"],["1","1"]] over 5 keys.
+  well_formed(
+    [k1, k2, k3, k4, k5],
+    Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 2 },
+        ],
+        [Weight { num: 1, den: 1 }, Weight { num: 1, den: 1 }],
+      ],
+    ),
+  ) == Valid
 }
 
 // ---------------------------------------------------------
@@ -142,9 +180,16 @@ test wf_rule7_non_positive_den() {
   )
 }
 
-test wf_rule8_non_positive_num() {
+test wf_rule8_negative_num() {
+  well_formed([k1], Weighted([[Weight { num: -1, den: 2 }]])) == Invalid(
+    NegativeNum,
+  )
+}
+
+test wf_all_zero_clause_unsatisfiable() {
+  // An all-zero clause is caught by rule 12, not rule 8.
   well_formed([k1], Weighted([[Weight { num: 0, den: 1 }]])) == Invalid(
-    NonPositiveNum,
+    UnsatisfiableClause,
   )
 }
 
@@ -263,6 +308,37 @@ test eval_weighted_multi_clause_anded_one_unsatisfied() {
 
 test eval_weighted_order_independent() {
   evaluate(half3, 3, [2, 0]) == evaluate(half3, 3, [0, 2])
+}
+
+const reserve: Threshold =
+  Weighted([[Weight { num: 0, den: 1 }, Weight { num: 1, den: 1 }]])
+
+test eval_zero_weight_signer_contributes_nothing() {
+  evaluate(reserve, 2, [0]) == False
+}
+
+test eval_full_weight_signer_satisfies_despite_zero_peer() {
+  evaluate(reserve, 2, [1]) == True
+}
+
+const keripy_mc: Threshold =
+  Weighted(
+    [
+      [
+        Weight { num: 1, den: 2 },
+        Weight { num: 1, den: 2 },
+        Weight { num: 1, den: 2 },
+      ],
+      [Weight { num: 1, den: 1 }, Weight { num: 1, den: 1 }],
+    ],
+  )
+
+test eval_keripy_multi_clause_both_clauses_reached() {
+  evaluate(keripy_mc, 5, [0, 2, 3, 4]) == True
+}
+
+test eval_keripy_multi_clause_unsigned_second_clause_fails() {
+  evaluate(keripy_mc, 5, [0, 1, 2]) == False
 }
 
 // ---------------------------------------------------------

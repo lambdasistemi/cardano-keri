@@ -229,8 +229,8 @@ demonstrably exists is
 on other chains, all using issuer-controlled allowlists; none on Cardano at
 scale — a 2026 Cardano RWA pipeline is a gap to research, not assert. Smallest real
 pilot: **one tokenized instrument + one venue on preprod**, synthetic
-GLEIF/QVI chain (dev-issued F-prefix credentials, since real F-prefix vLEIs do
-not exist until Veridian ships the ask), demonstrating admission, gated batch
+GLEIF/QVI chain (or real E-prefix testnet credentials — the E-native contract
+consumes production-format vLEIs as-is), demonstrating admission, gated batch
 execution, and revocation propagation end-to-end.
 
 ## 6. Case-specific risks & limitations

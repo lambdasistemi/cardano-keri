@@ -251,7 +251,7 @@
   </section>
 
   <!-- 11 · M3 -->
-  <section data-label="M3 · Signing bridge" data-speaker-notes="The signing bridge. Every case's actors keep keys in KERI wallets, not CIP-30 wallets. Producing order/transition-bound detached signatures programmatically is on every design's critical path. The one external gate: Veridian issuing F-prefix Blake2b-256 SAIDs — Plutus has no Blake3, so E-prefix SAIDs are a wall.">
+  <section data-label="M3 · Signing bridge" data-speaker-notes="The signing bridge. Every case's actors keep keys in KERI wallets, not CIP-30 wallets. Producing order/transition-bound detached signatures programmatically is on every design's critical path. The former external gate — Veridian F-prefix SAIDs — is dissolved: the contract is E-native Blake3, with in-script blake3 on the rare paths.">
     <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M3</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">Layer 4</span></div>
     <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">KERI-wallet ↔ Cardano signing bridge</h2>
     <p style="font-size:27px; line-height:1.4; color:var(--muted); margin-top:20px; max-width:1500px;">Every case's actors keep keys in KERI wallets, not <code>CIP-30</code> wallets; producing order/transition-bound detached signatures programmatically is on the critical path of every design.</p>
@@ -259,7 +259,7 @@
       <ul style="list-style:none; display:flex; flex-direction:column; gap:24px;">
         <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Bridge core: produce those signed permission slips from a KERI wallet (detached signatures from Signify/Veridian), in the format Layer 3 expects (envelope spec).</span></li>
         <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>A developer kit to build the request and its proof (intent/proof SDK).</span></li>
-        <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Track the one thing we don't control: Veridian must issue credential IDs in a hash format Cardano can verify (<code>F-prefix</code>, <code>Blake2b-256</code> <code>SAID</code>s). <span style="color:var(--muted); font-size:24px;">Plutus can't do Blake3, so the default IDs (<code>E-prefix</code> SAIDs) are a wall.</span></span></li>
+        <li style="display:flex; gap:16px; font-size:27px; line-height:1.38;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>The former external gate is gone: the contract is <strong>E-native</strong> — standard Blake3 (<code>E-prefix</code>) identities and SAIDs are consumed as-is. <span style="color:var(--muted); font-size:24px;">In-script blake3 covers the rare genesis/rotation paths; authorizations verify raw keys.</span></span></li>
       </ul>
       <div style="background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:30px 34px; align-self:center;">
         <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;">Sequencing</div>
@@ -312,7 +312,7 @@
       </div>
       <div style="background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:24px 32px;">
         <span style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase;">Shared runway</span>
-        <span style="font-size:25px; line-height:1.4; color:var(--muted); margin-left:14px;">Starts during M2 — confirm counterparties, get them credentialed (QVI issuance), build credential fixtures, stand up preprod, and clear the F-prefix gate.</span>
+        <span style="font-size:25px; line-height:1.4; color:var(--muted); margin-left:14px;">Starts during M2 — confirm counterparties, get them credentialed (QVI issuance), build credential fixtures, and stand up preprod.</span>
       </div>
     </div>
   </section>
@@ -359,7 +359,7 @@
   </section>
 
   <!-- 16 · DEPENDENCY SPINE -->
-  <section data-label="Dependency spine" data-speaker-notes="The spine is dependency order, not a calendar. Solid edges are internal sequencing; the only dashed node is the Veridian F-prefix SAID gate, the single external dependency, feeding M4. Sequencing, not scheduling.">
+  <section data-label="Dependency spine" data-speaker-notes="The spine is dependency order, not a calendar. Solid edges are internal sequencing; the only dashed node is the optional blake3 builtin CIP — no longer a blocking dependency; it lifts the single-chunk genesis cap. Sequencing, not scheduling.">
     <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:500;">Dependencies</div>
     <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Dependency spine</h2>
     <div style="flex:1; display:flex; flex-direction:column; margin-top:12px;">
@@ -389,7 +389,7 @@
         <!-- M5 -->
         <g><rect x="1130" y="178" width="260" height="104" rx="12" fill="#1a212b" stroke="#2b333e"></rect><text x="1154" y="218" fill="#5cb8b0" font-size="26" font-weight="600" font-family="'IBM Plex Mono', monospace">M5</text><text x="1154" y="248" fill="#e9edf1" font-size="20">Case adapters</text><text x="1154" y="272" fill="#e9edf1" font-size="20">& hardening</text></g>
         <!-- External gate -->
-        <g><rect x="640" y="486" width="370" height="90" rx="12" fill="none" stroke="#d8a75f" stroke-width="2" stroke-dasharray="9 7"></rect><text x="666" y="524" fill="#d8a75f" font-size="20" font-weight="600" font-family="'IBM Plex Mono', monospace">Veridian F-prefix SAID gate</text><text x="666" y="552" fill="#9aa5b1" font-size="19">the only external dependency</text></g>
+        <g><rect x="640" y="486" width="370" height="90" rx="12" fill="none" stroke="#d8a75f" stroke-width="2" stroke-dasharray="9 7"></rect><text x="666" y="524" fill="#d8a75f" font-size="20" font-weight="600" font-family="'IBM Plex Mono', monospace">blake3 builtin CIP (optional)</text><text x="666" y="552" fill="#9aa5b1" font-size="19">lifts the 1-chunk genesis cap</text></g>
       </svg>
       <div style="display:flex; align-items:center; justify-content:space-between; margin-top:18px; padding-top:22px; border-top:1px solid var(--line);">
         <div style="display:flex; gap:36px; font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--muted);">

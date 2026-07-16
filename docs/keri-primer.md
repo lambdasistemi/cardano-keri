@@ -154,9 +154,9 @@ KERI solves identity portability and key rotation. It does not solve:
 
 The `cardano-keri` bridge reuses the same Ed25519 keys Veridian already manages. No re-keying. The same signing operation that advances the KERI KEL also advances the Cardano registry. Cardano becomes an additional witness — one with stronger ordering and composability guarantees than any witness pool.
 
-## Blake2b-256: the Cardano path
+## Blake3: the Cardano path is native
 
-cardano-keri takes a different path: it requires Blake2b-256 (F-prefix) AID derivation, which Cardano can verify natively today. Blake3 AIDs are not supported. See [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+cardano-keri is **E-native**: standard Blake3 (`E`-prefix) AIDs — the Veridian and vLEI production default — are supported as-is. Genesis hashing runs in-script through a dedicated hash-proof mint (one blake3 chunk covers every real inception shape); rotations pay one single-block blake3 per revealing key; plain authorizations verify raw keys with no hashing at all. The earlier F-prefix requirement is retired — see [Blake2b-256 AID Requirement](design/blake2b256-requirement.md) for the archived rationale.
 
 ---
 

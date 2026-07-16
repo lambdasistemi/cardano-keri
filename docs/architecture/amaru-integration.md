@@ -135,9 +135,10 @@ The proposed cardano-keri MPFS plugin **would verify**. Its Aiken validators
 would check the derivation (`trie_key == blake2b_256(cbor{cur_pubkey,
 next_digest})`), the Ed25519 self-auth / possession signatures, and the
 pre-rotation binding
-(`blake2b_256(reveal_key) == next_digest`) — which is *why* the
+(now `blake3_256(qb64(reveal_key)) ∈ next_keys` under the E-native contract,
+with in-script blake3 on the rare rotation path — the historical
 [Blake2b-256 / F-prefix requirement](../design/blake2b256-requirement.md)
-exists: so the derivation is checkable with the `blake2b_256` builtin.
+is retired).
 `cur_pubkey` would live in on-chain `KeyState`, and a downstream MPFS
 cage/plugin would consume it via a CIP-31 reference input + inclusion proof,
 requiring the spend to be signed by `blake2b_224(cur_pubkey)`. That is the
@@ -387,9 +388,10 @@ match the discussion order above.
 
 **Dependencies**
 
-11. Blake2b-256 / F-prefix digest agility in Veridian is a hard dependency for
-    the seq-0 binding — see [Veridian Bridge](veridian-bridge.md#digest-agility-requirement).
-    Will Veridian commit to it?
+11. ~~Blake2b-256 / F-prefix digest agility in Veridian~~ — dissolved by the
+    E-native contract (2026-07-16): the seq-0 binding holds for unmodified
+    Blake3 Veridian identities — see
+    [Veridian Bridge](veridian-bridge.md#digest-agility-requirement).
 12. Without on-chain Blake3 + CESR parsing builtins, trustless burn/duplicity
     checks are weakened. Is that a protocol ask, or do we accept the challenge-
     period mitigation?

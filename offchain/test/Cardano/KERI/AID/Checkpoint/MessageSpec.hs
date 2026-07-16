@@ -259,6 +259,9 @@ spec = do
     describe "validateInception (exact rejections)" $ do
         it "accepts a non-delegated icp with a matching derived asset" $
             validateInception Icp validIcp `shouldBe` Right ()
+        it "rejects a non-icp domain -> InceptionDomainMismatch" $
+            validateInception Icp validIcp{imDomain = advanceDomain}
+                `shouldBe` Left InceptionDomainMismatch
         it "rejects a dip-typed inception -> DelegatedInceptionRejected" $
             validateInception Dip validIcp
                 `shouldBe` Left DelegatedInceptionRejected
@@ -310,6 +313,9 @@ spec = do
         it "valid succession signed by the revealed successor set" $
             advanceEqualities spent validAdv createdValid sigsRevealed
                 `shouldBe` Right ()
+        it "wrong adv domain -> AdvanceDomainMismatch" $
+            advanceEqualities spent validAdv{amDomain = inceptionDomain} createdValid sigsRevealed
+                `shouldBe` Left AdvanceDomainMismatch
 
         -- eq6 — the parent #21 pre-rotation invariant (security-critical).
         -- The SAME attacker evidence satisfies the spent-current quorum but
@@ -323,6 +329,27 @@ spec = do
         it "stolen current quorum signing the advance -> Eq6SuccessorQuorumUnsatisfied" $
             advanceEqualities spent validAdv createdValid sigsStolenCurrent
                 `shouldBe` Left Eq6SuccessorQuorumUnsatisfied
+        it "duplicated successor key cannot satisfy an unweighted quorum alone" $
+            let dupKey = b32 0x44
+                dupThr = Unweighted 2
+                dupCommit = keysetCommit (NextCommitment [dupKey, dupKey] dupThr)
+                dupAdv =
+                    validAdv
+                        { amPriorCommit = dupCommit
+                        , amNewCurKeys = [dupKey, dupKey]
+                        , amNewCurThreshold = dupThr
+                        }
+                dupCreated =
+                    createdValid
+                        { cdCurKeys = [dupKey, dupKey]
+                        , cdCurThreshold = dupThr
+                        }
+             in advanceEqualities
+                    spent{scNextDigest = dupCommit}
+                    dupAdv
+                    dupCreated
+                    (RevealedSuccessorSigners [dupKey])
+                    `shouldBe` Left Eq6SuccessorQuorumUnsatisfied
 
         -- eq5 — sequence advance.
         it "bad seq_to (!= prior_seq + 1) -> Eq5SequenceMismatch" $

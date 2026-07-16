@@ -18,12 +18,13 @@ use cardano_keri/checkpoint/datum.{
   CheckpointDatumV1, NextCommitment, keyset_commit,
 }
 use cardano_keri/checkpoint/message.{
-  AdvanceInvalid, AdvanceMessage, AdvanceValid, DelegatedInceptionRejected, Dip,
-  Drt, Eq1NetworkPolicyMismatch, Eq2AssetOrAidMismatch, Eq3OutRefMismatch,
+  AdvanceDomainMismatch, AdvanceInvalid, AdvanceMessage, AdvanceValid,
+  DelegatedInceptionRejected, Dip, Drt, Eq1NetworkPolicyMismatch,
+  Eq2AssetOrAidMismatch, Eq3OutRefMismatch,
   Eq4PriorMismatch, Eq5SequenceMismatch, Eq6SuccessorQuorumUnsatisfied,
   Eq7CreatedStateMismatch, Icp, InceptionAidWidth, InceptionAssetMismatch,
-  InceptionInvalid, InceptionMessage, InceptionValid, RevealedSuccessorSigners,
-  SpentCheckpoint, advance_domain, advance_equalities,
+  InceptionDomainMismatch, InceptionInvalid, InceptionMessage, InceptionValid,
+  RevealedSuccessorSigners, SpentCheckpoint, advance_domain, advance_equalities,
   checkpoint_asset_domain_tag, deriveAidAssetName, inception_domain,
   validate_inception,
 }
@@ -233,6 +234,13 @@ test inception_accepts_valid() {
   validate_inception(Icp, valid_icp()) == InceptionValid
 }
 
+test inception_rejects_wrong_domain() {
+  validate_inception(
+    Icp,
+    InceptionMessage { ..valid_icp(), domain: advance_domain },
+  ) == InceptionInvalid(InceptionDomainMismatch)
+}
+
 test inception_rejects_dip() {
   validate_inception(Dip, valid_icp()) == InceptionInvalid(
     DelegatedInceptionRejected,
@@ -301,6 +309,15 @@ test advance_valid_succession() {
   advance_equalities(spent(), valid_adv(), created_valid(), sigs_revealed()) == AdvanceValid
 }
 
+test advance_wrong_domain() {
+  advance_equalities(
+    spent(),
+    AdvanceMessage { ..valid_adv(), domain: inception_domain },
+    created_valid(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(AdvanceDomainMismatch)
+}
+
 // eq6 — the parent #21 pre-rotation invariant (security-critical). The SAME
 // attacker evidence satisfies the spent-current quorum but maps to no successor
 // position, so the advance is rejected.
@@ -318,6 +335,32 @@ test advance_stolen_current_quorum_rejected() {
     valid_adv(),
     created_valid(),
     sigs_stolen_current(),
+  ) == AdvanceInvalid(Eq6SuccessorQuorumUnsatisfied)
+}
+
+test advance_duplicate_successor_key_rejected() {
+  let dup_key =
+    #"4444444444444444444444444444444444444444444444444444444444444444"
+  let dup_commit = keyset_commit(
+    NextCommitment {
+      next_keys: [dup_key, dup_key],
+      next_threshold: Unweighted(2),
+    },
+  )
+  advance_equalities(
+    SpentCheckpoint { ..spent(), next_digest: dup_commit },
+    AdvanceMessage {
+      ..valid_adv(),
+      prior_commit: dup_commit,
+      new_cur_keys: [dup_key, dup_key],
+      new_cur_threshold: Unweighted(2),
+    },
+    CheckpointDatumV1 {
+      ..created_valid(),
+      cur_keys: [dup_key, dup_key],
+      cur_threshold: Unweighted(2),
+    },
+    RevealedSuccessorSigners([dup_key]),
   ) == AdvanceInvalid(Eq6SuccessorQuorumUnsatisfied)
 }
 

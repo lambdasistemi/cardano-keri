@@ -20,7 +20,9 @@ use aiken/primitive/bytearray
 // ---------------------------------------------------------
 
 /// An exact rational weight `num/den` in reduced canonical form
-/// (`den > 0`, `num > 0`, `num <= den`, `gcd(num, den) == 1`).
+/// (`den > 0`, `num >= 0`, `num <= den`, `gcd(num, den) == 1`). Zero weights
+/// are legal KERI (the reserve/custodial-rotation pattern); the gcd rule
+/// makes `0/1` the unique canonical zero spelling.
 /// Encodes as `Constr 0 [I num, I den]`.
 pub type Weight {
   num: Int,
@@ -54,8 +56,8 @@ pub type ThresholdError {
   PartitionMismatch
   /// Rule 7: a weight has `den <= 0`.
   NonPositiveDen
-  /// Rule 8: a weight has `num <= 0` (dead key).
-  NonPositiveNum
+  /// Rule 8: a weight has `num < 0` (negative weight).
+  NegativeNum
   /// Rule 9: a weight has `num > den` (over unity).
   OverUnityWeight
   /// Rule 10: a weight is unreduced (`gcd(num, den) != 1`).
@@ -149,8 +151,8 @@ fn check_weight(w: Weight) -> Verdict {
   let Weight { num, den } = w
   if den <= 0 {
     Invalid(NonPositiveDen)
-  } else if num <= 0 {
-    Invalid(NonPositiveNum)
+  } else if num < 0 {
+    Invalid(NegativeNum)
   } else if num > den {
     Invalid(OverUnityWeight)
   } else if math.gcd(num, den) != 1 {
@@ -236,12 +238,11 @@ fn sum_signed(
   when ws is {
     [] -> (num_acc, den_acc)
     [Weight { num, den }, ..rest] -> {
-      let (na, da) =
-        if list.has(signers, pos) {
-          (num_acc * den + num * den_acc, den_acc * den)
-        } else {
-          (num_acc, den_acc)
-        }
+      let (na, da) = if list.has(signers, pos) {
+        (num_acc * den + num * den_acc, den_acc * den)
+      } else {
+        (num_acc, den_acc)
+      }
       sum_signed(rest, pos + 1, signers, na, da)
     }
   }

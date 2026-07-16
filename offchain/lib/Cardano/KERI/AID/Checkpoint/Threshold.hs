@@ -83,7 +83,9 @@ data Threshold
     deriving stock (Show, Eq)
 
 {- | An exact rational weight @num\/den@ in reduced canonical form
-(@den > 0@, @num > 0@, @num <= den@, @gcd num den == 1@).
+(@den > 0@, @num >= 0@, @num <= den@, @gcd num den == 1@). Zero weights are
+legal KERI (the reserve\/custodial-rotation pattern); the gcd rule makes
+@0\/1@ the unique canonical zero spelling.
 -}
 data Weight = Weight !Integer !Integer
     deriving stock (Show, Eq)
@@ -104,8 +106,8 @@ data ThresholdError
       PartitionMismatch
     | -- | Rule 7: a weight has @den <= 0@.
       NonPositiveDen
-    | -- | Rule 8: a weight has @num <= 0@ (dead key).
-      NonPositiveNum
+    | -- | Rule 8: a weight has @num < 0@ (negative weight).
+      NegativeNum
     | -- | Rule 9: a weight has @num > den@ (over unity).
       OverUnityWeight
     | -- | Rule 10: a weight is unreduced (@gcd num den /= 1@).
@@ -157,10 +159,10 @@ instance FromData Threshold where
             traverse (fromBuiltinData . BuiltinData) ws
         clauseFromData _ = Nothing
 
--- | Is @num\/den@ a reduced weight in @(0, 1]@ (F18 rules 7-10)?
+-- | Is @num\/den@ a reduced weight in @[0, 1]@ (F18 rules 7-10)?
 canonicalWeight :: Integer -> Integer -> Bool
 canonicalWeight num den =
-    den > 0 && num > 0 && num <= den && gcd num den == 1
+    den > 0 && num >= 0 && num <= den && gcd num den == 1
 
 unBuiltin :: BuiltinData -> Data
 unBuiltin (BuiltinData d) = d
@@ -202,7 +204,7 @@ wellFormed keys th = do
 
     checkWeight (Weight num den) = do
         when (den <= 0) (Left NonPositiveDen)
-        when (num <= 0) (Left NonPositiveNum)
+        when (num < 0) (Left NegativeNum)
         when (num > den) (Left OverUnityWeight)
         unless (gcd num den == 1) (Left UnreducedWeight)
         unless (den <= maxWeightDenom) (Left WeightOutOfBound)

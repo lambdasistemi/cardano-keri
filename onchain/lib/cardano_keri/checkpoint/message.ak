@@ -3,23 +3,32 @@
 ////
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Message`
 //// byte-for-byte: the two domain-separated signed preimages
-//// (`InceptionMessage` = Constr 0, 11 fields; `AdvanceMessage` = Constr 0,
+//// (`InceptionMessage` = Constr 0, 12 fields; `AdvanceMessage` = Constr 0,
 //// 17 fields) and `deriveAidAssetName` over the frozen 65-byte
 //// `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x46 ‖ cesr_aid` preimage encode to the
 //// exact canonical Plutus-Data CBOR / `blake2b_256` digest the Haskell
 //// encoder emits (see `vectors.ak`). Domain strings, constructor indices, and
 //// field order are protocol surface; they change only by minting a new
-//// version tag. Each message binds the deployment (`network_id`,
-//// `checkpoint_policy_id`) and token (`aid_asset_name`), and every carried
-//// `aid_asset_name` must equal `deriveAidAssetName(cesr_aid)`.
+//// version tag.
+////
+//// The advance is authorized by the KERI dual-threshold rule: the signer
+//// evidence must satisfy the rotation's own current threshold over
+//// `new_cur_keys` AND the spent checkpoint's pre-rotation threshold
+//// (`next_threshold`) over the committed `next_keys` digests. Partial/reserve
+//// rotation is supported: any satisfiable subset of the committed digests may
+//// be revealed, and `new_cur_threshold` may differ from the committed
+//// `next_threshold` — exactly the KERI rotation-validation rule. Each message
+//// binds the deployment (`network_id`, `checkpoint_policy_id`) and token
+//// (`aid_asset_name`), and every carried `aid_asset_name` must equal
+//// `deriveAidAssetName(cesr_aid)`.
 
 use aiken/collection/list
 use aiken/crypto
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, NextCommitment, keyset_commit,
+  CheckpointDatumV1, DatumError, DatumInvalid, datum_well_formed,
 }
-use cardano_keri/checkpoint/threshold.{Invalid, Threshold, evaluate, well_formed}
+use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 
 // ---------------------------------------------------------
 // Frozen constants
@@ -56,10 +65,10 @@ pub fn deriveAidAssetName(cesr_aid: ByteArray) -> ByteArray {
 }
 
 // ---------------------------------------------------------
-// Inception message (icp) — Constr 0, 11 fields in frozen order
+// Inception message (icp) — Constr 0, 12 fields in frozen order
 // ---------------------------------------------------------
 
-/// The signed inception preimage (Constr 0; 11 fields in frozen order).
+/// The signed inception preimage (Constr 0; 12 fields in frozen order).
 pub type InceptionMessage {
   domain: ByteArray,
   network_id: Int,
@@ -68,7 +77,8 @@ pub type InceptionMessage {
   cesr_aid: ByteArray,
   cur_keys: List<ByteArray>,
   cur_threshold: Threshold,
-  next_digest: ByteArray,
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
   witnesses: List<ByteArray>,
   toad: Int,
   native_sn: Int,
@@ -79,9 +89,8 @@ pub type InceptionMessage {
 // ---------------------------------------------------------
 
 /// The signed advance preimage (Constr 0; 17 fields in frozen order). The
-/// advance is authorized by the revealed successor set
-/// (`new_cur_keys`/`new_cur_threshold`), never the spent current set (KERI
-/// pre-rotation).
+/// advance is authorized by the KERI dual-threshold rule (see the module
+/// doc), never by the spent current set alone (KERI pre-rotation).
 pub type AdvanceMessage {
   domain: ByteArray,
   network_id: Int,
@@ -90,12 +99,12 @@ pub type AdvanceMessage {
   cesr_aid: ByteArray,
   spent_txid: ByteArray,
   spent_index: Int,
-  prior_commit: ByteArray,
   prior_seq: Int,
   prior_native_sn: Int,
   new_cur_keys: List<ByteArray>,
   new_cur_threshold: Threshold,
-  new_next_digest: ByteArray,
+  new_next_keys: List<ByteArray>,
+  new_next_threshold: Threshold,
   new_witnesses: List<ByteArray>,
   new_toad: Int,
   seq_to: Int,
@@ -103,7 +112,7 @@ pub type AdvanceMessage {
 }
 
 // ---------------------------------------------------------
-// Inception validation (event-type + AID/asset binding)
+// Inception validation (event-type + AID/asset binding + well-formedness)
 // ---------------------------------------------------------
 
 /// The attested KERI inception event type. V1 accepts only `Icp`; a delegated
@@ -124,6 +133,10 @@ pub type InceptionError {
   InceptionAidWidth
   /// `aid_asset_name /= deriveAidAssetName(cesr_aid)`.
   InceptionAssetMismatch
+  /// `native_sn /= 0`: a KERI `icp` always has `s = 0`.
+  InceptionNativeSnNonZero
+  /// The implied genesis datum failed `datum_well_formed` (F18 + rule 14).
+  InceptionIllFormed(DatumError)
 }
 
 /// The inception acceptance verdict. Aiken's prelude has no `Result`, so this
@@ -134,37 +147,64 @@ pub type InceptionVerdict {
   InceptionInvalid(InceptionError)
 }
 
+/// The genesis checkpoint datum an accepted inception message mints: the
+/// message's key-state fields at `seq = 0`.
+pub fn inception_datum(message: InceptionMessage) -> CheckpointDatumV1 {
+  CheckpointDatumV1 {
+    cesr_aid: message.cesr_aid,
+    cur_keys: message.cur_keys,
+    cur_threshold: message.cur_threshold,
+    next_keys: message.next_keys,
+    next_threshold: message.next_threshold,
+    witnesses: message.witnesses,
+    toad: message.toad,
+    seq: 0,
+    native_sn: message.native_sn,
+  }
+}
+
 /// Registration acceptance predicate: the attested event must be a
-/// non-delegated `icp`, the `cesr_aid` must be a well-formed 32-byte AID, and
-/// the carried asset name must be the AID's own derived locator (a copied
-/// caller name is insufficient). The width check precedes the derivation check
-/// so a malformed AID is rejected on width, not on a coincidental derivation.
+/// non-delegated `icp`, the `cesr_aid` must be a well-formed 32-byte AID, the
+/// carried asset name must be the AID's own derived locator (a copied caller
+/// name is insufficient), `native_sn` must be 0 (a KERI `icp` always has
+/// `s = 0`), and the implied genesis datum must be fully well-formed (F18 +
+/// rule 14). The width check precedes the derivation check so a malformed AID
+/// is rejected on width, not on a coincidental derivation.
 pub fn validate_inception(
   event: EventType,
   message: InceptionMessage,
 ) -> InceptionVerdict {
   if message.domain != inception_domain {
     InceptionInvalid(InceptionDomainMismatch)
-  } else when event is {
-    Icp ->
-      if bytearray.length(message.cesr_aid) != 32 {
-        InceptionInvalid(InceptionAidWidth)
-      } else if message.aid_asset_name != deriveAidAssetName(message.cesr_aid) {
-        InceptionInvalid(InceptionAssetMismatch)
-      } else {
-        InceptionValid
-      }
-    _ -> InceptionInvalid(DelegatedInceptionRejected)
+  } else {
+    when event is {
+      Icp ->
+        if bytearray.length(message.cesr_aid) != 32 {
+          InceptionInvalid(InceptionAidWidth)
+        } else if message.aid_asset_name != deriveAidAssetName(message.cesr_aid) {
+          InceptionInvalid(InceptionAssetMismatch)
+        } else if message.native_sn != 0 {
+          InceptionInvalid(InceptionNativeSnNonZero)
+        } else {
+          when datum_well_formed(inception_datum(message)) is {
+            DatumInvalid(e) -> InceptionInvalid(InceptionIllFormed(e))
+            _ -> InceptionValid
+          }
+        }
+      _ -> InceptionInvalid(DelegatedInceptionRejected)
+    }
   }
 }
 
 // ---------------------------------------------------------
-// Advance validation (the seven F10 equalities) — #77 / parent #21
+// Advance validation (the F10 checks) — #77 / parent #21
 // ---------------------------------------------------------
 
 /// The spent checkpoint context an advance is validated against: its
 /// deployment, identity-asset name, exact `TxOutRef`, and prior key-state
-/// projection fields (mirrors the Slice-3 `SpentCheckpoint`).
+/// projection fields — including the committed `(next_keys, next_threshold)`
+/// pair the dual-threshold rule evaluates (mirrors the Slice-3
+/// `SpentCheckpoint`).
 pub type SpentCheckpoint {
   network_id: Int,
   policy_id: ByteArray,
@@ -172,23 +212,24 @@ pub type SpentCheckpoint {
   txid: ByteArray,
   index: Int,
   cesr_aid: ByteArray,
-  next_digest: ByteArray,
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
   seq: Int,
   native_sn: Int,
 }
 
 /// The key digests of the raw keys that produced valid signatures (the signer
-/// evidence). eq6 maps this evidence onto `new_cur_keys` positions and
-/// `evaluate`s the REVEALED successor threshold. Because the evidence is
-/// key-based, the SAME evidence can be evaluated against the spent-current set:
-/// a stolen spent-current quorum satisfies the spent-current threshold yet maps
-/// to no successor position, so it fails the successor threshold and is
-/// rejected (mirrors the Slice-3 `RevealedSuccessorSigners`).
+/// evidence). eq6 maps this evidence onto `new_cur_keys` positions (the
+/// rotation's own threshold) AND onto the spent checkpoint's committed
+/// `next_keys` positions (the pre-rotation threshold) — KERI's dual-threshold
+/// rule. A stolen spent-current quorum maps to no committed `next_keys`
+/// position, so it fails the pre-rotation threshold and is rejected (mirrors
+/// the Slice-3 `RevealedSuccessorSigners`).
 pub type RevealedSuccessorSigners {
   RevealedSuccessorSigners(List<ByteArray>)
 }
 
-/// Which of the seven F10 advance equalities rejected (mirrors the Slice-3
+/// Which of the F10 advance checks rejected (mirrors the Slice-3
 /// `AdvanceError`).
 pub type AdvanceError {
   /// The signed preimage domain was not the frozen `adv` literal.
@@ -199,14 +240,19 @@ pub type AdvanceError {
   Eq2AssetOrAidMismatch
   /// eq3: `(spent_txid, spent_index)` is not the spent `TxOutRef`.
   Eq3OutRefMismatch
-  /// eq4: the reveal does not match `spent.next_digest` / prior fields.
+  /// eq4: `prior_seq` / `prior_native_sn` do not match the spent datum.
   Eq4PriorMismatch
   /// eq5: `seq_to /= spent.seq + 1` or `native_sn_to` did not advance.
   Eq5SequenceMismatch
-  /// eq6: the REVEALED successor set did not authorize the advance.
-  Eq6SuccessorQuorumUnsatisfied
+  /// eq6: the revealed set did not satisfy its own current threshold.
+  Eq6CurrentQuorumUnsatisfied
+  /// eq6: the evidence did not satisfy the spent checkpoint's committed
+  /// `(next_keys, next_threshold)` — the KERI pre-rotation gate.
+  Eq6PriorNextQuorumUnsatisfied
   /// eq7: the created datum does not equal the message's new-state fields.
   Eq7CreatedStateMismatch
+  /// eq8: the created datum failed `datum_well_formed` (F18 + rule 14).
+  Eq8CreatedIllFormed(DatumError)
 }
 
 /// The advance acceptance verdict. `AdvanceValid` ≙ `Right ()`,
@@ -217,13 +263,18 @@ pub type AdvanceVerdict {
   AdvanceInvalid(AdvanceError)
 }
 
-/// The seven F10 advance equalities, checked in order against the actual
-/// created checkpoint datum. Crucially eq6 evaluates the signer evidence
-/// against the REVEALED successor set (`new_cur_keys`/`new_cur_threshold`), not
-/// the spent current set — so a full stolen spent-current quorum yields no
-/// successor authorization and is rejected. eq7 requires the created datum to
-/// equal the message's new-state fields exactly (nothing written that was not
-/// signed).
+/// The F10 advance checks, checked in order against the actual created
+/// checkpoint datum. eq6 is the KERI dual-threshold rule: the signer evidence
+/// must satisfy the rotation's own `new_cur_threshold` over `new_cur_keys`
+/// AND the spent checkpoint's committed `next_threshold` over its `next_keys`
+/// digests — where only evidence from keys revealed in `new_cur_keys` counts
+/// toward the pre-rotation gate (in KERI, rotation signatures are indexed
+/// over the event's own key list). A full stolen spent-current quorum maps to
+/// no committed `next_keys` position and is rejected; partial/reserve
+/// rotation (a satisfiable subset reveal, with a restated current threshold)
+/// is accepted. eq7 requires the created datum to equal the message's
+/// new-state fields exactly (nothing written that was not signed); eq8
+/// requires that state to be well-formed.
 pub fn advance_equalities(
   spent: SpentCheckpoint,
   message: AdvanceMessage,
@@ -242,45 +293,46 @@ pub fn advance_equalities(
   } else if !(message.spent_txid == spent.txid && message.spent_index == spent.index) {
     // eq3: exact spent TxOutRef.
     AdvanceInvalid(Eq3OutRefMismatch)
-  } else if !(message.prior_commit == spent.next_digest && message.prior_commit == keyset_commit(
-    NextCommitment {
-      next_keys: message.new_cur_keys,
-      next_threshold: message.new_cur_threshold,
-    },
-  ) && message.prior_seq == spent.seq && message.prior_native_sn == spent.native_sn) {
-    // eq4: the reveal matches the pre-committed successor and prior fields.
+  } else if !(message.prior_seq == spent.seq && message.prior_native_sn == spent.native_sn) {
+    // eq4: the message binds the exact prior projection state.
     AdvanceInvalid(Eq4PriorMismatch)
   } else if !(message.seq_to == spent.seq + 1 && message.native_sn_to > spent.native_sn) {
     // eq5: exact successor sequence; native KERI sequence advances.
     AdvanceInvalid(Eq5SequenceMismatch)
-  } else if well_formed(
-    message.new_cur_keys,
-    message.new_cur_threshold,
-  ) is Invalid(_) {
-    AdvanceInvalid(Eq6SuccessorQuorumUnsatisfied)
   } else if !evaluate(
     message.new_cur_threshold,
     list.length(message.new_cur_keys),
-    successor_positions(message.new_cur_keys, controlled),
+    positions_in(message.new_cur_keys, controlled),
   ) {
-    // eq6: the REVEALED successor set authorizes (NOT the spent current set).
-    AdvanceInvalid(Eq6SuccessorQuorumUnsatisfied)
+    // eq6a: the evidence satisfies the rotation's own current threshold.
+    AdvanceInvalid(Eq6CurrentQuorumUnsatisfied)
+  } else if !evaluate(
+    spent.next_threshold,
+    list.length(spent.next_keys),
+    positions_in(
+      spent.next_keys,
+      list.filter(controlled, fn(k) { list.has(message.new_cur_keys, k) }),
+    ),
+  ) {
+    // eq6b: the evidence revealed in new_cur_keys satisfies the committed
+    // (next_keys, next_threshold) — the KERI pre-rotation gate.
+    AdvanceInvalid(Eq6PriorNextQuorumUnsatisfied)
   } else if created != expected_created(message) {
     // eq7: the created datum equals the message's new-state fields exactly.
     AdvanceInvalid(Eq7CreatedStateMismatch)
   } else {
-    AdvanceValid
+    // eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
+    when datum_well_formed(created) is {
+      DatumInvalid(e) -> AdvanceInvalid(Eq8CreatedIllFormed(e))
+      _ -> AdvanceValid
+    }
   }
 }
 
-/// Positions in `keys` whose digest is among the `controlled` signer evidence
-/// — the key-based mapping eq6 evaluates against the revealed successor set. A
-/// spent-current key never appears in the successor `keys`, so its evidence
-/// contributes no position.
-fn successor_positions(
-  keys: List<ByteArray>,
-  controlled: List<ByteArray>,
-) -> List<Int> {
+/// Positions in `keys` whose digest is among the `controlled` signer
+/// evidence — the key-based mapping eq6 evaluates on both sides of the
+/// dual-threshold rule.
+fn positions_in(keys: List<ByteArray>, controlled: List<ByteArray>) -> List<Int> {
   list.indexed_foldr(
     keys,
     [],
@@ -301,7 +353,8 @@ fn expected_created(message: AdvanceMessage) -> CheckpointDatumV1 {
     cesr_aid: message.cesr_aid,
     cur_keys: message.new_cur_keys,
     cur_threshold: message.new_cur_threshold,
-    next_digest: message.new_next_digest,
+    next_keys: message.new_next_keys,
+    next_threshold: message.new_next_threshold,
     witnesses: message.new_witnesses,
     toad: message.new_toad,
     seq: message.seq_to,

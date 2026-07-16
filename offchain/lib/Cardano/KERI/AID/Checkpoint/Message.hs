@@ -51,18 +51,18 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     evaluate,
-   wellFormed,
- )
+    wellFormed,
+  )
 import Control.Monad (
     unless,
  )
-import Data.Either (
-   isRight,
- )
 import Data.ByteString (
     ByteString,
- )
+  )
 import Data.ByteString qualified as BS
+import Data.Either (
+    isRight,
+  )
 import Data.IntSet qualified as IntSet
 import Data.Text.Encoding qualified as TE
 import PlutusCore.Data (
@@ -350,7 +350,7 @@ to no successor position, so it fails the successor threshold and is rejected.
 newtype RevealedSuccessorSigners = RevealedSuccessorSigners [KeyDigest]
     deriving stock (Show, Eq)
 
--- | Which advance validation rejected: the frozen domain gate or eq1-eq7.
+-- | Which advance validation rejected: the frozen domain gate or one of eq1-eq7.
 data AdvanceError
     = -- | The signed preimage domain was not the frozen @adv@ literal.
       AdvanceDomainMismatch

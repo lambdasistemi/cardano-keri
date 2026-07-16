@@ -73,9 +73,12 @@ guarantee: pre-rotation, duplicity detection, portable history.
 
 !!! note "Digest agility, again"
     Like AIDs, SAIDs carry a prefix naming their digest algorithm. KERI's
-    default is Blake3 (`E` prefix). **cardano-keri requires Blake2b-256
-    (`F` prefix)** so a Plutus script can recompute the SAID natively. See
-    [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+    default is Blake3 (`E` prefix) — and **cardano-keri is E-native**:
+    standard Blake3 SAIDs are consumed as-is. Where a SAID must be recomputed
+    on-chain, the hash-proof mint runs in-script blake3 (single chunk,
+    ≤1024 B). The earlier F-prefix requirement is retired — see
+    [Blake2b-256 AID Requirement](design/blake2b256-requirement.md) for the
+    archived rationale.
 
 ---
 
@@ -256,11 +259,12 @@ synthetic 4-hop vLEI chain verified on-chain on a devnet, one action through
 full verification and one through the admission cache, and a mid-chain
 revocation blocking both.
 
-The one external dependency is the **F-prefix (Blake2b-256) SAID gate**: GLEIF
-and QVIs issue Blake3 (`E`-prefix) SAIDs today, which Plutus cannot verify.
-cardano-keri requires Blake2b-256 SAIDs so the on-chain verifier and off-chain
-tooling share one hash. See [Blake2b-256 AID
-Requirement](design/blake2b256-requirement.md).
+The former external dependency — the **F-prefix (Blake2b-256) SAID gate** —
+is dissolved by the E-native contract (2026-07-16): the Blake3 (`E`-prefix)
+SAIDs GLEIF and QVIs issue today are consumed natively, off-chain by the
+verifier and on-chain through the hash-proof mint where needed. See
+[Blake2b-256 AID Requirement](design/blake2b256-requirement.md) for the
+archived rationale.
 
 ---
 

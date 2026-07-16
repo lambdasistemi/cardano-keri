@@ -22,7 +22,7 @@ The identity registry script enforces the following properties within a single b
 
 **AID uniqueness (the #91 registration gate).** Registration is the fixed **logical registration gate**: the MPFS absence/unicity proof at inception admits an AID at most once and **promotes** the registered leaf into its **per-AID checkpoint token** (minted exactly once, `+1`). This is the one-time registration gate — **not** the live current-authority store, which is the sovereign per-AID checkpoint (see the box above and the value-write guarantee below).
 
-**Pre-rotation binding.** A rotation is valid only if `blake2b_256(reveal_key) == cur_state.next_digest`. The on-chain state binds the next rotation to the key committed at the previous step. This cannot be circumvented without a preimage of blake2b_256.
+**Pre-rotation binding.** A rotation is valid only if the revealed keys match the committed `next_keys` digests (`blake3_256(qb64(reveal_key))` membership) **and** the signer evidence satisfies both thresholds — the rotation's own and the committed next threshold (the KERI dual-threshold rule). This cannot be circumvented without a preimage of blake3_256.
 
 **Monotonic sequence.** `seq` increases by exactly one per rotation. The on-chain script checks `seq_to == cur_state.seq + 1`. There is no skip or rollback.
 
@@ -45,7 +45,7 @@ The identity registry script enforces the following properties within a single b
 ## CESR AID correlation — legacy Candidate-B metadata vs Candidate-A resolution
 
 *The first paragraph describes the rejected Candidate-B metadata shape; the Candidate-A
-resolution follows it.* The `cesr_aid` field in the legacy Candidate-B `KeyState` is the decoded CESR AID, stored unverified and carried forward through rotations for off-chain correlation. The F-prefix (Blake2b-256) requirement exists so that *off-chain* verifiers recompute the derivation with the same hash Cardano scripts use elsewhere — see [Blake2b-256 Requirement](blake2b256-requirement.md).
+resolution follows it.* The `cesr_aid` field in the legacy Candidate-B `KeyState` is the decoded CESR AID, stored unverified and carried forward through rotations for off-chain correlation. The historical F-prefix (Blake2b-256) requirement is retired by the E-native contract — verifiers recompute the standard Blake3 derivation; see [Blake2b-256 Requirement](blake2b256-requirement.md) for the archived rationale.
 
 Off-chain resolution works as follows: given a CESR AID (e.g., `FKYLUMm...`), derive the asset id `(checkpoint_policy_id, aid_asset_name)` from the AID, then resolve the AID's current checkpoint UTxO by a generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only) and re-validate it against the ledger. (The rejected Candidate-B shape instead decoded the base64url prefix and scanned `KeyState` values across the shared MPF trie for a matching `cesr_aid`, then used the associated `trie_key` — a shared/global registry, superseded by #92.)
 

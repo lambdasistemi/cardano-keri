@@ -184,11 +184,13 @@ Demand-driven, after the pilots prove the core:
   freshness / liveness, R-TEL policing, and freeze relay, all bounty-compatible
   but never truth-choosing when evidence is absent
   (`specs/68-keystate-shape/identity-model.md` §7b / §11). The
-  in-script blake3 question is reopened: the lane-packed spike #88 core fits
-  the whole single-chunk domain (54.3% cpu / 71.7% mem at 1024 bytes), and
-  the full single-tx registration context is the remaining measurement. A
-  native `blake3` builtin CIP remains the sunset path for multi-chunk inputs
-  and for reclaiming the budget.
+  in-script blake3 core (spike #88, lane-packed) is now **shipped in the
+  contract** (2026-07-16): rotations hash one single block per revealing key
+  (3.6% cpu / 4.5% mem each) and the hash-proof minter covers single-chunk
+  genesis (≤1024 B — the whole observed production population below
+  GLEIF-Root scale). Remaining M5 work: the chunk-token extension for
+  6+-key inception events, and the native `blake3` builtin CIP — now backed
+  by shipped-workaround cost evidence — to reclaim the budget.
 - **Delegated-AID and recovery extension**: a versioned checkpoint protocol for
   `dip` / `drt`, recursive parent-anchor proofs, resource bounds, and
   delegated/superseding recovery. This moves earlier only if a concrete

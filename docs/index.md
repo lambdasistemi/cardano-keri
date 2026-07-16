@@ -88,21 +88,24 @@ grants false authority.
 
 ```mermaid
 flowchart LR
-    ICP["cesr_inception_event"] --> H["blake3 (native vLEI)<br/>or blake2b (F-prefix, CF sidecar)"]
+    ICP["cesr_inception_event"] --> H["blake3<br/>(E-native, the production KERI default)"]
     H --> AID["cesr_aid<br/>(KERI identifier, 32 bytes)"]
     style AID fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
-    AID -->|"leaf key"| CK["Checkpoint leaf<br/>keys+weights · kt · next_digest (blake2b)<br/>witnesses · toad · seq"]
+    AID -->|"asset name"| CK["Checkpoint<br/>raw keys+weights · kt · next_keys/nt (blake3)<br/>witnesses · toad · seq"]
     style CK fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-    SEAL["witnessed anchoring seal<br/>(blake2b payload commitments)"] -->|"advance tx:<br/>seal + threshold receipts"| CK
+    SEAL["witnessed anchoring seal<br/>(canonical payload commitments)"] -->|"advance tx:<br/>seal + threshold receipts"| CK
 ```
 
 The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier
-used by Veridian and KERI witnesses. Native **Blake3** AIDs are served as-is — the seal
-carries the blake2b commitments Cardano needs, so no digest-agility patch is required for
-identity. The genesis binding `cesr_aid ↔ (keys, witnesses)@inception` is
-registration-attested (falsifiable — identity-model §7a); every later advance is
-cryptographic. F-prefix (Blake2b) AIDs remain the CF-as-QVI sidecar option — see
-[Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
+used by Veridian and KERI witnesses. Native **Blake3** AIDs are served as-is — the checkpoint stores the standard
+KEL `n` digests byte-for-byte, so no digest-agility patch and no
+Cardano-specific AID flavor exist. The genesis binding
+`cesr_aid == blake3(icp_bytes)` is verified trustlessly by the hash-proof
+minter for inception events up to one blake3 chunk (1024 B — every observed
+production shape below GLEIF-Root scale); every later advance is cryptographic
+via the dual-threshold reveal. The historical F-prefix option is retired — see
+[Blake2b-256 AID Requirement](design/blake2b256-requirement.md) for the
+archived rationale.
 
 ## System components
 

@@ -1,6 +1,13 @@
 # Blake2b-256 AID Requirement
 
-cardano-keri requires Blake2b-256 (CESR `F` prefix) AID derivation. Blake3 AIDs are not supported.
+!!! warning "Retired — superseded by the E-native contract (2026-07-16)"
+    cardano-keri is now **E-native**: standard Blake3 (`E`-prefix) AIDs are
+    supported as-is, with in-script blake3 (spike #88 lane-packed core) on the
+    rare genesis/rotation paths and raw-key verification on the authorization
+    hot path. This document is kept as the archived rationale for the earlier
+    F-prefix decision and as the cost record that motivated it.
+
+cardano-keri **required** Blake2b-256 (CESR `F` prefix) AID derivation; Blake3 AIDs were not supported.
 
 ## Why Blake2b-256
 

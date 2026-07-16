@@ -2,7 +2,7 @@
 
 ## What is Veridian
 
-Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value. cardano-keri requires F-prefix (Blake2b-256) derivation: `cesr_aid = blake2b_256(cesr_inception_event)`.
+Veridian is a [Signify](https://github.com/WebOfTrust/signify-ts)-based [KERI](https://github.com/WebOfTrust/ietf-keri) wallet written in TypeScript. It manages [Ed25519](https://www.rfc-editor.org/rfc/rfc8032) key pairs, produces [CESR](https://github.com/WebOfTrust/ietf-cesr)-encoded Key Event Logs (KELs), and interacts with KERI witnesses for receipt collection. Identities in Veridian are identified by their CESR AID — a self-certifying 32-byte value. cardano-keri is E-native: `cesr_aid = blake3_256(cesr_inception_event)` — the standard Veridian derivation, unmodified.
 
 Signify holds keys in an encrypted key store. Keys are never exported in plaintext. The wallet exposes signing operations: sign a message with the current key, sign with the next key (at rotation time).
 
@@ -64,20 +64,19 @@ flowchart LR
 
 ## Digest agility requirement
 
-!!! warning "Scope narrowed (2026-07-09)"
-    The F-prefix mandate below now applies only to the **CF-as-QVI sidecar** path
-    (Blake2b-issued credentials). The spine path serves **native Blake3 vLEI** identities
-    with **no digest-agility patch at all**: the anchoring seal is a plain Blake3-SAID'd
-    event whose *payload* carries blake2b commitments, and witness receipts verify over
-    raw bytes (identity-model §4–5).
+!!! warning "Requirement dissolved by the E-native contract (2026-07-16)"
+    There is **no digest-agility requirement anymore.** The checkpoint datum
+    stores the standard Blake3 KEL `n` entries byte-for-byte
+    (`next_keys[i] = blake3_256(qb64(next_verkey_i))` — exactly what keripy
+    emits by default), so unmodified Veridian identities satisfy the seq-0
+    correspondence out of the box:
 
-cardano-keri requires Blake2b-256 (F-prefix) digest agility. This is not optional. Veridian inception events MUST use `n = base64url(blake2b_256(canonical_next_pubkey_bytes))` and the AID prefix MUST use the F-prefix derivation.
+    ```
+    KEL.inception.n decoded == checkpoint.next_keys  [byte-for-byte]
+    ```
 
-```
-KEL.inception.n decoded == Cardano.KeyState.next_digest  [byte-for-byte]
-```
-
-Without this alignment, the bridge binding is unverifiable until first rotation — exactly the identity's most vulnerable period. See [Seq-0 binding gap](../design/aid-model.md#seq-0-binding-gap).
+    The historical F-prefix mandate and its test vector are kept below for the
+    archived Candidate-B lineage only.
 
 ### Canonical encoding
 

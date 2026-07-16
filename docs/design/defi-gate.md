@@ -241,10 +241,12 @@ cardano-keri is **the verification rails, not any of the actors**:
 | Holder key custody and wallets | Veridian / any KERI wallet |
 | Registry + TEL validators, Aiken verifier, proof-builder SDK | **cardano-keri** |
 
-The one thing cardano-keri needs from others and cannot build: Veridian issuing
-**F-prefix (Blake2b-256)** SAIDs for Cardano-targeted credentials — see
-[Blake2b-256 Requirement](blake2b256-requirement.md). This is the single
-external gate on the on-chain stack.
+The former single external gate — Veridian issuing **F-prefix (Blake2b-256)**
+SAIDs — is dissolved by the E-native contract (2026-07-16): standard Blake3
+identities and SAIDs are consumed as-is, so nothing on the on-chain stack
+waits on a wallet vendor. See
+[Blake2b-256 Requirement](blake2b256-requirement.md) for the archived
+rationale.
 
 ## What the gate is not
 

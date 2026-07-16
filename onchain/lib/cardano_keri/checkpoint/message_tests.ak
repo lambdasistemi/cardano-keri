@@ -95,7 +95,7 @@ test derivation_definition() {
   aid_asset() == crypto.blake2b_256(
     bytearray.concat(
       checkpoint_asset_domain_tag,
-      bytearray.concat(#"46", cesr_a()),
+      bytearray.concat(#"45", cesr_a()),
     ),
   )
 }
@@ -104,7 +104,7 @@ test derivation_wrong_code_negative() {
   crypto.blake2b_256(
     bytearray.concat(
       checkpoint_asset_domain_tag,
-      bytearray.concat(#"45", cesr_a()),
+      bytearray.concat(#"46", cesr_a()),
     ),
   ) == vectors.negative_aid_asset_name_wrong_code
 }
@@ -247,7 +247,7 @@ fn spent() -> SpentCheckpoint {
     txid: spent_txid,
     index: 1,
     cesr_aid: cesr_a(),
-    next_keys: [nk11],
+    next_keys: [message.next_key_digest(nk11)],
     next_threshold: Unweighted(1),
     seq: 0,
     native_sn: 0,
@@ -340,7 +340,14 @@ test stolen_quorum_satisfies_spent_current() {
 }
 
 test stolen_quorum_maps_to_no_committed_next_position() {
-  evaluate(Unweighted(1), 1, positions_of([nk11], [k1, k2])) == False
+  evaluate(
+    Unweighted(1),
+    1,
+    positions_of(
+      [message.next_key_digest(nk11)],
+      list.map([k1, k2], message.next_key_digest),
+    ),
+  ) == False
 }
 
 test advance_stolen_current_quorum_honest_message_rejected() {
@@ -571,7 +578,10 @@ fn third(n: Int) -> threshold.Threshold {
 fn reserve_spent() -> SpentCheckpoint {
   SpentCheckpoint {
     ..spent(),
-    next_keys: [rn0, rn1, rn2, rn3, rn4, rn5, rn6],
+    next_keys: list.map(
+      [rn0, rn1, rn2, rn3, rn4, rn5, rn6],
+      message.next_key_digest,
+    ),
     next_threshold: third(7),
   }
 }
@@ -581,7 +591,10 @@ fn reserve_adv() -> AdvanceMessage {
     ..valid_adv(),
     new_cur_keys: [rn0, rn5, rn6],
     new_cur_threshold: third(3),
-    new_next_keys: [rn1, rn2, rn3, rn4, rf1, rf2, rf3],
+    new_next_keys: list.concat(
+      list.map([rn1, rn2, rn3, rn4], message.next_key_digest),
+      [rf1, rf2, rf3],
+    ),
     new_next_threshold: third(7),
   }
 }
@@ -591,7 +604,10 @@ fn reserve_created() -> CheckpointDatumV1 {
     ..created_valid(),
     cur_keys: [rn0, rn5, rn6],
     cur_threshold: third(3),
-    next_keys: [rn1, rn2, rn3, rn4, rf1, rf2, rf3],
+    next_keys: list.concat(
+      list.map([rn1, rn2, rn3, rn4], message.next_key_digest),
+      [rf1, rf2, rf3],
+    ),
     next_threshold: third(7),
   }
 }

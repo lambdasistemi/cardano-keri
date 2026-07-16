@@ -2,6 +2,12 @@ module Cardano.KERI.AID.Checkpoint.MessageSpec (
     spec,
 ) where
 
+import Cardano.KERI.AID.Blake3.Checkpoint (
+    blake3Hash,
+ )
+import Cardano.KERI.AID.CESR (
+    qb64Verkey,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     DatumError (..),
@@ -77,6 +83,12 @@ positionsIn :: [ByteString] -> [ByteString] -> IntSet
 positionsIn keyset controlled =
     IntSet.fromList [i | (i, k) <- zip [0 ..] keyset, k `elem` controlled]
 
+{- | The committed next-key digest of a raw verkey:
+@blake3_256(qb64(key))@ — the KERI KEL @n@ entry byte-for-byte.
+-}
+nkd :: ByteString -> ByteString
+nkd = blake3Hash . qb64Verkey
+
 -- Fixed test material shared with the independent golden generator.
 k1, k2, policy, cesrA :: ByteString
 k1 = b32 0x01
@@ -91,11 +103,11 @@ cesrAFlipped = BS.pack (1 : [1 .. 31])
 -- The golden asset name for cesrA (independently computed).
 aidNameGolden :: ByteString
 aidNameGolden =
-    hexBs "c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac9"
+    hexBs "67cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb78536"
 
--- The asset name derived with the WRONG code (0x45, not 0x46).
+-- The asset name derived with the WRONG code (0x46 'F', not 0x45 'E').
 wrongCodeAsset :: ByteString
-wrongCodeAsset = blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x45 cesrA)
+wrongCodeAsset = blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x46 cesrA)
 
 -- ---------------------------------------------------------
 -- Inception fixture (matched to the generator)
@@ -154,7 +166,7 @@ spent =
         , scTxid = spentTxid
         , scIndex = 1
         , scCesrAid = cesrA
-        , scNextKeys = newKeys
+        , scNextKeys = map nkd newKeys
         , scNextThreshold = newThr
         , scSeq = 0
         , scNativeSn = 0
@@ -217,8 +229,9 @@ sigsStolenCurrent = RevealedSuccessorSigners attackerKeys
 rn :: Word8 -> ByteString
 rn i = b32 (0x30 + i)
 
+-- The committed digests: the KEL n entries of the raw reserve keys.
 reserveN :: [ByteString]
-reserveN = map rn [0 .. 6]
+reserveN = map (nkd . rn) [0 .. 6]
 
 third :: Integer -> Threshold
 third n = Weighted [replicate (fromIntegral n) (Weight 1 3)]
@@ -227,10 +240,10 @@ third n = Weighted [replicate (fromIntegral n) (Weight 1 3)]
 reserveRevealed :: [ByteString]
 reserveRevealed = [rn 0, rn 5, rn 6]
 
--- Re-commitment: the 4 unexposed reserves carried forward + 3 fresh.
+-- Re-commitment: the 4 unexposed reserve digests carried forward + 3 fresh.
 reserveNextN :: [ByteString]
 reserveNextN =
-    [rn 1, rn 2, rn 3, rn 4]
+    map (nkd . rn) [1, 2, 3, 4]
         <> map b32 [0x71, 0x72, 0x73]
 
 reserveSpent :: SpentCheckpoint
@@ -282,19 +295,19 @@ spec = do
             deriveAidAssetName cesrA `shouldBe` aidNameGolden
         it "asset name is exactly 32 bytes" $
             BS.length (deriveAidAssetName cesrA) `shouldBe` 32
-        it "definition: blake2b_256(tag ++ 0x46 ++ cesr_aid)" $
+        it "definition: blake2b_256(tag ++ 0x45 ++ cesr_aid)" $
             deriveAidAssetName cesrA
-                `shouldBe` blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x46 cesrA)
-        it "wrong derivation code (0x45) has its own exact digest" $
+                `shouldBe` blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x45 cesrA)
+        it "wrong derivation code (0x46) has its own exact digest" $
             wrongCodeAsset
                 `shouldBe` hexBs
-                    "67cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb78536"
+                    "c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac9"
         it "wrong derivation code differs from the golden" $
             wrongCodeAsset `shouldSatisfy` (/= aidNameGolden)
         it "mutated AID (one-bit flip) has its own exact digest" $
             deriveAidAssetName cesrAFlipped
                 `shouldBe` hexBs
-                    "1e56b40cc1a6f1163f08fb24bcb29fe85bc4f5c721c9a4afac5a10588aafa3f0"
+                    "a45ec3ef92f14458cc127a7a43d349e55d6f6e08e3c722e718574eb637f6762d"
         it "one-bit flip differs from the golden" $
             deriveAidAssetName cesrAFlipped `shouldSatisfy` (/= aidNameGolden)
 
@@ -305,7 +318,7 @@ spec = do
         it "icp canonical CBOR golden" $
             canonicalCbor validIcp
                 `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200202020202020202020202020202020202020202020202020202020202020202ffd8799f01ff800000ff"
+                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200202020202020202020202020202020202020202020202020202020202020202ffd8799f01ff800000ff"
         it "builder fills the frozen icp domain" $
             imDomain validIcp `shouldBe` inceptionDomain
 
@@ -364,7 +377,7 @@ spec = do
         it "advance (valid succession) canonical CBOR golden" $
             canonicalCbor validAdv
                 `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820c8451c7348ab75c013738557db1eff061db499cd0baeef6ae90cd4f533e75ac95820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff80000101ff"
+                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff80000101ff"
         it "builder fills the frozen adv domain" $
             amDomain validAdv `shouldBe` advanceDomain
 
@@ -386,7 +399,7 @@ spec = do
             evaluate spentCurThr (length spentCurKeys) (positionsIn spentCurKeys attackerKeys)
                 `shouldBe` True
         it "the same evidence maps to no committed next-key position" $
-            evaluate (scNextThreshold spent) (length (scNextKeys spent)) (positionsIn (scNextKeys spent) attackerKeys)
+            evaluate (scNextThreshold spent) (length (scNextKeys spent)) (positionsIn (scNextKeys spent) (map nkd attackerKeys))
                 `shouldBe` False
         it "stolen current quorum on the honest message -> Eq6CurrentQuorumUnsatisfied" $
             advanceEqualities spent validAdv createdValid sigsStolenCurrent

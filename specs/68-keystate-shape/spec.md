@@ -137,10 +137,10 @@ vectors (F30).
 
 | Name | Type | Domain |
 |---|---|---|
-| `KeyDigest` | `ByteArray` | exactly 32 bytes; `= blake2b_256(qb64(verkey))` (KERI-aligned, see below) |
-| `Verkey` | `ByteArray` | exactly 32 bytes; raw Ed25519 public key |
-| `Digest32` | `ByteArray` | exactly 32 bytes; a Blake2b-256 output |
-| `CesrAid` | `ByteArray` | exactly 32 bytes; raw F-code-stripped Blake2b-256 AID digest (`docs/design/aid-model.md`) |
+| `KeyDigest` | `ByteArray` | exactly 32 bytes; `= blake3_256(qb64(verkey))` — the KERI `n` entry byte-for-byte (E-native, see below) |
+| `Verkey` | `ByteArray` | exactly 32 bytes; raw Ed25519 public key (current keys and witnesses) |
+| `Digest32` | `ByteArray` | exactly 32 bytes; a hash output |
+| `CesrAid` | `ByteArray` | exactly 32 bytes; raw E-code-stripped Blake3-256 AID digest — production KERI AIDs as-is |
 | `Int` fields | `Int` | non-negative unless stated; canonical minimal-width CBOR integer |
 
 ### `CheckpointDatum` — the versioned datum
@@ -155,7 +155,7 @@ CheckpointDatum =
 
 CheckpointDatumV1 { -- Constr 0 of the inner record; fields in EXACTLY this order:
   0  cesr_aid       : CesrAid                 -- external AID; the identity binding (KERI `i`)
-  1  cur_keys       : List<KeyDigest>         -- current establishment key digests (KERI `k`), positional
+  1  cur_keys       : List<Verkey>            -- current establishment RAW verkeys (KERI `k`, decoded), positional
   2  cur_threshold  : Threshold               -- current signing threshold (KERI `kt`)
   3  next_keys      : List<KeyDigest>         -- pre-rotation next-key digests (KERI `n`), positional
   4  next_threshold : Threshold               -- pre-rotation next threshold (KERI `nt`)
@@ -172,10 +172,11 @@ Field notes (nothing here is retrofittable):
   so a checkpoint cannot be re-pointed at a different identity. Never itself
   "verified" — the qb64/derivation-code correspondence to on-chain material is the
   hybrid-genesis concern (`identity-model.md` §7c), not this schema.
-- **`cur_keys`** — per-key **digests**, not raw keys (KEL seq-0 recomputability;
-  `specs/24-keystate/spec.md` "KERI alignment"). Positional: `cur_threshold`'s
-  weights and clauses index into this list by position. Non-empty, no duplicate
-  digest.
+- **`cur_keys`** — **raw** verkeys, not digests: authorization signature checks
+  verify Ed25519 directly against the datum with **zero hashing on the hot
+  path**; the KEL `k` entries are recoverable byte-for-byte by decoding the
+  qb64. Positional: `cur_threshold`'s weights and clauses index into this list
+  by position. Non-empty, no duplicate key.
 - **`cur_threshold`** — see "Threshold". Carries the KERI `kt` faithfully
   (integer **or** fractionally weighted multi-clause), so real GLEIF/QVI configs
   round-trip byte-identically.
@@ -188,7 +189,8 @@ Field notes (nothing here is retrofittable):
   threshold, exactly the KERI dual-threshold rotation rule (GLEIF's production
   Root AID rotates this way: 7 committed digests at `nt = ["1/3"×7]`, revealing
   3 with `kt = ["1/3"×3]`, carrying unexposed reserves forward). Byte-for-byte
-  equal to public KEL data under F-code KELs.
+  equal to the `n` lists of **real production KELs** — E-code Blake3, no
+  Cardano-specific KEL flavor.
 - **`witnesses`** — current witness **verkeys** (raw 32-byte Ed25519), because
   Cardano verifies receipts as `Ed25519.verify(witness_pk, seal_bytes, sig)`
   directly over seal bytes (`identity-model.md` §5). A non-transferable KERI
@@ -214,21 +216,28 @@ is carried by the token's mint/spend lineage and the designated script address
 (`specs/92-checkpoint-contention/spec.md`), not by a datum enum, and the sliding
 window is dissolved (see "Freshness").
 
-### `KeyDigest` — KERI alignment (reused from #24, normative)
+### `KeyDigest` — KERI alignment (E-native, normative)
 
-Verified against the ToIP KERI specification (`specs/24-keystate/spec.md` "KERI
-alignment", 2026-07-07):
+Verified against the ToIP KERI specification and keripy
+(`Diger(ser=verfer.qb64b)`, default code `E` = Blake3-256 — the production
+KERI default):
 
 ```
 qb64(k)   = "D" ++ b64url(0x00 ++ k)[1..]     -- 44 ASCII chars, transferable code "D"
-KeyDigest = blake2b_256(qb64(k))              -- 32 bytes; equals the KEL `n`-entry digest value
+KeyDigest = blake3_256(qb64(k))               -- 32 bytes; equals the KEL `n`-entry digest value
 ```
 
-So under F-prefix (Blake2b-256) KELs a `KeyDigest` equals the KEL next-key digest
-byte-for-byte and the stored `next_keys` entries equal the KEL `n` list from public KEL data at seq 0.
-On-chain preimage checks reconstruct `qb64(raw_key)` from a supplied raw key before
-digesting (a fixed 33-byte → 44-char Base64url encoding) — that reconstruction is
-#24's redeemer path; #68 fixes only the digest **definition** and its width.
+The stored `next_keys` entries equal the `n` list of **real production KELs**
+(GLEIF, Veridian) byte-for-byte from public KEL data at seq 0 — no digest-agility
+mandate, no Cardano-specific KEL flavor. `cur_keys` hold the **raw** verkeys
+(the KEL `k` entries decoded), so authorization signature checks never hash;
+blake3 runs only on the rare paths: at rotation, one single-block
+`blake3(qb64(raw_key))` per revealing key (measured: **3.6% cpu / 4.5% mem**
+of the mainnet per-tx budget each, spike #88 lane-packed core, vendored as
+`onchain/lib/cardano_keri/blake3.ak`), and at genesis over the inception event
+bytes (#24/#91's transaction layer, see "Genesis binding" below). #68 fixes
+the digest **definition** and its width; the qb64 reconstruction is a fixed
+33-byte → 44-char Base64url encoding shared by both codebases.
 
 ### AID asset-name derivation (locator binding — the #92→#68 pin)
 
@@ -242,19 +251,46 @@ the locator asset cannot be reproduced byte-for-byte:
 ```
 CHECKPOINT_ASSET_DOMAIN_TAG   = UTF8("cardano-keri/checkpoint-asset/v1")   -- 32 bytes, constant
    = 0x 63617264616e6f2d 6b6572692f636865 636b706f696e742d 61737365742f7631
-canonical_qualified_aid_bytes = 0x46 ‖ cesr_aid                            -- 33 bytes
-   -- 0x46 = ASCII 'F', the V1 F-only (Blake2b-256) derivation code; cesr_aid is the
-   -- complete 32-byte raw digest (F-code-stripped, as stored in the datum).
+canonical_qualified_aid_bytes = 0x45 ‖ cesr_aid                            -- 33 bytes
+   -- 0x45 = ASCII 'E', the V1 E-native (Blake3-256) derivation code — the
+   -- production KERI AID default; cesr_aid is the complete 32-byte raw digest
+   -- (E-code-stripped, as stored in the datum).
 aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ canonical_qualified_aid_bytes)
    -- blake2b_256 over the fixed 65-byte (32+1+32) preimage → 32-byte asset name
 ```
 
 Rationale: minimal and **cheap on-chain** — a single native `blake2b_256` Plutus
-builtin over a fixed 65-byte preimage (not the expensive genesis BLAKE3), consistent
-with #92's "native `blake2b_256`, not BLAKE3" and with V1's F-only (`0x46`) AID
-policy. Because the preimage is fully determined by `cesr_aid`, the asset name is a
-deterministic **label of** the AID (#91), never an independent identifier. Changing
-either constant requires a new version tag.
+builtin over a fixed 65-byte preimage. The outer hash is deliberately
+`blake2b_256` even though the AID itself is Blake3: the asset name is a
+Cardano-internal **label of** the AID (#91), never a KERI artifact, so the
+cheap native builtin is correct here and blake3 stays confined to genesis and
+rotation. Because the preimage is fully determined by `cesr_aid`, the asset
+name is deterministic, never an independent identifier. Changing either
+constant requires a new version tag.
+
+### Genesis binding (E-native) — the hash-proof minter
+
+`cesr_aid = blake3_256(icp bytes)` for an E-code AID. The on-chain binding
+check (`blake3(icp_bytes) == cesr_aid`, plus keys-in-event equality) is
+#24/#91's **transaction layer**, wired as a **hash-proof minter**: a dedicated
+minting policy verifies the blake3 relation in its own transaction — using the
+lane-packed single-chunk core measured in spike #88 (17.1% cpu at 300 bytes,
+54.3% cpu / 71.7% mem at the 1024-byte single-chunk boundary; vendored at
+`onchain/lib/cardano_keri/blake3.ak`) — and mints a proof token named
+`blake2b_256(icp_bytes ‖ cesr_aid)`. Registration then recomputes that one
+cheap native blake2b over the event bytes it already carries and requires the
+token: no inline blake3 in the registration validator, no oracle trust.
+
+V1 verifiable genesis is **capped at 1024 bytes** (one blake3 chunk). Measured
+against production KELs, this covers the entire V1 target population: a
+GEDA-scale 5-key, 5-witness inception is 966–1017 bytes; single-sig and
+QVI-shaped 2-key groups are 550–660 bytes. The only real event observed above
+the cap is GLEIF's own 7-key Root inception (1181 bytes) — issuer
+infrastructure that never registers (and `dip` besides). Boards of 6+ keys
+with a full witness pool wait for the chunk-token extension (the #97
+multi-transaction lineage: chunk proofs composed by a cheap parent-node mint)
+or a native `blake3` builtin CIP. #68 freezes the `cesr_aid` definition and
+width; the minter is a #24 obligation.
 
 `deriveAidAssetName(cesr_aid) -> aid_asset_name` is part of the **executable
 schema-support** scope (Haskell + Aiken), with a fixed golden and adversarial
@@ -322,7 +358,7 @@ stored as a bare `Int`; KERI `bt` has no weighted form.
 
 The pre-rotation commitment is the **explicit** `(next_keys, next_threshold)`
 pair inside the datum — no aggregate `keyset_commit` hash. Each `next_keys`
-entry is a `KeyDigest` (the KEL `n` entry byte-for-byte under F-code KELs), so
+entry is a `KeyDigest` (the production KEL `n` entry byte-for-byte), so
 raw next keys remain secret until reveal, while the structure supports the KERI
 **dual-threshold rotation rule**: at advance time the signer evidence must
 satisfy the rotation's own `(new_cur_keys, new_cur_threshold)` **and** the
@@ -404,7 +440,7 @@ counts.
 
 **Evaluation** (`evaluate : Threshold × cur_keys × SignerPositions -> Bool`, where
 `SignerPositions` is the set of positions whose raw key verified a signature and
-whose qb64 digest matched `cur_keys[pos]`):
+whose raw key equals `cur_keys[pos]` — no hashing):
 
 - `Unweighted(m)`: `|SignerPositions| >= m`.
 - `Weighted(clauses)`: for each clause `c_j` over partition `P_j`,
@@ -496,7 +532,7 @@ AdvanceMessage { -- Constr 0; fields in EXACTLY this order:
 The pre-rotation binding is the KERI **dual-threshold rule** (check 6 below): the
 signer evidence must satisfy the spent checkpoint's committed
 `(next_keys, next_threshold)` — evidence is mapped onto committed positions by
-**digest membership**, and only keys revealed in `new_cur_keys` count, mirroring
+**digest membership** (`blake3_256(qb64(key))`, one single-block hash per revealing key — measured 3.6% cpu / 4.5% mem each), and only keys revealed in `new_cur_keys` count, mirroring
 keripy's index/ondex signature validation. A party holding no pre-committed key
 cannot substitute a successor set: their evidence maps to no committed position.
 Partial (reserve) rotation, augmented keys, and a restated current threshold are
@@ -524,7 +560,7 @@ signed message binds the successor, defeating "capture the identity at `seq+2`")
    signer evidence MUST satisfy **both** (a) the rotation's own
    `(new_cur_keys, new_cur_threshold)` and (b) the spent checkpoint's committed
    `(next_keys, next_threshold)`, where for (b) only evidence from keys revealed
-   in `new_cur_keys` counts and positions are found by digest membership in
+   in `new_cur_keys` counts and positions are found by `blake3_256(qb64(key))` digest membership in
    `spent.next_keys`. Theft of every raw *current* key contributes no committed
    next position, so a full spent-current quorum signing an advance is
    **rejected** (negative vector) — whether it signs the honest message or an
@@ -677,7 +713,7 @@ Vector families (each positive + adversarial):
    created state (eq8).
 6. `deriveAidAssetName(cesr_aid)` — one fixed derivation golden (a known `cesr_aid`
    → its exact 32-byte `aid_asset_name`, byte-identical Aiken/Haskell); negatives =
-   wrong derivation code (not `0x46`), truncated / over-long `cesr_aid` (≠ 32 bytes),
+   wrong derivation code (`0x46`, not `0x45`), truncated / over-long `cesr_aid` (≠ 32 bytes),
    mutated AID (one-bit flip ⇒ different asset name), and a message carrying a
    substituted `aid_asset_name ≠ deriveAidAssetName(cesr_aid)`.
 
@@ -750,7 +786,7 @@ implements:
       cross-asset, and wrong-outref replays are each rejected — negative vectors. No
       replay boundary is claimed that is absent from the signed bytes.
 - [ ] **Locator asset-name pinned:** `CHECKPOINT_ASSET_DOMAIN_TAG` and
-      `canonical_qualified_aid_bytes` (= `0x46 ‖ cesr_aid`) are frozen with exact
+      `canonical_qualified_aid_bytes` (= `0x45 ‖ cesr_aid`) are frozen with exact
       bytes; `deriveAidAssetName` is executable Aiken+Haskell with a byte-identical
       golden and wrong-code / truncated / mutated-AID / substituted-asset negatives;
       messages require `aid_asset_name == deriveAidAssetName(cesr_aid)`.

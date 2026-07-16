@@ -16,7 +16,7 @@ Every registered identity has two identifiers that are always distinct:
 | Identifier | Derivation | Where used | Verified on-chain? |
 |---|---|---|---|
 | `trie_key` | `blake2b_256(cbor({cur_pubkey, next_digest}))` | MPF trie key, cage auth | Yes |
-| [CESR](https://github.com/WebOfTrust/ietf-cesr) AID | `blake2b_256(cesr_inception_event)` (F prefix) | KERI witnesses, Veridian | No — stored as metadata; F-prefix keeps it *recomputable* off-chain with a Cardano-aligned hash |
+| [CESR](https://github.com/WebOfTrust/ietf-cesr) AID | `blake3_256(cesr_inception_event)` (E prefix — the production KERI default) | KERI witnesses, Veridian | Genesis binding via the hash-proof minter (≤1024 B events); stored in the checkpoint datum |
 
 The CESR AID is stored as the `cesr_aid` field inside the `KeyState` value at the `trie_key`. Off-chain tools correlate KERI identities to their on-chain state by scanning the trie metadata.
 
@@ -58,7 +58,7 @@ The trie leaf wraps `KeyState` with a lifecycle status:
     proof extension. The singleton shape above is the illustration. See the
     [factored core](business-cases/index.md#the-factored-core-required-by-every-case).
 
-**Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-keri requires F-prefix (Blake2b-256) AIDs; the derivation code is always `F` and is not stored separately.
+**Encoding note:** `cesr_aid` is typed as `ByteArray[32]` — the raw digest bytes after stripping the CESR derivation code. cardano-keri is E-native: the derivation code is always `E` (Blake3-256, the production KERI default) and is not stored separately.
 
 `cur_pubkey` is the raw public key, stored on-chain. This differs from earlier designs that stored only a hash. Storing the raw key enables the on-chain script to verify `trie_key` derivation and Ed25519 signatures without requiring the caller to re-supply the key in the redeemer.
 
@@ -79,9 +79,16 @@ The trie leaf wraps `KeyState` with a lifecycle status:
 
 **Attack B — first-party squatting.** An adversary uses their own keys, produces a valid inception, and asserts a `cesr_aid` they do not control (a well-known KERI prefix). Signing `inc_msg` does nothing here — they are honestly signing their own inception with false metadata. Nor would on-chain derivation checking help: KERI inception events are public, so a squatter can always supply the victim's real event bytes and pass a `blake2b_256(event) == cesr_aid` check; binding the event to the *registrant* would require parsing CESR on-chain, which is out of scope by design. The authoritative defense is the off-chain KEL-derived resolution protocol — the bridge's authoritative identity is the `trie_key` recomputed from the real KEL, not the `cesr_aid` index.
 
-cardano-keri requires Blake2b-256 (F-prefix) AIDs; Blake3 AIDs are not supported.
+cardano-keri is E-native: standard Blake3-256 (E-prefix) AIDs are supported as-is; genesis hash binding is verified by the hash-proof minter for events up to one blake3 chunk.
 
 ## Seq-0 binding gap
+
+!!! warning "Superseded by the E-native contract (2026-07-16)"
+    The digest-agility mandate below is dissolved: the checkpoint contract is
+    now **E-native** — the datum's `next_keys` are the standard Blake3 KEL `n`
+    entries byte-for-byte, so the seq-0 correspondence holds for unmodified
+    production identities with no bridge mandate. The analysis is kept for the
+    historical Candidate-B lineage only.
 
 !!! danger "Pre-rotation identity is unverifiable without the digest agility mandate"
     At seq 0, the `next_pubkey` is secret (by design — it has not been revealed in a rotation yet). An off-chain verifier holding only the KEL has access to `cur_pubkey` (from the KEL's `k` field) but cannot reproduce `next_digest` without knowing `next_pubkey`.

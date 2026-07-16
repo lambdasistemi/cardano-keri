@@ -5,7 +5,7 @@
 //// byte-for-byte: the two domain-separated signed preimages
 //// (`InceptionMessage` = Constr 0, 12 fields; `AdvanceMessage` = Constr 0,
 //// 17 fields) and `deriveAidAssetName` over the frozen 65-byte
-//// `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x46 ‖ cesr_aid` preimage encode to the
+//// `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x45 ‖ cesr_aid` preimage encode to the
 //// exact canonical Plutus-Data CBOR / `blake2b_256` digest the Haskell
 //// encoder emits (see `vectors.ak`). Domain strings, constructor indices, and
 //// field order are protocol surface; they change only by minting a new
@@ -25,6 +25,8 @@
 use aiken/collection/list
 use aiken/crypto
 use aiken/primitive/bytearray
+use cardano_keri/base64url
+use cardano_keri/blake3
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV1, DatumError, DatumInvalid, datum_well_formed,
 }
@@ -51,17 +53,37 @@ pub const advance_domain: ByteArray =
 // Locator asset-name derivation (#92 -> #68 pin)
 // ---------------------------------------------------------
 
-/// `aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x46 ‖ cesr_aid)`
-/// over the fixed 65-byte preimage. `0x46` = ASCII `'F'`, the V1 F-only
-/// (Blake2b-256) derivation code. The asset name is a deterministic label of
-/// the AID; changing either constant requires a new version tag.
+/// `aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x45 ‖ cesr_aid)`
+/// over the fixed 65-byte preimage. `0x45` = ASCII `'E'`, the V1 E-native
+/// (Blake3-256) derivation code — the production KERI AID default. The outer
+/// hash stays `blake2b_256`: it is a Cardano-internal label of the AID, never
+/// a KERI artifact, so the cheap native builtin is correct here. Changing
+/// either constant requires a new version tag.
 pub fn deriveAidAssetName(cesr_aid: ByteArray) -> ByteArray {
   crypto.blake2b_256(
     bytearray.concat(
       checkpoint_asset_domain_tag,
-      bytearray.concat(#"46", cesr_aid),
+      bytearray.concat(#"45", cesr_aid),
     ),
   )
+}
+
+/// The fully qualified Base64url (qb64) form of a raw 32-byte transferable
+/// Ed25519 verkey: code `'D'` followed by `b64url(0x00 ‖ key)` with the first
+/// (always `'A'`) character replaced by the code — 44 ASCII characters. This
+/// is the exact preimage KERI digests for KEL `n` entries.
+pub fn qb64_verkey(key: ByteArray) -> ByteArray {
+  bytearray.push(
+    bytearray.drop(base64url.encode(bytearray.push(key, 0)), 1),
+    68,
+  )
+}
+
+/// A pre-rotation next-key digest: `blake3_256(qb64(verkey))` — the KERI KEL
+/// `n` entry byte-for-byte. One single-block blake3 per revealing key, on the
+/// rare rotation path only (never at plain authorization).
+pub fn next_key_digest(key: ByteArray) -> ByteArray {
+  blake3.hash(qb64_verkey(key))
 }
 
 // ---------------------------------------------------------
@@ -311,11 +333,16 @@ pub fn advance_equalities(
     list.length(spent.next_keys),
     positions_in(
       spent.next_keys,
-      list.filter(controlled, fn(k) { list.has(message.new_cur_keys, k) }),
+      list.map(
+        list.filter(controlled, fn(k) { list.has(message.new_cur_keys, k) }),
+        next_key_digest,
+      ),
     ),
   ) {
     // eq6b: the evidence revealed in new_cur_keys satisfies the committed
-    // (next_keys, next_threshold) — the KERI pre-rotation gate.
+    // (next_keys, next_threshold) — the KERI pre-rotation gate. Each
+    // revealing key is digested once (blake3 over its 44-char qb64) to find
+    // its committed position; the KEL n entries are matched byte-for-byte.
     AdvanceInvalid(Eq6PriorNextQuorumUnsatisfied)
   } else if created != expected_created(message) {
     // eq7: the created datum equals the message's new-state fields exactly.

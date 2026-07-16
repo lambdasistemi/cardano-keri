@@ -45,6 +45,12 @@ module Cardano.KERI.AID.Checkpoint.Message (
     advanceEqualities,
 ) where
 
+import Cardano.KERI.AID.Blake3.Checkpoint (
+    blake3Hash,
+ )
+import Cardano.KERI.AID.CESR (
+    qb64Verkey,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     CheckpointDatumV1 (..),
@@ -106,14 +112,16 @@ advanceDomain = TE.encodeUtf8 "cardano-keri/checkpoint/adv/v1"
 -- Locator asset-name derivation (#92 -> #68 pin)
 -- ---------------------------------------------------------
 
-{- | @aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x46 ‖ cesr_aid)@
-over the fixed 65-byte preimage. @0x46@ = ASCII @\'F\'@, the V1 F-only
-(Blake2b-256) derivation code. The asset name is a deterministic label of the
-AID; changing either constant requires a new version tag.
+{- | @aid_asset_name = blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x45 ‖ cesr_aid)@
+over the fixed 65-byte preimage. @0x45@ = ASCII @\'E\'@, the V1 E-native
+(Blake3-256) derivation code — the production KERI AID default. The outer
+hash stays @blake2b_256@: it is a Cardano-internal label of the AID, never a
+KERI artifact, so the cheap native builtin is correct here. Changing either
+constant requires a new version tag.
 -}
 deriveAidAssetName :: CesrAid -> ByteString
 deriveAidAssetName cesrAid =
-    blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x46 cesrAid)
+    blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x45 cesrAid)
 
 -- ---------------------------------------------------------
 -- Shared codec helper
@@ -138,7 +146,7 @@ data InceptionMessage = InceptionMessage
     , imCheckpointPolicyId :: !ByteString
     , imAidAssetName :: !ByteString
     , imCesrAid :: !CesrAid
-    , imCurKeys :: ![KeyDigest]
+    , imCurKeys :: ![Verkey]
     , imCurThreshold :: !Threshold
     , imNextKeys :: ![KeyDigest]
     , imNextThreshold :: !Threshold
@@ -175,7 +183,7 @@ inceptionMessage ::
     ByteString ->
     ByteString ->
     CesrAid ->
-    [KeyDigest] ->
+    [Verkey] ->
     Threshold ->
     [KeyDigest] ->
     Threshold ->
@@ -267,7 +275,7 @@ data AdvanceMessage = AdvanceMessage
     , amSpentIndex :: !Integer
     , amPriorSeq :: !Integer
     , amPriorNativeSn :: !Integer
-    , amNewCurKeys :: ![KeyDigest]
+    , amNewCurKeys :: ![Verkey]
     , amNewCurThreshold :: !Threshold
     , amNewNextKeys :: ![KeyDigest]
     , amNewNextThreshold :: !Threshold
@@ -314,7 +322,7 @@ advanceMessage ::
     Integer ->
     Integer ->
     Integer ->
-    [KeyDigest] ->
+    [Verkey] ->
     Threshold ->
     [KeyDigest] ->
     Threshold ->
@@ -379,15 +387,16 @@ data SpentCheckpoint = SpentCheckpoint
     }
     deriving stock (Show, Eq)
 
-{- | The key digests of the raw keys that produced valid signatures (the
-signer evidence). eq6 maps this evidence onto @new_cur_keys@ positions (the
-rotation's own threshold) __and__ onto the spent checkpoint's committed
-@next_keys@ positions (the pre-rotation threshold) — KERI's dual-threshold
-rule. Because the evidence is key-based, a stolen spent-current quorum maps
-to no committed @next_keys@ position, so it fails the pre-rotation threshold
-and is rejected.
+{- | The __raw__ verkeys that produced valid signatures (the signer
+evidence). eq6 maps this evidence onto @new_cur_keys@ positions by direct
+raw-key equality (the rotation's own threshold — no hashing) __and__ onto
+the spent checkpoint's committed @next_keys@ positions via
+@blake3_256(qb64(key))@ (the pre-rotation threshold; one single-block hash
+per revealing key, on the rare rotation path only) — KERI's dual-threshold
+rule. A stolen spent-current quorum maps to no committed @next_keys@
+position, so it fails the pre-rotation threshold and is rejected.
 -}
-newtype RevealedSuccessorSigners = RevealedSuccessorSigners [KeyDigest]
+newtype RevealedSuccessorSigners = RevealedSuccessorSigners [Verkey]
     deriving stock (Show, Eq)
 
 -- | Which advance validation rejected: the frozen domain gate or one of eq1-eq8.
@@ -479,12 +488,16 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
         (Left Eq6CurrentQuorumUnsatisfied)
     -- (b) the evidence revealed in new_cur_keys satisfies the spent
     --     checkpoint's committed (next_keys, next_threshold) — pre-rotation.
+    --     Each revealing key is digested once (blake3 over its 44-char qb64)
+    --     to find its committed position; the KEL n entries are matched
+    --     byte-for-byte.
     let revealed = filter (`elem` amNewCurKeys am) controlled
+        revealedDigests = map (blake3Hash . qb64Verkey) revealed
     unless
         ( evaluate
             (scNextThreshold sc)
             (length (scNextKeys sc))
-            (positionsIn (scNextKeys sc) revealed)
+            (positionsIn (scNextKeys sc) revealedDigests)
         )
         (Left Eq6PriorNextQuorumUnsatisfied)
     -- eq7: the created datum equals the message's new-state fields exactly.
@@ -504,8 +517,8 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
     -- eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
     first Eq8CreatedIllFormed (datumWellFormed created)
 
--- | Positions in @keys@ whose digest appears in the signer evidence.
-positionsIn :: [KeyDigest] -> [KeyDigest] -> IntSet
+-- | Positions in @keys@ whose entry appears in the given evidence list.
+positionsIn :: [ByteString] -> [ByteString] -> IntSet
 positionsIn keys controlled =
     IntSet.fromList
         [ i

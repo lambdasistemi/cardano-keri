@@ -19,7 +19,7 @@ use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV1, NextCommitment, keyset_commit,
 }
-use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
+use cardano_keri/checkpoint/threshold.{Invalid, Threshold, evaluate, well_formed}
 
 // ---------------------------------------------------------
 // Frozen constants
@@ -116,6 +116,8 @@ pub type EventType {
 
 /// An inception rejection reason (mirrors the Slice-3 `InceptionError`).
 pub type InceptionError {
+  /// The signed preimage domain was not the frozen `icp` literal.
+  InceptionDomainMismatch
   /// A delegated (`Dip`) or rotation (`Drt`) inception was attested.
   DelegatedInceptionRejected
   /// `cesr_aid` is not exactly 32 bytes (malformed AID width).
@@ -141,7 +143,9 @@ pub fn validate_inception(
   event: EventType,
   message: InceptionMessage,
 ) -> InceptionVerdict {
-  when event is {
+  if message.domain != inception_domain {
+    InceptionInvalid(InceptionDomainMismatch)
+  } else when event is {
     Icp ->
       if bytearray.length(message.cesr_aid) != 32 {
         InceptionInvalid(InceptionAidWidth)
@@ -187,6 +191,8 @@ pub type RevealedSuccessorSigners {
 /// Which of the seven F10 advance equalities rejected (mirrors the Slice-3
 /// `AdvanceError`).
 pub type AdvanceError {
+  /// The signed preimage domain was not the frozen `adv` literal.
+  AdvanceDomainMismatch
   /// eq1: `network_id` / `checkpoint_policy_id` do not match the deployment.
   Eq1NetworkPolicyMismatch
   /// eq2: asset name is not the AID's derived locator, or the AID crossed.
@@ -225,8 +231,10 @@ pub fn advance_equalities(
   signers: RevealedSuccessorSigners,
 ) -> AdvanceVerdict {
   let RevealedSuccessorSigners(controlled) = signers
-  // eq1: deployment (network + policy) binding.
-  if !(message.network_id == spent.network_id && message.checkpoint_policy_id == spent.policy_id) {
+  if message.domain != advance_domain {
+    AdvanceInvalid(AdvanceDomainMismatch)
+  } else if !(message.network_id == spent.network_id && message.checkpoint_policy_id == spent.policy_id) {
+    // eq1: deployment (network + policy) binding.
     AdvanceInvalid(Eq1NetworkPolicyMismatch)
   } else if !(message.aid_asset_name == deriveAidAssetName(message.cesr_aid) && message.aid_asset_name == spent.aid_asset_name && message.cesr_aid == spent.cesr_aid) {
     // eq2: asset name is the AID's own derived locator, spent asset, and AID.
@@ -245,6 +253,11 @@ pub fn advance_equalities(
   } else if !(message.seq_to == spent.seq + 1 && message.native_sn_to > spent.native_sn) {
     // eq5: exact successor sequence; native KERI sequence advances.
     AdvanceInvalid(Eq5SequenceMismatch)
+  } else if well_formed(
+    message.new_cur_keys,
+    message.new_cur_threshold,
+  ) is Invalid(_) {
+    AdvanceInvalid(Eq6SuccessorQuorumUnsatisfied)
   } else if !evaluate(
     message.new_cur_threshold,
     list.length(message.new_cur_keys),

@@ -51,6 +51,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     evaluate,
+   wellFormed,
  )
 import Control.Monad (
     unless,
@@ -185,7 +186,9 @@ inceptionMessage net pol asset cesr keys thr nxt wits toad nsn =
 
 -- | An inception rejection reason.
 data InceptionError
-    = -- | A delegated (@dip@) or rotation (@drt@) inception was attested.
+    = -- | The signed preimage domain was not the frozen @icp@ literal.
+      InceptionDomainMismatch
+    | -- | A delegated (@dip@) or rotation (@drt@) inception was attested.
       DelegatedInceptionRejected
     | -- | @cesr_aid@ is not exactly 32 bytes (malformed AID width).
       InceptionAidWidth
@@ -202,6 +205,7 @@ AID is rejected on width, not on a coincidental derivation.
 validateInception ::
     EventType -> InceptionMessage -> Either InceptionError ()
 validateInception et m = do
+    unless (imDomain m == inceptionDomain) (Left InceptionDomainMismatch)
     unless (et == Icp) (Left DelegatedInceptionRejected)
     unless (BS.length (imCesrAid m) == 32) (Left InceptionAidWidth)
     unless
@@ -345,7 +349,11 @@ newtype RevealedSuccessorSigners = RevealedSuccessorSigners [KeyDigest]
 
 -- | Which of the seven F10 advance equalities rejected.
 data AdvanceError
-    = -- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
+    = -- | The signed preimage domain was not the frozen @adv@ literal.
+      AdvanceDomainMismatch
+    | -- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
+      --
+      -- The numbered constructors below mirror the seven F10 equalities.
       Eq1NetworkPolicyMismatch
     | -- | eq2: asset name is not the AID's derived locator, or the AID crossed.
       Eq2AssetOrAidMismatch
@@ -376,6 +384,7 @@ advanceEqualities ::
     RevealedSuccessorSigners ->
     Either AdvanceError ()
 advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
+    unless (amDomain am == advanceDomain) (Left AdvanceDomainMismatch)
     -- eq1: deployment (network + policy) binding.
     unless
         ( amNetworkId am == scNetworkId sc
@@ -415,6 +424,9 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
                 | (i, k) <- zip [0 ..] (amNewCurKeys am)
                 , k `elem` controlled
                 ]
+    unless
+        (either (const False) (const True) (wellFormed (amNewCurKeys am) (amNewCurThreshold am)))
+        (Left Eq6SuccessorQuorumUnsatisfied)
     unless
         (evaluate (amNewCurThreshold am) (length (amNewCurKeys am)) sigPositions)
         (Left Eq6SuccessorQuorumUnsatisfied)

@@ -57,7 +57,7 @@ e2e:
 gen-checkpoint-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
     cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-vectors -- ../onchain/lib/cardano_keri/checkpoint/vectors.ak'
-    cd onchain && nix shell nixpkgs#aiken --command aiken fmt lib/cardano_keri/checkpoint/vectors.ak
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/vectors.ak
 
 # Drift check: regenerate the fixtures and fail if the committed copy diverges
 # from a fresh regenerate (stale fixtures must FAIL the gate).
@@ -68,15 +68,15 @@ check-checkpoint-vectors: gen-checkpoint-vectors
 
 # Format Aiken sources
 format-onchain:
-    cd onchain && nix shell nixpkgs#aiken --command aiken fmt
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt
 
 # Check Aiken formatting without modifying files
 format-check-onchain:
-    cd onchain && nix shell nixpkgs#aiken --command aiken fmt --check
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt --check
 
 # Run Aiken tests + type-check
 check-onchain:
-    cd onchain && nix shell nixpkgs#aiken --command aiken check
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
 # --- BLAKE3 spike (pinned Aiken) ---
 

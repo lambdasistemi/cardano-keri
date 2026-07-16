@@ -37,10 +37,10 @@ jobs:
       - uses: actions/checkout@v6
       - name: Format check
         working-directory: onchain
-        run: nix shell nixpkgs#aiken --command aiken fmt --check
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt --check
       - name: Check (tests + type-check)
         working-directory: onchain
-        run: nix shell nixpkgs#aiken --command aiken check
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
   blake3-spike:
     name: BLAKE3 spike (Aiken 1.1.23)

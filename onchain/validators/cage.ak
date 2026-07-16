@@ -43,18 +43,19 @@ validator mpfCage(_version: Int, predecessorPolicy: PolicyId) {
       Retract(stateRef) -> {
         expect RequestDatum(request) = datum
         let Request { requestOwner, requestToken, submitted_at, .. } = request
-        let Transaction {
-          extra_signatories,
-          validity_range,
-          reference_inputs,
-          ..
-        } = tx
+        let  
+            Transaction {
+              extra_signatories,
+              validity_range,
+              reference_inputs,
+              ..
+            }
+          = tx
         expect has(extra_signatories, requestOwner)
-        expect Some(stateInput) =
-          find(
-            reference_inputs,
-            fn(input) { input.output_reference == stateRef },
-          )
+        expect Some(stateInput) = find(
+          reference_inputs,
+          fn(input) { input.output_reference == stateRef },
+        )
         expect Some(tokenId) = tokenFromValue(stateInput.output.value)
         expect requestToken == tokenId
         let State { process_time, retract_time, .. } = readState(stateInput)
@@ -73,8 +74,7 @@ validator mpfCage(_version: Int, predecessorPolicy: PolicyId) {
         when redeemer is {
           Modify(actions) -> validModify(state, input, tokenId, tx, actions)
           End -> {
-            expect address.Script(policyId) =
-              input.output.address.payment_credential
+            expect address.Script(policyId) = input.output.address.payment_credential
             validateEnd(policyId, tokenId, tx)
           }
           _ -> fail
@@ -89,8 +89,10 @@ validator mpfCage(_version: Int, predecessorPolicy: PolicyId) {
 }
 
 pub fn extractToken(what: OutputReference, tx: Transaction) {
-  expect Some(input) =
-    find(tx.inputs, fn(input) { input.output_reference == what })
+  expect Some(input) = find(
+    tx.inputs,
+    fn(input) { input.output_reference == what },
+  )
   expect Some(tokenId) = tokenFromValue(input.output.value)
   (input, tokenId)
 }
@@ -120,17 +122,16 @@ fn validateBurn(tokenId: TokenId, policyId: PolicyId, tx: Transaction) {
   expect [Pair(burnedName, burnedQty)] = dict.to_pairs(tokens(mint, policyId))
   expect burnedName == tokenId.assetName
   expect burnedQty == -1
-  expect Some(stateInput) =
-    find(
-      inputs,
-      fn(input) {
-        input.output.address.payment_credential == address.Script(policyId) && quantity(
-          policyId,
-          input.output.value,
-          tokenId,
-        ) == Some(1)
-      },
-    )
+  expect Some(stateInput) = find(
+    inputs,
+    fn(input) {
+      input.output.address.payment_credential == address.Script(policyId) && quantity(
+        policyId,
+        input.output.value,
+        tokenId,
+      ) == Some(1)
+    },
+  )
   let State { owner, .. } = readState(stateInput)
   expect has(extra_signatories, owner)
   True
@@ -221,21 +222,19 @@ pub fn verifyOwnerAuth(
   // Step 1: verify identity inclusion via no-op MPF update
   let id_trie = mpf.from_root(identity_root)
   let cur_key_digest = blake2b_256(owner_key)
-  expect _ =
-    mpf.update(
-      id_trie,
-      owner_aid,
-      identity_proof,
-      cur_key_digest,
-      cur_key_digest,
-    )
+  expect _ = mpf.update(
+    id_trie,
+    owner_aid,
+    identity_proof,
+    cur_key_digest,
+    cur_key_digest,
+  )
   // Step 2: verify owner signature over domain ++ request output reference
-  let msg =
-    blake2b_256(
-      value_write_domain
-        |> bytearray.concat(out_ref.transaction_id)
-        |> bytearray.concat(from_int_big_endian(out_ref.output_index, 2)),
-    )
+  let msg = blake2b_256(
+    value_write_domain
+      |> bytearray.concat(out_ref.transaction_id)
+      |> bytearray.concat(from_int_big_endian(out_ref.output_index, 2)),
+  )
   expect verify_ed25519_signature(owner_key, msg, owner_sig)
   True
 }
@@ -265,66 +264,66 @@ fn mkAction(
     when input.output.datum is {
       InlineDatum(datum) ->
         if datum is RequestDatum(request): CageDatum {
-          let Request {
-            requestToken,
-            requestKey,
-            requestValue,
-            requestOwner,
-            tip,
-            submitted_at,
-          } = request
+          let  
+              Request {
+                requestToken,
+                requestKey,
+                requestValue,
+                requestOwner,
+                tip,
+                submitted_at,
+              }
+            = request
           if requestToken == tokenId {
             expect tip == state_tip
             let (trie, actions, owners, totalInputLovelace) = acc
             let action, actionsTail <- uncons(actions)
             let inputLovelace = assets.lovelace_of(input.output.value)
-            let newTrie =
-              when action is {
-                UpdateAction { value_proof, auth } -> {
-                  expect in_phase1(validity_range, submitted_at, process_time)
-                  // FR6 (H5): bind the authenticated AID to the mutated key. The
-                  // key's first 32 bytes must be `blake2b_256(owner_aid)` — the
-                  // owner cell is exactly that digest (length 32); a longer key is
-                  // a namespaced child under it. This rejects both an unrelated
-                  // authenticated AID (digest differs) and a raw-`owner_aid` prefix
-                  // (the AID bytes are not their own digest).
-                  expect length(requestKey) >= 32
-                  expect take(requestKey, 32) == blake2b_256(auth.owner_aid)
-                  // Verify AID owner authorization before applying MPF op
-                  expect
-                    verifyOwnerAuth(auth, identity_root, input.output_reference)
-                  when requestValue is {
-                    Insert(value) ->
-                      mpf.insert(trie, requestKey, value, value_proof)
-                    Delete(value) ->
-                      mpf.delete(trie, requestKey, value, value_proof)
-                    Update(oldValue, newValue) ->
-                      mpf.update(
-                        trie,
-                        requestKey,
-                        value_proof,
-                        oldValue,
-                        newValue,
-                      )
-                  }
-                }
-                Rejected -> {
-                  expect
-                    is_rejectable(
-                      validity_range,
-                      submitted_at,
-                      process_time,
-                      retract_time,
+            let newTrie = when action is {
+              UpdateAction { value_proof, auth } -> {
+                expect in_phase1(validity_range, submitted_at, process_time)
+                // FR6 (H5): bind the authenticated AID to the mutated key. The
+                // key's first 32 bytes must be `blake2b_256(owner_aid)` — the
+                // owner cell is exactly that digest (length 32); a longer key is
+                // a namespaced child under it. This rejects both an unrelated
+                // authenticated AID (digest differs) and a raw-`owner_aid` prefix
+                // (the AID bytes are not their own digest).
+                expect length(requestKey) >= 32
+                expect take(requestKey, 32) == blake2b_256(auth.owner_aid)
+                // Verify AID owner authorization before applying MPF op
+                expect
+                  verifyOwnerAuth(auth, identity_root, input.output_reference)
+                when requestValue is {
+                  Insert(value) ->
+                    mpf.insert(trie, requestKey, value, value_proof)
+                  Delete(value) ->
+                    mpf.delete(trie, requestKey, value, value_proof)
+                  Update(oldValue, newValue) ->
+                    mpf.update(
+                      trie,
+                      requestKey,
+                      value_proof,
+                      oldValue,
+                      newValue,
                     )
-                  trie
                 }
               }
-            let newOwners =
-              if inputLovelace > 0 {
-                [Pair(requestOwner, inputLovelace), ..owners]
-              } else {
-                owners
+              Rejected -> {
+                expect
+                  is_rejectable(
+                    validity_range,
+                    submitted_at,
+                    process_time,
+                    retract_time,
+                  )
+                trie
               }
+            }
+            let newOwners = if inputLovelace > 0 {
+              [Pair(requestOwner, inputLovelace), ..owners]
+            } else {
+              owners
+            }
             (
               newTrie,
               actionsTail,
@@ -364,8 +363,7 @@ fn validModify(
   tx: Transaction,
   actions: List<RequestAction>,
 ) {
-  let Transaction { outputs, inputs, validity_range, fee: tx_fee, mint, .. } =
-    tx
+  let Transaction { outputs, inputs, validity_range, fee: tx_fee, mint, .. } = tx
   // Spend-side half of the H6 mint↔End coupling (see `validateBurn`): a Modify
   // continues the cage lifecycle, so it must NOT mint or burn its own thread
   // token. Burning is exclusively the owner-authorized End path, so a burn
@@ -375,12 +373,14 @@ fn validModify(
   let State { root, tip, process_time, retract_time, .. } = state
   expect Some(output) = head(outputs)
   expect InlineDatum(outDatum) = output.datum
-  expect StateDatum(State {
-    root: newRoot,
-    process_time: outProcessTime,
-    retract_time: outRetractTime,
-    ..
-  }) = outDatum
+  expect  
+      StateDatum(State {
+        root: newRoot,
+        process_time: outProcessTime,
+        retract_time: outRetractTime,
+        ..
+      })
+    = outDatum
   // Enforce immutability of time params
   expect process_time == outProcessTime
   expect retract_time == outRetractTime
@@ -394,19 +394,18 @@ fn validModify(
   // StateDatum, `state`), NOT the output datum's root — a tx must not introduce
   // its own authority via its own output. `identity_root` may advance (oracle
   // updates it in the output) but authorization is proven against the input root.
-  let (expectedNewTrie, remainingActions, owners, totalInputLovelace) =
-    inputs
-      |> foldl(
-          (mpf.from_root(root), actions, [], 0),
-          mkAction(
-            tokenId,
-            tip,
-            process_time,
-            retract_time,
-            validity_range,
-            state.identity_root,
-          ),
-        )
+  let (expectedNewTrie, remainingActions, owners, totalInputLovelace) = inputs
+    |> foldl(
+        (mpf.from_root(root), actions, [], 0),
+        mkAction(
+          tokenId,
+          tip,
+          process_time,
+          retract_time,
+          validity_range,
+          state.identity_root,
+        ),
+      )
   // Fold gap fix: all actions must be consumed
   expect remainingActions == []
   expect mpf.root(expectedNewTrie) == newRoot
@@ -468,8 +467,9 @@ pub fn validateMigration(
   let Migration { tokenId } = migration
   let Transaction { outputs, mint, .. } = tx
   // Exactly one predecessor-policy burn of the migrated token at -1.
-  expect [Pair(oldName, oldQty)] =
-    dict.to_pairs(tokens(mint, predecessorPolicy))
+  expect [Pair(oldName, oldQty)] = dict.to_pairs(
+    tokens(mint, predecessorPolicy),
+  )
   expect oldName == tokenId.assetName
   expect oldQty == -1
   // Exactly one successor-policy mint of the migrated token at +1.

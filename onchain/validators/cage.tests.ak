@@ -29,8 +29,14 @@ use types.{
 // the cage script opens an empty state.
 test accept_mint_full_tx() {
   let asset = out_ref(seed_tx_id, 0)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   let tx = mint_tx(cage_policy, asset, state)
   cage.mpfCage.mint(
     0,
@@ -46,8 +52,14 @@ test accept_mint_full_tx() {
 test accept_migrate_full_tx() {
   let asset = out_ref(seed_tx_id, 1)
   let tokenId = token_of(asset)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   let tx = migrate_tx(cage_policy, old_cage_policy, tokenId, state)
   cage.mpfCage.mint(
     0,
@@ -66,8 +78,14 @@ test accept_modify_empty_batch_full_tx() {
   let root0 = empty_root()
   let in_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
   let out_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
-  let tx =
-    modify_tx(cage_policy, own_ref, tokenId, owner_vkh, in_state, out_state)
+  let tx = modify_tx(
+    cage_policy,
+    own_ref,
+    tokenId,
+    owner_vkh,
+    in_state,
+    out_state,
+  )
   cage.mpfCage.spend(
     0,
     old_cage_policy,
@@ -84,18 +102,14 @@ test accept_modify_empty_batch_full_tx() {
 // the gen-vectors owner-auth fixture whose signature is over the request input's
 // output reference (tx_id 0xde*32, index 0).
 test accept_modify_insert_full_tx() {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
-  let owner_sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
-  let identity_root =
-    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
-  let request_ref =
-    out_ref(
-      #"dededededededededededededededededededededededededededededededede",
-      0,
-    )
+  let owner_sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root = #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref = out_ref(
+    #"dededededededededededededededededededededededededededededededede",
+    0,
+  )
 
   let own_ref = out_ref(seed_tx_id, 2)
   let tokenId = token_of(own_ref)
@@ -109,66 +123,60 @@ test accept_modify_insert_full_tx() {
   // value trie (proof []); the continuing state carries the recomputed root.
   let requestKey = blake2b_256(owner_aid)
   let new_root = insert_root(empty_root(), requestKey, "42", [])
-  let in_state =
-    state_datum(
-      owner_vkh,
-      empty_root(),
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
-  let out_state =
-    state_datum(
-      owner_vkh,
-      new_root,
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
+  let in_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
+  let out_state = state_datum(
+    owner_vkh,
+    new_root,
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
 
-  let state_in =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
-  let request_in =
-    input_at(
-      request_ref,
-      inline_output(
-        from_script(cage_policy),
-        from_lovelace(2_000_000),
-        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
-      ),
-    )
+  let state_in = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
+  let request_in = input_at(
+    request_ref,
+    inline_output(
+      from_script(cage_policy),
+      from_lovelace(2_000_000),
+      request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+    ),
+  )
 
   let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
   let action = UpdateAction { value_proof: [], auth }
 
   // Refund the request owner: totalInput(2_000_000) - fee(0) - n(1)*tip.
   let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      out_state,
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    out_state,
+  )
 
-  let tx =
-    spend_context(
-      [state_in, request_in],
-      [],
-      [state_out, refund],
-      zero,
-      [owner_vkh],
-      interval.between(0, 5_000),
-      0,
-    )
+  let tx = spend_context(
+    [state_in, request_in],
+    [],
+    [state_out, refund],
+    zero,
+    [owner_vkh],
+    interval.between(0, 5_000),
+    0,
+  )
 
   cage.mpfCage.spend(
     0,
@@ -185,8 +193,14 @@ test accept_modify_insert_full_tx() {
 test accept_end_full_tx() {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
   cage.mpfCage.spend(0, old_cage_policy, Some(state), End, own_ref, tx)
 }
@@ -199,8 +213,14 @@ test accept_end_full_tx() {
 test accept_burning_full_tx() {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   let tx = end_tx(cage_policy, own_ref, tokenId, owner_vkh, state)
   cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
@@ -222,18 +242,26 @@ test accept_burning_full_tx() {
 test reject_mint_token_absent_from_state_output() fail {
   let asset = out_ref(seed_tx_id, 0)
   let tokenId = token_of(asset)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   // State output sits at the cage script with an empty-root StateDatum, but its
   // value is ada-only: the minted thread token is NOT confined here.
-  let state_out =
-    inline_output(from_script(cage_policy), from_lovelace(min_ada), state)
-  let tx =
-    mint_context(
-      [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
-      [state_out],
-      from_asset(cage_policy, tokenId.assetName, 1),
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    from_lovelace(min_ada),
+    state,
+  )
+  let tx = mint_context(
+    [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
+    [state_out],
+    from_asset(cage_policy, tokenId.assetName, 1),
+  )
   cage.mpfCage.mint(
     0,
     old_cage_policy,
@@ -253,25 +281,28 @@ test reject_mint_token_absent_from_state_output() fail {
 test reject_mint_extra_asset_name_under_policy() fail {
   let asset = out_ref(seed_tx_id, 0)
   let tokenId = token_of(asset)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      state,
-    )
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    state,
+  )
   // Mint the derived token at qty 1 AND an unrelated asset name under the same
   // policy — an extra token minted alongside the thread token.
-  let mint =
-    from_asset(cage_policy, tokenId.assetName, 1)
-      |> merge(from_asset(cage_policy, "extra", 1))
-  let tx =
-    mint_context(
-      [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
-      [state_out],
-      mint,
-    )
+  let mint = from_asset(cage_policy, tokenId.assetName, 1)
+    |> merge(from_asset(cage_policy, "extra", 1))
+  let tx = mint_context(
+    [input_at(asset, ada_output(from_verification_key(owner_vkh), min_ada))],
+    [state_out],
+    mint,
+  )
   cage.mpfCage.mint(
     0,
     old_cage_policy,
@@ -302,27 +333,31 @@ test reject_mint_extra_asset_name_under_policy() fail {
 test reject_burning_positive_mint() fail {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_input =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        state,
-      ),
-    )
-  let tx =
-    spend_context(
-      [state_input],
-      [],
-      [],
-      from_asset(cage_policy, tokenId.assetName, 1),
-      [owner_vkh],
-      interval.everything,
-      0,
-    )
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_input = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    ),
+  )
+  let tx = spend_context(
+    [state_input],
+    [],
+    [],
+    from_asset(cage_policy, tokenId.assetName, 1),
+    [owner_vkh],
+    interval.everything,
+    0,
+  )
   cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
@@ -337,27 +372,31 @@ test reject_burn_state_input_token_mismatch() fail {
   let tokenId = token_of(own_ref)
   // A different token sits in the spent cage state UTxO.
   let otherId = token_of(out_ref(seed_tx_id, 99))
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let mismatched_input =
-    input_at(
-      out_ref(seed_tx_id, 4),
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, otherId),
-        state,
-      ),
-    )
-  let tx =
-    spend_context(
-      [mismatched_input],
-      [],
-      [],
-      from_asset(cage_policy, tokenId.assetName, -1),
-      [owner_vkh],
-      interval.everything,
-      0,
-    )
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let mismatched_input = input_at(
+    out_ref(seed_tx_id, 4),
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, otherId),
+      state,
+    ),
+  )
+  let tx = spend_context(
+    [mismatched_input],
+    [],
+    [],
+    from_asset(cage_policy, tokenId.assetName, -1),
+    [owner_vkh],
+    interval.everything,
+    0,
+  )
   cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
@@ -367,27 +406,31 @@ test reject_burn_state_input_token_mismatch() fail {
 test reject_burn_without_owner_signature() fail {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_input =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        state,
-      ),
-    )
-  let tx =
-    spend_context(
-      [state_input],
-      [],
-      [],
-      from_asset(cage_policy, tokenId.assetName, -1),
-      [],
-      interval.everything,
-      0,
-    )
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_input = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    ),
+  )
+  let tx = spend_context(
+    [state_input],
+    [],
+    [],
+    from_asset(cage_policy, tokenId.assetName, -1),
+    [],
+    interval.everything,
+    0,
+  )
   cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
@@ -397,30 +440,33 @@ test reject_burn_without_owner_signature() fail {
 test reject_burning_extra_cage_entry() fail {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_input =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        state,
-      ),
-    )
-  let mint =
-    from_asset(cage_policy, tokenId.assetName, -1)
-      |> merge(from_asset(cage_policy, "extra", -1))
-  let tx =
-    spend_context(
-      [state_input],
-      [],
-      [],
-      mint,
-      [owner_vkh],
-      interval.everything,
-      0,
-    )
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_input = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      state,
+    ),
+  )
+  let mint = from_asset(cage_policy, tokenId.assetName, -1)
+    |> merge(from_asset(cage_policy, "extra", -1))
+  let tx = spend_context(
+    [state_input],
+    [],
+    [],
+    mint,
+    [owner_vkh],
+    interval.everything,
+    0,
+  )
   cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
 }
 
@@ -437,44 +483,61 @@ test reject_burning_extra_cage_entry() fail {
 test reject_burn_via_modify_not_end() fail {
   let own_ref = out_ref(seed_tx_id, 3)
   let tokenId = token_of(own_ref)
-  let in_state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let out_state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_input =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
+  let in_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let out_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_input = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
   // Continuing state output at the cage script but TOKENLESS (ada only): the
   // thread token is dropped here and separately burned by the mint below.
-  let state_out =
-    inline_output(from_script(cage_policy), from_lovelace(min_ada), out_state)
-  let tx =
-    spend_context(
-      [state_input],
-      [],
-      [state_out],
-      from_asset(cage_policy, tokenId.assetName, -1),
-      [owner_vkh],
-      interval.everything,
-      0,
-    )
-  let mint_ok =
-    cage.mpfCage.mint(0, old_cage_policy, Burning(tokenId), cage_policy, tx)
-  let spend_ok =
-    cage.mpfCage.spend(
-      0,
-      old_cage_policy,
-      Some(in_state),
-      Modify([]),
-      own_ref,
-      tx,
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    from_lovelace(min_ada),
+    out_state,
+  )
+  let tx = spend_context(
+    [state_input],
+    [],
+    [state_out],
+    from_asset(cage_policy, tokenId.assetName, -1),
+    [owner_vkh],
+    interval.everything,
+    0,
+  )
+  let mint_ok = cage.mpfCage.mint(
+    0,
+    old_cage_policy,
+    Burning(tokenId),
+    cage_policy,
+    tx,
+  )
+  let spend_ok = cage.mpfCage.spend(
+    0,
+    old_cage_policy,
+    Some(in_state),
+    Modify([]),
+    own_ref,
+    tx,
+  )
   mint_ok && spend_ok
 }
 
@@ -501,21 +564,24 @@ test reject_burn_via_modify_not_end() fail {
 test reject_migrate_attacker_predecessor_policy() fail {
   let asset = out_ref(seed_tx_id, 1)
   let tokenId = token_of(asset)
-  let attacker_policy =
-    #"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let attacker_policy = #"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   // Successor token honestly confined in the state output, so only the
   // predecessor pin can reject.
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      state,
-    )
-  let mint =
-    from_asset(attacker_policy, tokenId.assetName, -1)
-      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    state,
+  )
+  let mint = from_asset(attacker_policy, tokenId.assetName, -1)
+    |> merge(from_asset(cage_policy, tokenId.assetName, 1))
   let tx = mint_context([], [state_out], mint)
   cage.mpfCage.mint(
     0,
@@ -536,18 +602,22 @@ test reject_migrate_attacker_predecessor_policy() fail {
 test reject_migrate_extra_successor_asset() fail {
   let asset = out_ref(seed_tx_id, 1)
   let tokenId = token_of(asset)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      state,
-    )
-  let mint =
-    from_asset(old_cage_policy, tokenId.assetName, -1)
-      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
-      |> merge(from_asset(cage_policy, "evil", 1))
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    state,
+  )
+  let mint = from_asset(old_cage_policy, tokenId.assetName, -1)
+    |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+    |> merge(from_asset(cage_policy, "evil", 1))
   let tx = mint_context([], [state_out], mint)
   cage.mpfCage.mint(
     0,
@@ -567,15 +637,23 @@ test reject_migrate_extra_successor_asset() fail {
 test reject_migrate_successor_token_absent_from_state_output() fail {
   let asset = out_ref(seed_tx_id, 1)
   let tokenId = token_of(asset)
-  let state =
-    state_datum(owner_vkh, empty_root(), empty_root(), 0, 10_000, 10_000)
+  let state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    0,
+    10_000,
+    10_000,
+  )
   // State output at the cage script with an empty-root StateDatum, but ada-only:
   // the successor token is NOT confined here.
-  let state_out =
-    inline_output(from_script(cage_policy), from_lovelace(min_ada), state)
-  let mint =
-    from_asset(old_cage_policy, tokenId.assetName, -1)
-      |> merge(from_asset(cage_policy, tokenId.assetName, 1))
+  let state_out = inline_output(
+    from_script(cage_policy),
+    from_lovelace(min_ada),
+    state,
+  )
+  let mint = from_asset(old_cage_policy, tokenId.assetName, -1)
+    |> merge(from_asset(cage_policy, tokenId.assetName, 1))
   let tx = mint_context([], [state_out], mint)
   cage.mpfCage.mint(
     0,
@@ -616,36 +694,36 @@ test reject_modify_token_moved_out_of_state_output() fail {
   let in_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
   let out_state = state_datum(owner_vkh, root0, empty_root(), 0, 10_000, 10_000)
   let attacker_vkh = #"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
-  let state_input =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
+  let state_input = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
   // Continuing state output at the cage script but TOKENLESS (ada only).
-  let state_out =
-    inline_output(from_script(cage_policy), from_lovelace(min_ada), out_state)
+  let state_out = inline_output(
+    from_script(cage_policy),
+    from_lovelace(min_ada),
+    out_state,
+  )
   // The thread token is moved OUT to an attacker's non-cage output (not burned).
-  let attacker_out =
-    Output {
-      address: from_verification_key(attacker_vkh),
-      value: state_value(cage_policy, tokenId),
-      datum: NoDatum,
-      reference_script: None,
-    }
-  let tx =
-    spend_context(
-      [state_input],
-      [],
-      [state_out, attacker_out],
-      zero,
-      [owner_vkh],
-      interval.everything,
-      0,
-    )
+  let attacker_out = Output {
+    address: from_verification_key(attacker_vkh),
+    value: state_value(cage_policy, tokenId),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [state_input],
+    [],
+    [state_out, attacker_out],
+    zero,
+    [owner_vkh],
+    interval.everything,
+    0,
+  )
   cage.mpfCage.spend(
     0,
     old_cage_policy,
@@ -664,19 +742,15 @@ test reject_modify_token_moved_out_of_state_output() fail {
 // tx can introduce its own authority and is accepted. The FR5 fix authenticates
 // against `state.identity_root` (the spent input), where the mapping is absent.
 test reject_modify_output_identity_root_self_auth() fail {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
-  let owner_sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let owner_sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
   // Fabricated aid→key mapping — placed ONLY in the tx's own OUTPUT datum.
-  let fabricated_root =
-    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
-  let request_ref =
-    out_ref(
-      #"dededededededededededededededededededededededededededededededede",
-      0,
-    )
+  let fabricated_root = #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref = out_ref(
+    #"dededededededededededededededededededededededededededededededede",
+    0,
+  )
 
   let own_ref = out_ref(seed_tx_id, 2)
   let tokenId = token_of(own_ref)
@@ -690,63 +764,57 @@ test reject_modify_output_identity_root_self_auth() fail {
 
   // INPUT identity_root does NOT contain the aid→key mapping (empty trie);
   // OUTPUT identity_root is the fabricated root that DOES contain it.
-  let in_state =
-    state_datum(
-      owner_vkh,
-      empty_root(),
-      empty_root(),
-      tip,
-      process_time,
-      retract_time,
-    )
-  let out_state =
-    state_datum(
-      owner_vkh,
-      new_root,
-      fabricated_root,
-      tip,
-      process_time,
-      retract_time,
-    )
+  let in_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    empty_root(),
+    tip,
+    process_time,
+    retract_time,
+  )
+  let out_state = state_datum(
+    owner_vkh,
+    new_root,
+    fabricated_root,
+    tip,
+    process_time,
+    retract_time,
+  )
 
-  let state_in =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
-  let request_in =
-    input_at(
-      request_ref,
-      inline_output(
-        from_script(cage_policy),
-        from_lovelace(2_000_000),
-        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
-      ),
-    )
+  let state_in = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
+  let request_in = input_at(
+    request_ref,
+    inline_output(
+      from_script(cage_policy),
+      from_lovelace(2_000_000),
+      request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+    ),
+  )
 
   let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
   let action = UpdateAction { value_proof: [], auth }
   let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      out_state,
-    )
-  let tx =
-    spend_context(
-      [state_in, request_in],
-      [],
-      [state_out, refund],
-      zero,
-      [owner_vkh],
-      interval.between(0, 5_000),
-      0,
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    out_state,
+  )
+  let tx = spend_context(
+    [state_in, request_in],
+    [],
+    [state_out, refund],
+    zero,
+    [owner_vkh],
+    interval.between(0, 5_000),
+    0,
+  )
   cage.mpfCage.spend(
     0,
     old_cage_policy,
@@ -764,18 +832,14 @@ test reject_modify_output_identity_root_self_auth() fail {
 // never binds `owner_aid` to `requestKey`, so any registered AID authorizes any
 // key. The FR6 fix requires `bytearray.take(requestKey, 32) == blake2b_256(owner_aid)`.
 test reject_modify_unrelated_aid_authorizes_key() fail {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
-  let owner_sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
-  let identity_root =
-    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
-  let request_ref =
-    out_ref(
-      #"dededededededededededededededededededededededededededededededede",
-      0,
-    )
+  let owner_sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root = #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref = out_ref(
+    #"dededededededededededededededededededededededededededededededede",
+    0,
+  )
 
   let own_ref = out_ref(seed_tx_id, 2)
   let tokenId = token_of(own_ref)
@@ -784,68 +848,61 @@ test reject_modify_unrelated_aid_authorizes_key() fail {
   let retract_time = 10_000
 
   // A 32-byte key in a DIFFERENT namespace: first 32 bytes ≠ blake2b_256(owner_aid).
-  let requestKey =
-    #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  let requestKey = #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   let new_root = insert_root(empty_root(), requestKey, "42", [])
 
   // Genuine identity_root in BOTH input and output (isolates FR6 from FR5).
-  let in_state =
-    state_datum(
-      owner_vkh,
-      empty_root(),
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
-  let out_state =
-    state_datum(
-      owner_vkh,
-      new_root,
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
+  let in_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
+  let out_state = state_datum(
+    owner_vkh,
+    new_root,
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
 
-  let state_in =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
-  let request_in =
-    input_at(
-      request_ref,
-      inline_output(
-        from_script(cage_policy),
-        from_lovelace(2_000_000),
-        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
-      ),
-    )
+  let state_in = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
+  let request_in = input_at(
+    request_ref,
+    inline_output(
+      from_script(cage_policy),
+      from_lovelace(2_000_000),
+      request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+    ),
+  )
 
   let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
   let action = UpdateAction { value_proof: [], auth }
   let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      out_state,
-    )
-  let tx =
-    spend_context(
-      [state_in, request_in],
-      [],
-      [state_out, refund],
-      zero,
-      [owner_vkh],
-      interval.between(0, 5_000),
-      0,
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    out_state,
+  )
+  let tx = spend_context(
+    [state_in, request_in],
+    [],
+    [state_out, refund],
+    zero,
+    [owner_vkh],
+    interval.between(0, 5_000),
+    0,
+  )
   cage.mpfCage.spend(
     0,
     old_cage_policy,
@@ -862,18 +919,14 @@ test reject_modify_unrelated_aid_authorizes_key() fail {
 // accept this; the frozen FR6 rule requires the first 32 bytes to equal
 // `blake2b_256(owner_aid)`, and the AID bytes are not their own digest — reject.
 test reject_modify_raw_aid_prefix_authorizes_key() fail {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
-  let owner_sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
-  let identity_root =
-    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
-  let request_ref =
-    out_ref(
-      #"dededededededededededededededededededededededededededededededede",
-      0,
-    )
+  let owner_sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root = #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let request_ref = out_ref(
+    #"dededededededededededededededededededededededededededededededede",
+    0,
+  )
 
   let own_ref = out_ref(seed_tx_id, 2)
   let tokenId = token_of(own_ref)
@@ -883,67 +936,60 @@ test reject_modify_raw_aid_prefix_authorizes_key() fail {
 
   // requestKey = raw owner_aid (`test-aid`, 8 bytes) padded to 32 bytes. Its
   // first 32 bytes are the AID itself, NOT blake2b_256(owner_aid).
-  let requestKey =
-    #"746573742d616964000000000000000000000000000000000000000000000000"
+  let requestKey = #"746573742d616964000000000000000000000000000000000000000000000000"
   let new_root = insert_root(empty_root(), requestKey, "42", [])
 
-  let in_state =
-    state_datum(
-      owner_vkh,
-      empty_root(),
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
-  let out_state =
-    state_datum(
-      owner_vkh,
-      new_root,
-      identity_root,
-      tip,
-      process_time,
-      retract_time,
-    )
+  let in_state = state_datum(
+    owner_vkh,
+    empty_root(),
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
+  let out_state = state_datum(
+    owner_vkh,
+    new_root,
+    identity_root,
+    tip,
+    process_time,
+    retract_time,
+  )
 
-  let state_in =
-    input_at(
-      own_ref,
-      inline_output(
-        from_script(cage_policy),
-        state_value(cage_policy, tokenId),
-        in_state,
-      ),
-    )
-  let request_in =
-    input_at(
-      request_ref,
-      inline_output(
-        from_script(cage_policy),
-        from_lovelace(2_000_000),
-        request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
-      ),
-    )
+  let state_in = input_at(
+    own_ref,
+    inline_output(
+      from_script(cage_policy),
+      state_value(cage_policy, tokenId),
+      in_state,
+    ),
+  )
+  let request_in = input_at(
+    request_ref,
+    inline_output(
+      from_script(cage_policy),
+      from_lovelace(2_000_000),
+      request_datum(tokenId, owner_vkh, requestKey, Insert("42"), tip, 0),
+    ),
+  )
 
   let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
   let action = UpdateAction { value_proof: [], auth }
   let refund = ada_output(from_verification_key(owner_vkh), 2_000_000 - tip)
-  let state_out =
-    inline_output(
-      from_script(cage_policy),
-      state_value(cage_policy, tokenId),
-      out_state,
-    )
-  let tx =
-    spend_context(
-      [state_in, request_in],
-      [],
-      [state_out, refund],
-      zero,
-      [owner_vkh],
-      interval.between(0, 5_000),
-      0,
-    )
+  let state_out = inline_output(
+    from_script(cage_policy),
+    state_value(cage_policy, tokenId),
+    out_state,
+  )
+  let tx = spend_context(
+    [state_in, request_in],
+    [],
+    [state_out, refund],
+    zero,
+    [owner_vkh],
+    interval.between(0, 5_000),
+    0,
+  )
   cage.mpfCage.spend(
     0,
     old_cage_policy,
@@ -970,15 +1016,11 @@ test fold_gap_fix_empty_actions_accepted() {
 
 // Accept: valid owner_key + matching owner_sig + valid MPF inclusion.
 test accept_owner_signed() {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
   let owner_aid = #"746573742d616964"
-  let owner_sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
-  let identity_root =
-    #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
-  let tx_id =
-    #"dededededededededededededededededededededededededededededededede"
+  let owner_sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let identity_root = #"4252dfacb23de149149cbd8fa606b63e59c501a10a168854eead7c25af070f94"
+  let tx_id = #"dededededededededededededededededededededededededededededededede"
 
   let auth = OwnerAuth { owner_aid, identity_proof: [], owner_key, owner_sig }
   let out_ref = OutputReference { transaction_id: tx_id, output_index: 0 }
@@ -988,40 +1030,31 @@ test accept_owner_signed() {
 
 // Reject: wrong signature — verify_ed25519 returns False for a zeroed sig.
 test reject_bad_sig() {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
-  let tx_id =
-    #"dededededededededededededededededededededededededededededededede"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let tx_id = #"dededededededededededededededededededededededededededededededede"
   let domain = "cardano-keri/value-write/v1"
-  let msg =
-    blake2b_256(
-      domain
-        |> bytearray.concat(tx_id)
-        |> bytearray.concat(#"0000"),
-    )
-  let bad_sig =
-    #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  let msg = blake2b_256(
+    domain
+      |> bytearray.concat(tx_id)
+      |> bytearray.concat(#"0000"),
+  )
+  let bad_sig = #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
   !verify_ed25519_signature(owner_key, msg, bad_sig)
 }
 
 // Reject: wrong public key — correct sig but different key → verify fails.
 test reject_wrong_key() {
-  let owner_key =
-    #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
-  let wrong_key =
-    #"0000000000000000000000000000000000000000000000000000000000000000"
-  let tx_id =
-    #"dededededededededededededededededededededededededededededededede"
+  let owner_key = #"2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12"
+  let wrong_key = #"0000000000000000000000000000000000000000000000000000000000000000"
+  let tx_id = #"dededededededededededededededededededededededededededededededede"
   let domain = "cardano-keri/value-write/v1"
-  let msg =
-    blake2b_256(
-      domain
-        |> bytearray.concat(tx_id)
-        |> bytearray.concat(#"0000"),
-    )
-  let sig =
-    #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
+  let msg = blake2b_256(
+    domain
+      |> bytearray.concat(tx_id)
+      |> bytearray.concat(#"0000"),
+  )
+  let sig = #"f25fc18036ea046e7812d1e044fc18fadbe7f31b9fc402fe7bf4b10acd7317b11d83d86bdf0e8c91741a0b2f39e8e9e48d18588514cfd6df5f13542dd43cfd01"
 
   // sig is valid for owner_key but wrong_key should reject it
   !verify_ed25519_signature(wrong_key, msg, sig) && verify_ed25519_signature(

@@ -87,7 +87,7 @@ GLEIF vLEI chain (off-chain KERI)
                       └─ value cages (MPFS)
 ```
 
-The binding is established at inception by the bridge's [digest agility requirement](../architecture/veridian-bridge.md#digest-agility-requirement): the KERI inception event's `n` field uses `blake2b_256`, so the Cardano on-chain commitment and the KERI KEL commitment are byte-for-byte equal from day one.
+The binding needs no digest-agility mandate: the contract is E-native, so the checkpoint datum stores the standard Blake3 KEL `n` entries and the Cardano on-chain commitment equals the KERI KEL commitment byte-for-byte from day one, for unmodified production identities.
 
 Once registered, the legal entity's **qualified KERI AID — and the checkpoint asset name derived from it — is the stable handle** across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by `(checkpoint_policy_id, aid_asset_name)` as a CIP-31 reference input and reads the **current weighted keys/threshold** from its `CheckpointDatumV1`. It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.
 
@@ -133,7 +133,9 @@ A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain 
 ---
 
 !!! note "Identity requirement"
-    cardano-keri requires Veridian identities to use Blake2b-256 (F-prefix) AID derivation. Existing Blake3 Veridian users must create a new identity.
+    cardano-keri is **E-native**: standard Blake3 (E-prefix) KERI AIDs — the
+    Veridian and vLEI production default — register as-is. No re-issuance, no
+    Cardano-specific AID flavor.
 
 ## Gap table
 
@@ -144,11 +146,11 @@ the cryptographic path exists and the work is scheduled.
 
 | Capability | Status |
 |---|---|
-| Seq-0 binding verifiable from KEL | Native Blake3 AIDs: genesis remains registration-attested pending a full-context single-tx measurement (identity-model §7a; lane-packed spike #88 core fits the whole single-chunk domain, 54.3% cpu / 71.7% mem at 1024 bytes); F-prefix AIDs (CF sidecar): on-chain self-cert |
-| Full on-chain AID self-cert | F-prefix (CF sidecar) only — `blake2b_256` builtin; native Blake3 AIDs get cryptographic *advances* via witnessed seals, attested genesis |
+| Seq-0 binding verifiable from KEL | Native: the datum stores the KEL `n` digests byte-for-byte; genesis `blake3(icp) == cesr_aid` is verified trustlessly by the hash-proof minter for events up to one blake3 chunk (1024 B — covers the full V1 target population; only GLEIF-Root-scale 6+-key boards exceed it) |
+| Full on-chain AID self-cert | E-native: hash-proof minter at genesis (spike #88 lane-packed core, ≤1024 B single-tx); rotations pay one single-block blake3 per revealing key (measured 3.6% cpu / 4.5% mem); plain authorizations verify raw keys — zero hashing |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
 | Super watcher (cross-plane relayer / evidence submitter) | Divergence-burn retired for identity (no fork possible under the checkpoint — identity-model §1/§11); live duties: relay witnessed anchoring, submit duplicity / correspondence proofs (a defined duty, drilled via #90 — identity-model §7b), request/trigger freeze, police R-TEL; permissionless, bounty-compatible; M5 |
-| Cardano-only vLEI resolution | Blocked externally — requires GLEIF/QVI adoption of F-prefix SAIDs |
+| Cardano-only vLEI resolution | Unblocked by the E-native pivot: existing GLEIF/QVI credentials and AIDs are consumed as-is; large-event genesis (6+-key boards) waits for the chunk-token extension or a native `blake3` builtin CIP |
 
 ---
 

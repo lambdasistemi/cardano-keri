@@ -20,6 +20,12 @@ written there; with none it is printed to stdout.
 -}
 module Main (main) where
 
+import Cardano.KERI.AID.Blake3.Checkpoint (
+    blake3Hash,
+ )
+import Cardano.KERI.AID.CESR (
+    qb64Verkey,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
@@ -167,7 +173,7 @@ reserveAdv =
         0
         [rn 0, rn 5, rn 6]
         (third 3)
-        ([rn 1, rn 2, rn 3, rn 4] <> map b32 [0x71, 0x72, 0x73])
+        (map (nkd . rn) [1, 2, 3, 4] <> map b32 [0x71, 0x72, 0x73])
         (third 7)
         []
         0
@@ -176,11 +182,13 @@ reserveAdv =
   where
     rn i = b32 (0x30 + i)
     third n = Weighted [replicate n (Weight 1 3)]
+    -- The committed next-key digest of a raw verkey (the KEL n entry).
+    nkd = blake3Hash . qb64Verkey
 
--- | The @deriveAidAssetName@ negative computed with the WRONG code (@0x45@).
+-- | The @deriveAidAssetName@ negative computed with the WRONG code (@0x46@).
 wrongCodeAsset :: ByteString
 wrongCodeAsset =
-    blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x45 cesrA)
+    blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x46 cesrA)
 
 -- ---------------------------------------------------------
 -- The vector set
@@ -302,11 +310,11 @@ vectors =
         cesrA
     , Vec
         "golden_aid_asset_name"
-        "derivation: aid_asset_name = blake2b_256(tag ++ 0x46 ++ cesr_aid)"
+        "derivation: aid_asset_name = blake2b_256(tag ++ 0x45 ++ cesr_aid)"
         (deriveAidAssetName cesrA)
     , Vec
         "negative_aid_asset_name_wrong_code"
-        "derivation negative: wrong code 0x45 (not 0x46)"
+        "derivation negative: wrong code 0x46 (not 0x45)"
         wrongCodeAsset
     , Vec
         "negative_aid_asset_name_mutated_aid"

@@ -1,9 +1,14 @@
 module Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
+    qb64Verkey,
 ) where
 
-import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertFromBase)
+import Data.ByteArray.Encoding (
+    Base (Base64URLUnpadded),
+    convertFromBase,
+    convertToBase,
+ )
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 
@@ -56,3 +61,15 @@ parse2char bs
 
 decodeB64Url :: ByteString -> Either String ByteString
 decodeB64Url input = convertFromBase Base64URLUnpadded input :: Either String ByteString
+
+{- | The fully qualified Base64url (qb64) form of a raw 32-byte transferable
+Ed25519 verkey: code @\'D\'@ followed by @b64url(0x00 ‖ key)@ with the first
+(always @\'A\'@) character replaced by the code — 44 ASCII characters. This is
+the exact preimage KERI digests for KEL @n@ entries
+(@keripy: Diger(ser=verfer.qb64b)@).
+-}
+qb64Verkey :: ByteString -> ByteString
+qb64Verkey key =
+    BS.cons 0x44 (BS.drop 1 b64) -- 'D' replaces the leading 'A'
+  where
+    b64 = convertToBase Base64URLUnpadded (BS.cons 0x00 key)

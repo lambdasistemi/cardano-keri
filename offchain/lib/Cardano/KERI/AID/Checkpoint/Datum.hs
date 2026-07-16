@@ -19,7 +19,10 @@ change only by minting a new version tag. The pre-rotation commitment is the
 explicit @(next_keys, next_threshold)@ pair — the KERI @n@ digest list plus
 @nt@ — so a rotation may reveal any satisfiable subset of the committed
 digests (KERI partial\/reserve rotation) and restate its own current
-threshold, exactly as the KERI dual-threshold rule allows.
+threshold, exactly as the KERI dual-threshold rule allows. The contract is
+E-native: @cesr_aid@ and the @next_keys@ entries are Blake3-256 values equal
+byte-for-byte to production KERI KEL material, while @cur_keys@ hold raw
+verkeys so the authorization hot path never hashes.
 -}
 module Cardano.KERI.AID.Checkpoint.Datum (
     -- * Fixed-width field aliases
@@ -88,16 +91,18 @@ import PlutusTx.IsData.Class (
 -- Fixed-width field aliases (spec "Primitive widths and domains")
 -- ---------------------------------------------------------
 
--- | A current\/next establishment key digest (@blake2b_256(qb64(verkey))@).
+{- | A pre-rotation next-key digest: @blake3_256(qb64(verkey))@ — the KERI
+KEL @n@ entry byte-for-byte (E-code, the production KERI default).
+-}
 type KeyDigest = ByteString
 
--- | A raw 32-byte Ed25519 witness verkey.
+-- | A raw 32-byte Ed25519 verkey (current keys and witnesses).
 type Verkey = ByteString
 
--- | A 32-byte Blake2b-256 output.
+-- | A 32-byte hash output.
 type Digest32 = ByteString
 
--- | The external F-code-stripped 32-byte Blake2b-256 AID digest.
+-- | The external E-code-stripped 32-byte Blake3-256 AID digest.
 type CesrAid = ByteString
 
 -- ---------------------------------------------------------
@@ -117,9 +122,11 @@ are positional and security-significant; reordering changes the bytes.
 -}
 data CheckpointDatumV1 = CheckpointDatumV1
     { cdCesrAid :: !CesrAid
-    -- ^ external AID binding (KERI @i@)
-    , cdCurKeys :: ![KeyDigest]
-    -- ^ current establishment key digests (KERI @k@), positional
+    -- ^ external AID binding (KERI @i@, E-code)
+    , cdCurKeys :: ![Verkey]
+    {- ^ current establishment __raw__ verkeys (KERI @k@, decoded), positional —
+    raw so authorization signature checks never hash
+    -}
     , cdCurThreshold :: !Threshold
     -- ^ current signing threshold (KERI @kt@)
     , cdNextKeys :: ![KeyDigest]

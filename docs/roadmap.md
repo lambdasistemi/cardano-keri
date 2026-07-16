@@ -121,10 +121,12 @@ path of every design.
 - Intent/proof SDK
   ([#7](https://github.com/lambdasistemi/cardano-keri/issues/7), absorbed and
   rescoped from the retired staking-validator design).
-- Tracking of the single external gate
-  ([#42](https://github.com/lambdasistemi/cardano-keri/issues/42)): Veridian
-  issuing **F-prefix (Blake2b-256) SAIDs** for Cardano-targeted credentials —
-  Plutus has no Blake3, so E-prefix SAIDs are a wall. See
+- ~~The former external gate ([#42](https://github.com/lambdasistemi/cardano-keri/issues/42)):
+  Veridian F-prefix SAIDs~~ — **dissolved by the E-native checkpoint contract**
+  (2026-07-16): standard Blake3 (E-prefix) AIDs register natively; genesis is
+  verified by the hash-proof minter (spike #88 lane-packed blake3, ≤1024 B
+  single chunk) and rotations pay one single-block blake3 per revealing key.
+  No wallet-vendor dependency remains. The historical rationale is preserved in
   [Blake2b-256 AID Requirement](design/blake2b256-requirement.md).
 
 - **Vertical demo
@@ -155,7 +157,7 @@ Amaru/Veridian channel; the Amaru treasury ceremony):
 Both pilots share a **runway ticket
 ([#48](https://github.com/lambdasistemi/cardano-keri/issues/48), milestoned
 M2)**: counterparty confirmation, QVI credential issuance, credential
-fixtures, preprod environment, and the F-prefix gate readiness check — started
+fixtures, and preprod environment — started
 early because of the lead times below.
 
 The actors exercised by both pilots are independent AIDs whose business
@@ -219,9 +221,7 @@ flowchart LR
     M2 -->|"envelope spec"| M3["M3<br/>Signing bridge<br/>Layer 4"]
     M2 --> M4["M4<br/>Pilots"]
     M3 --> M4
-    G["Veridian F-prefix<br/>SAID gate"] -.->|"external"| M4
     M4 --> M5["M5<br/>Case adapters<br/>& hardening"]
-    style G fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
 ```
 
 ## Timing caveats

@@ -350,7 +350,7 @@ to no successor position, so it fails the successor threshold and is rejected.
 newtype RevealedSuccessorSigners = RevealedSuccessorSigners [KeyDigest]
     deriving stock (Show, Eq)
 
--- | Which of the seven F10 advance equalities rejected.
+-- | Which advance validation rejected: the frozen domain gate or eq1-eq7.
 data AdvanceError
     = -- | The signed preimage domain was not the frozen @adv@ literal.
       AdvanceDomainMismatch

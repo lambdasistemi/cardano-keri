@@ -56,6 +56,9 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
 import Control.Monad (
     unless,
  )
+import Data.Either (
+   isRight,
+ )
 import Data.ByteString (
     ByteString,
  )
@@ -353,7 +356,7 @@ data AdvanceError
       AdvanceDomainMismatch
     | -- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
       --
-      -- The numbered constructors below mirror the seven F10 equalities.
+      -- The numbered constructors below still mirror the seven F10 equalities.
       Eq1NetworkPolicyMismatch
     | -- | eq2: asset name is not the AID's derived locator, or the AID crossed.
       Eq2AssetOrAidMismatch
@@ -425,7 +428,7 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
                 , k `elem` controlled
                 ]
     unless
-        (either (const False) (const True) (wellFormed (amNewCurKeys am) (amNewCurThreshold am)))
+        (isRight (wellFormed (amNewCurKeys am) (amNewCurThreshold am)))
         (Left Eq6SuccessorQuorumUnsatisfied)
     unless
         (evaluate (amNewCurThreshold am) (length (amNewCurKeys am)) sigPositions)

@@ -1,6 +1,6 @@
 name = "lambdasistemi/cardano-keri"
 version = "0.0.0"
-compiler = "v1.1.21"
+compiler = "v1.1.23"
 plutus = "v3"
 description = ""
 

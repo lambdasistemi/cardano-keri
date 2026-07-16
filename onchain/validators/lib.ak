@@ -125,8 +125,10 @@ pub fn quantity(
 /// - Different output_index -> different hash
 /// - Output index 0 vs 256 -> different hash (tests big-endian encoding)
 pub fn assetName(ref: OutputReference) -> Hash<Sha2_256, OutputReference> {
-  let bytes =
-    concat(ref.transaction_id, from_int_big_endian(ref.output_index, 2))
+  let bytes = concat(
+    ref.transaction_id,
+    from_int_big_endian(ref.output_index, 2),
+  )
   sha2_256(bytes)
 }
 

@@ -24,27 +24,53 @@ The identity registry script enforces the following properties within a single b
 
 **Pre-rotation binding.** A rotation is valid only if the revealed keys match the committed `next_keys` digests (`blake3_256(qb64(reveal_key))` membership) **and** the signer evidence satisfies both thresholds — the rotation's own and the committed next threshold (the KERI dual-threshold rule). This cannot be circumvented without a preimage of blake3_256.
 
+**Witness-gated advancement.** If the spent checkpoint has `toad > 0`, a normal advance
+also requires at least `toad` valid Ed25519 witness receipts over the exact KEL anchoring
+evidence. Controller signatures alone are insufficient, even after a timeout. A witness-set
+change uses the two-seal handoff: the outgoing set receipts the proposed replacement before
+the incoming set receipts activation. An explicitly witnessless checkpoint (`toad = 0`) is
+a visible weaker mode that consumers may reject.
+
 ## Divergence enforcement
 
-Ratified 2026-07-17 ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106), ships inside the V1 validator with [#24](https://github.com/lambdasistemi/cardano-keri/issues/24)). The pre-rotation commitment doubles as a **bond**: the same commitment must never sign two different successors, and enforcement is permissionless.
+Ratified 2026-07-17 and corrected after the Cardano-first attack review
+([#106](https://github.com/lambdasistemi/cardano-keri/issues/106), ships inside the V1
+validator with [#24](https://github.com/lambdasistemi/cardano-keri/issues/24)). Post-hoc
+slashing cannot undo a settled Cardano action, so the first defense is preventive:
+**a witnessed identity cannot activate new Cardano keys until its KERI witness threshold has
+receipted the anchoring evidence.**
 
 | Divergence | On-chain consequence | Trigger |
 |---|---|---|
-| Fork (signed alternative rotation) | **Nullified** — `Convict` path: tombstone, AID permanently lost, prover paid | Anyone presents the conflicting signed KERI rotation |
-| Cardano behind (lag) | **Frozen** — advance-only until the controller catches up; consumers fail closed by address | Anyone presents the witnessed later KEL event |
-| Cardano ahead | No in-script remedy (absence is unprovable); prevented by the witness-receipt requirement at advance; resolves into convergence or `Convict` as soon as the KEL moves | — |
+| Cardano-first attempt on a witnessed AID | **Rejected before activation** — no successor checkpoint and therefore no action under the proposed keys | Advance lacks the configured threshold's receipts |
+| Cardano behind (lag) | **Frozen** — advance-only until the controller catches up; consumers fail closed by address; no conviction bounty | Anyone presents the witnessed later KEL event |
+| Recoverable or ambiguous conflict | **Frozen/disputed** — preserve the same token and allow a valid supported recovery/correction | Anyone presents objective mismatch or duplicity evidence that is not provably terminal |
+| Irreconcilable V1 fork | **Convicted** — move the token to a permanent tombstone; prover paid | Anyone proves two incompatible, controller-threshold-signed and threshold-witness-receipted nondelegated establishment rotations from the same prior commitment |
 
 ```mermaid
 stateDiagram-v2
     [*] --> Active : genesis — icp + hash-proof mint (#91)
-    Active --> Active : advance (dual threshold)
-    Active --> Frozen : Freeze — witnessed later KEL event (permissionless)
-    Frozen --> Active : advance (catches up)
-    Active --> Tombstone : Convict — signed alternative rotation (permissionless)
-    Frozen --> Tombstone : Convict
+    Active --> Active : advance — dual threshold + witness receipts
+    Active --> Frozen : later KEL or recoverable/ambiguous conflict
+    Frozen --> Active : catch up or valid V1 correction
+    Active --> Tombstone : irreconcilable V1 conviction
+    Frozen --> Tombstone : irreconcilable V1 conviction
 ```
 
-The tombstone is terminal: with mint-once unicity the asset name can never be re-minted, and consumers resolving it get positive evidence of the conviction. **Framing is impossible** — a conviction requires signatures satisfying the committed threshold, so it collapses to the same standard as rotation itself; witness signatures alone never convict.
+The tombstone is terminal: the quantity-one token is **moved** to the designated tombstone
+address, not burned and later re-minted. With mint-once unicity, consumers get positive
+evidence of the conviction. Neither evidence class suffices alone: the conflicting event
+must satisfy the pre-committed controller threshold **and** carry the applicable KERI witness
+threshold's receipts. The Cardano branch's receipts were already verified at advance. This
+keeps private or abandoned signed drafts out of `Convict`; a witnessless conflict cannot be
+permanently convicted in V1. The proof must also establish irreconcilability under V1's
+independent-AID rules. Potentially recoverable evidence freezes instead of destroying the
+AID. Delegated and superseding recovery remain outside V1 and must define their own dispute
+rules before admission.
+
+Conviction stops future use; it does not roll back Cardano actions that already settled.
+That is why the receipt requirement belongs on `Advance`, before the new keys can authorize
+anything.
 
 **Monotonic sequence.** `seq` increases by exactly one per rotation. The on-chain script checks `seq_to == cur_state.seq + 1`. There is no skip or rollback.
 
@@ -54,7 +80,10 @@ The tombstone is terminal: with mint-once unicity the asset name can never be re
 
 ## What is NOT on-chain
 
-**Full KEL history.** The on-chain state holds only the current key-state. The full sequence of inception and rotation events is not stored or verified on-chain. There is no CESR encoding, no event receipt chain.
+**Full KEL history.** The on-chain state holds only the current key-state. The full sequence
+of inception and rotation events is not stored or replayed on-chain. An advance verifies the
+specific anchoring event and its threshold receipts; it does not verify or retain the entire
+event-receipt chain.
 
 **Genesis identity binding (byte binding vs semantic projection).** The **BLAKE3 genesis byte binding** — that the inception bytes hash to the qualified AID — is verified **on-chain for ≤1-chunk inceptions** (#97/#98) and **attested for >1-chunk**. The **semantic projection** — that the AID's keys/threshold are faithfully decoded into its checkpoint — remains **oracle/attester-trusted**, with a **permissionless challenge + mechanical freeze**. Candidate A's `aid_asset_name` is a **native, domain-separated `blake2b_256` locator derived from the already-qualified AID** — a cheap label, **not a second self-certification**. Note that **public inception bytes alone do not prove controller possession** (inception events are public, so anyone can supply a victim's event bytes). Security instead rests on **three distinct boundaries**: the **byte binding** (`blake3(icp) == cesr_aid`, on-chain ≤1-chunk / attested >1-chunk); the **signed registration package** (key possession — proves control of the keys carried in the package); and the **attested semantic projection** (that keys/threshold are faithfully decoded), which **remains attester-trusted** (permissionless challenge + mechanical freeze). **Semantic correspondence stays attester-trusted** — signatures alone do **not** carry the weight against a corrupt projection attester, who could pair a victim's inception bytes with attacker-controlled keys and then sign. See [Binding verification protocol](../architecture/veridian-bridge.md#binding-verification-protocol).
 

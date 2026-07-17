@@ -187,7 +187,10 @@ sovereign per-AID checkpoint decision (Candidate A) is **unchanged** — this is
 
 1. **KERI is the sole identity state machine.** The Cardano per-AID checkpoint is a
    **globally ordered, spend-linearized projection of current authority**, **not a second
-   independently sovereign identity history**. It cannot fork the identity; it can only lag.
+   independently sovereign identity history**. For a witnessed AID, every advance requires
+   threshold-receipted anchoring evidence, so a controller-only Cardano branch is rejected
+   before activation; there is no V1 signature-only timeout fallback. The checkpoint can
+   still lag. Witnessless AIDs and witness-threshold collusion are explicit weaker cases.
 2. **Sovereignty does not eliminate synchronization lag.** When KERI rotates but the
    checkpoint has not been advanced or frozen, a **Cardano-only consumer still sees, and
    may accept, the old checkpoint key**. The old key is **stale in KERI** immediately, but
@@ -202,7 +205,8 @@ sovereign per-AID checkpoint decision (Candidate A) is **unchanged** — this is
    checkpoint; **relay** a fully witnessed anchoring transition when valid; **submit**
    objective duplicity or seal↔native-correspondence proofs; **request or trigger the
    applicable freeze path** when safe advancement is impossible; **police** stale/false
-   R-TEL credential mirrors; support **permissionless, bounty-compatible** operation.
+   R-TEL credential mirrors. Relay and freeze are permissionless; only a successful,
+   irreconcilable-fork conviction is bounty-paid from the registration deposit.
    **A watcher never chooses truth when cryptographic evidence is absent.**
 5. **Loss / recovery outcomes (kept separate).**
    - **lost local public KEL** — recover from KERIA / witness / watcher replicas; Cardano
@@ -221,9 +225,14 @@ sovereign per-AID checkpoint decision (Candidate A) is **unchanged** — this is
      may **expose and submit objective evidence** but **cannot manufacture a canonical
      truth branch**.
 6. **Fork / divergence outcomes (kept separate).**
-   - an **unreceipted local KEL fork** has **no accepted authority**;
-   - **conflicting threshold-receipted events** are **duplicity evidence** → a fatal
-     **freeze/slashing** path where objectively verifiable;
+   - a witnessed Cardano checkpoint **cannot advance without threshold receipts**;
+     controller signatures and elapsed time are insufficient;
+   - an **unreceipted local KEL fork** has **no accepted authority** under this trust model;
+   - **conflicting threshold-receipted events** are **duplicity evidence** → immediate
+     freeze; permanent conviction additionally requires controller-threshold signatures on
+     the conflicting establishment event and is restricted to an irreconcilable conflict
+     under V1's supported independent-AID rules. Controller signatures without witness
+     receipts, or receipts without controller-threshold signatures, cannot convict;
    - **native-KERI state vs Cardano-facing seal/checkpoint mismatch** is **semantic
      correspondence fraud**, handled by the permissionless proof/freeze path;
    - **KERI-ahead / Cardano-behind** is **synchronization lag, not a second valid identity

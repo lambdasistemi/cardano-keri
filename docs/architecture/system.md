@@ -164,6 +164,11 @@ sequenceDiagram
     Note over CT,CK: witness-set change: two-seal handoff —<br/>outgoing set receipts the pre-announcement,<br/>incoming set receipts the activation (§6a)
 ```
 
+For a checkpoint with `toad > 0`, missing or insufficient receipts make the advance invalid;
+controller signatures and elapsed time never replace them in V1. This prevents a controller
+from activating one key state on Cardano, using it, and only later publishing a different KERI
+rotation. An already witnessless checkpoint (`toad = 0`) is an explicit weaker mode.
+
 Genesis (the first leaf) remains registration-attested and publicly falsifiable pending a
 full-context single-transaction measurement (identity-model §7a). Lane-packed spike #88
 now fits the BLAKE3 core across the whole single-chunk domain — 17.1% cpu / 22.4% mem at

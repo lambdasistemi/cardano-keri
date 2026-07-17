@@ -128,7 +128,9 @@ The legitimate holder commits to `next_key` at inception (or at each rotation) a
     The two-machines premise below is retired by
     `specs/68-keystate-shape/identity-model.md` (PR #87): the Cardano key-state is an
     **on-chain checkpoint of the one witnessed KEL**, advanced only by witness-receipted
-    anchoring seals — the event log cannot fork. What *remains* to verify continuously is
+    anchoring seals. For a witnessed AID, a controller-only Cardano branch is rejected; the
+    guarantee assumes an honest witness threshold and does not cover `toad = 0`. What
+    *remains* to verify continuously is
     the **seal↔native key-state correspondence** (§7a, open thread 4): witnesses receipt
     events, not truth, so a controller can self-equivocate about her own keys across the
     two views. The per-rotation invariant below survives as that correspondence check

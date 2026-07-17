@@ -581,8 +581,11 @@ signed message binds the successor, defeating "capture the identity at `seq+2`")
 outgoing set to have endorsed `(new_witnesses, new_toad)` (Seal W, receipted by the
 outgoing set) before the incoming set's Seal K is accepted. #68 fixes the
 **message bytes** that carry `new_witnesses/new_toad`; the seal-receipt verification
-and the Δ-windowed signature-only fallback are #24's transaction-level checks over
-these bytes.
+is #24's transaction-level check over these bytes. V1 has **no Δ-windowed or other
+signature-only fallback**: when the spent checkpoint has `toad > 0`, no controller-only
+advance is valid. A transition to `toad = 0` still needs the outgoing set's threshold
+receipts over the explicit handoff; an already witnessless checkpoint is the only V1 state
+that can advance without witness receipts.
 
 Domain separation and the reconstruct-don't-trust rule together give the F10/#77
 guarantee: replaying a captured reveal, substituting `new_next`, changing `seq`,
@@ -740,8 +743,9 @@ implements:
   (`delta=0`, `seq+1`, the eight F10 checks incl. the dual-threshold rule, two-seal witness handoff),
   migration (#99 predecessor binding), and close (#99 `validateEnd` `-1` burn) with
   a closed/tombstone discovery story.
-- Wire witness-receipt verification (`Ed25519.verify(witness_pk, seal_bytes, sig)`)
-  and the Δ-windowed signature-only fallback over the frozen witness/message bytes.
+- Wire witness-receipt verification (`Ed25519.verify(witness_pk, seal_bytes, sig)`) over
+  the frozen witness/message bytes. Reject missing, insufficient, wrong-set, replayed, or
+  wrong-seal receipts. **Do not implement a time-based signature-only fallback in V1.**
 - Resolve the current checkpoint as a CIP-31 reference input; enforce
   uniqueness/currentness; publish per-use-case anchoring-freshness policy.
 - Delete the standalone MPF identity-registry / `identity_root` / `root_window` /
@@ -780,6 +784,11 @@ implements:
       production Root pattern — is accepted; an insufficient reveal is rejected;
       augmented keys count only toward the current threshold — positive and
       negative vectors.
+- [ ] **Witness-gated V1 advance:** when the spent checkpoint has `toad > 0`, #24
+      requires the applicable threshold witness receipts over the KEL anchoring evidence;
+      valid controller/dual-threshold signatures without those receipts are rejected, and
+      elapsed time never changes that verdict. Witness-set changes use the two-seal handoff;
+      only an already witnessless (`toad = 0`) checkpoint has no receipt requirement.
 - [ ] **Deployment/token binding:** both messages bind `network_id`,
       `checkpoint_policy_id`, and `aid_asset_name`, and the advance binds the exact
       spent `TxOutRef` (`spent_txid`/`spent_index`); cross-network, cross-policy,

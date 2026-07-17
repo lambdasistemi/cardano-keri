@@ -48,7 +48,7 @@ wrong, this check goes RED before any enforcement code is built on it.
 
 ## Slice 6 — measurement + finalization prep
 
-- [ ] T106-S6 #109 matrix extended with Convict/Freeze full-context cells (2-key + 7-key fixtures)
-- [ ] T106-S6 ≥ 25% headroom asserted or the spec's budget target revised with rationale
-- [ ] T106-S6 O3/O4 recorded as #24 parameters in spec.md open questions
-- [ ] T106-S6 gate extended with measurement invocation; committed with trailer `Tasks: T106-S6`
+- [X] T106-S6 #109 matrix extended with Convict/Freeze full-context cells (2-key + 7-key fixtures)
+- [X] T106-S6 ≥ 25% headroom asserted or the spec's budget target revised with rationale
+- [X] T106-S6 O3/O4 recorded as #24 parameters in spec.md open questions
+- [X] T106-S6 gate extended with measurement invocation; committed with trailer `Tasks: T106-S6`

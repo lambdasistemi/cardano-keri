@@ -53,10 +53,18 @@ convict/freeze proof formats and predicates are exact — that is this spec.
 
 ## Ratified invariants
 
-1. **Attribution or nothing.** A conviction requires signatures that satisfy
-   the checkpoint's own recorded threshold under the controller's keys.
-   Witness signatures alone MUST NOT be able to convict — witnesses receipt
-   events, they do not own identities. Framing collapses to key theft.
+1. **Attribution AND witnessing.** A conviction of a witnessed AID requires
+   BOTH (a) controller signatures satisfying the checkpoint's recorded
+   threshold — witnesses receipt events, they do not own identities, so witness
+   signatures alone MUST NOT convict — AND (b) witness receipts (`≥ toad`)
+   proving the fork is a real *witnessed* event, not an unwitnessed
+   controller-signed artifact. This mirrors the advance's own witness-receipt
+   requirement (#24): the Cardano checkpoint only ever reflects witnessed
+   events, so the controller cannot create an unwitnessed forked reality on
+   Cardano, and cannot be convicted by one either. Framing collapses to key
+   theft AND witness collusion simultaneously. A `toad = 0` witnessless AID is
+   the lower-assurance tier: no witness backstop, conviction on controller sigs
+   alone.
 2. **Permissionless both ways.** Any party may submit either proof; neither
    path requires registration, stake, or identity.
 3. **Tombstone is terminal.** No spend path exits the tombstone address. With
@@ -155,23 +163,38 @@ Given tip datum `D` at either role address and `EventEvidence` `E`:
 3. **Controller attribution**: `E.ctrl_sigs` satisfy `D.cur_threshold` over
    positions in `D.cur_keys` (exact rational evaluation, reusing #68
    `evaluate`).
-4. **Conflict**: the qb64-decoded digests at `E.off_n` differ from
+4. **Witnessed** (the anti-fork gate): `E.wit_sigs` verify against `D.witnesses`
+   (raw keys, native Ed25519, over `event_bytes`) and count `≥ D.toad`. This is
+   the crux: a conviction fires only on a **witnessed** conflicting event — a
+   real published KERI duplicity — never on controller-signed bytes that were
+   never witnessed. Because the Cardano advance itself requires witness receipts
+   (`#24`), an unwitnessed fork can never be Cardano reality *and* can never
+   convict; a witnessed fork requires the witnesses to have double-receipted the
+   same sn, which is the witness-duplicity that IS the crime. A `D.toad = 0`
+   (witnessless) AID is the documented lower-assurance tier: it has no witness
+   backstop, so the check is vacuous and conviction degrades to controller-sig
+   attribution alone — witnessless AIDs carry no structural anti-fork guarantee.
+5. **Conflict**: the qb64-decoded digests at `E.off_n` differ from
    `D.next_keys` (as positional lists), OR the event's `nt`/`kt`/`b`/`bt`
    slices differ from `D`'s recorded values (any single material mismatch
    suffices; equality of everything = no conflict = reject).
-5. **Output shape**: the continuing output sits at the tombstone address,
+6. **Output shape**: the continuing output sits at the tombstone address,
    carries the quantity-one token, min-ADA, and the conviction record datum:
 
    ```
    TombstoneV1 { cesr_aid, convicted_at_native_sn : Int, evidence_said : ByteArray }
    ```
 
-6. **Bounty**: the remaining value (registration deposit) pays the transaction
-   as the prover directs. No controller signature is required anywhere.
+7. **Bounty**: the remaining value (registration deposit) pays the transaction
+   as the prover directs. No *controller* signature over the SPEND is required;
+   the conviction is attributed by the controller signatures on the fork
+   `event_bytes` (check 3) plus the witness receipts (check 4).
 
-Witness receipts (`wit_sigs`) are **not required** for conviction (invariant
-1: attribution comes from controller signatures). If present they are ignored
-by the predicate — the plan may log them for off-chain analytics only.
+Both controller signatures (check 3) AND witness receipts (check 4) are required
+for a witnessed AID: the controller signatures attribute the fork to the
+identity's own keys (no framing by witnesses), and the witness receipts prove
+the fork is a real published event (no framing by an unwitnessed controller-signed
+artifact). Neither alone convicts.
 
 ## The `Freeze` predicate (lag → frozen)
 
@@ -227,6 +250,7 @@ Each of these MUST be a rejected vector in both implementations:
 | # | Attack | Rejected by |
 |---|---|---|
 | F1 | Witness-signatures-only conviction (no controller sigs) | Convict 3 |
+| F1b | **Unwitnessed-fork conviction of a witnessed AID (controller sigs, but receipts < toad)** | **Convict 4 (the anti-fork gate)** |
 | F2 | Conviction with sigs below threshold | Convict 3 |
 | F3 | Conviction where the event matches `D` exactly (no conflict) | Convict 4 |
 | F4 | Conviction at sn ≠ `D.native_sn` | shared sn check |
@@ -238,7 +262,7 @@ Each of these MUST be a rejected vector in both implementations:
 | F10 | Freeze at sn ≤ `D.native_sn` (stale/replay) | Freeze 1 |
 | F11 | Spend of a tombstone output by any redeemer | lifecycle (no path) |
 | F12 | Freeze output at any address other than FROZEN / datum mutated | Freeze 4 |
-| F13 | Convict output missing token or conviction record | Convict 5 |
+| F13 | Convict output missing token or conviction record | Convict 6 |
 
 **F6 and F11 — the two validator-boundary vectors.** F6 (the `said_blank`
 anti-substitution) is the on-chain **slice reconstruction** the schema layer
@@ -249,7 +273,7 @@ tombstone is unspendable) is a **validator "no path" property**, not a pure
 predicate — the schema layer encodes it as *terminality*: `TombstoneV1` carries
 no advance/convict/freeze continuation, and #24's validator ships no spending
 redeemer for the tombstone address. Both are covered by #24; the schema layer
-delivers F1–F5, F7–F10, F12, F13 as executable rejected vectors and documents
+delivers F1, F1b, F2–F5, F7–F10, F12, F13 as executable rejected vectors and documents
 F6/F11 as the #24 obligation.
 
 Positive vectors: one conviction from ACTIVE and one from FROZEN (GLEIF-shaped
@@ -322,7 +346,7 @@ predicate cells and confirms they are a small fraction of budget.
 - [ ] Convict and Freeze predicates implemented in both languages as pure
       schema-support functions (validator wiring in #24), byte- and
       verdict-parity tested like the #68 layer.
-- [ ] All F1–F13 negative vectors and the three positive vectors executable in
+- [ ] All F1, F1b, F2–F13 negative vectors and the positive vectors (incl. a witnessed fork) executable in
       both implementations.
 - [ ] Attribution invariant proven: no vector convicts without controller
       signatures satisfying the recorded threshold.

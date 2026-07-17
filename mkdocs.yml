@@ -42,6 +42,9 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Roadmap: roadmap.md
+  - Identity on Cardano:
+      - Presentation: identity-on-cardano/index.html
+      - Self-Certifying Identities on Cardano: blog/self-certifying-identities-on-cardano.md
   - KERI Primer: keri-primer.md
   - ACDC Primer: acdc-primer.md
   - Finance Primer: finance-primer.md

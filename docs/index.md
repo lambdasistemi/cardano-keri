@@ -4,6 +4,11 @@ Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://
 
 **New here? Start with the [KERI primer](keri-primer.md)** — it explains what KERI is, how pre-rotation works, what Veridian is, and what Cardano adds. Then the **[ACDC primer](acdc-primer.md)** covers the credential layer — how vLEI credentials chain, how revocation works, and how Cardano verifies a chain on-chain. For the financial and institutional concepts behind the use cases (securities, KYC/AML, custody, escrow, batchers…), see the **[Finance primer](finance-primer.md)**.
 
+!!! tip "Identity on Cardano"
+    Start with the [presentation](identity-on-cardano/index.html) for the user
+    journey, then read [Self-Certifying Identities on Cardano](blog/self-certifying-identities-on-cardano.md)
+    for the design decisions, measurements, threat model, and milestone boundary.
+
 ---
 
 ## Implementation status

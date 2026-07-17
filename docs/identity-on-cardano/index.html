@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identity on Cardano — Keep the identity you already trust</title>
+<meta name="description" content="How a KERI identity gains a stable Cardano presence, survives key changes, and remains publicly auditable.">
+<meta name="theme-color" content="#f7f6f1">
 <script src="../milestones-deck/support.js"></script>
+<script>
+document.addEventListener('click', (event) => {
+  const link = event.target.closest && event.target.closest('#engineering-article-link');
+  if (!link || location.pathname.includes('/docs/identity-on-cardano/')) return;
+  event.preventDefault();
+  window.open('../blog/self-certifying-identities-on-cardano/', '_blank', 'noopener');
+}, true);
+</script>
 </head>
 <body>
 <x-dc>
@@ -61,6 +72,8 @@
   .teal{color:var(--teal2)}
   .amber{color:var(--amber)}
   .red{color:var(--red)}
+  .deck-link{color:var(--teal2);text-decoration:none;border-bottom:1px solid var(--teal-dim)}
+  .deck-link:hover{color:var(--teal);border-bottom-color:var(--teal)}
   .foot-status{position:absolute;right:96px;bottom:55px;display:flex;gap:10px}
 </style>
 </helmet>
@@ -68,15 +81,15 @@
 <x-import component-from-global-scope="deck-stage" from="../milestones-deck/deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
 
   <!-- 1 · TITLE -->
-  <section data-label="Keep the identity you already trust" data-speaker-notes="Frame this as one pilot story, not a roadmap or feature inventory. Northstar is a composite organization: the details are deliberately ordinary. The wire contract is merged and byte-tested today; the validator and divergence enforcement are the M1 build. Everything described as operational is either already verified at the contract layer or marked as shipping with M1.">
+  <section data-label="Keep the identity you already trust" data-speaker-notes="Frame this as one pilot story, not a roadmap or feature inventory. Northstar is a composite organization: the details are deliberately ordinary. Define the project shorthand once: Milestone 1, or M1 internally, is the identity-core milestone. The wire contract is merged and byte-tested today; the validator and divergence enforcement complete that milestone. Everything described as operational is either already verified at the contract layer or marked as part of the first milestone.">
     <div style="position:absolute;inset:0;background:radial-gradient(circle at 76% 42%,rgba(32,127,122,.12),transparent 32%),linear-gradient(135deg,#ffffff,var(--bg) 66%);"></div>
     <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1540px;">
-      <div class="kicker">M1 · a practical identity story</div>
+      <div class="kicker">cardano-keri · identity core</div>
       <h1 style="font-size:100px;font-weight:600;line-height:.99;letter-spacing:-.04em;margin-top:28px;max-width:1500px;">Keep the identity<br><span class="teal">you already trust.</span></h1>
-      <p style="font-size:34px;line-height:1.42;color:var(--muted);margin-top:36px;max-width:1350px;">M1 gives an existing KERI identity a stable home on Cardano—so a team can manage records, update keys, and recover control without handing authority to a middleman.</p>
+      <p style="font-size:34px;line-height:1.42;color:var(--muted);margin-top:36px;max-width:1350px;">The first cardano-keri milestone delivers the identity core: an existing KERI identity gains a stable home on Cardano, so a team can manage records, update keys, and recover control without handing authority to a middleman.</p>
       <div style="display:flex;align-items:center;gap:16px;margin-top:74px;">
         <span class="chip live"><span class="dot"></span> wire contract ready and byte-tested</span>
-        <span class="chip m1"><span class="dot"></span> M1 adds the validator and safeguards</span>
+        <span class="chip m1"><span class="dot"></span> first milestone adds validator + safeguards</span>
       </div>
     </div>
     <div style="position:relative;z-index:1;border-top:1px solid var(--line);padding-top:22px;font-family:'IBM Plex Mono',monospace;font-size:19px;color:var(--dim);display:flex;justify-content:space-between;">
@@ -213,7 +226,7 @@
   </section>
 
   <!-- 6 · OWNED DATA -->
-  <section data-label="Your records stay under the right control" data-speaker-notes="This is the first concrete thing Northstar builds: an owned MPFS data leaf. The cage exists already; M1 composes it with the checkpoint. A write references the live checkpoint and verifies the current threshold. The checkpoint asset stays stable, so the same leaf remains owned after key rotation. The identity checkpoint is sovereign, but the existing MPFS value cage retains its stated oracle/liveness boundary; avoid implying every value plane is permissionless.">
+  <section data-label="Your records stay under the right control" data-speaker-notes="This is the first concrete thing Northstar builds: an owned MPFS data leaf. The cage exists already; the identity-core milestone composes it with the checkpoint. A write references the live checkpoint and verifies the current threshold. The checkpoint asset stays stable, so the same leaf remains owned after key rotation. The identity checkpoint is sovereign, but the existing MPFS value cage retains its stated oracle/liveness boundary; avoid implying every value plane is permissionless.">
     <div class="kicker">Northstar · first useful action</div>
     <h2 class="title">Your Cardano records stay under the right control—even after keys change.</h2>
     <p class="story">Northstar owns an on-chain record through its identity checkpoint. The record follows the organization’s current authority instead of being tied to one permanent key.</p>
@@ -242,7 +255,7 @@
     <div class="proofs">
       <div class="proof"><span class="key">current authority</span><span class="value">Every write checks the live checkpoint.</span></div>
       <div class="proof"><span class="key">stable ownership</span><span class="value">The record does not move when keys rotate.</span></div>
-      <div class="proof"><span class="key">working pieces</span><span class="value">The shipped MPFS cage composes with the M1 core.</span></div>
+      <div class="proof"><span class="key">working pieces</span><span class="value">The shipped MPFS cage composes with the identity core.</span></div>
     </div>
     <div class="storyline"><span>need</span><span>register</span><span class="active">use</span><span>rotate</span><span>recover</span><span>trust</span></div>
   </section>
@@ -286,7 +299,7 @@
   </section>
 
   <!-- 8 · COMPROMISE -->
-  <section data-label="Losing today's keys does not mean losing the identity" data-speaker-notes="This is the emotional and technical climax. State the threat strongly: the attacker has every current private key, not merely one key. The attacker still cannot rotate because it cannot reveal the preimages committed in the next-key digest list. Northstar uses the successor material it already controlled to advance and evict the compromised current set. This is not Cardano-specific recovery or delegated recovery; it is KERI pre-rotation working as designed. If the next material is also lost or stolen, M1 does not rescue the AID.">
+  <section data-label="Losing today's keys does not mean losing the identity" data-speaker-notes="This is the emotional and technical climax. State the threat strongly: the attacker has every current private key, not merely one key. The attacker still cannot rotate because it cannot reveal the preimages committed in the next-key digest list. Northstar uses the successor material it already controlled to advance and evict the compromised current set. This is not Cardano-specific recovery or delegated recovery; it is KERI pre-rotation working as designed. If the next material is also lost or stolen, the identity core does not rescue the AID.">
     <div class="kicker">Northstar · incident day</div>
     <h2 class="title">Losing today’s keys does not mean losing the identity.</h2>
     <p class="story">Even if every key valid today is stolen, the intruder cannot choose tomorrow’s keys. Northstar can use the successor keys it prepared earlier to recover control.</p>
@@ -311,7 +324,7 @@
     <div class="proofs">
       <div class="proof"><span class="key">tested failure</span><span class="value">A full stolen current quorum still cannot rotate.</span></div>
       <div class="proof"><span class="key">continuity</span><span class="value">Successor keys remove the compromised set without changing the AID.</span></div>
-      <div class="proof"><span class="key">M1 boundary</span><span class="value">If both current and successor keys are lost, M1 cannot recover the identity.</span></div>
+      <div class="proof"><span class="key">scope boundary</span><span class="value">If both current and successor keys are lost, this layer cannot recover the identity.</span></div>
     </div>
     <div class="storyline"><span>need</span><span>register</span><span>use</span><span>rotate</span><span class="active">recover</span><span>trust</span></div>
   </section>
@@ -355,7 +368,7 @@
   </section>
 
   <!-- 10 · ENFORCEMENT -->
-  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="This is divergence enforcement shipping inside the M1 validator, not a future watcher aspiration. A signed alternative successor is attributable equivocation: anyone can submit it and permanently convict the identity. If Cardano is behind a witnessed KERI event, anyone can freeze the checkpoint until it advances. Cardano-ahead absence cannot be proved in script, so advances require witness receipts and any later KEL movement resolves the state toward convergence or conviction. Framing is impossible unless the attacker can produce signatures satisfying the owner’s pre-committed threshold.">
+  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="This is divergence enforcement shipping inside the identity-core validator, not a future watcher aspiration. A signed alternative successor is attributable equivocation: anyone can submit it and permanently convict the identity. If Cardano is behind a witnessed KERI event, anyone can freeze the checkpoint until it advances. Cardano-ahead absence cannot be proved in script, so advances require witness receipts and any later KEL movement resolves the state toward convergence or conviction. Framing is impossible unless the attacker can produce signatures satisfying the owner’s pre-committed threshold.">
     <div class="kicker">Counterparty · public safeguards</div>
     <h2 class="title">Public checks keep Cardano and KERI in sync.</h2>
     <p class="story">Partners do not have to take Northstar’s word for it. Public evidence tells the validator when to retire a conflicting identity or pause an out-of-date checkpoint.</p>
@@ -380,13 +393,13 @@
       </div>
     </div>
     <div class="callout" style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-      <span style="font-size:26px;"><strong>Owners cannot be framed:</strong> witness signatures alone are not enough. Conviction requires the owner’s pre-committed signing threshold.</span><span class="chip m1">ships in M1 validator</span>
+      <span style="font-size:26px;"><strong>Owners cannot be framed:</strong> witness signatures alone are not enough. Conviction requires the owner’s pre-committed signing threshold.</span><span class="chip m1">part of the identity-core validator</span>
     </div>
     <div class="storyline"><span>need</span><span>register</span><span>use</span><span>rotate</span><span>recover</span><span class="active">trust</span></div>
   </section>
 
   <!-- 11 · ECOSYSTEM -->
-  <section data-label="The same public evidence supports useful services" data-speaker-notes="Now widen from Northstar to the supporting ecosystem. The watcher compares public KELs and checkpoints, submits valid freeze or conviction evidence, and can earn the bounty without registration, stake, or committee membership. The auditor replays KEL history and byte-compares the public checkpoint, including discoverable retirement and conviction tombstones. The issuer can mirror per-issuer TEL revocation status keyed by opaque 32-byte credential IDs. Be explicit: M1 mirrors status; full vLEI credential-chain verification is M2.">
+  <section data-label="The same public evidence supports useful services" data-speaker-notes="Now widen from Northstar to the supporting ecosystem. The watcher compares public KELs and checkpoints, submits valid freeze or conviction evidence, and can earn the bounty without registration, stake, or committee membership. The auditor replays KEL history and byte-compares the public checkpoint, including discoverable retirement and conviction tombstones. The issuer can mirror per-issuer TEL revocation status keyed by opaque 32-byte credential IDs. Be explicit: the identity-core milestone mirrors status; full vLEI credential-chain verification belongs to the next verification milestone, called M2 in the project plan.">
     <div class="kicker">Around Northstar · useful public services</div>
     <h2 class="title">The same public evidence supports useful services.</h2>
     <p class="story">Because the KERI history and Cardano checkpoint are public, independent operators can keep them aligned, audit them, and publish credential status.</p>
@@ -413,14 +426,14 @@
         <div class="mono teal" style="font-size:20px;line-height:1.55;">production credential IDs<br>ledger-ordered updates<br>issuer API not required</div>
       </div>
     </div>
-    <div class="callout warning" style="margin-top:21px;font-size:23px;line-height:1.35;color:var(--muted);"><span class="mono amber">CLEAR SCOPE</span>&nbsp; M1 publishes credential status. Verifying the full GLEIF → QVI → legal-entity credential chain comes in M2.</div>
+    <div class="callout warning" style="margin-top:21px;font-size:23px;line-height:1.35;color:var(--muted);"><span class="mono amber">CLEAR SCOPE</span>&nbsp; The identity core publishes credential status. Verifying the full GLEIF → QVI → legal-entity credential chain comes in the next verification milestone.</div>
     <div class="storyline"><span>need</span><span>register</span><span>use</span><span>rotate</span><span>recover</span><span class="active">trust</span></div>
   </section>
 
   <!-- 12 · ACCEPTANCE -->
-  <section data-label="The M1 demo shows the complete journey" data-speaker-notes="Return to the protagonist and prove the vertical slice. The devnet cast incepts a 2-of-3 identity, writes an owned data leaf, rotates without an identity oracle in the operating path, then submits an attack using a stolen current quorum and shows rejection. The contract layer is already frozen and tested in two independent implementations: Haskell 195 tests and Aiken 157 checks. The runnable M1 demo is the validator-level acceptance gate.">
+  <section data-label="The end-to-end demo shows the complete journey" data-speaker-notes="Return to the protagonist and prove the vertical slice. The devnet cast incepts a 2-of-3 identity, writes an owned data leaf, rotates without an identity oracle in the operating path, then submits an attack using a stolen current quorum and shows rejection. The contract layer is already frozen and tested in two independent implementations: Haskell 195 tests and Aiken 157 checks. The runnable identity-core demo is the validator-level acceptance gate for the first milestone.">
     <div class="kicker">Acceptance · runnable devnet</div>
-    <h2 class="title">The M1 demo shows the complete journey.</h2>
+    <h2 class="title">The end-to-end demo shows the complete journey.</h2>
     <p class="story">A runnable local-devnet demo proves that registration, record ownership, key updates, and recovery work together—not only as separate unit tests.</p>
     <div style="flex:1;display:flex;align-items:stretch;gap:12px;margin-top:40px;min-height:0;">
       <div class="panel" style="flex:1;padding:27px 27px;">
@@ -447,12 +460,12 @@
   </section>
 
   <!-- 13 · BOUNDARY / ASK -->
-  <section data-label="What M1 is ready to prove — and what comes next" data-speaker-notes="End on discipline and a concrete pilot conversation. M1 establishes independent E-native AIDs, faithful current key state, stable resolution, self-rotation, owned-cage composition, lifecycle, and evidence-bound enforcement. It does not verify the full vLEI credential chain, provide general action envelopes, supply Veridian signing UX, or add delegated or superseding recovery. Those are later milestones. The useful next conversation is narrow: bring one independent KERI AID, one Cardano record it should own, and an explicit freshness policy for cross-plane lag.">
+  <section data-label="What this foundation proves — and what comes next" data-speaker-notes="End on discipline and a concrete pilot conversation. The identity-core milestone establishes independent E-native AIDs, faithful current key state, stable resolution, self-rotation, owned-cage composition, lifecycle, and evidence-bound enforcement. It does not verify the full vLEI credential chain, provide general action envelopes, supply Veridian signing UX, or add delegated or superseding recovery. Those are later milestones, named M2, M3, and M5 in the internal plan. The useful next conversation is narrow: bring one independent KERI AID, one Cardano record it should own, and an explicit freshness policy for cross-plane lag.">
     <div class="kicker">Honest boundary · pilot invitation</div>
-    <h2 class="title">What M1 is ready to prove—and what comes next.</h2>
+    <h2 class="title">What this foundation proves—and what comes next.</h2>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:38px;min-height:0;">
       <div class="panel2" style="padding:32px 35px;border-color:var(--teal-dim);">
-        <div class="label">Ready in M1</div>
+        <div class="label">Delivered by the identity core</div>
         <ul style="list-style:none;margin-top:25px;display:flex;flex-direction:column;gap:21px;">
           <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="teal">✓</span><span>Use an existing E-native KERI identity without re-issuing it.</span></li>
           <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="teal">✓</span><span>Keep one stable Cardano handle while keys and approval rules change.</span></li>
@@ -461,18 +474,21 @@
         </ul>
       </div>
       <div class="panel warning" style="padding:32px 35px;">
-        <div class="label amber">Planned after M1</div>
+        <div class="label amber">Built on top in later milestones</div>
         <ul style="list-style:none;margin-top:25px;display:flex;flex-direction:column;gap:21px;">
-          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">M2</span><span>Verify the complete GLEIF → QVI → legal-entity credential chain.</span></li>
-          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">M2</span><span>Authorize arbitrary dApp actions through reusable signed envelopes.</span></li>
-          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">M3</span><span>Connect Veridian and Signify signing directly to Cardano workflows.</span></li>
-          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">M5</span><span>Add delegated identities and a superseding recovery path.</span></li>
+          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">→</span><span>Verify the complete GLEIF → QVI → legal-entity credential chain.</span></li>
+          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">→</span><span>Authorize arbitrary dApp actions through reusable signed envelopes.</span></li>
+          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">→</span><span>Connect Veridian and Signify signing directly to Cardano workflows.</span></li>
+          <li style="display:flex;gap:15px;font-size:27px;line-height:1.35;"><span class="amber">→</span><span>Add delegated identities and a superseding recovery path.</span></li>
         </ul>
       </div>
     </div>
     <div class="callout" style="margin-top:24px;padding:25px 29px;display:flex;align-items:center;justify-content:space-between;gap:35px;border-color:var(--teal-dim);">
       <div><div class="label">A useful first pilot needs</div><div style="font-size:30px;margin-top:10px;">an existing KERI identity · one Cardano record it should control · a clear freshness policy</div></div>
-      <div class="mono teal" style="font-size:26px;white-space:nowrap;">bring us a real workflow →</div>
+      <div class="mono" style="font-size:22px;white-space:nowrap;text-align:right;display:flex;flex-direction:column;gap:10px;">
+        <a id="engineering-article-link" class="deck-link" href="../blog/self-certifying-identities-on-cardano.md" target="_blank" rel="noopener">read the engineering deep dive ↗</a>
+        <span class="teal">bring us a real workflow →</span>
+      </div>
     </div>
   </section>
 

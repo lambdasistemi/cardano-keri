@@ -99,7 +99,7 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 2 · PROTAGONIST -->
-  <section data-label="Meet Northstar" data-speaker-notes="Give the audience a person to follow. Northstar is a composite prospective pilot, not a claimed customer. It already has an independent standard KERI AID and sensible governance. Its problem is not getting an identity; it is giving that identity a Cardano presence that applications can resolve without pinning a key or introducing a custodian.">
+  <section data-label="Meet Northstar" data-speaker-notes="Give the audience a person to follow. Northstar is a composite prospective pilot, not a claimed customer. It already has an independent standard KERI AID, 2-of-3 controller governance, and a configured KERI witness threshold. Its problem is not getting an identity; it is giving that identity a Cardano presence that applications can resolve without pinning a key or introducing a custodian.">
     <div class="kicker">Composite pilot · Northstar</div>
     <h2 class="title">Meet Northstar: a team with an identity already in use.</h2>
     <p class="story">Northstar wants its existing KERI identity to control Cardano records, so partners can recognize the same organization on both systems.</p>
@@ -108,7 +108,7 @@ document.addEventListener('click', (event) => {
         <div class="label">What they already use</div>
         <div style="font-size:35px;font-weight:600;margin-top:18px;">A standard KERI identity</div>
         <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--teal2);margin-top:18px;">AID: E… · Blake3 · Veridian-compatible</div>
-        <p class="small" style="margin-top:23px;">Three officers share control: any two can approve an action. A separate set of future keys is kept safe for rotation.</p>
+        <p class="small" style="margin-top:23px;">Any two of three officers approve an action. Future keys stay separate, and KERI witnesses receipt accepted events.</p>
       </div>
       <div class="panel" style="padding:30px 32px;">
         <div class="label">What they want on Cardano</div>
@@ -261,22 +261,22 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 7 · ROTATE -->
-  <section data-label="Update keys directly, whenever your team needs to" data-speaker-notes="Rotation is a self-service state transition, but it is not merely a signature by the old keys. The revealed successor keys must match the previously committed n digests and satisfy both the previously committed next threshold and the new current threshold. Partial reserve rotation is first-class: GLEIF Root revealed 3 of 7 committed keys, restated the threshold, and carried reserves forward. Each revealed key costs one small Blake3 block: measured at 3.6 percent CPU and 4.5 percent memory of a transaction budget. Normal authorization hashes nothing.">
+  <section data-label="Update keys directly, with public KERI confirmation" data-speaker-notes="Rotation is self-service but not private. The revealed successor keys must match the previously committed n digests and satisfy both the previously committed next threshold and the new current threshold. Because Northstar has witnesses, the validator also requires its configured witness threshold's receipts over the anchoring event in the KEL. Controller signatures and elapsed time never replace those receipts in V1. A witness-set change uses the two-seal handoff. Partial reserve rotation remains first-class: GLEIF Root revealed 3 of 7 committed keys, restated the threshold, and carried reserves forward. Each revealed key costs 3.6 percent CPU and 4.5 percent memory; ordinary authorization hashes nothing.">
     <div class="kicker">Northstar · month 3</div>
-    <h2 class="title">Update keys directly, whenever your team needs to.</h2>
-    <p class="story">Northstar can replace operational keys itself. A valid rotation follows the plan committed in advance, without waiting for an administrator, allowlist, or oracle.</p>
+    <h2 class="title">Update keys directly—with public KERI confirmation.</h2>
+    <p class="story">Northstar chooses its successor keys without an identity oracle. Cardano activates them only after the team’s KERI witness threshold has receipted the update.</p>
     <div style="flex:1;display:grid;grid-template-columns:1.18fr .82fr;gap:28px;align-items:center;margin-top:30px;min-height:0;">
       <div class="panel" style="padding:32px 34px;">
         <div class="label">Three checks protect every key update</div>
         <div style="display:flex;align-items:stretch;gap:14px;margin-top:24px;">
-          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">same plan</div><div class="small" style="margin-top:12px;">The revealed keys match the commitment made earlier.</div></div>
+          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">prepared keys</div><div class="small" style="margin-top:12px;">The revealed keys match the earlier commitment and both signing thresholds.</div></div>
           <div class="arrow" style="display:flex;align-items:center;">+</div>
-          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">old promise</div><div class="small" style="margin-top:12px;">The revealed set satisfies the threshold committed before.</div></div>
+          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">public KERI event</div><div class="small" style="margin-top:12px;">Northstar’s configured witness threshold receipts the anchor in its event log.</div></div>
           <div class="arrow" style="display:flex;align-items:center;">+</div>
-          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">new rule</div><div class="small" style="margin-top:12px;">The new signers satisfy the approval rule going forward.</div></div>
+          <div class="panel2" style="flex:1;padding:23px;"><div class="mono teal" style="font-size:21px;">same resulting state</div><div class="small" style="margin-top:12px;">The signed update exactly matches the checkpoint Cardano creates.</div></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:28px;padding-top:23px;border-top:1px solid var(--line);">
-          <span style="font-size:28px;">The checkpoint moves forward to <code>seq + 1</code></span><span class="chip m1">self-service</span>
+          <span style="font-size:28px;">No receipts, no <code>seq + 1</code> checkpoint.</span><span class="chip m1">fail closed</span>
         </div>
       </div>
       <div class="panel warning" style="padding:32px 34px;">
@@ -291,7 +291,7 @@ document.addEventListener('click', (event) => {
       </div>
     </div>
     <div class="proofs">
-      <div class="proof"><span class="key">direct</span><span class="value">The identity controller submits its own valid update.</span></div>
+      <div class="proof"><span class="key">no identity oracle</span><span class="value">The controller chooses the keys; witnesses confirm the KERI event.</span></div>
       <div class="proof"><span class="key">flexible reserves</span><span class="value">A rotation can reveal only part of the prepared set.</span></div>
       <div class="proof"><span class="key">measured cost</span><span class="value">Each revealed key uses one small Blake3 block.</span></div>
     </div>
@@ -299,7 +299,7 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 8 · COMPROMISE -->
-  <section data-label="Losing today's keys does not mean losing the identity" data-speaker-notes="This is the emotional and technical climax. State the threat strongly: the attacker has every current private key, not merely one key. The attacker still cannot rotate because it cannot reveal the preimages committed in the next-key digest list. Northstar uses the successor material it already controlled to advance and evict the compromised current set. This is not Cardano-specific recovery or delegated recovery; it is KERI pre-rotation working as designed. If the next material is also lost or stolen, the identity core does not rescue the AID.">
+  <section data-label="Losing today's keys does not mean losing the identity" data-speaker-notes="This is the emotional and technical climax. The attacker has every current private key, not merely one. The attacker still cannot rotate because it cannot reveal the preimages committed in the next-key digest list. Northstar uses its successor material, publishes the KERI rotation, collects the configured witness receipts, and advances Cardano. This is KERI pre-rotation, not delegated or superseding recovery. If the next material is also lost or stolen, the identity core does not rescue the AID.">
     <div class="kicker">Northstar · incident day</div>
     <h2 class="title">Losing today’s keys does not mean losing the identity.</h2>
     <p class="story">Even if every key valid today is stolen, the intruder cannot choose tomorrow’s keys. Northstar can use the successor keys it prepared earlier to recover control.</p>
@@ -323,7 +323,7 @@ document.addEventListener('click', (event) => {
     </div>
     <div class="proofs">
       <div class="proof"><span class="key">tested failure</span><span class="value">A full stolen current quorum still cannot rotate.</span></div>
-      <div class="proof"><span class="key">continuity</span><span class="value">Successor keys remove the compromised set without changing the AID.</span></div>
+      <div class="proof"><span class="key">witnessed continuity</span><span class="value">The receipted successor event removes the compromised set without changing the AID.</span></div>
       <div class="proof"><span class="key">scope boundary</span><span class="value">If both current and successor keys are lost, this layer cannot recover the identity.</span></div>
     </div>
     <div class="storyline"><span>need</span><span>register</span><span>use</span><span>rotate</span><span class="active">recover</span><span>trust</span></div>
@@ -368,16 +368,16 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 10 · ENFORCEMENT -->
-  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="This is divergence enforcement shipping inside the identity-core validator, not a future watcher aspiration. A signed alternative successor is attributable equivocation: anyone can submit it and permanently convict the identity. If Cardano is behind a witnessed KERI event, anyone can freeze the checkpoint until it advances. Cardano-ahead absence cannot be proved in script, so advances require witness receipts and any later KEL movement resolves the state toward convergence or conviction. Framing is impossible unless the attacker can produce signatures satisfying the owner’s pre-committed threshold.">
+  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="Lead with prevention. Northstar's witnessed checkpoint cannot move first: Advance requires the configured witness threshold's receipts, and V1 has no controller-only timeout fallback. This matters because a later tombstone cannot roll back an already-settled Cardano action. If KERI moves first, anyone can freeze the stale checkpoint until it catches up; this is permissionless but not bounty-paid. Permanent conviction is narrower: the conflicting nondelegated establishment rotation must satisfy both the pre-committed controller threshold and the applicable witness-receipt threshold and be irreconcilable under V1 KERI rules. Recoverable or ambiguous evidence freezes instead. The token moves to a tombstone; it is not burned and recreated.">
     <div class="kicker">Counterparty · public safeguards</div>
     <h2 class="title">Public checks keep Cardano and KERI in sync.</h2>
-    <p class="story">Partners do not have to take Northstar’s word for it. Public evidence tells the validator when to retire a conflicting identity or pause an out-of-date checkpoint.</p>
+    <p class="story">Northstar cannot activate private Cardano-only keys and explain them later. Public KERI receipts are checked before new authority exists, while later evidence can pause or permanently retire a checkpoint.</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px;min-height:0;">
-      <div class="panel danger" style="padding:30px 31px;">
-        <div class="label red">Two conflicting rotations</div>
-        <div style="font-size:34px;font-weight:600;margin-top:18px;">The owner signed two different futures</div>
-        <div style="font-size:48px;font-weight:600;color:var(--red);margin-top:26px;">Retire the identity</div>
-        <p class="small" style="margin-top:12px;">The validator burns the token, leaves a permanent tombstone, and pays the prover from the deposit.</p>
+      <div class="panel" style="padding:30px 31px;border-color:var(--teal-dim);">
+        <div class="label">Cardano tries to move first</div>
+        <div style="font-size:34px;font-weight:600;margin-top:18px;">Controller signatures arrive without witness receipts</div>
+        <div style="font-size:48px;font-weight:600;color:var(--teal2);margin-top:26px;">Reject the update</div>
+        <p class="small" style="margin-top:12px;">No checkpoint means the proposed keys can authorize no later Cardano action. Time never bypasses the check.</p>
       </div>
       <div class="panel warning" style="padding:30px 31px;">
         <div class="label amber">KERI has moved first</div>
@@ -385,21 +385,21 @@ document.addEventListener('click', (event) => {
         <div style="font-size:48px;font-weight:600;color:var(--amber);margin-top:26px;">Pause the checkpoint</div>
         <p class="small" style="margin-top:12px;">The identity can only move forward until Cardano catches up. Applications reject authority in the meantime.</p>
       </div>
-      <div class="panel" style="padding:30px 31px;">
-        <div class="label">Cardano appears ahead</div>
-        <div style="font-size:34px;font-weight:600;margin-top:18px;">Missing public history cannot be proved</div>
-        <div style="font-size:48px;font-weight:600;color:var(--muted);margin-top:26px;">Require receipts</div>
-        <p class="small" style="margin-top:12px;">Witness receipts are required before an advance. Later KERI events resolve the state toward agreement or conviction.</p>
+      <div class="panel danger" style="padding:30px 31px;">
+        <div class="label red">Two publicly accepted rotations</div>
+        <div style="font-size:34px;font-weight:600;margin-top:18px;">Both controller and witness thresholds prove an irreconcilable conflict</div>
+        <div style="font-size:48px;font-weight:600;color:var(--red);margin-top:26px;">Retire permanently</div>
+        <p class="small" style="margin-top:12px;">The same token moves to its tombstone and the conviction prover receives the deposit. Recoverable evidence only pauses.</p>
       </div>
     </div>
     <div class="callout" style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-      <span style="font-size:26px;"><strong>Owners cannot be framed:</strong> witness signatures alone are not enough. Conviction requires the owner’s pre-committed signing threshold.</span><span class="chip m1">part of the identity-core validator</span>
+      <span style="font-size:26px;"><strong>Two gates, two jobs:</strong> controller signatures authorize; witness receipts prove public KERI acceptance. Conviction requires both.</span><span class="chip m1">part of the identity-core validator</span>
     </div>
     <div class="storyline"><span>need</span><span>register</span><span>use</span><span>rotate</span><span>recover</span><span class="active">trust</span></div>
   </section>
 
   <!-- 11 · ECOSYSTEM -->
-  <section data-label="The same public evidence supports useful services" data-speaker-notes="Now widen from Northstar to the supporting ecosystem. The watcher compares public KELs and checkpoints, submits valid freeze or conviction evidence, and can earn the bounty without registration, stake, or committee membership. The auditor replays KEL history and byte-compares the public checkpoint, including discoverable retirement and conviction tombstones. The issuer can mirror per-issuer TEL revocation status keyed by opaque 32-byte credential IDs. Be explicit: the identity-core milestone mirrors status; full vLEI credential-chain verification belongs to the next verification milestone, called M2 in the project plan.">
+  <section data-label="The same public evidence supports useful services" data-speaker-notes="Now widen from Northstar to the supporting ecosystem. The watcher compares public KELs and checkpoints, relays receipted advances, submits permissionless freeze evidence, and submits conviction only with both controller-threshold signatures and threshold witness receipts for a proved irreconcilable V1 conflict. Routine relay and freeze are not paid from the identity deposit; only successful conviction is. The auditor replays KEL history and byte-compares the checkpoint. The issuer mirrors per-issuer TEL status. Full vLEI credential-chain verification belongs to the next verification milestone.">
     <div class="kicker">Around Northstar · useful public services</div>
     <h2 class="title">The same public evidence supports useful services.</h2>
     <p class="story">Because the KERI history and Cardano checkpoint are public, independent operators can keep them aligned, audit them, and publish credential status.</p>
@@ -407,9 +407,9 @@ document.addEventListener('click', (event) => {
       <div class="panel" style="padding:31px 32px;display:flex;flex-direction:column;">
         <div class="label">Watcher</div>
         <div style="font-size:39px;font-weight:600;margin-top:18px;">Keep both histories aligned.</div>
-        <p class="small" style="margin-top:20px;">Compare the public KERI event log (KEL) with Cardano. Submit valid pause or conviction evidence and receive the bounty.</p>
+        <p class="small" style="margin-top:20px;">Compare the public KERI event log (KEL) with Cardano. Relay accepted updates, pause lagging checkpoints, and submit fully receipted conviction evidence.</p>
         <div class="rule" style="margin:26px 0 20px;"></div>
-        <div class="mono teal" style="font-size:20px;line-height:1.55;">open to anyone<br>mechanical comparison<br>paid from the deposit</div>
+        <div class="mono teal" style="font-size:20px;line-height:1.55;">open to anyone<br>permissionless pause<br>conviction alone pays</div>
       </div>
       <div class="panel" style="padding:31px 32px;display:flex;flex-direction:column;">
         <div class="label">Auditor</div>
@@ -431,7 +431,7 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 12 · ACCEPTANCE -->
-  <section data-label="The end-to-end demo shows the complete journey" data-speaker-notes="Return to the protagonist and prove the vertical slice. The devnet cast incepts a 2-of-3 identity, writes an owned data leaf, rotates without an identity oracle in the operating path, then submits an attack using a stolen current quorum and shows rejection. The contract layer is already frozen and tested in two independent implementations: Haskell 195 tests and Aiken 157 checks. The runnable identity-core demo is the validator-level acceptance gate for the first milestone.">
+  <section data-label="The end-to-end demo shows the complete journey" data-speaker-notes="Return to the protagonist and prove the vertical slice. The devnet cast incepts a witnessed 2-of-3 identity, writes an owned data leaf, collects threshold witness receipts and rotates without an identity oracle, then proves two rejections: a controller-signed Cardano-first advance without receipts and an attack using a stolen current quorum. The wire contract is already tested in two implementations: Haskell 195 tests and Aiken 157 checks. The runnable identity-core demo is the validator-level acceptance gate for the first milestone.">
     <div class="kicker">Acceptance · runnable devnet</div>
     <h2 class="title">The end-to-end demo shows the complete journey.</h2>
     <p class="story">A runnable local-devnet demo proves that registration, record ownership, key updates, and recovery work together—not only as separate unit tests.</p>
@@ -445,18 +445,18 @@ document.addEventListener('click', (event) => {
       </div>
       <div class="arrow" style="display:flex;align-items:center;">→</div>
       <div class="panel" style="flex:1;padding:27px 27px;">
-        <div class="mono teal" style="font-size:25px;">03</div><div style="font-size:36px;font-weight:600;margin-top:22px;">Update keys</div><p class="small" style="margin-top:14px;">Move to the successor keys prepared in advance.</p>
+        <div class="mono teal" style="font-size:25px;">03</div><div style="font-size:36px;font-weight:600;margin-top:22px;">Update keys</div><p class="small" style="margin-top:14px;">Collect witness receipts, then activate the prepared successor keys.</p>
       </div>
       <div class="arrow" style="display:flex;align-items:center;">→</div>
       <div class="panel warning" style="flex:1;padding:27px 27px;">
-        <div class="mono amber" style="font-size:25px;">04</div><div style="font-size:36px;font-weight:600;margin-top:22px;">Prove recovery</div><p class="small" style="margin-top:14px;">Try to rotate with stolen current keys. The ledger rejects it.</p>
+        <div class="mono amber" style="font-size:25px;">04</div><div style="font-size:36px;font-weight:600;margin-top:22px;">Reject both attacks</div><p class="small" style="margin-top:14px;">No receipts and stolen current keys both fail on-chain.</p>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px;">
       <div class="callout" style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:25px;">Haskell wire + semantics</span><span class="metric" style="font-size:35px;">195 <span style="font-size:18px;color:var(--muted);">tests</span></span></div>
       <div class="callout" style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:25px;">Aiken on-chain contract</span><span class="metric" style="font-size:35px;">157 <span style="font-size:18px;color:var(--muted);">checks</span></span></div>
     </div>
-    <div class="how">one continuous proof · register → create a record → update keys → reject the compromised-key attempt</div>
+    <div class="how">one continuous proof · register → create a record → receipted update → reject Cardano-first and stolen-key attempts</div>
   </section>
 
   <!-- 13 · BOUNDARY / ASK -->

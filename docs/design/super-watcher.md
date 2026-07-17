@@ -1,14 +1,15 @@
 # Super Watcher: Permissionless Cross-Plane Relayer & Evidence Submitter
 
-!!! note "Live role (2026-07-15, #92 / NOTE-022) — a relayer + evidence submitter, not a convergence enforcer"
+!!! note "Live role — a relayer + evidence submitter, not a truth oracle"
     The live super-watcher role is a **first-class, permissionless cross-plane relayer and
     evidence submitter** spanning **KERI ↔ Cardano** and the **credential-status (R-TEL)
-    mirror** — **not** the divergence-burn convergence enforcer this page was originally
-    written around. Identity is KERI-sovereign (one witnessed KEL); the Cardano per-AID
+    mirror** — **not** the automatic divergence-burn convergence enforcer this page was
+    originally written around. Identity is KERI-sovereign (one witnessed KEL); the Cardano per-AID
     checkpoint is a globally ordered, **spend-linearized projection of current authority**,
-    **not a second independently sovereign identity history** — it cannot fork the identity,
-    it can only lag. The retired divergence-burn / deposit / `trie_key` / "Fork = forfeit" /
-    bounty-burn mechanics are quarantined, in the past tense, in the
+    **not a second independently sovereign identity history**. For a witnessed AID it cannot
+    advance without threshold receipts, and it can lag. The retired automatic
+    divergence-burn / `trie_key` / "Fork = forfeit" mechanics are quarantined, in the past
+    tense, in the
     [historical appendix](#historical-appendix-the-retired-divergence-burn-design) at the
     foot of this page.
 
@@ -18,8 +19,10 @@ The witnessed [KERI](https://github.com/WebOfTrust/ietf-keri) KEL is the sole id
 state machine; Cardano carries a per-AID **checkpoint** that projects the current authority
 KERI has settled. This page formerly described the two as independently advancing machines
 sharing inception material — that framing is **superseded**: the checkpoint is a
-**projection of current authority, not a rival history**, so an identity **cannot fork; it
-can only lag** a very recent KERI event. What remains is a real cross-plane
+**projection of current authority, not a rival history**. For `toad > 0`, a private
+Cardano-first advance is invalid because the configured witness receipts are mandatory;
+there is no signature-only timeout fallback. The checkpoint can still lag a recent KERI
+event. What remains is a real cross-plane
 **synchronization** and **evidence** problem — witnessed KERI events must be relayed onto
 the checkpoint, objective duplicity / correspondence fraud must be submitted, and
 stale / false credential-status mirrors must be policed.
@@ -37,7 +40,8 @@ service, recovery authority, or authoritative indexer. Ordinary KERI watchers po
 
 **It is:**
 - A **permissionless cross-plane relayer and evidence submitter** — anyone can run one, no registration or trust required.
-- **Bounty-compatible** — its submissions can carry incentives, but incentives are not what confer its standing.
+- **Precisely incentivized** — relay and freeze are permissionless but not automatically
+  paid; a successful irreconcilable-fork conviction may collect the registration deposit.
 - **Evidence-bound** — it only ever relays witnessed events or submits cryptographic proofs; it never adjudicates.
 
 **It is not:**
@@ -59,9 +63,18 @@ on evidence:
 
 - **Relay a fully witnessed anchoring** transition onto the checkpoint when the seal and its threshold witness receipts are valid (the §4 / §6a two-seal handoff).
 - **Submit** objective **duplicity** or seal↔native-**correspondence proofs** — the §7b fraud-proof shape, drilled via #90 — wherever the stored witness threshold receipted the divergent establishment event.
-- **Request or trigger the applicable freeze** path when safe advancement is impossible: an upheld correspondence-fraud verdict, or a compromise signal that only a freeze can contain during the synchronization lag.
+- **Request or trigger the applicable freeze** path when safe advancement is impossible: a
+  later witnessed KERI event, correspondence fraud, or conflict that is not yet proved
+  irreconcilable. Freezing is permissionless and is not bounty-paid by default.
+- **Submit a conviction proof** only when the evidence proves two incompatible V1
+  nondelegated establishment rotations from the same prior commitment, the conflicting
+  event satisfies both the pre-committed controller threshold and the applicable KERI
+  witness-receipt threshold, and no supported KERI superseding rule can reconcile them. A
+  successful conviction pays the prover from the deposit and moves the existing token to
+  its permanent tombstone.
 - **Police stale or false R-TEL** credential-status mirrors, submitting evidence when a mirror misreports issuance / revocation.
-- Support **permissionless, bounty-compatible** operation across all of the above.
+- Never present post-hoc conviction as rollback: settled Cardano actions remain settled;
+  mandatory advance-time receipts are what stop the Cardano-first attack.
 
 **A super watcher never chooses truth when cryptographic evidence is absent.** Where no
 threshold-receipted proof exists — for example the §7b witness-swap residual, or a
@@ -76,7 +89,8 @@ The freeze registry (R-FRZ) and the super watcher serve different purposes:
 | Mechanism | Authorized by | Purpose | Initiated by |
 |---|---|---|---|
 | Freeze registry (R-FRZ) | next_key (legitimate holder) | Emergency revocation of a stolen cur_key | Identity owner |
-| Super-watcher freeze request | Objective fraud / duplicity proof | Contain an unrecoverable divergence pending correction | Anyone (permissionless) |
+| Super-watcher freeze | Later witnessed event or objective non-terminal conflict | Fail closed while the controller catches up or proves a valid correction | Anyone (permissionless; no default bounty) |
+| V1 conviction | Irreconcilable nondelegated rotation conflict | Stop future use and preserve a permanent audit record | Anyone (bounty-paid from deposit) |
 
 They are complementary and both **evidence-gated**: a controller whose `cur_key` is stolen
 uses the freeze registry directly; a super watcher **requests or triggers the applicable
@@ -95,7 +109,7 @@ The implementation delta is: subscribe to Cardano checkpoint events, compare the
 against witnessed KEL state at each bound sequence number, and know how to construct and
 submit the relay / fraud-proof / freeze-request transactions. Any existing KERI watcher
 operator is a natural candidate to run a super watcher; because operation is permissionless
-and bounty-compatible, no coordination or governance is needed to bootstrap the fleet.
+and permissionless, no coordination or governance is needed to bootstrap the fleet.
 
 ---
 
@@ -105,9 +119,11 @@ and bounty-compatible, no coordination or governance is needed to bootstrap the 
     Everything in this appendix is the **legacy divergence-burn design**, written against the
     retired **two-independent-state-machines** premise. It is **no longer** the live role
     (see the top of this page and `specs/68-keystate-shape/identity-model.md` §11): under the
-    KERI-sovereign checkpoint an identity cannot fork, so a divergence-burn is not needed for
-    identity. It is preserved, in the past tense, only as a reference for the proof / freeze
-    mechanics that the live evidence-submission duties inherit.
+    KERI-sovereign checkpoint a witnessed Cardano-first branch is rejected at advance time.
+    The old "any mismatch burns" mechanism is therefore not the live mitigation. It is
+    preserved, in the past tense, only as a reference for proof mechanics; the live V1
+    `Convict` path is narrower, moves the token to a tombstone, and applies only to a proved
+    irreconcilable independent-AID rotation conflict.
 
 ### The retired two-registry framing
 
@@ -122,8 +138,10 @@ authority, not a second sovereign history.
 The core invariant of the retired design was: *a controller who diverged their Cardano
 identity from their KERI KEL lost their registry deposit to the first watcher that detected
 it.* The deposit was framed as a convergence bond, making convergence the rational choice.
-Under the sovereign checkpoint this mechanism is unnecessary — the identity cannot fork —
-so it is retained only for the proof mechanics below.
+Under the sovereign checkpoint this automatic mechanism is unnecessary: a witnessed
+Cardano-first branch is rejected at advance, while only a fully receipted, irreconcilable V1
+rotation conflict can reach the narrower live conviction path. The old design is retained
+only for the proof-mechanics history below.
 
 ```mermaid
 sequenceDiagram

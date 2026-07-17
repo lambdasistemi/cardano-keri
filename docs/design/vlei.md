@@ -109,7 +109,7 @@ This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md)
 
 An entity's complete Cardano key history — inception, every rotation, freeze events — is immutably recorded on-chain in slot order. No operator, including GLEIF or the QVI, can alter or suppress this record. A regulator or auditor can verify the entity's key custody chain from inception to the present without asking the entity or any intermediary.
 
-This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized **projection of current authority** that a super watcher **relays and evidences** — not a second, independently sovereign identity history. Identity is KERI-sovereign (one witnessed KEL); the checkpoint cannot fork, it can only lag, so the super watcher relays valid anchoring transitions and submits duplicity / correspondence proofs rather than policing divergence between two rival records (see [Super Watcher](super-watcher.md)).
+This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized **projection of current authority** that a super watcher **relays and evidences** — not a second, independently sovereign identity history. For a witnessed AID, a private Cardano-first branch is rejected because every advance needs threshold receipts; the checkpoint can still lag, and witnessless/colluding-witness cases are explicitly weaker. The super watcher relays valid anchoring transitions and submits freeze or fully receipted conviction evidence rather than choosing between unsupported rival records (see [Super Watcher](super-watcher.md)).
 
 ### 3. Governance eligibility
 
@@ -149,7 +149,7 @@ the cryptographic path exists and the work is scheduled.
 | Seq-0 binding verifiable from KEL | Native: the datum stores the KEL `n` digests byte-for-byte; genesis `blake3(icp) == cesr_aid` is verified trustlessly by the hash-proof minter for events up to one blake3 chunk (1024 B — covers the full V1 target population; only GLEIF-Root-scale 6+-key boards exceed it) |
 | Full on-chain AID self-cert | E-native: hash-proof minter at genesis (spike #88 lane-packed core, ≤1024 B single-tx); rotations pay one single-block blake3 per revealing key (measured 3.6% cpu / 4.5% mem); plain authorizations verify raw keys — zero hashing |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
-| Super watcher (cross-plane relayer / evidence submitter) | Divergence-burn retired for identity (no fork possible under the checkpoint — identity-model §1/§11); live duties: relay witnessed anchoring, submit duplicity / correspondence proofs (a defined duty, drilled via #90 — identity-model §7b), request/trigger freeze, police R-TEL; permissionless, bounty-compatible; M5 |
+| Super watcher (cross-plane relayer / evidence submitter) | A witnessed checkpoint cannot advance without threshold receipts (no signature-only timeout fallback). Live duties: relay witnessed anchoring, submit duplicity/correspondence proofs, trigger permissionless freeze, and submit a bounty-paid conviction only for a V1 conflict proved irreconcilable under the supported independent-AID rules; police R-TEL; M5 tooling |
 | Cardano-only vLEI resolution | Unblocked by the E-native pivot: existing GLEIF/QVI credentials and AIDs are consumed as-is; large-event genesis (6+-key boards) waits for the chunk-token extension or a native `blake3` builtin CIP |
 
 ---

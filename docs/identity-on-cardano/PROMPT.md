@@ -23,7 +23,8 @@ Use one protagonist throughout:
 
 > **Northstar** (clearly labelled “composite pilot”) already operates a standard
 > E-prefix Blake3 KERI AID in a Veridian-compatible environment. A 2-of-3 board
-> controls its current keys and successor material is held separately.
+> controls its current keys, successor material is held separately, and a
+> configured KERI witness threshold receipts accepted events.
 > Northstar wants one Cardano record controlled by that identity. It refuses to
 > re-issue the identity, pin a fixed hot key, or introduce a custodian into the
 > operating path.
@@ -53,8 +54,9 @@ Never blur delivered contract work with the remaining identity-core build.
 
 - **MERGED + BYTE-TESTED**: the frozen E-native wire contract and its independent
   Haskell/Aiken vectors and checks.
-- **SHIPS WITH THE IDENTITY-CORE MILESTONE**: the validator state machine, registration/advance wiring,
-  convict/freeze paths, and runnable devnet acceptance demo.
+- **SHIPS WITH THE IDENTITY-CORE MILESTONE**: the validator state machine,
+  registration/advance wiring, mandatory witness-receipt checks and two-seal
+  handoff, freeze/narrow-conviction paths, and runnable devnet acceptance demo.
 - **BUILT IN LATER MILESTONES**: credential-chain verification, general authorization envelopes,
   KERI-wallet signing UX, delegated AIDs, and superseding recovery.
 
@@ -65,8 +67,8 @@ Do not use “implemented” as a blanket deck-level adjective.
 - Use complete sentences. Avoid stacks of slogan fragments such as “Compare.
   Prove. Get paid.”
 - Prefer everyday verbs: “bring,” “find,” “read,” “update,” “pause,” “recover,”
-  and “retire.” Put exact protocol verbs such as `mint`, `freeze`, `burn`, and
-  `convict` in the supporting explanation.
+  and “retire.” Put exact protocol verbs such as `mint`, `freeze`, `tombstone`,
+  and `convict` in the supporting explanation.
 - Define an acronym the first time it appears. For example: “the public KERI
   event log (KEL).”
 - Do not assume the audience knows `AID`, `KEL`, `TEL`, `CIP-31`, `n`, `nt`, or
@@ -115,6 +117,11 @@ The following claims are fixed:
   4.5% memory of a transaction budget. Plain authorization performs no hash.
 - A holder of every current key still cannot rotate without the pre-committed
   successor material. This negative case exists in both implementations.
+- For a checkpoint with `toad > 0`, every V1 advance additionally requires the
+  configured KERI witness threshold's receipts over the anchoring event. Valid
+  controller signatures and elapsed time never replace those receipts. A
+  witness-set change uses the two-seal handoff; an already witnessless
+  (`toad = 0`) checkpoint is an explicit weaker mode.
 - For inception events up to 1024 bytes, the hash-proof path verifies
   `blake3(inception_event) == AID` on-chain. This covers observed registering
   production shapes below GLEIF-Root scale.
@@ -126,17 +133,26 @@ The following claims are fixed:
   as a CIP-31 reference input, and revalidates asset, quantity, datum, version,
   lineage, and active/freeze rules against the ledger. An indexer affects
   liveness only.
-- Divergence enforcement ships in the M1 validator: a signed conflicting
-  rotation can permanently convict/burn the identity and pay the prover; a
-  witnessed later KERI event can freeze a lagging checkpoint until it advances.
-  Witness signatures alone cannot frame the owner.
+- The third attack is prevented at advance time: without the configured witness
+  receipts, proposed Cardano keys never become active and therefore cannot
+  authorize an action that a later tombstone would be unable to roll back.
+- A witnessed later KERI event can freeze a lagging checkpoint until it advances;
+  freeze is permissionless and is not paid from the identity deposit by default.
+- Permanent conviction is restricted to a V1-independent-AID conflict proved
+  irreconcilable under supported KERI rules. The conflicting establishment
+  rotation must satisfy both the pre-committed controller threshold and the
+  applicable witness-receipt threshold. The existing quantity-one token moves
+  to a permanent tombstone; it is not burned and recreated. Recoverable or
+  ambiguous evidence freezes instead. Only successful conviction pays the
+  prover from the deposit.
 - M1 also includes KEL replay/dual-root reconstruction, lifecycle with
   discoverable tombstones, and a per-issuer TEL revocation-status registry.
 - The wire contract is frozen and byte-tested across Haskell (195 tests) and
   Aiken (157 checks).
 - The M1 acceptance demo is a runnable local-devnet terminal cast: incept a
-  2-of-3 identity, write an owned leaf, rotate, and reject a stolen-current-
-  quorum rotation attempt.
+  witnessed 2-of-3 identity, write an owned leaf, collect threshold receipts and
+  rotate, then reject both a controller-signed receipt-free Cardano-first advance
+  and a stolen-current-quorum rotation attempt.
 
 ## Slide sequence
 
@@ -158,8 +174,9 @@ The following claims are fixed:
    Keep the concrete MPFS value-cage implementation in the speaker notes, not
    in audience-facing copy: it is one consumer of the identity core, not part
    of the identity itself.
-7. **Update keys directly, whenever your team needs to.** Explain the KERI dual-threshold rule,
-   partial reserve rotation, and measured per-reveal cost.
+7. **Update keys directly—with public KERI confirmation.** Explain the KERI
+   dual-threshold rule, mandatory witness receipts, no signature-only timeout
+   fallback, partial reserve rotation, and measured per-reveal cost.
 8. **Losing today’s keys does not mean losing the identity.** This is the
    climax. Show “intruder has every current key → cannot choose tomorrow’s
    keys” versus “owner reveals committed successor keys → recovers the same
@@ -167,16 +184,19 @@ The following claims are fixed:
 9. **Apps always read the keys that are valid now.** Show asset lookup → CIP-31
    reference → ledger revalidation. State that stale indexers delay but cannot
    forge, and frozen state fails closed.
-10. **Public checks keep Cardano and KERI in sync.** Three columns: conflicting
-    rotations → retire; KERI moved first → pause; Cardano appears ahead → require
-    witness receipts. Keep the exact burn/freeze/conviction terms in the body and
-    state that owners cannot be framed.
+10. **Public checks keep Cardano and KERI in sync.** Three columns: Cardano tries
+    to move first without receipts → reject before activation; KERI moved first →
+    pause without a conviction bounty; irreconcilable, controller-threshold-signed
+    and witness-threshold-receipted V1 rotations → move the same token to a
+    permanent tombstone and pay the conviction prover. State that recoverable or
+    ambiguous evidence freezes rather than destroys the AID.
 11. **The same public evidence supports useful services.** Watcher: keep the two
     histories aligned. Auditor: build reports from replayable facts. Issuer:
     publish per-issuer credential status. Explicitly scope full credential-chain
     verification to the next verification milestone; map it to M2 only in the notes.
 12. **The end-to-end demo shows the complete journey.** Register → create a record →
-    update keys → prove recovery. Show 195 Haskell tests / 157 Aiken checks as
+    collect receipts and update keys → reject both Cardano-first and stolen-key
+    attempts. Show 195 Haskell tests / 157 Aiken checks as
     contract evidence, not as a substitute for the devnet demo.
 13. **What this foundation proves—and what comes next.** Two columns: delivered
     by the identity core versus built on top later. Keep M2/M3/M5 mappings in
@@ -197,6 +217,10 @@ Reject the output and revise if any of these are true:
   semantic projection;
 - a bare milestone code appears in visible audience-facing copy;
 - M1 validator work is presented as already merged;
+- a witnessed advance is shown succeeding with controller signatures alone or
+  through a timeout fallback;
+- conviction is shown without both controller-threshold signatures and threshold
+  witness receipts, or as rollback of an already-settled Cardano action;
 - a technical term appears before the user need that makes it relevant;
 - any slide contains more than one main visual or more than three proof points;
 - the 2-of-3 attack/recovery sequence is not the visual climax;

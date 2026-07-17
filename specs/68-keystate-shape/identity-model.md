@@ -208,12 +208,19 @@ freeze. Note this scenario already breaks the model's *existing* trust assumptio
 honest threshold of the controller's own witnesses), and it degrades plain KERI liveness
 for that AID too (the same witnesses gate native receipting).
 
-**Liveness fallback (explicit, time-locked degradation).** If the outgoing threshold is
-unreachable, allow a **signature-only witness reset**: a seal signed by the current keys
-without outgoing receipts, which activates only after a challenge window Δ; during Δ, any
-conflicting outgoing-receipted seal wins, and watchers can raise the alarm. Trust during
-the fallback degrades exactly to "the controller's keys + time + public observability" —
-bounded, visible, and only reachable when the model's base assumption has already failed.
+**V1 liveness policy: fail closed; no signature-only fallback.** If the checkpoint's stored
+`toad > 0`, no amount of controller signatures or elapsed time can replace the required
+witness receipts. If the outgoing threshold is unreachable, the Cardano checkpoint cannot
+advance or change its checking set. That is an explicit liveness failure, not a reason to
+re-open a second, controller-only identity history. A future version may define a
+KERI-compatible recovery/dispute protocol, but it must use a new validator/version and a
+discoverable migration; it is not a hidden V1 timeout path.
+
+An explicit transition to a witnessless state is not a bypass: while witnesses are still in
+place, the outgoing set must receipt Seal W committing to `(W' = [], toad' = 0)`. The
+resulting checkpoint then visibly carries `toad = 0`, allowing consumers that require
+witnessed identities to reject the weaker mode. A checkpoint that was already witnessless
+has no receipts to present; it is outside the witnessed no-fork guarantee.
 
 **Out of scope here:** KERI superseding/delegated recovery (no delegated AIDs in this
 model yet); divergence between the announced `W'` and the native rotation's actual set is
@@ -318,8 +325,10 @@ requires the controller to burn her entire witness relationship in one event —
 attributable, and exactly what the §6a handoff refuses to endorse on the Cardano side.
 
 **Role assignment:** submitting fraud proofs is the super-watcher's identity-plane job
-(#10) — permissionless, bounty-compatible, and the divergence-proof/burn mechanics
-already designed there transfer with the receipts-over-raw-bytes simplification.
+(#10). Relay and freeze are permissionless but do not receive the identity's conviction
+deposit by default. A bounty is paid only when the submitted package satisfies the narrow
+V1 `Convict` rule: controller threshold, applicable witness-receipt threshold, and a proved
+irreconcilable independent-AID rotation conflict.
 
 This upgrades §7a's second limit from "rests on controller honesty" to **"fraud-proof
 policed — objective wherever the stored witness threshold receipted the divergent event;
@@ -438,8 +447,9 @@ This stays prototype design — it does not claim production maturity, nor inter
   the sig check, not a frozen shape. §7c adds a freeze target: pin the inception CESR
   serialization, the #97 checkpoint datum/redeemer, and the projection fields with
   Haskell/Aiken golden parity; an on-chain projection verifier stays **deferred**.
-- **#10 (super-watcher)** — divergence-burn is **not needed** for identity forks (one
-  machine). The super-watcher is reframed as a **permissionless cross-plane relayer and
+- **#10 (super-watcher)** — post-hoc burning is **not** the mitigation for a Cardano-first
+  fork: V1 prevents that attack by requiring threshold witness receipts before a witnessed
+  checkpoint can advance. The super-watcher is a **permissionless cross-plane relayer and
   evidence submitter** (KERI ↔ Cardano + the R-TEL mirror), **not** a trusted oracle,
   identity authority, key custodian, backup service, recovery authority, or authoritative
   indexer. Its live duties are (§7b, §11): **relay** a fully witnessed anchoring transition;
@@ -466,10 +476,9 @@ integrity the checkpoint provides.
 1. **Witness-set rotation — drilled 2026-07-09, resolution in §6a** (two-seal handoff:
    pre-announcement receipted by the outgoing set while still in office, activation
    receipted by the incoming set; both seals in one advance tx). No longer a blocker.
-   Residual knobs: **Δ sizing** for the time-locked signature-only fallback (relates to
-   thread 6's freshness windows), whether Seal W and Seal K must be KEL-adjacent or may
-   be separated by interaction events, and the delegated/superseding-recovery case when
-   delegated AIDs enter the model.
+   V1 has **no time-locked signature-only fallback**. Residual questions are whether Seal W
+   and Seal K must be KEL-adjacent or may be separated by interaction events, and the
+   delegated/superseding-recovery case when delegated AIDs enter the model.
 2. **Pin the seal's serialization** — receipts sign raw bytes (§5), so Plutus parses the
    seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"
@@ -525,8 +534,11 @@ outcomes. The sovereign per-AID checkpoint decision (Candidate A, §10 thread 8,
 
 **Projection, not a second sovereign history.** KERI is the **sole identity state machine**;
 the Cardano per-AID checkpoint is a globally ordered, **spend-linearized projection of
-current authority**, **not a second independently sovereign identity history**. It cannot
-fork the identity; it can only lag.
+current authority**, **not a second independently sovereign identity history**. For a
+witnessed checkpoint, Cardano cannot activate a controller-only branch: every advance needs
+the configured threshold's receipts over the KEL anchoring evidence. It can still lag, and
+the guarantee fails if the witness threshold colludes. Witnessless (`toad = 0`) checkpoints
+are an explicit weaker mode.
 
 **Sovereignty does not eliminate synchronization lag.** When KERI rotates but the checkpoint
 has not been advanced or frozen, a **Cardano-only consumer still sees, and may accept, the
@@ -541,8 +553,10 @@ recovery authority, or authoritative indexer. Its live duties: observe witnessed
 against the checkpoint; **relay a fully witnessed anchoring** transition when valid;
 **submit** objective duplicity or seal↔native-correspondence proofs (a defined duty, §7b,
 drilled via #90); **request or trigger the applicable freeze** path when safe advancement is
-impossible; **police** stale / false R-TEL mirrors; support permissionless, bounty-compatible
-operation. **A watcher never chooses truth when cryptographic evidence is absent.**
+impossible; submit conviction only with both required thresholds and V1 irreconcilability;
+and **police** stale / false R-TEL mirrors. Relay and freeze are permissionless; only a
+successful conviction is bounty-paid from the identity deposit. **A watcher never chooses
+truth when cryptographic evidence is absent.**
 
 ### 11a. Loss / recovery outcomes (kept separate)
 
@@ -554,8 +568,13 @@ operation. **A watcher never chooses truth when cryptographic evidence is absent
 
 ### 11b. Fork / divergence outcomes (kept separate)
 
-- an **unreceipted local KEL fork has no accepted authority** (no threshold receipts ⇒ nothing Cardano or any watcher will admit);
-- **conflicting threshold-receipted events** are **duplicity evidence** → a fatal **freeze / slashing** path where objectively verifiable (§7b teeth, #91);
+- for a checkpoint with `toad > 0`, an **unreceipted Cardano-first advance is invalid**;
+  controller signatures and elapsed time cannot activate it;
+- an **unreceipted local KEL fork has no accepted authority** under the witnessed-checkpoint
+  trust model (no threshold receipts ⇒ nothing Cardano or any watcher will admit);
+- **conflicting threshold-receipted events** are **duplicity evidence** → immediate freeze;
+  permanent conviction is reserved for a conflict the V1 validator can prove is
+  irreconcilable under the supported independent-AID KERI rules;
 - **native-KERI state vs Cardano-facing seal / checkpoint mismatch** is **semantic correspondence fraud**, handled by the permissionless proof / freeze path (§7b, drilled via #90);
 - **KERI-ahead / Cardano-behind** is **synchronization lag, not a second valid identity branch** — but it is a **real safety window** for Cardano-only consumers.
 
@@ -564,13 +583,25 @@ operation. **A watcher never chooses truth when cryptographic evidence is absent
 
     | Divergence | Consequence |
     |---|---|
-    | **Fork** — a signed alternative rotation (the committed next-key preimages revealed with a different successor than Cardano recorded at the same native sn) | **Nullified**: `Convict` spend path — attributable double-signing under the pre-rotation bond; tombstone, AID permanently lost, prover paid from the deposit |
-    | **Cardano behind** — a witnessed later KERI establishment event | **Frozen**: `Freeze` spend path — checkpoint moves to the frozen address (status-by-address, #92), advance-only until the controller catches up |
-    | **Cardano ahead** — no corresponding witnessed KERI event | Not in-script provable (absence proof); prevented by the witness-receipt requirement at advance, and temporarily unprovable only — any later witnessed KEL event at that sn resolves it into convergence or `Convict` |
+    | **Cardano-first attempt** — a witnessed checkpoint advance lacks the configured threshold's receipts | **Rejected before activation**: no successor checkpoint, so the proposed keys can authorize no later Cardano action |
+    | **Cardano behind** — a witnessed later KERI establishment event | **Frozen**: `Freeze` spend path — checkpoint moves to the frozen address (status-by-address, #92), advance-only until the controller catches up; permissionless, but not bounty-paid by default |
+    | **Irreconcilable V1 fork** — two incompatible, threshold-witness-receipted nondelegated establishment rotations from the same prior commitment, with no supported KERI superseding rule able to reconcile them | **Convicted**: the quantity-one token moves to a permanent tombstone; the prover is paid from the deposit |
+    | **Recoverable or ambiguous conflict** — including evidence that a future delegated/superseding-recovery protocol may reconcile | **Frozen/disputed, never immediately tombstoned**: recovery must preserve the same token and AID |
 
-    Only signatures under the pre-committed keys can convict — witness signatures alone
-    never can — so an honest controller cannot be framed. Both paths must ship in the V1
-    validator: the script hash freezes at deployment (#24 is blocked by #106).
+    Neither evidence class is sufficient alone. Conviction requires (a) controller
+    signatures satisfying the pre-committed key threshold and (b) the applicable KERI
+    witness threshold's receipts over the conflicting establishment event. The Cardano
+    branch's receipts were already checked when it advanced. This excludes private,
+    abandoned, or merely recoverable signed drafts from `Convict`. The proof must also show
+    irreconcilability under V1's independent-AID rules. If evidence may be recoverable, the
+    safe reaction is freeze/dispute. The token is moved, not burned and re-minted. A
+    witnessless conflict cannot use V1 `Convict`. The witness gate and both evidence paths
+    must ship in the V1 validator because its script hash freezes at deployment (#24 is
+    blocked by #106).
+
+    Conviction is prospective containment, not rollback: Cardano actions already settled
+    remain settled. The Cardano-first attack is therefore mitigated at **advance time** by
+    mandatory receipts, not later by destroying the checkpoint.
 
 ### 11c. Consumer contract (honest)
 

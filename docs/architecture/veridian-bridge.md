@@ -46,6 +46,11 @@ The core insight of the Veridian bridge is that the same Ed25519 keys serve both
 2. **Cardano (on-chain):** The identity **checkpoint**, keyed by `cesr_aid`, advances
    when the seal plus its threshold witness receipts are presented in an advance tx.
 
+For a witnessed checkpoint, this is a hard V1 gate: controller signatures without the
+configured threshold receipts are rejected, with no timeout fallback. If witnesses are
+unavailable, Cardano does not advance. That is a liveness failure rather than permission to
+create a private Cardano branch.
+
 No re-keying is required. The same private key that signs KERI events signs the Cardano
 advance; the chain verifies the seal's blake2b commitments and the Ed25519 receipts over
 the raw seal bytes.
@@ -337,11 +342,13 @@ Cardano block time is approximately 20 seconds. After a KERI rotation in Veridia
 ## One state machine, one stated limit
 
 *(This section previously described "two independent state machines" — superseded, see
-the banner above.)* The witnessed KEL is the single source of truth; the on-chain
-checkpoint advances only through witness-receipted seals, so the event log **cannot
-fork**. The residual gap is narrower (identity-model §7a): witnesses receipt events, not
-truth, so the seal's *claimed* key-state corresponds to the native Blake3 key-state only
-by controller honesty — self-equivocation, not third-party forgery.
+the banner above.)* The witnessed KEL is the single source of truth. For a checkpoint with
+`toad > 0`, Cardano rejects an advance without threshold-receipted anchoring evidence, so
+the controller cannot privately activate a Cardano-first branch. The guarantee assumes an
+honest witness threshold and does not apply to an explicitly witnessless AID. A residual
+correspondence problem remains (identity-model §7a): witnesses receipt events, not truth, so
+the seal's *claimed* key-state may still differ from the native Blake3 key-state —
+self-equivocation, not third-party forgery.
 
 - Cardano cages authorize against the checkpoint key-state, which advanced under witness
   receipts — not against an independently-rotating copy.
@@ -357,10 +364,11 @@ Under the KERI-sovereign checkpoint (identity-model §11, #92 / NOTE-022) the su
 a **first-class, permissionless cross-plane relayer and evidence submitter** across
 **KERI ↔ Cardano** and the credential-status (R-TEL) mirror — **not** a trusted oracle,
 identity authority, key custodian, backup service, recovery authority, or authoritative
-indexer. Divergence-burn is retired: forks are structurally impossible under the checkpoint,
-so there is nothing to burn. Its live duties are: **relay a fully witnessed anchoring**
-transition when valid; **submit** duplicity or seal↔native-**correspondence proofs** (a
-**defined duty** — permissionlessly falsifiable and freeze-backed, identity-model §7b, #90);
-**request or trigger the applicable freeze** path when safe advancement is impossible; and
+indexer. The old automatic "any mismatch burns the identity" design is retired. Its live
+duties are: **relay a fully witnessed anchoring** transition when valid; **submit** duplicity
+or seal↔native-**correspondence proofs** (a **defined duty** — permissionlessly falsifiable
+and freeze-backed, identity-model §7b, #90); **request or trigger the applicable freeze**
+path when safe advancement is impossible; submit a conviction proof only for a V1 conflict
+that is provably irreconcilable under the supported independent-AID rules; and
 **police** stale / false R-TEL credential mirrors. It **never chooses truth when
 cryptographic evidence is absent**. See [Super Watcher](../design/super-watcher.md).

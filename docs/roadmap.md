@@ -32,7 +32,7 @@ Tracked as GitHub
     pilots and M5's adapters are vertical by nature; M1–M3 get explicit demo
     tickets.
 
-### M1 — Identity core (Layers 1–2)
+### Identity core — first milestone (Layers 1–2)
 
 Everything every case needs to anchor identity, finishing the foundation of
 the umbrella epic
@@ -48,13 +48,20 @@ the umbrella epic
 - Checkpoint mint/spend lineage and permissionless pre-rotation
   ([#24](https://github.com/lambdasistemi/cardano-keri/issues/24)), mechanically
   re-cut to each AID's quantity-one checkpoint-token UTxO. A single key remains
-  the 1-of-1 degenerate threshold case.
+  the 1-of-1 degenerate threshold case. For a witnessed AID (`toad > 0`), every
+  advance requires the configured threshold's receipts over the KEL anchoring
+  evidence. Controller signatures alone never activate new Cardano keys, and
+  there is no signature-only timeout fallback in the first milestone.
 - Divergence enforcement inside the V1 validator
   ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106)):
-  permissionless **convict** (attributable double-sign under the pre-rotation
-  bond → tombstone, bounty-paid) and **freeze** (witnessed later KEL event →
-  advance-only, status-by-address) spend paths — co-designed with #24 because
-  the script hash freezes at deployment.
+  permissionless **freeze** (witnessed later KEL event or recoverable/ambiguous
+  conflict → advance-only, status-by-address, no default bounty) and narrowly
+  scoped **convict** (an irreconcilable nondelegated rotation conflict carrying
+  both controller-threshold signatures and threshold witness receipts under the
+  V1 rules → the same token moves to a permanent tombstone, bounty-paid) spend
+  paths. These are co-designed with #24 because the script hash freezes at
+  deployment. Conviction stops future use; it cannot roll back settled Cardano
+  actions, which is why the witness gate belongs on advance.
 - Dual-root reconstruction and KEL replay off-chain
   ([#25](https://github.com/lambdasistemi/cardano-keri/issues/25)).
 - Migration and lifecycle: legacy-leaf policy, End/GC restriction
@@ -67,7 +74,9 @@ the umbrella epic
 - **Vertical demo
   ([#44](https://github.com/lambdasistemi/cardano-keri/issues/44))**: incept a
   2-of-3 threshold AID on a local devnet, write an owned leaf, self-rotate
-  without the oracle, and show that a stolen current key cannot rotate.
+  without the oracle after collecting threshold witness receipts, and show that
+  both a stolen-current-quorum rotation and a controller-signed but
+  receipt-free Cardano-first advance are rejected.
 
 ### M2 — Verification + authorization core (Layer 3)
 
@@ -180,20 +189,23 @@ Demand-driven, after the pilots prove the core:
 - Super watcher — permissionless cross-plane relayer & evidence submitter
   ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) —
   **reframed by the identity model (2026-07-09) and #92 / NOTE-022
-  (2026-07-15)**: identity forks are structurally impossible under the
-  KERI-sovereign checkpoint, so the old *economic* divergence-burn is retired —
-  what exists instead is the targeted, cryptographically attributable
+  (2026-07-15)**: for witnessed AIDs, controller-only Cardano forks are rejected
+  at advance; lag and witness-threshold failure remain explicit risks. The old
+  *automatic* "mismatch means burn" model is
+  retired — a witnessed Cardano-first branch is prevented at advance time.
+  What exists in addition is targeted, cryptographically attributable
   **convict/freeze enforcement in the V1 validator**
   ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106), M1),
   which the watcher's proofs feed. The live role is a
   **permissionless cross-plane relayer and evidence submitter** (KERI ↔ Cardano
   + the R-TEL mirror), **not** a live economic convergence enforcer: relay a
   fully witnessed anchoring transition, submit duplicity / correspondence fraud
-  proofs (a defined duty, drilled via #90 — bounty-paid through the #106
-  convict/freeze paths), request or trigger the applicable
-  freeze path, and police stale / false R-TEL credential mirrors — anchoring
-  freshness / liveness, R-TEL policing, and freeze relay, all bounty-compatible
-  but never truth-choosing when evidence is absent
+  proofs (a defined duty, drilled via #90), request or trigger the applicable
+  permissionless freeze path, submit a bounty-paid conviction only for a V1
+  conflict proved irreconcilable and carrying both controller and witness
+  thresholds, and police stale / false R-TEL credential
+  mirrors. Routine relay and freeze are not paid from the identity deposit; the
+  conviction bounty is. The watcher never chooses truth when evidence is absent
   (`specs/68-keystate-shape/identity-model.md` §7b / §11). The
   in-script blake3 core (spike #88, lane-packed) is now **shipped in the
   contract** (2026-07-16): rotations hash one single block per revealing key
@@ -230,11 +242,11 @@ local unsolved problem:
 
 ```mermaid
 flowchart LR
-    M1["M1<br/>Identity core<br/>Layers 1–2"] --> M2["M2<br/>Verification +<br/>authorization core<br/>Layer 3"]
-    M2 -->|"envelope spec"| M3["M3<br/>Signing bridge<br/>Layer 4"]
-    M2 --> M4["M4<br/>Pilots"]
+    M1["First milestone<br/>Identity core<br/>Layers 1–2"] --> M2["Second milestone<br/>Verification +<br/>authorization core<br/>Layer 3"]
+    M2 -->|"envelope spec"| M3["Third milestone<br/>Signing bridge<br/>Layer 4"]
+    M2 --> M4["Fourth milestone<br/>Pilots"]
     M3 --> M4
-    M4 --> M5["M5<br/>Case adapters<br/>& hardening"]
+    M4 --> M5["Fifth milestone<br/>Case adapters<br/>& hardening"]
 ```
 
 ## Timing caveats

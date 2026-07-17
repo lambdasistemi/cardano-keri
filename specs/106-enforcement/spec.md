@@ -258,10 +258,23 @@ witnessed successor; one thaw-by-advance.
 
 ## Measurement obligations
 
-Convict and Freeze extend the #109 matrix: SAID recomputation (event ≤ 1024 B)
-plus per-signature Ed25519 plus slice checks, in full spend context, at the
-GLEIF-shaped fixture sizes. Budget target: each proof fits one transaction
-with ≥ 25% headroom.
+Two layers, two owners:
+
+- **Schema-layer predicate cost (this ticket, Slice 6):** the ex-units of
+  `convict_predicate` and `freeze_predicate` as executed by the Aiken schema
+  layer — per-signature `verify_ed25519_signature`, per-revealed-key
+  `next_key_digest` (blake3, freeze only), threshold `evaluate`, and the list
+  comparisons — measured on the 2-key and the GLEIF-shaped 7-key fixtures via
+  `aiken check --plain-numbers`, reported against the mainnet per-tx budget.
+- **Full-spend-context cost (#24 / #109):** SAID recomputation over the event
+  bytes (≤ 1024 B) + CESR slice extraction + the transaction-level checks that
+  wrap these predicates. This is the on-chain layer the schema predicates do NOT
+  perform (they take decoded evidence), so it extends the #109 matrix under #24,
+  not here.
+
+Budget target: the schema-layer predicate cost leaves ample room (the SAID
+recomputation is the dominant #24 cost, measured separately); Slice 6 reports the
+predicate cells and confirms they are a small fraction of budget.
 
 ## Open questions
 
@@ -273,16 +286,21 @@ with ≥ 25% headroom.
   `signing_target` field recorded per signature in every fixture manifest
   (Slice 1), which the generator sets by re-verifying each signature against
   both candidate byte strings.
-- **O2 — `kt`/`bt` conflict encoding.** Threshold spellings in the event are
-  strings (`"1/2"`, hex ints); comparing them to `D`'s structured `Threshold`
-  needs either canonical re-spelling on-chain (slice-comparable, preferred)
-  or restricting Convict 4's conflict test to `n`/`b` lists only (weaker but
-  sufficient — a kt-only conflict without an n conflict still yields a later
-  provable divergence). Decide in plan.md with a cost measurement.
-- **O3 — deposit size** (see mechanics above).
-- **O4 — role encoding**: three parameterized addresses vs one address with a
-  role tag. Address-per-role keeps consumer reads status-blind (#92 style);
-  decide with #24's address layout.
+- **O2 — `kt`/`bt` conflict encoding — RESOLVED (2026-07-17).** The schema-layer
+  predicates compare the **decoded structured** `Threshold` (kt/nt) and the raw
+  witness list (b) and integer toad (bt) directly (Slice 3/4), so a kt/nt/bt-only
+  conflict IS detected — strictly stronger than the n/b-only fallback. The
+  on-chain path re-derives the structured `Threshold` from the event's slices
+  (canonical re-spelling), which is #24's CESR-slicing obligation; the schema
+  contract fixes the comparison semantics.
+- **O3 — deposit size — DEFERRED to #24 (validator parameter).** `D_reg` is a
+  #24 registration/close parameter, not a #106 schema concern: large enough that
+  a conviction bounty pays a watcher's costs, small enough not to gate
+  registration. Recorded here as a #24 obligation.
+- **O4 — role encoding — DEFERRED to #24 (address layout).** Address-per-role
+  (Active/Frozen/Tombstone) vs one address with a role datum tag; address-per-role
+  keeps consumer reads status-blind (#92 style) and is preferred. Decided with
+  #24's address layout; the schema layer fixes the roles, #24 fixes the encoding.
 
 ## Acceptance criteria
 

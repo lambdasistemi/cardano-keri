@@ -13,3 +13,6 @@ result-*
 
 # resolve-ticket live log
 WIP.md
+
+# keripy fixture regeneration venv (network-installed, not committed)
+/tmp/keri-venv*

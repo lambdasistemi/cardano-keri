@@ -1,0 +1,12 @@
+{
+  "families": [
+    "fork",
+    "honest_2key",
+    "honest_7key",
+    "lag"
+  ],
+  "generator": "gen_fixtures.py",
+  "keri_version": "1.3.5",
+  "o1_resolution": "all controller and witness signatures verify over event_raw (not said)",
+  "seed_hex": "30313233343536373839616263646566"
+}

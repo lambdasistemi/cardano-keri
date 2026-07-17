@@ -20,31 +20,36 @@ exercising the real shipped code (not a reimplementation):
   3. __Negative control__ — a deliberately-wrong derivation (BLAKE2b in
      place of BLAKE3, and a bit-flipped key) does NOT match @n@, so the
      positive check provably discriminates.
+
+The JSON-loading and qb64-decode helpers live in
+"Cardano.KERI.AID.Checkpoint.FixtureLoader" (shared with @EnforcementSpec@).
 -}
 module Cardano.KERI.AID.Checkpoint.Keri68OracleSpec (spec) where
 
 import Cardano.Crypto.Hash (Blake2b_256, digest)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
-import Cardano.KERI.AID.CESR (
-    Primitive (..),
-    parsePrimitive,
-    qb64Verkey,
+import Cardano.KERI.AID.CESR (qb64Verkey)
+import Cardano.KERI.AID.Checkpoint.FixtureLoader (
+    arrayField,
+    decodeHex,
+    digestRaw,
+    loadFixture,
+    lookupKey,
+    note,
+    textArrayField,
+    textField,
+    verkeyRaw,
  )
 import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Control.Monad (forM_, unless, when)
-import Data.Aeson (Value (..), eitherDecodeFileStrict)
-import Data.Aeson.Key qualified as K
-import Data.Aeson.KeyMap qualified as KM
+import Data.Aeson (Value)
 import Data.Bits (xor)
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.Foldable (toList)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Paths_cardano_keri (getDataFileName)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 
 -- | Which events and rotations to check, per committed fixture.
@@ -173,33 +178,8 @@ revealedKeys fx rotKey = do
     textArrayField ked "k"
 
 -- ---------------------------------------------------------------------------
--- Decoders (all built on the SHIPPED CESR parser / memory primitives)
+-- Wrong-derivation primitives (kept local; the negative control's teeth)
 -- ---------------------------------------------------------------------------
-
--- | Decode a qb64 verkey (@B@ or @D@) to its raw 32 bytes via shipped CESR.
-verkeyRaw :: Text -> Either String ByteString
-verkeyRaw t =
-    parseFull t >>= \case
-        Ed25519PublicKey raw -> Right raw
-        _ -> Left (T.unpack t <> ": not an Ed25519 public key")
-
--- | Decode a qb64 @E@ self-addressing digest to its raw 32 bytes.
-digestRaw :: Text -> Either String ByteString
-digestRaw t =
-    parseFull t >>= \case
-        SelfAddressing raw -> Right raw
-        _ -> Left (T.unpack t <> ": not a self-addressing digest")
-
--- | Parse exactly one CESR primitive, requiring the whole token be consumed.
-parseFull :: Text -> Either String Primitive
-parseFull t = case parsePrimitive (TE.encodeUtf8 t) of
-    Right (p, rest)
-        | BS.null rest -> Right p
-        | otherwise -> Left (T.unpack t <> ": trailing bytes after primitive")
-    Left err -> Left (T.unpack t <> ": " <> err)
-
-decodeHex :: Text -> Either String ByteString
-decodeHex t = convertFromBase Base16 (TE.encodeUtf8 t)
 
 blake2b256 :: ByteString -> ByteString
 blake2b256 = digest (Proxy :: Proxy Blake2b_256)
@@ -208,45 +188,3 @@ flipFirstBit :: ByteString -> ByteString
 flipFirstBit b = case BS.uncons b of
     Just (h, t) -> BS.cons (h `xor` 1) t
     Nothing -> b
-
--- ---------------------------------------------------------------------------
--- Minimal aeson Value drilling
--- ---------------------------------------------------------------------------
-
-loadFixture :: FilePath -> IO Value
-loadFixture name = do
-    path <- getDataFileName ("test/keri-fixtures/fixtures/" <> name)
-    result <- eitherDecodeFileStrict path
-    case result of
-        Right v -> pure v
-        Left err -> fail ("failed to decode " <> name <> ": " <> err)
-
-note :: Text -> Maybe a -> Either String a
-note msg = maybe (Left (T.unpack msg)) Right
-
-lookupKey :: Text -> Value -> Maybe Value
-lookupKey k value = case value of
-    Object o -> KM.lookup (K.fromText k) o
-    _ -> Nothing
-
-textField :: Value -> Text -> Either String Text
-textField value k = note (k <> " missing or not a string") $ do
-    field <- lookupKey k value
-    case field of
-        String t -> Just t
-        _ -> Nothing
-
-arrayField :: Value -> Text -> Either String [Value]
-arrayField value k = note (k <> " missing or not an array") $ do
-    field <- lookupKey k value
-    case field of
-        Array a -> Just (toList a)
-        _ -> Nothing
-
-textArrayField :: Value -> Text -> Either String [Text]
-textArrayField value k = do
-    elems <- arrayField value k
-    traverse asText elems
-  where
-    asText (String t) = Right t
-    asText _ = Left (T.unpack k <> ": element is not a string")

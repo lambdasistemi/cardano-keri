@@ -5,6 +5,7 @@ import Cardano.KERI.AID.CESRSpec qualified as CESRSpec
 import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
+import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.Keri68OracleSpec qualified as Keri68OracleSpec
 import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
@@ -22,3 +23,4 @@ main = hspec $ do
     DatumSpec.spec
     MessageSpec.spec
     Keri68OracleSpec.spec
+    EnforcementSpec.spec

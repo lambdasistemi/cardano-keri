@@ -28,10 +28,10 @@ wrong, this check goes RED before any enforcement code is built on it.
 
 ## Slice 3 — Haskell enforcement predicates
 
-- [ ] T106-S3 `qb64Aid` in CESR.hs; `EventEvidence`, `convictPredicate`, `freezePredicate` in Enforcement.hs
-- [ ] T106-S3 RED: honest-does-not-convict (F3), fork-convicts, lag-freezes, O1-pinned signature bytes, over the committed fixtures
-- [ ] T106-S3 negatives F1, F2, F4, F5, F6, F7, F10 via fixture mutation in EnforcementSpec
-- [ ] T106-S3 gate green; committed with trailer `Tasks: T106-S3`
+- [X] T106-S3 `qb64Aid` in CESR.hs; `EventEvidence`, `convictPredicate`, `freezePredicate` in Enforcement.hs
+- [X] T106-S3 RED: honest-does-not-convict (F3), fork-convicts, lag-freezes, O1-pinned signature bytes, over the committed fixtures
+- [X] T106-S3 negatives F1, F2, F4, F5, F6, F7, F10 via fixture mutation in EnforcementSpec
+- [X] T106-S3 gate green; committed with trailer `Tasks: T106-S3`
 
 ## Slice 4 — Aiken mirror + vectors + verdict parity
 

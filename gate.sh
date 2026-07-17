@@ -55,14 +55,14 @@ if [ -x specs/92-checkpoint-contention/accept.sh ]; then
 fi
 
 # 2b. keripy fixture drift (#106) — OPT-IN, network-dependent.
-#     The committed fixtures under specs/106-enforcement/fixtures/ are the
+#     The committed fixtures under offchain/test/keri-fixtures/fixtures/ are the
 #     durable oracle output the Haskell/Aiken suites consume. Regenerating them
 #     needs a keripy install (uv, network), so this drift check is NOT in the
 #     offline path — it runs only when CARDANO_KERI_KERI_FIXTURES=1 is set
 #     (CI job or manual). When enabled: regenerate and require no git diff.
 if [ "${CARDANO_KERI_KERI_FIXTURES:-0}" = "1" ]; then
-  bash specs/106-enforcement/run.sh
-  git diff --exit-code specs/106-enforcement/fixtures/
+  bash offchain/test/keri-fixtures/run.sh
+  git diff --exit-code offchain/test/keri-fixtures/fixtures/
   echo "gate.sh: keripy fixture drift check GREEN"
 fi
 

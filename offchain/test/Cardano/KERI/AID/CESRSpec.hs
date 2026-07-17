@@ -10,7 +10,7 @@ import Cardano.Crypto.DSIGN (
  )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
+import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Verkey)
 import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -45,6 +45,13 @@ spec = describe "CESR" $ do
 
     it "round-trips an Ed25519 public key (B code)" $ do
         let encoded = cesr1 'B' vkBytes
+        parsePrimitive encoded `shouldBe` Right (Ed25519PublicKey vkBytes, "")
+
+    it "round-trips an Ed25519 public key (D code, transferable)" $ do
+        -- Encode a raw verkey with the SHIPPED forward encoder (qb64Verkey
+        -- emits the 'D' transferable form), then decode it back through the
+        -- SHIPPED parsePrimitive. Both halves must agree byte-for-byte.
+        let encoded = qb64Verkey vkBytes
         parsePrimitive encoded `shouldBe` Right (Ed25519PublicKey vkBytes, "")
 
     it "round-trips an Ed25519 signature (0B code)" $ do

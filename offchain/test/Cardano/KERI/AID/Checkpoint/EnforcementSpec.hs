@@ -12,12 +12,21 @@ module Cardano.KERI.AID.Checkpoint.EnforcementSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
+    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
+    AddressRole (..),
+    ContinuingOutput (..),
     ConvictError (..),
+    ConvictOutputError (..),
     EventEvidence (..),
     FreezeError (..),
+    FreezeOutputError (..),
+    OutputDatum (..),
+    TombstoneV1 (..),
+    convictOutputPredicate,
     convictPredicate,
+    freezeOutputPredicate,
     freezePredicate,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -46,6 +55,10 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Numeric (readHex)
+import PlutusTx.IsData.Class (
+    fromBuiltinData,
+    toBuiltinData,
+ )
 import Test.Hspec (
     Expectation,
     Spec,
@@ -135,6 +148,98 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                 freezePredicate tip ev{eeWitSigs = []}
                     `shouldBe` Left FzInsufficientReceipts
 
+        -- F2: some controller sigs verify, but not enough for cur_threshold
+        -- (distinct from F1's zero-signature case).
+        it "F2: sigs below threshold -> CvQuorumUnsatisfied" $
+            withBuilt (honestConvictSetup honest2) $ \(tip, ev) ->
+                convictPredicate tip ev{eeCtrlSigs = take 1 (eeCtrlSigs ev)}
+                    `shouldBe` Left CvQuorumUnsatisfied
+
+    describe "TombstoneV1 wire codec" $ do
+        it "canonical CBOR golden (Constr 0, 3 fields)" $
+            canonicalCbor goldenTombstone
+                `shouldBe` hexBs
+                    "d8799f5820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa015820ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccff"
+        it "round-trips through Plutus Data" $
+            fromBuiltinData (toBuiltinData goldenTombstone)
+                `shouldBe` Just goldenTombstone
+
+    describe "convict output shape (Convict 5)" $ do
+        it "valid: Tombstone + token + correct record" $
+            withBuilt (convictSetup fork) $ \(tip, ev) ->
+                convictOutputPredicate tip ev (tombstoneOut tip ev True Tombstone)
+                    `shouldBe` Right ()
+
+        -- F13: convict output missing the token.
+        it "F13: missing token -> CoMissingToken" $
+            withBuilt (convictSetup fork) $ \(tip, ev) ->
+                convictOutputPredicate tip ev (tombstoneOut tip ev False Tombstone)
+                    `shouldBe` Left CoMissingToken
+
+        -- F13: convict output carrying a checkpoint datum, not the record.
+        it "F13: wrong record -> CoWrongRecord" $
+            withBuilt (convictSetup fork) $ \(tip, ev) ->
+                convictOutputPredicate
+                    tip
+                    ev
+                    (ContinuingOutput Tombstone True (CheckpointOutput tip))
+                    `shouldBe` Left CoWrongRecord
+
+        -- F13: convict output at a non-tombstone role.
+        it "F13: non-tombstone role -> CoNotTombstone" $
+            withBuilt (convictSetup fork) $ \(tip, ev) ->
+                convictOutputPredicate tip ev (tombstoneOut tip ev True Active)
+                    `shouldBe` Left CoNotTombstone
+
+    describe "freeze output shape (Freeze 4)" $ do
+        it "valid: Frozen + token + unchanged datum" $
+            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
+                freezeOutputPredicate tip (checkpointOut tip True Frozen)
+                    `shouldBe` Right ()
+
+        -- F12: freeze output at a non-frozen role.
+        it "F12: non-frozen role -> FoNotFrozen" $
+            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
+                freezeOutputPredicate tip (checkpointOut tip True Active)
+                    `shouldBe` Left FoNotFrozen
+
+        -- F12: freeze output with a mutated datum.
+        it "F12: mutated datum -> FoDatumChanged" $
+            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
+                freezeOutputPredicate
+                    tip
+                    ( ContinuingOutput
+                        Frozen
+                        True
+                        (CheckpointOutput tip{cdNativeSn = cdNativeSn tip + 1})
+                    )
+                    `shouldBe` Left FoDatumChanged
+
+-- ---------------------------------------------------------------------------
+-- Output-shape + tombstone fixtures/helpers
+-- ---------------------------------------------------------------------------
+
+-- | A fixed synthetic conviction record for the byte-parity golden.
+goldenTombstone :: TombstoneV1
+goldenTombstone = TombstoneV1 (BS.replicate 32 0xaa) 1 (BS.replicate 32 0xcc)
+
+-- | The tombstone continuing-output a valid conviction writes.
+tombstoneOut ::
+    CheckpointDatumV1 -> EventEvidence -> Bool -> AddressRole -> ContinuingOutput
+tombstoneOut tip ev hasTok role =
+    ContinuingOutput
+        role
+        hasTok
+        (TombstoneOutput (TombstoneV1 (cdCesrAid tip) (cdNativeSn tip) (eeSaid ev)))
+
+-- | A checkpoint continuing-output carrying the tip datum unchanged.
+checkpointOut :: CheckpointDatumV1 -> Bool -> AddressRole -> ContinuingOutput
+checkpointOut tip hasTok role = ContinuingOutput role hasTok (CheckpointOutput tip)
+
+-- | Decode a hex literal, erroring on malformed input.
+hexBs :: Text -> ByteString
+hexBs = either error id . decodeHex
+
 -- ---------------------------------------------------------------------------
 -- Scenario builders (tip datum + evidence from a fixture)
 -- ---------------------------------------------------------------------------
@@ -191,6 +296,7 @@ evidenceFrom fx evKey ctrlKey witKey = do
             , eeType = deType de
             , eeNativeSn = deSn de
             , eeCesrAid = deAid de
+            , eeSaid = deSaid de
             , eeRevealedKeys = deKeys de
             , eeNextKeys = deNext de
             , eeCurThreshold = deKt de
@@ -211,6 +317,7 @@ data DecodedEvent = DecodedEvent
     , deType :: ByteString
     , deSn :: Integer
     , deAid :: ByteString
+    , deSaid :: ByteString
     , deKeys :: [ByteString]
     , deNext :: [ByteString]
     , deKt :: Threshold
@@ -227,6 +334,7 @@ decodeEvent fx evKey = do
     ty <- TE.encodeUtf8 <$> textField ked "t"
     sn <- hexIntField ked "s"
     aid <- digestRaw =<< textField ked "i"
+    said <- digestRaw =<< textField ev "said"
     keys <- traverse verkeyRaw =<< textArrayField ked "k"
     next <- traverse digestRaw =<< textArrayField ked "n"
     kt <- thresholdField ked "kt"
@@ -239,6 +347,7 @@ decodeEvent fx evKey = do
             , deType = ty
             , deSn = sn
             , deAid = aid
+            , deSaid = said
             , deKeys = keys
             , deNext = next
             , deKt = kt

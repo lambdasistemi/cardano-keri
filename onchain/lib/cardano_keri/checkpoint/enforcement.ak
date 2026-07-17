@@ -32,6 +32,7 @@ pub type EventEvidence {
   t: ByteArray,
   native_sn: Int,
   cesr_aid: ByteArray,
+  said: ByteArray,
   revealed_keys: List<ByteArray>,
   next_keys: List<ByteArray>,
   cur_threshold: Threshold,
@@ -264,4 +265,123 @@ fn count_receipts(
       }
     },
   )
+}
+
+// ---------------------------------------------------------
+// Lifecycle: the conviction-record datum (TombstoneV1)
+// ---------------------------------------------------------
+
+/// The conviction record a Convict spend writes to the tombstone output — a
+/// NEW frozen wire type (Constr 0, three fields in order), mirroring the
+/// Slice-5 Haskell `TombstoneV1`. cbor.serialise is byte-identical to the
+/// Haskell canonicalCbor (see enforcement_vectors.golden_tombstone).
+pub type TombstoneV1 {
+  cesr_aid: ByteArray,
+  convicted_at_native_sn: Int,
+  evidence_said: ByteArray,
+}
+
+// ---------------------------------------------------------
+// Output-shape layer (spec Convict 5 / Freeze 4)
+// ---------------------------------------------------------
+
+/// The role of a continuing-output's script address in the #106 lifecycle.
+pub type AddressRole {
+  Active
+  Frozen
+  Tombstone
+}
+
+/// The datum a continuing output carries: the ongoing checkpoint state or the
+/// terminal conviction record.
+pub type OutputDatum {
+  CheckpointOutput(CheckpointDatumV1)
+  TombstoneOutput(TombstoneV1)
+}
+
+/// An abstract continuing-output descriptor — the schema-layer projection of a
+/// transaction output (role, whether it carries the identity token, and its
+/// datum), NOT the ledger's Output. The output-shape predicates operate on this.
+pub type ContinuingOutput {
+  role: AddressRole,
+  has_token: Bool,
+  datum: OutputDatum,
+}
+
+/// A conviction output-shape rejection reason (mirrors the Slice-5
+/// `ConvictOutputError`).
+pub type ConvictOutputError {
+  /// The continuing output is not at the tombstone role.
+  CoNotTombstone
+  /// The continuing output does not carry the identity token.
+  CoMissingToken
+  /// The datum is not the exact expected TombstoneV1 conviction record.
+  CoWrongRecord
+}
+
+/// The conviction output-shape verdict. `ConvictOutputValid` ≙ `Right ()`.
+pub type ConvictOutputVerdict {
+  ConvictOutputValid
+  ConvictOutputInvalid(ConvictOutputError)
+}
+
+/// Convict output shape (spec Convict 5): the continuing output must sit at the
+/// tombstone role, carry the token, and hold exactly
+/// `TombstoneV1 { tip.cesr_aid, tip.native_sn, evidence.said }`. Same ordered
+/// checks as the Slice-5 Haskell `convictOutputPredicate`.
+pub fn convict_output_predicate(
+  tip: CheckpointDatumV1,
+  evidence: EventEvidence,
+  out: ContinuingOutput,
+) -> ConvictOutputVerdict {
+  if out.role != Tombstone {
+    ConvictOutputInvalid(CoNotTombstone)
+  } else if !out.has_token {
+    ConvictOutputInvalid(CoMissingToken)
+  } else if out.datum != TombstoneOutput(
+    TombstoneV1 {
+      cesr_aid: tip.cesr_aid,
+      convicted_at_native_sn: tip.native_sn,
+      evidence_said: evidence.said,
+    },
+  ) {
+    ConvictOutputInvalid(CoWrongRecord)
+  } else {
+    ConvictOutputValid
+  }
+}
+
+/// A freeze output-shape rejection reason (mirrors the Slice-5
+/// `FreezeOutputError`).
+pub type FreezeOutputError {
+  /// The continuing output is not at the frozen role.
+  FoNotFrozen
+  /// The continuing output does not carry the identity token.
+  FoMissingToken
+  /// The datum is not byte-identical to the tip checkpoint datum.
+  FoDatumChanged
+}
+
+/// The freeze output-shape verdict. `FreezeOutputValid` ≙ `Right ()`.
+pub type FreezeOutputVerdict {
+  FreezeOutputValid
+  FreezeOutputInvalid(FreezeOutputError)
+}
+
+/// Freeze output shape (spec Freeze 4): the continuing output must sit at the
+/// frozen role, carry the token, and hold the tip checkpoint datum unchanged.
+/// Same ordered checks as the Slice-5 Haskell `freezeOutputPredicate`.
+pub fn freeze_output_predicate(
+  tip: CheckpointDatumV1,
+  out: ContinuingOutput,
+) -> FreezeOutputVerdict {
+  if out.role != Frozen {
+    FreezeOutputInvalid(FoNotFrozen)
+  } else if !out.has_token {
+    FreezeOutputInvalid(FoMissingToken)
+  } else if out.datum != CheckpointOutput(tip) {
+    FreezeOutputInvalid(FoDatumChanged)
+  } else {
+    FreezeOutputValid
+  }
 }

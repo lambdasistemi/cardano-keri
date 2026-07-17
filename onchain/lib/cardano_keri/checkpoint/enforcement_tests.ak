@@ -8,12 +8,18 @@
 //// and the negatives (F1/F4/F5/F7/F8/F9/F10) via in-test mutation of a base
 //// vector. Any disagreement means one mirror is wrong.
 
+use aiken/cbor
+use aiken/collection/list
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/enforcement.{
-  ConvictInvalid, ConvictValid, CvAidMismatch, CvNoConflict, CvQuorumUnsatisfied,
-  CvRevealMismatch, CvSeqMismatch, EventEvidence, FreezeInvalid, FreezeValid,
-  FzInsufficientReceipts, FzNotAhead, FzUncommittedReveal, convict_predicate,
-  freeze_predicate,
+  Active, CheckpointOutput, CoMissingToken, CoNotTombstone, CoWrongRecord,
+  ContinuingOutput, ConvictInvalid, ConvictOutputInvalid, ConvictOutputValid,
+  ConvictValid, CvAidMismatch, CvNoConflict, CvQuorumUnsatisfied,
+  CvRevealMismatch, CvSeqMismatch, EventEvidence, FoDatumChanged, FoNotFrozen,
+  FreezeInvalid, FreezeOutputInvalid, FreezeOutputValid, FreezeValid, Frozen,
+  FzInsufficientReceipts, FzNotAhead, FzUncommittedReveal, Tombstone,
+  TombstoneOutput, TombstoneV1, convict_output_predicate, convict_predicate,
+  freeze_output_predicate, freeze_predicate,
 }
 use cardano_keri/checkpoint/enforcement_vectors as vec
 
@@ -112,4 +118,118 @@ test f8_freeze_insufficient_receipts() {
   freeze_predicate(vec.lag_freeze_tip, evidence) == FreezeInvalid(
     FzInsufficientReceipts,
   )
+}
+
+// ---------------------------------------------------------
+// F2: some controller sigs verify, but below cur_threshold
+// ---------------------------------------------------------
+
+test f2_convict_quorum_below_threshold() {
+  // honest_2key convict tip is a 2-of-2; keep only one verifying signature.
+  let evidence = EventEvidence {
+    ..vec.honest2_convict_evidence,
+    ctrl_sigs: list.take(vec.honest2_convict_evidence.ctrl_sigs, 1),
+  }
+  convict_predicate(vec.honest2_convict_tip, evidence) == ConvictInvalid(
+    CvQuorumUnsatisfied,
+  )
+}
+
+// ---------------------------------------------------------
+// TombstoneV1 codec byte-parity (against the Haskell golden)
+// ---------------------------------------------------------
+
+test tombstone_cbor_golden() {
+  let tomb = TombstoneV1 {
+    cesr_aid: #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    convicted_at_native_sn: 1,
+    evidence_said: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  }
+  cbor.serialise(tomb) == vec.golden_tombstone
+}
+
+// ---------------------------------------------------------
+// Convict output shape (Convict 5) + F13
+// ---------------------------------------------------------
+
+fn convict_tombstone(has_token: Bool, role) -> ContinuingOutput {
+  ContinuingOutput {
+    role,
+    has_token,
+    datum: TombstoneOutput(
+      TombstoneV1 {
+        cesr_aid: vec.fork_convict_tip.cesr_aid,
+        convicted_at_native_sn: vec.fork_convict_tip.native_sn,
+        evidence_said: vec.fork_convict_evidence.said,
+      },
+    ),
+  }
+}
+
+test convict_output_valid() {
+  convict_output_predicate(
+    vec.fork_convict_tip,
+    vec.fork_convict_evidence,
+    convict_tombstone(True, Tombstone),
+  ) == ConvictOutputValid
+}
+
+test f13_convict_output_missing_token() {
+  convict_output_predicate(
+    vec.fork_convict_tip,
+    vec.fork_convict_evidence,
+    convict_tombstone(False, Tombstone),
+  ) == ConvictOutputInvalid(CoMissingToken)
+}
+
+test f13_convict_output_wrong_record() {
+  let out = ContinuingOutput {
+    role: Tombstone,
+    has_token: True,
+    datum: CheckpointOutput(vec.fork_convict_tip),
+  }
+  convict_output_predicate(vec.fork_convict_tip, vec.fork_convict_evidence, out) == ConvictOutputInvalid(
+    CoWrongRecord,
+  )
+}
+
+test f13_convict_output_wrong_role() {
+  convict_output_predicate(
+    vec.fork_convict_tip,
+    vec.fork_convict_evidence,
+    convict_tombstone(True, Active),
+  ) == ConvictOutputInvalid(CoNotTombstone)
+}
+
+// ---------------------------------------------------------
+// Freeze output shape (Freeze 4) + F12
+// ---------------------------------------------------------
+
+fn freeze_checkpoint(has_token: Bool, role, datum) -> ContinuingOutput {
+  ContinuingOutput { role, has_token, datum: CheckpointOutput(datum) }
+}
+
+test freeze_output_valid() {
+  freeze_output_predicate(
+    vec.lag_freeze_tip,
+    freeze_checkpoint(True, Frozen, vec.lag_freeze_tip),
+  ) == FreezeOutputValid
+}
+
+test f12_freeze_output_wrong_role() {
+  freeze_output_predicate(
+    vec.lag_freeze_tip,
+    freeze_checkpoint(True, Active, vec.lag_freeze_tip),
+  ) == FreezeOutputInvalid(FoNotFrozen)
+}
+
+test f12_freeze_output_mutated_datum() {
+  let mutated = CheckpointDatumV1 {
+    ..vec.lag_freeze_tip,
+    native_sn: vec.lag_freeze_tip.native_sn + 1,
+  }
+  freeze_output_predicate(
+    vec.lag_freeze_tip,
+    freeze_checkpoint(True, Frozen, mutated),
+  ) == FreezeOutputInvalid(FoDatumChanged)
 }

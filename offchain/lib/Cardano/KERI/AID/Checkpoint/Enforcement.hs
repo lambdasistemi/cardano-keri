@@ -29,6 +29,18 @@ module Cardano.KERI.AID.Checkpoint.Enforcement (
     -- * Freeze (lag -> frozen)
     FreezeError (..),
     freezePredicate,
+
+    -- * Lifecycle: the conviction-record datum
+    TombstoneV1 (..),
+
+    -- * Output-shape layer
+    AddressRole (..),
+    OutputDatum (..),
+    ContinuingOutput (..),
+    ConvictOutputError (..),
+    convictOutputPredicate,
+    FreezeOutputError (..),
+    freezeOutputPredicate,
 ) where
 
 import Cardano.KERI.AID.Blake3.Checkpoint (
@@ -62,6 +74,16 @@ import Data.IntSet qualified as IntSet
 import Data.List (
     elemIndex,
  )
+import PlutusCore.Data (
+    Data (..),
+ )
+import PlutusTx.Builtins.Internal (
+    BuiltinData (..),
+ )
+import PlutusTx.IsData.Class (
+    FromData (..),
+    ToData (..),
+ )
 
 -- ---------------------------------------------------------
 -- Decoded event evidence
@@ -83,6 +105,8 @@ data EventEvidence = EventEvidence
     -- ^ KERI native sequence number @s@
     , eeCesrAid :: !CesrAid
     -- ^ KERI @i@, raw (E-code stripped)
+    , eeSaid :: !ByteString
+    -- ^ KERI @d@ (the event SAID), raw (E-code stripped)
     , eeRevealedKeys :: ![Verkey]
     -- ^ KERI @k@, raw verkeys
     , eeNextKeys :: ![KeyDigest]
@@ -245,3 +269,118 @@ atMay xs i
     | otherwise = case drop i xs of
         (x : _) -> Just x
         [] -> Nothing
+
+-- ---------------------------------------------------------
+-- Lifecycle: the conviction-record datum (TombstoneV1)
+-- ---------------------------------------------------------
+
+{- | The conviction record a @Convict@ spend writes to the tombstone output
+(a NEW frozen wire type; @Constr 0@, three fields in order). It records the
+convicted AID, the native sn the double-sign occurred at, and the raw
+(E-code-stripped) SAID of the conflicting event.
+-}
+data TombstoneV1 = TombstoneV1
+    { tvCesrAid :: !CesrAid
+    -- ^ the convicted AID (KERI @i@, raw)
+    , tvConvictedAtNativeSn :: !Integer
+    -- ^ the native sn the conflicting reveal occurred at
+    , tvEvidenceSaid :: !ByteString
+    -- ^ the conflicting event's SAID (KERI @d@, raw)
+    }
+    deriving stock (Show, Eq)
+
+-- | @Constr 0 [B cesr_aid, I convicted_at_native_sn, B evidence_said]@.
+instance ToData TombstoneV1 where
+    toBuiltinData TombstoneV1{..} =
+        BuiltinData $
+            Constr
+                0
+                [ B tvCesrAid
+                , I tvConvictedAtNativeSn
+                , B tvEvidenceSaid
+                ]
+
+instance FromData TombstoneV1 where
+    fromBuiltinData (BuiltinData (Constr 0 [B cesr, I sn, B said])) =
+        Just (TombstoneV1 cesr sn said)
+    fromBuiltinData _ = Nothing
+
+-- ---------------------------------------------------------
+-- Output-shape layer (spec Convict 5 / Freeze 4)
+-- ---------------------------------------------------------
+
+-- | The role of a continuing-output's script address in the #106 lifecycle.
+data AddressRole = Active | Frozen | Tombstone
+    deriving stock (Show, Eq)
+
+{- | The datum carried by a continuing output: either the ongoing checkpoint
+state or the terminal conviction record.
+-}
+data OutputDatum
+    = CheckpointOutput CheckpointDatumV1
+    | TombstoneOutput TombstoneV1
+    deriving stock (Show, Eq)
+
+{- | An abstract continuing-output descriptor — the schema-layer projection of a
+transaction output (role, whether it carries the identity token, and its
+datum), NOT the ledger's @TxOut@. The output-shape predicates operate on this.
+-}
+data ContinuingOutput = ContinuingOutput
+    { coRole :: !AddressRole
+    , coHasToken :: !Bool
+    , coDatum :: !OutputDatum
+    }
+    deriving stock (Show, Eq)
+
+-- | A conviction output-shape rejection reason (one constructor per check).
+data ConvictOutputError
+    = -- | The continuing output is not at the tombstone role.
+      CoNotTombstone
+    | -- | The continuing output does not carry the identity token.
+      CoMissingToken
+    | -- | The datum is not the exact expected 'TombstoneV1' conviction record.
+      CoWrongRecord
+    deriving stock (Show, Eq)
+
+{- | Convict output shape (spec Convict 5): the continuing output must sit at the
+tombstone role, carry the token, and hold exactly
+@TombstoneV1 tip.cesr_aid tip.native_sn evidence.said@.
+-}
+convictOutputPredicate ::
+    CheckpointDatumV1 ->
+    EventEvidence ->
+    ContinuingOutput ->
+    Either ConvictOutputError ()
+convictOutputPredicate tip e out = do
+    unless (coRole out == Tombstone) (Left CoNotTombstone)
+    unless (coHasToken out) (Left CoMissingToken)
+    let expected =
+            TombstoneOutput
+                ( TombstoneV1
+                    (cdCesrAid tip)
+                    (cdNativeSn tip)
+                    (eeSaid e)
+                )
+    unless (coDatum out == expected) (Left CoWrongRecord)
+
+-- | A freeze output-shape rejection reason (one constructor per check).
+data FreezeOutputError
+    = -- | The continuing output is not at the frozen role.
+      FoNotFrozen
+    | -- | The continuing output does not carry the identity token.
+      FoMissingToken
+    | -- | The datum is not byte-identical to the tip checkpoint datum.
+      FoDatumChanged
+    deriving stock (Show, Eq)
+
+{- | Freeze output shape (spec Freeze 4): the continuing output must sit at the
+frozen role, carry the token, and hold the tip checkpoint datum unchanged.
+-}
+freezeOutputPredicate ::
+    CheckpointDatumV1 ->
+    ContinuingOutput ->
+    Either FreezeOutputError ()
+freezeOutputPredicate tip out = do
+    unless (coRole out == Frozen) (Left FoNotFrozen)
+    unless (coHasToken out) (Left FoMissingToken)
+    unless (coDatum out == CheckpointOutput tip) (Left FoDatumChanged)

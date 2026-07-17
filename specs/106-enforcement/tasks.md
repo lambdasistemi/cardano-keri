@@ -42,9 +42,9 @@ wrong, this check goes RED before any enforcement code is built on it.
 
 ## Slice 5 — lifecycle vectors + output-shape predicates
 
-- [ ] T106-S5 `TombstoneV1` + output-shape predicates (Convict 5 / Freeze 4) in both languages
-- [ ] T106-S5 negatives F8, F9, F11, F12, F13 in both languages
-- [ ] T106-S5 committed with trailer `Tasks: T106-S5`
+- [X] T106-S5 `TombstoneV1` + output-shape predicates (Convict 5 / Freeze 4) in both languages
+- [X] T106-S5 negatives F8, F9, F11, F12, F13 in both languages
+- [X] T106-S5 committed with trailer `Tasks: T106-S5`
 
 ## Slice 6 — measurement + finalization prep
 

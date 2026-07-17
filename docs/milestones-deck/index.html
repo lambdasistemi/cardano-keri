@@ -143,15 +143,15 @@
   </section>
 
   <!-- 6 · M1 -->
-  <section data-label="M1 · Identity core" data-speaker-notes="The identity core. The KeyState shape is frozen into trie_key at inception, so it must be right from v1 — that is why the shape carries threshold and delegator fields even when most identities are 1-of-1.">
+  <section data-label="M1 · Identity core" data-speaker-notes="The identity core. Each AID owns a quantity-one checkpoint token whose asset name is derived from the AID — the stable handle across rotations. The datum shape is a frozen wire contract (E-native Blake3, raw current keys, explicit next pair), so it had to be right in v1 — it is merged and byte-tested in both languages. Divergence has teeth: convict burns a provable double-signer, freeze suspends a lagging checkpoint.">
     <div style="display:flex; align-items:baseline; gap:20px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; color:var(--accent);">M1</span><span style="font-family:'IBM Plex Mono',monospace; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);">Layers 1–2</span></div>
     <h2 style="font-size:var(--t-title); font-weight:600; margin-top:14px; letter-spacing:-0.01em;">Identity core</h2>
     <div style="flex:1; display:grid; grid-template-columns:1.15fr 1fr; gap:44px; margin-top:34px;">
       <div style="display:flex; flex-direction:column; gap:34px;">
         <div>
           <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;">Key state</div>
-          <p style="font-size:28px; line-height:1.4;">Each identity is an on-chain record (key-state UTxO) whose owner can rotate keys with no gatekeeper (permissionless pre-rotation). It holds a list of weighted signers with an m-of-n threshold (<code>KeyState</code>, weighted multisig) and reserves a slot for a controlling parent identity (<code>delegator</code>).</p>
-          <p style="font-size:24px; line-height:1.45; color:var(--muted); margin-top:12px;">Its shape is locked in when the identity is created — hashed into the identity's on-chain key (<code>trie_key</code>) — so it must be right in v1. A plain single-key identity is just the 1-of-1 case.</p>
+          <p style="font-size:28px; line-height:1.4;">Each identity is a quantity-one checkpoint UTxO whose owner rotates keys with no gatekeeper (permissionless pre-rotation, KERI dual-threshold rule). It holds raw weighted signing keys and the explicit next-key commitment (<code>CheckpointDatumV1</code>, E-native Blake3 — standard production AIDs as-is; no <code>delegator</code> slot, independent AIDs only).</p>
+          <p style="font-size:24px; line-height:1.45; color:var(--muted); margin-top:12px;">The wire contract is frozen and byte-tested across Haskell and Aiken (merged). A plain single-key identity is just the 1-of-1 case.</p>
         </div>
         <div>
           <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;">Vetting</div>
@@ -163,6 +163,7 @@
         <ul style="list-style:none; display:flex; flex-direction:column; gap:20px;">
           <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Rebuild an identity's full history off-chain from two anchored roots (dual-root reconstruction, <code>KEL</code> replay).</span></li>
           <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Rules for migrating and retiring old state <span style="color:var(--muted); font-size:24px;">(legacy-leaf policy, End/GC restriction).</span></span></li>
+          <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>Divergence has consequences: a provable double-sign <em>burns</em> the identity, a lagging checkpoint gets <em>frozen</em> <span style="color:var(--muted); font-size:24px;">(permissionless, bounty-paid — convict/freeze paths).</span></span></li>
           <li style="display:flex; gap:16px; font-size:28px; line-height:1.4;"><span style="color:var(--accent); flex-shrink:0;">—</span><span>A per-issuer registry of which credentials are still valid <span style="color:var(--muted); font-size:24px;">(<code>TEL</code> revocation registry, MPF-backed).</span></span></li>
         </ul>
       </div>

@@ -559,6 +559,19 @@ operation. **A watcher never chooses truth when cryptographic evidence is absent
 - **native-KERI state vs Cardano-facing seal / checkpoint mismatch** is **semantic correspondence fraud**, handled by the permissionless proof / freeze path (§7b, drilled via #90);
 - **KERI-ahead / Cardano-behind** is **synchronization lag, not a second valid identity branch** — but it is a **real safety window** for Cardano-only consumers.
 
+!!! note "Ratified enforcement (2026-07-17 — #106, ships inside the V1 validator with #24)"
+    The outcomes above now have concrete, **permissionless** on-chain teeth:
+
+    | Divergence | Consequence |
+    |---|---|
+    | **Fork** — a signed alternative rotation (the committed next-key preimages revealed with a different successor than Cardano recorded at the same native sn) | **Nullified**: `Convict` spend path — attributable double-signing under the pre-rotation bond; tombstone, AID permanently lost, prover paid from the deposit |
+    | **Cardano behind** — a witnessed later KERI establishment event | **Frozen**: `Freeze` spend path — checkpoint moves to the frozen address (status-by-address, #92), advance-only until the controller catches up |
+    | **Cardano ahead** — no corresponding witnessed KERI event | Not in-script provable (absence proof); prevented by the witness-receipt requirement at advance, and temporarily unprovable only — any later witnessed KEL event at that sn resolves it into convergence or `Convict` |
+
+    Only signatures under the pre-committed keys can convict — witness signatures alone
+    never can — so an honest controller cannot be framed. Both paths must ship in the V1
+    validator: the script hash freezes at deployment (#24 is blocked by #106).
+
 ### 11c. Consumer contract (honest)
 
 Every future protected action must reference the **current unspent per-AID checkpoint** and

@@ -24,6 +24,28 @@ The identity registry script enforces the following properties within a single b
 
 **Pre-rotation binding.** A rotation is valid only if the revealed keys match the committed `next_keys` digests (`blake3_256(qb64(reveal_key))` membership) **and** the signer evidence satisfies both thresholds — the rotation's own and the committed next threshold (the KERI dual-threshold rule). This cannot be circumvented without a preimage of blake3_256.
 
+## Divergence enforcement
+
+Ratified 2026-07-17 ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106), ships inside the V1 validator with [#24](https://github.com/lambdasistemi/cardano-keri/issues/24)). The pre-rotation commitment doubles as a **bond**: the same commitment must never sign two different successors, and enforcement is permissionless.
+
+| Divergence | On-chain consequence | Trigger |
+|---|---|---|
+| Fork (signed alternative rotation) | **Nullified** — `Convict` path: tombstone, AID permanently lost, prover paid | Anyone presents the conflicting signed KERI rotation |
+| Cardano behind (lag) | **Frozen** — advance-only until the controller catches up; consumers fail closed by address | Anyone presents the witnessed later KEL event |
+| Cardano ahead | No in-script remedy (absence is unprovable); prevented by the witness-receipt requirement at advance; resolves into convergence or `Convict` as soon as the KEL moves | — |
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active : genesis — icp + hash-proof mint (#91)
+    Active --> Active : advance (dual threshold)
+    Active --> Frozen : Freeze — witnessed later KEL event (permissionless)
+    Frozen --> Active : advance (catches up)
+    Active --> Tombstone : Convict — signed alternative rotation (permissionless)
+    Frozen --> Tombstone : Convict
+```
+
+The tombstone is terminal: with mint-once unicity the asset name can never be re-minted, and consumers resolving it get positive evidence of the conviction. **Framing is impossible** — a conviction requires signatures satisfying the committed threshold, so it collapses to the same standard as rotation itself; witness signatures alone never convict.
+
 **Monotonic sequence.** `seq` increases by exactly one per rotation. The on-chain script checks `seq_to == cur_state.seq + 1`. There is no skip or rollback.
 
 **Key possession at rotation.** The rotation message is signed with `reveal_key`. The on-chain script verifies the Ed25519 signature. Possession of the hash alone is insufficient.

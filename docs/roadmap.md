@@ -49,6 +49,12 @@ the umbrella epic
   ([#24](https://github.com/lambdasistemi/cardano-keri/issues/24)), mechanically
   re-cut to each AID's quantity-one checkpoint-token UTxO. A single key remains
   the 1-of-1 degenerate threshold case.
+- Divergence enforcement inside the V1 validator
+  ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106)):
+  permissionless **convict** (attributable double-sign under the pre-rotation
+  bond → tombstone, bounty-paid) and **freeze** (witnessed later KEL event →
+  advance-only, status-by-address) spend paths — co-designed with #24 because
+  the script hash freezes at deployment.
 - Dual-root reconstruction and KEL replay off-chain
   ([#25](https://github.com/lambdasistemi/cardano-keri/issues/25)).
 - Migration and lifecycle: legacy-leaf policy, End/GC restriction
@@ -175,11 +181,16 @@ Demand-driven, after the pilots prove the core:
   ([#10](https://github.com/lambdasistemi/cardano-keri/issues/10)) —
   **reframed by the identity model (2026-07-09) and #92 / NOTE-022
   (2026-07-15)**: identity forks are structurally impossible under the
-  KERI-sovereign checkpoint, so divergence-burn is retired. The live role is a
+  KERI-sovereign checkpoint, so the old *economic* divergence-burn is retired —
+  what exists instead is the targeted, cryptographically attributable
+  **convict/freeze enforcement in the V1 validator**
+  ([#106](https://github.com/lambdasistemi/cardano-keri/issues/106), M1),
+  which the watcher's proofs feed. The live role is a
   **permissionless cross-plane relayer and evidence submitter** (KERI ↔ Cardano
   + the R-TEL mirror), **not** a live economic convergence enforcer: relay a
   fully witnessed anchoring transition, submit duplicity / correspondence fraud
-  proofs (a defined duty, drilled via #90), request or trigger the applicable
+  proofs (a defined duty, drilled via #90 — bounty-paid through the #106
+  convict/freeze paths), request or trigger the applicable
   freeze path, and police stale / false R-TEL credential mirrors — anchoring
   freshness / liveness, R-TEL policing, and freeze relay, all bounty-compatible
   but never truth-choosing when evidence is absent

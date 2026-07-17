@@ -231,7 +231,7 @@ Each of these MUST be a rejected vector in both implementations:
 | F3 | Conviction where the event matches `D` exactly (no conflict) | Convict 4 |
 | F4 | Conviction at sn ≠ `D.native_sn` | shared sn check |
 | F5 | Conviction with another AID's event (i-field mismatch) | shared AID check |
-| F6 | Conviction whose `said_blank` diverges outside the SAID span | shared SAID check |
+| F6 | Conviction whose `said_blank` diverges outside the SAID span | #24 slice reconstruction (see note) |
 | F7 | Conviction with revealed keys ≠ `D.cur_keys` (two unrelated events) | Convict 2 |
 | F8 | Freeze with unwitnessed event (receipts < toad) | Freeze 3 |
 | F9 | Freeze whose signing keys are not committed in `D.next_keys` | Freeze 2 |
@@ -239,6 +239,18 @@ Each of these MUST be a rejected vector in both implementations:
 | F11 | Spend of a tombstone output by any redeemer | lifecycle (no path) |
 | F12 | Freeze output at any address other than FROZEN / datum mutated | Freeze 4 |
 | F13 | Convict output missing token or conviction record | Convict 5 |
+
+**F6 and F11 — the two validator-boundary vectors.** F6 (the `said_blank`
+anti-substitution) is the on-chain **slice reconstruction** the schema layer
+out-of-scopes to #24: the schema predicates already verify every signature over
+the exact `event_bytes`, so no signature can be moved onto different bytes, and
+the SAID-dummy reconstruction is precisely the CESR slicing #24 owns. F11 (a
+tombstone is unspendable) is a **validator "no path" property**, not a pure
+predicate — the schema layer encodes it as *terminality*: `TombstoneV1` carries
+no advance/convict/freeze continuation, and #24's validator ships no spending
+redeemer for the tombstone address. Both are covered by #24; the schema layer
+delivers F1–F5, F7–F10, F12, F13 as executable rejected vectors and documents
+F6/F11 as the #24 obligation.
 
 Positive vectors: one conviction from ACTIVE and one from FROZEN (GLEIF-shaped
 7-key fixture with a conflicting `n'`); one freeze with a 3-of-7 reserve-shaped

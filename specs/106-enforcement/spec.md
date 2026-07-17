@@ -184,8 +184,9 @@ Given tip datum `D` at the ACTIVE address and `EventEvidence` `E`:
    `D.next_threshold`. (The event provably spends this checkpoint's own
    pre-rotation commitment — it is *this* identity's future, not noise.)
 3. **Witnessed**: `E.wit_sigs` verify against `D.witnesses` (raw keys, native
-   Ed25519, over the SAID) and count `≥ D.toad`. A `toad = 0` checkpoint is
-   freezable with controller-signature evidence alone (a documented weaker
+   Ed25519, **over `event_bytes`** — per O1, witness receipts sign the full
+   serialization, not the SAID) and count `≥ D.toad`. A `toad = 0` checkpoint
+   is freezable with controller-signature evidence alone (a documented weaker
    tier — consistent with #68's witnessless stance).
 4. **Output shape**: the continuing output sits at the FROZEN address with
    byte-identical datum and the token; all other value is preserved. No

@@ -1,13 +1,15 @@
 # cardano-keri M1 — narrative slide-deck brief
 
-Create a 13-slide, 16:9 (1920×1080) presentation titled **“One identity. New
-Cardano authority.”** It explains what cardano-keri M1 enables by following one
+Create a 13-slide, 16:9 (1920×1080) presentation titled **“Keep the identity you
+already trust.”** It explains what cardano-keri M1 enables by following one
 composite pilot organization through a complete story. This is not a feature
 catalogue and not a roadmap presentation.
 
-The audience is technical peers and prospective pilot counterparties. They
-understand keys, signatures, and UTxOs but may not know KERI. The tone is
-confident, concrete, and deliberately unhyped.
+The audience includes technical peers and prospective pilot counterparties.
+They may understand keys and signatures but should not need prior KERI
+knowledge. The tone is welcoming, concrete, and deliberately unhyped. Write as
+if explaining the project to a capable new collaborator: lead with the human
+outcome, then introduce the protocol term that makes it possible.
 
 ## The editorial rule
 
@@ -32,7 +34,8 @@ Every story slide contains:
 
 1. a persona/time kicker;
 2. a plain-language outcome title;
-3. one user-story sentence in the form “As …, I can …, so that …”;
+3. one or two complete, conversational sentences explaining why the outcome
+   matters to that person or team;
 4. one diagram or one three-column strip;
 5. at most three factual proof points;
 6. the journey line with the current stage highlighted;
@@ -51,19 +54,37 @@ Never blur delivered contract work with the remaining M1 build.
 
 Do not use “implemented” as a blanket deck-level adjective.
 
+## Language system
+
+- Use complete sentences. Avoid stacks of slogan fragments such as “Compare.
+  Prove. Get paid.”
+- Prefer everyday verbs: “bring,” “find,” “read,” “update,” “pause,” “recover,”
+  and “retire.” Put exact protocol verbs such as `mint`, `freeze`, `burn`, and
+  `convict` in the supporting explanation.
+- Define an acronym the first time it appears. For example: “the public KERI
+  event log (KEL).”
+- Do not assume the audience knows `AID`, `KEL`, `TEL`, `CIP-31`, `n`, `nt`, or
+  `kt`. Explain the job first; show the identifier second.
+- Security slides should reassure the audience by showing the protection and
+  recovery path. Avoid theatrical language such as “identity death” or “lying
+  is fatal.”
+- Proof points are short supporting sentences, not isolated technical nouns.
+
 ## Visual system
 
-- Background `#0e1217`; alternate background `#141a22`.
-- Panels `#1a212b` or `#212a35`; 1px borders `#2b333e`; 14px radius.
-- Text `#e9edf1`; muted `#9aa5b1`; dim `#69737f`.
-- Teal `#5cb8b0` / `#86cec7`; amber `#d8a75f`; danger `#d97b6b`.
+- Warm-white background `#f7f6f1`; alternate background `#eef4f2`.
+- Panels `#ffffff` or soft teal `#e7f2ef`; 1px borders `#ccd9d5`; 14px radius;
+  subtle low-contrast shadows.
+- Text `#21343a`; muted `#53666b`; dim `#718187`.
+- Teal `#207f7a` / `#126a66`; amber `#a86b16`; danger `#b44d43`.
 - IBM Plex Sans for prose; IBM Plex Mono for labels, code, status, and proof
   points.
 - Titles 56–60px, weight 600, tight tracking. Body 27–30px. Labels 18–22px.
 - Generous whitespace. No stock photos, decorative illustrations, gradients
   pretending to be content, or walls of cards.
-- Use teal for valid/current paths, amber for boundaries or lag, and red only
-  for an actual rejected attack or permanent conviction.
+- Use teal for valid/current paths, amber for boundaries or lag, and pale red
+  only for an actual rejected action or permanent conviction. The overall deck
+  should feel open and calm, not like a security incident dashboard.
 - The checkpoint asset should be the recurring visual anchor: its identity is
   stable while its key-state datum changes.
 
@@ -113,41 +134,44 @@ The following claims are fixed:
 
 ## Slide sequence
 
-1. **One identity. New Cardano authority.** Establish that this is one pilot
+1. **Keep the identity you already trust.** Establish that this is one pilot
    story. Show the two status chips: wire merged/byte-tested; validator and
    enforcement ship with M1.
-2. **They already have an identity.** Introduce Northstar’s existing AID,
+2. **Meet Northstar: a team with an identity already in use.** Introduce Northstar’s existing AID,
    governance, concrete need, and non-negotiables.
-3. **Bring the identity you already operate.** Show existing inception event →
+3. **Bring your existing identity—no conversion required.** Show existing inception event →
    ≤1024-byte hash proof → sovereign quantity-one checkpoint. Include the honest
    semantic-projection boundary in amber.
-4. **A stable name for changing authority.** Make the checkpoint asset the
+4. **Give apps one stable name for your organization.** Make the checkpoint asset the
    fixed visual object and show the datum fields that advance.
-5. **The board’s real rules survive the move.** Show Northstar’s 2-of-3 rule,
+5. **Keep the approval rules your team already uses.** Show Northstar’s 2-of-3 rule,
    then the wider weighted/multi-clause/zero-weight compatibility.
-6. **Write once. Keep control after every rotation.** Show an owned MPFS leaf
+6. **Your records stay under the right control.** Show an owned MPFS leaf
    authorized against the current checkpoint and unchanged after rotation.
-7. **Rotate without asking anyone.** Explain the KERI dual-threshold rule,
+7. **Update keys directly, whenever your team needs to.** Explain the KERI dual-threshold rule,
    partial reserve rotation, and measured per-reveal cost.
-8. **Stolen current keys do not control the future.** This is the climax. Show
-   “attacker has every current key → rotation rejected” versus “owner reveals
-   committed successor keys → checkpoint advances.” State the next-material
-   loss boundary.
-9. **Contracts follow the identity, not its keys.** Show asset lookup → CIP-31
+8. **Losing today’s keys does not mean losing the identity.** This is the
+   climax. Show “intruder has every current key → cannot choose tomorrow’s
+   keys” versus “owner reveals committed successor keys → recovers the same
+   identity.” State the next-material loss boundary.
+9. **Apps always read the keys that are valid now.** Show asset lookup → CIP-31
    reference → ledger revalidation. State that stale indexers delay but cannot
    forge, and frozen state fails closed.
-10. **Lying has an on-chain consequence.** Three columns: fork → burn; Cardano
-    behind → freeze; Cardano ahead → witness-receipt prevention and later
-    convergence/conviction. State “no framing.”
-11. **The public evidence creates three useful roles.** Watcher: compare/prove/
-    get paid. Auditor: replay/byte-compare/tombstones. Issuer: publish per-issuer
-    TEL status. Explicitly scope full credential-chain verification to M2.
-12. **One terminal cast is the acceptance test.** Incept → write → rotate →
-    stolen-current-quorum attack rejected. Show 195 Haskell tests / 157 Aiken
-    checks as contract evidence, not as a substitute for the devnet demo.
-13. **What M1 proves—and where it stops.** Two columns: M1 establishes versus
-    M2/M3/M5 boundaries. Close with a specific pilot invitation: “one independent
-    KERI AID · one Cardano record it should own · one explicit freshness policy.”
+10. **Public checks keep Cardano and KERI in sync.** Three columns: conflicting
+    rotations → retire; KERI moved first → pause; Cardano appears ahead → require
+    witness receipts. Keep the exact burn/freeze/conviction terms in the body and
+    state that owners cannot be framed.
+11. **The same public evidence supports useful services.** Watcher: keep the two
+    histories aligned. Auditor: build reports from replayable facts. Issuer:
+    publish per-issuer credential status. Explicitly scope full credential-chain
+    verification to M2.
+12. **The M1 demo shows the complete journey.** Register → create a record →
+    update keys → prove recovery. Show 195 Haskell tests / 157 Aiken checks as
+    contract evidence, not as a substitute for the devnet demo.
+13. **What M1 is ready to prove—and what comes next.** Two columns: M1 establishes
+    versus M2/M3/M5 boundaries. Close with a specific pilot invitation: “Bring an
+    existing KERI identity, one Cardano record it should control, and a clear
+    freshness policy.”
 
 ## Final quality gate
 

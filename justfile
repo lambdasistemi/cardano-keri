@@ -93,6 +93,14 @@ format-check-onchain:
 check-onchain:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
+# Measure the schema-layer enforcement predicate ex-units (#106 Slice 6).
+# An INVOCATION, not a headroom ASSERTION: aiken cannot assert its own ex-units
+# in-test, so this runs the measurement tests with `--plain-numbers` (printing
+# exact mem/cpu per test) and fails only if a measurement test fails to run/pass.
+# The headroom verdict is the re-verifiable claim in specs/106-enforcement/MEASUREMENTS.md.
+measure-enforcement:
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_convict -m measure_freeze
+
 # --- BLAKE3 spike (pinned Aiken) ---
 
 # Format the BLAKE3 spike with its pinned compiler
@@ -120,7 +128,7 @@ format: format-offchain format-onchain format-blake3
 format-check: format-check-offchain format-check-onchain format-check-blake3
 
 # Onchain CI gate (mirrors the Onchain job)
-ci-onchain: format-check-onchain check-onchain
+ci-onchain: format-check-onchain check-onchain measure-enforcement
 
 # BLAKE3 spike CI gate (mirrors the BLAKE3 job)
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3

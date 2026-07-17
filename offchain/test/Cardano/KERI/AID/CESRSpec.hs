@@ -10,7 +10,12 @@ import Cardano.Crypto.DSIGN (
  )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Verkey)
+import Cardano.KERI.AID.CESR (
+    Primitive (..),
+    parsePrimitive,
+    qb64Aid,
+    qb64Verkey,
+ )
 import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -60,6 +65,12 @@ spec = describe "CESR" $ do
 
     it "round-trips a self-addressing identifier (E code)" $ do
         let encoded = cesr1 'E' digestBytes
+        parsePrimitive encoded `shouldBe` Right (SelfAddressing digestBytes, "")
+
+    it "round-trips a self-addressing digest (E code) via qb64Aid" $ do
+        -- qb64Aid is the shipped E-code forward encoder; decode it back
+        -- through the shipped parsePrimitive.
+        let encoded = qb64Aid digestBytes
         parsePrimitive encoded `shouldBe` Right (SelfAddressing digestBytes, "")
 
     it "returns unconsumed remainder" $ do

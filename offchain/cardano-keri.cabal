@@ -55,6 +55,7 @@ library
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Datum
+    Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Ed25519
@@ -85,6 +86,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
+    Cardano.KERI.AID.Checkpoint.EnforcementSpec
+    Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec

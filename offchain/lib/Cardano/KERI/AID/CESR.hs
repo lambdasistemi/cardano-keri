@@ -2,6 +2,7 @@ module Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
     qb64Verkey,
+    qb64Aid,
 ) where
 
 import Data.ByteArray.Encoding (
@@ -77,3 +78,15 @@ qb64Verkey key =
     BS.cons 0x44 (BS.drop 1 b64) -- 'D' replaces the leading 'A'
   where
     b64 = convertToBase Base64URLUnpadded (BS.cons 0x00 key)
+
+{- | The fully qualified Base64url (qb64) form of a raw 32-byte self-addressing
+digest (E-code AID): code @\'E\'@ followed by @b64url(0x00 ‖ digest)@ with the
+first (always @\'A\'@) character replaced by the code — 44 ASCII characters. The
+E-code (@0x45@) analogue of 'qb64Verkey', mirroring the KERI @i@\/@d@ SAID form;
+@#24@'s on-chain AID slice-check compares the event's @i@ against this.
+-}
+qb64Aid :: ByteString -> ByteString
+qb64Aid digest =
+    BS.cons 0x45 (BS.drop 1 b64) -- 'E' replaces the leading 'A'
+  where
+    b64 = convertToBase Base64URLUnpadded (BS.cons 0x00 digest)

@@ -276,6 +276,21 @@ Budget target: the schema-layer predicate cost leaves ample room (the SAID
 recomputation is the dominant #24 cost, measured separately); Slice 6 reports the
 predicate cells and confirms they are a small fraction of budget.
 
+!!! important "#24 design question surfaced by the Slice-6 measurement (2026-07-17)"
+    The Slice-6 cells show the 7-key GLEIF freeze schema predicate at **29.38%
+    mem** (the binding cell; convict is < 1%). The naive full-spend estimate adds
+    #24's SAID recomputation (~71.7% mem at 1024 B, spike #88), which would exceed
+    budget for a 7-key freeze. **But O1 likely makes the SAID recomputation
+    redundant:** every signature verifies over the full `event_bytes` (not the
+    SAID), so the controller signatures (convict) and witness receipts (freeze)
+    already bind `event_bytes` — including the `i`/AID field and the conflicting
+    `n` — to the AID. An attacker can neither alter `i` nor forge a signature over
+    the altered bytes. #24's **first enforcement design question** is therefore:
+    *does the on-chain path need the SAID recomputation at all, or do the
+    O1-over-`event_bytes` signatures suffice?* If the latter (expected), the
+    dominant projected cost disappears and every enforcement path — including
+    large-board freezes — fits one transaction with wide headroom.
+
 ## Open questions
 
 - **O1 — witness/controller signing target — RESOLVED (2026-07-17).** Pinned

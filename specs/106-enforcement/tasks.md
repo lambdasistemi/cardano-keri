@@ -52,3 +52,18 @@ wrong, this check goes RED before any enforcement code is built on it.
 - [X] T106-S6 ≥ 25% headroom asserted or the spec's budget target revised with rationale
 - [X] T106-S6 O3/O4 recorded as #24 parameters in spec.md open questions
 - [X] T106-S6 gate extended with measurement invocation; committed with trailer `Tasks: T106-S6`
+
+(Slice 7 added below — the witness-receipt anti-fork requirement.)
+
+## Slice 7 — anti-fork: require witness receipts on convict evidence  [driver+navigator pair]
+
+The controller cannot make Cardano reflect an unwitnessed event (the advance
+requires witness receipts, #24), so a conviction must also require the
+conflicting event to be witnessed — only a real published duplicity convicts,
+never unwitnessed controller-signed bytes. Witnessless (`toad=0`) AIDs are the
+lower-assurance tier (controller-sig attribution alone).
+
+- [ ] T106-S7 keripy generator: add a `fork_witnessed` bundle (witnessed AID; rot_recorded + rot_conflict both carry witness receipts from the tip's witnesses — the collusion/duplicity). Regenerate fixtures (hermetic keripy flake); drift-stable.
+- [ ] T106-S7 `convictPredicate`/`convict_predicate` gain the Convict-4 witness-receipt check (wit_sigs verify over event_bytes against tip.witnesses, count ≥ tip.toad), both languages; new error `CvInsufficientReceipts`/`CvUnwitnessed`. Existing checks/order preserved otherwise.
+- [ ] T106-S7 vectors + parity: `fork_witnessed` convict → Valid (witnessed duplicity); the existing witnessless `fork` → still Valid (toad=0 vacuous tier); **F1b** = unwitnessed conflicting event on a witnessed AID (receipts < toad) → `CvInsufficientReceipts` (mutate fork_witnessed). Both languages, verdict parity.
+- [ ] T106-S7 update MEASUREMENTS.md if the added witness Ed25519 shifts the convict cell (re-measure convict on fork_witnessed); RED→GREEN pair handshake; gate green; committed with trailer `Tasks: T106-S7`.

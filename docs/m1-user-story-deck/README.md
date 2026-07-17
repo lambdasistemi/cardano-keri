@@ -4,54 +4,56 @@ Browser-native preview of the 13-slide deck. These images avoid GitHub's embedde
 
 [Open the HTML deck source](index.html) · [Open the PDF](cardano-keri-m1-user-story.pdf) · [Read the reusable design prompt](PROMPT.md)
 
-## 01 — One identity. New Cardano authority.
+The slides are the approachable overview. For the engineering decisions, measurements, limitations, and implementation status, read the [deep technical companion article](blog/cf-blog-post-cardano-keri-v3.md). The branch also preserves the [notes for the future vLEI verification installment](blog/series-notes-vlei-post.md).
 
-![Slide 01 — One identity. New Cardano authority.](preview/slide-01.png)
+## 01 — Keep the identity you already trust
+
+![Slide 01 — Keep the identity you already trust](preview/slide-01.png)
 
 ## 02 — Meet Northstar
 
 ![Slide 02 — Meet Northstar](preview/slide-02.png)
 
-## 03 — Bring the identity you already operate
+## 03 — Bring your existing identity — no conversion required
 
-![Slide 03 — Bring the identity you already operate](preview/slide-03.png)
+![Slide 03 — Bring your existing identity — no conversion required](preview/slide-03.png)
 
-## 04 — A stable name for changing authority
+## 04 — Give apps one stable name for your organization
 
-![Slide 04 — A stable name for changing authority](preview/slide-04.png)
+![Slide 04 — Give apps one stable name for your organization](preview/slide-04.png)
 
-## 05 — The board's real rules survive the move
+## 05 — Keep the approval rules your team already uses
 
-![Slide 05 — The board's real rules survive the move](preview/slide-05.png)
+![Slide 05 — Keep the approval rules your team already uses](preview/slide-05.png)
 
-## 06 — Write once. Keep control after every rotation.
+## 06 — Your records stay under the right control
 
-![Slide 06 — Write once. Keep control after every rotation.](preview/slide-06.png)
+![Slide 06 — Your records stay under the right control](preview/slide-06.png)
 
-## 07 — Rotate without a gatekeeper
+## 07 — Update keys directly, whenever your team needs to
 
-![Slide 07 — Rotate without a gatekeeper](preview/slide-07.png)
+![Slide 07 — Update keys directly, whenever your team needs to](preview/slide-07.png)
 
-## 08 — Stolen current keys do not control the future
+## 08 — Losing today's keys does not mean losing the identity
 
-![Slide 08 — Stolen current keys do not control the future](preview/slide-08.png)
+![Slide 08 — Losing today's keys does not mean losing the identity](preview/slide-08.png)
 
-## 09 — Contracts follow the identity, not its keys
+## 09 — Apps always read the keys that are valid now
 
-![Slide 09 — Contracts follow the identity, not its keys](preview/slide-09.png)
+![Slide 09 — Apps always read the keys that are valid now](preview/slide-09.png)
 
-## 10 — Lying has an on-chain consequence
+## 10 — Public checks keep Cardano and KERI in sync
 
-![Slide 10 — Lying has an on-chain consequence](preview/slide-10.png)
+![Slide 10 — Public checks keep Cardano and KERI in sync](preview/slide-10.png)
 
-## 11 — The public evidence creates three useful roles
+## 11 — The same public evidence supports useful services
 
-![Slide 11 — The public evidence creates three useful roles](preview/slide-11.png)
+![Slide 11 — The same public evidence supports useful services](preview/slide-11.png)
 
-## 12 — One terminal cast is the acceptance test
+## 12 — The M1 demo shows the complete journey
 
-![Slide 12 — One terminal cast is the acceptance test](preview/slide-12.png)
+![Slide 12 — The M1 demo shows the complete journey](preview/slide-12.png)
 
-## 13 — What M1 proves — and where it stops
+## 13 — What M1 is ready to prove — and what comes next
 
-![Slide 13 — What M1 proves — and where it stops](preview/slide-13.png)
+![Slide 13 — What M1 is ready to prove — and what comes next](preview/slide-13.png)

@@ -47,7 +47,10 @@ from keri.core import coring, eventing
 from keri.core.signing import Salter
 
 SEED = b"0123456789abcdef"  # frozen; changing it rewrites every fixture
-OUT = os.path.join(os.path.dirname(__file__), "fixtures")
+# Output dir: FIXTURES_OUT if set (run.sh pins the committed path), else
+# <cwd>/fixtures — so `nix run .#gen` from this directory writes in place
+# rather than into the read-only store copy of this script.
+OUT = os.environ.get("FIXTURES_OUT") or os.path.join(os.getcwd(), "fixtures")
 
 
 def _b64u_to_hex(qb64: str) -> str:

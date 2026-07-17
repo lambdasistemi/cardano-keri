@@ -1,10 +1,10 @@
-# cardano-keri M1 — user-story deck
+# Identity on Cardano — presentation
 
 Browser-native preview of the 13-slide deck. These images avoid GitHub's embedded PDF renderer entirely.
 
-[Open the HTML deck source](index.html) · [Open the PDF](cardano-keri-m1-user-story.pdf) · [Read the reusable design prompt](PROMPT.md)
+[Open the presentation](index.html) · [Open the PDF](cardano-keri-identity-core.pdf) · [Read the reusable design prompt](PROMPT.md)
 
-The slides are the approachable overview. For the engineering decisions, measurements, limitations, and implementation status, read the [deep technical companion article](blog/cf-blog-post-cardano-keri-v3.md). The branch also preserves the [notes for the future vLEI verification installment](blog/series-notes-vlei-post.md).
+The slides are the approachable overview. For the engineering decisions, measurements, limitations, and implementation status, read the [deep technical companion article](../blog/self-certifying-identities-on-cardano.md). The documentation also preserves the [notes for the future vLEI verification installment](../blog/series-notes-vlei.md).
 
 ## 01 — Keep the identity you already trust
 
@@ -50,10 +50,10 @@ The slides are the approachable overview. For the engineering decisions, measure
 
 ![Slide 11 — The same public evidence supports useful services](preview/slide-11.png)
 
-## 12 — The M1 demo shows the complete journey
+## 12 — The end-to-end demo shows the complete journey
 
-![Slide 12 — The M1 demo shows the complete journey](preview/slide-12.png)
+![Slide 12 — The end-to-end demo shows the complete journey](preview/slide-12.png)
 
-## 13 — What M1 is ready to prove — and what comes next
+## 13 — What this foundation proves — and what comes next
 
-![Slide 13 — What M1 is ready to prove — and what comes next](preview/slide-13.png)
+![Slide 13 — What this foundation proves — and what comes next](preview/slide-13.png)

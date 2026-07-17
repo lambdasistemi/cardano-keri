@@ -1,9 +1,15 @@
-# cardano-keri M1 — narrative slide-deck brief
+# Identity on Cardano — narrative slide-deck brief
 
 Create a 13-slide, 16:9 (1920×1080) presentation titled **“Keep the identity you
-already trust.”** It explains what cardano-keri M1 enables by following one
-composite pilot organization through a complete story. This is not a feature
-catalogue and not a roadmap presentation.
+already trust.”** It explains what cardano-keri's first milestone—the identity
+core—enables by following one composite pilot organization through a complete
+story. This is not a feature catalogue and not a roadmap presentation.
+
+The project plan calls this **Milestone 1 (M1)** internally. Never use a bare
+milestone code such as `M1`, `M2`, or `M3` as audience-facing copy. Name the
+capability instead: “identity core,” “credential-chain verification,” or
+“wallet signing.” Milestone codes may appear in speaker notes after the
+capability has been named.
 
 The audience includes technical peers and prospective pilot counterparties.
 They may understand keys and signatures but should not need prior KERI
@@ -43,13 +49,13 @@ Every story slide contains:
 
 ## Status language
 
-Never blur delivered contract work with the remaining M1 build.
+Never blur delivered contract work with the remaining identity-core build.
 
 - **MERGED + BYTE-TESTED**: the frozen E-native wire contract and its independent
   Haskell/Aiken vectors and checks.
-- **SHIPS WITH M1**: the validator state machine, registration/advance wiring,
+- **SHIPS WITH THE IDENTITY-CORE MILESTONE**: the validator state machine, registration/advance wiring,
   convict/freeze paths, and runnable devnet acceptance demo.
-- **NOT IN M1**: credential-chain verification, general authorization envelopes,
+- **BUILT IN LATER MILESTONES**: credential-chain verification, general authorization envelopes,
   KERI-wallet signing UX, delegated AIDs, and superseding recovery.
 
 Do not use “implemented” as a blanket deck-level adjective.
@@ -135,8 +141,9 @@ The following claims are fixed:
 ## Slide sequence
 
 1. **Keep the identity you already trust.** Establish that this is one pilot
-   story. Show the two status chips: wire merged/byte-tested; validator and
-   enforcement ship with M1.
+   story. Define the first milestone as the identity core. Show the two status
+   chips: wire merged/byte-tested; the first milestone adds the validator and
+   enforcement.
 2. **Meet Northstar: a team with an identity already in use.** Introduce Northstar’s existing AID,
    governance, concrete need, and non-negotiables.
 3. **Bring your existing identity—no conversion required.** Show existing inception event →
@@ -164,14 +171,16 @@ The following claims are fixed:
 11. **The same public evidence supports useful services.** Watcher: keep the two
     histories aligned. Auditor: build reports from replayable facts. Issuer:
     publish per-issuer credential status. Explicitly scope full credential-chain
-    verification to M2.
-12. **The M1 demo shows the complete journey.** Register → create a record →
+    verification to the next verification milestone; map it to M2 only in the notes.
+12. **The end-to-end demo shows the complete journey.** Register → create a record →
     update keys → prove recovery. Show 195 Haskell tests / 157 Aiken checks as
     contract evidence, not as a substitute for the devnet demo.
-13. **What M1 is ready to prove—and what comes next.** Two columns: M1 establishes
-    versus M2/M3/M5 boundaries. Close with a specific pilot invitation: “Bring an
+13. **What this foundation proves—and what comes next.** Two columns: delivered
+    by the identity core versus built on top later. Keep M2/M3/M5 mappings in
+    speaker notes. Close with a specific pilot invitation: “Bring an
     existing KERI identity, one Cardano record it should control, and a clear
-    freshness policy.”
+    freshness policy.” Link to the official long-form engineering article for
+    readers who want the design reversals, measurements, and threat model.
 
 ## Final quality gate
 
@@ -183,9 +192,11 @@ Reject the output and revise if any of these are true:
   failure, or consequence;
 - “trustless registration” is used without separating byte binding from
   semantic projection;
+- a bare milestone code appears in visible audience-facing copy;
 - M1 validator work is presented as already merged;
 - a technical term appears before the user need that makes it relevant;
 - any slide contains more than one main visual or more than three proof points;
 - the 2-of-3 attack/recovery sequence is not the visual climax;
 - the final slide is a generic “thank you” instead of an honest scope and pilot
   invitation.
+- the final slide and the engineering article do not link to one another.

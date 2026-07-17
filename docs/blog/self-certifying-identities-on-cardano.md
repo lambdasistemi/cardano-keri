@@ -4,6 +4,11 @@
 
 **Dek:** Inside the design decisions of cardano-keri's identity core — the Blake3-versus-Blake2 reversal, the fork problem, the limits we accepted, and what ships at the end of Milestone 1. First in a series following the project milestone by milestone.
 
+!!! tip "Prefer the visual story?"
+    [View the Identity on Cardano presentation](../identity-on-cardano/index.html)
+    for the concise user journey through registration, use, key rotation,
+    compromise recovery, and public verification.
+
 ---
 
 Imagine a mid-sized company that wants to interact with a Cardano protocol — sign a treasury disbursement, prove it is allowed to trade a regulated asset, or simply write into an on-chain registry it owns. On day one, this looks easy: generate a key, put its hash in the contract, done. Then reality arrives. The CFO who held the key leaves. The board decides that two of three directors should sign, not one. A laptop is stolen and the key must be replaced *now*. The company is still exactly the same company — but on-chain, its identity was the key, and the key is gone. Every contract that referenced it has to be updated, every counterparty notified, every integration re-tested.
@@ -85,7 +90,7 @@ Read those numbers twice and the design writes itself. In-script Blake3 would be
 
 - **Ordinary authorizations hash nothing at all.** The datum holds raw keys; signature verification is native. This is the path that runs thousands of times a day, and its hashing bill is zero.
 - **Rotations hash one small block per revealing key.** An organization rotates a handful of times a year, in a dedicated transaction with the budget to spare. A 3-of-5 board reveal costs about eleven percent of one transaction's CPU.
-- **Genesis hashes once — ever — and not even in the registration transaction.** The binding between an identifier and its inception event is verified by a dedicated **hash-proof mint**: a minting policy whose only job is to check `blake3(inception_event) == identifier` in its own transaction, with the entire budget available, and to mint a proof token that the registration then consumes. The registration validator itself never computes Blake3; it checks for the token with one cheap native hash. That makes the AID-to-event byte binding oracle-free. The field-by-field projection of CESR data into the checkpoint remains a separate, explicit trust boundary: it is attested, challengeable, and subject to freeze. M1 does not pretend to run a full CESR parser on-chain.
+- **Genesis hashes once — ever — and not even in the registration transaction.** The binding between an identifier and its inception event is verified by a dedicated **hash-proof mint**: a minting policy whose only job is to check `blake3(inception_event) == identifier` in its own transaction, with the entire budget available, and to mint a proof token that the registration then consumes. The registration validator itself never computes Blake3; it checks for the token with one cheap native hash. That makes the AID-to-event byte binding oracle-free. The field-by-field projection of CESR data into the checkpoint remains a separate, explicit trust boundary: it is attested, challengeable, and subject to freeze. The identity-core milestone does not pretend to run a full CESR parser on-chain.
 
 The reversal deleted three entries from our risk register in a single stroke: the parallel-identity bridge that existing holders would have needed, the "digest agility" mandate we would have had to ask of wallet software, and the project's one external dependency on a vendor's roadmap. It also armed a proposal we intend to bring to the community: a native `blake3` builtin CIP — argued not from hypotheticals, but from a shipped workaround with published cost tables and production identity workloads behind it. This is the same argument, in the same shape, that brought `keccak_256` into Plutus for the benefit of the Ethereum ecosystem's tooling.
 

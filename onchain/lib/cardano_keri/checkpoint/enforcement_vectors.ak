@@ -5,11 +5,17 @@
 //// fixtures). Each scenario is the tip datum + decoded evidence the
 //// Slice-3 EnforcementSpec builds from the same JSON; enforcement_tests.ak
 //// asserts convict_predicate/freeze_predicate reproduce the Haskell
-//// verdicts. `just check-enforcement-vectors` forbids drift.
+//// verdicts, plus the TombstoneV1 codec golden. `just
+//// check-enforcement-vectors` forbids drift.
 
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/enforcement.{EventEvidence}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
+
+/// TombstoneV1 { cesr_aid: 0xaa*32, convicted_at_native_sn: 1,
+/// evidence_said: 0xcc*32 } canonical CBOR (byte-parity golden)
+pub const golden_tombstone: ByteArray =
+  #"d8799f5820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa015820ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccff"
 
 /// fork: rot_conflict double-signs the rot_recorded tip -> ConvictValid
 pub const fork_convict_tip: CheckpointDatumV1 =
@@ -35,6 +41,7 @@ pub const fork_convict_evidence: EventEvidence =
     t: #"726f74",
     native_sn: 1,
     cesr_aid: #"fb442d0b050570133d187479e3b092cc0e46d06598ee207155bc0147a9525d7c",
+    said: #"5cce84e9d83a603623737105990d4029b90eec7cab69029ddcbb7656ad797469",
     revealed_keys: [
       #"c3f0fbee3789c4a7b50d7a2a3e41371f9c3bbeeca921027fa116686ea26e2be4",
     ],
@@ -80,6 +87,7 @@ pub const honest2_convict_evidence: EventEvidence =
     t: #"726f74",
     native_sn: 1,
     cesr_aid: #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e5",
+    said: #"e75fa74f41ba75e72a352a7e5eb0af7f7b4cab302cc5502635dde534964e5d4d",
     revealed_keys: [
       #"31ef2cde2e41026aa942d27564996aa6a676cd04d61f4a43069d893a34781ea6",
       #"c47da7b5b68d6a1d2e8eadaa506b02d95a961338d95af2692478b6c559a477e9",
@@ -131,6 +139,7 @@ pub const honest2_freeze_evidence: EventEvidence =
     t: #"726f74",
     native_sn: 1,
     cesr_aid: #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e5",
+    said: #"e75fa74f41ba75e72a352a7e5eb0af7f7b4cab302cc5502635dde534964e5d4d",
     revealed_keys: [
       #"31ef2cde2e41026aa942d27564996aa6a676cd04d61f4a43069d893a34781ea6",
       #"c47da7b5b68d6a1d2e8eadaa506b02d95a961338d95af2692478b6c559a477e9",
@@ -182,6 +191,7 @@ pub const lag_freeze_evidence: EventEvidence =
     t: #"726f74",
     native_sn: 1,
     cesr_aid: #"beaac6be961817c711dbfc5f2b682b59eac12ac258ee7353c438e2ff2c973718",
+    said: #"494048e8e5b94e6dc0f65123b7a2c63436abedbb5ff9215c399f11b3d05afca5",
     revealed_keys: [
       #"5829b2eb48e4cbb18a9a77ec3faace56eb6cd6cf819b67e53c8faf984b3556e9",
     ],
@@ -266,6 +276,7 @@ pub const honest7_freeze_evidence: EventEvidence =
     t: #"726f74",
     native_sn: 1,
     cesr_aid: #"f6a328b6d76c9e9f5ec9d52f02d4317a48427e59e7a6c44f121a71a3ef24158b",
+    said: #"1e1605db3934d1f607ea544674451ba698c360c1e5e7611cad15b1dd33be7209",
     revealed_keys: [
       #"ae8115907b0607239849b31694260cf2369973db503b0d60860040e8a4dc45fc",
       #"d055bf010c87a998ba75251d63a247e11047d75173b71105b048029d9c46c34c",

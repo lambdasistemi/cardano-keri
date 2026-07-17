@@ -28,9 +28,11 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
+    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
     EventEvidence (..),
+    TombstoneV1 (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -156,6 +158,7 @@ evidenceFrom fx evKey ctrlKey witKey = do
             , eeType = deType de
             , eeNativeSn = deSn de
             , eeCesrAid = deAid de
+            , eeSaid = deSaid de
             , eeRevealedKeys = deKeys de
             , eeNextKeys = deNext de
             , eeCurThreshold = deKt de
@@ -175,6 +178,7 @@ data DecodedEvent = DecodedEvent
     , deType :: ByteString
     , deSn :: Integer
     , deAid :: ByteString
+    , deSaid :: ByteString
     , deKeys :: [ByteString]
     , deNext :: [ByteString]
     , deKt :: Threshold
@@ -191,6 +195,7 @@ decodeEvent fx evKey = do
     ty <- TE.encodeUtf8 <$> textField ked "t"
     sn <- hexIntField ked "s"
     aid <- digestRaw =<< textField ked "i"
+    said <- digestRaw =<< textField ev "said"
     keys <- traverse verkeyRaw =<< textArrayField ked "k"
     next <- traverse digestRaw =<< textArrayField ked "n"
     kt <- thresholdField ked "kt"
@@ -203,6 +208,7 @@ decodeEvent fx evKey = do
             , deType = ty
             , deSn = sn
             , deAid = aid
+            , deSaid = said
             , deKeys = keys
             , deNext = next
             , deKt = kt
@@ -318,7 +324,8 @@ textArrayField value k = do
 type Scenario = (String, String, CheckpointDatumV1, EventEvidence)
 
 render :: [Scenario] -> String
-render scenarios = header <> "\n" <> concatMap renderScenario scenarios
+render scenarios =
+    header <> "\n" <> golden <> "\n" <> concatMap renderScenario scenarios
   where
     header =
         unlines
@@ -329,12 +336,24 @@ render scenarios = header <> "\n" <> concatMap renderScenario scenarios
             , "//// fixtures). Each scenario is the tip datum + decoded evidence the"
             , "//// Slice-3 EnforcementSpec builds from the same JSON; enforcement_tests.ak"
             , "//// asserts convict_predicate/freeze_predicate reproduce the Haskell"
-            , "//// verdicts. `just check-enforcement-vectors` forbids drift."
+            , "//// verdicts, plus the TombstoneV1 codec golden. `just"
+            , "//// check-enforcement-vectors` forbids drift."
             , ""
             , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1}"
             , "use cardano_keri/checkpoint/enforcement.{EventEvidence}"
             , "use cardano_keri/checkpoint/threshold.{Unweighted, Weighted, Weight}"
             ]
+    -- TombstoneV1 codec golden: canonical CBOR of a fixed synthetic record,
+    -- byte-identical to the Haskell canonicalCbor (Constr 0, 3 fields).
+    golden =
+        unlines
+            [ "/// TombstoneV1 { cesr_aid: 0xaa*32, convicted_at_native_sn: 1,"
+            , "/// evidence_said: 0xcc*32 } canonical CBOR (byte-parity golden)"
+            , "pub const golden_tombstone: ByteArray ="
+            , "  " <> hexLit (canonicalCbor goldenTombstone)
+            ]
+    goldenTombstone =
+        TombstoneV1 (BS.replicate 32 0xaa) 1 (BS.replicate 32 0xcc)
 
 renderScenario :: Scenario -> String
 renderScenario (name, doc, tip, evidence) =
@@ -372,6 +391,7 @@ renderEvidence e =
             , "t: " <> hexLit (eeType e)
             , "native_sn: " <> show (eeNativeSn e)
             , "cesr_aid: " <> hexLit (eeCesrAid e)
+            , "said: " <> hexLit (eeSaid e)
             , "revealed_keys: " <> byteList (eeRevealedKeys e)
             , "next_keys: " <> byteList (eeNextKeys e)
             , "cur_threshold: " <> renderThreshold (eeCurThreshold e)

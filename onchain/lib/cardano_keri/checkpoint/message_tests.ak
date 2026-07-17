@@ -122,6 +122,32 @@ test derivation_mutated_aid_differs() {
 }
 
 // ---------------------------------------------------------
+// qb64_aid: E-code AID encoder (mirrors the Slice-3 Haskell qb64Aid)
+// ---------------------------------------------------------
+
+test qb64_aid_golden_zero() {
+  message.qb64_aid(zero32) == "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+test qb64_aid_golden_cesr_a() {
+  message.qb64_aid(cesr_a()) == "EAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+}
+
+test qb64_aid_is_e_code_44_bytes() {
+  let a = message.qb64_aid(cesr_a())
+  bytearray.length(a) == 44 && bytearray.take(a, 1) == #"45"
+}
+
+test qb64_aid_shares_verkey_payload_differs_by_code() {
+  // Same 0x00-prefixed base64url payload as qb64_verkey; only the 1-char code
+  // differs ('E' 0x45 vs 'D' 0x44).
+  bytearray.drop(message.qb64_aid(cesr_a()), 1) == bytearray.drop(
+    message.qb64_verkey(cesr_a()),
+    1,
+  ) && message.qb64_aid(cesr_a()) != message.qb64_verkey(cesr_a())
+}
+
+// ---------------------------------------------------------
 // Inception fixture + byte identity + verdict parity
 // ---------------------------------------------------------
 

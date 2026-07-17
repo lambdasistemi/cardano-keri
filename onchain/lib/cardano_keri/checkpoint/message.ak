@@ -79,6 +79,19 @@ pub fn qb64_verkey(key: ByteArray) -> ByteArray {
   )
 }
 
+/// The fully qualified Base64url (qb64) form of a raw 32-byte self-addressing
+/// digest (E-code AID): code `'E'` (`0x45`) followed by `b64url(0x00 ‖ digest)`
+/// with the first (always `'A'`) character replaced by the code — 44 ASCII
+/// characters. The E-code analogue of `qb64_verkey`, mirroring the KERI `i`/`d`
+/// SAID form (mirrors the Slice-3 Haskell `qb64Aid`); #24's on-chain AID
+/// slice-check compares the event's `i` against this.
+pub fn qb64_aid(digest: ByteArray) -> ByteArray {
+  bytearray.push(
+    bytearray.drop(base64url.encode(bytearray.push(digest, 0)), 1),
+    69,
+  )
+}
+
 /// A pre-rotation next-key digest: `blake3_256(qb64(verkey))` — the KERI KEL
 /// `n` entry byte-for-byte. One single-block blake3 per revealing key, on the
 /// rare rotation path only (never at plain authorization).

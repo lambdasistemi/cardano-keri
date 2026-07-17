@@ -35,10 +35,10 @@ wrong, this check goes RED before any enforcement code is built on it.
 
 ## Slice 4 — Aiken mirror + vectors + verdict parity
 
-- [ ] T106-S4 `enforcement.ak` + `qb64_aid`; verdict types per #68 convention
-- [ ] T106-S4 vector generator extended; fixture-derived constants committed; drift-stable
-- [ ] T106-S4 aiken tests: byte parity + verdict parity incl. fork/lag scenarios
-- [ ] T106-S4 committed with trailer `Tasks: T106-S4`
+- [X] T106-S4 `enforcement.ak` + `qb64_aid`; verdict types per #68 convention
+- [X] T106-S4 vector generator extended; fixture-derived constants committed; drift-stable
+- [X] T106-S4 aiken tests: byte parity + verdict parity incl. fork/lag scenarios
+- [X] T106-S4 committed with trailer `Tasks: T106-S4`
 
 ## Slice 5 — lifecycle vectors + output-shape predicates
 

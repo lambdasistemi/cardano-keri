@@ -20,11 +20,11 @@ real nix check exercising the SHIPPED library (not a reimplementation). This is
 "validate the past before entering the future": if the E-native derivation were
 wrong, this check goes RED before any enforcement code is built on it.
 
-- [ ] T106-S2 `Keri68OracleSpec.hs` reads the committed fixtures via `Paths_cardano_keri` data-files (wired in cardano-keri.cabal); registered in test/Main.hs
-- [ ] T106-S2 O1 confirmation: each committed signature verifies over `event_raw` (cardano-crypto-class Ed25519) and NOT over the SAID — matching the fixture's recorded `signing_target`
-- [ ] T106-S2 #68 derivation: for each rotation's revealed keys, the REAL `qb64Verkey` + `blake3Hash` reproduces a member of the icp's committed `n` (decoded) — validating the byte-for-byte-equals-KEL claim against the oracle
-- [ ] T106-S2 negative control: a deliberately-wrong derivation (blake2b, or a bit-flipped key) does NOT match — the check provably discriminates
-- [ ] T106-S2 the spec is part of the `unit-tests` nix check (`nix build .#checks.x86_64-linux.unit-tests` green); gate green; committed with trailer `Tasks: T106-S2`
+- [X] T106-S2 `Keri68OracleSpec.hs` reads the committed fixtures via `Paths_cardano_keri` data-files (wired in cardano-keri.cabal); registered in test/Main.hs
+- [X] T106-S2 O1 confirmation: each committed signature verifies over `event_raw` (cardano-crypto-class Ed25519) and NOT over the SAID — matching the fixture's recorded `signing_target`
+- [X] T106-S2 #68 derivation: for each rotation's revealed keys, the REAL `qb64Verkey` + `blake3Hash` reproduces a member of the icp's committed `n` (decoded) — validating the byte-for-byte-equals-KEL claim against the oracle
+- [X] T106-S2 negative control: a deliberately-wrong derivation (blake2b, or a bit-flipped key) does NOT match — the check provably discriminates
+- [X] T106-S2 the spec is part of the `unit-tests` nix check (`nix build .#checks.x86_64-linux.unit-tests` green); gate green; committed with trailer `Tasks: T106-S2`
 
 ## Slice 3 — Haskell enforcement predicates
 

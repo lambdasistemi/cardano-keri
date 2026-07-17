@@ -16,6 +16,10 @@ maintainer:    paolo.veronelli@gmail.com
 category:      Cardano
 build-type:    Simple
 
+-- Committed keripy oracle fixtures, read hermetically by the unit-tests
+-- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
+data-files:    test/keri-fixtures/fixtures/*.json
+
 common warnings
   ghc-options:
     -Wall -Werror -Wunused-imports -Wunused-packages
@@ -62,6 +66,7 @@ test-suite unit-tests
   hs-source-dirs:   test
   main-is:          Main.hs
   build-depends:
+    , aeson
     , base
     , bytestring
     , cardano-crypto-class
@@ -72,6 +77,7 @@ test-suite unit-tests
     , plutus-core
     , plutus-tx
     , QuickCheck
+    , text
 
   other-modules:
     Cardano.KERI.AID.Blake3.CheckpointSpec
@@ -79,9 +85,11 @@ test-suite unit-tests
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
+    Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Ed25519Spec
+    Paths_cardano_keri
 
   ghc-options:      -threaded -with-rtsopts=-N
 

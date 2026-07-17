@@ -131,12 +131,17 @@ Checks shared by both predicates (over tip datum `D`):
   under mint-once + the #91 keys-in-event gate).
 - The sequence-number slice equals the hex spelling of the predicate's target
   sn (hex spelling supplied by the prover, checked by re-encoding).
-- SAID: `blake3(said_blank) == slice(event_bytes, off_d, 44-decoded)` via the
-  #24 hash-proof machinery; `said_blank` must equal `event_bytes` outside the
-  SAID spans (two slice comparisons). All signatures verify over the SAID
-  (open question O1 pins the exact signing target against keripy).
+- SAID (AID binding): `blake3(said_blank) == slice(event_bytes, off_d, 44-decoded)`
+  via the #24 hash-proof machinery, where `said_blank` is `event_bytes` with the
+  `i`/`d` spans dummied; `said_blank` must equal `event_bytes` outside those
+  spans (two slice comparisons). This binds the event bytes to the AID —
+  anti-substitution — and is the *only* use of the SAID.
 - `ctrl_sigs`: each `(idx, sig)` verifies with the raw key decoded from
-  `k[idx]`'s qb64 slice.
+  `k[idx]`'s qb64 slice, **over `event_bytes` (the full serialization)** — NOT
+  over the SAID. (O1 RESOLVED empirically against keripy 1.3.5, 2026-07-17: both
+  controller indexed signatures and witness receipts verify over `serder.raw`;
+  verification against the SAID bytes fails. So the carried event bytes are the
+  signature target directly — no SAID-isolation needed for signature checks.)
 
 ## The `Convict` predicate (fork → tombstone)
 
@@ -247,10 +252,14 @@ with ≥ 25% headroom.
 
 ## Open questions
 
-- **O1 — witness/controller signing target.** KERI indexed signatures and
-  witness receipts sign the event's serialization or its SAID depending on
-  couplet form. Pin the exact bytes against keripy (`Siger`/`Cigar`
-  attachment semantics) before plan.md; the predicate text assumes SAID.
+- **O1 — witness/controller signing target — RESOLVED (2026-07-17).** Pinned
+  empirically against keripy 1.3.5: both controller indexed signatures and
+  witness receipts verify over the **full event serialization** (`serder.raw`),
+  not over the SAID. The predicate text and shared checks above are updated
+  accordingly; the SAID is used only for the AID-binding hash. Evidence is the
+  `signing_target` field recorded per signature in every fixture manifest
+  (Slice 1), which the generator sets by re-verifying each signature against
+  both candidate byte strings.
 - **O2 — `kt`/`bt` conflict encoding.** Threshold spellings in the event are
   strings (`"1/2"`, hex ints); comparing them to `D`'s structured `Threshold`
   needs either canonical re-spelling on-chain (slice-comparable, preferred)

@@ -1,0 +1,78 @@
+{
+  "icp": {
+    "ked": {
+      "b": [
+        "BASLTOQbSMBUv6OCtQnzXOj-dRaCFanZaRTRPgiwwcJI"
+      ],
+      "bt": "1",
+      "i": "EL6qxr6WGBfHEdv8XytoK1nqwSrCWO5zU8Q44v8slzcY",
+      "k": [
+        "DCrahRdTFnLb6xivg1ARPsnQ523fePhj-D5sxsy9zqoo"
+      ],
+      "kt": "1",
+      "n": [
+        "EGZKiC_EcVvaHLMnyUUU3k3TeEVt2geQx-ELaKuQpkJS"
+      ],
+      "nt": "1",
+      "s": "0",
+      "t": "icp"
+    },
+    "pre": "EL6qxr6WGBfHEdv8XytoK1nqwSrCWO5zU8Q44v8slzcY",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303135395f222c2274223a22696370222c2264223a22454c36717872365747426648456476385879746f4b316e7177537243574f357a55385134347638736c7a6359222c2269223a22454c36717872365747426648456476385879746f4b316e7177537243574f357a55385134347638736c7a6359222c2273223a2230222c226b74223a2231222c226b223a5b224443726168526454466e4c62367869766731415250736e51353233666550686a2d443573787379397a716f6f225d2c226e74223a2231222c226e223a5b2245475a4b69435f4563567661484c4d6e79555555336b33546545567432676551782d454c614b7551706b4a53225d2c226274223a2231222c2262223a5b224241534c544f5162534d425576364f4374516e7a584f6a2d6452614346616e5a615254525067697777634a49225d2c2263223a5b5d2c2261223a5b5d7d",
+    "raw_len": 345,
+    "said": "EL6qxr6WGBfHEdv8XytoK1nqwSrCWO5zU8Q44v8slzcY"
+  },
+  "icp_sigs": [
+    {
+      "index": 0,
+      "kind": "controller",
+      "sig_hex": "fd94dcd6ca8495008b05fc1a2ee57e76c6fa2e1db37c321c76912ef8371227f6dd51a798e94a418627331508baa5c582d5d082ee445cd83f922d3242e8ba2103",
+      "sig_qb64": "AAD9lNzWyoSVAIsF_Bou5X52xvouHbN8Mhx2kS74NxIn9t1Rp5jpSkGGJzMVCLqlxYLV0ILuRFzYP5ItMkLouiED",
+      "signer_verkey_qb64": "DCrahRdTFnLb6xivg1ARPsnQ523fePhj-D5sxsy9zqoo",
+      "signing_target": "event_raw"
+    }
+  ],
+  "note": "witnessed rotation at sn=1 ahead of a checkpoint recorded at sn=0",
+  "rot": {
+    "ked": {
+      "b": [],
+      "bt": "1",
+      "i": "EL6qxr6WGBfHEdv8XytoK1nqwSrCWO5zU8Q44v8slzcY",
+      "k": [
+        "DFgpsutI5Muxipp37D-qzlbrbNbPgZtn5TyPr5hLNVbp"
+      ],
+      "kt": "1",
+      "n": [
+        "EFQL1ADm0_AqIYBBuFyUDG9bxImtBPDmRmAW8OlZMEhn"
+      ],
+      "nt": "1",
+      "s": "1",
+      "t": "rot"
+    },
+    "pre": "EL6qxr6WGBfHEdv8XytoK1nqwSrCWO5zU8Q44v8slzcY",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22726f74222c2264223a2245456c41534f6a6c7555357477505a5249376569786a5132712d3237585f6b6858446d66456250515776796c222c2269223a22454c36717872365747426648456476385879746f4b316e7177537243574f357a55385134347638736c7a6359222c2273223a2231222c2270223a22454c36717872365747426648456476385879746f4b316e7177537243574f357a55385134347638736c7a6359222c226b74223a2231222c226b223a5b224446677073757449354d75786970703337442d717a6c6272624e6250675a746e355479507235684c4e566270225d2c226e74223a2231222c226e223a5b224546514c3141446d305f417149594242754679554447396278496d744250446d526d4157384f6c5a4d45686e225d2c226274223a2231222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    "raw_len": 352,
+    "said": "EElASOjluU5twPZRI7eixjQ2q-27X_khXDmfEbPQWvyl"
+  },
+  "rot_sigs": [
+    {
+      "index": 0,
+      "kind": "controller",
+      "sig_hex": "174cbab4598c7907ddcfe09a1b928317d89e02b4ded5e66cff075a5eea8a9b6f2d218af4babc65fd64c794af85f04d072b73c8e5ff7360de281675dd5ae4050f",
+      "sig_qb64": "AAAXTLq0WYx5B93P4JobkoMX2J4CtN7V5mz_B1pe6oqbby0hivS6vGX9ZMeUr4XwTQcrc8jl_3Ng3igWdd1a5AUP",
+      "signer_verkey_qb64": "DFgpsutI5Muxipp37D-qzlbrbNbPgZtn5TyPr5hLNVbp",
+      "signing_target": "event_raw"
+    }
+  ],
+  "rot_witness_receipts": [
+    {
+      "index": 0,
+      "kind": "witness",
+      "sig_hex": "aa05eea539101d6792560bc1299d60a6e4895c346ffff2013b174e366b736e32b5948f6294357a676c5de78cdc531fef3f8c62feafffddabd58b4943939ba709",
+      "sig_qb64": "AACqBe6lORAdZ5JWC8EpnWCm5IlcNG__8gE7F042a3NuMrWUj2KUNXpnbF3njNxTH-8_jGL-r__dq9WLSUOTm6cJ",
+      "signer_verkey_qb64": "BASLTOQbSMBUv6OCtQnzXOj-dRaCFanZaRTRPgiwwcJI",
+      "signing_target": "event_raw"
+    }
+  ],
+  "witness_verkey_qb64": "BASLTOQbSMBUv6OCtQnzXOj-dRaCFanZaRTRPgiwwcJI"
+}

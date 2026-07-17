@@ -49,6 +49,11 @@ signature re-verification (proves fixtures are self-consistent before any
 implementation exists). GREEN: generator + fixtures committed, drift check in
 gate.sh.
 
+Note (from Slice 2, Q-001): the shipped `parsePrimitive` gained `D`-code
+(transferable verkey) decode in the `fix(cesr)` commit under T106-S2. Slice 3's
+convict predicate relies on it (decode the event's `k` to raw, compare to the
+datum's raw `cur_keys`). `qb64Aid` is an E-code *encoder* (forward), unaffected.
+
 ### Slice 2 — Haskell predicates (T106-S2)
 
 `EventEvidence`, `convictPredicate`, `freezePredicate` per spec, with

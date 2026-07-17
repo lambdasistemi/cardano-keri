@@ -14,7 +14,10 @@ import Data.ByteString qualified as BS
 
 -- | Subset of CESR primitives needed for Ed25519 AID verification.
 data Primitive
-    = -- | B — 32-byte Ed25519 public key
+    = {- | @B@ (non-transferable) or @D@ (transferable) — a raw 32-byte
+      Ed25519 public key. This module does not track transferability;
+      no consumer needs the distinction.
+      -}
       Ed25519PublicKey !ByteString
     | -- | 0B — 64-byte Ed25519 signature
       Ed25519Signature !ByteString
@@ -42,7 +45,8 @@ parse1char bs
         raw <- decodeB64Url (BS.cons 0x41 (BS.tail tok)) -- 'A' + rest
         let payload = BS.drop 1 raw -- strip 1 lead byte
         case BS.index tok 0 of
-            0x42 -> Right (Ed25519PublicKey payload, rest) -- 'B'
+            0x42 -> Right (Ed25519PublicKey payload, rest) -- 'B' (non-transferable)
+            0x44 -> Right (Ed25519PublicKey payload, rest) -- 'D' (transferable)
             0x45 -> Right (SelfAddressing payload, rest) -- 'E'
             code -> Left $ "unknown 1-char code: " <> show code
 

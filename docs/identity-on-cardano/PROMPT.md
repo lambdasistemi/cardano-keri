@@ -153,8 +153,11 @@ The following claims are fixed:
    fixed visual object and show the datum fields that advance.
 5. **Keep the approval rules your team already uses.** Show Northstar’s 2-of-3 rule,
    then the wider weighted/multi-clause/zero-weight compatibility.
-6. **Your records stay under the right control.** Show an owned MPFS leaf
+6. **Your records stay under the right control.** Show a real Cardano record
    authorized against the current checkpoint and unchanged after rotation.
+   Keep the concrete MPFS value-cage implementation in the speaker notes, not
+   in audience-facing copy: it is one consumer of the identity core, not part
+   of the identity itself.
 7. **Update keys directly, whenever your team needs to.** Explain the KERI dual-threshold rule,
    partial reserve rotation, and measured per-reveal cost.
 8. **Losing today’s keys does not mean losing the identity.** This is the

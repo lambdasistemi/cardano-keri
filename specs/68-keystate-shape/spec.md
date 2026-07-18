@@ -9,7 +9,7 @@ Downstream consumer: #24 (checkpoint validator + permissionless pre-rotation).
 Ratified design inputs (do not reopen — see "Ratified invariants"):
 `specs/92-checkpoint-contention/{spec.md,DECISION.md}` (sovereign per-AID
 checkpoint, Candidate A), `specs/68-keystate-shape/identity-model.md`
-(§6 checkpoint state, §6a two-seal handoff, §11 loss/fork),
+(§6 checkpoint state, §6a incoming-set validation, §11 loss/fork),
 `specs/68-keystate-shape/delegation-boundary-decision.md` (#81),
 `specs/24-keystate/spec.md` ("frozen surface" KERI alignment — reused),
 `docs/architecture/identity-ops.md`, `docs/design/aid-model.md`,
@@ -69,7 +69,7 @@ material + threshold + witness + message contract** — this document.
 3. Both KERI **integer** and **fractionally weighted (multi-clause)** thresholds,
    with one deterministic normalization/evaluation and a complete rejection
    predicate (F18). 1-of-1 is the degenerate instance of the same schema.
-4. Signed **inception (`icp`)** and **advance (rotation / two-seal)** message
+4. Signed **inception (`icp`)** and **advance (rotation / witness change)** message
    domains and their bindings; #77 (F10) successor-substitution/replay resistance.
 5. Cardano **freshness/currentness** semantics against the per-AID UTxO
    architecture (F12/#79): uniqueness, concurrency, off-chain KERI lag,
@@ -85,7 +85,7 @@ material + threshold + witness + message contract** — this document.
 - The checkpoint **spend/mint validator**, redeemers, and state-machine
   transitions (registration, normal rotation, migration, close/burn).
 - **Witness-receipt** (`Ed25519.verify(witness_pk, seal_bytes, sig)`) verification
-  wiring, seal **parsing**, and the two-seal handoff **enforcement** in a
+  wiring, seal **parsing**, and the incoming-set witness-rotation **enforcement** in a
   validator (this document fixes the message/commitment **bytes** those checks run
   over, not the transaction-level checks).
 - MPFS absence/unicity proofs, genesis BLAKE3 byte-binding, CIP-31 reference-input
@@ -505,7 +505,7 @@ fuller #91 oracle-gated registration package (OOBI-style signed package + the
 transient inception-cage token) is #24/#91's transaction-level binding; #68 freezes
 these deployment/token context fields in the signed preimage.
 
-### Advance message (rotation / two-seal handoff) — F10 / #77
+### Advance message (rotation / witness change) — F10 / #77
 
 ```
 AdvanceMessage { -- Constr 0; fields in EXACTLY this order:
@@ -576,16 +576,21 @@ signed message binds the successor, defeating "capture the identity at `seq+2`")
    1–13 on both pairs + rule 14) — nothing ill-formed can be written, so the
    next tip is always advanceable and never bricked.
 
-**Witness rotation (two-seal handoff, `identity-model.md` §6a).** When
-`new_witnesses/new_toad` differ from the spent set, #24 additionally requires the
-outgoing set to have endorsed `(new_witnesses, new_toad)` (Seal W, receipted by the
-outgoing set) before the incoming set's Seal K is accepted. #68 fixes the
-**message bytes** that carry `new_witnesses/new_toad`; the seal-receipt verification
-is #24's transaction-level check over these bytes. V1 has **no Δ-windowed or other
-signature-only fallback**: when the spent checkpoint has `toad > 0`, no controller-only
-advance is valid. A transition to `toad = 0` still needs the outgoing set's threshold
-receipts over the explicit handoff; an already witnessless checkpoint is the only V1 state
-that can advance without witness receipts.
+**Witness rotation (incoming-set validation, `identity-model.md` §6a).** When
+`new_witnesses/new_toad` differ from the spent set, #24 validates the advance seal's
+threshold receipts against the **incoming (new)** set `(new_witnesses, new_toad)` — exactly
+as KERI does — with **no outgoing-set endorsement and no two-seal handoff**; the cut
+witnesses receipt nothing. #68 fixes the **message bytes** that carry
+`new_witnesses/new_toad`; the seal-receipt verification against the incoming set is #24's
+transaction-level check over these bytes. (The KERI-level `br`/`ba`/`bt` backer-delta
+encoding — identity-model §6a — and any migration of these absolute bytes to it are part of
+#24's recut; the validation *rule* is identical over either encoding.) V1 has **no
+Δ-windowed or other signature-only fallback**: when the advance's **incoming** `new_toad > 0`,
+no controller-only advance is valid. A transition to `new_toad = 0` validates against the
+**empty incoming set** (zero receipts) — from a witnessed or an already-witnessless prior
+state alike; its only defense is the visible `toad = 0` in the resulting datum, which
+consumers may reject. There is no Cardano-side magnitude bound (a full-pool migration is valid
+KERI). A receipt-free advance is therefore exactly one whose incoming `new_toad = 0`.
 
 Domain separation and the reconstruct-don't-trust rule together give the F10/#77
 guarantee: replaying a captured reveal, substituting `new_next`, changing `seq`,
@@ -740,7 +745,7 @@ implements:
   never trust a caller-provided asset name.
 - Implement the checkpoint mint/spend validator: genesis registration (mint
   quantity-one token, `seq=0`, `icp` only, `dip`/`drt` rejected), normal rotation
-  (`delta=0`, `seq+1`, the eight F10 checks incl. the dual-threshold rule, two-seal witness handoff),
+  (`delta=0`, `seq+1`, the eight F10 checks incl. the dual-threshold rule, incoming-set witness validation),
   migration (#99 predecessor binding), and close (#99 `validateEnd` `-1` burn) with
   a closed/tombstone discovery story.
 - Wire witness-receipt verification (`Ed25519.verify(witness_pk, seal_bytes, sig)`) over
@@ -784,11 +789,12 @@ implements:
       production Root pattern — is accepted; an insufficient reveal is rejected;
       augmented keys count only toward the current threshold — positive and
       negative vectors.
-- [ ] **Witness-gated V1 advance:** when the spent checkpoint has `toad > 0`, #24
-      requires the applicable threshold witness receipts over the KEL anchoring evidence;
-      valid controller/dual-threshold signatures without those receipts are rejected, and
-      elapsed time never changes that verdict. Witness-set changes use the two-seal handoff;
-      only an already witnessless (`toad = 0`) checkpoint has no receipt requirement.
+- [ ] **Witness-gated V1 advance:** when the advance's incoming `new_toad > 0`, #24
+      requires at least `new_toad` witness receipts over the KEL anchoring evidence against the
+      incoming (new) set; valid controller/dual-threshold signatures without those receipts are
+      rejected, and elapsed time never changes that verdict. Witness-set changes validate
+      against the incoming (new) set with no outgoing-set endorsement; a transition to
+      `new_toad = 0` (from any prior state) is the only receipt-free advance.
 - [ ] **Deployment/token binding:** both messages bind `network_id`,
       `checkpoint_policy_id`, and `aid_asset_name`, and the advance binds the exact
       spent `TxOutRef` (`spent_txid`/`spent_index`); cross-network, cross-policy,

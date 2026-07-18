@@ -14,12 +14,13 @@ use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/enforcement.{
   Active, CheckpointOutput, CoMissingToken, CoNotTombstone, CoWrongRecord,
   ContinuingOutput, ConvictInvalid, ConvictOutputInvalid, ConvictOutputValid,
-  ConvictValid, CvAidMismatch, CvNoConflict, CvQuorumUnsatisfied,
-  CvRevealMismatch, CvSeqMismatch, EventEvidence, FoDatumChanged, FoNotFrozen,
-  FreezeInvalid, FreezeOutputInvalid, FreezeOutputValid, FreezeValid, Frozen,
-  FzInsufficientReceipts, FzNotAhead, FzUncommittedReveal, Tombstone,
-  TombstoneOutput, TombstoneV1, convict_output_predicate, convict_predicate,
-  freeze_output_predicate, freeze_predicate,
+  ConvictValid, CvAidMismatch, CvInsufficientReceipts, CvNoConflict,
+  CvQuorumUnsatisfied, CvRevealMismatch, CvSeqMismatch, EventEvidence,
+  FoDatumChanged, FoNotFrozen, FreezeInvalid, FreezeOutputInvalid,
+  FreezeOutputValid, FreezeValid, Frozen, FzInsufficientReceipts, FzNotAhead,
+  FzUncommittedReveal, Tombstone, TombstoneOutput, TombstoneV1,
+  convict_output_predicate, convict_predicate, freeze_output_predicate,
+  freeze_predicate,
 }
 use cardano_keri/checkpoint/enforcement_vectors as vec
 
@@ -149,7 +150,7 @@ test tombstone_cbor_golden() {
 }
 
 // ---------------------------------------------------------
-// Convict output shape (Convict 5) + F13
+// Convict output shape (Convict 6) + F13
 // ---------------------------------------------------------
 
 fn convict_tombstone(has_token: Bool, role) -> ContinuingOutput {
@@ -232,4 +233,39 @@ test f12_freeze_output_mutated_datum() {
     vec.lag_freeze_tip,
     freeze_checkpoint(True, Frozen, mutated),
   ) == FreezeOutputInvalid(FoDatumChanged)
+}
+
+// ---------------------------------------------------------
+// Slice 7 — anti-fork: witness receipts on convict evidence
+// ---------------------------------------------------------
+
+// A WITNESSED fork (witness double-receipts sn=1, diverging n) convicts.
+test fork_witnessed_convicts() {
+  convict_predicate(
+    vec.fork_witnessed_convict_tip,
+    vec.fork_witnessed_convict_evidence,
+  ) == ConvictValid
+}
+
+// F3b (framing-hole regression): the witnessed AID's OWN honest rot_recorded,
+// presented as evidence, agrees on n/nt/bt -> must NOT convict. Failed RED
+// before the Slice-7 fix (the conflict check's phantom `b` mismatch faked a
+// conflict); passes now that the step-5 witness term is dropped.
+test f3b_witnessed_honest_recorded_is_no_conflict() {
+  convict_predicate(
+    vec.fork_witnessed_honest_tip,
+    vec.fork_witnessed_honest_evidence,
+  ) == ConvictInvalid(CvNoConflict)
+}
+
+// F1b: a witnessed AID (toad=1) whose conflicting event carries too few witness
+// receipts cannot be convicted. Failed RED before the Slice-7 witness gate.
+test f1b_witnessed_fork_insufficient_receipts() {
+  let evidence = EventEvidence {
+    ..vec.fork_witnessed_convict_evidence,
+    wit_sigs: [],
+  }
+  convict_predicate(vec.fork_witnessed_convict_tip, evidence) == ConvictInvalid(
+    CvInsufficientReceipts,
+  )
 }

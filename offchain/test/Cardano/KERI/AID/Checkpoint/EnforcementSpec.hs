@@ -76,6 +76,7 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
     honest2 <- runIO (loadFixture "honest_2key.json")
     honest7 <- runIO (loadFixture "honest_7key.json")
     lagFx <- runIO (loadFixture "lag.json")
+    forkW <- runIO (loadFixture "fork_witnessed.json")
 
     describe "convict" $ do
         -- fork: rot_conflict double-signs the rot_recorded tip (VALID conviction).
@@ -113,6 +114,27 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
             withBuilt (convictSetup fork) $ \(tip, ev) ->
                 convictPredicate tip ev{eeCtrlSigs = []}
                     `shouldBe` Left CvQuorumUnsatisfied
+
+    describe "convict anti-fork witness gate (Slice 7)" $ do
+        -- A WITNESSED fork (witness double-receipts sn=1, diverging n) convicts.
+        it "fork_witnessed: witnessed rot_conflict convicts" $
+            withBuilt (forkWitnessedConvictSetup forkW) $ \(tip, ev) ->
+                convictPredicate tip ev `shouldBe` Right ()
+
+        -- F3b: the witnessed AID's OWN honest rot_recorded, presented as
+        -- evidence, agrees on n/nt/bt -> must NOT convict. Failed RED before
+        -- the Slice-7 fix (the conflict check's phantom `b` mismatch faked a
+        -- conflict).
+        it "F3b: witnessed honest rot_recorded is no conflict" $
+            withBuilt (forkWitnessedHonestSetup forkW) $ \(tip, ev) ->
+                convictPredicate tip ev `shouldBe` Left CvNoConflict
+
+        -- F1b: a witnessed fork (toad=1) with too few witness receipts cannot
+        -- convict. Failed RED before the Slice-7 witness gate.
+        it "F1b: insufficient receipts -> CvInsufficientReceipts" $
+            withBuilt (forkWitnessedConvictSetup forkW) $ \(tip, ev) ->
+                convictPredicate tip ev{eeWitSigs = []}
+                    `shouldBe` Left CvInsufficientReceipts
 
     describe "freeze" $ do
         -- honest_2key: a legit later event, toad=0 tier (Cardano is behind).
@@ -164,7 +186,7 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
             fromBuiltinData (toBuiltinData goldenTombstone)
                 `shouldBe` Just goldenTombstone
 
-    describe "convict output shape (Convict 5)" $ do
+    describe "convict output shape (Convict 6)" $ do
         it "valid: Tombstone + token + correct record" $
             withBuilt (convictSetup fork) $ \(tip, ev) ->
                 convictOutputPredicate tip ev (tombstoneOut tip ev True Tombstone)
@@ -251,6 +273,37 @@ convictSetup fx = do
     ev <- evidenceFrom fx "rot_conflict" "rot_conflict_sigs" Nothing
     pure (tip, ev)
 
+{- | Witnessed fork conviction: tip = the witnessed rot_recorded state (witness
+set from the icp, since a rotation does not restate @b@); evidence = the
+witness-receipted rot_conflict.
+-}
+forkWitnessedConvictSetup ::
+    Value -> Either String (CheckpointDatumV1, EventEvidence)
+forkWitnessedConvictSetup fx = do
+    tip <- tipFromWitnessed fx "rot_recorded" "icp" 1
+    ev <-
+        evidenceFrom
+            fx
+            "rot_conflict"
+            "rot_conflict_sigs"
+            (Just "rot_conflict_witness_receipts")
+    pure (tip, ev)
+
+{- | F3b: the same witnessed tip, but evidence = the AID's OWN honest
+rot_recorded (with its own witness receipts) — must not be a conflict.
+-}
+forkWitnessedHonestSetup ::
+    Value -> Either String (CheckpointDatumV1, EventEvidence)
+forkWitnessedHonestSetup fx = do
+    tip <- tipFromWitnessed fx "rot_recorded" "icp" 1
+    ev <-
+        evidenceFrom
+            fx
+            "rot_recorded"
+            "rot_recorded_sigs"
+            (Just "rot_recorded_witness_receipts")
+    pure (tip, ev)
+
 -- | F3 conviction: tip = the state the rot reflects, evidence = that same rot.
 honestConvictSetup :: Value -> Either String (CheckpointDatumV1, EventEvidence)
 honestConvictSetup fx = do
@@ -279,6 +332,28 @@ tipFrom fx evKey seqNo = do
             , cdNextThreshold = deNt de
             , cdWitnesses = deWits de
             , cdToad = deToad de
+            , cdSeq = seqNo
+            , cdNativeSn = deSn de
+            }
+
+{- | Tip whose key state is @evKey@'s but whose witness set/toad come from
+@witKey@ (the AID's inception): a KERI rotation carries no @b@ field, so a
+witnessed AID's current witness set is inherited, not restated by the rot.
+-}
+tipFromWitnessed ::
+    Value -> Text -> Text -> Integer -> Either String CheckpointDatumV1
+tipFromWitnessed fx evKey witKey seqNo = do
+    de <- decodeEvent fx evKey
+    wde <- decodeEvent fx witKey
+    pure
+        CheckpointDatumV1
+            { cdCesrAid = deAid de
+            , cdCurKeys = deKeys de
+            , cdCurThreshold = deKt de
+            , cdNextKeys = deNext de
+            , cdNextThreshold = deNt de
+            , cdWitnesses = deWits wde
+            , cdToad = deToad wde
             , cdSeq = seqNo
             , cdNativeSn = deSn de
             }

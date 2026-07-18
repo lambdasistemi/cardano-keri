@@ -76,12 +76,25 @@ main = do
     honest2 <- load dir "honest_2key.json"
     honest7 <- load dir "honest_7key.json"
     lagFx <- load dir "lag.json"
+    forkW <- load dir "fork_witnessed.json"
     let scenarios =
             [
                 ( "fork_convict"
                 , "fork: rot_conflict double-signs the rot_recorded tip -> ConvictValid"
                 , orDie (tipFrom fork "rot_recorded" 1)
                 , orDie (evidenceFrom fork "rot_conflict" "rot_conflict_sigs" Nothing)
+                )
+            ,
+                ( "fork_witnessed_convict"
+                , "fork_witnessed: witnessed rot_conflict double-signs the witnessed rot_recorded tip -> ConvictValid"
+                , orDie (tipFromWitnessed forkW "rot_recorded" "icp" 1)
+                , orDie (evidenceFrom forkW "rot_conflict" "rot_conflict_sigs" (Just "rot_conflict_witness_receipts"))
+                )
+            ,
+                ( "fork_witnessed_honest"
+                , "fork_witnessed F3b: the witnessed AID's OWN honest rot_recorded as evidence -> ConvictInvalid(CvNoConflict)"
+                , orDie (tipFromWitnessed forkW "rot_recorded" "icp" 1)
+                , orDie (evidenceFrom forkW "rot_recorded" "rot_recorded_sigs" (Just "rot_recorded_witness_receipts"))
                 )
             ,
                 ( "honest2_convict"
@@ -142,6 +155,28 @@ tipFrom fx evKey seqNo = do
             , cdNextThreshold = deNt de
             , cdWitnesses = deWits de
             , cdToad = deToad de
+            , cdSeq = seqNo
+            , cdNativeSn = deSn de
+            }
+
+{- | Tip whose key state is @evKey@'s but whose witness set/toad come from
+@witKey@ (the AID's inception): a KERI rotation carries no @b@ field, so a
+witnessed AID's current witness set is inherited, not restated by the rot.
+-}
+tipFromWitnessed ::
+    Value -> Text -> Text -> Integer -> Either String CheckpointDatumV1
+tipFromWitnessed fx evKey witKey seqNo = do
+    de <- decodeEvent fx evKey
+    wde <- decodeEvent fx witKey
+    pure
+        CheckpointDatumV1
+            { cdCesrAid = deAid de
+            , cdCurKeys = deKeys de
+            , cdCurThreshold = deKt de
+            , cdNextKeys = deNext de
+            , cdNextThreshold = deNt de
+            , cdWitnesses = deWits wde
+            , cdToad = deToad wde
             , cdSeq = seqNo
             , cdNativeSn = deSn de
             }

@@ -37,10 +37,18 @@ one's exact signer shape (not a nominal size).
 
 | predicate | fixture (signer shape) | mem | mem used | mem headroom | cpu | cpu used | cpu headroom |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| convict | fork (1 controller) | 84,678 | 0.60% | 99.40% | 84,048,874 | 0.84% | 99.16% |
+| convict | fork (1 controller, witnessless) | 97,860 | 0.70% | 99.30% | 89,177,128 | 0.89% | 99.11% |
+| convict | fork_witnessed (1 controller + 1 witness receipt) | 108,885 | 0.78% | 99.22% | 146,649,513 | 1.47% | 98.53% |
 | freeze | honest_2key (2 controllers, witnessless) | 2,651,268 | 18.94% | 81.06% | 1,259,217,932 | 12.59% | 87.41% |
 | freeze | lag (1 controller + 1 witness) | 1,370,140 | 9.79% | 90.21% | 698,470,633 | 6.98% | 93.02% |
 | freeze | honest_7key (3 revealed of 7 committed, GLEIF 3-of-7) | 4,113,688 | 29.38% | 70.62% | 1,929,971,270 | 19.30% | 80.70% |
+
+The `convict` / `fork_witnessed` cell is the #106 Slice-7 addition: the anti-fork
+witness gate makes the witnessed-fork conviction verify a witness receipt in
+addition to the controller signature, so it is measured from the owned
+`enforcement_tests.ak` `fork_witnessed_convicts` case (reproduce with
+`aiken check --plain-numbers -m fork_witnessed_convicts`); the four `measure_*`
+cells reproduce with `just measure-enforcement`.
 
 Minimum headroom across all cells: **70.62% memory** and **80.70% CPU** (both on
 the honest_7key freeze) — comfortably above the ≥ 25% headroom target.
@@ -48,7 +56,9 @@ the honest_7key freeze) — comfortably above the ≥ 25% headroom target.
 Reading the cells:
 
 - **convict** is nearly free — one controller `verify_ed25519_signature` over
-  `event_bytes` plus the same-reveal / forward-commitment list comparisons.
+  `event_bytes`, the anti-fork witness gate (one more `verify_ed25519_signature`
+  per receipt on a witnessed AID; vacuous when `toad = 0`), and the same-reveal /
+  forward-commitment (`n`/`nt`/`bt`) list comparisons.
 - **freeze** cost scales with the reveal set: each verifying revealed key costs
   one `verify_ed25519_signature` **and** one `next_key_digest` (a blake3 over the
   44-byte qb64). The 2-controller witnessless case is 18.94% mem; the GLEIF

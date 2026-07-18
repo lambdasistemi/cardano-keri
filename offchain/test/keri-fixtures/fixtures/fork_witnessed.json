@@ -1,0 +1,119 @@
+{
+  "icp": {
+    "ked": {
+      "b": [
+        "BEprHy-KD0Id9-Yu4C9GwpyvmPXj1mAwX290p7eBsXJj"
+      ],
+      "bt": "1",
+      "i": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+      "k": [
+        "DOa7t5TJwFHz2iX4E3kUHtTU5pppZ_EdDYLpVeoCfTyd"
+      ],
+      "kt": "1",
+      "n": [
+        "EGcr2lzEeJhZbVBeYrKaV39K3VC2Mi83KXYI2HI6EZSZ"
+      ],
+      "nt": "1",
+      "s": "0",
+      "t": "icp"
+    },
+    "pre": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303135395f222c2274223a22696370222c2264223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2269223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2273223a2230222c226b74223a2231222c226b223a5b22444f61377435544a7746487a3269583445336b5548745455357070705a5f456444594c7056656f4366547964225d2c226e74223a2231222c226e223a5b2245476372326c7a45654a685a6256426559724b615633394b335643324d6938334b58594932484936455a535a225d2c226274223a2231222c2262223a5b224245707248792d4b44304964392d597534433947777079766d50586a316d4177583239307037654273584a6a225d2c2263223a5b5d2c2261223a5b5d7d",
+    "raw_len": 345,
+    "said": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-"
+  },
+  "icp_sigs": [
+    {
+      "index": 0,
+      "kind": "controller",
+      "sig_hex": "89a1bb605580a27423a26c19cb0d5b093f3276f48fc5298abf1472950654874c41a5eb4cd7628c5f61a33de0c3dec4125da8cc16cb0a4ef195352644cbfc8000",
+      "sig_qb64": "AACJobtgVYCidCOibBnLDVsJPzJ29I_FKYq_FHKVBlSHTEGl60zXYoxfYaM94MPexBJdqMwWywpO8ZU1JkTL_IAA",
+      "signer_verkey_qb64": "DOa7t5TJwFHz2iX4E3kUHtTU5pppZ_EdDYLpVeoCfTyd",
+      "signing_target": "event_raw"
+    }
+  ],
+  "note": "witnessed fork: same sn, same revealed keys, DIFFERENT next commitment; BOTH rotations witness-receipted (the published duplicity that can convict)",
+  "rot_conflict": {
+    "ked": {
+      "b": [],
+      "bt": "1",
+      "i": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+      "k": [
+        "DPHoOG21z2llX05ZwuRwoMqSFoloOz-TJDSkCXWQ_cjl"
+      ],
+      "kt": "1",
+      "n": [
+        "EFYmoyeuf7_qvRONNeRg2ixYjv6tCChBRdvrGwNhgRgI"
+      ],
+      "nt": "1",
+      "s": "1",
+      "t": "rot"
+    },
+    "pre": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22726f74222c2264223a22454e4f4e785a54744c725239725f5a4863386d4a4248572d345f39655230464d35327942474e30726879754f222c2269223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2273223a2231222c2270223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c226b74223a2231222c226b223a5b224450486f4f4732317a326c6c5830355a777552776f4d7153466f6c6f4f7a2d544a44536b435857515f636a6c225d2c226e74223a2231222c226e223a5b224546596d6f79657566375f7176524f4e4e655267326978596a763674434368425264767247774e6867526749225d2c226274223a2231222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    "raw_len": 352,
+    "said": "ENONxZTtLrR9r_ZHc8mJBHW-4_9eR0FM52yBGN0rhyuO"
+  },
+  "rot_conflict_sigs": [
+    {
+      "index": 0,
+      "kind": "controller",
+      "sig_hex": "42791eec52b7c028dfe604121b794b16fc46979d9ca972c0c96aa71e7cd00b206aa83ea829ae457e5054f07f3c0503f6d7bd1fa7c4d8e927a046a83ae2d6bc04",
+      "sig_qb64": "AABCeR7sUrfAKN_mBBIbeUsW_EaXnZypcsDJaqcefNALIGqoPqgprkV-UFTwfzwFA_bXvR-nxNjpJ6BGqDri1rwE",
+      "signer_verkey_qb64": "DPHoOG21z2llX05ZwuRwoMqSFoloOz-TJDSkCXWQ_cjl",
+      "signing_target": "event_raw"
+    }
+  ],
+  "rot_conflict_witness_receipts": [
+    {
+      "index": 0,
+      "kind": "witness",
+      "sig_hex": "1f0904d4082918a69647d4feb7868990e2c42ae741cac5e493d1c74ab48c0d520a76c7c3f4b8dec17e85906361ad2b8108ef13b8684fd1cb1609b073b87a4c0d",
+      "sig_qb64": "AAAfCQTUCCkYppZH1P63homQ4sQq50HKxeST0cdKtIwNUgp2x8P0uN7BfoWQY2GtK4EI7xO4aE_RyxYJsHO4ekwN",
+      "signer_verkey_qb64": "BEprHy-KD0Id9-Yu4C9GwpyvmPXj1mAwX290p7eBsXJj",
+      "signing_target": "event_raw"
+    }
+  ],
+  "rot_recorded": {
+    "ked": {
+      "b": [],
+      "bt": "1",
+      "i": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+      "k": [
+        "DPHoOG21z2llX05ZwuRwoMqSFoloOz-TJDSkCXWQ_cjl"
+      ],
+      "kt": "1",
+      "n": [
+        "EKXla0Ndvr5MG2Losofecuvc198rAP6jXRo2IVbIh3_x"
+      ],
+      "nt": "1",
+      "s": "1",
+      "t": "rot"
+    },
+    "pre": "EL8ZJOHg0uk6ZwZWlhUxYeSkQDN8wItQZ4KH53T0R-B-",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22726f74222c2264223a2245457836797a6b454243476f6c67655274472d577335415f6a2d545f37744b69334a6b6e5530554955687259222c2269223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2273223a2231222c2270223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c226b74223a2231222c226b223a5b224450486f4f4732317a326c6c5830355a777552776f4d7153466f6c6f4f7a2d544a44536b435857515f636a6c225d2c226e74223a2231222c226e223a5b22454b586c61304e647672354d47324c6f736f666563757663313938724150366a58526f324956624968335f78225d2c226274223a2231222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    "raw_len": 352,
+    "said": "EEx6yzkEBCGolgeRtG-Ws5A_j-T_7tKi3JknU0UIUhrY"
+  },
+  "rot_recorded_sigs": [
+    {
+      "index": 0,
+      "kind": "controller",
+      "sig_hex": "848bc55cb246ec99c22f05a4f7e737d736dcf3055dc3c31d8b51ae32b7df61ea64b21bb5b08778dd25b0be3c06307dd7146b2d78dc1e6373519edbce42431d01",
+      "sig_qb64": "AACEi8VcskbsmcIvBaT35zfXNtzzBV3Dwx2LUa4yt99h6mSyG7Wwh3jdJbC-PAYwfdcUay143B5jc1Ge285CQx0B",
+      "signer_verkey_qb64": "DPHoOG21z2llX05ZwuRwoMqSFoloOz-TJDSkCXWQ_cjl",
+      "signing_target": "event_raw"
+    }
+  ],
+  "rot_recorded_witness_receipts": [
+    {
+      "index": 0,
+      "kind": "witness",
+      "sig_hex": "c5ecde0b9e4244dd63e4518a2e81dc06232c0c2056c6c7a7e771a851b0c7d0d3f1fcca67aef8bb92d826d2ec50953b05656567c8f3998b297bc19c36462ba40b",
+      "sig_qb64": "AADF7N4LnkJE3WPkUYougdwGIywMIFbGx6fncahRsMfQ0_H8ymeu-LuS2CbS7FCVOwVlZWfI85mLKXvBnDZGK6QL",
+      "signer_verkey_qb64": "BEprHy-KD0Id9-Yu4C9GwpyvmPXj1mAwX290p7eBsXJj",
+      "signing_target": "event_raw"
+    }
+  ],
+  "witness_verkey_qb64": "BEprHy-KD0Id9-Yu4C9GwpyvmPXj1mAwX290p7eBsXJj"
+}

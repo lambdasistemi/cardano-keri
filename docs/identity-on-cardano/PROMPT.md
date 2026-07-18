@@ -55,8 +55,7 @@ Never blur delivered contract work with the remaining identity-core build.
 - **MERGED + BYTE-TESTED**: the frozen E-native wire contract and its independent
   Haskell/Aiken vectors and checks.
 - **SHIPS WITH THE IDENTITY-CORE MILESTONE**: the validator state machine,
-  registration/advance wiring, mandatory witness-receipt checks and two-seal
-  handoff, freeze/narrow-conviction paths, and runnable devnet acceptance demo.
+  registration/advance wiring, mandatory witness-receipt checks (witness-set changes validated against the incoming set), freeze/narrow-conviction paths, and runnable devnet acceptance demo.
 - **BUILT IN LATER MILESTONES**: credential-chain verification, general authorization envelopes,
   KERI-wallet signing UX, delegated AIDs, and superseding recovery.
 
@@ -120,7 +119,7 @@ The following claims are fixed:
 - For a checkpoint with `toad > 0`, every V1 advance additionally requires the
   configured KERI witness threshold's receipts over the anchoring event. Valid
   controller signatures and elapsed time never replace those receipts. A
-  witness-set change uses the two-seal handoff; an already witnessless
+  witness-set change is validated against the incoming set (KERI's `br`/`ba`/`bt` delta, no outgoing endorsement); an already witnessless
   (`toad = 0`) checkpoint is an explicit weaker mode.
 - For inception events up to 1024 bytes, the hash-proof path verifies
   `blake3(inception_event) == AID` on-chain. This covers observed registering

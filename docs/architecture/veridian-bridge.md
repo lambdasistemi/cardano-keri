@@ -32,8 +32,9 @@ Signify holds keys in an encrypted key store. Keys are never exported in plainte
     Per `specs/68-keystate-shape/identity-model.md` (PR #87) there is **one** state
     machine — the witnessed KEL — and Cardano holds a **checkpoint** advanced only by
     witness-receipted **anchoring seals**. The wallet's bridge duty changes accordingly:
-    emit the anchoring seal per rotation (and the §6a handoff pre-announcement on witness
-    changes), collect witness receipts, and submit/relay the checkpoint-advance tx.
+    emit the anchoring seal per rotation (a witness change simply carries KERI's
+    `br`/`ba`/`bt` backer delta, validated against the incoming set — §6a, no
+    pre-announcement), collect witness receipts, and submit/relay the checkpoint-advance tx.
     "Same keys" survives; "two registries" does not.
 
 The core insight of the Veridian bridge is that the same Ed25519 keys serve both worlds:
@@ -44,12 +45,15 @@ The core insight of the Veridian bridge is that the same Ed25519 keys serve both
    key-state.
 
 2. **Cardano (on-chain):** The identity **checkpoint**, keyed by `cesr_aid`, advances
-   when the seal plus its threshold witness receipts are presented in an advance tx.
+   when the seal and the witness receipts its **incoming** `new_toad` requires are presented
+   in an advance tx.
 
-For a witnessed checkpoint, this is a hard V1 gate: controller signatures without the
-configured threshold receipts are rejected, with no timeout fallback. If witnesses are
-unavailable, Cardano does not advance. That is a liveness failure rather than permission to
-create a private Cardano branch.
+When the advance's incoming `new_toad > 0`, this is a hard V1 gate: controller signatures
+without the required threshold receipts over the incoming set are rejected, with no timeout
+fallback. If those incoming witnesses are unavailable, Cardano does not advance to that
+witnessed target — a liveness failure rather than permission to create a private Cardano
+branch. (A controller may still rotate to `new_toad = 0`, which needs no receipts and visibly
+exits the witnessed guarantee.)
 
 No re-keying is required. The same private key that signs KERI events signs the Cardano
 advance; the chain verifies the seal's blake2b commitments and the Ed25519 receipts over
@@ -342,10 +346,12 @@ Cardano block time is approximately 20 seconds. After a KERI rotation in Veridia
 ## One state machine, one stated limit
 
 *(This section previously described "two independent state machines" — superseded, see
-the banner above.)* The witnessed KEL is the single source of truth. For a checkpoint with
-`toad > 0`, Cardano rejects an advance without threshold-receipted anchoring evidence, so
-the controller cannot privately activate a Cardano-first branch. The guarantee assumes an
-honest witness threshold and does not apply to an explicitly witnessless AID. A residual
+the banner above.)* The witnessed KEL is the single source of truth. When an
+advance's incoming `new_toad > 0`, Cardano rejects it without threshold-receipted anchoring
+evidence over that incoming set, so the controller cannot privately activate a Cardano-first
+branch. (A legitimate KERI rotation to `new_toad = 0` is receipt-free but visibly exits the
+witnessed guarantee.) The guarantee assumes an honest witness threshold and does not apply to
+an explicitly witnessless AID. A residual
 correspondence problem remains (identity-model §7a): witnesses receipt events, not truth, so
 the seal's *claimed* key-state may still differ from the native Blake3 key-state —
 self-equivocation, not third-party forgery.

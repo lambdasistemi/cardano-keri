@@ -159,15 +159,18 @@ sequenceDiagram
     KW-->>CT: threshold witness receipts (over raw seal bytes)
     CT->>V: advance tx — seal + receipts
     V->>CK: read stored keys · next_keys · next_threshold · witnesses · toad
-    V->>V: revealed digests ∈ next_keys + dual thresholds,<br/>Ed25519 receipts vs stored witness set
+    V->>V: revealed digests ∈ next_keys + dual thresholds,<br/>Ed25519 receipts vs incoming (new) witness set at new toad
     V->>CK: seq+1 — new keys, new next_keys/next_threshold
-    Note over CT,CK: witness-set change: two-seal handoff —<br/>outgoing set receipts the pre-announcement,<br/>incoming set receipts the activation (§6a)
+    Note over CT,CK: witness-set change: validated against the incoming (new) set<br/>at the new toad — no outgoing endorsement (§6a)
 ```
 
-For a checkpoint with `toad > 0`, missing or insufficient receipts make the advance invalid;
-controller signatures and elapsed time never replace them in V1. This prevents a controller
-from activating one key state on Cardano, using it, and only later publishing a different KERI
-rotation. An already witnessless checkpoint (`toad = 0`) is an explicit weaker mode.
+When the advance's **incoming** `new_toad > 0`, receipts below `new_toad` over the incoming
+(new) set make the advance invalid; controller signatures and elapsed time never replace them
+in V1 (for a pure key rotation the incoming set equals the stored one). This prevents a
+controller from activating one witnessed key state on Cardano, using it, and only later
+publishing a different KERI rotation. A rotation to `new_toad = 0` validates against the empty
+incoming set (zero receipts); the resulting checkpoint visibly carries `toad = 0`, an explicit
+weaker mode consumers may reject.
 
 Genesis (the first leaf) remains registration-attested and publicly falsifiable pending a
 full-context single-transaction measurement (identity-model §7a). Lane-packed spike #88

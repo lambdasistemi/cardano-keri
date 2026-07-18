@@ -225,8 +225,9 @@ sovereign per-AID checkpoint decision (Candidate A) is **unchanged** — this is
      may **expose and submit objective evidence** but **cannot manufacture a canonical
      truth branch**.
 6. **Fork / divergence outcomes (kept separate).**
-   - a witnessed Cardano checkpoint **cannot advance without threshold receipts**;
-     controller signatures and elapsed time are insufficient;
+   - a witnessed advance (incoming `new_toad > 0`) **cannot proceed without the incoming
+     set's threshold receipts**; controller signatures and elapsed time are insufficient (a
+     rotation to `new_toad = 0` is receipt-free and visibly exits the witnessed guarantee);
    - an **unreceipted local KEL fork** has **no accepted authority** under this trust model;
    - **conflicting threshold-receipted events** are **duplicity evidence** → immediate
      freeze; permanent conviction additionally requires controller-threshold signatures on
@@ -337,8 +338,8 @@ selection mechanism — selection is the operator-ratified sovereignty invariant
 Notation: the advancing per-AID checkpoint holds (identity-model.md §6)
 `Checkpoint { keys, threshold, next_digest, witnesses, toad, seq }` (and the §7b
 `native_sn` binding) — the conceptual key-state, carried on-chain as the inline
-**`CheckpointDatum`** (Candidate A); #68 freezes its exact CBOR/wire layout. "Advance" = a witnessed-seal rotation (§4/§6a two-seal
-handoff) or a genesis promotion. Reads are **CIP-31 reference-input**,
+**`CheckpointDatum`** (Candidate A); #68 freezes its exact CBOR/wire layout. "Advance" = a witnessed-seal rotation (§4/§6a incoming-set
+validation) or a genesis promotion. Reads are **CIP-31 reference-input**,
 bring-your-own-proof (§2), so the contended surface is the **write path**
 (registration, rare rotation/checkpoint advance, close/freeze), not ordinary
 reads.
@@ -431,7 +432,7 @@ reads.
     spent** — so Cardano **does not execute the checkpoint spending validator** during
     the consumer's transaction;
   - the consumer does **not** replay KERI history, **does not** re-verify prior
-    rotations or two-seal handoffs, **does not** recompute the genesis BLAKE3
+    rotations or witness-set changes, **does not** recompute the genesis BLAKE3
     `blake3(icp) == cesr_aid`, and (for Candidate A) **supplies no MPF inclusion
     proof** — those transition facts are **inherited inductively** from the genuine
     singleton token's own mint/spend history (each advance already proved its step at
@@ -511,7 +512,7 @@ reads.
 - **Normal rotation transition (state machine; `delta = 0`).** A normal rotation
   (i) **consumes** the current checkpoint UTxO identified by the steady asset;
   (ii) **authenticates** the existing datum's current weighted key/witness state and
-  the witnessed **two-seal handoff** (§6a, fixed upstream); (iii) requires
+  the witnessed **incoming-set rotation** (§6a, fixed upstream); (iii) requires
   **`new.seq = old.seq + 1`**, the correct old→new key/`threshold`, witness/`toad`,
   `next_digest`, and `native_sn` transition, with the **AID and `aid_asset_name`
   invariant unchanged**; and (iv) **creates exactly one** continuing checkpoint
@@ -532,8 +533,8 @@ reads.
   via the logical registration record or committed history (a burned token yields no
   live UTxO, so discovery must not read "closed" as "never registered").
 - **Serialization / stale / batch / replay.** Rotations serialize on
-  **that AID's own UTxO only** — no global contention. Two-seal handoff (§6a)
-  checked against the *stored* `(witnesses, toad)` then advanced once. Stale-root
+  **that AID's own UTxO only** — no global contention. A witness-set change (§6a)
+  is validated against the incoming (new) set — no outgoing endorsement — and advanced once. Stale-root
   window largely **dissolves** (the datum *is* the tip; freshness = "spend the
   tip"), reducing the #24 A11 depth-10 stale-proof surface. **Batching is not
   required for parallelism** (each AID advances on its own UTxO), but A **can
@@ -722,7 +723,7 @@ is superseded by the operator decision (NOTE-021).
 | Criterion (falsifier) | A per-AID UTxO | B singleton MPFS | C lane-shard |
 |---|---|---|---|
 | **C1a Registration-pipeline per-tx budget fit** — each registration tx measured at its **own** boundary: Step(s), Finish, and activation/promotion (oracle gate + MPFS absence/unicity + selected-store materialization, incl. A's post-Finish steady-token mint) each fit mainnet 14 M mem / 10 G CPU. *Falsifier: any single registration tx cannot fit at realistic proof depth.* | MEASURE | MEASURE | MEASURE |
-| **C1b Rotation-advance per-tx budget fit** — the *separate* rotation-advance tx (§6a two-seal threshold Ed25519 + selected physical-storage update at realistic MPF depth + continuing output/token + `Data` boundary) fits mainnet 14 M mem / 10 G CPU at N=1. *Falsifier: cannot fit N=1 at realistic depth. Disjoint transactions are never summed into one per-tx claim.* | MEASURE | MEASURE | MEASURE |
+| **C1b Rotation-advance per-tx budget fit** — the *separate* rotation-advance tx (§6a incoming-set threshold Ed25519 + selected physical-storage update at realistic MPF depth + continuing output/token + `Data` boundary) fits mainnet 14 M mem / 10 G CPU at N=1. *Falsifier: cannot fit N=1 at realistic depth. Disjoint transactions are never summed into one per-tx claim.* | MEASURE | MEASURE | MEASURE |
 | **C2 Sustained honest advance throughput ≥ ratified SLO** — measured **separately** for the **average/uncoordinated** and the **targeted/adversarial** case (grinding a victim lane in C). *Falsifier: measured advances/block below the ratified SLO and batching cannot reach it within the C1b budget, in whichever case that criterion requires.* | high (parallel) | MEASURE (A12-bound) | MEASURE (average K-way; targeted victim ≈ single-lane) |
 | **C3 State/min-ADA growth per 10⁶ active AIDs ≤ ratified capital-lock budget.** *Falsifier: projected locked min-ADA × active population exceeds the ratified budget (A's min-ADA is reclaimable on close/burn — count active, not cumulative).* | MEASURE (O(#active AIDs)) | O(1) UTxO | O(K) UTxO |
 | **C3b Transient inception-cage bloat & cleanup ≤ ratified bloat budget** — the shared per-attempt transient cage (all candidates) under permissionless spam: **peak concurrent live attempts** and **abandoned-attempt cost** (min-ADA held + reclaim/burn cost), with the timeout/reclaim path self-funding. *Falsifier: peak concurrent transient UTxOs or unreclaimable abandoned-attempt min-ADA exceeds the ratified bloat budget, or the reclaim/burn path is not deposit-funded.* | MEASURE (transient cage) | MEASURE (transient cage) | MEASURE (transient cage) |
@@ -776,11 +777,11 @@ forbidden.
   during Step/Finish A too relies on the transient per-attempt token — such that
   concurrent unrelated AIDs **cannot** interfere with or consume one another's
   intermediate state (C5, NOTE-018).
-- **Rotation ordering, same-AID serialization, witnessed two-seal handoff, stale
+- **Rotation ordering, same-AID serialization, witnessed incoming-set rotation, stale
   proofs, snapshot/rebuild, batch atomicity, replay/misbinding.** Same-AID
-  serialization: A per-UTxO, B global, C per-lane. Two-seal (§6a): Seal W checked
-  vs stored `(witnesses,toad)`, Seal K vs the just-endorsed `(W',toad')`, one
-  advance. Stale proofs/window + snapshot-rebuild: dissolve in A, depth-10 window
+  serialization: A per-UTxO, B global, C per-lane. Witness-set change (§6a): receipts
+  validated against the incoming `(new_witnesses,new_toad)` set, no outgoing
+  endorsement, one advance. Stale proofs/window + snapshot-rebuild: dissolve in A, depth-10 window
   in B/C. Batch atomicity + replay: `seq` monotonicity + domain-bound message in
   all; batching only in B/C.
 - **Permissionless-inception / global-UTxO griefing & emergency-rotation
@@ -858,7 +859,7 @@ per-tx claim**:
    (oracle gate + MPFS absence/unicity + selected-store materialization, incl. A's
    post-Finish steady-token mint/promotion). Each uses the **per-attempt transient
    cage/thread token** for confinement. Report per-tx ex-units/size (C1a).
-2. **Rotation advance** — a **separate** tx exercising the §6a **two-seal threshold
+2. **Rotation advance** — a **separate** tx exercising the §6a **incoming-set threshold
    Ed25519** verification, the **selected physical-storage update** (MPF update at a
    stated, **non-zero** proof depth for B/C; direct datum spend for A), the
    continuing output/token placement, and the ledger `Data` boundary
@@ -926,8 +927,8 @@ measurement (C1), and the smoke is its live corroboration, not its replacement.
 - **The advance path is unbuilt and unmeasured, and its transactions are
   distinct.** The registration pipeline (Step/Finish confinement → Finish → oracle +
   MPFS unicity + store materialization) and the **separate** rotation-advance tx
-  (two-seal + MPF update) have never been built or measured; #97 and #99 measure
-  disjoint fragments. **Genesis Step/Finish and the rotation two-seal are different
+  (incoming-set threshold verify + MPF update) have never been built or measured; #97 and #99 measure
+  disjoint fragments. **Genesis Step/Finish and the rotation advance are different
   transactions on different paths and must never be summed into one per-tx budget
   claim** (NOTE-018). "The intermediate value is confined" is a **required #24/#92
   invariant**, phrased as such, not an implemented fact.
@@ -971,7 +972,7 @@ they are **never summed** into one per-tx claim (NOTE-018): (i) the **registrati
 pipeline** — the ≤1-chunk **Step/Finish** confinement plus a **separate
 activation/promotion** tx (oracle gate + MPFS absence/unicity + selected-store
 materialization) — with its own unmeasured bound at each tx's **own** boundary; and
-(ii) the **separate rotation advance** — §6a **two-seal** threshold Ed25519 + the
+(ii) the **separate rotation advance** — §6a **incoming-set** threshold Ed25519 + the
 selected physical-storage update (non-zero-depth MPF update for B/C) + `Data`
 boundary — with its own unmeasured bound. Each family's batch bound (candidates B/C)
 **MUST be measured directly at its own tx boundary** and **MUST NOT** be assumed
@@ -1030,7 +1031,7 @@ public chain data** to *discover* the AID's checkpoint UTxO — but that depende
 **refined forward in NOTE-019** to a **generic exact-asset `(checkpoint_policy_id,
 aid_asset_name)` Cardano index lookup** answerable by any generic asset index, **not**
 a bespoke/authoritative QVI-owned `AID → UTxO` directory. (b) **Boundary split:** genesis **Step/Finish** (inception
-byte-binding/confinement) and the **witnessed two-seal** check (rotation/checkpoint-
+byte-binding/confinement) and the **witnessed incoming-set rotation** check (rotation/checkpoint-
 advance) are **different transactions on different paths**; evidence measures the
 **registration pipeline** (Step / Finish / activation-promotion) and the **rotation
 advance** at their **own** tx boundaries and **never sums disjoint transactions**
@@ -1098,8 +1099,8 @@ address with the **same** asset at quantity one; **only** the separate migration
 branches may move to an accepted successor policy/address or burn `-1`.
 (c) **Downstream consumers inherit transition facts inductively.** A CIP-31 reference
 input is **read, not spent**, so no checkpoint spending validator runs in the consumer
-tx; the consumer does **not** replay KERI history, re-verify prior rotations/two-seal
-handoffs, recompute genesis BLAKE3, or (for A) supply an MPF inclusion proof — those are
+tx; the consumer does **not** replay KERI history, re-verify prior rotations/witness-set
+changes, recompute genesis BLAKE3, or (for A) supply an MPF inclusion proof — those are
 inherited from the genuine singleton token's mint/spend history. The consumer performs
 only a **bounded provenance/state boundary check** (exact `(policy_id, asset_name)`,
 quantity one, accepted checkpoint script/version, well-formed inline datum with
@@ -1270,7 +1271,7 @@ root plus an off-chain MPFS state materializer/proof builder.
   **bounded timeout → reclaim/burn** that **cannot activate or bypass byte binding**,
   with the timeout **ratified before measurement** if it affects the decision (not
   invented).
-- **FR8.** **Rotation ordering, same-AID serialization, witnessed two-seal handoff,
+- **FR8.** **Rotation ordering, same-AID serialization, witnessed incoming-set rotation,
   stale proofs, snapshot/rebuild, batch atomicity, and replay/misbinding rejection**
   are covered per candidate.
 - **FR9.** **Permissionless-inception / global-UTxO griefing and emergency-rotation
@@ -1323,7 +1324,7 @@ root plus an off-chain MPFS state materializer/proof builder.
   one **`CheckpointStateOutput`** and rejecting extra names/quantities; (d) the
   **current key state lives in the inline `CheckpointDatum`** (the token is the
   locator, not the key store; **#68** freezes the CBOR/wire layout); (e) **normal
-  rotation** is a **`delta = 0`** transition (consume-tip, two-seal handoff, `new.seq
+  rotation** is a **`delta = 0`** transition (consume-tip, incoming-set validation, `new.seq
   = old.seq + 1`, AID + `aid_asset_name` invariant, exactly one continuing output at
   the same script address, token moved not re-minted), with **migration** and
   **close/`-1`-burn** kept separate; (f) **discovery** is a **generic `(policy_id,

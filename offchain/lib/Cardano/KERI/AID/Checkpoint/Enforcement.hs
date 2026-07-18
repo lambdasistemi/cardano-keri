@@ -142,7 +142,13 @@ data ConvictError
       CvRevealMismatch
     | -- | The verifying controller signatures do not satisfy @cur_threshold@.
       CvQuorumUnsatisfied
-    | -- | The evidence agrees with the tip on the whole forward commitment.
+    | {- | The conflicting event's witness receipts number fewer than the tip's
+      @toad@ (an unwitnessed event cannot frame a witnessed identity).
+      -}
+      CvInsufficientReceipts
+    | {- | The evidence agrees with the tip on @n@\/@nt@\/@bt@ (the whole
+      conflict commitment) — not a conflict.
+      -}
       CvNoConflict
     deriving stock (Show, Eq)
 
@@ -155,9 +161,12 @@ quorum, that diverges from the tip on any forward field. Checks in order (spec
   2. same reveal — @k@ equals the tip's @cur_keys@ positionally;
   3. controller attribution — the positions whose signature verifies over
      'eeEventBytes' satisfy the tip's @cur_threshold@;
-  4. conflict — the event diverges from the tip on at least one of
-     @(next_keys, next_threshold, witnesses, toad)@ (agreement everywhere is
-     not a conflict and is rejected).
+  4. witnessed anti-fork gate — at least @toad@ witness receipts verify over
+     'eeEventBytes' against the tip's witnesses (vacuous when @toad == 0@);
+  5. conflict — the event diverges from the tip on at least one of
+     @(next_keys, next_threshold, toad)@ (@n@\/@nt@\/@bt@; the witness set is
+     NOT a conflict axis) — agreement everywhere is not a conflict and is
+     rejected.
 -}
 convictPredicate ::
     CheckpointDatumV1 -> EventEvidence -> Either ConvictError ()
@@ -179,11 +188,26 @@ convictPredicate d e = do
     unless
         (evaluate (cdCurThreshold d) (length (cdCurKeys d)) signed)
         (Left CvQuorumUnsatisfied)
-    -- 4. conflict: any single forward mismatch; agreement everywhere = reject.
+    -- 4. witnessed anti-fork gate: the conflicting event must carry at least
+    --    @toad@ verifying witness receipts (only a real published duplicity can
+    --    convict). @toad == 0@ is the vacuous witnessless tier. Mirrors the
+    --    freeze predicate's witness check.
+    let receipts =
+            length
+                [ ()
+                | (idx, sig) <- eeWitSigs e
+                , Just w <- [cdWitnesses d `atMay` idx]
+                , verifyEd25519 w (eeEventBytes e) sig
+                ]
+    unless (fromIntegral receipts >= cdToad d) (Left CvInsufficientReceipts)
+    -- 5. conflict: any single forward mismatch on @n@\/@nt@\/@bt@; agreement
+    --    everywhere = reject. The witness set is NOT a conflict axis — a KERI
+    --    rotation restates no @b@ (only the @br@\/@ba@ delta), so @eeWitnesses@
+    --    is always @[]@ and comparing it to a witnessed tip would phantom-convict
+    --    the AID's own honest rotation.
     let agrees =
             eeNextKeys e == cdNextKeys d
                 && eeNextThreshold e == cdNextThreshold d
-                && eeWitnesses e == cdWitnesses d
                 && eeToad e == cdToad d
     when agrees (Left CvNoConflict)
 
@@ -306,7 +330,7 @@ instance FromData TombstoneV1 where
     fromBuiltinData _ = Nothing
 
 -- ---------------------------------------------------------
--- Output-shape layer (spec Convict 5 / Freeze 4)
+-- Output-shape layer (spec Convict 6 / Freeze 4)
 -- ---------------------------------------------------------
 
 -- | The role of a continuing-output's script address in the #106 lifecycle.
@@ -342,7 +366,7 @@ data ConvictOutputError
       CoWrongRecord
     deriving stock (Show, Eq)
 
-{- | Convict output shape (spec Convict 5): the continuing output must sit at the
+{- | Convict output shape (spec Convict 6): the continuing output must sit at the
 tombstone role, carry the token, and hold exactly
 @TombstoneV1 tip.cesr_aid tip.native_sn evidence.said@.
 -}

@@ -61,6 +61,108 @@ pub const fork_convict_evidence: EventEvidence =
     wit_sigs: [],
   }
 
+/// fork_witnessed: witnessed rot_conflict double-signs the witnessed rot_recorded tip -> ConvictValid
+pub const fork_witnessed_convict_tip: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
+    cur_keys: [
+      #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
+    ],
+    cur_threshold: Unweighted(1),
+    next_keys: [
+      #"a5e56b435dbebe4c1b62e8b287de72ebdcd7df2b00fea35d1a362156c8877ff1",
+    ],
+    next_threshold: Unweighted(1),
+    witnesses: [
+      #"4a6b1f2f8a0f421df7e62ee02f46c29caf98f5e3d660305f6f74a7b781b17263",
+    ],
+    toad: 1,
+    seq: 1,
+    native_sn: 1,
+  }
+
+pub const fork_witnessed_convict_evidence: EventEvidence =
+  EventEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22726f74222c2264223a22454e4f4e785a54744c725239725f5a4863386d4a4248572d345f39655230464d35327942474e30726879754f222c2269223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2273223a2231222c2270223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c226b74223a2231222c226b223a5b224450486f4f4732317a326c6c5830355a777552776f4d7153466f6c6f4f7a2d544a44536b435857515f636a6c225d2c226e74223a2231222c226e223a5b224546596d6f79657566375f7176524f4e4e655267326978596a763674434368425264767247774e6867526749225d2c226274223a2231222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    t: #"726f74",
+    native_sn: 1,
+    cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
+    said: #"d38dc594ed2eb47daff64773c9890475bee3ff5e47414ce76c8118dd2b872b8e",
+    revealed_keys: [
+      #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
+    ],
+    next_keys: [
+      #"5626a327ae7fbfeabd138d35e460da2c588efead08284145dbeb1b0361811808",
+    ],
+    cur_threshold: Unweighted(1),
+    next_threshold: Unweighted(1),
+    witnesses: [],
+    toad: 1,
+    ctrl_sigs: [
+      (
+        0,
+        #"42791eec52b7c028dfe604121b794b16fc46979d9ca972c0c96aa71e7cd00b206aa83ea829ae457e5054f07f3c0503f6d7bd1fa7c4d8e927a046a83ae2d6bc04",
+      ),
+    ],
+    wit_sigs: [
+      (
+        0,
+        #"1f0904d4082918a69647d4feb7868990e2c42ae741cac5e493d1c74ab48c0d520a76c7c3f4b8dec17e85906361ad2b8108ef13b8684fd1cb1609b073b87a4c0d",
+      ),
+    ],
+  }
+
+/// fork_witnessed F3b: the witnessed AID's OWN honest rot_recorded as evidence -> ConvictInvalid(CvNoConflict)
+pub const fork_witnessed_honest_tip: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
+    cur_keys: [
+      #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
+    ],
+    cur_threshold: Unweighted(1),
+    next_keys: [
+      #"a5e56b435dbebe4c1b62e8b287de72ebdcd7df2b00fea35d1a362156c8877ff1",
+    ],
+    next_threshold: Unweighted(1),
+    witnesses: [
+      #"4a6b1f2f8a0f421df7e62ee02f46c29caf98f5e3d660305f6f74a7b781b17263",
+    ],
+    toad: 1,
+    seq: 1,
+    native_sn: 1,
+  }
+
+pub const fork_witnessed_honest_evidence: EventEvidence =
+  EventEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22726f74222c2264223a2245457836797a6b454243476f6c67655274472d577335415f6a2d545f37744b69334a6b6e5530554955687259222c2269223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c2273223a2231222c2270223a22454c385a4a4f486730756b365a775a576c6855785965536b51444e38774974515a344b4835335430522d422d222c226b74223a2231222c226b223a5b224450486f4f4732317a326c6c5830355a777552776f4d7153466f6c6f4f7a2d544a44536b435857515f636a6c225d2c226e74223a2231222c226e223a5b22454b586c61304e647672354d47324c6f736f666563757663313938724150366a58526f324956624968335f78225d2c226274223a2231222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    t: #"726f74",
+    native_sn: 1,
+    cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
+    said: #"4c7acb39040421a8960791b46f96b3903f8fe4ffeed2a2dc9927534508521ad8",
+    revealed_keys: [
+      #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
+    ],
+    next_keys: [
+      #"a5e56b435dbebe4c1b62e8b287de72ebdcd7df2b00fea35d1a362156c8877ff1",
+    ],
+    cur_threshold: Unweighted(1),
+    next_threshold: Unweighted(1),
+    witnesses: [],
+    toad: 1,
+    ctrl_sigs: [
+      (
+        0,
+        #"848bc55cb246ec99c22f05a4f7e737d736dcf3055dc3c31d8b51ae32b7df61ea64b21bb5b08778dd25b0be3c06307dd7146b2d78dc1e6373519edbce42431d01",
+      ),
+    ],
+    wit_sigs: [
+      (
+        0,
+        #"c5ecde0b9e4244dd63e4518a2e81dc06232c0c2056c6c7a7e771a851b0c7d0d3f1fcca67aef8bb92d826d2ec50953b05656567c8f3998b297bc19c36462ba40b",
+      ),
+    ],
+  }
+
 /// honest_2key: rot vs its own reflected state -> ConvictInvalid(CvNoConflict)
 pub const honest2_convict_tip: CheckpointDatumV1 =
   CheckpointDatumV1 {

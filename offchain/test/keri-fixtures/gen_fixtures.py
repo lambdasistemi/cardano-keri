@@ -206,6 +206,43 @@ def build():
         "rot_witness_receipts": [_sig_record(lw[0], 0, lrot.raw, lrot.said, "witness")],
     }
 
+    # --- fork_witnessed: two conflicting WITNESSED rotations at the same sn -
+    # A witnessed AID (toad=1) whose witness double-receipts sn=1: the published
+    # duplicity that CAN convict (#106 Slice 7 anti-fork). Same shape as `fork`
+    # (same revealed keys, DIFFERENT next commitment at sn 1) but both the
+    # recorded and the conflicting rotation carry a receipt from the AID's
+    # witness — only a witnessed fork proves a real published double-sign;
+    # unwitnessed controller-signed bytes cannot frame the identity.
+    fwc = salt.signers(count=1, transferable=True, temp=True, path="fwc")
+    fwn = salt.signers(count=1, transferable=True, temp=True, path="fwn")
+    fwn2a = salt.signers(count=1, transferable=True, temp=True, path="fwn2a")
+    fwn2b = salt.signers(count=1, transferable=True, temp=True, path="fwn2b")
+    fww = salt.signers(count=1, transferable=False, temp=True, path="fww")  # witness (B-code)
+    fwicp = eventing.incept(
+        keys=[fwc[0].verfer.qb64],
+        ndigs=[coring.Diger(ser=fwn[0].verfer.qb64b).qb64],
+        isith="1", nsith="1", wits=[fww[0].verfer.qb64], toad="1",
+        code=coring.MtrDex.Blake3_256,
+    )
+    fwcommon = dict(pre=fwicp.pre, dig=fwicp.said, sn=1,
+                    keys=[fwn[0].verfer.qb64], isith="1", nsith="1",
+                    wits=[fww[0].verfer.qb64])
+    fwrotA = eventing.rotate(ndigs=[coring.Diger(ser=fwn2a[0].verfer.qb64b).qb64], **fwcommon)
+    fwrotB = eventing.rotate(ndigs=[coring.Diger(ser=fwn2b[0].verfer.qb64b).qb64], **fwcommon)
+    assert fwrotA.ked["k"] == fwrotB.ked["k"] and fwrotA.ked["n"] != fwrotB.ked["n"]
+    bundles["fork_witnessed"] = {
+        "note": "witnessed fork: same sn, same revealed keys, DIFFERENT next commitment; BOTH rotations witness-receipted (the published duplicity that can convict)",
+        "icp": _event_record(fwicp),
+        "icp_sigs": [_sig_record(fwc[0], 0, fwicp.raw, fwicp.said, "controller")],
+        "witness_verkey_qb64": fww[0].verfer.qb64,
+        "rot_recorded": _event_record(fwrotA),
+        "rot_recorded_sigs": [_sig_record(fwn[0], 0, fwrotA.raw, fwrotA.said, "controller")],
+        "rot_recorded_witness_receipts": [_sig_record(fww[0], 0, fwrotA.raw, fwrotA.said, "witness")],
+        "rot_conflict": _event_record(fwrotB),
+        "rot_conflict_sigs": [_sig_record(fwn[0], 0, fwrotB.raw, fwrotB.said, "controller")],
+        "rot_conflict_witness_receipts": [_sig_record(fww[0], 0, fwrotB.raw, fwrotB.said, "witness")],
+    }
+
     return bundles
 
 

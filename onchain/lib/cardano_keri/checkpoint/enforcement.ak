@@ -59,7 +59,11 @@ pub type ConvictError {
   CvRevealMismatch
   /// The verifying controller signatures do not satisfy `cur_threshold`.
   CvQuorumUnsatisfied
-  /// The evidence agrees with the tip on the whole forward commitment.
+  /// The conflicting event's witness receipts number fewer than the tip's
+  /// `toad` (an unwitnessed event cannot frame a witnessed identity).
+  CvInsufficientReceipts
+  /// The evidence agrees with the tip on `n`/`nt`/`bt` (the whole conflict
+  /// commitment) — not a conflict.
   CvNoConflict
 }
 
@@ -71,9 +75,13 @@ pub type ConvictVerdict {
 }
 
 /// The conviction predicate: a rotation at the tip's own sn revealing the tip's
-/// own `cur_keys` (a double-sign of one commitment), attributed to the current
-/// quorum, that diverges from the tip on any forward field. Same ordered checks
-/// as the Slice-3 Haskell `convictPredicate`.
+/// own `cur_keys` (a double-sign of one commitment). Ordered checks (same as the
+/// Slice-3 Haskell `convictPredicate`): (1) establishment gate — `rot` / same
+/// AID / same `native_sn`; (2) same reveal — `k` equals `cur_keys`;
+/// (3) controller attribution over `cur_threshold`; (4) witnessed anti-fork gate
+/// — at least `toad` verifying witness receipts (vacuous when `toad = 0`);
+/// (5) conflict — divergence on `n`/`nt`/`bt` only (the witness set is NOT a
+/// conflict axis).
 pub fn convict_predicate(
   tip: CheckpointDatumV1,
   evidence: EventEvidence,
@@ -92,6 +100,15 @@ pub fn convict_predicate(
     verified_positions(tip.cur_keys, evidence.event_bytes, evidence.ctrl_sigs),
   ) {
     ConvictInvalid(CvQuorumUnsatisfied)
+  } else if count_receipts(
+    tip.witnesses,
+    evidence.event_bytes,
+    evidence.wit_sigs,
+  ) < tip.toad {
+    // step 4: witnessed anti-fork gate — the conflicting event must carry at
+    // least `toad` verifying witness receipts (toad=0 is the vacuous
+    // witnessless tier). Reuses the freeze predicate's receipt count.
+    ConvictInvalid(CvInsufficientReceipts)
   } else if forward_agrees(tip, evidence) {
     ConvictInvalid(CvNoConflict)
   } else {
@@ -99,11 +116,14 @@ pub fn convict_predicate(
   }
 }
 
-/// Whether the evidence agrees with the tip on the whole forward commitment
-/// (`next_keys`, `next_threshold`, `witnesses`, `toad`) — agreement everywhere
-/// is not a conflict.
+/// Whether the evidence agrees with the tip on the forward commitment
+/// (`next_keys`, `next_threshold`, `toad`) — agreement everywhere is not a
+/// conflict. The witness set is NOT a conflict axis: a KERI rotation restates no
+/// `b` (only the `br`/`ba` delta), so `evidence.witnesses` is always `[]` and
+/// comparing it to a witnessed tip would phantom-convict the AID's own honest
+/// rotation.
 fn forward_agrees(tip: CheckpointDatumV1, evidence: EventEvidence) -> Bool {
-  evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.witnesses == tip.witnesses && evidence.toad == tip.toad
+  evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.toad == tip.toad
 }
 
 // ---------------------------------------------------------
@@ -282,7 +302,7 @@ pub type TombstoneV1 {
 }
 
 // ---------------------------------------------------------
-// Output-shape layer (spec Convict 5 / Freeze 4)
+// Output-shape layer (spec Convict 6 / Freeze 4)
 // ---------------------------------------------------------
 
 /// The role of a continuing-output's script address in the #106 lifecycle.
@@ -325,7 +345,7 @@ pub type ConvictOutputVerdict {
   ConvictOutputInvalid(ConvictOutputError)
 }
 
-/// Convict output shape (spec Convict 5): the continuing output must sit at the
+/// Convict output shape (spec Convict 6): the continuing output must sit at the
 /// tombstone role, carry the token, and hold exactly
 /// `TombstoneV1 { tip.cesr_aid, tip.native_sn, evidence.said }`. Same ordered
 /// checks as the Slice-5 Haskell `convictOutputPredicate`.

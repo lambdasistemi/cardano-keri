@@ -175,9 +175,17 @@ Given tip datum `D` at either role address and `EventEvidence` `E`:
    backstop, so the check is vacuous and conviction degrades to controller-sig
    attribution alone — witnessless AIDs carry no structural anti-fork guarantee.
 5. **Conflict**: the qb64-decoded digests at `E.off_n` differ from
-   `D.next_keys` (as positional lists), OR the event's `nt`/`kt`/`b`/`bt`
-   slices differ from `D`'s recorded values (any single material mismatch
-   suffices; equality of everything = no conflict = reject).
+   `D.next_keys` (as positional lists), OR the event's `nt`/`bt` slices differ
+   from `D`'s recorded values (any single material mismatch suffices; equality
+   of everything = no conflict = reject). The witness list `b` is **not** a
+   conflict axis: a KERI rotation carries no `b` field, only the `br`/`ba`
+   delta, so comparing the event's (absent) `b` against `D.witnesses` would
+   spuriously flag *every* witnessed AID as conflicting — and, combined with the
+   Convict 4 witness gate, would let a witnessed identity's own honest recorded
+   rotation convict it (checks 1–4 all pass, and a phantom `b` mismatch fakes
+   the conflict). A witness-delta-only fork (same `n`/`nt`/`bt`, different
+   `br`/`ba`) belongs to the witness-changing rotation scope tracked by #24, and
+   fails closed here (its receipts do not verify against `D.witnesses`).
 6. **Output shape**: the continuing output sits at the tombstone address,
    carries the quantity-one token, min-ADA, and the conviction record datum:
 
@@ -252,7 +260,8 @@ Each of these MUST be a rejected vector in both implementations:
 | F1 | Witness-signatures-only conviction (no controller sigs) | Convict 3 |
 | F1b | **Unwitnessed-fork conviction of a witnessed AID (controller sigs, but receipts < toad)** | **Convict 4 (the anti-fork gate)** |
 | F2 | Conviction with sigs below threshold | Convict 3 |
-| F3 | Conviction where the event matches `D` exactly (no conflict) | Convict 4 |
+| F3 | Conviction where the event matches `D` exactly (no conflict) | Convict 5 |
+| F3b | **Witnessed AID's own honest recorded rotation presented as evidence (no `n`/`nt`/`bt` divergence)** | **Convict 5 (the `b` phantom-conflict fix)** |
 | F4 | Conviction at sn ≠ `D.native_sn` | shared sn check |
 | F5 | Conviction with another AID's event (i-field mismatch) | shared AID check |
 | F6 | Conviction whose `said_blank` diverges outside the SAID span | #24 slice reconstruction (see note) |
@@ -273,7 +282,7 @@ tombstone is unspendable) is a **validator "no path" property**, not a pure
 predicate — the schema layer encodes it as *terminality*: `TombstoneV1` carries
 no advance/convict/freeze continuation, and #24's validator ships no spending
 redeemer for the tombstone address. Both are covered by #24; the schema layer
-delivers F1, F1b, F2–F5, F7–F10, F12, F13 as executable rejected vectors and documents
+delivers F1, F1b, F2–F5, F3b, F7–F10, F12, F13 as executable rejected vectors and documents
 F6/F11 as the #24 obligation.
 
 Positive vectors: one conviction from ACTIVE and one from FROZEN (GLEIF-shaped

@@ -18,14 +18,18 @@ checked in the same amended commit that lands the slice.
       canonical `kt`/`nt`/`bt` re-spelling, E1–E9 slice checks, proof-token
       name, pure R3/R4/R6/R7/R8 predicate + typed errors; fixture-driven
       RED→GREEN spec (positives: 2-key, witnessed, weighted, owner-replay;
-      negatives: squat, dip, drt, per-slice E1–E9, misdirected offsets,
-      wrong-preimage/below-threshold signatures).
+      negatives: squat, dip, drt, per-slice E1–E9, wrong-preimage/
+      below-threshold signatures, and the A-001 offset-misdirection family:
+      wrong offsets, overlapping spans, spans into `a`/other fields,
+      code-prefix confusion, truncated slices, duplicated offsets).
 
 ## Slice 3 — Aiken mirror + shared-vector parity
 
 - [ ] T114-S3 `checkpoint/registration.ak` mirror + `gen-registration-vectors`
       generator + Aiken vector/parity suites asserting byte-identical
-      encodings AND identical verdicts per vector; drift check wired.
+      encodings AND identical verdicts per vector (incl. the full
+      offset-misdirection family — A-001 QB condition 1 gates acceptance);
+      drift check wired.
 
 ## Slice 4 — hash-proof minting policy
 
@@ -36,10 +40,12 @@ checked in the same amended commit that lands the slice.
 ## Slice 5 — checkpoint validator scaffold + Register branch
 
 - [ ] T114-S5 `validators/checkpoint.ak` (`version`, `hash_proof_policy`,
-      `network_id`, `d_reg`): `Register` mint branch composing R1–R8,
-      fail-closed spend (R10); ScriptContext end-to-end positives (2-key,
-      7-key GLEIF, witnessed 2-of-3, proof burned) + R1/R2/R5/R8/R10
-      negatives; registration-context measurement cells.
+      `network_id`, `d_reg`): `Register` mint branch composing R1–R8 (no
+      fixed-input-count assumption — room for the #116 gate input, A-001
+      QC), fail-closed spend (R10); ScriptContext end-to-end positives
+      (2-key, 7-key GLEIF, witnessed 2-of-3, proof burned) + R1/R2/R5/R8/
+      R10 negatives; registration-context measurement cells at 2-key and
+      7-key — the A-001 measurement gate: <25% headroom ⇒ STOP + Q-file.
 
 ## Slice 6 — measurements report + finalization
 

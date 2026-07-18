@@ -222,15 +222,29 @@ event compares differently-coded 44-char strings and fails; pointing two
 An attacker cannot place chosen 44-char strings inside a victim's genuine
 inception bytes.
 
-**Consequence (flagged for ratification).** E1–E9 make the semantic
-projection of a `<= 1024 B` inception **fully on-chain-checked** — the §7c
-"attested, challengeable projection" and the #91 oracle activation gate are
-not wired in this path. Registration in V1 is permissionless and trustless
-for the single-chunk tier; `> 1024 B` inceptions are rejected outright
-(H1), not admitted via an attested tier. This supersedes, for V1
-registration, §7c's oracle-gating (decision 1) — it does not touch the
-`> 1-chunk` attested story, which simply waits (with the chunk-token
-extension or a native blake3 builtin) behind a version bump.
+**Consequence — ratified supersession (2026-07-18, A-001).** E1–E9 make the
+semantic projection of a `<= 1024 B` inception **fully on-chain-checked** —
+the §7c "attested, challengeable projection" and the #91 oracle activation
+gate are not wired in this path. Registration in V1 is permissionless and
+trustless for the single-chunk tier; `> 1024 B` inceptions are rejected
+outright (H1), not admitted via an attested tier. **This formally
+supersedes #91 decision 1 (oracle-gated registration) for V1** — ratified
+at the epic spec checkpoint (A-001): it removes a trusted role rather than
+adding one, and reuses the slice-binding machinery the enforcement layer
+already relies on. It does not touch the `> 1-chunk` attested story, which
+simply waits (with the chunk-token extension or a native blake3 builtin)
+behind a version bump. Two **binding conditions** ride with the
+supersession:
+
+1. **Offset-misdirection adversarial vectors are mandatory** — a dedicated
+   negative-vector family (wrong offsets, overlapping spans, spans pointing
+   into `a`/other fields, derivation-code prefix confusion, truncated
+   slices), in both languages, before the slice landing E1–E9 is accepted.
+2. **Measurement gate** — the full registration Tx B (E1–E9 + the blake2b
+   proof-name recompute + R7 signatures) measured at the 2-key and 7-key
+   shapes against the epic's ≥25% headroom target; **on a miss, STOP and
+   Q-file the epic owner** — the fallback is re-introducing the attested
+   tier, never weakening checks.
 
 ### Address role (O4 non-foreclosure)
 
@@ -242,11 +256,20 @@ script, so every spend still runs the V1 validator and `policy id ==
 payment hash` everywhere) remains fully available; nothing here forecloses
 address-per-role.
 
-### Unicity residual (decision requested)
+### Unicity — temporary pre-deployment residual (gate = #116 scope)
 
-Nothing in this path prevents minting the **same** `(policy,
-aid_asset_name)` twice: on-chain global-absence is unprovable without the
-#91 MPFS gate, which is not wired here. Bounding the harm:
+Ruled at the spec checkpoint (A-001): mint-once unicity is a ratified epic
+invariant, **not** a permanent residual. Nothing in this path prevents
+minting the **same** `(policy, aid_asset_name)` twice; that window is
+accepted **only pre-deployment** (the script hash freezes at deployment,
+not per-child — a later child amends the script). The unicity/absence gate
+is **explicit #116 scope** (the same invariant as tombstone terminality;
+mechanism — MPFS absence proof vs alternative — is decided there). #114's
+obligation is structural: the `Register` transaction shape **leaves room
+for one additional reference or consumed input** (the future gate input) —
+no check in the branch may assume a fixed input count or reject
+transactions for carrying inputs beyond those R5 names. Bounding the
+interim harm:
 
 - A duplicate's datum is forced (keys-must-match) to the same key-state as
   the genuine token — the attacker registers the *victim*, at the
@@ -260,9 +283,9 @@ aid_asset_name)` twice: on-chain global-absence is unprovable without the
   re-registration**, which would undermine tombstone terminality ("with
   mint-once unicity the AID can never re-register", #106).
 
-Where unicity enforcement lands (a mint-side MPFS absence proof in a later
-child, #116's terminality treatment, or a documented V1 residual) is an
-epic-level call — surfaced at the spec checkpoint, not decided here.
+Decided (A-001): the gate ships with #116 (issue updated by the epic
+owner); #114 documents the window as temporary and keeps the `Register`
+shape gate-ready as above.
 
 ---
 
@@ -322,34 +345,44 @@ bundles.
       the wrong preimage (KERI `event_raw` instead of the `InceptionMessage`
       preimage), crossed `network_id`/policy — each rejected (R7).
 - [ ] Slice vectors: each of E1–E9 has at least one rejection (mismatched
-      slice or count) and the offset-misdirection cases (off_k → `n` field,
-      off_k → `b` field, duplicated offset) are rejected.
+      slice or count), **plus the dedicated offset-misdirection family
+      (A-001 QB condition 1)**: wrong offsets, overlapping spans, spans
+      pointing into `a`/other fields (incl. off_k → `n`, off_k → `b`),
+      derivation-code prefix confusion, truncated slices, duplicated
+      offsets — executable in both languages, landed with the E1–E9 slice.
 - [ ] Deposit vector: state output below `min_ada + d_reg` rejected (R8).
 - [ ] Haskell/Aiken parity: shared generated vectors, byte-identical
       encodings AND identical verdicts in both implementations; drift check
       green; existing fixture bundles byte-unchanged.
-- [ ] Measurement cells for the hash-proof mint (300 B, 966 B, 1024 B) and
-      the registration context (2-key, 7-key GLEIF, witnessed 2-of-3)
-      reported against the mainnet per-tx budget with the ≥25% headroom
-      verdict (or a recorded rationale).
+- [ ] Measurement cells for the hash-proof mint (300 B, 966 B, 1024 B)
+      reported against the mainnet per-tx budget (rationale recorded if the
+      1024 B boundary cell runs tight — known 71.7% mem from spike #88).
+- [ ] **Measurement gate (A-001 QB condition 2):** the full registration
+      Tx B context (E1–E9 + blake2b proof-name recompute + R7 signatures)
+      measured at the 2-key and 7-key shapes meets the epic's ≥25% headroom
+      target; on a miss the ticket STOPS and Q-files the epic owner (the
+      fallback is re-introducing the attested tier, never weakening checks).
 - [ ] Spend paths fail closed at HEAD (R10 vector).
 
-## Open questions (for the spec checkpoint — Q-001)
+## Spec-checkpoint rulings (Q-001 → A-001, 2026-07-18 — all resolved)
 
-- **QA — single-tx hash-proof mint.** Ratify the lane-packed single-tx
-  design (no Step/Finish chain ⇒ no intermediate chaining value ⇒ the §7c
-  cage-confinement invariant is vacuous for this path)?
-- **QB — oracle-less V1 registration.** Ratify that E1–E9 supersede the #91
-  oracle projection attestation for the ≤1-chunk tier (permissionless
-  registration; no provisional/active states, no bonds, no oracle in #114)?
-- **QC — unicity.** Accept duplicate-mint as a bounded V1 residual, or
-  schedule the MPFS absence gate into a sibling (#116 terminality depends on
-  the answer)?
-- **QD — ACTIVE address.** Ratify `Address(Script(hash), None)` as ACTIVE
-  with role encoding deferred (staking-credential path left open)?
-- **QE — oversize tier.** Ratify hard rejection of `> 1024 B` inceptions in
-  V1 (no attested tier wired)?
-- **QF — KERI event signatures.** Registration verifies `InceptionMessage`
-  signatures only (R7); the icp's own KERI signatures stay off-chain (KEL
-  audit). Add on-chain re-verification (≈ |k| extra native Ed25519 checks)
-  as belt-and-braces, or keep R7-only?
+- **QA — APPROVED.** Single-tx lane-packed hash-proof mint; no Step/Finish
+  chain, no intermediate chaining value, §7c cage confinement vacuous for
+  this path.
+- **QB — APPROVED WITH CONDITIONS.** Oracle-less trustless registration for
+  the ≤1-chunk tier formally supersedes #91 decision 1 for V1 (dated note
+  above). Binding conditions: the offset-misdirection vector family and the
+  Tx B measurement gate with STOP-on-miss (folded into the acceptance
+  criteria).
+- **QC — MODIFIED.** Duplicate-mint is a **temporary pre-deployment
+  residual**; the unicity/absence gate is **#116 scope**; the `Register`
+  shape leaves room for the gate input (section above).
+- **QD — APPROVED.** ACTIVE = `Address(Script(own_hash), None)`; role
+  encoding stays open on the staking-credential axis for #116/#117 (O4).
+- **QE — APPROVED.** `> 1024 B` inceptions hard-rejected in V1 — the
+  documented M1 limit; larger boards wait behind a version bump.
+- **QF — APPROVED (R7-only), considered-and-rejected.** On-chain
+  re-verification of the icp's indexed KERI self-signatures adds no security
+  against squat: the registration message is already signed by the event's
+  own keys to the event's own threshold, so possession is proven; the KEL
+  carries the self-signatures for off-chain audit.

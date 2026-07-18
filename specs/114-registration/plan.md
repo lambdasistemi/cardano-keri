@@ -97,6 +97,15 @@ no seeds/offsets, so no `InceptionMessage` signatures exist for the A-001
 scenario each — existing bundles byte-unchanged, S1 loader spec updated.
 One pair commit; then S5 proceeds on true shapes.
 
+### S5b — base64url encoder optimization (interposed; A-001 QB-2 stop)
+
+The S5 measurement gate fired: reg_7key at 84.6% mem (15.4% headroom).
+Diagnosis: `base64url.encode` folds per byte (~19K mem/input byte); E2/E4/
+E6/E8 run 2N+1+W encodes. Remediation: 3-bytes-per-step encoder,
+byte-identical output (parity pinned by base64url_tests, S3 qb64 goldens,
+shared vectors). No check changes. Attested-tier fallback (the A-001-named
+path) is reserved for a post-5b miss — epic Q-003 records the stop.
+
 ### S5 — checkpoint validator scaffold + Register branch
 
 `checkpoint.ak` with parameters `(version, hash_proof_policy, network_id,

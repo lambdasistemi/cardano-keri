@@ -8,10 +8,12 @@ bundle is generator-emitted; this spec proves the committed artifacts carry
 the ground truth the registration path (E1-E9 slice checks, R7 signatures)
 is later tested against:
 
-  1. __Family completeness__ — the five sub-fixtures (@reg_witnessed@,
-     @reg_weighted@, @reg_dip@, @reg_drt@, @reg_oversize@) are present with
-     event record, signatures, per-field offsets, and signer seeds; event
-     types and shapes (3-wit toad-2, weighted @kt@, delegation) match.
+  1. __Family completeness__ — the seven sub-fixtures (@reg_witnessed@,
+     @reg_weighted@, @reg_dip@, @reg_drt@, @reg_oversize@, @reg_2key@,
+     @reg_7key@) are present with event record, signatures, per-field
+     offsets, and signer seeds; event types and shapes (3-wit toad-2,
+     weighted @kt@, delegation, unwitnessed 2-key, unwitnessed
+     GLEIF-shaped 7-key) match.
 
   2. __Size tiering__ — @reg_oversize@ exceeds the 1024-byte single-chunk
      boundary (H1 rejection material); every other event fits within it.
@@ -81,6 +83,8 @@ regFixtures =
     , RegFixture "reg_dip" "dip" False
     , RegFixture "reg_drt" "drt" False
     , RegFixture "reg_oversize" "icp" True
+    , RegFixture "reg_2key" "icp" False
+    , RegFixture "reg_7key" "icp" False
     ]
 
 spec :: Spec
@@ -95,6 +99,10 @@ spec =
                     checkWitnessedShape fx `shouldBe` Right ()
                 it "reg_weighted has a fractionally-weighted kt" $ \fx ->
                     checkWeightedShape fx `shouldBe` Right ()
+                it "reg_2key is the unwitnessed 2-key kt-2 shape" $ \fx ->
+                    checkTwoKeyShape fx `shouldBe` Right ()
+                it "reg_7key is the unwitnessed GLEIF-shaped 7-key board" $ \fx ->
+                    checkSevenKeyShape fx `shouldBe` Right ()
                 forM_ (["reg_dip", "reg_drt"] :: [Text]) $ \key ->
                     it (T.unpack key <> " records its delegator") $ \fx ->
                         checkDelegated fx key `shouldBe` Right ()
@@ -172,6 +180,52 @@ checkWeightedShape fx = do
     case kt of
         Array _ -> Right ()
         _ -> Left "reg_weighted: kt is not a fractionally-weighted array"
+
+{- | The true unwitnessed 2-key shape (A-003\/T114-S5a): 2 keys,
+unweighted @kt@ 2, no witnesses, toad 0 — the S5 2-key measurement
+subject.
+-}
+checkTwoKeyShape :: Value -> Either String ()
+checkTwoKeyShape fx = do
+    ked <- kedOf fx "reg_2key"
+    ks <- textArrayField ked "k"
+    unless (length ks == 2) $
+        Left ("reg_2key: expected 2 keys, got " <> show (length ks))
+    kt <- textField ked "kt"
+    unless (kt == "2") $
+        Left ("reg_2key: expected kt 2, got " <> T.unpack kt)
+    wits <- textArrayField ked "b"
+    unless (null wits) $
+        Left ("reg_2key: expected no witnesses, got " <> show (length wits))
+    bt <- textField ked "bt"
+    unless (bt == "0") $
+        Left ("reg_2key: expected toad 0, got " <> T.unpack bt)
+
+{- | The unwitnessed GLEIF-shaped 7-key board (A-003\/T114-S5a): 7
+fractionally-weighted keys, no witnesses — the S5 7-key measurement
+subject; must fit the 1024-byte tier ('checkSize' enforces the size).
+-}
+checkSevenKeyShape :: Value -> Either String ()
+checkSevenKeyShape fx = do
+    ked <- kedOf fx "reg_7key"
+    ks <- textArrayField ked "k"
+    unless (length ks == 7) $
+        Left ("reg_7key: expected 7 keys, got " <> show (length ks))
+    kt <- note "reg_7key: kt missing" (lookupKey "kt" ked)
+    case kt of
+        Array xs ->
+            unless (length xs == 7) $
+                Left
+                    ( "reg_7key: expected a 7-clause weighted kt, got "
+                        <> show (length xs)
+                    )
+        _ -> Left "reg_7key: kt is not a fractionally-weighted array"
+    wits <- textArrayField ked "b"
+    unless (null wits) $
+        Left ("reg_7key: expected no witnesses, got " <> show (length wits))
+    bt <- textField ked "bt"
+    unless (bt == "0") $
+        Left ("reg_7key: expected toad 0, got " <> T.unpack bt)
 
 -- | E1 material: the delegated events record which AID delegates them.
 checkDelegated :: Value -> Text -> Either String ()

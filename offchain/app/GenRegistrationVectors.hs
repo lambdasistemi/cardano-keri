@@ -138,7 +138,9 @@ main = do
         wgt = orDie (regCase ctx0 fx "reg_weighted")
         dip = orDie (regCase ctx0 fx "reg_dip")
         drt = orDie (regCase ctx0 fx "reg_drt")
-        scenarios = buildScenarios wit wgt dip drt
+        r2k = orDie (regCase ctx0 fx "reg_2key")
+        r7k = orDie (regCase ctx0 fx "reg_7key")
+        scenarios = buildScenarios wit wgt dip drt r2k r7k
     mapM_ assertVerdict scenarios
     let rendered = render wit wgt scenarios
     case out of
@@ -307,10 +309,20 @@ data Scenario = Scenario
 {- | Every S2 family member as a deterministic construction over the
 honest fixture cases — positives, R3\/R4, per-slice E1-E9, R7
 signature negatives, R8, and the full A-001 offset-misdirection
-family. Constructions mirror the S2 spec bodies exactly.
+family — plus the two true-shape honest scenarios (unwitnessed 2-key,
+unwitnessed GLEIF 7-key; A-003\/T114-S5a) the S5 validator positives
+and measurement cells build from. Constructions mirror the S2 spec
+bodies exactly.
 -}
-buildScenarios :: RegCase -> RegCase -> RegCase -> RegCase -> [Scenario]
-buildScenarios wit wgt dip drt =
+buildScenarios ::
+    RegCase ->
+    RegCase ->
+    RegCase ->
+    RegCase ->
+    RegCase ->
+    RegCase ->
+    [Scenario]
+buildScenarios wit wgt dip drt r2k r7k =
     [ sc
         "pos_witnessed"
         "reg_witnessed (3-wit toad-2) honest package -> Valid"
@@ -334,6 +346,22 @@ buildScenarios wit wgt dip drt =
         (rcDatum wit)
         boundary
         (rcEvidence wit)
+        (Right ())
+    , sc
+        "pos_2key"
+        "reg_2key (unwitnessed 2-key) honest package -> Valid"
+        ctx0
+        (rcDatum r2k)
+        funded
+        (rcEvidence r2k)
+        (Right ())
+    , sc
+        "pos_7key"
+        "reg_7key (unwitnessed GLEIF 7-key) honest package -> Valid"
+        ctx0
+        (rcDatum r7k)
+        funded
+        (rcEvidence r7k)
         (Right ())
     , sc
         "r3_seq_nonzero"

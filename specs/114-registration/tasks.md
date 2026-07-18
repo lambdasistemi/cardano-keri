@@ -39,7 +39,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 5a — true 2-key/7-key registration shapes (Q-003 ruling: option B)
 
-- [ ] T114-S5a Extend the registration fixture family with `reg_2key`
+- [X] T114-S5a Extend the registration fixture family with `reg_2key`
       (≤1024 B unwitnessed 2-key icp) and `reg_7key` (≤1024 B unwitnessed
       GLEIF-shaped 7-key icp), seeds + offsets, existing bundles
       byte-unchanged; extend `GenRegistrationVectors.hs` +

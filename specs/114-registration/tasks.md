@@ -66,7 +66,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 6 — measurements report + finalization
 
-- [ ] T114-S6 `specs/114-registration/MEASUREMENTS.md`: reported cells +
+- [X] T114-S6 `specs/114-registration/MEASUREMENTS.md`: reported cells +
       ≥25% headroom verdict (or recorded rationale); close cell gaps.
 - [ ] T114-S6b (orchestrator) PR body audit, `chore: drop gate.sh`,
       mark-ready Q-file to the epic owner.

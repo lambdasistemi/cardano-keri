@@ -56,7 +56,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 5 — checkpoint validator scaffold + Register branch
 
-- [ ] T114-S5 `validators/checkpoint.ak` (`version`, `hash_proof_policy`,
+- [X] T114-S5 `validators/checkpoint.ak` (`version`, `hash_proof_policy`,
       `network_id`, `d_reg`): `Register` mint branch composing R1–R8 (no
       fixed-input-count assumption — room for the #116 gate input, A-001
       QC), fail-closed spend (R10); ScriptContext end-to-end positives

@@ -6,8 +6,10 @@
     mirror** — **not** the automatic divergence-burn convergence enforcer this page was
     originally written around. Identity is KERI-sovereign (one witnessed KEL); the Cardano per-AID
     checkpoint is a globally ordered, **spend-linearized projection of current authority**,
-    **not a second independently sovereign identity history**. For a witnessed AID it cannot
-    advance without threshold receipts, and it can lag. The retired automatic
+    **not a second independently sovereign identity history**. A witnessed advance (incoming
+    `new_toad > 0`) cannot proceed without the incoming set's threshold receipts, though it can
+    lag; a rotation to `new_toad = 0` is receipt-free and visibly exits the witnessed
+    guarantee. The retired automatic
     divergence-burn / `trie_key` / "Fork = forfeit" mechanics are quarantined, in the past
     tense, in the
     [historical appendix](#historical-appendix-the-retired-divergence-burn-design) at the
@@ -61,7 +63,7 @@ service, recovery authority, or authoritative indexer. Ordinary KERI watchers po
 A super watcher observes witnessed KERI events against the Cardano checkpoint and acts only
 on evidence:
 
-- **Relay a fully witnessed anchoring** transition onto the checkpoint when the seal and its threshold witness receipts are valid (the §4 / §6a two-seal handoff).
+- **Relay a fully witnessed anchoring** transition onto the checkpoint when the seal and its threshold witness receipts are valid (the §4 / §6a incoming-set validation).
 - **Submit** objective **duplicity** or seal↔native-**correspondence proofs** — the §7b fraud-proof shape, drilled via #90 — wherever the stored witness threshold receipted the divergent establishment event.
 - **Request or trigger the applicable freeze** path when safe advancement is impossible: a
   later witnessed KERI event, correspondence fraud, or conflict that is not yet proved

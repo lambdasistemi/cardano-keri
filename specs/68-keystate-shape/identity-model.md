@@ -8,7 +8,9 @@ Amended 2026-07-09 after adversarial validation: two limits of the "cryptographi
 claim stated explicitly (§7a — genesis binding, seal↔native correspondence); receipt
 mechanics corrected against keripy (receipts sign **raw event bytes**, so the blake2b-SAID
 requirement is **dropped** — §5); witness-set rotation elevated to a ratification blocker
-and then **drilled to resolution the same day** (§6a — the two-seal handoff). Spike #88
+and then **drilled to resolution the same day** (§6a), whose resolution was **recut
+2026-07-18** to KERI's incoming-set validation rule (the earlier two-seal handoff had no
+basis in KERI and was removed). Spike #88
 reopened the genesis in-script-blake3 performance question on 2026-07-10, and the
 lane-packed second pass the same day extended the fit to the whole single-chunk
 domain. Genesis was then **decided 2026-07-11 (#91)** on that evidence: two merged
@@ -118,8 +120,8 @@ What does Cardano check on the seal?
 **The no-fork decision (§1) forces witness-receipted.** Signature-only re-opens the fork.
 
 Cost of witness-receipting: Cardano must (a) track the **witness set + toad** as part of
-the checkpoint (they change through the two-seal handoff — §6a), and (b) verify
-threshold Ed25519 receipts over the seal.
+the checkpoint (they change through KERI's `br`/`ba`/`bt` delta, validated against the
+incoming set — §6a), and (b) verify threshold Ed25519 receipts over the seal.
 
 **Corrected against keripy (2026-07-09).** Witness receipts sign the **raw serialized
 event bytes**, not the SAID — `Kevery.processReceipt` / `valSigsWigsDel` verify
@@ -156,76 +158,82 @@ AIDs cannot consume or serialize it. This is a *physical-storage* selection only
 not alter the R-KEL classification (§7c / `system-architecture.md`).
 
 Both the signing keys **and** the witness set advance through witness-receipted seals.
-Which set receipts a witness-set change was the sharp question — verified keripy behavior
-cuts both ways:
+Which set receipts a witness-set change is settled by KERI itself — verified against the
+ToIP KERI spec, keripy 1.3.5/2.0, production tooling, and an empirical control experiment
+(2026-07-18):
 
-- KERI counts a rotation's receipts against the **new** set and new toad
+- KERI counts a rotation's receipts against the **new (incoming)** set and new toad
   (`Kever.update` → `self.rotate(serder)` → `valSigsWigsDel(wits=new)`), and a
-  post-rotation seal is receipted by the **then-current (new)** set.
-- So a naive "receipted by the *old* threshold" rule **deadlocks** — cut witnesses have no
-  duty to receipt anything after removal — while accepting the new set's receipts lets the
-  checking set be **swapped inside the very event being checked**, voiding the duplicity
-  argument behind no-fork (§5).
+  post-rotation seal is receipted by the **then-current (new)** set. keripy actively
+  **rejects** a rotation offered to the outgoing set — the cut witnesses' receipts do not
+  count.
+- So a "receipted by the *old* threshold" rule is not merely awkward, it is **not KERI**: it
+  would make Cardano unable to mirror rotations that every standard KERI tool
+  (keripy/KERIA/Signify/Veridian) emits. Validating against the incoming set is therefore
+  **mandatory**, and it is safe for the same reason a pure key rotation is (§5, §6a).
 
-The resolution is the two-seal handoff, drilled in §6a.
+The resolution is the incoming-set validation rule, drilled in §6a.
 
-### 6a. Witness-set rotation: the two-seal handoff
+### 6a. Witness-set rotation: incoming-set validation
 
-**Rule: every checking set endorses its successor.** The chain of witness custody must be
-unbroken from genesis — Cardano never checks receipts against a set that was not itself
-endorsed by the previously checked set. The mechanism exploits timing: a witness change is
-announced *while the outgoing set is still in office*.
+**Rule: a witness-set change is validated against the incoming set — exactly as KERI does.**
+A witness-changing rotation carries only KERI's backer delta — `br` (backers cut), `ba`
+(backers added), and the new threshold `bt` — and is validated against the **incoming**
+witness set `new_set = (prior − br) ∪ ba` at the **new** `bt`. There is **no outgoing-set
+endorsement and no two-seal handoff.** The validator computes `new_set` from the stored
+`(witnesses, toad)` and the message's `br`/`ba`, verifies the advance seal's threshold
+receipts against `new_set` at `bt`, and stores `(new_set, bt)`. A pure key rotation
+(`br = ba = ∅`) is just the special case `new_set = prior` — the same single-seal advance
+as §4–5. The cut/outgoing witnesses receipt nothing: keripy actively rejects a rotation
+offered to the outgoing set, so a Cardano rule that demanded their endorsement could not
+mirror rotations that every standard KERI tool (keripy/KERIA/Signify/Veridian) emits.
 
-1. **Seal W (handoff pre-announcement).** Before the native rotation, the controller emits
-   an interaction event whose seal data carries a blake2b commitment to the incoming
-   configuration `(W', toad')`. Signed by the current keys; receipted by the **outgoing**
-   set — natively and willingly, because at this sequence number they *are* the current
-   witnesses (no post-removal duty is ever invoked, which is what killed the naive
-   old-set rule).
-2. **Native rotation** follows in the KEL (Blake3, receipted per KERI by the new set —
-   Cardano never reads it).
-3. **Seal K (the §4 advance seal).** Post-rotation: reveals the pre-committed new keys,
-   commits the next digest, signed by the new keys, receipted by the **incoming** set
-   `W'`.
+**Why no-fork survives — identical to a pure key rotation.** No-fork does **not** rest on
+the checking set being frozen across the event; it rests on exactly what KERI's own safety
+rests on, now read against `new_set`:
 
-**One Cardano tx can carry both seals**: the validator checks Seal W against the *stored*
-`(witnesses, toad)`, then Seal K against the just-endorsed `(W', toad')`, and advances the
-checkpoint once. No "pending" state needs to persist on-chain, and a pure key rotation
-(witness set unchanged) needs only Seal K, exactly as in §4–5.
+1. **Honest witness threshold** of the AID's witnesses — the same §5 assumption.
+2. **First-seen duplicity protection** — a witness will not receipt two conflicting events
+   at one sequence number, so the receipted rotation Cardano sees is the one KERI saw.
+3. **A non-delegated rotation cannot supersede another rotation** — at a given `sn` a
+   non-delegated establishment event is first-seen-wins; nothing lets a second, conflicting
+   rotation displace the first. This is the *same* protection that makes a pure key rotation
+   unforgeable, so a witness-set change adds no new attack surface.
 
-**Why no-fork survives.** The checking set can no longer be swapped inside the checked
-event: introducing a disjoint set requires the outgoing threshold to receipt the handoff,
-and two conflicting handoffs at one sequence number are duplicity against the *same*
-outgoing set — the very protection §5 already relies on. Induction restored: every
-checking set is endorsed by its predecessor, back to genesis (whose own binding is §7a's
-stated limit).
+The earlier worry — that letting the incoming set validate its own introduction "voids the
+duplicity argument" — was mistaken: the incoming set is not something the controller can
+conjure past its own honest witnesses, and the first-seen / non-superseding rules bind it
+exactly as they bind key rotations.
 
-**Cost: stricter than native KERI.** KERI lets key authority alone rotate witnesses; this
-rule adds outgoing-set consent for the *Cardano-facing* handoff. The consequence is a
-liveness dependence: an outgoing set that withholds receipts (dead or hostile beyond the
-toad margin) can hold the checkpoint's witness evolution hostage — it cannot forge, only
-freeze. Note this scenario already breaks the model's *existing* trust assumption (§5:
-honest threshold of the controller's own witnesses), and it degrades plain KERI liveness
-for that AID too (the same witnesses gate native receipting).
+**Downgrade to `toad = 0`.** A rotation to a witnessless state is not a special validator
+case: `new_set = ∅` validates against the **empty incoming set** — zero receipts required,
+and no outgoing endorsement to demand. The single defense is the **visible `toad = 0` in
+the checkpoint datum**, which consumers that require witnessed identities may reject. A
+checkpoint that was *already* witnessless likewise has no receipts to present and is outside
+the witnessed no-fork guarantee.
 
-**V1 liveness policy: fail closed; no signature-only fallback.** If the checkpoint's stored
-`toad > 0`, no amount of controller signatures or elapsed time can replace the required
-witness receipts. If the outgoing threshold is unreachable, the Cardano checkpoint cannot
-advance or change its checking set. That is an explicit liveness failure, not a reason to
-re-open a second, controller-only identity history. A future version may define a
-KERI-compatible recovery/dispute protocol, but it must use a new validator/version and a
-discoverable migration; it is not a hidden V1 timeout path.
+**No Cardano-side magnitude bound (V1).** V1 caps neither how many backers a single rotation
+may cut nor add: a legitimate full-pool migration — cutting the entire prior set and
+installing a disjoint one — is valid KERI that every standard tool emits, so refusing it on
+the Cardano side would break interoperability. The residual it leaves for the
+*correspondence* fraud proof (a rotation that both swaps the witness set and diverges the
+keys is receipted only by the new set, so a proof against the prior set cannot verify) is
+stated in §7b — a correspondence-policing limit, not a reason to bound the rotation here.
 
-An explicit transition to a witnessless state is not a bypass: while witnesses are still in
-place, the outgoing set must receipt Seal W committing to `(W' = [], toad' = 0)`. The
-resulting checkpoint then visibly carries `toad = 0`, allowing consumers that require
-witnessed identities to reject the weaker mode. A checkpoint that was already witnessless
-has no receipts to present; it is outside the witnessed no-fork guarantee.
+**V1 liveness policy: fail closed; no signature-only fallback.** When the rotation's
+**incoming** `new_toad > 0`, no amount of controller signatures or elapsed time can replace
+the required receipts over the incoming set. If that incoming threshold is unreachable, the
+Cardano checkpoint cannot advance to the witnessed target — an explicit liveness failure, not
+a reason to re-open a second, controller-only identity history. (The controller may still
+rotate to `new_toad = 0`, which needs zero receipts, at the cost of the visible witnessless
+mode above.) A future version may define a KERI-compatible recovery/dispute protocol, but it
+must use a new validator/version and a discoverable migration; it is not a hidden V1 timeout
+path.
 
-**Out of scope here:** KERI superseding/delegated recovery (no delegated AIDs in this
-model yet); divergence between the announced `W'` and the native rotation's actual set is
-the §7a correspondence limit — **required and policed as a defined superwatcher duty via
-on-chain fraud proofs (drilled #90, §7b)**, degrading only for the precise witness-swap
+**Out of scope here:** KERI superseding/delegated recovery (no delegated AIDs in this model
+yet); divergence between the rotation's claimed key-state and the native rotation's actual
+set is the §7a correspondence limit — **required and policed as a defined superwatcher duty
+via on-chain fraud proofs (drilled #90, §7b)**, degrading only for the precise witness-swap
 residual (§7b) to the watcher-attested path.
 
 ## 7. What this settles: the integrity hazard
@@ -321,8 +329,10 @@ proof cannot verify its receipts against the stored set. That divergence remains
 **off-chain falsifiable** (anyone replaying the KEL sees it) but not on-chain-provable —
 it degrades to the watcher-attested freeze path, the same trust grade as genesis (§7a).
 Under the model's base assumption (honest threshold of the *stored* set) the escape
-requires the controller to burn her entire witness relationship in one event — loud,
-attributable, and exactly what the §6a handoff refuses to endorse on the Cardano side.
+requires the controller to burn her entire witness relationship in one event — loud and
+attributable. §6a validates such a full-pool migration as ordinary KERI (no outgoing
+endorsement, no Cardano-side magnitude bound); the residual is this correspondence-proof
+gap, not a rotation the validator could refuse.
 
 **Role assignment:** submitting fraud proofs is the super-watcher's identity-plane job
 (#10). Relay and freeze are permissionless but do not receive the identity's conviction
@@ -473,12 +483,13 @@ integrity the checkpoint provides.
 
 ## 10. Open threads to drill
 
-1. **Witness-set rotation — drilled 2026-07-09, resolution in §6a** (two-seal handoff:
-   pre-announcement receipted by the outgoing set while still in office, activation
-   receipted by the incoming set; both seals in one advance tx). No longer a blocker.
-   V1 has **no time-locked signature-only fallback**. Residual questions are whether Seal W
-   and Seal K must be KEL-adjacent or may be separated by interaction events, and the
-   delegated/superseding-recovery case when delegated AIDs enter the model.
+1. **Witness-set rotation — drilled 2026-07-09, resolution recut 2026-07-18 in §6a**
+   (incoming-set validation: a witness change carries KERI's `br`/`ba`/`bt` delta and is
+   validated against the incoming set `new_set = (prior − br) ∪ ba` at the new `bt`, with no
+   outgoing-set endorsement — exactly as KERI does). No longer a blocker. V1 has **no
+   time-locked signature-only fallback** (fail closed) and **no Cardano-side magnitude
+   bound** on the backer delta. Residual question is the delegated/superseding-recovery case
+   when delegated AIDs enter the model.
 2. **Pin the seal's serialization** — receipts sign raw bytes (§5), so Plutus parses the
    seal to extract AID / `s` / commitments: fix one serialization kind + field layout so
    parsing is cheap and unambiguous. (Replaces the former "blake2b-SAID digest agility"

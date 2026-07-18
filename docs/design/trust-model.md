@@ -24,12 +24,14 @@ The identity registry script enforces the following properties within a single b
 
 **Pre-rotation binding.** A rotation is valid only if the revealed keys match the committed `next_keys` digests (`blake3_256(qb64(reveal_key))` membership) **and** the signer evidence satisfies both thresholds — the rotation's own and the committed next threshold (the KERI dual-threshold rule). This cannot be circumvented without a preimage of blake3_256.
 
-**Witness-gated advancement.** If the spent checkpoint has `toad > 0`, a normal advance
-also requires at least `toad` valid Ed25519 witness receipts over the exact KEL anchoring
-evidence. Controller signatures alone are insufficient, even after a timeout. A witness-set
-change uses the two-seal handoff: the outgoing set receipts the proposed replacement before
-the incoming set receipts activation. An explicitly witnessless checkpoint (`toad = 0`) is
-a visible weaker mode that consumers may reject.
+**Witness-gated advancement.** An advance's witness receipts are verified against its
+**incoming (new)** set at the new toad (`new_toad`): when `new_toad > 0` the advance requires
+at least `new_toad` valid Ed25519 receipts over the exact KEL anchoring evidence, and
+controller signatures alone are insufficient even after a timeout. For a pure key rotation the
+incoming set equals the stored one. A witness-set change is validated against that incoming
+set — exactly as KERI does, with no outgoing-set endorsement and no two-seal handoff. A
+rotation to `new_toad = 0` validates against the empty incoming set (zero receipts); the
+resulting checkpoint visibly carries `toad = 0`, a weaker mode consumers may reject.
 
 ## Divergence enforcement
 

@@ -124,6 +124,15 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
+# Measure the checkpoint Register branch ex-units at the A-001 QB-2 gate
+# shapes (#114 S5: reg_2key, reg_7key GLEIF, reg_witnessed 2-of-3) — each cell
+# the full Tx-B context (R1/R2/R5 shape + E1-E9 + blake2b proof-name recompute
+# + R7 signatures). Same caveat as measure-enforcement: an INVOCATION printing
+# exact mem/cpu per cell, not a headroom assertion — the >=25%-headroom verdict
+# lives in specs/114-registration/MEASUREMENTS.md (S6).
+measure-checkpoint:
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_checkpoint
+
 # --- BLAKE3 spike (pinned Aiken) ---
 
 # Format the BLAKE3 spike with its pinned compiler
@@ -151,7 +160,7 @@ format: format-offchain format-onchain format-blake3
 format-check: format-check-offchain format-check-onchain format-check-blake3
 
 # Onchain CI gate (mirrors the Onchain job)
-ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof
+ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof measure-checkpoint
 
 # BLAKE3 spike CI gate (mirrors the BLAKE3 job)
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3

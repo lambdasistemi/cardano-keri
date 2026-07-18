@@ -48,7 +48,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 5b — base64url encoder optimization (A-001 gate miss remediation)
 
-- [ ] T114-S5b Rewrite `cardano_keri/base64url.encode` from per-byte
+- [X] T114-S5b Rewrite `cardano_keri/base64url.encode` from per-byte
       fold (~638K mem per 33-byte encode) to a 3-bytes-per-step encoder
       with byte-identical output; extend `base64url_tests.ak` parity
       coverage; full suite + S3 qb64 goldens green; re-measure the S5

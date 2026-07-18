@@ -15,7 +15,9 @@ Fixture families (each a JSON bundle under fixtures/):
   lag           — a witnessed rotation strictly ahead of a recorded checkpoint
                   state: the Freeze evidence.
   registration  — #114 icp-admission family: witnessed / weighted / delegated
-                  (dip, drt) / oversize inceptions, each with generator-emitted
+                  (dip, drt) / oversize inceptions plus the true S5
+                  measurement shapes (unwitnessed 2-key, unwitnessed
+                  GLEIF-shaped 7-key — T114-S5a), each with generator-emitted
                   per-field byte offsets into the raw serialization (offset
                   convention documented on _field_spans) and exported signer
                   seeds (temp test keys from the fixed Salter seed below —
@@ -481,6 +483,26 @@ def build():
         code=coring.MtrDex.Blake3_256,
     )
 
+    # True S5 measurement shapes (A-003 / T114-S5a): the unwitnessed
+    # 2-key and the unwitnessed GLEIF-shaped 7-key icp, with seeds +
+    # offsets so the Cardano-side registration package (preimage
+    # signatures) can be produced for them like any family member.
+    r2c = salt.signers(count=2, transferable=True, temp=True, path="r2c")
+    r2n = salt.signers(count=2, transferable=True, temp=True, path="r2n")
+    ricp_2 = eventing.incept(
+        keys=[s.verfer.qb64 for s in r2c],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in r2n],
+        isith="2", nsith="2", code=coring.MtrDex.Blake3_256,
+    )
+
+    r7c = salt.signers(count=7, transferable=True, temp=True, path="r7c")
+    r7n = salt.signers(count=7, transferable=True, temp=True, path="r7n")
+    ricp_7 = eventing.incept(
+        keys=[s.verfer.qb64 for s in r7c],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in r7n],
+        isith=["1/3"] * 7, nsith=["1/3"] * 7, code=coring.MtrDex.Blake3_256,
+    )
+
     bundles["registration"] = {
         "note": (
             "#114 registration path ground truth: icp-admission fixtures "
@@ -517,11 +539,22 @@ def build():
             ricp_o, roc, ron,
             "GLEIF-Root-shaped 7-key 7-witness icp > 1024 B (H1 rejection material)",
         ),
+        "reg_2key": _reg_record(
+            ricp_2, r2c, r2n,
+            "unwitnessed 2-key kt-2 icp — the true S5 2-key measurement shape",
+        ),
+        "reg_7key": _reg_record(
+            ricp_7, r7c, r7n,
+            "unwitnessed GLEIF-shaped 7-key icp — the true S5 7-key measurement shape",
+        ),
     }
     assert bundles["registration"]["reg_oversize"]["event"]["raw_len"] > 1024, (
         "reg_oversize does not breach the single-chunk boundary"
     )
-    for small in ("reg_witnessed", "reg_weighted", "reg_dip", "reg_drt"):
+    for small in (
+        "reg_witnessed", "reg_weighted", "reg_dip", "reg_drt",
+        "reg_2key", "reg_7key",
+    ):
         assert bundles["registration"][small]["event"]["raw_len"] <= 1024, (
             f"{small} unexpectedly exceeds the single-chunk boundary"
         )

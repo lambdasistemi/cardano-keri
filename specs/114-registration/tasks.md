@@ -37,6 +37,15 @@ checked in the same amended commit that lands the slice.
       966 B / 1024 B mints, oversize, wrong-AID, multi-name, extra-quantity,
       burn branch) + size-tier measurement cells.
 
+## Slice 5a — true 2-key/7-key registration shapes (Q-003 ruling: option B)
+
+- [ ] T114-S5a Extend the registration fixture family with `reg_2key`
+      (≤1024 B unwitnessed 2-key icp) and `reg_7key` (≤1024 B unwitnessed
+      GLEIF-shaped 7-key icp), seeds + offsets, existing bundles
+      byte-unchanged; extend `GenRegistrationVectors.hs` +
+      `registration_vectors.ak` with an honest signed scenario each; update
+      the S1 loader spec's family assertions; regeneration byte-stable.
+
 ## Slice 5 — checkpoint validator scaffold + Register branch
 
 - [ ] T114-S5 `validators/checkpoint.ak` (`version`, `hash_proof_policy`,

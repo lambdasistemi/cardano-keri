@@ -90,6 +90,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
+    Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Ed25519Spec
     Paths_cardano_keri

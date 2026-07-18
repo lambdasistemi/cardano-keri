@@ -19,6 +19,7 @@ module Cardano.KERI.AID.Checkpoint.FixtureLoader (
     intField,
     arrayField,
     textArrayField,
+    intArrayField,
 
     -- * Decoders (shipped CESR / memory primitives)
     decodeHex,
@@ -93,6 +94,15 @@ textArrayField value k = do
   where
     asText (String t) = Right t
     asText _ = Left (T.unpack k <> ": element is not a string")
+
+-- | Require an array-of-integers (JSON numbers) field.
+intArrayField :: Value -> Text -> Either String [Integer]
+intArrayField value k = do
+    elems <- arrayField value k
+    traverse asInt elems
+  where
+    asInt (Number s) = Right (truncate s)
+    asInt _ = Left (T.unpack k <> ": element is not an integer")
 
 -- | Decode a base16 (hex) text to raw bytes.
 decodeHex :: Text -> Either String ByteString

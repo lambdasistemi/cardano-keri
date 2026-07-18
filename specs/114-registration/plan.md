@@ -75,7 +75,10 @@ verdict semantics). `gen-registration-vectors` emits both the canonical
 vector set and Aiken literals from one computation; Aiken suites assert
 byte-identity of encodings AND verdict identity per vector (parity =
 serialization + behavior). Wire the drift check beside the existing
-generators.
+generators. The offset-misdirection family (A-001 QB condition 1: wrong
+offsets, overlapping spans, spans into `a`/other fields, code-prefix
+confusion, truncated slices) must be executable in BOTH languages within
+S2+S3 — S3 is not acceptable without it.
 
 ### S4 — hash-proof minting policy
 
@@ -89,7 +92,10 @@ mirror. Measurement cells for the three sizes.
 
 `checkpoint.ak` with parameters `(version, hash_proof_policy, network_id,
 d_reg)`: `Register` mint branch composing R1–R8 (S3 predicate + mint/output/
-value checks in the validator body), R10 fail-closed spend handler.
+value checks in the validator body), R10 fail-closed spend handler. The
+branch must not assume a fixed input count nor reject extra inputs beyond
+those R5 names — structural room for the #116 unicity-gate input (A-001
+QC).
 ScriptContext-level end-to-end tests: full Tx-B contexts for the three
 positive fixtures (proof input present + burned), and the R1/R2/R5/R8/R10
 transaction-shape negatives. Registration-context measurement cells (2-key,
@@ -111,7 +117,10 @@ the epic owner.
 - **Budget:** the boundary blake3 (71.7% mem) is Tx A alone; if S4 cells
   show the full mint context breaching headroom at 1024 B, record the
   rationale and the effective cap (e.g. 966 B GEDA-scale) — an epic
-  escalation, not a silent cap.
+  escalation, not a silent cap. **Tx B is gated (A-001 QB condition 2):**
+  2-key and 7-key registration contexts must meet ≥25% headroom; on a miss,
+  STOP and Q-file the epic owner (fallback = attested tier, never weakened
+  checks).
 - **Aiken silent diagnostics:** always `script -qec 'aiken check' /dev/null`
   in briefs and the gate.
 - Slice order is strict: S2 depends on S1; S3 on S2; S5 on S3+S4; S4 only on

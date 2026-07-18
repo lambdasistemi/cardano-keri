@@ -14,7 +14,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 2 — Haskell registration predicate
 
-- [ ] T114-S2 `Cardano.KERI.AID.Checkpoint.Registration`: `B`-code qb64,
+- [X] T114-S2 `Cardano.KERI.AID.Checkpoint.Registration`: `B`-code qb64,
       canonical `kt`/`nt`/`bt` re-spelling, E1–E9 slice checks, proof-token
       name, pure R3/R4/R6/R7/R8 predicate + typed errors; fixture-driven
       RED→GREEN spec (positives: 2-key, witnessed, weighted, owner-replay;

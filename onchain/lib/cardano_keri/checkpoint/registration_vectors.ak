@@ -1,0 +1,2228 @@
+//// Auto-generated Aiken registration vectors for #114 — DO NOT EDIT.
+////
+//// Regenerate with `just gen-registration-vectors` (runs
+//// offchain/app/GenRegistrationVectors.hs over the committed keripy
+//// registration.json). Each scenario is the deployment context, genesis
+//// datum, lovelace, evidence, and verdict of one S2 RegistrationSpec
+//// family member; the generator asserts the Haskell predicate returns
+//// each recorded verdict before emitting, and registration_tests.ak
+//// asserts registration_predicate reproduces them one-for-one (verdict
+//// parity) plus the preimage/proof-name/re-spelling/qb64 byte goldens.
+//// `just check-registration-vectors` forbids drift.
+
+use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}
+use cardano_keri/checkpoint/message.{
+  InceptionIllFormed, InceptionNativeSnNonZero,
+}
+use cardano_keri/checkpoint/registration.{
+  DeploymentContext, E1EventTypeMismatch, E2AidMismatch, E3SequenceMismatch,
+  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,
+  E7NextThresholdMismatch, E8WitnessesMismatch, E9ToadMismatch,
+  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
+  R8DepositBelowMinimum, RegistrationEvidence, RegistrationInvalid,
+  RegistrationValid, RegistrationVerdict,
+}
+use cardano_keri/checkpoint/threshold.{
+  DuplicateKey, Unweighted, Weight, Weighted,
+}
+
+/// reg_witnessed reconstructed InceptionMessage canonical-CBOR
+/// preimage under ctx0 (the R7 signature target; byte-parity golden)
+pub const witnessed_preimage: ByteArray =
+  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763100581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc58201220792f8be300286a1c14a651ec7a25479632d415ea49ff25617dc81d1dd12b5820395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b9829f582039ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f582046c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5ffd8799f02ff9f5820429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc915820ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9bffd8799f02ff9f5820edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c464714758207952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce715820df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2ff0200ff"
+
+/// reg_weighted reconstructed-message preimage under ctx0
+pub const weighted_preimage: ByteArray =
+  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763100581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820595f654091d3eef0743fc222dbfbb1d6a3fa39f9c188b2bc9f391cf7aa2e5256582049e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe9f5820a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86582015896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead6658209e1f96f704feb873d90ae7529c5a3dd99130c985526eef6e3fd92c13fb74280bffd87a9f9f9fd8799f0102ffd8799f0104ffd8799f0104ffffffff9f58201966e84856ea81f3af978ab9628d35cc3fd977ad0c619b306efe14c39df2331c58207bfaff1fd6f8eae4984d281b1fae296c8063d156ef31a7c2e0fe661530059f32582019b261aaef1f707ee0e671a8b09d5e74b94c99809c23e9a327c47231ce32985effd87a9f9f9fd8799f0102ffd8799f0104ffd8799f0104ffffffff800000ff"
+
+/// blake2b_256(reg_witnessed bytes ‖ aid) — the R5 proof-token name
+pub const witnessed_proof_name: ByteArray =
+  #"cf2d6f249e30a5ab4feb881f1b16f315211a360b65eb8e57549d36d023b2a6cc"
+
+/// blake2b_256(reg_weighted bytes ‖ aid)
+pub const weighted_proof_name: ByteArray =
+  #"e8185da2e9ab9c87ddc314b52c2488a7e97ff9cf0db268f4109a3c49ee5fc961"
+
+/// The reg_weighted kt canonical re-spelling (the E5 expected bytes)
+pub const weighted_kt_respell: ByteArray =
+  #"5b22312f32222c22312f34222c22312f34225d"
+
+/// respellHex goldens: (n, keripy {:x} spelling bytes)
+pub const respell_hex_golden: List<(Int, ByteArray)> =
+  [(0, #"30"), (2, #"32"), (10, #"61"), (26, #"3161")]
+
+/// (raw witness verkey, its B-code qb64) for every reg_witnessed b entry
+pub const witnessed_witness_qb64: List<(ByteArray, ByteArray)> =
+  [
+    (
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648",
+    ),
+    (
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"42486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578",
+    ),
+    (
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+      #"424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43",
+    ),
+  ]
+
+/// reg_witnessed (3-wit toad-2) honest package -> Valid
+pub const pos_witnessed_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const pos_witnessed_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const pos_witnessed_lovelace: Int = 10000000
+
+pub const pos_witnessed_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const pos_witnessed_verdict: RegistrationVerdict = RegistrationValid
+
+/// reg_weighted (fractional kt) honest package -> Valid
+pub const pos_weighted_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const pos_weighted_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
+    cur_keys: [
+      #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
+      #"15896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead66",
+      #"9e1f96f704feb873d90ae7529c5a3dd99130c985526eef6e3fd92c13fb74280b",
+    ],
+    cur_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    next_keys: [
+      #"1966e84856ea81f3af978ab9628d35cc3fd977ad0c619b306efe14c39df2331c",
+      #"7bfaff1fd6f8eae4984d281b1fae296c8063d156ef31a7c2e0fe661530059f32",
+      #"19b261aaef1f707ee0e671a8b09d5e74b94c99809c23e9a327c47231ce32985e",
+    ],
+    next_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const pos_weighted_lovelace: Int = 10000000
+
+pub const pos_weighted_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303230375f222c2274223a22696370222c2264223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2269223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2273223a2230222c226b74223a5b22312f32222c22312f34222c22312f34225d2c226b223a5b22444b615f3075327a46794c5f765f576b4e75454172354b362d7032326c5061685a61785043594d7234697547222c224442574a625566305f5a6c4f3442466d6f5f576b467370475971527036655a4a3267514d614f42464871316d222c22444a34666c7663455f72687a3251726e5570786150646d524d4d6d46556d3776626a5f5a4c4250376443674c225d2c226e74223a5b22312f32222c22312f34222c22312f34225d2c226e223a5b2245426c6d36456857366f487a7235654b75574b4e4e63775f32586574444747624d47372d464d4f64386a4d63222c22454876365f785f572d4f726b6d45306f47782d754b57794159394657377a476e7775442d5a685577425a3879222c2245426d79596172764833422d344f5a78714c4364586e5335544a6d416e4350706f796645636a484f4d706865225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [176, 223, 270],
+    off_kt: 150,
+    off_n: [348, 395, 442],
+    off_nt: 322,
+    off_b: [],
+    off_bt: 495,
+    ctrl_sigs: [
+      (
+        0,
+        #"0658b6692429b9441214f4ad4c26af381506e2254bbc587ff2e64db423a1f6b934f910575a21f49a58c1db76c28b3cb2c9f5824907a25fb849d1bea63119270b",
+      ),
+      (
+        1,
+        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+      ),
+      (
+        2,
+        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+      ),
+    ],
+  }
+
+pub const pos_weighted_verdict: RegistrationVerdict = RegistrationValid
+
+/// deposit boundary: exactly min_ada + d_reg -> Valid
+pub const pos_deposit_boundary_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const pos_deposit_boundary_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const pos_deposit_boundary_lovelace: Int = 7000000
+
+pub const pos_deposit_boundary_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const pos_deposit_boundary_verdict: RegistrationVerdict = RegistrationValid
+
+/// seq /= 0 -> R3GenesisDatumMismatch
+pub const r3_seq_nonzero_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r3_seq_nonzero_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 1,
+    native_sn: 0,
+  }
+
+pub const r3_seq_nonzero_lovelace: Int = 10000000
+
+pub const r3_seq_nonzero_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const r3_seq_nonzero_verdict: RegistrationVerdict =
+  RegistrationInvalid(R3GenesisDatumMismatch)
+
+/// native_sn /= 0 -> R4 InceptionNativeSnNonZero
+pub const r4_native_sn_nonzero_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r4_native_sn_nonzero_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 1,
+  }
+
+pub const r4_native_sn_nonzero_lovelace: Int = 10000000
+
+pub const r4_native_sn_nonzero_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const r4_native_sn_nonzero_verdict: RegistrationVerdict =
+  RegistrationInvalid(R4InceptionInvalid(InceptionNativeSnNonZero))
+
+/// reg_dip: real keripy delegated inception -> E1
+pub const e1_dip_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e1_dip_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"9c841ea8d9f094a981c36222b822adc21d87b2955abbd5a349f7b8f0269cef1c",
+    cur_keys: [
+      #"f5e3d9e80c82040e78bdb5ed49c03b984b9a0c0a47cb12b02057b99c1e7073ab",
+    ],
+    cur_threshold: Unweighted(1),
+    next_keys: [
+      #"cc4d36caf363a9dc786215e56d208e8291a4d166e862132290bd4b2220d330b0",
+    ],
+    next_threshold: Unweighted(1),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e1_dip_lovelace: Int = 10000000
+
+pub const e1_dip_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303135665f222c2274223a22646970222c2264223a22454a794548716a5a384a537067634e69497267697263496468374b56577276566f306e337550416d6e4f3863222c2269223a22454a794548716a5a384a537067634e69497267697263496468374b56577276566f306e337550416d6e4f3863222c2273223a2230222c226b74223a2231222c226b223a5b224450586a3265674d6767514f654c323137556e414f35684c6d67774b5238735373434258755a776563484f72225d2c226e74223a2231222c226e223a5b22454d784e4e73727a59366e6365474956355730676a6f4b52704e466d364749544970433953794967307a4377225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d2c226469223a22454a53383557374b534d744a616d5746525669756234794e6872743673506431644b6b6c534959434e325345227d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160],
+    off_kt: 151,
+    off_n: [222],
+    off_nt: 213,
+    off_b: [],
+    off_bt: 275,
+    ctrl_sigs: [
+      (
+        0,
+        #"4f7b5a19dc8712ab62cc283d3670a11c83f7a22de367dd70a13e256fed42986e8b76f3d0d5f753fe5ad1a60d750baa74d509951d0ab2fe15a9d549945b0d7809",
+      ),
+    ],
+  }
+
+pub const e1_dip_verdict: RegistrationVerdict =
+  RegistrationInvalid(E1EventTypeMismatch)
+
+/// reg_drt: real keripy delegated rotation -> E1
+pub const e1_drt_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e1_drt_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"9c841ea8d9f094a981c36222b822adc21d87b2955abbd5a349f7b8f0269cef1c",
+    cur_keys: [
+      #"201a270bc2ffd155609330b97c20cc2d8fe22d126a111e0b0bee30512d8f2256",
+    ],
+    cur_threshold: Unweighted(1),
+    next_keys: [
+      #"0426ec546e0d85a8db3b209d66ca1ee0d87c4c3fd52ca9bf50ec997e1c351c90",
+    ],
+    next_threshold: Unweighted(1),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e1_drt_lovelace: Int = 10000000
+
+pub const e1_drt_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22647274222c2264223a2245505430503763634457324d564d436d4f6177534932746d56503342354f5756365741755a2d5438786f5f31222c2269223a22454a794548716a5a384a537067634e69497267697263496468374b56577276566f306e337550416d6e4f3863222c2273223a2231222c2270223a22454a794548716a5a384a537067634e69497267697263496468374b56577276566f306e337550416d6e4f3863222c226b74223a2231222c226b223a5b22444341614a7776435f394656594a4d77755877677a4332503469305361684565437776754d4645746a794a57225d2c226e74223a2231222c226e223a5b224541516d374652754459576f327a73676e57624b487544596645775f31537970763144736d5834634e527951225d2c226274223a2230222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [211],
+    off_kt: 202,
+    off_n: [273],
+    off_nt: 264,
+    off_b: [],
+    off_bt: 326,
+    ctrl_sigs: [
+      (
+        0,
+        #"59a834b675cf08b395d07321ec29e518156b4d599427da07f4201f78d9d115fec5abf12a2654abac369371ca416f906512630bcc101442d8e7637c354c989508",
+      ),
+    ],
+  }
+
+pub const e1_drt_verdict: RegistrationVerdict =
+  RegistrationInvalid(E1EventTypeMismatch)
+
+/// crossed AID in the datum (re-signed) -> E2
+pub const e2_crossed_aid_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e2_crossed_aid_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e2_crossed_aid_lovelace: Int = 10000000
+
+pub const e2_crossed_aid_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"062ad63612523dae358c017b6452fc701cd1643cd68db3cc2b04e9d65d09f0d8906138317d9901ba721617788abfacd4e618122734678cc40bdaea28e36e7e0f",
+      ),
+      (
+        1,
+        #"d6ed1d778a288e19b831da9063f9d8bcc7a6c7b2dfba1b2760cf323e9301fc93b4ed9084cb3f54ebcbd28f360b14acabb3d7fd3067287bb3a84a5e791a0b7105",
+      ),
+    ],
+  }
+
+pub const e2_crossed_aid_verdict: RegistrationVerdict =
+  RegistrationInvalid(E2AidMismatch)
+
+/// off_s pointed at t -> E3
+pub const e3_off_s_at_t_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e3_off_s_at_t_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e3_off_s_at_t_lovelace: Int = 10000000
+
+pub const e3_off_s_at_t_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 30,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e3_off_s_at_t_verdict: RegistrationVerdict =
+  RegistrationInvalid(E3SequenceMismatch)
+
+/// squat: attacker keys over victim bytes -> E4
+pub const e4_squat_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e4_squat_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"93202a5a570f308d73a67e765f27e14f68f30b5b9b14c62ef8be8d5e977f2cac",
+      #"0fc1b76e7b421bc244f72a0937dc5905c2bac5851c42334981e55250f722daf3",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e4_squat_lovelace: Int = 10000000
+
+pub const e4_squat_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"670e6ccc85ee778fb7c1ec71c417e6a7d2a875f097edc157d731a2353b5eaeb90602f4fe08ccaa220b78e40aaf865e5f810fee57699bbb417aa868613a2be509",
+      ),
+      (
+        1,
+        #"22daa81e263f58de212658330ef7890426338070dfa18b553fcce7d55245e76143ec15129772efdf567f6dc68025ef7b63aff097a3695f08054b5191f6b1110b",
+      ),
+    ],
+  }
+
+pub const e4_squat_verdict: RegistrationVerdict =
+  RegistrationInvalid(E4CurKeysMismatch)
+
+/// restated unweighted kt -> E5
+pub const e5_kt_restated_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e5_kt_restated_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(1),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e5_kt_restated_lovelace: Int = 10000000
+
+pub const e5_kt_restated_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e5_kt_restated_verdict: RegistrationVerdict =
+  RegistrationInvalid(E5CurThresholdMismatch)
+
+/// mutated weighted clause -> E5
+pub const e5_weighted_mutated_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e5_weighted_mutated_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
+    cur_keys: [
+      #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
+      #"15896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead66",
+      #"9e1f96f704feb873d90ae7529c5a3dd99130c985526eef6e3fd92c13fb74280b",
+    ],
+    cur_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    next_keys: [
+      #"1966e84856ea81f3af978ab9628d35cc3fd977ad0c619b306efe14c39df2331c",
+      #"7bfaff1fd6f8eae4984d281b1fae296c8063d156ef31a7c2e0fe661530059f32",
+      #"19b261aaef1f707ee0e671a8b09d5e74b94c99809c23e9a327c47231ce32985e",
+    ],
+    next_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e5_weighted_mutated_lovelace: Int = 10000000
+
+pub const e5_weighted_mutated_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303230375f222c2274223a22696370222c2264223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2269223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2273223a2230222c226b74223a5b22312f32222c22312f34222c22312f34225d2c226b223a5b22444b615f3075327a46794c5f765f576b4e75454172354b362d7032326c5061685a61785043594d7234697547222c224442574a625566305f5a6c4f3442466d6f5f576b467370475971527036655a4a3267514d614f42464871316d222c22444a34666c7663455f72687a3251726e5570786150646d524d4d6d46556d3776626a5f5a4c4250376443674c225d2c226e74223a5b22312f32222c22312f34222c22312f34225d2c226e223a5b2245426c6d36456857366f487a7235654b75574b4e4e63775f32586574444747624d47372d464d4f64386a4d63222c22454876365f785f572d4f726b6d45306f47782d754b57794159394657377a476e7775442d5a685577425a3879222c2245426d79596172764833422d344f5a78714c4364586e5335544a6d416e4350706f796645636a484f4d706865225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [176, 223, 270],
+    off_kt: 150,
+    off_n: [348, 395, 442],
+    off_nt: 322,
+    off_b: [],
+    off_bt: 495,
+    ctrl_sigs: [
+      (
+        0,
+        #"0658b6692429b9441214f4ad4c26af381506e2254bbc587ff2e64db423a1f6b934f910575a21f49a58c1db76c28b3cb2c9f5824907a25fb849d1bea63119270b",
+      ),
+      (
+        1,
+        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+      ),
+      (
+        2,
+        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+      ),
+    ],
+  }
+
+pub const e5_weighted_mutated_verdict: RegistrationVerdict =
+  RegistrationInvalid(E5CurThresholdMismatch)
+
+/// substituted next digest -> E6
+pub const e6_next_flipped_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e6_next_flipped_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"bd9474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e6_next_flipped_lovelace: Int = 10000000
+
+pub const e6_next_flipped_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e6_next_flipped_verdict: RegistrationVerdict =
+  RegistrationInvalid(E6NextKeysMismatch)
+
+/// restated nt -> E7
+pub const e7_nt_restated_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e7_nt_restated_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(1),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e7_nt_restated_lovelace: Int = 10000000
+
+pub const e7_nt_restated_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e7_nt_restated_verdict: RegistrationVerdict =
+  RegistrationInvalid(E7NextThresholdMismatch)
+
+/// substituted witness verkey -> E8
+pub const e8_witness_flipped_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e8_witness_flipped_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"12ad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e8_witness_flipped_lovelace: Int = 10000000
+
+pub const e8_witness_flipped_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e8_witness_flipped_verdict: RegistrationVerdict =
+  RegistrationInvalid(E8WitnessesMismatch)
+
+/// witness count mismatch -> E8
+pub const e8_witness_count_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e8_witness_count_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e8_witness_count_lovelace: Int = 10000000
+
+pub const e8_witness_count_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e8_witness_count_verdict: RegistrationVerdict =
+  RegistrationInvalid(E8WitnessesMismatch)
+
+/// restated toad -> E9
+pub const e9_toad_restated_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const e9_toad_restated_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 1,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const e9_toad_restated_lovelace: Int = 10000000
+
+pub const e9_toad_restated_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const e9_toad_restated_verdict: RegistrationVerdict =
+  RegistrationInvalid(E9ToadMismatch)
+
+/// the bundle's own KERI event_raw sigs MUST fail -> R7
+pub const r7_event_raw_sigs_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_event_raw_sigs_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_event_raw_sigs_lovelace: Int = 10000000
+
+pub const r7_event_raw_sigs_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+  }
+
+pub const r7_event_raw_sigs_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// below threshold: 1 of kt=2 -> R7
+pub const r7_below_threshold_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_below_threshold_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_below_threshold_lovelace: Int = 10000000
+
+pub const r7_below_threshold_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+    ],
+  }
+
+pub const r7_below_threshold_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// below weighted threshold: 2 of 3 quarters -> R7
+pub const r7_below_weighted_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_below_weighted_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
+    cur_keys: [
+      #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
+      #"15896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead66",
+      #"9e1f96f704feb873d90ae7529c5a3dd99130c985526eef6e3fd92c13fb74280b",
+    ],
+    cur_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    next_keys: [
+      #"1966e84856ea81f3af978ab9628d35cc3fd977ad0c619b306efe14c39df2331c",
+      #"7bfaff1fd6f8eae4984d281b1fae296c8063d156ef31a7c2e0fe661530059f32",
+      #"19b261aaef1f707ee0e671a8b09d5e74b94c99809c23e9a327c47231ce32985e",
+    ],
+    next_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 2 },
+          Weight { num: 1, den: 4 },
+          Weight { num: 1, den: 4 },
+        ],
+      ],
+    ),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_below_weighted_lovelace: Int = 10000000
+
+pub const r7_below_weighted_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303230375f222c2274223a22696370222c2264223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2269223a2245456e6f523871694c4a62726c5039774773306a756f44742d375154774f6a554176527762524169366b662d222c2273223a2230222c226b74223a5b22312f32222c22312f34222c22312f34225d2c226b223a5b22444b615f3075327a46794c5f765f576b4e75454172354b362d7032326c5061685a61785043594d7234697547222c224442574a625566305f5a6c4f3442466d6f5f576b467370475971527036655a4a3267514d614f42464871316d222c22444a34666c7663455f72687a3251726e5570786150646d524d4d6d46556d3776626a5f5a4c4250376443674c225d2c226e74223a5b22312f32222c22312f34222c22312f34225d2c226e223a5b2245426c6d36456857366f487a7235654b75574b4e4e63775f32586574444747624d47372d464d4f64386a4d63222c22454876365f785f572d4f726b6d45306f47782d754b57794159394657377a476e7775442d5a685577425a3879222c2245426d79596172764833422d344f5a78714c4364586e5335544a6d416e4350706f796645636a484f4d706865225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [176, 223, 270],
+    off_kt: 150,
+    off_n: [348, 395, 442],
+    off_nt: 322,
+    off_b: [],
+    off_bt: 495,
+    ctrl_sigs: [
+      (
+        1,
+        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+      ),
+      (
+        2,
+        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+      ),
+    ],
+  }
+
+pub const r7_below_weighted_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// duplicated index does not stack -> R7
+pub const r7_dup_index_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_dup_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_dup_index_lovelace: Int = 10000000
+
+pub const r7_dup_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+    ],
+  }
+
+pub const r7_dup_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// attacker-signed message over victim keys -> R7
+pub const r7_attacker_signed_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_attacker_signed_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_attacker_signed_lovelace: Int = 10000000
+
+pub const r7_attacker_signed_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"c372a6c9225fe311f3a6223e9d6ec97514a35e5c5ea7d43b68517fc8d250b46e5d0935c5c2f01a684536429d2eb854a18924904ff493f8e7c4a416ff6dacf808",
+      ),
+      (
+        1,
+        #"52a49aedc9b37bb35f021142c7bee2abf0bd2ad761b026ba7b51e789e3117320a1768447be94d2850d3d8a440ff012b27e273a1cc6672c36d0832e7913d0d00b",
+      ),
+    ],
+  }
+
+pub const r7_attacker_signed_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// crossed network_id (sigs for network 0) -> R7
+pub const r7_crossed_network_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 1,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_crossed_network_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_crossed_network_lovelace: Int = 10000000
+
+pub const r7_crossed_network_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const r7_crossed_network_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// crossed checkpoint policy (sigs for 0xCC..) -> R7
+pub const r7_crossed_policy_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r7_crossed_policy_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_crossed_policy_lovelace: Int = 10000000
+
+pub const r7_crossed_policy_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const r7_crossed_policy_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// one lovelace short of min_ada + d_reg -> R8
+pub const r8_deposit_short_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const r8_deposit_short_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r8_deposit_short_lovelace: Int = 6999999
+
+pub const r8_deposit_short_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const r8_deposit_short_verdict: RegistrationVerdict =
+  RegistrationInvalid(R8DepositBelowMinimum)
+
+/// misdirection: off_i shifted by one -> E2
+pub const mis_off_i_shift_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_off_i_shift_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_off_i_shift_lovelace: Int = 10000000
+
+pub const mis_off_i_shift_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 92,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_off_i_shift_verdict: RegistrationVerdict =
+  RegistrationInvalid(E2AidMismatch)
+
+/// misdirection: overlapping spans off_k[1]=off_k[0]+1 -> E4
+pub const mis_overlap_k_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_overlap_k_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_overlap_k_lovelace: Int = 10000000
+
+pub const mis_overlap_k_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 161],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_overlap_k_verdict: RegistrationVerdict =
+  RegistrationInvalid(E4CurKeysMismatch)
+
+/// misdirection: off_k pointed into n (D vs E code) -> E4
+pub const mis_k_into_n_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_k_into_n_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_k_into_n_lovelace: Int = 10000000
+
+pub const mis_k_into_n_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [269, 316],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_k_into_n_verdict: RegistrationVerdict =
+  RegistrationInvalid(E4CurKeysMismatch)
+
+/// misdirection: off_k pointed into b (D vs B code) -> E4
+pub const mis_k_into_b_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_k_into_b_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_k_into_b_lovelace: Int = 10000000
+
+pub const mis_k_into_b_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [378, 425],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_k_into_b_verdict: RegistrationVerdict =
+  RegistrationInvalid(E4CurKeysMismatch)
+
+/// misdirection: off_i pointed at a k entry (E vs D code) -> E2
+pub const mis_i_at_k_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_i_at_k_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_i_at_k_lovelace: Int = 10000000
+
+pub const mis_i_at_k_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 160,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_i_at_k_verdict: RegistrationVerdict =
+  RegistrationInvalid(E2AidMismatch)
+
+/// misdirection: off_b pointed at k entries (B vs D code) -> E8
+pub const mis_b_at_k_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_b_at_k_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_b_at_k_lovelace: Int = 10000000
+
+pub const mis_b_at_k_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [160, 207, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_b_at_k_verdict: RegistrationVerdict =
+  RegistrationInvalid(E8WitnessesMismatch)
+
+/// misdirection: off_i at the byte tail (truncated) -> E2
+pub const mis_trunc_i_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_trunc_i_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_trunc_i_lovelace: Int = 10000000
+
+pub const mis_trunc_i_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 523,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_trunc_i_verdict: RegistrationVerdict =
+  RegistrationInvalid(E2AidMismatch)
+
+/// misdirection: last off_k at the tail (truncated) -> E4
+pub const mis_trunc_k_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_trunc_k_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_trunc_k_lovelace: Int = 10000000
+
+pub const mis_trunc_k_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 513],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_trunc_k_verdict: RegistrationVerdict =
+  RegistrationInvalid(E4CurKeysMismatch)
+
+/// misdirection: negative off_i -> E2
+pub const mis_neg_i_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_neg_i_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_neg_i_lovelace: Int = 10000000
+
+pub const mis_neg_i_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: -1,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const mis_neg_i_verdict: RegistrationVerdict =
+  RegistrationInvalid(E2AidMismatch)
+
+/// misdirection: duplicated offsets duplicate the key -> R4 F18
+pub const mis_dup_k_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 5000000,
+  }
+
+pub const mis_dup_k_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const mis_dup_k_lovelace: Int = 10000000
+
+pub const mis_dup_k_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 160],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"a214fa1fc6632c9d1ac039f1cb1aeae6ea3d1c0dd55af898bbd0f0fe902074d94f21aa518f1ac7612c8f557ce377750d3b3e25d10157aa2b00ed1180715f7f00",
+      ),
+      (
+        1,
+        #"da1e6c6ec577bfa42a96b3af8d52697223acdd1f37f9ea3ea574bdd4970f8ffc5e75753608e757c96fa54b3174887847e1a29fe4e557ed0496156921360a9a0d",
+      ),
+    ],
+  }
+
+pub const mis_dup_k_verdict: RegistrationVerdict =
+  RegistrationInvalid(
+    R4InceptionInvalid(InceptionIllFormed(ThresholdIllFormed(DuplicateKey))),
+  )

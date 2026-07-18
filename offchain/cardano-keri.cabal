@@ -57,6 +57,7 @@ library
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Message
+    Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Ed25519
 
@@ -91,6 +92,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
+    Cardano.KERI.AID.Checkpoint.RegistrationSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Ed25519Spec
     Paths_cardano_keri

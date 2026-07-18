@@ -88,6 +88,15 @@ oversize/wrong-AID/multi-name/extra-quantity rejections, burn branch.
 Haskell side only re-exports the name derivation (already in S2) — no new
 mirror. Measurement cells for the three sizes.
 
+### S5a — true 2-key/7-key registration shapes (interposed; Q-003 option B)
+
+The S1 bundle's frozen legacy families (`honest_2key`/`honest_7key`) carry
+no seeds/offsets, so no `InceptionMessage` signatures exist for the A-001
+2-key/7-key measurement shapes. Extend the registration family with
+`reg_2key` + `reg_7key` (≤1024 B, seeds + offsets) and an honest vector
+scenario each — existing bundles byte-unchanged, S1 loader spec updated.
+One pair commit; then S5 proceeds on true shapes.
+
 ### S5 — checkpoint validator scaffold + Register branch
 
 `checkpoint.ak` with parameters `(version, hash_proof_policy, network_id,

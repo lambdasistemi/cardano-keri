@@ -1,0 +1,49 @@
+# Tasks: registration path — icp admission and checkpoint genesis (#114)
+
+One slice = one bisect-safe commit carrying `Tasks: T114-S<n>`; boxes are
+checked in the same amended commit that lands the slice.
+
+## Slice 1 — keripy registration fixture family
+
+- [ ] T114-S1 Extend `gen_fixtures.py` with the `registration` family
+      (`reg_witnessed` 3-wit/toad-2, `reg_weighted`, `reg_dip`, `reg_drt`,
+      `reg_oversize`), signer-seed export, and generator-emitted offsets for
+      `t/i/s/k/kt/n/nt/b/bt`; commit the new bundle; RED loader spec first;
+      regeneration byte-stable; existing bundles byte-unchanged (drift
+      check).
+
+## Slice 2 — Haskell registration predicate
+
+- [ ] T114-S2 `Cardano.KERI.AID.Checkpoint.Registration`: `B`-code qb64,
+      canonical `kt`/`nt`/`bt` re-spelling, E1–E9 slice checks, proof-token
+      name, pure R3/R4/R6/R7/R8 predicate + typed errors; fixture-driven
+      RED→GREEN spec (positives: 2-key, witnessed, weighted, owner-replay;
+      negatives: squat, dip, drt, per-slice E1–E9, misdirected offsets,
+      wrong-preimage/below-threshold signatures).
+
+## Slice 3 — Aiken mirror + shared-vector parity
+
+- [ ] T114-S3 `checkpoint/registration.ak` mirror + `gen-registration-vectors`
+      generator + Aiken vector/parity suites asserting byte-identical
+      encodings AND identical verdicts per vector; drift check wired.
+
+## Slice 4 — hash-proof minting policy
+
+- [ ] T114-S4 `validators/hash_proof.ak` (H1–H4) + tests (honest 300 B /
+      966 B / 1024 B mints, oversize, wrong-AID, multi-name, extra-quantity,
+      burn branch) + size-tier measurement cells.
+
+## Slice 5 — checkpoint validator scaffold + Register branch
+
+- [ ] T114-S5 `validators/checkpoint.ak` (`version`, `hash_proof_policy`,
+      `network_id`, `d_reg`): `Register` mint branch composing R1–R8,
+      fail-closed spend (R10); ScriptContext end-to-end positives (2-key,
+      7-key GLEIF, witnessed 2-of-3, proof burned) + R1/R2/R5/R8/R10
+      negatives; registration-context measurement cells.
+
+## Slice 6 — measurements report + finalization
+
+- [ ] T114-S6 `specs/114-registration/MEASUREMENTS.md`: reported cells +
+      ≥25% headroom verdict (or recorded rationale); close cell gaps.
+- [ ] T114-S6b (orchestrator) PR body audit, `chore: drop gate.sh`,
+      mark-ready Q-file to the epic owner.

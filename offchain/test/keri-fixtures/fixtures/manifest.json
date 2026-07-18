@@ -4,7 +4,8 @@
     "fork_witnessed",
     "honest_2key",
     "honest_7key",
-    "lag"
+    "lag",
+    "registration"
   ],
   "generator": "gen_fixtures.py",
   "keri_version": "1.3.5",

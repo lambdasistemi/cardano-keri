@@ -14,6 +14,12 @@ Fixture families (each a JSON bundle under fixtures/):
                   double-sign artifact the Convict predicate convicts on.
   lag           — a witnessed rotation strictly ahead of a recorded checkpoint
                   state: the Freeze evidence.
+  registration  — #114 icp-admission family: witnessed / weighted / delegated
+                  (dip, drt) / oversize inceptions, each with generator-emitted
+                  per-field byte offsets into the raw serialization (offset
+                  convention documented on _field_spans) and exported signer
+                  seeds (temp test keys from the fixed Salter seed below —
+                  safe to commit).
 
 Every signature carries a `signing_target` field ("event_raw" | "said") that
 the generator sets by re-verifying the signature against BOTH candidate byte
@@ -100,6 +106,171 @@ def _event_record(serder):
             "bt": serder.ked.get("bt", "0"),
         },
     }
+
+
+def _scan_string(raw: bytes, pos: int):
+    """Content span (start, end) of the JSON string starting at raw[pos] == '"'."""
+    assert raw[pos : pos + 1] == b'"'
+    end = raw.index(b'"', pos + 1)
+    assert b"\\" not in raw[pos + 1 : end], "escape inside a KERI field string"
+    return pos + 1, end
+
+
+def _skip_value(raw: bytes, pos: int):
+    """Position just past the JSON value starting at pos."""
+    c = raw[pos : pos + 1]
+    if c == b'"':
+        return _scan_string(raw, pos)[1] + 1
+    if c in (b"[", b"{"):
+        depth = 0
+        while True:
+            ch = raw[pos : pos + 1]
+            if ch == b'"':
+                pos = _scan_string(raw, pos)[1] + 1
+            elif ch in (b"[", b"{"):
+                depth += 1
+                pos += 1
+            elif ch in (b"]", b"}"):
+                depth -= 1
+                pos += 1
+                if depth == 0:
+                    return pos
+            else:
+                pos += 1
+    end = pos
+    while raw[end : end + 1] not in (b",", b"}", b"]"):
+        end += 1
+    return end
+
+
+def _field_spans(raw: bytes):
+    """Byte spans of the top-level JSON values in keripy's compact serialization.
+
+    OFFSET CONVENTION (the ground truth consumed by the E1-E9 slice checks
+    and RegistrationFixturesSpec):
+
+      * string values  -> the span covers the VALUE CONTENT between the
+                          quotes (a 44-char qb64 primitive, "icp", a hex
+                          digit string), quotes excluded;
+      * array values   -> the span covers the full array INCLUDING the
+                          brackets (the weighted kt/nt fraction-string
+                          re-spelling); each string element additionally
+                          yields its own between-quotes content span.
+
+    KERI field strings never contain JSON escapes (asserted), so quote
+    scanning locates exact byte spans. Returns {key: (kind, start, end,
+    elems)} where kind is "string" | "array" | "other" and elems lists
+    (start, end) content spans of string elements for arrays (else None).
+    """
+    assert raw[:1] == b"{", "not a compact JSON object serialization"
+    spans = {}
+    pos = 1
+    while raw[pos : pos + 1] != b"}":
+        ks, ke = _scan_string(raw, pos)
+        key = raw[ks:ke].decode()
+        pos = ke + 1
+        assert raw[pos : pos + 1] == b":"
+        pos += 1
+        c = raw[pos : pos + 1]
+        if c == b'"':
+            vs, ve = _scan_string(raw, pos)
+            spans[key] = ("string", vs, ve, None)
+            pos = ve + 1
+        elif c == b"[":
+            end = _skip_value(raw, pos)
+            elems = []
+            p = pos + 1
+            while raw[p : p + 1] != b"]":
+                if raw[p : p + 1] == b'"':
+                    es, ee = _scan_string(raw, p)
+                    elems.append((es, ee))
+                    p = ee + 1
+                else:
+                    p = _skip_value(raw, p)
+                if raw[p : p + 1] == b",":
+                    p += 1
+            spans[key] = ("array", pos, end, elems)
+            pos = end
+        else:
+            end = _skip_value(raw, pos)
+            spans[key] = ("other", pos, end, None)
+            pos = end
+        if raw[pos : pos + 1] == b",":
+            pos += 1
+    return spans
+
+
+def _offsets_record(serder):
+    """Per-field value offsets into serder.raw, per the _field_spans convention.
+
+    Scalar fields (t, i, s, kt, nt, bt) map to a single offset — the value
+    content for strings, the opening '[' for weighted kt/nt arrays. The
+    k/n/b fields map to per-element content offsets ([] when the event has
+    no such field, e.g. b in a drt).
+    """
+    spans = _field_spans(serder.raw)
+    offsets = {}
+    for f in ("t", "i", "s", "kt", "nt", "bt"):
+        if f in spans:
+            offsets[f] = spans[f][1]
+    for f in ("k", "n", "b"):
+        offsets[f] = [start for start, _ in spans[f][3]] if f in spans else []
+    return offsets
+
+
+def _assert_offsets(serder, offsets):
+    """Self-check: slicing raw at each exported offset reproduces the ked value."""
+    raw = serder.raw
+    ked = serder.ked
+
+    def sl(off, blen):
+        return raw[off : off + blen]
+
+    for f in ("t", "i", "s", "bt"):
+        if f in offsets:
+            exp = ked[f].encode()
+            assert sl(offsets[f], len(exp)) == exp, f"offset self-check failed: {f}"
+    for f in ("kt", "nt"):
+        if f in offsets:
+            v = ked[f]
+            exp = (
+                json.dumps(v, separators=(",", ":")) if isinstance(v, list) else v
+            ).encode()
+            assert sl(offsets[f], len(exp)) == exp, f"offset self-check failed: {f}"
+    for f in ("k", "n", "b"):
+        elems = ked.get(f) or []
+        assert len(offsets[f]) == len(elems), f"offset count mismatch: {f}"
+        for off, e in zip(offsets[f], elems):
+            assert sl(off, len(e)) == e.encode(), f"offset self-check failed: {f}"
+
+
+def _seed_records(signers):
+    """Signer-seed export: raw Ed25519 seed (hex) + the qb64 verkey it derives."""
+    return [
+        {"seed_hex": s.raw.hex(), "verkey_qb64": s.verfer.qb64} for s in signers
+    ]
+
+
+def _reg_record(serder, cur, nxt, note, delegator_pre=None):
+    """One registration sub-fixture: event, sigs, offsets, signer seeds."""
+    offsets = _offsets_record(serder)
+    _assert_offsets(serder, offsets)
+    rec = {
+        "note": note,
+        "event": _event_record(serder),
+        "event_sigs": [
+            _sig_record(cur[i], i, serder.raw, serder.said, "controller")
+            for i in range(len(cur))
+        ],
+        "offsets": offsets,
+        "signer_seeds": {
+            "current": _seed_records(cur),
+            "next": _seed_records(nxt),
+        },
+    }
+    if delegator_pre is not None:
+        rec["delegator_pre"] = delegator_pre
+    return rec
 
 
 def build():
@@ -243,6 +414,118 @@ def build():
         "rot_conflict_witness_receipts": [_sig_record(fww[0], 0, fwrotB.raw, fwrotB.said, "witness")],
     }
 
+    # --- registration: #114 icp-admission ground truth --------------------
+    # Every event and signature is keripy output; per-field offsets are
+    # computed from keripy's own serialization (_field_spans) and
+    # self-checked against ked before export. Exported seeds are temp test
+    # keys derived from the fixed Salter seed — safe to commit; the Haskell
+    # layer uses them to produce Cardano-side InceptionMessage signatures
+    # at test time (deployment parameters are chosen there, so keripy
+    # cannot pre-sign those preimages).
+    rwc = salt.signers(count=2, transferable=True, temp=True, path="rwc")
+    rwn = salt.signers(count=2, transferable=True, temp=True, path="rwn")
+    rww = salt.signers(count=3, transferable=False, temp=True, path="rww")
+    ricp_w = eventing.incept(
+        keys=[s.verfer.qb64 for s in rwc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in rwn],
+        isith="2", nsith="2",
+        wits=[s.verfer.qb64 for s in rww], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+
+    rgc = salt.signers(count=3, transferable=True, temp=True, path="rgc")
+    rgn = salt.signers(count=3, transferable=True, temp=True, path="rgn")
+    ricp_g = eventing.incept(
+        keys=[s.verfer.qb64 for s in rgc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in rgn],
+        isith=["1/2", "1/4", "1/4"], nsith=["1/2", "1/4", "1/4"],
+        code=coring.MtrDex.Blake3_256,
+    )
+
+    # A 1-key delegator whose pre anchors the delegated pair below; only its
+    # prefix is needed (the delegating seal lives in the delegator's KEL).
+    rdel_c = salt.signers(count=1, transferable=True, temp=True, path="rdelc")
+    rdel_n = salt.signers(count=1, transferable=True, temp=True, path="rdeln")
+    rdel_icp = eventing.incept(
+        keys=[rdel_c[0].verfer.qb64],
+        ndigs=[coring.Diger(ser=rdel_n[0].verfer.qb64b).qb64],
+        isith="1", nsith="1", code=coring.MtrDex.Blake3_256,
+    )
+
+    rdc = salt.signers(count=1, transferable=True, temp=True, path="rdc")
+    rdn = salt.signers(count=1, transferable=True, temp=True, path="rdn")
+    rdn2 = salt.signers(count=1, transferable=True, temp=True, path="rdn2")
+    rdip = eventing.delcept(
+        keys=[rdc[0].verfer.qb64],
+        delpre=rdel_icp.pre,
+        ndigs=[coring.Diger(ser=rdn[0].verfer.qb64b).qb64],
+        isith="1", nsith="1", code=coring.MtrDex.Blake3_256,
+    )
+    rdrt = eventing.deltate(
+        pre=rdip.pre, dig=rdip.said, sn=1,
+        keys=[rdn[0].verfer.qb64],
+        ndigs=[coring.Diger(ser=rdn2[0].verfer.qb64b).qb64],
+        isith="1", nsith="1",
+    )
+
+    # GLEIF-Root-shaped board pushed past the single-chunk boundary: 7
+    # fractionally-weighted keys, 7 next digests, 7 witnesses, toad 5.
+    roc = salt.signers(count=7, transferable=True, temp=True, path="roc")
+    ron = salt.signers(count=7, transferable=True, temp=True, path="ron")
+    row = salt.signers(count=7, transferable=False, temp=True, path="row")
+    ricp_o = eventing.incept(
+        keys=[s.verfer.qb64 for s in roc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in ron],
+        isith=["1/3"] * 7, nsith=["1/3"] * 7,
+        wits=[s.verfer.qb64 for s in row], toad="5",
+        code=coring.MtrDex.Blake3_256,
+    )
+
+    bundles["registration"] = {
+        "note": (
+            "#114 registration path ground truth: icp-admission fixtures "
+            "with generator-emitted per-field offsets and signer-seed export"
+        ),
+        "offset_convention": (
+            "Offsets index into the raw serialization (raw_hex decoded). "
+            "For string-valued fields (t, i, s, bt, unweighted kt/nt, and "
+            "each k/n/b element) the offset points at the first byte of the "
+            "value content BETWEEN the quotes; for weighted kt/nt it points "
+            "at the opening '[' and the value spans the full compact-JSON "
+            "fraction-string array. Emitted by _field_spans from keripy's "
+            "own serialization and self-checked against ked before export."
+        ),
+        "reg_witnessed": _reg_record(
+            ricp_w, rwc, rwn,
+            "3-witness toad-2 icp — the parent-acceptance witnessed 2-of-3 shape",
+        ),
+        "reg_weighted": _reg_record(
+            ricp_g, rgc, rgn,
+            "fractionally-weighted kt icp (E5 weighted re-spelling material)",
+        ),
+        "reg_dip": _reg_record(
+            rdip, rdc, rdn,
+            "real keripy delegated inception (E1 rejection material)",
+            delegator_pre=rdel_icp.pre,
+        ),
+        "reg_drt": _reg_record(
+            rdrt, rdn, rdn2,
+            "real keripy delegated rotation (E1 rejection material)",
+            delegator_pre=rdel_icp.pre,
+        ),
+        "reg_oversize": _reg_record(
+            ricp_o, roc, ron,
+            "GLEIF-Root-shaped 7-key 7-witness icp > 1024 B (H1 rejection material)",
+        ),
+    }
+    assert bundles["registration"]["reg_oversize"]["event"]["raw_len"] > 1024, (
+        "reg_oversize does not breach the single-chunk boundary"
+    )
+    for small in ("reg_witnessed", "reg_weighted", "reg_dip", "reg_drt"):
+        assert bundles["registration"][small]["event"]["raw_len"] <= 1024, (
+            f"{small} unexpectedly exceeds the single-chunk boundary"
+        )
+
     return bundles
 
 
@@ -264,14 +547,19 @@ def main():
     with open(os.path.join(OUT, "manifest.json"), "w") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)
         fh.write("\n")
-    # O1 assertion: no signature should have slipped through as "said"
-    targets = {
-        s["signing_target"]
-        for data in bundles.values()
-        for key, val in data.items()
-        if key.endswith("sigs") or key.endswith("receipts")
-        for s in val
-    }
+    # O1 assertion: no signature should have slipped through as "said".
+    # Walks nested sub-fixtures too (the registration family nests one
+    # level deeper than the flat #106 families).
+    def _sig_targets(node):
+        if isinstance(node, dict):
+            for key, val in node.items():
+                if key.endswith("sigs") or key.endswith("receipts"):
+                    for s in val:
+                        yield s["signing_target"]
+                else:
+                    yield from _sig_targets(val)
+
+    targets = set(_sig_targets(bundles))
     assert targets == {"event_raw"}, f"O1 violated: unexpected signing targets {targets}"
     print(f"wrote {len(bundles)} fixture bundles + manifest to {OUT}", file=sys.stderr)
 

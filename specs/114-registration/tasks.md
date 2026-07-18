@@ -5,7 +5,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 1 — keripy registration fixture family
 
-- [ ] T114-S1 Extend `gen_fixtures.py` with the `registration` family
+- [X] T114-S1 Extend `gen_fixtures.py` with the `registration` family
       (`reg_witnessed` 3-wit/toad-2, `reg_weighted`, `reg_dip`, `reg_drt`,
       `reg_oversize`), signer-seed export, and generator-emitted offsets for
       `t/i/s/k/kt/n/nt/b/bt`; commit the new bundle; RED loader spec first;

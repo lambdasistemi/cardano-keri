@@ -99,7 +99,7 @@ share a transaction with threshold Ed25519 + output checks at ≥25% headroom):
 ```
 Tx A — hash-proof mint (permissionless):
   mint: (hash_proof_policy, blake2b_256(icp_bytes ‖ cesr_aid), +1)
-  redeemer: { icp_bytes, cesr_aid }
+  redeemer: { icp_bytes, cesr_aid, off_i, off_d }
   → proof token paid anywhere the submitter likes
 
 Tx B — registration (permissionless, replay-safe):
@@ -111,17 +111,40 @@ Tx B — registration (permissionless, replay-safe):
 
 ### The hash-proof minting policy (`hash_proof.ak`)
 
-Parameter-free. Checks, on mint:
+Parameter-free. Checks, on mint (H2 corrected 2026-07-18, slice-4 Q-001: a
+KERI `E`-code AID is the blake3 digest of the **SAID-dummied**
+serialization — keripy dresses the 44-char `i` and `d` value spans with
+`"#"×44` before digesting — never of the final bytes; #106's shared checks
+already state this mechanism, and the empirical proof against the committed
+`reg_witnessed`/`honest_2key` fixtures is recorded in the Q/A files):
 
-- **H1** — redeemer carries `(icp_bytes, cesr_aid)`;
-  `len(icp_bytes) <= 1024` (one blake3 chunk) and `len(cesr_aid) == 32`.
-- **H2** — `blake3.verify(icp_bytes, cesr_aid)` (the vendored lane-packed
-  single-chunk core, `onchain/lib/cardano_keri/blake3.ak`).
+- **H1** — redeemer carries `(icp_bytes, cesr_aid, off_i, off_d)`;
+  `len(icp_bytes) <= 1024` (one blake3 chunk), `len(cesr_aid) == 32`, and
+  the two 44-char spans at `off_i`/`off_d` are disjoint and lie inside
+  `icp_bytes`.
+- **H2** — the said-blank binding, two parts:
+  (a) `slice(icp_bytes, off_i, 44) == qb64_aid(cesr_aid)` and the same at
+  `off_d` (an `icp` is self-addressing: `d == i`);
+  (b) `blake3.verify(splice_dummies(icp_bytes, off_i, off_d), cesr_aid)`
+  (the vendored lane-packed single-chunk core), where `splice_dummies`
+  overwrites both spans with `"#"×44` — equality outside the spans holds by
+  construction of the splice.
 - **H3** — the policy mints exactly
-  `[Pair(blake2b_256(icp_bytes ‖ cesr_aid), 1)]` (single-name,
-  quantity-one; inspects the full `tokens(mint, policy)` map).
+  `[Pair(blake2b_256(icp_bytes ‖ cesr_aid), 1)]` over the **final** bytes
+  (single-name, quantity-one; inspects the full `tokens(mint, policy)`
+  map). Naming over the final bytes is what makes Tx A compose with R5,
+  which recomputes the same name from the final `evidence.event_bytes`.
 - **H4** — burn branch: every entry under the policy is strictly negative —
   burning is always permitted (the registration tx burns the proof).
+
+Trust note: with prover-supplied spans the policy proves "`cesr_aid` is the
+SAID of `icp_bytes` **under the claimed spans**". Fake spans over
+self-authored bytes buy an attacker nothing beyond honest self-registration:
+Tx B's admission still requires E1–E9 + R4 + R7 threshold signatures with
+the datum keys over the same bytes — the #106 two-slice-comparison
+discipline. (Optionally S5 may additionally pin Tx B's `off_i` to Tx A's;
+recorded as optional hardening, not required — both already independently
+compare against `qb64_aid(D.cesr_aid)`.)
 
 The token name binds the **pair** (bytes, AID): a proof for one AID can never
 satisfy a registration carrying different bytes or a different AID, because
@@ -215,7 +238,8 @@ CESR/JSON):
 | E9 | `bt` | hex re-spelling of `D.toad` at `off_bt` |
 
 **Why offset misdirection fails.** The bytes are fixed (H2 binds them to the
-AID). Every expected value is derivation-code-prefixed (`D`/`E`/`B`) or an
+AID via the said-blank splice, with the `i`/`d` spans themselves
+slice-checked against `qb64_aid(cesr_aid)`). Every expected value is derivation-code-prefixed (`D`/`E`/`B`) or an
 exact re-spelling, so pointing an offset at a different field of the genuine
 event compares differently-coded 44-char strings and fails; pointing two
 `off_k` entries at one slice duplicates a key and fails F18 rule 2 (via R4).
@@ -332,9 +356,10 @@ bundles.
       correctly (positive vector).
 - [ ] `dip` and `drt` rejected (E1/R4), each as an executable vector from
       real keripy events.
-- [ ] `> 1024 B` inception rejected (H1); wrong-AID bytes rejected (H2);
-      proof-name mismatch (wrong bytes, wrong AID, crossed pair) rejected
-      (R5); missing/unburned proof token rejected (R5).
+- [ ] `> 1024 B` inception rejected (H1); wrong-AID bytes rejected (H2b);
+      wrong/overlapping/out-of-range `off_i`/`off_d` spans rejected
+      (H1/H2a); proof-name mismatch (wrong bytes, wrong AID, crossed pair)
+      rejected (R5); missing/unburned proof token rejected (R5).
 - [ ] Mint-shape vectors: extra asset name, quantity ≠ 1, token to a foreign
       address, second output at the checkpoint address, missing token — each
       rejected (R1/R2).

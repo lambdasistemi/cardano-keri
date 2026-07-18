@@ -25,7 +25,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 3 — Aiken mirror + shared-vector parity
 
-- [ ] T114-S3 `checkpoint/registration.ak` mirror + `gen-registration-vectors`
+- [X] T114-S3 `checkpoint/registration.ak` mirror + `gen-registration-vectors`
       generator + Aiken vector/parity suites asserting byte-identical
       encodings AND identical verdicts per vector (incl. the full
       offset-misdirection family — A-001 QB condition 1 gates acceptance);

@@ -79,6 +79,22 @@ gen-enforcement-vectors:
 check-enforcement-vectors: gen-enforcement-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/enforcement_vectors.ak
 
+# Regenerate the committed Aiken registration vectors (#114) from the committed
+# keripy registration.json via GenRegistrationVectors.hs. OFFLINE — reads the
+# committed JSON (signatures re-derived from the exported signer seeds), no
+# keripy. One Haskell computation is the source of truth for every scenario's
+# context/datum/evidence AND its verdict (the generator asserts the Haskell
+# predicate verdict before emitting); `aiken fmt` then canonicalizes the module.
+gen-registration-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-registration-vectors -- ../onchain/lib/cardano_keri/checkpoint/registration_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/registration_vectors.ak
+
+# Drift check: regenerate the registration vectors and fail if the committed
+# copy diverges from a fresh regenerate (stale vectors must FAIL the gate).
+check-registration-vectors: gen-registration-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/registration_vectors.ak
+
 # --- onchain (Aiken) ---
 
 # Format Aiken sources
@@ -134,7 +150,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors
+ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

@@ -33,7 +33,7 @@ checked in the same amended commit that lands the slice.
 
 ## Slice 4 — hash-proof minting policy
 
-- [ ] T114-S4 `validators/hash_proof.ak` (H1–H4) + tests (honest 300 B /
+- [X] T114-S4 `validators/hash_proof.ak` (H1–H4) + tests (honest 300 B /
       966 B / 1024 B mints, oversize, wrong-AID, multi-name, extra-quantity,
       burn branch) + size-tier measurement cells.
 

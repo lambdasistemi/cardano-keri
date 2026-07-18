@@ -117,6 +117,13 @@ check-onchain:
 measure-enforcement:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_convict -m measure_freeze
 
+# Measure the hash-proof minting policy ex-units at the three size tiers
+# (#114 S4: ~300 B class, 966 B GEDA-scale, 1024 B boundary). Same caveat as
+# measure-enforcement: an INVOCATION printing exact mem/cpu per cell, not a
+# headroom assertion — the verdict lives in specs/114-registration/MEASUREMENTS.md.
+measure-hash-proof:
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
+
 # --- BLAKE3 spike (pinned Aiken) ---
 
 # Format the BLAKE3 spike with its pinned compiler
@@ -144,7 +151,7 @@ format: format-offchain format-onchain format-blake3
 format-check: format-check-offchain format-check-onchain format-check-blake3
 
 # Onchain CI gate (mirrors the Onchain job)
-ci-onchain: format-check-onchain check-onchain measure-enforcement
+ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof
 
 # BLAKE3 spike CI gate (mirrors the BLAKE3 job)
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3

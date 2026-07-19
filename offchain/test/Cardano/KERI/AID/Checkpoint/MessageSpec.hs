@@ -14,6 +14,15 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     blake2b_256,
     canonicalCbor,
  )
+import Cardano.KERI.AID.Checkpoint.FixtureLoader (
+    digestRaw,
+    loadFixture,
+    lookupKey,
+    note,
+    textArrayField,
+    textField,
+    verkeyRaw,
+ )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
     AdvanceMessage (..),
@@ -37,6 +46,9 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Weight (..),
     evaluate,
  )
+import Data.Aeson (
+    Value (..),
+ )
 import Data.ByteArray.Encoding (
     Base (Base16),
     convertFromBase,
@@ -45,15 +57,26 @@ import Data.ByteString (
     ByteString,
  )
 import Data.ByteString qualified as BS
+import Data.Foldable (
+    toList,
+ )
 import Data.IntSet (
     IntSet,
  )
 import Data.IntSet qualified as IntSet
+import Data.Text (
+    Text,
+ )
+import Data.Text qualified as T
 import Data.Word (
     Word8,
  )
+import Numeric (
+    readHex,
+ )
 import Test.Hspec (
     Spec,
+    beforeAll,
     describe,
     it,
     shouldBe,
@@ -166,6 +189,7 @@ spent =
         , scTxid = spentTxid
         , scIndex = 1
         , scCesrAid = cesrA
+        , scWitnesses = []
         , scNextKeys = map nkd newKeys
         , scNextThreshold = newThr
         , scSeq = 0
@@ -187,7 +211,8 @@ validAdv =
         newThr
         newNextKeys
         newNextThr
-        [] -- new_witnesses
+        [] -- wit_cut
+        [] -- wit_add
         0 -- new_toad
         1 -- seq_to
         1 -- native_sn_to
@@ -270,6 +295,145 @@ reserveCreated =
         , cdNextKeys = reserveNextN
         , cdNextThreshold = third 7
         }
+
+-- ---------------------------------------------------------
+-- S1 fixture-driven witness-delta (W1-W3) coverage (#115 S2)
+--
+-- Everything below is derived straight from the committed S1 keripy bundle
+-- (advance.json): the outgoing witness set (icp.b), the delta (rot.br/ba),
+-- the rotation's own key state (rot.k/kt/n/nt), and the genesis pre-rotation
+-- commitment the delta is checked against (icp.n/nt). Nothing is hand
+-- transcribed; only eq1-eq5's deployment/outref plumbing (irrelevant to
+-- W1-W3) is a fixed constant shared across fixtures.
+-- ---------------------------------------------------------
+
+{- | A fixed spent 'TxOutRef' shared by every delta fixture below (eq1-eq5
+plumbing only; irrelevant to the W1-W3/eq7 checks under test).
+-}
+deltaSpentTxid :: ByteString
+deltaSpentTxid = b32 0xd1
+
+-- | One committed advance fixture's fully-derived validation material.
+data DeltaFixture = DeltaFixture
+    { dfSpent :: SpentCheckpoint
+    , dfMessage :: AdvanceMessage
+    , dfCreated :: CheckpointDatumV1
+    , dfSigners :: RevealedSuccessorSigners
+    , dfIcpKeys :: [ByteString]
+    , dfOldWitnesses :: [ByteString]
+    , dfSurvivors :: [ByteString]
+    }
+
+-- | Base-16 (KERI hex, e.g. @bt@/@s@) text to an 'Integer'.
+hexInt :: Text -> Integer
+hexInt t = case readHex (T.unpack t) of
+    [(n, "")] -> n
+    _ -> error ("not a lowercase hex integer: " <> T.unpack t)
+
+-- | The first element of a fixture-guaranteed non-empty list.
+firstOf :: String -> [a] -> a
+firstOf _ (x : _) = x
+firstOf label [] = error (label <> ": unexpectedly empty")
+
+{- | A KERI @kt@\/@nt@ threshold JSON value: a plain hex @m@-of-@n@ string, or
+a single-clause array of @"num/den"@ fraction strings (KERI reserve
+rotation weights).
+-}
+parseThreshold :: Value -> Threshold
+parseThreshold (String t) = Unweighted (hexInt t)
+parseThreshold (Array vs) = Weighted [map parseWeight (toList vs)]
+parseThreshold v = error ("threshold: unexpected JSON shape: " <> show v)
+
+parseWeight :: Value -> Weight
+parseWeight (String t) = case T.splitOn "/" t of
+    [numT, denT] -> Weight (read (T.unpack numT)) (read (T.unpack denT))
+    _ -> error ("weight: malformed fraction " <> T.unpack t)
+parseWeight v = error ("weight: unexpected JSON shape: " <> show v)
+
+{- | A committed advance fixture's validation material — the spent context,
+the reconstructed message, the honest (W3-derived) created datum, and the
+revealed successor signer evidence — pulled from @advance.json@ by key
+(@adv_wit_2key@\/@adv_wit_7key@\/@adv_downgrade@\/@adv_keep@).
+-}
+deltaFixture :: Value -> Text -> DeltaFixture
+deltaFixture doc key = either error id $ do
+    sub <- field doc key
+    icp <- field sub "icp"
+    rot <- field sub "rot"
+    icpKed <- field icp "ked"
+    rotKed <- field rot "ked"
+    aid <- digestRaw =<< textField icpKed "i"
+    icpKeys <- traverse verkeyRaw =<< textArrayField icpKed "k"
+    oldWitnesses <- traverse verkeyRaw =<< textArrayField icpKed "b"
+    icpNext <- traverse digestRaw =<< textArrayField icpKed "n"
+    icpNextThr <- parseThreshold <$> field icpKed "nt"
+    cuts <- traverse verkeyRaw =<< textArrayField rotKed "br"
+    adds <- traverse verkeyRaw =<< textArrayField rotKed "ba"
+    rotKeys <- traverse verkeyRaw =<< textArrayField rotKed "k"
+    rotThr <- parseThreshold <$> field rotKed "kt"
+    rotNext <- traverse digestRaw =<< textArrayField rotKed "n"
+    rotNextThr <- parseThreshold <$> field rotKed "nt"
+    toad <- hexInt <$> textField rotKed "bt"
+    let survivors = filter (`notElem` cuts) oldWitnesses
+        newSet = survivors <> adds
+        asset = deriveAidAssetName aid
+        sc =
+            SpentCheckpoint
+                { scNetworkId = 1
+                , scPolicyId = policy
+                , scAidAssetName = asset
+                , scTxid = deltaSpentTxid
+                , scIndex = 0
+                , scCesrAid = aid
+                , scWitnesses = oldWitnesses
+                , scNextKeys = icpNext
+                , scNextThreshold = icpNextThr
+                , scSeq = 0
+                , scNativeSn = 0
+                }
+        msg =
+            advanceMessage
+                1
+                policy
+                asset
+                aid
+                deltaSpentTxid
+                0
+                0
+                0
+                rotKeys
+                rotThr
+                rotNext
+                rotNextThr
+                cuts
+                adds
+                toad
+                1
+                1
+        created =
+            CheckpointDatumV1
+                { cdCesrAid = aid
+                , cdCurKeys = rotKeys
+                , cdCurThreshold = rotThr
+                , cdNextKeys = rotNext
+                , cdNextThreshold = rotNextThr
+                , cdWitnesses = newSet
+                , cdToad = toad
+                , cdSeq = 1
+                , cdNativeSn = 1
+                }
+    pure
+        DeltaFixture
+            { dfSpent = sc
+            , dfMessage = msg
+            , dfCreated = created
+            , dfSigners = RevealedSuccessorSigners rotKeys
+            , dfIcpKeys = icpKeys
+            , dfOldWitnesses = oldWitnesses
+            , dfSurvivors = survivors
+            }
+  where
+    field v k = note (k <> " missing") (lookupKey k v)
 
 spec :: Spec
 spec = do
@@ -377,7 +541,7 @@ spec = do
         it "advance (valid succession) canonical CBOR golden" $
             canonicalCbor validAdv
                 `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff80000101ff"
+                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff8080000101ff"
         it "builder fills the frozen adv domain" $
             amDomain validAdv `shouldBe` advanceDomain
 
@@ -558,3 +722,89 @@ spec = do
                     augCreated
                     (RevealedSuccessorSigners (aug : reserveRevealed))
                     `shouldBe` Right ()
+
+    -- ------------------------------------------------------
+    -- S1 fixture-driven witness-delta (W1-W3) coverage (#115 S2): the
+    -- witnessed cut/add, keep, and downgrade family shapes, plus a
+    -- fixture-grounded stolen-current-quorum rejection.
+    -- ------------------------------------------------------
+    describe "advance witness-delta (W1-W3) - S1 fixture-driven" $
+        beforeAll (loadFixture "advance.json") $ do
+            it "adv_wit_2key: witnessed cut+add accepted with the W3-derived set" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                        `shouldBe` Right ()
+            it "adv_wit_7key: GLEIF-scale witnessed cut+add accepted" $ \doc ->
+                let df = deltaFixture doc "adv_wit_7key"
+                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                        `shouldBe` Right ()
+            it "adv_keep: no-delta rotation accepted; witnesses unchanged" $ \doc -> do
+                let df = deltaFixture doc "adv_keep"
+                advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                    `shouldBe` Right ()
+                cdWitnesses (dfCreated df) `shouldBe` dfOldWitnesses df
+            it "adv_downgrade: cutting every witness yields toad=0 and an empty derived set" $ \doc -> do
+                let df = deltaFixture doc "adv_downgrade"
+                advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                    `shouldBe` Right ()
+                cdWitnesses (dfCreated df) `shouldBe` []
+                cdToad (dfCreated df) `shouldBe` 0
+            it "stolen spent-current quorum (real icp keys) rejected -> Eq6CurrentQuorumUnsatisfied" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    attacker = RevealedSuccessorSigners (dfIcpKeys df)
+                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) attacker
+                        `shouldBe` Left Eq6CurrentQuorumUnsatisfied
+
+    -- ------------------------------------------------------
+    -- S1 fixture-driven delta malformations (#115 S2): every W1/W2/derived-
+    -- set/toad rejection constructed over the honest adv_wit_2key material.
+    -- ------------------------------------------------------
+    describe "advance witness-delta malformations - S1 fixture-driven" $
+        beforeAll (loadFixture "advance.json") $ do
+            it "duplicate cut -> EqW1CutInvalid" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    cut = firstOf "amWitCut" (amWitCut (dfMessage df))
+                    msg = (dfMessage df){amWitCut = [cut, cut]}
+                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                        `shouldBe` Left EqW1CutInvalid
+            it "cut of a non-member witness -> EqW1CutInvalid" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    msg = (dfMessage df){amWitCut = amWitAdd (dfMessage df)}
+                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                        `shouldBe` Left EqW1CutInvalid
+            it "duplicate add -> EqW2AddInvalid" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    add = firstOf "amWitAdd" (amWitAdd (dfMessage df))
+                    msg = (dfMessage df){amWitAdd = [add, add]}
+                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                        `shouldBe` Left EqW2AddInvalid
+            it "add already present among survivors -> EqW2AddInvalid" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    survivor = firstOf "dfSurvivors" (dfSurvivors df)
+                    msg = (dfMessage df){amWitAdd = [survivor]}
+                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                        `shouldBe` Left EqW2AddInvalid
+            it "cut/add overlap (re-adding the cut witness) -> EqW2AddInvalid" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    msg = (dfMessage df){amWitAdd = amWitCut (dfMessage df)}
+                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                        `shouldBe` Left EqW2AddInvalid
+            it "derived-set mismatch (datum keeps the outgoing set) -> Eq7CreatedStateMismatch" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    created = (dfCreated df){cdWitnesses = dfOldWitnesses df}
+                 in advanceEqualities (dfSpent df) (dfMessage df) created (dfSigners df)
+                        `shouldBe` Left Eq7CreatedStateMismatch
+            it "wrong survivor order (adds before survivors) -> Eq7CreatedStateMismatch" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    msg = dfMessage df
+                    wrongOrder = amWitAdd msg <> dfSurvivors df
+                    created = (dfCreated df){cdWitnesses = wrongOrder}
+                 in advanceEqualities (dfSpent df) msg created (dfSigners df)
+                        `shouldBe` Left Eq7CreatedStateMismatch
+            it "toad out of bounds (message+datum agree) -> Eq8CreatedIllFormed ToadRange" $ \doc ->
+                let df = deltaFixture doc "adv_wit_2key"
+                    badToad = toInteger (length (cdWitnesses (dfCreated df))) + 5
+                    msg = (dfMessage df){amNewToad = badToad}
+                    created = (dfCreated df){cdToad = badToad}
+                 in advanceEqualities (dfSpent df) msg created (dfSigners df)
+                        `shouldBe` Left (Eq8CreatedIllFormed ToadRange)

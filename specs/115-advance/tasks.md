@@ -23,7 +23,7 @@
 
 ## Slice 4 — Haskell advance predicate
 
-- [ ] T115-S4 `Advance.hs`: `AdvanceEvidence`, AE1–AE10, receipt gate,
+- [x] T115-S4 `Advance.hs`: `AdvanceEvidence`, AE1–AE10, receipt gate,
   message reconstruction, `advancePredicate`; adversarial families
   (offset misdirection, receipt-index games, cut-witness receipts,
   outgoing-only quorum).

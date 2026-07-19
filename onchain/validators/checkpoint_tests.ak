@@ -25,21 +25,25 @@
 //// preimage under exactly that context.
 
 use aiken/collection/list
+use aiken/interval
 use cage_context.{
   ada_output, input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id,
+  spend_context,
 }
 use cardano/address.{from_script, from_verification_key}
-use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge}
+use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, Transaction, placeholder,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use checkpoint.{Register}
+use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
+use checkpoint.{Advance, Close, Convict, Freeze, Register}
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
 /// proof token in the R5 input/burn is denominated under it).
@@ -412,5 +416,722 @@ test reject_r10_spend_fails_closed() fail {
     rdm,
     out_ref(seed_tx_id, 0),
     placeholder,
+  )
+}
+
+// ---------------------------------------------------------------------
+// Advance spend branch (#115 S6) — V1-V7 end-to-end over constructed
+// ScriptContext data. Positives replay the S1 keripy honest fixture
+// families end-to-end (real Advance evidence, real successor datum);
+// negatives probe each transaction-shape check the validator itself owns
+// (V1-V3) plus one end-to-end predicate-evidence rejection through V4-V7
+// (the exhaustive AE/W/ctrl/receipt families already live in
+// advance_tests.ak at the predicate level). Freeze/Convict/Close prove the
+// non-Advance branches stay fail-closed (#116/#117 land there).
+// ---------------------------------------------------------------------
+
+/// Advance vectors were generated under network_id = 1 (the Register
+/// branch above uses 0) — the eq1 equality binds this value via the
+/// reconstructed preimage.
+const adv_network_id: Int = 1
+
+/// The successor lovelace used by the honest Advance fixtures: exactly the
+/// V3 floor (`checkpoint_min_ada + d_reg` = 2_000_000 + 5_000_000).
+const advance_deposit: Int = 7_000_000
+
+/// OLD checkpoint datums: the real keripy `icp` key state (`k`/`kt`/`b`/`bt`,
+/// raw-decoded from `fixtures/advance.json`) each S1 honest family's `rot`
+/// actually advanced FROM. `next_keys`/`next_threshold`/`witnesses`/`seq`/
+/// `native_sn` are reused byte-for-byte from the vectors' own `..._spent`
+/// `SpentCheckpoint` (the only OLD fields `advance_predicate` consults);
+/// `cur_keys`/`cur_threshold`/`toad` play no role in the predicate but are
+/// the real icp values, for end-to-end fidelity.
+const old_adv_wit_2key: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_wit_2key_spent.cesr_aid,
+    cur_keys: [
+      #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
+      #"95d507a9923dc62701d5619c117a3cbb8ae91cfe3f99e96cc0ae986cb52b586d",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: adv_vec.pos_adv_wit_2key_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_wit_2key_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_wit_2key_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_wit_2key_spent.seq,
+    native_sn: adv_vec.pos_adv_wit_2key_spent.native_sn,
+  }
+
+const old_adv_wit_7key: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_wit_7key_spent.cesr_aid,
+    cur_keys: [
+      #"0380fcebe3b1b3d0d6a196c6059c92975cf446f03c69bf089c0d0d7be611063e",
+      #"87d4034a197c50e9133f3a97c81d45a28a23744bea198bf7896060d40c502ddc",
+      #"6b6431d375e8db08b1f9e3c5c0c1dc71cd186e7ad155c03dd1e07cf32d1bcf51",
+      #"f9f02712abf08ee233d729b47d76f4e789dc4cf46d6e9fae8c020dd6323806f6",
+      #"9d3e1ade7c4c87e2a1c4b1595f38ae404a13f5736b8a241a17c4750ab43cc935",
+      #"0db754920b399dafec84660f7f516138a6d509523ce5532d19ff3e4b1b41a22b",
+      #"f50a4c9bf688e8ce210f8109e8247fc81ef20f8d4a029500d4ceb7be0e23becb",
+    ],
+    cur_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+        ],
+      ],
+    ),
+    next_keys: adv_vec.pos_adv_wit_7key_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_wit_7key_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_wit_7key_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_wit_7key_spent.seq,
+    native_sn: adv_vec.pos_adv_wit_7key_spent.native_sn,
+  }
+
+const old_adv_keep: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_keep_spent.cesr_aid,
+    cur_keys: [
+      #"12ccc14d7d0a648007b1f4d80f915be8c822eceab255959ba4a9513de0ab9514",
+      #"1ceb4e251e1c7ef619bfec5a2ab7515aa328b02b6379f5e7a1af6381f800a605",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: adv_vec.pos_adv_keep_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_keep_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_keep_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_keep_spent.seq,
+    native_sn: adv_vec.pos_adv_keep_spent.native_sn,
+  }
+
+const old_adv_downgrade: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_downgrade_spent.cesr_aid,
+    cur_keys: [
+      #"4927ac8d0d088f48036a5586c0b5338c70afb8a8fd5366c690fcb1ec622bf4a8",
+      #"5d0363fe2fa651c91b772228932cb41a236e17441c6b318c902f1e728243d2c1",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: adv_vec.pos_adv_downgrade_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_downgrade_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_downgrade_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_downgrade_spent.seq,
+    native_sn: adv_vec.pos_adv_downgrade_spent.native_sn,
+  }
+
+// ---------------------------------------------------------------------
+// Advance context builders
+// ---------------------------------------------------------------------
+
+fn advance_own_ref(spent: SpentCheckpoint) -> OutputReference {
+  out_ref(spent.txid, spent.index)
+}
+
+/// The spent ACTIVE-address input: the checkpoint token at quantity one,
+/// inline `V1(old)`.
+fn advance_old_input(spent: SpentCheckpoint, old: CheckpointDatumV1) -> Input {
+  input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: InlineDatum(V1(old)),
+      reference_script: None,
+    },
+  )
+}
+
+/// The ACTIVE-address successor output: `lovelace` + the same token +
+/// inline `V1(new)`.
+fn advance_new_output(
+  spent: SpentCheckpoint,
+  lovelace: Int,
+  new: CheckpointDatumV1,
+) -> Output {
+  Output {
+    address: from_script(policy),
+    value: from_lovelace(lovelace)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+    datum: InlineDatum(V1(new)),
+    reference_script: None,
+  }
+}
+
+/// A full honest Advance spend context: consume `old` at `spent`'s outref,
+/// create `new` at the deposit floor, no mint/burn under the checkpoint
+/// policy.
+fn advance_tx(
+  spent: SpentCheckpoint,
+  old: CheckpointDatumV1,
+  new: CheckpointDatumV1,
+) -> Transaction {
+  spend_context(
+    [advance_old_input(spent, old)],
+    [],
+    [advance_new_output(spent, advance_deposit, new)],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+/// Drive the real spend handler under the fixed advance deployment
+/// parameters.
+fn run_advance(
+  redeemer: Data,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    adv_network_id,
+    d_reg,
+    None,
+    redeemer,
+    own_ref,
+    tx,
+  )
+}
+
+/// A second, structurally-valid but off-protocol datum shape: casting
+/// through this (instead of the real single-constructor `CheckpointDatum`)
+/// produces a `Data` value that is NOT `V1(...)`, to prove non-V1 datums
+/// fail closed without a second real datum version existing.
+type NonV1Probe {
+  ProbeV1(CheckpointDatumV1)
+  ProbeV2(CheckpointDatumV1)
+}
+
+// ---------------------------------------------------------------------
+// positives — the four honest families + gate-room
+// ---------------------------------------------------------------------
+
+test accept_advance_wit_2key() {
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
+    advance_tx(
+      adv_vec.pos_adv_wit_2key_spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+    ),
+  )
+}
+
+test accept_advance_wit_7key() {
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_7key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_7key_spent),
+    advance_tx(
+      adv_vec.pos_adv_wit_7key_spent,
+      old_adv_wit_7key,
+      adv_vec.pos_adv_wit_7key_created,
+    ),
+  )
+}
+
+test accept_advance_keep() {
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_keep_evidence },
+    advance_own_ref(adv_vec.pos_adv_keep_spent),
+    advance_tx(
+      adv_vec.pos_adv_keep_spent,
+      old_adv_keep,
+      adv_vec.pos_adv_keep_created,
+    ),
+  )
+}
+
+test accept_advance_downgrade() {
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_downgrade_evidence },
+    advance_own_ref(adv_vec.pos_adv_downgrade_spent),
+    advance_tx(
+      adv_vec.pos_adv_downgrade_spent,
+      old_adv_downgrade,
+      adv_vec.pos_adv_downgrade_created,
+    ),
+  )
+}
+
+/// Gate-room proof (#116): an EXTRA unrelated input must be admitted — no
+/// check may assume a fixed input count.
+test accept_advance_extra_input() {
+  let tx = advance_tx(
+    adv_vec.pos_adv_wit_2key_spent,
+    old_adv_wit_2key,
+    adv_vec.pos_adv_wit_2key_created,
+  )
+  let extra = value_input(7, from_lovelace(42_000_000))
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
+    Transaction { ..tx, inputs: list.concat(tx.inputs, [extra]) },
+  )
+}
+
+// ---------------------------------------------------------------------
+// V2 — successor output
+// ---------------------------------------------------------------------
+
+/// V2: a second output at the ACTIVE address (datum-confusion guard).
+test reject_v2_second_active_output() fail {
+  let tx = advance_tx(
+    adv_vec.pos_adv_wit_2key_spent,
+    old_adv_wit_2key,
+    adv_vec.pos_adv_wit_2key_created,
+  )
+  let second = ada_output(from_script(policy), min_ada)
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
+    Transaction { ..tx, outputs: list.concat(tx.outputs, [second]) },
+  )
+}
+
+/// V2: the ACTIVE-address successor output (datum, deposit) but WITHOUT
+/// the checkpoint token.
+test reject_v2_missing_token() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let bare = Output {
+    address: from_script(policy),
+    value: from_lovelace(advance_deposit),
+    datum: InlineDatum(V1(adv_vec.pos_adv_wit_2key_created)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [advance_old_input(spent, old_adv_wit_2key)],
+    [],
+    [bare],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V2: the checkpoint token at quantity two on the successor output.
+test reject_v2_extra_token_quantity() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let doubled = Output {
+    address: from_script(policy),
+    value: from_lovelace(advance_deposit)
+      |> merge(from_asset(policy, spent.aid_asset_name, 2)),
+    datum: InlineDatum(V1(adv_vec.pos_adv_wit_2key_created)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [advance_old_input(spent, old_adv_wit_2key)],
+    [],
+    [doubled],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// no mint/burn under the checkpoint policy (the token moves, never mints)
+// ---------------------------------------------------------------------
+
+test reject_advance_stray_mint() fail {
+  let tx = advance_tx(
+    adv_vec.pos_adv_wit_2key_spent,
+    old_adv_wit_2key,
+    adv_vec.pos_adv_wit_2key_created,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
+    Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
+  )
+}
+
+test reject_advance_stray_burn() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    Transaction { ..tx, mint: from_asset(policy, spent.aid_asset_name, -1) },
+  )
+}
+
+// ---------------------------------------------------------------------
+// V1 — own input / OLD datum
+// ---------------------------------------------------------------------
+
+/// V1: the spent input carries no datum at all.
+test reject_v1_missing_old_datum() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let bare_input = input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: NoDatum,
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [bare_input],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V1: the spent input's inline datum is not the `V1` constructor.
+test reject_v1_non_v1_old_datum() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let probe_input = input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: InlineDatum(ProbeV2(old_adv_wit_2key)),
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [probe_input],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V1: the spent input (token + datum) sits at a foreign address.
+test reject_v1_wrong_active_address() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let stray_input = input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_verification_key(owner_vkh),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: InlineDatum(V1(old_adv_wit_2key)),
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [stray_input],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V1: the named own input carries a valid inline `V1(OLD)` datum but NOT
+/// the checkpoint token derived from it.
+test reject_v1_missing_token() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let bare_input = input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada),
+      datum: InlineDatum(V1(old_adv_wit_2key)),
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [bare_input],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V1: the named own input carries the checkpoint token at quantity two.
+test reject_v1_extra_token_quantity() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let doubled_input = input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 2)),
+      datum: InlineDatum(V1(old_adv_wit_2key)),
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [doubled_input],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V1: the redeemer's `out_ref` names no input in the transaction at all.
+test reject_v1_wrong_outref() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    out_ref(spent.txid, spent.index + 1),
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// V2 — NEW datum
+// ---------------------------------------------------------------------
+
+/// V2: the ACTIVE-address successor output carries no datum at all.
+test reject_v2_missing_new_datum() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let bare = Output {
+    address: from_script(policy),
+    value: from_lovelace(advance_deposit)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [advance_old_input(spent, old_adv_wit_2key)],
+    [],
+    [bare],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// V2: the successor output's inline datum is not the `V1` constructor.
+test reject_v2_non_v1_new_datum() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let probe = Output {
+    address: from_script(policy),
+    value: from_lovelace(advance_deposit)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+    datum: InlineDatum(ProbeV2(adv_vec.pos_adv_wit_2key_created)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [advance_old_input(spent, old_adv_wit_2key)],
+    [],
+    [probe],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// V3 — deposit continuity
+// ---------------------------------------------------------------------
+
+/// V3: successor lovelace one below `checkpoint_min_ada + d_reg`.
+test reject_v3_deposit_below_floor() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = spend_context(
+    [advance_old_input(spent, old_adv_wit_2key)],
+    [],
+    [
+      advance_new_output(
+        spent,
+        advance_deposit - 1,
+        adv_vec.pos_adv_wit_2key_created,
+      ),
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// V4 / eq5 — sequence continuity (routed through the S5 predicate)
+// ---------------------------------------------------------------------
+
+/// eq5: `seq` skips ahead of `spent.seq + 1`.
+test reject_eq5_sequence_skip() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let skipped = CheckpointDatumV1 {
+    ..adv_vec.pos_adv_wit_2key_created,
+    seq: adv_vec.pos_adv_wit_2key_created.seq + 1,
+  }
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, skipped),
+  )
+}
+
+/// eq5: `native_sn` does not strictly increase over the spent state.
+test reject_eq5_native_sn_non_increasing() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let stalled = CheckpointDatumV1 {
+    ..adv_vec.pos_adv_wit_2key_created,
+    native_sn: spent.native_sn,
+  }
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, stalled),
+  )
+}
+
+// ---------------------------------------------------------------------
+// V4-V7 — at least one end-to-end predicate-evidence rejection (the
+// exhaustive AE/W/ctrl/receipt families live in advance_tests.ak)
+// ---------------------------------------------------------------------
+
+/// V7: a receipt-free advance (zero witness receipts, toad > 0) rejects
+/// end-to-end through the real spend handler.
+test reject_v7_end_to_end_receipt_free() fail {
+  run_advance(
+    Advance { evidence: adv_vec.v7_receipt_free_evidence },
+    advance_own_ref(adv_vec.v7_receipt_free_spent),
+    advance_tx(
+      adv_vec.v7_receipt_free_spent,
+      old_adv_wit_2key,
+      adv_vec.v7_receipt_free_created,
+    ),
+  )
+}
+
+// ---------------------------------------------------------------------
+// non-Advance redeemers stay fail-closed (#116/#117 land there)
+// ---------------------------------------------------------------------
+
+test reject_freeze_fails_closed() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Freeze,
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
+  )
+}
+
+test reject_convict_fails_closed() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Convict,
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
+  )
+}
+
+test reject_close_fails_closed() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Close,
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
   )
 }

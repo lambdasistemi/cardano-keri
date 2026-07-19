@@ -35,7 +35,7 @@
 
 ## Slice 6 — spend branch + measurement gate
 
-- [ ] T115-S6 `checkpoint.ak` spend redeemer sum + `Advance` V1–V7;
+- [x] T115-S6 `checkpoint.ak` spend redeemer sum + `Advance` V1–V7;
   end-to-end `ScriptContext` tests (4 honest shapes + shape vectors +
   fail-closed non-Advance redeemers + Register regression);
   `checkpoint_measurements.ak` cells at `adv_wit_2key`/`adv_wit_7key`/

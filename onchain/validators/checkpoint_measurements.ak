@@ -27,19 +27,24 @@
 ////
 //// This module adds NO validator behavior; measurement infrastructure only.
 
+use aiken/interval
 use cage_context.{
-  input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id,
+  input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
 use cardano/address.{from_script, from_verification_key}
-use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge}
-use cardano/transaction.{InlineDatum, Input, NoDatum, Output, Transaction}
+use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
+use cardano/transaction.{
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+}
+use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use checkpoint.{MintRedeemer, Register}
+use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
+use checkpoint.{Advance, MintRedeemer, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -163,5 +168,231 @@ test measure_checkpoint_register_witnessed() {
     redeemer_witnessed,
     policy,
     tx_witnessed,
+  )
+}
+
+// ---------------------------------------------------------------------
+// Advance spend branch ex-unit measurements (#115 S6 — the A-001
+// measurement STOP gate). Same shape as the Register cells above: every
+// fixture is a top-level `const` (not charged) and each `test measure_*`
+// invokes the REAL `checkpoint.checkpoint.spend` handler on its ACCEPT
+// path over a full spend `Transaction`, so `aiken check --plain-numbers -m
+// measure_checkpoint` (the existing `measure-checkpoint` recipe, whose `-m
+// measure_checkpoint` filter already matches these by substring) reports
+// the mem/cpu of one honest advance per gate shape. Cells (the A-001 gate
+// shapes, brief S6): `adv_wit_2key` (witnessed cut+add, 2-key), `adv_wit_7key`
+// (GLEIF-scale 7-key partial reveal), and `adv_keep` (no-delta steady-state
+// advance) — each the FULL Advance context: V1 own-input/token, V2
+// successor-output/token/no-mint, V3 deposit, and the S5 `advance_predicate`
+// (V4 reconstruction + `advance_equalities`, V5 controller signatures, V6
+// AE1-AE10 event binding, V7 receipt quorum).
+//
+// Advance vectors were generated under network_id = 1 (the Register cells
+// above use 0) — the eq1 equality binds this value via the reconstructed
+// preimage.
+
+const adv_network_id: Int = 1
+
+const advance_deposit: Int = 7_000_000
+
+/// OLD checkpoint datums: the real keripy `icp` key state each honest
+/// family's `rot` advanced FROM (mirrors checkpoint_tests.ak's identically
+/// named consts — `cur_keys`/`cur_threshold`/`toad` play no role in
+/// `advance_predicate`, only `next_keys`/`next_threshold`/`witnesses`/
+/// `seq`/`native_sn` do, reused byte-for-byte from the vectors' own
+/// `..._spent` `SpentCheckpoint`).
+const old_adv_wit_2key: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_wit_2key_spent.cesr_aid,
+    cur_keys: [
+      #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
+      #"95d507a9923dc62701d5619c117a3cbb8ae91cfe3f99e96cc0ae986cb52b586d",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: adv_vec.pos_adv_wit_2key_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_wit_2key_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_wit_2key_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_wit_2key_spent.seq,
+    native_sn: adv_vec.pos_adv_wit_2key_spent.native_sn,
+  }
+
+const old_adv_wit_7key: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_wit_7key_spent.cesr_aid,
+    cur_keys: [
+      #"0380fcebe3b1b3d0d6a196c6059c92975cf446f03c69bf089c0d0d7be611063e",
+      #"87d4034a197c50e9133f3a97c81d45a28a23744bea198bf7896060d40c502ddc",
+      #"6b6431d375e8db08b1f9e3c5c0c1dc71cd186e7ad155c03dd1e07cf32d1bcf51",
+      #"f9f02712abf08ee233d729b47d76f4e789dc4cf46d6e9fae8c020dd6323806f6",
+      #"9d3e1ade7c4c87e2a1c4b1595f38ae404a13f5736b8a241a17c4750ab43cc935",
+      #"0db754920b399dafec84660f7f516138a6d509523ce5532d19ff3e4b1b41a22b",
+      #"f50a4c9bf688e8ce210f8109e8247fc81ef20f8d4a029500d4ceb7be0e23becb",
+    ],
+    cur_threshold: Weighted(
+      [
+        [
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+          Weight { num: 1, den: 3 },
+        ],
+      ],
+    ),
+    next_keys: adv_vec.pos_adv_wit_7key_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_wit_7key_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_wit_7key_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_wit_7key_spent.seq,
+    native_sn: adv_vec.pos_adv_wit_7key_spent.native_sn,
+  }
+
+const old_adv_keep: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: adv_vec.pos_adv_keep_spent.cesr_aid,
+    cur_keys: [
+      #"12ccc14d7d0a648007b1f4d80f915be8c822eceab255959ba4a9513de0ab9514",
+      #"1ceb4e251e1c7ef619bfec5a2ab7515aa328b02b6379f5e7a1af6381f800a605",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: adv_vec.pos_adv_keep_spent.next_keys,
+    next_threshold: adv_vec.pos_adv_keep_spent.next_threshold,
+    witnesses: adv_vec.pos_adv_keep_spent.witnesses,
+    toad: 2,
+    seq: adv_vec.pos_adv_keep_spent.seq,
+    native_sn: adv_vec.pos_adv_keep_spent.native_sn,
+  }
+
+fn advance_own_ref(spent: SpentCheckpoint) -> OutputReference {
+  out_ref(spent.txid, spent.index)
+}
+
+fn advance_old_input(spent: SpentCheckpoint, old: CheckpointDatumV1) -> Input {
+  input_at(
+    advance_own_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: InlineDatum(V1(old)),
+      reference_script: None,
+    },
+  )
+}
+
+fn advance_new_output(
+  spent: SpentCheckpoint,
+  lovelace: Int,
+  new: CheckpointDatumV1,
+) -> Output {
+  Output {
+    address: from_script(policy),
+    value: from_lovelace(lovelace)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+    datum: InlineDatum(V1(new)),
+    reference_script: None,
+  }
+}
+
+fn advance_tx(
+  spent: SpentCheckpoint,
+  old: CheckpointDatumV1,
+  new: CheckpointDatumV1,
+) -> Transaction {
+  spend_context(
+    [advance_old_input(spent, old)],
+    [],
+    [advance_new_output(spent, advance_deposit, new)],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+const own_ref_adv_wit_2key: OutputReference =
+  OutputReference {
+    transaction_id: adv_vec.pos_adv_wit_2key_spent.txid,
+    output_index: adv_vec.pos_adv_wit_2key_spent.index,
+  }
+
+const tx_adv_wit_2key: Transaction =
+  advance_tx(
+    adv_vec.pos_adv_wit_2key_spent,
+    old_adv_wit_2key,
+    adv_vec.pos_adv_wit_2key_created,
+  )
+
+const own_ref_adv_wit_7key: OutputReference =
+  OutputReference {
+    transaction_id: adv_vec.pos_adv_wit_7key_spent.txid,
+    output_index: adv_vec.pos_adv_wit_7key_spent.index,
+  }
+
+const tx_adv_wit_7key: Transaction =
+  advance_tx(
+    adv_vec.pos_adv_wit_7key_spent,
+    old_adv_wit_7key,
+    adv_vec.pos_adv_wit_7key_created,
+  )
+
+const own_ref_adv_keep: OutputReference =
+  OutputReference {
+    transaction_id: adv_vec.pos_adv_keep_spent.txid,
+    output_index: adv_vec.pos_adv_keep_spent.index,
+  }
+
+const tx_adv_keep: Transaction =
+  advance_tx(
+    adv_vec.pos_adv_keep_spent,
+    old_adv_keep,
+    adv_vec.pos_adv_keep_created,
+  )
+
+// adv_wit_2key: 2 controller Ed25519 verifications + 2 witness-receipt
+// verifications over the full rot event bytes, plus the AE1-AE10 slice set.
+test measure_checkpoint_advance_wit_2key() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    adv_network_id,
+    d_reg,
+    None,
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    own_ref_adv_wit_2key,
+    tx_adv_wit_2key,
+  )
+}
+
+// adv_wit_7key (GLEIF shape): 3 controller Ed25519 verifications (partial
+// reveal), 2 witness-receipt verifications, AE1-AE10 over ~1 KiB event bytes.
+test measure_checkpoint_advance_wit_7key() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    adv_network_id,
+    d_reg,
+    None,
+    Advance { evidence: adv_vec.pos_adv_wit_7key_evidence },
+    own_ref_adv_wit_7key,
+    tx_adv_wit_7key,
+  )
+}
+
+// adv_keep: no-delta steady-state advance — 2 controller Ed25519
+// verifications, 2 witness-receipt verifications, empty wit_cut/wit_add.
+test measure_checkpoint_advance_keep() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    adv_network_id,
+    d_reg,
+    None,
+    Advance { evidence: adv_vec.pos_adv_keep_evidence },
+    own_ref_adv_keep,
+    tx_adv_keep,
   )
 }

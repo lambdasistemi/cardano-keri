@@ -134,14 +134,21 @@ shifts by one. `new_toad` stays. Constructor index stays 0.
 The signed preimage stays the canonical-CBOR serialization of the Constr-0
 `Data` tree (`cbor.serialise` / `toBuiltinData`), unchanged in mechanism.
 
-**Domain string: unchanged (`cardano-keri/checkpoint/adv/v1`) — ruling
-requested.** The #68 freeze note says field order changes only by minting a
+**Domain string: unchanged (`cardano-keri/checkpoint/adv/v1`) — ratified by
+A-005.** The #68 freeze note says field order changes only by minting a
 new version tag; that discipline protects *deployed* artifacts. No advance
 artifact has ever been produced outside test goldens (spends fail closed;
 nothing is on any chain), so the recommendation is to amend in place under
 `/v1` and regenerate the goldens, keeping `/v2` for a genuinely
 post-deployment migration. Alternative (bump to `adv/v2` now) costs a dead
-version number and implies a v1 that never existed. **QA below.**
+version number and implies a v1 that never existed.
+
+**Ratified amendment (2026-07-19, A-005/QA).** The 18-field delta layout is
+amended in place under `cardano-keri/checkpoint/adv/v1`. The version-tag
+discipline protects deployed surface; no advance artifact has existed outside
+test goldens, so minting a dead `adv/v2` would add noise rather than preserve
+compatibility. Advance goldens regenerate under `/v1`; `/v2` remains reserved
+for a post-deployment migration.
 
 ### Why the controller signs the delta, not the list
 
@@ -283,10 +290,12 @@ AdvanceEvidence {
 
 Gate-room (#116): V1 names one input and V2 one output at ACTIVE; nothing
 bounds total inputs/reference inputs. `len(event_bytes)` is unbounded by
-construction (no blake3 chunk limit exists on this path); the practical
-bound is the measurement gate.
+construction (no blake3 chunk limit exists on this path). **Ratified QD note:**
+the registration path's 1024-byte inception cap already bounds the registered
+population's board sizes, so advance inherits a practical bound; the
+measurement gate covers the remaining execution-budget bound.
 
-### No SAID proof on the advance path (ruling requested — QC)
+### No SAID proof on the advance path (ratified — QC)
 
 Registration needed the hash-proof mint because the AID **is** the blake3
 SAID of the inception bytes — an identity claim requiring an in-script
@@ -301,6 +310,16 @@ byte-string that spells this transition and is receipted by the incoming
 quorum is valid witness evidence. Consequence: no blake3 over `event_bytes`
 anywhere (eq6b's per-revealing-key digests are the only blake3 on the
 path), and Tx-A-style proof tokens do not exist for advances.
+
+**Ratified QC rationale (A-005).** Spend linearity is the prior-event binding:
+the spent outref anchors the identity and checkpoint state, while strict
+sequence monotonicity and AE1–AE10 pin the claimed rotation to the transition
+being written. A rotation with a wrong `p`, but the correct reveal at the
+correct sequence number and receipts from the required incoming threshold, is
+witnessed duplicity. That lies inside the same honest-threshold boundary on
+which the rest of the design already relies. Accordingly, leaving `d` and `p`
+unchecked is deliberate, and #116 inherits this rationale when it resolves the
+SAID question for enforcement evidence.
 
 ### The advance event-binding slice set (AE1–AE10)
 
@@ -411,24 +430,22 @@ never mutations of committed bundles.
       shapes meets ≥25% headroom; on a miss the ticket STOPS and Q-files
       the epic owner (fallback is never weakening checks).
 
-## Spec-checkpoint questions (Q-005 — PARKED until the epic A-file)
+## Spec-checkpoint rulings (Q-005 / A-005 — ratified 2026-07-19)
 
-- **QA** — the 18-field `AdvanceMessage` layout above, amended **in place
+- **QA — APPROVED.** The 18-field `AdvanceMessage` layout above, amended **in place
   under the `adv/v1` domain** (pre-deployment; goldens regenerate; `/v2`
-  reserved for post-deployment migration). Approve layout + domain ruling.
-- **QB** — `SpentCheckpoint` gains `witnesses` (validation-context type,
+  reserved for post-deployment migration).
+- **QB — APPROVED.** `SpentCheckpoint` gains `witnesses` (validation-context type,
   both languages); W1/W2 delta-validity live inside `advance_equalities`
-  with new error constructors; eq7 checks against the derived set. Approve.
-- **QC** — **no SAID/blake3 proof over the rot bytes** (section above): the
+  with new error constructors; eq7 checks against the derived set.
+- **QC — APPROVED.** **No SAID/blake3 proof over the rot bytes** (section above): the
   receipts + AE slices + dual-threshold signatures carry the binding; `d`
-  and `p` spans unchecked. Approve the omission as specced.
-- **QD** — no structural cap on `len(event_bytes)` (no blake3 chunk bound
-  exists on this path; the measurement gate is the practical bound).
-  Approve, or impose an explicit cap.
-- **QE** — deposit continuity as V3 (`successor lovelace >= min_ada +
+  and `p` spans remain deliberately unchecked under the ratified rationale.
+- **QD — APPROVED.** No structural cap on `len(event_bytes)` (no blake3 chunk bound
+  exists on this path; the registration cap and measurement gate supply the
+  practical bounds).
+- **QE — APPROVED.** Deposit continuity as V3 (`successor lovelace >= min_ada +
   d_reg`, same constant mechanism as R8; economics remain O3/#117).
-  Approve.
-- **QF** — the slice plan in `plan.md` (S1 fixtures → S2 Haskell amendment
+- **QF — APPROVED.** The slice plan in `plan.md` (S1 fixtures → S2 Haskell amendment
   → S3 Aiken amendment+parity → S4 Haskell advance predicate → S5 Aiken
   predicate+parity → S6 spend branch+measurement STOP gate → S7 report).
-  Approve.

@@ -577,14 +577,18 @@ signed message binds the successor, defeating "capture the identity at `seq+2`")
    next tip is always advanceable and never bricked.
 
 **Witness rotation (incoming-set validation, `identity-model.md` §6a).** When
-`new_witnesses/new_toad` differ from the spent set, #24 validates the advance seal's
-threshold receipts against the **incoming (new)** set `(new_witnesses, new_toad)` — exactly
-as KERI does — with **no outgoing-set endorsement and no two-seal handoff**; the cut
-witnesses receipt nothing. #68 fixes the **message bytes** that carry
-`new_witnesses/new_toad`; the seal-receipt verification against the incoming set is #24's
-transaction-level check over these bytes. (The KERI-level `br`/`ba`/`bt` backer-delta
-encoding — identity-model §6a — and any migration of these absolute bytes to it are part of
-#24's recut; the validation *rule* is identical over either encoding.) V1 has **no
+
+> **Pre-deployment amendment (2026-07-19, #115 / A-005).** `AdvanceMessage`
+> now carries KERI's `br`/`ba`/`bt` delta directly under the unchanged
+> `cardano-keri/checkpoint/adv/v1` domain. The validator derives the incoming
+> witness set as `(old.witnesses − br) ++ ba`; no advance artifact existed
+> outside test goldens, so this amends the frozen layout in place rather than
+> minting a dead `/v2`.
+
+When the derived incoming set or `new_toad` differs from the spent set, #24
+validates threshold receipts against that **incoming (new)** set — exactly as
+KERI does — with **no outgoing-set endorsement and no two-seal handoff**; the
+cut witnesses receipt nothing. V1 has **no
 Δ-windowed or other signature-only fallback**: when the advance's **incoming** `new_toad > 0`,
 no controller-only advance is valid. A transition to `new_toad = 0` validates against the
 **empty incoming set** (zero receipts) — from a witnessed or an already-witnessless prior

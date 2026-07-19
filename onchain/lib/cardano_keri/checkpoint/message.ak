@@ -4,7 +4,7 @@
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Message`
 //// byte-for-byte: the two domain-separated signed preimages
 //// (`InceptionMessage` = Constr 0, 12 fields; `AdvanceMessage` = Constr 0,
-//// 17 fields) and `deriveAidAssetName` over the frozen 65-byte
+//// 18 fields) and `deriveAidAssetName` over the frozen 65-byte
 //// `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x45 ‖ cesr_aid` preimage encode to the
 //// exact canonical Plutus-Data CBOR / `blake2b_256` digest the Haskell
 //// encoder emits (see `vectors.ak`). Domain strings, constructor indices, and
@@ -21,6 +21,13 @@
 //// binds the deployment (`network_id`, `checkpoint_policy_id`) and token
 //// (`aid_asset_name`), and every carried `aid_asset_name` must equal
 //// `deriveAidAssetName(cesr_aid)`.
+////
+//// The advance additionally carries the incoming-set witness rule (#115): the
+//// signed preimage carries KERI's delta (`wit_cut`/`wit_add`) rather than a
+//// full witness list, and `advance_equalities` derives the incoming set
+//// (`new_set = (spent.witnesses - wit_cut) ++ wit_add`, survivors first in
+//// spent order, then adds in add order) and requires the created datum's
+//// witnesses to equal it exactly.
 
 use aiken/collection/list
 use aiken/crypto
@@ -120,12 +127,16 @@ pub type InceptionMessage {
 }
 
 // ---------------------------------------------------------
-// Advance message (rotation / two-seal handoff) — Constr 0, 17 fields
+// Advance message (dual-threshold rotation + incoming-set witness
+// admission) — Constr 0, 18 fields
 // ---------------------------------------------------------
 
-/// The signed advance preimage (Constr 0; 17 fields in frozen order). The
+/// The signed advance preimage (Constr 0; 18 fields in frozen order). The
 /// advance is authorized by the KERI dual-threshold rule (see the module
-/// doc), never by the spent current set alone (KERI pre-rotation).
+/// doc), never by the spent current set alone (KERI pre-rotation). Field 14
+/// carries the rotation's witness-cut delta (`br`) and field 15 the
+/// witness-add delta (`ba`) — the incoming witness set is never signed
+/// directly; `advance_equalities` derives it.
 pub type AdvanceMessage {
   domain: ByteArray,
   network_id: Int,
@@ -140,7 +151,8 @@ pub type AdvanceMessage {
   new_cur_threshold: Threshold,
   new_next_keys: List<ByteArray>,
   new_next_threshold: Threshold,
-  new_witnesses: List<ByteArray>,
+  wit_cut: List<ByteArray>,
+  wit_add: List<ByteArray>,
   new_toad: Int,
   seq_to: Int,
   native_sn_to: Int,
@@ -236,10 +248,12 @@ pub fn validate_inception(
 // ---------------------------------------------------------
 
 /// The spent checkpoint context an advance is validated against: its
-/// deployment, identity-asset name, exact `TxOutRef`, and prior key-state
-/// projection fields — including the committed `(next_keys, next_threshold)`
-/// pair the dual-threshold rule evaluates (mirrors the Slice-3
-/// `SpentCheckpoint`).
+/// deployment, identity-asset name, exact `TxOutRef`, current witness set
+/// (the W1-W3 delta base), and prior key-state projection fields —
+/// including the committed `(next_keys, next_threshold)` pair the
+/// dual-threshold rule evaluates (mirrors the Slice-3 `SpentCheckpoint`). A
+/// validation-context type, not a wire type; the spend branch fills it from
+/// the spent inline datum.
 pub type SpentCheckpoint {
   network_id: Int,
   policy_id: ByteArray,
@@ -247,6 +261,7 @@ pub type SpentCheckpoint {
   txid: ByteArray,
   index: Int,
   cesr_aid: ByteArray,
+  witnesses: List<ByteArray>,
   next_keys: List<ByteArray>,
   next_threshold: Threshold,
   seq: Int,
@@ -279,6 +294,12 @@ pub type AdvanceError {
   Eq4PriorMismatch
   /// eq5: `seq_to /= spent.seq + 1` or `native_sn_to` did not advance.
   Eq5SequenceMismatch
+  /// W1: `wit_cut` entries are not pairwise distinct, or one is not a
+  /// member of the spent witness set.
+  EqW1CutInvalid
+  /// W2: `wit_add` entries are not pairwise distinct, overlap `wit_cut`, or
+  /// one is already among the surviving (uncut) witnesses.
+  EqW2AddInvalid
   /// eq6: the revealed set did not satisfy its own current threshold.
   Eq6CurrentQuorumUnsatisfied
   /// eq6: the evidence did not satisfy the spent checkpoint's committed
@@ -299,17 +320,26 @@ pub type AdvanceVerdict {
 }
 
 /// The F10 advance checks, checked in order against the actual created
-/// checkpoint datum. eq6 is the KERI dual-threshold rule: the signer evidence
-/// must satisfy the rotation's own `new_cur_threshold` over `new_cur_keys`
-/// AND the spent checkpoint's committed `next_threshold` over its `next_keys`
-/// digests — where only evidence from keys revealed in `new_cur_keys` counts
-/// toward the pre-rotation gate (in KERI, rotation signatures are indexed
-/// over the event's own key list). A full stolen spent-current quorum maps to
-/// no committed `next_keys` position and is rejected; partial/reserve
-/// rotation (a satisfiable subset reveal, with a restated current threshold)
-/// is accepted. eq7 requires the created datum to equal the message's
-/// new-state fields exactly (nothing written that was not signed); eq8
-/// requires that state to be well-formed.
+/// checkpoint datum. W1/W2 (between eq5 and eq6) validate the witness delta
+/// against the spent witness set: `wit_cut` entries must be pairwise
+/// distinct and all members of `spent.witnesses` (W1); `wit_add` entries
+/// must be pairwise distinct, disjoint from `wit_cut`, and not already among
+/// the surviving (uncut) witnesses (W2). eq6 is the KERI dual-threshold
+/// rule: the signer evidence must satisfy the rotation's own
+/// `new_cur_threshold` over `new_cur_keys` AND the spent checkpoint's
+/// committed `next_threshold` over its `next_keys` digests — where only
+/// evidence from keys revealed in `new_cur_keys` counts toward the
+/// pre-rotation gate (in KERI, rotation signatures are indexed over the
+/// event's own key list). A full stolen spent-current quorum maps to no
+/// committed `next_keys` position and is rejected; partial/reserve rotation
+/// (a satisfiable subset reveal, with a restated current threshold) is
+/// accepted. eq7 (amended, W3) requires the created datum to equal the
+/// message's new-state fields exactly, with its witnesses equal to the
+/// derived incoming set — survivors (the spent witnesses minus `wit_cut`,
+/// in spent order) followed by `wit_add` (in add order) — never the signed
+/// lists directly; eq8 requires that state to be well-formed (which alone
+/// bounds `new_toad`: rule 14 requires `0 <= new_toad <= length(new_set)`,
+/// `0` only when `new_set` is empty).
 pub fn advance_equalities(
   spent: SpentCheckpoint,
   message: AdvanceMessage,
@@ -317,6 +347,13 @@ pub fn advance_equalities(
   signers: RevealedSuccessorSigners,
 ) -> AdvanceVerdict {
   let RevealedSuccessorSigners(controlled) = signers
+  // The surviving (uncut) witnesses, in spent order — the W3 derivation
+  // base, reused by the W2 check and eq7 below.
+  let survivors = list.filter(
+    spent.witnesses,
+    fn(w) { !list.has(message.wit_cut, w) },
+  )
+  let new_set = list.concat(survivors, message.wit_add)
   if message.domain != advance_domain {
     AdvanceInvalid(AdvanceDomainMismatch)
   } else if !(message.network_id == spent.network_id && message.checkpoint_policy_id == spent.policy_id) {
@@ -334,6 +371,22 @@ pub fn advance_equalities(
   } else if !(message.seq_to == spent.seq + 1 && message.native_sn_to > spent.native_sn) {
     // eq5: exact successor sequence; native KERI sequence advances.
     AdvanceInvalid(Eq5SequenceMismatch)
+  } else if !(distinct(message.wit_cut) && list.all(
+    message.wit_cut,
+    fn(w) { list.has(spent.witnesses, w) },
+  )) {
+    // W1: wit_cut entries are pairwise distinct and all members of the
+    // spent witness set (a dup cut or a cut of a non-member is a malformed
+    // rotation — neither is otherwise caught, as set-wise both are no-ops).
+    AdvanceInvalid(EqW1CutInvalid)
+  } else if !(distinct(message.wit_add) && list.all(
+    message.wit_add,
+    fn(w) { !list.has(message.wit_cut, w) },
+  ) && list.all(message.wit_add, fn(w) { !list.has(survivors, w) })) {
+    // W2: wit_add entries are pairwise distinct, disjoint from wit_cut (no
+    // cut-then-re-add in one event), and not already among the survivors
+    // (no add-already-present).
+    AdvanceInvalid(EqW2AddInvalid)
   } else if !evaluate(
     message.new_cur_threshold,
     list.length(message.new_cur_keys),
@@ -357,8 +410,9 @@ pub fn advance_equalities(
     // revealing key is digested once (blake3 over its 44-char qb64) to find
     // its committed position; the KEL n entries are matched byte-for-byte.
     AdvanceInvalid(Eq6PriorNextQuorumUnsatisfied)
-  } else if created != expected_created(message) {
-    // eq7: the created datum equals the message's new-state fields exactly.
+  } else if created != expected_created(message, new_set) {
+    // eq7 (amended, W3): the created datum equals the message's new-state
+    // fields exactly, with witnesses equal to the derived incoming set.
     AdvanceInvalid(Eq7CreatedStateMismatch)
   } else {
     // eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
@@ -367,6 +421,11 @@ pub fn advance_equalities(
       _ -> AdvanceValid
     }
   }
+}
+
+/// Pairwise distinctness (no duplicate `ByteArray` entries).
+fn distinct(xs: List<ByteArray>) -> Bool {
+  list.length(list.unique(xs)) == list.length(xs)
 }
 
 /// Positions in `keys` whose digest is among the `controlled` signer
@@ -387,15 +446,19 @@ fn positions_in(keys: List<ByteArray>, controlled: List<ByteArray>) -> List<Int>
 }
 
 /// The checkpoint datum the advance message's new-state fields must produce
-/// (eq7 baseline): the successor key-state projected forward one step.
-fn expected_created(message: AdvanceMessage) -> CheckpointDatumV1 {
+/// (eq7 baseline): the successor key-state projected forward one step, with
+/// witnesses equal to the caller-supplied W3-derived incoming set.
+fn expected_created(
+  message: AdvanceMessage,
+  new_set: List<ByteArray>,
+) -> CheckpointDatumV1 {
   CheckpointDatumV1 {
     cesr_aid: message.cesr_aid,
     cur_keys: message.new_cur_keys,
     cur_threshold: message.new_cur_threshold,
     next_keys: message.new_next_keys,
     next_threshold: message.new_next_threshold,
-    witnesses: message.new_witnesses,
+    witnesses: new_set,
     toad: message.new_toad,
     seq: message.seq_to,
     native_sn: message.native_sn_to,

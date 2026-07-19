@@ -10,14 +10,14 @@
 
 ## Slice 2 — Haskell message amendment
 
-- [ ] T115-S2 `Message.hs`: 18-field `AdvanceMessage` (`wit_cut`/`wit_add`),
+- [x] T115-S2 `Message.hs`: 18-field `AdvanceMessage` (`wit_cut`/`wit_add`),
   `SpentCheckpoint.witnesses`, W1/W2 errors, derivation, amended eq7,
   two-seal doc fix; `MessageSpec.hs` + goldens regen; S1-fixture-driven
   equalities specs (incl. stolen-quorum, delta malformations).
 
 ## Slice 3 — Aiken message amendment + parity
 
-- [ ] T115-S3 `message.ak` mirror + `message_tests.ak` + `vectors.ak`
+- [x] T115-S3 `message.ak` mirror + `message_tests.ak` + `vectors.ak`
   regen; shared vectors byte-identical AND verdict-identical; registration
   goldens byte-unchanged.
 

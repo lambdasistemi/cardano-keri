@@ -150,8 +150,35 @@ validAdv =
         (Unweighted 1) -- new_cur_threshold
         [b32 0x22] -- new_next_keys
         (Unweighted 1) -- new_next_threshold
-        [] -- new_witnesses
+        [] -- wit_cut
+        [] -- wit_add
         0 -- new_toad
+        1 -- seq_to
+        1 -- native_sn_to
+
+{- | A witnessed advance carrying distinct, non-empty @wit_cut@\/@wit_add@
+(#115 S2\/S3): pins the frozen field-14\/field-15 order (a swapped cut\/add
+would byte-match a swapped golden, which the witnessless 'validAdv' cannot
+detect since both its delta lists are empty).
+-}
+witnessedAdv :: AdvanceMessage
+witnessedAdv =
+    advanceMessage
+        1 -- network_id
+        policy
+        (deriveAidAssetName cesrA)
+        cesrA
+        (b32 0xd0) -- spent_txid
+        1 -- spent_index
+        0 -- prior_seq
+        0 -- prior_native_sn
+        [b32 0x11] -- new_cur_keys
+        (Unweighted 1) -- new_cur_threshold
+        [b32 0x22] -- new_next_keys
+        (Unweighted 1) -- new_next_threshold
+        [b32 0xb1] -- wit_cut
+        [b32 0xb4] -- wit_add
+        2 -- new_toad
         1 -- seq_to
         1 -- native_sn_to
 
@@ -175,7 +202,8 @@ reserveAdv =
         (third 3)
         (map (nkd . rn) [1, 2, 3, 4] <> map b32 [0x71, 0x72, 0x73])
         (third 7)
-        []
+        [] -- wit_cut
+        [] -- wit_add
         0
         1
         1
@@ -333,6 +361,10 @@ vectors =
         "golden_advance_reserve_message"
         "message: AdvanceMessage (partial/reserve rotation, GLEIF Root shape)"
         (canonicalCbor reserveAdv)
+    , Vec
+        "golden_advance_witnessed_message"
+        "message: AdvanceMessage (distinct non-empty wit_cut/wit_add, field-order pin)"
+        (canonicalCbor witnessedAdv)
     ]
 
 -- ---------------------------------------------------------

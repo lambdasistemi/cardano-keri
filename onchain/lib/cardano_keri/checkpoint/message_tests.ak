@@ -8,8 +8,8 @@
 //// security-critical eq6 dual-threshold rule (a stolen spent-current quorum
 //// maps to no committed next-key position and is rejected; a partial/reserve
 //// rotation revealing a satisfiable subset is accepted). Field order
-//// (12 icp / 17 adv), the `Constr 0` tags, and the eight checks are protocol
-//// surface, frozen against the vectors + the Slice-3 semantics.
+//// (12 icp / 18 adv), the `Constr 0` tags, and the W1-W3 + eight F10 checks
+//// are protocol surface, frozen against the vectors + the Slice-2 semantics.
 
 use aiken/cbor
 use aiken/collection/list
@@ -24,11 +24,11 @@ use cardano_keri/checkpoint/message.{
   Eq2AssetOrAidMismatch, Eq3OutRefMismatch, Eq4PriorMismatch,
   Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
   Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
-  Icp, InceptionAidWidth, InceptionAssetMismatch, InceptionDomainMismatch,
-  InceptionIllFormed, InceptionInvalid, InceptionMessage, InceptionValid,
-  RevealedSuccessorSigners, SpentCheckpoint, advance_domain, advance_equalities,
-  checkpoint_asset_domain_tag, deriveAidAssetName, inception_domain,
-  validate_inception,
+  EqW1CutInvalid, EqW2AddInvalid, Icp, InceptionAidWidth, InceptionAssetMismatch,
+  InceptionDomainMismatch, InceptionIllFormed, InceptionInvalid,
+  InceptionMessage, InceptionValid, RevealedSuccessorSigners, SpentCheckpoint,
+  advance_domain, advance_equalities, checkpoint_asset_domain_tag,
+  deriveAidAssetName, inception_domain, validate_inception,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted, evaluate,
@@ -69,6 +69,19 @@ const wrong_policy: ByteArray =
 
 const crossed_aid: ByteArray =
   #"5555555555555555555555555555555555555555555555555555555555555555"
+
+// witness verkeys for the W1-W3 delta coverage below.
+const w1: ByteArray =
+  #"b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+
+const w2: ByteArray =
+  #"b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+
+const w3: ByteArray =
+  #"b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3"
+
+const w4: ByteArray =
+  #"b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4"
 
 // The derivation golden's fixed cesr_aid (0x00..0x1f), from vectors.ak.
 fn cesr_a() -> ByteArray {
@@ -273,6 +286,7 @@ fn spent() -> SpentCheckpoint {
     txid: spent_txid,
     index: 1,
     cesr_aid: cesr_a(),
+    witnesses: [],
     next_keys: [message.next_key_digest(nk11)],
     next_threshold: Unweighted(1),
     seq: 0,
@@ -295,11 +309,51 @@ fn valid_adv() -> AdvanceMessage {
     new_cur_threshold: Unweighted(1),
     new_next_keys: [nk22],
     new_next_threshold: Unweighted(1),
-    new_witnesses: [],
+    wit_cut: [],
+    wit_add: [],
     new_toad: 0,
     seq_to: 1,
     native_sn_to: 1,
   }
+}
+
+// A witnessed variant of `spent()`/`valid_adv()`: the spent checkpoint
+// carries three witnesses [w1, w2, w3]; the rotation cuts w1 and adds w4.
+fn witnessed_spent() -> SpentCheckpoint {
+  SpentCheckpoint { ..spent(), witnesses: [w1, w2, w3] }
+}
+
+fn witnessed_adv() -> AdvanceMessage {
+  AdvanceMessage { ..valid_adv(), wit_cut: [w1], wit_add: [w4], new_toad: 2 }
+}
+
+fn witnessed_created() -> CheckpointDatumV1 {
+  CheckpointDatumV1 { ..created_valid(), witnesses: [w2, w3, w4], toad: 2 }
+}
+
+// A no-delta rotation over the same non-empty witnessed_spent() set: the
+// witness order and toad are preserved exactly.
+fn witnessed_keep_adv() -> AdvanceMessage {
+  AdvanceMessage { ..valid_adv(), wit_cut: [], wit_add: [], new_toad: 2 }
+}
+
+fn witnessed_keep_created() -> CheckpointDatumV1 {
+  CheckpointDatumV1 { ..created_valid(), witnesses: [w1, w2, w3], toad: 2 }
+}
+
+// The visible-downgrade rotation: every spent witness is cut, none added,
+// bt = 0 — the derived set is empty and zero receipts are required.
+fn witnessed_downgrade_adv() -> AdvanceMessage {
+  AdvanceMessage {
+    ..valid_adv(),
+    wit_cut: [w1, w2, w3],
+    wit_add: [],
+    new_toad: 0,
+  }
+}
+
+fn witnessed_downgrade_created() -> CheckpointDatumV1 {
+  CheckpointDatumV1 { ..created_valid(), witnesses: [], toad: 0 }
 }
 
 fn created_valid() -> CheckpointDatumV1 {
@@ -689,4 +743,113 @@ test advance_reserve_augmented_key_accepted() {
     },
     RevealedSuccessorSigners([aug, rn0, rn5, rn6]),
   ) == AdvanceValid
+}
+
+// ---------------------------------------------------------
+// Witness-delta (W1-W3) verdict family (#115 S3) — mirrors the Slice-2
+// hspec `advance witness-delta` / `advance witness-delta malformations`
+// verdicts one-for-one.
+// ---------------------------------------------------------
+
+test advance_witnessed_cut_add_accepted() {
+  advance_equalities(
+    witnessed_spent(),
+    witnessed_adv(),
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceValid
+}
+
+test advance_witnessed_message_golden() {
+  cbor.serialise(witnessed_adv()) == vectors.golden_advance_witnessed_message
+}
+
+test advance_witnessed_keep_accepted() {
+  advance_equalities(
+    witnessed_spent(),
+    witnessed_keep_adv(),
+    witnessed_keep_created(),
+    sigs_revealed(),
+  ) == AdvanceValid
+}
+
+test advance_witnessed_downgrade_accepted() {
+  advance_equalities(
+    witnessed_spent(),
+    witnessed_downgrade_adv(),
+    witnessed_downgrade_created(),
+    sigs_revealed(),
+  ) == AdvanceValid
+}
+
+test advance_witness_dup_cut_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), wit_cut: [w1, w1] },
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(EqW1CutInvalid)
+}
+
+test advance_witness_cut_not_present_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), wit_cut: [w4] },
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(EqW1CutInvalid)
+}
+
+test advance_witness_dup_add_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), wit_add: [w4, w4] },
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(EqW2AddInvalid)
+}
+
+test advance_witness_add_already_present_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), wit_add: [w2] },
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(EqW2AddInvalid)
+}
+
+test advance_witness_cut_add_overlap_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), wit_add: [w1] },
+    witnessed_created(),
+    sigs_revealed(),
+  ) == AdvanceInvalid(EqW2AddInvalid)
+}
+
+test advance_witness_derived_set_mismatch_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    witnessed_adv(),
+    CheckpointDatumV1 { ..witnessed_created(), witnesses: [w1, w2, w3] },
+    sigs_revealed(),
+  ) == AdvanceInvalid(Eq7CreatedStateMismatch)
+}
+
+test advance_witness_wrong_survivor_order_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    witnessed_adv(),
+    CheckpointDatumV1 { ..witnessed_created(), witnesses: [w4, w2, w3] },
+    sigs_revealed(),
+  ) == AdvanceInvalid(Eq7CreatedStateMismatch)
+}
+
+test advance_witness_toad_out_of_bounds_rejected() {
+  advance_equalities(
+    witnessed_spent(),
+    AdvanceMessage { ..witnessed_adv(), new_toad: 9 },
+    CheckpointDatumV1 { ..witnessed_created(), toad: 9 },
+    sigs_revealed(),
+  ) == AdvanceInvalid(Eq8CreatedIllFormed(ToadRange))
 }

@@ -43,5 +43,5 @@
 
 ## Slice 7 — measurements report (docs-only)
 
-- [ ] T115-S7 `specs/115-advance/MEASUREMENTS.md`: advance cells vs
+- [x] T115-S7 `specs/115-advance/MEASUREMENTS.md`: advance cells vs
   budget, headroom verdicts, any gate history preserved.

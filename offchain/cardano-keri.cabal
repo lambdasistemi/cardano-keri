@@ -86,6 +86,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Cage.SignSpec
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec
+    Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader

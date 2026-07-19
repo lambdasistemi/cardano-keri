@@ -22,6 +22,9 @@ Fixture families (each a JSON bundle under fixtures/):
                   convention documented on _field_spans) and exported signer
                   seeds (temp test keys from the fixed Salter seed below —
                   safe to commit).
+  advance       — #115 witnessed rotations: 2-key and GLEIF 7-key cut/add,
+                  all-witness downgrade, and no-delta keep, with incoming-set
+                  receipts, rotation offsets, and controller/witness seeds.
 
 Every signature carries a `signing_target` field ("event_raw" | "said") that
 the generator sets by re-verifying the signature against BOTH candidate byte
@@ -90,23 +93,32 @@ def _sig_record(signer, index, event_raw, said, kind):
     }
 
 
-def _event_record(serder):
+def _event_record(serder, rotation_fields=False):
+    ked = {
+        "t": serder.ked["t"],
+        "s": serder.ked["s"],
+        "i": serder.ked["i"],
+        "k": serder.ked["k"],
+        "n": serder.ked["n"],
+        "kt": serder.ked["kt"],
+        "nt": serder.ked["nt"],
+        "b": serder.ked.get("b", []),
+        "bt": serder.ked.get("bt", "0"),
+    }
+    if rotation_fields:
+        ked.update(
+            {
+                "p": serder.ked["p"],
+                "br": serder.ked["br"],
+                "ba": serder.ked["ba"],
+            }
+        )
     return {
         "pre": serder.pre,
         "said": serder.said,
         "raw_hex": serder.raw.hex(),
         "raw_len": len(serder.raw),
-        "ked": {
-            "t": serder.ked["t"],
-            "s": serder.ked["s"],
-            "i": serder.ked["i"],
-            "k": serder.ked["k"],
-            "n": serder.ked["n"],
-            "kt": serder.ked["kt"],
-            "nt": serder.ked["nt"],
-            "b": serder.ked.get("b", []),
-            "bt": serder.ked.get("bt", "0"),
-        },
+        "ked": ked,
     }
 
 
@@ -202,7 +214,7 @@ def _field_spans(raw: bytes):
     return spans
 
 
-def _offsets_record(serder):
+def _offsets_record(serder, rotation_fields=False):
     """Per-field value offsets into serder.raw, per the _field_spans convention.
 
     Scalar fields (t, i, s, kt, nt, bt) map to a single offset — the value
@@ -212,10 +224,15 @@ def _offsets_record(serder):
     """
     spans = _field_spans(serder.raw)
     offsets = {}
-    for f in ("t", "i", "s", "kt", "nt", "bt"):
+    scalar_fields = ["t", "i", "s", "kt", "nt", "bt"]
+    array_fields = ["k", "n", "b"]
+    if rotation_fields:
+        scalar_fields.append("p")
+        array_fields.extend(("br", "ba"))
+    for f in scalar_fields:
         if f in spans:
             offsets[f] = spans[f][1]
-    for f in ("k", "n", "b"):
+    for f in array_fields:
         offsets[f] = [start for start, _ in spans[f][3]] if f in spans else []
     return offsets
 
@@ -228,7 +245,7 @@ def _assert_offsets(serder, offsets):
     def sl(off, blen):
         return raw[off : off + blen]
 
-    for f in ("t", "i", "s", "bt"):
+    for f in ("t", "i", "s", "p", "bt"):
         if f in offsets:
             exp = ked[f].encode()
             assert sl(offsets[f], len(exp)) == exp, f"offset self-check failed: {f}"
@@ -239,7 +256,9 @@ def _assert_offsets(serder, offsets):
                 json.dumps(v, separators=(",", ":")) if isinstance(v, list) else v
             ).encode()
             assert sl(offsets[f], len(exp)) == exp, f"offset self-check failed: {f}"
-    for f in ("k", "n", "b"):
+    for f in ("k", "n", "b", "br", "ba"):
+        if f not in offsets:
+            continue
         elems = ked.get(f) or []
         assert len(offsets[f]) == len(elems), f"offset count mismatch: {f}"
         for off, e in zip(offsets[f], elems):
@@ -273,6 +292,47 @@ def _reg_record(serder, cur, nxt, note, delegator_pre=None):
     if delegator_pre is not None:
         rec["delegator_pre"] = delegator_pre
     return rec
+
+
+def _advance_record(
+    icp,
+    rot,
+    icp_cur,
+    rot_cur,
+    rot_next,
+    witness_outgoing,
+    witness_added,
+    receipts,
+    note,
+):
+    """One #115 fixture with incoming-indexed receipts and seed material."""
+    offsets = _offsets_record(rot, rotation_fields=True)
+    _assert_offsets(rot, offsets)
+    return {
+        "note": note,
+        "icp": _event_record(icp),
+        "icp_sigs": [
+            _sig_record(signer, index, icp.raw, icp.said, "controller")
+            for index, signer in enumerate(icp_cur)
+        ],
+        "rot": _event_record(rot, rotation_fields=True),
+        "rot_sigs": [
+            _sig_record(signer, index, rot.raw, rot.said, "controller")
+            for index, signer in enumerate(rot_cur)
+        ],
+        "rot_witness_receipts": [
+            _sig_record(signer, incoming_index, rot.raw, rot.said, "witness")
+            for signer, incoming_index in receipts
+        ],
+        "offsets": offsets,
+        "signer_seeds": {
+            "inception_current": _seed_records(icp_cur),
+            "rotation_current": _seed_records(rot_cur),
+            "rotation_next": _seed_records(rot_next),
+            "witness_outgoing": _seed_records(witness_outgoing),
+            "witness_added": _seed_records(witness_added),
+        },
+    }
 
 
 def build():
@@ -414,6 +474,129 @@ def build():
         "rot_conflict": _event_record(fwrotB),
         "rot_conflict_sigs": [_sig_record(fwn[0], 0, fwrotB.raw, fwrotB.said, "controller")],
         "rot_conflict_witness_receipts": [_sig_record(fww[0], 0, fwrotB.raw, fwrotB.said, "witness")],
+    }
+
+    # --- advance: #115 witnessed rotation ground truth -------------------
+    # Receipt indices are positions in the derived incoming set
+    # (outgoing witnesses minus br, followed by ba), never the outgoing set.
+
+    # True 2-key witnessed shape: [w0,w1,w2] -> [w1,w2,w3].  Receipts use
+    # incoming indices 0 and 2, proving both survivor reindexing and add index.
+    awc = salt.signers(count=2, transferable=True, temp=True, path="awc")
+    awn = salt.signers(count=2, transferable=True, temp=True, path="awn")
+    awn2 = salt.signers(count=2, transferable=True, temp=True, path="awn2")
+    aww = salt.signers(count=4, transferable=False, temp=True, path="aww")
+    awicp = eventing.incept(
+        keys=[s.verfer.qb64 for s in awc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in awn],
+        isith="2", nsith="2",
+        wits=[s.verfer.qb64 for s in aww[:3]], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+    awrot = eventing.rotate(
+        pre=awicp.pre, dig=awicp.said, sn=1,
+        keys=[s.verfer.qb64 for s in awn],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in awn2],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in aww[:3]],
+        cuts=[aww[0].verfer.qb64], adds=[aww[3].verfer.qb64],
+    )
+
+    # GLEIF-root reserve shape: reveal committed positions 0,5,6 and restate
+    # a 3-clause current threshold while retaining a 7-key next reserve.
+    a7c = salt.signers(count=7, transferable=True, temp=True, path="a7c")
+    a7n = salt.signers(count=7, transferable=True, temp=True, path="a7n")
+    a7n2 = salt.signers(count=7, transferable=True, temp=True, path="a7n2")
+    a7w = salt.signers(count=4, transferable=False, temp=True, path="a7w")
+    a7icp = eventing.incept(
+        keys=[s.verfer.qb64 for s in a7c],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in a7n],
+        isith=["1/3"] * 7, nsith=["1/3"] * 7,
+        wits=[s.verfer.qb64 for s in a7w[:3]], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+    a7reveal = [a7n[0], a7n[5], a7n[6]]
+    a7rot = eventing.rotate(
+        pre=a7icp.pre, dig=a7icp.said, sn=1,
+        keys=[s.verfer.qb64 for s in a7reveal],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in a7n2],
+        isith=["1/3"] * 3, nsith=["1/3"] * 7, toad="2",
+        wits=[s.verfer.qb64 for s in a7w[:3]],
+        cuts=[a7w[0].verfer.qb64], adds=[a7w[3].verfer.qb64],
+    )
+
+    # Visible downgrade: all witnesses are cut, the incoming set is empty,
+    # bt is zero, and no receipts exist.
+    adc = salt.signers(count=2, transferable=True, temp=True, path="adc")
+    adn = salt.signers(count=2, transferable=True, temp=True, path="adn")
+    adn2 = salt.signers(count=2, transferable=True, temp=True, path="adn2")
+    adw = salt.signers(count=3, transferable=False, temp=True, path="adw")
+    adicp = eventing.incept(
+        keys=[s.verfer.qb64 for s in adc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in adn],
+        isith="2", nsith="2",
+        wits=[s.verfer.qb64 for s in adw], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+    adrot = eventing.rotate(
+        pre=adicp.pre, dig=adicp.said, sn=1,
+        keys=[s.verfer.qb64 for s in adn],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in adn2],
+        isith="2", nsith="2", toad="0",
+        wits=[s.verfer.qb64 for s in adw],
+        cuts=[s.verfer.qb64 for s in adw], adds=[],
+    )
+
+    # Common steady state: no witness delta, same non-empty set and threshold
+    # receipts from two unchanged witnesses.
+    akc = salt.signers(count=2, transferable=True, temp=True, path="akc")
+    akn = salt.signers(count=2, transferable=True, temp=True, path="akn")
+    akn2 = salt.signers(count=2, transferable=True, temp=True, path="akn2")
+    akw = salt.signers(count=3, transferable=False, temp=True, path="akw")
+    akicp = eventing.incept(
+        keys=[s.verfer.qb64 for s in akc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in akn],
+        isith="2", nsith="2",
+        wits=[s.verfer.qb64 for s in akw], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+    akrot = eventing.rotate(
+        pre=akicp.pre, dig=akicp.said, sn=1,
+        keys=[s.verfer.qb64 for s in akn],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in akn2],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in akw], cuts=[], adds=[],
+    )
+
+    bundles["advance"] = {
+        "note": (
+            "#115 witnessed rotations with controller and incoming-set "
+            "witness signatures over exact keripy event raw bytes"
+        ),
+        "offset_convention": (
+            "Offsets index into rot.raw: string values point to unquoted "
+            "content; array offsets identify each unquoted element. All "
+            "t/i/s/k/kt/n/nt/p/br/ba/bt slices are self-checked against ked."
+        ),
+        "adv_wit_2key": _advance_record(
+            awicp, awrot, awc, awn, awn2, aww[:3], [aww[3]],
+            [(aww[1], 0), (aww[3], 2)],
+            "2-key witnessed rotation cutting witness 0 and adding witness 3",
+        ),
+        "adv_wit_7key": _advance_record(
+            a7icp, a7rot, a7c, a7reveal, a7n2, a7w[:3], [a7w[3]],
+            [(a7w[1], 0), (a7w[3], 2)],
+            "GLEIF-root partial 3-of-7 reveal with witness cut/add",
+        ),
+        "adv_downgrade": _advance_record(
+            adicp, adrot, adc, adn, adn2, adw, [], [],
+            "all witnesses cut, bt=0, and zero receipts",
+        ),
+        "adv_keep": _advance_record(
+            akicp, akrot, akc, akn, akn2, akw, [],
+            [(akw[0], 0), (akw[2], 2)],
+            "no witness delta; threshold receipts from the unchanged set",
+        ),
     }
 
     # --- registration: #114 icp-admission ground truth --------------------

@@ -30,7 +30,7 @@
 
 ## Slice 5 — Aiken advance predicate + parity
 
-- [ ] T115-S5 `advance.ak` mirror (+tests) + `GenAdvanceVectors.hs`
+- [x] T115-S5 `advance.ak` mirror (+tests) + `GenAdvanceVectors.hs`
   shared vectors (bytes AND verdicts) wired into `just ci`.
 
 ## Slice 6 — spend branch + measurement gate

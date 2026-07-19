@@ -2,7 +2,7 @@
 
 ## Slice 1 — keripy witness-rotation fixtures
 
-- [ ] T115-S1 `gen_fixtures.py`: `p`/`br`/`ba` spans in `_field_spans`;
+- [x] T115-S1 `gen_fixtures.py`: `p`/`br`/`ba` spans in `_field_spans`;
   `adv_wit_2key`/`adv_wit_7key`/`adv_downgrade`/`adv_keep` bundles
   (offsets, controller sigs, incoming-set witness receipts, seeds);
   byte-stable regen; existing bundles byte-unchanged; committed

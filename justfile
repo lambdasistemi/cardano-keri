@@ -141,14 +141,45 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
-# Measure the checkpoint Register branch ex-units at the A-001 QB-2 gate
-# shapes (#114 S5: reg_2key, reg_7key GLEIF, reg_witnessed 2-of-3) — each cell
-# the full Tx-B context (R1/R2/R5 shape + E1-E9 + blake2b proof-name recompute
-# + R7 signatures). Same caveat as measure-enforcement: an INVOCATION printing
-# exact mem/cpu per cell, not a headroom assertion — the >=25%-headroom verdict
-# lives in specs/114-registration/MEASUREMENTS.md (S6).
+# Measure and mechanically gate the nine final checkpoint ACCEPT paths. The
+# exact title set prevents obsolete or partial fixtures from substituting for
+# the final matrix; every row must pass and remain at or below the unrounded
+# 25%-headroom limits (10,500,000 memory and 7,500,000,000 CPU).
 measure-checkpoint:
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_checkpoint
+    #!/usr/bin/env bash
+    set -euo pipefail
+    results="$(mktemp)"
+    trap 'rm -f "$results"' EXIT
+    cd onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#jq --command bash -euo pipefail -c '
+      aiken check --plain-numbers -m measure_checkpoint | tee "$1"
+      jq -e '\''
+        [
+          "measure_checkpoint_register_2key",
+          "measure_checkpoint_register_witnessed",
+          "measure_checkpoint_register_7key",
+          "measure_checkpoint_freeze_lag",
+          "measure_checkpoint_freeze_2key",
+          "measure_checkpoint_freeze_7key",
+          "measure_checkpoint_convict_witnessed_active",
+          "measure_checkpoint_convict_witnessed_frozen",
+          "measure_checkpoint_advance_from_frozen"
+        ] as $required
+        | [.modules[].tests[] | select(.title | startswith("measure_checkpoint"))] as $tests
+        | ($tests | map(.title)) as $actual
+        | if ($actual | sort) != ($required | sort) then
+            error("checkpoint measurement title mismatch: expected \($required | sort); actual \($actual | sort)")
+          elif any($tests[]; .status != "pass") then
+            error("checkpoint measurement did not pass: \([$tests[] | select(.status != "pass") | {title, status}])")
+          elif any($tests[]; ((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) then
+            error("checkpoint measurement lacks execution units: \([$tests[] | select(((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) | .title])")
+          elif any($tests[]; .execution_units.mem > 10500000 or .execution_units.cpu > 7500000000) then
+            error("checkpoint measurement exceeds hard limit: \([$tests[] | select(.execution_units.mem > 10500000 or .execution_units.cpu > 7500000000) | {title, execution_units}])")
+          else
+            $tests | map({title, status, execution_units})
+          end
+      '\'' "$1"
+    ' _ "$results"
 
 # --- BLAKE3 spike (pinned Aiken) ---
 

@@ -33,7 +33,8 @@ use cage_context.{
 use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
+  placeholder,
 }
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
@@ -42,8 +43,11 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/role.{Registry}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
-use checkpoint.{Advance, Close, Convict, Freeze, Register}
+use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
+use cardano_keri/checkpoint/unicity_vectors as uni
+use checkpoint.{Advance, Close, Convict, Freeze, RecordRegistration, Register}
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
 /// proof token in the R5 input/burn is denominated under it).
@@ -58,6 +62,9 @@ const policy: PolicyId =
 const network_id: Int = 0
 
 const d_reg: Int = 5_000_000
+
+const registry_ref: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 9 }
 
 // ---------------------------------------------------------------------
 // Tx-B context builders
@@ -105,6 +112,47 @@ fn register_mint(aid_name: ByteArray, proof_name: ByteArray) -> Value {
     |> merge(from_asset(hp_policy, proof_name, -1))
 }
 
+fn registry_value() -> Value {
+  from_lovelace(min_ada)
+    |> merge(from_asset(policy, uni.registry_thread_name, 1))
+}
+
+fn registry_output(root: ByteArray) -> Output {
+  Output {
+    address: role.address(policy, Registry),
+    value: registry_value(),
+    datum: InlineDatum(RegistryDatumV1 { root }),
+    reference_script: None,
+  }
+}
+
+fn gated_register_tx(
+  old_root: ByteArray,
+  new_root: ByteArray,
+  tx: Transaction,
+) -> Transaction {
+  let registry_input = input_at(registry_ref, registry_output(old_root))
+  let registry_redeemer: Data = RecordRegistration
+  Transaction {
+    ..tx,
+    inputs: list.concat(tx.inputs, [registry_input]),
+    outputs: list.concat(tx.outputs, [registry_output(new_root)]),
+    redeemers: [Pair(Spend(registry_ref), registry_redeemer)],
+  }
+}
+
+fn registration_key(e: RegistrationEvidence) -> ByteArray {
+  if e == vec.pos_7key_evidence {
+    deriveAidAssetName(vec.pos_7key_datum.cesr_aid)
+  } else if e == vec.pos_witnessed_evidence {
+    deriveAidAssetName(vec.pos_witnessed_datum.cesr_aid)
+  } else if e == vec.pos_weighted_evidence {
+    deriveAidAssetName(vec.pos_weighted_datum.cesr_aid)
+  } else {
+    deriveAidAssetName(vec.pos_2key_datum.cesr_aid)
+  }
+}
+
 /// A full honest Tx-B context over one vector package.
 fn register_tx(
   d: CheckpointDatumV1,
@@ -122,14 +170,27 @@ fn register_tx(
 
 /// Drive the real mint handler under the fixed deployment parameters.
 fn run_register(e: RegistrationEvidence, tx: Transaction) -> Bool {
+  let key = registration_key(e)
+  let old_root = unicity.empty_root()
+  let new_root = unicity.insert_registered(old_root, key, [])
+  run_register_at(e, old_root, new_root, tx)
+}
+
+fn run_register_at(
+  e: RegistrationEvidence,
+  old_root: ByteArray,
+  new_root: ByteArray,
+  tx: Transaction,
+) -> Bool {
   checkpoint.checkpoint.mint(
     0,
     hp_policy,
     network_id,
     d_reg,
-    Register { evidence: e },
+    uni.registry_seed,
+    Register { evidence: e, registry_ref, absence_proof: [] },
     policy,
-    tx,
+    gated_register_tx(old_root, new_root, tx),
   )
 }
 
@@ -194,6 +255,25 @@ test accept_register_extra_input() {
   run_register(
     vec.pos_2key_evidence,
     Transaction { ..tx, inputs: list.concat(tx.inputs, [extra]) },
+  )
+}
+
+/// U5: replaying the same AID registration from the same implicit empty
+/// registry state must reject. This is the validator-level regression that
+/// exposes the pre-#116 gap: the current Register handler has no registry
+/// input or absence transition, so this duplicate still succeeds.
+test reject_u5_duplicate_registration_without_registry_gate() fail {
+  let key = deriveAidAssetName(vec.pos_2key_datum.cesr_aid)
+  let present_root = unicity.insert_registered(unicity.empty_root(), key, [])
+  run_register_at(
+    vec.pos_2key_evidence,
+    present_root,
+    present_root,
+    register_tx(
+      vec.pos_2key_datum,
+      vec.pos_2key_lovelace,
+      vec.pos_2key_evidence,
+    ),
   )
 }
 
@@ -412,6 +492,7 @@ test reject_r10_spend_fails_closed() fail {
     hp_policy,
     network_id,
     d_reg,
+    uni.registry_seed,
     Some(datum_data),
     rdm,
     out_ref(seed_tx_id, 0),
@@ -597,6 +678,7 @@ fn run_advance(
     hp_policy,
     adv_network_id,
     d_reg,
+    uni.registry_seed,
     None,
     redeemer,
     own_ref,

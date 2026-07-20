@@ -1,26 +1,31 @@
-# Spec: enforcement wiring — freeze, convict, and mint once (#116)
+# Spec: enforcement wiring — freeze, sovereign convict, and lazy permanence (#116)
 
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/116
 Epic: https://github.com/lambdasistemi/cardano-keri/issues/24
 
-Registration and advance now cover the honest checkpoint lifecycle. This
-ticket makes the same validator react to evidence: a witnessed later event can
-freeze a stale checkpoint, a witnessed conflicting event can permanently
-convict it, and the registration gate remembers every AID forever so a
-convicted identity cannot mint a replacement checkpoint.
+Registration and advance cover the honest checkpoint lifecycle. This ticket
+makes the same validator react to evidence: a witnessed later event can freeze
+a stale checkpoint, and a witnessed conflicting event can sovereignly
+tombstone it without touching shared state. The full registration deposit then
+backs a transferable bounty right. Registration only reference-reads a shared
+conviction list; the list is written lazily when a right holder cashes out and
+makes the conviction permanent.
 
 Ratified inputs (do not reopen without an epic Q-file):
 `specs/106-enforcement/spec.md` (pure enforcement predicates and proof
 fixtures), `specs/114-registration/spec.md` (live Register path and gate-room),
 `specs/115-advance/spec.md` (live Advance path and O1 full-byte signatures),
 and `specs/92-checkpoint-contention/spec.md` (sovereign per-AID state and
-status-by-address).
+status-by-address). The 2026-07-20 ruling in
+`/tmp/keri-24/unicity-redesign.md` supersedes only A-007 QB's
+append-on-registration registry; the other A-007 rulings remain binding.
 
 !!! danger "This completes pre-deployment validator surface"
-    The role addresses, append-only registration set, Freeze path, Convict
-    path, and tombstone dispatch rule all affect the applied checkpoint script
-    hash. They must be ratified before implementation. No deployed checkpoint
-    exists, so this is the last safe place to amend the V1 script in place.
+    The role addresses, conviction-list bootstrap, Freeze path, sovereign
+    Convict path, bounty-right custody, Finalize/Redeem path, and tombstone
+    dispatch rule all affect the applied checkpoint script hash. They must be
+    ratified before reimplementation. No deployed checkpoint exists, so this
+    remains a safe place to amend the V1 script in place.
 
 ---
 
@@ -32,18 +37,25 @@ status-by-address).
    already cover the complete `event_bytes`. All predicate-relevant fields are
    slice-bound to those signed bytes. The `d` field is retained as a signed
    audit label, not treated as a second authorization root.
-2. **Use an append-only MPFS registration set for mint-once unicity.** A
-   singleton registry thread UTxO is consumed atomically with every Register.
-   Its root inserts the AID-derived asset name with an absence proof; there is
-   no delete/update path. The same combined checkpoint script mints and cages
-   the registry thread token, so there is no trusted registry owner.
+2. **Separate sovereign containment from lazy permanence.** Register
+   reference-reads an append-only MPFS conviction list and proves the AID is
+   absent; it never consumes or updates the list. Convict immediately
+   tombstones only the named per-AID checkpoint and converts its whole deposit
+   into a uniquely named bearer bounty right backed by a claim UTxO; it also
+   performs no shared write. The first cash-out inserts the AID into the
+   conviction list, while later rights redeem against the already-present
+   marker. Duplicate fresh mint and pre-finalization re-registration are an
+   explicit, deposit-backed residual rather than a claimed mint-once property.
 3. **Encode lifecycle roles on the staking-credential axis.** ACTIVE keeps the
    already-ratified no-stake address. FROZEN, TOMBSTONE, and the internal
-   REGISTRY state use distinct deterministic staking **script** credentials
-   derived from the checkpoint policy hash. The payment credential remains the
-   checkpoint script hash for every role.
+   REGISTRY state retain their deterministic staking **script** credentials;
+   the proposed BOUNTY claim extends the same derivation with a new tag. The
+   payment credential remains the checkpoint script hash for every role.
 
-These three decisions are spec-checkpoint material.
+The replacement unicity mechanics, bounty custody, cash-out modes, race
+semantics, and `D_reg` security role are new spec-checkpoint material. SAID,
+existing role derivation, Freeze/thaw, and the two #106 corrections are not
+reopened.
 
 ### Ratification record (2026-07-20)
 
@@ -59,15 +71,25 @@ This is a dated #116 disposition, not a rewrite of #106 history. #106 F6's
 wrong-`d`-slice adversarial vector families because this V1 wire contract has
 no `said_blank` input.
 
+### Unicity redesign record (2026-07-20)
+
+The epic owner rejected A-007 QB after the delivered implementation exposed
+its ledger-level throughput consequence: consuming one singleton MPFS UTxO on
+every Register serializes all registrations globally, roughly one AID per
+block, and creates a griefing surface. This spec therefore supersedes the
+append-on-registration design. The shared MPFS now stores only permanent
+convictions and is read-only on Register, untouched on Convict, and written at
+most once per identity during economically motivated cash-out.
+
 ## Problem
 
-At `616c630`, `checkpoint.ak` admits Register and Advance but still rejects
-Freeze, Convict, and Close. The #106 predicates exist only as decoded schema
-functions; the live validator does not bind their fields to a transaction,
-does not encode Frozen/Tombstone addresses, and has no terminal tombstone path.
-Registration also still permits the same `(policy, aid_asset_name)` to be
-minted in separate transactions. That temporary pre-deployment residual makes
-conviction reversible by re-registration and therefore must disappear here.
+The draft branch at `78009a1` wires Freeze and Convict, but its unicity path
+consumes and advances one singleton MPFS root on every Register. That turns a
+permissionless admission path into a global serialization point and is
+rejected. The redesign must preserve the already-proved enforcement binding,
+roles, and Freeze/thaw behavior while replacing S3/S5 with contention-free
+registration, sovereign conviction, deposit-backed rights, and lazy permanent
+finalization.
 
 ## Scope
 
@@ -75,24 +97,32 @@ conviction reversible by re-registration and therefore must disappear here.
 
 1. A live wire-evidence layer that slice-binds KERI `rot` fields to the exact
    bytes signed by controllers and witnesses, then invokes the #106 predicates.
-2. ACTIVE → FROZEN, FROZEN → ACTIVE by ordinary Advance, and
+2. ACTIVE → FROZEN, FROZEN → ACTIVE by ordinary Advance, and sovereign
    ACTIVE|FROZEN → TOMBSTONE transaction paths.
-3. Tombstone terminality and bounty release from the registration deposit.
-4. A permanent, permissionless MPFS absence gate coupled atomically to
-   Register, including one-shot registry bootstrap.
-5. Deterministic full-address role encoding.
-6. Haskell/Aiken verdict parity, transaction-boundary adversarial vectors, and
+3. Tombstone terminality plus seizure of the whole registration deposit into a
+   bearer bounty-right claim, with no fee haircut.
+4. A one-shot-bootstrapped append-only MPFS conviction list: read-only absence
+   proof on Register, no shared touch on Convict, first-redemption insertion,
+   and already-finalized redemption without another write.
+5. Unique repeatable bounty rights, claim custody, one-time burn, multi-right
+   cash-out, and the Register/Convict/Finalize race matrix.
+6. Deterministic full-address role encoding.
+7. Haskell/Aiken verdict parity, transaction-boundary adversarial vectors, and
    full-path execution-unit measurements.
 
 **Out of scope**
 
-- Close, migration, consumer lookup, and final deposit economics (#117).
+- Close, migration, and consumer lookup (#117). `D_reg` is pulled forward from
+  #117 as this design's primary deterrence and bounty parameter; production
+  calibration remains a spec-checkpoint decision rather than an implicit
+  constant.
 - The full cross-path adversarial matrix (#118) and devnet cast (#44).
 - A witness-delta/pool-swap-only conviction. It remains fail-closed to Freeze;
   `prev_witnesses_digest` is the named V2 hook.
 - Replacing the sovereign per-AID checkpoint with an MPFS current-state store.
-  The MPFS structure here remembers registration history only; Advance remains
-  per-AID and contention-free across unrelated identities.
+  The MPFS structure here remembers permanent convictions only; Advance,
+  Freeze, and Convict remain per-AID and contention-free across unrelated
+  identities.
 - Any `said_blank` reconstruction or BLAKE3 over enforcement event bytes.
 
 ## Inherited invariants
@@ -108,13 +138,22 @@ conviction reversible by re-registration and therefore must disappear here.
 4. Freeze preserves the complete state value and byte-identical V1 datum. Thaw
    is an ordinary Advance to ACTIVE; there is no separate unfreeze redeemer.
 5. Convict leaves the quantity-one checkpoint token in a terminal tombstone,
-   records the evidence, and releases the deposit remainder as bounty.
+   records the evidence, and backs a unique bearer right with **all** lovelace
+   above the checkpoint min-ADA floor. Fees and claim min-ADA are funded
+   separately; the seized deposit cannot be burned, retained, or haircut.
 6. Status is derived from the exact full address, not from a status field in
    `CheckpointDatumV1`.
 7. Close remains fail-closed. Tombstone is excluded before any current or
    future checkpoint-state redeemer dispatch.
-8. Every registration inserts once into the permanent history set. A Frozen,
-   Tombstone, advanced, or later closed checkpoint never removes that entry.
+8. Register proves absence against a named current conviction-list reference
+   input but does not write it. Multiple registrations may reference-read the
+   same root concurrently.
+9. The first valid bounty cash-out for an absent AID inserts one permanent
+   conviction marker. Later rights prove membership and redeem without another
+   root update. There is no delete path.
+10. Until that first finalization lands, duplicate fresh mint and
+    re-registration are permitted. Every later evidenced fork remains
+    sovereignly containable and seizes another full deposit.
 
 ## SAID decision — no enforcement-path recomputation
 
@@ -246,7 +285,9 @@ role_hash(h, tag) = blake2b_224(
 )
 ```
 
-Tags are one byte: FROZEN `0x00`, TOMBSTONE `0x01`, REGISTRY `0x02`.
+The ratified tags remain FROZEN `0x00`, TOMBSTONE `0x01`, and REGISTRY
+`0x02`. This redesign proposes BOUNTY `0x03` for deposit-claim custody; adding
+that tag does not change the domain or any existing role encoding.
 
 | Role | Full address |
 | --- | --- |
@@ -254,6 +295,7 @@ Tags are one byte: FROZEN `0x00`, TOMBSTONE `0x01`, REGISTRY `0x02`.
 | FROZEN | `Address(Script(h), Some(Inline(Script(role_hash(h, 0x00)))))` |
 | TOMBSTONE | `Address(Script(h), Some(Inline(Script(role_hash(h, 0x01)))))` |
 | REGISTRY | `Address(Script(h), Some(Inline(Script(role_hash(h, 0x02)))))` |
+| BOUNTY | `Address(Script(h), Some(Inline(Script(role_hash(h, 0x03)))))` |
 
 The markers are deterministic protocol labels, not caller parameters and not
 verification keys. They grant no spending authority: every output still has
@@ -265,114 +307,185 @@ across validator versions. ACTIVE stays byte-for-byte compatible with #114 and
 Every branch compares the **whole address**. An unknown staking credential
 fails closed even when its payment credential is `Script(h)`.
 
-## Mint-once unicity gate
+## Conviction-list unicity and lazy permanence
 
-### Registry state
+### State, labels, and bootstrap
 
-The combined checkpoint validator gains a fifth parameter, a deployment
-`registry_seed : OutputReference`, and a second mint redeemer:
+The fifth applied parameter remains a one-shot deployment seed, renamed
+`conviction_seed : OutputReference`. The shared state stores **only permanent
+convictions**:
 
 ```text
-MintRedeemer =
-  BootstrapRegistry
-  | Register {
-      evidence       : RegistrationEvidence,
-      registry_ref   : OutputReference,
-      absence_proof  : Proof
-    }
+ConvictionListDatumV1 { root : ByteArray }
 
-RegistryDatumV1 { root : ByteArray }
+BountyClaimDatumV1 {
+  aid_asset_name   : ByteArray,
+  right_asset_name : ByteArray,
+  seized_lovelace  : Int
+}
 ```
 
-The registry thread asset name is:
+The thread token and fixed set value are domain-separated:
 
 ```text
-blake2b_256(
-  "cardano-keri/checkpoint/registry-thread/v1"
-  || cbor.serialise(registry_seed)
+conviction_thread_name(seed) = blake2b_256(
+  "cardano-keri/checkpoint/conviction-thread/v1"
+  || cbor.serialise(seed)
+)
+
+convicted_marker = blake2b_256(
+  "cardano-keri/checkpoint/convicted/v1"
 )
 ```
 
-It is under the checkpoint policy itself. `BootstrapRegistry` consumes the
-parameterized seed once, mints exactly one thread token, and places it in
-exactly one REGISTRY output with inline `RegistryDatumV1 { root =
-root(empty) }`. There is no burn redeemer for the thread token.
+`BootstrapConvictionList` consumes the parameterized seed once, mints exactly
+one thread token under the checkpoint policy, and cages it in exactly one
+REGISTRY output with inline `ConvictionListDatumV1 { root = root(empty) }`.
+The thread has no burn, split, merge, close, or migration branch in V1. The set
+key is the frozen 32-byte `deriveAidAssetName(cesr_aid)`; presence means
+permanent conviction, not historical registration.
 
-The set key is the already-frozen 32-byte
-`deriveAidAssetName(D.cesr_aid)`. Its value is the fixed V1 registered marker
-`blake2b_256("cardano-keri/checkpoint/registered/v1")`. The value never
-changes; only presence matters.
+### Register is a reference-read
 
-### Atomic Register shape
-
-Register adds one input and one continuing output to #114's transaction:
+Register keeps #114 R1–R8 and adds a named **reference input**, never a normal
+input or continuing output:
 
 ```text
 Tx Register:
   inputs:
     hash-proof token input (existing R5)
-    registry_ref at REGISTRY, carrying thread token + old root
     fee/funding inputs as needed
+  reference_inputs:
+    conviction_ref at REGISTRY, carrying thread token + current root
   outputs:
     one ACTIVE checkpoint state output (existing R2)
-    one REGISTRY successor, same thread token/value + new root
   checkpoint mint:
     exactly +1 deriveAidAssetName(D.cesr_aid)
   hash-proof mint:
     exactly -1 proof token
-  checkpoint redeemers:
-    mint  = Register { evidence, registry_ref, absence_proof }
-    spend = RecordRegistration
+  checkpoint redeemer:
+    Register { evidence, conviction_ref, absence_proof }
 ```
 
-The Register mint branch keeps R1–R8 and additionally:
+The mint branch:
 
-1. resolves exactly the named `registry_ref` at the exact REGISTRY address;
-2. requires its inline registry datum and the derived thread token at quantity
-   one;
-3. requires exactly one REGISTRY successor with byte-identical value and the
-   same thread token, inline new-root datum, and no mint/burn of the thread;
-4. computes
-   `new = mpf.insert(from_root(old.root), aid_asset_name,
-   registered_marker, absence_proof)` and requires
-   `root(new) == successor.root`.
+1. resolves exactly the named `conviction_ref` from `reference_inputs` at the
+   exact REGISTRY address, with inline `ConvictionListDatumV1` and the derived
+   thread token at quantity one;
+2. verifies `absence_proof` for the AID key against that datum's exact root;
+3. requires no thread-token mint/burn and no REGISTRY spend or successor;
+4. runs unchanged R1–R8 controller authorization, event binding, hash-proof
+   consumption, output, and deposit checks.
 
-`mpf.insert` verifies both absence at the old root and inclusion at the new
-root. An existing key therefore rejects forever. Two racing registrations
-serialize on the registry UTxO: at most one consumes the current tip; after a
-retry the loser faces a present key and fails.
+An old root cannot be named after it has been consumed: its output reference is
+no longer in the UTxO set. Multiple Register transactions may, however,
+reference-read the same current root concurrently, including two registrations
+of the same absent AID. This is intentional. An AID already present in the
+conviction list fails its absence proof forever.
 
-The REGISTRY `RecordRegistration` spend branch accepts only when the
-transaction mints exactly one non-registry asset at quantity `+1` under the
-same checkpoint policy. That forces the paired Register mint handler to run;
-the mint handler performs controller authorization, event binding, proof-token
-consumption, and the MPFS transition. Conversely, Register requires the
-registry input, so neither half can execute alone.
+### Bearer bounty right and deposit custody
 
-This coupling prevents reservation griefing: inserting a victim AID is only
-possible in the same transaction that passes the victim's full #114 Register
-authorization. The set is permissionless and has no owner key, delete,
-update, close, or migration branch in V1.
+Each sovereign Convict names the checkpoint input it consumes and derives a
+fresh right name:
+
+```text
+bounty_right_name(checkpoint_ref, aid_asset_name) = blake2b_256(
+  "cardano-keri/checkpoint/bounty-right/v1"
+  || cbor.serialise(checkpoint_ref)
+  || aid_asset_name
+)
+```
+
+Because an output reference is consumed at most once, repeated conviction
+cycles for one AID produce distinct rights. The combined checkpoint policy
+mints exactly one such token in the Convict transaction and requires the token
+to leave checkpoint-script custody so its holder may transfer it like any
+bearer asset.
+
+The deposit is not left on the terminal tombstone. Convict creates exactly one
+BOUNTY claim output with inline `BountyClaimDatumV1` and no unrelated native
+assets. Let:
+
+```text
+seized_lovelace = checkpoint_input.lovelace - checkpoint_min_ada
+```
+
+The claim output contains exactly `claim_min_ada + seized_lovelace`, while the
+tombstone contains exactly `checkpoint_min_ada` plus the AID token. The claim's
+min-ADA and all transaction fees require separate funding. Thus every lovelace
+above the checkpoint floor—including any amount above the minimum `D_reg`—is
+backed for the right holder; Convict cannot fund fees from it or apply a
+haircut. The checkpoint input must already satisfy
+`seized_lovelace >= D_reg`.
+
+This BOUNTY-role claim is the checkpoint proposal for the soundness pass. It
+preserves F11 because TOMBSTONE remains unspendable. The epic checkpoint may
+replace the custody shape if it supplies an equally exact whole-deposit and
+one-time-redemption proof.
+
+### Finalize first; redeem later rights
+
+A cash-out consumes one or more BOUNTY claims for exactly one AID, consumes and
+burns each matching bearer right at quantity `-1`, and releases each complete
+`seized_lovelace` amount to the exact address of the input that carried that
+right. Dedicated payout accounting must prevent fees from reducing the seized
+amount; the precise ledger-level sum check is part of the checkpoint ruling.
+There is no claim successor, so the claim plus right burn is one-time.
+
+Cash-out has two modes:
+
+1. **Finalize absent.** If the AID is absent, the transaction consumes the
+   current REGISTRY thread UTxO, verifies the absence proof, creates exactly one
+   byte-value-preserving REGISTRY successor whose root inserts
+   `(aid_asset_name, convicted_marker)`, and then releases the claims. This is
+   the only V1 root-write path. Payout without that insertion fails.
+2. **Redeem present.** If an earlier cash-out already inserted the AID, the
+   transaction reference-reads the current REGISTRY UTxO, verifies inclusion,
+   writes no successor, burns the remaining matching rights, and releases their
+   claims. This avoids a second shared write for the same identity.
+
+The registry spend and BOUNTY spend handlers, plus the checkpoint-policy
+mint/burn handler, must be welded: no claim may leave script custody unless the
+same transaction proves one of the two modes, and no absent-mode root update
+may occur without at least one matching right burn and claim payout. A holder
+may aggregate multiple rights for the same AID in one cash-out. Rights for
+different AIDs use separate proofs and transactions in V1.
+
+Therefore “get paid if and only if permanent” means: an absent AID is made
+permanent in the payout transaction; a present AID is proved already permanent
+in the payout transaction. No third claim-spend mode exists.
+
+### Race semantics
+
+The required outcomes are explicit:
+
+- Register vs Register: both reference-read; unrelated and same-AID absent
+  registrations may validate concurrently. There is no shared write.
+- Convict vs Register: Convict touches only its named per-AID checkpoint and
+  claim outputs. A pre-finalization re-registration may land; a later fork is
+  independently convictable and creates another backed right.
+- Register vs first Finalize: if Finalize consumes the referenced root first,
+  Register's old reference disappears and it must retry against the convicted
+  root, where absence fails. If Register validates first, or precedes Finalize
+  in ledger order, its ACTIVE output may exist during the documented
+  resurrection window; Finalize blocks registrations after that point but does
+  not retroactively spend that output.
+- Finalize vs Finalize: two absent-mode cash-outs serialize on the thread. One
+  inserts; the loser retries in present mode and can still redeem without
+  another root write.
+- Redeem-present transactions are reference-read only and may run concurrently.
+
+The epic-owner soundness pass must confirm these outcomes against actual
+CIP-31/reference-input and MPF proof semantics before implementation dispatch.
 
 ### Contention boundary
 
-The singleton registry serializes **registration only**, a one-time operation.
-It never participates in Advance, Freeze, Convict, consumer reads, or
-per-AID lookup. The #92 sovereignty invariant therefore stands: an unrelated
-AID cannot contend for another AID's ongoing checkpoint UTxO. Global
-registration contention is an explicit liveness residual of the logically
-fixed MPFS absence gate: two people registering at once may need to retry, but
-they cannot delay each other's already-registered identities or lifecycle
-transactions.
-
-### Registry-lineage adversarial acceptance
-
-The live vectors MUST reject registry-token smuggling, a duplicate or missing
-registry successor, root rollback, an absence proof checked against a stale
-root, and bootstrap replay (the seed cannot be consumed a second time). The
-final measurement matrix includes aggregate Register plus RecordRegistration
-rows at MPFS depths 0, 8, and 16; any row below 25% memory or CPU headroom
-stops the ticket and opens an epic Q-file.
+The singleton list is never consumed by Register, Advance, Freeze, Convict, or
+present-mode redemption. It is consumed only by the first cash-out for an AID,
+at most once per identity and at the bounty holder's timing. Those rare
+finalizations serialize, but registration throughput and sovereign containment
+do not. V1 therefore keeps one unsharded list unless the checkpoint answer
+finds a ledger or proof reason to shard it.
 
 ## Freeze transaction
 
@@ -401,25 +514,40 @@ Advance from TOMBSTONE, REGISTRY, or an unknown role fails before its predicate.
 ```text
 Tx Convict:
   input:  one ACTIVE or FROZEN checkpoint tip, inline V1(TIP), token + deposit
-  output: exactly one TOMBSTONE output containing:
+  outputs:
+          exactly one TOMBSTONE output containing:
             value = checkpoint_min_ada + the same quantity-one AID token
             datum = TombstoneV1 {
               cesr_aid = TIP.cesr_aid,
               convicted_at_native_sn = TIP.native_sn,
               evidence_said = evidence.said
             }
-  mint:   nothing under the checkpoint policy
+          exactly one BOUNTY claim output containing:
+            value = claim_min_ada + all checkpoint lovelace above
+                    checkpoint_min_ada
+            datum = BountyClaimDatumV1 {
+              aid_asset_name,
+              right_asset_name,
+              seized_lovelace
+            }
+  checkpoint mint:
+          exactly +1 bounty_right_name(checkpoint_ref, aid_asset_name)
+          and no AID-token/thread mint or burn
+  conviction list: no input, reference input, output, or root proof
 ```
 
-No other native asset may remain in the tombstone. The input's remaining
-lovelace and any other value leave the state output and are available for fees
-and the prover's bounty/change. The validator does not prescribe a prover
-address; ledger value conservation guarantees the residual cannot disappear
-or remain trapped in the tombstone.
+No unrelated native asset may remain in either script output. The minted right
+must be paid outside checkpoint-script custody to the transaction submitter's
+chosen bearer address. The tombstone and claim equations account for the whole
+checkpoint input: its floor remains with the tombstone, while every excess
+lovelace backs the right. Claim min-ADA, fees, and ordinary change come from
+separate funding inputs.
 
 The branch binds EE0–EE9 and requires
 `convict_predicate(TIP, decoded) == ConvictValid` before checking the exact
-tombstone output. No controller signature over the Cardano spend is required.
+tombstone, claim, right-name, mint-map, and custody shapes. It MUST NOT inspect,
+spend, reference, or update the conviction list. No controller signature over
+the Cardano spend is required.
 
 ## Tombstone terminality (F11)
 
@@ -427,7 +555,8 @@ Spend dispatch first classifies the named own input by exact role and datum:
 
 - ACTIVE V1: Advance, Freeze, or Convict;
 - FROZEN V1: Advance or Convict;
-- REGISTRY `RegistryDatumV1`: RecordRegistration only;
+- REGISTRY `ConvictionListDatumV1`: FinalizeConviction only;
+- BOUNTY `BountyClaimDatumV1`: RedeemBounty only;
 - TOMBSTONE `TombstoneV1`: **no redeemer**;
 - unknown role/datum pairing: fail.
 
@@ -436,9 +565,11 @@ every current `SpendRedeemer` is tried against a real tombstone input in the
 validator-level F11 family and fails. #117 must add Close beneath the same
 pre-dispatch role gate; it cannot make TOMBSTONE spendable accidentally.
 
-The append-only registry independently prevents a second Register mint for the
-tombstoned AID. Terminality therefore holds both for the old token and for the
-AID's mint history.
+The tombstoned token is terminal immediately. Mint-history permanence is
+separate: until a right is redeemed, another Register may create another token
+for the same AID; after first-redemption insertion, the reference-read absence
+gate rejects all later registration. Any checkpoint created during the window
+is still subject to sovereign Freeze/Convict and can lose another full deposit.
 
 ## Required adversarial vectors
 
@@ -451,11 +582,17 @@ or promotes these transaction-boundary families:
 | W2 | `said` is wrong width or `off_d` does not name its E-code spelling |
 | W3 | one valid witness receipt duplicated to fake `toad = 2` |
 | W4 | same reveal and `n`/`nt`/`bt`, but different `kt`, is accepted as a conflict only when the tip controller threshold still attributes it |
-| U1 | Register without registry input or with wrong thread token/address/datum |
-| U2 | stale/wrong MPFS proof, existing-key insert, wrong new root, or changed registry value |
-| U3 | RecordRegistration without the paired exact `+1` Register mint; Register without RecordRegistration |
-| U4 | second Bootstrap, thread-token burn/mint, duplicate registry successor, registry delete/update attempt |
-| U5 | two same-AID registrations from one root cannot both validate; post-conviction re-register rejects |
+| U1 | Register without the named REGISTRY reference input, or with wrong thread token/address/datum/root |
+| U2 | stale/wrong absence proof or present AID; any Register attempt to spend the list, create a successor, or mint/burn the thread |
+| U3 | two unrelated or same-AID absent registrations reference-read one root concurrently without a shared spend |
+| U4 | second Bootstrap, thread-token escape/burn/mint, split list, non-empty bootstrap root, or wrong seed |
+| B1 | Convict touches the conviction list, omits/duplicates the unique right, misnames it, leaves it in script custody, or mints/burns an AID/thread token |
+| B2 | claim datum/right/AID mismatch, claim value below `claim_min_ada + seized_lovelace`, fee haircut, retained deposit, unrelated claim asset, or missing separate funding |
+| P1 | absent-AID claim payout without consuming the current thread and inserting the exact convicted marker, or root update without a matching claim + right burn |
+| P2 | already-present redemption without a current REGISTRY reference + inclusion proof, with a REGISTRY successor, or with a second root write |
+| P3 | right/claim replay, burn count mismatch, duplicate claim, mixed-AID aggregation, payout to an address other than the right-bearing input, or incomplete seized amount |
+| X1 | Register-before-Finalize window accepts; Finalize-before-Register invalidates the old reference and retry rejects on presence |
+| X2 | two first Finalizers: one inserts; the loser can retry present-mode without losing its claim; present-mode redemptions coexist |
 | R1 | role marker mutation, unknown staking credential, or wrong role/datum pairing |
 | F11 | every spend redeemer against TOMBSTONE fails |
 | F12-L | Freeze changes datum/value, omits token, mints/burns, or targets a non-FROZEN address |
@@ -472,31 +609,52 @@ Every final ACCEPT path is measured with the pinned Aiken toolchain against
 14,000,000 memory / 10,000,000,000 CPU:
 
 1. Freeze at `lag`, 2-key, and GLEIF 7-key shapes.
-2. Convict from ACTIVE and FROZEN, including `fork_witnessed`.
-3. Registry bootstrap.
-4. Registration plus the registry spend, reported as the **sum of all script
-   executions in the same transaction**, at 2-key, witnessed, and 7-key
-   registration shapes, with MPFS absence proofs at depth 0, 8, and 16.
+2. Sovereign Convict from ACTIVE and FROZEN, including `fork_witnessed`, the
+   unique right mint, and the fully backed claim output.
+3. Conviction-list bootstrap.
+4. Reference-read Register at 2-key, witnessed, and 7-key registration shapes,
+   with MPFS absence proofs at depths 0, 8, and 16. There is no registry spend
+   execution to add.
+5. First Finalize at proof depths 0, 8, and 16, for one right and a faithful
+   multi-right same-AID aggregate.
+6. Present-mode Redeem at inclusion-proof depths 0, 8, and 16, likewise covering
+   one and multiple same-AID rights without a root write.
 
 Each cell must retain at least 25.00% headroom on both axes. A miss is a hard
 STOP: no weakened check, reduced signer fixture, or depth-0-only claim may be
 substituted. The orchestrator opens an epic Q-file with raw numbers and the
 smallest faithful remediation.
 
-The report must distinguish typed-handler numbers from ledger `Data`
-deserialization and must not call a summed estimate a live-node measurement.
-#118 owns the final cross-path matrix; #44 owns devnet corroboration.
+Every transaction row reports the sum of all script executions in that
+transaction (checkpoint spend, checkpoint-policy mint/burn, REGISTRY/BOUNTY
+spends, and any other live handler). The report must distinguish typed-handler
+numbers from ledger `Data` deserialization and must not call a summed estimate
+a live-node measurement. The old append-on-registration rows are retained only
+as superseded history. #118 owns the final cross-path matrix; #44 owns devnet
+corroboration.
 
 ## Residuals
 
 - Witness-line-up-only/pool-swap conviction remains fail-closed to Freeze;
   `prev_witnesses_digest` is the V2 hook.
-- The registration-history UTxO is globally contended and can delay new
-  registrations. It cannot delay an existing AID's Advance/Freeze/Convict.
+- Duplicate fresh mint and re-registration after Convict but before first
+  Finalize are explicitly allowed. They preserve a stale-read/confusion window;
+  cryptographic fork evidence still contains each offending checkpoint and
+  every repeated cycle loses another full deposit.
+- A right holder can delay permanence by declining to cash out. The system owes
+  no payout until the right is redeemed, the offending checkpoint is already
+  tombstoned, and the locked claim remains fully backed.
+- First Finalize transactions for different AIDs share one list and may need to
+  retry. Register, Advance, Freeze, Convict, and present-mode Redeem do not share
+  that write bottleneck.
+- `D_reg` is the primary deterrence/reward knob. Its production value and the
+  claimed bleed/milk/finalize equilibrium require epic-level ratification in
+  this ticket, not silent deferral to #117.
 - `evidence_said` is a signed event field, not a recomputed digest.
-- Close/migration discovery semantics and deposit amount are #117.
-- Proof production and registry-tip discovery are off-chain liveness work;
-  the proof and root transition are verified on-chain.
+- Close/migration discovery semantics remain #117.
+- Proof production, current-tip discovery, and right/claim discovery are
+  off-chain liveness work; every referenced root, proof, transition, burn, and
+  payout weld is verified on-chain.
 
 ## Acceptance criteria
 
@@ -507,10 +665,17 @@ deserialization and must not call a summed estimate a live-node measurement.
 - [ ] A witnessed fork convicts from ACTIVE and FROZEN; controller-only or
       duplicate-receipt framing fails.
 - [ ] A tombstone cannot be spent by any redeemer and holds the exact terminal
-      record/token/min-ADA shape.
-- [ ] Bootstrap creates one permanent registry thread; Register atomically
-      inserts absence into the MPFS set; duplicate and post-conviction Register
-      fail.
+      record/token/min-ADA shape; Convict creates a unique bearer right and a
+      separate claim backing the whole seized deposit with no fee haircut.
+- [ ] Bootstrap creates one permanent conviction-list thread. Register only
+      reference-reads it and proves absence; concurrent absent registrations do
+      not consume shared state.
+- [ ] First cash-out burns matching rights, pays every complete claim, and
+      inserts the AID exactly once; later rights redeem on inclusion without
+      another root write or replay.
+- [ ] The full Register/Convict/Finalize race matrix has the outcomes specified
+      above; pre-finalization re-registration accepts and post-finalization
+      registration rejects.
 - [ ] Role addresses use the exact deterministic staking-script encoding above.
 - [ ] SAID non-recomputation and its measurement rationale remain recorded.
 - [ ] All new adversarial families pass and all live measurement cells retain
@@ -519,15 +684,30 @@ deserialization and must not call a summed estimate a live-node measurement.
 
 ## Spec-checkpoint questions
 
-The epic owner is asked to ratify:
+The epic owner is asked to fold the parallel Cardano-mechanics soundness pass
+into a ruling on these replacement questions:
 
-1. **SAID:** no enforcement-path recomputation; signed `d` retained only as
-   `TombstoneV1` audit evidence, with the measured cost rationale above.
-2. **Unicity:** a one-shot bootstrapped, append-only MPFS registration set in a
-   singleton REGISTRY UTxO, atomically paired with Register and never consulted
-   on steady per-AID paths.
-3. **Roles:** ACTIVE = no stake credential; FROZEN/TOMBSTONE/REGISTRY =
-   deterministic domain-separated staking script markers derived from the
-   checkpoint hash.
-4. **Schema corrections:** distinct witness-receipt indices and restoration of
-   `kt` as a Convict conflict axis before live wiring.
+1. **Mutable-root reference read and races.** Confirm that a named CIP-31
+   reference input carrying the singleton thread makes an MPF absence proof
+   current under ledger semantics, and ratify the Register-before-Finalize,
+   Finalize-before-Register, and two-Finalizer outcomes stated above.
+2. **Bearer right and custody.** Ratify or correct the proposed unique right
+   name, mint under the combined checkpoint policy, BOUNTY role `0x03`, separate
+   claim UTxO, whole-surplus seizure equation, and payout-to-right-input-address
+   accounting. Any correction must preserve repeatability, transferability,
+   exact full-deposit backing, fee separation, and one-time redemption.
+3. **Finalize/Redeem weld.** Ratify absent-mode consume+insert and present-mode
+   reference-read+inclusion, including multi-right same-AID aggregation,
+   rights held by different bearers, retry after a competing insertion, exact
+   burns, and the rule that an absent claim cannot pay without permanence.
+4. **Bootstrap and topology.** Ratify the renamed conviction domains, one-shot
+   thread, unchanged REGISTRY role encoding, no deletion, and a single
+   unsharded list whose only write is first cash-out per identity.
+5. **Economics.** Pull O3 forward: state the V1 `D_reg` requirement or
+   calibration rule needed for the claimed bleed/milk/finalize equilibrium,
+   and identify any perverse incentive the implementation vectors must exclude.
+
+The following A-007 decisions remain ratified and are not reopened: SAID
+non-recomputation; ACTIVE/FROZEN/TOMBSTONE/REGISTRY role derivation; Freeze and
+ordinary-Advance thaw; distinct witness-index counting; and `kt` as a Convict
+conflict axis.

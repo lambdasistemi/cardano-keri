@@ -45,6 +45,20 @@ status-by-address).
 
 These three decisions are spec-checkpoint material.
 
+### Ratification record (2026-07-20)
+
+Epic #24's first design question is resolved here: enforcement-path SAID
+recomputation is omitted. O1 signs the full event bytes and EE0–EE9
+slice-bind every predicate-relevant field, so recomputing a blanked event
+would add no authority boundary. The contemporary measurements below show why
+that distinction matters: the historical 1024-byte hash projection consumes
+about 71.7% memory, while the binding cell retains 80.34% memory headroom.
+
+This is a dated #116 disposition, not a rewrite of #106 history. #106 F6's
+`said_blank` reconstruction is superseded by signature-mutation and
+wrong-`d`-slice adversarial vector families because this V1 wire contract has
+no `said_blank` input.
+
 ## Problem
 
 At `616c630`, `checkpoint.ak` admits Register and Advance but still rejects
@@ -347,7 +361,18 @@ It never participates in Advance, Freeze, Convict, consumer reads, or
 per-AID lookup. The #92 sovereignty invariant therefore stands: an unrelated
 AID cannot contend for another AID's ongoing checkpoint UTxO. Global
 registration contention is an explicit liveness residual of the logically
-fixed MPFS absence gate.
+fixed MPFS absence gate: two people registering at once may need to retry, but
+they cannot delay each other's already-registered identities or lifecycle
+transactions.
+
+### Registry-lineage adversarial acceptance
+
+The live vectors MUST reject registry-token smuggling, a duplicate or missing
+registry successor, root rollback, an absence proof checked against a stale
+root, and bootstrap replay (the seed cannot be consumed a second time). The
+final measurement matrix includes aggregate Register plus RecordRegistration
+rows at MPFS depths 0, 8, and 16; any row below 25% memory or CPU headroom
+stops the ticket and opens an epic Q-file.
 
 ## Freeze transaction
 

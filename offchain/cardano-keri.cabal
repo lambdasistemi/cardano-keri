@@ -38,7 +38,7 @@ common warnings
 library
   import:           warnings
   default-language: GHC2021
-  hs-source-dirs:   lib
+  hs-source-dirs:   lib e2e
   build-depends:
     , base                  >=4.18 && <5
     , bytestring            >=0.11 && <0.13
@@ -60,7 +60,13 @@ library
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
+    Cardano.KERI.AID.Checkpoint.Unicity
     Cardano.KERI.AID.Ed25519
+
+  other-modules:
+    Cardano.KERI.AID.E2E.Mpf
+    Cardano.KERI.AID.E2E.MpfProof
+    Cardano.KERI.AID.E2E.MpfTrie
 
 test-suite unit-tests
   import:           warnings
@@ -97,6 +103,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.RegistrationSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
+    Cardano.KERI.AID.Checkpoint.UnicitySpec
     Cardano.KERI.AID.Ed25519Spec
     Paths_cardano_keri
 
@@ -164,6 +171,17 @@ executable gen-advance-vectors
     , cardano-keri
     , memory                >=0.18 && <0.19
     , text
+
+executable gen-unicity-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenUnicityVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

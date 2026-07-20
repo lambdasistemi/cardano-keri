@@ -22,18 +22,18 @@
 
 ## Slice 3 — mint-once MPFS registry
 
-- [ ] T116-S3 Shared unicity model/vectors: registry thread-name, role hashes,
+- [X] T116-S3 Shared unicity model/vectors: registry thread-name, role hashes,
       set key/marker, empty root, and valid/invalid absence transitions at
       declared proof depths.
-- [ ] T116-S3 `BootstrapRegistry` consumes the applied `registry_seed`, mints
+- [X] T116-S3 `BootstrapRegistry` consumes the applied `registry_seed`, mints
       one permanently-caged thread token, and creates one empty REGISTRY state.
-- [ ] T116-S3 Register atomically consumes/continues the registry state and
+- [X] T116-S3 Register atomically consumes/continues the registry state and
       inserts `deriveAidAssetName(D.cesr_aid)`; `RecordRegistration` requires
       the paired exact Register mint.
-- [ ] T116-S3 U1–U5 full-context vectors: absent/wrong gate, bad proof/root,
+- [X] T116-S3 U1–U5 full-context vectors: absent/wrong gate, bad proof/root,
       stale race, duplicate mint, reservation attempt, thread escape/burn, and
       second bootstrap; existing R1–R8 regressions green.
-- [ ] T116-S3 Gate green; commit with exactly `Tasks: T116-S3`.
+- [X] T116-S3 Gate green; commit with exactly `Tasks: T116-S3`.
 
 ## Slice 4 — Freeze and thaw
 

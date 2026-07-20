@@ -63,15 +63,15 @@ two corrective slices: S7 deletion/fixed bond and S8 measurements.
 
 ## Slice 8 — replacement sovereign-path measurements
 
-- [ ] T116-S8 Measure final Register (2-key/witnessed/7-key), Freeze
+- [X] T116-S8 Measure final Register (2-key/witnessed/7-key), Freeze
       (lag/2-key/7-key), Convict (ACTIVE/FROZEN), and FROZEN→ACTIVE Advance
       ACCEPT paths with `d_reg = 1_000_000_000`.
-- [ ] T116-S8 Replace registry-era acceptance tables in
+- [X] T116-S8 Replace registry-era acceptance tables in
       `specs/116-enforcement/MEASUREMENTS.md`; retain a concise superseded note,
       raw units, percentages, methodology, and the SAID comparison.
-- [ ] T116-S8 Every final row retains at least 25.00% memory and CPU headroom,
+- [X] T116-S8 Every final row retains at least 25.00% memory and CPU headroom,
       or STOP and open an epic Q-file; no weakened fixture or live-node claim.
-- [ ] T116-S8 Full gate green; commit exactly
+- [X] T116-S8 Full gate green; commit exactly
       `test(116): remeasure sovereign enforcement` with exactly
       `Tasks: T116-S8`.
 
@@ -81,7 +81,7 @@ two corrective slices: S7 deletion/fixed bond and S8 measurements.
       benign documented residual and zero added mechanism.
 - [X] Q-011 ratifies the simplified spec, two-slice plan, and task coverage
       before any code dispatch.
-- [ ] Each corrective slice is accepted by full-file owner review plus a fresh
+- [X] Each corrective slice is accepted by full-file owner review plus a fresh
       `./gate.sh` before task boxes are checked and the amended commit is pushed.
 - [ ] Finalization requires a new explicit epic-owner mark-ready ruling;
       current scope does not drop `gate.sh`, mark ready, merge, or re-finalize.

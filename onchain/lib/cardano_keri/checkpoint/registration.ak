@@ -51,6 +51,14 @@ pub type DeploymentContext {
   d_reg: Int,
 }
 
+/// Mechanical lower bound for the deployment-fixed registration bond.
+pub const registration_deposit_floor: Int = 5_000_000
+
+/// Whether an applied registration-bond parameter is deployable.
+pub fn valid_registration_deposit(d_reg: Int) -> Bool {
+  d_reg >= registration_deposit_floor
+}
+
 // ---------------------------------------------------------
 // Registration evidence (mirrors the S2 `RegistrationEvidence`)
 // ---------------------------------------------------------
@@ -238,6 +246,8 @@ pub fn registration_message(
 /// A registration rejection reason (one constructor per check; mirrors
 /// the S2 `RegistrationError` constructor-for-constructor).
 pub type RegistrationError {
+  /// Applied `d_reg` is below `registration_deposit_floor`.
+  DRegBelowMinimum
   /// R3: `seq != 0` or the datum is not the genesis datum of the
   /// reconstructed message.
   R3GenesisDatumMismatch
@@ -348,32 +358,37 @@ pub fn registration_predicate(
   lovelace: Int,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {
-  // R3: genesis datum — reconstructed message, nothing supplied.
-  let m = registration_message(ctx, d)
-  if !(d.seq == 0 && d == inception_datum(m)) {
-    RegistrationInvalid(R3GenesisDatumMismatch)
+  if !valid_registration_deposit(ctx.d_reg) {
+    RegistrationInvalid(DRegBelowMinimum)
   } else {
-    // R6: the event-binding slice set (E1 derives R4's type).
-    when event_binding(d, e) is {
-      RegistrationInvalid(err) -> RegistrationInvalid(err)
-      RegistrationValid ->
-        // R4: the frozen #68 schema predicate, reused.
-        when validate_inception(Icp, m) is {
-          InceptionInvalid(err) -> RegistrationInvalid(R4InceptionInvalid(err))
-          InceptionValid -> {
-            // R7: distinct verified positions over the message preimage.
-            let preimage = cbor.serialise(m)
-            let signed = verified_positions(d.cur_keys, preimage, e.ctrl_sigs)
-            if !evaluate(d.cur_threshold, list.length(d.cur_keys), signed) {
-              RegistrationInvalid(R7QuorumUnsatisfied)
-            } else if lovelace < ctx.min_ada + ctx.d_reg {
-              // R8: deposit floor.
-              RegistrationInvalid(R8DepositBelowMinimum)
-            } else {
-              RegistrationValid
+    // R3: genesis datum — reconstructed message, nothing supplied.
+    let m = registration_message(ctx, d)
+    if !(d.seq == 0 && d == inception_datum(m)) {
+      RegistrationInvalid(R3GenesisDatumMismatch)
+    } else {
+      // R6: the event-binding slice set (E1 derives R4's type).
+      when event_binding(d, e) is {
+        RegistrationInvalid(err) -> RegistrationInvalid(err)
+        RegistrationValid ->
+          // R4: the frozen #68 schema predicate, reused.
+          when validate_inception(Icp, m) is {
+            InceptionInvalid(err) ->
+              RegistrationInvalid(R4InceptionInvalid(err))
+            InceptionValid -> {
+              // R7: distinct verified positions over the message preimage.
+              let preimage = cbor.serialise(m)
+              let signed = verified_positions(d.cur_keys, preimage, e.ctrl_sigs)
+              if !evaluate(d.cur_threshold, list.length(d.cur_keys), signed) {
+                RegistrationInvalid(R7QuorumUnsatisfied)
+              } else if lovelace < ctx.min_ada + ctx.d_reg {
+                // R8: deposit floor.
+                RegistrationInvalid(R8DepositBelowMinimum)
+              } else {
+                RegistrationValid
+              }
             }
           }
-        }
+      }
     }
   }
 }

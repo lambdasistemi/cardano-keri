@@ -10,8 +10,7 @@
 //// proof-token input present AND burned (R5), the single-`Pair`
 //// checkpoint mint (R1), the ACTIVE-address state output carrying the
 //// token and the inline `V1` datum (R2), deposit met (R8). One positive
-//// adds an EXTRA unrelated input (A-001 QC gate-room proof: the branch
-//// must leave room for the #116 unicity-gate input).
+//// adds an EXTRA unrelated input (A-001 QC gate-room proof).
 ////
 //// The exhaustive R3/R4/E1-E9/R7/R8 families live in the S2/S3 layers
 //// (`registration_tests.ak` over the shared vectors); here one R6 and one
@@ -20,9 +19,10 @@
 ////
 //// The validator parameters under test mirror the vectors' shared
 //// `DeploymentContext` (`network_id = 0`, checkpoint policy = the ctx
-//// `checkpoint_policy_id`, `d_reg = 5_000_000`, ledger floor
+//// `checkpoint_policy_id`, `d_reg = 1_000_000_000`, ledger floor
 //// `min_ada = 2_000_000`): the R7 signatures sign the reconstructed
-//// preimage under exactly that context.
+//// preimage under exactly that context. Ordinary fixtures use the
+//// non-normative reference d_reg = 1_000_000_000 lovelace.
 
 use aiken/collection/list
 use aiken/interval
@@ -36,8 +36,7 @@ use cardano/address.{
 }
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
-  placeholder,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
@@ -49,11 +48,9 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Active, Frozen, Registry, Tombstone}
+use cardano_keri/checkpoint/role.{Active, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
-use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
-use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{Advance, Close, RecordRegistration, Register}
+use checkpoint.{Advance, Close, Register}
 
 /// Test-side encoding of the ratified Slice-4 spend redeemer. Keeping this
 /// local makes the RED diff test-only while still exercising the real handler's
@@ -62,7 +59,6 @@ type Slice4SpendRedeemer {
   Slice4Advance { evidence: AdvanceEvidence }
   Slice4Freeze { evidence: EnforcementEvidence }
   Slice4Convict
-  Slice4RecordRegistration
   Slice4Close
 }
 
@@ -74,7 +70,6 @@ type Slice5SpendRedeemer {
   Slice5Advance { evidence: AdvanceEvidence }
   Slice5Freeze { evidence: EnforcementEvidence }
   Slice5Convict { evidence: EnforcementEvidence }
-  Slice5RecordRegistration
   Slice5Close
 }
 
@@ -90,10 +85,7 @@ const policy: PolicyId =
 
 const network_id: Int = 0
 
-const d_reg: Int = 5_000_000
-
-const registry_ref: OutputReference =
-  OutputReference { transaction_id: seed_tx_id, output_index: 9 }
+const d_reg: Int = 1_000_000_000
 
 // ---------------------------------------------------------------------
 // Tx-B context builders
@@ -141,47 +133,6 @@ fn register_mint(aid_name: ByteArray, proof_name: ByteArray) -> Value {
     |> merge(from_asset(hp_policy, proof_name, -1))
 }
 
-fn registry_value() -> Value {
-  from_lovelace(min_ada)
-    |> merge(from_asset(policy, uni.registry_thread_name, 1))
-}
-
-fn registry_output(root: ByteArray) -> Output {
-  Output {
-    address: role.address(policy, Registry),
-    value: registry_value(),
-    datum: InlineDatum(RegistryDatumV1 { root }),
-    reference_script: None,
-  }
-}
-
-fn gated_register_tx(
-  old_root: ByteArray,
-  new_root: ByteArray,
-  tx: Transaction,
-) -> Transaction {
-  let registry_input = input_at(registry_ref, registry_output(old_root))
-  let registry_redeemer: Data = RecordRegistration
-  Transaction {
-    ..tx,
-    inputs: list.concat(tx.inputs, [registry_input]),
-    outputs: list.concat(tx.outputs, [registry_output(new_root)]),
-    redeemers: [Pair(Spend(registry_ref), registry_redeemer)],
-  }
-}
-
-fn registration_key(e: RegistrationEvidence) -> ByteArray {
-  if e == vec.pos_7key_evidence {
-    deriveAidAssetName(vec.pos_7key_datum.cesr_aid)
-  } else if e == vec.pos_witnessed_evidence {
-    deriveAidAssetName(vec.pos_witnessed_datum.cesr_aid)
-  } else if e == vec.pos_weighted_evidence {
-    deriveAidAssetName(vec.pos_weighted_datum.cesr_aid)
-  } else {
-    deriveAidAssetName(vec.pos_2key_datum.cesr_aid)
-  }
-}
-
 /// A full honest Tx-B context over one vector package.
 fn register_tx(
   d: CheckpointDatumV1,
@@ -199,27 +150,31 @@ fn register_tx(
 
 /// Drive the real mint handler under the fixed deployment parameters.
 fn run_register(e: RegistrationEvidence, tx: Transaction) -> Bool {
-  let key = registration_key(e)
-  let old_root = unicity.empty_root()
-  let new_root = unicity.insert_registered(old_root, key, [])
-  run_register_at(e, old_root, new_root, tx)
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    Register { evidence: e },
+    policy,
+    tx,
+  )
 }
 
-fn run_register_at(
+/// Invoke Register with an explicit deployment bond parameter.
+fn run_register_with_deposit(
+  d_reg_parameter: Int,
   e: RegistrationEvidence,
-  old_root: ByteArray,
-  new_root: ByteArray,
   tx: Transaction,
 ) -> Bool {
   checkpoint.checkpoint.mint(
     0,
     hp_policy,
     network_id,
-    d_reg,
-    uni.registry_seed,
-    Register { evidence: e, registry_ref, absence_proof: [] },
+    d_reg_parameter,
+    Register { evidence: e },
     policy,
-    gated_register_tx(old_root, new_root, tx),
+    tx,
   )
 }
 
@@ -271,9 +226,22 @@ test accept_register_weighted() {
   )
 }
 
+/// The final #114 Register shape has no shared coordinating state.
+test t116_s7_accept_registration_without_shared_state() {
+  run_register_with_deposit(
+    d_reg,
+    vec.pos_2key_evidence,
+    register_tx(
+      vec.pos_2key_datum,
+      vec.pos_2key_lovelace,
+      vec.pos_2key_evidence,
+    ),
+  )
+}
+
 /// Gate-room proof (A-001 QC): an EXTRA unrelated input must be admitted —
 /// no check may assume a fixed input count or reject inputs beyond those
-/// R5 names (structural room for the #116 unicity-gate input).
+/// R5 names.
 test accept_register_extra_input() {
   let tx = register_tx(
     vec.pos_2key_datum,
@@ -287,22 +255,34 @@ test accept_register_extra_input() {
   )
 }
 
-/// U5: replaying the same AID registration from the same implicit empty
-/// registry state must reject. This is the validator-level regression that
-/// exposes the pre-#116 gap: the current Register handler has no registry
-/// input or absence transition, so this duplicate still succeeds.
-test reject_u5_duplicate_registration_without_registry_gate() fail {
-  let key = deriveAidAssetName(vec.pos_2key_datum.cesr_aid)
-  let present_root = unicity.insert_registered(unicity.empty_root(), key, [])
-  run_register_at(
+/// Duplicate same-AID ACTIVE registration is an admitted controller
+/// self-harm residual.
+test t116_s7_accept_duplicate_active_registration() {
+  run_register(
     vec.pos_2key_evidence,
-    present_root,
-    present_root,
     register_tx(
       vec.pos_2key_datum,
       vec.pos_2key_lovelace,
       vec.pos_2key_evidence,
     ),
+  )
+}
+
+/// D1: reject a deployment configured below the mechanical floor.
+test t116_s7_reject_d_reg_below_mechanical_floor_registration_mint() fail {
+  let tx = register_tx(
+    vec.pos_2key_datum,
+    vec.pos_2key_lovelace,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    vec.d_reg_below_floor,
+    Register { evidence: vec.pos_2key_evidence },
+    policy,
+    tx,
   )
 }
 
@@ -521,7 +501,6 @@ test reject_r10_spend_fails_closed() fail {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     Some(datum_data),
     rdm,
     out_ref(seed_tx_id, 0),
@@ -547,7 +526,7 @@ const adv_network_id: Int = 1
 
 /// The successor lovelace used by the honest Advance fixtures: exactly the
 /// V3 floor (`checkpoint_min_ada + d_reg` = 2_000_000 + 5_000_000).
-const advance_deposit: Int = 7_000_000
+const advance_deposit: Int = min_ada + d_reg
 
 /// OLD checkpoint datums: the real keripy `icp` key state (`k`/`kt`/`b`/`bt`,
 /// raw-decoded from `fixtures/advance.json`) each S1 honest family's `rot`
@@ -724,7 +703,24 @@ fn run_advance(
     hp_policy,
     adv_network_id,
     d_reg,
-    uni.registry_seed,
+    None,
+    redeemer,
+    own_ref,
+    tx,
+  )
+}
+
+fn run_advance_with_d_reg(
+  d_reg_parameter: Int,
+  redeemer: Data,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    adv_network_id,
+    d_reg_parameter,
     None,
     redeemer,
     own_ref,
@@ -747,6 +743,21 @@ type NonV1Probe {
 
 test accept_advance_wit_2key() {
   run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
+    advance_tx(
+      adv_vec.pos_adv_wit_2key_spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+    ),
+  )
+}
+
+/// D1 RED: the same invalid deployment parameter must reject before spend
+/// dispatch. Delivered code admits this otherwise-honest Advance.
+test t116_s7_reject_d_reg_below_mechanical_floor_checkpoint_spend() fail {
+  run_advance_with_d_reg(
+    vec.d_reg_below_floor,
     Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     advance_tx(
@@ -1492,23 +1503,6 @@ test t116_s4_reject_freeze_from_tombstone_role() fail {
   )
 }
 
-test t116_s4_reject_freeze_from_registry_role() fail {
-  let tip = enf_vec.lag_freeze_tip
-  let value = freeze_value(tip)
-  run_freeze(
-    enf_vec.lag_freeze_wire,
-    freeze_own_ref,
-    freeze_context(
-      tip,
-      role.address(policy, Registry),
-      V1(tip),
-      value,
-      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
-      zero,
-    ),
-  )
-}
-
 test t116_s4_reject_freeze_from_unknown_role() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = freeze_value(tip)
@@ -1535,7 +1529,11 @@ test t116_s4_reject_freeze_wrong_role_datum_pairing() fail {
     freeze_context(
       tip,
       role.address(policy, Active),
-      RegistryDatumV1 { root: unicity.empty_root() },
+      TombstoneV1 {
+        cesr_aid: tip.cesr_aid,
+        convicted_at_native_sn: tip.native_sn,
+        evidence_said: other_aid,
+      },
       value,
       [freeze_output(role.address(policy, Frozen), V1(tip), value)],
       zero,
@@ -1856,20 +1854,6 @@ test t116_s4_reject_advance_from_tombstone() fail {
   )
 }
 
-test t116_s4_reject_advance_from_registry() fail {
-  let spent = adv_vec.pos_adv_wit_2key_spent
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    advance_tx_from(
-      spent,
-      old_adv_wit_2key,
-      adv_vec.pos_adv_wit_2key_created,
-      role.address(policy, Registry),
-    ),
-  )
-}
-
 test t116_s4_reject_advance_from_unknown_role() fail {
   let spent = adv_vec.pos_adv_wit_2key_spent
   run_advance(
@@ -1885,9 +1869,9 @@ test t116_s4_reject_advance_from_unknown_role() fail {
 }
 
 // ---------------------------------------------------------------------
-// T116-S5 RED — witnessed Convict, bounty release, exact TombstoneV1,
-// pre-dispatch terminality, and post-conviction mint-once unicity. Every
-// boundary test drives the real five-argument applied checkpoint handler.
+// T116-S5 — witnessed Convict, bounty release, exact TombstoneV1, and
+// pre-dispatch terminality. Every boundary test drives the real applied
+// checkpoint handler.
 // ---------------------------------------------------------------------
 
 const convict_own_ref: OutputReference =
@@ -2098,7 +2082,7 @@ test t116_s5_reject_convict_wrong_input_datum_family() fail {
     convict_own_ref,
     convict_context(
       role.address(policy, Active),
-      RegistryDatumV1 { root: unicity.empty_root() },
+      ProbeV2(tip),
       convict_input_value(tip),
       [
         convict_output(
@@ -2481,23 +2465,15 @@ test t116_s5_f11_reject_convict_from_terminal_tombstone() fail {
   run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
 }
 
-test t116_s5_f11_reject_record_registration_from_terminal_tombstone() fail {
-  let redeemer: Data = Slice5RecordRegistration
-  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
-}
-
 test t116_s5_f11_reject_close_from_terminal_tombstone() fail {
   let redeemer: Data = Slice5Close
   run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
 }
 
-// U5 post-conviction re-registration: the transaction includes the same-AID
-// tombstone and invokes the live mint handler, but the permanent registry root
-// already contains the AID key, so the re-mint cannot validate.
-test t116_s5_reject_u5_post_conviction_same_aid_register() fail {
+// A same-AID tombstone does not prevent re-registration.
+test t116_s7_accept_post_conviction_same_aid_registration() {
   let d = vec.pos_2key_datum
   let key = deriveAidAssetName(d.cesr_aid)
-  let present_root = unicity.insert_registered(unicity.empty_root(), key, [])
   let tombstone = input_at(
     convict_own_ref,
     Output {
@@ -2514,10 +2490,35 @@ test t116_s5_reject_u5_post_conviction_same_aid_register() fail {
     },
   )
   let tx = register_tx(d, vec.pos_2key_lovelace, vec.pos_2key_evidence)
-  run_register_at(
+  run_register(
     vec.pos_2key_evidence,
-    present_root,
-    present_root,
+    Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
+  )
+}
+
+/// D2 retained guard: a repeated registration (represented by the existing
+/// same-AID tombstone input) cannot post one lovelace below the applied bond.
+test t116_s7_reject_repeated_registration_one_below_bond() fail {
+  let d = vec.pos_2key_datum
+  let key = deriveAidAssetName(d.cesr_aid)
+  let tombstone = input_at(
+    convict_own_ref,
+    Output {
+      address: role.address(policy, Tombstone),
+      value: from_lovelace(min_ada) |> merge(from_asset(policy, key, 1)),
+      datum: InlineDatum(
+        TombstoneV1 {
+          cesr_aid: d.cesr_aid,
+          convicted_at_native_sn: d.native_sn,
+          evidence_said: other_aid,
+        },
+      ),
+      reference_script: None,
+    },
+  )
+  let tx = register_tx(d, min_ada + d_reg - 1, vec.pos_2key_evidence)
+  run_register(
+    vec.pos_2key_evidence,
     Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
   )
 }

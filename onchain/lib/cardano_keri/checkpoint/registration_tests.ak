@@ -28,14 +28,15 @@ use cardano_keri/checkpoint/message.{
   InceptionIllFormed, InceptionNativeSnNonZero,
 }
 use cardano_keri/checkpoint/registration.{
-  DeploymentContext, E1EventTypeMismatch, E2AidMismatch, E3SequenceMismatch,
-  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,
-  E7NextThresholdMismatch, E8WitnessesMismatch, E9ToadMismatch,
-  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
-  R8DepositBelowMinimum, RegistrationEvidence, RegistrationInvalid,
-  RegistrationValid, RegistrationVerdict, proof_token_name, qb64_witness_verkey,
-  registration_message, registration_predicate, respell_hex, respell_threshold,
-  slice_matches,
+  DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
+  E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
+  E6NextKeysMismatch, E7NextThresholdMismatch, E8WitnessesMismatch,
+  E9ToadMismatch, R3GenesisDatumMismatch, R4InceptionInvalid,
+  R7QuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
+  RegistrationInvalid, RegistrationValid, RegistrationVerdict, proof_token_name,
+  qb64_witness_verkey, registration_deposit_floor, registration_message,
+  registration_predicate, respell_hex, respell_threshold, slice_matches,
+  valid_registration_deposit,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/threshold.{
@@ -200,6 +201,23 @@ test witness_qb64_is_event_slice() {
 // ---------------------------------------------------------
 // Verdict parity: positives
 // ---------------------------------------------------------
+
+test d1_deployment_floor_boundaries_match_haskell() {
+  registration_deposit_floor == vec.d_reg_floor && valid_registration_deposit(
+    vec.d_reg_floor,
+  ) && !valid_registration_deposit(vec.d_reg_below_floor)
+}
+
+test d1_deployment_below_floor_rejects() {
+  parity(
+    vec.d1_deployment_below_floor_ctx,
+    vec.d1_deployment_below_floor_datum,
+    vec.d1_deployment_below_floor_lovelace,
+    vec.d1_deployment_below_floor_evidence,
+    vec.d1_deployment_below_floor_verdict,
+    RegistrationInvalid(DRegBelowMinimum),
+  )
+}
 
 test pos_witnessed_accepts() {
   parity(

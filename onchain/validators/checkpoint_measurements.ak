@@ -34,7 +34,7 @@ use cage_context.{
 use cardano/address.{Address, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
@@ -45,14 +45,9 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Frozen, Registry, Tombstone}
+use cardano_keri/checkpoint/role.{Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
-use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
-use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{
-  Advance, BootstrapRegistry, Convict, Freeze, MintRedeemer, RecordRegistration,
-  Register,
-}
+use checkpoint.{Advance, Convict, Freeze, MintRedeemer, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -64,10 +59,7 @@ const policy: PolicyId =
 
 const network_id: Int = 0
 
-const d_reg: Int = 5_000_000
-
-const registry_ref: OutputReference =
-  OutputReference { transaction_id: seed_tx_id, output_index: 9 }
+const d_reg: Int = 1_000_000_000
 
 // ---------------------------------------------------------------------
 // Tx-B builders (private mirror of checkpoint_tests.ak)
@@ -103,37 +95,18 @@ fn register_mint(aid_name: ByteArray, proof_name: ByteArray) -> Value {
     |> merge(from_asset(hp_policy, proof_name, -1))
 }
 
-fn registry_output(root: ByteArray) -> Output {
-  Output {
-    address: role.address(policy, Registry),
-    value: from_lovelace(min_ada)
-      |> merge(from_asset(policy, uni.registry_thread_name, 1)),
-    datum: InlineDatum(RegistryDatumV1 { root }),
-    reference_script: None,
-  }
-}
-
 fn register_tx(
   d: CheckpointDatumV1,
   lovelace: Int,
   e: RegistrationEvidence,
-  old_root: ByteArray,
-  new_root: ByteArray,
 ) -> Transaction {
   let aid_name = deriveAidAssetName(d.cesr_aid)
   let proof_name = proof_token_name(e.event_bytes, d.cesr_aid)
-  let registry_redeemer: Data = RecordRegistration
-  Transaction {
-    ..mint_context(
-      [
-        proof_input(proof_name),
-        input_at(registry_ref, registry_output(old_root)),
-      ],
-      [state_output(aid_name, lovelace, d), registry_output(new_root)],
-      register_mint(aid_name, proof_name),
-    ),
-    redeemers: [Pair(Spend(registry_ref), registry_redeemer)],
-  }
+  mint_context(
+    [proof_input(proof_name)],
+    [state_output(aid_name, lovelace, d)],
+    register_mint(aid_name, proof_name),
+  )
 }
 
 // ---------------------------------------------------------------------
@@ -141,99 +114,24 @@ fn register_tx(
 // ---------------------------------------------------------------------
 
 const tx_2key: Transaction =
-  register_tx(
-    vec.pos_2key_datum,
-    vec.pos_2key_lovelace,
-    vec.pos_2key_evidence,
-    uni.depth_0_old_root,
-    uni.depth_0_new_root,
-  )
+  register_tx(vec.pos_2key_datum, vec.pos_2key_lovelace, vec.pos_2key_evidence)
 
-const redeemer_2key: MintRedeemer =
-  Register {
-    evidence: vec.pos_2key_evidence,
-    registry_ref,
-    absence_proof: uni.depth_0_proof,
-  }
+const redeemer_2key: MintRedeemer = Register { evidence: vec.pos_2key_evidence }
 
 const tx_7key: Transaction =
-  register_tx(
-    vec.pos_7key_datum,
-    vec.pos_7key_lovelace,
-    vec.pos_7key_evidence,
-    uni.depth_16_old_root,
-    uni.depth_16_new_root,
-  )
+  register_tx(vec.pos_7key_datum, vec.pos_7key_lovelace, vec.pos_7key_evidence)
 
-const redeemer_7key: MintRedeemer =
-  Register {
-    evidence: vec.pos_7key_evidence,
-    registry_ref,
-    absence_proof: uni.depth_16_proof,
-  }
+const redeemer_7key: MintRedeemer = Register { evidence: vec.pos_7key_evidence }
 
 const tx_witnessed: Transaction =
   register_tx(
     vec.pos_witnessed_datum,
     vec.pos_witnessed_lovelace,
     vec.pos_witnessed_evidence,
-    uni.depth_8_old_root,
-    uni.depth_8_new_root,
   )
 
 const redeemer_witnessed: MintRedeemer =
-  Register {
-    evidence: vec.pos_witnessed_evidence,
-    registry_ref,
-    absence_proof: uni.depth_8_proof,
-  }
-
-fn measure_registry_spend(old_root: ByteArray, tx: Transaction) -> Bool {
-  let datum_data: Data = RegistryDatumV1 { root: old_root }
-  checkpoint.checkpoint.spend(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    uni.registry_seed,
-    Some(datum_data),
-    RecordRegistration,
-    registry_ref,
-    tx,
-  )
-}
-
-fn registry_seed_input() -> Input {
-  input_at(
-    uni.registry_seed,
-    Output {
-      address: from_verification_key(owner_vkh),
-      value: from_lovelace(min_ada),
-      datum: NoDatum,
-      reference_script: None,
-    },
-  )
-}
-
-const tx_bootstrap_registry: Transaction =
-  mint_context(
-    [registry_seed_input()],
-    [registry_output(uni.empty_root)],
-    from_asset(policy, uni.registry_thread_name, 1),
-  )
-
-test measure_checkpoint_bootstrap_registry() {
-  checkpoint.checkpoint.mint(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    uni.registry_seed,
-    BootstrapRegistry,
-    policy,
-    tx_bootstrap_registry,
-  )
-}
+  Register { evidence: vec.pos_witnessed_evidence }
 
 // reg_2key: 2 Ed25519 verifications, unweighted 2-of-2, no witnesses.
 test measure_checkpoint_register_2key() {
@@ -242,15 +140,10 @@ test measure_checkpoint_register_2key() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     redeemer_2key,
     policy,
     tx_2key,
   )
-}
-
-test measure_checkpoint_record_registration_2key_depth_0() {
-  measure_registry_spend(uni.depth_0_old_root, tx_2key)
 }
 
 // reg_7key (GLEIF shape): 7 Ed25519 verifications, weighted 7×1/3
@@ -261,15 +154,10 @@ test measure_checkpoint_register_7key() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     redeemer_7key,
     policy,
     tx_7key,
   )
-}
-
-test measure_checkpoint_record_registration_7key_depth_16() {
-  measure_registry_spend(uni.depth_16_old_root, tx_7key)
 }
 
 // reg_witnessed (2-of-3 witnessed): 2 Ed25519 verifications plus the E8
@@ -280,15 +168,10 @@ test measure_checkpoint_register_witnessed() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     redeemer_witnessed,
     policy,
     tx_witnessed,
   )
-}
-
-test measure_checkpoint_record_registration_witnessed_depth_8() {
-  measure_registry_spend(uni.depth_8_old_root, tx_witnessed)
 }
 
 // ---------------------------------------------------------------------
@@ -313,7 +196,7 @@ test measure_checkpoint_record_registration_witnessed_depth_8() {
 
 const adv_network_id: Int = 1
 
-const advance_deposit: Int = 7_000_000
+const advance_deposit: Int = min_ada + d_reg
 
 /// OLD checkpoint datums: the real keripy `icp` key state each honest
 /// family's `rot` advanced FROM (mirrors checkpoint_tests.ak's identically
@@ -480,7 +363,6 @@ test measure_checkpoint_advance_wit_2key() {
     hp_policy,
     adv_network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
     own_ref_adv_wit_2key,
@@ -496,7 +378,6 @@ test measure_checkpoint_advance_wit_7key() {
     hp_policy,
     adv_network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Advance { evidence: adv_vec.pos_adv_wit_7key_evidence },
     own_ref_adv_wit_7key,
@@ -512,7 +393,6 @@ test measure_checkpoint_advance_keep() {
     hp_policy,
     adv_network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Advance { evidence: adv_vec.pos_adv_keep_evidence },
     own_ref_adv_keep,
@@ -628,7 +508,6 @@ test measure_checkpoint_freeze_2key() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Freeze { evidence: honest2_freeze_wire },
     own_ref_freeze_2key,
@@ -642,7 +521,6 @@ test measure_checkpoint_freeze_7key() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Freeze { evidence: honest7_freeze_wire },
     own_ref_freeze_7key,
@@ -698,7 +576,6 @@ test measure_checkpoint_freeze_lag() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Freeze { evidence: enf_vec.lag_freeze_wire },
     own_ref_freeze_lag,
@@ -784,7 +661,6 @@ test measure_checkpoint_convict_witnessed_active() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Convict { evidence: enf_vec.fork_witnessed_convict_wire },
     own_ref_convict_witnessed,
@@ -798,7 +674,6 @@ test measure_checkpoint_convict_witnessed_frozen() {
     hp_policy,
     network_id,
     d_reg,
-    uni.registry_seed,
     None,
     Convict { evidence: enf_vec.fork_witnessed_convict_wire },
     own_ref_convict_witnessed,

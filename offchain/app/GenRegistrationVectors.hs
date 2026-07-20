@@ -58,6 +58,7 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
     qb64WitnessVerkey,
+    registrationDepositFloor,
     registrationMessage,
     registrationPredicate,
     respellHex,
@@ -103,7 +104,7 @@ ctx0 =
         { dcNetworkId = 0
         , dcCheckpointPolicyId = BS.replicate 28 0xCC
         , dcMinAda = 2000000
-        , dcDReg = 5000000
+        , dcDReg = 1000000000
         }
 
 -- | A crossed deployment: different network id.
@@ -116,7 +117,7 @@ ctxPol = ctx0{dcCheckpointPolicyId = BS.replicate 28 0xDD}
 
 -- | An honest state-output lovelace comfortably above the floor.
 funded :: Integer
-funded = 10000000
+funded = dcMinAda ctx0 + dcDReg ctx0
 
 -- | The exact R8 floor (@min_ada + d_reg@ of 'ctx0').
 boundary :: Integer
@@ -363,6 +364,15 @@ buildScenarios wit wgt dip drt r2k r7k =
         funded
         (rcEvidence r7k)
         (Right ())
+    , let invalidCtx = ctx0{dcDReg = registrationDepositFloor - 1}
+       in sc
+            "d1_deployment_below_floor"
+            "d_reg one below the mechanical floor -> DRegBelowMinimum"
+            invalidCtx
+            (rcDatum wit)
+            (dcMinAda invalidCtx + dcDReg invalidCtx)
+            (rcEvidence wit)
+            (Left DRegBelowMinimum)
     , sc
         "r3_seq_nonzero"
         "seq /= 0 -> R3GenesisDatumMismatch"
@@ -817,7 +827,7 @@ render wit wgt scenarios =
             , "  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,"
             , "  E7NextThresholdMismatch, E8WitnessesMismatch, E9ToadMismatch,"
             , "  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,"
-            , "  R8DepositBelowMinimum, RegistrationEvidence, RegistrationInvalid,"
+            , "  DRegBelowMinimum, R8DepositBelowMinimum, RegistrationEvidence, RegistrationInvalid,"
             , "  RegistrationValid, RegistrationVerdict,"
             , "}"
             , "use cardano_keri/checkpoint/threshold.{DuplicateKey, Unweighted, Weight, Weighted}"
@@ -852,6 +862,10 @@ render wit wgt scenarios =
             , "/// (raw witness verkey, its B-code qb64) for every reg_witnessed b entry"
             , "pub const witnessed_witness_qb64: List<(ByteArray, ByteArray)> ="
             , "  " <> witnessQb64Golden
+            , ""
+            , "/// Haskell-sourced deployment-fixed bond boundaries"
+            , "pub const d_reg_floor: Int = " <> show registrationDepositFloor
+            , "pub const d_reg_below_floor: Int = " <> show (registrationDepositFloor - 1)
             ]
     preimageOf c = canonicalCbor (registrationMessage ctx0 (rcDatum c))
     proofNameOf c = proofTokenName (rcRaw c) (cdCesrAid (rcDatum c))
@@ -954,6 +968,7 @@ renderVerdict (Left e) =
 
 renderError :: RegistrationError -> String
 renderError = \case
+    DRegBelowMinimum -> "DRegBelowMinimum"
     R3GenesisDatumMismatch -> "R3GenesisDatumMismatch"
     R4InceptionInvalid ie ->
         "R4InceptionInvalid(" <> renderInceptionError ie <> ")"

@@ -60,10 +60,12 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
     qb64WitnessVerkey,
+    registrationDepositFloor,
     registrationMessage,
     registrationPredicate,
     respellHex,
     respellThreshold,
+    validRegistrationDeposit,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -101,7 +103,7 @@ ctx0 =
         { dcNetworkId = 0
         , dcCheckpointPolicyId = BS.replicate 28 0xCC
         , dcMinAda = 2_000_000
-        , dcDReg = 5_000_000
+        , dcDReg = 1_000_000_000
         }
 
 -- | A crossed deployment: different network id.
@@ -114,7 +116,7 @@ ctxPol = ctx0{dcCheckpointPolicyId = BS.replicate 28 0xDD}
 
 -- | An honest state-output lovelace comfortably above the floor.
 funded :: Integer
-funded = 10_000_000
+funded = dcMinAda ctx0 + dcDReg ctx0
 
 -- ---------------------------------------------------------------
 -- Fixture case: datum + honest evidence + signer material
@@ -343,6 +345,7 @@ spec =
             sliceNegatives
             signatureNegatives
             depositNegatives
+            deploymentFloor
             misdirectionFamily
             proofToken
             respelling
@@ -639,6 +642,23 @@ depositNegatives =
                     (dcMinAda ctx0 + dcDReg ctx0 - 1)
                     (rcEvidence c)
                     `shouldBe` Left R8DepositBelowMinimum
+
+deploymentFloor :: SpecWith Value
+deploymentFloor =
+    describe "deployment d_reg mechanical floor" $ do
+        it "pins the generated boundary values" $ \_fx -> do
+            registrationDepositFloor `shouldBe` 5_000_000
+            validRegistrationDeposit registrationDepositFloor `shouldBe` True
+            validRegistrationDeposit (registrationDepositFloor - 1) `shouldBe` False
+        it "4,999,999 rejects even when the output meets the applied bond" $ \fx ->
+            withCase fx "reg_witnessed" $ \c -> do
+                let invalidCtx = ctx0{dcDReg = registrationDepositFloor - 1}
+                registrationPredicate
+                    invalidCtx
+                    (rcDatum c)
+                    (dcMinAda invalidCtx + dcDReg invalidCtx)
+                    (rcEvidence c)
+                    `shouldBe` Left DRegBelowMinimum
 
 -- ---------------------------------------------------------------
 -- A-001 QB condition 1: the offset-misdirection family

@@ -9,6 +9,9 @@ module Cardano.KERI.AID.Checkpoint.UnicitySpec (
 import Cardano.KERI.AID.Cage.Types (
     ProofStep (..),
  )
+import Cardano.KERI.AID.Checkpoint.Message (
+    deriveAidAssetName,
+ )
 import Cardano.KERI.AID.Checkpoint.Unicity (
     RegistrySeed (..),
     emptyRegistryRoot,
@@ -41,6 +44,14 @@ policy = BS.replicate 28 0xcc
 
 key :: ByteString
 key = BS.pack [0 .. 31]
+
+registrationAid :: Int -> ByteString
+registrationAid depth =
+    hexBs $ case depth of
+        0 -> "33f1c3f607175773a00e6750ea9ef24dd7e5cc961b35951b50981e5388374d9a"
+        8 -> "395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982"
+        16 -> "072b920b7022eed732095825c0535bd8057986783f501db1b836ed9be72ab45c"
+        _ -> error "UnicitySpec: unsupported registration depth"
 
 seed :: RegistrySeed
 seed = RegistrySeed{registrySeedTxId = BS.replicate 32 0xa1, registrySeedIndex = 7}
@@ -76,6 +87,7 @@ spec = do
         it "pins the empty root" $
             emptyRegistryRoot `shouldBe` BS.replicate 32 0
         mapM_ validDepth [0, 8, 16]
+        mapM_ validRegistrationDepth [0, 8, 16]
         it "rejects a wrong successor root" $ do
             let proof = branchProof 8
                 (oldRoot, _) = transitionRoots key proof
@@ -99,3 +111,9 @@ spec = do
             let proof = branchProof depth
                 (oldRoot, newRoot) = transitionRoots key proof
             validAbsenceTransition oldRoot newRoot key proof `shouldBe` True
+    validRegistrationDepth depth =
+        it ("accepts the paired registration fixture at proof depth " <> show depth) $ do
+            let registrationKey = deriveAidAssetName (registrationAid depth)
+                proof = branchProof depth
+                (oldRoot, newRoot) = transitionRoots registrationKey proof
+            validAbsenceTransition oldRoot newRoot registrationKey proof `shouldBe` True

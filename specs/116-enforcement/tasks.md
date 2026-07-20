@@ -45,18 +45,18 @@ two corrective slices: S7 deletion/fixed bond and S8 measurements.
 
 ## Slice 7 — delete unicity and fix registration bonds
 
-- [ ] T116-S7 RED proves registry-free Register and post-conviction same-AID
+- [X] T116-S7 RED proves registry-free Register and post-conviction same-AID
       re-registration fail on the delivered S3 design, while an applied
       `d_reg = 4_999_999` is not yet rejected.
-- [ ] T116-S7 Delete the Haskell/Aiken unicity model, generator, vectors,
+- [X] T116-S7 Delete the Haskell/Aiken unicity model, generator, vectors,
       registry tests, recipes, cabal/test wiring, bootstrap/thread/redeemer,
       applied seed parameter, and REGISTRY role without weakening other gates.
-- [ ] T116-S7 Preserve #114 R1–R8 with `Register { evidence }`, enforce the
+- [X] T116-S7 Preserve #114 R1–R8 with `Register { evidence }`, enforce the
       deployment-fixed `d_reg >= 5_000_000` before mint and spend dispatch,
       share the floor predicate and generated boundary values across Haskell/
       Aiken, and pass fresh/repeated underfunding negatives plus duplicate/
       re-registration positives at the reference 1,000 ADA fixture value.
-- [ ] T116-S7 Preserve S1/S2/S4/S5, Close fail-closed, and retained role bytes;
+- [X] T116-S7 Preserve S1/S2/S4/S5, Close fail-closed, and retained role bytes;
       prove net LOC decreases; full gate green; commit exactly
       `refactor(116): drop unicity and fix registration bonds` with exactly
       `Tasks: T116-S7`.
@@ -79,7 +79,7 @@ two corrective slices: S7 deletion/fixed bond and S8 measurements.
 
 - [X] A-010 consumed; A-009 withdrawn; Q-010 closed with self-conviction as a
       benign documented residual and zero added mechanism.
-- [ ] Q-011 ratifies the simplified spec, two-slice plan, and task coverage
+- [X] Q-011 ratifies the simplified spec, two-slice plan, and task coverage
       before any code dispatch.
 - [ ] Each corrective slice is accepted by full-file owner review plus a fresh
       `./gate.sh` before task boxes are checked and the amended commit is pushed.

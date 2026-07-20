@@ -15,12 +15,12 @@ use cardano_keri/checkpoint/message.{
   InceptionIllFormed, InceptionNativeSnNonZero,
 }
 use cardano_keri/checkpoint/registration.{
-  DeploymentContext, E1EventTypeMismatch, E2AidMismatch, E3SequenceMismatch,
-  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,
-  E7NextThresholdMismatch, E8WitnessesMismatch, E9ToadMismatch,
-  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
-  R8DepositBelowMinimum, RegistrationEvidence, RegistrationInvalid,
-  RegistrationValid, RegistrationVerdict,
+  DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
+  E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
+  E6NextKeysMismatch, E7NextThresholdMismatch, E8WitnessesMismatch,
+  E9ToadMismatch, R3GenesisDatumMismatch, R4InceptionInvalid,
+  R7QuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
+  RegistrationInvalid, RegistrationValid, RegistrationVerdict,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted,
@@ -68,13 +68,18 @@ pub const witnessed_witness_qb64: List<(ByteArray, ByteArray)> =
     ),
   ]
 
+/// Haskell-sourced deployment-fixed bond boundaries
+pub const d_reg_floor: Int = 5000000
+
+pub const d_reg_below_floor: Int = 4999999
+
 /// reg_witnessed (3-wit toad-2) honest package -> Valid
 pub const pos_witnessed_ctx: DeploymentContext =
   DeploymentContext {
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const pos_witnessed_datum: CheckpointDatumV1 =
@@ -100,7 +105,7 @@ pub const pos_witnessed_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const pos_witnessed_lovelace: Int = 10000000
+pub const pos_witnessed_lovelace: Int = 1002000000
 
 pub const pos_witnessed_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -134,7 +139,7 @@ pub const pos_weighted_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const pos_weighted_datum: CheckpointDatumV1 =
@@ -174,7 +179,7 @@ pub const pos_weighted_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const pos_weighted_lovelace: Int = 10000000
+pub const pos_weighted_lovelace: Int = 1002000000
 
 pub const pos_weighted_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -212,7 +217,7 @@ pub const pos_deposit_boundary_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const pos_deposit_boundary_datum: CheckpointDatumV1 =
@@ -238,7 +243,7 @@ pub const pos_deposit_boundary_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const pos_deposit_boundary_lovelace: Int = 7000000
+pub const pos_deposit_boundary_lovelace: Int = 1002000000
 
 pub const pos_deposit_boundary_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -272,7 +277,7 @@ pub const pos_2key_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const pos_2key_datum: CheckpointDatumV1 =
@@ -294,7 +299,7 @@ pub const pos_2key_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const pos_2key_lovelace: Int = 10000000
+pub const pos_2key_lovelace: Int = 1002000000
 
 pub const pos_2key_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -328,7 +333,7 @@ pub const pos_7key_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const pos_7key_datum: CheckpointDatumV1 =
@@ -384,7 +389,7 @@ pub const pos_7key_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const pos_7key_lovelace: Int = 10000000
+pub const pos_7key_lovelace: Int = 1002000000
 
 pub const pos_7key_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -432,13 +437,74 @@ pub const pos_7key_evidence: RegistrationEvidence =
 
 pub const pos_7key_verdict: RegistrationVerdict = RegistrationValid
 
+/// d_reg one below the mechanical floor -> DRegBelowMinimum
+pub const d1_deployment_below_floor_ctx: DeploymentContext =
+  DeploymentContext {
+    network_id: 0,
+    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    min_ada: 2000000,
+    d_reg: 4999999,
+  }
+
+pub const d1_deployment_below_floor_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const d1_deployment_below_floor_lovelace: Int = 6999999
+
+pub const d1_deployment_below_floor_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+      ),
+      (
+        1,
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+  }
+
+pub const d1_deployment_below_floor_verdict: RegistrationVerdict =
+  RegistrationInvalid(DRegBelowMinimum)
+
 /// seq /= 0 -> R3GenesisDatumMismatch
 pub const r3_seq_nonzero_ctx: DeploymentContext =
   DeploymentContext {
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r3_seq_nonzero_datum: CheckpointDatumV1 =
@@ -464,7 +530,7 @@ pub const r3_seq_nonzero_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r3_seq_nonzero_lovelace: Int = 10000000
+pub const r3_seq_nonzero_lovelace: Int = 1002000000
 
 pub const r3_seq_nonzero_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -499,7 +565,7 @@ pub const r4_native_sn_nonzero_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r4_native_sn_nonzero_datum: CheckpointDatumV1 =
@@ -525,7 +591,7 @@ pub const r4_native_sn_nonzero_datum: CheckpointDatumV1 =
     native_sn: 1,
   }
 
-pub const r4_native_sn_nonzero_lovelace: Int = 10000000
+pub const r4_native_sn_nonzero_lovelace: Int = 1002000000
 
 pub const r4_native_sn_nonzero_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -560,7 +626,7 @@ pub const e1_dip_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e1_dip_datum: CheckpointDatumV1 =
@@ -580,7 +646,7 @@ pub const e1_dip_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e1_dip_lovelace: Int = 10000000
+pub const e1_dip_lovelace: Int = 1002000000
 
 pub const e1_dip_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -611,7 +677,7 @@ pub const e1_drt_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e1_drt_datum: CheckpointDatumV1 =
@@ -631,7 +697,7 @@ pub const e1_drt_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e1_drt_lovelace: Int = 10000000
+pub const e1_drt_lovelace: Int = 1002000000
 
 pub const e1_drt_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -662,7 +728,7 @@ pub const e2_crossed_aid_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e2_crossed_aid_datum: CheckpointDatumV1 =
@@ -688,7 +754,7 @@ pub const e2_crossed_aid_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e2_crossed_aid_lovelace: Int = 10000000
+pub const e2_crossed_aid_lovelace: Int = 1002000000
 
 pub const e2_crossed_aid_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -723,7 +789,7 @@ pub const e3_off_s_at_t_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e3_off_s_at_t_datum: CheckpointDatumV1 =
@@ -749,7 +815,7 @@ pub const e3_off_s_at_t_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e3_off_s_at_t_lovelace: Int = 10000000
+pub const e3_off_s_at_t_lovelace: Int = 1002000000
 
 pub const e3_off_s_at_t_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -784,7 +850,7 @@ pub const e4_squat_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e4_squat_datum: CheckpointDatumV1 =
@@ -810,7 +876,7 @@ pub const e4_squat_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e4_squat_lovelace: Int = 10000000
+pub const e4_squat_lovelace: Int = 1002000000
 
 pub const e4_squat_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -845,7 +911,7 @@ pub const e5_kt_restated_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e5_kt_restated_datum: CheckpointDatumV1 =
@@ -871,7 +937,7 @@ pub const e5_kt_restated_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e5_kt_restated_lovelace: Int = 10000000
+pub const e5_kt_restated_lovelace: Int = 1002000000
 
 pub const e5_kt_restated_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -906,7 +972,7 @@ pub const e5_weighted_mutated_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e5_weighted_mutated_datum: CheckpointDatumV1 =
@@ -946,7 +1012,7 @@ pub const e5_weighted_mutated_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e5_weighted_mutated_lovelace: Int = 10000000
+pub const e5_weighted_mutated_lovelace: Int = 1002000000
 
 pub const e5_weighted_mutated_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -985,7 +1051,7 @@ pub const e6_next_flipped_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e6_next_flipped_datum: CheckpointDatumV1 =
@@ -1011,7 +1077,7 @@ pub const e6_next_flipped_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e6_next_flipped_lovelace: Int = 10000000
+pub const e6_next_flipped_lovelace: Int = 1002000000
 
 pub const e6_next_flipped_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1046,7 +1112,7 @@ pub const e7_nt_restated_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e7_nt_restated_datum: CheckpointDatumV1 =
@@ -1072,7 +1138,7 @@ pub const e7_nt_restated_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e7_nt_restated_lovelace: Int = 10000000
+pub const e7_nt_restated_lovelace: Int = 1002000000
 
 pub const e7_nt_restated_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1107,7 +1173,7 @@ pub const e8_witness_flipped_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e8_witness_flipped_datum: CheckpointDatumV1 =
@@ -1133,7 +1199,7 @@ pub const e8_witness_flipped_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e8_witness_flipped_lovelace: Int = 10000000
+pub const e8_witness_flipped_lovelace: Int = 1002000000
 
 pub const e8_witness_flipped_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1168,7 +1234,7 @@ pub const e8_witness_count_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e8_witness_count_datum: CheckpointDatumV1 =
@@ -1193,7 +1259,7 @@ pub const e8_witness_count_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e8_witness_count_lovelace: Int = 10000000
+pub const e8_witness_count_lovelace: Int = 1002000000
 
 pub const e8_witness_count_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1228,7 +1294,7 @@ pub const e9_toad_restated_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const e9_toad_restated_datum: CheckpointDatumV1 =
@@ -1254,7 +1320,7 @@ pub const e9_toad_restated_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const e9_toad_restated_lovelace: Int = 10000000
+pub const e9_toad_restated_lovelace: Int = 1002000000
 
 pub const e9_toad_restated_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1289,7 +1355,7 @@ pub const r7_event_raw_sigs_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_event_raw_sigs_datum: CheckpointDatumV1 =
@@ -1315,7 +1381,7 @@ pub const r7_event_raw_sigs_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_event_raw_sigs_lovelace: Int = 10000000
+pub const r7_event_raw_sigs_lovelace: Int = 1002000000
 
 pub const r7_event_raw_sigs_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1350,7 +1416,7 @@ pub const r7_below_threshold_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_below_threshold_datum: CheckpointDatumV1 =
@@ -1376,7 +1442,7 @@ pub const r7_below_threshold_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_below_threshold_lovelace: Int = 10000000
+pub const r7_below_threshold_lovelace: Int = 1002000000
 
 pub const r7_below_threshold_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1407,7 +1473,7 @@ pub const r7_below_weighted_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_below_weighted_datum: CheckpointDatumV1 =
@@ -1447,7 +1513,7 @@ pub const r7_below_weighted_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_below_weighted_lovelace: Int = 10000000
+pub const r7_below_weighted_lovelace: Int = 1002000000
 
 pub const r7_below_weighted_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1482,7 +1548,7 @@ pub const r7_dup_index_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_dup_index_datum: CheckpointDatumV1 =
@@ -1508,7 +1574,7 @@ pub const r7_dup_index_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_dup_index_lovelace: Int = 10000000
+pub const r7_dup_index_lovelace: Int = 1002000000
 
 pub const r7_dup_index_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1543,7 +1609,7 @@ pub const r7_attacker_signed_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_attacker_signed_datum: CheckpointDatumV1 =
@@ -1569,7 +1635,7 @@ pub const r7_attacker_signed_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_attacker_signed_lovelace: Int = 10000000
+pub const r7_attacker_signed_lovelace: Int = 1002000000
 
 pub const r7_attacker_signed_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1604,7 +1670,7 @@ pub const r7_crossed_network_ctx: DeploymentContext =
     network_id: 1,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_crossed_network_datum: CheckpointDatumV1 =
@@ -1630,7 +1696,7 @@ pub const r7_crossed_network_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_crossed_network_lovelace: Int = 10000000
+pub const r7_crossed_network_lovelace: Int = 1002000000
 
 pub const r7_crossed_network_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1665,7 +1731,7 @@ pub const r7_crossed_policy_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r7_crossed_policy_datum: CheckpointDatumV1 =
@@ -1691,7 +1757,7 @@ pub const r7_crossed_policy_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_crossed_policy_lovelace: Int = 10000000
+pub const r7_crossed_policy_lovelace: Int = 1002000000
 
 pub const r7_crossed_policy_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1726,7 +1792,7 @@ pub const r8_deposit_short_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const r8_deposit_short_datum: CheckpointDatumV1 =
@@ -1752,7 +1818,7 @@ pub const r8_deposit_short_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r8_deposit_short_lovelace: Int = 6999999
+pub const r8_deposit_short_lovelace: Int = 1001999999
 
 pub const r8_deposit_short_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1787,7 +1853,7 @@ pub const mis_off_i_shift_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_off_i_shift_datum: CheckpointDatumV1 =
@@ -1813,7 +1879,7 @@ pub const mis_off_i_shift_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_off_i_shift_lovelace: Int = 10000000
+pub const mis_off_i_shift_lovelace: Int = 1002000000
 
 pub const mis_off_i_shift_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1848,7 +1914,7 @@ pub const mis_overlap_k_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_overlap_k_datum: CheckpointDatumV1 =
@@ -1874,7 +1940,7 @@ pub const mis_overlap_k_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_overlap_k_lovelace: Int = 10000000
+pub const mis_overlap_k_lovelace: Int = 1002000000
 
 pub const mis_overlap_k_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1909,7 +1975,7 @@ pub const mis_k_into_n_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_k_into_n_datum: CheckpointDatumV1 =
@@ -1935,7 +2001,7 @@ pub const mis_k_into_n_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_k_into_n_lovelace: Int = 10000000
+pub const mis_k_into_n_lovelace: Int = 1002000000
 
 pub const mis_k_into_n_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -1970,7 +2036,7 @@ pub const mis_k_into_b_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_k_into_b_datum: CheckpointDatumV1 =
@@ -1996,7 +2062,7 @@ pub const mis_k_into_b_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_k_into_b_lovelace: Int = 10000000
+pub const mis_k_into_b_lovelace: Int = 1002000000
 
 pub const mis_k_into_b_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2031,7 +2097,7 @@ pub const mis_i_at_k_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_i_at_k_datum: CheckpointDatumV1 =
@@ -2057,7 +2123,7 @@ pub const mis_i_at_k_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_i_at_k_lovelace: Int = 10000000
+pub const mis_i_at_k_lovelace: Int = 1002000000
 
 pub const mis_i_at_k_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2092,7 +2158,7 @@ pub const mis_b_at_k_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_b_at_k_datum: CheckpointDatumV1 =
@@ -2118,7 +2184,7 @@ pub const mis_b_at_k_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_b_at_k_lovelace: Int = 10000000
+pub const mis_b_at_k_lovelace: Int = 1002000000
 
 pub const mis_b_at_k_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2153,7 +2219,7 @@ pub const mis_trunc_i_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_trunc_i_datum: CheckpointDatumV1 =
@@ -2179,7 +2245,7 @@ pub const mis_trunc_i_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_trunc_i_lovelace: Int = 10000000
+pub const mis_trunc_i_lovelace: Int = 1002000000
 
 pub const mis_trunc_i_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2214,7 +2280,7 @@ pub const mis_trunc_k_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_trunc_k_datum: CheckpointDatumV1 =
@@ -2240,7 +2306,7 @@ pub const mis_trunc_k_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_trunc_k_lovelace: Int = 10000000
+pub const mis_trunc_k_lovelace: Int = 1002000000
 
 pub const mis_trunc_k_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2275,7 +2341,7 @@ pub const mis_neg_i_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_neg_i_datum: CheckpointDatumV1 =
@@ -2301,7 +2367,7 @@ pub const mis_neg_i_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_neg_i_lovelace: Int = 10000000
+pub const mis_neg_i_lovelace: Int = 1002000000
 
 pub const mis_neg_i_evidence: RegistrationEvidence =
   RegistrationEvidence {
@@ -2336,7 +2402,7 @@ pub const mis_dup_k_ctx: DeploymentContext =
     network_id: 0,
     checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     min_ada: 2000000,
-    d_reg: 5000000,
+    d_reg: 1000000000,
   }
 
 pub const mis_dup_k_datum: CheckpointDatumV1 =
@@ -2362,7 +2428,7 @@ pub const mis_dup_k_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const mis_dup_k_lovelace: Int = 10000000
+pub const mis_dup_k_lovelace: Int = 1002000000
 
 pub const mis_dup_k_evidence: RegistrationEvidence =
   RegistrationEvidence {

@@ -57,6 +57,10 @@ module Cardano.KERI.AID.Checkpoint.Registration (
     -- * Proof-token name (R5 derivation)
     proofTokenName,
 
+    -- * Deployment-fixed registration bond
+    registrationDepositFloor,
+    validRegistrationDeposit,
+
     -- * Message reconstruction (R3)
     registrationMessage,
 
@@ -128,9 +132,20 @@ data DeploymentContext = DeploymentContext
     , dcMinAda :: !Integer
     -- ^ ledger min-ADA floor of the state output
     , dcDReg :: !Integer
-    -- ^ the registration deposit parameter (economics = O3, #117)
+    {- ^ deployment-fixed registration bond whose operator magnitude is
+    selected pre-mainnet; #117 owns Close/migration/consumer lookup,
+    not this security parameter
+    -}
     }
     deriving stock (Show, Eq)
+
+-- | Mechanical lower bound for the deployment-fixed registration bond.
+registrationDepositFloor :: Integer
+registrationDepositFloor = 5_000_000
+
+-- | Whether an applied registration-bond parameter is deployable.
+validRegistrationDeposit :: Integer -> Bool
+validRegistrationDeposit dReg = dReg >= registrationDepositFloor
 
 -- ---------------------------------------------------------
 -- Registration evidence
@@ -281,7 +296,9 @@ registrationMessage ctx d =
 
 -- | A registration rejection reason (one constructor per check).
 data RegistrationError
-    = {- | R3: @seq \/= 0@ or the datum is not the genesis datum of
+    = -- | Applied @d_reg@ is below 'registrationDepositFloor'.
+      DRegBelowMinimum
+    | {- | R3: @seq \/= 0@ or the datum is not the genesis datum of
       the reconstructed message.
       -}
       R3GenesisDatumMismatch
@@ -384,6 +401,7 @@ registrationPredicate ::
     RegistrationEvidence ->
     Either RegistrationError ()
 registrationPredicate ctx d lovelace e = do
+    unless (validRegistrationDeposit (dcDReg ctx)) (Left DRegBelowMinimum)
     -- R3: genesis datum — reconstructed message, nothing supplied.
     let m = registrationMessage ctx d
     unless

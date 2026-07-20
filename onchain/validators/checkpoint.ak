@@ -10,10 +10,9 @@
 //// transaction-shape checks R1/R2/R5 live here.
 ////
 //// Gate-room (A-001 QC): no check assumes a fixed input count or rejects
-//// inputs beyond the one R5 names — the `Register` shape leaves room for
-//// the #116 unicity-gate reference/consumed input. Duplicate-mint of the
-//// same `(policy, aid_asset_name)` is the documented temporary
-//// pre-deployment residual; the unicity/absence gate is #116 scope.
+//// inputs beyond the one R5 names. Duplicate-mint of the same
+//// `(policy, aid_asset_name)` is the documented controller self-harm
+//// residual; registration has no shared coordinating state.
 ////
 //// #115 S6 adds the `Advance` spend branch (V1-V7): KERI rotation
 //// admission over the tip checkpoint UTxO, delegating V4-V7 to the S5
@@ -24,14 +23,11 @@
 
 use aiken/collection/dict
 use aiken/collection/list
-use aiken/merkle_patricia_forestry.{Proof}
 use cardano/address.{Script, from_script}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
-use cardano/transaction.{
-  InlineDatum, OutputReference, Spend, Transaction, find_input,
-}
+use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
@@ -43,10 +39,9 @@ use cardano_keri/checkpoint/enforcement.{
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
-  registration_predicate,
+  registration_predicate, valid_registration_deposit,
 }
-use cardano_keri/checkpoint/role.{Active, Frozen, Registry, Tombstone}
-use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
+use cardano_keri/checkpoint/role.{Active, Frozen, Tombstone}
 
 /// The ledger min-ADA floor the R8 deposit arithmetic runs over (spec R8:
 /// state-output lovelace `>= min_ada + d_reg`). A conservative fixed
@@ -61,12 +56,7 @@ pub const checkpoint_min_ada: Int = 2_000_000
 /// prover-supplied offsets, and the controller signatures over the
 /// reconstructed `InceptionMessage` preimage).
 pub type MintRedeemer {
-  BootstrapRegistry
-  Register {
-    evidence: RegistrationEvidence,
-    registry_ref: OutputReference,
-    absence_proof: Proof,
-  }
+  Register { evidence: RegistrationEvidence }
 }
 
 /// The checkpoint spend redeemer. `Advance` carries the S5 `AdvanceEvidence`
@@ -78,7 +68,6 @@ pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
   Freeze { evidence: EnforcementEvidence }
   Convict { evidence: EnforcementEvidence }
-  RecordRegistration
   Close
 }
 
@@ -88,7 +77,6 @@ pub type SpendRedeemer {
 type SpendInputRole {
   ActiveCheckpoint
   FrozenCheckpoint
-  RegistryState
   TerminalTombstone
 }
 
@@ -97,20 +85,16 @@ validator checkpoint(
   hash_proof_policy: PolicyId,
   network_id: Int,
   d_reg: Int,
-  registry_seed: OutputReference,
 ) {
   mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
+    expect valid_registration_deposit(d_reg)
     when redeemer is {
-      BootstrapRegistry -> validate_bootstrap(registry_seed, policy_id, tx)
-      Register { evidence, registry_ref, absence_proof } ->
+      Register { evidence } ->
         validate_register(
           hash_proof_policy,
           network_id,
           d_reg,
-          registry_seed,
           evidence,
-          registry_ref,
-          absence_proof,
           policy_id,
           tx,
         )
@@ -123,6 +107,7 @@ validator checkpoint(
     own_ref: OutputReference,
     tx: Transaction,
   ) {
+    expect valid_registration_deposit(d_reg)
     expect rdm: SpendRedeemer = redeemer
     expect Some(input_role) = classify_spend_input(own_ref, tx)
     when Pair(input_role, rdm) is {
@@ -136,8 +121,6 @@ validator checkpoint(
         validate_convict(evidence, own_ref, tx)
       Pair(FrozenCheckpoint, Convict { evidence }) ->
         validate_convict(evidence, own_ref, tx)
-      Pair(RegistryState, RecordRegistration) ->
-        validate_record_registration(registry_seed, own_ref, tx)
       _ -> fail
     }
   }
@@ -163,9 +146,6 @@ fn classify_spend_input(
   } else if own_input.output.address == role.address(own_hash, Frozen) {
     expect V1(_): CheckpointDatum = datum_data
     Some(FrozenCheckpoint)
-  } else if own_input.output.address == role.address(own_hash, Registry) {
-    expect _: RegistryDatumV1 = datum_data
-    Some(RegistryState)
   } else if own_input.output.address == role.address(own_hash, Tombstone) {
     expect _: TombstoneV1 = datum_data
     Some(TerminalTombstone)
@@ -180,14 +160,11 @@ fn validate_register(
   hash_proof_policy: PolicyId,
   network_id: Int,
   d_reg: Int,
-  registry_seed: OutputReference,
   evidence: RegistrationEvidence,
-  registry_ref: OutputReference,
-  absence_proof: Proof,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
-  let Transaction { inputs, outputs, mint, redeemers, .. } = tx
+  let Transaction { inputs, outputs, mint, .. } = tx
   // R2 — exactly one output at the ACTIVE address
   // `Address(Script(own_policy), None)` (the full address, so the
   // staking-credential axis stays free for the #116/#117 role encoding,
@@ -229,32 +206,6 @@ fn validate_register(
   )
   expect burned_name == proof_name
   expect burned_qty == -1
-  // U1/U2 — consume the named REGISTRY tip, preserve its complete value,
-  // and advance its MPFS root by one absence-proven marker insertion.
-  let thread_name = unicity.registry_thread_name(registry_seed)
-  expect Some(registry_input) = find_input(inputs, registry_ref)
-  expect registry_input.output.address == role.address(policy_id, Registry)
-  expect quantity_of(registry_input.output.value, policy_id, thread_name) == 1
-  expect InlineDatum(old_registry_data) = registry_input.output.datum
-  expect old_registry: RegistryDatumV1 = old_registry_data
-  expect [registry_output] = list.filter(
-    outputs,
-    fn(output) { output.address == role.address(policy_id, Registry) },
-  )
-  expect registry_output.value == registry_input.output.value
-  expect quantity_of(registry_output.value, policy_id, thread_name) == 1
-  expect InlineDatum(new_registry_data) = registry_output.datum
-  expect new_registry: RegistryDatumV1 = new_registry_data
-  expect
-    unicity.insert_registered(old_registry.root, aid_name, absence_proof) == new_registry.root
-  // U3 — the named registry input must execute RecordRegistration in the
-  // same transaction. Exactly one redeemer for that spend purpose is admitted.
-  expect [Pair(_, registry_redeemer_data)] = list.filter(
-    redeemers,
-    fn(pair) { pair.1st == Spend(registry_ref) },
-  )
-  expect registry_redeemer: SpendRedeemer = registry_redeemer_data
-  expect registry_redeemer == RecordRegistration
   // R3/R4/R6/R7/R8 — the S3 predicate over the reconstructed message,
   // the datum, the state output's lovelace, and the redeemer evidence.
   let ctx = DeploymentContext {
@@ -265,63 +216,6 @@ fn validate_register(
   }
   expect
     registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
-  True
-}
-
-/// One-shot registry creation: exact seed consumption, one thread mint, and
-/// one REGISTRY output rooted at the empty MPFS trie.
-fn validate_bootstrap(
-  registry_seed: OutputReference,
-  policy_id: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect [_] = list.filter(
-    inputs,
-    fn(input) { input.output_reference == registry_seed },
-  )
-  let thread_name = unicity.registry_thread_name(registry_seed)
-  expect [Pair(minted_name, minted_qty)] = dict.to_pairs(
-    tokens(mint, policy_id),
-  )
-  expect minted_name == thread_name
-  expect minted_qty == 1
-  expect [registry_output] = list.filter(
-    outputs,
-    fn(output) { output.address == role.address(policy_id, Registry) },
-  )
-  expect quantity_of(registry_output.value, policy_id, thread_name) == 1
-  expect InlineDatum(registry_data) = registry_output.datum
-  expect registry: RegistryDatumV1 = registry_data
-  expect registry.root == unicity.empty_root()
-  True
-}
-
-/// Registry spend coupling. The exact non-thread +1 under the own policy
-/// necessarily invokes the paired Register mint handler in the ledger.
-fn validate_record_registration(
-  registry_seed: OutputReference,
-  own_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(own_input) = find_input(inputs, own_ref)
-  expect Script(own_hash) = own_input.output.address.payment_credential
-  expect own_input.output.address == role.address(own_hash, Registry)
-  expect InlineDatum(registry_data) = own_input.output.datum
-  expect _: RegistryDatumV1 = registry_data
-  let thread_name = unicity.registry_thread_name(registry_seed)
-  expect quantity_of(own_input.output.value, own_hash, thread_name) == 1
-  expect [registry_output] = list.filter(
-    outputs,
-    fn(output) { output.address == role.address(own_hash, Registry) },
-  )
-  expect registry_output.value == own_input.output.value
-  expect InlineDatum(successor_data) = registry_output.datum
-  expect _: RegistryDatumV1 = successor_data
-  expect [Pair(minted_name, minted_qty)] = dict.to_pairs(tokens(mint, own_hash))
-  expect minted_name != thread_name
-  expect minted_qty == 1
   True
 }
 
@@ -418,7 +312,7 @@ fn validate_advance(
   let Transaction { inputs, outputs, mint, .. } = tx
   // V1 — resolve the named own input at exactly ACTIVE or FROZEN, carrying
   // exactly one checkpoint token derived from its inline V1(OLD) datum.
-  // TOMBSTONE, REGISTRY, unknown roles, and non-V1 datums fail before the
+  // TOMBSTONE, unknown roles, and non-V1 datums fail before the
   // advance predicate.
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential

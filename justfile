@@ -112,17 +112,6 @@ gen-advance-vectors:
 check-advance-vectors: gen-advance-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/advance_vectors.ak
 
-# Regenerate the #116 append-only registry roots and absence proofs at MPFS
-# depths 0/8/16 from the shared Haskell reference model.
-gen-unicity-vectors:
-    mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-unicity-vectors -- ../onchain/lib/cardano_keri/checkpoint/unicity_vectors.ak'
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/unicity_vectors.ak
-
-# Drift check: the committed roots/proofs must equal a fresh generation.
-check-unicity-vectors: gen-unicity-vectors
-    git diff --exit-code onchain/lib/cardano_keri/checkpoint/unicity_vectors.ak
-
 # --- onchain (Aiken) ---
 
 # Format Aiken sources

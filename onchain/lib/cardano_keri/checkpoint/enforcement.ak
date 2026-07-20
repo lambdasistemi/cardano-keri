@@ -1,23 +1,163 @@
 //// Convict/Freeze divergence-enforcement predicates (#106 Slice 4).
 ////
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Enforcement`
-//// verdict-for-verdict: pure predicates over already-decoded KERI
-//// establishment-event evidence (`EventEvidence`) plus the tip
-//// `CheckpointDatumV1`, returning a `XxxVerdict` sum (`XxxValid` ≙ `Right ()`,
-//// `XxxInvalid(e)` ≙ `Left e`) with one constructor per check, evaluated in the
-//// same order. The evidence is decoded: offset/slice extraction over the raw
-//// CESR event is #24's concern, not this layer's. O1 is resolved — all
-//// controller and witness signatures verify over `event_bytes` (the full event
-//// serialization), never the SAID.
+//// verdict-for-verdict: `EnforcementEvidence` is EE0-EE9-bound before decoded
+//// `EventEvidence` reaches the predicates alongside the tip
+//// `CheckpointDatumV1`. O1 is resolved — all controller and witness signatures
+//// verify over `event_bytes` (the full event serialization), never the SAID.
 ////
 //// `enforcement_tests.ak` asserts these verdicts match the Haskell over the
 //// committed keripy fixtures (`enforcement_vectors.ak`).
 
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
+use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
-use cardano_keri/checkpoint/message.{next_key_digest}
+use cardano_keri/checkpoint/message.{next_key_digest, qb64_aid, qb64_verkey}
+use cardano_keri/checkpoint/registration.{
+  respell_hex, respell_threshold, slice_matches,
+}
 use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
+
+// ---------------------------------------------------------
+// Signed wire evidence and EE0-EE9 binding
+// ---------------------------------------------------------
+
+/// Ratified V1 enforcement wire evidence. Offsets locate exact field spellings
+/// in `event_bytes`; they never define the decoded content. There is no
+/// `said_blank` and no SAID recomputation.
+pub type EnforcementEvidence {
+  event_bytes: ByteArray,
+  off_t: Int,
+  off_i: Int,
+  off_s: Int,
+  off_d: Int,
+  off_k: List<Int>,
+  off_kt: Int,
+  off_n: List<Int>,
+  off_nt: Int,
+  off_bt: Int,
+  native_sn: Int,
+  said: ByteArray,
+  revealed_keys: List<ByteArray>,
+  next_keys: List<ByteArray>,
+  cur_threshold: Threshold,
+  next_threshold: Threshold,
+  toad: Int,
+  ctrl_sigs: List<(Int, ByteArray)>,
+  wit_sigs: List<(Int, ByteArray)>,
+}
+
+/// Structured rejection from the ordered EE0-EE9 wire binder.
+pub type EnforcementBindingError {
+  EE0EventBytesLength
+  EE1EventTypeMismatch
+  EE2AidMismatch
+  EE3SequenceMismatch
+  EE4SaidMismatch
+  EE5RevealedKeysMismatch
+  EE6CurThresholdMismatch
+  EE7NextKeysMismatch
+  EE8NextThresholdMismatch
+  EE9ToadMismatch
+}
+
+/// The binder either returns the decoded event or the exact failed EE axis.
+pub type EnforcementBindingVerdict {
+  EnforcementBindingValid(EventEvidence)
+  EnforcementBindingInvalid(EnforcementBindingError)
+}
+
+/// Bind EE0 through EE9 in order, constructing decoded rotation evidence only
+/// after all signed slices match. `event_bytes` and both signature-pair lists
+/// are carried unchanged; V1 rotations do not restate the witness set.
+pub fn bind_enforcement_evidence(
+  aid: ByteArray,
+  evidence: EnforcementEvidence,
+) -> EnforcementBindingVerdict {
+  let event_len = bytearray.length(evidence.event_bytes)
+  if event_len < 1 || event_len > 1024 {
+    EnforcementBindingInvalid(EE0EventBytesLength)
+  } else if !slice_matches(evidence.event_bytes, evidence.off_t, "rot") {
+    EnforcementBindingInvalid(EE1EventTypeMismatch)
+  } else if !slice_matches(evidence.event_bytes, evidence.off_i, qb64_aid(aid)) {
+    EnforcementBindingInvalid(EE2AidMismatch)
+  } else if !slice_matches(
+    evidence.event_bytes,
+    evidence.off_s,
+    respell_hex(evidence.native_sn),
+  ) {
+    EnforcementBindingInvalid(EE3SequenceMismatch)
+  } else if bytearray.length(evidence.said) != 32 || !slice_matches(
+    evidence.event_bytes,
+    evidence.off_d,
+    qb64_aid(evidence.said),
+  ) {
+    EnforcementBindingInvalid(EE4SaidMismatch)
+  } else if !slices_match(
+    evidence.event_bytes,
+    evidence.off_k,
+    list.map(evidence.revealed_keys, qb64_verkey),
+  ) {
+    EnforcementBindingInvalid(EE5RevealedKeysMismatch)
+  } else if !slice_matches(
+    evidence.event_bytes,
+    evidence.off_kt,
+    respell_threshold(evidence.cur_threshold),
+  ) {
+    EnforcementBindingInvalid(EE6CurThresholdMismatch)
+  } else if !slices_match(
+    evidence.event_bytes,
+    evidence.off_n,
+    list.map(evidence.next_keys, qb64_aid),
+  ) {
+    EnforcementBindingInvalid(EE7NextKeysMismatch)
+  } else if !slice_matches(
+    evidence.event_bytes,
+    evidence.off_nt,
+    respell_threshold(evidence.next_threshold),
+  ) {
+    EnforcementBindingInvalid(EE8NextThresholdMismatch)
+  } else if !slice_matches(
+    evidence.event_bytes,
+    evidence.off_bt,
+    respell_hex(evidence.toad),
+  ) {
+    EnforcementBindingInvalid(EE9ToadMismatch)
+  } else {
+    EnforcementBindingValid(
+      EventEvidence {
+        event_bytes: evidence.event_bytes,
+        t: "rot",
+        native_sn: evidence.native_sn,
+        cesr_aid: aid,
+        said: evidence.said,
+        revealed_keys: evidence.revealed_keys,
+        next_keys: evidence.next_keys,
+        cur_threshold: evidence.cur_threshold,
+        next_threshold: evidence.next_threshold,
+        witnesses: [],
+        toad: evidence.toad,
+        ctrl_sigs: evidence.ctrl_sigs,
+        wit_sigs: evidence.wit_sigs,
+      },
+    )
+  }
+}
+
+fn slices_match(
+  raw: ByteArray,
+  offsets: List<Int>,
+  expected: List<ByteArray>,
+) -> Bool {
+  list.length(offsets) == list.length(expected) && list.all(
+    list.zip(offsets, expected),
+    fn(pair) {
+      let (offset, bytes) = pair
+      slice_matches(raw, offset, bytes)
+    },
+  )
+}
 
 // ---------------------------------------------------------
 // Decoded event evidence (mirrors the Slice-3 `EventEvidence`)
@@ -62,7 +202,7 @@ pub type ConvictError {
   /// The conflicting event's witness receipts number fewer than the tip's
   /// `toad` (an unwitnessed event cannot frame a witnessed identity).
   CvInsufficientReceipts
-  /// The evidence agrees with the tip on `n`/`nt`/`bt` (the whole conflict
+  /// The evidence agrees with the tip on `kt`/`n`/`nt`/`bt` (the whole conflict
   /// commitment) — not a conflict.
   CvNoConflict
 }
@@ -79,9 +219,9 @@ pub type ConvictVerdict {
 /// Slice-3 Haskell `convictPredicate`): (1) establishment gate — `rot` / same
 /// AID / same `native_sn`; (2) same reveal — `k` equals `cur_keys`;
 /// (3) controller attribution over `cur_threshold`; (4) witnessed anti-fork gate
-/// — at least `toad` verifying witness receipts (vacuous when `toad = 0`);
-/// (5) conflict — divergence on `n`/`nt`/`bt` only (the witness set is NOT a
-/// conflict axis).
+/// — at least `toad` distinct verifying witness indices (vacuous when
+/// `toad = 0`); (5) conflict — divergence on `kt`/`n`/`nt`/`bt` only (the
+/// witness set is NOT a conflict axis).
 pub fn convict_predicate(
   tip: CheckpointDatumV1,
   evidence: EventEvidence,
@@ -117,13 +257,13 @@ pub fn convict_predicate(
 }
 
 /// Whether the evidence agrees with the tip on the forward commitment
-/// (`next_keys`, `next_threshold`, `toad`) — agreement everywhere is not a
-/// conflict. The witness set is NOT a conflict axis: a KERI rotation restates no
-/// `b` (only the `br`/`ba` delta), so `evidence.witnesses` is always `[]` and
-/// comparing it to a witnessed tip would phantom-convict the AID's own honest
-/// rotation.
+/// (`cur_threshold`, `next_keys`, `next_threshold`, `toad`) — agreement
+/// everywhere is not a conflict. The witness set is NOT a conflict axis: a KERI
+/// rotation restates no `b` (only the `br`/`ba` delta), so
+/// `evidence.witnesses` is always `[]` and comparing it to a witnessed tip would
+/// phantom-convict the AID's own honest rotation.
 fn forward_agrees(tip: CheckpointDatumV1, evidence: EventEvidence) -> Bool {
-  evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.toad == tip.toad
+  evidence.cur_threshold == tip.cur_threshold && evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.toad == tip.toad
 }
 
 // ---------------------------------------------------------
@@ -263,27 +403,30 @@ fn locate_all(
   }
 }
 
-/// Count `wit_sigs` that verify with the tip witness at their index over `msg`.
+/// Count distinct indices whose receipt verifies with the tip witness over `msg`.
 fn count_receipts(
   witnesses: List<ByteArray>,
   msg: ByteArray,
   wit_sigs: List<(Int, ByteArray)>,
 ) -> Int {
-  list.foldl(
-    wit_sigs,
-    0,
-    fn(pair, acc) {
-      let (idx, sig) = pair
-      when list.at(witnesses, idx) is {
-        Some(w) ->
-          if verify_ed25519_signature(w, msg, sig) {
-            acc + 1
-          } else {
-            acc
+  list.length(
+    list.unique(
+      list.filter_map(
+        wit_sigs,
+        fn(pair) {
+          let (idx, sig) = pair
+          when list.at(witnesses, idx) is {
+            Some(w) ->
+              if verify_ed25519_signature(w, msg, sig) {
+                Some(idx)
+              } else {
+                None
+              }
+            None -> None
           }
-        None -> acc
-      }
-    },
+        },
+      ),
+    ),
   )
 }
 

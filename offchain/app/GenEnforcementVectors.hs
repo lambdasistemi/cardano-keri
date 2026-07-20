@@ -1,21 +1,20 @@
 {- |
 Module      : Main
-Description : Enforcement vector generator (#106 Slice 4) — fixtures -> Aiken
+Description : Enforcement vector generator (#116 Slice 2) — fixtures -> Aiken
 
 Reads the committed keripy fixtures
 (@offchain\/test\/keri-fixtures\/fixtures\/*.json@) and emits a self-contained
 Aiken module
 (@onchain\/lib\/cardano_keri\/checkpoint\/enforcement_vectors.ak@) of
-@pub const@ tip 'CheckpointDatumV1' + 'EventEvidence' values, one per
-enforcement scenario, that the Aiken @enforcement_tests.ak@ drives through
-@convict_predicate@\/@freeze_predicate@ to prove verdict parity with the
-Slice-3 Haskell over the same fixtures.
+@pub const@ tip 'CheckpointDatumV1' + decoded 'EventEvidence' values, plus
+'EnforcementEvidence' wire values for every Slice-1 offset-bearing scenario.
+The Aiken @enforcement_tests.ak@ drives the binder and predicates to prove
+verdict parity with Haskell over the same fixtures.
 
-The fixture -> (tip, evidence) mapping mirrors the Slice-3
-@EnforcementSpec@ builders exactly (the parity is asserted in both languages
-against the same committed JSON). The generator reuses the shipped
-'CheckpointDatumV1'\/'EventEvidence'\/'Threshold' types and the shipped CESR
-decoder; it is OFFLINE (no keripy) and deterministic (drift-checked).
+The fixture -> (tip, decoded evidence, optional wire offsets) mapping mirrors
+the @EnforcementSpec@ builders exactly. The generator reuses the shipped
+'CheckpointDatumV1'\/'EventEvidence'\/'Threshold' types and CESR decoder; it is
+OFFLINE (no keripy) and deterministic (drift-checked).
 
 Invocation: @gen-enforcement-vectors OUT_PATH [FIXTURES_DIR]@ (default fixtures
 dir @test\/keri-fixtures\/fixtures@, resolved from the offchain package root).
@@ -83,42 +82,49 @@ main = do
                 , "fork: rot_conflict double-signs the rot_recorded tip -> ConvictValid"
                 , orDie (tipFrom fork "rot_recorded" 1)
                 , orDie (evidenceFrom fork "rot_conflict" "rot_conflict_sigs" Nothing)
+                , Just (orDie (offsetsFrom fork "rot_conflict"))
                 )
             ,
                 ( "fork_witnessed_convict"
                 , "fork_witnessed: witnessed rot_conflict double-signs the witnessed rot_recorded tip -> ConvictValid"
                 , orDie (tipFromWitnessed forkW "rot_recorded" "icp" 1)
                 , orDie (evidenceFrom forkW "rot_conflict" "rot_conflict_sigs" (Just "rot_conflict_witness_receipts"))
+                , Just (orDie (offsetsFrom forkW "rot_conflict"))
                 )
             ,
                 ( "fork_witnessed_honest"
                 , "fork_witnessed F3b: the witnessed AID's OWN honest rot_recorded as evidence -> ConvictInvalid(CvNoConflict)"
                 , orDie (tipFromWitnessed forkW "rot_recorded" "icp" 1)
                 , orDie (evidenceFrom forkW "rot_recorded" "rot_recorded_sigs" (Just "rot_recorded_witness_receipts"))
+                , Just (orDie (offsetsFrom forkW "rot_recorded"))
                 )
             ,
                 ( "honest2_convict"
                 , "honest_2key: rot vs its own reflected state -> ConvictInvalid(CvNoConflict)"
                 , orDie (tipFrom honest2 "rot" 1)
                 , orDie (evidenceFrom honest2 "rot" "rot_sigs" Nothing)
+                , Nothing
                 )
             ,
                 ( "honest2_freeze"
                 , "honest_2key: witnessless later rot -> FreezeValid"
                 , orDie (tipFrom honest2 "icp" 0)
                 , orDie (evidenceFrom honest2 "rot" "rot_sigs" Nothing)
+                , Nothing
                 )
             ,
                 ( "lag_freeze"
                 , "lag: witnessed later rot (toad=1 receipt) -> FreezeValid"
                 , orDie (tipFrom lagFx "icp" 0)
                 , orDie (evidenceFrom lagFx "rot" "rot_sigs" (Just "rot_witness_receipts"))
+                , Just (orDie (offsetsFrom lagFx "rot"))
                 )
             ,
                 ( "honest7_freeze"
                 , "honest_7key: 3-of-7 partial reveal vs weighted nt -> FreezeValid"
                 , orDie (tipFrom honest7 "icp" 0)
                 , orDie (evidenceFrom honest7 "rot" "rot_sigs" Nothing)
+                , Nothing
                 )
             ]
         rendered = render scenarios
@@ -203,6 +209,40 @@ evidenceFrom fx evKey ctrlKey witKey = do
             , eeCtrlSigs = ctrl
             , eeWitSigs = wit
             }
+
+data EnforcementOffsets = EnforcementOffsets
+    { eoT :: !Int
+    , eoI :: !Int
+    , eoS :: !Int
+    , eoD :: !Int
+    , eoK :: ![Int]
+    , eoKt :: !Int
+    , eoN :: ![Int]
+    , eoNt :: !Int
+    , eoBt :: !Int
+    }
+
+offsetsFrom :: Value -> Text -> Either String EnforcementOffsets
+offsetsFrom fx evKey = do
+    ev <- note (evKey <> " missing") (lookupKey evKey fx)
+    offsets <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
+    EnforcementOffsets
+        <$> intAt "t" offsets
+        <*> intAt "i" offsets
+        <*> intAt "s" offsets
+        <*> intAt "d" offsets
+        <*> intsAt "k" offsets
+        <*> intAt "kt" offsets
+        <*> intsAt "n" offsets
+        <*> intAt "nt" offsets
+        <*> intAt "bt" offsets
+  where
+    intAt key value = fromInteger <$> intField value key
+    intsAt key value = do
+        entries <- arrayField value key
+        traverse asInt entries
+    asInt (Number n) = Right (truncate n)
+    asInt _ = Left "offset array element is not an integer"
 
 -- ---------------------------------------------------------
 -- Fixture decoding (KERI ked -> typed fields), mirrors EnforcementSpec
@@ -356,7 +396,13 @@ textArrayField value k = do
 -- Aiken rendering
 -- ---------------------------------------------------------
 
-type Scenario = (String, String, CheckpointDatumV1, EventEvidence)
+type Scenario =
+    ( String
+    , String
+    , CheckpointDatumV1
+    , EventEvidence
+    , Maybe EnforcementOffsets
+    )
 
 render :: [Scenario] -> String
 render scenarios =
@@ -364,18 +410,19 @@ render scenarios =
   where
     header =
         unlines
-            [ "//// Auto-generated Aiken enforcement vectors for #106 — DO NOT EDIT."
+            [ "//// Auto-generated Aiken enforcement vectors for #116 — DO NOT EDIT."
             , "////"
             , "//// Regenerate with `just gen-enforcement-vectors` (runs"
             , "//// offchain/app/GenEnforcementVectors.hs over the committed keripy"
             , "//// fixtures). Each scenario is the tip datum + decoded evidence the"
-            , "//// Slice-3 EnforcementSpec builds from the same JSON; enforcement_tests.ak"
-            , "//// asserts convict_predicate/freeze_predicate reproduce the Haskell"
-            , "//// verdicts, plus the TombstoneV1 codec golden. `just"
+            , "//// EnforcementSpec builds from the same JSON; offset-bearing scenarios"
+            , "//// also carry the ratified EnforcementEvidence wire value."
+            , "//// enforcement_tests.ak asserts binder/predicate Haskell parity, plus"
+            , "//// the TombstoneV1 codec golden. `just"
             , "//// check-enforcement-vectors` forbids drift."
             , ""
             , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1}"
-            , "use cardano_keri/checkpoint/enforcement.{EventEvidence}"
+            , "use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, EventEvidence}"
             , "use cardano_keri/checkpoint/threshold.{Unweighted, Weighted, Weight}"
             ]
     -- TombstoneV1 codec golden: canonical CBOR of a fixed synthetic record,
@@ -391,7 +438,7 @@ render scenarios =
         TombstoneV1 (BS.replicate 32 0xaa) 1 (BS.replicate 32 0xcc)
 
 renderScenario :: Scenario -> String
-renderScenario (name, doc, tip, evidence) =
+renderScenario (name, doc, tip, evidence, offsets) =
     unlines
         [ "/// " <> doc
         , "pub const " <> name <> "_tip: CheckpointDatumV1 = " <> renderDatum tip
@@ -399,6 +446,37 @@ renderScenario (name, doc, tip, evidence) =
         , "pub const " <> name <> "_evidence: EventEvidence = " <> renderEvidence evidence
         , ""
         ]
+        <> maybe "" (renderWire name) offsets
+
+renderWire :: String -> EnforcementOffsets -> String
+renderWire name offsets =
+    unlines
+        [ "pub const " <> name <> "_wire: EnforcementEvidence ="
+        , "  EnforcementEvidence {"
+        , "    event_bytes: " <> evidence <> ".event_bytes,"
+        , "    off_t: " <> show (eoT offsets) <> ","
+        , "    off_i: " <> show (eoI offsets) <> ","
+        , "    off_s: " <> show (eoS offsets) <> ","
+        , "    off_d: " <> show (eoD offsets) <> ","
+        , "    off_k: " <> intList (eoK offsets) <> ","
+        , "    off_kt: " <> show (eoKt offsets) <> ","
+        , "    off_n: " <> intList (eoN offsets) <> ","
+        , "    off_nt: " <> show (eoNt offsets) <> ","
+        , "    off_bt: " <> show (eoBt offsets) <> ","
+        , "    native_sn: " <> evidence <> ".native_sn,"
+        , "    said: " <> evidence <> ".said,"
+        , "    revealed_keys: " <> evidence <> ".revealed_keys,"
+        , "    next_keys: " <> evidence <> ".next_keys,"
+        , "    cur_threshold: " <> evidence <> ".cur_threshold,"
+        , "    next_threshold: " <> evidence <> ".next_threshold,"
+        , "    toad: " <> evidence <> ".toad,"
+        , "    ctrl_sigs: " <> evidence <> ".ctrl_sigs,"
+        , "    wit_sigs: " <> evidence <> ".wit_sigs,"
+        , "  }"
+        , ""
+        ]
+  where
+    evidence = name <> "_evidence"
 
 renderDatum :: CheckpointDatumV1 -> String
 renderDatum d =
@@ -449,6 +527,9 @@ renderThreshold (Weighted clauses) =
 
 byteList :: [ByteString] -> String
 byteList xs = "[" <> intercalate ", " (map hexLit xs) <> "]"
+
+intList :: [Int] -> String
+intList xs = "[" <> intercalate ", " (map show xs) <> "]"
 
 sigLits :: [(Int, ByteString)] -> String
 sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"

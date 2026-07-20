@@ -1,34 +1,126 @@
-//// Convict/Freeze verdict-parity tests (#106 Slice 4).
+//// Enforcement wire-binding and predicate parity tests (#116 Slice 2).
 ////
-//// Drives `convict_predicate`/`freeze_predicate` over the generated
-//// `enforcement_vectors.ak` (the tip datum + decoded evidence the Slice-3
-//// Haskell `EnforcementSpec` builds from the same committed keripy fixtures)
-//// and asserts the Aiken verdicts match the Haskell one-for-one — the positives
-//// (fork convict, honest_2key CvNoConflict, honest_2key/lag/honest_7key freeze)
-//// and the negatives (F1/F4/F5/F7/F8/F9/F10) via in-test mutation of a base
-//// vector. Any disagreement means one mirror is wrong.
+//// Drives the EE0-EE9 binder and `convict_predicate`/`freeze_predicate` over
+//// generated vectors built from the same committed fixtures as the Haskell
+//// `EnforcementSpec`. Positives, wire mutations, distinct receipt quorum, and
+//// kt-only conflict must agree one-for-one across both languages.
 
 use aiken/cbor
 use aiken/collection/list
+use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/enforcement.{
   Active, CheckpointOutput, CoMissingToken, CoNotTombstone, CoWrongRecord,
   ContinuingOutput, ConvictInvalid, ConvictOutputInvalid, ConvictOutputValid,
   ConvictValid, CvAidMismatch, CvInsufficientReceipts, CvNoConflict,
-  CvQuorumUnsatisfied, CvRevealMismatch, CvSeqMismatch, EventEvidence,
-  FoDatumChanged, FoNotFrozen, FreezeInvalid, FreezeOutputInvalid,
-  FreezeOutputValid, FreezeValid, Frozen, FzInsufficientReceipts, FzNotAhead,
-  FzUncommittedReveal, Tombstone, TombstoneOutput, TombstoneV1,
+  CvQuorumUnsatisfied, CvRevealMismatch, CvSeqMismatch, EE0EventBytesLength,
+  EE1EventTypeMismatch, EE2AidMismatch, EE3SequenceMismatch, EE4SaidMismatch,
+  EE5RevealedKeysMismatch, EE6CurThresholdMismatch, EE7NextKeysMismatch,
+  EE8NextThresholdMismatch, EE9ToadMismatch, EnforcementBindingInvalid,
+  EnforcementBindingValid, EnforcementEvidence, EventEvidence, FoDatumChanged,
+  FoNotFrozen, FreezeInvalid, FreezeOutputInvalid, FreezeOutputValid,
+  FreezeValid, Frozen, FzInsufficientReceipts, FzNotAhead, FzUncommittedReveal,
+  Tombstone, TombstoneOutput, TombstoneV1, bind_enforcement_evidence,
   convict_output_predicate, convict_predicate, freeze_output_predicate,
   freeze_predicate,
 }
 use cardano_keri/checkpoint/enforcement_vectors as vec
+use cardano_keri/checkpoint/threshold.{Unweighted}
 
 const zero32: ByteArray =
   #"0000000000000000000000000000000000000000000000000000000000000000"
 
 const other32: ByteArray =
   #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+// ---------------------------------------------------------
+// T116-S2 wire binding (shared generated fixture vectors)
+// ---------------------------------------------------------
+
+test wire_binding_accepts_offset_bearing_fixtures() {
+  bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    vec.fork_convict_wire,
+  ) == EnforcementBindingValid(vec.fork_convict_evidence) && bind_enforcement_evidence(
+    vec.fork_witnessed_convict_tip.cesr_aid,
+    vec.fork_witnessed_convict_wire,
+  ) == EnforcementBindingValid(vec.fork_witnessed_convict_evidence) && bind_enforcement_evidence(
+    vec.lag_freeze_tip.cesr_aid,
+    vec.lag_freeze_wire,
+  ) == EnforcementBindingValid(vec.lag_freeze_evidence)
+}
+
+test ee0_rejects_empty_and_over_1024_event_bytes() {
+  let empty = EnforcementEvidence { ..vec.fork_convict_wire, event_bytes: #"" }
+  let oversized = EnforcementEvidence {
+    ..vec.fork_convict_wire,
+    event_bytes: bytearray.concat(
+      vec.honest7_freeze_evidence.event_bytes,
+      vec.honest7_freeze_evidence.event_bytes,
+    ),
+  }
+  bind_enforcement_evidence(vec.fork_convict_tip.cesr_aid, empty) == EnforcementBindingInvalid(
+    EE0EventBytesLength,
+  ) && bind_enforcement_evidence(vec.fork_convict_tip.cesr_aid, oversized) == EnforcementBindingInvalid(
+    EE0EventBytesLength,
+  )
+}
+
+test ee1_to_ee9_reject_every_misdirected_offset_axis() {
+  let wire = vec.fork_convict_wire
+  bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_t: wire.off_i },
+  ) == EnforcementBindingInvalid(EE1EventTypeMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_i: wire.off_s },
+  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_s: wire.off_t },
+  ) == EnforcementBindingInvalid(EE3SequenceMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_d: wire.off_i },
+  ) == EnforcementBindingInvalid(EE4SaidMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_k: wire.off_n },
+  ) == EnforcementBindingInvalid(EE5RevealedKeysMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_kt: wire.off_bt },
+  ) == EnforcementBindingInvalid(EE6CurThresholdMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_n: wire.off_k },
+  ) == EnforcementBindingInvalid(EE7NextKeysMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_nt: wire.off_bt },
+  ) == EnforcementBindingInvalid(EE8NextThresholdMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_bt: wire.off_t },
+  ) == EnforcementBindingInvalid(EE9ToadMismatch)
+}
+
+test malformed_spans_counts_and_d_reject_at_their_binding_axis() {
+  let wire = vec.fork_convict_wire
+  expect Some(off_n0) = list.at(wire.off_n, 0)
+  bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_i: -1 },
+  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence {
+      ..wire,
+      off_i: bytearray.length(wire.event_bytes) - 1,
+    },
+  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_k: [] },
+  ) == EnforcementBindingInvalid(EE5RevealedKeysMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, off_n: [off_n0, -1] },
+  ) == EnforcementBindingInvalid(EE7NextKeysMismatch) && bind_enforcement_evidence(
+    vec.fork_convict_tip.cesr_aid,
+    EnforcementEvidence { ..wire, said: bytearray.take(wire.said, 31) },
+  ) == EnforcementBindingInvalid(EE4SaidMismatch)
+}
 
 // ---------------------------------------------------------
 // Positives (the four fixture scenarios)
@@ -268,4 +360,38 @@ test f1b_witnessed_fork_insufficient_receipts() {
   convict_predicate(vec.fork_witnessed_convict_tip, evidence) == ConvictInvalid(
     CvInsufficientReceipts,
   )
+}
+
+// W3: quorum counts distinct verifying witness indices, not signature pairs.
+test duplicate_receipt_cannot_fake_convict_toad_two() {
+  let tip = CheckpointDatumV1 { ..vec.fork_witnessed_convict_tip, toad: 2 }
+  let evidence = EventEvidence {
+    ..vec.fork_witnessed_convict_evidence,
+    wit_sigs: list.concat(
+      vec.fork_witnessed_convict_evidence.wit_sigs,
+      vec.fork_witnessed_convict_evidence.wit_sigs,
+    ),
+  }
+  convict_predicate(tip, evidence) == ConvictInvalid(CvInsufficientReceipts)
+}
+
+test duplicate_receipt_cannot_fake_freeze_toad_two() {
+  let tip = CheckpointDatumV1 { ..vec.lag_freeze_tip, toad: 2 }
+  let evidence = EventEvidence {
+    ..vec.lag_freeze_evidence,
+    wit_sigs: list.concat(
+      vec.lag_freeze_evidence.wit_sigs,
+      vec.lag_freeze_evidence.wit_sigs,
+    ),
+  }
+  freeze_predicate(tip, evidence) == FreezeInvalid(FzInsufficientReceipts)
+}
+
+// W4: `kt` is a forward-agreement axis, after attribution under tip.kt.
+test kt_only_divergence_convicts_after_tip_threshold_attribution() {
+  let evidence = EventEvidence {
+    ..vec.honest2_convict_evidence,
+    cur_threshold: Unweighted(1),
+  }
+  convict_predicate(vec.honest2_convict_tip, evidence) == ConvictValid
 }

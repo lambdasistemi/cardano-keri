@@ -1,12 +1,11 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.EnforcementSpec
-Description : Convict/Freeze predicates over the committed keripy fixtures
+Description : Enforcement wire binding and predicates over keripy fixtures
 
-Builds a tip 'CheckpointDatumV1' and decoded 'EventEvidence' from the committed
-keripy fixtures (reusing the shared "FixtureLoader" decoders) and drives the
-Slice-3 enforcement predicates. Positive cases are the four fixture scenarios;
-negatives (F1/F4/F5/F7/F8/F9/F10) mutate a loaded fixture in-spec — the fixture
-JSON files are never edited.
+Builds wire and decoded enforcement evidence from the committed keripy fixtures,
+proves ordered EE0-EE9 binding, and drives Convict/Freeze predicates including
+the distinct-receipt and kt-conflict corrections. Negative cases mutate loaded
+fixtures in-spec; fixture JSON is never edited.
 -}
 module Cardano.KERI.AID.Checkpoint.EnforcementSpec (spec) where
 
@@ -20,11 +19,14 @@ import Cardano.KERI.AID.Checkpoint.Enforcement (
     ContinuingOutput (..),
     ConvictError (..),
     ConvictOutputError (..),
+    EnforcementBindingError (..),
+    EnforcementEvidence (..),
     EventEvidence (..),
     FreezeError (..),
     FreezeOutputError (..),
     OutputDatum (..),
     TombstoneV1 (..),
+    bindEnforcementEvidence,
     convictOutputPredicate,
     convictPredicate,
     freezeOutputPredicate,
@@ -89,6 +91,73 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                 fixtureArtifactFingerprint (efEvents cfg) (efSignatures cfg) (efFixture cfg)
                     `shouldBe` Right (efFingerprint cfg)
 
+    describe "T116-S2 enforcement wire binding (EE0-EE9)" $ do
+        it "binds every Slice-1 offset-bearing enforcement fixture" $ do
+            forM_
+                [ wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing
+                , wireSetup
+                    forkW
+                    "rot_conflict"
+                    "rot_conflict_sigs"
+                    (Just "rot_conflict_witness_receipts")
+                , wireSetup lagFx "rot" "rot_sigs" (Just "rot_witness_receipts")
+                ]
+                ( \built -> withBuilt built $ \(aid, wire, decoded) ->
+                    bindEnforcementEvidence aid wire `shouldBe` Right decoded
+                )
+
+        it "EE0: rejects empty and over-1024-byte signature targets" $
+            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
+                \(aid, wire, _) -> do
+                    bindEnforcementEvidence aid wire{eneEventBytes = ""}
+                        `shouldBe` Left EE0EventBytesLength
+                    bindEnforcementEvidence aid wire{eneEventBytes = BS.replicate 1025 0}
+                        `shouldBe` Left EE0EventBytesLength
+
+        it "EE1-EE9: rejects each misdirected scalar/list offset axis in order" $
+            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
+                \(aid, wire, _) -> do
+                    bindEnforcementEvidence aid wire{eneOffT = eneOffI wire}
+                        `shouldBe` Left EE1EventTypeMismatch
+                    bindEnforcementEvidence aid wire{eneOffI = eneOffS wire}
+                        `shouldBe` Left EE2AidMismatch
+                    bindEnforcementEvidence aid wire{eneOffS = eneOffT wire}
+                        `shouldBe` Left EE3SequenceMismatch
+                    bindEnforcementEvidence aid wire{eneOffD = eneOffI wire}
+                        `shouldBe` Left EE4SaidMismatch
+                    bindEnforcementEvidence aid wire{eneOffK = eneOffN wire}
+                        `shouldBe` Left EE5RevealedKeysMismatch
+                    bindEnforcementEvidence aid wire{eneOffKt = eneOffBt wire}
+                        `shouldBe` Left EE6CurThresholdMismatch
+                    bindEnforcementEvidence aid wire{eneOffN = eneOffK wire}
+                        `shouldBe` Left EE7NextKeysMismatch
+                    bindEnforcementEvidence aid wire{eneOffNt = eneOffBt wire}
+                        `shouldBe` Left EE8NextThresholdMismatch
+                    bindEnforcementEvidence aid wire{eneOffBt = eneOffT wire}
+                        `shouldBe` Left EE9ToadMismatch
+
+        it "EE2/EE5/EE7: rejects negative, truncated, and count-mismatched spans" $
+            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
+                \(aid, wire, _) -> do
+                    bindEnforcementEvidence aid wire{eneOffI = -1}
+                        `shouldBe` Left EE2AidMismatch
+                    bindEnforcementEvidence
+                        aid
+                        wire{eneOffI = BS.length (eneEventBytes wire) - 1}
+                        `shouldBe` Left EE2AidMismatch
+                    bindEnforcementEvidence aid wire{eneOffK = []}
+                        `shouldBe` Left EE5RevealedKeysMismatch
+                    bindEnforcementEvidence aid wire{eneOffN = eneOffN wire <> [-1]}
+                        `shouldBe` Left EE7NextKeysMismatch
+
+        it "EE4: rejects a non-32-byte said and a wrong d slice" $
+            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
+                \(aid, wire, _) -> do
+                    bindEnforcementEvidence aid wire{eneSaid = BS.take 31 (eneSaid wire)}
+                        `shouldBe` Left EE4SaidMismatch
+                    bindEnforcementEvidence aid wire{eneOffD = eneOffI wire}
+                        `shouldBe` Left EE4SaidMismatch
+
     describe "convict" $ do
         -- fork: rot_conflict double-signs the rot_recorded tip (VALID conviction).
         it "fork: rot_conflict convicts the rot_recorded tip" $
@@ -147,6 +216,18 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                 convictPredicate tip ev{eeWitSigs = []}
                     `shouldBe` Left CvInsufficientReceipts
 
+        it "W3: a duplicated valid receipt cannot fake toad=2" $
+            withBuilt (forkWitnessedConvictSetup forkW) $ \(tip, ev) ->
+                convictPredicate
+                    tip{cdToad = 2}
+                    ev{eeWitSigs = eeWitSigs ev <> eeWitSigs ev}
+                    `shouldBe` Left CvInsufficientReceipts
+
+        it "W4: a kt-only divergence convicts after tip-threshold attribution" $
+            withBuilt (honestConvictSetup honest2) $ \(tip, ev) ->
+                convictPredicate tip ev{eeCurThreshold = Unweighted 1}
+                    `shouldBe` Right ()
+
     describe "freeze" $ do
         -- honest_2key: a legit later event, toad=0 tier (Cardano is behind).
         it "honest_2key: witnessless later rot freezes" $
@@ -179,6 +260,13 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
         it "F8: receipts below toad -> FzInsufficientReceipts" $
             withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, ev) ->
                 freezePredicate tip ev{eeWitSigs = []}
+                    `shouldBe` Left FzInsufficientReceipts
+
+        it "W3: a duplicated valid receipt cannot fake toad=2" $
+            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, ev) ->
+                freezePredicate
+                    tip{cdToad = 2}
+                    ev{eeWitSigs = eeWitSigs ev <> eeWitSigs ev}
                     `shouldBe` Left FzInsufficientReceipts
 
         -- F2: some controller sigs verify, but not enough for cur_threshold
@@ -329,6 +417,54 @@ freezeSetup fx witKey = do
     tip <- tipFrom fx "icp" 0
     ev <- evidenceFrom fx "rot" "rot_sigs" witKey
     pure (tip, ev)
+
+{- | Build the ratified enforcement wire evidence and its decoded counterpart
+from one fixture event. Offsets are generator-owned oracle output.
+-}
+wireSetup ::
+    Value ->
+    Text ->
+    Text ->
+    Maybe Text ->
+    Either String (ByteString, EnforcementEvidence, EventEvidence)
+wireSetup fx evKey ctrlKey witKey = do
+    ev <- note (evKey <> " missing") (lookupKey evKey fx)
+    offsets <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
+    decoded <- evidenceFrom fx evKey ctrlKey witKey
+    offT <- intField offsets "t"
+    offI <- intField offsets "i"
+    offS <- intField offsets "s"
+    offD <- intField offsets "d"
+    offK <- intArrayField offsets "k"
+    offKt <- intField offsets "kt"
+    offN <- intArrayField offsets "n"
+    offNt <- intField offsets "nt"
+    offBt <- intField offsets "bt"
+    pure
+        ( eeCesrAid decoded
+        , EnforcementEvidence
+            { eneEventBytes = eeEventBytes decoded
+            , eneOffT = fromInteger offT
+            , eneOffI = fromInteger offI
+            , eneOffS = fromInteger offS
+            , eneOffD = fromInteger offD
+            , eneOffK = map fromInteger offK
+            , eneOffKt = fromInteger offKt
+            , eneOffN = map fromInteger offN
+            , eneOffNt = fromInteger offNt
+            , eneOffBt = fromInteger offBt
+            , eneNativeSn = eeNativeSn decoded
+            , eneSaid = eeSaid decoded
+            , eneRevealedKeys = eeRevealedKeys decoded
+            , eneNextKeys = eeNextKeys decoded
+            , eneCurThreshold = eeCurThreshold decoded
+            , eneNextThreshold = eeNextThreshold decoded
+            , eneToad = eeToad decoded
+            , eneCtrlSigs = eeCtrlSigs decoded
+            , eneWitSigs = eeWitSigs decoded
+            }
+        , decoded
+        )
 
 -- | Build the tip datum a fixture event reflects (@cur = k@, @next = n@, ...).
 tipFrom :: Value -> Text -> Integer -> Either String CheckpointDatumV1

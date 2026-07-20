@@ -20,7 +20,7 @@
 
 The identity registry script enforces the following properties within a single block:
 
-**AID uniqueness (the #91 registration gate).** Registration is the fixed **logical registration gate**: the MPFS absence/unicity proof at inception admits an AID at most once and **promotes** the registered leaf into its **per-AID checkpoint token** (minted exactly once, `+1`). This is the one-time registration gate — **not** the live current-authority store, which is the sovereign per-AID checkpoint (see the box above and the value-write guarantee below).
+**Per-AID checkpoint token (no global uniqueness gate).** Registration mints the AID's **sovereign per-AID checkpoint token** — quantity-one at mint (`+1` of the AID-derived asset name), keys-must-match, fixed deposit locked. There is **no** MPFS absence/unicity proof and no shared registry: register (and re-register) is sovereign and contends on nothing. On-chain uniqueness is therefore **not** globally enforced — a controller can mint a second checkpoint for their own AID, which only splits their own identity into a fail-closed ambiguity (self-harm, never a way to seize another AID). An honest identity keeps exactly one live checkpoint; consumers fail closed on any count other than one. This is the registration path — **not** the live current-authority store, which is the sovereign per-AID checkpoint (see the box above and the value-write guarantee below).
 
 **Pre-rotation binding.** A rotation is valid only if the revealed keys match the committed `next_keys` digests (`blake3_256(qb64(reveal_key))` membership) **and** the signer evidence satisfies both thresholds — the rotation's own and the committed next threshold (the KERI dual-threshold rule). This cannot be circumvented without a preimage of blake3_256.
 
@@ -57,15 +57,20 @@ stateDiagram-v2
     Frozen --> Active : catch up or valid V1 correction
     Active --> Tombstone : irreconcilable V1 conviction
     Frozen --> Tombstone : irreconcilable V1 conviction
+    Tombstone --> Active : re-register — fresh token, if KERI still carries the AID
 ```
 
-The tombstone is terminal: the quantity-one token is **moved** to the designated tombstone
-address, not burned and later re-minted. With mint-once unicity, consumers get positive
-evidence of the conviction. Neither evidence class suffices alone: the conflicting event
+The tombstone is terminal **for that token**: the quantity-one token is **moved** to the
+designated tombstone address (not burned), where it stands as the permanent, queryable
+conviction record while the whole seized deposit is paid to the prover. It does **not** bar
+the AID — Cardano mirrors KERI, so if the identity legitimately continues in KERI it may
+register a fresh checkpoint, and any renewed fork is convicted again, forfeiting another
+deposit. There is no mint-once unicity and no permanent re-registration bar. Neither evidence
+class suffices alone: the conflicting event
 must satisfy the pre-committed controller threshold **and** carry the applicable KERI witness
 threshold's receipts. The Cardano branch's receipts were already verified at advance. This
 keeps private or abandoned signed drafts out of `Convict`; a witnessless conflict cannot be
-permanently convicted in V1. The proof must also establish irreconcilability under V1's
+convicted in V1. The proof must also establish irreconcilability under V1's
 independent-AID rules. Potentially recoverable evidence freezes instead of destroying the
 AID. Delegated and superseding recovery remain outside V1 and must define their own dispute
 rules before admission.
@@ -102,7 +107,7 @@ resolution follows it.* The `cesr_aid` field in the legacy Candidate-B `KeyState
 
 Off-chain resolution works as follows: given a CESR AID (e.g., `FKYLUMm...`), derive the asset id `(checkpoint_policy_id, aid_asset_name)` from the AID, then resolve the AID's current checkpoint UTxO by a generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only) and re-validate it against the ledger. (The rejected Candidate-B shape instead decoded the base64url prefix and scanned `KeyState` values across the shared MPF trie for a matching `cesr_aid`, then used the associated `trie_key` — a shared/global registry, superseded by #92.)
 
-Under the sovereign per-AID checkpoint (#92), discovery of an AID's current authority is a **generic `(policy_id, asset_name)` asset lookup** — not a KEL replay. **AID uniqueness** is enforced on-chain by the **#91 gate** (the steady per-AID checkpoint token is minted exactly once, `+1`, only after Step/Finish byte binding + the oracle / projection gate + MPFS absence / unicity), not by disambiguating rival `cesr_aid` claims after the fact. KEL / TEL replay is **solely for historical credential issuance / admission** and does **not** select the current checkpoint identity. The legacy Candidate-B `cesr_aid` *metadata field* was a convenience correlation label, never an identity selector; under Candidate A the **qualified AID deterministically derives** the asset id `(checkpoint_policy_id, aid_asset_name)` and **binds the checkpoint datum** (AID/sequence binding) — identity is settled on-chain, not by a label.
+Under the sovereign per-AID checkpoint (#92), discovery of an AID's current authority is a **generic `(policy_id, asset_name)` asset lookup** — not a KEL replay. **AID identity** is settled on-chain by **deterministic asset derivation**, not by a global uniqueness gate: the checkpoint token's asset name derives from the qualified AID and the datum binds AID/sequence. Registration mints `+1` of that asset name after Step/Finish byte binding + the oracle / projection gate — there is **no** MPFS absence/unicity proof (that shared-registry gate was removed). A controller can mint a duplicate for their own AID (a benign, fail-closed self-harm residual), so on-chain uniqueness is upheld by consumer fail-closed + controller incentive, not by a global proof or by disambiguating rival `cesr_aid` claims after the fact. KEL / TEL replay is **solely for historical credential issuance / admission** and does **not** select the current checkpoint identity. The legacy Candidate-B `cesr_aid` *metadata field* was a convenience correlation label, never an identity selector; under Candidate A the **qualified AID deterministically derives** the asset id `(checkpoint_policy_id, aid_asset_name)` and **binds the checkpoint datum** (AID/sequence binding) — identity is settled on-chain, not by a label.
 
 ## On/off-chain boundary
 
@@ -116,7 +121,7 @@ Under the sovereign per-AID checkpoint (#92), discovery of an AID's current auth
 
 | Property | On-chain | Off-chain / separate plane |
 |---|---|---|
-| Registered-AID uniqueness | Yes — #91 MPFS absence/unicity proof + the exactly-once `+1` steady-token gate (minted once, only after Step/Finish byte binding + oracle/projection gate + MPFS unicity) | — |
+| Per-AID checkpoint identity (no global uniqueness gate) | Deterministic — asset name derives from the qualified AID + datum AID/sequence binding; each mint is `+1` after Step/Finish byte binding + oracle/projection gate. **No** MPFS absence/unicity proof; duplicate mint is a benign self-harm residual | Consumers fail closed on checkpoint count ≠ 1 |
 | Checkpoint asset + datum bound to the qualified AID | Yes — domain-separated `blake2b_256` `aid_asset_name` derivation + inline datum AID/sequence binding + accepted mint/spend lineage | — |
 | Genesis byte binding | Yes for ≤1-chunk inceptions (#97/#98); attested for >1-chunk | Attester for >1-chunk |
 | Genesis semantic projection (keys/threshold faithfully decoded) | Partial — oracle/attester-trusted with permissionless challenge + mechanical freeze | Trusted slash / unfreeze (the honest #91 residual) |

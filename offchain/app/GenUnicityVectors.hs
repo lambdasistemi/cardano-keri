@@ -10,6 +10,9 @@ module Main (main) where
 import Cardano.KERI.AID.Cage.Types (
     ProofStep (..),
  )
+import Cardano.KERI.AID.Checkpoint.Message (
+    deriveAidAssetName,
+ )
 import Cardano.KERI.AID.Checkpoint.Unicity (
     RegistrySeed (..),
     emptyRegistryRoot,
@@ -47,10 +50,16 @@ seed =
         , registrySeedIndex = 7
         }
 
--- The #114 2-key honest fixture's frozen deriveAidAssetName.
-registrationKey :: ByteString
-registrationKey =
-    hexBs "bde8efe693008f5ed0b7299984ce466523788f1c724bd235ced24fd842f77005"
+-- The three #116 S6 registration fixtures, paired to their ratified proof
+-- depths. The committed constants are derived here rather than copied from
+-- opaque roots or proof bytes.
+registrationAid :: Int -> ByteString
+registrationAid depth =
+    hexBs $ case depth of
+        0 -> "33f1c3f607175773a00e6750ea9ef24dd7e5cc961b35951b50981e5388374d9a"
+        8 -> "395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982"
+        16 -> "072b920b7022eed732095825c0535bd8057986783f501db1b836ed9be72ab45c"
+        _ -> error "gen-unicity-vectors: unsupported registration depth"
 
 branchProof :: Int -> [ProofStep]
 branchProof depth =
@@ -98,6 +107,7 @@ renderDepth depth =
         , "  ]"
         ]
   where
+    registrationKey = deriveAidAssetName (registrationAid depth)
     proof = branchProof depth
     (oldRoot, newRoot) = transitionRoots registrationKey proof
     prefix = "depth_" <> show depth <> "_"

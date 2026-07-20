@@ -60,15 +60,15 @@
 
 ## Slice 6 — final measurement evidence
 
-- [ ] T116-S6 Measure Freeze lag/2-key/7-key and witnessed Convict from ACTIVE
+- [X] T116-S6 Measure Freeze lag/2-key/7-key and witnessed Convict from ACTIVE
       and FROZEN on the real handler ACCEPT paths.
-- [ ] T116-S6 Measure registry bootstrap and aggregate Register +
+- [X] T116-S6 Measure registry bootstrap and aggregate Register +
       RecordRegistration at 2-key/witnessed/7-key and MPFS depths 0/8/16.
-- [ ] T116-S6 Record raw memory/CPU, percentages, methodology, and the SAID
+- [X] T116-S6 Record raw memory/CPU, percentages, methodology, and the SAID
       non-recomputation comparison in `MEASUREMENTS.md`.
-- [ ] T116-S6 ≥25.00% headroom on both axes for every required cell, or STOP +
+- [X] T116-S6 ≥25.00% headroom on both axes for every required cell, or STOP +
       epic Q-file before commit; no weakened checks or depth substitution.
-- [ ] T116-S6 Gate green; commit with exactly `Tasks: T116-S6`.
+- [X] T116-S6 Gate green; commit with exactly `Tasks: T116-S6`.
 
 ## Orchestrator finalization
 

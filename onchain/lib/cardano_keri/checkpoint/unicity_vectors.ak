@@ -28,13 +28,13 @@ pub const depth_0_new_root: ByteArray =
 pub const depth_0_proof: Proof = []
 
 pub const depth_8_key: ByteArray =
-  #"bde8efe693008f5ed0b7299984ce466523788f1c724bd235ced24fd842f77005"
+  #"1220792f8be300286a1c14a651ec7a25479632d415ea49ff25617dc81d1dd12b"
 
 pub const depth_8_old_root: ByteArray =
-  #"f04b4d1ff07865b45461ca9117aa47d069e09d65647a0a1be2e28047621edb74"
+  #"87beed7431fe1120f39ea11c17d7dd01e005c741a9c26439728951f989ae8fb9"
 
 pub const depth_8_new_root: ByteArray =
-  #"8c6a8d62e249d09be0c5f205d5e50b732c4d13bebde51ee8613637e30ee97a0c"
+  #"626cf310ac74175de77f0238744747d59f7c66f53401a4d8008f6c575d4d91d5"
 
 pub const depth_8_proof: Proof =
   [
@@ -73,13 +73,13 @@ pub const depth_8_proof: Proof =
   ]
 
 pub const depth_16_key: ByteArray =
-  #"bde8efe693008f5ed0b7299984ce466523788f1c724bd235ced24fd842f77005"
+  #"324bdcfdd981f66d18600778e7797bacf54582eca52bbbe56e6da94d6929266d"
 
 pub const depth_16_old_root: ByteArray =
-  #"f40d0a44d1ac49ef84ad4557e12b73964998c28d1465aca49d24ec66a25bb32b"
+  #"a08966b4f2d893449e27b5d4cdc03f543e4467881b3d79ac010f79a568efee43"
 
 pub const depth_16_new_root: ByteArray =
-  #"63735d917cb046c6bdb041be6b7b83f34a8a23080f2d9fc3c335cfcf6dc0a33b"
+  #"9b504bec0ce45f1c70e898f1847021dadf4efd1cd15001a66e36645226ee6931"
 
 pub const depth_16_proof: Proof =
   [

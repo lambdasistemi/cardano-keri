@@ -37,14 +37,14 @@
 
 ## Slice 4 — Freeze and thaw
 
-- [ ] T116-S4 ACTIVE Freeze wire evidence invokes EE0–EE9 +
+- [X] T116-S4 ACTIVE Freeze wire evidence invokes EE0–EE9 +
       `freeze_predicate`; exact FROZEN address, same complete value/token, and
       byte-identical V1 datum required.
-- [ ] T116-S4 Advance accepts ACTIVE or FROZEN input and always returns ACTIVE;
+- [X] T116-S4 Advance accepts ACTIVE or FROZEN input and always returns ACTIVE;
       no standalone thaw, no TOMBSTONE/REGISTRY/unknown-role admission.
-- [ ] T116-S4 W/R/F12-L/T1 transaction-boundary negatives and Register/Advance
+- [X] T116-S4 W/R/F12-L/T1 transaction-boundary negatives and Register/Advance
       regressions green.
-- [ ] T116-S4 Gate green; commit with exactly `Tasks: T116-S4`.
+- [X] T116-S4 Gate green; commit with exactly `Tasks: T116-S4`.
 
 ## Slice 5 — Convict and tombstone terminality
 

@@ -26,28 +26,45 @@
 
 use aiken/collection/list
 use aiken/interval
+use aiken/primitive/bytearray
 use cage_context.{
   ada_output, input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id,
   spend_context,
 }
-use cardano/address.{from_script, from_verification_key}
+use cardano/address.{
+  Address, from_script, from_verification_key, with_delegation_script,
+}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
   placeholder,
 }
+use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
+use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Registry}
+use cardano_keri/checkpoint/role.{Active, Frozen, Registry, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{Advance, Close, Convict, Freeze, RecordRegistration, Register}
+use checkpoint.{Advance, Close, Convict, RecordRegistration, Register}
+
+/// Test-side encoding of the ratified Slice-4 spend redeemer. Keeping this
+/// local makes the RED diff test-only while still exercising the real handler's
+/// `Data` decoder; GREEN changes the live `SpendRedeemer` to this exact shape.
+type Slice4SpendRedeemer {
+  Slice4Advance { evidence: AdvanceEvidence }
+  Slice4Freeze { evidence: EnforcementEvidence }
+  Slice4Convict
+  Slice4RecordRegistration
+  Slice4Close
+}
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
 /// proof token in the R5 input/burn is denominated under it).
@@ -507,8 +524,8 @@ test reject_r10_spend_fails_closed() fail {
 // negatives probe each transaction-shape check the validator itself owns
 // (V1-V3) plus one end-to-end predicate-evidence rejection through V4-V7
 // (the exhaustive AE/W/ctrl/receipt families already live in
-// advance_tests.ak at the predicate level). Freeze/Convict/Close prove the
-// non-Advance branches stay fail-closed (#116/#117 land there).
+// advance_tests.ak at the predicate level). Slice 4 below opens Freeze and
+// ordinary-Advance thaw while Convict/Close stay fail-closed.
 // ---------------------------------------------------------------------
 
 /// Advance vectors were generated under network_id = 1 (the Register
@@ -619,10 +636,18 @@ fn advance_own_ref(spent: SpentCheckpoint) -> OutputReference {
 /// The spent ACTIVE-address input: the checkpoint token at quantity one,
 /// inline `V1(old)`.
 fn advance_old_input(spent: SpentCheckpoint, old: CheckpointDatumV1) -> Input {
+  advance_old_input_at(spent, old, role.address(policy, Active))
+}
+
+fn advance_old_input_at(
+  spent: SpentCheckpoint,
+  old: CheckpointDatumV1,
+  address: Address,
+) -> Input {
   input_at(
     advance_own_ref(spent),
     Output {
-      address: from_script(policy),
+      address,
       value: from_lovelace(min_ada)
         |> merge(from_asset(policy, spent.aid_asset_name, 1)),
       datum: InlineDatum(V1(old)),
@@ -655,8 +680,17 @@ fn advance_tx(
   old: CheckpointDatumV1,
   new: CheckpointDatumV1,
 ) -> Transaction {
+  advance_tx_from(spent, old, new, role.address(policy, Active))
+}
+
+fn advance_tx_from(
+  spent: SpentCheckpoint,
+  old: CheckpointDatumV1,
+  new: CheckpointDatumV1,
+  address: Address,
+) -> Transaction {
   spend_context(
-    [advance_old_input(spent, old)],
+    [advance_old_input_at(spent, old, address)],
     [],
     [advance_new_output(spent, advance_deposit, new)],
     zero,
@@ -1188,15 +1222,653 @@ test reject_v7_end_to_end_receipt_free() fail {
 }
 
 // ---------------------------------------------------------------------
-// non-Advance redeemers stay fail-closed (#116/#117 land there)
+// T116-S4 RED — live Freeze and ordinary-Advance thaw. Every case invokes
+// the five-argument applied checkpoint spend handler; the enforcement input
+// is the committed wire fixture, never a pure-predicate substitute.
 // ---------------------------------------------------------------------
 
-test reject_freeze_fails_closed() fail {
+const freeze_own_ref: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 8 }
+
+const other_aid: ByteArray =
+  #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+fn unknown_role_address() -> Address {
+  from_script(policy)
+    |> with_delegation_script(
+        #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      )
+}
+
+fn freeze_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(advance_deposit)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+    |> merge(from_asset(hp_policy, #"f0", 3))
+}
+
+fn freeze_input(
+  tip: CheckpointDatumV1,
+  address: Address,
+  datum: Data,
+  value: Value,
+) -> Input {
+  input_at(
+    freeze_own_ref,
+    Output { address, value, datum: InlineDatum(datum), reference_script: None },
+  )
+}
+
+fn freeze_output(address: Address, datum: Data, value: Value) -> Output {
+  Output { address, value, datum: InlineDatum(datum), reference_script: None }
+}
+
+fn freeze_context(
+  tip: CheckpointDatumV1,
+  input_address: Address,
+  input_datum: Data,
+  input_value: Value,
+  outputs: List<Output>,
+  mint: Value,
+) -> Transaction {
+  spend_context(
+    [freeze_input(tip, input_address, input_datum, input_value)],
+    [],
+    outputs,
+    mint,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+fn freeze_tx(tip: CheckpointDatumV1) -> Transaction {
+  let value = freeze_value(tip)
+  freeze_context(
+    tip,
+    role.address(policy, Active),
+    V1(tip),
+    value,
+    [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+    zero,
+  )
+}
+
+fn run_freeze(
+  evidence: EnforcementEvidence,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let redeemer: Data = Slice4Freeze { evidence }
+  run_advance(redeemer, own_ref, tx)
+}
+
+// Honest REDs: current Slice-3 code rejects both because Freeze is fail-closed
+// and Advance admits only ACTIVE. GREEN must flip these exact tests.
+test t116_s4_accept_freeze_lag_real_wire() {
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_accept_advance_thaw_from_frozen() {
   let spent = adv_vec.pos_adv_wit_2key_spent
   run_advance(
-    Freeze,
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
     advance_own_ref(spent),
-    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
+    advance_tx_from(
+      spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+      role.address(policy, Frozen),
+    ),
+  )
+}
+
+// EE0-EE9 at the live handler boundary.
+test t116_s4_reject_freeze_ee0_empty_event() fail {
+  let wire = EnforcementEvidence { ..enf_vec.lag_freeze_wire, event_bytes: #"" }
+  run_freeze(wire, freeze_own_ref, freeze_tx(enf_vec.lag_freeze_tip))
+}
+
+test t116_s4_reject_freeze_ee0_over_1024_event() fail {
+  let wire = EnforcementEvidence {
+    ..enf_vec.lag_freeze_wire,
+    event_bytes: bytearray.concat(
+      enf_vec.honest7_freeze_evidence.event_bytes,
+      enf_vec.honest7_freeze_evidence.event_bytes,
+    ),
+  }
+  run_freeze(wire, freeze_own_ref, freeze_tx(enf_vec.lag_freeze_tip))
+}
+
+test t116_s4_reject_freeze_ee1_type_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_t: wire.off_i },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee2_aid_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_i: wire.off_s },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee3_sequence_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_s: wire.off_t },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee4_said_width() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, said: bytearray.take(wire.said, 31) },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee5_key_count() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_k: [] },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee6_threshold_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_kt: wire.off_t },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee7_next_key_count() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_n: [] },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee8_next_threshold_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_nt: wire.off_t },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_ee9_toad_offset() fail {
+  let wire = enf_vec.lag_freeze_wire
+  run_freeze(
+    EnforcementEvidence { ..wire, off_bt: wire.off_t },
+    freeze_own_ref,
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_s4_reject_freeze_replayed_not_ahead_event() fail {
+  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, native_sn: 1 }
+  run_freeze(enf_vec.lag_freeze_wire, freeze_own_ref, freeze_tx(tip))
+}
+
+test t116_s4_reject_freeze_crossed_aid_wire() fail {
+  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, cesr_aid: other_aid }
+  run_freeze(enf_vec.lag_freeze_wire, freeze_own_ref, freeze_tx(tip))
+}
+
+test t116_s4_reject_freeze_w3_duplicate_receipt_for_toad_two() fail {
+  expect [receipt] = enf_vec.lag_freeze_wire.wit_sigs
+  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, toad: 2 }
+  let wire = EnforcementEvidence {
+    ..enf_vec.lag_freeze_wire,
+    wit_sigs: [receipt, receipt],
+  }
+  run_freeze(wire, freeze_own_ref, freeze_tx(tip))
+}
+
+// R1 input role/datum/token boundary. Whole-address role checks reject every
+// staking mutation even though payment credentials still name this validator.
+test t116_s4_reject_freeze_from_frozen_as_standalone_thaw() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Frozen),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Active), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_from_tombstone_role() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Tombstone),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_from_registry_role() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Registry),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_from_unknown_role() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      unknown_role_address(),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_wrong_role_datum_pairing() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      RegistryDatumV1 { root: unicity.empty_root() },
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_missing_input_token() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = from_lovelace(advance_deposit)
+    |> merge(from_asset(hp_policy, #"f0", 3))
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_input_token_quantity_two() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_wrong_own_ref() fail {
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    out_ref(seed_tx_id, 7),
+    freeze_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+// F12-L output confinement: exactly one FROZEN output, same inline V1 Data
+// and complete Value, with no own-policy mint or burn.
+test t116_s4_reject_freeze_missing_frozen_output() fail {
+  let tip = enf_vec.lag_freeze_tip
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      freeze_value(tip),
+      [],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_duplicate_frozen_output() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  let frozen = freeze_output(role.address(policy, Frozen), V1(tip), value)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [frozen, frozen],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_active_output() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Active), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_tombstone_output() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Tombstone), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_unknown_role_output() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(unknown_role_address(), V1(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_changed_datum() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let changed = CheckpointDatumV1 { ..tip, seq: tip.seq + 1 }
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(changed), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_missing_output_datum() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  let bare = Output {
+    address: role.address(policy, Frozen),
+    value,
+    datum: NoDatum,
+    reference_script: None,
+  }
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [bare],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_non_v1_output_datum() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), ProbeV2(tip), value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_any_complete_value_change() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [
+        freeze_output(
+          role.address(policy, Frozen),
+          V1(tip),
+          value |> merge(from_lovelace(1)),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_output_token_omission() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = freeze_value(tip)
+  let output_value = from_lovelace(advance_deposit)
+    |> merge(from_asset(hp_policy, #"f0", 3))
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      input_value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), output_value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_output_token_quantity_change() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = freeze_value(tip)
+  let output_value = input_value
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      input_value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), output_value)],
+      zero,
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_own_policy_mint() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      from_asset(policy, #"ee", 1),
+    ),
+  )
+}
+
+test t116_s4_reject_freeze_own_policy_burn() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = freeze_value(tip)
+  run_freeze(
+    enf_vec.lag_freeze_wire,
+    freeze_own_ref,
+    freeze_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Frozen), V1(tip), value)],
+      from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    ),
+  )
+}
+
+// T1: only an ordinary, fully-valid Advance may thaw FROZEN back to ACTIVE.
+test t116_s4_reject_invalid_advance_proof_from_frozen() fail {
+  let spent = adv_vec.v7_receipt_free_spent
+  run_advance(
+    Advance { evidence: adv_vec.v7_receipt_free_evidence },
+    advance_own_ref(spent),
+    advance_tx_from(
+      spent,
+      old_adv_wit_2key,
+      adv_vec.v7_receipt_free_created,
+      role.address(policy, Frozen),
+    ),
+  )
+}
+
+test t116_s4_reject_advance_from_tombstone() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    advance_tx_from(
+      spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+      role.address(policy, Tombstone),
+    ),
+  )
+}
+
+test t116_s4_reject_advance_from_registry() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    advance_tx_from(
+      spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+      role.address(policy, Registry),
+    ),
+  )
+}
+
+test t116_s4_reject_advance_from_unknown_role() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    advance_own_ref(spent),
+    advance_tx_from(
+      spent,
+      old_adv_wit_2key,
+      adv_vec.pos_adv_wit_2key_created,
+      unknown_role_address(),
+    ),
   )
 }
 

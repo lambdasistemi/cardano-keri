@@ -10,6 +10,7 @@ JSON files are never edited.
 -}
 module Cardano.KERI.AID.Checkpoint.EnforcementSpec (spec) where
 
+import Cardano.Crypto.Hash (Blake2b_256, digest)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     canonicalCbor,
@@ -33,6 +34,7 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
     decodeHex,
     digestRaw,
+    intArrayField,
     intField,
     loadFixture,
     lookupKey,
@@ -45,12 +47,13 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
  )
-import Control.Monad (forM)
+import Control.Monad (forM, forM_, unless)
 import Data.Aeson (Value (..))
 import Data.Bits (xor)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -77,6 +80,14 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
     honest7 <- runIO (loadFixture "honest_7key.json")
     lagFx <- runIO (loadFixture "lag.json")
     forkW <- runIO (loadFixture "fork_witnessed.json")
+
+    describe "T116-S1 oracle offsets and artifact preservation" $ do
+        forM_ (enforcementFixtureCfgs fork forkW lagFx) $ \cfg -> do
+            it (T.unpack (efName cfg) <> ": offsets reproduce every protected KERI field") $
+                checkEnforcementOffsets (efEvents cfg) (efFixture cfg)
+            it (T.unpack (efName cfg) <> ": events and signatures retain their pre-offset bytes") $
+                fixtureArtifactFingerprint (efEvents cfg) (efSignatures cfg) (efFixture cfg)
+                    `shouldBe` Right (efFingerprint cfg)
 
     describe "convict" $ do
         -- fork: rot_conflict double-signs the rot_recorded tip (VALID conviction).
@@ -485,3 +496,92 @@ flip1 :: ByteString -> ByteString
 flip1 b = case BS.uncons b of
     Just (h, t) -> BS.cons (h `xor` 1) t
     Nothing -> b
+
+-- ---------------------------------------------------------------------------
+-- T116-S1: generator-emitted offsets and byte-preservation baselines
+-- ---------------------------------------------------------------------------
+
+data EnforcementFixture = EnforcementFixture
+    { efName :: Text
+    , efFixture :: Value
+    , efEvents :: [Text]
+    , efSignatures :: [Text]
+    , efFingerprint :: ByteString
+    }
+
+enforcementFixtureCfgs :: Value -> Value -> Value -> [EnforcementFixture]
+enforcementFixtureCfgs fork forkW lagFx =
+    [ EnforcementFixture
+        "fork"
+        fork
+        ["icp", "rot_recorded", "rot_conflict"]
+        ["icp_sigs", "rot_recorded_sigs", "rot_conflict_sigs"]
+        (hexBs "9b3ab24cd28b3ebea6b1291565dcec5eddd7ee73239904e42d5d7b39a5bcca62")
+    , EnforcementFixture
+        "fork_witnessed"
+        forkW
+        ["icp", "rot_recorded", "rot_conflict"]
+        [ "icp_sigs"
+        , "rot_recorded_sigs"
+        , "rot_recorded_witness_receipts"
+        , "rot_conflict_sigs"
+        , "rot_conflict_witness_receipts"
+        ]
+        (hexBs "e1b4cb43f54ba441d6ea3fd7e79d57ace6ba232e482d9fa5826af7e16945eace")
+    , EnforcementFixture
+        "lag"
+        lagFx
+        ["icp", "rot"]
+        ["icp_sigs", "rot_sigs", "rot_witness_receipts"]
+        (hexBs "59e617d3f891664757e70fec30eecbb3a616df977081b9c9908c22c2f4a8d236")
+    ]
+
+checkEnforcementOffsets :: [Text] -> Value -> Expectation
+checkEnforcementOffsets eventKeys fx =
+    withBuilt
+        ( forM_
+            eventKeys
+            ( \eventKey -> do
+                event <- note (eventKey <> " missing") (lookupKey eventKey fx)
+                ked <- note (eventKey <> ".ked missing") (lookupKey "ked" event)
+                raw <- decodeHex =<< textField event "raw_hex"
+                offsets <- note (eventKey <> ".offsets missing") (lookupKey "offsets" event)
+                forM_ ["t", "i", "s", "d", "kt", "nt", "bt"] $ \key -> do
+                    offset <- intField offsets key
+                    expected <-
+                        TE.encodeUtf8
+                            <$> if key == "d"
+                                then textField event "said"
+                                else textField ked key
+                    sliceAt eventKey key raw offset expected
+                forM_ ["k", "n", "b"] $ \key -> do
+                    offsetsForKey <- intArrayField offsets key
+                    expected <- map TE.encodeUtf8 <$> textArrayField ked key
+                    unless (length offsetsForKey == length expected) $
+                        Left (T.unpack (eventKey <> "." <> key <> ": offset count mismatch"))
+                    forM_ (zip offsetsForKey expected) $
+                        uncurry (sliceAt eventKey key raw)
+            )
+        )
+        (const (pure ()))
+
+sliceAt :: Text -> Text -> ByteString -> Integer -> ByteString -> Either String ()
+sliceAt eventKey key raw offset expected = do
+    let start = fromInteger offset
+    unless (offset >= 0 && start + BS.length expected <= BS.length raw) $
+        Left (T.unpack (eventKey <> "." <> key <> ": offset out of bounds"))
+    unless (BS.take (BS.length expected) (BS.drop start raw) == expected) $
+        Left (T.unpack (eventKey <> "." <> key <> ": offset slice mismatch"))
+
+fixtureArtifactFingerprint :: [Text] -> [Text] -> Value -> Either String ByteString
+fixtureArtifactFingerprint eventKeys sigKeys fx = do
+    rawEvents <- forM eventKeys $ \key -> do
+        event <- note (key <> " missing") (lookupKey key fx)
+        TE.encodeUtf8 <$> textField event "raw_hex"
+    sigs <- concat <$> forM sigKeys (textArrayFieldFor fx)
+    pure (digest (Proxy :: Proxy Blake2b_256) (BS.concat (rawEvents <> map TE.encodeUtf8 sigs)))
+
+textArrayFieldFor :: Value -> Text -> Either String [Text]
+textArrayFieldFor fx key = do
+    entries <- arrayField fx key
+    traverse (`textField` "sig_hex") entries

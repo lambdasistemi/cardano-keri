@@ -1,15 +1,16 @@
-//// Auto-generated Aiken enforcement vectors for #106 — DO NOT EDIT.
+//// Auto-generated Aiken enforcement vectors for #116 — DO NOT EDIT.
 ////
 //// Regenerate with `just gen-enforcement-vectors` (runs
 //// offchain/app/GenEnforcementVectors.hs over the committed keripy
 //// fixtures). Each scenario is the tip datum + decoded evidence the
-//// Slice-3 EnforcementSpec builds from the same JSON; enforcement_tests.ak
-//// asserts convict_predicate/freeze_predicate reproduce the Haskell
-//// verdicts, plus the TombstoneV1 codec golden. `just
+//// EnforcementSpec builds from the same JSON; offset-bearing scenarios
+//// also carry the ratified EnforcementEvidence wire value.
+//// enforcement_tests.ak asserts binder/predicate Haskell parity, plus
+//// the TombstoneV1 codec golden. `just
 //// check-enforcement-vectors` forbids drift.
 
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
-use cardano_keri/checkpoint/enforcement.{EventEvidence}
+use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, EventEvidence}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 
 /// TombstoneV1 { cesr_aid: 0xaa*32, convicted_at_native_sn: 1,
@@ -59,6 +60,29 @@ pub const fork_convict_evidence: EventEvidence =
       ),
     ],
     wit_sigs: [],
+  }
+
+pub const fork_convict_wire: EnforcementEvidence =
+  EnforcementEvidence {
+    event_bytes: fork_convict_evidence.event_bytes,
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_d: 40,
+    off_k: [211],
+    off_kt: 202,
+    off_n: [273],
+    off_nt: 264,
+    off_bt: 326,
+    native_sn: fork_convict_evidence.native_sn,
+    said: fork_convict_evidence.said,
+    revealed_keys: fork_convict_evidence.revealed_keys,
+    next_keys: fork_convict_evidence.next_keys,
+    cur_threshold: fork_convict_evidence.cur_threshold,
+    next_threshold: fork_convict_evidence.next_threshold,
+    toad: fork_convict_evidence.toad,
+    ctrl_sigs: fork_convict_evidence.ctrl_sigs,
+    wit_sigs: fork_convict_evidence.wit_sigs,
   }
 
 /// fork_witnessed: witnessed rot_conflict double-signs the witnessed rot_recorded tip -> ConvictValid
@@ -112,6 +136,29 @@ pub const fork_witnessed_convict_evidence: EventEvidence =
     ],
   }
 
+pub const fork_witnessed_convict_wire: EnforcementEvidence =
+  EnforcementEvidence {
+    event_bytes: fork_witnessed_convict_evidence.event_bytes,
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_d: 40,
+    off_k: [211],
+    off_kt: 202,
+    off_n: [273],
+    off_nt: 264,
+    off_bt: 326,
+    native_sn: fork_witnessed_convict_evidence.native_sn,
+    said: fork_witnessed_convict_evidence.said,
+    revealed_keys: fork_witnessed_convict_evidence.revealed_keys,
+    next_keys: fork_witnessed_convict_evidence.next_keys,
+    cur_threshold: fork_witnessed_convict_evidence.cur_threshold,
+    next_threshold: fork_witnessed_convict_evidence.next_threshold,
+    toad: fork_witnessed_convict_evidence.toad,
+    ctrl_sigs: fork_witnessed_convict_evidence.ctrl_sigs,
+    wit_sigs: fork_witnessed_convict_evidence.wit_sigs,
+  }
+
 /// fork_witnessed F3b: the witnessed AID's OWN honest rot_recorded as evidence -> ConvictInvalid(CvNoConflict)
 pub const fork_witnessed_honest_tip: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -161,6 +208,29 @@ pub const fork_witnessed_honest_evidence: EventEvidence =
         #"c5ecde0b9e4244dd63e4518a2e81dc06232c0c2056c6c7a7e771a851b0c7d0d3f1fcca67aef8bb92d826d2ec50953b05656567c8f3998b297bc19c36462ba40b",
       ),
     ],
+  }
+
+pub const fork_witnessed_honest_wire: EnforcementEvidence =
+  EnforcementEvidence {
+    event_bytes: fork_witnessed_honest_evidence.event_bytes,
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_d: 40,
+    off_k: [211],
+    off_kt: 202,
+    off_n: [273],
+    off_nt: 264,
+    off_bt: 326,
+    native_sn: fork_witnessed_honest_evidence.native_sn,
+    said: fork_witnessed_honest_evidence.said,
+    revealed_keys: fork_witnessed_honest_evidence.revealed_keys,
+    next_keys: fork_witnessed_honest_evidence.next_keys,
+    cur_threshold: fork_witnessed_honest_evidence.cur_threshold,
+    next_threshold: fork_witnessed_honest_evidence.next_threshold,
+    toad: fork_witnessed_honest_evidence.toad,
+    ctrl_sigs: fork_witnessed_honest_evidence.ctrl_sigs,
+    wit_sigs: fork_witnessed_honest_evidence.wit_sigs,
   }
 
 /// honest_2key: rot vs its own reflected state -> ConvictInvalid(CvNoConflict)
@@ -316,6 +386,29 @@ pub const lag_freeze_evidence: EventEvidence =
         #"aa05eea539101d6792560bc1299d60a6e4895c346ffff2013b174e366b736e32b5948f6294357a676c5de78cdc531fef3f8c62feafffddabd58b4943939ba709",
       ),
     ],
+  }
+
+pub const lag_freeze_wire: EnforcementEvidence =
+  EnforcementEvidence {
+    event_bytes: lag_freeze_evidence.event_bytes,
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_d: 40,
+    off_k: [211],
+    off_kt: 202,
+    off_n: [273],
+    off_nt: 264,
+    off_bt: 326,
+    native_sn: lag_freeze_evidence.native_sn,
+    said: lag_freeze_evidence.said,
+    revealed_keys: lag_freeze_evidence.revealed_keys,
+    next_keys: lag_freeze_evidence.next_keys,
+    cur_threshold: lag_freeze_evidence.cur_threshold,
+    next_threshold: lag_freeze_evidence.next_threshold,
+    toad: lag_freeze_evidence.toad,
+    ctrl_sigs: lag_freeze_evidence.ctrl_sigs,
+    wit_sigs: lag_freeze_evidence.wit_sigs,
   }
 
 /// honest_7key: 3-of-7 partial reveal vs weighted nt -> FreezeValid

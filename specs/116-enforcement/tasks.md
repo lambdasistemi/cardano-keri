@@ -10,15 +10,15 @@
 
 ## Slice 2 — wire binding and predicate corrections
 
-- [ ] T116-S2 Haskell `EnforcementEvidence` + EE0–EE9 binding (including the
+- [X] T116-S2 Haskell `EnforcementEvidence` + EE0–EE9 binding (including the
       1024-byte V1 cap) to decoded
       `EventEvidence`; no `said_blank` or SAID recomputation.
-- [ ] T116-S2 Haskell predicates count distinct witness indices and treat `kt`
+- [X] T116-S2 Haskell predicates count distinct witness indices and treat `kt`
       as a Convict conflict axis; RED vectors include duplicate receipt and
       kt-only conflict.
-- [ ] T116-S2 Aiken mirror + shared generated vectors; byte- and verdict-parity
+- [X] T116-S2 Aiken mirror + shared generated vectors; byte- and verdict-parity
       for positives and every wire mutation.
-- [ ] T116-S2 Gate green; commit with exactly `Tasks: T116-S2`.
+- [X] T116-S2 Gate green; commit with exactly `Tasks: T116-S2`.
 
 ## Slice 3 — mint-once MPFS registry
 

@@ -17,8 +17,9 @@
 ////
 //// #115 S6 adds the `Advance` spend branch (V1-V7): KERI rotation
 //// admission over the tip checkpoint UTxO, delegating V4-V7 to the S5
-//// `advance_predicate`. `Freeze`/`Convict`/`Close` remain explicit,
-//// fail-closed placeholders for #116/#117 before the deployment freeze.
+//// `advance_predicate`. #116 S4 opens ACTIVE Freeze and ordinary-Advance
+//// thaw from FROZEN; `Convict`/`Close` remain explicit fail-closed
+//// placeholders before the deployment freeze.
 
 use aiken/collection/dict
 use aiken/collection/list
@@ -32,12 +33,16 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
+use cardano_keri/checkpoint/enforcement.{
+  EnforcementBindingValid, EnforcementEvidence, FreezeValid,
+  bind_enforcement_evidence, freeze_predicate,
+}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
   registration_predicate,
 }
-use cardano_keri/checkpoint/role.{Registry}
+use cardano_keri/checkpoint/role.{Active, Frozen, Registry}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 
 /// The ledger min-ADA floor the R8 deposit arithmetic runs over (spec R8:
@@ -62,11 +67,12 @@ pub type MintRedeemer {
 }
 
 /// The checkpoint spend redeemer. `Advance` carries the S5 `AdvanceEvidence`
-/// and runs V1-V7 (KERI rotation admission); `Freeze`/`Convict`/`Close` are
-/// explicit placeholders for #116/#117 and remain fail-closed here.
+/// and runs V1-V7 (KERI rotation admission). `Freeze` carries the signed KERI
+/// wire evidence that opens ACTIVE -> FROZEN; `Convict`/`Close` remain
+/// fail-closed placeholders.
 pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
-  Freeze
+  Freeze { evidence: EnforcementEvidence }
   Convict
   RecordRegistration
   Close
@@ -107,8 +113,7 @@ validator checkpoint(
     when rdm is {
       Advance { evidence } ->
         validate_advance(network_id, d_reg, evidence, own_ref, tx)
-      // #116/#117 land here; fail closed until then.
-      Freeze -> fail
+      Freeze { evidence } -> validate_freeze(evidence, own_ref, tx)
       Convict -> fail
       RecordRegistration ->
         validate_record_registration(registry_seed, own_ref, tx)
@@ -272,6 +277,39 @@ fn validate_record_registration(
   True
 }
 
+/// Permissionless ACTIVE -> FROZEN transition. The signed wire evidence is
+/// EE0-EE9-bound before the pure freeze predicate runs; the state output then
+/// preserves the input datum and complete value exactly at the FROZEN role.
+fn validate_freeze(
+  evidence: EnforcementEvidence,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(tip_data) = own_input.output.datum
+  expect V1(tip): CheckpointDatum = tip_data
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect EnforcementBindingValid(decoded) = bind_enforcement_evidence(
+    tip.cesr_aid,
+    evidence,
+  )
+  expect freeze_predicate(tip, decoded) == FreezeValid
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == role.address(own_hash, Frozen) },
+  )
+  expect state_output.value == own_input.output.value
+  expect quantity_of(state_output.value, own_hash, aid_name) == 1
+  expect InlineDatum(successor_data) = state_output.datum
+  expect successor_data == tip_data
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  True
+}
+
 /// The `Advance` branch: V1 own input / V2 successor output / V3 deposit
 /// continuity live here; V4-V7 delegate to the S5 `advance_predicate` over
 /// a `SpentCheckpoint` built EXCLUSIVELY from the deployment parameters,
@@ -285,12 +323,17 @@ fn validate_advance(
   tx: Transaction,
 ) -> Bool {
   let Transaction { inputs, outputs, mint, .. } = tx
-  // V1 — resolve the named own input at ACTIVE (`Address(Script(own_hash),
-  // None)`), carrying exactly one checkpoint token derived from its
-  // inline V1(OLD) datum. Fails closed on any non-V1 datum constructor.
+  // V1 — resolve the named own input at exactly ACTIVE or FROZEN, carrying
+  // exactly one checkpoint token derived from its inline V1(OLD) datum.
+  // TOMBSTONE, REGISTRY, unknown roles, and non-V1 datums fail before the
+  // advance predicate.
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
-  expect own_input.output.address.stake_credential == None
+  expect
+    own_input.output.address == role.address(own_hash, Active) || own_input.output.address == role.address(
+      own_hash,
+      Frozen,
+    )
   expect InlineDatum(old_datum_data) = own_input.output.datum
   expect V1(old): CheckpointDatum = old_datum_data
   let aid_name = deriveAidAssetName(old.cesr_aid)

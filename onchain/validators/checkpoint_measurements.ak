@@ -38,16 +38,17 @@ use cardano/transaction.{
 }
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Registry}
+use cardano_keri/checkpoint/role.{Frozen, Registry}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{Advance, MintRedeemer, RecordRegistration, Register}
+use checkpoint.{Advance, Freeze, MintRedeemer, RecordRegistration, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -431,5 +432,67 @@ test measure_checkpoint_advance_keep() {
     Advance { evidence: adv_vec.pos_adv_keep_evidence },
     own_ref_adv_keep,
     tx_adv_keep,
+  )
+}
+
+// ---------------------------------------------------------------------
+// Slice-4 live Freeze measurement fixture. S6 owns the final lag/2-key/7-key
+// matrix and report; this cell keeps the committed lag wire on the real
+// handler ACCEPT path as soon as Freeze opens.
+// ---------------------------------------------------------------------
+
+const own_ref_freeze_lag: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 8 }
+
+fn freeze_lag_value() -> Value {
+  from_lovelace(advance_deposit)
+    |> merge(
+        from_asset(
+          policy,
+          deriveAidAssetName(enf_vec.lag_freeze_tip.cesr_aid),
+          1,
+        ),
+      )
+}
+
+const tx_freeze_lag: Transaction =
+  spend_context(
+    [
+      input_at(
+        own_ref_freeze_lag,
+        Output {
+          address: from_script(policy),
+          value: freeze_lag_value(),
+          datum: InlineDatum(V1(enf_vec.lag_freeze_tip)),
+          reference_script: None,
+        },
+      ),
+    ],
+    [],
+    [
+      Output {
+        address: role.address(policy, Frozen),
+        value: freeze_lag_value(),
+        datum: InlineDatum(V1(enf_vec.lag_freeze_tip)),
+        reference_script: None,
+      },
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+
+test measure_checkpoint_freeze_lag() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    uni.registry_seed,
+    None,
+    Freeze { evidence: enf_vec.lag_freeze_wire },
+    own_ref_freeze_lag,
+    tx_freeze_lag,
   )
 }

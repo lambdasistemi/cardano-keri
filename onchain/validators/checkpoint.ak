@@ -18,14 +18,17 @@
 //// #115 S6 adds the `Advance` spend branch (V1-V7): KERI rotation
 //// admission over the tip checkpoint UTxO, delegating V4-V7 to the S5
 //// `advance_predicate`. #116 S4 opens ACTIVE Freeze and ordinary-Advance
-//// thaw from FROZEN; `Convict`/`Close` remain explicit fail-closed
-//// placeholders before the deployment freeze.
+//// thaw from FROZEN. #116 S5 opens ACTIVE|FROZEN Convict, writes the exact
+//// terminal tombstone, and pre-dispatches every named input by role+datum;
+//// `Close` remains explicitly fail-closed before the deployment freeze.
 
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/merkle_patricia_forestry.{Proof}
 use cardano/address.{Script, from_script}
-use cardano/assets.{PolicyId, lovelace_of, quantity_of, tokens}
+use cardano/assets.{
+  PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
+}
 use cardano/transaction.{
   InlineDatum, OutputReference, Spend, Transaction, find_input,
 }
@@ -34,15 +37,15 @@ use cardano_keri/checkpoint/advance.{
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
 use cardano_keri/checkpoint/enforcement.{
-  EnforcementBindingValid, EnforcementEvidence, FreezeValid,
-  bind_enforcement_evidence, freeze_predicate,
+  ConvictValid, EnforcementBindingValid, EnforcementEvidence, FreezeValid,
+  TombstoneV1, bind_enforcement_evidence, convict_predicate, freeze_predicate,
 }
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
   registration_predicate,
 }
-use cardano_keri/checkpoint/role.{Active, Frozen, Registry}
+use cardano_keri/checkpoint/role.{Active, Frozen, Registry, Tombstone}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 
 /// The ledger min-ADA floor the R8 deposit arithmetic runs over (spec R8:
@@ -68,14 +71,25 @@ pub type MintRedeemer {
 
 /// The checkpoint spend redeemer. `Advance` carries the S5 `AdvanceEvidence`
 /// and runs V1-V7 (KERI rotation admission). `Freeze` carries the signed KERI
-/// wire evidence that opens ACTIVE -> FROZEN; `Convict`/`Close` remain
-/// fail-closed placeholders.
+/// wire evidence that opens ACTIVE -> FROZEN; `Convict` carries the witnessed
+/// conflicting event that opens ACTIVE|FROZEN -> TOMBSTONE. `Close` remains
+/// fail-closed.
 pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
   Freeze { evidence: EnforcementEvidence }
-  Convict
+  Convict { evidence: EnforcementEvidence }
   RecordRegistration
   Close
+}
+
+/// Exact named-input classification performed before any branch predicate.
+/// A tombstone is classified so it can be rejected explicitly by the dispatch
+/// matrix; unknown roles and every role/datum mismatch fail during dispatch.
+type SpendInputRole {
+  ActiveCheckpoint
+  FrozenCheckpoint
+  RegistryState
+  TerminalTombstone
 }
 
 validator checkpoint(
@@ -110,19 +124,53 @@ validator checkpoint(
     tx: Transaction,
   ) {
     expect rdm: SpendRedeemer = redeemer
-    when rdm is {
-      Advance { evidence } ->
+    expect Some(input_role) = classify_spend_input(own_ref, tx)
+    when Pair(input_role, rdm) is {
+      Pair(ActiveCheckpoint, Advance { evidence }) ->
         validate_advance(network_id, d_reg, evidence, own_ref, tx)
-      Freeze { evidence } -> validate_freeze(evidence, own_ref, tx)
-      Convict -> fail
-      RecordRegistration ->
+      Pair(FrozenCheckpoint, Advance { evidence }) ->
+        validate_advance(network_id, d_reg, evidence, own_ref, tx)
+      Pair(ActiveCheckpoint, Freeze { evidence }) ->
+        validate_freeze(evidence, own_ref, tx)
+      Pair(ActiveCheckpoint, Convict { evidence }) ->
+        validate_convict(evidence, own_ref, tx)
+      Pair(FrozenCheckpoint, Convict { evidence }) ->
+        validate_convict(evidence, own_ref, tx)
+      Pair(RegistryState, RecordRegistration) ->
         validate_record_registration(registry_seed, own_ref, tx)
-      Close -> fail
+      _ -> fail
     }
   }
 
   else(_) {
     fail
+  }
+}
+
+/// Classify the named input by its whole role address and exact inline datum
+/// family before dispatching a redeemer. In particular, TOMBSTONE is a known
+/// terminal role with no admitted redeemer.
+fn classify_spend_input(
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Option<SpendInputRole> {
+  expect Some(own_input) = find_input(tx.inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect InlineDatum(datum_data) = own_input.output.datum
+  if own_input.output.address == role.address(own_hash, Active) {
+    expect V1(_): CheckpointDatum = datum_data
+    Some(ActiveCheckpoint)
+  } else if own_input.output.address == role.address(own_hash, Frozen) {
+    expect V1(_): CheckpointDatum = datum_data
+    Some(FrozenCheckpoint)
+  } else if own_input.output.address == role.address(own_hash, Registry) {
+    expect _: RegistryDatumV1 = datum_data
+    Some(RegistryState)
+  } else if own_input.output.address == role.address(own_hash, Tombstone) {
+    expect _: TombstoneV1 = datum_data
+    Some(TerminalTombstone)
+  } else {
+    None
   }
 }
 
@@ -306,6 +354,51 @@ fn validate_freeze(
   expect quantity_of(state_output.value, own_hash, aid_name) == 1
   expect InlineDatum(successor_data) = state_output.datum
   expect successor_data == tip_data
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  True
+}
+
+/// Permissionless ACTIVE|FROZEN -> TOMBSTONE transition. Wire evidence is
+/// bound before the pure conviction predicate runs. The terminal output keeps
+/// only min-ADA and the quantity-one AID token; every input residual is left
+/// outside checkpoint state for fees, prover bounty, and ordinary change.
+fn validate_convict(
+  evidence: EnforcementEvidence,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect
+    own_input.output.address == role.address(own_hash, Active) || own_input.output.address == role.address(
+      own_hash,
+      Frozen,
+    )
+  expect InlineDatum(tip_data) = own_input.output.datum
+  expect V1(tip): CheckpointDatum = tip_data
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect EnforcementBindingValid(decoded) = bind_enforcement_evidence(
+    tip.cesr_aid,
+    evidence,
+  )
+  expect convict_predicate(tip, decoded) == ConvictValid
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == role.address(own_hash, Tombstone) },
+  )
+  let terminal_value = from_lovelace(checkpoint_min_ada)
+    |> merge(from_asset(own_hash, aid_name, 1))
+  expect state_output.value == terminal_value
+  expect InlineDatum(tombstone_data) = state_output.datum
+  expect tombstone: TombstoneV1 = tombstone_data
+  expect
+    tombstone == TombstoneV1 {
+      cesr_aid: tip.cesr_aid,
+      convicted_at_native_sn: tip.native_sn,
+      evidence_said: evidence.said,
+    }
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
 }

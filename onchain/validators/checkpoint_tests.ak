@@ -42,7 +42,7 @@ use cardano/transaction.{
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
+use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
@@ -53,7 +53,7 @@ use cardano_keri/checkpoint/role.{Active, Frozen, Registry, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{Advance, Close, Convict, RecordRegistration, Register}
+use checkpoint.{Advance, Close, RecordRegistration, Register}
 
 /// Test-side encoding of the ratified Slice-4 spend redeemer. Keeping this
 /// local makes the RED diff test-only while still exercising the real handler's
@@ -64,6 +64,18 @@ type Slice4SpendRedeemer {
   Slice4Convict
   Slice4RecordRegistration
   Slice4Close
+}
+
+/// Test-side encoding of the ratified Slice-5 spend redeemer. The constructor
+/// order mirrors the live type exactly; only Convict changes shape. Keeping it
+/// local lets the validator-level positive observe a genuine decoder/dispatch
+/// RED before production is changed.
+type Slice5SpendRedeemer {
+  Slice5Advance { evidence: AdvanceEvidence }
+  Slice5Freeze { evidence: EnforcementEvidence }
+  Slice5Convict { evidence: EnforcementEvidence }
+  Slice5RecordRegistration
+  Slice5Close
 }
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
@@ -1872,12 +1884,641 @@ test t116_s4_reject_advance_from_unknown_role() fail {
   )
 }
 
-test reject_convict_fails_closed() fail {
-  let spent = adv_vec.pos_adv_wit_2key_spent
-  run_advance(
-    Convict,
-    advance_own_ref(spent),
-    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
+// ---------------------------------------------------------------------
+// T116-S5 RED — witnessed Convict, bounty release, exact TombstoneV1,
+// pre-dispatch terminality, and post-conviction mint-once unicity. Every
+// boundary test drives the real five-argument applied checkpoint handler.
+// ---------------------------------------------------------------------
+
+const convict_own_ref: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 6 }
+
+fn convict_input_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(advance_deposit)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+    |> merge(from_asset(hp_policy, #"f1", 3))
+}
+
+fn tombstone_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(min_ada)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+}
+
+fn tombstone_record(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> TombstoneV1 {
+  TombstoneV1 {
+    cesr_aid: tip.cesr_aid,
+    convicted_at_native_sn: tip.native_sn,
+    evidence_said: evidence.said,
+  }
+}
+
+fn convict_input(address: Address, datum: Data, value: Value) -> Input {
+  input_at(
+    convict_own_ref,
+    Output { address, value, datum: InlineDatum(datum), reference_script: None },
+  )
+}
+
+fn convict_output(address: Address, datum: Data, value: Value) -> Output {
+  Output { address, value, datum: InlineDatum(datum), reference_script: None }
+}
+
+fn convict_context(
+  input_address: Address,
+  input_datum: Data,
+  input_value: Value,
+  outputs: List<Output>,
+  mint: Value,
+) -> Transaction {
+  spend_context(
+    [convict_input(input_address, input_datum, input_value)],
+    [],
+    outputs,
+    mint,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+fn convict_tx_from(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  input_address: Address,
+) -> Transaction {
+  convict_context(
+    input_address,
+    V1(tip),
+    convict_input_value(tip),
+    [
+      convict_output(
+        role.address(policy, Tombstone),
+        tombstone_record(tip, evidence),
+        tombstone_value(tip),
+      ),
+    ],
+    zero,
+  )
+}
+
+fn run_convict(
+  evidence: EnforcementEvidence,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let redeemer: Data = Slice5Convict { evidence }
+  run_advance(redeemer, own_ref, tx)
+}
+
+// Genuine RED: this is a committed, controller-and-witness-signed conflicting
+// rotation. Slice 4 cannot decode its fielded Convict wire evidence yet.
+test t116_s5_accept_convict_from_active_real_witnessed_wire() {
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_tx_from(
+      enf_vec.fork_witnessed_convict_tip,
+      enf_vec.fork_witnessed_convict_wire,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+test t116_s5_accept_convict_from_frozen_real_witnessed_wire() {
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_tx_from(
+      enf_vec.fork_witnessed_convict_tip,
+      enf_vec.fork_witnessed_convict_wire,
+      role.address(policy, Frozen),
+    ),
+  )
+}
+
+// F1b/F3b through the live handler, not the pure predicate.
+test t116_s5_reject_f1b_insufficient_witnessed_receipts() fail {
+  let evidence = EnforcementEvidence {
+    ..enf_vec.fork_witnessed_convict_wire,
+    wit_sigs: [],
+  }
+  run_convict(
+    evidence,
+    convict_own_ref,
+    convict_tx_from(
+      enf_vec.fork_witnessed_convict_tip,
+      evidence,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+test t116_s5_reject_f3b_witnessed_honest_recorded_no_conflict() fail {
+  run_convict(
+    enf_vec.fork_witnessed_honest_wire,
+    convict_own_ref,
+    convict_tx_from(
+      enf_vec.fork_witnessed_honest_tip,
+      enf_vec.fork_witnessed_honest_wire,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+// Live EE binding, replay, and crossed-AID regressions.
+test t116_s5_reject_convict_misdirected_wire_offset() fail {
+  let evidence = EnforcementEvidence {
+    ..enf_vec.fork_witnessed_convict_wire,
+    off_i: enf_vec.fork_witnessed_convict_wire.off_s,
+  }
+  run_convict(
+    evidence,
+    convict_own_ref,
+    convict_tx_from(
+      enf_vec.fork_witnessed_convict_tip,
+      evidence,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+test t116_s5_reject_convict_replayed_sequence() fail {
+  let tip = CheckpointDatumV1 {
+    ..enf_vec.fork_witnessed_convict_tip,
+    native_sn: enf_vec.fork_witnessed_convict_tip.native_sn + 1,
+  }
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_tx_from(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+test t116_s5_reject_convict_crossed_aid_wire() fail {
+  let tip = CheckpointDatumV1 {
+    ..enf_vec.fork_witnessed_convict_tip,
+    cesr_aid: other_aid,
+  }
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_tx_from(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+// F13-L input role/datum/token/outref confinement.
+test t116_s5_reject_convict_from_wrong_input_role() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_tx_from(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      unknown_role_address(),
+    ),
+  )
+}
+
+test t116_s5_reject_convict_wrong_input_datum_family() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      RegistryDatumV1 { root: unicity.empty_root() },
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_missing_input_token() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let input_value = from_lovelace(advance_deposit)
+    |> merge(from_asset(hp_policy, #"f1", 3))
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      input_value,
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_input_token_quantity_two() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let input_value = convict_input_value(tip)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      input_value,
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_wrong_own_ref() fail {
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    out_ref(seed_tx_id, 5),
+    convict_tx_from(
+      enf_vec.fork_witnessed_convict_tip,
+      enf_vec.fork_witnessed_convict_wire,
+      role.address(policy, Active),
+    ),
+  )
+}
+
+// F13-L exact Tombstone address, unique output, datum, record, token, and
+// min-ADA-only value. The input residual is intentionally absent here.
+test t116_s5_reject_convict_missing_tombstone_output() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_duplicate_tombstone_output() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let output = convict_output(
+    role.address(policy, Tombstone),
+    tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+    tombstone_value(tip),
+  )
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [output, output],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_wrong_role_output() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Frozen),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_missing_tombstone_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let output = Output {
+    address: role.address(policy, Tombstone),
+    value: tombstone_value(tip),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [output],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_non_tombstone_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          V1(tip),
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_wrong_tombstone_record() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let record = TombstoneV1 {
+    ..tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+    cesr_aid: other_aid,
+  }
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          record,
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_wrong_evidence_said_record() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let record = TombstoneV1 {
+    ..tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+    evidence_said: other_aid,
+  }
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          record,
+          tombstone_value(tip),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_output_token_omission() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          from_lovelace(min_ada),
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_output_token_quantity_two() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let value = tombstone_value(tip)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          value,
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_retained_registration_deposit() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let value = from_lovelace(advance_deposit)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          value,
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_retained_extra_native_asset() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let value = tombstone_value(tip) |> merge(from_asset(hp_policy, #"f1", 3))
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    convict_context(
+      role.address(policy, Active),
+      V1(tip),
+      convict_input_value(tip),
+      [
+        convict_output(
+          role.address(policy, Tombstone),
+          tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+          value,
+        ),
+      ],
+      zero,
+    ),
+  )
+}
+
+test t116_s5_reject_convict_own_policy_mint() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = convict_tx_from(
+    tip,
+    enf_vec.fork_witnessed_convict_wire,
+    role.address(policy, Active),
+  )
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
+  )
+}
+
+test t116_s5_reject_convict_own_policy_burn() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = convict_tx_from(
+    tip,
+    enf_vec.fork_witnessed_convict_wire,
+    role.address(policy, Active),
+  )
+  run_convict(
+    enf_vec.fork_witnessed_convict_wire,
+    convict_own_ref,
+    Transaction {
+      ..tx,
+      mint: from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    },
+  )
+}
+
+// F11: every current spend redeemer is tried against a real TOMBSTONE role,
+// exact TombstoneV1 record, and quantity-one AID token. All must fail before
+// branch-specific predicates can admit the state.
+fn terminal_tombstone_tx() -> Transaction {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  spend_context(
+    [
+      convict_input(
+        role.address(policy, Tombstone),
+        tombstone_record(tip, enf_vec.fork_witnessed_convict_wire),
+        tombstone_value(tip),
+      ),
+    ],
+    [],
+    [],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+test t116_s5_f11_reject_advance_from_terminal_tombstone() fail {
+  let redeemer: Data = Slice5Advance {
+    evidence: adv_vec.pos_adv_wit_2key_evidence,
+  }
+  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
+}
+
+test t116_s5_f11_reject_freeze_from_terminal_tombstone() fail {
+  let redeemer: Data = Slice5Freeze { evidence: enf_vec.lag_freeze_wire }
+  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
+}
+
+test t116_s5_f11_reject_convict_from_terminal_tombstone() fail {
+  let redeemer: Data = Slice5Convict {
+    evidence: enf_vec.fork_witnessed_convict_wire,
+  }
+  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
+}
+
+test t116_s5_f11_reject_record_registration_from_terminal_tombstone() fail {
+  let redeemer: Data = Slice5RecordRegistration
+  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
+}
+
+test t116_s5_f11_reject_close_from_terminal_tombstone() fail {
+  let redeemer: Data = Slice5Close
+  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
+}
+
+// U5 post-conviction re-registration: the transaction includes the same-AID
+// tombstone and invokes the live mint handler, but the permanent registry root
+// already contains the AID key, so the re-mint cannot validate.
+test t116_s5_reject_u5_post_conviction_same_aid_register() fail {
+  let d = vec.pos_2key_datum
+  let key = deriveAidAssetName(d.cesr_aid)
+  let present_root = unicity.insert_registered(unicity.empty_root(), key, [])
+  let tombstone = input_at(
+    convict_own_ref,
+    Output {
+      address: role.address(policy, Tombstone),
+      value: from_lovelace(min_ada) |> merge(from_asset(policy, key, 1)),
+      datum: InlineDatum(
+        TombstoneV1 {
+          cesr_aid: d.cesr_aid,
+          convicted_at_native_sn: d.native_sn,
+          evidence_said: other_aid,
+        },
+      ),
+      reference_script: None,
+    },
+  )
+  let tx = register_tx(d, vec.pos_2key_lovelace, vec.pos_2key_evidence)
+  run_register_at(
+    vec.pos_2key_evidence,
+    present_root,
+    present_root,
+    Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
   )
 }
 

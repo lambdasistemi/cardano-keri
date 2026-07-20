@@ -48,15 +48,15 @@
 
 ## Slice 5 — Convict and tombstone terminality
 
-- [ ] T116-S5 ACTIVE|FROZEN Convict invokes EE0–EE9 + `convict_predicate` and
+- [X] T116-S5 ACTIVE|FROZEN Convict invokes EE0–EE9 + `convict_predicate` and
       creates the exact TOMBSTONE token/record/min-ADA-only output.
-- [ ] T116-S5 Registration deposit remainder is released from state as bounty;
+- [X] T116-S5 Registration deposit remainder is released from state as bounty;
       own-policy mint/burn and retained extra value reject.
-- [ ] T116-S5 F1b/F3b/F11/F13-L full-context vectors, including every redeemer
+- [X] T116-S5 F1b/F3b/F11/F13-L full-context vectors, including every redeemer
       against TOMBSTONE and post-conviction re-registration.
-- [ ] T116-S5 Close remains fail-closed; Register/Advance/Freeze regressions
+- [X] T116-S5 Close remains fail-closed; Register/Advance/Freeze regressions
       green.
-- [ ] T116-S5 Gate green; commit with exactly `Tasks: T116-S5`.
+- [X] T116-S5 Gate green; commit with exactly `Tasks: T116-S5`.
 
 ## Slice 6 — final measurement evidence
 

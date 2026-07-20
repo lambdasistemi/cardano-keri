@@ -31,24 +31,27 @@ use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
-use cardano/address.{from_script, from_verification_key}
+use cardano/address.{Address, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
 }
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/enforcement.{TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Frozen, Registry}
+use cardano_keri/checkpoint/role.{Frozen, Registry, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 use cardano_keri/checkpoint/unicity.{RegistryDatumV1}
 use cardano_keri/checkpoint/unicity_vectors as uni
-use checkpoint.{Advance, Freeze, MintRedeemer, RecordRegistration, Register}
+use checkpoint.{
+  Advance, Convict, Freeze, MintRedeemer, RecordRegistration, Register,
+}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -494,5 +497,105 @@ test measure_checkpoint_freeze_lag() {
     Freeze { evidence: enf_vec.lag_freeze_wire },
     own_ref_freeze_lag,
     tx_freeze_lag,
+  )
+}
+
+// ---------------------------------------------------------------------
+// Slice-5 live Convict measurement fixtures. S6 owns the final combined
+// matrix, percentages, and report; these cells keep the committed witnessed
+// fork on both real ACTIVE and FROZEN handler ACCEPT paths.
+// ---------------------------------------------------------------------
+
+const own_ref_convict_witnessed: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 6 }
+
+fn convict_witnessed_input_value() -> Value {
+  from_lovelace(advance_deposit)
+    |> merge(
+        from_asset(
+          policy,
+          deriveAidAssetName(enf_vec.fork_witnessed_convict_tip.cesr_aid),
+          1,
+        ),
+      )
+}
+
+fn convict_witnessed_tombstone_value() -> Value {
+  from_lovelace(min_ada)
+    |> merge(
+        from_asset(
+          policy,
+          deriveAidAssetName(enf_vec.fork_witnessed_convict_tip.cesr_aid),
+          1,
+        ),
+      )
+}
+
+fn convict_witnessed_tx(input_address: Address) -> Transaction {
+  spend_context(
+    [
+      input_at(
+        own_ref_convict_witnessed,
+        Output {
+          address: input_address,
+          value: convict_witnessed_input_value(),
+          datum: InlineDatum(V1(enf_vec.fork_witnessed_convict_tip)),
+          reference_script: None,
+        },
+      ),
+    ],
+    [],
+    [
+      Output {
+        address: role.address(policy, Tombstone),
+        value: convict_witnessed_tombstone_value(),
+        datum: InlineDatum(
+          TombstoneV1 {
+            cesr_aid: enf_vec.fork_witnessed_convict_tip.cesr_aid,
+            convicted_at_native_sn: enf_vec.fork_witnessed_convict_tip.native_sn,
+            evidence_said: enf_vec.fork_witnessed_convict_wire.said,
+          },
+        ),
+        reference_script: None,
+      },
+    ],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+const tx_convict_witnessed_active: Transaction =
+  convict_witnessed_tx(from_script(policy))
+
+const tx_convict_witnessed_frozen: Transaction =
+  convict_witnessed_tx(role.address(policy, Frozen))
+
+test measure_checkpoint_convict_witnessed_active() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    uni.registry_seed,
+    None,
+    Convict { evidence: enf_vec.fork_witnessed_convict_wire },
+    own_ref_convict_witnessed,
+    tx_convict_witnessed_active,
+  )
+}
+
+test measure_checkpoint_convict_witnessed_frozen() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    uni.registry_seed,
+    None,
+    Convict { evidence: enf_vec.fork_witnessed_convict_wire },
+    own_ref_convict_witnessed,
+    tx_convict_witnessed_frozen,
   )
 }

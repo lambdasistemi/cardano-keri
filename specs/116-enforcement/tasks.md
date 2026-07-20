@@ -72,11 +72,11 @@
 
 ## Orchestrator finalization
 
-- [X] Spec checkpoint ratified by epic-owner A-file before `gate.sh` creation or
+- [ ] Spec checkpoint ratified by epic-owner A-file before `gate.sh` creation or
       Slice 1 dispatch.
-- [X] Every slice accepted by full-file orchestrator review + fresh `./gate.sh`
+- [ ] Every slice accepted by full-file orchestrator review + fresh `./gate.sh`
       before its task boxes are checked and branch is pushed.
-- [X] Finalization audit proves task-trailer bijection, no uncommitted changes,
+- [ ] Finalization audit proves task-trailer bijection, no uncommitted changes,
       current HEAD pushed, PR body/checklist current, and CI green.
-- [X] BLOCKED mark-ready Q-file answered by epic owner before `gh pr ready`;
+- [ ] BLOCKED mark-ready Q-file answered by epic owner before `gh pr ready`;
       orchestrator never merges.

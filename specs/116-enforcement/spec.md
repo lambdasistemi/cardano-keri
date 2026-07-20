@@ -23,9 +23,9 @@ append-on-registration registry; the other A-007 rulings remain binding.
 !!! danger "This completes pre-deployment validator surface"
     The role addresses, conviction-list bootstrap, Freeze path, sovereign
     Convict path, bounty-right custody, Finalize/Redeem path, and tombstone
-    dispatch rule all affect the applied checkpoint script hash. They must be
-    ratified before reimplementation. No deployed checkpoint exists, so this
-    remains a safe place to amend the V1 script in place.
+    dispatch rule all affect the applied checkpoint script hash. A-009 ratifies
+    them for reimplementation. No deployed checkpoint exists, so this remains
+    a safe place to amend the V1 script in place.
 
 ---
 
@@ -53,9 +53,9 @@ append-on-registration registry; the other A-007 rulings remain binding.
    payment credential remains the checkpoint script hash for every role.
 
 The replacement unicity mechanics, bounty custody, cash-out modes, race
-semantics, and `D_reg` security role are new spec-checkpoint material. SAID,
-existing role derivation, Freeze/thaw, and the two #106 corrections are not
-reopened.
+semantics, and parameterized `D_reg` security role were ratified by A-009.
+SAID, existing role derivation, Freeze/thaw, and the two #106 corrections are
+not reopened.
 
 ### Ratification record (2026-07-20)
 
@@ -93,7 +93,10 @@ live validators. Its verdict is **GO-WITH-CHANGES**, folded below:
   never a spendable tombstone or free-change payout;
 - cash-out has insert-if-absent and membership-if-present modes;
 - one unsharded list is the V1 design, with prefix sharding only a V2 escape;
-- `D_reg` is a #116 security parameter with a V1 hard floor, not #117 work.
+- `D_reg` is a #116 validator parameter with a mechanical hard floor, not #117
+  work. Contract deployment selects its security magnitude; 1,000 ADA is the
+  non-normative reference/expected value for fixtures and measurements, not an
+  on-chain constant.
 
 ## Problem
 
@@ -126,10 +129,11 @@ finalization.
 
 **Out of scope**
 
-- Close, migration, and consumer lookup (#117). `D_reg` is pulled forward from
-  #117 as this design's primary deterrence and bounty parameter; production
-  calibration remains a spec-checkpoint decision rather than an implicit
-  constant.
+- Close, migration, and consumer lookup (#117), including recovery of the
+  refundable bond by an honest Close. `D_reg` is pulled forward as this
+  design's primary deterrence and bounty validator parameter. Its mechanism and
+  mechanical floor are fixed here; the concrete value is selected when the
+  contract is deployed and must never become an implicit validator constant.
 - The full cross-path adversarial matrix (#118) and devnet cast (#44).
 - A witness-delta/pool-swap-only conviction. It remains fail-closed to Freeze;
   `prev_witnesses_digest` is the named V2 hook.
@@ -512,8 +516,8 @@ The required outcomes are explicit:
 - Redeem-present transactions are reference-read only and may run concurrently.
 
 The mechanics audit confirms these outcomes against actual CIP-31/reference-
-input and MPF proof semantics. The epic checkpoint ratifies the folded contract
-before implementation dispatch.
+input and MPF proof semantics. A-009 ratifies the folded contract for
+implementation dispatch.
 
 ### Contention boundary
 
@@ -521,39 +525,51 @@ The singleton list is never consumed by Register, Advance, Freeze, Convict, or
 present-mode redemption. It is consumed only by the first cash-out for an AID,
 at most once per identity and at the bounty holder's timing. Those rare
 finalizations serialize, but registration throughput and sovereign containment
-do not. V1 therefore keeps one unsharded list unless the checkpoint answer
-finds a ledger or proof reason to reject the audit. If observed finalize rates
-ever make reference-input retries material, AID-prefix sharding is an explicit
-V2 escape hatch, not V1 scope.
+do not. V1 therefore keeps one unsharded list. If observed finalize rates ever
+make reference-input retries material, AID-prefix sharding is an explicit V2
+escape hatch, not V1 scope.
 
-### Deposit economics — O3 pinned in #116
+### Deposit economics — O3 parameter and mechanical floor pinned in #116
 
 `D_reg` is the primary security knob: it is the forker's loss on every
-contained cycle and the hunter's gross bounty on redemption. V1 pins these
-conservative accounting floors:
+contained cycle and the hunter's gross bounty on redemption. The validator is
+applied with `d_reg : Int` and all Register, Advance, Convict, and cash-out
+accounting is generic over that parameter. V1 pins only this mechanical floor:
 
 ```text
 checkpoint_min_ada   = 2_000_000 lovelace
 bounty_claim_min_ada = 2_000_000 lovelace
 deterrence_margin    = 1_000_000 lovelace
-D_reg_v1_min         = checkpoint_min_ada
-                     + bounty_claim_min_ada
-                     + deterrence_margin
-                     = 5_000_000 lovelace
+D_reg_mechanical_floor = checkpoint_min_ada
+                       + bounty_claim_min_ada
+                       + deterrence_margin
+                       = 5_000_000 lovelace
 ```
 
-The applied `d_reg` parameter MUST be at least `D_reg_v1_min`; existing V1
-fixtures pin the boundary at 5,000,000 lovelace and add a one-lovelace-below
-negative. A deployment MAY choose a larger value, but never a smaller one, and
-must publish that choice as part of its threat model. Registration and Advance
-continue to enforce `checkpoint_lovelace >= checkpoint_min_ada + d_reg`.
-Convict proves the complete surplus is claim-backed. Neither Close nor #117 may
-waive, defer, or reinterpret this floor.
+The applied `d_reg` parameter MUST be at least
+`D_reg_mechanical_floor`. Boundary fixtures use 5,000,000 lovelace only as the
+canonical floor and retain a 4,999,999-lovelace applied-parameter negative; a
+checkpoint whose surplus is one lovelace below its applied `d_reg` also
+rejects. Ordinary behavior fixtures and every measurement use the
+non-normative reference value:
 
-The floor is the minimum mechanically testable condition, not a claim that one
-ADA of margin deters every real adversary. The epic checkpoint must either
-ratify 5,000,000 lovelace as the V1 deployment value or pin a higher `d_reg`;
-implementation may not leave the deployed value undecided.
+```text
+D_reg_reference = 1_000 ADA = 1_000_000_000 lovelace
+```
+
+These vectors prove generic parameter use and realistic arithmetic without
+pinning the eventual deployment input. Registration and Advance enforce
+`checkpoint_lovelace >= checkpoint_min_ada + d_reg`; Convict proves the
+complete actual surplus is claim-backed. Neither Close nor #117 may waive,
+defer, or reinterpret the floor.
+
+The operator supplies the concrete value when applying the validator at
+contract deployment. The expected order of magnitude is approximately 1,000
+ADA, modeled as a refundable bond: an honest Close recovers it under #117,
+whereas a convicted forker loses the whole bond to the backed bearer right.
+The implementation MUST NOT hardcode either 5 ADA or 1,000 ADA as the security
+value. Changing the deployment input changes the forker loss and watcher reward
+without changing the generic validator logic.
 
 The threat model is pinned with the parameter:
 
@@ -731,9 +747,11 @@ corroboration.
 - First Finalize transactions for different AIDs share one list and may need to
   retry. Register, Advance, Freeze, Convict, and present-mode Redeem do not share
   that write bottleneck.
-- `D_reg` is the primary deterrence/reward knob. Its production value and the
-  claimed bleed/milk/finalize equilibrium require epic-level ratification in
-  this ticket, not silent deferral to #117.
+- `D_reg` is the primary deterrence/reward knob. Its mechanism and 5,000,000-
+  lovelace mechanical floor are ratified here; ordinary fixtures and
+  measurements use the non-normative 1,000 ADA reference. The operator selects
+  the concrete value at contract deployment, and this implementation hardcodes
+  neither the floor nor the reference as that security choice.
 - `evidence_said` is a signed event field, not a recomputed digest.
 - Close/migration discovery semantics remain #117.
 - Proof production, current-tip discovery, and right/claim discovery are
@@ -766,29 +784,31 @@ corroboration.
       ≥25% memory and CPU headroom.
 - [ ] Register and Advance regressions remain green; Close remains fail-closed.
 
-## Spec-checkpoint questions
+## Spec-checkpoint disposition
 
-The mechanics audit is folded into this artifact. The epic owner is asked to
-ratify these exact replacement choices or state a concrete correction:
+The mechanics audit is folded into this artifact. A-009 ratifies these exact
+replacement choices:
 
-1. **Live-root absence read and races.** Ratify the thin public MPF `excludes`
+1. **Live-root absence read and races.** The thin public MPF `excludes`
    helper; exact REGISTRY-address + quantity-one thread-token binding; root from
    the reference input's inline datum only; and the audited Register-before-
    Finalize, Finalize-before-Register, and two-Finalizer outcomes.
-2. **Bearer right and custody.** Ratify the per-checkpoint-ref nonce, right name
+2. **Bearer right and custody.** The per-checkpoint-ref nonce, right name
    over `(domain, cesr_aid, nonce)`, mint under the combined policy, BOUNTY role
    `0x03`, separate script-locked claim, whole-surplus equation, separate fee/
    min-ADA funding, and payout-to-right-input-address accounting.
-3. **Finalize/Redeem weld.** Ratify absent-mode consume+insert and present-mode
+3. **Finalize/Redeem weld.** Absent-mode consume+insert and present-mode
    reference-read+inclusion, including multi-right same-AID aggregation,
    rights held by different bearers, retry after a competing insertion, exact
    burns, and the rule that an absent claim cannot pay without permanence.
-4. **Bootstrap and topology.** Ratify the conviction domains, one-shot thread,
+4. **Bootstrap and topology.** The conviction domains, one-shot thread,
    unchanged REGISTRY encoding, insert-only root, and single unsharded V1 list;
    AID-prefix sharding stays a V2 escape hatch only.
-5. **Economics.** Ratify 5,000,000 lovelace as the V1 deployed `d_reg` or pin a
-   higher value. The normative hard floor is already #116 scope and may not be
-   deferred to #117.
+5. **Economics.** `d_reg` remains a validator parameter generic over every
+   enforcement path. 5,000,000 lovelace is the mechanical hard floor only,
+   with a one-below negative. Ordinary fixtures and measurements use a
+   non-normative 1,000 ADA reference; the concrete value is supplied at
+   contract deployment and is not hardcoded or deferred to #117.
 
 The following A-007 decisions remain ratified and are not reopened: SAID
 non-recomputation; ACTIVE/FROZEN/TOMBSTONE/REGISTRY role derivation; Freeze and

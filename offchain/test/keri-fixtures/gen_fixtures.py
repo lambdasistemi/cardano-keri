@@ -245,7 +245,7 @@ def _assert_offsets(serder, offsets):
     def sl(off, blen):
         return raw[off : off + blen]
 
-    for f in ("t", "i", "s", "p", "bt"):
+    for f in ("t", "i", "s", "d", "p", "bt"):
         if f in offsets:
             exp = ked[f].encode()
             assert sl(offsets[f], len(exp)) == exp, f"offset self-check failed: {f}"
@@ -292,6 +292,22 @@ def _reg_record(serder, cur, nxt, note, delegator_pre=None):
     if delegator_pre is not None:
         rec["delegator_pre"] = delegator_pre
     return rec
+
+
+def _enforcement_event_record(serder, rotation_fields=False):
+    """One enforcement event with generator-derived field offsets.
+
+    Enforcement consumes only t/i/s/k/kt/n/nt/bt.  The offsets are scanned
+    from keripy's exact serialization and self-checked before they become
+    fixture data; they are never maintained as hand-authored constants.
+    """
+    offsets = _offsets_record(serder, rotation_fields=rotation_fields)
+    offsets["d"] = _field_spans(serder.raw)["d"][1]
+    _assert_offsets(serder, offsets)
+    return {
+        **_event_record(serder, rotation_fields=rotation_fields),
+        "offsets": offsets,
+    }
 
 
 def _advance_record(
@@ -404,11 +420,11 @@ def build():
     assert rotA.ked["k"] == rotB.ked["k"] and rotA.ked["n"] != rotB.ked["n"]
     bundles["fork"] = {
         "note": "same sn, same revealed keys, DIFFERENT next commitment — the double-sign",
-        "icp": _event_record(ficp),
+        "icp": _enforcement_event_record(ficp),
         "icp_sigs": [_sig_record(c1[0], 0, ficp.raw, ficp.said, "controller")],
-        "rot_recorded": _event_record(rotA),  # what Cardano wrote
+        "rot_recorded": _enforcement_event_record(rotA),  # what Cardano wrote
         "rot_recorded_sigs": [_sig_record(fn[0], 0, rotA.raw, rotA.said, "controller")],
-        "rot_conflict": _event_record(rotB),  # the conviction evidence
+        "rot_conflict": _enforcement_event_record(rotB),  # the conviction evidence
         "rot_conflict_sigs": [_sig_record(fn[0], 0, rotB.raw, rotB.said, "controller")],
     }
 
@@ -431,10 +447,10 @@ def build():
     )
     bundles["lag"] = {
         "note": "witnessed rotation at sn=1 ahead of a checkpoint recorded at sn=0",
-        "icp": _event_record(licp),
+        "icp": _enforcement_event_record(licp),
         "icp_sigs": [_sig_record(lc[0], 0, licp.raw, licp.said, "controller")],
         "witness_verkey_qb64": lw[0].verfer.qb64,
-        "rot": _event_record(lrot),
+        "rot": _enforcement_event_record(lrot),
         "rot_sigs": [_sig_record(ln[0], 0, lrot.raw, lrot.said, "controller")],
         "rot_witness_receipts": [_sig_record(lw[0], 0, lrot.raw, lrot.said, "witness")],
     }
@@ -465,13 +481,13 @@ def build():
     assert fwrotA.ked["k"] == fwrotB.ked["k"] and fwrotA.ked["n"] != fwrotB.ked["n"]
     bundles["fork_witnessed"] = {
         "note": "witnessed fork: same sn, same revealed keys, DIFFERENT next commitment; BOTH rotations witness-receipted (the published duplicity that can convict)",
-        "icp": _event_record(fwicp),
+        "icp": _enforcement_event_record(fwicp),
         "icp_sigs": [_sig_record(fwc[0], 0, fwicp.raw, fwicp.said, "controller")],
         "witness_verkey_qb64": fww[0].verfer.qb64,
-        "rot_recorded": _event_record(fwrotA),
+        "rot_recorded": _enforcement_event_record(fwrotA),
         "rot_recorded_sigs": [_sig_record(fwn[0], 0, fwrotA.raw, fwrotA.said, "controller")],
         "rot_recorded_witness_receipts": [_sig_record(fww[0], 0, fwrotA.raw, fwrotA.said, "witness")],
-        "rot_conflict": _event_record(fwrotB),
+        "rot_conflict": _enforcement_event_record(fwrotB),
         "rot_conflict_sigs": [_sig_record(fwn[0], 0, fwrotB.raw, fwrotB.said, "controller")],
         "rot_conflict_witness_receipts": [_sig_record(fww[0], 0, fwrotB.raw, fwrotB.said, "witness")],
     }

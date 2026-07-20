@@ -2,11 +2,11 @@
 
 ## Slice 1 — keripy enforcement offsets
 
-- [ ] T116-S1 Export `t/i/s/d/k/kt/n/nt/bt` offsets for fork,
+- [X] T116-S1 Export `t/i/s/d/k/kt/n/nt/bt` offsets for fork,
       fork-witnessed, and lag evidence from the hermetic generator.
-- [ ] T116-S1 Prove existing event bytes, controller signatures, and witness
+- [X] T116-S1 Prove existing event bytes, controller signatures, and witness
       receipts are byte-unchanged; regeneration is drift-stable.
-- [ ] T116-S1 Gate green; commit with exactly `Tasks: T116-S1`.
+- [X] T116-S1 Gate green; commit with exactly `Tasks: T116-S1`.
 
 ## Slice 2 — wire binding and predicate corrections
 

@@ -81,6 +81,20 @@ append-on-registration design. The shared MPFS now stores only permanent
 convictions and is read-only on Register, untouched on Convict, and written at
 most once per identity during economically motivated cash-out.
 
+### Mechanics audit record (2026-07-20)
+
+`/tmp/keri-24/audit/unicity-mechanics.md` independently checked this redesign
+against Conway/Plutus V3 reference-input rules, MPF v2.0.0, and the repository's
+live validators. Its verdict is **GO-WITH-CHANGES**, folded below:
+
+- absence is a read-only `excludes` oracle over the root taken from the
+  authenticated live singleton reference input;
+- Convict mints a unique bearer right and creates a dedicated BOUNTY claim,
+  never a spendable tombstone or free-change payout;
+- cash-out has insert-if-absent and membership-if-present modes;
+- one unsharded list is the V1 design, with prefix sharding only a V2 escape;
+- `D_reg` is a #116 security parameter with a V1 hard floor, not #117 work.
+
 ## Problem
 
 The draft branch at `78009a1` wires Freeze and Convict, but its unicity path
@@ -319,7 +333,8 @@ convictions**:
 ConvictionListDatumV1 { root : ByteArray }
 
 BountyClaimDatumV1 {
-  aid_asset_name   : ByteArray,
+  cesr_aid         : ByteArray,
+  conviction_nonce : OutputReference,
   right_asset_name : ByteArray,
   seized_lovelace  : Int
 }
@@ -372,7 +387,8 @@ The mint branch:
 1. resolves exactly the named `conviction_ref` from `reference_inputs` at the
    exact REGISTRY address, with inline `ConvictionListDatumV1` and the derived
    thread token at quantity one;
-2. verifies `absence_proof` for the AID key against that datum's exact root;
+2. takes the root only from that inline datum and verifies `absence_proof` for
+   the AID key against that exact root with `mpf.excludes`;
 3. requires no thread-token mint/burn and no REGISTRY spend or successor;
 4. runs unchanged R1–R8 controller authorization, event binding, hash-proof
    consumption, output, and deposit checks.
@@ -383,16 +399,33 @@ reference-read the same current root concurrently, including two registrations
 of the same absent AID. This is intentional. An AID already present in the
 conviction list fails its absence proof forever.
 
+MPF v2.0.0 has no public standalone absence predicate: its private
+`excluding(key, proof) == self.root` check is currently reachable only through
+`insert`. S3 MUST add the thin public dependency helper:
+
+```text
+pub fn excludes(self, key, proof) -> Bool {
+  excluding(key, proof) == self.root
+}
+```
+
+and use it as a one-traversal read-only oracle. This is the absence analogue of
+the repository's existing read-only `update` oracle in `cage.ak`; pretending to
+insert and discarding the result is sound but deliberately rejected because it
+performs the inclusion traversal too. Authenticating the reference by exact
+REGISTRY address **and** quantity-one thread token is the safety linchpin: a
+caller-supplied empty or stale root is never accepted.
+
 ### Bearer bounty right and deposit custody
 
 Each sovereign Convict names the checkpoint input it consumes and derives a
 fresh right name:
 
 ```text
-bounty_right_name(checkpoint_ref, aid_asset_name) = blake2b_256(
+bounty_right_name(checkpoint_ref, cesr_aid) = blake2b_256(
   "cardano-keri/checkpoint/bounty-right/v1"
+  || cesr_aid
   || cbor.serialise(checkpoint_ref)
-  || aid_asset_name
 )
 ```
 
@@ -404,13 +437,14 @@ bearer asset.
 
 The deposit is not left on the terminal tombstone. Convict creates exactly one
 BOUNTY claim output with inline `BountyClaimDatumV1` and no unrelated native
-assets. Let:
+assets. Its `cesr_aid` and `conviction_nonce = checkpoint_ref` reproduce and
+bind the unique right name; `right_asset_name` is checked, never trusted. Let:
 
 ```text
 seized_lovelace = checkpoint_input.lovelace - checkpoint_min_ada
 ```
 
-The claim output contains exactly `claim_min_ada + seized_lovelace`, while the
+The claim output contains exactly `bounty_claim_min_ada + seized_lovelace`, while the
 tombstone contains exactly `checkpoint_min_ada` plus the AID token. The claim's
 min-ADA and all transaction fees require separate funding. Thus every lovelace
 above the checkpoint floor—including any amount above the minimum `D_reg`—is
@@ -418,10 +452,10 @@ backed for the right holder; Convict cannot fund fees from it or apply a
 haircut. The checkpoint input must already satisfy
 `seized_lovelace >= D_reg`.
 
-This BOUNTY-role claim is the checkpoint proposal for the soundness pass. It
-preserves F11 because TOMBSTONE remains unspendable. The epic checkpoint may
-replace the custody shape if it supplies an equally exact whole-deposit and
-one-time-redemption proof.
+This BOUNTY-role claim is the audited custody choice. It preserves F11 because
+TOMBSTONE remains unspendable. The mechanics audit rejects
+both alternatives: leaving custody on TOMBSTONE would break F11, while releasing
+the deposit as free change would break the cash-out/finality weld.
 
 ### Finalize first; redeem later rights
 
@@ -442,7 +476,9 @@ Cash-out has two modes:
 2. **Redeem present.** If an earlier cash-out already inserted the AID, the
    transaction reference-reads the current REGISTRY UTxO, verifies inclusion,
    writes no successor, burns the remaining matching rights, and releases their
-   claims. This avoids a second shared write for the same identity.
+   claims. Inclusion is exactly
+   `mpf.has(mpf.from_root(root), aid_asset_name, convicted_marker, proof)`.
+   This avoids a second shared write for the same identity.
 
 The registry spend and BOUNTY spend handlers, plus the checkpoint-policy
 mint/burn handler, must be welded: no claim may leave script custody unless the
@@ -475,8 +511,9 @@ The required outcomes are explicit:
   another root write.
 - Redeem-present transactions are reference-read only and may run concurrently.
 
-The epic-owner soundness pass must confirm these outcomes against actual
-CIP-31/reference-input and MPF proof semantics before implementation dispatch.
+The mechanics audit confirms these outcomes against actual CIP-31/reference-
+input and MPF proof semantics. The epic checkpoint ratifies the folded contract
+before implementation dispatch.
 
 ### Contention boundary
 
@@ -485,7 +522,49 @@ present-mode redemption. It is consumed only by the first cash-out for an AID,
 at most once per identity and at the bounty holder's timing. Those rare
 finalizations serialize, but registration throughput and sovereign containment
 do not. V1 therefore keeps one unsharded list unless the checkpoint answer
-finds a ledger or proof reason to shard it.
+finds a ledger or proof reason to reject the audit. If observed finalize rates
+ever make reference-input retries material, AID-prefix sharding is an explicit
+V2 escape hatch, not V1 scope.
+
+### Deposit economics — O3 pinned in #116
+
+`D_reg` is the primary security knob: it is the forker's loss on every
+contained cycle and the hunter's gross bounty on redemption. V1 pins these
+conservative accounting floors:
+
+```text
+checkpoint_min_ada   = 2_000_000 lovelace
+bounty_claim_min_ada = 2_000_000 lovelace
+deterrence_margin    = 1_000_000 lovelace
+D_reg_v1_min         = checkpoint_min_ada
+                     + bounty_claim_min_ada
+                     + deterrence_margin
+                     = 5_000_000 lovelace
+```
+
+The applied `d_reg` parameter MUST be at least `D_reg_v1_min`; existing V1
+fixtures pin the boundary at 5,000,000 lovelace and add a one-lovelace-below
+negative. A deployment MAY choose a larger value, but never a smaller one, and
+must publish that choice as part of its threat model. Registration and Advance
+continue to enforce `checkpoint_lovelace >= checkpoint_min_ada + d_reg`.
+Convict proves the complete surplus is claim-backed. Neither Close nor #117 may
+waive, defer, or reinterpret this floor.
+
+The floor is the minimum mechanically testable condition, not a claim that one
+ADA of margin deters every real adversary. The epic checkpoint must either
+ratify 5,000,000 lovelace as the V1 deployment value or pin a higher `d_reg`;
+implementation may not leave the deployed value undecided.
+
+The threat model is pinned with the parameter:
+
+- an honest AID cannot be farmed because Convict still requires two
+  irreconcilable controller-threshold-signed events and the applicable witness
+  quorum;
+- a controller self-convicting only round-trips its own deposit (less dust and
+  fees) while permanently retiring an AID it already controls;
+- every resurrection/fork cycle locks and loses another full `d_reg`, produces
+  no durable fraudulent branch, and creates no money—the right is backed by the
+  forker's seized value.
 
 ## Freeze transaction
 
@@ -523,15 +602,16 @@ Tx Convict:
               evidence_said = evidence.said
             }
           exactly one BOUNTY claim output containing:
-            value = claim_min_ada + all checkpoint lovelace above
+            value = bounty_claim_min_ada + all checkpoint lovelace above
                     checkpoint_min_ada
             datum = BountyClaimDatumV1 {
-              aid_asset_name,
+              cesr_aid,
+              conviction_nonce = checkpoint_ref,
               right_asset_name,
               seized_lovelace
             }
   checkpoint mint:
-          exactly +1 bounty_right_name(checkpoint_ref, aid_asset_name)
+          exactly +1 bounty_right_name(checkpoint_ref, cesr_aid)
           and no AID-token/thread mint or burn
   conviction list: no input, reference input, output, or root proof
 ```
@@ -548,6 +628,10 @@ The branch binds EE0–EE9 and requires
 tombstone, claim, right-name, mint-map, and custody shapes. It MUST NOT inspect,
 spend, reference, or update the conviction list. No controller signature over
 the Cardano spend is required.
+
+This explicitly replaces the draft handler's `mint == []` assertion and its
+free-change release of the deposit. Keeping either old behavior is a veto: the
+right would not exist or its collateral would already have escaped the weld.
 
 ## Tombstone terminality (F11)
 
@@ -587,7 +671,7 @@ or promotes these transaction-boundary families:
 | U3 | two unrelated or same-AID absent registrations reference-read one root concurrently without a shared spend |
 | U4 | second Bootstrap, thread-token escape/burn/mint, split list, non-empty bootstrap root, or wrong seed |
 | B1 | Convict touches the conviction list, omits/duplicates the unique right, misnames it, leaves it in script custody, or mints/burns an AID/thread token |
-| B2 | claim datum/right/AID mismatch, claim value below `claim_min_ada + seized_lovelace`, fee haircut, retained deposit, unrelated claim asset, or missing separate funding |
+| B2 | claim datum/right/AID mismatch, claim value below `bounty_claim_min_ada + seized_lovelace`, fee haircut, retained deposit, unrelated claim asset, or missing separate funding |
 | P1 | absent-AID claim payout without consuming the current thread and inserting the exact convicted marker, or root update without a matching claim + right burn |
 | P2 | already-present redemption without a current REGISTRY reference + inclusion proof, with a REGISTRY successor, or with a second root write |
 | P3 | right/claim replay, burn count mismatch, duplicate claim, mixed-AID aggregation, payout to an address other than the right-bearing input, or incomplete seized amount |
@@ -684,28 +768,27 @@ corroboration.
 
 ## Spec-checkpoint questions
 
-The epic owner is asked to fold the parallel Cardano-mechanics soundness pass
-into a ruling on these replacement questions:
+The mechanics audit is folded into this artifact. The epic owner is asked to
+ratify these exact replacement choices or state a concrete correction:
 
-1. **Mutable-root reference read and races.** Confirm that a named CIP-31
-   reference input carrying the singleton thread makes an MPF absence proof
-   current under ledger semantics, and ratify the Register-before-Finalize,
-   Finalize-before-Register, and two-Finalizer outcomes stated above.
-2. **Bearer right and custody.** Ratify or correct the proposed unique right
-   name, mint under the combined checkpoint policy, BOUNTY role `0x03`, separate
-   claim UTxO, whole-surplus seizure equation, and payout-to-right-input-address
-   accounting. Any correction must preserve repeatability, transferability,
-   exact full-deposit backing, fee separation, and one-time redemption.
+1. **Live-root absence read and races.** Ratify the thin public MPF `excludes`
+   helper; exact REGISTRY-address + quantity-one thread-token binding; root from
+   the reference input's inline datum only; and the audited Register-before-
+   Finalize, Finalize-before-Register, and two-Finalizer outcomes.
+2. **Bearer right and custody.** Ratify the per-checkpoint-ref nonce, right name
+   over `(domain, cesr_aid, nonce)`, mint under the combined policy, BOUNTY role
+   `0x03`, separate script-locked claim, whole-surplus equation, separate fee/
+   min-ADA funding, and payout-to-right-input-address accounting.
 3. **Finalize/Redeem weld.** Ratify absent-mode consume+insert and present-mode
    reference-read+inclusion, including multi-right same-AID aggregation,
    rights held by different bearers, retry after a competing insertion, exact
    burns, and the rule that an absent claim cannot pay without permanence.
-4. **Bootstrap and topology.** Ratify the renamed conviction domains, one-shot
-   thread, unchanged REGISTRY role encoding, no deletion, and a single
-   unsharded list whose only write is first cash-out per identity.
-5. **Economics.** Pull O3 forward: state the V1 `D_reg` requirement or
-   calibration rule needed for the claimed bleed/milk/finalize equilibrium,
-   and identify any perverse incentive the implementation vectors must exclude.
+4. **Bootstrap and topology.** Ratify the conviction domains, one-shot thread,
+   unchanged REGISTRY encoding, insert-only root, and single unsharded V1 list;
+   AID-prefix sharding stays a V2 escape hatch only.
+5. **Economics.** Ratify 5,000,000 lovelace as the V1 deployed `d_reg` or pin a
+   higher value. The normative hard floor is already #116 scope and may not be
+   deferred to #117.
 
 The following A-007 decisions remain ratified and are not reopened: SAID
 non-recomputation; ACTIVE/FROZEN/TOMBSTONE/REGISTRY role derivation; Freeze and

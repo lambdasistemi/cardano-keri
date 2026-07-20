@@ -121,10 +121,14 @@ Exact message formats and on-chain checks are specified in
     on-chain with an attacker-chosen `new_next` and capture the identity. See
     [Identity Operations — Rotation](identity-ops.md#rotation).
 
-A closed or frozen leaf **remains in the trie forever** (tombstone). A
-`trie_key` can never be re-registered: the inception absence proof fails
-against any leaf, whatever its status. This is what makes "trie_key uniqueness"
-hold across the whole registry lifetime, not just while an identity is active.
+A convicted checkpoint token is moved to a **permanent tombstone** (a closed
+identity's token is likewise retired). The tombstone is a permanent, queryable
+per-AID record — but it does **not** bar re-registration. There is no inception
+absence proof and no global uniqueness gate, so if KERI still carries the AID it
+may register a fresh checkpoint: Cardano mirrors KERI and never permanently
+blocks an identity. A duplicate registration is possible but self-defeating —
+consumers fail closed on more than one live checkpoint, so it only harms the
+controller who mints it.
 
 ## Freeze registry
 

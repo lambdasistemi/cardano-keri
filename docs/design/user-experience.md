@@ -37,9 +37,11 @@ You know a peer by their Veridian AID — established out-of-band (OOBI exchange
     **current-actor authority** path: **KEL replay is not in the hot path**. It stays only
     for **historical credential issuance / admission** (the KEL/TEL credential chain) and
     does **not** select the current checkpoint identity — the admission-cache split is
-    preserved. **AID uniqueness** is enforced on-chain by the **#91 gate** (the steady per-AID
-    checkpoint token is minted exactly once), not by a KEL-replay squatting resolution. The
-    mechanical `trie_key` / freeze re-cut is downstream #24.
+    preserved. **AID identity** is settled on-chain by **deterministic asset derivation** —
+    the checkpoint token's asset name derives from the qualified AID and the datum binds
+    AID/sequence — not by a global uniqueness gate and not by a KEL-replay squatting
+    resolution. There is no MPFS absence/unicity proof; a duplicate mint is a benign,
+    fail-closed self-harm residual, and a convicted AID may re-register if KERI still carries it.
 
 ```mermaid
 flowchart TD
@@ -69,10 +71,13 @@ checkpoint** — no KEL replay in this path:
 ## AID uniqueness and genesis — the #91 on-chain gate
 
 *Which* checkpoint is Bob's is settled **on-chain**, not by replaying KELs. Under Candidate A
-(`specs/92-checkpoint-contention/DECISION.md`) a registered AID has **exactly one** steady
-per-AID checkpoint token: it is minted **exactly once, `+1`, only after** the #91
-**Step/Finish byte binding** + the **oracle / projection gate** + the **MPFS absence /
-unicity** proof. There is no pool of rival registrants for the same AID to disambiguate later.
+(`specs/92-checkpoint-contention/DECISION.md`) an honest AID has **exactly one** live
+per-AID checkpoint token, whose asset name derives from the qualified AID; each mint is
+`+1`, **only after** the **Step/Finish byte binding** + the **oracle / projection gate**.
+There is **no** MPFS absence/unicity proof and no shared registry — register and re-register
+are sovereign. "Exactly one" is upheld by the controller's own interest and by consumers
+failing closed on any count other than one, not by a global gate: a duplicate mint only
+harms whoever makes it.
 
 - **Discovery is the AID-derived asset, revalidated by lineage.** The asset id
   `(checkpoint_policy_id, aid_asset_name)` is **deterministically derived from the AID**; the
@@ -95,9 +100,10 @@ unicity** proof. There is no pool of rival registrants for the same AID to disam
     The earlier framing here — *anyone can register any `cesr_aid`; multiple entries claim
     the same AID; a one-time KEL / admission binding then selects the legitimate controller*
     — was the **rejected Candidate-B** shared-registry metadata/index model. Under Candidate
-    A there is **no rival-registrant pool**: uniqueness is enforced by the **on-chain #91
-    gate** (the steady per-AID checkpoint token is minted exactly once — see the *AID
-    uniqueness and genesis* section above). The old Candidate-B `cesr_aid` *metadata field*
+    A there is **no rival-registrant pool** and no global uniqueness gate: identity is settled
+    by **deterministic asset derivation** from the qualified AID, not by an MPFS absence/unicity
+    proof (which was removed — a duplicate mint is a benign, fail-closed self-harm residual, and
+    a convicted AID may re-register if KERI still carries it). The old Candidate-B `cesr_aid` *metadata field*
     was a convenience correlation label, never an identity selector; under Candidate A the
     **qualified AID deterministically derives** the asset id `(checkpoint_policy_id,
     aid_asset_name)` and **binds the checkpoint datum** (AID/sequence binding) — identity is

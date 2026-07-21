@@ -1,0 +1,105 @@
+# Tasks: reopen #116 — freeze-bond state core
+
+A-014 ratified this packet and the epic owner reopened #116. Behavior slices
+are RED -> GREEN; measurement and documentation slices are separately gated
+driver/navigator commits. Every commit uses the exact `Tasks:` trailer shown
+in `plan.md`.
+
+## Dependency barrier
+
+- [X] T116-R0 Epic owner reopens #116, creates its branch from then-current
+      `origin/main`, installs `gate.sh`, and confirms no #114/#115/#117 pair is
+      dispatched ahead of this dependency.
+- [X] T116-R0 Record **NO DEPLOY**: final #116 intentionally closes Register,
+      all Advance roles, and Close until the owning tickets land.
+
+## Slice R1 — schema and parity foundation
+
+- [ ] T116-R1 RED: add failing Haskell tests for `B` floor/one-below,
+      positive `W_freeze`, exact role values, version-tagged
+      `ArmedV1 { checkpoint : CheckpointDatumV1, hunter_pkh, deadline }`
+      codec/hunter width, finite arm upper endpoint `u`, `u+W_freeze`, and
+      ARMED role `0x02`.
+- [ ] T116-R1 GREEN: implement the smallest Haskell/Aiken freeze-bond model,
+      role/datum codec, raw-bound endpoint helpers, generator, and generated
+      vectors; wire cabal/Main/just drift gates without inventing a normalized
+      "greatest included" time.
+- [ ] T116-R1 Prove old role hashes and CheckpointDatumV1/TombstoneV1 bytes are
+      unchanged, no validator dispatch changed, full gate green, and commit
+      exactly `feat(116): model freeze-bond state and deadline` with exactly
+      `Tasks: T116-R1`.
+
+## Slice R2 — arm and claim
+
+- [ ] T116-R2 RED: full validator contexts expose old arity/direct Freeze,
+      absent Claim, invalid time/value/beneficiary cases, and required staging
+      closures.
+- [ ] T116-R2 GREEN: apply `B`/`W_freeze`, classify the exact ArmedV1 wrapper,
+      wire ACTIVE->ARMED with complete input Value and
+      `deadline=u+W_freeze`, then
+      ARMED->FROZEN Claim at lower endpoint `>= deadline` with named exact `B`
+      hunter output and continuing Value equal to input minus `B` lovelace;
+      close Register/Advance/Convict/Close.
+- [ ] T116-R2 Preserve unchanged enforcement evidence/predicate, extra
+      unrelated inputs, token continuity, minimum ADA, `D_reg`, donated
+      surplus/assets, no own-policy mint/burn, and reject every wrong
+      role/datum/output/time/value axis.
+- [ ] T116-R2 Vector the normative bounded-interference family: one Arm per
+      behind state, repeated Arm rejection, no early Claim or proof-free
+      #116 mutation during the exclusive `W_freeze` window, and exact/late
+      Claim boundaries; reserve ordinary Advance for #115.
+- [ ] T116-R2 Full gate green; commit exactly
+      `feat(116): wire armed freeze and bond claim` with exactly
+      `Tasks: T116-R2`.
+
+## Slice R3 — conviction routing
+
+- [ ] T116-R3 RED: pin staging-closed Convict plus wrong convictor/hunter,
+      output-index reuse, under/over-payment, extra-asset/datum, and retained
+      bond/deposit negatives.
+- [ ] T116-R3 GREEN: reopen ACTIVE/ARMED/FROZEN Convict with exact unchanged
+      TombstoneV1 and dedicated enterprise outputs (`D+B`, `D`+`B`, or `D`)
+      using distinct ARMED indices.
+- [ ] T116-R3 Preserve EE binding, conflict axes, witness distinctness,
+      terminal token, allowed re-registration, and benign self-conviction;
+      prove protected `D_reg`/`B` cannot remain free change while unreserved
+      surplus may remain ordinary transaction change.
+- [ ] T116-R3 Full gate green; commit exactly
+      `feat(116): route conviction deposits and freeze bonds` with exactly
+      `Tasks: T116-R3`.
+
+## Slice R4 — measurements
+
+- [ ] T116-R4 Measure full 2-key/7-key Arm, Claim, and ACTIVE/ARMED/FROZEN
+      Convict ACCEPT contexts, including conservative-surplus cases; record
+      raw memory/CPU, use, and headroom in
+      `specs/116-freeze-bond/MEASUREMENTS.md`.
+- [ ] T116-R4 HARD STOP if any row has less than 25.00% headroom on either
+      axis; do not weaken evidence, signers, receipts, event size, or handler.
+- [ ] T116-R4 Audit exact applied arity, generated parity/drift, staging-closed
+      Register/Advance, no registry/batcher/sequencer, and full gate.
+- [ ] T116-R4 Commit exactly `test(116): measure freeze-bond state paths` with
+      exactly `Tasks: T116-R4`.
+
+## Slice R5 — freeze lifecycle documentation
+
+- [ ] T116-R5 Driver/navigator update only the #116-owned freeze fragments in
+      `docs/design/trust-model.md`,
+      `docs/blog/self-certifying-identities-on-cardano.md`, and
+      `docs/milestones-deck/index.html`.
+- [ ] T116-R5 Explain ARMED `0x02`, raw validity-range deadlines, exact
+      B/D_reg claims, permissionless response/thaw, the economic (not
+      cryptographic or bounty-paid) incentive, and donated third-party funds.
+- [ ] T116-R5 Make the two-invariant theorem the centerpiece: M1 blog central
+      argument + state machine + per-move adversarial table; trust-model
+      normative advance-totality/bounded-interference rules; deck one-liner
+      “anyone can project the public truth; no one can lie about it or lock you
+      out of it.”
+- [ ] T116-R5 State held #117 as CLOSING `0x03` with distinct `W_close`,
+      mandatory one-tx ordinary Advance-void, and no cryptographic
+      express-close; never reuse `W_freeze` for Close, and leave #114
+      registration/#115 normal-advance fragments untouched.
+- [ ] T116-R5 Run `mkdocs build --strict`, lychee, and the full gate; commit
+      exactly `docs(116): explain the bonded freeze lifecycle` with exactly
+      `Tasks: T116-R5`, then park for epic-owner acceptance. Do not deploy,
+      dispatch #117, mark ready, or merge without instruction.

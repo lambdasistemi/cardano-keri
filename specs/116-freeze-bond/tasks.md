@@ -31,27 +31,27 @@ in `plan.md`.
 
 ## Slice R2 — arm and claim
 
-- [ ] T116-R2 RED: full validator contexts expose old arity/direct Freeze,
+- [X] T116-R2 RED: full validator contexts expose old arity/direct Freeze,
       absent Claim, invalid time/value/beneficiary cases, and required staging
       closures.
-- [ ] T116-R2 GREEN: apply `B`/`W_freeze`, classify the exact ArmedV1 wrapper,
+- [X] T116-R2 GREEN: apply `B`/`W_freeze`, classify the exact ArmedV1 wrapper,
       wire ACTIVE->ARMED with complete input Value and
       `deadline=u+W_freeze`, then
       ARMED->FROZEN Claim at lower endpoint `>= deadline` with named exact `B`
       hunter output and continuing Value equal to input minus `B` lovelace;
       close Register/Advance/Convict/Close.
-- [ ] T116-R2 Preserve unchanged enforcement evidence/predicate, extra
+- [X] T116-R2 Preserve unchanged enforcement evidence/predicate, extra
       unrelated inputs, token continuity, minimum ADA, `D_reg`, donated
       surplus/assets, no own-policy mint/burn, and reject every wrong
       role/datum/output/time/value axis.
-- [ ] T116-R2 Vector the normative bounded-interference family: one Arm per
+- [X] T116-R2 Vector the normative bounded-interference family: one Arm per
       behind state, repeated Arm rejection, no early Claim or proof-free
       #116 mutation during the exclusive `W_freeze` window, and exact/late
       Claim boundaries; reserve ordinary Advance for #115.
-- [ ] T116-R2 Keep stable full-context Arm/Claim test identifiers for the R4
+- [X] T116-R2 Keep stable full-context Arm/Claim test identifiers for the R4
       Lean traceability map; do not claim the abstract model covers datum,
       address, or real-Value axes that these contexts prove.
-- [ ] T116-R2 Full gate green; commit exactly
+- [X] T116-R2 Full gate green; commit exactly
       `feat(116): wire armed freeze and bond claim` with exactly
       `Tasks: T116-R2`.
 

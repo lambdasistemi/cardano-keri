@@ -1,31 +1,11 @@
-//// Checkpoint `Register` branch ex-unit measurements (#114 S5 — the
-//// A-001 QB-2 measurement gate).
+//// T116-R2 staging checkpoint measurements.
 ////
-//// Mirrors the `hash_proof_measurements.ak` precedent: every fixture is a
-//// top-level `const` (folded at compile time, not charged to the measured
-//// cost) and each `test measure_*` invokes the REAL
-//// `checkpoint.checkpoint.mint` handler on its ACCEPT path over a full
-//// Tx-B `Transaction`, so `aiken check --plain-numbers -m
-//// measure_checkpoint` (justfile `measure-checkpoint`) reports the
-//// mem/cpu of one honest registration per gate shape, against the mainnet
-//// per-tx budget (memory 14,000,000; CPU 10,000,000,000).
-////
-//// Cells (the A-001 gate shapes, slice 5a / A-003): `reg_2key`
-//// (unwitnessed 2-key), `reg_7key` (unwitnessed GLEIF-shaped 7-key — 7
-//// Ed25519 verifications over the reconstructed preimage), and
-//// `reg_witnessed` (3-witness toad-2, 2-of-2 signing). Each cell is the
-//// FULL Register context: R1 mint shape, R2 ACTIVE-output checks, R5
-//// proof-input lookup + burn-map check + blake2b proof-name recompute,
-//// and the S3 predicate (R3 datum reconstruction, E1-E9 slices, R4
-//// schema, R7 signatures, R8 deposit). The ≥25%-headroom verdict — STOP +
-//// Q-file on a miss, never weakened checks — is the re-verifiable claim
-//// in `specs/114-registration/MEASUREMENTS.md` (S6).
-////
-//// Builders are declared privately here because Aiken forbids `pub`
-//// exports in a module importing a validator; they are the same Tx-B
-//// shape as `checkpoint_tests.ak`'s `register_tx`.
-////
-//// This module adds NO validator behavior; measurement infrastructure only.
+//// The exact live-handler ACCEPT set at this non-deployable HEAD is Arm with
+//// the real 2-key evidence, Arm with the real GLEIF-shaped 7-key evidence,
+//// and Claim. Register, every Advance, Convict, and Close are deliberately
+//// absent because R2 fail-closes them. `just measure-checkpoint` enforces the
+//// exact three titles and the repository's existing hard execution-unit
+//// limits. This is not R4's final measurement or 25%-headroom table.
 
 use aiken/interval
 use cage_context.{
@@ -40,14 +20,15 @@ use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
+use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Frozen, Tombstone}
+use cardano_keri/checkpoint/role.{Armed, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted}
-use checkpoint.{Advance, Convict, Freeze, MintRedeemer, Register}
+use checkpoint.{ClaimFreeze, Freeze, MintRedeemer, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -60,6 +41,13 @@ const policy: PolicyId =
 const network_id: Int = 0
 
 const d_reg: Int = 1_000_000_000
+
+const freeze_bond: Int = 5_000_000
+
+const freeze_window: Int = 500
+
+const hunter_pkh: ByteArray =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 // ---------------------------------------------------------------------
 // Tx-B builders (private mirror of checkpoint_tests.ak)
@@ -132,47 +120,6 @@ const tx_witnessed: Transaction =
 
 const redeemer_witnessed: MintRedeemer =
   Register { evidence: vec.pos_witnessed_evidence }
-
-// reg_2key: 2 Ed25519 verifications, unweighted 2-of-2, no witnesses.
-test measure_checkpoint_register_2key() {
-  checkpoint.checkpoint.mint(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    redeemer_2key,
-    policy,
-    tx_2key,
-  )
-}
-
-// reg_7key (GLEIF shape): 7 Ed25519 verifications, weighted 7×1/3
-// threshold, 7 E4 + 7 E6 slice checks over ~1 KiB of event bytes.
-test measure_checkpoint_register_7key() {
-  checkpoint.checkpoint.mint(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    redeemer_7key,
-    policy,
-    tx_7key,
-  )
-}
-
-// reg_witnessed (2-of-3 witnessed): 2 Ed25519 verifications plus the E8
-// witness-slice set and rule-14 toad checks.
-test measure_checkpoint_register_witnessed() {
-  checkpoint.checkpoint.mint(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    redeemer_witnessed,
-    policy,
-    tx_witnessed,
-  )
-}
 
 // ---------------------------------------------------------------------
 // Final ordinary thaw measurement (#116 S8). The FROZEN input retains the
@@ -271,21 +218,6 @@ const tx_advance_from_frozen: Transaction =
     adv_vec.pos_adv_keep_created,
   )
 
-// Ordinary no-delta thaw: 2 controller Ed25519 verifications and 2 witness
-// receipts over the full rot bytes, with empty wit_cut/wit_add.
-test measure_checkpoint_advance_from_frozen() {
-  checkpoint.checkpoint.spend(
-    0,
-    hp_policy,
-    adv_network_id,
-    d_reg,
-    None,
-    Advance { evidence: adv_vec.pos_adv_keep_evidence },
-    own_ref_advance_from_frozen,
-    tx_advance_from_frozen,
-  )
-}
-
 // ---------------------------------------------------------------------
 // Slice-4 live Freeze measurement fixture. S6 owns the final lag/2-key/7-key
 // matrix and report; this cell keeps the committed lag wire on the real
@@ -339,7 +271,7 @@ const honest7_freeze_wire: EnforcementEvidence =
   }
 
 fn freeze_measurement_value(d: CheckpointDatumV1) -> Value {
-  from_lovelace(advance_deposit)
+  from_lovelace(advance_deposit + freeze_bond)
     |> merge(from_asset(policy, deriveAidAssetName(d.cesr_aid), 1))
 }
 
@@ -363,15 +295,17 @@ fn freeze_measurement_tx(
     [],
     [
       Output {
-        address: role.address(policy, Frozen),
+        address: role.address(policy, Armed),
         value,
-        datum: InlineDatum(V1(d)),
+        datum: InlineDatum(
+          ArmedV1 { checkpoint: d, hunter_pkh, deadline: 1_000 + freeze_window },
+        ),
         reference_script: None,
       },
     ],
     zero,
     [],
-    interval.everything,
+    interval.between(0, 1_000),
     0,
   )
 }
@@ -388,27 +322,31 @@ const own_ref_freeze_7key: OutputReference =
 const tx_freeze_7key: Transaction =
   freeze_measurement_tx(own_ref_freeze_7key, enf_vec.honest7_freeze_tip)
 
-test measure_checkpoint_freeze_2key() {
+test measure_checkpoint_arm_2key() {
   checkpoint.checkpoint.spend(
     0,
     hp_policy,
     network_id,
     d_reg,
+    freeze_bond,
+    freeze_window,
     None,
-    Freeze { evidence: honest2_freeze_wire },
+    Freeze { evidence: honest2_freeze_wire, hunter_pkh },
     own_ref_freeze_2key,
     tx_freeze_2key,
   )
 }
 
-test measure_checkpoint_freeze_7key() {
+test measure_checkpoint_arm_7key() {
   checkpoint.checkpoint.spend(
     0,
     hp_policy,
     network_id,
     d_reg,
+    freeze_bond,
+    freeze_window,
     None,
-    Freeze { evidence: honest7_freeze_wire },
+    Freeze { evidence: honest7_freeze_wire, hunter_pkh },
     own_ref_freeze_7key,
     tx_freeze_7key,
   )
@@ -418,7 +356,7 @@ const own_ref_freeze_lag: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 8 }
 
 fn freeze_lag_value() -> Value {
-  from_lovelace(advance_deposit)
+  from_lovelace(advance_deposit + freeze_bond)
     |> merge(
         from_asset(
           policy,
@@ -428,15 +366,21 @@ fn freeze_lag_value() -> Value {
       )
 }
 
-const tx_freeze_lag: Transaction =
+const tx_claim: Transaction =
   spend_context(
     [
       input_at(
         own_ref_freeze_lag,
         Output {
-          address: from_script(policy),
+          address: role.address(policy, Armed),
           value: freeze_lag_value(),
-          datum: InlineDatum(V1(enf_vec.lag_freeze_tip)),
+          datum: InlineDatum(
+            ArmedV1 {
+              checkpoint: enf_vec.lag_freeze_tip,
+              hunter_pkh,
+              deadline: 1_000 + freeze_window,
+            },
+          ),
           reference_script: None,
         },
       ),
@@ -444,28 +388,36 @@ const tx_freeze_lag: Transaction =
     [],
     [
       Output {
+        address: from_verification_key(hunter_pkh),
+        value: from_lovelace(freeze_bond),
+        datum: NoDatum,
+        reference_script: None,
+      },
+      Output {
         address: role.address(policy, Frozen),
-        value: freeze_lag_value(),
+        value: freeze_lag_value() |> merge(from_lovelace(-freeze_bond)),
         datum: InlineDatum(V1(enf_vec.lag_freeze_tip)),
         reference_script: None,
       },
     ],
     zero,
     [],
-    interval.everything,
+    interval.after(1_000 + freeze_window),
     0,
   )
 
-test measure_checkpoint_freeze_lag() {
+test measure_checkpoint_claim() {
   checkpoint.checkpoint.spend(
     0,
     hp_policy,
     network_id,
     d_reg,
+    freeze_bond,
+    freeze_window,
     None,
-    Freeze { evidence: enf_vec.lag_freeze_wire },
+    ClaimFreeze { hunter_output_index: 0 },
     own_ref_freeze_lag,
-    tx_freeze_lag,
+    tx_claim,
   )
 }
 
@@ -540,29 +492,3 @@ const tx_convict_witnessed_active: Transaction =
 
 const tx_convict_witnessed_frozen: Transaction =
   convict_witnessed_tx(role.address(policy, Frozen))
-
-test measure_checkpoint_convict_witnessed_active() {
-  checkpoint.checkpoint.spend(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    None,
-    Convict { evidence: enf_vec.fork_witnessed_convict_wire },
-    own_ref_convict_witnessed,
-    tx_convict_witnessed_active,
-  )
-}
-
-test measure_checkpoint_convict_witnessed_frozen() {
-  checkpoint.checkpoint.spend(
-    0,
-    hp_policy,
-    network_id,
-    d_reg,
-    None,
-    Convict { evidence: enf_vec.fork_witnessed_convict_wire },
-    own_ref_convict_witnessed,
-    tx_convict_witnessed_frozen,
-  )
-}

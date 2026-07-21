@@ -11,16 +11,22 @@ pub type Role {
   Active
   Frozen
   Tombstone
+  Armed
 }
 
 const domain: ByteArray = "cardano-keri/checkpoint/role/v1"
 
-pub fn hash(policy: PolicyId, role: Role) -> ScriptHash {
-  let tag = when role is {
-    Active -> fail @"ACTIVE has no staking role hash"
-    Frozen -> #"00"
-    Tombstone -> #"01"
+pub fn role_tag(role: Role) -> Option<ByteArray> {
+  when role is {
+    Active -> None
+    Frozen -> Some(#"00")
+    Tombstone -> Some(#"01")
+    Armed -> Some(#"02")
   }
+}
+
+pub fn hash(policy: PolicyId, role: Role) -> ScriptHash {
+  expect Some(tag) = role_tag(role)
   blake2b_224(domain |> bytearray.concat(policy) |> bytearray.concat(tag))
 }
 
@@ -38,6 +44,8 @@ pub fn classify(policy: PolicyId, candidate: Address) -> Option<Role> {
     Some(Frozen)
   } else if candidate == address(policy, Tombstone) {
     Some(Tombstone)
+  } else if candidate == address(policy, Armed) {
+    Some(Armed)
   } else {
     None
   }

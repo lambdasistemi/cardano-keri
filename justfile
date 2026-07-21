@@ -112,6 +112,18 @@ gen-advance-vectors:
 check-advance-vectors: gen-advance-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/advance_vectors.ak
 
+# Regenerate the isolated #116 freeze-bond parity vectors from the Haskell
+# model. The generator is the sole source of wire bytes, role constants,
+# parameter verdicts, and raw deadline-boundary verdicts.
+gen-freeze-bond-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-freeze-bond-vectors -- ../onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
+
+# Drift check: a fresh Haskell regenerate must reproduce the committed module.
+check-freeze-bond-vectors: gen-freeze-bond-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
+
 # --- onchain (Aiken) ---
 
 # Format Aiken sources
@@ -214,7 +226,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors
+ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

@@ -86,6 +86,23 @@ type R2SpendRedeemer {
   R2Close
 }
 
+/// Test-side target wire for T116-R3. The constructor order preserves the R2
+/// wire and gives Convict the existing evidence plus explicit recipients and
+/// named payout indices. Keeping it local lets RED exercise the real handler
+/// before production dispatch is reopened.
+type R3SpendRedeemer {
+  R3Advance { evidence: AdvanceEvidence }
+  R3Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  R3ClaimFreeze { hunter_output_index: Int }
+  R3Convict {
+    evidence: EnforcementEvidence,
+    convictor_pkh: ByteArray,
+    convictor_output_index: Int,
+    hunter_output_index: Int,
+  }
+  R3Close
+}
+
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
 /// proof token in the R5 input/burn is denominated under it).
 const hp_policy: PolicyId =
@@ -3611,4 +3628,868 @@ test reject_close_fails_closed() fail {
     advance_own_ref(spent),
     advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
   )
+}
+
+// ---------------------------------------------------------------------
+// T116-R3 RED — exact ACTIVE/ARMED/FROZEN conviction routing.
+//
+// Every context below uses the committed witnessed-fork evidence, an exact
+// terminal tombstone, balanced protected-reserve payouts, and explicit
+// output indices. The delivered R2 handler has no fielded Convict wire or
+// live Convict dispatch, so the honest contexts are the intended RED.
+// ---------------------------------------------------------------------
+
+const r3_convictor: ByteArray =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+const r3_other_convictor: ByteArray =
+  #"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+const r3_convictor_short: ByteArray =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+const r3_surplus_lovelace: Int = 17
+
+fn r3_change_value() -> Value {
+  from_lovelace(r3_surplus_lovelace)
+    |> merge(from_asset(hp_policy, #"f3", 3))
+}
+
+fn r3_state_value(tip: CheckpointDatumV1, protected_lovelace: Int) -> Value {
+  from_lovelace(min_ada + protected_lovelace)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+    |> merge(r3_change_value())
+}
+
+fn r3_terminal_value(tip: CheckpointDatumV1) -> Value {
+  tombstone_value(tip)
+}
+
+fn r3_terminal_output(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  value: Value,
+) -> Output {
+  convict_output(
+    role.address(policy, Tombstone),
+    tombstone_record(tip, evidence),
+    value,
+  )
+}
+
+fn r3_payout_output(pkh: ByteArray, value: Value, datum: Datum) -> Output {
+  r2_hunter_output(pkh, value, datum)
+}
+
+fn r3_change_output() -> Output {
+  r3_payout_output(r3_other_convictor, r3_change_value(), NoDatum)
+}
+
+fn r3_context(
+  input_address: Address,
+  input_datum: Data,
+  input_value: Value,
+  outputs: List<Output>,
+  mint: Value,
+) -> Transaction {
+  convict_context(input_address, input_datum, input_value, outputs, mint)
+}
+
+fn r3_active_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  convictor_pkh: ByteArray,
+  convictor_value: Value,
+  convictor_datum: Datum,
+  terminal_value: Value,
+) -> Transaction {
+  r3_context(
+    role.address(policy, Active),
+    V1(tip),
+    r3_state_value(tip, d_reg + r2_freeze_bond),
+    [
+      r3_payout_output(convictor_pkh, convictor_value, convictor_datum),
+      r3_terminal_output(tip, evidence, terminal_value),
+      r3_change_output(),
+    ],
+    zero,
+  )
+}
+
+fn r3_active_tx() -> Transaction {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  r3_active_tx_with(
+    tip,
+    evidence,
+    r3_convictor,
+    from_lovelace(d_reg + r2_freeze_bond),
+    NoDatum,
+    r3_terminal_value(tip),
+  )
+}
+
+fn r3_armed_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  convictor_pkh: ByteArray,
+  hunter_pkh: ByteArray,
+  convictor_value: Value,
+  hunter_value: Value,
+  convictor_datum: Datum,
+  hunter_datum: Datum,
+  terminal_value: Value,
+) -> Transaction {
+  r3_context(
+    role.address(policy, Armed),
+    r2_armed_datum(tip, hunter_pkh, r2_deadline),
+    r3_state_value(tip, d_reg + r2_freeze_bond),
+    [
+      r3_payout_output(convictor_pkh, convictor_value, convictor_datum),
+      r3_payout_output(hunter_pkh, hunter_value, hunter_datum),
+      r3_terminal_output(tip, evidence, terminal_value),
+      r3_change_output(),
+    ],
+    zero,
+  )
+}
+
+fn r3_armed_tx() -> Transaction {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  r3_armed_tx_with(
+    tip,
+    evidence,
+    r3_convictor,
+    r2_hunter,
+    from_lovelace(d_reg),
+    from_lovelace(r2_freeze_bond),
+    NoDatum,
+    NoDatum,
+    r3_terminal_value(tip),
+  )
+}
+
+fn r3_frozen_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  convictor_pkh: ByteArray,
+  convictor_value: Value,
+  convictor_datum: Datum,
+  terminal_value: Value,
+) -> Transaction {
+  r3_context(
+    role.address(policy, Frozen),
+    V1(tip),
+    r3_state_value(tip, d_reg),
+    [
+      r3_payout_output(convictor_pkh, convictor_value, convictor_datum),
+      r3_terminal_output(tip, evidence, terminal_value),
+      r3_change_output(),
+    ],
+    zero,
+  )
+}
+
+fn r3_frozen_tx() -> Transaction {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  r3_frozen_tx_with(
+    tip,
+    evidence,
+    r3_convictor,
+    from_lovelace(d_reg),
+    NoDatum,
+    r3_terminal_value(tip),
+  )
+}
+
+fn r3_convict_redeemer(
+  evidence: EnforcementEvidence,
+  convictor_pkh: ByteArray,
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+) -> R3SpendRedeemer {
+  R3Convict {
+    evidence,
+    convictor_pkh,
+    convictor_output_index,
+    hunter_output_index,
+  }
+}
+
+fn run_r3_with_d_reg(
+  d_reg_parameter: Int,
+  redeemer: R3SpendRedeemer,
+  tx: Transaction,
+) -> Bool {
+  let redeemer_data: Data = redeemer
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg_parameter,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    redeemer_data,
+    convict_own_ref,
+    tx,
+  )
+}
+
+fn run_r3(redeemer: R3SpendRedeemer, tx: Transaction) -> Bool {
+  run_r3_with_d_reg(d_reg, redeemer, tx)
+}
+
+fn r3_honest_redeemer(
+  convictor_pkh: ByteArray,
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+) -> R3SpendRedeemer {
+  r3_convict_redeemer(
+    enf_vec.fork_witnessed_convict_wire,
+    convictor_pkh,
+    convictor_output_index,
+    hunter_output_index,
+  )
+}
+
+test t116_r3_accept_convict_active_routes_deposit_and_bond() {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_active_tx())
+}
+
+test t116_r3_accept_convict_armed_routes_deposit_and_recorded_hunter_bond() {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 1), r3_armed_tx())
+}
+
+test t116_r3_accept_convict_frozen_routes_deposit() {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_frozen_tx())
+}
+
+test t116_r3_accept_convict_preserves_unreserved_surplus_as_change() {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_active_tx())
+}
+
+test t116_r3_accept_convict_with_unrelated_extra_input_and_output() {
+  let tx = r3_active_tx()
+  let extra_input = value_input(23, from_lovelace(42_000_000))
+  let extra_output = r3_payout_output(
+    r2_other_hunter,
+    from_lovelace(9_000_000),
+    NoDatum,
+  )
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction {
+      ..tx,
+      inputs: list.concat(tx.inputs, [extra_input]),
+      outputs: list.concat(tx.outputs, [extra_output]),
+    },
+  )
+}
+
+test t116_r3_accept_self_conviction_and_same_hunter_recipient_at_distinct_indices() {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  let tx = r3_armed_tx_with(
+    tip,
+    evidence,
+    r2_hunter,
+    r2_hunter,
+    from_lovelace(d_reg),
+    from_lovelace(r2_freeze_bond),
+    NoDatum,
+    NoDatum,
+    r3_terminal_value(tip),
+  )
+  run_r3(r3_honest_redeemer(r2_hunter, 0, 1), tx)
+}
+
+test t116_r3_accept_armed_distinct_indices_when_payout_amounts_coincide() {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  let equal_d_reg = r2_freeze_bond
+  let input_value = r3_state_value(tip, equal_d_reg + r2_freeze_bond)
+  let tx = r3_context(
+    role.address(policy, Armed),
+    r2_armed_datum(tip, r2_hunter, r2_deadline),
+    input_value,
+    [
+      r3_payout_output(r2_hunter, from_lovelace(equal_d_reg), NoDatum),
+      r3_payout_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+      r3_terminal_output(tip, evidence, r3_terminal_value(tip)),
+      r3_change_output(),
+    ],
+    zero,
+  )
+  run_r3_with_d_reg(equal_d_reg, r3_honest_redeemer(r2_hunter, 0, 1), tx)
+}
+
+test t116_r3_reject_convictor_wrong_width() fail {
+  run_r3(r3_honest_redeemer(r3_convictor_short, 0, 0), r3_active_tx())
+}
+
+test t116_r3_reject_active_wrong_convictor_beneficiary() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_other_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_armed_hunter_redirection() fail {
+  let tx = r3_armed_tx()
+  expect [convictor_output,
+        hunter_output, terminal_output, change_output] = tx.outputs
+  let redirected_hunter_output = Output {
+    ..hunter_output,
+    address: from_verification_key(r3_other_convictor),
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    Transaction {
+      ..tx,
+      outputs: [
+        convictor_output, redirected_hunter_output, terminal_output,
+        change_output,
+      ],
+    },
+  )
+}
+
+test t116_r3_reject_wrong_convictor_output_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 1, 1), r3_active_tx())
+}
+
+test t116_r3_reject_out_of_bounds_convictor_output_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 99, 0), r3_active_tx())
+}
+
+test t116_r3_reject_negative_convictor_output_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, -1, 0), r3_active_tx())
+}
+
+test t116_r3_reject_armed_wrong_hunter_output_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 2), r3_armed_tx())
+}
+
+test t116_r3_reject_armed_out_of_bounds_hunter_output_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 99), r3_armed_tx())
+}
+
+test t116_r3_reject_armed_reused_payout_index() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_armed_tx())
+}
+
+test t116_r3_reject_active_underpaid_deposit_and_bond() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond - 1),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_active_overpaid_deposit_and_bond() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond + 1),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_armed_underpaid_deposit() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg - 1),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_armed_overpaid_deposit() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg + 1),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_armed_underpaid_hunter_bond() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond - 1),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_armed_overpaid_hunter_bond() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond + 1),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_frozen_underpaid_deposit() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_frozen_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg - 1),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_frozen_overpaid_deposit() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_frozen_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg + 1),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_convictor_payout_with_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      InlineDatum(V1(tip)),
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_convictor_payout_with_extra_asset() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let payout = from_lovelace(d_reg + r2_freeze_bond)
+    |> merge(from_asset(hp_policy, #"ff", 1))
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      payout,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_hunter_payout_with_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      InlineDatum(V1(tip)),
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_hunter_payout_with_extra_asset() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let hunter_value = from_lovelace(r2_freeze_bond)
+    |> merge(from_asset(hp_policy, #"ff", 1))
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      hunter_value,
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_deposit_retained_in_tombstone() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let terminal = r3_terminal_value(tip) |> merge(from_lovelace(d_reg))
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      NoDatum,
+      terminal,
+    ),
+  )
+}
+
+test t116_r3_reject_bond_retained_in_tombstone() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let terminal = r3_terminal_value(tip)
+    |> merge(from_lovelace(r2_freeze_bond))
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      NoDatum,
+      terminal,
+    ),
+  )
+}
+
+test t116_r3_reject_surplus_asset_retained_in_tombstone() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let terminal = r3_terminal_value(tip)
+    |> merge(from_asset(hp_policy, #"f3", 3))
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_frozen_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg),
+      NoDatum,
+      terminal,
+    ),
+  )
+}
+
+test t116_r3_reject_wrong_tombstone_record() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  let wrong_record = TombstoneV1 {
+    ..tombstone_record(tip, evidence),
+    evidence_said: other_aid,
+  }
+  let tx = r3_context(
+    role.address(policy, Active),
+    V1(tip),
+    r3_state_value(tip, d_reg + r2_freeze_bond),
+    [
+      r3_payout_output(
+        r3_convictor,
+        from_lovelace(d_reg + r2_freeze_bond),
+        NoDatum,
+      ),
+      convict_output(
+        role.address(policy, Tombstone),
+        wrong_record,
+        r3_terminal_value(tip),
+      ),
+      r3_change_output(),
+    ],
+    zero,
+  )
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), tx)
+}
+
+test t116_r3_reject_missing_terminal_token() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let terminal = from_lovelace(min_ada)
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    r3_frozen_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      from_lovelace(d_reg),
+      NoDatum,
+      terminal,
+    ),
+  )
+}
+
+test t116_r3_reject_missing_input_token() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_active_tx()
+  expect [own_input] = tx.inputs
+  let missing = Input {
+    ..own_input,
+    output: Output {
+      ..own_input.output,
+      value: own_input.output.value
+        |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1)),
+    },
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction { ..tx, inputs: [missing] },
+  )
+}
+
+test t116_r3_reject_input_token_quantity_two() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_active_tx()
+  expect [own_input] = tx.inputs
+  let doubled = Input {
+    ..own_input,
+    output: Output {
+      ..own_input.output,
+      value: own_input.output.value
+        |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1)),
+    },
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction { ..tx, inputs: [doubled] },
+  )
+}
+
+test t116_r3_reject_missing_tombstone_output() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_context(
+    role.address(policy, Active),
+    V1(tip),
+    r3_state_value(tip, d_reg + r2_freeze_bond),
+    [
+      r3_payout_output(
+        r3_convictor,
+        from_lovelace(d_reg + r2_freeze_bond),
+        NoDatum,
+      ),
+      r3_change_output(),
+    ],
+    zero,
+  )
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), tx)
+}
+
+test t116_r3_reject_duplicate_tombstone_output() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  let terminal = r3_terminal_output(tip, evidence, r3_terminal_value(tip))
+  let tx = r3_context(
+    role.address(policy, Frozen),
+    V1(tip),
+    r3_state_value(tip, d_reg),
+    [
+      r3_payout_output(r3_convictor, from_lovelace(d_reg), NoDatum),
+      terminal,
+      terminal,
+      r3_change_output(),
+    ],
+    zero,
+  )
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), tx)
+}
+
+test t116_r3_reject_convict_from_wrong_role() fail {
+  let tx = r3_active_tx()
+  expect [own_input] = tx.inputs
+  let wrong = Input {
+    ..own_input,
+    output: Output { ..own_input.output, address: unknown_role_address() },
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction { ..tx, inputs: [wrong] },
+  )
+}
+
+test t116_r3_reject_armed_role_with_checkpoint_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_armed_tx()
+  expect [own_input] = tx.inputs
+  let wrong = Input {
+    ..own_input,
+    output: Output { ..own_input.output, datum: InlineDatum(V1(tip)) },
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    Transaction { ..tx, inputs: [wrong] },
+  )
+}
+
+test t116_r3_reject_active_role_with_armed_datum() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_active_tx()
+  expect [own_input] = tx.inputs
+  let wrong = Input {
+    ..own_input,
+    output: Output {
+      ..own_input.output,
+      datum: InlineDatum(r2_armed_datum(tip, r2_hunter, r2_deadline)),
+    },
+  }
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction { ..tx, inputs: [wrong] },
+  )
+}
+
+test t116_r3_reject_live_ee_binding_mutation() fail {
+  let evidence = EnforcementEvidence {
+    ..enf_vec.fork_witnessed_convict_wire,
+    off_i: enf_vec.fork_witnessed_convict_wire.off_s,
+  }
+  run_r3(r3_convict_redeemer(evidence, r3_convictor, 0, 0), r3_active_tx())
+}
+
+test t116_r3_reject_live_no_conflict_axis() fail {
+  let tip = enf_vec.fork_witnessed_honest_tip
+  let evidence = enf_vec.fork_witnessed_honest_wire
+  run_r3(
+    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      evidence,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_live_insufficient_witness_receipts() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = EnforcementEvidence {
+    ..enf_vec.fork_witnessed_convict_wire,
+    wit_sigs: [],
+  }
+  run_r3(
+    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      evidence,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_duplicate_receipt_does_not_fake_distinct_witnesses() fail {
+  expect [receipt] = enf_vec.fork_witnessed_convict_wire.wit_sigs
+  let tip = CheckpointDatumV1 { ..enf_vec.fork_witnessed_convict_tip, toad: 2 }
+  let evidence = EnforcementEvidence {
+    ..enf_vec.fork_witnessed_convict_wire,
+    wit_sigs: [receipt, receipt],
+  }
+  run_r3(
+    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
+    r3_active_tx_with(
+      tip,
+      evidence,
+      r3_convictor,
+      from_lovelace(d_reg + r2_freeze_bond),
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
+}
+
+test t116_r3_reject_own_policy_mint() fail {
+  let tx = r3_active_tx()
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
+  )
+}
+
+test t116_r3_reject_own_policy_burn() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let tx = r3_active_tx()
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 0),
+    Transaction {
+      ..tx,
+      mint: from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    },
+  )
+}
+
+test t116_r3_reject_convict_from_terminal_tombstone() fail {
+  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), terminal_tombstone_tx())
 }

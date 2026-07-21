@@ -57,19 +57,19 @@ in `plan.md`.
 
 ## Slice R3 — conviction routing
 
-- [ ] T116-R3 RED: pin staging-closed Convict plus wrong convictor/hunter,
+- [X] T116-R3 RED: pin staging-closed Convict plus wrong convictor/hunter,
       output-index reuse, under/over-payment, extra-asset/datum, and retained
       bond/deposit negatives.
-- [ ] T116-R3 GREEN: reopen ACTIVE/ARMED/FROZEN Convict with exact unchanged
+- [X] T116-R3 GREEN: reopen ACTIVE/ARMED/FROZEN Convict with exact unchanged
       TombstoneV1 and dedicated enterprise outputs (`D+B`, `D`+`B`, or `D`)
       using distinct ARMED indices.
-- [ ] T116-R3 Preserve EE binding, conflict axes, witness distinctness,
+- [X] T116-R3 Preserve EE binding, conflict axes, witness distinctness,
       terminal token, allowed re-registration, and benign self-conviction;
       prove protected `D_reg`/`B` cannot remain free change while unreserved
       surplus may remain ordinary transaction change.
-- [ ] T116-R3 Keep stable full-context Convict/value-routing identifiers for
+- [X] T116-R3 Keep stable full-context Convict/value-routing identifiers for
       R4 traceability without changing the Lean theorem inventory.
-- [ ] T116-R3 Full gate green; commit exactly
+- [X] T116-R3 Full gate green; commit exactly
       `feat(116): route conviction deposits and freeze bonds` with exactly
       `Tasks: T116-R3`.
 

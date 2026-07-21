@@ -45,24 +45,86 @@ receipted the anchoring evidence.**
 | Divergence | On-chain consequence | Trigger |
 |---|---|---|
 | Cardano-first attempt on a witnessed AID | **Rejected before activation** — no successor checkpoint and therefore no action under the proposed keys | Advance lacks the configured threshold's receipts |
-| Cardano behind (lag) | **Frozen** — advance-only until the controller catches up; consumers fail closed by address; no conviction bounty | Anyone presents the witnessed later KEL event |
-| Recoverable or ambiguous conflict | **Frozen/disputed** — preserve the same token and allow a valid supported recovery/correction | Anyone presents objective mismatch or duplicity evidence that is not provably terminal |
+| Cardano behind (lag) | **Armed, then frozen only after abandonment** — Arm immediately moves the checkpoint from bare-role ACTIVE to ARMED `0x02`, so consumers fail closed; Claim moves it to FROZEN `0x00` only after a full unanswered `W_freeze` | Anyone presents the witnessed later KEL event; Claim pays only the hunter recorded by Arm |
+| Recoverable or ambiguous conflict | **Fail closed under its owning dispute rule** — preserve the same token for a supported recovery/correction; this is not a direct #116 ACTIVE-to-FROZEN shortcut | Anyone presents objective mismatch or duplicity evidence that is not provably terminal |
 | Irreconcilable V1 fork | **Convicted** — move the token to a permanent tombstone; prover paid | Anyone proves two incompatible, controller-threshold-signed and threshold-witness-receipted nondelegated establishment rotations from the same prior commitment |
 
 ```mermaid
 stateDiagram-v2
     [*] --> Active : genesis — icp + hash-proof mint (#91)
     Active --> Active : advance — dual threshold + witness receipts
-    Active --> Frozen : later KEL or recoverable/ambiguous conflict
-    Frozen --> Active : catch up or valid V1 correction
+    Active --> Armed : Arm — witnessed later KEL event
+    Armed --> Active : Advance before deadline — retain B
+    Armed --> Frozen : Claim at/after deadline — B to hunter
+    Frozen --> Active : Advance thaw — re-post B
     Active --> Tombstone : irreconcilable V1 conviction
+    Armed --> Tombstone : irreconcilable V1 conviction
     Frozen --> Tombstone : irreconcilable V1 conviction
     Tombstone --> Active : re-register — fresh token, if KERI still carries the AID
 ```
 
+### Bonded lag lifecycle
+
+The role address is the consumer boundary: ACTIVE uses the bare checkpoint role; FROZEN is
+`0x00`, TOMBSTONE is `0x01`, and ARMED is `0x02`. ARMED wraps the checkpoint datum with
+`hunter_pkh` and `deadline`. A consumer MUST accept only the bare ACTIVE role as current;
+ARMED and FROZEN MUST fail closed immediately by address. Arming therefore protects
+consumers at once but pays nothing. It is not an immediate ACTIVE-to-FROZEN transition.
+
+`B` (the freeze bond) and `D_reg` (the conviction deposit) are separate deployment
+parameters. ACTIVE and ARMED carry `min-ADA + D_reg + B`; FROZEN carries
+`min-ADA + D_reg`. An Arm transaction must have a finite validity upper bound `u`, from
+which the validator derives `deadline = u + W_freeze`. An ordinary permissionless Advance
+responds from ARMED only when its validity upper bound is strictly before `deadline` and
+retains `B`; Claim requires a validity lower bound at or after `deadline`, pays exactly `B`
+to the recorded `hunter_pkh`, and enters FROZEN. An ordinary permissionless Advance thaws
+FROZEN by applying the real next KEL event and re-posting `B`. Neither response nor thaw
+requires current, historical, or retired key authority beyond the public event proof.
+
+The economics reward abandonment cleanup, not lag. A responsive or catching-up checkpoint
+pays nothing; a full unanswered `W_freeze` pays the recorded hunter. A third party that
+funds `D_reg+B` at registration or adds `B` for a thaw makes an on-chain donation and gains
+no refund right; any commercial compensation is off chain. Value above the required
+continuing-output minimum remains ordinary transaction change.
+
+Convict preserves the token and min-ADA at TOMBSTONE while routing the two economic
+components by the input role: from ACTIVE, `D_reg+B` goes to the convictor; from ARMED,
+`D_reg` goes to the convictor and `B` to the recorded hunter; from FROZEN, `D_reg` goes to
+the convictor.
+
+### Normative anti-griefing invariants
+
+The final lifecycle MUST satisfy both rules below; it MUST NOT create an absorbing busy
+state.
+
+1. **Advance-totality.** From every reachable live behind state, at every slot, progress to
+   ACTIVE at the next KEL sequence MUST remain admissible within at most two transitions.
+   ACTIVE, FROZEN, and held #117 CLOSING use one ordinary permissionless Advance; ARMED
+   uses one before its hard deadline, while expired ARMED protects the hunter's earned
+   Claim and progresses by Claim followed by thaw-Advance. TOMBSTONE alone is terminal.
+   No actor has exclusive authority to submit these public projections.
+2. **Bounded adversarial interference.** Every adversarial touch MUST either apply the real
+   next KEL event, open one bounded exclusive state window, or require later-event/fork
+   evidence the adversary cannot fabricate. Arm is possible only once per genuinely-behind
+   ACTIVE state; repeated Arm and early Claim MUST reject; before the deadline ARMED admits
+   no proof-free state change other than its ordinary Advance response. A current ACTIVE
+   checkpoint has no permissionless spender. State exclusion MUST be impossible absent
+   block-level censorship.
+
+Held #117 adds CLOSING `0x03` and a datum-key-gated CloseIntent with its distinct deployment
+parameter `W_close`, never `W_freeze`. A false intent must be voidable in one transaction by
+ordinary permissionless Advance, even after the close deadline until finalize wins the
+race. No cryptographic express-close or pre-rotation shortcut is sound.
+
+This branch is deliberately not deployable: #116 currently opens only Arm, Claim, and
+Convict. #114 will open Register with `B`; #115 will open ordinary Advance, including ARMED
+response and FROZEN thaw; #117 will open CLOSING and Close. The reserved Register, Advance,
+and Close transitions remain fail closed here.
+
 The tombstone is terminal **for that token**: the quantity-one token is **moved** to the
 designated tombstone address (not burned), where it stands as the permanent, queryable
-conviction record while the whole seized deposit is paid to the prover. It does **not** bar
+conviction record while retaining its min-ADA. The exact conviction payouts are defined
+above. It does **not** bar
 the AID — Cardano mirrors KERI, so if the identity legitimately continues in KERI it may
 register a fresh checkpoint, and any renewed fork is convicted again, forfeiting another
 deposit. There is no mint-once unicity and no permanent re-registration bar. Neither evidence
@@ -96,7 +158,7 @@ event-receipt chain.
 
 **KERI duplicity detection.** Detecting that a controller published conflicting KERI events is off-chain work (watchers, witness receipts). Once detected, the evidence *can* be recorded on-chain as a permanent [duplicity freeze](../architecture/identity-ops.md#duplicity-freeze); the proposed [super watcher](super-watcher.md) is a **permissionless cross-plane relayer and evidence submitter** (KERI ↔ Cardano + the R-TEL mirror) that **relays** valid anchoring transitions and **submits** the duplicity / correspondence proofs that authorize a freeze — **not** a trusted oracle, identity authority, key custodian, backup service, recovery authority, or authoritative indexer, and it never chooses truth when cryptographic evidence is absent. The chain itself never observes KERI.
 
-**Instant revocation of data-plane authority.** Closing or freezing an identity revokes value-write authority at the next update — cages require that the referenced checkpoint is the AID's **current live UTxO in the accepted mint/spend lineage** (not a closed/tombstoned one) **and** that the AID is **absent from the separate shared R-FRZ freeze registry** — but a compromised current key retains value-write capability during the [synchronization lag](#synchronization-lag) window until the [emergency freeze](../architecture/identity-ops.md#emergency-freeze) or rotation lands. These are two **validation rules**, not datum fields: lifecycle status is **not** a `CheckpointDatum` field (the datum carries only the AID/sequence binding + current weighted key state), and freeze lives in R-FRZ. That shared **R-FRZ** registry is an **attacker-contendable residual** (not sovereign; unlike the per-AID checkpoint, unrelated parties can contend on it) — the sovereign emergency path must not reintroduce a shared attacker-contendable UTxO (downstream #24).
+**Instant revocation of data-plane authority.** Arming or freezing an identity revokes value-write authority at the lifecycle transition — cages require that the referenced checkpoint is the AID's **current live UTxO in the accepted mint/spend lineage** at the bare ACTIVE role address, not ARMED, FROZEN, closed, or tombstoned. Lifecycle exclusion is therefore enforced on the sovereign per-AID checkpoint itself, without a shared freeze-registry UTxO. A compromised old key retains value-write capability during the [synchronization lag](#synchronization-lag) window only until a successor Advance or valid Arm reaches the ledger.
 
 **Next-key compromise before rotation.** If `next_key` is stolen before rotation, the on-chain state provides no protection. The response is to rotate before the attacker does (a race condition outside the protocol).
 
@@ -127,7 +189,7 @@ Under the sovereign per-AID checkpoint (#92), discovery of an AID's current auth
 | Genesis semantic projection (keys/threshold faithfully decoded) | Partial — oracle/attester-trusted with permissionless challenge + mechanical freeze | Trusted slash / unfreeze (the honest #91 residual) |
 | Current authority thereafter | Yes — the inductively validated sovereign per-AID checkpoint (current weighted keys/threshold; each advance proved its step; consumer does a bounded boundary check) | — |
 | Value-write was authorized | Yes — against the sovereign per-AID checkpoint (#92) | — |
-| Identity has not been closed or frozen | Yes — the consumer enforces the applicable checkpoint lifecycle / close lineage (the referenced checkpoint is the current live UTxO in the accepted mint/spend lineage) plus the separate shared R-FRZ freeze rule (attacker-contendable) | — |
+| Identity has not been armed, frozen, closed, or tombstoned | Yes — the consumer requires the sovereign checkpoint's current live UTxO in the accepted mint/spend lineage at the bare ACTIVE role address | — |
 | Key was not stolen / AID not compromised | No | Off-chain compromise signal — watchers / KERI duplicity detection (a distinct plane from current-actor authority and from historical credential admission) |
 | KEL is complete and un-forked | No | Witness receipts |
 | Settlement is final | No | Praos/Genesis finality depth |
@@ -142,9 +204,9 @@ After a KERI rotation in Veridian, the Cardano registry still shows the old key 
 
 Applications that need consistency across both registries must account for this lag. Distinguish two things: **Veridian / KERI governs identity and rotations** (the identity source of truth), and the mirror caveat applies to the **credential / external plane** (R-TEL / R-ACDC / R-MAP). But the **current live sovereign per-AID checkpoint is the authoritative Cardano current-actor boundary** — R-KEL identity is an on-chain checkpoint, not a mere mirror: for **current Cardano authorization**, the current checkpoint is authoritative (during the lag window a consumer simply reads the checkpoint as it currently stands).
 
-**The honest Cardano-only safety window.** Sovereignty does not eliminate synchronization lag. When KERI has rotated but the checkpoint has not yet been advanced or frozen, a **Cardano-only consumer still sees, and may accept, the old checkpoint key**. The old key is **stale in KERI** immediately, but **Cardano enforcement changes only when a successor checkpoint, an applicable freeze, or valid evidence reaches the ledger**. This is a real safety window, not a second identity branch.
+**The honest Cardano-only safety window.** Sovereignty does not eliminate synchronization lag. When KERI has rotated but the checkpoint has not yet been advanced or armed, a **Cardano-only consumer still sees, and may accept, the old checkpoint key**. The old key is **stale in KERI** immediately, but **Cardano enforcement changes only when a successor Advance or valid Arm reaches the ledger**. Arm immediately moves the checkpoint to consumer-fail-closed ARMED; only a later unanswered Claim enters FROZEN. This is a real safety window, not a second identity branch.
 
-**Honest consumer contract.** Every future protected action references the current unspent per-AID checkpoint and meets its current weighted threshold; historical credentials still use KEL / TEL admission evidence. Because a Cardano transaction cannot know about an unseen off-chain KERI event, high-security protocols **fail closed** once a later witnessed event, an active freeze, or a valid mismatch / duplicity proof is presented, and **must publish an anchoring-freshness policy / SLA** rather than pretend replay protection alone supplies revocation freshness. #92 invents no universal numeric timeout; the appropriate freshness window is a per-use-case policy the protocol publishes.
+**Honest consumer contract.** Every future protected action references the current unspent per-AID checkpoint at the bare ACTIVE role address and meets its current weighted threshold; historical credentials still use KEL / TEL admission evidence. Because a Cardano transaction cannot know about an unseen off-chain KERI event, high-security protocols **fail closed** as soon as valid later-event evidence arms the checkpoint, as well as on FROZEN or TOMBSTONE, and **must publish an anchoring-freshness policy / SLA** rather than pretend replay protection alone supplies revocation freshness. #92 invents no universal numeric timeout; the appropriate freshness window is a per-use-case policy the protocol publishes.
 
 ## Relationship to KERI
 

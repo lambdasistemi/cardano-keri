@@ -105,23 +105,23 @@ in `plan.md`.
 
 ## Slice R5 — freeze lifecycle documentation
 
-- [ ] T116-R5 Driver/navigator update only the #116-owned freeze fragments in
+- [X] T116-R5 Driver/navigator update only the #116-owned freeze fragments in
       `docs/design/trust-model.md`,
       `docs/blog/self-certifying-identities-on-cardano.md`, and
       `docs/milestones-deck/index.html`.
-- [ ] T116-R5 Explain ARMED `0x02`, raw validity-range deadlines, exact
+- [X] T116-R5 Explain ARMED `0x02`, raw validity-range deadlines, exact
       B/D_reg claims, permissionless response/thaw, the economic (not
       cryptographic or bounty-paid) incentive, and donated third-party funds.
-- [ ] T116-R5 Make the two-invariant theorem the centerpiece: M1 blog central
+- [X] T116-R5 Make the two-invariant theorem the centerpiece: M1 blog central
       argument + state machine + per-move adversarial table; trust-model
       normative advance-totality/bounded-interference rules; deck one-liner
       “anyone can project the public truth; no one can lie about it or lock you
       out of it.”
-- [ ] T116-R5 State held #117 as CLOSING `0x03` with distinct `W_close`,
+- [X] T116-R5 State held #117 as CLOSING `0x03` with distinct `W_close`,
       mandatory one-tx ordinary Advance-void, and no cryptographic
       express-close; never reuse `W_freeze` for Close, and leave #114
       registration/#115 normal-advance fragments untouched.
-- [ ] T116-R5 Run `mkdocs build --strict`, lychee, and the full gate; commit
+- [X] T116-R5 Run `mkdocs build --strict`, lychee, and the full gate; commit
       exactly `docs(116): explain the bonded freeze lifecycle` with exactly
       `Tasks: T116-R5`.
 

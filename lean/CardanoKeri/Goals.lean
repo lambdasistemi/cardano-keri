@@ -49,7 +49,7 @@ theorem adversarial_advance_is_progress (p : Params) (env : Env)
     ∃ k : Seq, cfg.state.seq? = some k ∧
       cfg'.state = .active (k + 1) ∧
       env.kel.hasEvent (k + 1) := by
-  sorry
+  cases hstep <;> simp_all [MachState.seq?, Kel.behind]
 
 /-- **Goal 4 — bounded_churn** (restated machine-level from
 `bounded_interference`). In the permissionless fragment of the machine — no
@@ -80,7 +80,7 @@ theorem armed_exclusive_window (p : Params) (env : Env)
     (hstep : Step p env ⟨.armed k hunter d, led⟩ tx cfg')
     (hwin : tx.slot < d) :
     tx.act = .advance ∨ ∃ c : Addr, tx.act = .convict c := by
-  sorry
+  cases hstep <;> simp_all <;> (rename_i hd; exact absurd hwin (Nat.not_lt.mpr hd))
 
 /-- **Goal 6 — bond_transfer_only_via_elapsed_window** (restated
 machine-level from `honest_lag_never_pays`; merges the goal-8 window
@@ -115,7 +115,7 @@ theorem abandonment_pays_exactly_B (p : Params) (env : Env)
     cfg'.state = .frozen k ∧
     cfg'.ledger.outflows = led.outflows ++ [⟨hunter, p.B, .bounty⟩] ∧
     cfg'.ledger.deposits = led.deposits := by
-  sorry
+  cases hstep <;> simp_all
 
 /-- **Goal 8 — frozen_implies_true_silence.** Reaching Frozen requires a
 trace segment ≥ `Wf` slots long containing no advance: an arming (arm or
@@ -146,7 +146,8 @@ theorem close_lie_always_voidable (p : Params) (env : Env)
         Step p env ⟨.closing k r d, led⟩ ⟨t, .challengeClose c⟩ cfg') ∧
       (∃ cfg' : Config,
         Step p env ⟨.closing k r d, led⟩ ⟨t, .advance⟩ cfg') := by
-  sorry
+  intro t
+  exact ⟨fun c => ⟨_, Step.challengeClose c hbehind⟩, ⟨_, Step.advanceClosing hbehind⟩⟩
 
 -- Goal 10 (`close_lie_never_finalizes_under_liveness`) is DROPPED: challenger
 -- fairness is an off-chain assumption (scope correction, 2026-07-21). The
@@ -165,7 +166,10 @@ theorem close_at_tip_unchallengeable (p : Params) (env : Env)
       ¬ Step p env ⟨.closing k r d, led⟩ ⟨t, .advance⟩ cfg') ∧
     (∀ t : Slot, d ≤ t → ∃ cfg' : Config,
       Step p env ⟨.closing k r d, led⟩ ⟨t, .finalizeClose⟩ cfg') := by
-  sorry
+  refine ⟨fun t c cfg' hstep => ?_, fun t cfg' hstep => ?_,
+    fun t ht => ⟨_, Step.finalizeClose ht⟩⟩
+  · cases hstep <;> simp_all [Kel.behind]
+  · cases hstep <;> simp_all [Kel.behind]
 
 /-- **Goal 12 — current_state_is_quiet.** At the tip, Active, and absent
 fork evidence (Q-L01), every admissible spend is a closeIntent — the one
@@ -176,7 +180,7 @@ theorem current_state_is_quiet (p : Params) (env : Env)
     (htip : ¬ env.kel.behind k) (hfork : ¬ env.fork)
     (hstep : Step p env ⟨.active k, led⟩ tx cfg') :
     ∃ r : Addr, tx.act = .closeIntent r := by
-  sorry
+  cases hstep <;> simp_all [Kel.behind]
 
 /-- **Goal 13 — value_conservation** (per-transition form). Every transition
 preserves the balance: value carried on the UTxO plus cumulative payouts
@@ -199,7 +203,14 @@ admissible from every live state, at every slot, by any convictor. -/
 theorem convict_dominance (p : Params) (env : Env) (hfork : env.fork)
     (cfg : Config) (hlive : cfg.state.live) (t : Slot) (c : Addr) :
     ∃ cfg' : Config, Step p env cfg ⟨t, .convict c⟩ cfg' := by
-  sorry
+  obtain ⟨s, led⟩ := cfg
+  cases s with
+  | absent => exact absurd hlive (by simp [MachState.live])
+  | active k => exact ⟨_, Step.convictActive c hfork⟩
+  | armed k h d => exact ⟨_, Step.convictArmed c hfork⟩
+  | frozen k => exact ⟨_, Step.convictFrozen c hfork⟩
+  | closing k r d => exact ⟨_, Step.convictClosing c hfork⟩
+  | tombstone k => exact absurd hlive (by simp [MachState.live])
 
 /-- **Goal 15 — tombstone_terminal_but_no_aid_bar.** A tombstone admits no
 transitions; AND a fresh register on a different instance of the SAME AID is
@@ -214,7 +225,15 @@ theorem tombstone_terminal_but_no_aid_bar (p : Params) (env : Env) :
       sys j = ⟨.absent, ledj⟩ →
       env.kel.hasEvent 0 →
       ∃ sys' : Sys, SysStep p env sys j ⟨t, .register⟩ sys') := by
-  sorry
+  constructor
+  · intro k led tx cfg' hstep
+    nomatch hstep
+  · intro sys i j k ledi ledj t hne hsi hsj hicp
+    have hstep : Step p env (sys j) ⟨t, .register⟩
+        ⟨.active 0, { ledj with deposits := ledj.deposits + (p.minAda + p.D + p.B) }⟩ := by
+      rw [hsj]
+      exact Step.register hicp
+    exact ⟨_, SysStep.step hstep⟩
 
 /-- **Goal 16 — replay_convergence** (restated machine-level: existential
 reachability only, no adversarial-interleaving quantifier). From the empty

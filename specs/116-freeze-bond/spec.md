@@ -42,6 +42,8 @@ Convict. #114 and #115 remove those staging closures in their own scopes.
   Aiken traceability chain over the merged #124 lifecycle model.
 - update #116-owned freeze narrative in the docs, M1 slides, and M1 blog in a
   pair-owned slice gated by strict MkDocs and lychee.
+- extend the existing `withDevnet` suite with compiled checkpoint lifecycle
+  builders plus an honest fail-closed #116 staging smoke against a real node.
 
 ### Out of scope
 
@@ -233,6 +235,16 @@ behavior. Mainnet deployment and #117 resume remain prohibited until #114 and
 - explicit staging tests that Register and every Advance remain fail closed.
 - stable full-context test identifiers for the #116 Arm, Claim, and Convict
   rows consumed by the Lean traceability map.
+- a real-node `withDevnet` staging smoke that submits Register, Advance, and
+  Close to the applied #116 validator and asserts each transaction is rejected;
+  this is a positive test of the staging boundary, not a skipped success path.
+- compiled transaction builders and named E2E scenarios for Arm,
+  response-before-deadline, Claim at/after the deadline, and Thaw. Because #116
+  cannot create a checkpoint while Register is closed and cannot respond/thaw
+  while Advance is closed, the full freeze scenarios remain explicitly
+  pending with that staging rationale until #114/#115 open their dependencies.
+  No fake validator, bypass mint, or synthetic-node success substitutes for
+  the production validator.
 
 ## Normative anti-griefing invariants
 
@@ -310,6 +322,24 @@ required direct Advance-void; none implies that `W_freeze` protects Close or
 that a cryptographic express-close exists. They do not rewrite registration or
 normal-Advance fragments owned by #114/#115. The slice runs the
 repository-equivalent `mkdocs build --strict` and lychee link gate.
+
+## Staged live-node E2E slice
+
+#116 extends `offchain/e2e` using the existing `CageTxBuilder`/`withDevnet`
+pattern and existing CI jobs. It checks in the real transaction-construction
+surface required for Register, Arm, Advance response, Claim, Thaw, and Close,
+including validity ranges expressed through the node-facing slot-to-POSIX-ms
+boundary. The production #116 validator remains the script under test.
+
+At the #116 staging HEAD the executable smoke MUST submit and observe ledger
+rejection for Register, Advance, and Close. Those failures prove on a real
+devnet that the staged combined validator is genuinely closed where the
+ticket says it is closed. Arm/response/Claim/Thaw scenarios MUST compile and
+remain named but pending with the dependency reason: closed Register prevents
+creating the initial checkpoint, and closed Advance prevents response/thaw.
+They are activated incrementally by #114 and #115; #116 MUST NOT add a fixture
+validator, privileged mint, test-only state injection, or any other route
+around the production dispatch matrix.
 
 ## Lean -> Aiken traceability gate
 
@@ -419,3 +449,7 @@ complete 17/17 executable map is a hard failure.
     mappings; the drift gate, pure mirror, monadic traces, generated parity,
     and honest-limit header are checked in and green without opening any
     staged #114/#115/#117 validator action.
+12. The existing `withDevnet` CI runs a real-node fail-closed checkpoint smoke
+    for Register/Advance/Close, while production-shaped Arm/response/Claim/Thaw
+    builders and scenarios compile and are explicitly pending for the named
+    staging dependencies. No test-only consensus bypass is introduced.

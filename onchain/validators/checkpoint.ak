@@ -23,11 +23,15 @@
 
 use aiken/collection/dict
 use aiken/collection/list
-use cardano/address.{Script, from_script}
+use aiken/interval
+use cardano/address.{Script, from_script, from_verification_key}
 use cardano/assets.{
-  PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
+  PolicyId, Value, from_asset, from_lovelace, lovelace_of, merge, quantity_of,
+  tokens,
 }
-use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
+use cardano/transaction.{
+  InlineDatum, NoDatum, OutputReference, Transaction, find_input,
+}
 use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
@@ -36,12 +40,16 @@ use cardano_keri/checkpoint/enforcement.{
   ConvictValid, EnforcementBindingValid, EnforcementEvidence, FreezeValid,
   TombstoneV1, bind_enforcement_evidence, convict_predicate, freeze_predicate,
 }
+use cardano_keri/checkpoint/freeze_bond.{
+  ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
+  freeze_bond_valid, freeze_window_valid,
+}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
   registration_predicate, valid_registration_deposit,
 }
-use cardano_keri/checkpoint/role.{Active, Frozen, Tombstone}
+use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 
 /// The ledger min-ADA floor the R8 deposit arithmetic runs over (spec R8:
 /// state-output lovelace `>= min_ada + d_reg`). A conservative fixed
@@ -66,8 +74,9 @@ pub type MintRedeemer {
 /// fail-closed.
 pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
-  Freeze { evidence: EnforcementEvidence }
-  Convict { evidence: EnforcementEvidence }
+  Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  ClaimFreeze { hunter_output_index: Int }
+  Convict
   Close
 }
 
@@ -76,6 +85,7 @@ pub type SpendRedeemer {
 /// matrix; unknown roles and every role/datum mismatch fail during dispatch.
 type SpendInputRole {
   ActiveCheckpoint
+  ArmedCheckpoint
   FrozenCheckpoint
   TerminalTombstone
 }
@@ -85,20 +95,14 @@ validator checkpoint(
   hash_proof_policy: PolicyId,
   network_id: Int,
   d_reg: Int,
+  freeze_bond: Int,
+  freeze_window: Int,
 ) {
-  mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
+  mint(_redeemer: MintRedeemer, _policy_id: PolicyId, _tx: Transaction) {
     expect valid_registration_deposit(d_reg)
-    when redeemer is {
-      Register { evidence } ->
-        validate_register(
-          hash_proof_policy,
-          network_id,
-          d_reg,
-          evidence,
-          policy_id,
-          tx,
-        )
-    }
+    expect freeze_bond_valid(freeze_bond)
+    expect freeze_window_valid(freeze_window)
+    fail
   }
 
   spend(
@@ -108,19 +112,20 @@ validator checkpoint(
     tx: Transaction,
   ) {
     expect valid_registration_deposit(d_reg)
+    expect freeze_bond_valid(freeze_bond)
+    expect freeze_window_valid(freeze_window)
     expect rdm: SpendRedeemer = redeemer
-    expect Some(input_role) = classify_spend_input(own_ref, tx)
+    expect Some(input_role) = classify_spend_input(
+      d_reg,
+      freeze_bond,
+      own_ref,
+      tx,
+    )
     when Pair(input_role, rdm) is {
-      Pair(ActiveCheckpoint, Advance { evidence }) ->
-        validate_advance(network_id, d_reg, evidence, own_ref, tx)
-      Pair(FrozenCheckpoint, Advance { evidence }) ->
-        validate_advance(network_id, d_reg, evidence, own_ref, tx)
-      Pair(ActiveCheckpoint, Freeze { evidence }) ->
-        validate_freeze(evidence, own_ref, tx)
-      Pair(ActiveCheckpoint, Convict { evidence }) ->
-        validate_convict(evidence, own_ref, tx)
-      Pair(FrozenCheckpoint, Convict { evidence }) ->
-        validate_convict(evidence, own_ref, tx)
+      Pair(ActiveCheckpoint, Freeze { evidence, hunter_pkh }) ->
+        validate_arm(freeze_window, evidence, hunter_pkh, own_ref, tx)
+      Pair(ArmedCheckpoint, ClaimFreeze { hunter_output_index }) ->
+        validate_claim(freeze_bond, hunter_output_index, own_ref, tx)
       _ -> fail
     }
   }
@@ -134,6 +139,8 @@ validator checkpoint(
 /// family before dispatching a redeemer. In particular, TOMBSTONE is a known
 /// terminal role with no admitted redeemer.
 fn classify_spend_input(
+  d_reg: Int,
+  freeze_bond: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Option<SpendInputRole> {
@@ -141,10 +148,36 @@ fn classify_spend_input(
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect InlineDatum(datum_data) = own_input.output.datum
   if own_input.output.address == role.address(own_hash, Active) {
-    expect V1(_): CheckpointDatum = datum_data
+    expect V1(tip): CheckpointDatum = datum_data
+    expect
+      checkpoint_input_value_valid(
+        own_hash,
+        tip.cesr_aid,
+        checkpoint_min_ada + d_reg + freeze_bond,
+        own_input.output.value,
+      )
     Some(ActiveCheckpoint)
+  } else if own_input.output.address == role.address(own_hash, Armed) {
+    expect armed: ArmedDatum = datum_data
+    expect ArmedDatumValid = armed_datum_well_formed(armed)
+    let ArmedV1 { checkpoint: armed_checkpoint, .. } = armed
+    expect
+      checkpoint_input_value_valid(
+        own_hash,
+        armed_checkpoint.cesr_aid,
+        checkpoint_min_ada + d_reg + freeze_bond,
+        own_input.output.value,
+      )
+    Some(ArmedCheckpoint)
   } else if own_input.output.address == role.address(own_hash, Frozen) {
-    expect V1(_): CheckpointDatum = datum_data
+    expect V1(tip): CheckpointDatum = datum_data
+    expect
+      checkpoint_input_value_valid(
+        own_hash,
+        tip.cesr_aid,
+        checkpoint_min_ada + d_reg,
+        own_input.output.value,
+      )
     Some(FrozenCheckpoint)
   } else if own_input.output.address == role.address(own_hash, Tombstone) {
     expect _: TombstoneV1 = datum_data
@@ -152,6 +185,20 @@ fn classify_spend_input(
   } else {
     None
   }
+}
+
+/// A live checkpoint input carries exactly the one AID token derived from its
+/// inner datum and meets the protected lovelace reserve for its role.
+fn checkpoint_input_value_valid(
+  own_hash: PolicyId,
+  cesr_aid: ByteArray,
+  reserve: Int,
+  value: Value,
+) -> Bool {
+  let aid_name = deriveAidAssetName(cesr_aid)
+  dict.to_pairs(tokens(value, own_hash)) == [Pair(aid_name, 1)] && lovelace_of(
+    value,
+  ) >= reserve
 }
 
 /// The `Register` branch: R1/R2/R5 transaction shape here, R3/R4/R6/R7/R8
@@ -219,15 +266,18 @@ fn validate_register(
   True
 }
 
-/// Permissionless ACTIVE -> FROZEN transition. The signed wire evidence is
-/// EE0-EE9-bound before the pure freeze predicate runs; the state output then
-/// preserves the input datum and complete value exactly at the FROZEN role.
-fn validate_freeze(
+/// Permissionless ACTIVE -> ARMED transition. The signed wire evidence is
+/// EE0-EE9-bound before the unchanged freeze predicate runs. The raw finite
+/// validity upper endpoint anchors the stored deadline; inclusivity is never
+/// normalized inward.
+fn validate_arm(
+  freeze_window: Int,
   evidence: EnforcementEvidence,
+  hunter_pkh: ByteArray,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect own_input.output.address == role.address(own_hash, Active)
@@ -240,14 +290,61 @@ fn validate_freeze(
     evidence,
   )
   expect freeze_predicate(tip, decoded) == FreezeValid
+  expect !interval.is_empty(validity_range)
+  expect interval.Finite(upper) = validity_range.upper_bound.bound_type
+  let deadline = upper + freeze_window
+  let armed = ArmedV1 { checkpoint: tip, hunter_pkh, deadline }
+  expect ArmedDatumValid = armed_datum_well_formed(armed)
   expect [state_output] = list.filter(
     outputs,
-    fn(output) { output.address == role.address(own_hash, Frozen) },
+    fn(output) { output.address == role.address(own_hash, Armed) },
   )
   expect state_output.value == own_input.output.value
   expect quantity_of(state_output.value, own_hash, aid_name) == 1
   expect InlineDatum(successor_data) = state_output.datum
-  expect successor_data == tip_data
+  expect successor: ArmedDatum = successor_data
+  expect successor == armed
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  True
+}
+
+/// Permissionless ARMED -> FROZEN claim at or after the stored hard deadline.
+/// The named enterprise-key output receives exactly B and the continuing
+/// checkpoint keeps the complete input Value minus precisely that lovelace.
+fn validate_claim(
+  freeze_bond: Int,
+  hunter_output_index: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, Armed)
+  expect InlineDatum(armed_data) = own_input.output.datum
+  expect armed: ArmedDatum = armed_data
+  expect ArmedDatumValid = armed_datum_well_formed(armed)
+  let ArmedV1 { checkpoint: tip, hunter_pkh, deadline } = armed
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect !interval.is_empty(validity_range)
+  expect interval.Finite(lower) = validity_range.lower_bound.bound_type
+  expect lower >= deadline
+  expect Some(hunter_output) = list.at(outputs, hunter_output_index)
+  expect hunter_output.address == from_verification_key(hunter_pkh)
+  expect hunter_output.value == from_lovelace(freeze_bond)
+  expect NoDatum = hunter_output.datum
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == role.address(own_hash, Frozen) },
+  )
+  let expected_value = own_input.output.value
+    |> merge(from_lovelace(-freeze_bond))
+  expect state_output.value == expected_value
+  expect quantity_of(state_output.value, own_hash, aid_name) == 1
+  expect InlineDatum(successor_data) = state_output.datum
+  expect V1(successor): CheckpointDatum = successor_data
+  expect successor == tip
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
 }

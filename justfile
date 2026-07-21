@@ -153,10 +153,11 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
-# Measure and mechanically gate the nine final checkpoint ACCEPT paths. The
-# exact title set prevents obsolete or partial fixtures from substituting for
-# the final matrix; every row must pass and remain at or below the unrounded
-# 25%-headroom limits (10,500,000 memory and 7,500,000,000 CPU).
+# Measure and mechanically gate the three live R2 checkpoint ACCEPT paths.
+# This staging set is replaced by R4's final table; exact titles prevent
+# staging-closed Register/Advance/Convict paths from being smuggled back in.
+# Every row must pass and retain the existing hard execution-unit limits
+# (10,500,000 memory and 7,500,000,000 CPU).
 measure-checkpoint:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -167,15 +168,9 @@ measure-checkpoint:
       aiken check --plain-numbers -m measure_checkpoint | tee "$1"
       jq -e '\''
         [
-          "measure_checkpoint_register_2key",
-          "measure_checkpoint_register_witnessed",
-          "measure_checkpoint_register_7key",
-          "measure_checkpoint_freeze_lag",
-          "measure_checkpoint_freeze_2key",
-          "measure_checkpoint_freeze_7key",
-          "measure_checkpoint_convict_witnessed_active",
-          "measure_checkpoint_convict_witnessed_frozen",
-          "measure_checkpoint_advance_from_frozen"
+          "measure_checkpoint_arm_2key",
+          "measure_checkpoint_arm_7key",
+          "measure_checkpoint_claim"
         ] as $required
         | [.modules[].tests[] | select(.title | startswith("measure_checkpoint"))] as $tests
         | ($tests | map(.title)) as $actual

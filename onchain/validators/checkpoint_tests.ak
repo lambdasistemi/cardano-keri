@@ -36,19 +36,21 @@ use cardano/address.{
 }
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
+  Datum, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+  placeholder,
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Active, Frozen, Tombstone}
+use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 use checkpoint.{Advance, Close, Register}
 
@@ -71,6 +73,17 @@ type Slice5SpendRedeemer {
   Slice5Freeze { evidence: EnforcementEvidence }
   Slice5Convict { evidence: EnforcementEvidence }
   Slice5Close
+}
+
+/// Test-side target wire for T116-R2. Its constructor order is the exact
+/// six-parameter validator's spend wire; the RED helper below still invokes
+/// the delivered four-parameter script so this test-only diff type-checks.
+type R2SpendRedeemer {
+  R2Advance { evidence: AdvanceEvidence }
+  R2Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  R2ClaimFreeze { hunter_output_index: Int }
+  R2Convict
+  R2Close
 }
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
@@ -155,6 +168,8 @@ fn run_register(e: RegistrationEvidence, tx: Transaction) -> Bool {
     hp_policy,
     network_id,
     d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
     Register { evidence: e },
     policy,
     tx,
@@ -172,6 +187,8 @@ fn run_register_with_deposit(
     hp_policy,
     network_id,
     d_reg_parameter,
+    r2_freeze_bond,
+    r2_freeze_window,
     Register { evidence: e },
     policy,
     tx,
@@ -182,7 +199,7 @@ fn run_register_with_deposit(
 // positives — the four honest packages (R1+R2+R5+predicate end-to-end)
 // ---------------------------------------------------------------------
 
-test accept_register_2key() {
+test t116_r2_stage_reject_register_2key() fail {
   run_register(
     vec.pos_2key_evidence,
     register_tx(
@@ -193,7 +210,7 @@ test accept_register_2key() {
   )
 }
 
-test accept_register_7key() {
+test t116_r2_stage_reject_register_7key() fail {
   run_register(
     vec.pos_7key_evidence,
     register_tx(
@@ -204,7 +221,7 @@ test accept_register_7key() {
   )
 }
 
-test accept_register_witnessed() {
+test t116_r2_stage_reject_register_witnessed() fail {
   run_register(
     vec.pos_witnessed_evidence,
     register_tx(
@@ -215,7 +232,7 @@ test accept_register_witnessed() {
   )
 }
 
-test accept_register_weighted() {
+test t116_r2_stage_reject_register_weighted() fail {
   run_register(
     vec.pos_weighted_evidence,
     register_tx(
@@ -227,7 +244,7 @@ test accept_register_weighted() {
 }
 
 /// The final #114 Register shape has no shared coordinating state.
-test t116_s7_accept_registration_without_shared_state() {
+test t116_r2_stage_reject_registration_without_shared_state() fail {
   run_register_with_deposit(
     d_reg,
     vec.pos_2key_evidence,
@@ -242,7 +259,7 @@ test t116_s7_accept_registration_without_shared_state() {
 /// Gate-room proof (A-001 QC): an EXTRA unrelated input must be admitted —
 /// no check may assume a fixed input count or reject inputs beyond those
 /// R5 names.
-test accept_register_extra_input() {
+test t116_r2_stage_reject_register_extra_input() fail {
   let tx = register_tx(
     vec.pos_2key_datum,
     vec.pos_2key_lovelace,
@@ -257,7 +274,7 @@ test accept_register_extra_input() {
 
 /// Duplicate same-AID ACTIVE registration is an admitted controller
 /// self-harm residual.
-test t116_s7_accept_duplicate_active_registration() {
+test t116_r2_stage_reject_duplicate_active_registration() fail {
   run_register(
     vec.pos_2key_evidence,
     register_tx(
@@ -280,6 +297,8 @@ test t116_s7_reject_d_reg_below_mechanical_floor_registration_mint() fail {
     hp_policy,
     network_id,
     vec.d_reg_below_floor,
+    r2_freeze_bond,
+    r2_freeze_window,
     Register { evidence: vec.pos_2key_evidence },
     policy,
     tx,
@@ -501,6 +520,8 @@ test reject_r10_spend_fails_closed() fail {
     hp_policy,
     network_id,
     d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
     Some(datum_data),
     rdm,
     out_ref(seed_tx_id, 0),
@@ -703,6 +724,8 @@ fn run_advance(
     hp_policy,
     adv_network_id,
     d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
     None,
     redeemer,
     own_ref,
@@ -721,6 +744,8 @@ fn run_advance_with_d_reg(
     hp_policy,
     adv_network_id,
     d_reg_parameter,
+    r2_freeze_bond,
+    r2_freeze_window,
     None,
     redeemer,
     own_ref,
@@ -741,7 +766,7 @@ type NonV1Probe {
 // positives — the four honest families + gate-room
 // ---------------------------------------------------------------------
 
-test accept_advance_wit_2key() {
+test t116_r2_stage_reject_advance_wit_2key() fail {
   run_advance(
     Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
@@ -768,7 +793,7 @@ test t116_s7_reject_d_reg_below_mechanical_floor_checkpoint_spend() fail {
   )
 }
 
-test accept_advance_wit_7key() {
+test t116_r2_stage_reject_advance_wit_7key() fail {
   run_advance(
     Advance { evidence: adv_vec.pos_adv_wit_7key_evidence },
     advance_own_ref(adv_vec.pos_adv_wit_7key_spent),
@@ -780,7 +805,7 @@ test accept_advance_wit_7key() {
   )
 }
 
-test accept_advance_keep() {
+test t116_r2_stage_reject_advance_keep() fail {
   run_advance(
     Advance { evidence: adv_vec.pos_adv_keep_evidence },
     advance_own_ref(adv_vec.pos_adv_keep_spent),
@@ -792,7 +817,7 @@ test accept_advance_keep() {
   )
 }
 
-test accept_advance_downgrade() {
+test t116_r2_stage_reject_advance_downgrade() fail {
   run_advance(
     Advance { evidence: adv_vec.pos_adv_downgrade_evidence },
     advance_own_ref(adv_vec.pos_adv_downgrade_spent),
@@ -806,7 +831,7 @@ test accept_advance_downgrade() {
 
 /// Gate-room proof (#116): an EXTRA unrelated input must be admitted — no
 /// check may assume a fixed input count.
-test accept_advance_extra_input() {
+test t116_r2_stage_reject_advance_extra_input() fail {
   let tx = advance_tx(
     adv_vec.pos_adv_wit_2key_spent,
     old_adv_wit_2key,
@@ -1327,7 +1352,7 @@ fn run_freeze(
 
 // Honest REDs: current Slice-3 code rejects both because Freeze is fail-closed
 // and Advance admits only ACTIVE. GREEN must flip these exact tests.
-test t116_s4_accept_freeze_lag_real_wire() {
+test t116_r2_reject_old_direct_active_to_frozen_wire() fail {
   run_freeze(
     enf_vec.lag_freeze_wire,
     freeze_own_ref,
@@ -1335,16 +1360,20 @@ test t116_s4_accept_freeze_lag_real_wire() {
   )
 }
 
-test t116_s4_accept_advance_thaw_from_frozen() {
-  let spent = adv_vec.pos_adv_wit_2key_spent
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    advance_tx_from(
-      spent,
-      old_adv_wit_2key,
-      adv_vec.pos_adv_wit_2key_created,
+test t116_r2_stage_reject_advance_thaw_from_frozen() fail {
+  let tip = old_adv_wit_2key
+  let value = from_lovelace(min_ada + d_reg)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_r2(
+    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    r2_context(
+      tip,
       role.address(policy, Frozen),
+      V1(tip),
+      value,
+      [],
+      zero,
+      interval.everything,
     ),
   )
 }
@@ -1959,7 +1988,7 @@ fn run_convict(
 
 // Genuine RED: this is a committed, controller-and-witness-signed conflicting
 // rotation. Slice 4 cannot decode its fielded Convict wire evidence yet.
-test t116_s5_accept_convict_from_active_real_witnessed_wire() {
+test t116_r2_stage_reject_convict_from_active_real_witnessed_wire() fail {
   run_convict(
     enf_vec.fork_witnessed_convict_wire,
     convict_own_ref,
@@ -1971,7 +2000,7 @@ test t116_s5_accept_convict_from_active_real_witnessed_wire() {
   )
 }
 
-test t116_s5_accept_convict_from_frozen_real_witnessed_wire() {
+test t116_r2_stage_reject_convict_from_frozen_real_witnessed_wire() fail {
   run_convict(
     enf_vec.fork_witnessed_convict_wire,
     convict_own_ref,
@@ -2471,7 +2500,7 @@ test t116_s5_f11_reject_close_from_terminal_tombstone() fail {
 }
 
 // A same-AID tombstone does not prevent re-registration.
-test t116_s7_accept_post_conviction_same_aid_registration() {
+test t116_r2_stage_reject_post_conviction_same_aid_registration() fail {
   let d = vec.pos_2key_datum
   let key = deriveAidAssetName(d.cesr_aid)
   let tombstone = input_at(
@@ -2494,6 +2523,1058 @@ test t116_s7_accept_post_conviction_same_aid_registration() {
     vec.pos_2key_evidence,
     Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
   )
+}
+
+// ---------------------------------------------------------------------
+// T116-R2 RED — ACTIVE -> ARMED Arm and ARMED -> FROZEN Claim.
+//
+// The helper exposes the target six deployment parameters while the RED
+// implementation deliberately invokes the delivered four-parameter handler.
+// GREEN changes that one call to the exact target application after these
+// full-context tests have failed for the missing live behavior.
+// ---------------------------------------------------------------------
+
+const r2_freeze_bond: Int = 5_000_000
+
+const r2_freeze_window: Int = 500
+
+const r2_arm_upper: Int = 1_000
+
+const r2_deadline: Int = r2_arm_upper + r2_freeze_window
+
+const r2_hunter: ByteArray =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const r2_other_hunter: ByteArray =
+  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+const r2_hunter_short: ByteArray =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+fn r2_reserve_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(min_ada + d_reg + r2_freeze_bond)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+}
+
+fn r2_surplus_value(tip: CheckpointDatumV1) -> Value {
+  r2_reserve_value(tip)
+    |> merge(from_lovelace(17))
+    |> merge(from_asset(hp_policy, #"f2", 3))
+}
+
+fn r2_armed_datum(
+  tip: CheckpointDatumV1,
+  hunter_pkh: ByteArray,
+  deadline: Int,
+) -> ArmedDatum {
+  ArmedV1 { checkpoint: tip, hunter_pkh, deadline }
+}
+
+fn r2_armed_output(
+  tip: CheckpointDatumV1,
+  value: Value,
+  hunter_pkh: ByteArray,
+  deadline: Int,
+) -> Output {
+  freeze_output(
+    role.address(policy, Armed),
+    r2_armed_datum(tip, hunter_pkh, deadline),
+    value,
+  )
+}
+
+fn r2_frozen_output(tip: CheckpointDatumV1, value: Value) -> Output {
+  freeze_output(role.address(policy, Frozen), V1(tip), value)
+}
+
+fn r2_hunter_output(hunter_pkh: ByteArray, value: Value, datum: Datum) -> Output {
+  Output {
+    address: from_verification_key(hunter_pkh),
+    value,
+    datum,
+    reference_script: None,
+  }
+}
+
+fn r2_context(
+  tip: CheckpointDatumV1,
+  input_address: Address,
+  input_datum: Data,
+  input_value: Value,
+  outputs: List<Output>,
+  mint: Value,
+  validity_range: interval.Interval<Int>,
+) -> Transaction {
+  spend_context(
+    [freeze_input(tip, input_address, input_datum, input_value)],
+    [],
+    outputs,
+    mint,
+    [],
+    validity_range,
+    0,
+  )
+}
+
+fn r2_arm_tx_with(
+  tip: CheckpointDatumV1,
+  value: Value,
+  hunter_pkh: ByteArray,
+  deadline: Int,
+  validity_range: interval.Interval<Int>,
+) -> Transaction {
+  r2_context(
+    tip,
+    role.address(policy, Active),
+    V1(tip),
+    value,
+    [r2_armed_output(tip, value, hunter_pkh, deadline)],
+    zero,
+    validity_range,
+  )
+}
+
+fn r2_arm_tx(tip: CheckpointDatumV1) -> Transaction {
+  r2_arm_tx_with(
+    tip,
+    r2_surplus_value(tip),
+    r2_hunter,
+    r2_deadline,
+    interval.between(0, r2_arm_upper),
+  )
+}
+
+fn r2_claim_tx_with(
+  tip: CheckpointDatumV1,
+  input_value: Value,
+  hunter_pkh: ByteArray,
+  deadline: Int,
+  outputs: List<Output>,
+  validity_range: interval.Interval<Int>,
+) -> Transaction {
+  r2_context(
+    tip,
+    role.address(policy, Armed),
+    r2_armed_datum(tip, hunter_pkh, deadline),
+    input_value,
+    outputs,
+    zero,
+    validity_range,
+  )
+}
+
+fn r2_claim_tx(tip: CheckpointDatumV1, lower: Int) -> Transaction {
+  let input_value = r2_surplus_value(tip)
+  r2_claim_tx_with(
+    tip,
+    input_value,
+    r2_hunter,
+    r2_deadline,
+    [
+      r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+      r2_frozen_output(
+        tip,
+        input_value |> merge(from_lovelace(-r2_freeze_bond)),
+      ),
+    ],
+    interval.after(lower),
+  )
+}
+
+fn run_r2_with_parameters(
+  freeze_bond_parameter: Int,
+  freeze_window_parameter: Int,
+  redeemer: R2SpendRedeemer,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let redeemer_data: Data = redeemer
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond_parameter,
+    freeze_window_parameter,
+    None,
+    redeemer_data,
+    own_ref,
+    tx,
+  )
+}
+
+fn run_r2(redeemer: R2SpendRedeemer, tx: Transaction) -> Bool {
+  run_r2_with_parameters(
+    r2_freeze_bond,
+    r2_freeze_window,
+    redeemer,
+    freeze_own_ref,
+    tx,
+  )
+}
+
+fn r2_arm_redeemer(hunter_pkh: ByteArray) -> R2SpendRedeemer {
+  R2Freeze { evidence: enf_vec.lag_freeze_wire, hunter_pkh }
+}
+
+fn r2_claim_redeemer(index: Int) -> R2SpendRedeemer {
+  R2ClaimFreeze { hunter_output_index: index }
+}
+
+test t116_r2_accept_arm_preserves_complete_value_and_records_deadline() {
+  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(enf_vec.lag_freeze_tip))
+}
+
+test t116_r2_accept_arm_at_exact_reserve_floor() {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      r2_reserve_value(tip),
+      r2_hunter,
+      r2_deadline,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_accept_arm_raw_exclusive_upper_without_normalizing() {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      r2_surplus_value(tip),
+      r2_hunter,
+      r2_deadline,
+      interval.entirely_between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_accept_arm_with_unrelated_extra_input_and_output() {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_arm_tx(tip)
+  let extra_input = value_input(19, from_lovelace(42_000_000))
+  let extra_output = r2_hunter_output(
+    r2_other_hunter,
+    from_lovelace(9_000_000),
+    NoDatum,
+  )
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    Transaction {
+      ..tx,
+      inputs: list.concat(tx.inputs, [extra_input]),
+      outputs: list.concat(tx.outputs, [extra_output]),
+    },
+  )
+}
+
+test t116_r2_accept_claim_at_exact_deadline() {
+  run_r2(r2_claim_redeemer(0), r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline))
+}
+
+test t116_r2_accept_claim_after_deadline() {
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline + 1),
+  )
+}
+
+test t116_r2_accept_claim_at_exact_reserve_and_preserve_frozen_reserve() {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_reserve_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_accept_claim_with_unrelated_extra_input_and_output() {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline)
+  let extra_input = value_input(20, from_lovelace(42_000_000))
+  let extra_output = r2_hunter_output(
+    r2_other_hunter,
+    from_lovelace(9_000_000),
+    NoDatum,
+  )
+  run_r2(
+    r2_claim_redeemer(0),
+    Transaction {
+      ..tx,
+      inputs: list.concat(tx.inputs, [extra_input]),
+      outputs: list.concat(tx.outputs, [extra_output]),
+    },
+  )
+}
+
+test t116_r2_reject_freeze_bond_below_floor_before_dispatch() fail {
+  run_r2_with_parameters(
+    r2_freeze_bond - 1,
+    r2_freeze_window,
+    r2_arm_redeemer(r2_hunter),
+    freeze_own_ref,
+    r2_arm_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_r2_reject_zero_freeze_window_before_dispatch() fail {
+  run_r2_with_parameters(
+    r2_freeze_bond,
+    0,
+    r2_arm_redeemer(r2_hunter),
+    freeze_own_ref,
+    r2_arm_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_r2_reject_negative_freeze_window_before_dispatch() fail {
+  run_r2_with_parameters(
+    r2_freeze_bond,
+    -1,
+    r2_arm_redeemer(r2_hunter),
+    freeze_own_ref,
+    r2_arm_tx(enf_vec.lag_freeze_tip),
+  )
+}
+
+test t116_r2_reject_arm_hunter_wrong_width() fail {
+  run_r2(r2_arm_redeemer(r2_hunter_short), r2_arm_tx(enf_vec.lag_freeze_tip))
+}
+
+test t116_r2_reject_arm_empty_validity_range() fail {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      r2_surplus_value(tip),
+      r2_hunter,
+      r2_deadline,
+      interval.empty,
+    ),
+  )
+}
+
+test t116_r2_reject_arm_nonfinite_upper_bound() fail {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      r2_surplus_value(tip),
+      r2_hunter,
+      r2_deadline,
+      interval.after(0),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_wrong_deadline() fail {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      r2_surplus_value(tip),
+      r2_hunter,
+      r2_deadline - 1,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_wrong_successor_wrapper() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_surplus_value(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [freeze_output(role.address(policy, Armed), V1(tip), value)],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_live_ee_binding_mutation() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let evidence = EnforcementEvidence {
+    ..enf_vec.lag_freeze_wire,
+    off_i: enf_vec.lag_freeze_wire.off_s,
+  }
+  run_r2(R2Freeze { evidence, hunter_pkh: r2_hunter }, r2_arm_tx(tip))
+}
+
+test t116_r2_reject_arm_live_freeze_predicate_replay() fail {
+  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, native_sn: 1 }
+  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(tip))
+}
+
+test t116_r2_reject_arm_live_duplicate_receipt_quorum() fail {
+  expect [receipt] = enf_vec.lag_freeze_wire.wit_sigs
+  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, toad: 2 }
+  let evidence = EnforcementEvidence {
+    ..enf_vec.lag_freeze_wire,
+    wit_sigs: [receipt, receipt],
+  }
+  run_r2(R2Freeze { evidence, hunter_pkh: r2_hunter }, r2_arm_tx(tip))
+}
+
+test t116_r2_reject_arm_input_below_protected_reserve() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_reserve_value(tip) |> merge(from_lovelace(-1))
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      value,
+      r2_hunter,
+      r2_deadline,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_missing_token() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = from_lovelace(min_ada + d_reg + r2_freeze_bond)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      value,
+      r2_hunter,
+      r2_deadline,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_input_token_quantity_two() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_reserve_value(tip)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_arm_tx_with(
+      tip,
+      value,
+      r2_hunter,
+      r2_deadline,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_mutated_inner_checkpoint() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let changed = CheckpointDatumV1 { ..tip, seq: tip.seq + 1 }
+  let value = r2_surplus_value(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [r2_armed_output(changed, value, r2_hunter, r2_deadline)],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_changed_complete_value() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_surplus_value(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [
+        r2_armed_output(
+          tip,
+          value |> merge(from_lovelace(1)),
+          r2_hunter,
+          r2_deadline,
+        ),
+      ],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_missing_successor() fail {
+  let tip = enf_vec.lag_freeze_tip
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      r2_surplus_value(tip),
+      [],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_duplicate_successor() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_surplus_value(tip)
+  let successor = r2_armed_output(tip, value, r2_hunter, r2_deadline)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [successor, successor],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_arm_own_policy_mint() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_arm_tx(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
+  )
+}
+
+test t116_r2_reject_arm_own_policy_burn() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_arm_tx(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    Transaction {
+      ..tx,
+      mint: from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    },
+  )
+}
+
+test t116_r2_reject_repeated_arm_from_armed() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_surplus_value(tip)
+  run_r2(
+    r2_arm_redeemer(r2_hunter),
+    r2_context(
+      tip,
+      role.address(policy, Armed),
+      r2_armed_datum(tip, r2_hunter, r2_deadline),
+      value,
+      [r2_armed_output(tip, value, r2_hunter, r2_deadline)],
+      zero,
+      interval.between(0, r2_arm_upper),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_before_deadline() fail {
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline - 1),
+  )
+}
+
+test t116_r2_reject_claim_unbounded_lower() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.before(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_input_below_protected_reserve() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_reserve_value(tip) |> merge(from_lovelace(-1))
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_missing_input_token() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = from_lovelace(min_ada + d_reg + r2_freeze_bond)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_input_token_quantity_two() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_reserve_value(tip)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_wrong_payout_index() fail {
+  run_r2(r2_claim_redeemer(1), r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline))
+}
+
+test t116_r2_reject_claim_out_of_bounds_payout_index() fail {
+  run_r2(r2_claim_redeemer(9), r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline))
+}
+
+test t116_r2_reject_claim_wrong_beneficiary() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(
+          r2_other_hunter,
+          from_lovelace(r2_freeze_bond),
+          NoDatum,
+        ),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_underpaid_bond() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond - 1), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_overpaid_bond() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond + 1), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_payout_with_datum() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(
+          r2_hunter,
+          from_lovelace(r2_freeze_bond),
+          InlineDatum(V1(tip)),
+        ),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_payout_with_extra_asset() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  let payout_value = from_lovelace(r2_freeze_bond)
+    |> merge(from_asset(hp_policy, #"ff", 1))
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, payout_value, NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_retained_bond_in_frozen_value() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(tip, input_value),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_over_subtracted_frozen_value() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond - 1)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_mutated_inner_checkpoint() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let changed = CheckpointDatumV1 { ..tip, seq: tip.seq + 1 }
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          changed,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_missing_frozen_successor() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum)],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_duplicate_frozen_successor() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  let frozen = r2_frozen_output(
+    tip,
+    input_value |> merge(from_lovelace(-r2_freeze_bond)),
+  )
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter,
+      r2_deadline,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        frozen,
+        frozen,
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_wrong_role_datum_pairing() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_context(
+      tip,
+      role.address(policy, Armed),
+      V1(tip),
+      input_value,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      zero,
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_armed_wrapper_at_active_role() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      r2_armed_datum(tip, r2_hunter, r2_deadline),
+      input_value,
+      [
+        r2_hunter_output(r2_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      zero,
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_malformed_hunter_width() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let input_value = r2_surplus_value(tip)
+  run_r2(
+    r2_claim_redeemer(0),
+    r2_claim_tx_with(
+      tip,
+      input_value,
+      r2_hunter_short,
+      r2_deadline,
+      [
+        r2_hunter_output(
+          r2_hunter_short,
+          from_lovelace(r2_freeze_bond),
+          NoDatum,
+        ),
+        r2_frozen_output(
+          tip,
+          input_value |> merge(from_lovelace(-r2_freeze_bond)),
+        ),
+      ],
+      interval.after(r2_deadline),
+    ),
+  )
+}
+
+test t116_r2_reject_claim_own_policy_mint() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline)
+  run_r2(
+    r2_claim_redeemer(0),
+    Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
+  )
+}
+
+test t116_r2_reject_claim_own_policy_burn() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline)
+  run_r2(
+    r2_claim_redeemer(0),
+    Transaction {
+      ..tx,
+      mint: from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    },
+  )
+}
+
+test t116_r2_stage_reject_active_advance() fail {
+  let tip = old_adv_wit_2key
+  let value = r2_reserve_value(tip)
+  run_r2(
+    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [],
+      zero,
+      interval.everything,
+    ),
+  )
+}
+
+test t116_r2_stage_reject_armed_advance_reserved_for_115() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let value = r2_surplus_value(tip)
+  run_r2(
+    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    r2_context(
+      tip,
+      role.address(policy, Armed),
+      r2_armed_datum(tip, r2_hunter, r2_deadline),
+      value,
+      [],
+      zero,
+      interval.before(r2_deadline - 1),
+    ),
+  )
+}
+
+test t116_r2_stage_reject_convict() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let value = r2_reserve_value(tip)
+  run_r2(
+    R2Convict,
+    r2_context(
+      tip,
+      role.address(policy, Active),
+      V1(tip),
+      value,
+      [],
+      zero,
+      interval.everything,
+    ),
+  )
+}
+
+test t116_r2_stage_reject_close() fail {
+  run_r2(R2Close, r2_arm_tx(enf_vec.lag_freeze_tip))
 }
 
 /// D2 retained guard: a repeated registration (represented by the existing

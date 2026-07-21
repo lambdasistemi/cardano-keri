@@ -48,6 +48,9 @@ in `plan.md`.
       behind state, repeated Arm rejection, no early Claim or proof-free
       #116 mutation during the exclusive `W_freeze` window, and exact/late
       Claim boundaries; reserve ordinary Advance for #115.
+- [ ] T116-R2 Keep stable full-context Arm/Claim test identifiers for the R4
+      Lean traceability map; do not claim the abstract model covers datum,
+      address, or real-Value axes that these contexts prove.
 - [ ] T116-R2 Full gate green; commit exactly
       `feat(116): wire armed freeze and bond claim` with exactly
       `Tasks: T116-R2`.
@@ -64,12 +67,29 @@ in `plan.md`.
       terminal token, allowed re-registration, and benign self-conviction;
       prove protected `D_reg`/`B` cannot remain free change while unreserved
       surplus may remain ordinary transaction change.
+- [ ] T116-R3 Keep stable full-context Convict/value-routing identifiers for
+      R4 traceability without changing the Lean theorem inventory.
 - [ ] T116-R3 Full gate green; commit exactly
       `feat(116): route conviction deposits and freeze bonds` with exactly
       `Tasks: T116-R3`.
 
-## Slice R4 — measurements
+## Slice R4 — Lean traceability and measurements
 
+- [ ] T116-R4 RED: add direct QuickCheck properties for the nine
+      per-transition Lean goals and monadic state-machine properties for the
+      eight trace/reachability goals, named from corresponding
+      `Invariants.lean` seeds; observe failure against the missing pure mirror.
+- [ ] T116-R4 GREEN: give every Lean `Step` constructor a separately named
+      pure Haskell mirror function plus a total dispatcher; add the matching
+      Aiken model, generate shared theorem/verdict vectors from Haskell,
+      consume them in named Aiken tests, and wire cabal/Main/just test plus
+      regeneration gates without opening staged live dispatch.
+- [ ] T116-R4 Check in `lean/traceability.csv` with four honest-limit `#`
+      header statements, the exact three-column data header, and exactly one
+      fully populated row per theorem extracted from `Goals.lean`; add
+      `scripts/check-lean-traceability.sh` and normal-CI wiring that rejects
+      theorem/map cardinality or name drift, duplicate/blank/extra rows,
+      nonexistent mapped Haskell properties/Aiken tests, or vector drift.
 - [ ] T116-R4 Measure full 2-key/7-key Arm, Claim, and ACTIVE/ARMED/FROZEN
       Convict ACCEPT contexts, including conservative-surplus cases; record
       raw memory/CPU, use, and headroom in
@@ -77,8 +97,10 @@ in `plan.md`.
 - [ ] T116-R4 HARD STOP if any row has less than 25.00% headroom on either
       axis; do not weaken evidence, signers, receipts, event size, or handler.
 - [ ] T116-R4 Audit exact applied arity, generated parity/drift, staging-closed
-      Register/Advance, no registry/batcher/sequencer, and full gate.
-- [ ] T116-R4 Commit exactly `test(116): measure freeze-bond state paths` with
+      Register/Advance, no registry/batcher/sequencer, 17/17 executable
+      theorem rows, and full gate.
+- [ ] T116-R4 Commit exactly
+      `test(116): trace and measure freeze-bond state paths` with
       exactly `Tasks: T116-R4`.
 
 ## Slice R5 — freeze lifecycle documentation

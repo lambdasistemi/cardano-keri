@@ -1,9 +1,9 @@
 # Plan: reopen #116 — freeze-bond state core
 
 **Target branch**: `feat/116-freeze-bond`  
-**Base**: `02e7fc7bead52418029319ee71335dd69093d4bd`  
+**Base**: `2aa2d29adb79d503c40f6b9353852cf8433bafcd`
 **Spec**: `specs/116-freeze-bond/spec.md`  
-**Status**: A-014 ratified; R1 dispatch authorized
+**Status**: A-014 ratified; Lean-traceability addendum folded; R1 accepted
 
 ## Summary
 
@@ -21,6 +21,9 @@ until #114 and #115 land in order.
 - Existing keripy enforcement evidence and #106 binding are reused unchanged.
 - `Transaction.validity_range` is POSIX milliseconds.
 - Full `./gate.sh` per slice; memory and CPU must each retain >=25% headroom.
+- The 17 proved declarations in `lean/CardanoKeri/Goals.lean` and seed lemmas
+  in `Invariants.lean` are present from merged #124 and drive an executable
+  traceability gate in R4.
 
 ## Dependency barrier (`T116-R0`)
 
@@ -75,6 +78,24 @@ offchain/cardano-keri.cabal
 offchain/test/Main.hs
 justfile
 ```
+
+R4 traceability bootstrap adds:
+
+```text
+lean/traceability.csv
+scripts/check-lean-traceability.sh
+offchain/lib/Cardano/KERI/AID/Checkpoint/LifecycleModel.hs
+offchain/test/Cardano/KERI/AID/Checkpoint/LifecycleModelSpec.hs
+offchain/app/GenLifecycleTraceVectors.hs
+onchain/lib/cardano_keri/checkpoint/lifecycle_model.ak
+onchain/lib/cardano_keri/checkpoint/lifecycle_model_tests.ak
+onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
+```
+
+The pure model mirrors the entire ratified #124 lifecycle, including future
+#114/#115/#117 steps, but may not open those live validator branches. Exact
+module filenames may change only after a Q-file; the CSV and gate-script paths
+are fixed.
 
 Exact file placement may consolidate the new pure model into Enforcement if
 that produces a smaller coherent API, but it may not mix #114/#115 auth work
@@ -131,6 +152,8 @@ advance-totality and is intentionally staging-closed until #115.
 
 The temporary Convict closure keeps the R2 HEAD safe until exact payout routing
 lands in R3. Extra unrelated inputs/outputs remain allowed.
+Stable R2 full-context Arm/Claim test identifiers are retained as code-level
+evidence for R4's traceability map where applicable.
 
 Commit: `feat(116): wire armed freeze and bond claim` with exactly
 `Tasks: T116-R2`.
@@ -154,11 +177,32 @@ All named payouts are exact datumless enterprise-key lovelace values. The
 tombstone keeps only its protected terminal value; unreserved surplus remains
 ordinary transaction change. Existing evidence, conflict, terminality, and
 self-conviction behavior remains.
+Stable R3 full-context Convict/value-conservation identifiers are retained as
+code-level evidence for R4's traceability map where applicable.
 
 Commit: `feat(116): route conviction deposits and freeze bonds` with exactly
 `Tasks: T116-R3`.
 
-## Slice R4 — #116 path measurements (`T116-R4`)
+## Slice R4 — executable Lean traceability and measurements (`T116-R4`)
+
+RED first adds Haskell properties against a missing pure lifecycle model. The
+model gives every `Step` constructor in the merged Lean lifecycle its own
+named pure mirror function plus a total dispatcher. The nine
+per-transition goals are direct QuickCheck properties; the eight
+trace/reachability goals use monadic state-machine generation of valid and
+adversarial interleavings. `Invariants.lean` lemma names seed property names
+and failure labels.
+
+GREEN adds the isolated pure Haskell and Aiken lifecycle mirrors, one Haskell
+generator for shared theorem/verdict vectors, matching Aiken verdict tests,
+and all cabal/Main/just drift wiring. It checks in
+`lean/traceability.csv` with exactly one row for each of the 17 extracted
+theorems and the four honest-limit header statements. Fixed-path
+`scripts/check-lean-traceability.sh` extracts theorem names and fails on
+mapping cardinality/name drift, blank/duplicate/extra rows, or nonexistent
+mapped Haskell/Aiken test identifiers. The normal gate runs the script and
+vector regeneration. Future-action model cases remain test-only and may not
+weaken the R2 staging closures.
 
 Measure full validator ACCEPT contexts for 2-key/7-key Arm, Claim, and Convict
 from ACTIVE/ARMED/FROZEN, including reserve-preserving surplus contexts.
@@ -168,9 +212,10 @@ Record raw units, usage, and headroom in
 
 Any memory or CPU headroom below 25.00% is a hard stop and Q-file. The slice
 also runs repository-wide symbol checks proving no registry/batcher/sequencer
-surface and verifies Register/Advance remain intentionally closed.
+surface, verifies Register/Advance remain intentionally closed, and requires
+17/17 executable traceability rows.
 
-Commit: `test(116): measure freeze-bond state paths` with exactly
+Commit: `test(116): trace and measure freeze-bond state paths` with exactly
 `Tasks: T116-R4`.
 
 ## Slice R5 — freeze lifecycle documentation (`T116-R5`)
@@ -207,12 +252,15 @@ Commit: `docs(116): explain the bonded freeze lifecycle` with exactly
 `R1 -> R2 -> R3 -> R4 -> R5` is strict. R1 is behavior-neutral. R2 atomically
 changes the applied arity and Arm/Claim transition while closing every path
 whose final value semantics are not yet owned. R3 reopens Convict only with
-complete payout welds. R4 is measurement-only. R5 documents only the
+complete payout welds. R4 is test-only: pure traceability plus measurements,
+with no live dispatch. R5 documents only the
 #116-owned narrative after behavior and measurements are stable. Every HEAD
 builds and passes the full gate.
 
 After R5, #116 may merge but the protocol set remains **NO DEPLOY**. #114 is
 created from that updated main; no pair works ahead on a stale base.
+The R4 pure model includes future actions only because it mirrors the already
+proved ratified lifecycle; it is not an implementation of #114/#115/#117.
 
 ## Review and gate obligations
 
@@ -224,5 +272,8 @@ created from that updated main; no pair works ahead on a stale base.
 - Ticket owner reviews every changed file and fresh gate output before
   checking tasks or pushing.
 - Generated vector modules are never hand-edited.
+- The R4 owner audit extracts the theorem inventory independently and requires
+  exactly 17/17 unique map rows whose mapped identifiers exist and execute; a
+  green measurement table alone is insufficient.
 - Scope drift into Register/Advance authentication is a Q-file stop.
 - No mark-ready, merge, or deployment action is implied by this plan.

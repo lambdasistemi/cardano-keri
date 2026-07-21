@@ -1,4 +1,5 @@
 import CardanoKeri.Lifecycle
+import CardanoKeri.Invariants
 
 /-!
 # M1 theorem goals — STATEMENTS ONLY (ticket #124)
@@ -102,7 +103,117 @@ theorem bond_transfer_only_via_elapsed_window (p : Params) (env : Env)
       tr.amount = p.B ∧
       (∀ (m : Nat) (txm : Tx),
         i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance) := by
-  sorry
+  suffices H : ∀ (n : Nat) (txs : List Tx) (cfg : Config), txs.length ≤ n →
+      TraceFrom p env 0 initConfig txs cfg →
+      ∀ tr : Transfer, tr ∈ cfg.ledger.outflows → tr.kind = .bounty →
+      ∃ (i j : Nat) (txi txj : Tx),
+        txs[i]? = some txi ∧ txs[j]? = some txj ∧ i < j ∧
+        (txi.act = .arm tr.dest ∨ txi.act = .challengeClose tr.dest) ∧
+        txj.act = .claim ∧
+        txi.slot + p.Wf ≤ txj.slot ∧
+        tr.amount = p.B ∧
+        (∀ (m : Nat) (txm : Tx),
+          i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance) by
+    exact H txs.length txs cfg (Nat.le_refl _) htrace tr hmem hkind
+  intro n
+  induction n with
+  | zero =>
+    intro txs cfg hlen htr tr hmem hkind
+    have htxs : txs = [] := List.eq_nil_of_length_eq_zero (Nat.le_zero.mp hlen)
+    subst htxs
+    cases htr
+    simp [initConfig] at hmem
+  | succ n ih =>
+    intro txs cfg hlen htr tr hmem hkind
+    rcases htr.last_step with ⟨hnil, heq⟩ | ⟨pre, lst, cmid, heq, hpre, hst⟩
+    · subst hnil
+      rw [← heq] at hmem
+      simp [initConfig] at hmem
+    · subst heq
+      have hlenpre : pre.length ≤ n := by
+        simp only [List.length_append, List.length_cons, List.length_nil] at hlen
+        omega
+      have lift : (∃ (i j : Nat) (txi txj : Tx),
+            pre[i]? = some txi ∧ pre[j]? = some txj ∧ i < j ∧
+            (txi.act = .arm tr.dest ∨ txi.act = .challengeClose tr.dest) ∧
+            txj.act = .claim ∧ txi.slot + p.Wf ≤ txj.slot ∧ tr.amount = p.B ∧
+            (∀ (m : Nat) (txm : Tx),
+              i < m → m < j → pre[m]? = some txm → txm.act ≠ .advance)) →
+          ∃ (i j : Nat) (txi txj : Tx),
+            (pre ++ [lst])[i]? = some txi ∧ (pre ++ [lst])[j]? = some txj ∧ i < j ∧
+            (txi.act = .arm tr.dest ∨ txi.act = .challengeClose tr.dest) ∧
+            txj.act = .claim ∧ txi.slot + p.Wf ≤ txj.slot ∧ tr.amount = p.B ∧
+            (∀ (m : Nat) (txm : Tx),
+              i < m → m < j → (pre ++ [lst])[m]? = some txm → txm.act ≠ .advance) := by
+        rintro ⟨i, j, txi, txj, hi, hj, hij, hact, hcl, hwin, hamt, hbet⟩
+        have hjlen : j < pre.length := getElem?_some_lt hj
+        refine ⟨i, j, txi, txj, ?_, ?_, hij, hact, hcl, hwin, hamt, ?_⟩
+        · rw [List.getElem?_append_left (Nat.lt_trans hij hjlen)]
+          exact hi
+        · rw [List.getElem?_append_left hjlen]
+          exact hj
+        · intro m txm h1 h2 hm
+          rw [List.getElem?_append_left (Nat.lt_trans h2 hjlen)] at hm
+          exact hbet m txm h1 h2 hm
+      cases hst with
+      | @register led t hicp =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @advanceActive led k t hnext =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @advanceArmed led k hunter d t hnext hwin =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @advanceFrozen led k t hnext =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @advanceClosing led k r d t hnext =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @arm led k t hunter hbehind =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @closeIntent led k t refund hcap =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @challengeClose led k r d t ch hbehind =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @finalizeClose led k r d t hdeadline =>
+        rcases List.mem_append.mp hmem with hold | hnew
+        · exact lift (ih pre _ hlenpre hpre tr hold hkind)
+        · have htr' : tr = ⟨r, p.minAda + p.D + p.B, .refund⟩ := by simpa using hnew
+          subst htr'
+          simp at hkind
+      | @convictActive led k t c hforkev =>
+        exact absurd hforkev hfork
+      | @convictArmed led k hunter d t c hforkev =>
+        exact absurd hforkev hfork
+      | @convictFrozen led k t c hforkev =>
+        exact absurd hforkev hfork
+      | @convictClosing led k r d t c hforkev =>
+        exact absurd hforkev hfork
+      | @claim led k' hunter d t3 hdeadline =>
+        rcases List.mem_append.mp hmem with hold | hnew
+        · exact lift (ih pre _ hlenpre hpre tr hold hkind)
+        · have htr' : tr = ⟨hunter, p.B, .bounty⟩ := by simpa using hnew
+          subst htr'
+          rcases hpre.last_step with ⟨hnil2, heq2⟩ | ⟨pre2, lst2, cmid2, heq2, hpre2, hst2⟩
+          · exact absurd (congrArg Config.state heq2) (by simp [initConfig])
+          · have hL : (pre2 ++ [lst2]).length = pre2.length + 1 := by simp
+            subst heq2
+            cases hst2 with
+            | @arm led2 k2 t2 hunter2 hbehind2 =>
+              refine ⟨pre2.length, pre2.length + 1, ⟨t2, .arm hunter⟩, ⟨t3, .claim⟩,
+                ?_, ?_, Nat.lt_succ_self _, Or.inl rfl, rfl, hdeadline, rfl, ?_⟩
+              · rw [List.getElem?_append_left (by rw [hL]; exact Nat.lt_succ_self _)]
+                exact List.getElem?_concat_length
+              · rw [← hL]
+                exact List.getElem?_concat_length
+              · intro m txm h1 h2 _
+                omega
+            | @challengeClose led2 k2 r2 d2 t2 ch hbehind2 =>
+              refine ⟨pre2.length, pre2.length + 1, ⟨t2, .challengeClose hunter⟩, ⟨t3, .claim⟩,
+                ?_, ?_, Nat.lt_succ_self _, Or.inr rfl, rfl, hdeadline, rfl, ?_⟩
+              · rw [List.getElem?_append_left (by rw [hL]; exact Nat.lt_succ_self _)]
+                exact List.getElem?_concat_length
+              · rw [← hL]
+                exact List.getElem?_concat_length
+              · intro m txm h1 h2 _
+                omega
 
 /-- **Goal 7 — abandonment_pays_exactly_B.** A claim from Armed pays exactly
 `B`, to exactly the hunter recorded at arm time (the claimer chooses
@@ -132,7 +243,36 @@ theorem frozen_implies_true_silence (p : Params) (env : Env)
       txi.slot + p.Wf ≤ txj.slot ∧
       (∀ (m : Nat) (txm : Tx),
         i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance) := by
-  sorry
+  rcases htrace.last_step with ⟨hnil, heq⟩ | ⟨pre, lst, cmid, heq, hpre, hst⟩
+  · rw [← heq] at hfrozen
+    simp [initConfig] at hfrozen
+  · subst heq
+    cases hst <;> try (simp at hfrozen)
+    case claim led k' hunter d t3 hdeadline =>
+      subst hfrozen
+      rcases hpre.last_step with ⟨hnil2, heq2⟩ | ⟨pre2, lst2, cmid2, heq2, hpre2, hst2⟩
+      · exact absurd (congrArg Config.state heq2) (by simp [initConfig])
+      · have hL : (pre2 ++ [lst2]).length = pre2.length + 1 := by simp
+        subst heq2
+        cases hst2 with
+        | @arm led2 k2 t2 hunter2 hbehind2 =>
+          refine ⟨pre2.length, pre2.length + 1, ⟨t2, .arm hunter⟩, ⟨t3, .claim⟩,
+            hunter, ?_, ?_, Nat.lt_succ_self _, Or.inl rfl, rfl, hdeadline, ?_⟩
+          · rw [List.getElem?_append_left (by rw [hL]; exact Nat.lt_succ_self _)]
+            exact List.getElem?_concat_length
+          · rw [← hL]
+            exact List.getElem?_concat_length
+          · intro m txm h1 h2 _
+            omega
+        | @challengeClose led2 k2 r2 d2 t2 ch hbehind2 =>
+          refine ⟨pre2.length, pre2.length + 1, ⟨t2, .challengeClose hunter⟩, ⟨t3, .claim⟩,
+            hunter, ?_, ?_, Nat.lt_succ_self _, Or.inr rfl, rfl, hdeadline, ?_⟩
+          · rw [List.getElem?_append_left (by rw [hL]; exact Nat.lt_succ_self _)]
+            exact List.getElem?_concat_length
+          · rw [← hL]
+            exact List.getElem?_concat_length
+          · intro m txm h1 h2 _
+            omega
 
 /-- **Goal 9 — close_lie_always_voidable.** If a Closing state is behind the
 tip, then at EVERY slot before finalization (i.e. while the state is
@@ -189,14 +329,15 @@ theorem value_conservation (p : Params) (env : Env)
     (cfg : Config) (tx : Tx) (cfg' : Config)
     (hstep : Step p env cfg tx cfg') (hbal : cfg.balanced p) :
     cfg'.balanced p := by
-  sorry
+  exact hstep.preserves_balanced hbal
 
 /-- **Goal 13 (corollary) — value_conservation_trace.** Whole-trace form:
 every reachable configuration is balanced. -/
 theorem value_conservation_trace (p : Params) (env : Env)
     (cfg : Config) (hreach : Reachable p env cfg) :
     cfg.balanced p := by
-  sorry
+  obtain ⟨txs, htr⟩ := hreach
+  exact htr.preserves_balanced (initConfig_balanced p)
 
 /-- **Goal 14 — convict_dominance.** With fork evidence, convict is
 admissible from every live state, at every slot, by any convictor. -/
@@ -265,6 +406,22 @@ theorem close_cycle_requires_elapsed_window (p : Params) (env : Env)
       txs[i]? = some txi ∧
       txi.act = .closeIntent r ∧
       txi.slot + p.Wc ≤ txj.slot := by
-  sorry
+  have hjlen : j < txs.length := getElem?_some_lt hj
+  obtain ⟨c1, c2, hpre, hst, hsuf⟩ := htrace.step_at j txj hj
+  cases hst <;> try (simp at hfin)
+  case finalizeClose led k r d t hdeadline =>
+    rcases hpre.last_step with ⟨hnil2, heq2⟩ | ⟨pre2, lst2, cmid2, heq2, hpre2, hst2⟩
+    · exact absurd (congrArg Config.state heq2) (by simp [initConfig])
+    · have hlen : (txs.take j).length = j := by
+        rw [List.length_take]
+        exact Nat.min_eq_left (Nat.le_of_lt hjlen)
+      have hj1 : pre2.length + 1 = j := by
+        rw [← hlen, heq2]
+        simp
+      cases hst2 with
+      | @closeIntent led2 k2 t2 refund hcap =>
+        refine ⟨pre2.length, ⟨t2, .closeIntent r⟩, r, hj1, ?_, rfl, hdeadline⟩
+        rw [← List.getElem?_take_of_lt (by omega : pre2.length < j), heq2]
+        exact List.getElem?_concat_length
 
 end CardanoKeri

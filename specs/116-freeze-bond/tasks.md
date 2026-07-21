@@ -15,16 +15,16 @@ in `plan.md`.
 
 ## Slice R1 — schema and parity foundation
 
-- [ ] T116-R1 RED: add failing Haskell tests for `B` floor/one-below,
+- [X] T116-R1 RED: add failing Haskell tests for `B` floor/one-below,
       positive `W_freeze`, exact role values, version-tagged
       `ArmedV1 { checkpoint : CheckpointDatumV1, hunter_pkh, deadline }`
       codec/hunter width, finite arm upper endpoint `u`, `u+W_freeze`, and
       ARMED role `0x02`.
-- [ ] T116-R1 GREEN: implement the smallest Haskell/Aiken freeze-bond model,
+- [X] T116-R1 GREEN: implement the smallest Haskell/Aiken freeze-bond model,
       role/datum codec, raw-bound endpoint helpers, generator, and generated
       vectors; wire cabal/Main/just drift gates without inventing a normalized
       "greatest included" time.
-- [ ] T116-R1 Prove old role hashes and CheckpointDatumV1/TombstoneV1 bytes are
+- [X] T116-R1 Prove old role hashes and CheckpointDatumV1/TombstoneV1 bytes are
       unchanged, no validator dispatch changed, full gate green, and commit
       exactly `feat(116): model freeze-bond state and deadline` with exactly
       `Tasks: T116-R1`.

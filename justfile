@@ -124,6 +124,22 @@ gen-freeze-bond-vectors:
 check-freeze-bond-vectors: gen-freeze-bond-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
 
+# Regenerate the 17 Lean-theorem verdicts from the pure Haskell lifecycle
+# mirror. The generated Aiken module is never edited by hand.
+gen-lifecycle-trace-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-lifecycle-trace-vectors -- ../onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
+
+# Drift check: Haskell is the sole source of theorem verdict fixtures.
+check-lifecycle-trace-vectors: gen-lifecycle-trace-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
+
+# Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
+# generated-vector drift.
+check-lean-traceability:
+    ./scripts/check-lean-traceability.sh
+
 # --- onchain (Aiken) ---
 
 # Format Aiken sources
@@ -153,11 +169,9 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
-# Measure and mechanically gate the three live R2 checkpoint ACCEPT paths.
-# This staging set is replaced by R4's final table; exact titles prevent
-# staging-closed Register/Advance/Convict paths from being smuggled back in.
-# Every row must pass and retain the existing hard execution-unit limits
-# (10,500,000 memory and 7,500,000,000 CPU).
+# Measure and mechanically gate the six final R4 checkpoint ACCEPT paths.
+# Exact titles exclude staging-closed Register/Advance/Close paths. Every row
+# must pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
 measure-checkpoint:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -170,7 +184,10 @@ measure-checkpoint:
         [
           "measure_checkpoint_arm_2key",
           "measure_checkpoint_arm_7key",
-          "measure_checkpoint_claim"
+          "measure_checkpoint_claim",
+          "measure_checkpoint_convict_active",
+          "measure_checkpoint_convict_armed",
+          "measure_checkpoint_convict_frozen"
         ] as $required
         | [.modules[].tests[] | select(.title | startswith("measure_checkpoint"))] as $tests
         | ($tests | map(.title)) as $actual
@@ -221,7 +238,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors
+ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

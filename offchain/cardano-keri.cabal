@@ -58,6 +58,7 @@ library
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.FreezeBond
+    Cardano.KERI.AID.Checkpoint.LifecycleModel
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
@@ -100,6 +101,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
+    Cardano.KERI.AID.Checkpoint.LifecycleModelSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.RegistrationSpec
@@ -182,6 +184,15 @@ executable gen-freeze-bond-vectors
     , bytestring
     , cardano-keri
     , memory        >=0.18 && <0.19
+
+executable gen-lifecycle-trace-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenLifecycleTraceVectors.hs
+  build-depends:
+    , base
+    , cardano-keri
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

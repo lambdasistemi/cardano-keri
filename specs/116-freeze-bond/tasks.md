@@ -75,31 +75,31 @@ in `plan.md`.
 
 ## Slice R4 — Lean traceability and measurements
 
-- [ ] T116-R4 RED: add direct QuickCheck properties for the nine
+- [X] T116-R4 RED: add direct QuickCheck properties for the nine
       per-transition Lean goals and monadic state-machine properties for the
       eight trace/reachability goals, named from corresponding
       `Invariants.lean` seeds; observe failure against the missing pure mirror.
-- [ ] T116-R4 GREEN: give every Lean `Step` constructor a separately named
+- [X] T116-R4 GREEN: give every Lean `Step` constructor a separately named
       pure Haskell mirror function plus a total dispatcher; add the matching
       Aiken model, generate shared theorem/verdict vectors from Haskell,
       consume them in named Aiken tests, and wire cabal/Main/just test plus
       regeneration gates without opening staged live dispatch.
-- [ ] T116-R4 Check in `lean/traceability.csv` with four honest-limit `#`
+- [X] T116-R4 Check in `lean/traceability.csv` with four honest-limit `#`
       header statements, the exact three-column data header, and exactly one
       fully populated row per theorem extracted from `Goals.lean`; add
       `scripts/check-lean-traceability.sh` and normal-CI wiring that rejects
       theorem/map cardinality or name drift, duplicate/blank/extra rows,
       nonexistent mapped Haskell properties/Aiken tests, or vector drift.
-- [ ] T116-R4 Measure full 2-key/7-key Arm, Claim, and ACTIVE/ARMED/FROZEN
+- [X] T116-R4 Measure full 2-key/7-key Arm, Claim, and ACTIVE/ARMED/FROZEN
       Convict ACCEPT contexts, including conservative-surplus cases; record
       raw memory/CPU, use, and headroom in
       `specs/116-freeze-bond/MEASUREMENTS.md`.
-- [ ] T116-R4 HARD STOP if any row has less than 25.00% headroom on either
+- [X] T116-R4 HARD STOP if any row has less than 25.00% headroom on either
       axis; do not weaken evidence, signers, receipts, event size, or handler.
-- [ ] T116-R4 Audit exact applied arity, generated parity/drift, staging-closed
+- [X] T116-R4 Audit exact applied arity, generated parity/drift, staging-closed
       Register/Advance, no registry/batcher/sequencer, 17/17 executable
       theorem rows, and full gate.
-- [ ] T116-R4 Commit exactly
+- [X] T116-R4 Commit exactly
       `test(116): trace and measure freeze-bond state paths` with
       exactly `Tasks: T116-R4`.
 

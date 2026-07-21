@@ -1,12 +1,12 @@
-//// T116-R2 staging checkpoint measurements.
+//// T116-R4 final checkpoint measurements.
 ////
-//// The exact live-handler ACCEPT set at this non-deployable HEAD is Arm with
-//// the real 2-key evidence, Arm with the real GLEIF-shaped 7-key evidence,
-//// and Claim. Register, every Advance, Convict, and Close are deliberately
-//// absent because R2 fail-closes them. `just measure-checkpoint` enforces the
-//// exact three titles and the repository's existing hard execution-unit
-//// limits. This is not R4's final measurement or 25%-headroom table.
+//// The exact six full-validator ACCEPT contexts use committed generated KERI
+//// evidence, including the real 2-key and GLEIF-shaped 7-key Arm wires and the
+//// witnessed-fork Convict wire. Convict inputs carry conservative surplus
+//// change in addition to the protected reserves. `just measure-checkpoint`
+//// enforces these titles and the 25%-headroom caps.
 
+use aiken/collection/list
 use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
@@ -28,7 +28,9 @@ use cardano_keri/checkpoint/registration.{
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/role.{Armed, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted}
-use checkpoint.{ClaimFreeze, Freeze, MintRedeemer, Register}
+use checkpoint.{
+  ClaimFreeze, Convict, Freeze, MintRedeemer, Register, SpendRedeemer,
+}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -422,16 +424,24 @@ test measure_checkpoint_claim() {
 }
 
 // ---------------------------------------------------------------------
-// Slice-5 live Convict measurement fixtures. S6 owns the final combined
-// matrix, percentages, and report; these cells keep the committed witnessed
-// fork on both real ACTIVE and FROZEN handler ACCEPT paths.
+// Full final Convict measurements: one witnessed-fork wire on each admitted
+// live role. Protected reserves are paid exactly; unrelated surplus becomes
+// ordinary change and is deliberately present in every context.
 // ---------------------------------------------------------------------
 
 const own_ref_convict_witnessed: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 6 }
 
-fn convict_witnessed_input_value() -> Value {
-  from_lovelace(advance_deposit)
+const convictor_pkh: ByteArray =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+const change_pkh: ByteArray =
+  #"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+const conservative_surplus: Int = 42_000_000
+
+fn convict_witnessed_input_value(protected: Int) -> Value {
+  from_lovelace(min_ada + protected + conservative_surplus)
     |> merge(
         from_asset(
           policy,
@@ -452,34 +462,52 @@ fn convict_witnessed_tombstone_value() -> Value {
       )
 }
 
-fn convict_witnessed_tx(input_address: Address) -> Transaction {
+fn exact_payout(pkh: ByteArray, lovelace: Int) -> Output {
+  Output {
+    address: from_verification_key(pkh),
+    value: from_lovelace(lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
+fn convict_witnessed_tx(
+  input_address: Address,
+  input_datum: Data,
+  protected: Int,
+  protected_outputs: List<Output>,
+) -> Transaction {
   spend_context(
     [
       input_at(
         own_ref_convict_witnessed,
         Output {
           address: input_address,
-          value: convict_witnessed_input_value(),
-          datum: InlineDatum(V1(enf_vec.fork_witnessed_convict_tip)),
+          value: convict_witnessed_input_value(protected),
+          datum: InlineDatum(input_datum),
           reference_script: None,
         },
       ),
     ],
     [],
-    [
-      Output {
-        address: role.address(policy, Tombstone),
-        value: convict_witnessed_tombstone_value(),
-        datum: InlineDatum(
-          TombstoneV1 {
-            cesr_aid: enf_vec.fork_witnessed_convict_tip.cesr_aid,
-            convicted_at_native_sn: enf_vec.fork_witnessed_convict_tip.native_sn,
-            evidence_said: enf_vec.fork_witnessed_convict_wire.said,
-          },
-        ),
-        reference_script: None,
-      },
-    ],
+    list.concat(
+      protected_outputs,
+      [
+        Output {
+          address: role.address(policy, Tombstone),
+          value: convict_witnessed_tombstone_value(),
+          datum: InlineDatum(
+            TombstoneV1 {
+              cesr_aid: enf_vec.fork_witnessed_convict_tip.cesr_aid,
+              convicted_at_native_sn: enf_vec.fork_witnessed_convict_tip.native_sn,
+              evidence_said: enf_vec.fork_witnessed_convict_wire.said,
+            },
+          ),
+          reference_script: None,
+        },
+        exact_payout(change_pkh, conservative_surplus),
+      ],
+    ),
     zero,
     [],
     interval.everything,
@@ -488,7 +516,86 @@ fn convict_witnessed_tx(input_address: Address) -> Transaction {
 }
 
 const tx_convict_witnessed_active: Transaction =
-  convict_witnessed_tx(from_script(policy))
+  convict_witnessed_tx(
+    from_script(policy),
+    V1(enf_vec.fork_witnessed_convict_tip),
+    d_reg + freeze_bond,
+    [exact_payout(convictor_pkh, d_reg + freeze_bond)],
+  )
+
+const tx_convict_witnessed_armed: Transaction =
+  convict_witnessed_tx(
+    role.address(policy, Armed),
+    ArmedV1 {
+      checkpoint: enf_vec.fork_witnessed_convict_tip,
+      hunter_pkh,
+      deadline: 1_000 + freeze_window,
+    },
+    d_reg + freeze_bond,
+    [exact_payout(convictor_pkh, d_reg), exact_payout(hunter_pkh, freeze_bond)],
+  )
 
 const tx_convict_witnessed_frozen: Transaction =
-  convict_witnessed_tx(role.address(policy, Frozen))
+  convict_witnessed_tx(
+    role.address(policy, Frozen),
+    V1(enf_vec.fork_witnessed_convict_tip),
+    d_reg,
+    [exact_payout(convictor_pkh, d_reg)],
+  )
+
+fn convict_redeemer(
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+) -> SpendRedeemer {
+  Convict {
+    evidence: enf_vec.fork_witnessed_convict_wire,
+    convictor_pkh,
+    convictor_output_index,
+    hunter_output_index,
+  }
+}
+
+test measure_checkpoint_convict_active() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    convict_redeemer(0, 0),
+    own_ref_convict_witnessed,
+    tx_convict_witnessed_active,
+  )
+}
+
+test measure_checkpoint_convict_armed() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    convict_redeemer(0, 1),
+    own_ref_convict_witnessed,
+    tx_convict_witnessed_armed,
+  )
+}
+
+test measure_checkpoint_convict_frozen() {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    convict_redeemer(0, 0),
+    own_ref_convict_witnessed,
+    tx_convict_witnessed_frozen,
+  )
+}

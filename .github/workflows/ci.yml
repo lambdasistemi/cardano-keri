@@ -111,10 +111,10 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # Live-boundary #99 cage Phase-2 smoke: the runCommand check starts a real
-      # cardano-node via withDevnet, mints/requests/modifies against the hardened
-      # validator and observes the Modify settle. Linux-only.
-      - name: withDevnet cage Phase-2 smoke
+      # Live-boundary smoke: starts real cardano-node devnets, preserves the #99
+      # cage positive, and proves #116 Register/Advance/Close reach the applied
+      # production checkpoint validator and are rejected at the staging boundary.
+      - name: withDevnet cage + checkpoint staging smoke
         working-directory: offchain
         run: nix build --quiet -L .#checks.x86_64-linux.e2e
 

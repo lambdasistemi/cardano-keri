@@ -44,9 +44,15 @@ build-offchain:
 devshell-offchain:
     cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
 
-# Run the live-boundary withDevnet #99 cage Phase-2 smoke (Linux-only)
+# Run all live-boundary withDevnet smokes (Linux-only): the existing #99 cage
+# positive plus the #116 checkpoint staging rejections.
 e2e:
     cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
+
+# Run only the #116 checkpoint staging boundary: three live ledger rejections
+# and two named future lifecycle scenarios kept explicitly pending.
+e2e-checkpoint:
+    cd offchain && nix run --quiet .#e2e -- --match "#116 checkpoint staging"
 
 # --- checkpoint fixtures (#68) ---
 

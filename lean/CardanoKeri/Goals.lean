@@ -2,14 +2,15 @@ import CardanoKeri.Lifecycle
 import CardanoKeri.Invariants
 
 /-!
-# M1 theorem goals — STATEMENTS ONLY (ticket #124)
+# M1 theorem goals (ticket #124) — statements ratified, all proved
 
-Every body is `sorry` by design: the deliverable is well-defined goals.
 Numbering follows the worker brief; goal 10 is dropped, goals 4/6/16 are
 restated machine-level per the scope correction (2026-07-21), and goal 17
 is added per the epic-owner rulings. Side-condition choices beyond the
 brief's literal wording were flagged as Q-L01..Q-L03 and RATIFIED by
 A-L01-03 (2026-07-21); the README mapping table carries them per goal.
+Phase 2 (operator-authorized) proved every statement verbatim — no `sorry`,
+no custom axioms; the shared machinery lives in `CardanoKeri/Invariants.lean`.
 -/
 
 namespace CardanoKeri
@@ -27,7 +28,43 @@ theorem advance_totality (p : Params) (env : Env) (cfg : Config) (k : Seq)
       txs.getLast? = some last ∧
       last.act = .advance ∧
       cfg'.state = .active (k + 1) := by
-  sorry
+  obtain ⟨s, led⟩ := cfg
+  cases s with
+  | absent => simp [MachState.seq?] at hseq
+  | tombstone k' => exact absurd hlive (by simp [MachState.live])
+  | active k' =>
+    have hk : k' = k := by simpa [MachState.seq?] using hseq
+    subst hk
+    intro t
+    exact ⟨[⟨t, .advance⟩], _, ⟨t, .advance⟩,
+      .cons (Nat.le_refl t) (Step.advanceActive hbehind) (.nil _ _),
+      Nat.le_succ 1, rfl, rfl, rfl⟩
+  | frozen k' =>
+    have hk : k' = k := by simpa [MachState.seq?] using hseq
+    subst hk
+    intro t
+    exact ⟨[⟨t, .advance⟩], _, ⟨t, .advance⟩,
+      .cons (Nat.le_refl t) (Step.advanceFrozen hbehind) (.nil _ _),
+      Nat.le_succ 1, rfl, rfl, rfl⟩
+  | closing k' r d =>
+    have hk : k' = k := by simpa [MachState.seq?] using hseq
+    subst hk
+    intro t
+    exact ⟨[⟨t, .advance⟩], _, ⟨t, .advance⟩,
+      .cons (Nat.le_refl t) (Step.advanceClosing hbehind) (.nil _ _),
+      Nat.le_succ 1, rfl, rfl, rfl⟩
+  | armed k' hunter d =>
+    have hk : k' = k := by simpa [MachState.seq?] using hseq
+    subst hk
+    intro t
+    rcases Nat.lt_or_ge t d with hlt | hge
+    · exact ⟨[⟨t, .advance⟩], _, ⟨t, .advance⟩,
+        .cons (Nat.le_refl t) (Step.advanceArmed hbehind hlt) (.nil _ _),
+        Nat.le_succ 1, rfl, rfl, rfl⟩
+    · exact ⟨[⟨t, .claim⟩, ⟨t, .advance⟩], _, ⟨t, .advance⟩,
+        .cons (Nat.le_refl t) (Step.claim hge)
+          (.cons (Nat.le_refl t) (Step.advanceFrozen hbehind) (.nil _ _)),
+        Nat.le_refl 2, rfl, rfl, rfl⟩
 
 /-- **Goal 2 — no_absorbing_busy_state.** No reachable live state has an
 empty admissible-action set: at every slot some transition (possibly later)
@@ -39,7 +76,22 @@ theorem no_absorbing_busy_state (p : Params) (env : Env)
     (cfg : Config) (hreach : Reachable p env cfg) (hlive : cfg.state.live) :
     ∀ t : Slot, ∃ (tx : Tx) (cfg' : Config),
       t ≤ tx.slot ∧ Step p env cfg tx cfg' := by
-  sorry
+  obtain ⟨s, led⟩ := cfg
+  intro t
+  cases s with
+  | absent => exact absurd hlive (by simp [MachState.live])
+  | tombstone k => exact absurd hlive (by simp [MachState.live])
+  | active k =>
+    exact ⟨⟨t, .closeIntent 0⟩, _, Nat.le_refl t, Step.closeIntent 0 (hcap k)⟩
+  | armed k hunter d =>
+    exact ⟨⟨max t d, .claim⟩, _, Nat.le_max_left t d,
+      Step.claim (Nat.le_max_right t d)⟩
+  | frozen k =>
+    exact ⟨⟨t, .advance⟩, _, Nat.le_refl t,
+      Step.advanceFrozen (Reachable.frozen_behind hreach rfl)⟩
+  | closing k r d =>
+    exact ⟨⟨max t d, .finalizeClose⟩, _, Nat.le_max_left t d,
+      Step.finalizeClose (Nat.le_max_right t d)⟩
 
 /-- **Goal 3 — adversarial_advance_is_progress.** ANY admissible advance —
 the model has no actor distinction, so this covers every submitter — moves
@@ -70,7 +122,21 @@ theorem bounded_churn (p : Params) (env : Env)
     (hbetween : ∀ (m : Nat) (txm : Tx),
       i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance) :
     j ≤ i + 3 := by
-  sorry
+  refine Nat.le_of_not_lt fun hcon => ?_
+  have hjlen : j < txs.length := getElem?_some_lt hj
+  obtain ⟨c1, c2, hpre, hsti, hsuf⟩ := htrace.step_at i txi hi
+  obtain ⟨k2, led2, hc2⟩ := hsti.advance_target hadvi
+  subst hc2
+  obtain ⟨a, ha⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 1) (by omega)
+  obtain ⟨b, hb⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 2) (by omega)
+  obtain ⟨cc, hcc⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 3) (by omega)
+  exact fragment_no_three_stalls hcap hfork hsuf
+    (by rw [List.getElem?_drop]; exact ha)
+    (by rw [List.getElem?_drop]; exact hb)
+    (by rw [List.getElem?_drop]; exact hcc)
+    (hbetween (i + 1) a (by omega) (by omega) ha)
+    (hbetween (i + 2) b (by omega) (by omega) hb)
+    (hbetween (i + 3) cc (by omega) (by omega) hcc)
 
 /-- **Goal 5 — armed_exclusive_window.** From Armed strictly before the
 deadline, the ONLY admissible transitions are advance and convict: the
@@ -387,7 +453,15 @@ theorem replay_convergence (p : Params) (env : Env)
       TraceFrom p env 0 initConfig txs cfg ∧
       cfg.state = .active env.kel.tip ∧
       txs.length = env.kel.events.length := by
-  sorry
+  obtain ⟨txs, htr, hlen⟩ :=
+    active_advance_chain p env (env.kel.events.length - 1) 0
+      ⟨0 + (p.minAda + p.D + p.B), []⟩ 0
+      (by rw [Nat.zero_add]; exact Nat.sub_lt hicp Nat.zero_lt_one)
+  rw [Nat.zero_add (env.kel.events.length - 1)] at htr
+  refine ⟨⟨0, .register⟩ :: txs, _,
+    .cons (Nat.le_refl 0) (Step.register hicp) htr, rfl, ?_⟩
+  rw [List.length_cons, hlen]
+  exact Nat.sub_add_cancel hicp
 
 /-- **Goal 17 — close_cycle_requires_elapsed_window** (added per A-L01-03,
 ratifying Q-L02 part 2). Even capability-holder self-churn cannot be fast

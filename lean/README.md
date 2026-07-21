@@ -2,13 +2,16 @@
 
 A standalone Lake project (Lean 4, `v4.27.0`, **zero dependencies** — Lean
 core only) that models the M1 checkpoint lifecycle as **the on-chain
-validator's transition system** and states the M1 invariants as theorem
-goals. Every theorem body is `sorry` by design: the deliverable of #124 is
-*well-defined goals*, not proofs.
+validator's transition system** and proves the M1 invariants. Phase 1 of
+#124 delivered the statements (all `sorry`); phase 2 (operator-authorized)
+delivered the proofs — **all 17 goals are proved**, no `sorry` anywhere.
 
 - `CardanoKeri/Lifecycle.lean` — states, actions, guards, value ledger,
   traces (definitions only).
-- `CardanoKeri/Goals.lean` — the theorem statements (all `sorry`).
+- `CardanoKeri/Invariants.lean` — shared invariant lemmas (the QuickCheck
+  property seed inventory for the #114/#115/#116 reworks).
+- `CardanoKeri/Goals.lean` — the 17 theorems, statements exactly as
+  ratified, fully proved.
 
 Sources: epic #24 Technical contract; the "Permissionless bridging +
 incentivised freeze" design note (LOCKED 2026-07-21); the epic-owner
@@ -23,10 +26,37 @@ lake build          # with elan: picks up lean-toolchain (v4.27.0)
 nix shell nixpkgs#lean4 -c lake build
 ```
 
-The build must pass with exactly 17 `declaration uses 'sorry'` warnings
-(16 goals; goal 13 has a per-transition form plus a whole-trace corollary).
-No `axiom` declarations anywhere: `#print axioms` on every goal reports only
-`sorryAx` (and `propext`, Lean core).
+The build passes with **zero `sorry`** (16 goals; goal 13 has a
+per-transition form plus a whole-trace corollary, and goal 17 was added by
+ruling). No `axiom` declarations anywhere: `#print axioms` on every goal
+reports at most `propext` and `Quot.sound` (both Lean core).
+
+## Lemma inventory (QuickCheck property seeds)
+
+`Invariants.lean` names the machine facts the proofs run on; each is a
+candidate property-based test for the reworks:
+
+- `Step.preserves_balanced` / `TraceFrom.preserves_balanced` — conservation
+  per transition and along any trace.
+- `TraceFrom.last_step` / `TraceFrom.step_at` — every final-state fact is
+  witnessed by its producing transition; any indexed transition splits the
+  trace.
+- `reachable_behind` (+ `Reachable.armed_behind`, `Reachable.frozen_behind`)
+  — reachable Armed/Frozen states are genuinely behind, so response and
+  thaw advances are always enabled.
+- `Step.advance_target` — every advance lands Active (at exactly `k+1`).
+- `fragment_no_three_stalls` — the permissionless fragment stalls out after
+  arm → claim: three consecutive non-advances are impossible (goal 4's
+  engine, the constant-2 bound).
+- `active_advance_chain` — the replay ladder: `n` advances whenever the KEL
+  extends that far (goal 16's witness).
+- `outflowTotal_append`, `initConfig_balanced`, `getElem?_some_lt`,
+  `getElem?_isSome_of_lt` — bookkeeping.
+
+Proof-shape facts worth vectoring: a claim is always index-adjacent to the
+arm/challenge that set its deadline, and a finalizeClose is always
+index-adjacent to its closeIntent (nothing can sit between without leaving
+the state).
 
 ## Scope: the validator, nothing else
 

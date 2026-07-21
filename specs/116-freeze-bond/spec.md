@@ -1,7 +1,7 @@
 # #116: freeze-bond state machine
 
 **Target issue**: #116 (reopened; no new issue)  
-**Base**: `main` at `02e7fc7bead52418029319ee71335dd69093d4bd`  
+**Base**: `main` at `2aa2d29adb79d503c40f6b9353852cf8433bafcd`
 **Status**: Ratified by A-014 — implementation in progress  
 **Design authority**: `/tmp/keri-24/permissionless-freeze-design.md` and
 `/tmp/keri-24/verification-3-tickets.md`
@@ -38,6 +38,8 @@ Convict. #114 and #115 remove those staging closures in their own scopes.
   residual;
 - supply Haskell/Aiken parity models, generated vectors, full validator
   contexts, and measurements for #116-owned paths.
+- bootstrap and enforce the 17-row Lean -> QuickCheck -> generated-vector ->
+  Aiken traceability chain over the merged #124 lifecycle model.
 - update #116-owned freeze narrative in the docs, M1 slides, and M1 blog in a
   pair-owned slice gated by strict MkDocs and lychee.
 
@@ -229,6 +231,8 @@ behavior. Mainnet deployment and #117 resume remain prohibited until #114 and
 - full role/redeemer matrix, terminal tombstone, repeated registration not
   used as an admission gate, no registry/batcher/sequencer symbol;
 - explicit staging tests that Register and every Advance remain fail closed.
+- stable full-context test identifiers for the #116 Arm, Claim, and Convict
+  rows consumed by the Lean traceability map.
 
 ## Normative anti-griefing invariants
 
@@ -307,7 +311,68 @@ that a cryptographic express-close exists. They do not rewrite registration or
 normal-Advance fragments owned by #114/#115. The slice runs the
 repository-equivalent `mkdocs build --strict` and lychee link gate.
 
-## Measurement gate
+## Lean -> Aiken traceability gate
+
+The 17 proved theorem declarations in `lean/CardanoKeri/Goals.lean` are the
+machine-readable source of truth. #116 bootstraps a checked-in
+`lean/traceability.csv` whose data header is exactly:
+
+```text
+lean_theorem,quickcheck_property,aiken_test
+```
+
+The CSV contains exactly one unique, fully populated row for every extracted
+theorem, including both `value_conservation` and
+`value_conservation_trace`. Before the data header, `#` comment lines state
+the honest limits in substance: Lean proves universal claims over the
+abstract model; QuickCheck samples the pure Haskell mirror; generated parity
+vectors bind Haskell verdicts to Aiken verdicts; full-context Aiken tests
+cover ledger details abstracted by the model (addresses, datum shape, real
+Value arithmetic). No refinement proof is claimed.
+
+The bridge is test architecture, not live dispatch. A pure Haskell lifecycle
+model mirrors every `Step` constructor in merged
+`lean/CardanoKeri/Lifecycle.lean`, including Register, all four Advance
+sources, Arm, Claim, CloseIntent, ChallengeClose, FinalizeClose, and all four
+Convict sources. Modeling future #114/#115/#117 actions here does not open
+their staged validator branches. Every Lean constructor has a separately
+named pure Haskell mirror function; a total dispatcher delegates to those
+functions and returns rejection or the exact successor configuration.
+
+Direct QuickCheck properties cover the nine per-transition theorems:
+`adversarial_advance_is_progress`, `armed_exclusive_window`,
+`abandonment_pays_exactly_B`, `close_lie_always_voidable`,
+`close_at_tip_unchallengeable`, `current_state_is_quiet`,
+`value_conservation`, `convict_dominance`, and
+`tombstone_terminal_but_no_aid_bar`.
+
+Monadic state-machine properties generate valid and adversarial interleavings
+for the eight trace/reachability theorems: `advance_totality`,
+`no_absorbing_busy_state`, `bounded_churn`,
+`bond_transfer_only_via_elapsed_window`, `frozen_implies_true_silence`,
+`value_conservation_trace`, `replay_convergence`, and
+`close_cycle_requires_elapsed_window`.
+
+Names from `lean/CardanoKeri/Invariants.lean` seed corresponding property
+names and failure labels, especially `Step.preserves_balanced`,
+`TraceFrom.preserves_balanced`, `TraceFrom.last_step`,
+`TraceFrom.step_at`, `Step.advance_target`, `fragment_no_three_stalls`, and
+`active_advance_chain`. One Haskell generator emits shared theorem/verdict
+vectors; matching pure Aiken lifecycle verdict tests consume them. Existing
+and new full-context validator tests remain separate evidence for what the
+pure model abstracts.
+
+`scripts/check-lean-traceability.sh` is a CI drift gate wired into the normal
+repository gate. It extracts every top-level theorem name from `Goals.lean`
+and fails on a missing/duplicate/extra/blank CSV row, a missing mapped Haskell
+property identifier, a missing mapped Aiken test identifier, malformed
+header/comments, hand-edited vector drift, or a theorem count other than the
+source count. Renaming or adding a theorem therefore breaks CI until the map
+and executable tests move together. #114/#115 and held #117 strengthen or
+retarget their rows as their live full-context paths land; they must not
+create duplicate theorem rows or weaken this gate.
+
+## Measurement and traceability gate
 
 Full final-handler contexts measure at least:
 
@@ -323,6 +388,11 @@ below 25.00% headroom on either axis is a hard stop. Synthetic transaction
 shape may supply reserve-conformant state values, but KERI evidence must remain the real
 generated worst-case fixture and the measured target must be the full
 validator handler.
+
+The same R4 gate runs every mapped QuickCheck property, regenerates and diffs
+the shared Haskell/Aiken lifecycle vectors, runs every mapped Aiken test, and
+executes the traceability drift script. A green measurement table without a
+complete 17/17 executable map is a hard failure.
 
 ## Acceptance criteria
 
@@ -345,3 +415,7 @@ validator handler.
    and makes the two-invariant theorem its centerpiece; strict MkDocs and
    lychee pass, and the orchestrator does not author it.
 10. No historical spec, #117 code, PR-ready, or merge action occurs.
+11. All 17 merged Lean theorems have unique executable QuickCheck and Aiken
+    mappings; the drift gate, pure mirror, monadic traces, generated parity,
+    and honest-limit header are checked in and green without opening any
+    staged #114/#115/#117 validator action.

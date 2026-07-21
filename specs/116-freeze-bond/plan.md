@@ -44,6 +44,8 @@ staging-closed.
 - Every behavior slice is RED -> GREEN and one bisect-safe commit.
 - The pair-owned documentation slice is a separate bisect-safe commit gated by
   `mkdocs build --strict` and lychee.
+- The final #116 slice extends the existing real-node `withDevnet` suite and
+  proves the staging closures without bypassing the production validator.
 - No confidential operator material enters the repository artifacts.
 - No violation or exception is proposed.
 
@@ -76,6 +78,9 @@ onchain/validators/checkpoint_tests.ak
 onchain/validators/checkpoint_measurements.ak
 offchain/cardano-keri.cabal
 offchain/test/Main.hs
+offchain/e2e/CheckpointE2ESpec.hs
+offchain/e2e/CheckpointTxBuilder.hs
+offchain/e2e/e2e-main.hs
 justfile
 ```
 
@@ -247,17 +252,39 @@ fragments. `mkdocs build --strict`, lychee, and the full gate must pass.
 Commit: `docs(116): explain the bonded freeze lifecycle` with exactly
 `Tasks: T116-R5`.
 
+## Slice R6 — staged checkpoint devnet boundary (`T116-R6`)
+
+Extend the existing `offchain/e2e` suite, cabal component, Nix app/check, and
+CI entry using the `CageTxBuilder` and `withDevnet` pattern. The builders cover
+the production transaction shapes for Register, Arm, ordinary Advance
+response, Claim, Thaw, and Close, including real validity intervals and the
+slot-to-POSIX-ms conversion used at the node boundary.
+
+At the #116 staging HEAD the running smoke submits Register, Advance, and Close
+against the real applied combined validator and requires ledger rejection for
+all three. Full Arm -> response-before-deadline and Arm -> Claim-at/after ->
+Thaw scenarios are checked in, compile, and remain explicitly pending because
+closed Register cannot create the prerequisite checkpoint and closed Advance
+cannot perform response/thaw. The pending rationale names #114/#115; it is not
+a skip masking a #116 failure. No fixture validator, bypass mint, state
+injection, or off-chain mock may make a closed branch appear live.
+
+Run the targeted `withDevnet` smoke, compile the named pending scenarios, and
+run the full gate. Commit: `test(116): stage checkpoint lifecycle on devnet`
+with exactly `Tasks: T116-R6`.
+
 ## Ordering and bisect safety
 
-`R1 -> R2 -> R3 -> R4 -> R5` is strict. R1 is behavior-neutral. R2 atomically
+`R1 -> R2 -> R3 -> R4 -> R5 -> R6` is strict. R1 is behavior-neutral. R2 atomically
 changes the applied arity and Arm/Claim transition while closing every path
 whose final value semantics are not yet owned. R3 reopens Convict only with
 complete payout welds. R4 is test-only: pure traceability plus measurements,
-with no live dispatch. R5 documents only the
-#116-owned narrative after behavior and measurements are stable. Every HEAD
-builds and passes the full gate.
+with no live dispatch. R5 documents only the #116-owned narrative after
+behavior and measurements are stable. R6 exercises the honest staging boundary
+against a real node and leaves future success flows visibly pending. Every
+HEAD builds and passes the full gate.
 
-After R5, #116 may merge but the protocol set remains **NO DEPLOY**. #114 is
+After R6, #116 may merge but the protocol set remains **NO DEPLOY**. #114 is
 created from that updated main; no pair works ahead on a stale base.
 The R4 pure model includes future actions only because it mirrors the already
 proved ratified lifecycle; it is not an implementation of #114/#115/#117.
@@ -276,4 +303,6 @@ proved ratified lifecycle; it is not an implementation of #114/#115/#117.
   exactly 17/17 unique map rows whose mapped identifiers exist and execute; a
   green measurement table alone is insufficient.
 - Scope drift into Register/Advance authentication is a Q-file stop.
+- R6 may build those future transaction shapes but may not open, fake, or
+  bypass any Register/Advance/Close validator branch.
 - No mark-ready, merge, or deployment action is implied by this plan.

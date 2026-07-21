@@ -127,21 +127,21 @@ in `plan.md`.
 
 ## Slice R6 — staged checkpoint devnet boundary
 
-- [ ] T116-R6 Extend `offchain/e2e` with production-shaped checkpoint builders
+- [x] T116-R6 Extend `offchain/e2e` with production-shaped checkpoint builders
       for Register, Arm, Advance response, Claim, Thaw, and Close, following
       the existing `CageTxBuilder`/`withDevnet` pattern and real validity-range
       slot-to-POSIX-ms conversion.
-- [ ] T116-R6 Run a real-node fail-closed staging smoke that submits Register,
+- [x] T116-R6 Run a real-node fail-closed staging smoke that submits Register,
       Advance, and Close to the applied #116 validator and asserts all three
       are rejected by the ledger.
-- [ ] T116-R6 Check in compiled, named Arm->response-before-deadline and
+- [x] T116-R6 Check in compiled, named Arm->response-before-deadline and
       Arm->Claim-at/after-deadline->Thaw scenarios as explicitly pending on
       #114 Register and #115 Advance; never use a fixture validator, bypass
       mint, injected state, or mock to manufacture a positive result.
-- [ ] T116-R6 Wire the existing cabal/Nix/CI E2E surface so the staging smoke
+- [x] T116-R6 Wire the existing cabal/Nix/CI E2E surface so the staging smoke
       runs in the established `E2E (withDevnet)` path and the future scenarios
       cannot silently stop compiling.
-- [ ] T116-R6 Run the targeted real-node smoke and full gate; commit exactly
+- [x] T116-R6 Run the targeted real-node smoke and full gate; commit exactly
       `test(116): stage checkpoint lifecycle on devnet` with exactly
       `Tasks: T116-R6`, then park for epic-owner acceptance. Do not deploy,
       dispatch #117, mark ready, or merge without instruction.

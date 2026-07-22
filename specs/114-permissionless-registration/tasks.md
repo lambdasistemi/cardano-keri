@@ -91,49 +91,34 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
       `test(114): measure permissionless registration` with exactly
       `Tasks: T114-R4`.
 
-## Slice R5a — current-production devnet state
+## Closed investigation R5a — blocked on upstream #190
 
-- [ ] T114-R5a RED: start the real devnet, query/assert the 251-entry V3
-      pre-transition lineage, reproduce the production hash-proof settlement
-      failure under stale parameters, and record the pinned node version.
-- [ ] T114-R5a Prove whether the pinned node can enact PV 11. A node bump is
-      authorized only if this probe fails; if changed, record old/new versions,
-      compatibility verdict, and the exact lock delta.
-- [ ] T114-R5a Commit the full 2026-07-22 mainnet parameter snapshot in an E2E
-      fixture with provenance naming date, network, node/socket lineage, PV
-      11.0, and source SHA-256; record the same-day preprod digest as a
-      cross-check.
-- [ ] T114-R5a GREEN: submit/enact the real parameter/hard-fork transition,
-      poll it, then query/assert PV 11.0 and exact equality with all 350 V3
-      entries before settling a real production hash-proof mint. No genesis
-      cost-model patch, synthetic evaluator, pending case, or waiver.
-- [ ] T114-R5a Preserve the single genesis delta and drift proof exactly as
-      `maxTxSize 16384 -> 32768`; do not alter genesis exunits. A live witness
-      may use 16.5M/10B, while the measurement gate stays at the stricter
-      internal 14M/10B ceiling; correct the false E2E “mainnet 14M” comment.
-- [ ] T114-R5a Run the focused real-node test, both withDevnet jobs, and full
-      gate; report program bytes and both standing deltas; commit exactly
-      `test(114): initialize production cost model on devnet` with exactly
-      `Tasks: T114-R5a`.
+- [x] T114-R5a Close with no commit as
+      `blocked-on=cardano-node-clients#190`; preserve the ruled design, live
+      diagnosis, porting guide, and complete donor diffs in the two durable
+      #190 comments. No governance machinery or cost-model patch lands here.
 
 ## Slice R5 — staged checkpoint devnet
 
-- [ ] T114-R5 Restore the byte-verified suspended R5 patch, rebase its narrow
-      harness overlap onto R5a, and prove the resulting diff contains only the
-      approved R5 lifecycle surface.
+- [ ] T114-R5 Remove only the uncommitted R5a governance experiment, restore
+      the byte-verified suspended R5 patch, and prove the resulting diff
+      contains only the approved R5 lifecycle surface.
 - [ ] T114-R5 RED: replace #116's Register staging rejection/pending scenarios
       with the exact #114 live-boundary expectation matrix.
-- [ ] T114-R5 GREEN: on a real devnet settle hash-proof mint + permissionless
-      Register with `D_reg+B` escrow after the queried PV11/350 initialization,
-      then settle Arm against that fresh production-lineage checkpoint.
-- [ ] T114-R5 Exercise Claim according to the actual #116 dispatch at this
-      head—positive if live, explicit Phase-2 rejection if intentionally
-      closed—and leave no Claim scenario hidden as pending.
+- [ ] T114-R5 GREEN: compile hash-proof mint -> permissionless Register with
+      `D_reg+B` escrow -> Arm -> Claim, marking those positive rows exactly
+      `PENDING(blocked-on=#190)`; settle every staged flow that does not depend
+      on the hash-proof mint.
+- [ ] T114-R5 Add one live-node negative asserting the exact current failure:
+      hash-proof mint rejected because the 251-entry genesis model does not
+      price the required Plomin builtins.
 - [ ] T114-R5 Prove Advance and Close still reach the production validator and
       reject; retain the single-field 32-KiB genesis override, drift proof, and
       loud NON-DEPLOYABLE output banner.
 - [ ] T114-R5 Report current bytes and both standing deltas, run both withDevnet
-      jobs and the full gate, and commit exactly
+      jobs and the full gate, and publish the three-way evidence table
+      (settled-on-devnet / pending-on-#190 / proven-at-preprod-#115) with the two
+      durable #190 comment links; commit exactly
       `test(114): settle permissionless registration on devnet` with exactly
       `Tasks: T114-R5`.
 

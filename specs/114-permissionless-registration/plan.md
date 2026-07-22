@@ -55,12 +55,10 @@ lean/traceability.csv                                             # audit/condit
 offchain/e2e/CheckpointE2ESpec.hs
 offchain/e2e/CheckpointTxBuilder.hs
 offchain/e2e/CageTxBuilder.hs                    # live-limit wording only
-offchain/e2e/fixtures/mainnet-pparams-2026-07-22.json
 offchain/cardano-keri.cabal
 offchain/test/Main.hs
 justfile
 offchain/flake.nix
-offchain/flake.lock                              # only if PV11 probe requires bump
 specs/114-permissionless-registration/MEASUREMENTS.md
 
 # R6 only, named fragments:
@@ -160,52 +158,41 @@ even if #114 happens to fit; the binding deployability decision remains #115.
 Commit: `test(114): measure permissionless registration` with exactly
 `Tasks: T114-R4`.
 
-## Slice R5a — current-production devnet state (`T114-R5a`)
+## Closed investigation R5a — blocked on upstream #190
 
-RED starts the real devnet, queries the pre-transition protocol parameters,
-asserts the repository genesis lineage has the 251-entry Plutus V3 model, and
-demonstrates that the production hash-proof witness cannot settle under that
-stale state. It also records the pinned cardano-node version and tests whether
-that binary can enact PV 11; a node-pin bump is authorized only on a proved
-compatibility failure.
-
-GREEN commits the full 2026-07-22 mainnet protocol-parameter snapshot as an
-E2E fixture with a provenance envelope naming the mainnet node/socket lineage,
-date, PV 11.0, and source digest. The same-day preprod digest is recorded as a
-cross-check. The harness then uses the real protocol-parameter/hard-fork
-transition path, polls enactment, and queries the node to assert PV 11.0 plus
-the exact 350-entry V3 model content before settling a real production
-hash-proof mint. Fixture-only assertions, synthetic evaluation, a genesis
-cost-model patch, or a pending/waived witness are forbidden.
-
-The sole genesis difference remains the existing drift-proved
-`maxTxSize 16384 -> 32768`; its old/new assertions remain live and exunit
-fields stay untouched. The live-node witness may use the current production
-16.5M/10B limit. The measurement gate stays at the stricter internal 14M/10B
-ceiling. Correct the E2E harness comment that labels 14M as a network maximum.
-If the node pin changes, record the old/new versions and the compatibility
-verdict and keep the lock delta in this slice.
-
-Commit: `test(114): initialize production cost model on devnet` with exactly
-`Tasks: T114-R5a`.
+R5a produced no commit. Its live-node diagnosis proved that the stock devnet's
+251-entry Plutus V3 model leaves the required Plomin builtins unpriced and that
+the stock governance bootstrap cannot enact the corrective ParameterChange.
+The work is closed as `blocked-on=cardano-node-clients#190`; its porting guide,
+live epochs-1-through-5 evidence, and complete donor diffs now live in the
+upstream issue's
+[implementation guide](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840036)
+and [harness-diff comment](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840248).
+No governance machinery or cost-model patch lands in cardano-keri.
 
 ## Slice R5 — staged checkpoint devnet (`T114-R5`)
 
-After restoring and rebasing the independently verified suspended R5 patch,
-RED changes the named checkpoint E2E expectations from the #116 staging smoke
-to the exact #114 matrix. GREEN extends the existing `CageTxBuilder`-pattern
-harness and, after R5a's queried PV 11/350-entry initialization and under the
-already drift-checked devnet-only 32-KiB override:
+After removing only the uncommitted R5a governance experiment and restoring
+the independently verified suspended R5 patch, RED changes the named checkpoint
+E2E expectations from the #116 staging smoke to the exact #114 evidence matrix.
+GREEN extends the existing `CageTxBuilder`-pattern harness under the already
+drift-checked devnet-only 32-KiB override:
 
-- settles hash-proof mint then permissionless Register with real
-  `minADA+D_reg+B` escrow;
-- settles Arm against that fresh production-lineage checkpoint;
-- asserts Claim according to the actual #116 dispatch at this head (positive
-  if live, explicit Phase-2 rejection if intentionally closed; never pending);
+- compiles the positive hash-proof mint -> Register with real
+  `minADA+D_reg+B` escrow -> Arm -> Claim lifecycle and records every positive
+  row as `PENDING(blocked-on=#190)`;
+- adds one live-node negative asserting the exact rejection caused by the
+  unpriced Plomin builtins in the 251-entry genesis model;
+- settles any staged flow that does not require the hash-proof mint;
 - proves Advance and Close still reach the production validator and reject;
 - retains the loud NON-DEPLOYABLE output banner and single-field genesis
   override; and
 - reruns the checkpoint size probe and the full E2E/CI gate.
+
+The evidence table and PR body use three columns: settled-on-devnet,
+pending-on-#190, and proven-at-preprod-#115. The two linked #190 comments are
+the durable source for the pending rows' future implementation; #115's preprod
+gate owns the first real positive lifecycle settlement.
 
 Commit: `test(114): settle permissionless registration on devnet` with
 exactly `Tasks: T114-R5`.
@@ -247,12 +234,13 @@ Commit: `docs(114): explain permissionless bonded registration` with exactly
 
 ## Ordering and bisect safety
 
-`R1 -> R2 -> R3 -> R4 -> R5a -> R5 -> R6` is strict. Fixture material precedes
+`R1 -> R2 -> R3 -> R4 -> R5 -> R6` is strict. Fixture material precedes
 consumers. R2 is safe because #116 keeps mint closed. R3 atomically opens
 Register with all auth/value checks and an explicit 21-row traceability audit.
-R4 changes only measurement evidence. R5a proves the actual production-state
-transition and hash-proof boundary on a real node. R5 proves the exact staging
-matrix in that state. R6 changes only #114-owned narrative after behavior,
+R4 changes only measurement evidence. The closed R5a investigation names #190
+as the upstream blocker without a downstream commit. R5 proves the exact
+old-cost staging matrix and preserves honest pending rows. R6 changes only
+#114-owned narrative after behavior,
 measurements, and live-boundary evidence are stable. Every HEAD passes the full
 gate and records the current program bytes/deltas.
 
@@ -267,6 +255,6 @@ are still closed. #115 starts only from the updated main.
   excludes docs; old specs, #116 behavior, all #117 files, PR metadata, and
   pushes are always excluded.
 - A 25% miss, stale fresh-signing symbol, weakened offset/threshold canary,
-  missing traceability identifier, failed real PV11 transition, non-350 model,
+  missing traceability identifier, an imprecise or unobserved old-cost failure,
   E2E staging mismatch, or missing size delta is a Q-file stop.
 - No mark-ready, merge, deployment, or #117 resume is authorized here.

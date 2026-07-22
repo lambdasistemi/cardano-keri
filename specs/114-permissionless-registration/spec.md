@@ -279,50 +279,53 @@ permitted. The deployability hard stop remains #115 mark-ready, with A-015's
 binding remediation order: build-level first, then withdraw/observer
 forwarding, and mint/spend split only after a fresh operator ruling.
 
-## Current-production devnet initialization
+## Devnet cost-model boundary
 
-The E2E harness MUST reach the current production protocol state through the
-real node transition path before exercising the #114 lifecycle. It starts
-from the repository's valid devnet genesis and its 251-entry Plutus V3 model,
-queries and asserts that pre-transition state, then submits/enacts the actual
-protocol-parameter and hard-fork transition to PV 11.0 with the exact
-350-entry model copied from the 2026-07-22 mainnet snapshot. The test polls the
-node and asserts the post-transition protocol version, entry count, and model
-content from a fresh local-state query; checking the fixture alone is not
-evidence.
+The pinned `withDevnet` genesis exposes a 251-entry Plutus V3 cost model that
+does not price the Plomin builtins used by the production hash-proof policy.
+Its stock governance bootstrap cannot enact the required parameter update.
+That upstream defect is tracked by
+[`cardano-node-clients#190`](https://github.com/lambdasistemi/cardano-node-clients/issues/190).
+The ruled design, live epochs-1-through-5 diagnosis, porting guide, and complete
+donor diffs are preserved in the issue's
+[implementation guide](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840036)
+and [harness-diff comment](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840248),
+which are the durable source of record.
 
-The committed fixture carries public provenance: date, network, source node
-and socket lineage, protocol version, and source-file digest. Mainnet is the
-normative source; the same-day preprod snapshot is retained as cross-check
-evidence. The pinned node version is tested for PV 11 support and may be
-bumped only if that compatibility probe proves it necessary, with the old/new
-version and verdict recorded.
+#114 MUST NOT patch the cost model or governance state locally. Instead, its
+live-node evidence distinguishes three states explicitly:
 
-No cost model or protocol version is patched directly into genesis. The sole
-genesis delta remains the already drift-checked devnet-only
-`maxTxSize = 16384 -> 32768` override; transaction exunit fields remain
-unchanged. A live hash-proof witness may use the current production
-`16,500,000` / `10,000,000,000` transaction ceiling, while all validator
-measurement acceptance continues to use the stricter internal 14M/10B gate.
+1. **settled on devnet** — achievable staged-negative transactions and one
+   machine-checked rejection proving the exact missing-Plomin-price failure;
+2. **pending on #190** — the compiled positive hash-proof mint, Register, Arm,
+   and Claim lifecycle rows, each marked `PENDING(blocked-on=#190)`; and
+3. **proven at #115 preprod** — the first real positive settlement proof under
+   production prices, required at #115's preprod gate.
+
+When #190 lands, a follow-up may bump the pinned dependency and flip the
+pending devnet rows live. The sole current genesis delta remains the
+drift-checked devnet-only `maxTxSize = 16384 -> 32768` override; transaction
+exunit fields remain unchanged, and validator measurements retain the stricter
+internal 14M/10B ceiling.
 
 ## Staged live-node boundary
 
-After that initialization slice, the existing `withDevnet` checkpoint harness
-is extended in a dedicated slice. Against the real applied validator and real
-hash-proof policy it MUST:
+The existing `withDevnet` checkpoint harness is extended in a dedicated slice.
+Against the real applied validator and real hash-proof policy it MUST:
 
-1. settle the hash-proof mint and permissionless Register carrying
-   `checkpoint_min_ada + D_reg + B`;
-2. settle Arm against that freshly registered production-lineage checkpoint;
-3. exercise Claim according to the actual #116 dispatch at the #114 head — a
-   live branch is asserted positively, while an intentionally staged-closed
-   branch is asserted as a Phase-2 rejection, never hidden as pending; and
+1. compile the positive hash-proof mint -> permissionless Register with
+   `checkpoint_min_ada + D_reg + B` -> Arm -> Claim lifecycle, but mark each
+   positive row `PENDING(blocked-on=#190)` rather than claiming settlement;
+2. run one honest live-node negative that asserts the hash-proof mint is
+   rejected specifically because the 251-entry genesis model does not price
+   the required Plomin builtins;
+3. positively settle every staged flow that does not require that mint; and
 4. prove Advance and Close still reach the production script and reject.
 
 The devnet-only `maxTxSize = 32768` override remains single-field and
-drift-checked, with the **NON-DEPLOYABLE** banner. These slices prove real
-protocol transition, node settlement, and staging truth, not production-cap
-deployability.
+drift-checked, with the **NON-DEPLOYABLE** banner. This slice proves the
+old-cost node boundary and staging truth without misreporting blocked positive
+settlement as production-cap deployability.
 
 ## Pair-owned documentation slice
 
@@ -375,12 +378,12 @@ on #116 docs.
 6. Haskell/Aiken verdicts, codecs, numeric boundaries, generated vectors, the
    executable 21-theorem traceability gate, full gate, and the 25% measurement
    gate pass.
-7. The staged E2E settles Register+escrow and Arm, asserts Claim according to
-   the actual dispatch, and proves Advance/Close remain fail closed.
-8. The harness performs a real transition to queried PV 11.0 and the exact
-   provenance-pinned 350-entry mainnet V3 model before lifecycle settlement;
-   the sole genesis delta remains `maxTxSize`, and the pinned node's PV 11
-   compatibility verdict is recorded.
+7. The staged E2E settles every achievable old-cost flow, proves Advance/Close
+   remain fail closed, and observes the exact unpriced-Plomin rejection.
+8. Positive hash-proof/Register/Arm/Claim rows compile but are explicitly
+   `PENDING(blocked-on=#190)`; the evidence table routes their first real
+   settlement proof to #115's production-priced preprod gate and links the two
+   durable #190 implementation comments.
 9. The final size table reports bytes and deltas against 19,565 and 16,133;
    all artifacts remain prominently NON-DEPLOYABLE and #115 retains the hard
    stop.

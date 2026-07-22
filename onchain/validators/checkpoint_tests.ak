@@ -17,12 +17,13 @@
 //// R7 canary each prove the VALIDATOR routes through the S3 predicate and
 //// rejects.
 ////
-//// The validator parameters under test mirror the vectors' shared
-//// `DeploymentContext` (`network_id = 0`, checkpoint policy = the ctx
-//// `checkpoint_policy_id`, `d_reg = 1_000_000_000`, ledger floor
-//// `min_ada = 2_000_000`): the R7 signatures sign the reconstructed
-//// preimage under exactly that context. Ordinary fixtures use the
-//// non-normative reference d_reg = 1_000_000_000 lovelace.
+//// The registration deployment values under test mirror the vectors'
+//// shared `DeploymentContext` (`d_reg = 1_000_000_000`, ledger floor
+//// `min_ada = 2_000_000`). R7 authenticates the exact inception-event
+//// bytes with the event's own controller signatures and witness receipts;
+//// the validator separately enforces the ledger policy and network context.
+//// Ordinary fixtures use the non-normative reference d_reg =
+//// 1_000_000_000 lovelace.
 
 use aiken/collection/list
 use aiken/interval
@@ -108,8 +109,9 @@ type R3SpendRedeemer {
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
 
-/// The checkpoint policy under test — MUST equal the shared vectors'
-/// `checkpoint_policy_id` (the R7 signatures bind it via the preimage).
+/// The checkpoint policy under test. The validator enforces it through the
+/// minted checkpoint asset and state output; it is not part of R7's signed
+/// KERI event bytes.
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 

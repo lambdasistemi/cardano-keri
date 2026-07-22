@@ -21,17 +21,14 @@
 //// guard. `registration_tests.ak` asserts these verdicts match the
 //// Haskell over the shared generated vectors (`registration_vectors.ak`).
 
-use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{blake2b_256, verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/base64url
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
-use cardano_keri/checkpoint/message.{
-  Icp, InceptionError, InceptionInvalid, InceptionMessage, InceptionValid,
-  deriveAidAssetName, inception_datum, inception_domain, qb64_aid, qb64_verkey,
-  validate_inception,
+use cardano_keri/checkpoint/datum.{
+  CheckpointDatumV1, DatumError, DatumInvalid, DatumValid, datum_well_formed,
 }
+use cardano_keri/checkpoint/message.{qb64_aid, qb64_verkey}
 use cardano_keri/checkpoint/threshold.{
   Threshold, Unweighted, Weight, Weighted, evaluate,
 }
@@ -40,13 +37,10 @@ use cardano_keri/checkpoint/threshold.{
 // Deployment context (mirrors the S2 `DeploymentContext`)
 // ---------------------------------------------------------
 
-/// The deployment the registration validates against: the frozen
-/// validator parameters (`network_id`, the checkpoint policy = own script
-/// hash, `d_reg`) plus the ledger `min_ada` floor the R8 arithmetic runs
-/// over.
+/// The deployment values registration validation enforces: the
+/// deployment-fixed `d_reg` plus the ledger `min_ada` floor the R8
+/// arithmetic runs over.
 pub type DeploymentContext {
-  network_id: Int,
-  checkpoint_policy_id: ByteArray,
   min_ada: Int,
   d_reg: Int,
 }
@@ -67,12 +61,8 @@ pub fn valid_registration_deposit(d_reg: Int) -> Bool {
 /// per-field value offsets into it (the generator's offset convention:
 /// first byte of the value content between the quotes; a weighted
 /// `kt`/`nt` offset points at the opening `[` of the full compact-JSON
-/// array), and the controller signatures.
-///
-/// `ctrl_sigs` index into the datum's `cur_keys` and sign the
-/// `InceptionMessage` canonical-CBOR preimage — NOT the KERI event bytes
-/// (`event_bytes`); the KEL's own indexed KERI signatures stay off-chain
-/// audit material (spec QF).
+/// array), controller signatures, and witness receipts. Both signature
+/// families authenticate the exact `event_bytes`.
 pub type RegistrationEvidence {
   event_bytes: ByteArray,
   off_t: Int,
@@ -85,6 +75,7 @@ pub type RegistrationEvidence {
   off_b: List<Int>,
   off_bt: Int,
   ctrl_sigs: List<(Int, ByteArray)>,
+  wit_receipts: List<(Int, ByteArray)>,
 }
 
 // ---------------------------------------------------------
@@ -211,31 +202,46 @@ pub fn proof_token_name(
 }
 
 // ---------------------------------------------------------
-// Message reconstruction (R3)
+// Inception schema validation (R4)
 // ---------------------------------------------------------
 
-/// The RECONSTRUCTED `InceptionMessage`: deployment parameters from the
-/// context, the asset name derived (never copied) from the datum's AID,
-/// and the datum's own key-state fields. This is the only message shape
-/// the predicate ever consults — nothing message-shaped is
-/// caller-supplied (R3).
-pub fn registration_message(
-  ctx: DeploymentContext,
+/// The attested KERI inception event type. V1 accepts only `Icp`.
+pub type EventType {
+  Icp
+  Dip
+  Drt
+}
+
+/// An inception datum rejection reason, with no authorization message.
+pub type InceptionError {
+  DelegatedInceptionRejected
+  InceptionAidWidth
+  InceptionNativeSnNonZero
+  InceptionIllFormed(DatumError)
+}
+
+/// Structural inception-datum validation verdict.
+pub type InceptionVerdict {
+  InceptionValid
+  InceptionInvalid(InceptionError)
+}
+
+/// Validate the structural inception projection carried by a datum.
+pub fn validate_inception_datum(
+  event_type: EventType,
   d: CheckpointDatumV1,
-) -> InceptionMessage {
-  InceptionMessage {
-    domain: inception_domain,
-    network_id: ctx.network_id,
-    checkpoint_policy_id: ctx.checkpoint_policy_id,
-    aid_asset_name: deriveAidAssetName(d.cesr_aid),
-    cesr_aid: d.cesr_aid,
-    cur_keys: d.cur_keys,
-    cur_threshold: d.cur_threshold,
-    next_keys: d.next_keys,
-    next_threshold: d.next_threshold,
-    witnesses: d.witnesses,
-    toad: d.toad,
-    native_sn: d.native_sn,
+) -> InceptionVerdict {
+  if event_type != Icp {
+    InceptionInvalid(DelegatedInceptionRejected)
+  } else if bytearray.length(d.cesr_aid) != 32 {
+    InceptionInvalid(InceptionAidWidth)
+  } else if d.native_sn != 0 {
+    InceptionInvalid(InceptionNativeSnNonZero)
+  } else {
+    when datum_well_formed(d) is {
+      DatumInvalid(err) -> InceptionInvalid(InceptionIllFormed(err))
+      DatumValid -> InceptionValid
+    }
   }
 }
 
@@ -248,11 +254,10 @@ pub fn registration_message(
 pub type RegistrationError {
   /// Applied `d_reg` is below `registration_deposit_floor`.
   DRegBelowMinimum
-  /// R3: `seq != 0` or the datum is not the genesis datum of the
-  /// reconstructed message.
+  /// R3: `seq != 0`.
   R3GenesisDatumMismatch
-  /// R4: the frozen #68 `validate_inception` rejected (domain, AID
-  /// width, derived asset name, `native_sn`, F18 + rule 14).
+  /// R4: inception datum validation rejected (AID width, `native_sn`,
+  /// F18 + rule 14).
   R4InceptionInvalid(InceptionError)
   /// E1: the `t` slice is not `"icp"` (`dip`/`drt`/`rot` all reject
   /// here; the verified slice feeds R4's event type).
@@ -278,9 +283,12 @@ pub type RegistrationError {
   E8WitnessesMismatch
   /// E9: the `bt` slice is not the hex re-spelling of `toad`.
   E9ToadMismatch
-  /// R7: the distinct positions with a verifying signature over the
-  /// message preimage do not satisfy `cur_threshold`.
+  /// R7: distinct valid controller positions over `event_bytes` do not
+  /// satisfy `cur_threshold`.
   R7QuorumUnsatisfied
+  /// R7: distinct valid witness receipts over `event_bytes` do not meet
+  /// `toad`, or a zero-toad datum carried a non-empty receipt list.
+  R7WitnessQuorumUnsatisfied
   /// R8: state-output lovelace below `min_ada + d_reg`.
   R8DepositBelowMinimum
 }
@@ -361,30 +369,47 @@ pub fn registration_predicate(
   if !valid_registration_deposit(ctx.d_reg) {
     RegistrationInvalid(DRegBelowMinimum)
   } else {
-    // R3: genesis datum — reconstructed message, nothing supplied.
-    let m = registration_message(ctx, d)
-    if !(d.seq == 0 && d == inception_datum(m)) {
+    // R3: genesis projection.
+    if d.seq != 0 {
       RegistrationInvalid(R3GenesisDatumMismatch)
     } else {
       // R6: the event-binding slice set (E1 derives R4's type).
       when event_binding(d, e) is {
         RegistrationInvalid(err) -> RegistrationInvalid(err)
         RegistrationValid ->
-          // R4: the frozen #68 schema predicate, reused.
-          when validate_inception(Icp, m) is {
+          // R4: structural inception datum validation.
+          when validate_inception_datum(Icp, d) is {
             InceptionInvalid(err) ->
               RegistrationInvalid(R4InceptionInvalid(err))
             InceptionValid -> {
-              // R7: distinct verified positions over the message preimage.
-              let preimage = cbor.serialise(m)
-              let signed = verified_positions(d.cur_keys, preimage, e.ctrl_sigs)
+              // R7: distinct controller positions over exact event bytes.
+              let signed = verified_positions(
+                d.cur_keys,
+                e.event_bytes,
+                e.ctrl_sigs,
+              )
               if !evaluate(d.cur_threshold, list.length(d.cur_keys), signed) {
                 RegistrationInvalid(R7QuorumUnsatisfied)
-              } else if lovelace < ctx.min_ada + ctx.d_reg {
-                // R8: deposit floor.
-                RegistrationInvalid(R8DepositBelowMinimum)
               } else {
-                RegistrationValid
+                // R7: distinct witness positions over those same bytes.
+                let witnessed = verified_positions(
+                  d.witnesses,
+                  e.event_bytes,
+                  e.wit_receipts,
+                )
+                let receipts_satisfied = if d.toad == 0 {
+                  e.wit_receipts == []
+                } else {
+                  list.length(list.unique(witnessed)) >= d.toad
+                }
+                if !receipts_satisfied {
+                  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+                } else if lovelace < ctx.min_ada + ctx.d_reg {
+                  // R8: deposit floor.
+                  RegistrationInvalid(R8DepositBelowMinimum)
+                } else {
+                  RegistrationValid
+                }
               }
             }
           }
@@ -435,14 +460,18 @@ fn verified_positions(
     sigs,
     fn(pair) {
       let (idx, sig) = pair
-      when list.at(keys, idx) is {
-        Some(k) ->
-          if verify_ed25519_signature(k, msg, sig) {
-            Some(idx)
-          } else {
-            None
-          }
-        None -> None
+      if idx < 0 {
+        None
+      } else {
+        when list.at(keys, idx) is {
+          Some(k) ->
+            if verify_ed25519_signature(k, msg, sig) {
+              Some(idx)
+            } else {
+              None
+            }
+          None -> None
+        }
       }
     },
   )

@@ -8,36 +8,22 @@ event-binding slice checks, the canonical @kt@\/@nt@\/@bt@
 re-spelling, the @B@-code witness qb64, and the proof-token name.
 
 Every honest artifact comes from the committed @registration.json@
-keripy bundle (#114 S1): events, per-field offsets, and signer
-seeds. Registration signatures are produced HERE from the exported
-seeds, over the reconstructed 'InceptionMessage' canonical-CBOR
-preimage for the test deployment context — never over the KERI
-event bytes (the bundle's own @event_sigs@ sign @event_raw@ and
-MUST fail R7).
+keripy bundle (#114 S1): events, per-field offsets, event-own
+controller signatures, and witness receipts. Both signature families
+authenticate the exact event bytes.
 
 Adversarial vectors are deterministic constructions over the honest
-artifacts (mutated datums, misdirected offsets, crossed contexts),
+artifacts (mutated datums and misdirected offsets),
 per the A-001 QB condition-1 offset-misdirection family. The
 @reg_oversize@ H1 length tier is S4 scope (the hash-proof policy);
 the pure predicate carries no length guard.
 -}
 module Cardano.KERI.AID.Checkpoint.RegistrationSpec (spec) where
 
-import Cardano.Crypto.DSIGN (
-    SignKeyDSIGN,
-    deriveVerKeyDSIGN,
-    genKeyDSIGN,
-    rawSerialiseSigDSIGN,
-    rawSerialiseVerKeyDSIGN,
-    signDSIGN,
- )
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     DatumError (..),
     blake2b_256,
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     decodeHex,
@@ -51,17 +37,14 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     textField,
     verkeyRaw,
  )
-import Cardano.KERI.AID.Checkpoint.Message (
-    InceptionError (..),
- )
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
+    InceptionError (..),
     RegistrationError (..),
     RegistrationEvidence (..),
     proofTokenName,
     qb64WitnessVerkey,
     registrationDepositFloor,
-    registrationMessage,
     registrationPredicate,
     respellHex,
     respellThreshold,
@@ -96,30 +79,20 @@ import Test.Hspec (
 -- Test deployment contexts
 -- ---------------------------------------------------------------
 
--- | The canonical test deployment (network 0, policy 0xCC..).
+-- | The canonical registration deployment values.
 ctx0 :: DeploymentContext
 ctx0 =
     DeploymentContext
-        { dcNetworkId = 0
-        , dcCheckpointPolicyId = BS.replicate 28 0xCC
-        , dcMinAda = 2_000_000
+        { dcMinAda = 2_000_000
         , dcDReg = 1_000_000_000
         }
-
--- | A crossed deployment: different network id.
-ctxNet :: DeploymentContext
-ctxNet = ctx0{dcNetworkId = 1}
-
--- | A crossed deployment: different checkpoint policy.
-ctxPol :: DeploymentContext
-ctxPol = ctx0{dcCheckpointPolicyId = BS.replicate 28 0xDD}
 
 -- | An honest state-output lovelace comfortably above the floor.
 funded :: Integer
 funded = dcMinAda ctx0 + dcDReg ctx0
 
 -- ---------------------------------------------------------------
--- Fixture case: datum + honest evidence + signer material
+-- Fixture case: datum + honest evidence
 -- ---------------------------------------------------------------
 
 -- | One registration sub-fixture, lifted into predicate inputs.
@@ -129,20 +102,16 @@ data RegCase = RegCase
     , rcDatum :: CheckpointDatumV1
     -- ^ The genesis datum implied by the event's own key-state.
     , rcEvidence :: RegistrationEvidence
-    -- ^ Honest offsets + fresh preimage signatures for 'ctx0'.
-    , rcSigners :: [SignKeyDSIGN Ed25519DSIGN]
-    -- ^ Current signing keys (from the exported seeds).
-    , rcAttackers :: [SignKeyDSIGN Ed25519DSIGN]
-    -- ^ Attacker keys (the fixture's next seeds, repurposed).
-    , rcAttackerKeys :: [ByteString]
-    -- ^ The attacker raw verkeys.
-    , rcEventSigs :: [(Int, ByteString)]
-    -- ^ The bundle's own KERI signatures over @event_raw@.
+    -- ^ Honest offsets, event-own signatures, and witness receipts.
+    , rcOldMessageSigs :: [(Int, ByteString)]
+    -- ^ Obsolete signatures over the reconstructed InceptionMessage target.
+    , rcWitnessReceipts :: [(Int, ByteString)]
+    -- ^ The bundle's indexed witness receipts over @event_raw@.
     }
 
--- | Build the 'RegCase' of a sub-fixture for a deployment context.
-regCase :: DeploymentContext -> Value -> Text -> Either String RegCase
-regCase ctx fx key = do
+-- | Build the 'RegCase' of a sub-fixture.
+regCase :: Value -> Text -> Either String RegCase
+regCase fx key = do
     sub <- note (key <> " missing") (lookupKey key fx)
     ev <- note (key <> ".event missing") (lookupKey "event" sub)
     raw <- decodeHex =<< textField ev "raw_hex"
@@ -164,11 +133,9 @@ regCase ctx fx key = do
     offK <- offList offs "k"
     offN <- offList offs "n"
     offB <- offList offs "b"
-    seeds <-
-        note (key <> ".signer_seeds missing") (lookupKey "signer_seeds" sub)
-    signers <- map mkSigner <$> seedList seeds "current"
-    attackers <- map mkSigner <$> seedList seeds "next"
-    eventSigs <- committedSigs sub
+    eventSigs <- committedSigs sub "event_sigs"
+    witnessReceipts <- optionalCommittedSigs sub "witness_receipts"
+    obsoleteSigs <- oldMessageSigs
     let datum =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -197,12 +164,11 @@ regCase ctx fx key = do
                     , reOffNt = offNt
                     , reOffB = offB
                     , reOffBt = offBt
-                    , reCtrlSigs = signAll ctx signers datum
+                    , reCtrlSigs = eventSigs
+                    , reWitReceipts = witnessReceipts
                     }
-            , rcSigners = signers
-            , rcAttackers = attackers
-            , rcAttackerKeys = map verkeyOf attackers
-            , rcEventSigs = eventSigs
+            , rcOldMessageSigs = obsoleteSigs
+            , rcWitnessReceipts = witnessReceipts
             }
   where
     off o f = fromIntegral <$> intField o f
@@ -211,16 +177,7 @@ regCase ctx fx key = do
 -- | Run a check against a built fixture case, failing on load error.
 withCase ::
     Value -> Text -> (RegCase -> Expectation) -> Expectation
-withCase = withCaseCtx ctx0
-
--- | 'withCase' under an explicit signing deployment context.
-withCaseCtx ::
-    DeploymentContext ->
-    Value ->
-    Text ->
-    (RegCase -> Expectation) ->
-    Expectation
-withCaseCtx ctx fx key k = case regCase ctx fx key of
+withCase fx key k = case regCase fx key of
     Left err -> expectationFailure err
     Right c -> k c
 
@@ -278,16 +235,10 @@ parseDigits base digit t
             Just d -> Right (n * base + d)
             Nothing -> Left (T.unpack t <> ": not a numeral")
 
--- | The exported seed hexes of @signer_seeds.<branch>@.
-seedList :: Value -> Text -> Either String [ByteString]
-seedList seeds branch = do
-    entries <- arrayOf seeds branch
-    traverse (\e -> decodeHex =<< textField e "seed_hex") entries
-
--- | The bundle's committed KERI signatures as @(index, raw sig)@.
-committedSigs :: Value -> Either String [(Int, ByteString)]
-committedSigs sub = do
-    entries <- arrayOf sub "event_sigs"
+-- | One committed indexed-signature array as @(index, raw sig)@.
+committedSigs :: Value -> Text -> Either String [(Int, ByteString)]
+committedSigs sub field = do
+    entries <- arrayOf sub field
     traverse entrySig entries
   where
     entrySig e = do
@@ -295,38 +246,40 @@ committedSigs sub = do
         sig <- decodeHex =<< textField e "sig_hex"
         pure (fromIntegral idx, sig)
 
+-- | An indexed-signature array which is absent for unwitnessed fixtures.
+optionalCommittedSigs :: Value -> Text -> Either String [(Int, ByteString)]
+optionalCommittedSigs sub field = case lookupKey field sub of
+    Nothing -> Right []
+    Just _ -> committedSigs sub field
+
 -- | Require an array field (loader-style drilling).
 arrayOf :: Value -> Text -> Either String [Value]
 arrayOf v f = case lookupKey f v of
     Just (Array xs) -> Right (toList xs)
     _ -> Left (T.unpack f <> " missing or not an array")
 
--- | An Ed25519 signing key from a 32-byte exported seed.
-mkSigner :: ByteString -> SignKeyDSIGN Ed25519DSIGN
-mkSigner seed = genKeyDSIGN (mkSeedFromBytes seed)
-
--- | The raw 32-byte verkey of a signing key.
-verkeyOf :: SignKeyDSIGN Ed25519DSIGN -> ByteString
-verkeyOf = rawSerialiseVerKeyDSIGN . deriveVerKeyDSIGN
-
--- | Raw 64-byte Ed25519 signature over a message.
-signOver :: SignKeyDSIGN Ed25519DSIGN -> ByteString -> ByteString
-signOver sk msg = rawSerialiseSigDSIGN (signDSIGN () msg sk)
-
-{- | Indexed signatures of all given signers over the reconstructed
-'InceptionMessage' canonical-CBOR preimage for a datum + context.
+{- | The previously committed signatures over the deleted
+@InceptionMessage@ target. They remain only as adversarial bytes proving
+that the old authorization layer no longer verifies; no private signing
+material or obsolete preimage implementation is retained.
 -}
-signAll ::
-    DeploymentContext ->
-    [SignKeyDSIGN Ed25519DSIGN] ->
-    CheckpointDatumV1 ->
-    [(Int, ByteString)]
-signAll ctx signers datum =
-    [ (j, signOver sk preimage)
-    | (j, sk) <- zip [0 ..] signers
-    ]
+oldMessageSigs :: Either String [(Int, ByteString)]
+oldMessageSigs =
+    traverse
+        decodeIndexed
+        [
+            ( 0
+            , "46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809"
+            )
+        ,
+            ( 1
+            , "6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901"
+            )
+        ]
   where
-    preimage = canonicalCbor (registrationMessage ctx datum)
+    decodeIndexed (idx, sig) = do
+        raw <- decodeHex sig
+        pure (idx, raw)
 
 -- | Shorthand: run the predicate on a case under 'ctx0' / 'funded'.
 runReg :: RegCase -> Either RegistrationError ()
@@ -344,6 +297,7 @@ spec =
             genesisAndSchema
             sliceNegatives
             signatureNegatives
+            receiptNegatives
             depositNegatives
             deploymentFloor
             misdirectionFamily
@@ -428,9 +382,6 @@ sliceNegatives =
                         d
                         funded
                         (rcEvidence c)
-                            { reCtrlSigs =
-                                signAll ctx0 (rcSigners c) d
-                            }
                         `shouldBe` Left E2AidMismatch
         it "E3: off_s pointed at t -> E3SequenceMismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
@@ -443,20 +394,19 @@ sliceNegatives =
                         }
                     `shouldBe` Left E3SequenceMismatch
         it "E4: squat - attacker keys over victim bytes" $ \fx ->
-            withCase fx "reg_witnessed" $ \c -> do
-                let d =
-                        (rcDatum c)
-                            { cdCurKeys = rcAttackerKeys c
-                            }
-                registrationPredicate
-                    ctx0
-                    d
-                    funded
-                    (rcEvidence c)
-                        { reCtrlSigs =
-                            signAll ctx0 (rcAttackers c) d
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
+            withCase fx "reg_witnessed" $ \c ->
+                withCase fx "reg_weighted" $ \other -> do
+                    let d =
+                            (rcDatum c)
+                                { cdCurKeys =
+                                    take 2 (cdCurKeys (rcDatum other))
+                                }
+                    registrationPredicate
+                        ctx0
+                        d
+                        funded
+                        (rcEvidence c)
+                        `shouldBe` Left E4CurKeysMismatch
         it "E5: restated unweighted kt -> E5 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
@@ -544,21 +494,41 @@ flipFirst (x : xs) = BS.cons (BS.head x `xor255`) (BS.tail x) : xs
   where
     xor255 b = 255 - b
 
+-- | Flip the final byte without disturbing any E1-E9 field slice.
+flipLast :: ByteString -> ByteString
+flipLast raw
+    | BS.null raw = raw
+    | otherwise = BS.init raw <> BS.singleton (255 - BS.last raw)
+
+-- | Flip one signature byte while preserving its 64-byte shape.
+flipSignature :: ByteString -> ByteString
+flipSignature sig
+    | BS.null sig = sig
+    | otherwise = BS.cons (255 - BS.head sig) (BS.tail sig)
+
 -- ---------------------------------------------------------------
 -- R7: signature negatives
 -- ---------------------------------------------------------------
 
 signatureNegatives :: SpecWith Value
 signatureNegatives =
-    describe "R7 signatures over the reconstructed preimage" $ do
-        it "KERI event_raw sigs MUST fail -> R7 unsatisfied" $ \fx ->
+    describe "R7 controller signatures over exact event bytes" $ do
+        it "event-own controller signatures are accepted" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
                     ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c)
-                        { reCtrlSigs = rcEventSigs c
+                    `shouldBe` Right ()
+        it "old InceptionMessage-only signatures reject -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                registrationPredicate
+                    ctx0
+                    (rcDatum c)
+                    funded
+                    (rcEvidence c)
+                        { reCtrlSigs = rcOldMessageSigs c
                         }
                     `shouldBe` Left R7QuorumUnsatisfied
         it "below threshold: 1 of kt=2 -> R7 unsatisfied" $ \fx ->
@@ -572,6 +542,45 @@ signatureNegatives =
                             take 1 (reCtrlSigs (rcEvidence c))
                         }
                     `shouldBe` Left R7QuorumUnsatisfied
+        it "negative controller index fails closed -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (_idx, sig) = first1 (reCtrlSigs (rcEvidence c))
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reCtrlSigs =
+                                (-1, sig)
+                                    : drop 1 (reCtrlSigs (rcEvidence c))
+                            }
+                        `shouldBe` Left R7QuorumUnsatisfied
+        it "out-of-range controller index fails closed -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (_idx, sig) = first1 (reCtrlSigs (rcEvidence c))
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reCtrlSigs =
+                                (99, sig)
+                                    : drop 1 (reCtrlSigs (rcEvidence c))
+                            }
+                        `shouldBe` Left R7QuorumUnsatisfied
+        it "bad controller signature fails -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (idx, sig) = first1 (reCtrlSigs (rcEvidence c))
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reCtrlSigs =
+                                (idx, flipSignature sig)
+                                    : drop 1 (reCtrlSigs (rcEvidence c))
+                            }
+                        `shouldBe` Left R7QuorumUnsatisfied
         it "below weighted threshold: 2 of 3 quarters" $ \fx ->
             withCase fx "reg_weighted" $ \c ->
                 registrationPredicate
@@ -596,36 +605,124 @@ signatureNegatives =
                                 (first1 (reCtrlSigs (rcEvidence c)))
                         }
                     `shouldBe` Left R7QuorumUnsatisfied
-        it "attacker-signed message over victim keys -> R7" $ \fx ->
+        it "wrong controller keys over event bytes -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                case reCtrlSigs (rcEvidence c) of
+                    (idx0, sig0) : (idx1, sig1) : _ ->
+                        registrationPredicate
+                            ctx0
+                            (rcDatum c)
+                            funded
+                            (rcEvidence c)
+                                { reCtrlSigs =
+                                    [(idx0, sig1), (idx1, sig0)]
+                                }
+                            `shouldBe` Left R7QuorumUnsatisfied
+                    _ -> expectationFailure "expected two controller signatures"
+        it "controller signatures crossed onto different event bytes -> R7" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                registrationPredicate
+                    ctx0
+                    (rcDatum c)
+                    funded
+                    (rcEvidence c){reEventBytes = flipLast (rcRaw c)}
+                    `shouldBe` Left R7QuorumUnsatisfied
+
+-- ---------------------------------------------------------------
+-- Witness receipts over exact event bytes
+-- ---------------------------------------------------------------
+
+receiptNegatives :: SpecWith Value
+receiptNegatives =
+    describe "R7 witness receipts over exact event bytes" $ do
+        it "witnessed inception accepts its indexed receipt quorum" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                runReg c `shouldBe` Right ()
+        it "receipt-free witnessed inception rejects" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                registrationPredicate
+                    ctx0
+                    (rcDatum c)
+                    funded
+                    (rcEvidence c){reWitReceipts = []}
+                    `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "below toad receipt set rejects" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
                     ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c)
-                        { reCtrlSigs =
-                            signAll
-                                ctx0
-                                (rcAttackers c)
-                                (rcDatum c)
+                        { reWitReceipts = take 1 (rcWitnessReceipts c)
                         }
-                    `shouldBe` Left R7QuorumUnsatisfied
-        it "crossed network_id -> R7 unsatisfied" $ \fx ->
+                    `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "duplicate receipt index counts once" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
-                    ctxNet
+                    ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left R7QuorumUnsatisfied
-        it "crossed checkpoint policy -> R7 unsatisfied" $ \fx ->
+                        { reWitReceipts = replicate 2 (first1 (rcWitnessReceipts c))
+                        }
+                    `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "negative receipt index fails closed" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (_idx, sig) = first1 (rcWitnessReceipts c)
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reWitReceipts =
+                                (-1, sig) : drop 1 (rcWitnessReceipts c)
+                            }
+                        `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "out-of-range receipt index fails closed" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (_idx, sig) = first1 (rcWitnessReceipts c)
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reWitReceipts =
+                                (99, sig) : drop 1 (rcWitnessReceipts c)
+                            }
+                        `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "wrong witness keys over event bytes reject" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
-                    ctxPol
+                    ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left R7QuorumUnsatisfied
+                        { reWitReceipts = reCtrlSigs (rcEvidence c)
+                        }
+                    `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "bad witness receipt signature rejects" $ \fx ->
+            withCase fx "reg_witnessed" $ \c ->
+                let (idx, sig) = first1 (rcWitnessReceipts c)
+                 in registrationPredicate
+                        ctx0
+                        (rcDatum c)
+                        funded
+                        (rcEvidence c)
+                            { reWitReceipts =
+                                (idx, flipSignature sig)
+                                    : drop 1 (rcWitnessReceipts c)
+                            }
+                        `shouldBe` Left R7WitnessQuorumUnsatisfied
+        it "toad=0 requires a literally empty receipt list" $ \fx ->
+            withCase fx "reg_2key" $ \c ->
+                registrationPredicate
+                    ctx0
+                    (rcDatum c)
+                    funded
+                    (rcEvidence c)
+                        { reWitReceipts = [(0, BS.replicate 64 0)]
+                        }
+                    `shouldBe` Left R7WitnessQuorumUnsatisfied
 
 -- ---------------------------------------------------------------
 -- R8: deposit arithmetic
@@ -775,8 +872,6 @@ misdirectionFamily =
                     funded
                     (rcEvidence c)
                         { reOffK = [k0off, k0off]
-                        , reCtrlSigs =
-                            signAll ctx0 (rcSigners c) d
                         }
                     `shouldBe` Left
                         ( R4InceptionInvalid

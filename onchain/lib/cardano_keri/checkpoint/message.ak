@@ -1,10 +1,9 @@
-//// Frozen signed inception/advance message domains + locator asset-name
+//// Frozen signed advance message domain + locator asset-name
 //// derivation (#68 Slice 6).
 ////
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Message`
-//// byte-for-byte: the two domain-separated signed preimages
-//// (`InceptionMessage` = Constr 0, 12 fields; `AdvanceMessage` = Constr 0,
-//// 18 fields) and `deriveAidAssetName` over the frozen 65-byte
+//// byte-for-byte: the `AdvanceMessage` signed preimage (Constr 0, 18 fields)
+//// and `deriveAidAssetName` over the frozen 65-byte
 //// `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x45 ‖ cesr_aid` preimage encode to the
 //// exact canonical Plutus-Data CBOR / `blake2b_256` digest the Haskell
 //// encoder emits (see `vectors.ak`). Domain strings, constructor indices, and
@@ -47,10 +46,6 @@ use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 /// a constant 32-byte domain tag.
 pub const checkpoint_asset_domain_tag: ByteArray =
   #"63617264616e6f2d6b6572692f636865636b706f696e742d61737365742f7631"
-
-/// The frozen inception message domain: `UTF8("cardano-keri/checkpoint/icp/v1")`.
-pub const inception_domain: ByteArray =
-  #"63617264616e6f2d6b6572692f636865636b706f696e742f6963702f7631"
 
 /// The frozen advance message domain: `UTF8("cardano-keri/checkpoint/adv/v1")`.
 pub const advance_domain: ByteArray =
@@ -107,26 +102,6 @@ pub fn next_key_digest(key: ByteArray) -> ByteArray {
 }
 
 // ---------------------------------------------------------
-// Inception message (icp) — Constr 0, 12 fields in frozen order
-// ---------------------------------------------------------
-
-/// The signed inception preimage (Constr 0; 12 fields in frozen order).
-pub type InceptionMessage {
-  domain: ByteArray,
-  network_id: Int,
-  checkpoint_policy_id: ByteArray,
-  aid_asset_name: ByteArray,
-  cesr_aid: ByteArray,
-  cur_keys: List<ByteArray>,
-  cur_threshold: Threshold,
-  next_keys: List<ByteArray>,
-  next_threshold: Threshold,
-  witnesses: List<ByteArray>,
-  toad: Int,
-  native_sn: Int,
-}
-
-// ---------------------------------------------------------
 // Advance message (dual-threshold rotation + incoming-set witness
 // admission) — Constr 0, 18 fields
 // ---------------------------------------------------------
@@ -156,91 +131,6 @@ pub type AdvanceMessage {
   new_toad: Int,
   seq_to: Int,
   native_sn_to: Int,
-}
-
-// ---------------------------------------------------------
-// Inception validation (event-type + AID/asset binding + well-formedness)
-// ---------------------------------------------------------
-
-/// The attested KERI inception event type. V1 accepts only `Icp`; a delegated
-/// (`Dip`) or rotation (`Drt`) inception is rejected.
-pub type EventType {
-  Icp
-  Dip
-  Drt
-}
-
-/// An inception rejection reason (mirrors the Slice-3 `InceptionError`).
-pub type InceptionError {
-  /// The signed preimage domain was not the frozen `icp` literal.
-  InceptionDomainMismatch
-  /// A delegated (`Dip`) or rotation (`Drt`) inception was attested.
-  DelegatedInceptionRejected
-  /// `cesr_aid` is not exactly 32 bytes (malformed AID width).
-  InceptionAidWidth
-  /// `aid_asset_name /= deriveAidAssetName(cesr_aid)`.
-  InceptionAssetMismatch
-  /// `native_sn /= 0`: a KERI `icp` always has `s = 0`.
-  InceptionNativeSnNonZero
-  /// The implied genesis datum failed `datum_well_formed` (F18 + rule 14).
-  InceptionIllFormed(DatumError)
-}
-
-/// The inception acceptance verdict. Aiken's prelude has no `Result`, so this
-/// mirrors the Slice-3 `Either InceptionError ()`: `InceptionValid` ≙ `Right ()`,
-/// `InceptionInvalid(e)` ≙ `Left e`.
-pub type InceptionVerdict {
-  InceptionValid
-  InceptionInvalid(InceptionError)
-}
-
-/// The genesis checkpoint datum an accepted inception message mints: the
-/// message's key-state fields at `seq = 0`.
-pub fn inception_datum(message: InceptionMessage) -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
-    cesr_aid: message.cesr_aid,
-    cur_keys: message.cur_keys,
-    cur_threshold: message.cur_threshold,
-    next_keys: message.next_keys,
-    next_threshold: message.next_threshold,
-    witnesses: message.witnesses,
-    toad: message.toad,
-    seq: 0,
-    native_sn: message.native_sn,
-  }
-}
-
-/// Registration acceptance predicate: the attested event must be a
-/// non-delegated `icp`, the `cesr_aid` must be a well-formed 32-byte AID, the
-/// carried asset name must be the AID's own derived locator (a copied caller
-/// name is insufficient), `native_sn` must be 0 (a KERI `icp` always has
-/// `s = 0`), and the implied genesis datum must be fully well-formed (F18 +
-/// rule 14). The width check precedes the derivation check so a malformed AID
-/// is rejected on width, not on a coincidental derivation.
-pub fn validate_inception(
-  event: EventType,
-  message: InceptionMessage,
-) -> InceptionVerdict {
-  if message.domain != inception_domain {
-    InceptionInvalid(InceptionDomainMismatch)
-  } else {
-    when event is {
-      Icp ->
-        if bytearray.length(message.cesr_aid) != 32 {
-          InceptionInvalid(InceptionAidWidth)
-        } else if message.aid_asset_name != deriveAidAssetName(message.cesr_aid) {
-          InceptionInvalid(InceptionAssetMismatch)
-        } else if message.native_sn != 0 {
-          InceptionInvalid(InceptionNativeSnNonZero)
-        } else {
-          when datum_well_formed(inception_datum(message)) is {
-            DatumInvalid(e) -> InceptionInvalid(InceptionIllFormed(e))
-            _ -> InceptionValid
-          }
-        }
-      _ -> InceptionInvalid(DelegatedInceptionRejected)
-    }
-  }
 }
 
 // ---------------------------------------------------------

@@ -41,22 +41,13 @@ module CheckpointTxBuilder (
     armClaimThawScenario,
 ) where
 
-import Cardano.Crypto.DSIGN (
-    SignKeyDSIGN,
-    genKeyDSIGN,
-    rawSerialiseSigDSIGN,
-    signDSIGN,
- )
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
@@ -70,10 +61,8 @@ import Cardano.KERI.AID.Checkpoint.FreezeBond (
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Registration (
-    DeploymentContext (..),
     RegistrationEvidence (..),
     proofTokenName,
-    registrationMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.Ledger.Address (Addr (..))
@@ -197,8 +186,6 @@ import Cardano.KERI.AID.E2E.Script (
     loadBlueprint,
     mkCageScript,
  )
-
-type SignKey = SignKeyDSIGN Ed25519DSIGN
 
 data CheckpointEnv = CheckpointEnv
     { envCheckpointScript :: !(Script ConwayEra)
@@ -616,14 +603,13 @@ data RegistrationFixture = RegistrationFixture
     }
 
 loadRegistrationFixture :: CheckpointEnv -> IO RegistrationFixture
-loadRegistrationFixture env = do
+loadRegistrationFixture _env = do
     path <- getDataFileName "test/keri-fixtures/fixtures/registration.json"
     value <- eitherDecodeFileStrict path >>= either fail pure
     scenario <- either fail pure (atKey "reg_2key" value)
     event <- either fail pure (atKey "event" scenario)
     ked <- either fail pure (atKey "ked" event)
     offsets <- either fail pure (atKey "offsets" scenario)
-    seeds <- either fail pure (atKey "signer_seeds" scenario >>= atKey "current")
     raw <- either fail pure (textAt "raw_hex" event >>= decodeHex)
     aid <- either fail pure (textAt "pre" event >>= digestRaw)
     currentKeys <- either fail pure (textArrayAt "k" ked >>= traverse verkeyRaw)
@@ -642,7 +628,8 @@ loadRegistrationFixture env = do
     offB <- either fail pure (integerArrayAt "b" offsets)
     offBt <- either fail pure (integerAt "bt" offsets)
     offD <- either fail pure (eventSaidOffset event)
-    signerSeeds <- either fail pure (arrayValues seeds >>= traverse seedFromValue)
+    signatures <- either fail pure (indexedSignaturesAt "event_sigs" scenario)
+    receipts <- either fail pure (optionalIndexedSignaturesAt "witness_receipts" scenario)
     let datum =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -655,18 +642,6 @@ loadRegistrationFixture env = do
                 , cdSeq = 0
                 , cdNativeSn = 0
                 }
-        context =
-            DeploymentContext
-                { dcNetworkId = checkpointNetworkId
-                , dcCheckpointPolicyId = policyBytes (envCheckpointPolicy env)
-                , dcMinAda = checkpointMinAda
-                , dcDReg = registrationBond
-                }
-        preimage = canonicalCbor (registrationMessage context datum)
-        signatures =
-            [ (index, rawSerialiseSigDSIGN (signDSIGN () preimage signer))
-            | (index, signer) <- zip [0 ..] signerSeeds
-            ]
         evidence =
             RegistrationEvidence
                 { reEventBytes = raw
@@ -680,6 +655,7 @@ loadRegistrationFixture env = do
                 , reOffB = map fromInteger offB
                 , reOffBt = fromInteger offBt
                 , reCtrlSigs = signatures
+                , reWitReceipts = receipts
                 }
     pure
         RegistrationFixture
@@ -1508,10 +1484,24 @@ parseFull textValue =
             | otherwise -> Left (Text.unpack textValue <> ": trailing CESR bytes")
         Left err -> Left (Text.unpack textValue <> ": " <> err)
 
-seedFromValue :: Value -> Either String SignKey
-seedFromValue value = do
-    seed <- textAt "seed_hex" value >>= decodeHex
-    pure (genKeyDSIGN (mkSeedFromBytes seed))
+indexedSignaturesAt :: Text -> Value -> Either String [(Int, ByteString)]
+indexedSignaturesAt key value =
+    atKey key value >>= arrayValues >>= traverse indexedSignature
+
+optionalIndexedSignaturesAt ::
+    Text -> Value -> Either String [(Int, ByteString)]
+optionalIndexedSignaturesAt key (Object object) =
+    case KeyMap.lookup (Key.fromText key) object of
+        Nothing -> Right []
+        Just value -> arrayValues value >>= traverse indexedSignature
+optionalIndexedSignaturesAt key _ =
+    Left (Text.unpack key <> ": parent is not an object")
+
+indexedSignature :: Value -> Either String (Int, ByteString)
+indexedSignature value = do
+    index <- fromInteger <$> integerAt "index" value
+    signature <- textAt "sig_hex" value >>= decodeHex
+    pure (index, signature)
 
 findSubsequence :: ByteString -> ByteString -> Maybe Int
 findSubsequence needle haystack =

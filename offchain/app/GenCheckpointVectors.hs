@@ -34,11 +34,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceMessage,
-    InceptionMessage,
     advanceMessage,
     checkpointAssetDomainTag,
     deriveAidAssetName,
-    inceptionMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -117,22 +115,6 @@ mkV1 cesr keys thr nkeys nthr wits toad seqn nsn =
             , cdSeq = seqn
             , cdNativeSn = nsn
             }
-
--- | The inception fixture (valid @icp@), matched to MessageSpec.
-validIcp :: InceptionMessage
-validIcp =
-    inceptionMessage
-        1 -- network_id
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        [k1] -- cur_keys
-        (Unweighted 1) -- cur_threshold
-        [k2] -- next_keys (KERI n)
-        (Unweighted 1) -- next_threshold (KERI nt)
-        [] -- witnesses
-        0 -- toad
-        0 -- native_sn
 
 -- | The advance fixture (valid succession), matched to MessageSpec.
 validAdv :: AdvanceMessage
@@ -348,12 +330,8 @@ vectors =
         "negative_aid_asset_name_mutated_aid"
         "derivation negative: one-bit-flipped cesr_aid"
         (deriveAidAssetName cesrAFlipped)
-    , -- Signed message preimages (Slice 6 mirror).
+    , -- Signed advance-message preimages (Slice 6 mirror).
       Vec
-        "golden_inception_message"
-        "message: InceptionMessage (icp) canonical CBOR"
-        (canonicalCbor validIcp)
-    , Vec
         "golden_advance_message"
         "message: AdvanceMessage (valid succession) canonical CBOR"
         (canonicalCbor validAdv)

@@ -1,11 +1,11 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Message
-Description : Frozen signed inception\/advance message domains + F10 equalities, #68
+Description : Frozen signed advance message domain + F10 equalities, #68
 
-The two domain-separated signed preimages ('InceptionMessage', 'AdvanceMessage')
-and the locator asset-name derivation ('deriveAidAssetName'), plus the F10
-advance checks as pure predicates. Validator-free: this fixes the message
-bytes and the equality checks #24 runs over them, not the transaction context.
+The signed 'AdvanceMessage', locator asset-name derivation
+('deriveAidAssetName'), and F10 advance checks as pure predicates.
+Validator-free: this fixes the message bytes and the equality checks #24 runs
+over them, not the transaction context.
 
 The advance is authorized by the KERI __dual-threshold rule__: the attached
 signer evidence must satisfy the rotation's own current threshold over
@@ -29,19 +29,10 @@ equal it exactly.
 module Cardano.KERI.AID.Checkpoint.Message (
     -- * Frozen constants
     checkpointAssetDomainTag,
-    inceptionDomain,
     advanceDomain,
 
     -- * Locator asset-name derivation
     deriveAidAssetName,
-
-    -- * Inception (@icp@) registration
-    EventType (..),
-    InceptionMessage (..),
-    inceptionMessage,
-    inceptionDatum,
-    InceptionError (..),
-    validateInception,
 
     -- * Advance (dual-threshold rotation + incoming-set witness admission)
     AdvanceMessage (..),
@@ -110,10 +101,6 @@ checkpointAssetDomainTag :: ByteString
 checkpointAssetDomainTag =
     TE.encodeUtf8 "cardano-keri/checkpoint-asset/v1"
 
--- | The frozen inception message domain (@icp@).
-inceptionDomain :: ByteString
-inceptionDomain = TE.encodeUtf8 "cardano-keri/checkpoint/icp/v1"
-
 -- | The frozen advance message domain (@adv@).
 advanceDomain :: ByteString
 advanceDomain = TE.encodeUtf8 "cardano-keri/checkpoint/adv/v1"
@@ -140,135 +127,6 @@ deriveAidAssetName cesrAid =
 -- | Strip the 'BuiltinData' wrapper of a value's 'Data' tree.
 asData :: (ToData a) => a -> Data
 asData x = let BuiltinData d = toBuiltinData x in d
-
--- ---------------------------------------------------------
--- Inception message (icp)
--- ---------------------------------------------------------
-
--- | The attested KERI inception event type. V1 accepts only 'Icp'.
-data EventType = Icp | Dip | Drt
-    deriving stock (Show, Eq)
-
--- | The signed inception preimage (Constr 0; 12 fields in frozen order).
-data InceptionMessage = InceptionMessage
-    { imDomain :: !ByteString
-    , imNetworkId :: !Integer
-    , imCheckpointPolicyId :: !ByteString
-    , imAidAssetName :: !ByteString
-    , imCesrAid :: !CesrAid
-    , imCurKeys :: ![Verkey]
-    , imCurThreshold :: !Threshold
-    , imNextKeys :: ![KeyDigest]
-    , imNextThreshold :: !Threshold
-    , imWitnesses :: ![Verkey]
-    , imToad :: !Integer
-    , imNativeSn :: !Integer
-    }
-    deriving stock (Show, Eq)
-
-instance ToData InceptionMessage where
-    toBuiltinData InceptionMessage{..} =
-        BuiltinData $
-            Constr
-                0
-                [ B imDomain
-                , I imNetworkId
-                , B imCheckpointPolicyId
-                , B imAidAssetName
-                , B imCesrAid
-                , List (map B imCurKeys)
-                , asData imCurThreshold
-                , List (map B imNextKeys)
-                , asData imNextThreshold
-                , List (map B imWitnesses)
-                , I imToad
-                , I imNativeSn
-                ]
-
-{- | Build an 'InceptionMessage' with the frozen @icp@ domain filled in. The
-remaining arguments are the fields in spec order (network id .. native sn).
--}
-inceptionMessage ::
-    Integer ->
-    ByteString ->
-    ByteString ->
-    CesrAid ->
-    [Verkey] ->
-    Threshold ->
-    [KeyDigest] ->
-    Threshold ->
-    [Verkey] ->
-    Integer ->
-    Integer ->
-    InceptionMessage
-inceptionMessage net pol asset cesr keys thr nkeys nthr wits toad nsn =
-    InceptionMessage
-        { imDomain = inceptionDomain
-        , imNetworkId = net
-        , imCheckpointPolicyId = pol
-        , imAidAssetName = asset
-        , imCesrAid = cesr
-        , imCurKeys = keys
-        , imCurThreshold = thr
-        , imNextKeys = nkeys
-        , imNextThreshold = nthr
-        , imWitnesses = wits
-        , imToad = toad
-        , imNativeSn = nsn
-        }
-
-{- | The genesis checkpoint datum an accepted inception message mints:
-the message's key-state fields at @seq = 0@.
--}
-inceptionDatum :: InceptionMessage -> CheckpointDatumV1
-inceptionDatum m =
-    CheckpointDatumV1
-        { cdCesrAid = imCesrAid m
-        , cdCurKeys = imCurKeys m
-        , cdCurThreshold = imCurThreshold m
-        , cdNextKeys = imNextKeys m
-        , cdNextThreshold = imNextThreshold m
-        , cdWitnesses = imWitnesses m
-        , cdToad = imToad m
-        , cdSeq = 0
-        , cdNativeSn = imNativeSn m
-        }
-
--- | An inception rejection reason.
-data InceptionError
-    = -- | The signed preimage domain was not the frozen @icp@ literal.
-      InceptionDomainMismatch
-    | -- | A delegated (@dip@) or rotation (@drt@) inception was attested.
-      DelegatedInceptionRejected
-    | -- | @cesr_aid@ is not exactly 32 bytes (malformed AID width).
-      InceptionAidWidth
-    | -- | @aid_asset_name /= deriveAidAssetName(cesr_aid)@.
-      InceptionAssetMismatch
-    | -- | @native_sn /= 0@: a KERI @icp@ always has @s = 0@.
-      InceptionNativeSnNonZero
-    | -- | The implied genesis datum failed 'datumWellFormed' (F18 + rule 14).
-      InceptionIllFormed DatumError
-    deriving stock (Show, Eq)
-
-{- | Registration acceptance predicate: the attested event must be a
-non-delegated @icp@, the @cesr_aid@ must be a well-formed 32-byte AID, the
-carried asset name must be the AID's own derived locator (a copied caller name
-is insufficient), @native_sn@ must be @0@ (a KERI @icp@ always has @s = 0@),
-and the implied genesis datum must be fully well-formed (F18 + rule 14). The
-width check precedes the derivation check so a malformed AID is rejected on
-width, not on a coincidental derivation.
--}
-validateInception ::
-    EventType -> InceptionMessage -> Either InceptionError ()
-validateInception et m = do
-    unless (imDomain m == inceptionDomain) (Left InceptionDomainMismatch)
-    unless (et == Icp) (Left DelegatedInceptionRejected)
-    unless (BS.length (imCesrAid m) == 32) (Left InceptionAidWidth)
-    unless
-        (imAidAssetName m == deriveAidAssetName (imCesrAid m))
-        (Left InceptionAssetMismatch)
-    unless (imNativeSn m == 0) (Left InceptionNativeSnNonZero)
-    first InceptionIllFormed (datumWellFormed (inceptionDatum m))
 
 -- ---------------------------------------------------------
 -- Advance message (dual-threshold rotation + incoming-set witness

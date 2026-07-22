@@ -48,31 +48,31 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R3 — live bonded Register
 
-- [ ] T114-R3 RED: full contexts require permissionless event-own auth and at
+- [x] T114-R3 RED: full contexts require permissionless event-own auth and at
       least `minADA+D_reg+B` plus one AID token for fresh/duplicate/
       post-conviction registration; pin floor/one-below, conservative-surplus,
       donation, and all existing mint/proof/output/offset canaries.
-- [ ] T114-R3 GREEN: reopen only Register, use applied #116 parameters, reject
+- [x] T114-R3 GREEN: reopen only Register, use applied #116 parameters, reject
       short reserve, extra AID-policy assets, and controller-chosen parameter
       values while accepting checkpoint-custodied surplus lovelace/assets;
       retain unrelated input tolerance and repeatable registration.
-- [ ] T114-R3 Preserve generic deployment parameters with independent
+- [x] T114-R3 Preserve generic deployment parameters with independent
       5,000,000-lovelace floors/one-below negatives; fixtures use
       `D_reg=1,000,000,000` and `B=5,000,000`.
-- [ ] T114-R3 Vector #114's normative anti-griefing family: Register consumes
+- [x] T114-R3 Vector #114's normative anti-griefing family: Register consumes
       no existing checkpoint, duplicates/post-conviction registrations create
       independent state outputs, and hostile submissions can project only the
       real signed+witnessed inception event, never a same-UTxO busy lock.
-- [ ] T114-R3 Audit all 21 traceability rows and prove the required CI job
+- [x] T114-R3 Audit all 21 traceability rows and prove the required CI job
       remains green. Flip a PENDING row only if this slice independently adds
       both mapped executable tests; do not import Convict/Reap behavior to
       manufacture a mapping change.
-- [ ] T114-R3 Prove Advance and Close remain fail closed, no registry/absence
+- [x] T114-R3 Prove Advance and Close remain fail closed, no registry/absence
       proof/mint-once/batcher/sequencer exists, and full gate green.
-- [ ] T114-R3 Commit exactly
+- [x] T114-R3 Commit exactly
       `feat(114): enable permissionless bonded registration` with exactly
       `Tasks: T114-R3`.
-- [ ] T114-R3 Report applied program bytes and both standing deltas.
+- [x] T114-R3 Report applied program bytes and both standing deltas.
 
 ## Slice R4 — registration measurements
 

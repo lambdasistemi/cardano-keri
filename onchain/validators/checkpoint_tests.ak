@@ -119,6 +119,17 @@ const network_id: Int = 0
 
 const d_reg: Int = 1_000_000_000
 
+const r2_freeze_bond: Int = 5_000_000
+
+const r2_freeze_window: Int = 500
+
+const register_floor: Int = min_ada + d_reg + r2_freeze_bond
+
+const register_surplus_lovelace: Int = 17
+
+const unrelated_policy: PolicyId =
+  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
 // ---------------------------------------------------------------------
 // Tx-B context builders
 // ---------------------------------------------------------------------
@@ -159,6 +170,27 @@ fn state_output(
   }
 }
 
+fn state_output_with_value(value: Value, d: CheckpointDatumV1) -> Output {
+  Output {
+    address: from_script(policy),
+    value,
+    datum: InlineDatum(V1(d)),
+    reference_script: None,
+  }
+}
+
+fn bonded_state_value(aid_name: ByteArray, lovelace: Int) -> Value {
+  from_lovelace(lovelace) |> merge(from_asset(policy, aid_name, 1))
+}
+
+fn bonded_state_value_with_foreign_asset(
+  aid_name: ByteArray,
+  lovelace: Int,
+) -> Value {
+  bonded_state_value(aid_name, lovelace)
+    |> merge(from_asset(unrelated_policy, #"f4", 3))
+}
+
 /// The honest Tx-B mint value: checkpoint token +1, proof token -1.
 fn register_mint(aid_name: ByteArray, proof_name: ByteArray) -> Value {
   from_asset(policy, aid_name, 1)
@@ -178,6 +210,29 @@ fn register_tx(
     [state_output(aid_name, lovelace, d)],
     register_mint(aid_name, proof_name),
   )
+}
+
+fn bonded_register_tx(
+  d: CheckpointDatumV1,
+  value: Value,
+  e: RegistrationEvidence,
+) -> Transaction {
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  let proof_name = proof_token_name(e.event_bytes, d.cesr_aid)
+  mint_context(
+    [proof_input(proof_name)],
+    [state_output_with_value(value, d)],
+    register_mint(aid_name, proof_name),
+  )
+}
+
+fn bonded_register_tx_at(
+  d: CheckpointDatumV1,
+  lovelace: Int,
+  e: RegistrationEvidence,
+) -> Transaction {
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  bonded_register_tx(d, bonded_state_value(aid_name, lovelace), e)
 }
 
 /// Drive the real mint handler under the fixed deployment parameters.
@@ -218,58 +273,62 @@ fn run_register_with_deposit(
 // positives — the four honest packages (R1+R2+R5+predicate end-to-end)
 // ---------------------------------------------------------------------
 
-test t116_r2_stage_reject_register_2key() fail {
+test t114_r3_accept_register_2key_at_bonded_floor() {
   run_register(
     vec.pos_2key_evidence,
-    register_tx(
+    bonded_register_tx_at(
       vec.pos_2key_datum,
-      vec.pos_2key_lovelace,
+      register_floor,
       vec.pos_2key_evidence,
     ),
   )
 }
 
-test t116_r2_stage_reject_register_7key() fail {
+test t114_r3_accept_register_7key_with_conservative_surplus() {
   run_register(
     vec.pos_7key_evidence,
-    register_tx(
+    bonded_register_tx_at(
       vec.pos_7key_datum,
-      vec.pos_7key_lovelace,
+      register_floor + register_surplus_lovelace,
       vec.pos_7key_evidence,
     ),
   )
 }
 
-test t116_r2_stage_reject_register_witnessed() fail {
+test t114_r3_accept_register_witnessed_with_foreign_asset_surplus() {
+  let aid_name = deriveAidAssetName(vec.pos_witnessed_datum.cesr_aid)
   run_register(
     vec.pos_witnessed_evidence,
-    register_tx(
+    bonded_register_tx(
       vec.pos_witnessed_datum,
-      vec.pos_witnessed_lovelace,
+      bonded_state_value_with_foreign_asset(
+        aid_name,
+        register_floor + register_surplus_lovelace,
+      ),
       vec.pos_witnessed_evidence,
     ),
   )
 }
 
-test t116_r2_stage_reject_register_weighted() fail {
+test t114_r3_accept_register_weighted_without_submitter_signature() {
   run_register(
     vec.pos_weighted_evidence,
-    register_tx(
+    bonded_register_tx_at(
       vec.pos_weighted_datum,
-      vec.pos_weighted_lovelace,
+      register_floor,
       vec.pos_weighted_evidence,
     ),
   )
 }
 
 /// The final #114 Register shape has no shared coordinating state.
-test t116_r2_stage_reject_registration_without_shared_state() fail {
+test t114_r3_accept_registration_without_shared_state() {
   run_register_with_deposit(
     d_reg,
     vec.pos_2key_evidence,
-    register_tx(
+    bonded_register_tx_at(
       vec.pos_2key_datum,
-      vec.pos_2key_lovelace,
+      register_floor,
       vec.pos_2key_evidence,
     ),
   )
@@ -278,29 +337,69 @@ test t116_r2_stage_reject_registration_without_shared_state() fail {
 /// Gate-room proof (A-001 QC): an EXTRA unrelated input must be admitted —
 /// no check may assume a fixed input count or reject inputs beyond those
 /// R5 names.
-test t116_r2_stage_reject_register_extra_input() fail {
-  let tx = register_tx(
+test t114_r3_accept_register_with_unrelated_key_and_script_inputs_and_output() {
+  let tx = bonded_register_tx_at(
     vec.pos_2key_datum,
-    vec.pos_2key_lovelace,
+    register_floor,
     vec.pos_2key_evidence,
   )
-  let extra = value_input(7, from_lovelace(42_000_000))
+  let extra_key = value_input(7, from_lovelace(42_000_000))
+  let extra_script = input_at(
+    out_ref(seed_tx_id, 27),
+    Output {
+      address: from_script(unrelated_policy),
+      value: from_lovelace(9_000_000),
+      datum: NoDatum,
+      reference_script: None,
+    },
+  )
+  let extra_output = ada_output(from_verification_key(owner_vkh), 8_000_000)
   run_register(
     vec.pos_2key_evidence,
-    Transaction { ..tx, inputs: list.concat(tx.inputs, [extra]) },
+    Transaction {
+      ..tx,
+      inputs: list.concat(tx.inputs, [extra_key, extra_script]),
+      outputs: list.concat(tx.outputs, [extra_output]),
+    },
   )
 }
 
-/// Duplicate same-AID ACTIVE registration is an admitted controller
-/// self-harm residual.
-test t116_r2_stage_reject_duplicate_active_registration() fail {
+/// Duplicate same-AID ACTIVE history is reference-only: Register creates a
+/// fresh independent ACTIVE output without consuming the sovereign state.
+test t114_r3_accept_duplicate_active_via_reference_input() {
+  let d = vec.pos_2key_datum
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  let history = input_at(
+    out_ref(seed_tx_id, 28),
+    state_output_with_value(bonded_state_value(aid_name, register_floor), d),
+  )
+  let tx = bonded_register_tx_at(d, register_floor, vec.pos_2key_evidence)
   run_register(
     vec.pos_2key_evidence,
-    register_tx(
-      vec.pos_2key_datum,
-      vec.pos_2key_lovelace,
-      vec.pos_2key_evidence,
-    ),
+    Transaction { ..tx, reference_inputs: [history] },
+  )
+}
+
+/// Register may inspect checkpoint history as a reference input but must not
+/// consume any input locked by this checkpoint script.
+test t114_r3_reject_register_consuming_checkpoint_script_input() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let consumed = input_at(
+    out_ref(seed_tx_id, 29),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(min_ada),
+      datum: NoDatum,
+      reference_script: None,
+    },
+  )
+  run_register(
+    vec.pos_2key_evidence,
+    Transaction { ..tx, inputs: list.concat(tx.inputs, [consumed]) },
   )
 }
 
@@ -317,6 +416,27 @@ test t116_s7_reject_d_reg_below_mechanical_floor_registration_mint() fail {
     network_id,
     vec.d_reg_below_floor,
     r2_freeze_bond,
+    r2_freeze_window,
+    Register { evidence: vec.pos_2key_evidence },
+    policy,
+    tx,
+  )
+}
+
+/// B1: reject a freeze-bond deployment one below its independent floor before
+/// mint dispatch.
+test t114_r3_reject_freeze_bond_below_mechanical_floor_registration_mint() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    r2_freeze_bond - 1,
     r2_freeze_window,
     Register { evidence: vec.pos_2key_evidence },
     policy,
@@ -435,6 +555,43 @@ test reject_r2_missing_token() fail {
   run_register(vec.pos_2key_evidence, tx)
 }
 
+/// R2: the ACTIVE output carries the right token but no inline datum.
+test t114_r3_reject_register_missing_inline_datum() fail {
+  let d = vec.pos_2key_datum
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  let proof_name = proof_token_name(
+    vec.pos_2key_evidence.event_bytes,
+    d.cesr_aid,
+  )
+  let bare = Output {
+    address: from_script(policy),
+    value: bonded_state_value(aid_name, register_floor),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  run_register(
+    vec.pos_2key_evidence,
+    mint_context(
+      [proof_input(proof_name)],
+      [bare],
+      register_mint(aid_name, proof_name),
+    ),
+  )
+}
+
+/// R2: the ACTIVE output's complete own-policy asset map contains another
+/// name even though the Register mint itself is the exact singleton.
+test t114_r3_reject_register_output_extra_own_policy_asset_name() fail {
+  let d = vec.pos_2key_datum
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  let value = bonded_state_value(aid_name, register_floor)
+    |> merge(from_asset(policy, #"ee", 1))
+  run_register(
+    vec.pos_2key_evidence,
+    bonded_register_tx(d, value, vec.pos_2key_evidence),
+  )
+}
+
 // ---------------------------------------------------------------------
 // R5 — hash-proof consumption
 // ---------------------------------------------------------------------
@@ -484,11 +641,27 @@ test reject_r5_unburned_proof() fail {
 // R8 — deposit floor (routed through the validator)
 // ---------------------------------------------------------------------
 
-/// R8: state-output lovelace one below `min_ada + d_reg`.
-test reject_r8_deposit_below_floor() fail {
+/// R8: state-output lovelace one below `min_ada + d_reg + B`.
+test t114_r3_reject_register_one_below_bonded_floor() fail {
   run_register(
     vec.pos_2key_evidence,
-    register_tx(vec.pos_2key_datum, 6_999_999, vec.pos_2key_evidence),
+    bonded_register_tx_at(
+      vec.pos_2key_datum,
+      register_floor - 1,
+      vec.pos_2key_evidence,
+    ),
+  )
+}
+
+/// R8: the old pure-predicate reserve omits the complete applied bond.
+test t114_r3_reject_register_missing_freeze_bond() fail {
+  run_register(
+    vec.pos_2key_evidence,
+    bonded_register_tx_at(
+      vec.pos_2key_datum,
+      min_ada + d_reg,
+      vec.pos_2key_evidence,
+    ),
   )
 }
 
@@ -522,6 +695,39 @@ test reject_r7_canary_below_threshold() fail {
       vec.pos_2key_datum,
       vec.pos_2key_lovelace,
       vec.pos_2key_evidence,
+    ),
+  )
+}
+
+test t114_r3_reject_old_message_only_controller_signatures() fail {
+  run_register(
+    vec.r7_old_message_sigs_evidence,
+    bonded_register_tx_at(
+      vec.r7_old_message_sigs_datum,
+      register_floor,
+      vec.r7_old_message_sigs_evidence,
+    ),
+  )
+}
+
+test t114_r3_reject_bad_controller_signature_threshold() fail {
+  run_register(
+    vec.r7_below_threshold_evidence,
+    bonded_register_tx_at(
+      vec.r7_below_threshold_datum,
+      register_floor,
+      vec.r7_below_threshold_evidence,
+    ),
+  )
+}
+
+test t114_r3_reject_bad_witness_receipt_threshold() fail {
+  run_register(
+    vec.r7_receipts_bad_signature_evidence,
+    bonded_register_tx_at(
+      vec.r7_receipts_bad_signature_datum,
+      register_floor,
+      vec.r7_receipts_bad_signature_evidence,
     ),
   )
 }
@@ -2518,8 +2724,9 @@ test t116_s5_f11_reject_close_from_terminal_tombstone() fail {
   run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
 }
 
-// A same-AID tombstone does not prevent re-registration.
-test t116_r2_stage_reject_post_conviction_same_aid_registration() fail {
+// A same-AID tombstone may be supplied as read-only history and does not
+// prevent creation of a fresh independent ACTIVE registration.
+test t114_r3_accept_post_conviction_via_reference_input() {
   let d = vec.pos_2key_datum
   let key = deriveAidAssetName(d.cesr_aid)
   let tombstone = input_at(
@@ -2537,10 +2744,10 @@ test t116_r2_stage_reject_post_conviction_same_aid_registration() fail {
       reference_script: None,
     },
   )
-  let tx = register_tx(d, vec.pos_2key_lovelace, vec.pos_2key_evidence)
+  let tx = bonded_register_tx_at(d, register_floor, vec.pos_2key_evidence)
   run_register(
     vec.pos_2key_evidence,
-    Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
+    Transaction { ..tx, reference_inputs: [tombstone] },
   )
 }
 
@@ -2552,10 +2759,6 @@ test t116_r2_stage_reject_post_conviction_same_aid_registration() fail {
 // GREEN changes that one call to the exact target application after these
 // full-context tests have failed for the missing live behavior.
 // ---------------------------------------------------------------------
-
-const r2_freeze_bond: Int = 5_000_000
-
-const r2_freeze_window: Int = 500
 
 const r2_arm_upper: Int = 1_000
 
@@ -3596,9 +3799,9 @@ test t116_r2_stage_reject_close() fail {
   run_r2(R2Close, r2_arm_tx(enf_vec.lag_freeze_tip))
 }
 
-/// D2 retained guard: a repeated registration (represented by the existing
-/// same-AID tombstone input) cannot post one lovelace below the applied bond.
-test t116_s7_reject_repeated_registration_one_below_bond() fail {
+/// D2 retained guard: reference-only same-AID history cannot weaken the live
+/// reserve; a repeated registration one lovelace below `min+D_reg+B` rejects.
+test t114_r3_reject_repeated_registration_one_below_bonded_floor() fail {
   let d = vec.pos_2key_datum
   let key = deriveAidAssetName(d.cesr_aid)
   let tombstone = input_at(
@@ -3616,10 +3819,10 @@ test t116_s7_reject_repeated_registration_one_below_bond() fail {
       reference_script: None,
     },
   )
-  let tx = register_tx(d, min_ada + d_reg - 1, vec.pos_2key_evidence)
+  let tx = bonded_register_tx_at(d, register_floor - 1, vec.pos_2key_evidence)
   run_register(
     vec.pos_2key_evidence,
-    Transaction { ..tx, inputs: list.concat(tx.inputs, [tombstone]) },
+    Transaction { ..tx, reference_inputs: [tombstone] },
   )
 }
 

@@ -155,9 +155,8 @@ executable gen-registration-vectors
     , aeson
     , base
     , bytestring
-    , cardano-crypto-class
     , cardano-keri
-    , memory                >=0.18 && <0.19
+    , memory        >=0.18 && <0.19
     , text
 
 executable gen-advance-vectors

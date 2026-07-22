@@ -63,8 +63,8 @@ pub const checkpoint_min_ada: Int = 2_000_000
 
 /// The checkpoint mint redeemer. `Register` carries the S3
 /// `RegistrationEvidence` (the full keripy `icp` serialization,
-/// prover-supplied offsets, and the controller signatures over the
-/// reconstructed `InceptionMessage` preimage).
+/// prover-supplied offsets, controller signatures, and witness receipts
+/// over the exact KERI event bytes).
 pub type MintRedeemer {
   Register { evidence: RegistrationEvidence }
 }
@@ -262,7 +262,6 @@ fn checkpoint_input_value_valid(
 /// delegated to the S3 predicate.
 fn validate_register(
   hash_proof_policy: PolicyId,
-  network_id: Int,
   d_reg: Int,
   evidence: RegistrationEvidence,
   policy_id: PolicyId,
@@ -310,14 +309,9 @@ fn validate_register(
   )
   expect burned_name == proof_name
   expect burned_qty == -1
-  // R3/R4/R6/R7/R8 — the S3 predicate over the reconstructed message,
-  // the datum, the state output's lovelace, and the redeemer evidence.
-  let ctx = DeploymentContext {
-    network_id,
-    checkpoint_policy_id: policy_id,
-    min_ada: checkpoint_min_ada,
-    d_reg,
-  }
+  // R3/R4/R6/R7/R8 — the S3 predicate over the exact inception-event
+  // evidence, the datum, and the state output's lovelace.
+  let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
   expect
     registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
   True

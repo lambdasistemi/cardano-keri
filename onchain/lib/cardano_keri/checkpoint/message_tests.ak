@@ -3,12 +3,12 @@
 //// frozen `vectors.ak` message goldens produced by the Slice-2/3 Haskell
 //// encoder (`Cardano.KERI.AID.Checkpoint.Message`), the `deriveAidAssetName`
 //// asserts pin the frozen `CHECKPOINT_ASSET_DOMAIN_TAG ‖ 0x46 ‖ cesr_aid`
-//// preimage, and the `validate_inception` / `advance_equalities` asserts mirror
+//// preimage, and the `advance_equalities` asserts mirror
 //// the Slice-3 hspec `MessageSpec` verdicts one-for-one — including the
 //// security-critical eq6 dual-threshold rule (a stolen spent-current quorum
 //// maps to no committed next-key position and is rejected; a partial/reserve
-//// rotation revealing a satisfiable subset is accepted). Field order
-//// (12 icp / 18 adv), the `Constr 0` tags, and the W1-W3 + eight F10 checks
+//// rotation revealing a satisfiable subset is accepted). Advance field order,
+//// the `Constr 0` tag, and the W1-W3 + eight F10 checks
 //// are protocol surface, frozen against the vectors + the Slice-2 semantics.
 
 use aiken/cbor
@@ -20,15 +20,12 @@ use cardano_keri/checkpoint/datum.{
 }
 use cardano_keri/checkpoint/message.{
   AdvanceDomainMismatch, AdvanceInvalid, AdvanceMessage, AdvanceValid,
-  DelegatedInceptionRejected, Dip, Drt, Eq1NetworkPolicyMismatch,
-  Eq2AssetOrAidMismatch, Eq3OutRefMismatch, Eq4PriorMismatch,
-  Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
+  Eq1NetworkPolicyMismatch, Eq2AssetOrAidMismatch, Eq3OutRefMismatch,
+  Eq4PriorMismatch, Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
   Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
-  EqW1CutInvalid, EqW2AddInvalid, Icp, InceptionAidWidth, InceptionAssetMismatch,
-  InceptionDomainMismatch, InceptionIllFormed, InceptionInvalid,
-  InceptionMessage, InceptionValid, RevealedSuccessorSigners, SpentCheckpoint,
+  EqW1CutInvalid, EqW2AddInvalid, RevealedSuccessorSigners, SpentCheckpoint,
   advance_domain, advance_equalities, checkpoint_asset_domain_tag,
-  deriveAidAssetName, inception_domain, validate_inception,
+  deriveAidAssetName,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted, evaluate,
@@ -161,120 +158,6 @@ test qb64_aid_shares_verkey_payload_differs_by_code() {
 }
 
 // ---------------------------------------------------------
-// Inception fixture + byte identity + verdict parity
-// ---------------------------------------------------------
-
-fn valid_icp() -> InceptionMessage {
-  InceptionMessage {
-    domain: inception_domain,
-    network_id: 1,
-    checkpoint_policy_id: policy,
-    aid_asset_name: aid_asset(),
-    cesr_aid: cesr_a(),
-    cur_keys: [k1],
-    cur_threshold: Unweighted(1),
-    next_keys: [k2],
-    next_threshold: Unweighted(1),
-    witnesses: [],
-    toad: 0,
-    native_sn: 0,
-  }
-}
-
-test inception_message_golden() {
-  cbor.serialise(valid_icp()) == vectors.golden_inception_message
-}
-
-test inception_accepts_valid_icp() {
-  validate_inception(Icp, valid_icp()) == InceptionValid
-}
-
-test inception_rejects_wrong_domain() {
-  validate_inception(
-    Icp,
-    InceptionMessage { ..valid_icp(), domain: advance_domain },
-  ) == InceptionInvalid(InceptionDomainMismatch)
-}
-
-test inception_rejects_dip() {
-  validate_inception(Dip, valid_icp()) == InceptionInvalid(
-    DelegatedInceptionRejected,
-  )
-}
-
-test inception_rejects_drt() {
-  validate_inception(Drt, valid_icp()) == InceptionInvalid(
-    DelegatedInceptionRejected,
-  )
-}
-
-test inception_rejects_substituted_asset() {
-  validate_inception(
-    Icp,
-    InceptionMessage { ..valid_icp(), aid_asset_name: zero32 },
-  ) == InceptionInvalid(InceptionAssetMismatch)
-}
-
-test inception_rejects_wrong_code_asset() {
-  validate_inception(
-    Icp,
-    InceptionMessage {
-      ..valid_icp(),
-      aid_asset_name: vectors.negative_aid_asset_name_wrong_code,
-    },
-  ) == InceptionInvalid(InceptionAssetMismatch)
-}
-
-test inception_rejects_short_aid() {
-  let short = bytearray.take(cesr_a(), 31)
-  validate_inception(
-    Icp,
-    InceptionMessage {
-      ..valid_icp(),
-      cesr_aid: short,
-      aid_asset_name: deriveAidAssetName(short),
-    },
-  ) == InceptionInvalid(InceptionAidWidth)
-}
-
-test inception_rejects_long_aid() {
-  let long = bytearray.concat(cesr_a(), #"00")
-  validate_inception(
-    Icp,
-    InceptionMessage {
-      ..valid_icp(),
-      cesr_aid: long,
-      aid_asset_name: deriveAidAssetName(long),
-    },
-  ) == InceptionInvalid(InceptionAidWidth)
-}
-
-test inception_rejects_mutated_aid() {
-  validate_inception(
-    Icp,
-    InceptionMessage { ..valid_icp(), cesr_aid: cesr_a_flipped },
-  ) == InceptionInvalid(InceptionAssetMismatch)
-}
-
-test inception_rejects_nonzero_native_sn() {
-  validate_inception(Icp, InceptionMessage { ..valid_icp(), native_sn: 1 }) == InceptionInvalid(
-    message.InceptionNativeSnNonZero,
-  )
-}
-
-test inception_rejects_ill_formed_toad() {
-  validate_inception(Icp, InceptionMessage { ..valid_icp(), toad: 1 }) == InceptionInvalid(
-    InceptionIllFormed(ToadRange),
-  )
-}
-
-test inception_rejects_empty_next_keys() {
-  validate_inception(Icp, InceptionMessage { ..valid_icp(), next_keys: [] }) == InceptionInvalid(
-    InceptionIllFormed(datum.NextIllFormed(threshold.EmptyKeys)),
-  )
-}
-
-// ---------------------------------------------------------
 // Advance fixture (valid succession) + eq6 dual-threshold setup
 // ---------------------------------------------------------
 
@@ -391,7 +274,7 @@ test advance_valid_succession() {
 test advance_wrong_domain() {
   advance_equalities(
     spent(),
-    AdvanceMessage { ..valid_adv(), domain: inception_domain },
+    AdvanceMessage { ..valid_adv(), domain: checkpoint_asset_domain_tag },
     created_valid(),
     sigs_revealed(),
   ) == AdvanceInvalid(AdvanceDomainMismatch)

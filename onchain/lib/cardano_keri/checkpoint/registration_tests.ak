@@ -10,8 +10,8 @@
 //// expected constructor in-line (a third independent spelling next to the
 //// S2 hspec and the generator's own assertion), so a generator bug cannot
 //// silently weaken the suite. Byte-identity is asserted where bytes are
-//// asserted: the reconstructed `InceptionMessage` canonical-CBOR preimage
-//// (the R7 signature target), the R5 proof-token name, the E5/E7/E9
+//// asserted: controller signatures and witness receipts over exact event
+//// bytes, the R5 proof-token name, the E5/E7/E9
 //// canonical kt/nt/bt re-spellings, and the E8 B-code witness qb64 —
 //// each against a Haskell-emitted golden AND (for slices) the actual
 //// event bytes at the generator-exported offsets. Includes the full
@@ -19,24 +19,20 @@
 //// overlapping spans, spans into other fields, D/E/B code-prefix
 //// confusion, truncated slices, negative offsets, duplicated offsets).
 
-use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}
-use cardano_keri/checkpoint/message.{
-  InceptionIllFormed, InceptionNativeSnNonZero,
-}
 use cardano_keri/checkpoint/registration.{
   DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
   E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
   E6NextKeysMismatch, E7NextThresholdMismatch, E8WitnessesMismatch,
-  E9ToadMismatch, R3GenesisDatumMismatch, R4InceptionInvalid,
-  R7QuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
+  E9ToadMismatch, InceptionIllFormed, InceptionNativeSnNonZero,
+  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
+  R7WitnessQuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
   RegistrationInvalid, RegistrationValid, RegistrationVerdict, proof_token_name,
-  qb64_witness_verkey, registration_deposit_floor, registration_message,
-  registration_predicate, respell_hex, respell_threshold, slice_matches,
-  valid_registration_deposit,
+  qb64_witness_verkey, registration_deposit_floor, registration_predicate,
+  respell_hex, respell_threshold, slice_matches, valid_registration_deposit,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/threshold.{
@@ -62,30 +58,19 @@ fn parity(
 }
 
 // ---------------------------------------------------------
-// Byte parity: the reconstructed message preimage (R7 target)
+// Byte parity: event-own controller signatures and witness receipts
 // ---------------------------------------------------------
 
-test preimage_parity_witnessed() {
-  cbor.serialise(
-    registration_message(vec.pos_witnessed_ctx, vec.pos_witnessed_datum),
-  ) == vec.witnessed_preimage
-}
-
-test preimage_parity_weighted() {
-  cbor.serialise(
-    registration_message(vec.pos_weighted_ctx, vec.pos_weighted_datum),
-  ) == vec.weighted_preimage
-}
-
-// A committed ctrl signature verifies over the Aiken-recomputed preimage:
-// the two languages agree on the exact signature target bytes.
-test ctrl_sig_verifies_over_preimage() {
-  let preimage = cbor.serialise(
-    registration_message(vec.pos_witnessed_ctx, vec.pos_witnessed_datum),
-  )
+test ctrl_sig_verifies_over_exact_event_bytes() {
   expect Some((idx, sig)) = list.head(vec.pos_witnessed_evidence.ctrl_sigs)
   expect Some(key) = list.at(vec.pos_witnessed_datum.cur_keys, idx)
-  verify_ed25519_signature(key, preimage, sig)
+  verify_ed25519_signature(key, vec.pos_witnessed_evidence.event_bytes, sig)
+}
+
+test witness_receipt_verifies_over_exact_event_bytes() {
+  expect Some((idx, sig)) = list.head(vec.pos_witnessed_evidence.wit_receipts)
+  expect Some(key) = list.at(vec.pos_witnessed_datum.witnesses, idx)
+  verify_ed25519_signature(key, vec.pos_witnessed_evidence.event_bytes, sig)
 }
 
 // ---------------------------------------------------------
@@ -437,17 +422,191 @@ test e9_toad_restated_rejects() {
 // Verdict parity: R7 signature negatives
 // ---------------------------------------------------------
 
-// The bundle's own KERI signatures (over event_raw) MUST fail R7: the
-// registration preimage is the reconstructed message, never the event.
-test r7_event_raw_sigs_rejects() {
-  parity(
-    vec.r7_event_raw_sigs_ctx,
-    vec.r7_event_raw_sigs_datum,
-    vec.r7_event_raw_sigs_lovelace,
-    vec.r7_event_raw_sigs_evidence,
-    vec.r7_event_raw_sigs_verdict,
-    RegistrationInvalid(R7QuorumUnsatisfied),
-  )
+const witnessed_receipt_0: ByteArray =
+  #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208"
+
+const witnessed_receipt_2: ByteArray =
+  #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e"
+
+fn event_own_witnessed_evidence() -> RegistrationEvidence {
+  RegistrationEvidence {
+    ..vec.pos_witnessed_evidence,
+    wit_receipts: [(0, witnessed_receipt_0), (2, witnessed_receipt_2)],
+  }
+}
+
+// The bundle's own KERI signatures authenticate the exact inception event,
+// with its indexed witness receipts satisfying toad=2.
+test r7_event_own_controller_sigs_accept() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    event_own_witnessed_evidence(),
+  ) == RegistrationValid
+}
+
+test r7_old_inception_message_only_sigs_reject() {
+  registration_predicate(
+    vec.r7_old_message_sigs_ctx,
+    vec.r7_old_message_sigs_datum,
+    vec.r7_old_message_sigs_lovelace,
+    vec.r7_old_message_sigs_evidence,
+  ) == RegistrationInvalid(R7QuorumUnsatisfied)
+}
+
+test r7_controller_negative_index_rejects() {
+  expect [(_, sig0), sig1] = event_own_witnessed_evidence().ctrl_sigs
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      ctrl_sigs: [(-1, sig0), sig1],
+    },
+  ) == RegistrationInvalid(R7QuorumUnsatisfied)
+}
+
+test r7_controller_out_of_range_index_rejects() {
+  expect [(_, sig0), sig1] = event_own_witnessed_evidence().ctrl_sigs
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      ctrl_sigs: [(99, sig0), sig1],
+    },
+  ) == RegistrationInvalid(R7QuorumUnsatisfied)
+}
+
+test r7_controller_bad_signature_rejects() {
+  expect [(idx0, sig0), sig1] = event_own_witnessed_evidence().ctrl_sigs
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      ctrl_sigs: [(idx0, bytearray.push(bytearray.drop(sig0, 1), 255)), sig1],
+    },
+  ) == RegistrationInvalid(R7QuorumUnsatisfied)
+}
+
+test r7_controller_crossed_event_bytes_rejects() {
+  let e = event_own_witnessed_evidence()
+  let n = bytearray.length(e.event_bytes)
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..e,
+      event_bytes: bytearray.concat(bytearray.take(e.event_bytes, n - 1), #"00"),
+    },
+  ) == RegistrationInvalid(R7QuorumUnsatisfied)
+}
+
+test r7_witness_receipt_free_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence { ..event_own_witnessed_evidence(), wit_receipts: [] },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_below_toad_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: [(0, witnessed_receipt_0)],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_duplicate_index_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: [(0, witnessed_receipt_0), (0, witnessed_receipt_0)],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_negative_index_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: [(-1, witnessed_receipt_0), (2, witnessed_receipt_2)],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_out_of_range_index_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: [(99, witnessed_receipt_0), (2, witnessed_receipt_2)],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_wrong_key_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: event_own_witnessed_evidence().ctrl_sigs,
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_witness_bad_signature_rejects() {
+  registration_predicate(
+    vec.pos_witnessed_ctx,
+    vec.pos_witnessed_datum,
+    vec.pos_witnessed_lovelace,
+    RegistrationEvidence {
+      ..event_own_witnessed_evidence(),
+      wit_receipts: [
+        (0, bytearray.push(bytearray.drop(witnessed_receipt_0, 1), 255)),
+        (2, witnessed_receipt_2),
+      ],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+}
+
+test r7_toad_zero_requires_literal_empty_receipts() {
+  registration_predicate(
+    vec.pos_2key_ctx,
+    vec.pos_2key_datum,
+    vec.pos_2key_lovelace,
+    RegistrationEvidence {
+      ..vec.pos_2key_evidence,
+      wit_receipts: [
+        (
+          0,
+          #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        ),
+      ],
+    },
+  ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
 }
 
 test r7_below_threshold_rejects() {
@@ -483,36 +642,110 @@ test r7_dup_index_rejects() {
   )
 }
 
-test r7_attacker_signed_rejects() {
+test r7_wrong_controller_keys_rejects() {
   parity(
-    vec.r7_attacker_signed_ctx,
-    vec.r7_attacker_signed_datum,
-    vec.r7_attacker_signed_lovelace,
-    vec.r7_attacker_signed_evidence,
-    vec.r7_attacker_signed_verdict,
+    vec.r7_wrong_controller_keys_ctx,
+    vec.r7_wrong_controller_keys_datum,
+    vec.r7_wrong_controller_keys_lovelace,
+    vec.r7_wrong_controller_keys_evidence,
+    vec.r7_wrong_controller_keys_verdict,
     RegistrationInvalid(R7QuorumUnsatisfied),
   )
 }
 
-test r7_crossed_network_rejects() {
+test r7_crossed_event_bytes_rejects_vector() {
   parity(
-    vec.r7_crossed_network_ctx,
-    vec.r7_crossed_network_datum,
-    vec.r7_crossed_network_lovelace,
-    vec.r7_crossed_network_evidence,
-    vec.r7_crossed_network_verdict,
+    vec.r7_crossed_event_bytes_ctx,
+    vec.r7_crossed_event_bytes_datum,
+    vec.r7_crossed_event_bytes_lovelace,
+    vec.r7_crossed_event_bytes_evidence,
+    vec.r7_crossed_event_bytes_verdict,
     RegistrationInvalid(R7QuorumUnsatisfied),
   )
 }
 
-test r7_crossed_policy_rejects() {
+test r7_generated_controller_index_signature_matrix_matches_haskell() {
   parity(
-    vec.r7_crossed_policy_ctx,
-    vec.r7_crossed_policy_datum,
-    vec.r7_crossed_policy_lovelace,
-    vec.r7_crossed_policy_evidence,
-    vec.r7_crossed_policy_verdict,
+    vec.r7_negative_index_ctx,
+    vec.r7_negative_index_datum,
+    vec.r7_negative_index_lovelace,
+    vec.r7_negative_index_evidence,
+    vec.r7_negative_index_verdict,
     RegistrationInvalid(R7QuorumUnsatisfied),
+  ) && parity(
+    vec.r7_oob_index_ctx,
+    vec.r7_oob_index_datum,
+    vec.r7_oob_index_lovelace,
+    vec.r7_oob_index_evidence,
+    vec.r7_oob_index_verdict,
+    RegistrationInvalid(R7QuorumUnsatisfied),
+  ) && parity(
+    vec.r7_bad_signature_ctx,
+    vec.r7_bad_signature_datum,
+    vec.r7_bad_signature_lovelace,
+    vec.r7_bad_signature_evidence,
+    vec.r7_bad_signature_verdict,
+    RegistrationInvalid(R7QuorumUnsatisfied),
+  )
+}
+
+test r7_generated_witness_receipt_matrix_matches_haskell() {
+  parity(
+    vec.r7_receipts_empty_ctx,
+    vec.r7_receipts_empty_datum,
+    vec.r7_receipts_empty_lovelace,
+    vec.r7_receipts_empty_evidence,
+    vec.r7_receipts_empty_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_below_toad_ctx,
+    vec.r7_receipts_below_toad_datum,
+    vec.r7_receipts_below_toad_lovelace,
+    vec.r7_receipts_below_toad_evidence,
+    vec.r7_receipts_below_toad_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_dup_index_ctx,
+    vec.r7_receipts_dup_index_datum,
+    vec.r7_receipts_dup_index_lovelace,
+    vec.r7_receipts_dup_index_evidence,
+    vec.r7_receipts_dup_index_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_negative_index_ctx,
+    vec.r7_receipts_negative_index_datum,
+    vec.r7_receipts_negative_index_lovelace,
+    vec.r7_receipts_negative_index_evidence,
+    vec.r7_receipts_negative_index_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_oob_index_ctx,
+    vec.r7_receipts_oob_index_datum,
+    vec.r7_receipts_oob_index_lovelace,
+    vec.r7_receipts_oob_index_evidence,
+    vec.r7_receipts_oob_index_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_wrong_keys_ctx,
+    vec.r7_receipts_wrong_keys_datum,
+    vec.r7_receipts_wrong_keys_lovelace,
+    vec.r7_receipts_wrong_keys_evidence,
+    vec.r7_receipts_wrong_keys_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_receipts_bad_signature_ctx,
+    vec.r7_receipts_bad_signature_datum,
+    vec.r7_receipts_bad_signature_lovelace,
+    vec.r7_receipts_bad_signature_evidence,
+    vec.r7_receipts_bad_signature_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
+  ) && parity(
+    vec.r7_zero_toad_nonempty_ctx,
+    vec.r7_zero_toad_nonempty_datum,
+    vec.r7_zero_toad_nonempty_lovelace,
+    vec.r7_zero_toad_nonempty_evidence,
+    vec.r7_zero_toad_nonempty_verdict,
+    RegistrationInvalid(R7WitnessQuorumUnsatisfied),
   )
 }
 

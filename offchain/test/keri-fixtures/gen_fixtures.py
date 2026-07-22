@@ -625,11 +625,9 @@ def build():
     # --- registration: #114 icp-admission ground truth --------------------
     # Every event and signature is keripy output; per-field offsets are
     # computed from keripy's own serialization (_field_spans) and
-    # self-checked against ked before export. Exported seeds are temp test
-    # keys derived from the fixed Salter seed — safe to commit; the Haskell
-    # layer uses them to produce Cardano-side InceptionMessage signatures
-    # at test time (deployment parameters are chosen there, so keripy
-    # cannot pre-sign those preimages).
+    # self-checked against ked before export. The fixed Salter seed keeps
+    # fixture regeneration deterministic; exported event-own signatures
+    # authenticate keripy's exact serialization.
     rwc = salt.signers(count=2, transferable=True, temp=True, path="rwc")
     rwn = salt.signers(count=2, transferable=True, temp=True, path="rwn")
     rww = salt.signers(count=3, transferable=False, temp=True, path="rww")

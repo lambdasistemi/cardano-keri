@@ -31,19 +31,19 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R2 — event-own registration predicate
 
-- [ ] T114-R2 RED: replace preimage positives with KERI `event_sigs` and
+- [x] T114-R2 RED: replace preimage positives with KERI `event_sigs` and
       receipt-quorum cases; pin old-message-only, bad/duplicate index,
       wrong-byte/key/witness, below-threshold/toad, and toad-zero negatives.
-- [ ] T114-R2 GREEN: change Haskell/Aiken RegistrationEvidence and predicates
+- [x] T114-R2 GREEN: change Haskell/Aiken RegistrationEvidence and predicates
       to distinct controller/receipt verification over `event_bytes`, keeping
       all E1-E9/schema/threshold rules; regenerate vectors.
-- [ ] T114-R2 Delete inception-only InceptionMessage production/preimage/
+- [x] T114-R2 Delete inception-only InceptionMessage production/preimage/
       private-signing surface from Message modules/tests without touching
       AdvanceMessage or repurposing the old domain.
-- [ ] T114-R2 Prove live Register remains staging-closed, full gate green, and
+- [x] T114-R2 Prove live Register remains staging-closed, full gate green, and
       commit exactly `refactor(114): authenticate inception events from the KEL`
       with exactly `Tasks: T114-R2`.
-- [ ] T114-R2 Report applied program bytes and both standing deltas; audit the
+- [x] T114-R2 Report applied program bytes and both standing deltas; audit the
       21 traceability rows without flipping a sentinel lacking executable tests.
 
 ## Slice R3 — live bonded Register

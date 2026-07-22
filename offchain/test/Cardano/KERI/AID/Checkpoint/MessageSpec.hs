@@ -26,9 +26,6 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
     AdvanceMessage (..),
-    EventType (..),
-    InceptionError (..),
-    InceptionMessage (..),
     RevealedSuccessorSigners (..),
     SpentCheckpoint (..),
     advanceDomain,
@@ -36,9 +33,6 @@ import Cardano.KERI.AID.Checkpoint.Message (
     advanceMessage,
     checkpointAssetDomainTag,
     deriveAidAssetName,
-    inceptionDomain,
-    inceptionMessage,
-    validateInception,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -131,25 +125,6 @@ aidNameGolden =
 -- The asset name derived with the WRONG code (0x46 'F', not 0x45 'E').
 wrongCodeAsset :: ByteString
 wrongCodeAsset = blake2b_256 (checkpointAssetDomainTag <> BS.cons 0x46 cesrA)
-
--- ---------------------------------------------------------
--- Inception fixture (matched to the generator)
--- ---------------------------------------------------------
-
-validIcp :: InceptionMessage
-validIcp =
-    inceptionMessage
-        1 -- network_id
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        [k1] -- cur_keys
-        (Unweighted 1) -- cur_threshold
-        [k2] -- next_keys (KERI n)
-        (Unweighted 1) -- next_threshold (KERI nt)
-        [] -- witnesses
-        0 -- toad
-        0 -- native_sn
 
 -- ---------------------------------------------------------
 -- Advance fixture (valid succession) + eq6 dual-threshold setup
@@ -441,8 +416,6 @@ spec = do
     -- Frozen domain constants
     -- ------------------------------------------------------
     describe "frozen domain constants" $ do
-        it "inceptionDomain is the icp/v1 literal" $
-            inceptionDomain `shouldBe` ("cardano-keri/checkpoint/icp/v1" :: ByteString)
         it "advanceDomain is the adv/v1 literal" $
             advanceDomain `shouldBe` ("cardano-keri/checkpoint/adv/v1" :: ByteString)
         it "checkpointAssetDomainTag is the 32-byte asset/v1 tag" $
@@ -476,65 +449,6 @@ spec = do
             deriveAidAssetName cesrAFlipped `shouldSatisfy` (/= aidNameGolden)
 
     -- ------------------------------------------------------
-    -- InceptionMessage golden + validation (exact rejections)
-    -- ------------------------------------------------------
-    describe "InceptionMessage golden" $ do
-        it "icp canonical CBOR golden" $
-            canonicalCbor validIcp
-                `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200202020202020202020202020202020202020202020202020202020202020202ffd8799f01ff800000ff"
-        it "builder fills the frozen icp domain" $
-            imDomain validIcp `shouldBe` inceptionDomain
-
-    describe "validateInception (exact rejections)" $ do
-        it "accepts a non-delegated icp with a matching derived asset" $
-            validateInception Icp validIcp `shouldBe` Right ()
-        it "rejects a non-icp domain -> InceptionDomainMismatch" $
-            validateInception Icp validIcp{imDomain = advanceDomain}
-                `shouldBe` Left InceptionDomainMismatch
-        it "rejects a dip-typed inception -> DelegatedInceptionRejected" $
-            validateInception Dip validIcp
-                `shouldBe` Left DelegatedInceptionRejected
-        it "rejects a drt-typed inception -> DelegatedInceptionRejected" $
-            validateInception Drt validIcp
-                `shouldBe` Left DelegatedInceptionRejected
-        it "rejects a substituted asset name -> InceptionAssetMismatch" $
-            validateInception Icp validIcp{imAidAssetName = b32 0x00}
-                `shouldBe` Left InceptionAssetMismatch
-        it "rejects a wrong-code-derived substituted asset -> InceptionAssetMismatch" $
-            validateInception Icp validIcp{imAidAssetName = wrongCodeAsset}
-                `shouldBe` Left InceptionAssetMismatch
-        it "rejects a 31-byte AID (asset matches derive) -> InceptionAidWidth" $
-            validateInception
-                Icp
-                validIcp
-                    { imCesrAid = BS.take 31 cesrA
-                    , imAidAssetName = deriveAidAssetName (BS.take 31 cesrA)
-                    }
-                `shouldBe` Left InceptionAidWidth
-        it "rejects a 33-byte AID (asset matches derive) -> InceptionAidWidth" $
-            let cesr33 = cesrA <> BS.singleton 0x00
-             in validateInception
-                    Icp
-                    validIcp
-                        { imCesrAid = cesr33
-                        , imAidAssetName = deriveAidAssetName cesr33
-                        }
-                    `shouldBe` Left InceptionAidWidth
-        it "rejects a mutated AID carrying the original asset -> InceptionAssetMismatch" $
-            validateInception Icp validIcp{imCesrAid = cesrAFlipped}
-                `shouldBe` Left InceptionAssetMismatch
-        it "rejects native_sn /= 0 -> InceptionNativeSnNonZero (icp has s=0)" $
-            validateInception Icp validIcp{imNativeSn = 1}
-                `shouldBe` Left InceptionNativeSnNonZero
-        it "rejects an ill-formed genesis (toad=1, no witnesses) -> InceptionIllFormed" $
-            validateInception Icp validIcp{imToad = 1}
-                `shouldBe` Left (InceptionIllFormed ToadRange)
-        it "rejects an ill-formed genesis (empty next keys) -> InceptionIllFormed" $
-            validateInception Icp validIcp{imNextKeys = []}
-                `shouldBe` Left (InceptionIllFormed (NextIllFormed EmptyKeys))
-
-    -- ------------------------------------------------------
     -- AdvanceMessage golden
     -- ------------------------------------------------------
     describe "AdvanceMessage golden" $ do
@@ -553,7 +467,7 @@ spec = do
             advanceEqualities spent validAdv createdValid sigsRevealed
                 `shouldBe` Right ()
         it "wrong adv domain -> AdvanceDomainMismatch" $
-            advanceEqualities spent validAdv{amDomain = inceptionDomain} createdValid sigsRevealed
+            advanceEqualities spent validAdv{amDomain = checkpointAssetDomainTag} createdValid sigsRevealed
                 `shouldBe` Left AdvanceDomainMismatch
 
         -- eq6 — the parent #21 pre-rotation invariant (security-critical).

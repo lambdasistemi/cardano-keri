@@ -19,21 +19,15 @@ fails").
 
 Checks composed here are the pure R3\/R4\/R6\/R7\/R8 subset:
 
-* __R3__ — genesis datum: @seq == 0@ and the datum equals
-  'inceptionDatum' of the reconstructed message. The
-  'InceptionMessage' is rebuilt from the deployment context and the
-  datum's own fields ('registrationMessage'); nothing message-shaped
-  is caller-supplied.
+* __R3__ — genesis datum: @seq == 0@.
 * __R6__ — the E1-E9 event-binding slice set ('eventBinding'). E1
   runs before R4 because the verified @t@ slice is what derives
   R4's 'EventType' (spec E1 "feeds R4's event_type"): a @dip@\/
   @drt@\/@rot@ event rejects at E1.
-* __R4__ — the frozen #68 schema predicate 'validateInception',
-  reused, never re-derived.
-* __R7__ — controller signatures over the canonical-CBOR preimage
-  of the reconstructed message (never the KERI event bytes); the
-  distinct verified positions must satisfy the datum's own
-  @cur_threshold@ (the event's @kt@, pinned by E5).
+* __R4__ — the frozen #68 inception schema predicate over the datum.
+* __R7__ — controller signatures and witness receipts over exact KERI
+  event bytes; distinct verified controller positions satisfy @kt@ and
+  distinct witness positions satisfy @toad@.
 * __R8__ — deposit arithmetic over the deployment context.
 
 Transaction-shape checks (R1\/R2\/R5 token presence) are the S5
@@ -61,8 +55,10 @@ module Cardano.KERI.AID.Checkpoint.Registration (
     registrationDepositFloor,
     validRegistrationDeposit,
 
-    -- * Message reconstruction (R3)
-    registrationMessage,
+    -- * Inception schema validation (R4)
+    EventType (..),
+    InceptionError (..),
+    validateInceptionDatum,
 
     -- * The registration predicate
     RegistrationError (..),
@@ -77,18 +73,10 @@ import Cardano.KERI.AID.CESR (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     CheckpointDatumV1 (..),
+    DatumError,
     Verkey,
     blake2b_256,
-    canonicalCbor,
- )
-import Cardano.KERI.AID.Checkpoint.Message (
-    EventType (..),
-    InceptionError,
-    InceptionMessage,
-    deriveAidAssetName,
-    inceptionDatum,
-    inceptionMessage,
-    validateInception,
+    datumWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -119,17 +107,12 @@ import Data.IntSet qualified as IntSet
 -- Deployment context
 -- ---------------------------------------------------------
 
-{- | The deployment the registration validates against: the frozen
-validator parameters (@network_id@, the checkpoint policy = own
-script hash, @d_reg@) plus the ledger @min_ada@ floor the R8
+{- | The deployment values registration validation enforces: the
+deployment-fixed @d_reg@ plus the ledger @min_ada@ floor the R8
 arithmetic runs over.
 -}
 data DeploymentContext = DeploymentContext
-    { dcNetworkId :: !Integer
-    -- ^ deployment network id (message field 2)
-    , dcCheckpointPolicyId :: !ByteString
-    -- ^ the checkpoint policy id — the combined script's own hash
-    , dcMinAda :: !Integer
+    { dcMinAda :: !Integer
     -- ^ ledger min-ADA floor of the state output
     , dcDReg :: !Integer
     {- ^ deployment-fixed registration bond whose operator magnitude is
@@ -157,10 +140,8 @@ offset convention: first byte of the value content between the
 quotes; a weighted @kt@\/@nt@ offset points at the opening @[@ of
 the full compact-JSON array), and the controller signatures.
 
-'reCtrlSigs' index into the datum's @cur_keys@ and sign the
-__'InceptionMessage' canonical-CBOR preimage__ — NOT the KERI event
-bytes ('reEventBytes'); the KEL's own indexed KERI signatures stay
-off-chain audit material (spec QF).
+'reCtrlSigs' index into the datum's @cur_keys@ and 'reWitReceipts'
+index into its witnesses. Both authenticate exact 'reEventBytes'.
 -}
 data RegistrationEvidence = RegistrationEvidence
     { reEventBytes :: !ByteString
@@ -184,7 +165,9 @@ data RegistrationEvidence = RegistrationEvidence
     , reOffBt :: !Int
     -- ^ offset of the @bt@ JSON value
     , reCtrlSigs :: ![(Int, ByteString)]
-    -- ^ @(index into cur_keys, sig over the message preimage)@
+    -- ^ @(index into cur_keys, signature over event_bytes)@
+    , reWitReceipts :: ![(Int, ByteString)]
+    -- ^ @(index into witnesses, receipt signature over event_bytes)@
     }
     deriving stock (Show, Eq)
 
@@ -265,30 +248,29 @@ proofTokenName eventBytes cesrAid =
     blake2b_256 (eventBytes <> cesrAid)
 
 -- ---------------------------------------------------------
--- Message reconstruction (R3)
+-- Inception schema validation (R4)
 -- ---------------------------------------------------------
 
-{- | The __reconstructed__ 'InceptionMessage': deployment
-parameters from the context, the asset name derived (never copied)
-from the datum's AID, and the datum's own key-state fields. This is
-the only message shape the predicate ever consults — nothing
-message-shaped is caller-supplied (R3).
--}
-registrationMessage ::
-    DeploymentContext -> CheckpointDatumV1 -> InceptionMessage
-registrationMessage ctx d =
-    inceptionMessage
-        (dcNetworkId ctx)
-        (dcCheckpointPolicyId ctx)
-        (deriveAidAssetName (cdCesrAid d))
-        (cdCesrAid d)
-        (cdCurKeys d)
-        (cdCurThreshold d)
-        (cdNextKeys d)
-        (cdNextThreshold d)
-        (cdWitnesses d)
-        (cdToad d)
-        (cdNativeSn d)
+-- | The attested KERI inception event type. V1 accepts only 'Icp'.
+data EventType = Icp | Dip | Drt
+    deriving stock (Show, Eq)
+
+-- | An inception datum rejection reason, with no authorization message.
+data InceptionError
+    = DelegatedInceptionRejected
+    | InceptionAidWidth
+    | InceptionNativeSnNonZero
+    | InceptionIllFormed DatumError
+    deriving stock (Show, Eq)
+
+-- | Validate the structural inception projection carried by a datum.
+validateInceptionDatum ::
+    EventType -> CheckpointDatumV1 -> Either InceptionError ()
+validateInceptionDatum et d = do
+    unless (et == Icp) (Left DelegatedInceptionRejected)
+    unless (BS.length (cdCesrAid d) == 32) (Left InceptionAidWidth)
+    unless (cdNativeSn d == 0) (Left InceptionNativeSnNonZero)
+    first InceptionIllFormed (datumWellFormed d)
 
 -- ---------------------------------------------------------
 -- The registration predicate
@@ -298,12 +280,12 @@ registrationMessage ctx d =
 data RegistrationError
     = -- | Applied @d_reg@ is below 'registrationDepositFloor'.
       DRegBelowMinimum
-    | {- | R3: @seq \/= 0@ or the datum is not the genesis datum of
-      the reconstructed message.
+    | {- | R3: @seq \/= 0@ or the datum is not the genesis checkpoint
+      state.
       -}
       R3GenesisDatumMismatch
-    | {- | R4: the frozen #68 'validateInception' rejected (domain,
-      AID width, derived asset name, @native_sn@, F18 + rule 14).
+    | {- | R4: inception datum validation rejected (AID width,
+      @native_sn@, F18 + rule 14).
       -}
       R4InceptionInvalid InceptionError
     | {- | E1: the @t@ slice is not @\"icp\"@ (@dip@\/@drt@\/@rot@
@@ -336,10 +318,14 @@ data RegistrationError
       E8WitnessesMismatch
     | -- | E9: the @bt@ slice is not the hex re-spelling of @toad@.
       E9ToadMismatch
-    | {- | R7: the distinct positions with a verifying signature
-      over the message preimage do not satisfy @cur_threshold@.
+    | {- | R7: the distinct positions with a verifying signature over
+      the exact @event_bytes@ do not satisfy @cur_threshold@.
       -}
       R7QuorumUnsatisfied
+    | {- | R7: distinct valid witness receipt positions did not meet @toad@,
+      or a zero-toad datum carried a non-empty receipt list.
+      -}
+      R7WitnessQuorumUnsatisfied
     | -- | R8: state-output lovelace below @min_ada + d_reg@.
       R8DepositBelowMinimum
     deriving stock (Show, Eq)
@@ -402,27 +388,37 @@ registrationPredicate ::
     Either RegistrationError ()
 registrationPredicate ctx d lovelace e = do
     unless (validRegistrationDeposit (dcDReg ctx)) (Left DRegBelowMinimum)
-    -- R3: genesis datum — reconstructed message, nothing supplied.
-    let m = registrationMessage ctx d
-    unless
-        (cdSeq d == 0 && d == inceptionDatum m)
-        (Left R3GenesisDatumMismatch)
+    -- R3: genesis projection.
+    unless (cdSeq d == 0) (Left R3GenesisDatumMismatch)
     -- R6: the event-binding slice set (E1 derives R4's type).
     eventBinding d e
     -- R4: the frozen #68 schema predicate, reused.
-    first R4InceptionInvalid (validateInception Icp m)
-    -- R7: distinct verified positions over the message preimage.
-    let preimage = canonicalCbor m
-        signed =
+    first R4InceptionInvalid (validateInceptionDatum Icp d)
+    -- R7: distinct controller positions over exact event bytes.
+    let signed =
             IntSet.fromList
                 [ idx
                 | (idx, sig) <- reCtrlSigs e
                 , Just k <- [cdCurKeys d `atMay` idx]
-                , verifyEd25519 k preimage sig
+                , verifyEd25519 k (reEventBytes e) sig
                 ]
     unless
         (evaluate (cdCurThreshold d) (length (cdCurKeys d)) signed)
         (Left R7QuorumUnsatisfied)
+    -- R7: distinct witness receipt positions over those same bytes. A
+    -- zero-toad event accepts only a literally empty evidence list.
+    let witnessed =
+            IntSet.fromList
+                [ idx
+                | (idx, sig) <- reWitReceipts e
+                , Just k <- [cdWitnesses d `atMay` idx]
+                , verifyEd25519 k (reEventBytes e) sig
+                ]
+        receiptsSatisfied
+            | cdToad d == 0 = null (reWitReceipts e)
+            | otherwise =
+                toInteger (IntSet.size witnessed) >= cdToad d
+    unless receiptsSatisfied (Left R7WitnessQuorumUnsatisfied)
     -- R8: deposit floor.
     unless
         (lovelace >= dcMinAda ctx + dcDReg ctx)

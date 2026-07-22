@@ -7,33 +7,22 @@
 //// family member; the generator asserts the Haskell predicate returns
 //// each recorded verdict before emitting, and registration_tests.ak
 //// asserts registration_predicate reproduces them one-for-one (verdict
-//// parity) plus the preimage/proof-name/re-spelling/qb64 byte goldens.
+//// parity) plus the proof-name/re-spelling/qb64 byte goldens.
 //// `just check-registration-vectors` forbids drift.
 
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}
-use cardano_keri/checkpoint/message.{
-  InceptionIllFormed, InceptionNativeSnNonZero,
-}
 use cardano_keri/checkpoint/registration.{
   DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
   E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
   E6NextKeysMismatch, E7NextThresholdMismatch, E8WitnessesMismatch,
-  E9ToadMismatch, R3GenesisDatumMismatch, R4InceptionInvalid,
-  R7QuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
+  E9ToadMismatch, InceptionIllFormed, InceptionNativeSnNonZero,
+  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
+  R7WitnessQuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
   RegistrationInvalid, RegistrationValid, RegistrationVerdict,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted,
 }
-
-/// reg_witnessed reconstructed InceptionMessage canonical-CBOR
-/// preimage under ctx0 (the R7 signature target; byte-parity golden)
-pub const witnessed_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763100581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc58201220792f8be300286a1c14a651ec7a25479632d415ea49ff25617dc81d1dd12b5820395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b9829f582039ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f582046c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5ffd8799f02ff9f5820429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc915820ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9bffd8799f02ff9f5820edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c464714758207952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce715820df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2ff0200ff"
-
-/// reg_weighted reconstructed-message preimage under ctx0
-pub const weighted_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6963702f763100581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820595f654091d3eef0743fc222dbfbb1d6a3fa39f9c188b2bc9f391cf7aa2e5256582049e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe9f5820a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86582015896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead6658209e1f96f704feb873d90ae7529c5a3dd99130c985526eef6e3fd92c13fb74280bffd87a9f9f9fd8799f0102ffd8799f0104ffd8799f0104ffffffff9f58201966e84856ea81f3af978ab9628d35cc3fd977ad0c619b306efe14c39df2331c58207bfaff1fd6f8eae4984d281b1fae296c8063d156ef31a7c2e0fe661530059f32582019b261aaef1f707ee0e671a8b09d5e74b94c99809c23e9a327c47231ce32985effd87a9f9f9fd8799f0102ffd8799f0104ffd8799f0104ffffffff800000ff"
 
 /// blake2b_256(reg_witnessed bytes ‖ aid) — the R5 proof-token name
 pub const witnessed_proof_name: ByteArray =
@@ -75,12 +64,7 @@ pub const d_reg_below_floor: Int = 4999999
 
 /// reg_witnessed (3-wit toad-2) honest package -> Valid
 pub const pos_witnessed_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const pos_witnessed_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -122,11 +106,21 @@ pub const pos_witnessed_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -135,12 +129,7 @@ pub const pos_witnessed_verdict: RegistrationVerdict = RegistrationValid
 
 /// reg_weighted (fractional kt) honest package -> Valid
 pub const pos_weighted_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const pos_weighted_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -196,29 +185,25 @@ pub const pos_weighted_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"0658b6692429b9441214f4ad4c26af381506e2254bbc587ff2e64db423a1f6b934f910575a21f49a58c1db76c28b3cb2c9f5824907a25fb849d1bea63119270b",
+        #"dfbd994a8024cc958cca5b469f81b2592d56b6bb201f0ab30978bfcc807c5e1c224544180047f20dd42968332121007da8436e0a8c1a1299f67148426cf0680f",
       ),
       (
         1,
-        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+        #"91ee6dc1963d47b0ef52fceb7a227b4fb4f4a630e04f48a3cf67956c9d3960a63c4f8f1021ed05d092d315894c1afc3ba345d2b3174b423edfbae2bb84e6330f",
       ),
       (
         2,
-        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+        #"4c012d7fd59cb5ab6691a0f07d53c3312b830526ff188bf591b6f5d5e89ef249f76bdddcee897e22f2d6df4e9fa347246f47e0b829d20d4c0a395dcf2f27d90b",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const pos_weighted_verdict: RegistrationVerdict = RegistrationValid
 
 /// deposit boundary: exactly min_ada + d_reg -> Valid
 pub const pos_deposit_boundary_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const pos_deposit_boundary_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -260,11 +245,21 @@ pub const pos_deposit_boundary_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -273,12 +268,7 @@ pub const pos_deposit_boundary_verdict: RegistrationVerdict = RegistrationValid
 
 /// reg_2key (unwitnessed 2-key) honest package -> Valid
 pub const pos_2key_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const pos_2key_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -316,25 +306,21 @@ pub const pos_2key_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"23b0cebb6569f3a90ed376b2fc301a1d192a366914b4df2e77cacbdb073f672c1c3a31a88a6823b2ba71be86998e1b4d5db7d91b3a1d7190d0dedd4993f7f405",
+        #"79638e770077592a4157475dede6d4dd2560636bd024566d538c528eea3f9d3df68b9188f9f8556952cbcc364ac75598305ab6cc87198e911f14dc8948297a0b",
       ),
       (
         1,
-        #"ba9e63af67bcd593555599d15c10623729c1c18009001de7daa9662b88923a82729d822b97f075aa8cc1bbd9c985709d097c4e5511ca5e1f6d6f2dacaf248b07",
+        #"12a51f6509d389ffe03df77aa4d9114961d2203d70d290cd24850eb7d13f43640d209c3e9baa3d1a71afe4a834f270546f89229e1c084be0b7f37037eccb7b05",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const pos_2key_verdict: RegistrationVerdict = RegistrationValid
 
 /// reg_7key (unwitnessed GLEIF 7-key) honest package -> Valid
 pub const pos_7key_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const pos_7key_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -406,45 +392,41 @@ pub const pos_7key_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"4341be3b74577da0e73f2bc533e7275f126faec0cb96c4e80cb7dc7d0b7fe150b31c3b24748fa34a3aa02458c601204925a2c63172e12155f4a49d353c025c09",
+        #"9b75b06cb59f700ce7558825b82af7014318489ccda991dd1e849bf0a8bac05cc7219b1eaf8e0462c83e2b4233218b0c8f87a0e7e18b86c2b91c1e200546e407",
       ),
       (
         1,
-        #"3ef642a62b68865b8274a2ca682976cc34810cb3a572958fb40ff8139bcc2900d77064f4b2139157e235792cfba27ce8ac26326e6056c9ea13a3c84815b49c0e",
+        #"5292b35092b0c151278c470d89962ae8ee0116330c354707730488738ff6ca2323c811d4d892390907f2a60933b907cf69c6d12dd38602ba4c19fa9573e12d0b",
       ),
       (
         2,
-        #"01f91a730583a1dbd18dff574aaf9f5184f200b7208c87f059ea8be262af89ff22b55004b167f951a7e55f46b1872c861175fed50bb1ca3ca86be2e907321701",
+        #"a8a52f317e9aa2598eaeda5ac291792df6b1c2b87fe7a0cf0e77335f64b6b688da2ed20259143d89f99a6d0ea1978addf16d125db46b07bdf288b2027bba180a",
       ),
       (
         3,
-        #"23efc9b29964ae0f7dea9fb505484fbd91b5f97c245b4821f0028e76bb03e2cfc51182dd123b065c2b729b882808bd65cfd4e3682c691829e94686ee73fc310e",
+        #"b204510642d12adbb4a274d0f2e27c337901eae633490c68d54294d1460ee5df1457d04b05507544a620522a287905a636e2e4309dd30cbc26449050da64e004",
       ),
       (
         4,
-        #"428aa54db4aa418d346fb7ced0c3174ffd1edab06e941202f5add14c683cc8d6f06fff0d030adc1960831fc4cedd0114dbe15ddbba80739ac7deb4033ffdc30d",
+        #"95a1221aaba5fe566ac104de704912623e6f4d15893257abada6ababb7d3246c18b9ee11376ea541b2e4e5e8167ab52b145cbd6ba11c31b5fa5e11d748bf030a",
       ),
       (
         5,
-        #"4394b1021e479e9cfe6aaee3fa41e2d7eadac2e6866d034d893cb138e21d56ff73dda338b380a700d87b10ad6bebed195d572d5c32f7979916326be543329f0f",
+        #"68d8cf43e75b0e1e6f6ad1de7f2af98300ca51223cccc15d0caf30d5fe2de3b9a6cb0546eee9576a6237ca508dc479e1e0de144575d992da2d8be07c55ff460b",
       ),
       (
         6,
-        #"c9797defacf9532bcf2cdff4a14b74f4865d372b5aeaf03eba8f53b2bb1fcaf2e9201e851b496e495762878b71fd8d05674c5742ee9289c346303275822cd70b",
+        #"d5e57887ad0158fc618e327cddfa89317c6a50f99280593386b5506814e200bd66f2fa95cc957f3d953431245b3eea328facd596f29b280fa5fbc75f3d10040b",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const pos_7key_verdict: RegistrationVerdict = RegistrationValid
 
 /// d_reg one below the mechanical floor -> DRegBelowMinimum
 pub const d1_deployment_below_floor_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 4999999,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 4999999 }
 
 pub const d1_deployment_below_floor_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -486,11 +468,21 @@ pub const d1_deployment_below_floor_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -500,12 +492,7 @@ pub const d1_deployment_below_floor_verdict: RegistrationVerdict =
 
 /// seq /= 0 -> R3GenesisDatumMismatch
 pub const r3_seq_nonzero_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r3_seq_nonzero_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -547,11 +534,21 @@ pub const r3_seq_nonzero_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -561,12 +558,7 @@ pub const r3_seq_nonzero_verdict: RegistrationVerdict =
 
 /// native_sn /= 0 -> R4 InceptionNativeSnNonZero
 pub const r4_native_sn_nonzero_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r4_native_sn_nonzero_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -608,11 +600,21 @@ pub const r4_native_sn_nonzero_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -622,12 +624,7 @@ pub const r4_native_sn_nonzero_verdict: RegistrationVerdict =
 
 /// reg_dip: real keripy delegated inception -> E1
 pub const e1_dip_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e1_dip_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -663,9 +660,10 @@ pub const e1_dip_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"4f7b5a19dc8712ab62cc283d3670a11c83f7a22de367dd70a13e256fed42986e8b76f3d0d5f753fe5ad1a60d750baa74d509951d0ab2fe15a9d549945b0d7809",
+        #"e945892efb27fa0beed1b834ab8c6e09db4be9fbe21e05390efadb35f987221cbe8bfcb3b4d178cdfa0954c70f1efa34f67f8260ea6ebf1e32b97d87c2ad1c0c",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const e1_dip_verdict: RegistrationVerdict =
@@ -673,12 +671,7 @@ pub const e1_dip_verdict: RegistrationVerdict =
 
 /// reg_drt: real keripy delegated rotation -> E1
 pub const e1_drt_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e1_drt_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -714,9 +707,10 @@ pub const e1_drt_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"59a834b675cf08b395d07321ec29e518156b4d599427da07f4201f78d9d115fec5abf12a2654abac369371ca416f906512630bcc101442d8e7637c354c989508",
+        #"a123dd62a8509f0c3927f168df5decb1ed02caf4ff0e5d92cb8b0b0e4d02467c656ce9f681bf72938d8deb00b3d829202c003d6481e07e0920619ef2a15a2602",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const e1_drt_verdict: RegistrationVerdict =
@@ -724,12 +718,7 @@ pub const e1_drt_verdict: RegistrationVerdict =
 
 /// crossed AID in the datum (re-signed) -> E2
 pub const e2_crossed_aid_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e2_crossed_aid_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -771,11 +760,21 @@ pub const e2_crossed_aid_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"062ad63612523dae358c017b6452fc701cd1643cd68db3cc2b04e9d65d09f0d8906138317d9901ba721617788abfacd4e618122734678cc40bdaea28e36e7e0f",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"d6ed1d778a288e19b831da9063f9d8bcc7a6c7b2dfba1b2760cf323e9301fc93b4ed9084cb3f54ebcbd28f360b14acabb3d7fd3067287bb3a84a5e791a0b7105",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -785,12 +784,7 @@ pub const e2_crossed_aid_verdict: RegistrationVerdict =
 
 /// off_s pointed at t -> E3
 pub const e3_off_s_at_t_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e3_off_s_at_t_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -832,11 +826,21 @@ pub const e3_off_s_at_t_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -846,19 +850,14 @@ pub const e3_off_s_at_t_verdict: RegistrationVerdict =
 
 /// squat: attacker keys over victim bytes -> E4
 pub const e4_squat_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e4_squat_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
-      #"93202a5a570f308d73a67e765f27e14f68f30b5b9b14c62ef8be8d5e977f2cac",
-      #"0fc1b76e7b421bc244f72a0937dc5905c2bac5851c42334981e55250f722daf3",
+      #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
+      #"15896d47f4fd994ee01166a3f5a416ca4662a469e9e649da040c68e0451ead66",
     ],
     cur_threshold: Unweighted(2),
     next_keys: [
@@ -893,11 +892,21 @@ pub const e4_squat_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"670e6ccc85ee778fb7c1ec71c417e6a7d2a875f097edc157d731a2353b5eaeb90602f4fe08ccaa220b78e40aaf865e5f810fee57699bbb417aa868613a2be509",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"22daa81e263f58de212658330ef7890426338070dfa18b553fcce7d55245e76143ec15129772efdf567f6dc68025ef7b63aff097a3695f08054b5191f6b1110b",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -907,12 +916,7 @@ pub const e4_squat_verdict: RegistrationVerdict =
 
 /// restated unweighted kt -> E5
 pub const e5_kt_restated_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e5_kt_restated_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -954,11 +958,21 @@ pub const e5_kt_restated_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -968,12 +982,7 @@ pub const e5_kt_restated_verdict: RegistrationVerdict =
 
 /// mutated weighted clause -> E5
 pub const e5_weighted_mutated_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e5_weighted_mutated_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1029,17 +1038,18 @@ pub const e5_weighted_mutated_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"0658b6692429b9441214f4ad4c26af381506e2254bbc587ff2e64db423a1f6b934f910575a21f49a58c1db76c28b3cb2c9f5824907a25fb849d1bea63119270b",
+        #"dfbd994a8024cc958cca5b469f81b2592d56b6bb201f0ab30978bfcc807c5e1c224544180047f20dd42968332121007da8436e0a8c1a1299f67148426cf0680f",
       ),
       (
         1,
-        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+        #"91ee6dc1963d47b0ef52fceb7a227b4fb4f4a630e04f48a3cf67956c9d3960a63c4f8f1021ed05d092d315894c1afc3ba345d2b3174b423edfbae2bb84e6330f",
       ),
       (
         2,
-        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+        #"4c012d7fd59cb5ab6691a0f07d53c3312b830526ff188bf591b6f5d5e89ef249f76bdddcee897e22f2d6df4e9fa347246f47e0b829d20d4c0a395dcf2f27d90b",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const e5_weighted_mutated_verdict: RegistrationVerdict =
@@ -1047,12 +1057,7 @@ pub const e5_weighted_mutated_verdict: RegistrationVerdict =
 
 /// substituted next digest -> E6
 pub const e6_next_flipped_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e6_next_flipped_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1094,11 +1099,21 @@ pub const e6_next_flipped_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1108,12 +1123,7 @@ pub const e6_next_flipped_verdict: RegistrationVerdict =
 
 /// restated nt -> E7
 pub const e7_nt_restated_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e7_nt_restated_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1155,11 +1165,21 @@ pub const e7_nt_restated_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1169,12 +1189,7 @@ pub const e7_nt_restated_verdict: RegistrationVerdict =
 
 /// substituted witness verkey -> E8
 pub const e8_witness_flipped_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e8_witness_flipped_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1216,11 +1231,21 @@ pub const e8_witness_flipped_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1230,12 +1255,7 @@ pub const e8_witness_flipped_verdict: RegistrationVerdict =
 
 /// witness count mismatch -> E8
 pub const e8_witness_count_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e8_witness_count_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1276,11 +1296,21 @@ pub const e8_witness_count_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1290,12 +1320,7 @@ pub const e8_witness_count_verdict: RegistrationVerdict =
 
 /// restated toad -> E9
 pub const e9_toad_restated_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const e9_toad_restated_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1337,11 +1362,21 @@ pub const e9_toad_restated_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1349,16 +1384,11 @@ pub const e9_toad_restated_evidence: RegistrationEvidence =
 pub const e9_toad_restated_verdict: RegistrationVerdict =
   RegistrationInvalid(E9ToadMismatch)
 
-/// the bundle's own KERI event_raw sigs MUST fail -> R7
-pub const r7_event_raw_sigs_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+/// obsolete InceptionMessage-only signatures -> R7
+pub const r7_old_message_sigs_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_event_raw_sigs_datum: CheckpointDatumV1 =
+pub const r7_old_message_sigs_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
@@ -1381,9 +1411,9 @@ pub const r7_event_raw_sigs_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_event_raw_sigs_lovelace: Int = 1002000000
+pub const r7_old_message_sigs_lovelace: Int = 1002000000
 
-pub const r7_event_raw_sigs_evidence: RegistrationEvidence =
+pub const r7_old_message_sigs_evidence: RegistrationEvidence =
   RegistrationEvidence {
     event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
     off_t: 30,
@@ -1398,26 +1428,31 @@ pub const r7_event_raw_sigs_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
       ),
       (
         1,
-        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
 
-pub const r7_event_raw_sigs_verdict: RegistrationVerdict =
+pub const r7_old_message_sigs_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
 /// below threshold: 1 of kt=2 -> R7
 pub const r7_below_threshold_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r7_below_threshold_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1459,7 +1494,17 @@ pub const r7_below_threshold_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1467,14 +1512,207 @@ pub const r7_below_threshold_evidence: RegistrationEvidence =
 pub const r7_below_threshold_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
+/// negative controller index fails closed -> R7
+pub const r7_negative_index_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_negative_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_negative_index_lovelace: Int = 1002000000
+
+pub const r7_negative_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        -1,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_negative_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// out-of-range controller index fails closed -> R7
+pub const r7_oob_index_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_oob_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_oob_index_lovelace: Int = 1002000000
+
+pub const r7_oob_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        99,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_oob_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
+/// bad controller signature -> R7
+pub const r7_bad_signature_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_bad_signature_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_bad_signature_lovelace: Int = 1002000000
+
+pub const r7_bad_signature_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"ada31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_bad_signature_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7QuorumUnsatisfied)
+
 /// below weighted threshold: 2 of 3 quarters -> R7
 pub const r7_below_weighted_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r7_below_weighted_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1530,13 +1768,14 @@ pub const r7_below_weighted_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         1,
-        #"a46634b24a3e5f857e320523ce69d5c95ef151c4563c3eba3213b64022409e722116703178175f3eb4d7fa578049de09951391254391e2590e9429d56e0f0b08",
+        #"91ee6dc1963d47b0ef52fceb7a227b4fb4f4a630e04f48a3cf67956c9d3960a63c4f8f1021ed05d092d315894c1afc3ba345d2b3174b423edfbae2bb84e6330f",
       ),
       (
         2,
-        #"3acc15d61592b3a5766843c520b491c7de50e03411208b677eccad06958ff7e067b9c7675a18218c30d7f84bc6b717b4e7d2aa0916870ea8c62565b3a5f1cc0e",
+        #"4c012d7fd59cb5ab6691a0f07d53c3312b830526ff188bf591b6f5d5e89ef249f76bdddcee897e22f2d6df4e9fa347246f47e0b829d20d4c0a395dcf2f27d90b",
       ),
     ],
+    wit_receipts: [],
   }
 
 pub const r7_below_weighted_verdict: RegistrationVerdict =
@@ -1544,12 +1783,7 @@ pub const r7_below_weighted_verdict: RegistrationVerdict =
 
 /// duplicated index does not stack -> R7
 pub const r7_dup_index_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r7_dup_index_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1591,11 +1825,21 @@ pub const r7_dup_index_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1603,16 +1847,11 @@ pub const r7_dup_index_evidence: RegistrationEvidence =
 pub const r7_dup_index_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
-/// attacker-signed message over victim keys -> R7
-pub const r7_attacker_signed_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+/// controller signatures assigned to the wrong positions -> R7
+pub const r7_wrong_controller_keys_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_attacker_signed_datum: CheckpointDatumV1 =
+pub const r7_wrong_controller_keys_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
@@ -1635,9 +1874,9 @@ pub const r7_attacker_signed_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_attacker_signed_lovelace: Int = 1002000000
+pub const r7_wrong_controller_keys_lovelace: Int = 1002000000
 
-pub const r7_attacker_signed_evidence: RegistrationEvidence =
+pub const r7_wrong_controller_keys_evidence: RegistrationEvidence =
   RegistrationEvidence {
     event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
     off_t: 30,
@@ -1652,28 +1891,33 @@ pub const r7_attacker_signed_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"c372a6c9225fe311f3a6223e9d6ec97514a35e5c5ea7d43b68517fc8d250b46e5d0935c5c2f01a684536429d2eb854a18924904ff493f8e7c4a416ff6dacf808",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
       ),
       (
         1,
-        #"52a49aedc9b37bb35f021142c7bee2abf0bd2ad761b026ba7b51e789e3117320a1768447be94d2850d3d8a440ff012b27e273a1cc6672c36d0832e7913d0d00b",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
 
-pub const r7_attacker_signed_verdict: RegistrationVerdict =
+pub const r7_wrong_controller_keys_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
-/// crossed network_id (sigs for network 0) -> R7
-pub const r7_crossed_network_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 1,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+/// controller signatures crossed onto different event bytes -> R7
+pub const r7_crossed_event_bytes_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_crossed_network_datum: CheckpointDatumV1 =
+pub const r7_crossed_event_bytes_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
@@ -1696,11 +1940,11 @@ pub const r7_crossed_network_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_crossed_network_lovelace: Int = 1002000000
+pub const r7_crossed_event_bytes_lovelace: Int = 1002000000
 
-pub const r7_crossed_network_evidence: RegistrationEvidence =
+pub const r7_crossed_event_bytes_evidence: RegistrationEvidence =
   RegistrationEvidence {
-    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d82",
     off_t: 30,
     off_i: 91,
     off_s: 142,
@@ -1713,28 +1957,33 @@ pub const r7_crossed_network_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
 
-pub const r7_crossed_network_verdict: RegistrationVerdict =
+pub const r7_crossed_event_bytes_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
-/// crossed checkpoint policy (sigs for 0xCC..) -> R7
-pub const r7_crossed_policy_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+/// witnessed inception without receipts -> witness R7
+pub const r7_receipts_empty_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_crossed_policy_datum: CheckpointDatumV1 =
+pub const r7_receipts_empty_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
@@ -1757,9 +2006,9 @@ pub const r7_crossed_policy_datum: CheckpointDatumV1 =
     native_sn: 0,
   }
 
-pub const r7_crossed_policy_lovelace: Int = 1002000000
+pub const r7_receipts_empty_lovelace: Int = 1002000000
 
-pub const r7_crossed_policy_evidence: RegistrationEvidence =
+pub const r7_receipts_empty_evidence: RegistrationEvidence =
   RegistrationEvidence {
     event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
     off_t: 30,
@@ -1774,26 +2023,472 @@ pub const r7_crossed_policy_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [],
+  }
+
+pub const r7_receipts_empty_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// one receipt below toad=2 -> witness R7
+pub const r7_receipts_below_toad_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_below_toad_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_below_toad_lovelace: Int = 1002000000
+
+pub const r7_receipts_below_toad_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
       ),
     ],
   }
 
-pub const r7_crossed_policy_verdict: RegistrationVerdict =
-  RegistrationInvalid(R7QuorumUnsatisfied)
+pub const r7_receipts_below_toad_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// duplicated receipt index counts once -> witness R7
+pub const r7_receipts_dup_index_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_dup_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_dup_index_lovelace: Int = 1002000000
+
+pub const r7_receipts_dup_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+    ],
+  }
+
+pub const r7_receipts_dup_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// negative receipt index fails closed -> witness R7
+pub const r7_receipts_negative_index_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_negative_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_negative_index_lovelace: Int = 1002000000
+
+pub const r7_receipts_negative_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        -1,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_receipts_negative_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// out-of-range receipt index fails closed -> witness R7
+pub const r7_receipts_oob_index_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_oob_index_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_oob_index_lovelace: Int = 1002000000
+
+pub const r7_receipts_oob_index_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        99,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_receipts_oob_index_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// controller signatures do not verify as witness receipts -> witness R7
+pub const r7_receipts_wrong_keys_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_wrong_keys_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_wrong_keys_lovelace: Int = 1002000000
+
+pub const r7_receipts_wrong_keys_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+  }
+
+pub const r7_receipts_wrong_keys_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// bad witness receipt signature -> witness R7
+pub const r7_receipts_bad_signature_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_receipts_bad_signature_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
+    cur_keys: [
+      #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
+      #"46c4b433db68c11d515fdf8f717e3716d7485718c9a3544ccae2b93a7f5e89d5",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"429474f150ea116e93445d1d1d8f182a36ed07cc8e66add0717f4d2841d9dc91",
+      #"ca212fa36834cb0df38daa5a3131d2cdb62c4b9dc05bb7cfe8ca0eb3325fcf9b",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [
+      #"edad4caeeab48ba2de1fdf36346042dbc25b0fd74d25b55634625200c4647147",
+      #"7952d80e1e448d28103a8782a9e9527aaafee3da168aa06a60123b502285ce71",
+      #"df19f125a540331d35560b4f66395265ae857c9aa0a12221cfc5b5b267c739c2",
+    ],
+    toad: 2,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_receipts_bad_signature_lovelace: Int = 1002000000
+
+pub const r7_receipts_bad_signature_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303231355f222c2274223a22696370222c2264223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2269223a2245446c666c657736465471586174374c6d31755870566468525332767459697a336e59366144444164726d43222c2273223a2230222c226b74223a2232222c226b223a5b2244446d724841674d7647346c31654e304471504b3638726a395f364f714b7641465743457a4c53335979745f222c224445624574445062614d456455565f666a33462d4e7862585346635979614e55544d72697554705f586f6e56225d2c226e74223a2232222c226e223a5b2245454b5564504651366846756b3052644852325047436f323751664d6a6d61743048465f5453684232647952222c22454d6f684c364e6f4e4d734e38343271576a4578307332324c457564774675337a2d6a4b44724d7958382d62225d2c226274223a2232222c2262223a5b22424f3274544b37717449756933685f664e6a52675174764357775f5854535731566a5269556744455a484648222c2242486c53324134655249306f4544714867716e70556e71715f755061466f7167616d41534f31416968633578222c22424e385a3853576c51444d644e56594c54325935556d5775685879616f4b456949635f4674624a6e787a6e43225d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [378, 425, 472],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
+      ),
+      (
+        1,
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"c9784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+      ),
+    ],
+  }
+
+pub const r7_receipts_bad_signature_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+
+/// toad=0 requires a literally empty receipt list -> witness R7
+pub const r7_zero_toad_nonempty_ctx: DeploymentContext =
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
+
+pub const r7_zero_toad_nonempty_datum: CheckpointDatumV1 =
+  CheckpointDatumV1 {
+    cesr_aid: #"33f1c3f607175773a00e6750ea9ef24dd7e5cc961b35951b50981e5388374d9a",
+    cur_keys: [
+      #"02ca8bf431e5b6ec5849166b3b979504b50ea3ba1f274353d278b022f6ead026",
+      #"f32cb76b6582b047cf3478f3609b1207eecbb0d8fde2abc07beb68cacb34b34c",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [
+      #"5b015ffb5ea7565c606434c940fae7f0b79d930f4ab986f11360e5a26c307156",
+      #"9237afce3965fa2756c89f59afc97b89b9ee9faf668488e123ef1fd907bc9003",
+    ],
+    next_threshold: Unweighted(2),
+    witnesses: [],
+    toad: 0,
+    seq: 0,
+    native_sn: 0,
+  }
+
+pub const r7_zero_toad_nonempty_lovelace: Int = 1002000000
+
+pub const r7_zero_toad_nonempty_evidence: RegistrationEvidence =
+  RegistrationEvidence {
+    event_bytes: #"7b2276223a224b45524931304a534f4e3030303138395f222c2274223a22696370222c2264223a2245445078775f59484631647a6f41356e554f7165386b335835637957477a575647314359486c4f494e303261222c2269223a2245445078775f59484631647a6f41356e554f7165386b335835637957477a575647314359486c4f494e303261222c2273223a2230222c226b74223a2232222c226b223a5b2244414c4b695f51783562627357456b57617a75586c51533144714f364879644455394a3473434c323674416d222c2244504d737432746c677242487a7a52343832436245676675793744595f654b7277487672614d724c4e4c4e4d225d2c226e74223a2232222c226e223a5b2245467342585f746570315a635947513079554436355f43336e5a4d5053726d4738524e6735614a734d484657222c22454a4933723834355a666f6e5673696657615f4a65346d3537702d765a6f53493453507648396b48764a4144225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+    off_t: 30,
+    off_i: 91,
+    off_s: 142,
+    off_k: [160, 207],
+    off_kt: 151,
+    off_n: [269, 316],
+    off_nt: 260,
+    off_b: [],
+    off_bt: 369,
+    ctrl_sigs: [
+      (
+        0,
+        #"79638e770077592a4157475dede6d4dd2560636bd024566d538c528eea3f9d3df68b9188f9f8556952cbcc364ac75598305ab6cc87198e911f14dc8948297a0b",
+      ),
+      (
+        1,
+        #"12a51f6509d389ffe03df77aa4d9114961d2203d70d290cd24850eb7d13f43640d209c3e9baa3d1a71afe4a834f270546f89229e1c084be0b7f37037eccb7b05",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      ),
+    ],
+  }
+
+pub const r7_zero_toad_nonempty_verdict: RegistrationVerdict =
+  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
 
 /// one lovelace short of min_ada + d_reg -> R8
 pub const r8_deposit_short_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const r8_deposit_short_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1835,11 +2530,21 @@ pub const r8_deposit_short_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1849,12 +2554,7 @@ pub const r8_deposit_short_verdict: RegistrationVerdict =
 
 /// misdirection: off_i shifted by one -> E2
 pub const mis_off_i_shift_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_off_i_shift_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1896,11 +2596,21 @@ pub const mis_off_i_shift_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1910,12 +2620,7 @@ pub const mis_off_i_shift_verdict: RegistrationVerdict =
 
 /// misdirection: overlapping spans off_k[1]=off_k[0]+1 -> E4
 pub const mis_overlap_k_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_overlap_k_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -1957,11 +2662,21 @@ pub const mis_overlap_k_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -1971,12 +2686,7 @@ pub const mis_overlap_k_verdict: RegistrationVerdict =
 
 /// misdirection: off_k pointed into n (D vs E code) -> E4
 pub const mis_k_into_n_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_k_into_n_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2018,11 +2728,21 @@ pub const mis_k_into_n_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2032,12 +2752,7 @@ pub const mis_k_into_n_verdict: RegistrationVerdict =
 
 /// misdirection: off_k pointed into b (D vs B code) -> E4
 pub const mis_k_into_b_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_k_into_b_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2079,11 +2794,21 @@ pub const mis_k_into_b_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2093,12 +2818,7 @@ pub const mis_k_into_b_verdict: RegistrationVerdict =
 
 /// misdirection: off_i pointed at a k entry (E vs D code) -> E2
 pub const mis_i_at_k_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_i_at_k_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2140,11 +2860,21 @@ pub const mis_i_at_k_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2154,12 +2884,7 @@ pub const mis_i_at_k_verdict: RegistrationVerdict =
 
 /// misdirection: off_b pointed at k entries (B vs D code) -> E8
 pub const mis_b_at_k_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_b_at_k_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2201,11 +2926,21 @@ pub const mis_b_at_k_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2215,12 +2950,7 @@ pub const mis_b_at_k_verdict: RegistrationVerdict =
 
 /// misdirection: off_i at the byte tail (truncated) -> E2
 pub const mis_trunc_i_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_trunc_i_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2262,11 +2992,21 @@ pub const mis_trunc_i_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2276,12 +3016,7 @@ pub const mis_trunc_i_verdict: RegistrationVerdict =
 
 /// misdirection: last off_k at the tail (truncated) -> E4
 pub const mis_trunc_k_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_trunc_k_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2323,11 +3058,21 @@ pub const mis_trunc_k_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2337,12 +3082,7 @@ pub const mis_trunc_k_verdict: RegistrationVerdict =
 
 /// misdirection: negative off_i -> E2
 pub const mis_neg_i_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_neg_i_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2384,11 +3124,21 @@ pub const mis_neg_i_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"46e283ba1a98eb2a3aeb950d0479f19289523e2d8783b1c1ee08981639a918cf4a09132b2bd9c5dbbd368c396beaf357939b362a65b3c03413c58bf2ad3db809",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"6c6f4dff51ca178184bc250effd5b0146f65305cb50b81600fcf1bd3d92e8c4e68f04c159399d002f0f016d9e1891f0e18571208af58dc9774ae02ded7e6b901",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }
@@ -2398,12 +3148,7 @@ pub const mis_neg_i_verdict: RegistrationVerdict =
 
 /// misdirection: duplicated offsets duplicate the key -> R4 F18
 pub const mis_dup_k_ctx: DeploymentContext =
-  DeploymentContext {
-    network_id: 0,
-    checkpoint_policy_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    min_ada: 2000000,
-    d_reg: 1000000000,
-  }
+  DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
 pub const mis_dup_k_datum: CheckpointDatumV1 =
   CheckpointDatumV1 {
@@ -2445,11 +3190,21 @@ pub const mis_dup_k_evidence: RegistrationEvidence =
     ctrl_sigs: [
       (
         0,
-        #"a214fa1fc6632c9d1ac039f1cb1aeae6ea3d1c0dd55af898bbd0f0fe902074d94f21aa518f1ac7612c8f557ce377750d3b3e25d10157aa2b00ed1180715f7f00",
+        #"52a31ddaf0f3b2224f8a0f12fc56f37bc78fb320f3f0d4d185b1d382251b5917c054ddfec84827e0e35c8d478e673beea4d294fc4c9071a2e249274c59c95500",
       ),
       (
         1,
-        #"da1e6c6ec577bfa42a96b3af8d52697223acdd1f37f9ea3ea574bdd4970f8ffc5e75753608e757c96fa54b3174887847e1a29fe4e557ed0496156921360a9a0d",
+        #"8e4112f965f1c00aee803bd189efa47664613ddfbe2f6d39f4b4b054c0d60c11a7a258771c4344086a912ee73db4112054eb15edac461324e5ddb7005da73208",
+      ),
+    ],
+    wit_receipts: [
+      (
+        0,
+        #"36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+      ),
+      (
+        2,
+        #"634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
       ),
     ],
   }

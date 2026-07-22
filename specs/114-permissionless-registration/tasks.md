@@ -76,18 +76,18 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R4 — registration measurements
 
-- [ ] T114-R4 Measure full 2-key unwitnessed, witnessed 2-of-2/2-of-3, and
+- [x] T114-R4 Measure full 2-key unwitnessed, witnessed 2-of-2/2-of-3, and
       GLEIF-shaped 7-key Register handlers with proof burn, signatures,
       receipts, reserve-floor/conservative-surplus values, and final arity;
       write `specs/114-permissionless-registration/MEASUREMENTS.md`.
-- [ ] T114-R4 HARD STOP if any memory or CPU row has less than 25.00%
+- [x] T114-R4 HARD STOP if any memory or CPU row has less than 25.00%
       headroom; no fixture or handler weakening.
-- [ ] T114-R4 Audit Haskell/Aiken parity, generated drift, net fresh-signing
+- [x] T114-R4 Audit Haskell/Aiken parity, generated drift, net fresh-signing
       deletion, no forbidden coordinator, and full gate.
-- [ ] T114-R4 Record exact applied program bytes, delta from 19,565, and margin
+- [x] T114-R4 Record exact applied program bytes, delta from 19,565, and margin
       to 16,133 with a prominent NON-DEPLOYABLE verdict; restate the #115 hard
       stop and A-015 remediation order.
-- [ ] T114-R4 Commit exactly
+- [x] T114-R4 Commit exactly
       `test(114): measure permissionless registration` with exactly
       `Tasks: T114-R4`.
 

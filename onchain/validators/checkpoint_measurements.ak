@@ -103,25 +103,77 @@ fn register_tx(
 // one honest Tx-B per gate shape (consts: construction not charged)
 // ---------------------------------------------------------------------
 
+const register_surplus: Int = 42_000_000
+
 const tx_2key: Transaction =
-  register_tx(vec.pos_2key_datum, vec.pos_2key_lovelace, vec.pos_2key_evidence)
+  register_tx(
+    vec.pos_2key_datum,
+    min_ada + d_reg + freeze_bond,
+    vec.pos_2key_evidence,
+  )
 
 const redeemer_2key: MintRedeemer = Register { evidence: vec.pos_2key_evidence }
 
 const tx_7key: Transaction =
-  register_tx(vec.pos_7key_datum, vec.pos_7key_lovelace, vec.pos_7key_evidence)
+  register_tx(
+    vec.pos_7key_datum,
+    min_ada + d_reg + freeze_bond + register_surplus,
+    vec.pos_7key_evidence,
+  )
 
 const redeemer_7key: MintRedeemer = Register { evidence: vec.pos_7key_evidence }
 
 const tx_witnessed: Transaction =
   register_tx(
     vec.pos_witnessed_datum,
-    vec.pos_witnessed_lovelace,
+    min_ada + d_reg + freeze_bond + register_surplus,
     vec.pos_witnessed_evidence,
   )
 
 const redeemer_witnessed: MintRedeemer =
   Register { evidence: vec.pos_witnessed_evidence }
+
+test measure_checkpoint_register_2key() {
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    redeemer_2key,
+    policy,
+    tx_2key,
+  )
+}
+
+test measure_checkpoint_register_witnessed() {
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    redeemer_witnessed,
+    policy,
+    tx_witnessed,
+  )
+}
+
+test measure_checkpoint_register_7key() {
+  checkpoint.checkpoint.mint(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    redeemer_7key,
+    policy,
+    tx_7key,
+  )
+}
 
 // ---------------------------------------------------------------------
 // Final ordinary thaw measurement (#116 S8). The FROZEN input retains the

@@ -66,7 +66,7 @@ jobs:
       # regenerates the Aiken vectors from the Haskell mirror in the dev shell
       # and diffs them against the committed module).
       - name: Traceability drift gate
-        run: nix shell nixpkgs#just nixpkgs#ripgrep --command bash scripts/check-lean-traceability.sh
+        run: nix shell nixpkgs#just nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils --command bash scripts/check-lean-traceability.sh
 
   blake3-spike:
     name: BLAKE3 spike (Aiken 1.1.23)

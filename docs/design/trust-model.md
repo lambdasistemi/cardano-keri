@@ -138,7 +138,8 @@ race. No cryptographic express-close or pre-rotation shortcut is sound.
 This branch is deliberately not deployable: #116 currently opens only Arm, Claim, and
 Convict. #114 will open Register with `B`; #115 will open ordinary Advance, including ARMED
 response and FROZEN thaw; #117 will open CLOSING and Close. The reserved Register, Advance,
-and Close transitions remain fail closed here.
+and Close transitions remain fail closed here. Delivered Convict still writes the terminal
+tombstone output; the burn described above is the ratified design, landing by #115.
 
 Conviction is terminal **for that token** by **burning** it: everything not spendable — even
 by reference — is burnt (the burn axiom). The quantity-one token is destroyed, its whole

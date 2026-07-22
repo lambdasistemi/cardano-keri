@@ -42,6 +42,32 @@ jobs:
         working-directory: onchain
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
+  lean:
+    name: Lean (21 theorems + traceability gate)
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # The 21 proved theorems ARE the design (epic #24 / #124). `lake build`
+      # elaborates every proof; a `sorry` only WARNS, so the grep turns the
+      # warning into a failure ("breaks CI, not trust" — A-C04).
+      - name: Build the lifecycle model and theorems (no sorry)
+        working-directory: lean
+        run: |
+          set -o pipefail
+          nix shell nixpkgs#lean4 --command lake build 2>&1 | tee build.log
+          ! grep -q "uses 'sorry'" build.log
+      # Map completeness + name existence + Haskell-regenerated verdict-vector
+      # drift (the script ends in `just check-lifecycle-trace-vectors`, which
+      # regenerates the Aiken vectors from the Haskell mirror in the dev shell
+      # and diffs them against the committed module).
+      - name: Traceability drift gate
+        run: nix shell nixpkgs#just nixpkgs#ripgrep --command bash scripts/check-lean-traceability.sh
+
   blake3-spike:
     name: BLAKE3 spike (Aiken 1.1.23)
     runs-on: nixos

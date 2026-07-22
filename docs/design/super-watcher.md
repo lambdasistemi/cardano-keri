@@ -67,7 +67,9 @@ on evidence:
 - **Submit** objective **duplicity** or seal↔native-**correspondence proofs** — the §7b fraud-proof shape, drilled via #90 — wherever the stored witness threshold receipted the divergent establishment event.
 - **Request or trigger the applicable freeze** path when safe advancement is impossible: a
   later witnessed KERI event, correspondence fraud, or conflict that is not yet proved
-  irreconcilable. Freezing is permissionless and is not bounty-paid by default.
+  irreconcilable. Freezing (arming) is permissionless; the freeze bond `B` pays the
+  recorded hunter only after a full unanswered `W_freeze` response window — honest lag,
+  including registration catch-up, never pays anything.
 - **Submit a conviction proof** only when the evidence proves two incompatible V1
   nondelegated establishment rotations from the same prior commitment, the conflicting
   event satisfies both the pre-committed controller threshold and the applicable KERI

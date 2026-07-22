@@ -144,6 +144,13 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 - [ ] T114-R6 Preserve the burn axiom: conviction is recorded in the transaction,
       burns the checkpoint, and permits fresh registration; add no tombstone or
       #117 reap behavior.
+- [ ] T114-R6 Add the rolling-preprod-demo policy to the named trust-model and M1
+      demo/deck fragments: from #115 every ticket close manually refreshes the
+      latest contracts and lifecycle-so-far demo on preprod; every demo AID/KEL
+      is a genuine pinned-`keripy`-verifiable artifact; local/simulated
+      witness/watcher services are permitted because the claim is KERI
+      compatibility, not KERI infrastructure operation. Make no #114 deploy or
+      live-preprod claim.
 - [ ] T114-R6 Leave #115 normal-Advance and #116 freeze fragments untouched;
       run `mkdocs build --strict`, lychee, and the full gate.
 - [ ] T114-R6 Report final bytes and both standing deltas, then commit exactly

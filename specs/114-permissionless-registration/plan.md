@@ -229,6 +229,16 @@ required direct ordinary Advance-void, and no cryptographic express-close; it
 never reuses `W_freeze`. #115 normal-Advance and #116 freeze fragments remain
 untouched. Strict MkDocs, lychee, and the full gate must pass.
 
+The registration narrative also records the standing demo policy that begins
+at #115: every ticket close manually refreshes the latest contracts and
+lifecycle-so-far demo on preprod. Demo AIDs and KELs must be genuine artifacts
+accepted by the pinned `keripy` oracle; KERI-incompatible synthetics are not
+evidence. Witness and watcher services may be local or simulated because the
+claim is KERI compatibility, not KERI infrastructure operation. The pair adds
+the normative boundary in `docs/design/trust-model.md` and reflects it in the
+named M1 demo/deck fragment. R6 documents the rule only: it neither deploys nor
+runs preprod.
+
 Commit: `docs(114): explain permissionless bonded registration` with exactly
 `Tasks: T114-R6`.
 

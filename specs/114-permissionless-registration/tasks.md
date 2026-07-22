@@ -100,22 +100,22 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R5 — staged checkpoint devnet
 
-- [ ] T114-R5 Remove only the uncommitted R5a governance experiment, restore
+- [x] T114-R5 Remove only the uncommitted R5a governance experiment, restore
       the byte-verified suspended R5 patch, and prove the resulting diff
       contains only the approved R5 lifecycle surface.
-- [ ] T114-R5 RED: replace #116's Register staging rejection/pending scenarios
+- [x] T114-R5 RED: replace #116's Register staging rejection/pending scenarios
       with the exact #114 live-boundary expectation matrix.
-- [ ] T114-R5 GREEN: compile hash-proof mint -> permissionless Register with
+- [x] T114-R5 GREEN: compile hash-proof mint -> permissionless Register with
       `D_reg+B` escrow -> Arm -> Claim, marking those positive rows exactly
       `PENDING(blocked-on=#190)`; settle every staged flow that does not depend
       on the hash-proof mint.
-- [ ] T114-R5 Add one live-node negative asserting the exact current failure:
+- [x] T114-R5 Add one live-node negative asserting the exact current failure:
       hash-proof mint rejected because the 251-entry genesis model does not
       price the required Plomin builtins.
-- [ ] T114-R5 Prove Advance and Close still reach the production validator and
+- [x] T114-R5 Prove Advance and Close still reach the production validator and
       reject; retain the single-field 32-KiB genesis override, drift proof, and
       loud NON-DEPLOYABLE output banner.
-- [ ] T114-R5 Report current bytes and both standing deltas, run both withDevnet
+- [x] T114-R5 Report current bytes and both standing deltas, run both withDevnet
       jobs and the full gate, and publish the three-way evidence table
       (settled-on-devnet / pending-on-#190 / proven-at-preprod-#115) with the two
       durable #190 comment links; commit exactly

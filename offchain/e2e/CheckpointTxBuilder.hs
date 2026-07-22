@@ -5,19 +5,17 @@
 
 {- |
 Module      : CheckpointTxBuilder
-Description : Production-shaped #116 checkpoint transactions for withDevnet
+Description : Production-shaped #114 checkpoint transactions for withDevnet
 
 Loads the tracked-source Aiken blueprint, applies the production checkpoint
 validator's six deployment parameters in order, and builds real Conway
 transactions for Register, Arm, Advance, Claim, Thaw, and Close.
 
-At the #116 staging revision Register is closed, so a checkpoint token with
-production lineage cannot exist.  The running Register smoke dispatches the
-closest explicit negative to the checkpoint policy alone; the complete Tx-A
-and two-policy Register builders remain compiled for #114.  Advance and Close
-fund a correctly addressed, inline-datum, reserve-sized ACTIVE output without
-a checkpoint token.  Every running case asserts only Phase-2 rejection and no
-staged input is used to claim a positive lifecycle transition.
+The pinned devnet's 251-entry Plutus V3 model cannot price the Plomin builtins
+used by the real hash-proof policy.  This boundary therefore executes and
+asserts that exact mint failure, while retaining only compile-checked pending
+coverage for the positive Register -> Arm -> Claim chain.  Advance and Close
+remain real production-script staging rejections.
 -}
 module CheckpointTxBuilder (
     CheckpointEnv,
@@ -25,9 +23,11 @@ module CheckpointTxBuilder (
     RejectionEvidence,
     BoundaryCases,
     stagedCheckpointDevnet,
-    registerRejection,
     advanceRejection,
     closeRejection,
+    hashProofMintOldCostRejection,
+    pendingHashProofRegisterArmClaimScenario,
+    rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
     responseBoundaryCases,
     boundaryCasesCoverDeadline,
@@ -37,8 +37,6 @@ module CheckpointTxBuilder (
     buildClaimTx,
     buildThawTx,
     buildCloseTx,
-    armResponseBeforeDeadlineScenario,
-    armClaimThawScenario,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
@@ -67,7 +65,8 @@ import Cardano.KERI.AID.Checkpoint.Registration (
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.PParams (ppCostModelsL)
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..), costModelsValid, getCostModelParams)
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
@@ -83,6 +82,7 @@ import Cardano.Ledger.Api.Tx.Body (
  )
 import Cardano.Ledger.Api.Tx.Out (
     TxOut,
+    addrTxOutL,
     coinTxOutL,
     datumTxOutL,
     mkBasicTxOut,
@@ -138,7 +138,7 @@ import Cardano.Node.Client.Provider (
 import Cardano.Node.Client.Submitter (SubmitResult (..), Submitter (..))
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
-import Data.Aeson (Value (..), eitherDecodeFileStrict)
+import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
@@ -179,7 +179,7 @@ import System.Timeout (timeout)
 import UntypedPlutusCore (Program (..), applyProgram)
 import UntypedPlutusCore qualified as UPLC
 
-import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
+import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
 import Cardano.KERI.AID.E2E.Script (
     computeScriptHash,
     extractCompiledCode,
@@ -210,6 +210,7 @@ data RejectionEvidence = RejectionEvidence
     , rejectionTxId :: !TxId
     , rejectionDiagnostic :: !String
     , rejectionIsPhase2 :: !Bool
+    , rejectionCostModelEntries :: !Int
     }
     deriving stock (Show)
 
@@ -389,7 +390,7 @@ productionMaxTxBytes = 16_384
 -- program budget, and current overage. This is the standing mark-ready gate
 -- established by A-015; update only from a fresh real-shape measurement.
 expectedCheckpointSizeBudget :: (Int, Int, Int, Int, Int)
-expectedCheckpointSizeBudget = (19_565, 19_816, 251, 16_133, 3_432)
+expectedCheckpointSizeBudget = (23_124, 23_375, 251, 16_133, 6_991)
 
 applyCheckpointParams ::
     Integer ->
@@ -443,23 +444,14 @@ roleAddress env role =
                 (error "roleAddress: role hash is not 28 bytes")
                 (hashFromBytes markerBytes)
 
-registerRejection :: CheckpointEnv -> IO RejectionEvidence
-registerRejection env = do
-    prepareWallet env
-    fixture <- loadRegistrationFixture env
-    registerTx <-
-        withinSecs 90 "build staged checkpoint Register" $
-            buildStagedRegisterTx env fixture
-    expectProductionScriptRejection env "Register" registerTx
-
-{- | Complete Tx-A plus two-policy Register path retained for #114.  R6 only
-compiles this path because the production checkpoint Register branch is
-deliberately closed at the current staged head.
--}
 productionRegisterScenario :: CheckpointEnv -> IO CheckpointInput
 productionRegisterScenario env = do
+    (fixture, _) <- loadLifecycleFixture
+    productionRegisterScenarioWith env fixture
+
+productionRegisterScenarioWith :: CheckpointEnv -> RegistrationFixture -> IO CheckpointInput
+productionRegisterScenarioWith env fixture = do
     prepareWallet env
-    fixture <- loadRegistrationFixture env
     proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env fixture)
     proofTxId <- submitSettling env "hash-proof mint" proofTx
     proofUtxo <-
@@ -481,31 +473,115 @@ productionRegisterScenario env = do
             [0, 1]
             (hasAsset (envCheckpointPolicy env) checkpointName)
             >>= requireJust "registered checkpoint output did not settle"
+    assertActiveCheckpoint env fixture registered
     pure CheckpointInput{checkpointUtxo = registered, checkpointDatum = rfDatum fixture}
+
+{- | This is deliberately not run on the old-cost devnet.  Referencing this
+scenario from the authorized PENDING row type-checks the real hash-proof mint,
+permissionless Register with @D_reg+B@, Arm, and Claim builders without
+claiming settlement before cardano-node-clients#190 supplies Plomin pricing.
+-}
+pendingHashProofRegisterArmClaimScenario :: CheckpointEnv -> IO ()
+pendingHashProofRegisterArmClaimScenario env = do
+    (fixture, armEvidence) <- loadLifecycleFixture
+    registered <- productionRegisterScenarioWith env fixture
+    boundaries <- responseBoundaryCases env
+    unless
+        (boundaryCasesCoverDeadline boundaries)
+        (fail "node-derived deadline plans do not cover before/exact/after boundary")
+    let hunter = BS.replicate 28 0x42
+        armValidity = armUpper boundaries
+        deadline = hardDeadlineMs boundaries
+    armTx <-
+        withinSecs 90 "build checkpoint Arm" $
+            buildArmTx env registered armEvidence hunter armValidity
+    armTxId <- submitSettling env "checkpoint Arm" armTx
+    armed <-
+        pollOutput
+            (envProvider env)
+            armTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))))
+            >>= requireJust "ARMED checkpoint output did not settle"
+    assertArmedCheckpoint env registered hunter deadline armValidity armed
+    claimValidity <- awaitClaimValidity env deadline
+    claimTx <-
+        withinSecs 90 "build checkpoint Claim" $
+            buildClaimTx
+                env
+                CheckpointInput{checkpointUtxo = armed, checkpointDatum = rfDatum fixture}
+                hunter
+                claimValidity
+    claimTxId <- submitSettling env "checkpoint Claim" claimTx
+    assertClaimSettlement env fixture hunter armed claimTxId
 
 advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
     prepareWallet env
-    fixture <- loadRegistrationFixture env
+    (fixture, _) <- loadLifecycleFixture
     staged <- stageCheckpointInput env (rfDatum fixture)
-    boundary <- responseBoundaryCases env
+    validity <- currentValidity env
     tx <-
         buildAdvanceTx
             env
             staged
-            (rfDatum fixture)
+            (checkpointDatum staged)
             dummyAdvanceEvidence
-            (justBeforeResponse boundary)
+            validity
             False
     expectProductionScriptRejection env "Advance" tx
 
 closeRejection :: CheckpointEnv -> IO RejectionEvidence
 closeRejection env = do
     prepareWallet env
-    fixture <- loadRegistrationFixture env
+    (fixture, _) <- loadLifecycleFixture
     staged <- stageCheckpointInput env (rfDatum fixture)
     tx <- buildCloseTx env staged (currentValidity env)
     expectProductionScriptRejection env "Close" tx
+
+hashProofMintOldCostRejection :: CheckpointEnv -> IO RejectionEvidence
+hashProofMintOldCostRejection env = do
+    prepareWallet env
+    (fixture, _) <- loadLifecycleFixture
+    costModelEntries <- pinnedPlutusV3CostModelEntries env
+    unless
+        (costModelEntries == oldCostModelEntries)
+        ( fail
+            ( "hash-proof old-cost boundary requires the pinned "
+                <> show oldCostModelEntries
+                <> "-entry Plutus V3 model, observed "
+                <> show costModelEntries
+            )
+        )
+    tx <- withinSecs 90 "build old-cost hash-proof mint" (buildHashProofMintTx env fixture)
+    expectOldCostHashProofRejection env costModelEntries tx
+
+rejectionIsOldCostPlominBoundary :: RejectionEvidence -> Bool
+rejectionIsOldCostPlominBoundary RejectionEvidence{rejectionDiagnostic, rejectionCostModelEntries} =
+    rejectionCostModelEntries == oldCostModelEntries
+        && all (`isInfixOf` rejectionDiagnostic) oldCostFailureMarkers
+
+oldCostModelEntries :: Int
+oldCostModelEntries = 251
+
+{- | Plomin extends the V3 cost model beyond the 251 entries baked into the
+old devnet genesis.  The exact CEK overspend below is the node-visible failure
+of trying to evaluate the BLAKE3 policy against that incomplete model.
+-}
+oldCostFailureMarkers :: [String]
+oldCostFailureMarkers =
+    [ "CekError"
+    , "overspending the budget"
+    , "protocol version is: Version 10"
+    , "MintingScript"
+    ]
+
+pinnedPlutusV3CostModelEntries :: CheckpointEnv -> IO Int
+pinnedPlutusV3CostModelEntries env = do
+    params <- withinSecs 30 "query pinned Plutus V3 cost model" (queryProtocolParams (envProvider env))
+    pure $
+        maybe 0 (length . getCostModelParams) $
+            Map.lookup PlutusV3 (costModelsValid (params ^. ppCostModelsL))
 
 rejectionReachedProductionScript :: RejectionEvidence -> Bool
 rejectionReachedProductionScript = rejectionIsPhase2
@@ -546,7 +622,42 @@ expectProductionScriptRejection env label tx = do
                                     , rejectionTxId = txId
                                     , rejectionDiagnostic = diagnostic
                                     , rejectionIsPhase2 = True
+                                    , rejectionCostModelEntries = 0
                                     }
+
+expectOldCostHashProofRejection ::
+    CheckpointEnv -> Int -> ConwayTx -> IO RejectionEvidence
+expectOldCostHashProofRejection env costModelEntries tx = do
+    let txId = txIdTx tx
+    result <-
+        withinSecs 60 "submit old-cost hash-proof mint" $
+            submitTx (envSubmitter env) (addKeyWitness genesisSignKey tx)
+    case result of
+        Submitted submitted ->
+            fail $
+                "old-cost hash-proof mint unexpectedly submitted as "
+                    <> show submitted
+        Rejected raw -> do
+            let diagnostic = B8.unpack raw
+                evidence =
+                    RejectionEvidence
+                        { rejectionLabel = "hash-proof mint"
+                        , rejectionTxId = txId
+                        , rejectionDiagnostic = diagnostic
+                        , rejectionIsPhase2 = False
+                        , rejectionCostModelEntries = costModelEntries
+                        }
+            dbg $
+                "hash-proof mint rejected at old-cost boundary; tx id="
+                    <> show txId
+                    <> "; model entries="
+                    <> show costModelEntries
+                    <> "; diagnostic="
+                    <> oneLine diagnostic
+            unless
+                (rejectionIsOldCostPlominBoundary evidence)
+                (fail ("hash-proof mint was not the exact old-cost Plomin boundary: " <> diagnostic))
+            pure evidence
 
 phase1Markers :: [String]
 phase1Markers =
@@ -602,34 +713,47 @@ data RegistrationFixture = RegistrationFixture
     , rfProofName :: !ByteString
     }
 
-loadRegistrationFixture :: CheckpointEnv -> IO RegistrationFixture
-loadRegistrationFixture _env = do
-    path <- getDataFileName "test/keri-fixtures/fixtures/registration.json"
+{- | Use one committed KEL lineage for both the permissionless inception and
+the later signed rotation that Arms it.  That keeps the live test on the real
+Register output instead of manufacturing a checkpoint-shaped input.
+-}
+loadLifecycleFixture :: IO (RegistrationFixture, EnforcementEvidence)
+loadLifecycleFixture = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/honest_2key.json"
     value <- eitherDecodeFileStrict path >>= either fail pure
-    scenario <- either fail pure (atKey "reg_2key" value)
-    event <- either fail pure (atKey "event" scenario)
-    ked <- either fail pure (atKey "ked" event)
-    offsets <- either fail pure (atKey "offsets" scenario)
-    raw <- either fail pure (textAt "raw_hex" event >>= decodeHex)
-    aid <- either fail pure (textAt "pre" event >>= digestRaw)
-    currentKeys <- either fail pure (textArrayAt "k" ked >>= traverse verkeyRaw)
-    nextKeys <- either fail pure (textArrayAt "n" ked >>= traverse digestRaw)
-    witnesses <- either fail pure (textArrayAt "b" ked >>= traverse verkeyRaw)
-    currentThreshold <- either fail pure (thresholdAt "kt" ked)
-    nextThreshold <- either fail pure (thresholdAt "nt" ked)
-    toad <- either fail pure (hexIntegerAt "bt" ked)
-    offT <- either fail pure (integerAt "t" offsets)
-    offI <- either fail pure (integerAt "i" offsets)
-    offS <- either fail pure (integerAt "s" offsets)
-    offK <- either fail pure (integerArrayAt "k" offsets)
-    offKt <- either fail pure (integerAt "kt" offsets)
-    offN <- either fail pure (integerArrayAt "n" offsets)
-    offNt <- either fail pure (integerAt "nt" offsets)
-    offB <- either fail pure (integerArrayAt "b" offsets)
-    offBt <- either fail pure (integerAt "bt" offsets)
-    offD <- either fail pure (eventSaidOffset event)
-    signatures <- either fail pure (indexedSignaturesAt "event_sigs" scenario)
-    receipts <- either fail pure (optionalIndexedSignaturesAt "witness_receipts" scenario)
+    inception <- either fail pure (atKey "icp" value)
+    inceptionSignatures <- either fail pure (indexedSignaturesAt "icp_sigs" value)
+    rotation <- either fail pure (atKey "rot" value)
+    rotationSignatures <- either fail pure (indexedSignaturesAt "rot_sigs" value)
+    inceptionWithOffsets <- either fail pure (withDerivedOffsets inception)
+    rotationWithOffsets <- either fail pure (withDerivedOffsets rotation)
+    registration <- either fail pure (registrationFixtureFrom inceptionWithOffsets inceptionSignatures [])
+    armEvidence <- either fail pure (enforcementEvidenceFrom rotationWithOffsets rotationSignatures)
+    pure (registration, armEvidence)
+
+registrationFixtureFrom ::
+    Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String RegistrationFixture
+registrationFixtureFrom event signatures receipts = do
+    ked <- atKey "ked" event
+    offsets <- atKey "offsets" event
+    raw <- textAt "raw_hex" event >>= decodeHex
+    aid <- textAt "pre" event >>= digestRaw
+    currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
+    nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
+    witnesses <- textArrayAt "b" ked >>= traverse verkeyRaw
+    currentThreshold <- thresholdAt "kt" ked
+    nextThreshold <- thresholdAt "nt" ked
+    toad <- hexIntegerAt "bt" ked
+    offT <- integerAt "t" offsets
+    offI <- integerAt "i" offsets
+    offS <- integerAt "s" offsets
+    offK <- integerArrayAt "k" offsets
+    offKt <- integerAt "kt" offsets
+    offN <- integerArrayAt "n" offsets
+    offNt <- integerAt "nt" offsets
+    offB <- integerArrayAt "b" offsets
+    offBt <- integerAt "bt" offsets
+    offD <- eventSaidOffset event
     let datum =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -668,6 +792,37 @@ loadRegistrationFixture _env = do
             , rfProofName = proofTokenName raw aid
             }
 
+enforcementEvidenceFrom :: Value -> [(Int, ByteString)] -> Either String EnforcementEvidence
+enforcementEvidenceFrom event signatures = do
+    ked <- atKey "ked" event
+    offsets <- atKey "offsets" event
+    raw <- textAt "raw_hex" event >>= decodeHex
+    said <- textAt "said" event >>= digestRaw
+    currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
+    nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
+    currentThreshold <- thresholdAt "kt" ked
+    nextThreshold <- thresholdAt "nt" ked
+    toad <- hexIntegerAt "bt" ked
+    nativeSn <- hexIntegerAt "s" ked
+    (EnforcementEvidence raw . fromInteger <$> integerAt "t" offsets)
+        <*> (fromInteger <$> integerAt "i" offsets)
+        <*> (fromInteger <$> integerAt "s" offsets)
+        <*> (fromInteger <$> integerAt "d" offsets)
+        <*> (map fromInteger <$> integerArrayAt "k" offsets)
+        <*> (fromInteger <$> integerAt "kt" offsets)
+        <*> (map fromInteger <$> integerArrayAt "n" offsets)
+        <*> (fromInteger <$> integerAt "nt" offsets)
+        <*> (fromInteger <$> integerAt "bt" offsets)
+        <*> pure nativeSn
+        <*> pure said
+        <*> pure currentKeys
+        <*> pure nextKeys
+        <*> pure currentThreshold
+        <*> pure nextThreshold
+        <*> pure toad
+        <*> pure signatures
+        <*> pure []
+
 eventSaidOffset :: Value -> Either String Integer
 eventSaidOffset event = do
     raw <- textAt "raw_hex" event >>= decodeHex
@@ -677,6 +832,62 @@ eventSaidOffset event = do
         (Left "event SAID not found in raw serialization")
         (Right . fromIntegral)
         (findSubsequence needle raw)
+
+{- | The long-lived #116 enforcement fixtures intentionally preserve their
+original raw KERI events without an offsets envelope.  Re-derive the exact
+locations from those raw event bytes for this E2E-only wire builder; values are
+still checked against the event's KED before they are used as redeemer fields.
+-}
+withDerivedOffsets :: Value -> Either String Value
+withDerivedOffsets event@(Object fields) = do
+    ked <- atKey "ked" event
+    raw <- textAt "raw_hex" event >>= decodeHex
+    aid <- textAt "pre" event
+    said <- textAt "said" event
+    eventType <- textAt "t" ked
+    sequenceNo <- textAt "s" ked
+    currentKeys <- textArrayAt "k" ked
+    currentThreshold <- textAt "kt" ked
+    nextKeys <- textArrayAt "n" ked
+    nextThreshold <- textAt "nt" ked
+    witnesses <- textArrayAt "b" ked
+    toad <- textAt "bt" ked
+    let scalar = fieldValueOffset raw
+        array field = traverse (arrayValueOffset raw field)
+    offsets <-
+        object
+            <$> sequence
+                [ ("t" .=) <$> scalar "t" eventType
+                , ("i" .=) <$> scalar "i" aid
+                , ("s" .=) <$> scalar "s" sequenceNo
+                , ("d" .=) <$> scalar "d" said
+                , ("k" .=) <$> array "k" currentKeys
+                , ("kt" .=) <$> scalar "kt" currentThreshold
+                , ("n" .=) <$> array "n" nextKeys
+                , ("nt" .=) <$> scalar "nt" nextThreshold
+                , ("b" .=) <$> array "b" witnesses
+                , ("bt" .=) <$> scalar "bt" toad
+                ]
+    pure (Object (KeyMap.insert (Key.fromText "offsets") offsets fields))
+withDerivedOffsets _ = Left "event is not an object"
+
+fieldValueOffset :: ByteString -> Text -> Text -> Either String Integer
+fieldValueOffset raw field value = do
+    let prefix = Text.encodeUtf8 ("\"" <> field <> "\":\"")
+        needle = Text.encodeUtf8 value
+    start <- maybe (Left (Text.unpack field <> " field not found")) Right (findSubsequence prefix raw)
+    let offset = start + BS.length prefix
+    if needle `BS.isPrefixOf` BS.drop offset raw
+        then Right (fromIntegral offset)
+        else Left (Text.unpack field <> " value does not match raw event")
+
+arrayValueOffset :: ByteString -> Text -> Text -> Either String Integer
+arrayValueOffset raw field value = do
+    let prefix = Text.encodeUtf8 ("\"" <> field <> "\":[")
+        needle = Text.encodeUtf8 value
+    start <- maybe (Left (Text.unpack field <> " array not found")) Right (findSubsequence prefix raw)
+    offset <- maybe (Left (Text.unpack field <> " array value not found")) Right (findSubsequence needle (BS.drop start raw))
+    pure (fromIntegral (start + offset))
 
 buildHashProofMintTx ::
     CheckpointEnv -> RegistrationFixture -> IO ConwayTx
@@ -720,72 +931,6 @@ buildHashProofMintTx env fixture = do
                 & witsTxL . rdmrsTxWitsL .~ redeemers
     either
         (fail . ("buildHashProofMintTx: balance failed: " <>) . show)
-        (pure . balancedTx)
-        ( balanceTxWith
-            params
-            [seed]
-            (CollateralUtxos [collateral])
-            []
-            (envOwner env)
-            Nothing
-            tx
-        )
-
-{- | Closest explicit #116 Register negative.  It carries the real Register
-evidence and ACTIVE output and executes only the exact applied checkpoint
-policy.  It deliberately has no settled hash-proof input/burn lineage;
-successful Tx-A plus the full two-policy transaction below belongs to #114.
--}
-buildStagedRegisterTx ::
-    CheckpointEnv -> RegistrationFixture -> IO ConwayTx
-buildStagedRegisterTx env fixture = do
-    params <-
-        withinSecs 30 "query staged Register protocol parameters" $
-            queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 "query staged Register wallet" $
-            queryUTxOs (envProvider env) (envOwner env)
-    (seed, collateral) <- pickDisjoint wallet []
-    let (seedIn, _) = seed
-        collateralIn = fst collateral
-        checkpointName =
-            AssetName $
-                SBS.toShort $
-                    deriveAidAssetName (cdCesrAid (rfDatum fixture))
-        minted =
-            MultiAsset $
-                Map.singleton
-                    (envCheckpointPolicy env)
-                    (Map.singleton checkpointName 1)
-        stateValue =
-            MaryValue
-                (Coin (checkpointMinAda + registrationBond + freezeBond))
-                minted
-        stateOut =
-            mkBasicTxOut (roleAddress env Active) stateValue
-                & datumTxOutL .~ mkInlineDatum (asPlcData (V1 (rfDatum fixture)))
-        redeemers =
-            Redeemers $
-                Map.singleton
-                    (ConwayMinting (AsIx 0))
-                    ( ledgerData (registerRedeemerData (rfEvidence fixture))
-                    , scriptExUnits
-                    )
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ Set.singleton seedIn
-                & outputsTxBodyL .~ StrictSeq.singleton stateOut
-                & mintTxBodyL .~ minted
-                & collateralInputsTxBodyL .~ Set.singleton collateralIn
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity PlutusV3 params redeemers
-        tx =
-            mkBasicTx body
-                & witsTxL . scriptTxWitsL
-                    .~ Map.singleton (envCheckpointHash env) (envCheckpointScript env)
-                & witsTxL . rdmrsTxWitsL .~ redeemers
-    either
-        (fail . ("buildStagedRegisterTx: balance failed: " <>) . show)
         (pure . balancedTx)
         ( balanceTxWith
             params
@@ -892,6 +1037,11 @@ buildRegisterTx env fixture proofUtxo = do
                     ]
             & witsTxL . rdmrsTxWitsL .~ redeemers
 
+{- | The old-cost devnet cannot create the hash-proof input required for a
+real Register.  This deliberately tokenless output is therefore used only for
+the independent Advance/Close negative staging checks below; it is never a
+substitute for the blocked positive Register lineage.
+-}
 stageCheckpointInput ::
     CheckpointEnv -> CheckpointDatumV1 -> IO CheckpointInput
 stageCheckpointInput env datum = do
@@ -918,7 +1068,7 @@ stageCheckpointInput env datum = do
             (const True)
             >>= requireJust "manual checkpoint staging input did not settle"
     dbg
-        "manual ACTIVE checkpoint input has no production token lineage; only rejection is asserted"
+        "manual ACTIVE checkpoint input has no production token lineage; only Advance/Close rejection is asserted"
     pure CheckpointInput{checkpointUtxo = utxo, checkpointDatum = datum}
 
 buildArmTx ::
@@ -1149,6 +1299,130 @@ currentValidity env = do
             , upperPosixMs = upperMs
             }
 
+{- | Poll the node until it has reached a slot whose start is at or after the
+stored on-chain deadline.  The wait is bounded and every retry re-queries the
+node; it is deliberately not a wall-clock sleep.
+-}
+awaitClaimValidity :: CheckpointEnv -> Integer -> IO ValidityPlan
+awaitClaimValidity env deadline = go pollAttempts
+  where
+    provider = envProvider env
+    go remaining
+        | remaining <= 0 = fail "node did not reach the Claim deadline before polling timed out"
+        | otherwise = do
+            lower <- withinSecs 30 "query node Claim lower slot" (posixMsCeilSlot provider deadline)
+            snapshot <- withinSecs 30 "query node Claim tip" (queryLedgerSnapshot provider)
+            if ledgerTipSlot snapshot < lower
+                then threadDelay 1_000_000 >> go (remaining - 1)
+                else do
+                    lowerMs <- slotStartPosixMs env lower
+                    let upper = SlotNo (unSlotNo lower + 20)
+                    upperMs <- slotStartPosixMs env upper
+                    unless
+                        ( claimAtOrAfterDeadline
+                            deadline
+                            (Just (Finite lowerMs Inclusive))
+                        )
+                        (fail "node-derived Claim lower bound is before the stored deadline")
+                    pure
+                        ValidityPlan
+                            { lowerSlot = lower
+                            , upperSlot = upper
+                            , lowerPosixMs = lowerMs
+                            , upperPosixMs = upperMs
+                            }
+
+assertActiveCheckpoint ::
+    CheckpointEnv -> RegistrationFixture -> (TxIn, TxOut ConwayEra) -> IO ()
+assertActiveCheckpoint env fixture (_, output) = do
+    unless
+        (output ^. addrTxOutL == roleAddress env Active)
+        (fail "registered checkpoint output is not at the production ACTIVE role address")
+    unless
+        (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))) output)
+        (fail "registered checkpoint output does not retain its production AID token")
+    unless
+        (unCoin (output ^. coinTxOutL) >= checkpointMinAda + registrationBond + freezeBond)
+        (fail "registered checkpoint output is short of checkpoint_min_ada + D_reg + B")
+    case extractDatum output of
+        Just (V1 datum)
+            | datum == rfDatum fixture -> pure ()
+        _ -> fail "registered checkpoint output does not carry the production V1 datum lineage"
+
+assertArmedCheckpoint ::
+    CheckpointEnv ->
+    CheckpointInput ->
+    ByteString ->
+    Integer ->
+    ValidityPlan ->
+    (TxIn, TxOut ConwayEra) ->
+    IO ()
+assertArmedCheckpoint env input hunter deadline armValidity (_, output) = do
+    unless
+        (output ^. addrTxOutL == roleAddress env Armed)
+        (fail "Arm did not create an ARMED role-0x02 output")
+    unless
+        (output ^. valueTxOutL == snd (checkpointUtxo input) ^. valueTxOutL)
+        (fail "Arm did not preserve the registered token and reserve custody")
+    unless
+        (deadline == upperPosixMs armValidity + freezeWindow)
+        (fail "Arm deadline is not arm upper bound plus W_freeze")
+    case extractDatum output of
+        Just
+            ArmedV1
+                { adCheckpoint = armedCheckpoint
+                , adHunterPkh = armedHunter
+                , adDeadline = armedDeadline
+                }
+                | armedCheckpoint == checkpointDatum input
+                    && armedHunter == hunter
+                    && armedDeadline == deadline ->
+                    pure ()
+        _ -> fail "Arm output does not carry the exact ArmedV1 checkpoint/hunter/deadline wrapper"
+
+assertClaimSettlement ::
+    CheckpointEnv ->
+    RegistrationFixture ->
+    ByteString ->
+    (TxIn, TxOut ConwayEra) ->
+    TxId ->
+    IO ()
+assertClaimSettlement env fixture hunter armed claimTxId = do
+    payout <-
+        pollOutput
+            (envProvider env)
+            claimTxId
+            [0, 1, 2]
+            (isExactHunterPayout hunter)
+            >>= requireJust "Claim hunter payout did not settle"
+    frozen <-
+        pollOutput
+            (envProvider env)
+            claimTxId
+            [0, 1, 2]
+            (isFrozenCheckpoint env fixture)
+            >>= requireJust "Claim FROZEN checkpoint output did not settle"
+    unless
+        (isExactHunterPayout hunter (snd payout))
+        (fail "Claim hunter payout is not exactly B at the named hunter key")
+    unless
+        (snd frozen ^. valueTxOutL == addLovelace (-freezeBond) (snd armed ^. valueTxOutL))
+        (fail "Claim FROZEN checkpoint does not retain the remaining reserve and AID token")
+
+isExactHunterPayout :: ByteString -> TxOut ConwayEra -> Bool
+isExactHunterPayout hunter output =
+    output ^. addrTxOutL == keyAddress hunter
+        && case output ^. valueTxOutL of
+            MaryValue (Coin lovelace) (MultiAsset assets) -> lovelace == freezeBond && Map.null assets
+
+isFrozenCheckpoint :: CheckpointEnv -> RegistrationFixture -> TxOut ConwayEra -> Bool
+isFrozenCheckpoint env fixture output =
+    output ^. addrTxOutL == roleAddress env Frozen
+        && hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))) output
+        && case extractDatum output of
+            Just (V1 datum) -> datum == rfDatum fixture
+            _ -> False
+
 slotStartPosixMs :: CheckpointEnv -> SlotNo -> IO Integer
 slotStartPosixMs env target = do
     now <- round . (* 1000) <$> getPOSIXTime
@@ -1175,33 +1449,6 @@ slotStartPosixMs env target = do
             if slot < target
                 then search slotAt mid hi
                 else search slotAt lo mid
-
-armResponseBeforeDeadlineScenario :: CheckpointEnv -> IO ()
-armResponseBeforeDeadlineScenario env = do
-    fixture <- loadRegistrationFixture env
-    boundaries <- responseBoundaryCases env
-    let _builders =
-            ( buildArmTx
-            , buildAdvanceTx
-            , rfDatum fixture
-            , armUpper boundaries
-            , justBeforeResponse boundaries
-            )
-    _builders `seq` pure ()
-
-armClaimThawScenario :: CheckpointEnv -> IO ()
-armClaimThawScenario env = do
-    fixture <- loadRegistrationFixture env
-    boundaries <- responseBoundaryCases env
-    let _builders =
-            ( buildArmTx
-            , buildClaimTx
-            , buildThawTx
-            , rfDatum fixture
-            , exactDeadlineClaim boundaries
-            , afterDeadlineClaim boundaries
-            )
-    _builders `seq` pure ()
 
 dummyAdvanceEvidence :: AdvanceEvidence
 dummyAdvanceEvidence =
@@ -1267,6 +1514,7 @@ registrationEvidenceData RegistrationEvidence{..} =
         , intListData reOffB
         , I (fromIntegral reOffBt)
         , signatureListData reCtrlSigs
+        , signatureListData reWitReceipts
         ]
 
 advanceEvidenceData :: AdvanceEvidence -> PLC.Data
@@ -1414,9 +1662,9 @@ oneLine :: String -> String
 oneLine = take 480 . map (\character -> if character == '\n' then ' ' else character)
 
 atKey :: Text -> Value -> Either String Value
-atKey key (Object object) =
+atKey key (Object objectValue) =
     maybe (Left (Text.unpack key <> " missing")) Right $
-        KeyMap.lookup (Key.fromText key) object
+        KeyMap.lookup (Key.fromText key) objectValue
 atKey key _ = Left (Text.unpack key <> ": parent is not an object")
 
 textAt :: Text -> Value -> Either String Text
@@ -1487,15 +1735,6 @@ parseFull textValue =
 indexedSignaturesAt :: Text -> Value -> Either String [(Int, ByteString)]
 indexedSignaturesAt key value =
     atKey key value >>= arrayValues >>= traverse indexedSignature
-
-optionalIndexedSignaturesAt ::
-    Text -> Value -> Either String [(Int, ByteString)]
-optionalIndexedSignaturesAt key (Object object) =
-    case KeyMap.lookup (Key.fromText key) object of
-        Nothing -> Right []
-        Just value -> arrayValues value >>= traverse indexedSignature
-optionalIndexedSignaturesAt key _ =
-    Left (Text.unpack key <> ": parent is not an object")
 
 indexedSignature :: Value -> Either String (Int, ByteString)
 indexedSignature value = do

@@ -2,14 +2,15 @@
 
 {- |
 Module      : CheckpointE2ESpec
-Description : Live-node staging boundary for the #116 checkpoint lifecycle
+Description : Live-node boundary for the #114 permissionless checkpoint lifecycle
 
 Exercises the production, six-parameter checkpoint validator against a real
-@cardano-node@ devnet.  The #116 staging revision deliberately keeps
-Register, Advance, and Close closed, so those submissions must reach the
-production script and be rejected there.  The two complete freeze scenarios
-remain named and compile-checked until #114 opens Register and #115 opens
-Advance.
+@cardano-node@ devnet.  The pinned old-cost model rejects the real hash-proof
+mint before Register can settle, so the positive Register -> Arm -> Claim
+chain is explicitly compile-checked as `PENDING(blocked-on=#190)`. Advance
+and Close remain deliberately closed until #115 and #117 respectively; their
+real redeemers reach the production validator and reject from independent
+tokenless staging inputs.
 -}
 module CheckpointE2ESpec (spec) where
 
@@ -19,42 +20,38 @@ import CheckpointTxBuilder (
     CheckpointEnv,
     RejectionEvidence,
     advanceRejection,
-    armClaimThawScenario,
-    armResponseBeforeDeadlineScenario,
-    boundaryCasesCoverDeadline,
     closeRejection,
-    productionRegisterScenario,
-    registerRejection,
+    hashProofMintOldCostRejection,
+    pendingHashProofRegisterArmClaimScenario,
+    rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
-    responseBoundaryCases,
     stagedCheckpointDevnet,
  )
 
 spec :: Spec
-spec = describe "#116 checkpoint staging" $ do
+spec = describe "#114 permissionless checkpoint boundary" $ do
     around stagedCheckpointDevnet $ do
         it
-            "rejects a staged Register dispatch at the production checkpoint policy"
-            (assertProductionScriptRejection registerRejection)
+            "settled-on-devnet: rejects hash-proof mint at the 251-entry old-cost Plomin boundary"
+            (assertOldCostPlominRejection hashProofMintOldCostRejection)
         it
-            "rejects Advance against the real applied validator"
-            $ \env -> do
-                boundaries <- responseBoundaryCases env
-                boundaries `shouldSatisfy` boundaryCasesCoverDeadline
-                assertProductionScriptRejection advanceRejection env
+            "settled-on-devnet: rejects Advance at the production validator"
+            (assertProductionScriptRejection advanceRejection)
         it
-            "rejects Close against the real applied validator"
+            "settled-on-devnet: rejects Close at the production validator"
             (assertProductionScriptRejection closeRejection)
-    it "Arm -> response-before-deadline (pending #114/#115)" $ do
-        productionRegisterScenario `seq`
-            armResponseBeforeDeadlineScenario `seq`
-                pendingWith "#114 Register is closed and #115 Advance is closed"
-    it "Arm -> Claim-at/after-deadline -> Thaw (pending #114/#115)" $ do
-        armClaimThawScenario `seq`
-            pendingWith "#114 Register is closed and #115 Advance is closed"
+    it
+        "PENDING(blocked-on=#190): hash-proof mint -> permissionless Register with D_reg+B escrow -> Arm -> Claim"
+        (pendingHashProofRegisterArmClaimScenario `seq` pendingWith "blocked-on=#190")
 
 assertProductionScriptRejection ::
     (CheckpointEnv -> IO RejectionEvidence) -> CheckpointEnv -> IO ()
 assertProductionScriptRejection action env = do
     evidence <- action env
     evidence `shouldSatisfy` rejectionReachedProductionScript
+
+assertOldCostPlominRejection ::
+    (CheckpointEnv -> IO RejectionEvidence) -> CheckpointEnv -> IO ()
+assertOldCostPlominRejection action env = do
+    evidence <- action env
+    evidence `shouldSatisfy` rejectionIsOldCostPlominBoundary

@@ -46,7 +46,13 @@ revision is not deployable.
   19,565-byte #116 baseline and the 16,133-byte deployable budget at every
   slice gate; and
 - update #114-owned registration narrative in the docs, M1 slides, and M1 blog
-  in a pair-owned slice gated by strict MkDocs and lychee.
+  in a pair-owned slice gated by strict MkDocs and lychee; and
+- document the rolling-preprod-demo policy and its compatibility boundary:
+  from #115 onward each ticket close refreshes the latest contracts and
+  lifecycle-so-far demo on preprod, demo AIDs/KELs are genuine artifacts
+  verified by the pinned `keripy` oracle, and witness/watcher services may be
+  local or simulated because the acceptance claim is KERI compatibility rather
+  than KERI infrastructure operation.
 
 ### Out of scope
 
@@ -362,6 +368,17 @@ normal Advance or freeze fragments owned by #115/#116 and runs the
 repository-equivalent `mkdocs build --strict` and lychee gates after rebasing
 on #116 docs.
 
+The same pair-owned slice adds the standing demo boundary to the registration
+narrative. From #115 onward, closing every ticket means manually refreshing the
+preprod deployment to the latest contracts, updating the demo scripts and
+experience, and proving the lifecycle-so-far with introduced AIDs on preprod.
+Every demo AID and KEL must be a genuine `keripy`-verifiable artifact produced
+under the pinned oracle; KERI-incompatible synthetic fixtures are forbidden.
+Local or simulated witness/watcher services remain admissible because the demo
+proves KERI-compatible event artifacts and contract behavior, not operation of
+production KERI infrastructure. The #114 slice documents this future standing
+gate but makes no deployment claim and performs no live preprod action.
+
 ## Acceptance criteria
 
 1. Register is permissionless and accepts only event-own controller signatures
@@ -389,6 +406,9 @@ on #116 docs.
    stop.
 10. #116 behavior remains unchanged and Advance stays fail closed pending #115.
 11. The pair-owned #114 docs/slides/blog slice passes strict MkDocs and lychee;
-   the two-invariant theorem is central and the orchestrator does not author
-   those edits.
-12. No historical spec, #117 code, PR-ready, or merge action occurs.
+    the two-invariant theorem is central and the orchestrator does not author
+    those edits.
+12. The documentation states the rolling-preprod-demo close gate from #115 and
+    the pinned-`keripy` compatibility boundary, while allowing local/simulated
+    witness and watcher services and making no #114 preprod deployment claim.
+13. No historical spec, #117 code, PR-ready, or merge action occurs.

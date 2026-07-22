@@ -29,6 +29,10 @@ is later tested against:
 
   5. __O1__ — every committed signature verifies over @event_raw@, not the
      SAID (same discipline as @Keri68OracleSpec@).
+
+  6. __Witness receipts__ — the witnessed inception exports exactly two
+     distinct indexed receipts from its three witnesses (meeting toad 2),
+     and both signatures verify only over the exact decoded @event.raw_hex@.
 -}
 module Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec (spec) where
 
@@ -122,6 +126,11 @@ spec =
                 forM_ regFixtures $ \rf ->
                     it (T.unpack (rfKey rf)) $ \fx ->
                         checkSigs fx rf `shouldBe` Right ()
+            describe "witnessed inception receipt oracle" $ do
+                it "reg_witnessed exports exactly two distinct indexed receipts for the 3-witness toad-2 inception" $ \fx ->
+                    checkWitnessReceiptShape fx `shouldBe` Right ()
+                it "reg_witnessed receipts verify over exact event.raw_hex and reject the SAID target" $ \fx ->
+                    checkWitnessReceiptTargets fx `shouldBe` Right ()
   where
     sizeLabel rf = if rfOversize rf then " raw_len > 1024" else " raw_len <= 1024"
 
@@ -342,6 +351,66 @@ checkSigs fx rf = do
         sigBytes <- decodeHex =<< textField sv "sig_hex"
         unless (verifyEd25519 vk raw sigBytes) $
             Left (at <> ": does not verify over event_raw")
+        when (verifyEd25519 vk saidBytes sigBytes) $
+            Left (at <> ": unexpectedly verifies over the SAID")
+
+{- | The witnessed inception carries exactly the two indexed witness receipts
+required by its toad, with indices and signer keys drawn from @ked.b@.
+-}
+checkWitnessReceiptShape :: Value -> Either String ()
+checkWitnessReceiptShape fx = do
+    sub <- subFixture fx "reg_witnessed"
+    ked <- kedOf fx "reg_witnessed"
+    wits <- textArrayField ked "b"
+    bt <- textField ked "bt"
+    receipts <- arrayField sub "witness_receipts"
+    unless (length receipts == 2) $
+        Left
+            ( "reg_witnessed.witness_receipts: expected exactly 2 receipts, got "
+                <> show (length receipts)
+            )
+    unless (bt == "2") $
+        Left ("reg_witnessed: expected toad 2, got " <> T.unpack bt)
+    indices <- traverse (`intField` "index") receipts
+    unless (indices == [0, 2]) $
+        Left
+            ( "reg_witnessed.witness_receipts: expected distinct witness indices [0,2], got "
+                <> show indices
+            )
+    forM_ (zip3 [0 :: Int ..] receipts indices) $ \(j, receipt, index) -> do
+        let at = "reg_witnessed.witness_receipts[" <> show j <> "]"
+        kind <- textField receipt "kind"
+        unless (kind == "witness") $
+            Left (at <> ": kind /= witness")
+        let witnessIndex = fromIntegral index
+        when (index < 0 || witnessIndex >= length wits) $
+            Left (at <> ": witness index out of bounds")
+        signer <- textField receipt "signer_verkey_qb64"
+        unless (signer == wits !! witnessIndex) $
+            Left (at <> ": signer key does not match ked.b at its index")
+
+-- | Every exported receipt signs the exact keripy event bytes, never the SAID.
+checkWitnessReceiptTargets :: Value -> Either String ()
+checkWitnessReceiptTargets fx = do
+    sub <- subFixture fx "reg_witnessed"
+    ev <- eventOf fx "reg_witnessed"
+    raw <- decodeHex =<< textField ev "raw_hex"
+    saidBytes <- TE.encodeUtf8 <$> textField ev "said"
+    receipts <- arrayField sub "witness_receipts"
+    unless (length receipts == 2) $
+        Left
+            ( "reg_witnessed.witness_receipts: expected exactly 2 receipts, got "
+                <> show (length receipts)
+            )
+    forM_ (zip [0 :: Int ..] receipts) $ \(j, receipt) -> do
+        let at = "reg_witnessed.witness_receipts[" <> show j <> "]"
+        target <- textField receipt "signing_target"
+        unless (target == "event_raw") $
+            Left (at <> ": signing_target /= event_raw")
+        vk <- verkeyRaw =<< textField receipt "signer_verkey_qb64"
+        sigBytes <- decodeHex =<< textField receipt "sig_hex"
+        unless (verifyEd25519 vk raw sigBytes) $
+            Left (at <> ": does not verify over decoded event.raw_hex")
         when (verifyEd25519 vk saidBytes sigBytes) $
             Left (at <> ": unexpectedly verifies over the SAID")
 

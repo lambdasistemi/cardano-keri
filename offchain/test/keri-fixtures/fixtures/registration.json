@@ -826,6 +826,24 @@
           "verkey_qb64": "DA_Bt257QhvCRPcqCTfcWQXCusWFHEIzSYHlUlD3Itrz"
         }
       ]
-    }
+    },
+    "witness_receipts": [
+      {
+        "index": 0,
+        "kind": "witness",
+        "sig_hex": "36784a60e6e13b49c8934684165191c141874f88c1838be882775be595b63cbffbde39404a71b414f66796eb6bfc4359b45cc09a57b3edefad449d04b92e0208",
+        "sig_qb64": "AAA2eEpg5uE7SciTRoQWUZHBQYdPiMGDi-iCd1vllbY8v_veOUBKcbQU9meW62v8Q1m0XMCaV7Pt761EnQS5LgII",
+        "signer_verkey_qb64": "BO2tTK7qtIui3h_fNjRgQtvCWw_XTSW1VjRiUgDEZHFH",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 2,
+        "kind": "witness",
+        "sig_hex": "634b84d49b459055f1839ba3e7b6d3c6b274ef0e50ffad7e4ed870b601fe692e06886c1aad66bdf7d1cd03342ba786548eac6e7a48c335eb287a8a4c684aed0e",
+        "sig_qb64": "ACBjS4TUm0WQVfGDm6PnttPGsnTvDlD_rX5O2HC2Af5pLgaIbBqtZr330c0DNCunhlSOrG56SMM16yh6ikxoSu0O",
+        "signer_verkey_qb64": "BN8Z8SWlQDMdNVYLT2Y5UmWuhXyaoKEiIc_FtbJnxznC",
+        "signing_target": "event_raw"
+      }
+    ]
   }
 }

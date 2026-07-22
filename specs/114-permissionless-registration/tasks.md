@@ -18,15 +18,15 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R1 — witnessed inception oracle
 
-- [ ] T114-R1 RED: fixture tests require indexed witnessed-inception receipts
+- [x] T114-R1 RED: fixture tests require indexed witnessed-inception receipts
       over exact raw bytes and reject every non-`event_raw` signature target.
-- [ ] T114-R1 GREEN: extend the deterministic keripy generator and committed
+- [x] T114-R1 GREEN: extend the deterministic keripy generator and committed
       registration/manifest JSON; retain exact bytes, offsets, event
       signatures, and drift stability.
-- [ ] T114-R1 Full gate green; commit exactly
+- [x] T114-R1 Full gate green; commit exactly
       `test(114): export witnessed inception receipts` with exactly
       `Tasks: T114-R1`.
-- [ ] T114-R1 Report applied program bytes, delta from 19,565, and 16,133-byte
+- [x] T114-R1 Report applied program bytes, delta from 19,565, and 16,133-byte
       budget margin; do not make a deployment claim.
 
 ## Slice R2 — event-own registration predicate

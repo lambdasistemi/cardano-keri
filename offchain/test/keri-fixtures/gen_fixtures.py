@@ -19,9 +19,9 @@ Fixture families (each a JSON bundle under fixtures/):
                   measurement shapes (unwitnessed 2-key, unwitnessed
                   GLEIF-shaped 7-key — T114-S5a), each with generator-emitted
                   per-field byte offsets into the raw serialization (offset
-                  convention documented on _field_spans) and exported signer
-                  seeds (temp test keys from the fixed Salter seed below —
-                  safe to commit).
+                  convention documented on _field_spans), indexed witnessed-
+                  inception receipts, and exported signer seeds (temp test
+                  keys from the fixed Salter seed below — safe to commit).
   advance       — #115 witnessed rotations: 2-key and GLEIF 7-key cut/add,
                   all-witness downgrade, and no-delta keep, with incoming-set
                   receipts, rotation offsets, and controller/witness seeds.
@@ -272,8 +272,10 @@ def _seed_records(signers):
     ]
 
 
-def _reg_record(serder, cur, nxt, note, delegator_pre=None):
-    """One registration sub-fixture: event, sigs, offsets, signer seeds."""
+def _reg_record(
+    serder, cur, nxt, note, delegator_pre=None, witness_receipts=None
+):
+    """One registration sub-fixture: event, sigs, receipts, offsets, seeds."""
     offsets = _offsets_record(serder)
     _assert_offsets(serder, offsets)
     rec = {
@@ -291,6 +293,11 @@ def _reg_record(serder, cur, nxt, note, delegator_pre=None):
     }
     if delegator_pre is not None:
         rec["delegator_pre"] = delegator_pre
+    if witness_receipts is not None:
+        rec["witness_receipts"] = [
+            _sig_record(signer, index, serder.raw, serder.said, "witness")
+            for signer, index in witness_receipts
+        ]
     return rec
 
 
@@ -719,6 +726,7 @@ def build():
         "reg_witnessed": _reg_record(
             ricp_w, rwc, rwn,
             "3-witness toad-2 icp — the parent-acceptance witnessed 2-of-3 shape",
+            witness_receipts=[(rww[0], 0), (rww[2], 2)],
         ),
         "reg_weighted": _reg_record(
             ricp_g, rgc, rgn,

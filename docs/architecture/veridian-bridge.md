@@ -203,38 +203,28 @@ The SDK MUST display the IntentTranscript to the user (or consuming application)
 
 ## Transaction specifications
 
-### Inception transaction
+### Inception / Register transaction
 
-Registers the identity in the Cardano registry for the first time. Requires the ADA deposit (protocol-defined minimum).
+Registers the identity on-chain via permissionless bonded registration. The inception event (`icp`) authenticates itself with its own indexed controller signatures over exact `event_bytes`, and witness receipts cover those same bytes and satisfy `toad`. No Cardano-domain signing message or global absence proof exists.
 
-```
-inc_msg = cbor({
-  domain               : "cardano-keri/inception/v1",
-  network_id           : NetworkId,
-  registry_policy_id   : PolicyId,
-  registry_thread_token: AssetName,
-  trie_key             : ByteArray[32],
-  cur_pubkey           : ByteArray[32],
-  next_digest          : ByteArray[32],
-  cesr_aid             : ByteArray[32],   -- must be signed; prevents front-run metadata poisoning
-  identity_root        : ByteArray[32]
-})
+```text
+RegistrationEvidence {
+  event_bytes  : ByteArray
+  off_t, off_i, off_s, off_k, off_kt, off_n, off_nt, off_b, off_bt: Int
+  ctrl_sigs    : List<(Int, ByteArray)>  -- indexed controller signatures over event_bytes
+  wit_receipts : List<(Int, ByteArray)>  -- indexed witness receipts over event_bytes
+}
 
-Redeemer — Inception {
-  trie_key     : ByteArray[32]  -- blake2b_256(cbor({cur_pubkey, next_digest}))
-  cur_pubkey   : ByteArray[32]  -- raw Ed25519 public key
-  next_digest  : ByteArray[32]  -- blake2b_256(next_pubkey); KEL.n decoded == this
-  cesr_aid     : ByteArray[32]  -- decoded CESR AID, metadata only, also inside inc_msg
-  sig          : ByteArray[64]  -- Ed25519(cur_pubkey, inc_msg)
-  absence_proof               -- MPF proof trie_key not in trie
+Redeemer — Register {
+  evidence : RegistrationEvidence
 }
 
 On-chain checks:
-  1. trie_key == blake2b_256(cbor({cur_pubkey, next_digest}))
-  2. absence_proof valid against current identity_root
-  3. Ed25519(cur_pubkey, inc_msg, sig) valid
-  4. ADA value >= deposit_amount
-  5. Insert trie_key → IdentityLeaf { KeyState {cur_pubkey, next_digest, seq=0, cesr_aid, deposit}, status: Active }
+  1. Hash-proof token present in inputs and burned in transaction: blake3(event_bytes) == cesr_aid
+  2. E1-E9 bounds and schema projection: datum cur_keys, thresholds, next_digest, witnesses, toad match event_bytes
+  3. Indexed controller signatures over event_bytes satisfy cur_threshold
+  4. Indexed witness receipts over event_bytes satisfy toad (empty if toad == 0)
+  5. Output state carries exactly +1 derived AID checkpoint token and ADA >= checkpoint_min_ada + D_reg + B
 ```
 
 ### Rotation transaction
@@ -282,13 +272,13 @@ Value cages check both the identity root and the freeze root before authorizing 
 **For freshly-incepted identities (seq 0):**
 1. Replay the KERI KEL for the CESR AID. Verify CESR self-cert and witness receipts under KERI rules.
 2. Extract `cur_pubkey` from the KEL's inception `k` field.
-3. Decode the KEL's `n` field: `next_digest = decode_base64url(n)`. This MUST equal the Cardano `KeyState.next_digest` byte-for-byte (the digest agility mandate ensures this).
-4. Recompute: `expected_trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))`.
-5. Verify `KeyState[expected_trie_key].cesr_aid == decoded_cesr_aid`. Discard any other row claiming the same `cesr_aid` — they are squatters.
+3. Decode the KEL's `n` field: `next_digest = decode_base64url(n)`. This MUST equal the Cardano `CheckpointDatumV1.next_keys` commitment byte-for-byte.
+4. Derive asset name `aid_asset_name = blake2b_256(cesr_aid)`.
+5. Resolve `CheckpointDatumV1` at `(checkpoint_policy_id, aid_asset_name)` and verify `seq == 0`.
 
 **For rotated identities (seq > 0):** run the above for the inception event, then verify at each rotation that `KEL.rotation[seq].cur_pubkey == KeyState[seq].cur_pubkey` and `KEL.rotation[seq].n decoded == KeyState[seq].next_digest`. If any rotation diverges, the Cardano chain has forked from the KERI KEL; treat the identity as suspect and alert.
 
-**Duplicate cesr_aid handling:** if multiple `KeyState` rows in the Cardano registry assert the same `cesr_aid`, only one can be the legitimate registrant — the one whose inception `cur_pubkey` and `next_digest` match the KEL's inception event. All others are squatters. Resolvers MUST perform the recomputation above, not simply trust whichever row appears first or latest.
+**Duplicate registration handling:** registration is permissionless public projection: anyone may present a valid inception event and fund the deployment-fixed `D_reg + B` reserve. A third-party registrant donates `D_reg + B` with no refund right, producing an independent checkpoint output. If multiple live candidate checkpoints exist for the same AID, consumers fail closed when supplied multiple ACTIVE references — there is no global scan or unicity proof. Under held #117, the legitimate datum-key holder can open the challengeable CLOSING `0x03` flow and recover the donated escrow, making duplicate grief bounded, deposit-deterred, and victim-profitable. Conviction burns the checkpoint token upon proof of an irreconcilable witnessed fork, releasing the deposit and allowing fresh registration.
 
 ## Signify integration
 

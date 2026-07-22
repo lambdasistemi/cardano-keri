@@ -124,36 +124,36 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 
 ## Slice R6 — registration documentation
 
-- [ ] T114-R6 Driver/navigator update only “Inception transaction” in
+- [x] T114-R6 Driver/navigator update only “Inception transaction” in
       `docs/architecture/veridian-bridge.md`, the registration/duplicate
       fragment in `docs/design/trust-model.md`, the named M1 blog registration
       fragments, and the named M1 deck registration fragments.
-- [ ] T114-R6 Remove fresh Cardano-signing, registered-once, and anti-squat
+- [x] T114-R6 Remove fresh Cardano-signing, registered-once, and anti-squat
       claims; explain public event-own authentication, re-registration,
       protected `D_reg+B`, conservative surplus, and third-party donation.
-- [ ] T114-R6 Correct every #114-owned claim that 14M/10B is the live mainnet
+- [x] T114-R6 Correct every #114-owned claim that 14M/10B is the live mainnet
       maximum: it is the stricter internal measurement ceiling; the
       2026-07-22 live mainnet/preprod maximum is 16.5M/10B.
-- [ ] T114-R6 Make the theorem central: M1 blog single-UTxO argument + state
+- [x] T114-R6 Make the theorem central: M1 blog single-UTxO argument + state
       machine + per-move table with Register row; trust-model normative
       advance-totality/bounded-interference; deck one-liner “anyone can project
       the public truth; no one can lie about it or lock you out of it.”
-- [ ] T114-R6 Name CLOSING `0x03`, distinct `W_close`, required one-tx ordinary
+- [x] T114-R6 Name CLOSING `0x03`, distinct `W_close`, required one-tx ordinary
       Advance-void, and no cryptographic express-close in every held-#117
       mention; never conflate `W_close` with `W_freeze`.
-- [ ] T114-R6 Preserve the burn axiom: conviction is recorded in the transaction,
+- [x] T114-R6 Preserve the burn axiom: conviction is recorded in the transaction,
       burns the checkpoint, and permits fresh registration; add no tombstone or
       #117 reap behavior.
-- [ ] T114-R6 Add the rolling-preprod-demo policy to the named trust-model and M1
+- [x] T114-R6 Add the rolling-preprod-demo policy to the named trust-model and M1
       demo/deck fragments: from #115 every ticket close manually refreshes the
       latest contracts and lifecycle-so-far demo on preprod; every demo AID/KEL
       is a genuine pinned-`keripy`-verifiable artifact; local/simulated
       witness/watcher services are permitted because the claim is KERI
       compatibility, not KERI infrastructure operation. Make no #114 deploy or
       live-preprod claim.
-- [ ] T114-R6 Leave #115 normal-Advance and #116 freeze fragments untouched;
+- [x] T114-R6 Leave #115 normal-Advance and #116 freeze fragments untouched;
       run `mkdocs build --strict`, lychee, and the full gate.
-- [ ] T114-R6 Report final bytes and both standing deltas, then commit exactly
+- [x] T114-R6 Report final bytes and both standing deltas, then commit exactly
       `docs(114): explain permissionless bonded registration` with exactly
       `Tasks: T114-R6`, then park at Q-017. Do not deploy, dispatch #117, mark ready,
       or merge without instruction.

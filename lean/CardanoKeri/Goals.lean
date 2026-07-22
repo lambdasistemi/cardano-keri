@@ -31,7 +31,13 @@ theorem advance_totality (p : Params) (env : Env) (cfg : Config) (k : Seq)
   obtain ⟨s, led⟩ := cfg
   cases s with
   | absent => simp [MachState.seq?] at hseq
-  | tombstone k' => exact absurd hlive (by simp [MachState.live])
+  | reaping k' reaper d o =>
+    have hk : k' = k := by simpa [MachState.seq?] using hseq
+    subst hk
+    intro t
+    exact ⟨[⟨t, .advance⟩], _, ⟨t, .advance⟩,
+      .cons (Nat.le_refl t) (Step.advanceReaping hbehind) (.nil _ _),
+      Nat.le_succ 1, rfl, rfl, rfl⟩
   | active k' =>
     have hk : k' = k := by simpa [MachState.seq?] using hseq
     subst hk
@@ -80,7 +86,9 @@ theorem no_absorbing_busy_state (p : Params) (env : Env)
   intro t
   cases s with
   | absent => exact absurd hlive (by simp [MachState.live])
-  | tombstone k => exact absurd hlive (by simp [MachState.live])
+  | reaping k reaper d o =>
+    exact ⟨⟨max t d, .reapExecute⟩, _, Nat.le_max_left t d,
+      Step.reapExecute (Nat.le_max_right t d)⟩
   | active k =>
     exact ⟨⟨t, .closeIntent 0⟩, _, Nat.le_refl t, Step.closeIntent 0 (hcap k)⟩
   | armed k hunter d =>
@@ -105,13 +113,16 @@ theorem adversarial_advance_is_progress (p : Params) (env : Env)
   cases hstep <;> simp_all [MachState.seq?, Kel.behind]
 
 /-- **Goal 4 — bounded_churn** (restated machine-level from
-`bounded_interference`). In the permissionless fragment of the machine — no
-fork evidence, no close capability, i.e. exactly the moves the validator
-grants to everyone — any two consecutive advances enclose at most 2
-non-advance transitions (`j ≤ i + 3`): an arm (once per behind-state) and a
-claim (once per armed-state). The constant 2 matches the design's
-expectation. With the close capability the machine admits unbounded
-self-churn via closeIntent → finalizeClose → register cycles — see Q-L02. -/
+`bounded_interference`; **RATIFIED change under the burn axiom: the constant
+rises 2 → 3**, `j ≤ i + 4`). In the permissionless fragment of the machine —
+no fork evidence, no close capability, i.e. exactly the moves the validator
+grants to everyone — any two consecutive advances that do NOT enclose a
+reap-execute (`hnoreap`) enclose at most 3 non-advance transitions: an arm
+(once per behind-state), a claim (once per armed-state), and now a reap-intent
+(once per frozen-state). The reap-intent is the one new stall the burn axiom
+adds; a reap-execute burns the identity to Absent and re-registration starts a
+fresh count, so it (like closeIntent → finalizeClose → register self-churn,
+Q-L02) is excluded — see Q-B02. -/
 theorem bounded_churn (p : Params) (env : Env)
     (hfork : ¬ env.fork) (hcap : ∀ k : Seq, ¬ env.canClose k)
     (txs : List Tx) (cfg : Config)
@@ -120,8 +131,10 @@ theorem bounded_churn (p : Params) (env : Env)
     (hi : txs[i]? = some txi) (hj : txs[j]? = some txj) (hij : i < j)
     (hadvi : txi.act = .advance) (hadvj : txj.act = .advance)
     (hbetween : ∀ (m : Nat) (txm : Tx),
-      i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance) :
-    j ≤ i + 3 := by
+      i < m → m < j → txs[m]? = some txm → txm.act ≠ .advance)
+    (hnoreap : ∀ (m : Nat) (txm : Tx),
+      i < m → m < j → txs[m]? = some txm → txm.act ≠ .reapExecute) :
+    j ≤ i + 4 := by
   refine Nat.le_of_not_lt fun hcon => ?_
   have hjlen : j < txs.length := getElem?_some_lt hj
   obtain ⟨c1, c2, hpre, hsti, hsuf⟩ := htrace.step_at i txi hi
@@ -130,13 +143,17 @@ theorem bounded_churn (p : Params) (env : Env)
   obtain ⟨a, ha⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 1) (by omega)
   obtain ⟨b, hb⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 2) (by omega)
   obtain ⟨cc, hcc⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 3) (by omega)
-  exact fragment_no_three_stalls hcap hfork hsuf
+  obtain ⟨dd, hdd⟩ := getElem?_isSome_of_lt (l := txs) (i := i + 4) (by omega)
+  exact fragment_no_four_stalls hcap hfork hsuf
     (by rw [List.getElem?_drop]; exact ha)
     (by rw [List.getElem?_drop]; exact hb)
     (by rw [List.getElem?_drop]; exact hcc)
+    (by rw [List.getElem?_drop]; exact hdd)
     (hbetween (i + 1) a (by omega) (by omega) ha)
     (hbetween (i + 2) b (by omega) (by omega) hb)
     (hbetween (i + 3) cc (by omega) (by omega) hcc)
+    (hbetween (i + 4) dd (by omega) (by omega) hdd)
+    (hnoreap (i + 4) dd (by omega) (by omega) hdd)
 
 /-- **Goal 5 — armed_exclusive_window.** From Armed strictly before the
 deadline, the ONLY admissible transitions are advance and convict: the
@@ -252,6 +269,20 @@ theorem bond_transfer_only_via_elapsed_window (p : Params) (env : Env)
         exact absurd hforkev hfork
       | @convictClosing led k r d t c hforkev =>
         exact absurd hforkev hfork
+      | @convictReaping led k reaper d o t c hforkev =>
+        exact absurd hforkev hfork
+      | @reapIntentFrozen led k t reaper =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @reapIntentClosing led k r d t reaper hstale hbehind =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @advanceReaping led k reaper d o t hnext =>
+        exact lift (ih pre _ hlenpre hpre tr hmem hkind)
+      | @reapExecute led k reaper d o t hdeadline =>
+        rcases List.mem_append.mp hmem with hold | hnew
+        · exact lift (ih pre _ hlenpre hpre tr hold hkind)
+        · have htr' : tr = ⟨reaper, reapEscrow p o, .reap⟩ := by simpa using hnew
+          subst htr'
+          simp at hkind
       | @claim led k' hunter d t3 hdeadline =>
         rcases List.mem_append.mp hmem with hold | hnew
         · exact lift (ih pre _ hlenpre hpre tr hold hkind)
@@ -406,36 +437,56 @@ theorem value_conservation_trace (p : Params) (env : Env)
   exact htr.preserves_balanced (initConfig_balanced p)
 
 /-- **Goal 14 — convict_dominance.** With fork evidence, convict is
-admissible from every live state, at every slot, by any convictor. -/
+admissible from every live state, at every slot, by any convictor — and the
+burn axiom now makes the target `.absent` (no tombstone residue). -/
 theorem convict_dominance (p : Params) (env : Env) (hfork : env.fork)
     (cfg : Config) (hlive : cfg.state.live) (t : Slot) (c : Addr) :
-    ∃ cfg' : Config, Step p env cfg ⟨t, .convict c⟩ cfg' := by
+    ∃ cfg' : Config, Step p env cfg ⟨t, .convict c⟩ cfg' ∧ cfg'.state = .absent := by
   obtain ⟨s, led⟩ := cfg
   cases s with
   | absent => exact absurd hlive (by simp [MachState.live])
-  | active k => exact ⟨_, Step.convictActive c hfork⟩
-  | armed k h d => exact ⟨_, Step.convictArmed c hfork⟩
-  | frozen k => exact ⟨_, Step.convictFrozen c hfork⟩
-  | closing k r d => exact ⟨_, Step.convictClosing c hfork⟩
-  | tombstone k => exact absurd hlive (by simp [MachState.live])
+  | active k => exact ⟨_, Step.convictActive c hfork, rfl⟩
+  | armed k h d => exact ⟨_, Step.convictArmed c hfork, rfl⟩
+  | frozen k => exact ⟨_, Step.convictFrozen c hfork, rfl⟩
+  | closing k r d => exact ⟨_, Step.convictClosing c hfork, rfl⟩
+  | reaping k reaper d o => exact ⟨_, Step.convictReaping c hfork, rfl⟩
 
-/-- **Goal 15 — tombstone_terminal_but_no_aid_bar.** A tombstone admits no
-transitions; AND a fresh register on a different instance of the SAME AID is
-admissible regardless of the tombstone (conviction is penalty + record, not
-an AID bar). -/
-theorem tombstone_terminal_but_no_aid_bar (p : Params) (env : Env) :
-    (∀ (k : Seq) (led : Ledger) (tx : Tx) (cfg' : Config),
-      ¬ Step p env ⟨.tombstone k, led⟩ tx cfg') ∧
-    (∀ (sys : Sys) (i j : InstanceId) (k : Seq) (ledi ledj : Ledger) (t : Slot),
-      i ≠ j →
-      sys i = ⟨.tombstone k, ledi⟩ →
+/-- **Goal 15 — convict_burns_and_no_aid_bar** (the burn axiom; replaces the
+tombstone theorem). Convict from ANY live state, at any slot, burns straight
+to `.absent`, releasing the FULL carried escrow as outflows (nothing is left
+behind); AND a fresh register on an absent instance of the SAME AID is
+admissible regardless (conviction is penalty + record, never an AID bar — the
+record lives in the convict transaction, in history). -/
+theorem convict_burns_and_no_aid_bar (p : Params) (env : Env) (hfork : env.fork) :
+    (∀ (cfg : Config), cfg.state.live → ∀ (t : Slot) (c : Addr),
+      ∃ cfg' : Config, Step p env cfg ⟨t, .convict c⟩ cfg' ∧
+        cfg'.state = .absent ∧
+        outflowTotal cfg'.ledger.outflows
+          = outflowTotal cfg.ledger.outflows + carried p cfg.state) ∧
+    (∀ (sys : Sys) (j : InstanceId) (ledj : Ledger) (t : Slot),
       sys j = ⟨.absent, ledj⟩ →
       env.kel.hasEvent 0 →
       ∃ sys' : Sys, SysStep p env sys j ⟨t, .register⟩ sys') := by
-  constructor
-  · intro k led tx cfg' hstep
-    nomatch hstep
-  · intro sys i j k ledi ledj t hne hsi hsj hicp
+  refine ⟨?_, ?_⟩
+  · rintro ⟨s, led⟩ hlive t c
+    cases s with
+    | absent => exact absurd hlive (by simp [MachState.live])
+    | active k =>
+      exact ⟨_, Step.convictActive c hfork, rfl, by
+        simp only [outflowTotal_append, outflowTotal, carried, Value]; omega⟩
+    | armed k h d =>
+      exact ⟨_, Step.convictArmed c hfork, rfl, by
+        simp only [outflowTotal_append, outflowTotal, carried, Value]; omega⟩
+    | frozen k =>
+      exact ⟨_, Step.convictFrozen c hfork, rfl, by
+        simp only [outflowTotal_append, outflowTotal, carried, Value]; omega⟩
+    | closing k r d =>
+      exact ⟨_, Step.convictClosing c hfork, rfl, by
+        simp only [outflowTotal_append, outflowTotal, carried, Value]; omega⟩
+    | reaping k reaper d o =>
+      exact ⟨_, Step.convictReaping c hfork, rfl, by
+        simp only [outflowTotal_append, outflowTotal, carried, Value]; omega⟩
+  · intro sys j ledj t hsj hicp
     have hstep : Step p env (sys j) ⟨t, .register⟩
         ⟨.active 0, { ledj with deposits := ledj.deposits + (p.minAda + p.D + p.B) }⟩ := by
       rw [hsj]
@@ -497,5 +548,133 @@ theorem close_cycle_requires_elapsed_window (p : Params) (env : Env)
         refine ⟨pre2.length, ⟨t2, .closeIntent r⟩, r, hj1, ?_, rfl, hdeadline⟩
         rw [← List.getElem?_take_of_lt (by omega : pre2.length < j), heq2]
         exact List.getElem?_concat_length
+
+/-- **Goal 18 — dead_end_freedom** (the burn axiom's theorem). From EVERY
+reachable live state, at every slot, there exists an admissible transition
+path ending in `.absent` (burnt) or in `.active _` (revived). No reachable
+configuration is a dead end — nothing that is only a memory keeps a UTxO.
+Sibling of `no_absorbing_busy_state`, but reap makes the FROZEN/REAPING exits
+capability-free, so this needs NO capability or fork hypothesis at all
+(strictly weaker than goal 2): Active is already a target (empty path); Frozen,
+Armed and Reaping reach Active via the always-enabled advance (reachable ⇒
+behind); Closing and Reaping reach Absent via the permissionless
+finalize/reap-execute past their deadlines. -/
+theorem dead_end_freedom (p : Params) (env : Env) (cfg : Config)
+    (hreach : Reachable p env cfg) (hlive : cfg.state.live) :
+    ∀ t : Slot, ∃ (txs : List Tx) (cfg' : Config),
+      TraceFrom p env t cfg txs cfg' ∧
+      (cfg'.state = .absent ∨ ∃ k : Seq, cfg'.state = .active k) := by
+  obtain ⟨s, led⟩ := cfg
+  intro t
+  cases s with
+  | absent => exact absurd hlive (by simp [MachState.live])
+  | active k => exact ⟨[], _, .nil _ _, Or.inr ⟨k, rfl⟩⟩
+  | frozen k =>
+    have hb : env.kel.behind k := Reachable.frozen_behind hreach rfl
+    exact ⟨[⟨t, .advance⟩], _,
+      .cons (Nat.le_refl t) (Step.advanceFrozen hb) (.nil _ _), Or.inr ⟨k + 1, rfl⟩⟩
+  | closing k r d =>
+    exact ⟨[⟨max t d, .finalizeClose⟩], _,
+      .cons (Nat.le_max_left t d) (Step.finalizeClose (Nat.le_max_right t d)) (.nil _ _),
+      Or.inl rfl⟩
+  | reaping k reaper d o =>
+    exact ⟨[⟨max t d, .reapExecute⟩], _,
+      .cons (Nat.le_max_left t d) (Step.reapExecute (Nat.le_max_right t d)) (.nil _ _),
+      Or.inl rfl⟩
+  | armed k hunter d =>
+    have hb : env.kel.behind k := Reachable.armed_behind hreach rfl
+    rcases Nat.lt_or_ge t d with hlt | hge
+    · exact ⟨[⟨t, .advance⟩], _,
+        .cons (Nat.le_refl t) (Step.advanceArmed hb hlt) (.nil _ _), Or.inr ⟨k + 1, rfl⟩⟩
+    · exact ⟨[⟨t, .claim⟩, ⟨t, .advance⟩], _,
+        .cons (Nat.le_refl t) (Step.claim hge)
+          (.cons (Nat.le_refl t) (Step.advanceFrozen hb) (.nil _ _)),
+        Or.inr ⟨k + 1, rfl⟩⟩
+
+/-- **Goal 19 — reap_voidable.** A reachable REAPING admits the direct
+advance-void at every slot (`reachable ⇒ behind`, extending the
+`reachable_behind` lemmas to the reaping state). Stated stronger than "before
+the deadline": like the close void it is admissible throughout, so past the
+deadline it merely races the reap-execute and the ledger picks. -/
+theorem reap_voidable (p : Params) (env : Env)
+    (led : Ledger) (k : Seq) (reaper : Addr) (d : Slot) (o : ReapOrigin)
+    (hreach : Reachable p env ⟨.reaping k reaper d o, led⟩) :
+    ∀ t : Slot, ∃ cfg' : Config,
+      Step p env ⟨.reaping k reaper d o, led⟩ ⟨t, .advance⟩ cfg' := by
+  have hb : env.kel.behind k := Reachable.reaping_behind hreach rfl
+  intro t
+  exact ⟨_, Step.advanceReaping hb⟩
+
+/-- **Goal 20 — reap_requires_untouched_window.** A reapExecute at slot `s` is
+immediately preceded (`i + 1 = j`) by its own reapIntent, posted at slot
+`≤ s − Wr`: the reaping sat untouched through a full `Wr` window. The
+`close_cycle_requires_elapsed_window` pattern, for the third window. -/
+theorem reap_requires_untouched_window (p : Params) (env : Env)
+    (txs : List Tx) (cfg : Config)
+    (htrace : TraceFrom p env 0 initConfig txs cfg)
+    (j : Nat) (txj : Tx)
+    (hj : txs[j]? = some txj) (hexec : txj.act = .reapExecute) :
+    ∃ (i : Nat) (txi : Tx) (reaper : Addr),
+      i + 1 = j ∧
+      txs[i]? = some txi ∧
+      txi.act = .reapIntent reaper ∧
+      txi.slot + p.Wr ≤ txj.slot := by
+  have hjlen : j < txs.length := getElem?_some_lt hj
+  obtain ⟨c1, c2, hpre, hst, hsuf⟩ := htrace.step_at j txj hj
+  cases hst <;> try (simp at hexec)
+  case reapExecute led k reaper d o t hdeadline =>
+    rcases hpre.last_step with ⟨hnil2, heq2⟩ | ⟨pre2, lst2, cmid2, heq2, hpre2, hst2⟩
+    · exact absurd (congrArg Config.state heq2) (by simp [initConfig])
+    · have hlen : (txs.take j).length = j := by
+        rw [List.length_take]
+        exact Nat.min_eq_left (Nat.le_of_lt hjlen)
+      have hj1 : pre2.length + 1 = j := by
+        rw [← hlen, heq2]
+        simp
+      cases hst2 with
+      | @reapIntentFrozen _ _ t2 _ =>
+        refine ⟨pre2.length, ⟨t2, .reapIntent reaper⟩, reaper, hj1, ?_, rfl, hdeadline⟩
+        rw [← List.getElem?_take_of_lt (by omega : pre2.length < j), heq2]
+        exact List.getElem?_concat_length
+      | @reapIntentClosing _ _ _ _ t2 _ hstale2 hbehind2 =>
+        refine ⟨pre2.length, ⟨t2, .reapIntent reaper⟩, reaper, hj1, ?_, rfl, hdeadline⟩
+        rw [← List.getElem?_take_of_lt (by omega : pre2.length < j), heq2]
+        exact List.getElem?_concat_length
+
+/-- **Goal 21 — frozen_reap_requires_two_windows.** Any trace reaching a
+FROZEN-origin REAPING (`.fromFrozen`) contains an earlier arm→claim pair a full
+`Wf` apart with no intervening advance: TWO consecutive unanswered public
+windows precede a FROZEN-origin reap (`Wf` then `Wr`). A reapExecute can only
+fire from such a reachable reaping, so this covers the "FROZEN-origin
+reapExecute implies two windows" claim a fortiori. Composes
+`frozen_implies_true_silence` (the freeze window) with the reap-intent that
+opened the second. -/
+theorem frozen_reap_requires_two_windows (p : Params) (env : Env)
+    (txs : List Tx) (k : Seq) (reaper : Addr) (d : Slot) (ledr : Ledger)
+    (hreaching :
+      TraceFrom p env 0 initConfig txs ⟨.reaping k reaper d .fromFrozen, ledr⟩) :
+    ∃ (a b : Nat) (txa txb : Tx) (h : Addr),
+      txs[a]? = some txa ∧ txs[b]? = some txb ∧ a < b ∧
+      (txa.act = .arm h ∨ txa.act = .challengeClose h) ∧
+      txb.act = .claim ∧
+      txa.slot + p.Wf ≤ txb.slot ∧
+      (∀ (m : Nat) (txm : Tx),
+        a < m → m < b → txs[m]? = some txm → txm.act ≠ .advance) := by
+  rcases hreaching.last_step with ⟨hnil, heq⟩ | ⟨pre, lst, cmid, heq, hpre, hst⟩
+  · exact absurd (congrArg Config.state heq) (by simp [initConfig])
+  · cases hst with
+    | @reapIntentFrozen _ _ t2 _ =>
+      have lift : ∀ (m : Nat), m < pre.length → txs[m]? = pre[m]? := by
+        intro m hm
+        rw [heq, List.getElem?_append_left hm]
+      obtain ⟨a, b, txa, txb, h, ha, hb, hab, hact, hcl, hwin, hbet⟩ :=
+        frozen_implies_true_silence p env pre ⟨.frozen k, ledr⟩ hpre k rfl
+      refine ⟨a, b, txa, txb, h, ?_, ?_, hab, hact, hcl, hwin, ?_⟩
+      · rw [lift a (getElem?_some_lt ha)]; exact ha
+      · rw [lift b (getElem?_some_lt hb)]; exact hb
+      · intro m txm hm1 hm2 hmem
+        have hmpre : m < pre.length := Nat.lt_trans hm2 (getElem?_some_lt hb)
+        rw [lift m hmpre] at hmem
+        exact hbet m txm hm1 hm2 hmem
 
 end CardanoKeri

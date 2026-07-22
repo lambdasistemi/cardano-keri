@@ -29,16 +29,24 @@ theorem outflowTotal_append (xs ys : List Transfer) :
 /-- The empty instance is balanced. -/
 theorem initConfig_balanced (p : Params) : initConfig.balanced p := rfl
 
+/-- The reaping escrow and its thaw top-up recompose to the full active
+escrow, for either origin (the generalised-thaw invariant). -/
+theorem reap_escrow_topUp (p : Params) (o : ReapOrigin) :
+    reapEscrow p o + reapTopUp p o = p.minAda + p.D + p.B := by
+  cases o <;> simp [reapEscrow, reapTopUp] <;> omega
+
 /-- **Per-transition conservation** (goal 13's engine): every admissible
-step preserves carried + paid-out = paid-in. -/
+step preserves carried + paid-out = paid-in. The reaping cases lean on
+`reap_escrow_topUp`; all others are pure linear bookkeeping. -/
 theorem Step.preserves_balanced {p : Params} {env : Env}
     {cfg : Config} {tx : Tx} {cfg' : Config}
     (hstep : Step p env cfg tx cfg') (hbal : cfg.balanced p) :
     cfg'.balanced p := by
   cases hstep <;>
-    simp_all [Config.balanced, carried, outflowTotal_append, outflowTotal,
-      Nat.add_comm, Nat.add_left_comm] <;>
-    (rw [← hbal]; simp [Nat.add_comm, Nat.add_left_comm])
+    (try cases ‹ReapOrigin›) <;>
+    simp only [Config.balanced, carried, reapEscrow, reapTopUp,
+      outflowTotal_append, outflowTotal, Value] at hbal ⊢ <;>
+    omega
 
 /-- Balance is preserved along any trace. -/
 theorem TraceFrom.preserves_balanced {p : Params} {env : Env} {t : Slot}
@@ -108,15 +116,18 @@ theorem Step.advance_target {p : Params} {env : Env}
     ∃ (k : Seq) (led : Ledger), cfg' = ⟨.active k, led⟩ := by
   cases h <;> simp_all
 
-/-- Reachable Armed and Frozen states are genuinely behind: arming (and the
-challenge that re-arms) proves a later event, claim preserves the position,
-and the KEL is fixed per trace. -/
+/-- Reachable Armed, Frozen and Reaping states are genuinely behind: arming
+(and the challenge that re-arms) proves a later event, claim preserves the
+position, reap-intent inherits the behind-ness of its Frozen origin (or, from
+CLOSING, carries the behind guard directly), and the KEL is fixed per trace. -/
 theorem reachable_behind {p : Params} {env : Env} :
     ∀ (n : Nat) (txs : List Tx) (cfg : Config), txs.length ≤ n →
       TraceFrom p env 0 initConfig txs cfg →
       (∀ (k : Seq) (hunter : Addr) (d : Slot),
         cfg.state = .armed k hunter d → env.kel.behind k) ∧
-      (∀ k : Seq, cfg.state = .frozen k → env.kel.behind k) := by
+      (∀ k : Seq, cfg.state = .frozen k → env.kel.behind k) ∧
+      (∀ (k : Seq) (reaper : Addr) (d : Slot) (o : ReapOrigin),
+        cfg.state = .reaping k reaper d o → env.kel.behind k) := by
   intro n
   induction n with
   | zero =>
@@ -125,18 +136,20 @@ theorem reachable_behind {p : Params} {env : Env} :
     subst htxs
     cases htr
     exact ⟨fun k hunter d h => by simp [initConfig] at h,
-           fun k h => by simp [initConfig] at h⟩
+           fun k h => by simp [initConfig] at h,
+           fun k reaper d o h => by simp [initConfig] at h⟩
   | succ n ih =>
     intro txs cfg hlen htr
     rcases htr.last_step with ⟨hnil, heq⟩ | ⟨pre, lst, cmid, heq, hpre, hst⟩
     · rw [← heq]
       exact ⟨fun k hunter d h => by simp [initConfig] at h,
-             fun k h => by simp [initConfig] at h⟩
+             fun k h => by simp [initConfig] at h,
+             fun k reaper d o h => by simp [initConfig] at h⟩
     · subst heq
       have hlenpre : pre.length ≤ n := by
         simp only [List.length_append, List.length_cons, List.length_nil] at hlen
         omega
-      constructor
+      refine ⟨?_, ?_, ?_⟩
       · intro k hunter d h
         cases hst <;> simp at h
         case arm led2 k2 t2 hunter2 hbehind2 =>
@@ -152,6 +165,14 @@ theorem reachable_behind {p : Params} {env : Env} :
         case claim led2 k2 hunter2 d2 t2 hdl =>
           subst h
           exact (ih pre _ hlenpre hpre).1 _ hunter2 d2 rfl
+      · intro k reaper d o h
+        cases hst <;> simp at h
+        case reapIntentFrozen led2 k2 t2 reaper2 =>
+          obtain ⟨rfl, -, -, -⟩ := h
+          exact (ih pre _ hlenpre hpre).2.1 _ rfl
+        case reapIntentClosing led2 k2 r2 d2 t2 reaper2 hstale2 hbehind2 =>
+          obtain ⟨rfl, -, -, -⟩ := h
+          exact hbehind2
 
 /-- A reachable Armed state is behind (the arm guard proved a later event). -/
 theorem Reachable.armed_behind {p : Params} {env : Env} {cfg : Config}
@@ -165,24 +186,36 @@ theorem Reachable.frozen_behind {p : Params} {env : Env} {cfg : Config}
     (h : Reachable p env cfg) {k : Seq}
     (hs : cfg.state = .frozen k) : env.kel.behind k := by
   obtain ⟨txs, htr⟩ := h
-  exact (reachable_behind txs.length txs cfg (Nat.le_refl _) htr).2 k hs
+  exact (reachable_behind txs.length txs cfg (Nat.le_refl _) htr).2.1 k hs
+
+/-- A reachable Reaping state is behind: the advance-void is always enabled
+(the reap is voidable up to its deadline). -/
+theorem Reachable.reaping_behind {p : Params} {env : Env} {cfg : Config}
+    (h : Reachable p env cfg) {k : Seq} {reaper : Addr} {d : Slot} {o : ReapOrigin}
+    (hs : cfg.state = .reaping k reaper d o) : env.kel.behind k := by
+  obtain ⟨txs, htr⟩ := h
+  exact (reachable_behind txs.length txs cfg (Nat.le_refl _) htr).2.2 k reaper d o hs
 
 /-- In the permissionless fragment (no fork evidence, no close capability)
-an Active state admits at most two consecutive non-advance transitions —
-arm, then claim — and Frozen then admits only advance. Three in a row is
-impossible. -/
-theorem fragment_no_three_stalls {p : Params} {env : Env}
+an Active state admits at most three consecutive non-advance transitions —
+arm, then claim, then reap-intent — and Reaping then admits only advance (or
+the reap-execute burn, excluded here by `nrd`). Four non-advance, non-burn
+transitions in a row is impossible. The reap-intent is the one new stall the
+burn axiom adds (constant 2 → 3). -/
+theorem fragment_no_four_stalls {p : Params} {env : Env}
     (hcap : ∀ s : Seq, ¬ env.canClose s) (hfork : ¬ env.fork)
     {k : Seq} {led : Ledger} {t : Slot} {txs : List Tx} {c : Config}
     (htr : TraceFrom p env t ⟨.active k, led⟩ txs c)
-    {a b cc : Tx}
+    {a b cc dd : Tx}
     (h0 : txs[0]? = some a) (h1 : txs[1]? = some b) (h2 : txs[2]? = some cc)
-    (na : a.act ≠ .advance) (nb : b.act ≠ .advance) (nc : cc.act ≠ .advance) :
+    (h3 : txs[3]? = some dd)
+    (na : a.act ≠ .advance) (nb : b.act ≠ .advance) (nc : cc.act ≠ .advance)
+    (nd : dd.act ≠ .advance) (nrd : dd.act ≠ .reapExecute) :
     False := by
   cases htr with
   | nil => simp at h0
   | @cons _ _ cfg1 _ tx1 rest1 hmono1 hstep1 hrest1 =>
-    simp at h0 h1 h2
+    simp at h0 h1 h2 h3
     subst h0
     cases hstep1 with
     | @advanceActive _ _ _ hnext => exact na rfl
@@ -192,7 +225,7 @@ theorem fragment_no_three_stalls {p : Params} {env : Env}
       cases hrest1 with
       | nil => simp at h1
       | @cons _ _ cfg2 _ tx2 rest2 hmono2 hstep2 hrest2 =>
-        simp at h1 h2
+        simp at h1 h2 h3
         subst h1
         cases hstep2 with
         | @advanceArmed _ _ _ _ _ hnext hwin => exact nb rfl
@@ -201,11 +234,21 @@ theorem fragment_no_three_stalls {p : Params} {env : Env}
           cases hrest2 with
           | nil => simp at h2
           | @cons _ _ cfg3 _ tx3 rest3 hmono3 hstep3 hrest3 =>
-            simp at h2
+            simp at h2 h3
             subst h2
             cases hstep3 with
             | @advanceFrozen _ _ _ hnext => exact nc rfl
             | @convictFrozen _ _ _ cv hf => exact hfork hf
+            | @reapIntentFrozen _ _ _ reaper =>
+              cases hrest3 with
+              | nil => simp at h3
+              | @cons _ _ cfg4 _ tx4 rest4 hmono4 hstep4 hrest4 =>
+                simp at h3
+                subst h3
+                cases hstep4 with
+                | @advanceReaping _ _ _ _ _ _ hnext => exact nd rfl
+                | @convictReaping _ _ _ _ _ _ cv hf => exact hfork hf
+                | @reapExecute _ _ _ _ _ _ hdl => exact nrd rfl
 
 /-- From Active k, a chain of `n` plain advances is admissible whenever the
 KEL extends that far (all at one slot). -/

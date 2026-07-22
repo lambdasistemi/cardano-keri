@@ -58,7 +58,7 @@ the umbrella epic
   conflict → advance-only, status-by-address, no default bounty) and narrowly
   scoped **convict** (an irreconcilable nondelegated rotation conflict carrying
   both controller-threshold signatures and threshold witness receipts under the
-  V1 rules → the same token moves to a permanent tombstone, bounty-paid) spend
+  V1 rules → the same token is burned and the prover is paid) spend
   paths. These are co-designed with #24 because the script hash freezes at
   deployment. Conviction stops future use; it cannot roll back settled Cardano
   actions, which is why the witness gate belongs on advance.

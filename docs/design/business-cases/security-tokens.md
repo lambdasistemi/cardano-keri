@@ -14,7 +14,7 @@ policy preference.
     inline `CheckpointDatum`, read as a **CIP-31 reference input** and discovered by a
     **generic exact-asset `(policy_id, asset_name)` lookup** (candidate outref for liveness
     only, re-validated against the ledger). "Active" is enforced as **its live UTxO in the
-    accepted mint/spend lineage** (not a closed/tombstoned one) **and** the AID **absent from
+    accepted mint/spend lineage** (not a closed/convicted one) **and** the AID **absent from
     the separate, shared, attacker-contendable R-FRZ freeze registry** — not a status field in
     the datum. A `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so any
     authorization pre-signed under the prior sequence is **stale** and MUST be **re-signed** by

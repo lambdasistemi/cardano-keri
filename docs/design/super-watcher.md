@@ -72,8 +72,8 @@ on evidence:
   nondelegated establishment rotations from the same prior commitment, the conflicting
   event satisfies both the pre-committed controller threshold and the applicable KERI
   witness-receipt threshold, and no supported KERI superseding rule can reconcile them. A
-  successful conviction pays the prover from the deposit and moves the existing token to
-  its permanent tombstone.
+  successful conviction pays the prover from the deposit and **burns** the existing token
+  (the record lives in the convict transaction, in history).
 - **Police stale or false R-TEL** credential-status mirrors, submitting evidence when a mirror misreports issuance / revocation.
 - Never present post-hoc conviction as rollback: settled Cardano actions remain settled;
   mandatory advance-time receipts are what stop the Cardano-first attack.
@@ -124,7 +124,7 @@ and permissionless, no coordination or governance is needed to bootstrap the fle
     KERI-sovereign checkpoint a witnessed Cardano-first branch is rejected at advance time.
     The old "any mismatch burns" mechanism is therefore not the live mitigation. It is
     preserved, in the past tense, only as a reference for proof mechanics; the live V1
-    `Convict` path is narrower, moves the token to a tombstone, and applies only to a proved
+    `Convict` path is narrower, burns the token, and applies only to a proved
     irreconcilable independent-AID rotation conflict.
 
 ### The retired two-registry framing

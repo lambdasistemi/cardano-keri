@@ -368,11 +368,11 @@ document.addEventListener('click', (event) => {
   </section>
 
   <!-- 10 · ENFORCEMENT -->
-  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="Lead with prevention. Northstar's witnessed checkpoint cannot move first: Advance requires the configured witness threshold's receipts, and V1 has no controller-only timeout fallback. This matters because a later tombstone cannot roll back an already-settled Cardano action. If KERI moves first, anyone can freeze the stale checkpoint until it catches up; this is permissionless but not bounty-paid. Permanent conviction is narrower: the conflicting nondelegated establishment rotation must satisfy both the pre-committed controller threshold and the applicable witness-receipt threshold and be irreconcilable under V1 KERI rules. Recoverable or ambiguous evidence freezes instead. The token moves to a tombstone; it is not burned and recreated. That tombstone is permanent for that token and is the on-chain conviction record, but it does not end the AID: if KERI still carries the identity it may register a fresh checkpoint, and any renewed fork is convicted again.">
+  <section data-label="Public checks keep Cardano and KERI in sync" data-speaker-notes="Lead with prevention. Northstar's witnessed checkpoint cannot move first: Advance requires the configured witness threshold's receipts, and V1 has no controller-only timeout fallback. This matters because a later burn cannot roll back an already-settled Cardano action. If KERI moves first, anyone can freeze the stale checkpoint until it catches up; this is permissionless but not bounty-paid. Permanent conviction is narrower: the conflicting nondelegated establishment rotation must satisfy both the pre-committed controller threshold and the applicable witness-receipt threshold and be irreconcilable under V1 KERI rules. Recoverable or ambiguous evidence freezes instead. The token is burned — everything not spendable, even by reference, is burnt (the burn axiom); the conviction is recorded in the convict transaction, in history, forever, not in a tombstone UTxO. The burn does not end the AID: if KERI still carries the identity it may register a fresh checkpoint, and any renewed fork is convicted again.">
 
     <div class="kicker">Counterparty · public safeguards</div>
     <h2 class="title">Public checks keep Cardano and KERI in sync.</h2>
-    <p class="story">Northstar cannot activate private Cardano-only keys and explain them later. Public KERI receipts are checked before new authority exists, while later evidence can pause a checkpoint, or tombstone a proven fork.</p>
+    <p class="story">Northstar cannot activate private Cardano-only keys and explain them later. Public KERI receipts are checked before new authority exists, while later evidence can pause a checkpoint, or burn a proven fork.</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px;min-height:0;">
       <div class="panel" style="padding:30px 31px;border-color:var(--teal-dim);">
         <div class="label">Cardano tries to move first</div>
@@ -390,7 +390,7 @@ document.addEventListener('click', (event) => {
         <div class="label red">Two publicly accepted rotations</div>
         <div style="font-size:34px;font-weight:600;margin-top:18px;">Both controller and witness thresholds prove an irreconcilable conflict</div>
         <div style="font-size:48px;font-weight:600;color:var(--red);margin-top:26px;">Convict the fork</div>
-        <p class="small" style="margin-top:12px;">The same token moves to its tombstone and the conviction prover receives the deposit. Recoverable evidence only pauses.</p>
+        <p class="small" style="margin-top:12px;">The same token is burned and the conviction prover receives the deposit. Recoverable evidence only pauses.</p>
       </div>
     </div>
     <div class="callout" style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
@@ -417,7 +417,7 @@ document.addEventListener('click', (event) => {
         <div style="font-size:39px;font-weight:600;margin-top:18px;">Build reports from replayable facts.</div>
         <p class="small" style="margin-top:20px;">Reconstruct the full KERI history, compare it byte-for-byte with Cardano, and cite the evidence.</p>
         <div class="rule" style="margin:26px 0 20px;"></div>
-        <div class="mono teal" style="font-size:20px;line-height:1.55;">full history replay<br>byte-for-byte evidence<br>retirement remains visible</div>
+        <div class="mono teal" style="font-size:20px;line-height:1.55;">full history replay<br>byte-for-byte evidence<br>retirement visible in history</div>
       </div>
       <div class="panel" style="padding:31px 32px;display:flex;flex-direction:column;">
         <div class="label">Issuer</div>

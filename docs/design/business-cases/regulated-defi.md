@@ -155,7 +155,7 @@ On top of L1–L4:
   reference input — current weighted keys/threshold in the inline
   `CheckpointDatum`, discovered by a generic exact-asset `(policy_id,
   asset_name)` lookup, its live UTxO in the accepted mint/spend lineage (not a
-  closed/tombstoned one) and the AID absent from the shared R-FRZ freeze
+  closed/convicted one) and the AID absent from the shared R-FRZ freeze
   registry — + verification that the order's **detached witness set meets that
   checkpoint's current weighted threshold** +
   TEL non-revocation proofs (reference input) + `tx validity range ⊂

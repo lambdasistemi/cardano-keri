@@ -46,6 +46,9 @@ RED:
 - add observer-ran coupling tests for missing withdrawal, nonzero amount,
   wrong observer credential, missing/wrong Withdraw redeemer, wrong action,
   wrong h, and wrong own outref;
+- add a certificate-purpose rejection proving the observer cannot authorize
+  its own deregistration, plus an unregistered-reward-account live negative
+  where the node-client harness can express it;
 - port existing positive and adversarial predicate contexts through the
   observer and demonstrate the monolithic checkpoint no longer supplies that
   verification;
@@ -65,6 +68,9 @@ GREEN:
 - update the blueprint loader/builder to apply both scripts with one
   checkpoint h;
 - construct both reference-script transaction shapes; and
+- register the observer stake credential in devnet setup before the first
+  evidence-bearing transaction and keep every certificate purpose fail
+  closed;
 - require each exact applied program to be less than 16,133 bytes.
 
 Primary owned files:
@@ -305,6 +311,8 @@ GREEN:
   container, magic, D_reg, B, and 120-second freeze window;
 - apply and create both reference scripts, then build/submit Register, Arm,
   Claim and the extended Advance/response/thaw demo;
+- register the observer stake credential in setup and record the dedicated or
+  combined setup transaction id;
 - emit a redacted structured record with script hashes, AIDs, txids, and
   explorer URLs;
 - add genuine pinned-keripy demo material and verification;
@@ -347,6 +355,8 @@ GREEN:
 - update only the #115-owned fragments named by spec.md;
 - make ordinary replay, response, thaw, event-own signatures, incoming
   receipts, burn history, and genuine-keripy rolling demo explicit;
+- state the observer registration liveness dependency and why its
+  fail-closed certificate handler prevents deregistration;
 - preserve all #117 work as held design language;
 - pass strict MkDocs, links, and presentation checks.
 
@@ -369,8 +379,9 @@ After R8:
    transient failure.
 2. Recompute both applied sizes independently and inspect the 13-row report.
 3. Manually run the preprod recipe. Record both reference-script txids,
-   Register, Arm, Claim, and the rolling demo transaction ids and explorer
-   URLs. Never place secret material in logs.
+   observer stake-registration evidence, Register, Arm, Claim, and the
+   rolling demo transaction ids and explorer URLs. Never place secret
+   material in logs.
 4. Update the PR body with final contract, measurements, stock-cap result,
    preprod evidence, demo evidence, and exact verification.
 5. Push, monitor all required checks, and address failures through a new

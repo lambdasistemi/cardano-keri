@@ -116,6 +116,14 @@ redeemer. The checkpoint redeemers become slim state-machine commands:
 Register and Advance carry no evidence; Freeze retains hunter_pkh only;
 Convict retains beneficiaries and output indices only.
 
+The observer's script stake credential must be registered before, or in, the
+first evidence-bearing transaction on every network. An unregistered reward
+account cannot supply the required withdrawal and therefore cannot satisfy
+the checkpoint ran-check. The devnet E2E setup registers the credential
+before lifecycle transactions. The manual preprod setup either registers it
+in a dedicated transaction or carries the certificate alongside a
+reference-script creation transaction, and records that transaction id.
+
 The observer redeemer is an envelope with a small claim
 (action tag, checkpoint h, and optional own outref) plus an opaque evidence
 payload. The checkpoint inspects only the claim and never imports or decodes
@@ -154,6 +162,24 @@ unrelated inputs/reference inputs. The observer action and checkpoint
 ran-check are covered by mismatch, absent-withdrawal, nonzero-withdrawal,
 wrong-purpose, wrong-h, wrong-outref, wrong-action, and malformed-envelope
 negatives.
+
+### Stake-credential liveness
+
+The observer validator admits only its Withdraw purpose. Every certificate,
+including deregistration of its own script stake credential, reaches the
+fail-closed handler. Under Conway's script-credential authorization rule, a
+deregistration therefore cannot be authorized: no payment key, operator, or
+third party can remove the registered credential. A focused full-context
+certificate test pins that refusal. The E2E coupling RED also covers an
+unregistered reward account if the node-client harness can construct the
+case; if it cannot, the slice records the harness limitation and retains the
+typed certificate refusal plus live registered-path proof.
+
+This matters for liveness: successful deregistration would make every
+evidence-bearing checkpoint path unsatisfiable, because the checkpoint
+requires the withdrawal and the ledger requires the reward account to be
+registered. Registration plus fail-closed certificate dispatch is therefore
+a deployment invariant, not an operator convention.
 
 ### Size hard stop
 
@@ -382,9 +408,11 @@ The recorded manual run must settle:
 
 1. one reference-script creation transaction for checkpoint;
 2. one reference-script creation transaction for checkpoint_observer;
-3. a production-price permissionless Register of a genuine keripy AID;
-4. Arm of that checkpoint from genuine later-event evidence; and
-5. Claim at or after the stored deadline.
+3. observer stake-credential registration, either as a dedicated setup tx or
+   in one of the reference-script transactions;
+4. a production-price permissionless Register of a genuine keripy AID;
+5. Arm of that checkpoint from genuine later-event evidence; and
+6. Claim at or after the stored deadline.
 
 The rolling demo additionally exercises the #115 lifecycle available at the
 final tree: ordinary ACTIVE advance, ARMED response, and FROZEN thaw using a
@@ -417,8 +445,11 @@ fresh Cardano authorization language, explains event-own signatures,
 incoming receipts, ACTIVE/ARMED/FROZEN value behavior, and centers
 advance-totality plus bounded adversarial interference. It says conviction
 is recorded in the transaction history and the token is burned, not kept in a
-tombstone UTxO. The deck retains the approved line: anyone can project the
-public truth; no one can lie about it or lock you out of it.
+tombstone UTxO. The trust model also states that the registered observer
+credential is a liveness dependency and that its fail-closed certificate
+handler makes deregistration unauthorized. The deck retains the approved
+line: anyone can project the public truth; no one can lie about it or lock
+you out of it.
 
 All Close discussion remains a clearly held #117 design note with distinct
 W_close. This ticket neither specifies nor implements it. Strict MkDocs,
@@ -433,6 +464,10 @@ link, and presentation checks must pass.
 - [ ] Observer forwarding is transaction-coupled and every absent/mismatched
       withdrawal or observer action rejects without changing evidence
       verdicts.
+- [ ] The observer stake credential is registered in devnet and preprod
+      setup; certificate-purpose tests prove the observer refuses
+      deregistration, and an unregistered-path limitation is explicit if the
+      live harness cannot construct it.
 - [ ] AdvanceMessage and every fresh-signature preimage/helper/golden are
       deleted. Controller signatures and witness receipts cover event_bytes.
 - [ ] Real pinned-keripy witnessed rotations advance from ACTIVE; forged,
@@ -449,8 +484,9 @@ link, and presentation checks must pass.
 - [ ] Exactly thirteen full-handler rows pass with at least 25.00 percent
       memory and CPU headroom.
 - [ ] Stock-cap live-node checks are honest about cardano-node-clients#190.
-- [ ] The manual preprod record contains two reference-script txids and the
-      Register, Arm, and Claim txids, all explorer-verifiable.
+- [ ] The manual preprod record contains two reference-script txids, observer
+      stake-registration evidence, and the Register, Arm, and Claim txids,
+      all explorer-verifiable.
 - [ ] The refreshed demo uses genuine pinned-keripy AIDs/KELs and proves
       ACTIVE advance, ARMED response, and FROZEN thaw on preprod.
 - [ ] The named #115 documentation fragments pass their strict gates and no

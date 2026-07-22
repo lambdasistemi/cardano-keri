@@ -12,7 +12,7 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [x] T115-P2 Replace spec.md, plan.md, and tasks.md with the permissionless
       projection, observer, stock-cap, burn, measurement, preprod, and demo
       contract.
-- [ ] T115-P3 Obtain epic-owner approval through Q-001/A-001 before any
+- [x] T115-P3 Obtain epic-owner approval through Q-001/A-001 before any
       implementation dispatch.
 
 ## R1 — withdraw-0 observer forwarding
@@ -22,8 +22,10 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
       checkpoint state/Value/own-token/payout logic; move the hash-proof
       evidence burn; slim checkpoint redeemers to an exact opaque-payload
       observer claim; cover all coupling negatives; remove the obsolete
-      network_id parameter; apply/build both scripts; prove each is less than
-      16,133 bytes without opening Advance.
+      network_id parameter; register the observer stake credential in devnet
+      setup; prove its certificate handler rejects deregistration; apply/build
+      both scripts; prove each is less than 16,133 bytes without opening
+      Advance.
 
 ## R2 — production cap
 
@@ -70,7 +72,8 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R7 Ship a standalone manual preprod just recipe and runner using
       KERI_PREPROD_KEY_DIR, the ruled socket/container/magic/address,
       D_reg=5 ADA, B=5 ADA, W_freeze=120 seconds; protect/redact secrets; add
-      genuine pinned-keripy demo AIDs/KELs and hermetic dry-run tests; prove no
+      observer stake registration and record its txid; add genuine
+      pinned-keripy demo AIDs/KELs and hermetic dry-run tests; prove no
       gate.sh, just ci, Nix-check, or workflow dependency.
 
 ## R8 — pair-owned narrative
@@ -78,16 +81,18 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R8 Update only identity-ops, trust-model, M1 blog, and milestones
       deck advance fragments for permissionless replay, event-own evidence,
       response/thaw, advance-totality, bounded interference, conviction
-      history-by-burn, and the rolling genuine-keripy preprod demo; keep #117
-      held; pass strict docs/link/presentation gates.
+      history-by-burn, observer-registration/deregistration liveness, and the
+      rolling genuine-keripy preprod demo; keep #117 held; pass strict
+      docs/link/presentation gates.
 
 ## Final local and public evidence
 
 - [ ] T115-F1 Run clean final ./gate.sh; independently recompute both applied
       sizes and audit the exact 13-row headroom table.
 - [ ] T115-F2 Manually settle both reference scripts and Register, Arm, Claim
-      on preprod; run the ACTIVE advance, ARMED response, and FROZEN thaw demo;
-      record redacted output, script hashes, AIDs, explorer URLs, and txids.
+      on preprod after registering the observer stake credential; run the
+      ACTIVE advance, ARMED response, and FROZEN thaw demo; record redacted
+      output, script hashes, AIDs, explorer URLs, and txids.
 - [ ] T115-F3 Update and independently verify the PR body, push final HEAD,
       and obtain green required checks.
 - [ ] T115-F4 File mark-ready Q with local gates, size/exunit evidence,

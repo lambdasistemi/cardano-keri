@@ -1,451 +1,457 @@
-# Spec: advance path — dual-threshold rotation with incoming-set witness validation (#115)
+# Spec: permissionless advance projection (#115 re-land)
 
 Issue: https://github.com/lambdasistemi/cardano-keri/issues/115
-Epic: https://github.com/lambdasistemi/cardano-keri/issues/24 (V1 checkpoint
-validator — the script hash freezes at deployment, so this surface is
-co-designed with every sibling path).
 
-Ratified inputs (do not reopen — parent Q-file required):
-`specs/68-keystate-shape/spec.md` (frozen `CheckpointDatumV1`, message wire
-contract, F10 eq1–eq8, dual-threshold rule, `deriveAidAssetName`),
-`specs/92-checkpoint-contention/spec.md` (sovereign per-AID checkpoint,
-status-by-address), `specs/106-enforcement/spec.md` (`EventEvidence` slice
-discipline, O1/O2), `specs/114-registration/spec.md` (Register branch,
-E-slice machinery, A-001 standing conditions, #116 gate-room), and the
-**incoming-set witness ruling (epic, 2026-07-18, non-negotiable)** restated
-in "Ratified invariants" below.
+Epic: https://github.com/lambdasistemi/cardano-keri/issues/24
 
-!!! danger "This document amends frozen protocol surface"
-    The `AdvanceMessage` signed preimage changes shape (17 → 18 fields:
-    `new_witnesses` is replaced by the `wit_cut`/`wit_add` delta). The
-    advance path has never been deployable (every spend fails closed at
-    HEAD), so this is a **pre-deployment amendment** — but it is
-    frozen-contract material and is submitted for explicit ratification at
-    the spec checkpoint before any slice is dispatched.
+Status: pre-implementation specification checkpoint. This document supersedes
+the fresh-signature design delivered by PR #120 and the previous completed
+contents of this directory. The implementation base is main at 91ccc71, after
+the reopened #116 and #114 re-lands.
 
----
+## Source of record
+
+The refreshed issue body dated 2026-07-22 and its 2026-07-21 reopen comment
+are authoritative. The inherited contracts in specs/68-keystate-shape,
+specs/92-checkpoint-contention, specs/106-enforcement,
+specs/114-permissionless-registration, and specs/116-freeze-bond remain
+binding except where this ticket carries an explicit ratified amendment.
+
+The following operator rulings are also binding:
+
+- A-015 from #116: the deployable reference-script program budget is 16,133
+  bytes; #115 begins with withdraw/observer forwarding and preserves one
+  checkpoint hash h as both minting policy and payment credential.
+- The 2026-07-22 burn axiom: live state belongs in the UTxO set, history
+  belongs in transactions; Convict burns instead of writing a tombstone.
+- The manual-preprod and rolling-demo directives in the ticket brief.
+
+No implementation starts before the epic owner approves Q-001.
 
 ## Problem
 
-`main` at 53837f7 ships the registration path end-to-end (#114), but the
-checkpoint is write-once: every spend of the state UTxO fails closed (R10).
-The #68 message layer carries an `AdvanceMessage`/`advance_equalities` pair
-that predates the epic's witness ruling: it signs a `new_witnesses` full
-list, validates no witness receipts at all, and its module docs still
-describe the abandoned two-seal handoff. #115 delivers the Advance spend
-branch — KERI rotation admission with dual-threshold key proof and
-incoming-set witness receipts — and amends the message layer to the ratified
-delta schema.
+The merged checkpoint can register, arm, claim, and convict, but ordinary
+Advance is still fail closed. The dormant advance code authorizes a
+Cardano-specific AdvanceMessage rather than the public KERI event itself,
+only handles ACTIVE and FROZEN, and does not implement the reopened value and
+deadline rules. The monolithic applied checkpoint is also 23,124 bytes,
+6,991 bytes over the 16,133-byte creation-transaction budget, so it cannot be
+deployed under the real 16,384-byte transaction cap.
+
+This ticket makes a valid KERI rotation a permissionless projection. Anyone
+may submit the public event because every accepted successor field,
+destination, token quantity, and protected value is forced. The event's own
+controller signatures and incoming witness receipts are the only
+authentication evidence. No fresh Cardano-domain signature exists.
 
 ## Scope
 
-**In scope**
+### In scope
 
-1. **`AdvanceMessage` amendment** (both languages, goldens regenerated):
-   `new_witnesses : List<Verkey>` → `wit_cut`/`wit_add` deltas in the signed
-   preimage; `new_toad` stays; stale two-seal comments fixed.
-2. **Witness-delta derivation + validity rules** (W1–W3 below) and the
-   amended eq7 (created datum's `witnesses` is the *derived* incoming set).
-3. **Advance evidence layer** (`advance.ak` / `Advance.hs`): the rot
-   event-binding slice set AE1–AE10, controller dual-threshold signatures
-   over the reconstructed preimage, and the incoming-set receipt gate.
-4. **`checkpoint.ak` spend branch** (`Advance` redeemer, V1–V7): consume the
-   tip, exactly one successor at ACTIVE; Register untouched; Freeze/Convict/
-   Close still fail closed; #116 gate-room preserved.
-5. keripy-oracle **witness-changing rotation fixture family** (hermetic
-   flake extension; existing bundles byte-unchanged) + Haskell/Aiken parity
-   (bytes AND verdicts) + measurement cells (2-key, 7-key, witnessed) under
-   the A-001 ≥25% headroom STOP gate.
+1. R1 first: move heavy KERI evidence verification into a zero-value
+   withdrawal observer while the checkpoint retains mint/spend state-machine
+   and exact observer-ran checks. Both applied scripts must be strictly below
+   16,133 bytes before feature work continues.
+2. R2 second: delete the isolated 32 KiB devnet genesis, restore the stock
+   16,384-byte cap, remove the NON-DEPLOYABLE banner, and permanently gate
+   both applied sizes plus the absence of executable 32,768-byte overrides.
+3. Delete AdvanceMessage and its canonical-CBOR fresh-signature domain in
+   Haskell and Aiken. Controller signatures verify the exact KERI event bytes.
+4. Admit one Advance branch from ACTIVE, ARMED, and FROZEN with the exact
+   deadline and value rules below.
+5. Replace Convict tombstone creation with the ratified burn transition and
+   remove tombstone-only production, schema, role, and lifecycle-model
+   surfaces.
+6. Preserve generated Haskell/Aiken byte and verdict parity, add
+   advance-totality and bounded-interference adversarial coverage, and gate
+   exactly thirteen full-handler ACCEPT measurements.
+7. Activate the honest live-node surface at the stock cap, ship a
+   manual-only preprod runner, settle both reference scripts and the required
+   lifecycle on preprod, and refresh the genuine-keripy demo.
+8. Update the #115-owned advance/replay fragments in architecture, trust
+   model, M1 blog, and M1 milestones deck.
 
-**Out of scope**
+### Out of scope
 
-- Freeze/convict wiring and the unicity/absence gate (#116); close/
-  migration, role encoding O4, deposit economics O3 (#117); adversarial tx
-  suite + full budget matrix (#118); devnet cast (#44).
-- Delegated rotation (`drt`) admission — rejected in V1 (AE1).
-- Interaction (`ixn`) checkpointing — an advance is a rotation by
-  definition; non-establishment events never touch the checkpoint.
-- Multi-chunk/attested tiers; any blake3 over the rot bytes (none is needed
-  — see "No SAID proof on the advance path").
+- Any #117 Close, CLOSING, consumer lookup, reap, W_close, or W_reap work.
+- Mint/spend splitting. It breaks the single-h contract and still requires a
+  fresh operator ruling.
+- A global registry, mint-once gate, batcher, sequencer, authoritative
+  indexer, or new trusted party.
+- A KERI SAID proof over rotation bytes. The previously ratified event-slice,
+  signature, and receipt boundary remains.
+- Production KERI witness or watcher infrastructure. Local or simulated
+  services are allowed around genuine keripy-verifiable artifacts.
+- Any secret, live network, or preprod invocation in gate.sh, just ci, or a
+  GitHub workflow.
 
----
+## R1 deployable architecture
 
-## Ratified invariants (inherited — binding)
+### Two scripts, one identity hash
 
-1. Advance consumes the tip and creates **exactly one** successor at ACTIVE;
-   binds network/policy/asset/AID/spent-outref/`seq+1`/strictly increasing
-   `native_sn` (F10 eq1–eq5, frozen).
-2. KERI pre-rotation dual threshold (eq6a/eq6b, frozen): evidence satisfies
-   the rotation's own `new_cur_threshold` over `new_cur_keys` AND the spent
-   checkpoint's committed `(next_keys, next_threshold)` via
-   `blake3_256(qb64(key))` digests; the spent current set never authorizes;
-   partial/reserve rotation (GLEIF 3-of-7) supported.
-3. **Incoming-set witness rule (epic, 2026-07-18):** evidence carries KERI's
-   delta `br`/`ba`/`bt` only; the validator derives
-   `new_set = (old.witnesses − br) ∪ ba` (cuts first, adds appended, order
-   preserved) and, when `new_toad > 0`, verifies **≥ `new_toad`** valid
-   Ed25519 receipts drawn from `new_set` over the exact anchoring event
-   bytes (O1). Bounds `1 ≤ new_toad ≤ |new_set|`, or `0` iff the set is
-   empty. A cut/outgoing-only witness receipt MUST NOT count. **NO**
-   outgoing-set endorsement; **NO** magnitude bound; `toad → 0` downgrade =
-   zero receipts + visible datum.
-4. O1: every signature verifies over full serialized bytes, never a SAID.
-5. Slice discipline (#106/#114): prover-supplied offsets **locate**, never
-   define — every expected slice is computed from validated state.
-6. `aid_asset_name == deriveAidAssetName(cesr_aid)`; status is the address;
-   frozen #68 shapes are consumed, not re-derived.
-7. A-001 standing conditions: adversarial vectors for every new checking
-   surface; measurement gate ≥25% headroom with STOP-on-miss (fallback is
-   never weakening checks).
-8. #116 gate-room: no check may assume a fixed input count or reject
-   transactions for carrying inputs beyond those the branch names.
+The production blueprint has two independently applied Plutus V3 programs:
 
----
+1. checkpoint: the existing minting policy and spending validator. Its script
+   hash h remains the checkpoint policy id, ACTIVE payment credential, and
+   input to every role-address derivation.
+2. checkpoint_observer: a generic withdrawal validator that performs the
+   expensive KERI event binding, signature, threshold, and receipt
+   predicates.
 
-## The `AdvanceMessage` amendment (spec-checkpoint material)
+The observer hash is a deployment parameter of checkpoint. The observer does
+not become an AID identity or policy hash, and h is not split. The observer
+is parameterized only by immutable evidence-validation deployment values
+such as version, hash-proof policy, and D_reg; its redeemer names the
+checkpoint hash and the action context. This avoids a circular script hash
+dependency. The old network_id deployment parameter existed only to bind the
+deleted AdvanceMessage and is removed from the final applied scripts.
 
-### New signed preimage — Constr 0, 18 fields in frozen order
+### Zero-withdrawal coupling
 
-The one structural change: field 14 (`new_witnesses`) is replaced by the
-two delta fields, in KERI event order (`br` before `ba`); everything after
-shifts by one. `new_toad` stays. Constructor index stays 0.
+Every evidence-bearing Register, Advance, Freeze, or Convict transaction
+contains exactly the observer reward-account entry at zero lovelace and a
+matching Withdraw observer redeemer. ClaimFreeze carries no KERI evidence
+and does not need the observer. Evidence exists once, in the observer
+redeemer. The checkpoint redeemers become slim state-machine commands:
+Register and Advance carry no evidence; Freeze retains hunter_pkh only;
+Convict retains beneficiaries and output indices only.
 
-| # | Field | Data encoding | Status |
-|---|---|---|---|
-| 1 | `domain` | `B` (the frozen `adv` literal) | unchanged |
-| 2 | `network_id` | `I` | unchanged |
-| 3 | `checkpoint_policy_id` | `B` | unchanged |
-| 4 | `aid_asset_name` | `B` | unchanged |
-| 5 | `cesr_aid` | `B` | unchanged |
-| 6 | `spent_txid` | `B` | unchanged |
-| 7 | `spent_index` | `I` | unchanged |
-| 8 | `prior_seq` | `I` | unchanged |
-| 9 | `prior_native_sn` | `I` | unchanged |
-| 10 | `new_cur_keys` | `List(B)` | unchanged |
-| 11 | `new_cur_threshold` | `Threshold` data | unchanged |
-| 12 | `new_next_keys` | `List(B)` | unchanged |
-| 13 | `new_next_threshold` | `Threshold` data | unchanged |
-| 14 | **`wit_cut`** | `List(B)` — raw 32-byte verkeys cut (KERI `br`) | **replaces `new_witnesses`** |
-| 15 | **`wit_add`** | `List(B)` — raw 32-byte verkeys added (KERI `ba`) | **new** |
-| 16 | `new_toad` | `I` (KERI `bt`) | unchanged (shifted) |
-| 17 | `seq_to` | `I` | unchanged (shifted) |
-| 18 | `native_sn_to` | `I` | unchanged (shifted) |
+The observer redeemer is an envelope with a small claim
+(action tag, checkpoint h, and optional own outref) plus an opaque evidence
+payload. The checkpoint inspects only the claim and never imports or decodes
+the evidence type. The observer checks the same claim and decodes the payload
+as the exact evidence type selected by the action.
 
-The signed preimage stays the canonical-CBOR serialization of the Constr-0
-`Data` tree (`cbor.serialise` / `toBuiltinData`), unchanged in mechanism.
+The checkpoint performs an inexpensive ran-check:
 
-**Domain string: unchanged (`cardano-keri/checkpoint/adv/v1`) — ratified by
-A-005.** The #68 freeze note says field order changes only by minting a
-new version tag; that discipline protects *deployed* artifacts. No advance
-artifact has ever been produced outside test goldens (spends fail closed;
-nothing is on any chain), so the recommendation is to amend in place under
-`/v1` and regenerate the goldens, keeping `/v2` for a genuinely
-post-deployment migration. Alternative (bump to `adv/v2` now) costs a dead
-version number and implies a v1 that never existed.
+- its transaction contains Pair(Script(observer_hash), 0);
+- the redeemer map contains the matching Withdraw purpose;
+- that redeemer decodes to the expected observer action;
+- the action names the same checkpoint h and, for spends, the same own input
+  reference; and
+- no alternative observer credential or mismatched action can satisfy the
+  check.
 
-**Ratified amendment (2026-07-19, A-005/QA).** The 18-field delta layout is
-amended in place under `cardano-keri/checkpoint/adv/v1`. The version-tag
-discipline protects deployed surface; no advance artifact has existed outside
-test goldens, so minting a dead `adv/v2` would add noise rather than preserve
-compatibility. Advance goldens regenerate under `/v1`; `/v2` remains reserved
-for a post-deployment migration.
+The observer sees the same transaction and validates one of:
 
-### Why the controller signs the delta, not the list
+- ObserveRegister: proof-token input and exact hash-proof-policy burn,
+  inception event binding, event-own controller signatures, witness receipts,
+  projection, and registration reserve predicate for the named h output;
+- ObserveAdvance: rotation transition, event-own controller signatures,
+  dual thresholds, witness delta, event binding, and incoming receipt quorum
+  for the named h input and ACTIVE successor;
+- ObserveFreeze: existing enforcement binding plus freeze predicate for the
+  named h input;
+- ObserveConvict: existing enforcement binding plus conviction predicate for
+  the named h input.
 
-The delta is what KERI's `rot` event actually carries (`br`/`ba`); signing
-the same shape the witnesses receipt keeps one semantic object across both
-signature domains. It also makes the datum's witness list a *derived* value
-— the validator, not the prover, computes the incoming set, so a signed
-message can never smuggle a witness list that disagrees with the event the
-witnesses receipted.
+The checkpoint keeps all checkpoint-policy token, role, datum, output-count,
+mint/burn, payout, deadline, and complete-Value arithmetic. The observer owns
+the distinct hash-proof-policy proof input/burn check because computing its
+event-derived token name is evidence verification. Moving verification
+between scripts must not weaken a predicate, change vector verdicts, or bound
+unrelated inputs/reference inputs. The observer action and checkpoint
+ran-check are covered by mismatch, absent-withdrawal, nonzero-withdrawal,
+wrong-purpose, wrong-h, wrong-outref, wrong-action, and malformed-envelope
+negatives.
 
-### `SpentCheckpoint` gains `witnesses`
+### Size hard stop
 
-The delta derivation needs the spent witness list. `SpentCheckpoint` (a
-validation-context type constructed from the spent datum — **not** a wire
-type; no golden changes beyond the message) gains
-`witnesses : List<Verkey>` after `cesr_aid`, in both languages. The spend
-branch fills it from the spent inline datum.
+R1 is accepted only when the exact final-arity applied checkpoint and observer
+programs are each less than 16,133 bytes. The measurement uses silent traces,
+the pinned Aiken toolchain, and the same CBOR parameter order used by the
+off-chain transaction builder. A full signed reference-script creation
+transaction for each program is also constructed at the stock cap.
 
-### Witness-delta validity + derivation (W1–W3)
+If either script misses after two reviewed RED/GREEN attempts, the pair stops
+and files a Q-file. Checks may not be weakened, traces required for behavior
+may not be hidden, and mint/spend splitting may not be attempted.
 
-Checked inside `advance_equalities`, between eq5 and eq6 (new `AdvanceError`
-constructors `EqW1CutInvalid`, `EqW2AddInvalid`; W3 lands in the amended
-eq7). Mirrors keripy's rotation rules exactly:
+## R2 production-cap restoration
 
-- **W1 — cuts valid.** `wit_cut` entries are pairwise distinct and every
-  entry ∈ `spent.witnesses`. (A dup cut or a cut of a non-member is a
-  malformed rotation — keripy rejects it; so do we. Neither is otherwise
-  caught: set-wise both are no-ops.)
-- **W2 — adds valid.** `wit_add` entries are pairwise distinct,
-  `wit_add ∩ wit_cut = ∅` (no cut-then-re-add in one event), and
-  `wit_add ∩ (spent.witnesses − wit_cut) = ∅` (no add-already-present).
-- **W3 — derived set.** `new_set = (spent.witnesses − wit_cut) ++ wit_add`:
-  survivors keep the spent order, adds are appended in `wit_add` order. The
-  amended **eq7** requires the created datum's `witnesses` field to equal
-  `new_set` exactly (alongside the other new-state fields), and its `toad`
-  to equal `new_toad`.
-- `new_toad` bounds (`1 ≤ new_toad ≤ |new_set|`, or `0` iff empty) are
-  **already enforced** by eq8's `datum_well_formed` rule 14 over the created
-  datum — `bt`-out-of-bounds needs no new check, only its adversarial
-  vector.
+Immediately after R1:
 
-### Stale two-seal comments (fixed with the amendment)
+- remove offchain/flake.nix e2eGenesis and every executable
+  maxTxSize 16384 to 32768 rewrite;
+- use the one stock cardano-node-clients genesis for cage and checkpoint E2E;
+- remove the NON-DEPLOYABLE runtime banner and overage tuple;
+- add a permanent hermetic size recipe invoked by just ci that builds and
+  applies both programs and rejects either size greater than or equal to
+  16,133;
+- add a permanent source guard rejecting 32768 in executable harness,
+  workflow, or configuration files while allowing clearly labelled
+  historical measurement/spec records; and
+- rerun the checkpoint live-node boundary at stock 16,384.
 
-`onchain/lib/cardano_keri/checkpoint/message.ak` ("Advance message
-(rotation / two-seal handoff)" section header) and
-`offchain/lib/Cardano/KERI/AID/Checkpoint/Message.hs` (export-list and
-section headers) still call the advance a "two-seal handoff". The
-amendment commit re-titles these to the dual-threshold + incoming-set
-model and sweeps any remaining `two-seal` mention in the two files.
+The pinned devnet's old Plutus V3 price table remains an honest upstream
+boundary tracked by cardano-node-clients#190. R2 does not falsify a positive
+hash-proof settlement there. Rows blocked only by that price table remain
+explicitly pending on #190; production-price positive settlement is proved
+manually on preprod in this ticket.
 
-### Blast radius (all regenerated in the amendment slice)
+## Permissionless Advance evidence
 
-`message.ak` + `message_tests.ak` + `vectors.ak` goldens (Aiken),
-`Message.hs` + `MessageSpec.hs` + `GenCheckpointVectors.hs` goldens
-(Haskell), shared-vector parity (bytes AND verdicts). Registration
-artifacts are untouched — `InceptionMessage` does not change.
+AdvanceEvidence continues to carry the exact keripy rotation serialization,
+field offsets, ordered witness cut/add lists, indexed controller signatures,
+and indexed witness receipts. Its signature meaning changes:
 
----
+- ctrl_sigs indexes NEW.cur_keys and every counted signature verifies over
+  event_bytes exactly;
+- wit_receipts indexes the derived incoming witness set and verifies over
+  the same event_bytes exactly.
 
-## Transaction shape
+AdvanceMessage, advance_domain, message reconstruction, canonical-CBOR
+serialization, deployment fields, and out-ref fields are deleted from the
+authorization surface. Transaction context binds h and the spent outref;
+the event and successor datum bind the KERI transition. No compatibility
+shim or fresh signature remains.
 
-Advance is **one transaction** (no hash-proof pre-step: see "No SAID proof
-on the advance path"):
+### State and event checks
 
-```
-Tx Advance (spend, redeemer Advance { evidence }):
-  input:  the tip checkpoint UTxO at ACTIVE
-          (token (checkpoint_policy, aid_asset_name), inline V1 datum OLD)
-  output: exactly one successor at ACTIVE
-          (same token, inline V1 datum NEW, lovelace >= min_ada + d_reg)
-  mint:   nothing under checkpoint_policy (the token moves; no mint/burn)
-```
+For OLD, NEW, and evidence E, the observer checks in order:
 
-### The `Advance` spend branch (`checkpoint.ak`, V1–V7)
+1. NEW.cesr_aid equals OLD.cesr_aid; NEW.seq equals OLD.seq + 1; and
+   NEW.native_sn is strictly greater than OLD.native_sn.
+2. E.wit_cut is distinct and every member exists in OLD.witnesses.
+3. E.wit_add is distinct, disjoint from cuts, and absent from survivors.
+4. NEW.witnesses equals survivors in OLD order followed by additions in
+   event order; NEW.toad is datum-well-formed.
+5. Distinct valid controller signature positions satisfy
+   NEW.cur_threshold over NEW.cur_keys.
+6. Those same revealed valid keys, after blake3_256(qb64(verkey)), satisfy
+   OLD.next_threshold against OLD.next_keys. Stolen OLD.current keys alone
+   never authorize a rotation; a real partial 3-of-7 reserve reveal does.
+7. AE1 through AE10 bind t, i, s, k, kt, n, nt, br, ba, and bt slices of
+   event_bytes to NEW and the validated delta. Expected values are computed;
+   offsets only locate.
+8. If NEW.toad is zero, the incoming set and receipt list are both empty.
+   Otherwise distinct valid receipts from the derived incoming set are at
+   least NEW.toad. A cut or outgoing-only witness is at no eligible index.
 
-Same validator parameters as #114 (`version`, `hash_proof_policy`,
-`network_id`, `d_reg`); the spend handler replaces the unconditional `fail`
-with a redeemer sum — `Advance { evidence }` runs V1–V7, every other
-constructor still fails closed (#116/#117 land there).
+Signatures and receipts always cover full event_bytes, never the event SAID.
+The deliberate no-d/no-p and no-whole-event-Blake3 ruling remains. The only
+Blake3 work in Advance is per-revealed-key pre-rotation commitment matching.
 
-```
-AdvanceEvidence {
-  event_bytes : ByteArray             -- full keripy rot serialization
-  off_t   : Int                       -- offset of the event-type value
-  off_i   : Int                       -- offset of the 44-char qb64 AID
-  off_s   : Int                       -- offset of the hex sequence-number value
-  off_k   : List<Int>                 -- offsets of the 44-char qb64 `k` entries
-  off_kt  : Int                       -- offset of the kt JSON value
-  off_n   : List<Int>                 -- offsets of the 44-char `n` entries
-  off_nt  : Int                       -- offset of the nt JSON value
-  off_br  : List<Int>                 -- offsets of the 44-char `br` entries
-  off_ba  : List<Int>                 -- offsets of the 44-char `ba` entries
-  off_bt  : Int                       -- offset of the bt JSON value
-  wit_cut : List<ByteArray>           -- raw 32-byte verkeys cut (KERI br)
-  wit_add : List<ByteArray>           -- raw 32-byte verkeys added (KERI ba)
-  ctrl_sigs : List<(Int, ByteArray)>  -- (index into new_cur_keys, Ed25519 sig)
-                                      --   over the AdvanceMessage preimage
-  wit_receipts : List<(Int, ByteArray)> -- (index into DERIVED new_set,
-                                      --   Ed25519 sig over event_bytes)
-}
-```
+## Advance role and value matrix
 
-- **V1 — own input.** The spent `out_ref` resolves to an input at
-  `Address(Script(own_hash), None)` carrying
-  `(own_policy, deriveAidAssetName(OLD.cesr_aid))` at quantity one, with
-  the inline V1 datum `OLD`. Fails closed on any non-V1 datum constructor.
-- **V2 — successor output.** Exactly one output at the ACTIVE address; it
-  carries the same token at quantity one and inline V1 datum `NEW`
-  (one-element filter = the datum-confusion guard, as in R2). No mint under
-  `own_policy` (`tokens(mint, own_policy)` is empty — the token moves).
-- **V3 — deposit continuity.** The successor's lovelace
-  `>= min_ada + d_reg` (mechanism as R8; economics stay O3/#117).
-- **V4 — message equalities.** `advance_equalities(spent, M, NEW, signers)
-  == AdvanceValid` where `spent` is the `SpentCheckpoint` built from `OLD`
-  + the deployment parameters + the spent `out_ref`, and `M` is the
-  **reconstructed** `AdvanceMessage`: domain literal, deployment
-  parameters, `deriveAidAssetName(NEW.cesr_aid)`, `NEW.cesr_aid`, the spent
-  `out_ref`, `OLD.seq`/`OLD.native_sn`, `NEW`'s key-state fields,
-  `evidence.wit_cut`/`wit_add`, `NEW.toad`, `NEW.seq`/`NEW.native_sn`.
-  Nothing message-shaped is caller-supplied except the delta lists — which
-  W1/W2 validate against `OLD.witnesses`, AE8/AE9 pin to the receipted
-  bytes, and the controllers sign inside the preimage. This carries
-  eq1–eq5, W1/W2, eq6 dual-threshold, amended eq7, eq8.
-- **V5 — controller signatures.** `signers` for V4 =
-  `RevealedSuccessorSigners` of the keys at distinct positions of
-  `evidence.ctrl_sigs` that verify over the canonical-CBOR preimage of `M`
-  with `NEW.cur_keys[idx]` (the `verified_positions` convention: bad index
-  or bad signature never counts, never aborts).
-- **V6 — event binding.** The AE1–AE10 slice set below holds over
-  `evidence.event_bytes`.
-- **V7 — witness gate.** Let `new_set` be the W3 derivation. If
-  `NEW.toad == 0`: no receipts required (`new_set` is empty by rule 14 —
-  the downgrade is visible in the datum). Else: the count of **distinct**
-  indices in `evidence.wit_receipts` whose `(idx, sig)` verifies with
-  `new_set[idx]` over `evidence.event_bytes` is `>= NEW.toad`. Out-of-range
-  or non-verifying entries never count; duplicate indices count once. A cut
-  witness appears at no `new_set` index, so its receipt can never count —
-  structurally, not by filter.
+Every successful Advance creates exactly one ACTIVE/V1 output with the same
+derived AID token at quantity one. The complete own-policy mint map is empty.
+The successor datum is the unique projection of the real next KERI event.
 
-Gate-room (#116): V1 names one input and V2 one output at ACTIVE; nothing
-bounds total inputs/reference inputs. `len(event_bytes)` is unbounded by
-construction (no blake3 chunk limit exists on this path). **Ratified QD note:**
-the registration path's 1024-byte inception cap already bounds the registered
-population's board sizes, so advance inherits a practical bound; the
-measurement gate covers the remaining execution-budget bound.
+| Input role | Time condition | Successor complete Value |
+| --- | --- | --- |
+| ACTIVE | none | exactly input Value |
+| ARMED | finite upper validity endpoint strictly before stored deadline | exactly input Value |
+| FROZEN | none | exactly input Value plus exactly B lovelace |
 
-### No SAID proof on the advance path (ratified — QC)
+ARMED response removes the ArmedV1 wrapper, advances the inner checkpoint,
+returns to ACTIVE, and keeps B. At the exact deadline response rejects and
+ClaimFreeze accepts. FROZEN thaw may be submitted by anyone but must add B;
+third-party top-up is a donation with no independent refund right. All three
+successors meet the ACTIVE reserve and preserve every unrelated native asset
+and surplus unit. No alternate response or thaw redeemer exists.
 
-Registration needed the hash-proof mint because the AID **is** the blake3
-SAID of the inception bytes — an identity claim requiring an in-script
-digest. An advance makes no such claim: the identity is already anchored by
-the spent token/datum; `event_bytes` only needs to (a) spell exactly the
-transition being written — AE1–AE10, computed from validated state — and
-(b) carry ≥ `new_toad` incoming-set receipts over those exact bytes (O1).
-The rot event's `d` (its own SAID) and `p` (prior-event SAID) spans are
-therefore **not checked**: the checkpoint tracks projected key state, not
-KEL digests, and no on-chain field exists to check them against. Any
-byte-string that spells this transition and is receipted by the incoming
-quorum is valid witness evidence. Consequence: no blake3 over `event_bytes`
-anywhere (eq6b's per-revealing-key digests are the only blake3 on the
-path), and Tx-A-style proof tokens do not exist for advances.
+Wrong role, duplicate ACTIVE output, wrong datum version, value drift, missing
+or extra AID token, own-policy mint/burn, invalid or infinite required time
+bound, non-increasing sequence, or any evidence failure rejects.
 
-**Ratified QC rationale (A-005).** Spend linearity is the prior-event binding:
-the spent outref anchors the identity and checkpoint state, while strict
-sequence monotonicity and AE1–AE10 pin the claimed rotation to the transition
-being written. A rotation with a wrong `p`, but the correct reveal at the
-correct sequence number and receipts from the required incoming threshold, is
-witnessed duplicity. That lies inside the same honest-threshold boundary on
-which the rest of the design already relies. Accordingly, leaving `d` and `p`
-unchecked is deliberate, and #116 inherits this rationale when it resolves the
-SAID question for enforcement evidence.
+## Ratified conviction burn
 
-### The advance event-binding slice set (AE1–AE10)
+Convict retains the existing witnessed-fork evidence and role-specific
+beneficiaries, but the terminal shape changes:
 
-All checks are `slice(event_bytes, off, len) == expected` with expected
-bytes computed from the datum/message — the #106/#114 discipline
-(`slice_matches`/`slices_match` are reused; the script never parses JSON):
+- the full own-policy mint map is exactly the derived AID asset at quantity
+  minus one;
+- no checkpoint-role continuing output is created;
+- ACTIVE pays exactly min-ADA + D_reg + B to the convictor;
+- ARMED pays exactly min-ADA + D_reg to the convictor and exactly B to the
+  stored hunter at a distinct output index;
+- FROZEN pays exactly min-ADA + D_reg to the convictor;
+- unrelated surplus remains ordinary transaction change.
 
-| # | Field | Expected bytes |
-|---|---|---|
-| AE1 | `t` | `"rot"` at `off_t` (3 bytes; `icp`/`dip`/`drt`/`ixn` all differ ⇒ rejected) |
-| AE2 | `i` | `qb64_aid(NEW.cesr_aid)` at `off_i` (44 chars) |
-| AE3 | `s` | `respell_hex(NEW.native_sn)` at `off_s` (KERI `s` is the rot's own sn = `native_sn_to`) |
-| AE4 | `k` | `len(off_k) == len(NEW.cur_keys)`; each `qb64_verkey(NEW.cur_keys[j])` at `off_k[j]` |
-| AE5 | `kt` | canonical re-spelling of `NEW.cur_threshold` at `off_kt` (`respell_threshold`) |
-| AE6 | `n` | `len(off_n) == len(NEW.next_keys)`; each E-code spelling of `NEW.next_keys[j]` at `off_n[j]` |
-| AE7 | `nt` | re-spelling of `NEW.next_threshold` at `off_nt` |
-| AE8 | `br` | `len(off_br) == len(wit_cut)`; each `qb64_witness_verkey(wit_cut[j])` at `off_br[j]` (B code) |
-| AE9 | `ba` | `len(off_ba) == len(wit_add)`; each `qb64_witness_verkey(wit_add[j])` at `off_ba[j]` |
-| AE10 | `bt` | `respell_hex(NEW.toad)` at `off_bt` |
+TombstoneV1, the Tombstone role/tag, tombstone output predicates, terminal
+dispatch, codec goldens, and their Haskell/Aiken tests are deleted. The pure
+lifecycle state after conviction is Absent with a burned-token terminal
+event in ledger history; fresh registration remains admissible. The tag 0x01
+is freed but not reused by this ticket. #117 owns every other exit and reap
+path.
 
-**Why offset misdirection fails here.** The receipts fix the bytes: a
-receipt only counts if an incoming-set witness signed `event_bytes`
-verbatim, so the prover cannot invent bytes without the quorum's
-cooperation. Within genuinely receipted bytes, every expected value is
-derivation-code-prefixed (`D`/`E`/`B`) or an exact re-spelling computed
-from the datum, so pointing an offset at a different field compares
-differently-coded strings and fails; duplicated `off_k` entries collapse to
-duplicate keys and fail rule F18-2 via eq8; spans into `a`/`p`/`d` compare
-against code-prefixed expectations and fail. The dedicated misdirection
-family (A-001 condition 1) is mandatory acceptance material.
+## Models, vectors, and parity
 
----
+Existing genuine keripy advance fixtures remain the oracle and are
+regenerated only through the pinned fixture environment. The positive family
+includes unwitnessed 2-key, witnessed 2-key, no-delta witnessed, witness
+downgrade, and GLEIF-shaped 3-of-7 reserve rotation. Controller signatures in
+generated vectors are re-derived over event_bytes, and the old
+AdvanceMessage goldens disappear.
 
-## Fixtures — the keripy oracle (hermetic flake extension)
+Required adversarial families cover:
 
-Extend `offchain/test/keri-fixtures/gen_fixtures.py` with a
-**witness-changing rotation family**; every honest artifact is
-reference-implementation output; existing bundles byte-unchanged;
-regeneration byte-stable:
+- every AE1 through AE10 slice and offset-misdirection class;
+- wrong-preimage, bad-index, duplicate-index, below-new-threshold, and
+  below-old-commitment controller evidence;
+- stolen current-key quorum and valid partial reserve reveal;
+- malformed cut/add sets, wrong survivor order, datum mismatch, and bad bt;
+- missing, duplicate, misindexed, cut, outgoing-only, and insufficient
+  incoming receipts;
+- absent or mismatched observer execution and action coupling;
+- ACTIVE, ARMED, and FROZEN value/time/output/token negatives;
+- repeated Arm, early/exact/late Claim/response boundary, and all live-role
+  dispatch combinations;
+- Convict without burn, wrong burn map, continuing tombstone, redirected
+  payout, and re-registration after burn.
 
-- `adv_wit_2key` — a true 2-key shape: witnessed `icp` (3 witnesses,
-  `toad = 2`) → `rot` that cuts one witness and adds one
-  (`br = [w0]`, `ba = [w3]`, `bt = 2`), with per-field offsets
-  (incl. `br`/`ba` list spans), controller sigs, and **incoming-set witness
-  receipts** over `rot.raw` (keripy nontransferable witness signers).
-- `adv_wit_7key` — the GLEIF Root shape: 7-key reserve `icp` (witnessed) →
-  partial-reveal `rot` (3-of-7, restated `kt`) with a witness cut/add and
-  receipts.
-- `adv_downgrade` — a `rot` cutting **all** witnesses (`bt = 0`; the
-  visible-downgrade positive vector, zero receipts).
-- `adv_keep` — a no-delta witnessed `rot` (`br = ba = []`, same set;
-  receipts from the unchanged set) — the common steady-state advance.
-- The offsets machinery (`_field_spans`) learns the `p`, `br`, `ba` spans;
-  seed export covers witness signers (receipts over `event_raw` stay keripy
-  output; Cardano-side `AdvanceMessage` signatures are produced in the
-  Haskell layer from exported seeds, as in #114).
-- Existing `honest_2key`/`honest_7key` rot material is reused where it fits
-  (their unwitnessed rotations exercise the `toad = 0` equalities).
+The pure Haskell lifecycle model, QuickCheck properties, generated
+Haskell-to-Aiken vectors, and full Aiken contexts agree on:
 
-Adversarial vectors (delta malformations, receipt games, misdirected
-offsets, stolen-quorum rotations) are deterministic constructions over
-these honest artifacts in the vector generators — never keripy output,
-never mutations of committed bundles.
+- ordinary Advance is admissible from every reachable live role in this
+  ticket: ACTIVE progress, ARMED response before deadline, FROZEN thaw;
+- adversarial interference is bounded: a real next event makes progress,
+  Arm opens one exclusive bounded window, Claim needs full-window absence,
+  and Convict needs a real fork;
+- conviction burns to Absent and does not bar a later registration; and
+- value conservation includes the exact B top-up and freed min-ADA payout.
 
----
+No #117 constructors are opened or changed. Existing future-model Closing
+symbols remain abstract staging only.
+
+## Thirteen-row measurement gate
+
+The full applied scripts and real handler contexts are measured under the
+strict internal ceiling of 14,000,000 memory and 10,000,000,000 CPU. Every
+ACCEPT row must use at most 10,500,000 memory and 7,500,000,000 CPU, leaving
+at least 25.00 percent headroom on both axes. A miss is a hard stop and Q-file,
+never permission to weaken a fixture or predicate.
+
+Exactly these thirteen rows are gated:
+
+1. Register 2-key unwitnessed
+2. Register witnessed 2-of-2 controller and 2-of-3 receipts
+3. Register GLEIF-shaped 7-key
+4. Arm 2-key
+5. Arm 7-key
+6. Claim
+7. Convict ACTIVE burn
+8. Convict ARMED burn
+9. Convict FROZEN burn
+10. Advance ACTIVE witnessed 2-key
+11. Advance ACTIVE GLEIF 3-of-7
+12. Advance ARMED response before deadline
+13. Advance FROZEN thaw with B top-up
+
+Each evidence-bearing row exercises both the checkpoint and observer in the
+same full transaction context and records per-script execution units where
+the tool exposes them. MEASUREMENTS.md records exact units, percentages,
+headroom, applied sizes, parameter CBOR, and the stock-cap verdict.
+
+## Live-node, preprod, and demo boundary
+
+### Hermetic live-node gate
+
+The repository E2E builder applies both production scripts with final
+parameter arity, posts both reference scripts under stock maxTxSize 16,384,
+and runs every row the pinned devnet can price honestly. The existing exact
+old-cost Plomin rejection and PENDING(blocked-on=#190) labels remain truthful
+until the upstream fixture supports the production price table. No synthetic
+validator, injected state UTxO, or widened cap substitutes.
+
+### Manual-only preprod runner
+
+A named just recipe invokes repository tooling only when the operator runs it.
+It requires KERI_PREPROD_KEY_DIR in the environment, validates that the
+directory is /home/paolino/.secrets/cardano-keri-preprod or an explicitly
+provided equivalent, requires directory mode 700 and key-file mode 600, and
+never prints key contents. It uses:
+
+- socket /code/cardano-preprod/ipc/node.socket;
+- cardano-cli from container cardano-preprod;
+- testnet magic 1;
+- payment address
+  addr_test1vzdqjmt98smx8my6f5uum0szghuy8ff2hep2e64a9w2pehgnv4mdx;
+- D_reg = 5,000,000 lovelace;
+- B = 5,000,000 lovelace;
+- W_freeze = 120,000 POSIX milliseconds;
+- checkpoint version 0; the Cardano testnet network id is 0, but network id is
+  no longer an applied script parameter after AdvanceMessage deletion.
+
+The planning query found 10,000,000,000 lovelace at
+b57dc12001e759ce06d25de1a5a2c0b9789e650a799663b27c6891f526d575ca#0,
+so no funding blocker exists.
+
+The recorded manual run must settle:
+
+1. one reference-script creation transaction for checkpoint;
+2. one reference-script creation transaction for checkpoint_observer;
+3. a production-price permissionless Register of a genuine keripy AID;
+4. Arm of that checkpoint from genuine later-event evidence; and
+5. Claim at or after the stored deadline.
+
+The rolling demo additionally exercises the #115 lifecycle available at the
+final tree: ordinary ACTIVE advance, ARMED response, and FROZEN thaw using a
+short genuine keripy KEL. If a genuine fork fixture can be demonstrated
+without pretending to run production witness infrastructure, the demo may
+also show Convict burn; it is not a substitute for the mandatory Aiken burn
+tests.
+
+Every introduced AID and KEL is produced and verified by the pinned keripy
+oracle. Local or simulated witnesses/watchers are allowed. Output records
+script hashes, AIDs, transaction ids, and explorer URLs without secret
+material. The operator pastes explorer-verifiable transaction ids into the
+PR body and mark-ready Q-file.
+
+The preprod recipe is absent from gate.sh, just ci dependencies, Nix checks,
+and .github workflows. CI remains hermetic.
+
+## Pair-owned documentation
+
+The implementation pair, never the ticket orchestrator, updates only the
+#115-owned fragments in:
+
+- docs/architecture/identity-ops.md;
+- docs/design/trust-model.md;
+- docs/blog/self-certifying-identities-on-cardano.md; and
+- docs/milestones-deck/index.html.
+
+The narrative makes permissionless projection and replay concrete, deletes
+fresh Cardano authorization language, explains event-own signatures,
+incoming receipts, ACTIVE/ARMED/FROZEN value behavior, and centers
+advance-totality plus bounded adversarial interference. It says conviction
+is recorded in the transaction history and the token is burned, not kept in a
+tombstone UTxO. The deck retains the approved line: anyone can project the
+public truth; no one can lie about it or lock you out of it.
+
+All Close discussion remains a clearly held #117 design note with distinct
+W_close. This ticket neither specifies nor implements it. Strict MkDocs,
+link, and presentation checks must pass.
 
 ## Acceptance criteria
 
-- [ ] The amended `AdvanceMessage` (18 fields, `wit_cut`/`wit_add`)
-      round-trips byte-identically between Haskell and Aiken (goldens
-      regenerated once, then frozen; registration bundles byte-unchanged);
-      stale two-seal comments gone from both message modules.
-- [ ] A real keripy witnessed `rot` fixture advances end-to-end through the
-      Aiken spend branch (constructed `ScriptContext`), for `adv_wit_2key`,
-      `adv_wit_7key`, `adv_keep`, and `adv_downgrade`.
-- [ ] Witnessed 2-of-3 advance accepted with threshold receipts; the same
-      advance with 1 receipt, 0 receipts, or `new_toad` duplicate receipts
-      from one witness rejected (V7) — **receipt-free advance rejected
-      regardless of elapsed time** (no time axis exists in the gate).
-- [ ] Witness-changing advance accepted on incoming-set receipts; a
-      receipt by a cut witness does not count (V7 structural); an
-      outgoing-only quorum (old set, disjoint from `new_set`) rejected.
-- [ ] Receipt-index games rejected: out-of-range index, index pointing at a
-      different member than the signer, duplicated indices counted once —
-      each with an executable vector.
-- [ ] Delta malformations rejected: dup cuts, dup adds,
-      add-already-present, cut-not-present, cut∩add overlap (W1/W2), datum
-      witness list ≠ derived set, wrong survivor order (eq7), `bt` out of
-      bounds (eq8) — each with an executable vector.
-- [ ] Full stolen current-key quorum cannot rotate (eq6b); partial reserve
-      3-of-7 passes (eq6a+eq6b); below-threshold and wrong-preimage
-      controller signatures rejected (V5).
-- [ ] Slice vectors: each of AE1–AE10 has at least one rejection, plus the
-      offset-misdirection family (spans into `a`/`p`/`d`, cross-field
-      offsets, code confusion, truncated/overlapping spans, duplicated
-      offsets) in both languages (A-001 condition 1).
-- [ ] Transaction-shape vectors: second output at ACTIVE, missing/extra
-      token, token minted or burned under own policy, non-V1 datum,
-      lovelace below `min_ada + d_reg`, `seq` skip, `native_sn`
-      non-increase — each rejected (V1–V4).
-- [ ] Register branch behavior unchanged at HEAD (its #114 suite green,
-      byte-identical goldens); non-`Advance` spend redeemers still fail
-      closed.
-- [ ] Haskell/Aiken parity: shared generated vectors, byte-identical
-      encodings AND identical verdicts; drift check green.
-- [ ] **Measurement gate (A-001 condition 2):** the full Advance spend
-      context measured at `adv_wit_2key`, `adv_wit_7key`, and `adv_keep`
-      shapes meets ≥25% headroom; on a miss the ticket STOPS and Q-files
-      the epic owner (fallback is never weakening checks).
-
-## Spec-checkpoint rulings (Q-005 / A-005 — ratified 2026-07-19)
-
-- **QA — APPROVED.** The 18-field `AdvanceMessage` layout above, amended **in place
-  under the `adv/v1` domain** (pre-deployment; goldens regenerate; `/v2`
-  reserved for post-deployment migration).
-- **QB — APPROVED.** `SpentCheckpoint` gains `witnesses` (validation-context type,
-  both languages); W1/W2 delta-validity live inside `advance_equalities`
-  with new error constructors; eq7 checks against the derived set.
-- **QC — APPROVED.** **No SAID/blake3 proof over the rot bytes** (section above): the
-  receipts + AE slices + dual-threshold signatures carry the binding; `d`
-  and `p` spans remain deliberately unchecked under the ratified rationale.
-- **QD — APPROVED.** No structural cap on `len(event_bytes)` (no blake3 chunk bound
-  exists on this path; the registration cap and measurement gate supply the
-  practical bounds).
-- **QE — APPROVED.** Deposit continuity as V3 (`successor lovelace >= min_ada +
-  d_reg`, same constant mechanism as R8; economics remain O3/#117).
-- **QF — APPROVED.** The slice plan in `plan.md` (S1 fixtures → S2 Haskell amendment
-  → S3 Aiken amendment+parity → S4 Haskell advance predicate → S5 Aiken
-  predicate+parity → S6 spend branch+measurement STOP gate → S7 report).
+- [ ] Both exact applied programs are less than 16,133 bytes and both signed
+      reference-script creation shapes fit stock 16,384.
+- [ ] No executable 32,768-byte devnet override or NON-DEPLOYABLE banner
+      remains; permanent size and source guards run in just ci.
+- [ ] Observer forwarding is transaction-coupled and every absent/mismatched
+      withdrawal or observer action rejects without changing evidence
+      verdicts.
+- [ ] AdvanceMessage and every fresh-signature preimage/helper/golden are
+      deleted. Controller signatures and witness receipts cover event_bytes.
+- [ ] Real pinned-keripy witnessed rotations advance from ACTIVE; forged,
+      under-signed, under-witnessed, or wrong-projection variants reject.
+- [ ] A full stolen current-key set cannot rotate; GLEIF-shaped partial
+      3-of-7 reserve reveal succeeds.
+- [ ] ARMED response is accepted only before the deadline and preserves the
+      complete Value; FROZEN thaw adds exactly B and preserves all else.
+- [ ] Convict burns exactly one AID token, creates no tombstone, pays the
+      role-specific protected value including freed min-ADA, and permits
+      later registration.
+- [ ] Haskell/Aiken bytes and verdicts agree; advance-totality and bounded
+      interference properties are executable.
+- [ ] Exactly thirteen full-handler rows pass with at least 25.00 percent
+      memory and CPU headroom.
+- [ ] Stock-cap live-node checks are honest about cardano-node-clients#190.
+- [ ] The manual preprod record contains two reference-script txids and the
+      Register, Arm, and Claim txids, all explorer-verifiable.
+- [ ] The refreshed demo uses genuine pinned-keripy AIDs/KELs and proves
+      ACTIVE advance, ARMED response, and FROZEN thaw on preprod.
+- [ ] The named #115 documentation fragments pass their strict gates and no
+      #117 implementation is present.

@@ -106,11 +106,19 @@ validator checkpoint(
   freeze_bond: Int,
   freeze_window: Int,
 ) {
-  mint(_redeemer: MintRedeemer, _policy_id: PolicyId, _tx: Transaction) {
+  mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
     expect freeze_window_valid(freeze_window)
-    fail
+    let Register { evidence } = redeemer
+    validate_register(
+      hash_proof_policy,
+      d_reg,
+      freeze_bond,
+      evidence,
+      policy_id,
+      tx,
+    )
   }
 
   spend(
@@ -263,6 +271,7 @@ fn checkpoint_input_value_valid(
 fn validate_register(
   hash_proof_policy: PolicyId,
   d_reg: Int,
+  freeze_bond: Int,
   evidence: RegistrationEvidence,
   policy_id: PolicyId,
   tx: Transaction,
@@ -290,8 +299,19 @@ fn validate_register(
   )
   expect minted_name == aid_name
   expect minted_qty == 1
-  // R2 (cont.) — the state output carries the minted token.
-  expect quantity_of(state_output.value, policy_id, aid_name) == 1
+  // R2 (cont.) — the state output's complete own-policy map is exactly the
+  // derived AID token at quantity one. Assets under foreign policies remain
+  // ordinary checkpoint-custodied surplus.
+  expect
+    dict.to_pairs(tokens(state_output.value, policy_id)) == [Pair(aid_name, 1)]
+  // Register is independent of all existing checkpoint roles. Reference
+  // inputs remain available as history, but no consumed input may be locked
+  // by this checkpoint script, including malformed same-script state.
+  expect
+    list.all(
+      inputs,
+      fn(input) { input.output.address.payment_credential != Script(policy_id) },
+    )
   // R5 — some input carries the proof token named over the PAIR
   // (event_bytes, aid) at quantity one (`list.any`: extra inputs are
   // never rejected — gate-room), and the transaction burns it (the
@@ -314,6 +334,10 @@ fn validate_register(
   let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
   expect
     registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
+  // Live bonded reserve weld: keep the shared predicate generic over d_reg,
+  // while the applied checkpoint also protects the independent freeze bond.
+  expect
+    lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg + freeze_bond
   True
 }
 

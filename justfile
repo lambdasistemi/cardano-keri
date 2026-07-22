@@ -175,9 +175,9 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
-# Measure and mechanically gate the six final R4 checkpoint ACCEPT paths.
-# Exact titles exclude staging-closed Register/Advance/Close paths. Every row
-# must pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
+# Measure and mechanically gate the nine checkpoint ACCEPT paths: the six
+# inherited #116 rows plus the three #114 Register contexts. Every row must
+# pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
 measure-checkpoint:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -193,7 +193,10 @@ measure-checkpoint:
           "measure_checkpoint_claim",
           "measure_checkpoint_convict_active",
           "measure_checkpoint_convict_armed",
-          "measure_checkpoint_convict_frozen"
+          "measure_checkpoint_convict_frozen",
+          "measure_checkpoint_register_2key",
+          "measure_checkpoint_register_witnessed",
+          "measure_checkpoint_register_7key"
         ] as $required
         | [.modules[].tests[] | select(.title | startswith("measure_checkpoint"))] as $tests
         | ($tests | map(.title)) as $actual

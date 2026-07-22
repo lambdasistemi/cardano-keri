@@ -117,3 +117,17 @@ after a fresh operator ruling.
 - The production spend dispatch remains unchanged: Advance and Close still
   fall through to rejection, while the existing #116 Arm, Claim, and Convict
   staging remains intact.
+
+## T114-R5 old-cost devnet evidence matrix
+
+The pinned devnet remains deliberately **NON-DEPLOYABLE**. Its sole genesis
+drift is `maxTxSize=32768`; the Plutus V3 cost model remains the 251-entry
+old-cost model. The current six-parameter applied program is **23,124 bytes**,
+**+3,559** bytes from the 19,565-byte baseline, and **-6,991** bytes of margin
+to the 16,133-byte deployable creation budget.
+
+| evidence | settled-on-devnet | pending-on-#190 | proven-at-preprod-#115 |
+| --- | --- | --- | --- |
+| hash-proof mint | A real node executes the production policy and rejects the mint with `CekError` / `overspending the budget` under protocol version 10; the test also reads the pinned 251-entry Plutus V3 model. | The positive mint is `PENDING(blocked-on=#190)` until the missing Plomin prices are available. Durable sources: [guide](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840036), [harness diff](https://github.com/lambdasistemi/cardano-node-clients/issues/190#issuecomment-5048840248). | #115 preprod owns the first real positive lifecycle settlement. |
+| permissionless Register with `D_reg+B`, Arm, Claim | None is claimed on this old-cost devnet: all real builders and the complete scenario are compiled by the authorized `PENDING(blocked-on=#190)` row, but not executed as a substitute positive. | `PENDING(blocked-on=#190)` for the full hash-proof mint -> Register -> Arm -> Claim chain. | #115 preprod owns the first real positive lifecycle settlement. |
+| Advance and Close | Real, tokenless staging inputs reach the applied production validator and reject; this is independent of the unavailable hash-proof mint and does not claim a positive Register lineage. | Not applicable. | #115 routes the first real positive lifecycle settlement to preprod. |

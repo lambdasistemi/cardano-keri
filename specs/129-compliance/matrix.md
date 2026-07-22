@@ -18,6 +18,12 @@ values below), `just check-onchain` (full Aiken suite, exit 0),
 
 **Verdict summary: 47 rows — 33 COMPLIANT, 9 PLANNED, 5 UNPLANNED (Q-C01..Q-C05). GO (see final page).**
 
+> **Rulings applied (A-C01..05, 2026-07-22):** all five UNPLANNED findings were
+> RATIFIED and fixed on this branch in commit `c19cd10` — see the FIXED marks
+> below. Re-verified after the fixes: `scripts/check-lean-traceability.sh`
+> pass, `lake build` clean, `mkdocs build --strict` pass. The GO verdict is
+> now unconditional on the audit side.
+
 ---
 
 ## 1. State-machine fidelity (delivered Aiken transitions vs Lean `Step`)
@@ -102,7 +108,7 @@ CI-enforced → Q-C04. Per-row:
 | 6 | advance_totality | PARTIAL | QC covers active/armed(±deadline, claim→thaw)/frozen/closing (LifecycleModelSpec.hs:79-93, 454-480); the `reaping` branch of the ∀ is unsampled (mirror lacks it) — Q-C01(4) |
 | 7 | no_absorbing_busy_state | PARTIAL | successor exhibited per live mirror state with `closeCapabilities` = the ratified `hcap` (:95-102, 583-590); reaping missing — Q-C01(4) |
 | 8 | adversarial_advance_is_progress | PARTIAL | direct: any admitted advance lands `Active (k+1)` with `hasEvent (k+1)` over 4 of 5 live source states (:186-193, 277-285); reaping missing — Q-C01(4) |
-| 9 | bounded_churn | **MISMATCH → Q-C01(1)** | prop asserts `j <= i + 3` (:112) on the no-reap machine; the theorem states `j ≤ i + 4` with `hnoreap` (Goals.lean:137); the csv row carries no annotation; Aiken vector is one 2-stall trace (lifecycle_model_tests.ak:120-137) |
+| 9 | bounded_churn | ~~MISMATCH~~ **FIXED(c19cd10)** | prop asserts `j <= i + 3` (:112) on the no-reap machine vs the theorem's `j ≤ i + 4` (Goals.lean:137); per A-C01 the row is re-marked `PENDING(#127-pipeline)` with the README delivered-mirror note; the old-machine test keeps gating the delivered code un-mapped |
 | 10 | armed_exclusive_window | FAITHFUL | full action-universe filter, admitted ⊆ {Advance, Convict}, Advance present, fork randomized (:195-202); Aiken admitted == [Advance] at slot 9 < deadline (:139-149) |
 | 11 | bond_transfer_only_via_elapsed_window | FAITHFUL (sampled) | arm-or-challengeClose pairing, `slot_i + Wf ≤ slot_j`, no intervening advance, exact `Transfer hunter B Bounty` membership, ¬fork env (:116-131); necessity direction sampled on generator-shaped traces only (header-acknowledged sampling) |
 | 12 | abandonment_pays_exactly_B | FAITHFUL | exact outflow append to the RECORDED hunter, `Frozen k`, deposits unchanged (:204-214); Aiken mirror test (:169-180) |
@@ -110,9 +116,9 @@ CI-enforced → Q-C04. Per-row:
 | 14 | close_lie_always_voidable | FAITHFUL | behind-Closing admits both voids (:216-220) |
 | 15 | close_at_tip_unchallengeable | FAITHFUL | both voids rejected at tip + finalize admitted at deadline (:222-227) |
 | 16 | current_state_is_quiet | FAITHFUL | admitted == [CloseIntent] over the full action universe, ¬fork (:229-238) |
-| 17 | value_conservation | PARTIAL | balance preserved per constructor — but over the pre-burn `carried` (Tombstone keeps min_ada, LifecycleModel.hs:148); burn/reap flows unexercised — Q-C01(3) |
-| 18 | value_conservation_trace | PARTIAL | same machine gap — Q-C01(3) |
-| 19 | convict_dominance | PARTIAL | admissibility from the 4 mirror live states checked (:248-252); the theorem's "target = `.absent`" clause untested (mirror target is Tombstone) — defensible split with PENDING row 20, but un-annotated — Q-C01(2) |
+| 17 | value_conservation | ~~PARTIAL~~ **FIXED(c19cd10)** | pre-burn `carried` (Tombstone keeps min_ada, LifecycleModel.hs:148) → row re-marked `PENDING(#127-pipeline)` per A-C01; old-machine test retained |
+| 18 | value_conservation_trace | ~~PARTIAL~~ **FIXED(c19cd10)** | same → `PENDING(#127-pipeline)` |
+| 19 | convict_dominance | ~~PARTIAL~~ **FIXED(c19cd10)** | the theorem's "target = `.absent`" clause is untestable on the tombstone-target mirror (:248-252) → row re-marked `PENDING(#127-pipeline)` per A-C01; old-machine test retained |
 | 20 | convict_burns_and_no_aid_bar | PENDING — **correctly assigned** | burn/no-bar needs the post-burn mirror; legacy sibling `prop_tombstone_terminal_but_no_aid_bar` still exists un-mapped (:254-264) as the current machine's record |
 | 21 | replay_convergence | FAITHFUL | register + N−1 advances reach Active(tip) in exactly N txs, N random (:157-168) |
 | 22 | close_cycle_requires_elapsed_window | FAITHFUL (sampled) | finalize immediately preceded by its intent, `+Wc` elapsed (:170-182); positive-shape generator; early-finalize rejection guarded by the mirror dispatch guard (`deadline <= t`, LifecycleModel.hs:233) |
@@ -121,9 +127,11 @@ CI-enforced → Q-C04. Per-row:
 | 25 | reap_requires_untouched_window | PENDING — correctly assigned | needs reap steps |
 | 26 | frozen_reap_requires_two_windows | PENDING — correctly assigned | needs reap steps |
 
-Gate enforcement: script exists and passes locally; **not invoked by
-`.github/workflows/ci.yml`, and no CI job builds the Lean library at all** —
-UNPLANNED → Q-C04 (design: "breaks CI, not trust", design note:91).
+Gate enforcement: was UNPLANNED → Q-C04 (script not invoked by CI, no Lean CI
+job) — **FIXED(c19cd10)**: `ci.yml` now has a `lean` job building the 21
+theorems (`lake build`, with the `sorry`-warning grep turned into a failure)
+and running `scripts/check-lean-traceability.sh` including the
+Haskell-regenerated vector drift check (ci.yml, job `lean`).
 
 ## 6. Measurements & budget
 
@@ -133,15 +141,15 @@ UNPLANNED → Q-C04 (design: "breaks CI, not trust", design note:91).
 | 6.2 | Recipe intact and title-pinned (staged paths cannot be substituted) | brief dim 6 | exact-title jq check over the six required `measure_checkpoint_*` | COMPLIANT | justfile:190-197 |
 | 6.3 | 16,133 budget + banner in PR #125 body | recorded | banner + `19,565/19,816/251/16,133/3,432` table + #115 hard-stop sentence | COMPLIANT | PR #125 body:15,66-72 |
 | 6.4 | 16,133 budget + banner on the e2e output path | recorded + asserted | banner every staged run; exact tuple mechanically asserted (drift fails) | COMPLIANT | CheckpointTxBuilder.hs:283,399-405 |
-| 6.5 | 16,133 budget + banner in the committed measurement docs | recorded | ABSENT — MEASUREMENTS.md has only "non-deployable HEAD" (:49); no in-tree doc carries 19,565/16,133/3,432 | UNPLANNED → Q-C05 | grep over docs/ + specs/ |
+| 6.5 | 16,133 budget + banner in the committed measurement docs | recorded | was ABSENT (Q-C05) — **FIXED(c19cd10)**: "Deployability (A-015 standing budget)" section with banner + full five-column size table appended | FIXED | specs/116-freeze-bond/MEASUREMENTS.md §Deployability |
 
 ## 7. Docs ↔ code honesty
 
 | # | Element | Observed | Class | Evidence |
 |---|---------|----------|-------|----------|
 | 7.1 | Register/Advance/Close described as staged/held wherever the target design is narrated | Blog "Staged implementation boundary" admonition; trust-model "deliberately not deployable: #116 currently opens only Arm, Claim, and Convict; #114 will open… #115… #117…"; deck disclaimer "ratified final-lifecycle framing, not a deployment claim" | COMPLIANT | blog:189-190; trust-model.md:138-140; milestones-deck/index.html:146 |
-| 7.2 | Convict narrated as BURN while delivered Convict writes a tombstone; Convict listed among the OPEN transitions; no doc discloses the delivered tombstone shape | trust-model:96-101,144-148; blog:180; overview.md:124-126; identity-on-cardano:371; PROMPT.md:144 — vs checkpoint.ak:493-526 | UNPLANNED → Q-C02 | ibid |
-| 7.3 | Freeze "not bounty-paid" fragments surviving with no owning ticket (design named them now-wrong; #116's ratified docs slice scoped 3 files and fixed them; these two are outside every pipeline slice) | identity-on-cardano/index.html:371; super-watcher.md:70 | UNPLANNED → Q-C03 | specs/116-freeze-bond/spec.md:301-309 |
+| 7.2 | Convict narrated as BURN while delivered Convict writes a tombstone | was UNPLANNED (Q-C02) — **FIXED(c19cd10)**: every staged-boundary admonition/disclaimer now states "delivered Convict still writes the terminal tombstone; the burn lands by #115" (trust-model, blog admonition, milestones-deck note, identity-on-cardano note), and the blog per-move Convict row now separates Delivered payouts from the Ratified burn incl. the min-ADA clause | FIXED | trust-model.md; blog:180,190; milestones-deck/index.html:146; identity-on-cardano/index.html:371 |
+| 7.3 | Orphaned freeze "not bounty-paid" fragments | was UNPLANNED (Q-C03) — **FIXED(c19cd10)**: both fragments now state the bonded truth (permissionless arming; `B` to the recorded hunter only after a full unanswered `W_freeze`; honest lag never pays) | FIXED | identity-on-cardano/index.html:371; super-watcher.md:70-73 |
 | 7.4 | Registration narrative still fresh-signature-based ("squatting collapses to key theft", registration signed by the event's keys) | blog:71; specs/114-registration/spec.md:78 (old spec, ruled to be re-specced) | PLANNED(→#114 re-spec + its docs slice: registration narrative) | design note:74,78 |
 | 7.5 | Advance narrative / AdvanceMessage layer docs | pending #115 docs slice | PLANNED(→#115) | design note:75,78 |
 | 7.6 | Historical registry-era pages (freeze registry, absence proof, trie MPF, FrozenFatal re-registration bar) | All carry explicit superseded/rejected-lineage banners (#92/#68); reconciliation is the standing #84 ticket | COMPLIANT (banner-labeled history) | overview.md:15-27; identity-ops.md:3-33; aid-model.md:3-10 |
@@ -151,7 +159,7 @@ UNPLANNED → Q-C04 (design: "breaks CI, not trust", design note:91).
 
 # GO / NO-GO — one page
 
-## Verdict: **GO** for unpausing #114 → #115 → #117, with five filed riders (none blocks the code ground).
+## Verdict: **GO** for unpausing #114 → #115 → #117. All five riders were ratified (A-C01..05) and FIXED on this branch in `c19cd10` — the GO is unconditional on the audit side.
 
 **Why GO.** Every DELIVERED on-chain transition matches the design of record
 and the Lean `Step` relation exactly: arm/claim/convict guards, both deadline
@@ -169,26 +177,29 @@ message-layer deletion; #115 advance/response/thaw + convict-burn + the 3,432-
 byte deployability stop; #117 close/reap/W_close/W_reap), and this matrix adds
 the precise tombstone deletion map #115 needs.
 
-**The five riders (all filed, none on-chain code):**
+**The five riders — all RATIFIED (A-C01..05) and FIXED in `c19cd10`:**
 
-| Q | What | Proposed owner | Blocking? |
-|---|------|----------------|-----------|
-| Q-C01 | Live traceability rows silently assert the pre-burn mirror (churn `i+3` vs proved `i+4`; convict target clause untested; no reaping sampling; conservation over the old machine) | (a) one-line csv/README annotation NOW + (b) mirror upgrade with convict-burn ≤#115, reap coverage #117 | No — but the annotation should land before or with unpause; without it the csv overstates what CI checks |
-| Q-C02 | Docs declare live Convict burns; merged Convict writes a tombstone; staging labels cover only Register/Advance/Close | one-line staged-boundary amendment; #115 docs slice or a docs-only commit under the pause | No |
-| Q-C03 | Orphaned "not bounty-paid" fragments (identity-on-cardano deck, super-watcher.md) — no owning ticket | add to #115's docs-slice file list (or same docs pass as Q-C02) | No |
-| Q-C04 | Traceability gate + Lean build absent from repository CI (design says "breaks CI, not trust") | CI-only fix; can land during the pause | No — but SHOULD land before #114 merges, else the pipeline's own map rows are honor-system |
-| Q-C05 | 16,133/19,565/3,432 budget recorded only in PR body + e2e assertion, not in any committed doc | one section in specs/116-freeze-bond/MEASUREMENTS.md | No |
+| Q | What | Fix landed |
+|---|------|-----------|
+| Q-C01 | Live traceability rows silently asserted the pre-burn mirror | `bounded_churn`, `value_conservation`, `value_conservation_trace`, `convict_dominance` re-marked `PENDING(#127-pipeline)`; delivered-mirror staging note added to `lean/README.md`; old-machine tests retained; the burn/reap mirror upgrade stays with ≤#115/#117 |
+| Q-C02 | Docs declared live Convict burns; merged Convict writes a tombstone | delivered-tombstone sentence added to every staged-boundary admonition (trust-model, blog, both decks); blog per-move Convict row split into Delivered vs Ratified |
+| Q-C03 | Orphaned "not bounty-paid" fragments | both fragments rewritten to the bonded-freeze truth (identity-on-cardano deck, super-watcher.md) |
+| Q-C04 | Traceability gate + Lean build absent from CI | `lean` CI job added: `lake build` + sorry-warning-as-failure + `check-lean-traceability.sh` |
+| Q-C05 | Deployable budget not committed in-tree | A-015 size table + NON-DEPLOYABLE banner + #115 hard-stop sentence appended to `specs/116-freeze-bond/MEASUREMENTS.md` |
+
+Post-fix verification: `scripts/check-lean-traceability.sh` pass ("21 Lean
+theorems mapped"), `lake build` clean, `mkdocs build --strict` pass.
 
 **Conditions that WOULD have forced NO-GO** (verified absent): any reachable
 staged branch; any payout/deadline/value inequality vs the Lean relation; a
 REGISTRY/BOUNTY/unicity remnant; a claim that a closed transition is live; a
 non-reproducible measurement row; an unfiled divergence.
 
-**Recommended unpause order (unchanged from the design):** land Q-C04 (CI) +
-the Q-C01a annotation + the Q-C02/03/05 docs pass under the pause (no
-production code, ~1 commit each), then #114 → #115 (convict-burn + tombstone
+**Recommended unpause order (unchanged from the design):** the five ruling
+fixes are landed (`c19cd10`); resume #114 → #115 (convict-burn + tombstone
 deletion map + size hard-stop) → #117 (close + reap), each with its docs and
 E2E slice per the ratified staging ladder.
 
 Audit rows: 47 — COMPLIANT 33, PLANNED 9 (1.7-live, 1.8, 1.9, 1.10, 1.11,
-1.15, 2.8, 7.4, 7.5), UNPLANNED 5 (Q-C01..Q-C05).
+1.15, 2.8, 7.4, 7.5), UNPLANNED 5 (Q-C01..Q-C05) — all five RATIFIED and
+FIXED on this branch in `c19cd10`.

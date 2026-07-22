@@ -91,13 +91,41 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
       `test(114): measure permissionless registration` with exactly
       `Tasks: T114-R4`.
 
+## Slice R5a — current-production devnet state
+
+- [ ] T114-R5a RED: start the real devnet, query/assert the 251-entry V3
+      pre-transition lineage, reproduce the production hash-proof settlement
+      failure under stale parameters, and record the pinned node version.
+- [ ] T114-R5a Prove whether the pinned node can enact PV 11. A node bump is
+      authorized only if this probe fails; if changed, record old/new versions,
+      compatibility verdict, and the exact lock delta.
+- [ ] T114-R5a Commit the full 2026-07-22 mainnet parameter snapshot in an E2E
+      fixture with provenance naming date, network, node/socket lineage, PV
+      11.0, and source SHA-256; record the same-day preprod digest as a
+      cross-check.
+- [ ] T114-R5a GREEN: submit/enact the real parameter/hard-fork transition,
+      poll it, then query/assert PV 11.0 and exact equality with all 350 V3
+      entries before settling a real production hash-proof mint. No genesis
+      cost-model patch, synthetic evaluator, pending case, or waiver.
+- [ ] T114-R5a Preserve the single genesis delta and drift proof exactly as
+      `maxTxSize 16384 -> 32768`; do not alter genesis exunits. A live witness
+      may use 16.5M/10B, while the measurement gate stays at the stricter
+      internal 14M/10B ceiling; correct the false E2E “mainnet 14M” comment.
+- [ ] T114-R5a Run the focused real-node test, both withDevnet jobs, and full
+      gate; report program bytes and both standing deltas; commit exactly
+      `test(114): initialize production cost model on devnet` with exactly
+      `Tasks: T114-R5a`.
+
 ## Slice R5 — staged checkpoint devnet
 
+- [ ] T114-R5 Restore the byte-verified suspended R5 patch, rebase its narrow
+      harness overlap onto R5a, and prove the resulting diff contains only the
+      approved R5 lifecycle surface.
 - [ ] T114-R5 RED: replace #116's Register staging rejection/pending scenarios
       with the exact #114 live-boundary expectation matrix.
 - [ ] T114-R5 GREEN: on a real devnet settle hash-proof mint + permissionless
-      Register with `D_reg+B` escrow, then settle Arm against that fresh
-      production-lineage checkpoint.
+      Register with `D_reg+B` escrow after the queried PV11/350 initialization,
+      then settle Arm against that fresh production-lineage checkpoint.
 - [ ] T114-R5 Exercise Claim according to the actual #116 dispatch at this
       head—positive if live, explicit Phase-2 rejection if intentionally
       closed—and leave no Claim scenario hidden as pending.
@@ -118,6 +146,9 @@ delta from 19,565, and margin to the 16,133-byte deployable budget.
 - [ ] T114-R6 Remove fresh Cardano-signing, registered-once, and anti-squat
       claims; explain public event-own authentication, re-registration,
       protected `D_reg+B`, conservative surplus, and third-party donation.
+- [ ] T114-R6 Correct every #114-owned claim that 14M/10B is the live mainnet
+      maximum: it is the stricter internal measurement ceiling; the
+      2026-07-22 live mainnet/preprod maximum is 16.5M/10B.
 - [ ] T114-R6 Make the theorem central: M1 blog single-UTxO argument + state
       machine + per-move table with Register row; trust-model normative
       advance-totality/bounded-interference; deck one-liner “anyone can project

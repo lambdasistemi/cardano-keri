@@ -54,9 +54,13 @@ onchain/validators/checkpoint_measurements.ak
 lean/traceability.csv                                             # audit/conditional flip only
 offchain/e2e/CheckpointE2ESpec.hs
 offchain/e2e/CheckpointTxBuilder.hs
+offchain/e2e/CageTxBuilder.hs                    # live-limit wording only
+offchain/e2e/fixtures/mainnet-pparams-2026-07-22.json
 offchain/cardano-keri.cabal
 offchain/test/Main.hs
 justfile
+offchain/flake.nix
+offchain/flake.lock                              # only if PV11 probe requires bump
 specs/114-permissionless-registration/MEASUREMENTS.md
 
 # R6 only, named fragments:
@@ -156,11 +160,42 @@ even if #114 happens to fit; the binding deployability decision remains #115.
 Commit: `test(114): measure permissionless registration` with exactly
 `Tasks: T114-R4`.
 
+## Slice R5a — current-production devnet state (`T114-R5a`)
+
+RED starts the real devnet, queries the pre-transition protocol parameters,
+asserts the repository genesis lineage has the 251-entry Plutus V3 model, and
+demonstrates that the production hash-proof witness cannot settle under that
+stale state. It also records the pinned cardano-node version and tests whether
+that binary can enact PV 11; a node-pin bump is authorized only on a proved
+compatibility failure.
+
+GREEN commits the full 2026-07-22 mainnet protocol-parameter snapshot as an
+E2E fixture with a provenance envelope naming the mainnet node/socket lineage,
+date, PV 11.0, and source digest. The same-day preprod digest is recorded as a
+cross-check. The harness then uses the real protocol-parameter/hard-fork
+transition path, polls enactment, and queries the node to assert PV 11.0 plus
+the exact 350-entry V3 model content before settling a real production
+hash-proof mint. Fixture-only assertions, synthetic evaluation, a genesis
+cost-model patch, or a pending/waived witness are forbidden.
+
+The sole genesis difference remains the existing drift-proved
+`maxTxSize 16384 -> 32768`; its old/new assertions remain live and exunit
+fields stay untouched. The live-node witness may use the current production
+16.5M/10B limit. The measurement gate stays at the stricter internal 14M/10B
+ceiling. Correct the E2E harness comment that labels 14M as a network maximum.
+If the node pin changes, record the old/new versions and the compatibility
+verdict and keep the lock delta in this slice.
+
+Commit: `test(114): initialize production cost model on devnet` with exactly
+`Tasks: T114-R5a`.
+
 ## Slice R5 — staged checkpoint devnet (`T114-R5`)
 
+After restoring and rebasing the independently verified suspended R5 patch,
 RED changes the named checkpoint E2E expectations from the #116 staging smoke
 to the exact #114 matrix. GREEN extends the existing `CageTxBuilder`-pattern
-harness and, under the already drift-checked devnet-only 32-KiB override:
+harness and, after R5a's queried PV 11/350-entry initialization and under the
+already drift-checked devnet-only 32-KiB override:
 
 - settles hash-proof mint then permissionless Register with real
   `minADA+D_reg+B` escrow;
@@ -191,6 +226,9 @@ only #114-owned registration fragments:
 The text removes fresh Cardano signing, registered-once, and anti-squat claims;
 explains event-own public authentication, repeatable registrations, protected
 `D_reg+B`, conservative surplus, and the third-party-donation residual.
+It also corrects any #114-owned statement that calls 14M/10B the live mainnet
+transaction maximum: that pair is the project's stricter internal measurement
+ceiling, while the 2026-07-22 mainnet/preprod limit is 16.5M/10B.
 It preserves the burn axiom: conviction history is the transaction, the
 checkpoint is burned, and post-conviction registration is admissible; it does
 not invent a tombstone or implement #117's reap machine.
@@ -209,11 +247,12 @@ Commit: `docs(114): explain permissionless bonded registration` with exactly
 
 ## Ordering and bisect safety
 
-`R1 -> R2 -> R3 -> R4 -> R5 -> R6` is strict. Fixture material precedes
+`R1 -> R2 -> R3 -> R4 -> R5a -> R5 -> R6` is strict. Fixture material precedes
 consumers. R2 is safe because #116 keeps mint closed. R3 atomically opens
 Register with all auth/value checks and an explicit 21-row traceability audit.
-R4 changes only measurement evidence. R5 proves the exact staging boundary
-on a real node. R6 changes only #114-owned narrative after behavior,
+R4 changes only measurement evidence. R5a proves the actual production-state
+transition and hash-proof boundary on a real node. R5 proves the exact staging
+matrix in that state. R6 changes only #114-owned narrative after behavior,
 measurements, and live-boundary evidence are stable. Every HEAD passes the full
 gate and records the current program bytes/deltas.
 
@@ -228,6 +267,6 @@ are still closed. #115 starts only from the updated main.
   excludes docs; old specs, #116 behavior, all #117 files, PR metadata, and
   pushes are always excluded.
 - A 25% miss, stale fresh-signing symbol, weakened offset/threshold canary,
-  missing traceability identifier, E2E staging mismatch, or missing size delta
-  is a Q-file stop.
+  missing traceability identifier, failed real PV11 transition, non-350 model,
+  E2E staging mismatch, or missing size delta is a Q-file stop.
 - No mark-ready, merge, deployment, or #117 resume is authorized here.

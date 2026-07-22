@@ -4,8 +4,9 @@
 **Required base**: accepted #116 freeze-bond state revision
 **Status**: RATIFIED by A-014; active on merged #116 + audit-fix base
 **Design authority**: `/tmp/keri-24/permissionless-freeze-design.md` and
-`/tmp/keri-24/verification-3-tickets.md`, A-014, A-015/A-016, and the
-burn-axiom/audit-fix state merged through PR #130
+`/tmp/keri-24/verification-3-tickets.md`, A-014, A-015/A-016,
+A-001/A-002 live-network rulings, and the burn-axiom/audit-fix state merged
+through PR #130
 
 ## Purpose and dependency
 
@@ -262,6 +263,13 @@ Every row records raw memory/CPU, percentage used, and headroom. Any row below
 fixture weakening, or measuring a pure predicate instead of the live handler
 is forbidden.
 
+The measurement ceiling remains the deliberately stricter internal
+`14,000,000` memory / `10,000,000,000` CPU budget, so the 25% limits remain
+`10,500,000` / `7,500,000,000`. It is not the current network maximum. The
+2026-07-22 live mainnet and preprod snapshots both report PV 11.0, a 350-entry
+Plutus V3 cost model, `16,500,000` memory / `10,000,000,000` CPU transaction
+limits, and `maxTxSize = 16,384`.
+
 Script size is a separate standing gate. The exact applied checkpoint program
 is recorded after every slice, with `delta = current - 19,565` and
 `budget margin = 16,133 - current`. #114 is allowed to remain over the budget,
@@ -271,10 +279,37 @@ permitted. The deployability hard stop remains #115 mark-ready, with A-015's
 binding remediation order: build-level first, then withdraw/observer
 forwarding, and mint/spend split only after a fresh operator ruling.
 
+## Current-production devnet initialization
+
+The E2E harness MUST reach the current production protocol state through the
+real node transition path before exercising the #114 lifecycle. It starts
+from the repository's valid devnet genesis and its 251-entry Plutus V3 model,
+queries and asserts that pre-transition state, then submits/enacts the actual
+protocol-parameter and hard-fork transition to PV 11.0 with the exact
+350-entry model copied from the 2026-07-22 mainnet snapshot. The test polls the
+node and asserts the post-transition protocol version, entry count, and model
+content from a fresh local-state query; checking the fixture alone is not
+evidence.
+
+The committed fixture carries public provenance: date, network, source node
+and socket lineage, protocol version, and source-file digest. Mainnet is the
+normative source; the same-day preprod snapshot is retained as cross-check
+evidence. The pinned node version is tested for PV 11 support and may be
+bumped only if that compatibility probe proves it necessary, with the old/new
+version and verdict recorded.
+
+No cost model or protocol version is patched directly into genesis. The sole
+genesis delta remains the already drift-checked devnet-only
+`maxTxSize = 16384 -> 32768` override; transaction exunit fields remain
+unchanged. A live hash-proof witness may use the current production
+`16,500,000` / `10,000,000,000` transaction ceiling, while all validator
+measurement acceptance continues to use the stricter internal 14M/10B gate.
+
 ## Staged live-node boundary
 
-The existing `withDevnet` checkpoint harness is extended in a dedicated slice.
-Against the real applied validator and real hash-proof policy it MUST:
+After that initialization slice, the existing `withDevnet` checkpoint harness
+is extended in a dedicated slice. Against the real applied validator and real
+hash-proof policy it MUST:
 
 1. settle the hash-proof mint and permissionless Register carrying
    `checkpoint_min_ada + D_reg + B`;
@@ -284,9 +319,10 @@ Against the real applied validator and real hash-proof policy it MUST:
    branch is asserted as a Phase-2 rejection, never hidden as pending; and
 4. prove Advance and Close still reach the production script and reject.
 
-The existing devnet-only `maxTxSize = 32768` override remains single-field and
-drift-checked, with the **NON-DEPLOYABLE** banner. This slice proves node
-settlement and staging truth, not production-cap deployability.
+The devnet-only `maxTxSize = 32768` override remains single-field and
+drift-checked, with the **NON-DEPLOYABLE** banner. These slices prove real
+protocol transition, node settlement, and staging truth, not production-cap
+deployability.
 
 ## Pair-owned documentation slice
 
@@ -341,11 +377,15 @@ on #116 docs.
    gate pass.
 7. The staged E2E settles Register+escrow and Arm, asserts Claim according to
    the actual dispatch, and proves Advance/Close remain fail closed.
-8. The final size table reports bytes and deltas against 19,565 and 16,133;
+8. The harness performs a real transition to queried PV 11.0 and the exact
+   provenance-pinned 350-entry mainnet V3 model before lifecycle settlement;
+   the sole genesis delta remains `maxTxSize`, and the pinned node's PV 11
+   compatibility verdict is recorded.
+9. The final size table reports bytes and deltas against 19,565 and 16,133;
    all artifacts remain prominently NON-DEPLOYABLE and #115 retains the hard
    stop.
-9. #116 behavior remains unchanged and Advance stays fail closed pending #115.
-10. The pair-owned #114 docs/slides/blog slice passes strict MkDocs and lychee;
+10. #116 behavior remains unchanged and Advance stays fail closed pending #115.
+11. The pair-owned #114 docs/slides/blog slice passes strict MkDocs and lychee;
    the two-invariant theorem is central and the orchestrator does not author
    those edits.
-11. No historical spec, #117 code, PR-ready, or merge action occurs.
+12. No historical spec, #117 code, PR-ready, or merge action occurs.

@@ -32,7 +32,8 @@ abbrev Value := Nat
 
 /-- Deployment parameters. -/
 structure Params where
-  /-- min-ADA riding on the checkpoint UTxO; stays on the tombstone record. -/
+  /-- min-ADA riding on the checkpoint UTxO; released (burnt out) on every
+  exit — close, reap, or convict. Nothing keeps a UTxO just to remember. -/
   minAda : Value
   /-- `D_reg`, the conviction deposit — forfeit to a convictor on a fork. -/
   D : Value
@@ -42,6 +43,9 @@ structure Params where
   Wf : Nat
   /-- `W_close`: the CLOSING challenge window, in slots. -/
   Wc : Nat
+  /-- `W_reap`: the REAPING abandonment window, in slots (third challenge
+  window; months-scale, `≫ Wf`). -/
+  Wr : Nat
 
 /-- An abstract KEL event; only its sequence number is visible to the model. -/
 structure Event where
@@ -77,14 +81,24 @@ structure Env where
   closeIntent datum-key signature check ONLY, not key custody or honesty. -/
   canClose : Seq → Prop
 
-/-- Machine states of one token instance. -/
+/-- Where a REAPING state was entered from — the only thing that distinguishes
+a reap of an abandoned FROZEN checkpoint (escrow `min + D`, bond already paid
+out) from a reap of a stale-and-behind CLOSING checkpoint (escrow
+`min + D + B`). Fixes the reaping UTxO's value and the thaw top-up. -/
+inductive ReapOrigin where
+  | fromFrozen
+  | fromClosing
+
+/-- Machine states of one token instance. The burn axiom removed the eternal
+`tombstone` residue (convict now burns straight to `absent`); `reaping` — the
+third, abandonment challenge window — replaces it as a live, transient role. -/
 inductive MachState where
   | absent
   | active (k : Seq)
   | armed (k : Seq) (hunter : Addr) (deadline : Slot)
   | frozen (k : Seq)
   | closing (k : Seq) (refund : Addr) (deadline : Slot)
-  | tombstone (k : Seq)
+  | reaping (k : Seq) (reaper : Addr) (deadline : Slot) (origin : ReapOrigin)
 
 /-- The mirrored KEL position, when the instance exists on-chain. -/
 def MachState.seq? : MachState → Option Seq
@@ -93,26 +107,43 @@ def MachState.seq? : MachState → Option Seq
   | .armed k _ _ => some k
   | .frozen k => some k
   | .closing k _ _ => some k
-  | .tombstone k => some k
+  | .reaping k _ _ _ => some k
 
-/-- Live (non-terminal, on-chain) states: the four spendable role states. -/
+/-- Live (non-terminal, on-chain) states: the five spendable role states —
+the reaping challenge window is live (advance-voidable / reap-executable),
+never an absorbing residue. -/
 def MachState.live : MachState → Prop
   | .active _ => True
   | .armed _ _ _ => True
   | .frozen _ => True
   | .closing _ _ _ => True
+  | .reaping _ _ _ _ => True
   | _ => False
+
+/-- The escrow a REAPING UTxO carries, by origin: a FROZEN reap keeps
+`min + D` (the bond already left as a bounty); a stale-CLOSING reap keeps the
+full `min + D + B`. -/
+def reapEscrow (p : Params) : ReapOrigin → Value
+  | .fromFrozen => p.minAda + p.D
+  | .fromClosing => p.minAda + p.D + p.B
+
+/-- The deposit a thaw-out-of-reaping must re-post to top the successor escrow
+back to exactly `min + D + B` (generalises the frozen thaw's `B` re-post):
+`reapEscrow o + reapTopUp o = min + D + B` for either origin. -/
+def reapTopUp (p : Params) : ReapOrigin → Value
+  | .fromFrozen => p.B
+  | .fromClosing => 0
 
 /-- The value-ledger rule: what each state's UTxO carries.
 Active/Armed/Closing: `min + D + B`; Frozen: `min + D` (B paid out);
-Tombstone: `min`. -/
+Reaping: its origin's escrow; Absent: nothing (everything burnt/paid out). -/
 def carried (p : Params) : MachState → Value
   | .absent => 0
   | .active _ => p.minAda + p.D + p.B
   | .armed _ _ _ => p.minAda + p.D + p.B
   | .frozen _ => p.minAda + p.D
   | .closing _ _ _ => p.minAda + p.D + p.B
-  | .tombstone _ => p.minAda
+  | .reaping _ _ _ o => reapEscrow p o
 
 /-- Why a payout left the machine. -/
 inductive TransferKind where
@@ -122,6 +153,9 @@ inductive TransferKind where
   | forfeiture
   /-- `min + D + B` returned by an unchallenged finalized close. -/
   | refund
+  /-- The whole remaining escrow taken by a reaper on an untouched
+  abandonment window (the reap burn). -/
+  | reap
 
 /-- One payout out of the machine. -/
 structure Transfer where
@@ -164,6 +198,10 @@ inductive Action where
   | challengeClose (challenger : Addr)
   | finalizeClose
   | convict (convictor : Addr)
+  /-- Post a reap-intent (abandonment challenge) recording the reaper. -/
+  | reapIntent (reaper : Addr)
+  /-- Execute a reap after an untouched window: burn the UTxO, pay the reaper. -/
+  | reapExecute
 
 /-- A transition occurrence: the slot it happens at and the action taken. -/
 structure Tx where
@@ -234,29 +272,70 @@ inductive Step (p : Params) (env : Env) : Config → Tx → Config → Prop
       (hdeadline : d ≤ t) :
       Step p env ⟨.closing k r d, led⟩ ⟨t, .finalizeClose⟩
         ⟨.absent, { led with outflows := led.outflows ++ [⟨r, p.minAda + p.D + p.B, .refund⟩] }⟩
-  /-- Active k → Tombstone k on fork evidence: `D` and `B` to the convictor. -/
+  /-- Active k → Absent on fork evidence (the burn axiom: convict BURNS, no
+  tombstone residue). Full escrow out: `D` and `B` and the freed min-ADA to
+  the convictor. -/
   | convictActive {led : Ledger} {k : Seq} {t : Slot} (c : Addr)
       (hfork : env.fork) :
       Step p env ⟨.active k, led⟩ ⟨t, .convict c⟩
-        ⟨.tombstone k, { led with outflows := led.outflows ++ [⟨c, p.D, .forfeiture⟩, ⟨c, p.B, .forfeiture⟩] }⟩
-  /-- Armed k → Tombstone k on fork evidence: `D` to the convictor, `B` to
-  the armed hunter. -/
+        ⟨.absent, { led with outflows := led.outflows ++
+          [⟨c, p.D, .forfeiture⟩, ⟨c, p.B, .forfeiture⟩, ⟨c, p.minAda, .forfeiture⟩] }⟩
+  /-- Armed k → Absent on fork evidence: `D` and the freed min-ADA to the
+  convictor, `B` to the armed hunter (the one routing exception). -/
   | convictArmed {led : Ledger} {k : Seq} {hunter : Addr} {d : Slot} {t : Slot}
       (c : Addr) (hfork : env.fork) :
       Step p env ⟨.armed k hunter d, led⟩ ⟨t, .convict c⟩
-        ⟨.tombstone k, { led with outflows := led.outflows ++ [⟨c, p.D, .forfeiture⟩, ⟨hunter, p.B, .bounty⟩] }⟩
-  /-- Frozen k → Tombstone k on fork evidence: `D` to the convictor (`B` is
-  already gone). -/
+        ⟨.absent, { led with outflows := led.outflows ++
+          [⟨c, p.D, .forfeiture⟩, ⟨hunter, p.B, .bounty⟩, ⟨c, p.minAda, .forfeiture⟩] }⟩
+  /-- Frozen k → Absent on fork evidence: `D` and the freed min-ADA to the
+  convictor (`B` is already gone). -/
   | convictFrozen {led : Ledger} {k : Seq} {t : Slot} (c : Addr)
       (hfork : env.fork) :
       Step p env ⟨.frozen k, led⟩ ⟨t, .convict c⟩
-        ⟨.tombstone k, { led with outflows := led.outflows ++ [⟨c, p.D, .forfeiture⟩] }⟩
-  /-- Closing k → Tombstone k on fork evidence: `D` and `B` to the convictor
-  (convict dominates every live state). -/
+        ⟨.absent, { led with outflows := led.outflows ++
+          [⟨c, p.D, .forfeiture⟩, ⟨c, p.minAda, .forfeiture⟩] }⟩
+  /-- Closing k → Absent on fork evidence: `D` and `B` and the freed min-ADA
+  to the convictor (convict dominates every live state). -/
   | convictClosing {led : Ledger} {k : Seq} {r : Addr} {d : Slot} {t : Slot}
       (c : Addr) (hfork : env.fork) :
       Step p env ⟨.closing k r d, led⟩ ⟨t, .convict c⟩
-        ⟨.tombstone k, { led with outflows := led.outflows ++ [⟨c, p.D, .forfeiture⟩, ⟨c, p.B, .forfeiture⟩] }⟩
+        ⟨.absent, { led with outflows := led.outflows ++
+          [⟨c, p.D, .forfeiture⟩, ⟨c, p.B, .forfeiture⟩, ⟨c, p.minAda, .forfeiture⟩] }⟩
+  /-- Reaping → Absent on fork evidence: the whole carried escrow to the
+  convictor (not armed, so no hunter exception). -/
+  | convictReaping {led : Ledger} {k : Seq} {reaper : Addr} {d : Slot}
+      {o : ReapOrigin} {t : Slot} (c : Addr) (hfork : env.fork) :
+      Step p env ⟨.reaping k reaper d o, led⟩ ⟨t, .convict c⟩
+        ⟨.absent, { led with outflows := led.outflows ++ [⟨c, reapEscrow p o, .forfeiture⟩] }⟩
+  /-- Frozen k → Reaping: the abandonment challenge. Permissionless (anyone
+  may reap a truly-abandoned checkpoint); records the reaper and
+  `deadline = slot + Wr`. Escrow (`min + D`) is untouched. -/
+  | reapIntentFrozen {led : Ledger} {k : Seq} {t : Slot} (reaper : Addr) :
+      Step p env ⟨.frozen k, led⟩ ⟨t, .reapIntent reaper⟩
+        ⟨.reaping k reaper (t + p.Wr) .fromFrozen, led⟩
+  /-- Closing k → Reaping: reap-intent on a stale-and-behind CLOSING (deadline
+  passed unfinalized, and a later event exists — a genuinely non-current
+  close). The behind guard is a soundness strengthening over the brief's
+  "stale only" (see Q-B01): it keeps reap off an honest tip-close's refund and
+  makes every reachable reaping behind. Escrow (`min + D + B`) is untouched. -/
+  | reapIntentClosing {led : Ledger} {k : Seq} {r : Addr} {d : Slot} {t : Slot}
+      (reaper : Addr) (hstale : d ≤ t) (hbehind : env.kel.behind k) :
+      Step p env ⟨.closing k r d, led⟩ ⟨t, .reapIntent reaper⟩
+        ⟨.reaping k reaper (t + p.Wr) .fromClosing, led⟩
+  /-- Reaping → Active (k+1): the advance-void — a later-event proof voids the
+  reap and applies it; the advancer tops the successor escrow back to exactly
+  `min + D + B` (generalises thaw). REQUIRED, admissible at every slot while
+  reaping. -/
+  | advanceReaping {led : Ledger} {k : Seq} {reaper : Addr} {d : Slot}
+      {o : ReapOrigin} {t : Slot} (hnext : env.kel.hasEvent (k + 1)) :
+      Step p env ⟨.reaping k reaper d o, led⟩ ⟨t, .advance⟩
+        ⟨.active (k + 1), { led with deposits := led.deposits + reapTopUp p o }⟩
+  /-- Reaping → Absent: an untouched full window lets the reaper burn the UTxO
+  and take the whole remaining escrow (the `.reap` transfer). -/
+  | reapExecute {led : Ledger} {k : Seq} {reaper : Addr} {d : Slot}
+      {o : ReapOrigin} {t : Slot} (hdeadline : d ≤ t) :
+      Step p env ⟨.reaping k reaper d o, led⟩ ⟨t, .reapExecute⟩
+        ⟨.absent, { led with outflows := led.outflows ++ [⟨reaper, reapEscrow p o, .reap⟩] }⟩
 
 /-- A slot-monotone (non-strict) run of the machine, starting no earlier than
 the given slot. -/
@@ -277,7 +356,7 @@ def Reachable (p : Params) (env : Env) (cfg : Config) : Prop :=
 abbrev InstanceId := Nat
 
 /-- A family of instances of the SAME AID, sharing one `Env`. Needed only to
-state that a tombstone on one instance bars nothing on a fresh one. -/
+state that a burnt (convicted) instance bars nothing on a fresh one. -/
 abbrev Sys := InstanceId → Config
 
 /-- One instance steps; the others are untouched. -/

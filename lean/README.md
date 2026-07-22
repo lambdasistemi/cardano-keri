@@ -184,6 +184,19 @@ controller can act; behind the tip, anyone can help.** Goal 18
 (`dead_end_freedom`) is the burn axiom made a theorem: **nothing that is only
 a memory keeps a UTxO — every live state can move, or be reclaimed and burnt.**
 
+**Delivered-mirror staging note (A-C01, 2026-07-22).** The executable
+Haskell/Aiken mirror (`LifecycleModel.hs` / `lifecycle_model.ak`) gates the
+DELIVERED pre-burn machine: convict targets a tombstone, there is no reaping
+state, and the churn bound there is `j ≤ i + 3`. A `traceability.csv` row is
+live only when its mapped property asserts the same statement as its theorem
+on both machines; rows whose statements differ under the burn axiom —
+`bounded_churn` (`j ≤ i + 4` with `hnoreap`), `convict_dominance` (the
+`.absent` target), and both `value_conservation` forms (the burn-aware value
+ledger) — are `PENDING(#127-pipeline)` and flip when the pipeline lands the
+burn/reap mirror (convict-burn no later than #115; reap with #117). No test
+was deleted: the old-machine properties and Aiken parity tests keep gating the
+delivered code meanwhile; only the mapping claim is corrected.
+
 ## Questions and rulings
 
 The statement-precision questions Q-L01..Q-L03 (filed under

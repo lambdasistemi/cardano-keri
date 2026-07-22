@@ -49,3 +49,21 @@ Register, every Advance path, and Close remain absent from this table because
 they are staging-closed at this non-deployable HEAD. Exact measurement-title
 checking in `just measure-checkpoint` rejects any attempt to substitute those
 paths for the six required final contexts.
+
+## Deployability (A-015 standing budget)
+
+**=== NON-DEPLOYABLE UNDER THE PRODUCTION 16,384-BYTE CAP ===**
+
+Real-shape size measurement of the applied production program, mechanically
+asserted on every staged E2E run (`offchain/e2e/CheckpointTxBuilder.hs`,
+`expectedCheckpointSizeBudget` — drift fails the run):
+
+| applied program | reference-script creation tx | framing | deployable budget | over budget |
+| ---: | ---: | ---: | ---: | ---: |
+| 19,565 | 19,816 | 251 | 16,133 | 3,432 |
+
+The deployable budget is the production cap minus the measured
+creation-transaction framing: `16,384 − 251 = 16,133` bytes. Script size is a
+standing per-ticket budget from here on: #114 must report its size delta
+against these numbers, and #115 mark-ready is the hard deployability stop
+against the final validator shape (pre-ruled remediation order in A-015).

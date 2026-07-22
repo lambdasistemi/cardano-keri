@@ -13,7 +13,7 @@ ever back operators with a valid Legal Entity vLEI.
     a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
     asset_name)` lookup** (candidate outref for liveness only, re-validated against the
     ledger). "Active" is enforced as its **live UTxO in the accepted mint/spend lineage** (not
-    a closed/tombstoned one) **and** the AID **absent from the separate, shared,
+    a closed/convicted one) **and** the AID **absent from the separate, shared,
     attacker-contendable R-FRZ freeze registry** — not a status field in the datum. A
     `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so an owner signature
     made under the prior sequence is **stale** and must be **re-signed** by the current

@@ -121,7 +121,7 @@ provide the Aiken verifier that walks the chain. The steps span two planes:
     **Lifecycle / freeze are not datum fields.** The `CheckpointDatum` carries only the
     AID/sequence binding + current weighted key state. Close / lifecycle is enforced by the
     checkpoint's **asset mint/spend lineage** (the referenced checkpoint must be the current
-    live UTxO, not closed/tombstoned/migrated); freeze is the **separate shared R-FRZ** rule
+    live UTxO, not closed/convicted/migrated); freeze is the **separate shared R-FRZ** rule
     (attacker-contendable residual). The mechanical re-cut is downstream #24.
 
 ### Gate flow
@@ -164,7 +164,7 @@ checkpoint**. Every subsequent gated action then checks, atomically with the
 trade: the **acting entity's** signature(s) meeting the weighted threshold of the
 current keys in its **sovereign per-AID checkpoint** (read as a CIP-31 reference
 input); that the referenced checkpoint is the **current live UTxO in the accepted
-lineage** (not closed/tombstoned); **absence from the separate shared R-FRZ
+lineage** (not closed/convicted); **absence from the separate shared R-FRZ
 freeze registry**; and non-revocation across the credential chain's issuer TELs.
 Lifecycle and freeze are **validation rules**, not `CheckpointDatum` fields.
 

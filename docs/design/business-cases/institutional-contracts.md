@@ -179,7 +179,7 @@ On top of L1–L4:
     - *Live per transition*: re-read the **acting officer AID's sovereign
       per-AID checkpoint** as a CIP-31 reference input at every spend — a
       witness set meeting its current weighted keys/threshold, its live UTxO in
-      the accepted mint/spend lineage (not closed/tombstoned), the AID absent
+      the accepted mint/spend lineage (not closed/convicted), the AID absent
       from the shared R-FRZ freeze registry — plus OOR non-revocation (L2 TEL)
       linking it to the fixed LE. The honest default for institutional risk:
       each transition is a fresh attestation; a `delta = 0` rotation of the

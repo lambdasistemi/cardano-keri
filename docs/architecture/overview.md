@@ -70,7 +70,7 @@ KeyState {
 IdentityStatus {
   Active
   FrozenFatal { event_1, sig_1, event_2, sig_2, seq }  -- duplicity proof, irrecoverable
-  Closed                                               -- tombstone; deposit returned
+  Closed                                               -- token burnt; deposit returned
 }
 ```
 
@@ -106,7 +106,7 @@ material, not by any operator key:
 |---|---|
 | Inception | `cur_pubkey` signature over `inc_msg` + ADA deposit + absence proof |
 | Rotation | `blake2b_256(reveal_key) == next_digest` **and** `reveal_key` signature over `rot_msg` |
-| Close (tombstone) | `cur_pubkey` signature over `close_msg`; deposit returned |
+| Close (burn + refund) | `cur_pubkey` signature over `close_msg`; deposit returned |
 | Duplicity freeze | machine-verifiable `DuplicityProof` (two conflicting signed KERI events) |
 | Emergency freeze | `next_key` signature — marker in the separate freeze registry |
 
@@ -121,9 +121,12 @@ Exact message formats and on-chain checks are specified in
     on-chain with an attacker-chosen `new_next` and capture the identity. See
     [Identity Operations — Rotation](identity-ops.md#rotation).
 
-A convicted checkpoint token is moved to a **permanent tombstone** (a closed
-identity's token is likewise retired). The tombstone is a permanent, queryable
-per-AID record — but it does **not** bar re-registration. There is no inception
+A convicted checkpoint token is **burnt** (a closed identity's token is likewise
+burnt, its deposit refunded) — everything not spendable, even by reference, is
+burnt (the burn axiom). There is no tombstone: the conviction is recorded the way
+everything is on a blockchain — in the convict transaction, in history, forever —
+and the ledger's permanent footprint stays exactly the live identities. Burning
+does **not** bar re-registration. There is no inception
 absence proof and no global uniqueness gate, so if KERI still carries the AID it
 may register a fresh checkpoint: Cardano mirrors KERI and never permanently
 blocks an identity. A duplicate registration is possible but self-defeating —

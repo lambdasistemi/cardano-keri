@@ -66,8 +66,8 @@ Do not use “implemented” as a blanket deck-level adjective.
 - Use complete sentences. Avoid stacks of slogan fragments such as “Compare.
   Prove. Get paid.”
 - Prefer everyday verbs: “bring,” “find,” “read,” “update,” “pause,” “recover,”
-  and “retire.” Put exact protocol verbs such as `mint`, `freeze`, `tombstone`,
-  and `convict` in the supporting explanation.
+  and “retire.” Put exact protocol verbs such as `mint`, `freeze`, `convict`, `reap`,
+  and `close` in the supporting explanation.
 - Define an acronym the first time it appears. For example: “the public KERI
   event log (KEL).”
 - Do not assume the audience knows `AID`, `KEL`, `TEL`, `CIP-31`, `n`, `nt`, or
@@ -134,18 +134,18 @@ The following claims are fixed:
   liveness only.
 - The third attack is prevented at advance time: without the configured witness
   receipts, proposed Cardano keys never become active and therefore cannot
-  authorize an action that a later tombstone would be unable to roll back.
+  authorize an action that a later burn would be unable to roll back.
 - A witnessed later KERI event can freeze a lagging checkpoint until it advances;
   freeze is permissionless and is not paid from the identity deposit by default.
 - Permanent conviction is restricted to a V1-independent-AID conflict proved
   irreconcilable under supported KERI rules. The conflicting establishment
   rotation must satisfy both the pre-committed controller threshold and the
-  applicable witness-receipt threshold. The existing quantity-one token moves
-  to a permanent tombstone; it is not burned and recreated. Recoverable or
+  applicable witness-receipt threshold. The existing quantity-one token is
+  **burned** — the conviction is recorded in the convict transaction, in history, not in a tombstone UTxO. Recoverable or
   ambiguous evidence freezes instead. Only successful conviction pays the
   prover from the deposit.
-- M1 also includes KEL replay/dual-root reconstruction, lifecycle with
-  discoverable tombstones, and a per-issuer TEL revocation-status registry.
+- M1 also includes KEL replay/dual-root reconstruction, lifecycle with conviction/retirement
+  records discoverable in transaction history, and a per-issuer TEL revocation-status registry.
 - The wire contract is frozen and byte-tested across Haskell (195 tests) and
   Aiken (157 checks).
 - The M1 acceptance demo is a runnable local-devnet terminal cast: incept a
@@ -186,8 +186,8 @@ The following claims are fixed:
 10. **Public checks keep Cardano and KERI in sync.** Three columns: Cardano tries
     to move first without receipts → reject before activation; KERI moved first →
     pause without a conviction bounty; irreconcilable, controller-threshold-signed
-    and witness-threshold-receipted V1 rotations → move the same token to a
-    permanent tombstone and pay the conviction prover. State that recoverable or
+    and witness-threshold-receipted V1 rotations → burn the same token
+    and pay the conviction prover. State that recoverable or
     ambiguous evidence freezes rather than destroys the AID.
 11. **The same public evidence supports useful services.** Watcher: keep the two
     histories aligned. Auditor: build reports from replayable facts. Issuer:

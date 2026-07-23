@@ -9,11 +9,10 @@
 //// claim's action and runs the UNCHANGED registration/freeze/convict
 //// predicates over it.
 ////
-//// The action-tag positions are frozen now so R3 can open Advance without
-//// changing later tags:
+//// The action-tag positions are frozen:
 ////
 ////   0 ObserveRegister
-////   1 ObserveAdvance   (fails closed in R1)
+////   1 ObserveAdvance   (opened in R3; event-own signatures)
 ////   2 ObserveFreeze
 ////   3 ObserveConvict
 ////
@@ -28,6 +27,9 @@ use aiken/collection/list
 use cardano/address.{Script, from_script}
 use cardano/assets.{PolicyId, lovelace_of, quantity_of, tokens}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
+use cardano_keri/checkpoint/advance.{
+  AdvanceEvidence, AdvancePredicateValid, advance_predicate,
+}
 use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{
   ConvictValid, EnforcementBindingValid, EnforcementEvidence, EventEvidence,
@@ -35,6 +37,7 @@ use cardano_keri/checkpoint/enforcement.{
   freeze_predicate,
 }
 use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
+use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
   registration_predicate,
@@ -73,8 +76,9 @@ pub type ObserverEnvelope {
 /// identical lovelace quantity.
 const checkpoint_min_ada: Int = 2_000_000
 
-/// Lifecycle dispatch (A-004 family split): ObserveRegister only. ObserveAdvance
-/// retains tag 1 but fails closed throughout R1, as does every other action.
+/// Lifecycle dispatch (R3 four-program): ObserveRegister only.
+/// ObserveAdvance, ObserveFreeze, ObserveConvict, and every unknown action
+/// fail closed (Advance moved to validate_advance / observer_advance).
 pub fn validate_lifecycle(
   hash_proof_policy: PolicyId,
   d_reg: Int,
@@ -85,8 +89,19 @@ pub fn validate_lifecycle(
   if claim.action == observe_register {
     observe_register_impl(hash_proof_policy, d_reg, claim, payload, tx)
   } else {
-    // ObserveAdvance, ObserveFreeze, ObserveConvict, and every unknown action
-    // fail closed in the lifecycle observer.
+    // ObserveAdvance, ObserveFreeze, ObserveConvict, unknown: fail closed.
+    fail
+  }
+}
+
+/// Advance dispatch (R3 four-program): ObserveAdvance only.
+/// ObserveRegister, ObserveFreeze, ObserveConvict, and every unknown action
+/// fail closed.
+pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
+  let ObserverEnvelope { claim, payload } = envelope
+  if claim.action == observe_advance {
+    observe_advance_impl(claim, payload, tx)
+  } else {
     fail
   }
 }
@@ -150,6 +165,56 @@ fn observe_register_impl(
   let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
   expect
     registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
+  True
+}
+
+/// ObserveAdvance: resolve the named checkpoint input to its OLD V1 datum
+/// (ACTIVE role for R3 — ARMED/FROZEN spend coupling opens in R4), require a
+/// unique ACTIVE successor with NEW V1 datum, and run the pure
+/// `advance_predicate` over OLD, NEW, and the event-own AdvanceEvidence
+/// (controller signatures over exact event_bytes, dual thresholds, W1-W3,
+/// AE1-AE10, incoming-set receipts).
+fn observe_advance_impl(
+  claim: ObserverClaim,
+  payload: Data,
+  tx: Transaction,
+) -> Bool {
+  expect evidence: AdvanceEvidence = payload
+  expect Some(own_ref) = claim.own_ref
+  let Transaction { inputs, outputs, .. } = tx
+  let policy_id = claim.checkpoint_policy
+  // Named spent checkpoint input: locked by h, ACTIVE address, inline V1(OLD).
+  // A-017: ACTIVE == from_script(policy); CSE across own-input and successor.
+  // Payment Script(policy) is implied by full-address equality.
+  expect Some(own_input) = find_input(inputs, own_ref)
+  let active = from_script(policy_id)
+  expect own_input.output.address == active
+  expect InlineDatum(old_data) = own_input.output.datum
+  expect V1(old): CheckpointDatum = old_data
+  // Unique ACTIVE successor carries inline V1(NEW).
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == active },
+  )
+  expect InlineDatum(new_data) = state_output.datum
+  expect V1(new): CheckpointDatum = new_data
+  // Spent context for the pure transition (locator + W1-W3 base + prior
+  // commitment). Deployment/out-ref fields are filled from the claim and
+  // named input; pure equalities no longer re-check message-bound eq1/eq3/eq4.
+  let spent = SpentCheckpoint {
+    network_id: 0,
+    policy_id,
+    aid_asset_name: deriveAidAssetName(old.cesr_aid),
+    txid: own_ref.transaction_id,
+    index: own_ref.output_index,
+    cesr_aid: old.cesr_aid,
+    witnesses: old.witnesses,
+    next_keys: old.next_keys,
+    next_threshold: old.next_threshold,
+    seq: old.seq,
+    native_sn: old.native_sn,
+  }
+  expect advance_predicate(spent, new, evidence) == AdvancePredicateValid
   True
 }
 

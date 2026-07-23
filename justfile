@@ -303,12 +303,15 @@ check-checkpoint-deployability:
           ("observer_lifecycle", [ver, hp, dreg]) -> do
             hpB <- maybe (fail "hp") pure (decodeHex (T.pack hp))
             pure (serialiseUPLC (prog `applyDataArg` I (read ver) `applyDataArg` B hpB `applyDataArg` I (read dreg)))
+          ("observer_advance", [ver]) ->
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver)))
           ("observer_enforcement", [ver]) ->
             pure (serialiseUPLC (prog `applyDataArg` I (read ver)))
-          ("checkpoint", [ver, lh, eh, dreg, bond, window]) -> do
+          ("checkpoint", [ver, lh, ah, eh, dreg, bond, window]) -> do
             lhB <- maybe (fail "lh") pure (decodeHex (T.pack lh))
+            ahB <- maybe (fail "ah") pure (decodeHex (T.pack ah))
             ehB <- maybe (fail "eh") pure (decodeHex (T.pack eh))
-            pure (serialiseUPLC (prog `applyDataArg` I (read ver) `applyDataArg` B lhB `applyDataArg` B ehB `applyDataArg` I (read dreg) `applyDataArg` I (read bond) `applyDataArg` I (read window)))
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver) `applyDataArg` B lhB `applyDataArg` B ahB `applyDataArg` B ehB `applyDataArg` I (read dreg) `applyDataArg` I (read bond) `applyDataArg` I (read window)))
           _ -> fail "bad mode"
         let outBS = SBS.fromShort out
         writeFile outhex (toHex outBS)
@@ -359,17 +362,22 @@ check-checkpoint-deployability:
     cabal exec -v0 --project-file=cabal.project.devshell -- ghc -O2 \
       "$tmp/serializer.hs" -o "$tmp/serializer"
 
-    # 4. Extract raw compiled code for the three family-split validators
-    #    (selected by module + validator name via their blueprint titles, never
-    #    by handler purpose).
+    # 4. Extract raw compiled code for the four programs (selected by module +
+    #    validator name via their blueprint titles, never by handler purpose).
     lc_raw="$tmp/lc.raw.hex"
+    ad_raw="$tmp/ad.raw.hex"
     ef_raw="$tmp/ef.raw.hex"
     cp_raw="$tmp/cp.raw.hex"
     jq -r '.validators[] | select(.title=="checkpoint_observer.observer_lifecycle.withdraw") | .compiledCode' "$blueprint" > "$lc_raw"
+    jq -r '.validators[] | select(.title=="checkpoint_observer.observer_advance.withdraw") | .compiledCode' "$blueprint" > "$ad_raw"
     jq -r '.validators[] | select(.title=="checkpoint_observer.observer_enforcement.withdraw") | .compiledCode' "$blueprint" > "$ef_raw"
     jq -r '.validators[] | select(.title=="checkpoint.checkpoint.spend") | .compiledCode' "$blueprint" > "$cp_raw"
     if [ ! -s "$lc_raw" ] || [ "$(cat "$lc_raw")" = "null" ]; then
       echo "ERROR: observer_lifecycle validator not found in blueprint" >&2
+      exit 1
+    fi
+    if [ ! -s "$ad_raw" ] || [ "$(cat "$ad_raw")" = "null" ]; then
+      echo "ERROR: observer_advance validator not found in blueprint" >&2
       exit 1
     fi
     if [ ! -s "$ef_raw" ] || [ "$(cat "$ef_raw")" = "null" ]; then
@@ -383,26 +391,39 @@ check-checkpoint-deployability:
 
     # 5. Apply the frozen parameters via the builder's Haskell path, in the
     #    off-chain order: observer_lifecycle(version=0, hash_proof_policy,
-    #    d_reg=1000000000); observer_enforcement(version=0); then
-    #    checkpoint(version=0, lifecycle_hash, enforcement_hash,
-    #    d_reg=1000000000, freeze_bond=5000000, freeze_window=500). Each
-    #    observer hash is the PlutusV3 script hash (blake2b-224 of 0x03 ++
-    #    applied bytes) of its fully-applied program.
+    #    d_reg=1000000000); observer_advance(version=0);
+    #    observer_enforcement(version=0); then checkpoint(version=0,
+    #    lifecycle_hash, advance_hash, enforcement_hash, d_reg=1000000000,
+    #    freeze_bond=5000000, freeze_window=500). Each observer hash is the
+    #    PlutusV3 script hash (blake2b-224 of 0x03 ++ applied bytes) of its
+    #    fully-applied program. observer_advance must be <= 15333 (>=800 slack).
     hp_policy="4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
     lc_size=$("$tmp/serializer" observer_lifecycle "$lc_raw" "$tmp/lc.applied.hex" 0 "$hp_policy" 1000000000)
     lc_hash=$( { printf '\x03'; xxd -r -p "$tmp/lc.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
+    ad_size=$("$tmp/serializer" observer_advance "$ad_raw" "$tmp/ad.applied.hex" 0)
+    ad_hash=$( { printf '\x03'; xxd -r -p "$tmp/ad.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
     ef_size=$("$tmp/serializer" observer_enforcement "$ef_raw" "$tmp/ef.applied.hex" 0)
     ef_hash=$( { printf '\x03'; xxd -r -p "$tmp/ef.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
-    cp_size=$("$tmp/serializer" checkpoint "$cp_raw" "$tmp/cp.applied.hex" 0 "$lc_hash" "$ef_hash" 1000000000 5000000 500)
+    cp_size=$("$tmp/serializer" checkpoint "$cp_raw" "$tmp/cp.applied.hex" 0 "$lc_hash" "$ad_hash" "$ef_hash" 1000000000 5000000 500)
 
     echo "Derived observer_lifecycle script hash:    $lc_hash"
+    echo "Derived observer_advance script hash:      $ad_hash"
     echo "Derived observer_enforcement script hash:  $ef_hash"
     echo "observer_lifecycle applied size:    $lc_size bytes"
+    echo "observer_advance applied size:      $ad_size bytes"
     echo "observer_enforcement applied size:  $ef_size bytes"
     echo "checkpoint applied size:            $cp_size bytes"
 
     if [ "$lc_size" -ge 16133 ]; then
       echo "ERROR: observer_lifecycle applied size >= 16133 bytes ($lc_size)" >&2
+      exit 1
+    fi
+    if [ "$ad_size" -gt 15333 ]; then
+      echo "ERROR: observer_advance applied size > 15333 bytes ($ad_size; need >=800 slack)" >&2
+      exit 1
+    fi
+    if [ "$ad_size" -ge 16133 ]; then
+      echo "ERROR: observer_advance applied size >= 16133 bytes ($ad_size)" >&2
       exit 1
     fi
     if [ "$ef_size" -ge 16133 ]; then

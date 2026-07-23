@@ -1,36 +1,29 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Advance
-Description : #115 S4 advance evidence + AE1-AE10 + receipt gate
+Description : #115 R3 advance evidence + AE1-AE10 + event-own signatures
 
 Validator-free schema-support layer for the advance path (KERI rotation
 admission), same shape as "Cardano.KERI.AID.Checkpoint.Registration":
 pure predicates over an 'AdvanceEvidence' record plus the spent\/
 created checkpoint state, returning @Either AdvancePredicateError ()@.
 
-The 'AdvanceMessage' consumed by "Cardano.KERI.AID.Checkpoint.Message"
-is __reconstructed__ here exclusively from the spent context
-('SpentCheckpoint'), the created (successor) datum, and the evidence's
-own witness-delta lists (@wit_cut@\/@wit_add@) — nothing else
-message-shaped is caller-supplied (spec "V4 — message equalities").
-Controller signatures ('advancePredicate') verify over the
-reconstructed message's canonical-CBOR preimage at distinct positions
-of @new_cur_keys@ (V5); the AE1-AE10 event-binding slice set pins the
-attested KERI @rot@ event bytes to the created state (V6, reusing
+R3: controller signatures ('advancePredicate') verify over the exact full
+KERI @event_bytes@ at distinct positions of @NEW.cur_keys@ — never over a
+Cardano-specific AdvanceMessage. The AE1-AE10 event-binding slice set pins
+the attested KERI @rot@ event bytes to the created state (reusing
 "Cardano.KERI.AID.Checkpoint.Registration"'s @respellHex@\/
 @respellThreshold@\/@qb64WitnessVerkey@); and the incoming-set witness
-receipt gate (V7) counts distinct valid receipts indexed into the
-created datum's own (already W3-derived and eq7-pinned) witness list.
-No SAID\/blake3 proof is taken over the rot bytes (ratified QC): @d@
-and @p@ spans are deliberately unchecked.
+receipt gate counts distinct valid receipts indexed into the created
+datum's own (already W3-derived and eq7-pinned) witness list. No
+SAID\/blake3 proof is taken over the rot bytes (ratified QC): @d@ and @p@
+spans are deliberately unchecked. The only Blake3 work is per-revealed-key
+pre-rotation commitment matching inside the dual-threshold rule.
 -}
 module Cardano.KERI.AID.Checkpoint.Advance (
     -- * Advance evidence
     AdvanceEvidence (..),
 
-    -- * Message reconstruction (V4)
-    reconstructAdvanceMessage,
-
-    -- * Event binding (V6, AE1-AE10)
+    -- * Event binding (AE1-AE10)
     AdvanceEventError (..),
     eventBinding,
 
@@ -46,16 +39,12 @@ import Cardano.KERI.AID.CESR (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     Verkey,
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError,
-    AdvanceMessage,
     RevealedSuccessorSigners (..),
     SpentCheckpoint (..),
     advanceEqualities,
-    advanceMessage,
-    deriveAidAssetName,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     qb64WitnessVerkey,
@@ -87,11 +76,9 @@ convention, extended with the @br@\/@ba@ witness-delta spans), the
 ordered witness-delta lists themselves, the controller signatures, and
 the incoming-set witness receipts.
 
-'aeCtrlSigs' index into the __reconstructed__ 'AdvanceMessage'\'s
-@new_cur_keys@ and sign its canonical-CBOR preimage — NOT the KERI
-event bytes ('aeEventBytes'). 'aeWitReceipts' index into the
-__derived__ incoming witness set (@new_set@, W3) and sign
-'aeEventBytes' exactly (O1).
+'aeCtrlSigs' index into @NEW.cur_keys@ and sign 'aeEventBytes' exactly
+(R3 sole preimage). 'aeWitReceipts' index into the __derived__ incoming
+witness set (@new_set@, W3) and sign 'aeEventBytes' exactly (O1).
 -}
 data AdvanceEvidence = AdvanceEvidence
     { aeEventBytes :: !ByteString
@@ -121,55 +108,14 @@ data AdvanceEvidence = AdvanceEvidence
     , aeWitAdd :: ![Verkey]
     -- ^ KERI @ba@ — raw verkeys added, in event order
     , aeCtrlSigs :: ![(Int, ByteString)]
-    -- ^ @(index into new_cur_keys, sig over the message preimage)@
+    -- ^ @(index into NEW.cur_keys, sig over event_bytes)@
     , aeWitReceipts :: ![(Int, ByteString)]
     -- ^ @(index into the derived new_set, sig over event_bytes)@
     }
     deriving stock (Show, Eq)
 
 -- ---------------------------------------------------------
--- Message reconstruction (V4)
--- ---------------------------------------------------------
-
-{- | The __reconstructed__ 'AdvanceMessage': the spent context's
-deployment\/outref\/prior fields, the created (successor) datum's own
-key-state fields, and the evidence's witness-delta lists. This is the
-only message shape the predicate ever consults — nothing
-message-shaped is caller-supplied beyond the delta lists (V4), which
-W1\/W2 validate against the spent witness set and AE8\/AE9 pin to the
-receipted event bytes.
--}
-reconstructAdvanceMessage ::
-    SpentCheckpoint ->
-    -- | The created (successor) datum @NEW@.
-    CheckpointDatumV1 ->
-    -- | @wit_cut@ (KERI @br@).
-    [Verkey] ->
-    -- | @wit_add@ (KERI @ba@).
-    [Verkey] ->
-    AdvanceMessage
-reconstructAdvanceMessage sc new witCut witAdd =
-    advanceMessage
-        (scNetworkId sc)
-        (scPolicyId sc)
-        (deriveAidAssetName (cdCesrAid new))
-        (cdCesrAid new)
-        (scTxid sc)
-        (scIndex sc)
-        (scSeq sc)
-        (scNativeSn sc)
-        (cdCurKeys new)
-        (cdCurThreshold new)
-        (cdNextKeys new)
-        (cdNextThreshold new)
-        witCut
-        witAdd
-        (cdToad new)
-        (cdSeq new)
-        (cdNativeSn new)
-
--- ---------------------------------------------------------
--- Event binding (V6, AE1-AE10)
+-- Event binding (AE1-AE10)
 -- ---------------------------------------------------------
 
 -- | Which AE axis rejected (one constructor per #115 AE1-AE10 check).
@@ -210,11 +156,9 @@ data AdvanceEventError
       AE10ToadMismatch
     deriving stock (Show, Eq)
 
-{- | V6 — the AE1-AE10 event-binding slice set. Every expected value is
-computed from the created datum (derivation-code-prefixed qb64 or exact
-keripy re-spelling) or the evidence's own witness-delta lists (@br@\/
-@ba@); the prover's offsets only locate it (the #106\/#114
-offset-misdirection discipline). @d@ and @p@ are deliberately never
+{- | AE1-AE10 event-binding slice set. Every expected value is computed
+from the created datum or the evidence's own witness-delta lists; the
+prover's offsets only locate it. @d@ and @p@ are deliberately never
 checked (ratified QC — no SAID proof on the advance path).
 -}
 eventBinding ::
@@ -261,43 +205,35 @@ eventBinding new e = do
 -- The advance predicate
 -- ---------------------------------------------------------
 
-{- | Which advance validation rejected: message equalities, event
+{- | Which advance validation rejected: transition equalities, event
 binding, or the receipt quorum.
 -}
 data AdvancePredicateError
-    = {- | V4: 'advanceEqualities' rejected (eq1-eq5, W1\/W2, eq6
-      dual-threshold — including the controller-evidence gate,
-      amended eq7, eq8).
+    = {- | Transition equalities rejected (AID\/sequence, W1\/W2, eq6
+      dual-threshold — including the controller-evidence gate, W3, eq8).
       -}
       AdvMessageInvalid AdvanceError
-    | -- | V6: an AE1-AE10 event-binding slice mismatched.
+    | -- | An AE1-AE10 event-binding slice mismatched.
       AdvEventBinding AdvanceEventError
-    | {- | V7: the count of distinct valid incoming-set witness
-      receipts is below @NEW.toad@.
+    | {- | The count of distinct valid incoming-set witness receipts is
+      below @NEW.toad@.
       -}
       AdvReceiptQuorumUnsatisfied
     deriving stock (Show, Eq)
 
-{- | The pure advance predicate: V4 (message reconstruction + equalities,
-with V5's controller-signature evidence folded in as the @signers@
-argument), V6 (AE1-AE10 event binding), V7 (incoming-set witness
-receipt gate), in order.
+{- | The pure advance predicate: transition equalities (with controller
+signature evidence folded in as the revealed-signer positions over exact
+@event_bytes@), AE1-AE10 event binding, and the incoming-set witness
+receipt gate, in order.
 
-V5's controller evidence is the distinct positions of 'aeCtrlSigs' whose
-signature verifies over the reconstructed message's canonical-CBOR
-preimage against @NEW.cur_keys@ at that position (bad index or bad
-signature never counts, never aborts — the @verified_positions@
-convention).
+Controller evidence is the distinct positions of 'aeCtrlSigs' whose
+signature verifies over 'aeEventBytes' against @NEW.cur_keys@ at that
+position (bad index or bad signature never counts, never aborts — the
+@verified_positions@ convention).
 
-V7 counts distinct indices of 'aeWitReceipts' whose signature verifies
-over 'aeEventBytes' against the created datum's own witness list at
-that position. Because V4's eq7 (amended, W3) already pins that list to
-be exactly the derived incoming set, no separate re-derivation is
-needed here: a cut witness sits at no position of it, so its receipt
-can never count — structurally, not by filter. When @NEW.toad == 0@,
-the evidence must carry literally no receipt entries (the brief's
-downgrade rule): a non-empty list is rejected outright, even one whose
-entries could never verify, rather than silently ignored.
+Receipts count distinct indices of 'aeWitReceipts' whose signature
+verifies over 'aeEventBytes' against the created datum's own witness list.
+When @NEW.toad == 0@, the evidence must carry literally no receipt entries.
 -}
 advancePredicate ::
     SpentCheckpoint ->
@@ -306,14 +242,12 @@ advancePredicate ::
     AdvanceEvidence ->
     Either AdvancePredicateError ()
 advancePredicate sc new e = do
-    let msg = reconstructAdvanceMessage sc new (aeWitCut e) (aeWitAdd e)
-        preimage = canonicalCbor msg
-        signed =
+    let signed =
             IntSet.fromList
                 [ idx
                 | (idx, sig) <- aeCtrlSigs e
                 , Just k <- [cdCurKeys new `atMay` idx]
-                , verifyEd25519 k preimage sig
+                , verifyEd25519 k (aeEventBytes e) sig
                 ]
         revealed =
             RevealedSuccessorSigners
@@ -321,7 +255,9 @@ advancePredicate sc new e = do
                 | (idx, k) <- zip [0 ..] (cdCurKeys new)
                 , idx `IntSet.member` signed
                 ]
-    first AdvMessageInvalid (advanceEqualities sc msg new revealed)
+    first
+        AdvMessageInvalid
+        (advanceEqualities sc new (aeWitCut e) (aeWitAdd e) revealed)
     first AdvEventBinding (eventBinding new e)
     if cdToad new == 0
         then unless (null (aeWitReceipts e)) (Left AdvReceiptQuorumUnsatisfied)

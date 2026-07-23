@@ -22,11 +22,9 @@
 //// receipt-quorum negatives (receipt-free, below-toad, bad/out-of-range
 //// index, bad signature, duplicate index, wrong-member index, cut-witness
 //// receipt, outgoing-only quorum, non-empty receipts at toad=0). Byte
-//// parity is asserted for the four honest families' reconstructed
-//// `AdvanceMessage` canonical-CBOR preimage (the V5 controller-signature
-//// target).
+//// parity for the controller preimage is asserted as verification of a
+//// committed ctrl signature over exact `event_bytes` (R3 sole preimage).
 
-use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use cardano_keri/checkpoint/advance.{
@@ -35,7 +33,7 @@ use cardano_keri/checkpoint/advance.{
   AE7NextThresholdMismatch, AE8WitCutMismatch, AE9WitAddMismatch,
   AdvEventBinding, AdvMessageInvalid, AdvReceiptQuorumUnsatisfied,
   AdvanceEvidence, AdvancePredicateInvalid, AdvancePredicateValid,
-  AdvancePredicateVerdict, advance_predicate, reconstruct_advance_message,
+  AdvancePredicateVerdict, advance_predicate,
 }
 use cardano_keri/checkpoint/advance_vectors as vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ToadRange}
@@ -63,67 +61,26 @@ fn parity(
 }
 
 // ---------------------------------------------------------
-// Byte parity: the reconstructed message preimage (V5 target)
+// Event-own controller preimage (R3 sole signature target)
 // ---------------------------------------------------------
 
-test preimage_parity_adv_wit_2key() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_2key_spent,
-      vec.pos_adv_wit_2key_created,
-      vec.pos_adv_wit_2key_evidence.wit_cut,
-      vec.pos_adv_wit_2key_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_wit_2key_preimage
-}
-
-test preimage_parity_adv_wit_7key() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_7key_spent,
-      vec.pos_adv_wit_7key_created,
-      vec.pos_adv_wit_7key_evidence.wit_cut,
-      vec.pos_adv_wit_7key_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_wit_7key_preimage
-}
-
-test preimage_parity_adv_keep() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_keep_spent,
-      vec.pos_adv_keep_created,
-      vec.pos_adv_keep_evidence.wit_cut,
-      vec.pos_adv_keep_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_keep_preimage
-}
-
-test preimage_parity_adv_downgrade() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_downgrade_spent,
-      vec.pos_adv_downgrade_created,
-      vec.pos_adv_downgrade_evidence.wit_cut,
-      vec.pos_adv_downgrade_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_downgrade_preimage
-}
-
-// A committed ctrl signature verifies over the Aiken-recomputed preimage:
-// the two languages agree on the exact signature target bytes.
-test ctrl_sig_verifies_over_preimage() {
-  let preimage = cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_2key_spent,
-      vec.pos_adv_wit_2key_created,
-      vec.pos_adv_wit_2key_evidence.wit_cut,
-      vec.pos_adv_wit_2key_evidence.wit_add,
-    ),
-  )
+// A committed ctrl signature verifies over exact event_bytes.
+test ctrl_sig_verifies_over_event_bytes() {
   expect Some((idx, sig)) = list.head(vec.pos_adv_wit_2key_evidence.ctrl_sigs)
   expect Some(key) = list.at(vec.pos_adv_wit_2key_created.cur_keys, idx)
-  verify_ed25519_signature(key, preimage, sig)
+  verify_ed25519_signature(key, vec.pos_adv_wit_2key_evidence.event_bytes, sig)
+}
+
+// Wrong preimage residual: the honest event-own sig does not verify over a
+// stale AdvanceMessage-class label (same key/sig, different preimage).
+test ctrl_sig_does_not_verify_over_stale_message_label() {
+  expect Some((idx, sig)) = list.head(vec.pos_adv_wit_2key_evidence.ctrl_sigs)
+  expect Some(key) = list.at(vec.pos_adv_wit_2key_created.cur_keys, idx)
+  !verify_ed25519_signature(
+    key,
+    "cardano-keri/checkpoint/adv/v1-STALE-MESSAGE",
+    sig,
+  )
 }
 
 // ---------------------------------------------------------

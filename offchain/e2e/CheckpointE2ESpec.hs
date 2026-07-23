@@ -23,13 +23,14 @@ import CheckpointTxBuilder (
     assertStockMaxTxSize,
     closeRejection,
     hashProofMintOldCostRejection,
+    observerAdvanceStakeRegistrationSetup,
     observerEnforcementStakeRegistrationSetup,
     observerLifecycleStakeRegistrationSetup,
     pendingHashProofRegisterArmClaimScenario,
     rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
     stagedCheckpointDevnet,
-    verifyThreeProgramDeploymentShapes,
+    verifyFourProgramDeploymentShapes,
  )
 
 spec :: Spec
@@ -39,8 +40,8 @@ spec = describe "#114 permissionless checkpoint boundary" $ do
             "settled-on-devnet: live protocol parameters use stock maxTxSize = 16384"
             assertStockMaxTxSize
         it
-            "applies checkpoint plus both observers, derives both distinct observer hashes, and constructs all three signed reference-script creation shapes at the stock cap"
-            verifyThreeProgramDeploymentShapes
+            "applies checkpoint plus three observers, derives three distinct observer hashes, and constructs all four signed reference-script creation shapes at the stock cap"
+            verifyFourProgramDeploymentShapes
         it
             "settled-on-devnet: rejects hash-proof mint at the 251-entry old-cost Plomin boundary"
             (assertOldCostPlominRejection hashProofMintOldCostRejection)
@@ -56,6 +57,9 @@ spec = describe "#114 permissionless checkpoint boundary" $ do
     it
         "PENDING(harness-cannot-express-unregistered-observer-withdrawal): zero-withdrawal forward to unregistered observer_lifecycle credential fails"
         (observerLifecycleStakeRegistrationSetup `seq` pendingWith "harness-cannot-express-unregistered-observer-withdrawal")
+    it
+        "PENDING(harness-cannot-express-unregistered-observer-withdrawal): zero-withdrawal forward to unregistered observer_advance credential fails"
+        (observerAdvanceStakeRegistrationSetup `seq` pendingWith "harness-cannot-express-unregistered-observer-withdrawal")
     it
         "PENDING(harness-cannot-express-unregistered-observer-withdrawal): zero-withdrawal forward to unregistered observer_enforcement credential fails"
         (observerEnforcementStakeRegistrationSetup `seq` pendingWith "harness-cannot-express-unregistered-observer-withdrawal")

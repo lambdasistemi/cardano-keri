@@ -43,8 +43,8 @@ use cardano_keri/checkpoint/freeze_bond.{
 }
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_convict, observe_freeze,
-  observe_register,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
+  observe_freeze, observe_register,
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
@@ -95,6 +95,7 @@ type SpendInputRole {
 validator checkpoint(
   _version: Int,
   lifecycle_hash: PolicyId,
+  advance_hash: PolicyId,
   enforcement_hash: PolicyId,
   d_reg: Int,
   freeze_bond: Int,
@@ -105,10 +106,18 @@ validator checkpoint(
     expect freeze_bond_valid(freeze_bond)
     expect freeze_window_valid(freeze_window)
     let Register = redeemer
-    // R1 ran-check: Register selects the lifecycle observer at zero lovelace
-    // with a matching Withdraw redeemer whose claim is ObserveRegister over
-    // the current checkpoint h (no own_ref for a mint).
-    expect ran_check(lifecycle_hash, policy_id, observe_register, None, tx)
+    // Register → lifecycle observer at zero; no extra family observers.
+    expect
+      ran_check(
+        lifecycle_hash,
+        lifecycle_hash,
+        advance_hash,
+        enforcement_hash,
+        policy_id,
+        observe_register,
+        None,
+        tx,
+      )
     validate_register(d_reg, freeze_bond, policy_id, tx)
   }
 
@@ -131,11 +140,29 @@ validator checkpoint(
     expect Some(own_input) = find_input(tx.inputs, own_ref)
     expect Script(own_hash) = own_input.output.address.payment_credential
     when rdm is {
+      Advance -> {
+        // Advance → advance observer; state-machine body fail-closed until R4.
+        expect
+          ran_check(
+            advance_hash,
+            lifecycle_hash,
+            advance_hash,
+            enforcement_hash,
+            own_hash,
+            observe_advance,
+            Some(own_ref),
+            tx,
+          )
+        fail
+      }
       Freeze { hunter_pkh } ->
         when input_role is {
           ActiveCheckpoint -> {
             expect
               ran_check(
+                enforcement_hash,
+                lifecycle_hash,
+                advance_hash,
                 enforcement_hash,
                 own_hash,
                 observe_freeze,
@@ -148,13 +175,25 @@ validator checkpoint(
         }
       ClaimFreeze { hunter_output_index } ->
         when input_role is {
-          ArmedCheckpoint ->
+          ArmedCheckpoint -> {
+            // ClaimFreeze needs no observer: reject any family withdrawal.
+            expect
+              no_family_observer_withdrawal(
+                lifecycle_hash,
+                advance_hash,
+                enforcement_hash,
+                tx,
+              )
             validate_claim(freeze_bond, hunter_output_index, own_ref, tx)
+          }
           _ -> fail
         }
       Convict { convictor_pkh, convictor_output_index, hunter_output_index } -> {
         expect
           ran_check(
+            enforcement_hash,
+            lifecycle_hash,
+            advance_hash,
             enforcement_hash,
             own_hash,
             observe_convict,
@@ -203,30 +242,46 @@ validator checkpoint(
   }
 }
 
-/// The R1 ran-check: prove the observer ran over this exact claim. The
-/// transaction must contain `Pair(Script(observer_hash), 0)` in withdrawals
-/// (exactly zero lovelace; unrelated withdrawals are never rejected) and a
-/// matching `Withdraw(Script(observer_hash))` entry in redeemers whose
-/// envelope claim has the expected action, the current checkpoint h, and the
-/// expected own_ref (`None` for Register, the exact spent input for spends).
+/// Exact family selection ran-check (R3 four-program). The transaction must
+/// contain `Pair(Script(selected_hash), 0)` and a matching Withdraw redeemer
+/// whose claim has the expected action, checkpoint h, and own_ref. No other
+/// of the three family observer credentials may appear in withdrawals (extra
+/// / cross-family reject). Unrelated non-family withdrawals are not rejected.
 /// The checkpoint reads only the claim; the payload stays opaque.
 fn ran_check(
-  observer_hash: PolicyId,
+  selected_hash: PolicyId,
+  lifecycle_hash: PolicyId,
+  advance_hash: PolicyId,
+  enforcement_hash: PolicyId,
   checkpoint_policy: PolicyId,
   expected_action: Int,
   expected_own_ref: Option<OutputReference>,
   tx: Transaction,
 ) -> Bool {
-  let credential: Credential = Script(observer_hash)
-  // The configured observer credential is withdrawn at exactly zero lovelace.
+  let credential: Credential = Script(selected_hash)
+  // Selected family credential withdrawn at exactly zero lovelace.
   expect
     list.any(
       tx.withdrawals,
       fn(Pair(w_cred, w_lovelace)) { w_cred == credential && w_lovelace == 0 },
     )
-  // The matching Withdraw-purpose redeemer decodes to a well-shaped envelope
-  // whose claim names the expected action, the current checkpoint h, and the
-  // expected own_ref.
+  // No extra / cross-family observer credential withdrawals.
+  expect
+    list.all(
+      tx.withdrawals,
+      fn(Pair(w_cred, _w_lovelace)) {
+        when w_cred is {
+          Script(h) ->
+            if h == lifecycle_hash || h == advance_hash || h == enforcement_hash {
+              h == selected_hash
+            } else {
+              True
+            }
+          _ -> True
+        }
+      },
+    )
+  // Matching Withdraw redeemer with the expected claim.
   expect
     list.any(
       tx.redeemers,
@@ -246,6 +301,26 @@ fn ran_check(
       },
     )
   True
+}
+
+/// ClaimFreeze needs no observer: reject any of the three family credentials
+/// in withdrawals.
+fn no_family_observer_withdrawal(
+  lifecycle_hash: PolicyId,
+  advance_hash: PolicyId,
+  enforcement_hash: PolicyId,
+  tx: Transaction,
+) -> Bool {
+  list.all(
+    tx.withdrawals,
+    fn(Pair(w_cred, _w_lovelace)) {
+      when w_cred is {
+        Script(h) ->
+          h != lifecycle_hash && h != advance_hash && h != enforcement_hash
+        _ -> True
+      }
+    },
+  )
 }
 
 /// Classify the named input by its whole role address and exact inline datum

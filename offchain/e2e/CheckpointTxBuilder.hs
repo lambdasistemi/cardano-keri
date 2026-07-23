@@ -26,6 +26,7 @@ module CheckpointTxBuilder (
     advanceRejection,
     closeRejection,
     hashProofMintOldCostRejection,
+    observerAdvanceStakeRegistrationSetup,
     observerEnforcementStakeRegistrationSetup,
     observerLifecycleStakeRegistrationSetup,
     pendingHashProofRegisterArmClaimScenario,
@@ -35,7 +36,7 @@ module CheckpointTxBuilder (
     boundaryCasesCoverDeadline,
     productionRegisterScenario,
     assertStockMaxTxSize,
-    verifyThreeProgramDeploymentShapes,
+    verifyFourProgramDeploymentShapes,
     buildArmTx,
     buildAdvanceTx,
     buildClaimTx,
@@ -206,6 +207,9 @@ data CheckpointEnv = CheckpointEnv
     , envLifecycleScript :: !(Script ConwayEra)
     , envLifecycleBytes :: !SBS.ShortByteString
     , envLifecycleHash :: !ScriptHash
+    , envAdvanceScript :: !(Script ConwayEra)
+    , envAdvanceBytes :: !SBS.ShortByteString
+    , envAdvanceHash :: !ScriptHash
     , envEnforcementScript :: !(Script ConwayEra)
     , envEnforcementBytes :: !SBS.ShortByteString
     , envEnforcementHash :: !ScriptHash
@@ -299,19 +303,23 @@ stagedCheckpointDevnet action = do
             -- not be masked by a stale fixed-output blueprint lookup.
             assertLiveStockMaxTxSize (mkN2CProvider lsq)
             env <- mkCheckpointEnv blueprintPath lsq ltxs
-            -- A-004 three-program deployment boundary: both observer hashes
-            -- distinct, and one signed reference-script creation shape each
-            -- for checkpoint and both observers within the stock cap. This
-            -- supersedes the old single-checkpoint 23,124-byte monolith
-            -- budget for the family-split architecture.
-            verifyThreeProgramDeploymentShapes env
+            -- A-016 four-program deployment boundary: three observer hashes
+            -- pairwise distinct, and one signed reference-script creation
+            -- shape each for checkpoint and all three observers within the
+            -- stock cap.
+            verifyFourProgramDeploymentShapes env
             prepareWallet env
-            -- Both observers' script stake credentials must be registered
+            -- All three observers' script stake credentials must be registered
             -- before any evidence-bearing lifecycle transaction: the
             -- checkpoint ran-check requires the zero-lovelace withdrawal, and
             -- the ledger requires the reward account to be registered.
+            -- observer_advance is the fourth program's registration surface
+            -- (witness, ConwayCertifying, collateral, prepareWallet split,
+            -- pollOutput settlement — same choreography as the other two).
             lifecycleRegistrationTxId <- observerLifecycleStakeRegistrationSetup env
             dbg ("observer_lifecycle stake credential registered: " <> show lifecycleRegistrationTxId)
+            advanceRegistrationTxId <- observerAdvanceStakeRegistrationSetup env
+            dbg ("observer_advance stake credential registered: " <> show advanceRegistrationTxId)
             enforcementRegistrationTxId <- observerEnforcementStakeRegistrationSetup env
             dbg ("observer_enforcement stake credential registered: " <> show enforcementRegistrationTxId)
             action env
@@ -334,6 +342,11 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             (fail "observer_lifecycle compiled code not found in production blueprint")
             pure
             (extractCompiledCode "checkpoint_observer.observer_lifecycle." blueprint)
+    advanceCode <-
+        maybe
+            (fail "observer_advance compiled code not found in production blueprint")
+            pure
+            (extractCompiledCode "checkpoint_observer.observer_advance." blueprint)
     enforcementCode <-
         maybe
             (fail "observer_enforcement compiled code not found in production blueprint")
@@ -342,13 +355,10 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
     let hashProofScript = mkCageScript hashProofCode
         hashProofHash = computeScriptHash hashProofCode
         hashProofPolicy = PolicyID hashProofHash
-        -- A-004 family split: apply the lifecycle observer first (version,
-        -- hash-proof policy, D_reg) and derive its hash; apply the enforcement
-        -- observer (version) and derive its hash; then apply the checkpoint
-        -- with both hashes (version, lifecycle hash, enforcement hash, D_reg,
-        -- freeze bond, freeze window). Neither observer hash becomes an AID
-        -- policy or role hash; one checkpoint h remains the identity/policy/
-        -- role hash.
+        -- A-016 four-program: apply lifecycle (version, hash-proof, D_reg),
+        -- advance (version), enforcement (version); then checkpoint
+        -- (version, lifecycle hash, advance hash, enforcement hash, D_reg,
+        -- freeze bond, freeze window). One checkpoint h remains identity.
         appliedLifecycle =
             applyLifecycleParams
                 checkpointVersion
@@ -357,6 +367,12 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
                 lifecycleCode
         lifecycleScript = mkCageScript appliedLifecycle
         lifecycleHash = computeScriptHash appliedLifecycle
+        appliedAdvance =
+            applyAdvanceParams
+                checkpointVersion
+                advanceCode
+        advanceScript = mkCageScript appliedAdvance
+        advanceHash = computeScriptHash appliedAdvance
         appliedEnforcement =
             applyEnforcementParams
                 checkpointVersion
@@ -367,6 +383,7 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             applyCheckpointParams
                 checkpointVersion
                 (policyBytes (PolicyID lifecycleHash))
+                (policyBytes (PolicyID advanceHash))
                 (policyBytes (PolicyID enforcementHash))
                 registrationBond
                 freezeBond
@@ -377,6 +394,7 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
         checkpointPolicy = PolicyID checkpointHash
     dbg ("checkpoint script hash: " <> show checkpointHash)
     dbg ("observer_lifecycle script hash: " <> show lifecycleHash)
+    dbg ("observer_advance script hash: " <> show advanceHash)
     dbg ("observer_enforcement script hash: " <> show enforcementHash)
     dbg ("hash-proof script hash: " <> show hashProofHash)
     pure
@@ -388,6 +406,9 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envLifecycleScript = lifecycleScript
             , envLifecycleBytes = appliedLifecycle
             , envLifecycleHash = lifecycleHash
+            , envAdvanceScript = advanceScript
+            , envAdvanceBytes = appliedAdvance
+            , envAdvanceHash = advanceHash
             , envEnforcementScript = enforcementScript
             , envEnforcementBytes = appliedEnforcement
             , envEnforcementHash = enforcementHash
@@ -497,7 +518,7 @@ registerObserverStakeCredential observerHash observerScript label env = do
 {- | Register the applied observer_lifecycle script stake credential on the
 devnet. Genuine setup behavior: the checkpoint ran-check requires the
 zero-lovelace lifecycle withdrawal, and the ledger requires the reward account
-to be registered. Must run before the first Register/Advance lifecycle use.
+to be registered. Must run before the first Register use.
 -}
 observerLifecycleStakeRegistrationSetup :: CheckpointEnv -> IO TxId
 observerLifecycleStakeRegistrationSetup env =
@@ -505,6 +526,20 @@ observerLifecycleStakeRegistrationSetup env =
         (envLifecycleHash env)
         (envLifecycleScript env)
         "observer_lifecycle stake-credential registration"
+        env
+
+{- | Register the applied observer_advance script stake credential on the
+devnet. Fourth-program registration surface (A-016): same witness,
+ConwayCertifying (AsIx 0) redeemer, collateral, prepareWallet funding, and
+pollOutput settlement barrier as the other observers. Must run before the
+first Advance use.
+-}
+observerAdvanceStakeRegistrationSetup :: CheckpointEnv -> IO TxId
+observerAdvanceStakeRegistrationSetup env =
+    registerObserverStakeCredential
+        (envAdvanceHash env)
+        (envAdvanceScript env)
+        "observer_advance stake-credential registration"
         env
 
 {- | Register the applied observer_enforcement script stake credential on the
@@ -520,23 +555,26 @@ observerEnforcementStakeRegistrationSetup env =
         "observer_enforcement stake-credential registration"
         env
 
-{- | Staged-devnet boundary (A-004): assert the two observer hashes are
-distinct, then construct and sign one reference-script creation shape for the
-checkpoint and each observer, failing if any signed shape exceeds the stock
-16,384-byte transaction cap. This is a real boundary measurement, not a getter
-or marker.
+{- | Staged-devnet boundary (A-016): assert the three observer hashes are
+pairwise distinct, then construct and sign one reference-script creation shape
+for the checkpoint and each observer, failing if any signed shape exceeds the
+stock 16,384-byte transaction cap. Real boundary measurement, not a getter.
 -}
-verifyThreeProgramDeploymentShapes :: CheckpointEnv -> IO ()
-verifyThreeProgramDeploymentShapes env = do
+verifyFourProgramDeploymentShapes :: CheckpointEnv -> IO ()
+verifyFourProgramDeploymentShapes env = do
     when (envLifecycleHash env == envEnforcementHash env) $
         fail "observer_lifecycle and observer_enforcement hashes are not distinct"
+    when (envLifecycleHash env == envAdvanceHash env) $
+        fail "observer_lifecycle and observer_advance hashes are not distinct"
+    when (envAdvanceHash env == envEnforcementHash env) $
+        fail "observer_advance and observer_enforcement hashes are not distinct"
     params <-
-        withinSecs 30 "query three-program deployment parameters" $
+        withinSecs 30 "query four-program deployment parameters" $
             queryProtocolParams (envProvider env)
     wallet <-
-        withinSecs 30 "query three-program deployment wallet" $
+        withinSecs 30 "query four-program deployment wallet" $
             queryUTxOs (envProvider env) (envOwner env)
-    seed <- requireJust "three-program deployment: no wallet UTxO" (largestFirst wallet)
+    seed <- requireJust "four-program deployment: no wallet UTxO" (largestFirst wallet)
     let measureShape label script programBytes = do
             let referenceOut =
                     mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
@@ -556,10 +594,12 @@ verifyThreeProgramDeploymentShapes env = do
                 fail (label <> ": signed reference-script creation shape " <> show creationTxBytes <> " exceeds stock " <> show productionMaxTxBytes)
     measureShape "checkpoint reference-script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
     measureShape "observer_lifecycle reference-script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
+    measureShape "observer_advance reference-script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measureShape "observer_enforcement reference-script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
 
 applyCheckpointParams ::
     Integer ->
+    ByteString ->
     ByteString ->
     ByteString ->
     Integer ->
@@ -567,11 +607,12 @@ applyCheckpointParams ::
     Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version lifecycleHash enforcementHash dReg bond window code =
+applyCheckpointParams version lifecycleHash advanceHash enforcementHash dReg bond window code =
     serialiseUPLC $
         uncheckedDeserialiseUPLC code
             `applyDataArg` I version
             `applyDataArg` B lifecycleHash
+            `applyDataArg` B advanceHash
             `applyDataArg` B enforcementHash
             `applyDataArg` I dReg
             `applyDataArg` I bond
@@ -611,6 +652,27 @@ applyLifecycleParams version proofPolicy dReg code =
                     (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
          in either
                 (error . ("applyLifecycleParams: " <>) . show)
+                id
+                (applyProgram program argument)
+
+applyAdvanceParams ::
+    Integer ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyAdvanceParams version code =
+    serialiseUPLC $
+        uncheckedDeserialiseUPLC code
+            `applyDataArg` I version
+  where
+    applyDataArg program dat =
+        let Program _ versionTag _ = program
+            argument =
+                Program
+                    ()
+                    versionTag
+                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
+         in either
+                (error . ("applyAdvanceParams: " <>) . show)
                 id
                 (applyProgram program argument)
 

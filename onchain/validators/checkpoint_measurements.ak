@@ -54,6 +54,9 @@ const policy: PolicyId =
 const lifecycle_hash: PolicyId =
   #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
+const advance_hash: PolicyId =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 const enforcement_hash: PolicyId =
   #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
@@ -191,6 +194,7 @@ test measure_checkpoint_register_2key() {
   checkpoint.checkpoint.mint(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -205,6 +209,7 @@ test measure_checkpoint_register_witnessed() {
   checkpoint.checkpoint.mint(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -219,6 +224,7 @@ test measure_checkpoint_register_7key() {
   checkpoint.checkpoint.mint(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -446,6 +452,7 @@ test measure_checkpoint_arm_2key() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -461,6 +468,7 @@ test measure_checkpoint_arm_7key() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -530,6 +538,7 @@ test measure_checkpoint_claim() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -693,6 +702,7 @@ test measure_checkpoint_convict_active() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -708,6 +718,7 @@ test measure_checkpoint_convict_armed() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,
@@ -723,6 +734,7 @@ test measure_checkpoint_convict_frozen() {
   checkpoint.checkpoint.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     enforcement_hash,
     d_reg,
     freeze_bond,

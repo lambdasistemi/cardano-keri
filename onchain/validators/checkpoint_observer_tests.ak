@@ -10,6 +10,7 @@ use cardano/certificate.{RegisterCredential, UnregisterCredential}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
@@ -680,7 +681,7 @@ fn run_enforcement_withdraw(envelope: ObserverEnvelope, tx: Transaction) -> Bool
   checkpoint_observer.observer_enforcement.withdraw(0, envelope, 0, tx)
 }
 
-// --- lifecycle dispatch: accepts Register, rejects Freeze/Convict/Advance ---
+// --- lifecycle dispatch (R3 four-program): Register only; Advance rejects ---
 
 test t115_r1_lifecycle_accepts_register() {
   let claim = ObserverClaim {
@@ -732,7 +733,7 @@ test t115_r1_lifecycle_rejects_convict() fail {
   )
 }
 
-test t115_r1_lifecycle_rejects_advance_in_r1() fail {
+test t115_r3_lifecycle_rejects_advance_malformed_payload() fail {
   let claim = ObserverClaim {
     action: observe_advance,
     checkpoint_policy: policy,
@@ -740,6 +741,66 @@ test t115_r1_lifecycle_rejects_advance_in_r1() fail {
   }
   let envelope = ObserverEnvelope { claim, payload: 0 }
   run_lifecycle_withdraw(envelope, placeholder)
+}
+
+/// R3 four-program topology: observer_lifecycle is Register-only. Honest
+/// event-own ObserveAdvance must fail closed here (moves to observer_advance).
+test t115_r3_lifecycle_rejects_honest_observe_advance() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let new = adv_vec.pos_adv_wit_2key_created
+  let evidence = adv_vec.pos_adv_wit_2key_evidence
+  let own_ref = OutputReference {
+    transaction_id: spent.txid,
+    output_index: spent.index,
+  }
+  // OLD: transition-relevant fields from the spent vector; cur_keys/toad are
+  // not consulted by advance_predicate (filled with a well-formed placeholder).
+  let old = CheckpointDatumV1 {
+    cesr_aid: spent.cesr_aid,
+    cur_keys: new.cur_keys,
+    cur_threshold: new.cur_threshold,
+    next_keys: spent.next_keys,
+    next_threshold: spent.next_threshold,
+    witnesses: spent.witnesses,
+    toad: 2,
+    seq: spent.seq,
+    native_sn: spent.native_sn,
+  }
+  let aid_name = spent.aid_asset_name
+  let old_input = input_at(
+    own_ref,
+    Output {
+      address: role_address(policy, Active),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, aid_name, 1)),
+      datum: InlineDatum(V1(old)),
+      reference_script: None,
+    },
+  )
+  let new_output = Output {
+    address: from_script(policy),
+    value: from_lovelace(min_ada)
+      |> merge(from_asset(policy, aid_name, 1)),
+    datum: InlineDatum(V1(new)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [old_input],
+    [],
+    [new_output],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  // The vector spent.policy_id is testPolicy 0xCC… — match the claim policy.
+  let claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: Some(own_ref),
+  }
+  let envelope = ObserverEnvelope { claim, payload: evidence }
+  run_lifecycle_withdraw(envelope, tx)
 }
 
 // --- enforcement dispatch: accepts Freeze/Convict, rejects Register/Advance ---
@@ -794,7 +855,7 @@ test t115_r1_enforcement_rejects_register() fail {
   run_enforcement_withdraw(envelope, tx)
 }
 
-test t115_r1_enforcement_rejects_advance_in_r1() fail {
+test t115_r3_enforcement_rejects_advance() fail {
   let claim = ObserverClaim {
     action: observe_advance,
     checkpoint_policy: policy,
@@ -858,4 +919,128 @@ test t115_r2_enforcement_reject_own_deregistration_cert() fail {
   let own = Script(enforcement_script_hash)
   let cert = UnregisterCredential { credential: own, refund: Never }
   checkpoint_observer.observer_enforcement.publish(0, 0, cert, placeholder)
+}
+
+// ---------------------------------------------------------------------
+// R3 four-program RED — dedicated observer_advance
+// ---------------------------------------------------------------------
+// These tests reference checkpoint_observer.observer_advance, which does not
+// exist on the restored three-program GREEN. They are honest topology RED for
+// the absent fourth program: compile/run fails until GREEN lands the validator.
+
+/// Applied observer_advance script credential under test (28-byte placeholder).
+const advance_script_hash: ByteArray =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+/// Drive the dedicated observer_advance withdraw handler (version only).
+fn run_advance_withdraw(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
+  checkpoint_observer.observer_advance.withdraw(0, envelope, 0, tx)
+}
+
+/// Honest ObserveAdvance over the dedicated advance observer (event-own).
+test t115_r3_advance_accepts_honest_observe_advance() {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let new = adv_vec.pos_adv_wit_2key_created
+  let evidence = adv_vec.pos_adv_wit_2key_evidence
+  let own_ref = OutputReference {
+    transaction_id: spent.txid,
+    output_index: spent.index,
+  }
+  let old = CheckpointDatumV1 {
+    cesr_aid: spent.cesr_aid,
+    cur_keys: new.cur_keys,
+    cur_threshold: new.cur_threshold,
+    next_keys: spent.next_keys,
+    next_threshold: spent.next_threshold,
+    witnesses: spent.witnesses,
+    toad: 2,
+    seq: spent.seq,
+    native_sn: spent.native_sn,
+  }
+  let aid_name = spent.aid_asset_name
+  let old_input = input_at(
+    own_ref,
+    Output {
+      address: role_address(policy, Active),
+      value: from_lovelace(min_ada)
+        |> merge(from_asset(policy, aid_name, 1)),
+      datum: InlineDatum(V1(old)),
+      reference_script: None,
+    },
+  )
+  let new_output = Output {
+    address: from_script(policy),
+    value: from_lovelace(min_ada)
+      |> merge(from_asset(policy, aid_name, 1)),
+    datum: InlineDatum(V1(new)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [old_input],
+    [],
+    [new_output],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  let claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: Some(own_ref),
+  }
+  let envelope = ObserverEnvelope { claim, payload: evidence }
+  run_advance_withdraw(envelope, tx)
+}
+
+test t115_r3_advance_rejects_register_action() fail {
+  let claim = ObserverClaim {
+    action: observe_register,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: 0 }
+  run_advance_withdraw(envelope, placeholder)
+}
+
+test t115_r3_advance_rejects_freeze_action() fail {
+  let claim = ObserverClaim {
+    action: observe_freeze,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: 0 }
+  run_advance_withdraw(envelope, placeholder)
+}
+
+test t115_r3_advance_rejects_convict_action() fail {
+  let claim = ObserverClaim {
+    action: observe_convict,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: 0 }
+  run_advance_withdraw(envelope, placeholder)
+}
+
+test t115_r3_advance_rejects_malformed_payload() fail {
+  let claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: 0 }
+  run_advance_withdraw(envelope, placeholder)
+}
+
+test t115_r3_advance_accept_own_registration_cert() {
+  let own = Script(advance_script_hash)
+  let cert = RegisterCredential { credential: own, deposit: Never }
+  checkpoint_observer.observer_advance.publish(0, 0, cert, placeholder)
+}
+
+test t115_r3_advance_reject_own_deregistration_cert() fail {
+  let own = Script(advance_script_hash)
+  let cert = UnregisterCredential { credential: own, refund: Never }
+  checkpoint_observer.observer_advance.publish(0, 0, cert, placeholder)
 }

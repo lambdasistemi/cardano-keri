@@ -3,11 +3,11 @@
 //// Regenerate with `just gen-advance-vectors` (runs
 //// offchain/app/GenAdvanceVectors.hs over the committed keripy
 //// advance.json). Each scenario is the spent context, created
-//// (successor) datum, evidence, and verdict of one S4 AdvanceSpec
+//// (successor) datum, evidence, and verdict of one R3 AdvanceSpec
 //// family member; the generator asserts the Haskell predicate returns
 //// each recorded verdict before emitting, and advance_tests.ak
 //// asserts advance_predicate reproduces them one-for-one (verdict
-//// parity) plus the reconstructed-message preimage byte goldens.
+//// parity) with event-own controller signatures over event_bytes.
 //// `just check-advance-vectors` forbids drift.
 
 use cardano_keri/checkpoint/advance.{
@@ -25,23 +25,6 @@ use cardano_keri/checkpoint/message.{
   SpentCheckpoint,
 }
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
-
-/// adv_wit_2key reconstructed AdvanceMessage canonical-CBOR preimage
-/// (the V5 controller-signature target; byte-parity golden)
-pub const pos_adv_wit_2key_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582017f205d774fee3229a48484c03f817e0d987a33000eb27ed7686f14378ec4d6258206e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e6565820d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d10000009f5820317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b642915820d0fed4cdfbe7442a66811ac483f13047e44f9823c212bfa0f696f8466f1a8b3dffd8799f02ff9f5820084364b09d07f783a559c9901505c4d81e2d05de0ee7ce5983707544ef3e7f695820514dc509c5f80de0d91817b26c370ad7e1f71349c877a59234022efa9e8fa680ffd8799f02ff9f58201b74275c86cafb1cceb4bcf510e6641d653651d992d58fccb315a956d903c766ff9f5820bd716b39db2f5f4a8541b853c321b159c2f17ef03fc932babb6fc9fabfabbde8ff020101ff"
-
-/// adv_wit_7key reconstructed-message preimage
-pub const pos_adv_wit_7key_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820f3d76324bb8bdaecc1a4f781d4e028081c6116cdd5fcb0961d47d147eb5b620058202162cda4b8d4b10e64fefb597991eaaa8d621d154346f2a16b4fc5da9fb320f05820d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d10000009f582030dd99fe0504c7770b9391f61e990a387824e103f918dec2d19ef6d2762600eb5820b5ba46c4df4c63b06bd7fea32edda628726b754eaedfa83c8b80ca809cd5ce6d58201e801c7465d348974f6a204855d94099fce9835a011ee0c4e7df9d11491393ceffd87a9f9f9fd8799f0103ffd8799f0103ffd8799f0103ffffffff9f5820b869940ca04c5aa28f05f00cbabe75c8fc4f87dc5a5739377141a78eebf6cc3e5820d316a46d5ff2c9958cf9b4bb1f9d443fc6f85b388edcc3c48f80eba77766da705820ab3ec92b8455db06aa1cb26150d8f50ed0faade88f05f03577d57c3b4e6568615820bf36097b235f9a51b65480a428e5c5e0a1d76853c94c4016abcdd9871dc715f058207b8263369ff6f014c3d90772105c4717fa7cd747867776eb8b58e67782d62aae5820ed798ab0a19747802837c123c0fa408218febd234f4ca5d259d08639d95822c958205e262ed136bfcd471d831946bf70ee1d84e2054a9dbbdcf7de0969d17edff414ffd87a9f9f9fd8799f0103ffd8799f0103ffd8799f0103ffd8799f0103ffd8799f0103ffd8799f0103ffd8799f0103ffffffff9f5820a886dc6f5f3ccf60104dbce957585c7c265c17f9fa9b03d9b6b6b1b70720b05aff9f5820731eafe56bb7c556a9cec95ac584f8edd829a6e1373d1d369f636409cac76050ff020101ff"
-
-/// adv_keep reconstructed-message preimage
-pub const pos_adv_keep_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820a4bed9386669b4cbdec329a7104e19537e12d492b1992fed35bea6db0c12a03d58206542ffda65d1cc50b0bb0773b563fa15b7117a8b13eafb07c843b7cee8c075645820d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d10000009f5820186b6bfa0e2b0ccf89e98de50c70a2e06cd8007b28aebe4839008e5f11f96d635820a6ab1be796925788ddad01e0dc48671340ac5d9939ca8f4a8f24a6d471054835ffd8799f02ff9f5820c60064c4537adfb3c8d32430294e2115df09c0c61976d71b8c5404a8c1f3d42c582054de3fcfbdb77342b106618bee60c2338d6db97e7c273f534f89ce60252b6dbeffd8799f02ff8080020101ff"
-
-/// adv_downgrade reconstructed-message preimage
-pub const pos_adv_downgrade_preimage: ByteArray =
-  #"d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc5820ad822928e0e86083a379f60e5efa274fdcad4ee2b321d531eda33c6c86b6619f582023908f737e40253d63bc4a2d44a1e506f52071231944b0e107385979c1dda4105820d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d10000009f58205a3a074f4fe49b02f553402171d7a4f5bb64efedbabad5c00afee91ca3344db5582067bba098e759e275d79de86bea78c4cc4a3355f657b115c998542df7a2658385ffd8799f02ff9f58207f815538143e19f3b7f6cd7e2684d5e805b1218469091d96f0ca0150fd3bf34958207721b5b0eae33e37c85246410f251ca8d1a781a45c361843bd054cd41a699d2cffd8799f02ff9f58202bb7bb8c1274dc2151ce96086a77ca6f27fd5a08c8176276fad665a5ff235e2a582021dc51b4a97124d4b37aca0990af8dc7849219786dc41c6792cd6e448390cf2c5820dbe9432fba2e548cf4996c91d83f3d27a755324ffa879d6b675af6ea2a3bd51aff80000101ff"
 
 /// adv_wit_2key: witnessed cut+add accepted
 pub const pos_adv_wit_2key_spent: SpentCheckpoint =
@@ -111,11 +94,11 @@ pub const pos_adv_wit_2key_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -244,15 +227,15 @@ pub const pos_adv_wit_7key_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"a4e95ec3a1e9dbdc821ab1ed4d9d9cdec44fb0d665a6d55774d131dcc725229499a77a49f3d6aa49b52945efdd75d823e743fe9bdae1c0663f0f4ebceccbce07",
+        #"a9fd85601fa3b062c29ca1a6b992cd132291ae36a221dae2720948908b04cb9b58e0b5c2197ae46028b0ad2c7c3889d9e1ac5ef780af91e620a7defea3149f0a",
       ),
       (
         1,
-        #"56030fef56c5767f06ed4aad32ddc7527d6e5bff5dfe4ff16fc096dbdea39cd475b87a0bdef8b0cb833e7bb30183a061e8d28bd54551acb86389597642d8de0c",
+        #"73523c655de013596267622af60d68b4d2aabe6e7eee67a52c9e5ae0aae87c2b909c9c973f92945ad867adb6eb038a795b05cc0ee24039497355c4dc9d886200",
       ),
       (
         2,
-        #"0e225d9ecc1c5fefdb013f19b4147a8a5ca077cde47da758923aed5ef8e080c8d3a29a4d1300009f33797c5d2dfc12fe476c99b6c5c9e44de16e81733cacd109",
+        #"18bfbe261c6c8e437702f916a049cc5cb9f6d48dfe5ca6abc01cd5d7ae475b7da56ef4136b1d92d70be2fb014dc1a7b7c9e85ead48bd69763c9440a43945ce08",
       ),
     ],
     wit_receipts: [
@@ -334,11 +317,11 @@ pub const pos_adv_keep_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"9c8ceedfbb45c8fb6656268b8750e52a53da6a914cd769096e1121d46da4307f88eccea106074819d1c6191871fb23ab29a4c2632e3c94e086d4a8296b3c4204",
+        #"525fee0e0926777e9696d978ce302e8bbdfdb8c8360fe7e603df5744fb63e3dae899e7a61d325506fb6a19deb1050ce30bfbd8cfb948712f5fa34a2f9fe76103",
       ),
       (
         1,
-        #"4f847792b42a400aab91e9c50e186a0fb18d21073df30fe7a2de8d69b196f7e3314339f739ec136467ab828077d660153ae91e2153e92b1b852f0d6744c48b0f",
+        #"88ae576aa450f92a16c1eb49a4291c40665118b39c8c8532b0ab45aa5e34779201607f7b6b283ea9c39cce4fe8cdd55d7e6e1c42a991187a4d02b8bccc5a3c0d",
       ),
     ],
     wit_receipts: [
@@ -419,11 +402,11 @@ pub const pos_adv_downgrade_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"41eb6b1b6f6fdcdfc42e78433e4adbd41092ff4b0ec22e857e4c417c7b6854af1eccc985a098248433c73bc07ca615b49c0622b8c0de5fbc7a63baebc839c30d",
+        #"52b01c4ebd4e158301e315b0a34d7bd99b3027bd28c1b776d169706258aa2e6f13c025f469aa8af5b7a7bb5b4a8b78dfb2bd5ca4e99708266174ab50e7294404",
       ),
       (
         1,
-        #"4fa3bd1fcad0a87ff457346f9770db9df3872952ca1f344eabc321548995a6524643c2fe1147cbf1c59b42b6f892774b0a13d4b115bfbe773fb459cccf64a205",
+        #"03150016f6a1bc1798683e89df53993e28af7f0064e9a39df60c48fc1364207b07cf5293c7223000c2da95edb633cf3b202a1a6f0d4a1c8ac144fa2fd6a53801",
       ),
     ],
     wit_receipts: [],
@@ -500,11 +483,11 @@ pub const ae1_off_t_at_i_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -590,11 +573,11 @@ pub const ae2_off_i_shift_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -680,11 +663,11 @@ pub const ae3_off_s_at_t_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -770,11 +753,11 @@ pub const ae4_overlap_k_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -903,15 +886,15 @@ pub const ae5_off_kt_at_bt_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"a4e95ec3a1e9dbdc821ab1ed4d9d9cdec44fb0d665a6d55774d131dcc725229499a77a49f3d6aa49b52945efdd75d823e743fe9bdae1c0663f0f4ebceccbce07",
+        #"a9fd85601fa3b062c29ca1a6b992cd132291ae36a221dae2720948908b04cb9b58e0b5c2197ae46028b0ad2c7c3889d9e1ac5ef780af91e620a7defea3149f0a",
       ),
       (
         1,
-        #"56030fef56c5767f06ed4aad32ddc7527d6e5bff5dfe4ff16fc096dbdea39cd475b87a0bdef8b0cb833e7bb30183a061e8d28bd54551acb86389597642d8de0c",
+        #"73523c655de013596267622af60d68b4d2aabe6e7eee67a52c9e5ae0aae87c2b909c9c973f92945ad867adb6eb038a795b05cc0ee24039497355c4dc9d886200",
       ),
       (
         2,
-        #"0e225d9ecc1c5fefdb013f19b4147a8a5ca077cde47da758923aed5ef8e080c8d3a29a4d1300009f33797c5d2dfc12fe476c99b6c5c9e44de16e81733cacd109",
+        #"18bfbe261c6c8e437702f916a049cc5cb9f6d48dfe5ca6abc01cd5d7ae475b7da56ef4136b1d92d70be2fb014dc1a7b7c9e85ead48bd69763c9440a43945ce08",
       ),
     ],
     wit_receipts: [
@@ -997,11 +980,11 @@ pub const ae6_off_n_at_k_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1130,15 +1113,15 @@ pub const ae7_off_nt_at_kt_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"a4e95ec3a1e9dbdc821ab1ed4d9d9cdec44fb0d665a6d55774d131dcc725229499a77a49f3d6aa49b52945efdd75d823e743fe9bdae1c0663f0f4ebceccbce07",
+        #"a9fd85601fa3b062c29ca1a6b992cd132291ae36a221dae2720948908b04cb9b58e0b5c2197ae46028b0ad2c7c3889d9e1ac5ef780af91e620a7defea3149f0a",
       ),
       (
         1,
-        #"56030fef56c5767f06ed4aad32ddc7527d6e5bff5dfe4ff16fc096dbdea39cd475b87a0bdef8b0cb833e7bb30183a061e8d28bd54551acb86389597642d8de0c",
+        #"73523c655de013596267622af60d68b4d2aabe6e7eee67a52c9e5ae0aae87c2b909c9c973f92945ad867adb6eb038a795b05cc0ee24039497355c4dc9d886200",
       ),
       (
         2,
-        #"0e225d9ecc1c5fefdb013f19b4147a8a5ca077cde47da758923aed5ef8e080c8d3a29a4d1300009f33797c5d2dfc12fe476c99b6c5c9e44de16e81733cacd109",
+        #"18bfbe261c6c8e437702f916a049cc5cb9f6d48dfe5ca6abc01cd5d7ae475b7da56ef4136b1d92d70be2fb014dc1a7b7c9e85ead48bd69763c9440a43945ce08",
       ),
     ],
     wit_receipts: [
@@ -1224,11 +1207,11 @@ pub const ae8_off_br_at_ba_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1314,11 +1297,11 @@ pub const ae9_off_ba_at_br_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1447,15 +1430,15 @@ pub const ae10_off_bt_at_kt_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"a4e95ec3a1e9dbdc821ab1ed4d9d9cdec44fb0d665a6d55774d131dcc725229499a77a49f3d6aa49b52945efdd75d823e743fe9bdae1c0663f0f4ebceccbce07",
+        #"a9fd85601fa3b062c29ca1a6b992cd132291ae36a221dae2720948908b04cb9b58e0b5c2197ae46028b0ad2c7c3889d9e1ac5ef780af91e620a7defea3149f0a",
       ),
       (
         1,
-        #"56030fef56c5767f06ed4aad32ddc7527d6e5bff5dfe4ff16fc096dbdea39cd475b87a0bdef8b0cb833e7bb30183a061e8d28bd54551acb86389597642d8de0c",
+        #"73523c655de013596267622af60d68b4d2aabe6e7eee67a52c9e5ae0aae87c2b909c9c973f92945ad867adb6eb038a795b05cc0ee24039497355c4dc9d886200",
       ),
       (
         2,
-        #"0e225d9ecc1c5fefdb013f19b4147a8a5ca077cde47da758923aed5ef8e080c8d3a29a4d1300009f33797c5d2dfc12fe476c99b6c5c9e44de16e81733cacd109",
+        #"18bfbe261c6c8e437702f916a049cc5cb9f6d48dfe5ca6abc01cd5d7ae475b7da56ef4136b1d92d70be2fb014dc1a7b7c9e85ead48bd69763c9440a43945ce08",
       ),
     ],
     wit_receipts: [
@@ -1541,11 +1524,11 @@ pub const mis_trunc_i_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1631,11 +1614,11 @@ pub const mis_neg_i_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1721,11 +1704,11 @@ pub const mis_dup_k_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1811,11 +1794,11 @@ pub const mis_br_into_k_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1901,11 +1884,11 @@ pub const mis_short_k_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -1991,11 +1974,11 @@ pub const mis_short_n_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2081,11 +2064,11 @@ pub const mis_empty_br_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2171,11 +2154,11 @@ pub const mis_empty_ba_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2261,11 +2244,11 @@ pub const mis_t_into_p_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2351,11 +2334,11 @@ pub const mis_kt_into_d_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2441,11 +2424,11 @@ pub const mis_bt_into_a_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -2531,7 +2514,7 @@ pub const ctrl_bad_index_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         99,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
     ],
     wit_receipts: [
@@ -2549,7 +2532,7 @@ pub const ctrl_bad_index_evidence: AdvanceEvidence =
 pub const ctrl_bad_index_verdict: AdvancePredicateVerdict =
   AdvancePredicateInvalid(AdvMessageInvalid(Eq6CurrentQuorumUnsatisfied))
 
-/// wrong preimage: KERI event_raw sigs MUST fail -> Eq6CurrentQuorumUnsatisfied
+/// wrong preimage: old AdvanceMessage-class sigs MUST fail -> Eq6CurrentQuorumUnsatisfied
 pub const ctrl_wrong_preimage_spent: SpentCheckpoint =
   SpentCheckpoint {
     network_id: 1,
@@ -2617,11 +2600,11 @@ pub const ctrl_wrong_preimage_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
+        #"54b1e8132c89c280e5381c17addf0a8ff742d9698ad159a05d8c804a4dd42d4ccca94bcafe40a328bdd6688f385e7e1dbecf2e11ebbcc5d4679dd0eabfa0d503",
       ),
       (
         1,
-        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
+        #"15f68377b9391a4cdbb87c07430b3036e3662f090f5eadacd246281c6e493893c0a35c2c4ddd1b4ce5146ef353f2b6660660c1c9b611140fdc3083b221285908",
       ),
     ],
     wit_receipts: [
@@ -2707,7 +2690,7 @@ pub const ctrl_below_threshold_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
     ],
     wit_receipts: [
@@ -2793,11 +2776,11 @@ pub const ctrl_stolen_quorum_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"95bc2ec3276ebc5d967c82227a039804cbf830f53ec30b173a301ba2af23c1ebb94b077a35aca0a87ae89ad19c36883d4a1a6ba17b4077a8801064de885ea00a",
+        #"d8be9c05b66d594de16801f34373396dc1e341613c49aee07bcdb9ebb54094385c440517e8b8efa27277b04da7e0a213423995a3f8a0f739c8edda4d95d34709",
       ),
       (
         1,
-        #"ca435bf8fbd9865fab09ac1a6b95b39a44f8ca31eb40df5abeea380d1da70a9327f8277d9d796e24e1f01013ea44a8326ff490d4e3a3dad2902dd0f53d462606",
+        #"12ca2df241a37a27b8e2875d371c3eb66dab0ae6d9e512dc3870f1909a67ebcab605205287c7c661f8a5fc10247d0e920d29ac12fc1daad336e9b12dc115ba02",
       ),
     ],
     wit_receipts: [
@@ -2883,11 +2866,11 @@ pub const ctrl_substituted_successor_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"dceac14ddd31f8565aff8fa487567ab5aa3472e9b886e1c82ac58abcf7d7caafe63a6b5f71beca443f64d249d0d92f99b541220ac237bb181a57908e78aa810e",
+        #"d8be9c05b66d594de16801f34373396dc1e341613c49aee07bcdb9ebb54094385c440517e8b8efa27277b04da7e0a213423995a3f8a0f739c8edda4d95d34709",
       ),
       (
         1,
-        #"cb48daedf2a85a22d32cc3e3f3e8c97a72ef08ec54964d064fd0aa203be9d0de3314fc7b8931cd15e8eff78682a278e7e4017233a5a3716aa187355748c40802",
+        #"12ca2df241a37a27b8e2875d371c3eb66dab0ae6d9e512dc3870f1909a67ebcab605205287c7c661f8a5fc10247d0e920d29ac12fc1daad336e9b12dc115ba02",
       ),
     ],
     wit_receipts: [
@@ -2974,11 +2957,11 @@ pub const w1_dup_cut_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3064,11 +3047,11 @@ pub const w1_cut_non_member_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3155,11 +3138,11 @@ pub const w2_dup_add_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3245,11 +3228,11 @@ pub const w2_add_present_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3335,11 +3318,11 @@ pub const w2_cut_add_overlap_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3425,11 +3408,11 @@ pub const eq7_derived_set_mismatch_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3515,11 +3498,11 @@ pub const eq7_wrong_order_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3605,11 +3588,11 @@ pub const eq8_toad_out_of_bounds_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"fe00b6100326c3275c899280ea854b7b1c7f42c8940a4aa872eb07ef6401f60c3814c0a7ab3d666b683eacc21e7da300c1c8dbfbb138a492870b99357519db0f",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"d8bdce8b4db556779d712acc3e8c4dc86cf4114dddc49a719b0442a51d93687c610b0e25f6dd47061eddb577dcc8cca2849140519d228ca93c18f029f975d90f",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3695,11 +3678,11 @@ pub const v7_receipt_free_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [],
@@ -3776,11 +3759,11 @@ pub const v7_below_toad_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3862,11 +3845,11 @@ pub const v7_bad_index_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -3952,11 +3935,11 @@ pub const v7_bad_sig_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -4042,11 +4025,11 @@ pub const v7_dup_index_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -4132,11 +4115,11 @@ pub const v7_wrong_member_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -4222,11 +4205,11 @@ pub const v7_cut_witness_receipt_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -4316,11 +4299,11 @@ pub const v7_outgoing_only_quorum_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"7f6cfeab7c32b0bc9dde4550523de0cf127b93d3acc39960f72b2583b3a87e00c276a8c7f2446dafb1a8697e8cb3b2de92e42e6a04004193c3561f02f9d06f07",
+        #"51514ae1e3b8872b8db2cf442c14d6bac3a2dc2f86f298de4510e7585672f189f0430ff957cad40ef4d5f5ff648664df05bfc23ac8996fce09257e2adf9d8103",
       ),
       (
         1,
-        #"8887a83c985971809e6bc61d7096794155c2c857118b64a1926c8cf6574febbe7fbf8648223899c22356953b09f6f5f5feaac5def2deb8abfb94309ebc2a010b",
+        #"49bb0b96756088e8b96ff836a191f36168304674818a0912093b4853ef82cf92c98f1fe0d8c14bf126d31a6a5313268de9ab1eb8414b7de831e2c9d345ee670a",
       ),
     ],
     wit_receipts: [
@@ -4406,11 +4389,11 @@ pub const v7_downgrade_nonempty_receipts_evidence: AdvanceEvidence =
     ctrl_sigs: [
       (
         0,
-        #"41eb6b1b6f6fdcdfc42e78433e4adbd41092ff4b0ec22e857e4c417c7b6854af1eccc985a098248433c73bc07ca615b49c0622b8c0de5fbc7a63baebc839c30d",
+        #"52b01c4ebd4e158301e315b0a34d7bd99b3027bd28c1b776d169706258aa2e6f13c025f469aa8af5b7a7bb5b4a8b78dfb2bd5ca4e99708266174ab50e7294404",
       ),
       (
         1,
-        #"4fa3bd1fcad0a87ff457346f9770db9df3872952ca1f344eabc321548995a6524643c2fe1147cbf1c59b42b6f892774b0a13d4b115bfbe773fb459cccf64a205",
+        #"03150016f6a1bc1798683e89df53993e28af7f0064e9a39df60c48fc1364207b07cf5293c7223000c2da95edb633cf3b202a1a6f0d4a1c8ac144fa2fd6a53801",
       ),
     ],
     wit_receipts: [

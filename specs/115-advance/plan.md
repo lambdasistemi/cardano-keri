@@ -159,7 +159,13 @@ Trailer: Tasks: T115-R2
 ## Slice R3 — event-own advance authentication
 
 Goal: delete fresh Cardano authorization and make the exact KERI event the
-sole signature preimage.
+sole signature preimage while completing the ratified four-program topology.
+
+Before RED, the driver restores every previously owned R3 implementation,
+test, fixture, pin, and recipe path byte-exactly to the navigator-approved
+pre-probe GREEN diff. Root-owned spec.md, plan.md, and tasks.md remain
+untouched. The scratch probe is evidence, not a production edit or reusable
+RED.
 
 RED:
 
@@ -167,7 +173,24 @@ RED:
 - prove old AdvanceMessage signatures, event-byte mutations, wrong indices,
   duplicate indices, stolen-current quorum, under-threshold evidence,
   malformed witness deltas, receipt games, and AE offset misdirection reject;
-- preserve the genuine GLEIF 3-of-7 and witnessed rotations.
+- preserve the genuine GLEIF 3-of-7 and witnessed rotations;
+- introduce a dedicated observer_advance and prove observer_lifecycle is
+  Register-only, observer_advance is Advance-only, and
+  observer_enforcement remains Freeze/Convict-only;
+- prove checkpoint selects the lifecycle, advance, or enforcement credential
+  exactly by action, with missing, nonzero, extra, cross-family, and
+  wrong-action withdrawals rejected and ClaimFreeze requiring no observer;
+- prove observer_advance plain registration succeeds while deregistration and
+  every other certificate constructor fail;
+- prove the final checkpoint fourth-hash parameter and three-way observer
+  selection, all four exact applied-size rows, and all four stock-cap signed
+  reference-script transaction shapes;
+- prove the fourth-program observer_advance registration choreography in the
+  builder and E2E harness, including witness, ConwayCertifying redeemer,
+  collateral, prepareWallet split, and pollOutput settlement; and
+- run the fresh focused production oracle, including all 47 Haskell and 65
+  Aiken cases represented in the approved probe. No scratch result substitutes
+  for watching this RED fail for the intended missing topology.
 
 GREEN:
 
@@ -179,28 +202,70 @@ GREEN:
   both the NEW current threshold and OLD next-key commitment threshold;
 - preserve AE1-AE10, W1-W3, exact incoming-set receipts, and the no-d/no-p
   ruling;
-- add ObserveAdvance to observer_lifecycle and regenerate shared verdict
-  vectors; observer_enforcement remains Advance-fail-closed.
+- implement observer_advance for Advance and reduce observer_lifecycle to
+  Register; keep observer_enforcement Freeze/Convict-only;
+- apply the two A-017-approved representation-preserving changes: share the
+  equivalent ACTIVE address/from_script result and express the certifying
+  whitelist as RegisterCredential success with every other constructor
+  failing;
+- add the fourth observer hash and three-way action selection to checkpoint,
+  apply/load all four programs in E2E, and register observer_advance with the
+  same reviewed witness/redeemer/collateral/wallet-split/settlement
+  choreography; do not restore the four redundant action-wallet splits removed
+  by A-013;
+- independently re-prove the production semantic oracle and per-context
+  execution units, require every applied program below 16,133 bytes,
+  observer_advance no larger than 15,333 bytes with at least 800 bytes slack,
+  and construct all four signed reference-script shapes at stock 16,384; and
+- after all validator changes, repin only offchain/flake.nix outputHash using
+  the A-009 observed-hash discovery cycle and preserve observer-title proof.
 
-Primary owned files:
+Exact R3 ownership fence:
 
 - offchain/lib/Cardano/KERI/AID/Checkpoint/Advance.hs
 - offchain/lib/Cardano/KERI/AID/Checkpoint/Message.hs
+- offchain/flake.nix, outputHash only when the tracked on-chain blueprint
+  change requires the fixed-output repin; use the observed-hash discovery
+  cycle and do not change any other flake field
 - offchain/test/Cardano/KERI/AID/Checkpoint/AdvanceSpec.hs
 - offchain/test/Cardano/KERI/AID/Checkpoint/MessageSpec.hs
 - offchain/app/GenAdvanceVectors.hs
 - offchain/app/GenCheckpointVectors.hs
-- offchain/test/keri-fixtures/gen_fixtures.py and advance fixture metadata
-  only if the pinned oracle must regenerate signature fields
+- offchain/e2e/CheckpointTxBuilder.hs
+- offchain/e2e/CheckpointE2ESpec.hs
+- offchain/test/keri-fixtures/gen_fixtures.py
+- offchain/test/keri-fixtures/fixtures/advance.json
+- offchain/test/keri-fixtures/fixtures/manifest.json
+  (these three fixture paths are writable only through the pinned oracle when
+  it must regenerate signature fields; no hand-edited generated evidence)
 - onchain/lib/cardano_keri/checkpoint/advance.ak
 - onchain/lib/cardano_keri/checkpoint/advance_tests.ak
 - onchain/lib/cardano_keri/checkpoint/advance_vectors.ak
 - onchain/lib/cardano_keri/checkpoint/message.ak
 - onchain/lib/cardano_keri/checkpoint/message_tests.ak
+- onchain/lib/cardano_keri/checkpoint/observer.ak
+- onchain/lib/cardano_keri/checkpoint/observer_tests.ak
 - onchain/lib/cardano_keri/checkpoint/vectors.ak
+- onchain/validators/checkpoint.ak
+- onchain/validators/checkpoint_tests.ak
 - onchain/validators/checkpoint_observer.ak
 - onchain/validators/checkpoint_observer_tests.ak
-- justfile, only affected vector drift recipes
+- onchain/validators/checkpoint_measurements.ak, mechanical checkpoint-arity
+  co-change only: add one advance_hash constant and thread it in the same
+  argument position through the existing checkpoint.checkpoint.mint/spend
+  calls; do not change benchmark shapes, thresholds, row content, or any
+  other R6-owned behavior
+- justfile, affected vector drift plus four-program deployability-size and
+  signed-reference-shape wiring only
+
+Standing compile-coupling rule for this and every later slice: when a required
+arity/type co-change reaches into another slice's owned file, the driver
+discloses it, the navigator checks its content, the pair blocks, and root
+rules on the exact scope. No mechanical carve-out is silent or self-approved.
+
+The R3 commit body must state that checkpoint_measurements.ak changed
+mechanically because checkpoint gained the advance-observer hash parameter,
+and that no R6 benchmark behavior changed.
 
 Commit: feat(115): authenticate advance with the KERI event
 
@@ -308,9 +373,9 @@ GREEN:
 
 - gate exactly the thirteen rows listed in spec.md;
 - measure full selected-observer-plus-checkpoint contexts at final parameter
-  arity and record all three applied program sizes;
+  arity and record all four applied program sizes;
 - retain limits of 10,500,000 memory and 7,500,000,000 CPU per ACCEPT row;
-- record exact units, headroom, all three applied sizes, parameter CBOR, and
+- record exact units, headroom, all four applied sizes, parameter CBOR, and
   stock-cap verdict in MEASUREMENTS.md;
 - run the full stock-cap E2E boundary.
 
@@ -342,10 +407,12 @@ GREEN:
 
 - add a manual just recipe and repository runner for the ruled socket,
   container, magic, D_reg, B, and 120-second freeze window;
-- apply and create all three reference scripts, then build/submit Register,
+- apply and create all four reference scripts, then build/submit Register,
   Arm, Claim and the extended Advance/response/thaw demo;
-- register both observer stake credentials in setup and record every dedicated
-  or combined setup transaction id;
+- register all three observer stake credentials in setup, including the
+  fourth-program observer_advance witness/redeemer/collateral/prepareWallet
+  split/pollOutput settlement choreography, and record every dedicated or
+  combined setup transaction id;
 - emit a redacted structured record with script hashes, AIDs, txids, and
   explorer URLs;
 - add genuine pinned-keripy demo material and verification;
@@ -388,7 +455,7 @@ GREEN:
 - update only the #115-owned fragments named by spec.md;
 - make ordinary replay, response, thaw, event-own signatures, incoming
   receipts, burn history, and genuine-keripy rolling demo explicit;
-- state both observer-registration liveness dependencies using the final
+- state all three observer-registration liveness dependencies using the final
   invariant: each observer's stake credential is creatable once by anyone and
   removable by no one; its whitelist accepts only plain registration and
   rejects deregistration and every other certificate constructor;
@@ -412,10 +479,10 @@ After R8:
 
 1. Run ./gate.sh from a clean final HEAD and retry once only on a genuine
    transient failure.
-2. Recompute all three applied sizes independently and inspect the 13-row
+2. Recompute all four applied sizes independently and inspect the 13-row
    report.
-3. Manually run the preprod recipe. Record all three reference-script txids,
-   both observer stake-registration proofs, Register, Arm, Claim, and the
+3. Manually run the preprod recipe. Record all four reference-script txids,
+   all three observer stake-registration proofs, Register, Arm, Claim, and the
    rolling demo transaction ids and explorer URLs. Never place secret material
    in logs.
 4. Update the PR body with final contract, measurements, stock-cap result,
@@ -430,9 +497,11 @@ After R8:
 ## Hard stops
 
 - No implementation before A-001.
-- Any of checkpoint, observer_lifecycle, or observer_enforcement at or above
-  16,133 bytes after two complete reviewed family-split R1 attempts (the A-004
-  forward probe does not consume an attempt).
+- Any of checkpoint, observer_lifecycle, observer_advance, or
+  observer_enforcement at or above 16,133 bytes; observer_advance above 15,333
+  bytes or below 800 bytes of slack; or failure of any of the four signed
+  reference-script shapes at stock cap. The historical two-attempt R1 limit
+  and A-004 forward-probe exclusion remain recorded in the R1 evidence.
 - Any ACCEPT row below 25.00 percent headroom.
 - Gate failure after one retry.
 - Unfunded preprod wallet, leaked/incorrect key permissions, or public-network

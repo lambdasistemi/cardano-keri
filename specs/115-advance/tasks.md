@@ -41,12 +41,22 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 
 ## R3 — event-own advance authentication
 
-- [ ] T115-R3 Delete AdvanceMessage, its domain/reconstruction/CBOR
+- [x] T115-R3 Delete AdvanceMessage, its domain/reconstruction/CBOR
       fresh-signature helpers and goldens; verify indexed controller
       signatures over event_bytes; preserve dual thresholds, W1-W3,
-      AE1-AE10, and incoming-set receipts; add ObserveAdvance to
-      observer_lifecycle and regenerate Haskell/Aiken byte and verdict parity
-      vectors.
+      AE1-AE10, and incoming-set receipts; restore the approved pre-probe GREEN
+      byte-exactly, write fresh topology RED, split Register into
+      observer_lifecycle and Advance into observer_advance, keep
+      observer_enforcement Freeze/Convict-only, add the fourth observer hash
+      and three-way checkpoint selector, register the fourth-program
+      observer_advance credential with the reviewed witness/redeemer/
+      collateral/prepareWallet/pollOutput choreography, carry both
+      A-017-approved equivalent size representations into production,
+      regenerate Haskell/Aiken byte and verdict parity vectors, re-prove the
+      47/65 semantic oracle and per-context execution units, keep every program
+      below 16,133 and observer_advance at no more than 15,333 with at least
+      800 bytes slack, construct all four stock-cap reference-script shapes,
+      and repin only outputHash through the A-009 discovery cycle.
 
 ## R4 — all live Advance roles
 
@@ -69,7 +79,7 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 
 - [ ] T115-R6 Gate exactly thirteen full-handler ACCEPT rows at no more than
       10.5M memory and 7.5B CPU each; measure the selected family observer plus
-      checkpoint at final arity; record exact headroom and all three applied
+      checkpoint at final arity; record exact headroom and all four applied
       sizes in MEASUREMENTS.md; run the stock-cap live-node boundary.
 
 ## R7 — manual preprod and demo tooling
@@ -77,7 +87,8 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R7 Ship a standalone manual preprod just recipe and runner using
       KERI_PREPROD_KEY_DIR, the ruled socket/container/magic/address,
       D_reg=5 ADA, B=5 ADA, W_freeze=120 seconds; protect/redact secrets; add
-      both observer stake registrations and record their txids; add genuine
+      all three observer stake registrations, including the fourth-program
+      observer_advance choreography, and record their txids; add genuine
       pinned-keripy demo AIDs/KELs and hermetic dry-run tests; prove no
       gate.sh, just ci, Nix-check, or workflow dependency.
 
@@ -86,16 +97,17 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R8 Update only identity-ops, trust-model, M1 blog, and milestones
       deck advance fragments for permissionless replay, event-own evidence,
       response/thaw, advance-totality, bounded interference, conviction
-      history-by-burn, both observer-registration/deregistration liveness
+      history-by-burn, all three observer-registration/deregistration liveness
       dependencies, and the rolling genuine-keripy preprod demo; keep #117 held; pass strict
       docs/link/presentation gates.
 
 ## Final local and public evidence
 
-- [ ] T115-F1 Run clean final ./gate.sh; independently recompute all three
+- [ ] T115-F1 Run clean final ./gate.sh; independently recompute all four
       applied sizes and audit the exact 13-row headroom table.
-- [ ] T115-F2 Manually settle all three reference scripts and Register, Arm,
-      Claim on preprod after registering both observer stake credentials; run the
+- [ ] T115-F2 Manually settle all four reference scripts and Register, Arm,
+      Claim on preprod after registering all three observer stake credentials,
+      including the fourth-program observer_advance choreography; run the
       ACTIVE advance, ARMED response, and FROZEN thaw demo; record redacted
       output, script hashes, AIDs, explorer URLs, and txids.
 - [ ] T115-F3 Update and independently verify the PR body, push final HEAD,

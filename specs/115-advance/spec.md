@@ -55,7 +55,8 @@ authentication evidence. No fresh Cardano-domain signature exists.
    feature work continues.
 2. R2 second: delete the isolated 32 KiB devnet genesis, restore the stock
    16,384-byte cap, remove the NON-DEPLOYABLE banner, and permanently gate
-   all three applied sizes plus the absence of executable 32,768-byte overrides.
+   the then-current three applied sizes plus the absence of executable
+   32,768-byte overrides.
 3. Delete AdvanceMessage and its canonical-CBOR fresh-signature domain in
    Haskell and Aiken. Controller signatures verify the exact KERI event bytes.
 4. Admit one Advance branch from ACTIVE, ARMED, and FROZEN with the exact
@@ -67,8 +68,8 @@ authentication evidence. No fresh Cardano-domain signature exists.
    advance-totality and bounded-interference adversarial coverage, and gate
    exactly thirteen full-handler ACCEPT measurements.
 7. Activate the honest live-node surface at the stock cap, ship a
-   manual-only preprod runner, settle all three reference scripts and the required
-   lifecycle on preprod, and refresh the genuine-keripy demo.
+   manual-only preprod runner, settle all four final reference scripts and the
+   required lifecycle on preprod, and refresh the genuine-keripy demo.
 8. Update the #115-owned advance/replay fragments in architecture, trust
    model, M1 blog, and M1 milestones deck.
 
@@ -249,6 +250,53 @@ hash-proof settlement there. Rows blocked only by that price table remain
 explicitly pending on #190; production-price positive settlement is proved
 manually on preprod in this ticket.
 
+## R3 ratified four-program architecture
+
+A-016 and the successful A-017 Option D probe amend the final topology from
+the three-program R1/R2 stepping stone to four independently applied Plutus V3
+programs:
+
+1. checkpoint remains the minting policy, spending validator, identity hash h,
+   ACTIVE payment credential, and source of every role-address derivation;
+2. observer_lifecycle verifies Register only;
+3. observer_advance verifies Advance only; and
+4. observer_enforcement verifies Freeze and Convict.
+
+The final parameter order is exact. observer_lifecycle receives version,
+hash-proof policy, and D_reg; observer_advance receives version;
+observer_enforcement receives version; and checkpoint receives version,
+lifecycle observer hash, advance observer hash, enforcement observer hash,
+D_reg, freeze bond, and freeze window. The three observers are applied and
+hashed before checkpoint. No observer becomes an AID identity or policy hash,
+and the one-h identity contract remains intact.
+
+Checkpoint selects exactly one zero-valued withdrawal by action: Register uses
+observer_lifecycle, Advance uses observer_advance, Freeze and Convict use
+observer_enforcement, and ClaimFreeze uses none. A missing, nonzero, extra,
+cross-family, or wrong-action observer withdrawal rejects. Each observer's
+certifying handler accepts plain registration of its own credential exactly
+once by anyone, and rejects deregistration and every other certificate
+constructor. Devnet and preprod setup register all three observer credentials.
+In particular, the new observer_advance is the fourth program's
+stake-credential registration surface required by A-016: its witness,
+ConwayCertifying redeemer, collateral, prepareWallet funding split, and
+pollOutput settlement barrier follow the already reviewed registration
+choreography.
+
+The A-017 scratch probe measured checkpoint at 7,137 bytes,
+observer_lifecycle at 6,609, observer_advance at 15,272, and
+observer_enforcement at 14,500. The dedicated Advance baseline was 15,676
+bytes; two bounded representation-preserving changes reduced it by 404 bytes
+to 861 bytes of strict-cap slack. The first shares the ACTIVE address
+construction and equivalent from_script result; the second expresses the
+certifying whitelist as RegisterCredential success with every other
+constructor failing. The complete focused Haskell and Aiken semantic oracle
+remained unchanged. These measurements ratify the topology but are not
+production evidence: R3 restores the approved pre-probe GREEN exactly, writes
+fresh topology RED, carries both representations into production, and
+re-proves semantics, execution units, sizes, and all four signed
+reference-script creation shapes at stock maxTxSize 16,384.
+
 ## Permissionless Advance evidence
 
 AdvanceEvidence continues to carry the exact keripy rotation serialization,
@@ -402,15 +450,15 @@ Exactly these thirteen rows are gated:
 Each evidence-bearing row exercises the checkpoint and its selected family
 observer in the same full transaction context and records per-script execution
 units where the tool exposes them. MEASUREMENTS.md records exact units,
-percentages, headroom, all three applied sizes, parameter CBOR, and the
+percentages, headroom, all four applied sizes, parameter CBOR, and the
 stock-cap verdict.
 
 ## Live-node, preprod, and demo boundary
 
 ### Hermetic live-node gate
 
-The repository E2E builder applies all three production scripts with final
-parameter arity, posts all three reference scripts under stock maxTxSize
+The repository E2E builder applies all four production scripts with final
+parameter arity, posts all four reference scripts under stock maxTxSize
 16,384, and runs every row the pinned devnet can price honestly. The existing exact
 old-cost Plomin rejection and PENDING(blocked-on=#190) labels remain truthful
 until the upstream fixture supports the production price table. No synthetic
@@ -443,12 +491,16 @@ The recorded manual run must settle:
 
 1. one reference-script creation transaction for checkpoint;
 2. one reference-script creation transaction for observer_lifecycle;
-3. one reference-script creation transaction for observer_enforcement;
-4. stake-credential registration for both observers, either as dedicated setup
-   transactions or in reference-script transactions;
-5. a production-price permissionless Register of a genuine keripy AID;
-6. Arm of that checkpoint from genuine later-event evidence; and
-7. Claim at or after the stored deadline.
+3. one reference-script creation transaction for observer_advance;
+4. one reference-script creation transaction for observer_enforcement;
+5. stake-credential registration for all three observers, including the
+   fourth-program observer_advance choreography with its witness,
+   ConwayCertifying redeemer, collateral, prepareWallet split, and pollOutput
+   settlement barrier, either as dedicated setup transactions or in
+   reference-script transactions;
+6. a production-price permissionless Register of a genuine keripy AID;
+7. Arm of that checkpoint from genuine later-event evidence; and
+8. Claim at or after the stored deadline.
 
 The rolling demo additionally exercises the #115 lifecycle available at the
 final tree: ordinary ACTIVE advance, ARMED response, and FROZEN thaw using a
@@ -481,9 +533,10 @@ fresh Cardano authorization language, explains event-own signatures,
 incoming receipts, ACTIVE/ARMED/FROZEN value behavior, and centers
 advance-totality plus bounded adversarial interference. It says conviction
 is recorded in the transaction history and the token is burned, not kept in a
-tombstone UTxO. The trust model also states that the registered observer
-credential is a liveness dependency and that each observer's stake credential
-is creatable once by anyone and removable by no one: its certifying whitelist
+tombstone UTxO. The trust model also states that each registered observer
+credential is a liveness dependency and that each of the three observers'
+stake credentials is creatable once by anyone and removable by no one: its
+certifying whitelist
 accepts only plain registration and rejects deregistration and every other
 certificate constructor. The deck retains the approved line: anyone can
 project the public truth; no one can lie about it or lock you out of it.
@@ -494,17 +547,19 @@ link, and presentation checks must pass.
 
 ## Acceptance criteria
 
-- [ ] The checkpoint and both observer exact applied programs are each less
-      than 16,133 bytes and all three signed reference-script creation shapes
+- [ ] The checkpoint and all three observer exact applied programs are each
+      less than 16,133 bytes, observer_advance retains at least 800 bytes of
+      slack, and all four signed reference-script creation shapes
       fit stock 16,384.
 - [ ] No executable 32,768-byte devnet override or NON-DEPLOYABLE banner
       remains; permanent size and source guards run in just ci.
 - [ ] Family-split observer forwarding is transaction-coupled and every
       absent/mismatched withdrawal, cross-family credential, or observer action
       rejects without changing evidence verdicts.
-- [ ] Both observer stake credentials are registered in devnet and preprod
-      setup; certificate-purpose tests prove plain registration succeeds and
-      both observers refuse deregistration, and any unregistered-path
+- [ ] All three observer stake credentials are registered in devnet and
+      preprod setup, including the fourth-program observer_advance
+      choreography; certificate-purpose tests prove plain registration
+      succeeds and all three observers refuse deregistration, and any unregistered-path
       limitation is explicit if the live harness cannot construct it.
 - [ ] AdvanceMessage and every fresh-signature preimage/helper/golden are
       deleted. Controller signatures and witness receipts cover event_bytes.
@@ -522,8 +577,8 @@ link, and presentation checks must pass.
 - [ ] Exactly thirteen full-handler rows pass with at least 25.00 percent
       memory and CPU headroom.
 - [ ] Stock-cap live-node checks are honest about cardano-node-clients#190.
-- [ ] The manual preprod record contains three reference-script txids,
-      stake-registration evidence for both observers, and the Register, Arm,
+- [ ] The manual preprod record contains four reference-script txids,
+      stake-registration evidence for all three observers, and the Register, Arm,
       and Claim txids, all explorer-verifiable.
 - [ ] The refreshed demo uses genuine pinned-keripy AIDs/KELs and proves
       ACTIVE advance, ARMED response, and FROZEN thaw on preprod.

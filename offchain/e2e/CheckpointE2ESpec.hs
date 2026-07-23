@@ -20,6 +20,7 @@ import CheckpointTxBuilder (
     CheckpointEnv,
     RejectionEvidence,
     advanceRejection,
+    assertStockMaxTxSize,
     closeRejection,
     hashProofMintOldCostRejection,
     observerEnforcementStakeRegistrationSetup,
@@ -34,6 +35,9 @@ import CheckpointTxBuilder (
 spec :: Spec
 spec = describe "#114 permissionless checkpoint boundary" $ do
     around stagedCheckpointDevnet $ do
+        it
+            "settled-on-devnet: live protocol parameters use stock maxTxSize = 16384"
+            assertStockMaxTxSize
         it
             "applies checkpoint plus both observers, derives both distinct observer hashes, and constructs all three signed reference-script creation shapes at the stock cap"
             verifyThreeProgramDeploymentShapes

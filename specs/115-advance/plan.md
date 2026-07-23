@@ -54,9 +54,10 @@ RED:
 - prove Register cannot use observer_enforcement, Freeze/Convict cannot use
   observer_lifecycle, ObserveAdvance stays fail-closed in R1, and ClaimFreeze
   needs neither observer;
-- add certificate-purpose rejections proving neither observer can authorize
-  its own deregistration, plus unregistered-reward-account live negatives per
-  observer where the node-client harness can express them;
+- add certifying-purpose tests proving each observer accepts plain
+  registration of its own credential but rejects deregistration and every
+  other certificate constructor, plus unregistered-reward-account live
+  negatives per observer where the node-client harness can express them;
 - port existing positive and adversarial predicate contexts through the
   selected family observer and demonstrate the checkpoint no longer supplies
   that verification;
@@ -83,7 +84,9 @@ GREEN:
   deleted;
 - construct all three reference-script transaction shapes; and
 - register both observer stake credentials in devnet setup before the first
-  selected-family transaction and keep every certificate purpose fail closed;
+  selected-family transaction through an exhaustive whitelist accepting only
+  plain registration of the observer's own credential while keeping
+  deregistration and every other certificate constructor fail closed;
 - require all three exact applied programs to be less than 16,133 bytes.
 
 Primary owned files:
@@ -110,8 +113,8 @@ Trailer: Tasks: T115-R1
 
 ## Slice R2 — restore the production transaction cap
 
-Goal: remove the temporary size fiction immediately after R1 proves both
-programs deployable.
+Goal: remove the temporary size fiction immediately after R1 proves all three
+final-arity programs deployable.
 
 RED:
 
@@ -124,12 +127,21 @@ GREEN:
 
 - delete e2eGenesis and route checkpoint E2E to the stock 16,384 genesis;
 - delete the banner and overage tuple;
+- add each observer's exhaustive certifying whitelist: accept only plain
+  registration of its own script credential; reject deregistration,
+  delegation, DRep, pool, and every other certificate constructor;
+- build the registration certificate's `ConwayCertifying (AsIx 0)` redeemer
+  and script-integrity material before balancing;
 - make the permanent just ci gate reject any of the three programs at or above 16,133
   and reject 32768 in executable/configuration surfaces;
 - settle all three reference-script creation transactions on the local stock
   devnet;
 - rerun the truthful old-cost boundary, preserving explicit
   PENDING(blocked-on=#190) positive hash-proof rows.
+- record follow-up debt without widening R2: `submitSettling` currently proves
+  only mempool acceptance despite its name. R2 keeps the settlement barrier
+  local to observer registration; a later slice or follow-up ticket should
+  either rename the helper or make its global contract actually settle.
 
 Primary owned files:
 
@@ -137,6 +149,8 @@ Primary owned files:
 - offchain/e2e/CheckpointTxBuilder.hs
 - offchain/e2e/CheckpointE2ESpec.hs
 - justfile, only deployability/source guards and E2E labels
+- onchain/validators/checkpoint_observer.ak
+- onchain/validators/checkpoint_observer_tests.ak
 
 Commit: fix(115): restore the production transaction cap
 
@@ -374,8 +388,10 @@ GREEN:
 - update only the #115-owned fragments named by spec.md;
 - make ordinary replay, response, thaw, event-own signatures, incoming
   receipts, burn history, and genuine-keripy rolling demo explicit;
-- state both observer-registration liveness dependencies and why each
-  fail-closed certificate handler prevents deregistration;
+- state both observer-registration liveness dependencies using the final
+  invariant: each observer's stake credential is creatable once by anyone and
+  removable by no one; its whitelist accepts only plain registration and
+  rejects deregistration and every other certificate constructor;
 - preserve all #117 work as held design language;
 - pass strict MkDocs, links, and presentation checks.
 

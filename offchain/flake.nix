@@ -275,7 +275,7 @@
               outputHashMode = "flat";
               outputHashAlgo = "sha256";
               outputHash =
-                "sha256-SRhqvN+VasRniTCvmPrQdzBhocJksUhXNw9ZVwi7QqY=";
+                "sha256-I9ZtlA8eFXeyxH/DaWRyywgEdqQZe4S301YNlhulGgE=";
               buildPhase = ''
                 export HOME="$TMPDIR"
                 export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
@@ -291,41 +291,19 @@
             };
             cardanoNode = inputs.cardano-node.packages.${system}.cardano-node;
             e2eExe = project.hsPkgs.cardano-keri.components.tests.e2e-tests;
-            # Semantic-only devnet override authorized by A-015. The exact
-            # production checkpoint program cannot fit under the real 16 KiB
-            # transaction cap yet; change that one limit only so R6 can prove
-            # its staged Phase-2 behavior. Deployability remains a separate,
-            # mechanically checked budget in the E2E measurement surface.
-            e2eGenesis = pkgs.runCommand "keri-e2e-genesis-max-tx-32768" {
-              nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
-            } ''
-              cp -rL ${inputs.cardano-node-clients}/e2e-test/genesis "$out"
-              chmod -R u+w "$out"
-              source=${inputs.cardano-node-clients}/e2e-test/genesis/shelley-genesis.json
-              target="$out/shelley-genesis.json"
-
-              test "$(${pkgs.jq}/bin/jq -r '.protocolParams.maxTxSize' "$source")" = 16384
-              ${pkgs.jq}/bin/jq '.protocolParams.maxTxSize = 32768' "$source" > "$target.new"
-              mv "$target.new" "$target"
-              test "$(${pkgs.jq}/bin/jq -r '.protocolParams.maxTxSize' "$target")" = 32768
-
-              ${pkgs.jq}/bin/jq -S 'del(.protocolParams.maxTxSize)' "$source" > source.rest
-              ${pkgs.jq}/bin/jq -S 'del(.protocolParams.maxTxSize)' "$target" > target.rest
-              cmp source.rest target.rest
-            '';
             # One strict-PATH app exposed twice (apps.e2e via nix run +
             # checks.e2e via a runCommand that invokes it), modeled on
-            # cardano-tx-tools/nix/checks.nix. E2E_GENESIS_DIR comes from the
-            # pinned cardano-node-clients source; the cage and checkpoint
-            # blueprint variables both point at the complete flake-owned
-            # production blueprint above.
+            # cardano-tx-tools/nix/checks.nix. E2E_GENESIS_DIR is the one
+            # stock pinned cardano-node-clients genesis (maxTxSize 16384);
+            # the cage and checkpoint blueprint variables both point at the
+            # complete flake-owned production blueprint above.
             runner = pkgs.writeShellApplication {
               name = "e2e";
               # Strict PATH: the E2E executable AND the node binary it spawns
               # must both be listed so the app is self-contained.
               runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
               text = ''
-                export E2E_GENESIS_DIR="${e2eGenesis}"
+                export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 exec e2e-tests "$@"
@@ -347,8 +325,8 @@
               name = "e2e-sweep";
               runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
               text = ''
-                # Preserve the production 16384-byte cap used by the committed
-                # cage boundary sweep; only the checkpoint runner is widened.
+                # Stock production 16384-byte cap (same genesis as the e2e
+                # runner) for the committed cage boundary sweep.
                 export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"

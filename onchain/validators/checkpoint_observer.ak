@@ -16,17 +16,42 @@
 //// so there is no circular script-hash dependency. Neither observer hash
 //// becomes an AID policy or role hash.
 ////
-//// Stake-credential liveness: each observer admits ONLY its Withdraw purpose.
-//// Every certificate purpose, including deregistration of its own script
-//// stake credential, reaches that validator's fail-closed `else` handler, so
-//// under Conway's script-credential authorization rule a deregistration
-//// cannot be authorized. Registration of both credentials plus this
-//// fail-closed dispatch is a deployment invariant, not an operator convention.
+//// Stake-credential liveness (A-010): each observer's stake credential is
+//// creatable once by anyone and removable by no one. The publish handler is
+//// an exhaustive whitelist: only the plain RegisterCredential certificate is
+//// accepted; UnregisterCredential, delegation, DRep, pool, committee, and
+//// every other certificate constructor fail explicitly. The ledger dispatch
+//// already binds the script to its own credential. Withdraw continues to
+//// carry selected-family evidence validation.
 
 use cardano/assets.{PolicyId}
+use cardano/certificate.{
+  AuthorizeConstitutionalCommitteeProxy, Certificate, DelegateCredential,
+  RegisterAndDelegateCredential, RegisterCredential,
+  RegisterDelegateRepresentative, RegisterStakePool,
+  RetireFromConstitutionalCommittee, RetireStakePool, UnregisterCredential,
+  UnregisterDelegateRepresentative, UpdateDelegateRepresentative,
+}
 use cardano/transaction.{Transaction}
 use cardano_keri/checkpoint/observer.{
   ObserverEnvelope, validate_enforcement, validate_lifecycle,
+}
+
+/// Exhaustive certifying whitelist: plain registration only.
+fn accept_own_registration_only(certificate: Certificate) -> Bool {
+  when certificate is {
+    RegisterCredential { .. } -> True
+    UnregisterCredential { .. } -> fail
+    DelegateCredential { .. } -> fail
+    RegisterAndDelegateCredential { .. } -> fail
+    RegisterDelegateRepresentative { .. } -> fail
+    UpdateDelegateRepresentative { .. } -> fail
+    UnregisterDelegateRepresentative { .. } -> fail
+    RegisterStakePool { .. } -> fail
+    RetireStakePool { .. } -> fail
+    AuthorizeConstitutionalCommitteeProxy { .. } -> fail
+    RetireFromConstitutionalCommittee { .. } -> fail
+  }
 }
 
 validator observer_lifecycle(
@@ -39,6 +64,10 @@ validator observer_lifecycle(
     validate_lifecycle(hash_proof_policy, d_reg, envelope, tx)
   }
 
+  publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {
+    accept_own_registration_only(certificate)
+  }
+
   else(_) {
     fail
   }
@@ -48,6 +77,10 @@ validator observer_enforcement(_version: Int) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
     validate_enforcement(envelope, tx)
+  }
+
+  publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {
+    accept_own_registration_only(certificate)
   }
 
   else(_) {

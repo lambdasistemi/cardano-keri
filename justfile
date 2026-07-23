@@ -429,5 +429,36 @@ ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
 ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-lean-traceability
 
+# Permanent source guard: reject the widened max-tx override token in
+# executable harness, workflow, and configuration surfaces. Clearly labelled
+# historical measurement/spec records under specs/ and narrative docs under
+# docs/ are outside the scan set and may still mention the temporary 32 KiB
+# fiction. Markdown inside the scanned executable surfaces is not exempt.
+# The forbidden digit token is assembled at runtime so this recipe never
+# contains a contiguous match for its own needle.
+check-no-widened-max-tx-size:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    forbid="$(printf '%d' $(( 32000 + 768 )))"
+    # Executable / configuration / harness / workflow surfaces only.
+    mapfile -t hits < <(
+        git grep -nI -F -- "$forbid" -- \
+            justfile \
+            gate.sh \
+            offchain \
+            onchain \
+            scripts \
+            .github \
+            ':(exclude)specs/**' \
+            ':(exclude)docs/**' \
+            || true
+    )
+    if [ "${#hits[@]}" -gt 0 ]; then
+        echo "ERROR: forbidden widened max-tx override token '${forbid}' found in executable/configuration surfaces:" >&2
+        printf '%s\n' "${hits[@]}" >&2
+        exit 1
+    fi
+    echo "OK: no widened max-tx override token in executable/configuration surfaces"
+
 # Full CI gate (mirrors .github/workflows/ci.yml)
-ci: ci-onchain ci-blake3 ci-offchain
+ci: ci-onchain ci-blake3 ci-offchain check-no-widened-max-tx-size

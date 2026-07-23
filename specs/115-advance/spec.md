@@ -191,23 +191,25 @@ deletes the tombstone surface and removes the check without residue.
 
 ### Stake-credential liveness
 
-Each observer validator admits only its Withdraw purpose. Every certificate,
-including deregistration of either observer's own script stake credential,
-reaches that validator's fail-closed handler. Under Conway's
-script-credential authorization rule, a deregistration therefore cannot be
-authorized: no payment key, operator, or third party can remove either
-registered credential. Focused full-context certificate tests pin both
-refusals. The E2E coupling RED also covers an unregistered reward account per
+Each observer's stake credential is creatable once by anyone and removable by
+no one. Each validator admits its selected-family Withdraw purpose plus an
+exhaustive certifying whitelist accepting only the plain registration
+certificate for its own script credential. Deregistration, delegation, DRep,
+pool, and every other certificate constructor remain fail-closed. Under
+Conway's script-credential authorization rule, no payment key, operator, or
+third party can remove either registered credential. Focused full-context
+certificate tests pin registration success and deregistration refusal for both
+observers. The E2E coupling RED also covers an unregistered reward account per
 observer if the node-client harness can construct the case; if it cannot, the
-slice records the harness limitation and retains typed certificate refusals
-plus live registered-path proof for both.
+slice records the harness limitation and retains typed deregistration
+refusals plus live registered-path proof for both.
 
 This matters for liveness: successful deregistration would make that observer
 family's evidence-bearing checkpoint paths unsatisfiable, because the
 checkpoint requires its withdrawal and the ledger requires the reward account
-to be registered. Registration of both credentials plus fail-closed
-certificate dispatch is therefore a deployment invariant, not an operator
-convention.
+to be registered. Registration of both credentials plus the
+registration-only certifying whitelist is therefore a deployment invariant,
+not an operator convention.
 
 ### Size hard stop
 
@@ -480,10 +482,11 @@ incoming receipts, ACTIVE/ARMED/FROZEN value behavior, and centers
 advance-totality plus bounded adversarial interference. It says conviction
 is recorded in the transaction history and the token is burned, not kept in a
 tombstone UTxO. The trust model also states that the registered observer
-credential is a liveness dependency and that its fail-closed certificate
-handler makes deregistration unauthorized. The deck retains the approved
-line: anyone can project the public truth; no one can lie about it or lock
-you out of it.
+credential is a liveness dependency and that each observer's stake credential
+is creatable once by anyone and removable by no one: its certifying whitelist
+accepts only plain registration and rejects deregistration and every other
+certificate constructor. The deck retains the approved line: anyone can
+project the public truth; no one can lie about it or lock you out of it.
 
 All Close discussion remains a clearly held #117 design note with distinct
 W_close. This ticket neither specifies nor implements it. Strict MkDocs,
@@ -500,9 +503,9 @@ link, and presentation checks must pass.
       absent/mismatched withdrawal, cross-family credential, or observer action
       rejects without changing evidence verdicts.
 - [ ] Both observer stake credentials are registered in devnet and preprod
-      setup; certificate-purpose tests prove both observers refuse
-      deregistration, and any unregistered-path limitation is explicit if the
-      live harness cannot construct it.
+      setup; certificate-purpose tests prove plain registration succeeds and
+      both observers refuse deregistration, and any unregistered-path
+      limitation is explicit if the live harness cannot construct it.
 - [ ] AdvanceMessage and every fresh-signature preimage/helper/golden are
       deleted. Controller signatures and witness receipts cover event_bytes.
 - [ ] Real pinned-keripy witnessed rotations advance from ACTIVE; forged,

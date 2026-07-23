@@ -34,6 +34,7 @@ module CheckpointTxBuilder (
     responseBoundaryCases,
     boundaryCasesCoverDeadline,
     productionRegisterScenario,
+    assertStockMaxTxSize,
     verifyThreeProgramDeploymentShapes,
     buildArmTx,
     buildAdvanceTx,
@@ -105,7 +106,12 @@ import Cardano.Ledger.Coin (Coin (..), unCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Core (Script, eraProtVerLow, ppKeyDepositL)
+import Cardano.Ledger.Core (
+    Script,
+    eraProtVerLow,
+    ppKeyDepositL,
+    ppMaxTxSizeL,
+ )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
@@ -276,7 +282,6 @@ stagedCheckpointDevnet :: (CheckpointEnv -> IO ()) -> IO ()
 stagedCheckpointDevnet action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
-    dbg "=== NON-DEPLOYABLE UNDER THE PRODUCTION 16384-BYTE CAP ==="
     blueprintPath <-
         lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
             >>= maybe
@@ -288,6 +293,11 @@ stagedCheckpointDevnet action = do
                 pure
     withinSecs 300 "checkpoint withDevnet" $
         withDevnet $ \lsq ltxs -> do
+            -- R2 stock-cap boundary FIRST: query the live node for production
+            -- maxTxSize = 16384 before any blueprint application. Any non-
+            -- stock override fails here with the observed value; this must
+            -- not be masked by a stale fixed-output blueprint lookup.
+            assertLiveStockMaxTxSize (mkN2CProvider lsq)
             env <- mkCheckpointEnv blueprintPath lsq ltxs
             -- A-004 three-program deployment boundary: both observer hashes
             -- distinct, and one signed reference-script creation shape each
@@ -295,6 +305,7 @@ stagedCheckpointDevnet action = do
             -- supersedes the old single-checkpoint 23,124-byte monolith
             -- budget for the family-split architecture.
             verifyThreeProgramDeploymentShapes env
+            prepareWallet env
             -- Both observers' script stake credentials must be registered
             -- before any evidence-bearing lifecycle transaction: the
             -- checkpoint ran-check requires the zero-lovelace withdrawal, and
@@ -391,6 +402,29 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
 productionMaxTxBytes :: Int
 productionMaxTxBytes = 16_384
 
+{- | Prove the running checkpoint devnet exposes stock production
+'maxTxSize = 16384' via a live protocol-parameter query.  This is the R2
+stock-cap boundary: any non-stock override must fail here with the observed
+value, not via a unit shim.
+-}
+assertStockMaxTxSize :: CheckpointEnv -> IO ()
+assertStockMaxTxSize env = assertLiveStockMaxTxSize (envProvider env)
+
+-- | Live-node stock-cap check against a provider (usable before blueprint load).
+assertLiveStockMaxTxSize :: Provider IO -> IO ()
+assertLiveStockMaxTxSize provider = do
+    params <-
+        withinSecs 30 "query live stock maxTxSize" $
+            queryProtocolParams provider
+    let observed = fromIntegral (params ^. ppMaxTxSizeL) :: Int
+    dbg ("live protocol maxTxSize=" <> show observed)
+    unless (observed == productionMaxTxBytes) $
+        fail $
+            "checkpoint devnet maxTxSize is "
+                <> show observed
+                <> ", expected stock "
+                <> show productionMaxTxBytes
+
 {- | Register the applied observer's script stake credential on the devnet.
 
 The withdraw-0 coupling only validates if the observer's script stake
@@ -404,28 +438,61 @@ marker or getter.
 -}
 
 -- | Shared genuine Conway script-stake-credential registration for one observer.
-registerObserverStakeCredential :: ScriptHash -> String -> CheckpointEnv -> IO TxId
-registerObserverStakeCredential observerHash label env = do
+registerObserverStakeCredential ::
+    ScriptHash -> Script ConwayEra -> String -> CheckpointEnv -> IO TxId
+registerObserverStakeCredential observerHash observerScript label env = do
     params <-
         withinSecs 30 "query observer-registration protocol parameters" $
             queryProtocolParams (envProvider env)
     wallet <-
         withinSecs 30 "query observer-registration wallet" $
             queryUTxOs (envProvider env) (envOwner env)
-    seed <-
-        requireJust "observer registration: no wallet UTxO" (largestFirst wallet)
+    (seed, collateral) <- pickDisjoint wallet []
     let keyDeposit = params ^. ppKeyDepositL
         regCert =
             ConwayTxCertDeleg
                 (ConwayRegCert (ScriptHashObj observerHash) (SJust keyDeposit))
-        body = mkBasicTxBody & certsTxBodyL .~ StrictSeq.singleton regCert
-        skeleton = mkBasicTx body
+        -- ConwayCertifying AsIx 0: the sole certificate in certsTxBodyL.
+        -- Minimal unit redeemer (I 0) matches the publish handler's unused
+        -- Data argument; scriptExUnits is the in-file script ceiling.
+        redeemers =
+            Redeemers $
+                Map.singleton
+                    (ConwayCertifying (AsIx 0))
+                    (ledgerData (I 0), scriptExUnits)
+        body =
+            mkBasicTxBody
+                & certsTxBodyL .~ StrictSeq.singleton regCert
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity PlutusV3 params redeemers
+        skeleton =
+            mkBasicTx body
+                & witsTxL . scriptTxWitsL
+                    .~ Map.singleton observerHash observerScript
+                & witsTxL . rdmrsTxWitsL .~ redeemers
     balanced <-
         either
             (fail . (\e -> label <> ": balance failed: " <> show e))
             (pure . balancedTx)
-            (balanceTx params [seed] [] (envOwner env) skeleton)
-    submitSettling env label balanced
+            ( balanceTxWith
+                params
+                [seed]
+                (CollateralUtxos [collateral])
+                []
+                (envOwner env)
+                Nothing
+                skeleton
+            )
+    registrationTxId <- submitSettling env label balanced
+    _ <-
+        pollOutput
+            (envProvider env)
+            registrationTxId
+            [0, 1]
+            (const True)
+            >>= requireJust (label <> " output did not settle")
+    pure registrationTxId
 
 {- | Register the applied observer_lifecycle script stake credential on the
 devnet. Genuine setup behavior: the checkpoint ran-check requires the
@@ -436,6 +503,7 @@ observerLifecycleStakeRegistrationSetup :: CheckpointEnv -> IO TxId
 observerLifecycleStakeRegistrationSetup env =
     registerObserverStakeCredential
         (envLifecycleHash env)
+        (envLifecycleScript env)
         "observer_lifecycle stake-credential registration"
         env
 
@@ -448,6 +516,7 @@ observerEnforcementStakeRegistrationSetup :: CheckpointEnv -> IO TxId
 observerEnforcementStakeRegistrationSetup env =
     registerObserverStakeCredential
         (envEnforcementHash env)
+        (envEnforcementScript env)
         "observer_enforcement stake-credential registration"
         env
 
@@ -594,7 +663,6 @@ productionRegisterScenario env = do
 
 productionRegisterScenarioWith :: CheckpointEnv -> RegistrationFixture -> IO CheckpointInput
 productionRegisterScenarioWith env fixture = do
-    prepareWallet env
     proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env fixture)
     proofTxId <- submitSettling env "hash-proof mint" proofTx
     proofUtxo <-
@@ -660,7 +728,6 @@ pendingHashProofRegisterArmClaimScenario env = do
 
 advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
-    prepareWallet env
     (fixture, _) <- loadLifecycleFixture
     staged <- stageCheckpointInput env (rfDatum fixture)
     validity <- currentValidity env
@@ -676,7 +743,6 @@ advanceRejection env = do
 
 closeRejection :: CheckpointEnv -> IO RejectionEvidence
 closeRejection env = do
-    prepareWallet env
     (fixture, _) <- loadLifecycleFixture
     staged <- stageCheckpointInput env (rfDatum fixture)
     tx <- buildCloseTx env staged (currentValidity env)
@@ -684,7 +750,6 @@ closeRejection env = do
 
 hashProofMintOldCostRejection :: CheckpointEnv -> IO RejectionEvidence
 hashProofMintOldCostRejection env = do
-    prepareWallet env
     (fixture, _) <- loadLifecycleFixture
     costModelEntries <- pinnedPlutusV3CostModelEntries env
     unless

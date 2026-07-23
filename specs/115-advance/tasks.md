@@ -33,7 +33,7 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 
 ## R2 — production cap
 
-- [ ] T115-R2 Delete the 32 KiB genesis/runner and NON-DEPLOYABLE runtime
+- [x] T115-R2 Delete the 32 KiB genesis/runner and NON-DEPLOYABLE runtime
       banner; restore stock maxTxSize 16,384; settle all three reference-script
       creation shapes on stock devnet; permanently gate all three applied sizes
       and executable/config source against 32768; preserve honest #190 pending

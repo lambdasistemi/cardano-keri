@@ -4,8 +4,9 @@ use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
-use cardano/address.{from_script, from_verification_key}
+use cardano/address.{Script, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
+use cardano/certificate.{RegisterCredential, UnregisterCredential}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
@@ -803,24 +804,58 @@ test t115_r1_enforcement_rejects_advance_in_r1() fail {
   run_enforcement_withdraw(envelope, placeholder)
 }
 
-// --- liveness: each observer's else/certificate purpose fails closed ---
+// --- A-010 / T115-R2 certifying whitelist (typed RED) ---
+//
+// Each observer's stake credential is creatable once by anyone and removable
+// by no one. The future publish/certifying handler must accept only the plain
+// registration certificate for that observer's own script credential;
+// UnregisterCredential and every other certificate constructor fail closed.
+// These four tests call the future `.publish` handler with real Certificate
+// constructors (not `.else` placeholders). They are RED until the production
+// validator gains an exhaustive registration-only whitelist.
 
-test t115_r1_lifecycle_reject_certificate_purpose_deregistration() fail {
-  let claim = ObserverClaim {
-    action: observe_register,
-    checkpoint_policy: policy,
-    own_ref: None,
-  }
-  let envelope = ObserverEnvelope { claim, payload: 0 }
-  checkpoint_observer.observer_lifecycle.else(0, hp_policy, d_reg, placeholder)
+/// Applied observer_lifecycle script credential under test (28-byte hash).
+const lifecycle_script_hash: ByteArray =
+  #"0c785ee124129986e9584b017b647173c9b1f05aed1c4a91b2771d30"
+
+/// Applied observer_enforcement script credential under test (28-byte hash).
+const enforcement_script_hash: ByteArray =
+  #"d7d22ccdb22fa1abffec72dcac1d28cd0ca07514e133e40131e7d534"
+
+test t115_r2_lifecycle_accept_own_registration_cert() {
+  let own = Script(lifecycle_script_hash)
+  let cert = RegisterCredential { credential: own, deposit: Never }
+  checkpoint_observer.observer_lifecycle.publish(
+    0,
+    hp_policy,
+    d_reg,
+    0,
+    cert,
+    placeholder,
+  )
 }
 
-test t115_r1_enforcement_reject_certificate_purpose_deregistration() fail {
-  let claim = ObserverClaim {
-    action: observe_register,
-    checkpoint_policy: policy,
-    own_ref: None,
-  }
-  let envelope = ObserverEnvelope { claim, payload: 0 }
-  checkpoint_observer.observer_enforcement.else(0, placeholder)
+test t115_r2_lifecycle_reject_own_deregistration_cert() fail {
+  let own = Script(lifecycle_script_hash)
+  let cert = UnregisterCredential { credential: own, refund: Never }
+  checkpoint_observer.observer_lifecycle.publish(
+    0,
+    hp_policy,
+    d_reg,
+    0,
+    cert,
+    placeholder,
+  )
+}
+
+test t115_r2_enforcement_accept_own_registration_cert() {
+  let own = Script(enforcement_script_hash)
+  let cert = RegisterCredential { credential: own, deposit: Never }
+  checkpoint_observer.observer_enforcement.publish(0, 0, cert, placeholder)
+}
+
+test t115_r2_enforcement_reject_own_deregistration_cert() fail {
+  let own = Script(enforcement_script_hash)
+  let cert = UnregisterCredential { credential: own, refund: Never }
+  checkpoint_observer.observer_enforcement.publish(0, 0, cert, placeholder)
 }

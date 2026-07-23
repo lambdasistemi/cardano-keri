@@ -240,8 +240,209 @@ format: format-offchain format-onchain format-blake3
 # Check formatting everywhere
 format-check: format-check-offchain format-check-onchain format-check-blake3
 
+# Check mechanical size limits for the applied checkpoint and checkpoint_observer
+# programs, measuring the exact byte stream the final off-chain builder deploys.
+#
+# Binding artifact (NOTE-011/012): the builder consumes the FLAKE-OWNED blueprint
+# (compiled with the off-chain flake's Aiken 1.1.21, NOT the justfile-pinned
+# 1.1.23) and serializes parameters via the Haskell
+# `serialiseUPLC (uncheckedDeserialiseUPLC code `applyDataArg` ...)` path. That
+# path and `aiken blueprint apply` produce identical bytes for the SAME
+# blueprint, so the gate must (a) build the SAME compiler-owned blueprint the
+# builder consumes and (b) apply/serialize via the SAME Haskell path. Proven
+# against HEAD: Aiken 1.1.21 raw checkpoint 23,052 -> Haskell application
+# 23,124 (the trusted expectedCheckpointSizeBudget baseline).
+#
+# Source set (NOTE-012): the gate compiles the LIVE owned Aiken sources being
+# verified (tracked modifications AND new untracked observer production files),
+# filtering only generated/build artifacts (build/, plutus.json) — never
+# `git archive HEAD`, which would measure the previous commit. After commit
+# this live set converges to the git-tree set the flake builder consumes.
+check-checkpoint-deployability:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp_build="$(mktemp -d)"
+    trap 'rm -rf "$tmp_build"' EXIT
+
+    # The Haskell serializer: the builder's exact serialiseUPLC/applyProgram
+    # parameter-application path. Written to the temp dir (never the repo).
+    # Every heredoc payload line and both delimiters stay at the recipe
+    # indentation; just strips that common indentation before executing.
+    cat > "$tmp_build/serializer.hs" <<'SERIALIZER_EOF'
+    {-# LANGUAGE OverloadedStrings #-}
+    module Main (main) where
+    import qualified Data.ByteString as BS
+    import qualified Data.ByteString.Short as SBS
+    import Data.Char (isDigit)
+    import Data.Text (Text)
+    import qualified Data.Text as T
+    import qualified Data.Text.IO as TIO
+    import PlutusCore qualified as PLC
+    import PlutusCore.Data (Data (..))
+    import PlutusLedgerApi.V3 (serialiseUPLC, uncheckedDeserialiseUPLC)
+    import UntypedPlutusCore (Program (..), applyProgram)
+    import UntypedPlutusCore qualified as UPLC
+    import System.Environment (getArgs)
+    import Numeric (showHex)
+    decodeHex :: Text -> Maybe BS.ByteString
+    decodeHex t | odd (T.length t) = Nothing | otherwise = BS.pack <$> go (T.unpack t)
+      where go [] = Just []; go (a:b:r) = do { h <- hexDigit a; l <- hexDigit b; (h*16+l :) <$> go r }; go _ = Nothing
+            hexDigit c | isDigit c = Just (fromIntegral (fromEnum c - fromEnum c0)) | c >= ca && c <= cf = Just (fromIntegral (fromEnum c - fromEnum ca + 10)) | otherwise = Nothing
+            c0 = T.head (T.pack "0"); ca = T.head (T.pack "a"); cf = T.head (T.pack "f")
+    applyDataArg prog dat = let Program _ v _ = prog; arg = Program () v (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat))) in either (error . show) id (applyProgram prog arg)
+    toHex = concatMap (pad2 . (`showHex` "")) . BS.unpack
+      where pad2 s = if length s == 1 then "0" ++ s else s
+    main :: IO ()
+    main = do
+        args <- getArgs
+        let (mode, hexfile, outhex, rest) = case args of { (m:h:o:r) -> (m,h,o,r); _ -> error "usage" }
+        hex <- TIO.readFile hexfile
+        code <- maybe (fail "bad hex") (pure . SBS.toShort) (decodeHex (T.strip hex))
+        let prog = uncheckedDeserialiseUPLC code
+        out <- case (mode, rest) of
+          ("observer_lifecycle", [ver, hp, dreg]) -> do
+            hpB <- maybe (fail "hp") pure (decodeHex (T.pack hp))
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver) `applyDataArg` B hpB `applyDataArg` I (read dreg)))
+          ("observer_advance", [ver]) ->
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver)))
+          ("observer_enforcement", [ver]) ->
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver)))
+          ("checkpoint", [ver, lh, ah, eh, dreg, bond, window]) -> do
+            lhB <- maybe (fail "lh") pure (decodeHex (T.pack lh))
+            ahB <- maybe (fail "ah") pure (decodeHex (T.pack ah))
+            ehB <- maybe (fail "eh") pure (decodeHex (T.pack eh))
+            pure (serialiseUPLC (prog `applyDataArg` I (read ver) `applyDataArg` B lhB `applyDataArg` B ahB `applyDataArg` B ehB `applyDataArg` I (read dreg) `applyDataArg` I (read bond) `applyDataArg` I (read window)))
+          _ -> fail "bad mode"
+        let outBS = SBS.fromShort out
+        writeFile outhex (toHex outBS)
+        print (BS.length outBS)
+    SERIALIZER_EOF
+
+    # The inner gate script, run inside the offchain dev shell (ghc/cabal/jq/
+    # b2sum/xxd). Written to temp to avoid nested-quoting collisions.
+    cat > "$tmp_build/inner.sh" <<'INNER_EOF'
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp="$1"
+    repo="$2"
+
+    # 1. The compiler-owned blueprint: the off-chain flake's Aiken (1.1.21), the
+    #    same compiler that builds the blueprint the final builder consumes.
+    #    Stderr/exit is left visible so a failed acquisition names itself.
+    cd "$repo/offchain"
+    nix build --impure --expr '
+      let flake = builtins.getFlake (toString ./.);
+          pkgs = flake.inputs.nixpkgs.legacyPackages.x86_64-linux;
+      in pkgs.aiken' -o "$tmp/aiken"
+    aiken_bin="$tmp/aiken/bin/aiken"
+
+    # 2. Compile the LIVE owned Aiken sources (tracked modifications + new
+    #    untracked observer files), filtering only generated/build artifacts
+    #    (build/, plutus.json). Never `git archive HEAD`. The pinned Aiken
+    #    emits NO compiler diagnostics when stdout is not a TTY and exits 1
+    #    silently (NOTE-008), so the build is wrapped in `script -qec` to give
+    #    it a pseudo-TTY and surface the real error.
+    mkdir -p "$tmp/work"
+    tar -C "$repo/onchain" --exclude='./build' --exclude='./plutus.json' -cf - . \
+      | tar -C "$tmp/work" -xf -
+    cd "$tmp/work"
+    rm -rf build plutus.json
+    script -qec "\"$aiken_bin\" build -t silent" /dev/null
+    blueprint="$tmp/work/plutus.json"
+
+    # 3. Compile the serializer with the project's own package environment.
+    #    Stderr/exit is left visible so a failed compile names itself. The
+    #    recipe is self-contained: it first establishes the project package
+    #    environment (dist-newstyle/packagedb) via the project's own devshell
+    #    project configuration, never assuming another recipe already
+    #    populated it.
+    cd "$repo/offchain"
+    cabal update --project-file=cabal.project.devshell
+    cabal build -O0 --project-file=cabal.project.devshell --only-dependencies cardano-keri:e2e-tests
+    cabal exec -v0 --project-file=cabal.project.devshell -- ghc -O2 \
+      "$tmp/serializer.hs" -o "$tmp/serializer"
+
+    # 4. Extract raw compiled code for the four programs (selected by module +
+    #    validator name via their blueprint titles, never by handler purpose).
+    lc_raw="$tmp/lc.raw.hex"
+    ad_raw="$tmp/ad.raw.hex"
+    ef_raw="$tmp/ef.raw.hex"
+    cp_raw="$tmp/cp.raw.hex"
+    jq -r '.validators[] | select(.title=="checkpoint_observer.observer_lifecycle.withdraw") | .compiledCode' "$blueprint" > "$lc_raw"
+    jq -r '.validators[] | select(.title=="checkpoint_observer.observer_advance.withdraw") | .compiledCode' "$blueprint" > "$ad_raw"
+    jq -r '.validators[] | select(.title=="checkpoint_observer.observer_enforcement.withdraw") | .compiledCode' "$blueprint" > "$ef_raw"
+    jq -r '.validators[] | select(.title=="checkpoint.checkpoint.spend") | .compiledCode' "$blueprint" > "$cp_raw"
+    if [ ! -s "$lc_raw" ] || [ "$(cat "$lc_raw")" = "null" ]; then
+      echo "ERROR: observer_lifecycle validator not found in blueprint" >&2
+      exit 1
+    fi
+    if [ ! -s "$ad_raw" ] || [ "$(cat "$ad_raw")" = "null" ]; then
+      echo "ERROR: observer_advance validator not found in blueprint" >&2
+      exit 1
+    fi
+    if [ ! -s "$ef_raw" ] || [ "$(cat "$ef_raw")" = "null" ]; then
+      echo "ERROR: observer_enforcement validator not found in blueprint" >&2
+      exit 1
+    fi
+    if [ ! -s "$cp_raw" ] || [ "$(cat "$cp_raw")" = "null" ]; then
+      echo "ERROR: checkpoint validator not found in blueprint" >&2
+      exit 1
+    fi
+
+    # 5. Apply the frozen parameters via the builder's Haskell path, in the
+    #    off-chain order: observer_lifecycle(version=0, hash_proof_policy,
+    #    d_reg=1000000000); observer_advance(version=0);
+    #    observer_enforcement(version=0); then checkpoint(version=0,
+    #    lifecycle_hash, advance_hash, enforcement_hash, d_reg=1000000000,
+    #    freeze_bond=5000000, freeze_window=500). Each observer hash is the
+    #    PlutusV3 script hash (blake2b-224 of 0x03 ++ applied bytes) of its
+    #    fully-applied program. observer_advance must be <= 15333 (>=800 slack).
+    hp_policy="4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
+    lc_size=$("$tmp/serializer" observer_lifecycle "$lc_raw" "$tmp/lc.applied.hex" 0 "$hp_policy" 1000000000)
+    lc_hash=$( { printf '\x03'; xxd -r -p "$tmp/lc.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
+    ad_size=$("$tmp/serializer" observer_advance "$ad_raw" "$tmp/ad.applied.hex" 0)
+    ad_hash=$( { printf '\x03'; xxd -r -p "$tmp/ad.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
+    ef_size=$("$tmp/serializer" observer_enforcement "$ef_raw" "$tmp/ef.applied.hex" 0)
+    ef_hash=$( { printf '\x03'; xxd -r -p "$tmp/ef.applied.hex"; } | b2sum -l 224 | awk '{print $1}' )
+    cp_size=$("$tmp/serializer" checkpoint "$cp_raw" "$tmp/cp.applied.hex" 0 "$lc_hash" "$ad_hash" "$ef_hash" 1000000000 5000000 500)
+
+    echo "Derived observer_lifecycle script hash:    $lc_hash"
+    echo "Derived observer_advance script hash:      $ad_hash"
+    echo "Derived observer_enforcement script hash:  $ef_hash"
+    echo "observer_lifecycle applied size:    $lc_size bytes"
+    echo "observer_advance applied size:      $ad_size bytes"
+    echo "observer_enforcement applied size:  $ef_size bytes"
+    echo "checkpoint applied size:            $cp_size bytes"
+
+    if [ "$lc_size" -ge 16133 ]; then
+      echo "ERROR: observer_lifecycle applied size >= 16133 bytes ($lc_size)" >&2
+      exit 1
+    fi
+    if [ "$ad_size" -gt 15333 ]; then
+      echo "ERROR: observer_advance applied size > 15333 bytes ($ad_size; need >=800 slack)" >&2
+      exit 1
+    fi
+    if [ "$ad_size" -ge 16133 ]; then
+      echo "ERROR: observer_advance applied size >= 16133 bytes ($ad_size)" >&2
+      exit 1
+    fi
+    if [ "$ef_size" -ge 16133 ]; then
+      echo "ERROR: observer_enforcement applied size >= 16133 bytes ($ef_size)" >&2
+      exit 1
+    fi
+    if [ "$cp_size" -ge 16133 ]; then
+      echo "ERROR: checkpoint applied size >= 16133 bytes ($cp_size)" >&2
+      exit 1
+    fi
+    INNER_EOF
+    chmod +x "$tmp_build/inner.sh"
+
+    # Run the gate inside the offchain dev shell.
+    repo_root="$PWD"
+    cd offchain && nix develop --quiet -c bash "$tmp_build/inner.sh" "$tmp_build" "$repo_root"
+
 # Onchain CI gate (mirrors the Onchain job)
-ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof measure-checkpoint
+ci-onchain: format-check-onchain check-onchain check-checkpoint-deployability measure-enforcement measure-hash-proof measure-checkpoint
 
 # BLAKE3 spike CI gate (mirrors the BLAKE3 job)
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
@@ -249,5 +450,36 @@ ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
 ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-lean-traceability
 
+# Permanent source guard: reject the widened max-tx override token in
+# executable harness, workflow, and configuration surfaces. Clearly labelled
+# historical measurement/spec records under specs/ and narrative docs under
+# docs/ are outside the scan set and may still mention the temporary 32 KiB
+# fiction. Markdown inside the scanned executable surfaces is not exempt.
+# The forbidden digit token is assembled at runtime so this recipe never
+# contains a contiguous match for its own needle.
+check-no-widened-max-tx-size:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    forbid="$(printf '%d' $(( 32000 + 768 )))"
+    # Executable / configuration / harness / workflow surfaces only.
+    mapfile -t hits < <(
+        git grep -nI -F -- "$forbid" -- \
+            justfile \
+            gate.sh \
+            offchain \
+            onchain \
+            scripts \
+            .github \
+            ':(exclude)specs/**' \
+            ':(exclude)docs/**' \
+            || true
+    )
+    if [ "${#hits[@]}" -gt 0 ]; then
+        echo "ERROR: forbidden widened max-tx override token '${forbid}' found in executable/configuration surfaces:" >&2
+        printf '%s\n' "${hits[@]}" >&2
+        exit 1
+    fi
+    echo "OK: no widened max-tx override token in executable/configuration surfaces"
+
 # Full CI gate (mirrors .github/workflows/ci.yml)
-ci: ci-onchain ci-blake3 ci-offchain
+ci: ci-onchain ci-blake3 ci-offchain check-no-widened-max-tx-size

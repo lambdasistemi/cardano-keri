@@ -33,12 +33,13 @@ use cage_context.{
   spend_context,
 }
 use cardano/address.{
-  Address, from_script, from_verification_key, with_delegation_script,
+  Address, Credential, Script, from_script, from_verification_key,
+  with_delegation_script,
 }
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  Datum, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
-  placeholder,
+  Datum, InlineDatum, Input, NoDatum, Output, OutputReference, ScriptPurpose,
+  Transaction, Withdraw, placeholder,
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
@@ -47,6 +48,10 @@ use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
+use cardano_keri/checkpoint/observer.{
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
+  observe_freeze, observe_register,
+}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
@@ -59,7 +64,7 @@ use checkpoint.{Advance, Close, Register}
 /// local makes the RED diff test-only while still exercising the real handler's
 /// `Data` decoder; GREEN changes the live `SpendRedeemer` to this exact shape.
 type Slice4SpendRedeemer {
-  Slice4Advance { evidence: AdvanceEvidence }
+  Slice4Advance
   Slice4Freeze { evidence: EnforcementEvidence }
   Slice4Convict
   Slice4Close
@@ -70,7 +75,7 @@ type Slice4SpendRedeemer {
 /// local lets the validator-level positive observe a genuine decoder/dispatch
 /// RED before production is changed.
 type Slice5SpendRedeemer {
-  Slice5Advance { evidence: AdvanceEvidence }
+  Slice5Advance
   Slice5Freeze { evidence: EnforcementEvidence }
   Slice5Convict { evidence: EnforcementEvidence }
   Slice5Close
@@ -79,24 +84,23 @@ type Slice5SpendRedeemer {
 /// Test-side target wire for T116-R2. Its constructor order is the exact
 /// six-parameter validator's spend wire; the RED helper below still invokes
 /// the delivered four-parameter script so this test-only diff type-checks.
+/// R1 slims Freeze/Convict to drop the evidence (which moved to the observer).
 type R2SpendRedeemer {
-  R2Advance { evidence: AdvanceEvidence }
-  R2Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  R2Advance
+  R2Freeze { hunter_pkh: ByteArray }
   R2ClaimFreeze { hunter_output_index: Int }
   R2Convict
   R2Close
 }
 
 /// Test-side target wire for T116-R3. The constructor order preserves the R2
-/// wire and gives Convict the existing evidence plus explicit recipients and
-/// named payout indices. Keeping it local lets RED exercise the real handler
-/// before production dispatch is reopened.
+/// wire and gives Convict explicit recipients and named payout indices.
+/// R1 slims Freeze/Convict to drop the evidence (which moved to the observer).
 type R3SpendRedeemer {
-  R3Advance { evidence: AdvanceEvidence }
-  R3Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  R3Advance
+  R3Freeze { hunter_pkh: ByteArray }
   R3ClaimFreeze { hunter_output_index: Int }
   R3Convict {
-    evidence: EnforcementEvidence,
     convictor_pkh: ByteArray,
     convictor_output_index: Int,
     hunter_output_index: Int,
@@ -115,8 +119,6 @@ const hp_policy: PolicyId =
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 
-const network_id: Int = 0
-
 const d_reg: Int = 1_000_000_000
 
 const r2_freeze_bond: Int = 5_000_000
@@ -129,6 +131,28 @@ const register_surplus_lovelace: Int = 17
 
 const unrelated_policy: PolicyId =
   #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+const observer_hash: ByteArray =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+fn with_observer_coupling(
+  tx: Transaction,
+  family_hash: PolicyId,
+  action: Int,
+  claim_policy: PolicyId,
+  own_ref: Option<OutputReference>,
+  payload: Data,
+) -> Transaction {
+  let credential = Script(family_hash)
+  let claim = ObserverClaim { action, checkpoint_policy: claim_policy, own_ref }
+  let envelope = ObserverEnvelope { claim, payload }
+  let rdm_data: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), rdm_data)],
+  }
+}
 
 // ---------------------------------------------------------------------
 // Tx-B context builders
@@ -235,18 +259,30 @@ fn bonded_register_tx_at(
   bonded_register_tx(d, bonded_state_value(aid_name, lovelace), e)
 }
 
-/// Drive the real mint handler under the fixed deployment parameters.
+/// Drive the real mint handler under the fixed deployment parameters. R1:
+/// the checkpoint is parameterized by the observer hash (not the hash-proof
+/// policy or a network id), the redeemer is the slim bare `Register`, and the
+/// transaction is coupled to the observer at zero lovelace with the evidence
+/// carried as the opaque observer payload.
 fn run_register(e: RegistrationEvidence, tx: Transaction) -> Bool {
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
-    Register { evidence: e },
+    Register,
     policy,
-    tx,
+    with_observer_coupling(
+      tx,
+      lifecycle_hash,
+      observe_register,
+      policy,
+      None,
+      e,
+    ),
   )
 }
 
@@ -258,14 +294,22 @@ fn run_register_with_deposit(
 ) -> Bool {
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
-    Register { evidence: e },
+    Register,
     policy,
-    tx,
+    with_observer_coupling(
+      tx,
+      lifecycle_hash,
+      observe_register,
+      policy,
+      None,
+      e,
+    ),
   )
 }
 
@@ -412,14 +456,22 @@ test t116_s7_reject_d_reg_below_mechanical_floor_registration_mint() fail {
   )
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     vec.d_reg_below_floor,
     r2_freeze_bond,
     r2_freeze_window,
-    Register { evidence: vec.pos_2key_evidence },
+    Register,
     policy,
-    tx,
+    with_observer_coupling(
+      tx,
+      lifecycle_hash,
+      observe_register,
+      policy,
+      None,
+      vec.pos_2key_evidence,
+    ),
   )
 }
 
@@ -433,14 +485,22 @@ test t114_r3_reject_freeze_bond_below_mechanical_floor_registration_mint() fail 
   )
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg,
     r2_freeze_bond - 1,
     r2_freeze_window,
-    Register { evidence: vec.pos_2key_evidence },
+    Register,
     policy,
-    tx,
+    with_observer_coupling(
+      tx,
+      lifecycle_hash,
+      observe_register,
+      policy,
+      None,
+      vec.pos_2key_evidence,
+    ),
   )
 }
 
@@ -699,39 +759,6 @@ test reject_r7_canary_below_threshold() fail {
   )
 }
 
-test t114_r3_reject_old_message_only_controller_signatures() fail {
-  run_register(
-    vec.r7_old_message_sigs_evidence,
-    bonded_register_tx_at(
-      vec.r7_old_message_sigs_datum,
-      register_floor,
-      vec.r7_old_message_sigs_evidence,
-    ),
-  )
-}
-
-test t114_r3_reject_bad_controller_signature_threshold() fail {
-  run_register(
-    vec.r7_below_threshold_evidence,
-    bonded_register_tx_at(
-      vec.r7_below_threshold_datum,
-      register_floor,
-      vec.r7_below_threshold_evidence,
-    ),
-  )
-}
-
-test t114_r3_reject_bad_witness_receipt_threshold() fail {
-  run_register(
-    vec.r7_receipts_bad_signature_evidence,
-    bonded_register_tx_at(
-      vec.r7_receipts_bad_signature_datum,
-      register_floor,
-      vec.r7_receipts_bad_signature_evidence,
-    ),
-  )
-}
-
 // ---------------------------------------------------------------------
 // R10 — spend paths fail closed
 // ---------------------------------------------------------------------
@@ -742,8 +769,9 @@ test reject_r10_spend_fails_closed() fail {
   let rdm: Data = 0
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
@@ -938,7 +966,8 @@ fn advance_tx_from(
 }
 
 /// Drive the real spend handler under the fixed advance deployment
-/// parameters.
+/// parameters. R1: the checkpoint is parameterized by the observer hash
+/// (network_id is deleted; the fresh AdvanceMessage path it fed is gone).
 fn run_advance(
   redeemer: Data,
   own_ref: OutputReference,
@@ -946,8 +975,9 @@ fn run_advance(
 ) -> Bool {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    adv_network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
@@ -966,8 +996,9 @@ fn run_advance_with_d_reg(
 ) -> Bool {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    adv_network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
@@ -993,7 +1024,7 @@ type NonV1Probe {
 
 test t116_r2_stage_reject_advance_wit_2key() fail {
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     advance_tx(
       adv_vec.pos_adv_wit_2key_spent,
@@ -1008,7 +1039,7 @@ test t116_r2_stage_reject_advance_wit_2key() fail {
 test t116_s7_reject_d_reg_below_mechanical_floor_checkpoint_spend() fail {
   run_advance_with_d_reg(
     vec.d_reg_below_floor,
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     advance_tx(
       adv_vec.pos_adv_wit_2key_spent,
@@ -1020,7 +1051,7 @@ test t116_s7_reject_d_reg_below_mechanical_floor_checkpoint_spend() fail {
 
 test t116_r2_stage_reject_advance_wit_7key() fail {
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_7key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_7key_spent),
     advance_tx(
       adv_vec.pos_adv_wit_7key_spent,
@@ -1032,7 +1063,7 @@ test t116_r2_stage_reject_advance_wit_7key() fail {
 
 test t116_r2_stage_reject_advance_keep() fail {
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_keep_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_keep_spent),
     advance_tx(
       adv_vec.pos_adv_keep_spent,
@@ -1044,7 +1075,7 @@ test t116_r2_stage_reject_advance_keep() fail {
 
 test t116_r2_stage_reject_advance_downgrade() fail {
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_downgrade_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_downgrade_spent),
     advance_tx(
       adv_vec.pos_adv_downgrade_spent,
@@ -1064,7 +1095,7 @@ test t116_r2_stage_reject_advance_extra_input() fail {
   )
   let extra = value_input(7, from_lovelace(42_000_000))
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     Transaction { ..tx, inputs: list.concat(tx.inputs, [extra]) },
   )
@@ -1083,7 +1114,7 @@ test reject_v2_second_active_output() fail {
   )
   let second = ada_output(from_script(policy), min_ada)
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     Transaction { ..tx, outputs: list.concat(tx.outputs, [second]) },
   )
@@ -1108,11 +1139,7 @@ test reject_v2_missing_token() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V2: the checkpoint token at quantity two on the successor output.
@@ -1134,11 +1161,7 @@ test reject_v2_extra_token_quantity() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -1152,7 +1175,7 @@ test reject_advance_stray_mint() fail {
     adv_vec.pos_adv_wit_2key_created,
   )
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(adv_vec.pos_adv_wit_2key_spent),
     Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
   )
@@ -1162,7 +1185,7 @@ test reject_advance_stray_burn() fail {
   let spent = adv_vec.pos_adv_wit_2key_spent
   let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(spent),
     Transaction { ..tx, mint: from_asset(policy, spent.aid_asset_name, -1) },
   )
@@ -1200,11 +1223,7 @@ test reject_v1_missing_old_datum() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V1: the spent input's inline datum is not the `V1` constructor.
@@ -1235,11 +1254,7 @@ test reject_v1_non_v1_old_datum() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V1: the spent input (token + datum) sits at a foreign address.
@@ -1270,11 +1285,7 @@ test reject_v1_wrong_active_address() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V1: the named own input carries a valid inline `V1(OLD)` datum but NOT
@@ -1305,11 +1316,7 @@ test reject_v1_missing_token() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V1: the named own input carries the checkpoint token at quantity two.
@@ -1340,22 +1347,14 @@ test reject_v1_extra_token_quantity() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V1: the redeemer's `out_ref` names no input in the transaction at all.
 test reject_v1_wrong_outref() fail {
   let spent = adv_vec.pos_adv_wit_2key_spent
   let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    out_ref(spent.txid, spent.index + 1),
-    tx,
-  )
+  run_advance(Advance, out_ref(spent.txid, spent.index + 1), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -1381,11 +1380,7 @@ test reject_v2_missing_new_datum() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 /// V2: the successor output's inline datum is not the `V1` constructor.
@@ -1407,11 +1402,7 @@ test reject_v2_non_v1_new_datum() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -1436,11 +1427,7 @@ test reject_v3_deposit_below_floor() fail {
     interval.everything,
     0,
   )
-  run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
-    advance_own_ref(spent),
-    tx,
-  )
+  run_advance(Advance, advance_own_ref(spent), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -1455,7 +1442,7 @@ test reject_eq5_sequence_skip() fail {
     seq: adv_vec.pos_adv_wit_2key_created.seq + 1,
   }
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(spent),
     advance_tx(spent, old_adv_wit_2key, skipped),
   )
@@ -1469,7 +1456,7 @@ test reject_eq5_native_sn_non_increasing() fail {
     native_sn: spent.native_sn,
   }
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(spent),
     advance_tx(spent, old_adv_wit_2key, stalled),
   )
@@ -1484,7 +1471,7 @@ test reject_eq5_native_sn_non_increasing() fail {
 /// end-to-end through the real spend handler.
 test reject_v7_end_to_end_receipt_free() fail {
   run_advance(
-    Advance { evidence: adv_vec.v7_receipt_free_evidence },
+    Advance,
     advance_own_ref(adv_vec.v7_receipt_free_spent),
     advance_tx(
       adv_vec.v7_receipt_free_spent,
@@ -1590,7 +1577,7 @@ test t116_r2_stage_reject_advance_thaw_from_frozen() fail {
   let value = from_lovelace(min_ada + d_reg)
     |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
   run_r2(
-    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    R2Advance,
     r2_context(
       tip,
       role.address(policy, Frozen),
@@ -2083,7 +2070,7 @@ test t116_s4_reject_freeze_own_policy_burn() fail {
 test t116_s4_reject_invalid_advance_proof_from_frozen() fail {
   let spent = adv_vec.v7_receipt_free_spent
   run_advance(
-    Advance { evidence: adv_vec.v7_receipt_free_evidence },
+    Advance,
     advance_own_ref(spent),
     advance_tx_from(
       spent,
@@ -2097,7 +2084,7 @@ test t116_s4_reject_invalid_advance_proof_from_frozen() fail {
 test t116_s4_reject_advance_from_tombstone() fail {
   let spent = adv_vec.pos_adv_wit_2key_spent
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(spent),
     advance_tx_from(
       spent,
@@ -2111,7 +2098,7 @@ test t116_s4_reject_advance_from_tombstone() fail {
 test t116_s4_reject_advance_from_unknown_role() fail {
   let spent = adv_vec.pos_adv_wit_2key_spent
   run_advance(
-    Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    Advance,
     advance_own_ref(spent),
     advance_tx_from(
       spent,
@@ -2701,9 +2688,7 @@ fn terminal_tombstone_tx() -> Transaction {
 }
 
 test t116_s5_f11_reject_advance_from_terminal_tombstone() fail {
-  let redeemer: Data = Slice5Advance {
-    evidence: adv_vec.pos_adv_wit_2key_evidence,
-  }
+  let redeemer: Data = Slice5Advance
   run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
 }
 
@@ -2913,8 +2898,9 @@ fn run_r2_with_parameters(
   let redeemer_data: Data = redeemer
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond_parameter,
     freeze_window_parameter,
@@ -2936,20 +2922,41 @@ fn run_r2(redeemer: R2SpendRedeemer, tx: Transaction) -> Bool {
 }
 
 fn r2_arm_redeemer(hunter_pkh: ByteArray) -> R2SpendRedeemer {
-  R2Freeze { evidence: enf_vec.lag_freeze_wire, hunter_pkh }
+  R2Freeze { hunter_pkh }
 }
 
 fn r2_claim_redeemer(index: Int) -> R2SpendRedeemer {
   R2ClaimFreeze { hunter_output_index: index }
 }
 
+/// Drive an R2 Freeze (arm) through the real handler with the transaction
+/// coupled to the observer: the freeze evidence moved to the observer, so the
+/// checkpoint ran-check requires the zero-lovelace withdrawal plus a matching
+/// Withdraw redeemer carrying the honest lag wire as the opaque payload.
+fn run_r2_arm(redeemer: R2SpendRedeemer, tx: Transaction) -> Bool {
+  run_r2_with_parameters(
+    r2_freeze_bond,
+    r2_freeze_window,
+    redeemer,
+    freeze_own_ref,
+    with_observer_coupling(
+      tx,
+      enforcement_hash,
+      observe_freeze,
+      policy,
+      Some(freeze_own_ref),
+      enf_vec.lag_freeze_wire,
+    ),
+  )
+}
+
 test t116_r2_accept_arm_preserves_complete_value_and_records_deadline() {
-  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(enf_vec.lag_freeze_tip))
+  run_r2_arm(r2_arm_redeemer(r2_hunter), r2_arm_tx(enf_vec.lag_freeze_tip))
 }
 
 test t116_r2_accept_arm_at_exact_reserve_floor() {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -2963,7 +2970,7 @@ test t116_r2_accept_arm_at_exact_reserve_floor() {
 
 test t116_r2_accept_arm_raw_exclusive_upper_without_normalizing() {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -2984,7 +2991,7 @@ test t116_r2_accept_arm_with_unrelated_extra_input_and_output() {
     from_lovelace(9_000_000),
     NoDatum,
   )
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     Transaction {
       ..tx,
@@ -3077,12 +3084,15 @@ test t116_r2_reject_negative_freeze_window_before_dispatch() fail {
 }
 
 test t116_r2_reject_arm_hunter_wrong_width() fail {
-  run_r2(r2_arm_redeemer(r2_hunter_short), r2_arm_tx(enf_vec.lag_freeze_tip))
+  run_r2_arm(
+    r2_arm_redeemer(r2_hunter_short),
+    r2_arm_tx(enf_vec.lag_freeze_tip),
+  )
 }
 
 test t116_r2_reject_arm_empty_validity_range() fail {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3096,7 +3106,7 @@ test t116_r2_reject_arm_empty_validity_range() fail {
 
 test t116_r2_reject_arm_nonfinite_upper_bound() fail {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3110,7 +3120,7 @@ test t116_r2_reject_arm_nonfinite_upper_bound() fail {
 
 test t116_r2_reject_arm_wrong_deadline() fail {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3125,7 +3135,7 @@ test t116_r2_reject_arm_wrong_deadline() fail {
 test t116_r2_reject_arm_wrong_successor_wrapper() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_surplus_value(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3139,34 +3149,10 @@ test t116_r2_reject_arm_wrong_successor_wrapper() fail {
   )
 }
 
-test t116_r2_reject_arm_live_ee_binding_mutation() fail {
-  let tip = enf_vec.lag_freeze_tip
-  let evidence = EnforcementEvidence {
-    ..enf_vec.lag_freeze_wire,
-    off_i: enf_vec.lag_freeze_wire.off_s,
-  }
-  run_r2(R2Freeze { evidence, hunter_pkh: r2_hunter }, r2_arm_tx(tip))
-}
-
-test t116_r2_reject_arm_live_freeze_predicate_replay() fail {
-  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, native_sn: 1 }
-  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(tip))
-}
-
-test t116_r2_reject_arm_live_duplicate_receipt_quorum() fail {
-  expect [receipt] = enf_vec.lag_freeze_wire.wit_sigs
-  let tip = CheckpointDatumV1 { ..enf_vec.lag_freeze_tip, toad: 2 }
-  let evidence = EnforcementEvidence {
-    ..enf_vec.lag_freeze_wire,
-    wit_sigs: [receipt, receipt],
-  }
-  run_r2(R2Freeze { evidence, hunter_pkh: r2_hunter }, r2_arm_tx(tip))
-}
-
 test t116_r2_reject_arm_input_below_protected_reserve() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_reserve_value(tip) |> merge(from_lovelace(-1))
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3181,7 +3167,7 @@ test t116_r2_reject_arm_input_below_protected_reserve() fail {
 test t116_r2_reject_arm_missing_token() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = from_lovelace(min_ada + d_reg + r2_freeze_bond)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3197,7 +3183,7 @@ test t116_r2_reject_arm_input_token_quantity_two() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_reserve_value(tip)
     |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_arm_tx_with(
       tip,
@@ -3213,7 +3199,7 @@ test t116_r2_reject_arm_mutated_inner_checkpoint() fail {
   let tip = enf_vec.lag_freeze_tip
   let changed = CheckpointDatumV1 { ..tip, seq: tip.seq + 1 }
   let value = r2_surplus_value(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3230,7 +3216,7 @@ test t116_r2_reject_arm_mutated_inner_checkpoint() fail {
 test t116_r2_reject_arm_changed_complete_value() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_surplus_value(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3253,7 +3239,7 @@ test t116_r2_reject_arm_changed_complete_value() fail {
 
 test t116_r2_reject_arm_missing_successor() fail {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3271,7 +3257,7 @@ test t116_r2_reject_arm_duplicate_successor() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_surplus_value(tip)
   let successor = r2_armed_output(tip, value, r2_hunter, r2_deadline)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3288,7 +3274,7 @@ test t116_r2_reject_arm_duplicate_successor() fail {
 test t116_r2_reject_arm_own_policy_mint() fail {
   let tip = enf_vec.lag_freeze_tip
   let tx = r2_arm_tx(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     Transaction { ..tx, mint: from_asset(policy, #"ee", 1) },
   )
@@ -3297,7 +3283,7 @@ test t116_r2_reject_arm_own_policy_mint() fail {
 test t116_r2_reject_arm_own_policy_burn() fail {
   let tip = enf_vec.lag_freeze_tip
   let tx = r2_arm_tx(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     Transaction {
       ..tx,
@@ -3309,7 +3295,7 @@ test t116_r2_reject_arm_own_policy_burn() fail {
 test t116_r2_reject_repeated_arm_from_armed() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_surplus_value(tip)
-  run_r2(
+  run_r2_arm(
     r2_arm_redeemer(r2_hunter),
     r2_context(
       tip,
@@ -3748,7 +3734,7 @@ test t116_r2_stage_reject_active_advance() fail {
   let tip = old_adv_wit_2key
   let value = r2_reserve_value(tip)
   run_r2(
-    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    R2Advance,
     r2_context(
       tip,
       role.address(policy, Active),
@@ -3765,7 +3751,7 @@ test t116_r2_stage_reject_armed_advance_reserved_for_115() fail {
   let tip = enf_vec.lag_freeze_tip
   let value = r2_surplus_value(tip)
   run_r2(
-    R2Advance { evidence: adv_vec.pos_adv_wit_2key_evidence },
+    R2Advance,
     r2_context(
       tip,
       role.address(policy, Armed),
@@ -4010,17 +3996,11 @@ fn r3_frozen_tx() -> Transaction {
 }
 
 fn r3_convict_redeemer(
-  evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
   hunter_output_index: Int,
 ) -> R3SpendRedeemer {
-  R3Convict {
-    evidence,
-    convictor_pkh,
-    convictor_output_index,
-    hunter_output_index,
-  }
+  R3Convict { convictor_pkh, convictor_output_index, hunter_output_index }
 }
 
 fn run_r3_with_d_reg(
@@ -4031,15 +4011,23 @@ fn run_r3_with_d_reg(
   let redeemer_data: Data = redeemer
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
     None,
     redeemer_data,
     convict_own_ref,
-    tx,
+    with_observer_coupling(
+      tx,
+      enforcement_hash,
+      observe_convict,
+      policy,
+      Some(convict_own_ref),
+      enf_vec.fork_witnessed_convict_wire,
+    ),
   )
 }
 
@@ -4053,7 +4041,6 @@ fn r3_honest_redeemer(
   hunter_output_index: Int,
 ) -> R3SpendRedeemer {
   r3_convict_redeemer(
-    enf_vec.fork_witnessed_convict_wire,
     convictor_pkh,
     convictor_output_index,
     hunter_output_index,
@@ -4184,6 +4171,31 @@ test t116_r3_reject_negative_convictor_output_index() fail {
 
 test t116_r3_reject_armed_wrong_hunter_output_index() fail {
   run_r3(r3_honest_redeemer(r3_convictor, 0, 2), r3_armed_tx())
+}
+
+/// Characterization (NOTE-031): the checkpoint's own Convict-from-ARMED spend
+/// path enforces `armed_datum_well_formed` on the ArmedV1 input's hunter_pkh
+/// width. A malformed-width hunter_pkh in the ArmedV1 datum rejects here, in
+/// the checkpoint — proving the checkpoint (not the observer) owns this guard
+/// for the exact Convict-from-ARMED path. Recorded against the final coupled
+/// implementation (the observer's redundant copy was already removed; the
+/// checkpoint still rejects).
+test t115_r1_reject_convict_armed_malformed_hunter_width() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_r3(
+    r3_honest_redeemer(r3_convictor, 0, 1),
+    r3_armed_tx_with(
+      tip,
+      enf_vec.fork_witnessed_convict_wire,
+      r3_convictor,
+      r2_hunter_short,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+  )
 }
 
 test t116_r3_reject_armed_out_of_bounds_hunter_output_index() fail {
@@ -4449,35 +4461,6 @@ test t116_r3_reject_surplus_asset_retained_in_tombstone() fail {
   )
 }
 
-test t116_r3_reject_wrong_tombstone_record() fail {
-  let tip = enf_vec.fork_witnessed_convict_tip
-  let evidence = enf_vec.fork_witnessed_convict_wire
-  let wrong_record = TombstoneV1 {
-    ..tombstone_record(tip, evidence),
-    evidence_said: other_aid,
-  }
-  let tx = r3_context(
-    role.address(policy, Active),
-    V1(tip),
-    r3_state_value(tip, d_reg + r2_freeze_bond),
-    [
-      r3_payout_output(
-        r3_convictor,
-        from_lovelace(d_reg + r2_freeze_bond),
-        NoDatum,
-      ),
-      convict_output(
-        role.address(policy, Tombstone),
-        wrong_record,
-        r3_terminal_value(tip),
-      ),
-      r3_change_output(),
-    ],
-    zero,
-  )
-  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), tx)
-}
-
 test t116_r3_reject_missing_terminal_token() fail {
   let tip = enf_vec.fork_witnessed_convict_tip
   let terminal = from_lovelace(min_ada)
@@ -4612,69 +4595,6 @@ test t116_r3_reject_active_role_with_armed_datum() fail {
   )
 }
 
-test t116_r3_reject_live_ee_binding_mutation() fail {
-  let evidence = EnforcementEvidence {
-    ..enf_vec.fork_witnessed_convict_wire,
-    off_i: enf_vec.fork_witnessed_convict_wire.off_s,
-  }
-  run_r3(r3_convict_redeemer(evidence, r3_convictor, 0, 0), r3_active_tx())
-}
-
-test t116_r3_reject_live_no_conflict_axis() fail {
-  let tip = enf_vec.fork_witnessed_honest_tip
-  let evidence = enf_vec.fork_witnessed_honest_wire
-  run_r3(
-    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
-    r3_active_tx_with(
-      tip,
-      evidence,
-      r3_convictor,
-      from_lovelace(d_reg + r2_freeze_bond),
-      NoDatum,
-      r3_terminal_value(tip),
-    ),
-  )
-}
-
-test t116_r3_reject_live_insufficient_witness_receipts() fail {
-  let tip = enf_vec.fork_witnessed_convict_tip
-  let evidence = EnforcementEvidence {
-    ..enf_vec.fork_witnessed_convict_wire,
-    wit_sigs: [],
-  }
-  run_r3(
-    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
-    r3_active_tx_with(
-      tip,
-      evidence,
-      r3_convictor,
-      from_lovelace(d_reg + r2_freeze_bond),
-      NoDatum,
-      r3_terminal_value(tip),
-    ),
-  )
-}
-
-test t116_r3_reject_duplicate_receipt_does_not_fake_distinct_witnesses() fail {
-  expect [receipt] = enf_vec.fork_witnessed_convict_wire.wit_sigs
-  let tip = CheckpointDatumV1 { ..enf_vec.fork_witnessed_convict_tip, toad: 2 }
-  let evidence = EnforcementEvidence {
-    ..enf_vec.fork_witnessed_convict_wire,
-    wit_sigs: [receipt, receipt],
-  }
-  run_r3(
-    r3_convict_redeemer(evidence, r3_convictor, 0, 0),
-    r3_active_tx_with(
-      tip,
-      evidence,
-      r3_convictor,
-      from_lovelace(d_reg + r2_freeze_bond),
-      NoDatum,
-      r3_terminal_value(tip),
-    ),
-  )
-}
-
 test t116_r3_reject_own_policy_mint() fail {
   let tx = r3_active_tx()
   run_r3(
@@ -4697,4 +4617,1299 @@ test t116_r3_reject_own_policy_burn() fail {
 
 test t116_r3_reject_convict_from_terminal_tombstone() fail {
   run_r3(r3_honest_redeemer(r3_convictor, 0, 0), terminal_tombstone_tx())
+}
+
+// ---------------------------------------------------------------------
+// T115-R1 — Observer Coupling & Forwarding RED Tests
+// ---------------------------------------------------------------------
+
+/// Test-side target wire for T115-R1 mint redeemer (slim Register).
+type T115R1MintRedeemer {
+  T115R1Register
+}
+
+/// Test-side target wire for T115-R1 spend redeemer (slim Advance/Freeze/Convict).
+type T115R1SpendRedeemer {
+  T115R1Advance
+  T115R1Freeze { hunter_pkh: ByteArray }
+  T115R1ClaimFreeze { hunter_output_index: Int }
+  T115R1Convict {
+    convictor_pkh: ByteArray,
+    convictor_output_index: Int,
+    hunter_output_index: Int,
+  }
+  T115R1Close
+}
+
+/// R1 RED: Register requires observer coupling withdrawal and matching redeemers.
+test t115_r1_reject_register_missing_observer_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    tx,
+  )
+}
+
+test t115_r1_reject_register_nonzero_observer_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let credential = Script(observer_hash)
+  let claim = ObserverClaim {
+    action: 0,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: vec.pos_2key_evidence }
+  let obs_rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 100)],
+    redeemers: [Pair(Withdraw(credential), obs_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+test t115_r1_reject_register_wrong_observer_credential() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let wrong_hash = #"11111111111111111111111111111111111111111111111111111111"
+  let credential = Script(wrong_hash)
+  let claim = ObserverClaim {
+    action: 0,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: vec.pos_2key_evidence }
+  let obs_rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), obs_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+test t115_r1_reject_register_missing_withdraw_redeemer() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let credential = Script(observer_hash)
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+test t115_r1_reject_register_wrong_observer_action() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled_tx = with_observer_coupling(
+    tx,
+    lifecycle_hash,
+    2,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled_tx,
+  )
+}
+
+test t115_r1_reject_register_wrong_observer_policy() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let wrong_policy = #"11111111111111111111111111111111111111111111111111111111"
+  let coupled_tx = with_observer_coupling(
+    tx,
+    lifecycle_hash,
+    0,
+    wrong_policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled_tx,
+  )
+}
+
+test t115_r1_reject_freeze_mismatched_own_ref() fail {
+  let wrong_ref = out_ref(seed_tx_id, 1)
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled_tx = with_observer_coupling(
+    tx,
+    enforcement_hash,
+    2,
+    policy,
+    Some(wrong_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled_tx,
+  )
+}
+
+test t115_r1_reject_advance_fails_closed_in_r1() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let coupled_tx = with_observer_coupling(
+    tx,
+    lifecycle_hash,
+    1,
+    policy,
+    Some(advance_own_ref(spent)),
+    adv_vec.pos_adv_wit_2key_evidence,
+  )
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    coupled_tx,
+  )
+}
+
+test t115_r1_claim_freeze_remains_observer_free() {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline + 1)
+  // ClaimFreeze carries no observer coupling and succeeds as an un-coupled positive
+  run_r2(r2_claim_redeemer(0), tx)
+}
+
+// ---------------------------------------------------------------------
+// A-004 family split RED — checkpoint coupling by family
+// ---------------------------------------------------------------------
+// The family-split checkpoint is parameterized by BOTH observer hashes
+// (lifecycle, enforcement) and selects exactly one family per action:
+// Register -> lifecycle, Freeze/Convict -> enforcement, ClaimFreeze -> neither.
+// These tests call the checkpoint with the two-hash signature, which the
+// current single-observer checkpoint (one observer_hash parameter) does not
+// have — the honest RED for the absent two-hash coupling contract.
+
+const lifecycle_hash: PolicyId =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const advance_hash: PolicyId =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+const enforcement_hash: PolicyId =
+  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+/// Couple a transaction to a specific family observer credential at zero
+/// lovelace with a matching Withdraw redeemer carrying the envelope.
+fn with_family_coupling(
+  tx: Transaction,
+  family_hash: PolicyId,
+  action: Int,
+  claim_policy: PolicyId,
+  own_ref: Option<OutputReference>,
+  payload: Data,
+) -> Transaction {
+  let credential = Script(family_hash)
+  let claim = ObserverClaim { action, checkpoint_policy: claim_policy, own_ref }
+  let envelope = ObserverEnvelope { claim, payload }
+  let rdm_data: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), rdm_data)],
+  }
+}
+
+/// A valid Register selects the lifecycle observer (two-hash checkpoint).
+test t115_r1_register_selects_lifecycle() {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_register,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// A valid Freeze selects the enforcement observer (two-hash checkpoint).
+test t115_r1_freeze_selects_enforcement() {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_freeze,
+    policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// A valid Convict selects the enforcement observer (two-hash checkpoint).
+test t115_r1_convict_selects_enforcement() {
+  let tx = r3_active_tx()
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_convict,
+    policy,
+    Some(convict_own_ref),
+    enf_vec.fork_witnessed_convict_wire,
+  )
+  let slim_convict: Data = T115R1Convict {
+    convictor_pkh: r3_convictor,
+    convictor_output_index: 0,
+    hunter_output_index: 0,
+  }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_convict,
+    convict_own_ref,
+    coupled,
+  )
+}
+
+/// Register cannot substitute the enforcement credential.
+test t115_r1_reject_register_with_enforcement_credential() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_register,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// Freeze cannot substitute the lifecycle credential.
+test t115_r1_reject_freeze_with_lifecycle_credential() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_freeze,
+    policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// Convict cannot substitute the lifecycle credential.
+test t115_r1_reject_convict_with_lifecycle_credential() fail {
+  let tx = r3_active_tx()
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_convict,
+    policy,
+    Some(convict_own_ref),
+    enf_vec.fork_witnessed_convict_wire,
+  )
+  let slim_convict: Data = T115R1Convict {
+    convictor_pkh: r3_convictor,
+    convictor_output_index: 0,
+    hunter_output_index: 0,
+  }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_convict,
+    convict_own_ref,
+    coupled,
+  )
+}
+
+/// Register with a missing lifecycle withdrawal rejects.
+test t115_r1_reject_register_missing_lifecycle_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    tx,
+  )
+}
+
+/// Register with a nonzero lifecycle withdrawal rejects.
+test t115_r1_reject_register_nonzero_lifecycle_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let credential = Script(lifecycle_hash)
+  let claim = ObserverClaim {
+    action: observe_register,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: vec.pos_2key_evidence }
+  let obs_rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 100)],
+    redeemers: [Pair(Withdraw(credential), obs_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+/// Register with the lifecycle withdrawal but a missing Withdraw redeemer rejects.
+test t115_r1_reject_register_missing_lifecycle_redeemer() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let credential = Script(lifecycle_hash)
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+/// Register with the wrong lifecycle action rejects.
+test t115_r1_reject_register_wrong_lifecycle_action() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_convict,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// Register with the wrong checkpoint h in the lifecycle claim rejects.
+test t115_r1_reject_register_wrong_lifecycle_h() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let wrong_policy = #"11111111111111111111111111111111111111111111111111111111"
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_register,
+    wrong_policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// Freeze with a mismatched own_ref in the enforcement claim rejects.
+test t115_r1_reject_freeze_wrong_enforcement_own_ref() fail {
+  let wrong_ref = out_ref(seed_tx_id, 1)
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_freeze,
+    policy,
+    Some(wrong_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// Register/lifecycle with the correct zero withdrawal and matching Withdraw
+/// purpose but MALFORMED redeemer data (raw Data that cannot decode as
+/// ObserverEnvelope) rejects. This is the distinct wrong-Withdraw-redeemer
+/// case, not wrong action.
+test t115_r1_reject_register_malformed_lifecycle_redeemer() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let credential = Script(lifecycle_hash)
+  let malformed_rdm: Data = 0
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), malformed_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+/// Freeze/enforcement with a missing enforcement withdrawal rejects.
+test t115_r1_reject_freeze_missing_enforcement_withdrawal() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    tx,
+  )
+}
+
+/// Freeze/enforcement with a nonzero enforcement withdrawal rejects.
+test t115_r1_reject_freeze_nonzero_enforcement_withdrawal() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let credential = Script(enforcement_hash)
+  let claim = ObserverClaim {
+    action: observe_freeze,
+    checkpoint_policy: policy,
+    own_ref: Some(freeze_own_ref),
+  }
+  let envelope = ObserverEnvelope { claim, payload: enf_vec.lag_freeze_wire }
+  let obs_rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 100)],
+    redeemers: [Pair(Withdraw(credential), obs_rdm)],
+  }
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    bad_tx,
+  )
+}
+
+/// Freeze/enforcement with the enforcement withdrawal but a missing matching
+/// Withdraw redeemer rejects.
+test t115_r1_reject_freeze_missing_enforcement_redeemer() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let credential = Script(enforcement_hash)
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [],
+  }
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    bad_tx,
+  )
+}
+
+/// Freeze/enforcement with the matching Withdraw purpose but MALFORMED
+/// redeemer data (raw Data that cannot decode as ObserverEnvelope) rejects.
+test t115_r1_reject_freeze_malformed_enforcement_redeemer() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let credential = Script(enforcement_hash)
+  let malformed_rdm: Data = 0
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), malformed_rdm)],
+  }
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    bad_tx,
+  )
+}
+
+/// Freeze/enforcement with the wrong action (ObserveConvict) rejects.
+test t115_r1_reject_freeze_wrong_enforcement_action() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_convict,
+    policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// Freeze/enforcement with the wrong checkpoint h in the claim rejects.
+test t115_r1_reject_freeze_wrong_enforcement_h() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let wrong_policy = #"11111111111111111111111111111111111111111111111111111111"
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_freeze,
+    wrong_policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// ClaimFreeze succeeds through the two-hash checkpoint call with NO lifecycle
+/// or enforcement withdrawal/redeemer (it needs neither observer).
+test t115_r1_claim_freeze_observer_free_two_hash() {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline + 1)
+  let slim_claim: Data = T115R1ClaimFreeze { hunter_output_index: 0 }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_claim,
+    freeze_own_ref,
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// R3 four-program RED — three-way observer selection + fourth hash
+// ---------------------------------------------------------------------
+// Final arity: checkpoint(version, lifecycle_hash, advance_hash,
+// enforcement_hash, d_reg, freeze_bond, freeze_window). Selection:
+// Register→lifecycle, Advance→advance, Freeze/Convict→enforcement,
+// ClaimFreeze→none. Missing / nonzero / extra / cross-family / wrong-action
+// withdrawals reject. Restored GREEN still uses two-hash arity and permits
+// unrelated extra zero-lovelace withdrawals — the behavioral RED below
+// pins those contracts.
+
+/// Register + exact lifecycle coupling plus an extra advance-family
+/// zero-withdrawal. Four-program topology rejects extras; restored GREEN
+/// still accepts (unrelated withdrawals never rejected) → behavioral RED.
+test t115_r3_reject_register_extra_advance_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let lc = Script(lifecycle_hash)
+  let ad = Script(advance_hash)
+  let claim = ObserverClaim {
+    action: observe_register,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: vec.pos_2key_evidence }
+  let rdm: Data = envelope
+  let adv_claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let adv_env = ObserverEnvelope { claim: adv_claim, payload: 0 }
+  let adv_rdm: Data = adv_env
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(lc, 0), Pair(ad, 0)],
+    redeemers: [Pair(Withdraw(lc), rdm), Pair(Withdraw(ad), adv_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+/// Register + lifecycle + extra enforcement zero-withdrawal (cross-family
+/// extra). Must reject under four-program exact selection.
+test t115_r3_reject_register_extra_enforcement_withdrawal() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let lc = Script(lifecycle_hash)
+  let ef = Script(enforcement_hash)
+  let claim = ObserverClaim {
+    action: observe_register,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let envelope = ObserverEnvelope { claim, payload: vec.pos_2key_evidence }
+  let rdm: Data = envelope
+  let ef_claim = ObserverClaim {
+    action: observe_freeze,
+    checkpoint_policy: policy,
+    own_ref: None,
+  }
+  let ef_env = ObserverEnvelope { claim: ef_claim, payload: 0 }
+  let ef_rdm: Data = ef_env
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(lc, 0), Pair(ef, 0)],
+    redeemers: [Pair(Withdraw(lc), rdm), Pair(Withdraw(ef), ef_rdm)],
+  }
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    bad_tx,
+  )
+}
+
+/// Freeze + enforcement + extra advance zero-withdrawal must reject.
+test t115_r3_reject_freeze_extra_advance_withdrawal() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let ef = Script(enforcement_hash)
+  let ad = Script(advance_hash)
+  let claim = ObserverClaim {
+    action: observe_freeze,
+    checkpoint_policy: policy,
+    own_ref: Some(freeze_own_ref),
+  }
+  let envelope = ObserverEnvelope { claim, payload: enf_vec.lag_freeze_wire }
+  let rdm: Data = envelope
+  let adv_claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: Some(freeze_own_ref),
+  }
+  let adv_env = ObserverEnvelope { claim: adv_claim, payload: 0 }
+  let adv_rdm: Data = adv_env
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(ef, 0), Pair(ad, 0)],
+    redeemers: [Pair(Withdraw(ef), rdm), Pair(Withdraw(ad), adv_rdm)],
+  }
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    bad_tx,
+  )
+}
+
+/// ClaimFreeze must stay observer-free: an advance zero-withdrawal is an
+/// illegal extra under the four-program exact-selection contract.
+test t115_r3_reject_claim_freeze_with_advance_withdrawal() fail {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline + 1)
+  let ad = Script(advance_hash)
+  let claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: Some(freeze_own_ref),
+  }
+  let envelope = ObserverEnvelope { claim, payload: 0 }
+  let rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(ad, 0)],
+    redeemers: [Pair(Withdraw(ad), rdm)],
+  }
+  let slim_claim: Data = T115R1ClaimFreeze { hunter_output_index: 0 }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_claim,
+    freeze_own_ref,
+    bad_tx,
+  )
+}
+
+/// Register must not use the advance credential (cross-family / wrong-action
+/// family). Distinct advance_hash is not the configured lifecycle selector.
+test t115_r3_reject_register_with_advance_credential() fail {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled = with_family_coupling(
+    tx,
+    advance_hash,
+    observe_register,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// Freeze must not use the advance credential (cross-family).
+test t115_r3_reject_freeze_with_advance_credential() fail {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    advance_hash,
+    observe_freeze,
+    policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// Three-hash positive Register (fourth parameter applied). Restored GREEN
+/// checkpoint has only two observer hashes → arity mismatch until GREEN.
+test t115_r3_register_selects_lifecycle_three_hash() {
+  let tx = bonded_register_tx_at(
+    vec.pos_2key_datum,
+    register_floor,
+    vec.pos_2key_evidence,
+  )
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_register,
+    policy,
+    None,
+    vec.pos_2key_evidence,
+  )
+  checkpoint.checkpoint.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    Register,
+    policy,
+    coupled,
+  )
+}
+
+/// Three-hash Advance selects advance_hash then fail-closes the R3
+/// state-machine body (opened in R4). Arity mismatch on restored GREEN.
+test t115_r3_advance_selects_advance_then_fail_closed() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let coupled = with_family_coupling(
+    tx,
+    advance_hash,
+    observe_advance,
+    policy,
+    Some(advance_own_ref(spent)),
+    adv_vec.pos_adv_wit_2key_evidence,
+  )
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    coupled,
+  )
+}
+
+/// Three-hash: Advance with lifecycle credential (wrong family) rejects.
+test t115_r3_reject_advance_with_lifecycle_credential_three_hash() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let coupled = with_family_coupling(
+    tx,
+    lifecycle_hash,
+    observe_advance,
+    policy,
+    Some(advance_own_ref(spent)),
+    adv_vec.pos_adv_wit_2key_evidence,
+  )
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    coupled,
+  )
+}
+
+/// Three-hash: Advance missing advance withdrawal rejects.
+test t115_r3_reject_advance_missing_advance_withdrawal() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    tx,
+  )
+}
+
+/// Three-hash: Advance with nonzero advance withdrawal rejects.
+test t115_r3_reject_advance_nonzero_advance_withdrawal() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let credential = Script(advance_hash)
+  let claim = ObserverClaim {
+    action: observe_advance,
+    checkpoint_policy: policy,
+    own_ref: Some(advance_own_ref(spent)),
+  }
+  let envelope = ObserverEnvelope {
+    claim,
+    payload: adv_vec.pos_adv_wit_2key_evidence,
+  }
+  let rdm: Data = envelope
+  let bad_tx = Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 100)],
+    redeemers: [Pair(Withdraw(credential), rdm)],
+  }
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    bad_tx,
+  )
+}
+
+/// Three-hash: Advance with wrong action on the advance credential rejects.
+test t115_r3_reject_advance_wrong_action_on_advance_credential() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  let tx = advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created)
+  let coupled = with_family_coupling(
+    tx,
+    advance_hash,
+    observe_register,
+    policy,
+    Some(advance_own_ref(spent)),
+    adv_vec.pos_adv_wit_2key_evidence,
+  )
+  let slim_advance: Data = T115R1Advance
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_advance,
+    advance_own_ref(spent),
+    coupled,
+  )
+}
+
+/// Three-hash Freeze still selects enforcement (regression positive).
+test t115_r3_freeze_selects_enforcement_three_hash() {
+  let tx = r2_arm_tx(enf_vec.lag_freeze_tip)
+  let coupled = with_family_coupling(
+    tx,
+    enforcement_hash,
+    observe_freeze,
+    policy,
+    Some(freeze_own_ref),
+    enf_vec.lag_freeze_wire,
+  )
+  let slim_freeze: Data = T115R1Freeze { hunter_pkh: r2_hunter }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_freeze,
+    freeze_own_ref,
+    coupled,
+  )
+}
+
+/// Three-hash ClaimFreeze needs no observer.
+test t115_r3_claim_freeze_observer_free_three_hash() {
+  let tip = enf_vec.lag_freeze_tip
+  let tx = r2_claim_tx(tip, r2_deadline + 1)
+  let slim_claim: Data = T115R1ClaimFreeze { hunter_output_index: 0 }
+  checkpoint.checkpoint.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    d_reg,
+    r2_freeze_bond,
+    r2_freeze_window,
+    None,
+    slim_claim,
+    freeze_own_ref,
+    tx,
+  )
 }

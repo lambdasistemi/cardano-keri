@@ -11,17 +11,16 @@ datum, 'AdvanceEvidence', and verdict — one per S4 'AdvanceSpec' family
 member (the four honest fixture families, every AE1-AE10 axis, the
 A-001 offset-misdirection family, controller-evidence negatives, delta
 malformations, and the receipt-quorum negatives), plus the four
-reconstructed-message preimage byte goldens the honest families check.
+event-own controller preimage pin (ctrl sig over exact event_bytes).
 
 One computation feeds both languages: each scenario's verdict is the
 Haskell 'advancePredicate' output, and the generator ASSERTS it equals
 the family's declared expectation before emitting — a Haskell drift
 breaks the generator run (and the drift check), never silently weakens
-the Aiken suite. Controller signatures are produced here from the
-bundle's exported @rotation_current@\/@inception_current@ seeds over the
-reconstructed 'AdvanceMessage' canonical-CBOR preimage; witness receipts
-are the bundle's own @rot_witness_receipts@ (already signed over
-@event_raw@, O1). OFFLINE (no keripy) and deterministic (drift-checked).
+the Aiken suite. Controller signatures are the bundle's own @rot_sigs@
+over exact @event_raw@ (R3 sole preimage); witness receipts are the
+bundle's own @rot_witness_receipts@ (already signed over @event_raw@,
+O1). OFFLINE (no keripy) and deterministic (drift-checked).
 
 Invocation: @gen-advance-vectors OUT_PATH [FIXTURES_DIR]@ (default
 fixtures dir @test\/keri-fixtures\/fixtures@, resolved from the
@@ -46,16 +45,13 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
     AdvancePredicateError (..),
     advancePredicate,
-    reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     DatumError (..),
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
-    AdvanceMessage,
     SpentCheckpoint (..),
     deriveAidAssetName,
  )
@@ -120,7 +116,7 @@ main = do
         down = orDie (loadAdvCase fx "adv_downgrade")
         scenarios = buildScenarios w2 w7 keep down
     mapM_ assertVerdict scenarios
-    let rendered = render w2 w7 keep down scenarios
+    let rendered = render scenarios
     case out of
         Just path -> writeFile path rendered
         Nothing -> putStr rendered
@@ -254,7 +250,6 @@ loadAdvCase doc key = do
                 , cdSeq = 1
                 , cdNativeSn = 1
                 }
-        msg = reconstructAdvanceMessage sc created cuts adds
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
@@ -270,7 +265,7 @@ loadAdvCase doc key = do
                 , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
-                , aeCtrlSigs = signAll msg rotSigners
+                , aeCtrlSigs = eventRawCtrlSigs
                 , aeWitReceipts = honestReceipts
                 }
     pure
@@ -304,13 +299,20 @@ mkSigner = genKeyDSIGN . mkSeedFromBytes
 signOver :: SignKeyDSIGN Ed25519DSIGN -> ByteString -> ByteString
 signOver sk msg = rawSerialiseSigDSIGN (signDSIGN () msg sk)
 
--- | Indexed signatures of all given signers over an 'AdvanceMessage' preimage.
-signAll ::
-    AdvanceMessage -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
-signAll msg signers =
-    [(j, signOver sk preimage) | (j, sk) <- zip [0 ..] signers]
-  where
-    preimage = canonicalCbor msg
+-- | Indexed signatures of all given signers over exact KERI event bytes.
+signAllOverEvent ::
+    ByteString -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
+signAllOverEvent eventBytes signers =
+    [(j, signOver sk eventBytes) | (j, sk) <- zip [0 ..] signers]
+
+-- | Stale AdvanceMessage-class preimage residual (non-event label).
+staleAdvanceMessageLabel :: ByteString
+staleAdvanceMessageLabel = "cardano-keri/checkpoint/adv/v1-STALE-MESSAGE"
+
+signAllOverStaleMessage ::
+    [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
+signAllOverStaleMessage signers =
+    [(j, signOver sk staleAdvanceMessageLabel) | (j, sk) <- zip [0 ..] signers]
 
 -- | The signer of a known raw verkey in an @(verkey, signer)@ association.
 signerFor ::
@@ -564,10 +566,10 @@ buildScenarios w2 w7 keep down =
             (Left (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied))
     , sc
         "ctrl_wrong_preimage"
-        "wrong preimage: KERI event_raw sigs MUST fail -> Eq6CurrentQuorumUnsatisfied"
+        "wrong preimage: old AdvanceMessage-class sigs MUST fail -> Eq6CurrentQuorumUnsatisfied"
         (acSpent w2)
         (acCreated w2)
-        (acEvidence w2){aeCtrlSigs = acEventRawCtrlSigs w2}
+        (acEvidence w2){aeCtrlSigs = signAllOverStaleMessage (acRotSigners w2)}
         (Left (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied))
     , sc
         "ctrl_below_threshold"
@@ -576,13 +578,7 @@ buildScenarios w2 w7 keep down =
         (acCreated w2)
         (acEvidence w2){aeCtrlSigs = take 1 (aeCtrlSigs (acEvidence w2))}
         (Left (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied))
-    , let msg =
-            reconstructAdvanceMessage
-                (acSpent w2)
-                (acCreated w2)
-                (aeWitCut (acEvidence w2))
-                (aeWitAdd (acEvidence w2))
-          stolen = signAll msg (acIcpSigners w2)
+    , let stolen = signAllOverEvent (acRaw w2) (acIcpSigners w2)
        in sc
             "ctrl_stolen_quorum"
             "stolen full spent-current quorum (icp keys) cannot rotate -> Eq6CurrentQuorumUnsatisfied"
@@ -591,13 +587,7 @@ buildScenarios w2 w7 keep down =
             (acEvidence w2){aeCtrlSigs = stolen}
             (Left (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied))
     , let substituted = (acCreated w2){cdCurKeys = acIcpKeys w2}
-          msg =
-            reconstructAdvanceMessage
-                (acSpent w2)
-                substituted
-                (aeWitCut (acEvidence w2))
-                (aeWitAdd (acEvidence w2))
-          sigs = signAll msg (acIcpSigners w2)
+          sigs = signAllOverEvent (acRaw w2) (acIcpSigners w2)
        in sc
             "ctrl_substituted_successor"
             "substituted successor evidence (uncommitted board) -> Eq6PriorNextQuorumUnsatisfied"
@@ -663,19 +653,12 @@ buildScenarios w2 w7 keep down =
             (Left (AdvMessageInvalid Eq7CreatedStateMismatch))
     , let badToad = toInteger (length (acNewSet w2)) + 5
           created = (acCreated w2){cdToad = badToad}
-          msg =
-            reconstructAdvanceMessage
-                (acSpent w2)
-                created
-                (aeWitCut (acEvidence w2))
-                (aeWitAdd (acEvidence w2))
-          sigs = signAll msg (acRotSigners w2)
        in sc
             "eq8_toad_out_of_bounds"
             "toad out of bounds -> Eq8CreatedIllFormed ToadRange"
             (acSpent w2)
             created
-            (acEvidence w2){aeCtrlSigs = sigs}
+            (acEvidence w2)
             (Left (AdvMessageInvalid (Eq8CreatedIllFormed ToadRange)))
     , -- ---------------------------------------------------------
       -- V7: incoming-set witness receipt-quorum negatives
@@ -891,9 +874,9 @@ textArrayField value k = do
 -- Aiken rendering
 -- ---------------------------------------------------------
 
-render :: AdvCase -> AdvCase -> AdvCase -> AdvCase -> [Scenario] -> String
-render w2 w7 keep down scenarios =
-    header <> "\n" <> goldens <> "\n" <> concatMap renderScenario scenarios
+render :: [Scenario] -> String
+render scenarios =
+    header <> "\n" <> concatMap renderScenario scenarios
   where
     header =
         unlines
@@ -902,11 +885,11 @@ render w2 w7 keep down scenarios =
             , "//// Regenerate with `just gen-advance-vectors` (runs"
             , "//// offchain/app/GenAdvanceVectors.hs over the committed keripy"
             , "//// advance.json). Each scenario is the spent context, created"
-            , "//// (successor) datum, evidence, and verdict of one S4 AdvanceSpec"
+            , "//// (successor) datum, evidence, and verdict of one R3 AdvanceSpec"
             , "//// family member; the generator asserts the Haskell predicate returns"
             , "//// each recorded verdict before emitting, and advance_tests.ak"
             , "//// asserts advance_predicate reproduces them one-for-one (verdict"
-            , "//// parity) plus the reconstructed-message preimage byte goldens."
+            , "//// parity) with event-own controller signatures over event_bytes."
             , "//// `just check-advance-vectors` forbids drift."
             , ""
             , "use cardano_keri/checkpoint/advance.{"
@@ -925,33 +908,6 @@ render w2 w7 keep down scenarios =
             , "}"
             , "use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}"
             ]
-    goldens =
-        unlines
-            [ "/// adv_wit_2key reconstructed AdvanceMessage canonical-CBOR preimage"
-            , "/// (the V5 controller-signature target; byte-parity golden)"
-            , "pub const pos_adv_wit_2key_preimage: ByteArray ="
-            , "  " <> hexLit (preimageOf w2)
-            , ""
-            , "/// adv_wit_7key reconstructed-message preimage"
-            , "pub const pos_adv_wit_7key_preimage: ByteArray ="
-            , "  " <> hexLit (preimageOf w7)
-            , ""
-            , "/// adv_keep reconstructed-message preimage"
-            , "pub const pos_adv_keep_preimage: ByteArray ="
-            , "  " <> hexLit (preimageOf keep)
-            , ""
-            , "/// adv_downgrade reconstructed-message preimage"
-            , "pub const pos_adv_downgrade_preimage: ByteArray ="
-            , "  " <> hexLit (preimageOf down)
-            ]
-    preimageOf c =
-        canonicalCbor
-            ( reconstructAdvanceMessage
-                (acSpent c)
-                (acCreated c)
-                (aeWitCut (acEvidence c))
-                (aeWitAdd (acEvidence c))
-            )
 
 renderScenario :: Scenario -> String
 renderScenario s =
@@ -1050,11 +1006,7 @@ renderPredicateError = \case
 
 renderAdvanceError :: AdvanceError -> String
 renderAdvanceError = \case
-    AdvanceDomainMismatch -> "AdvanceDomainMismatch"
-    Eq1NetworkPolicyMismatch -> "Eq1NetworkPolicyMismatch"
     Eq2AssetOrAidMismatch -> "Eq2AssetOrAidMismatch"
-    Eq3OutRefMismatch -> "Eq3OutRefMismatch"
-    Eq4PriorMismatch -> "Eq4PriorMismatch"
     Eq5SequenceMismatch -> "Eq5SequenceMismatch"
     EqW1CutInvalid -> "EqW1CutInvalid"
     EqW2AddInvalid -> "EqW2AddInvalid"

@@ -20,12 +20,6 @@ written there; with none it is printed to stdout.
 -}
 module Main (main) where
 
-import Cardano.KERI.AID.Blake3.Checkpoint (
-    blake3Hash,
- )
-import Cardano.KERI.AID.CESR (
-    qb64Verkey,
- )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
@@ -33,8 +27,6 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
-    AdvanceMessage,
-    advanceMessage,
     checkpointAssetDomainTag,
     deriveAidAssetName,
  )
@@ -66,10 +58,6 @@ import System.Environment (
 b32 :: Word8 -> ByteString
 b32 = BS.replicate 32
 
--- | A 28-byte value of a single repeated byte (a Cardano policy id width).
-b28 :: Word8 -> ByteString
-b28 = BS.replicate 28
-
 -- Key digests / fixed material shared with DatumSpec.
 k1, k2, k3, cesrDatum, nk1, w1, w2 :: ByteString
 k1 = b32 0x01
@@ -81,8 +69,7 @@ w1 = b32 0xb1
 w2 = b32 0xb2
 
 -- Message-family material shared with MessageSpec.
-policy, cesrA, cesrAFlipped :: ByteString
-policy = b28 0xcc
+cesrA, cesrAFlipped :: ByteString
 cesrA = BS.pack [0 .. 31] -- the derivation golden's fixed cesr_aid (0x00..0x1f)
 cesrAFlipped = BS.pack (1 : [1 .. 31]) -- one-bit flip of byte 0
 
@@ -115,85 +102,6 @@ mkV1 cesr keys thr nkeys nthr wits toad seqn nsn =
             , cdSeq = seqn
             , cdNativeSn = nsn
             }
-
--- | The advance fixture (valid succession), matched to MessageSpec.
-validAdv :: AdvanceMessage
-validAdv =
-    advanceMessage
-        1 -- network_id
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        (b32 0xd0) -- spent_txid
-        1 -- spent_index
-        0 -- prior_seq
-        0 -- prior_native_sn
-        [b32 0x11] -- new_cur_keys (the revealed committed set)
-        (Unweighted 1) -- new_cur_threshold
-        [b32 0x22] -- new_next_keys
-        (Unweighted 1) -- new_next_threshold
-        [] -- wit_cut
-        [] -- wit_add
-        0 -- new_toad
-        1 -- seq_to
-        1 -- native_sn_to
-
-{- | A witnessed advance carrying distinct, non-empty @wit_cut@\/@wit_add@
-(#115 S2\/S3): pins the frozen field-14\/field-15 order (a swapped cut\/add
-would byte-match a swapped golden, which the witnessless 'validAdv' cannot
-detect since both its delta lists are empty).
--}
-witnessedAdv :: AdvanceMessage
-witnessedAdv =
-    advanceMessage
-        1 -- network_id
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        (b32 0xd0) -- spent_txid
-        1 -- spent_index
-        0 -- prior_seq
-        0 -- prior_native_sn
-        [b32 0x11] -- new_cur_keys
-        (Unweighted 1) -- new_cur_threshold
-        [b32 0x22] -- new_next_keys
-        (Unweighted 1) -- new_next_threshold
-        [b32 0xb1] -- wit_cut
-        [b32 0xb4] -- wit_add
-        2 -- new_toad
-        1 -- seq_to
-        1 -- native_sn_to
-
-{- | The partial (reserve) rotation fixture, matched to MessageSpec: the GLEIF
-production Root shape — 7 committed digests at @nt = [[1\/3 x7]]@, revealing
-indices {0, 5, 6} with a restated @kt = [[1\/3 x3]]@, re-committing the 4
-unexposed reserves plus 3 fresh digests.
--}
-reserveAdv :: AdvanceMessage
-reserveAdv =
-    advanceMessage
-        1
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        (b32 0xd0)
-        1
-        0
-        0
-        [rn 0, rn 5, rn 6]
-        (third 3)
-        (map (nkd . rn) [1, 2, 3, 4] <> map b32 [0x71, 0x72, 0x73])
-        (third 7)
-        [] -- wit_cut
-        [] -- wit_add
-        0
-        1
-        1
-  where
-    rn i = b32 (0x30 + i)
-    third n = Weighted [replicate n (Weight 1 3)]
-    -- The committed next-key digest of a raw verkey (the KEL n entry).
-    nkd = blake3Hash . qb64Verkey
 
 -- | The @deriveAidAssetName@ negative computed with the WRONG code (@0x46@).
 wrongCodeAsset :: ByteString
@@ -330,19 +238,6 @@ vectors =
         "negative_aid_asset_name_mutated_aid"
         "derivation negative: one-bit-flipped cesr_aid"
         (deriveAidAssetName cesrAFlipped)
-    , -- Signed advance-message preimages (Slice 6 mirror).
-      Vec
-        "golden_advance_message"
-        "message: AdvanceMessage (valid succession) canonical CBOR"
-        (canonicalCbor validAdv)
-    , Vec
-        "golden_advance_reserve_message"
-        "message: AdvanceMessage (partial/reserve rotation, GLEIF Root shape)"
-        (canonicalCbor reserveAdv)
-    , Vec
-        "golden_advance_witnessed_message"
-        "message: AdvanceMessage (distinct non-empty wit_cut/wit_add, field-order pin)"
-        (canonicalCbor witnessedAdv)
     ]
 
 -- ---------------------------------------------------------

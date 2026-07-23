@@ -1,20 +1,19 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.AdvanceSpec
-Description : #115 S4 pure advance predicate over keripy fixtures
+Description : #115 R3 pure advance predicate over keripy fixtures
 
 Fixture-driven hspec for "Cardano.KERI.AID.Checkpoint.Advance": the pure
-advance predicate (message reconstruction + eq1-eq8\/W1-W3, AE1-AE10
+advance predicate (transition equalities eq5\/W1-W3\/eq6-eq8, AE1-AE10
 event binding, the incoming-set witness receipt gate).
 
 Every honest artifact comes from the committed @advance.json@ keripy
 bundle (#115 S1): the witnessed\/keep\/downgrade rotation family,
-per-field offsets, and signer seeds. Controller signatures are produced
-HERE from the exported @rotation_current@ seeds, over the reconstructed
-'AdvanceMessage' canonical-CBOR preimage — never over the KERI event
-bytes (the bundle's own @rot_sigs@ sign @event_raw@ and MUST fail the
-controller-evidence gate). Incoming-set witness receipts, by contrast,
-sign @event_raw@ (O1) — the bundle's own @rot_witness_receipts@ are
-used directly, already indexed into the W3-derived incoming set.
+per-field offsets, and signer seeds. Controller signatures are the
+bundle's own @rot_sigs@ over the exact KERI @event_raw@ — the sole
+Advance signature preimage after R3 (old AdvanceMessage canonical-CBOR
+fresh-signature evidence MUST fail). Incoming-set witness receipts
+likewise sign @event_raw@ (O1) — the bundle's own @rot_witness_receipts@
+are used directly, already indexed into the W3-derived incoming set.
 
 Adversarial vectors are deterministic constructions over the honest
 artifacts (offset misdirection, delta malformations, stolen\/
@@ -37,12 +36,10 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
     AdvancePredicateError (..),
     advancePredicate,
-    reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     DatumError (..),
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
@@ -59,7 +56,6 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
-    AdvanceMessage,
     SpentCheckpoint (..),
     deriveAidAssetName,
  )
@@ -266,7 +262,6 @@ advCase doc key = do
                 , cdSeq = 1
                 , cdNativeSn = 1
                 }
-        msg = reconstructAdvanceMessage sc created cuts adds
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
@@ -282,7 +277,9 @@ advCase doc key = do
                 , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
-                , aeCtrlSigs = signAll msg rotSigners
+                , -- Honest controller evidence: the keripy rot_sigs over
+                  -- exact event_raw (R3 sole preimage).
+                  aeCtrlSigs = eventRawCtrlSigs
                 , aeWitReceipts = honestReceipts
                 }
     pure
@@ -351,13 +348,22 @@ mkSigner seed = genKeyDSIGN (mkSeedFromBytes seed)
 signOver :: SignKeyDSIGN Ed25519DSIGN -> ByteString -> ByteString
 signOver sk msg = rawSerialiseSigDSIGN (signDSIGN () msg sk)
 
--- | Indexed signatures of all given signers over an 'AdvanceMessage' preimage.
-signAll ::
-    AdvanceMessage -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
-signAll msg signers =
-    [(j, signOver sk preimage) | (j, sk) <- zip [0 ..] signers]
-  where
-    preimage = canonicalCbor msg
+-- | Indexed signatures of all given signers over exact KERI event bytes.
+signAllOverEvent ::
+    ByteString -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
+signAllOverEvent eventBytes signers =
+    [(j, signOver sk eventBytes) | (j, sk) <- zip [0 ..] signers]
+
+{- | Stale Cardano-specific preimage residual (deleted AdvanceMessage class):
+signatures over a non-event label must never count as controller evidence.
+-}
+staleAdvanceMessageLabel :: ByteString
+staleAdvanceMessageLabel = "cardano-keri/checkpoint/adv/v1-STALE-MESSAGE"
+
+signAllOverStaleMessage ::
+    [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
+signAllOverStaleMessage signers =
+    [(j, signOver sk staleAdvanceMessageLabel) | (j, sk) <- zip [0 ..] signers]
 
 -- | The signer of a known raw verkey in an @(verkey, signer)@ association.
 signerFor ::
@@ -395,7 +401,7 @@ findSubstring needle haystack = go 0
 
 spec :: Spec
 spec =
-    describe "Advance - #115 S4 pure predicate (keripy oracle)" $
+    describe "Advance - #115 R3 pure predicate (keripy oracle)" $
         beforeAll (loadFixture "advance.json") $ do
             positives
             eventBindingNegatives
@@ -581,13 +587,12 @@ controllerEvidenceNegatives =
                         `shouldBe` Left
                             (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
         it
-            "wrong preimage: KERI event_raw sigs MUST fail -> Eq6CurrentQuorumUnsatisfied"
+            "wrong preimage: old AdvanceMessage-class sigs MUST fail -> Eq6CurrentQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeCtrlSigs = acEventRawCtrlSigs c}
-                    `shouldBe` Left
-                        (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
+                let stale = signAllOverStaleMessage (acRotSigners c)
+                 in runAdvWith c (acEvidence c){aeCtrlSigs = stale}
+                        `shouldBe` Left
+                            (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
         it "below threshold: 1 of kt=2 -> Eq6CurrentQuorumUnsatisfied" $
             \fx -> withCase fx "adv_wit_2key" $ \c ->
                 runAdvWith
@@ -600,13 +605,8 @@ controllerEvidenceNegatives =
         it
             "stolen full spent-current quorum (icp keys) cannot rotate -> Eq6CurrentQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                let msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            (acCreated c)
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    stolen = signAll msg (acIcpSigners c)
+                let stolen =
+                        signAllOverEvent (acRaw c) (acIcpSigners c)
                  in runAdvWith c (acEvidence c){aeCtrlSigs = stolen}
                         `shouldBe` Left
                             (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
@@ -614,13 +614,7 @@ controllerEvidenceNegatives =
             "substituted successor evidence (uncommitted board) -> Eq6PriorNextQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c -> do
                 let substituted = (acCreated c){cdCurKeys = acIcpKeys c}
-                    msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            substituted
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    sigs = signAll msg (acIcpSigners c)
+                    sigs = signAllOverEvent (acRaw c) (acIcpSigners c)
                 advancePredicate
                     (acSpent c)
                     substituted
@@ -686,13 +680,9 @@ deltaMalformations =
             withCase fx "adv_wit_2key" $ \c -> do
                 let badToad = toInteger (length (acNewSet c)) + 5
                     created = (acCreated c){cdToad = badToad}
-                    msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            created
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    sigs = signAll msg (acRotSigners c)
+                    -- Controller evidence stays the honest event-own set;
+                    -- toad is a datum-well-formedness gate, not a re-sign.
+                    sigs = aeCtrlSigs (acEvidence c)
                 advancePredicate
                     (acSpent c)
                     created

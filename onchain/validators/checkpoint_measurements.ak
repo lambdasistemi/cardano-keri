@@ -11,10 +11,12 @@ use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
-use cardano/address.{Address, from_script, from_verification_key}
+use cardano/address.{
+  Address, Credential, Script, from_script, from_verification_key,
+}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
 }
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
@@ -22,6 +24,10 @@ use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
+use cardano_keri/checkpoint/observer.{
+  ObserverClaim, ObserverEnvelope, observe_convict, observe_freeze,
+  observe_register,
+}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
@@ -40,7 +46,16 @@ const hp_policy: PolicyId =
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 
-const network_id: Int = 0
+/// The R1 observer deployment: the checkpoint is parameterized by the applied
+/// The family-split observers (A-004): the checkpoint is parameterized by
+/// both observer hashes. These fixtures stand in for those hashes in the
+/// measurement contexts. Register selects lifecycle; Freeze/Convict select
+/// enforcement; ClaimFreeze needs neither.
+const lifecycle_hash: PolicyId =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const enforcement_hash: PolicyId =
+  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
 const d_reg: Int = 1_000_000_000
 
@@ -50,6 +65,28 @@ const freeze_window: Int = 500
 
 const hunter_pkh: ByteArray =
   #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+/// Couple an evidence-bearing measurement transaction to a family observer: a
+/// zero-lovelace withdrawal of that family credential plus a matching
+/// Withdraw-purpose redeemer carrying the envelope (claim + opaque payload).
+/// The checkpoint ran-check reads only the claim.
+fn with_observer_coupling(
+  tx: Transaction,
+  family_hash: PolicyId,
+  action: Int,
+  own_ref: Option<OutputReference>,
+  payload: Data,
+) -> Transaction {
+  let credential: Credential = Script(family_hash)
+  let claim = ObserverClaim { action, checkpoint_policy: policy, own_ref }
+  let envelope = ObserverEnvelope { claim, payload }
+  let rdm_data: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), rdm_data)],
+  }
+}
 
 // ---------------------------------------------------------------------
 // Tx-B builders (private mirror of checkpoint_tests.ak)
@@ -106,38 +143,55 @@ fn register_tx(
 const register_surplus: Int = 42_000_000
 
 const tx_2key: Transaction =
-  register_tx(
-    vec.pos_2key_datum,
-    min_ada + d_reg + freeze_bond,
+  with_observer_coupling(
+    register_tx(
+      vec.pos_2key_datum,
+      min_ada + d_reg + freeze_bond,
+      vec.pos_2key_evidence,
+    ),
+    lifecycle_hash,
+    observe_register,
+    None,
     vec.pos_2key_evidence,
   )
 
-const redeemer_2key: MintRedeemer = Register { evidence: vec.pos_2key_evidence }
+const redeemer_2key: MintRedeemer = Register
 
 const tx_7key: Transaction =
-  register_tx(
-    vec.pos_7key_datum,
-    min_ada + d_reg + freeze_bond + register_surplus,
+  with_observer_coupling(
+    register_tx(
+      vec.pos_7key_datum,
+      min_ada + d_reg + freeze_bond + register_surplus,
+      vec.pos_7key_evidence,
+    ),
+    lifecycle_hash,
+    observe_register,
+    None,
     vec.pos_7key_evidence,
   )
 
-const redeemer_7key: MintRedeemer = Register { evidence: vec.pos_7key_evidence }
+const redeemer_7key: MintRedeemer = Register
 
 const tx_witnessed: Transaction =
-  register_tx(
-    vec.pos_witnessed_datum,
-    min_ada + d_reg + freeze_bond + register_surplus,
+  with_observer_coupling(
+    register_tx(
+      vec.pos_witnessed_datum,
+      min_ada + d_reg + freeze_bond + register_surplus,
+      vec.pos_witnessed_evidence,
+    ),
+    lifecycle_hash,
+    observe_register,
+    None,
     vec.pos_witnessed_evidence,
   )
 
-const redeemer_witnessed: MintRedeemer =
-  Register { evidence: vec.pos_witnessed_evidence }
+const redeemer_witnessed: MintRedeemer = Register
 
 test measure_checkpoint_register_2key() {
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -150,8 +204,8 @@ test measure_checkpoint_register_2key() {
 test measure_checkpoint_register_witnessed() {
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -164,8 +218,8 @@ test measure_checkpoint_register_witnessed() {
 test measure_checkpoint_register_7key() {
   checkpoint.checkpoint.mint(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -368,24 +422,36 @@ const own_ref_freeze_2key: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 7 }
 
 const tx_freeze_2key: Transaction =
-  freeze_measurement_tx(own_ref_freeze_2key, enf_vec.honest2_freeze_tip)
+  with_observer_coupling(
+    freeze_measurement_tx(own_ref_freeze_2key, enf_vec.honest2_freeze_tip),
+    enforcement_hash,
+    observe_freeze,
+    Some(own_ref_freeze_2key),
+    honest2_freeze_wire,
+  )
 
 const own_ref_freeze_7key: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 5 }
 
 const tx_freeze_7key: Transaction =
-  freeze_measurement_tx(own_ref_freeze_7key, enf_vec.honest7_freeze_tip)
+  with_observer_coupling(
+    freeze_measurement_tx(own_ref_freeze_7key, enf_vec.honest7_freeze_tip),
+    enforcement_hash,
+    observe_freeze,
+    Some(own_ref_freeze_7key),
+    honest7_freeze_wire,
+  )
 
 test measure_checkpoint_arm_2key() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
     None,
-    Freeze { evidence: honest2_freeze_wire, hunter_pkh },
+    Freeze { hunter_pkh },
     own_ref_freeze_2key,
     tx_freeze_2key,
   )
@@ -394,13 +460,13 @@ test measure_checkpoint_arm_2key() {
 test measure_checkpoint_arm_7key() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
     None,
-    Freeze { evidence: honest7_freeze_wire, hunter_pkh },
+    Freeze { hunter_pkh },
     own_ref_freeze_7key,
     tx_freeze_7key,
   )
@@ -463,8 +529,8 @@ const tx_claim: Transaction =
 test measure_checkpoint_claim() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -568,50 +634,66 @@ fn convict_witnessed_tx(
 }
 
 const tx_convict_witnessed_active: Transaction =
-  convict_witnessed_tx(
-    from_script(policy),
-    V1(enf_vec.fork_witnessed_convict_tip),
-    d_reg + freeze_bond,
-    [exact_payout(convictor_pkh, d_reg + freeze_bond)],
+  with_observer_coupling(
+    convict_witnessed_tx(
+      from_script(policy),
+      V1(enf_vec.fork_witnessed_convict_tip),
+      d_reg + freeze_bond,
+      [exact_payout(convictor_pkh, d_reg + freeze_bond)],
+    ),
+    enforcement_hash,
+    observe_convict,
+    Some(own_ref_convict_witnessed),
+    enf_vec.fork_witnessed_convict_wire,
   )
 
 const tx_convict_witnessed_armed: Transaction =
-  convict_witnessed_tx(
-    role.address(policy, Armed),
-    ArmedV1 {
-      checkpoint: enf_vec.fork_witnessed_convict_tip,
-      hunter_pkh,
-      deadline: 1_000 + freeze_window,
-    },
-    d_reg + freeze_bond,
-    [exact_payout(convictor_pkh, d_reg), exact_payout(hunter_pkh, freeze_bond)],
+  with_observer_coupling(
+    convict_witnessed_tx(
+      role.address(policy, Armed),
+      ArmedV1 {
+        checkpoint: enf_vec.fork_witnessed_convict_tip,
+        hunter_pkh,
+        deadline: 1_000 + freeze_window,
+      },
+      d_reg + freeze_bond,
+      [
+        exact_payout(convictor_pkh, d_reg),
+        exact_payout(hunter_pkh, freeze_bond),
+      ],
+    ),
+    enforcement_hash,
+    observe_convict,
+    Some(own_ref_convict_witnessed),
+    enf_vec.fork_witnessed_convict_wire,
   )
 
 const tx_convict_witnessed_frozen: Transaction =
-  convict_witnessed_tx(
-    role.address(policy, Frozen),
-    V1(enf_vec.fork_witnessed_convict_tip),
-    d_reg,
-    [exact_payout(convictor_pkh, d_reg)],
+  with_observer_coupling(
+    convict_witnessed_tx(
+      role.address(policy, Frozen),
+      V1(enf_vec.fork_witnessed_convict_tip),
+      d_reg,
+      [exact_payout(convictor_pkh, d_reg)],
+    ),
+    enforcement_hash,
+    observe_convict,
+    Some(own_ref_convict_witnessed),
+    enf_vec.fork_witnessed_convict_wire,
   )
 
 fn convict_redeemer(
   convictor_output_index: Int,
   hunter_output_index: Int,
 ) -> SpendRedeemer {
-  Convict {
-    evidence: enf_vec.fork_witnessed_convict_wire,
-    convictor_pkh,
-    convictor_output_index,
-    hunter_output_index,
-  }
+  Convict { convictor_pkh, convictor_output_index, hunter_output_index }
 }
 
 test measure_checkpoint_convict_active() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -625,8 +707,8 @@ test measure_checkpoint_convict_active() {
 test measure_checkpoint_convict_armed() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,
@@ -640,8 +722,8 @@ test measure_checkpoint_convict_armed() {
 test measure_checkpoint_convict_frozen() {
   checkpoint.checkpoint.spend(
     0,
-    hp_policy,
-    network_id,
+    lifecycle_hash,
+    enforcement_hash,
     d_reg,
     freeze_bond,
     freeze_window,

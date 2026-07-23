@@ -26,12 +26,15 @@ module CheckpointTxBuilder (
     advanceRejection,
     closeRejection,
     hashProofMintOldCostRejection,
+    observerEnforcementStakeRegistrationSetup,
+    observerLifecycleStakeRegistrationSetup,
     pendingHashProofRegisterArmClaimScenario,
     rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
     responseBoundaryCases,
     boundaryCasesCoverDeadline,
     productionRegisterScenario,
+    verifyThreeProgramDeploymentShapes,
     buildArmTx,
     buildAdvanceTx,
     buildClaimTx,
@@ -72,6 +75,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (mkBasicTx, txIdTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
+    certsTxBodyL,
     collateralInputsTxBodyL,
     feeTxBodyL,
     inputsTxBodyL,
@@ -100,7 +104,8 @@ import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin (Coin (..), unCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Core (Script, eraProtVerLow)
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
+import Cardano.Ledger.Core (Script, eraProtVerLow, ppKeyDepositL)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
@@ -137,7 +142,7 @@ import Cardano.Node.Client.Provider (
  )
 import Cardano.Node.Client.Submitter (SubmitResult (..), Submitter (..))
 import Control.Concurrent (threadDelay)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -192,6 +197,12 @@ data CheckpointEnv = CheckpointEnv
     , envCheckpointBytes :: !SBS.ShortByteString
     , envCheckpointHash :: !ScriptHash
     , envCheckpointPolicy :: !PolicyID
+    , envLifecycleScript :: !(Script ConwayEra)
+    , envLifecycleBytes :: !SBS.ShortByteString
+    , envLifecycleHash :: !ScriptHash
+    , envEnforcementScript :: !(Script ConwayEra)
+    , envEnforcementBytes :: !SBS.ShortByteString
+    , envEnforcementHash :: !ScriptHash
     , envHashProofScript :: !(Script ConwayEra)
     , envHashProofHash :: !ScriptHash
     , envHashProofPolicy :: !PolicyID
@@ -233,9 +244,6 @@ data BoundaryCases = BoundaryCases
 
 checkpointVersion :: Integer
 checkpointVersion = 0
-
-checkpointNetworkId :: Integer
-checkpointNetworkId = 0
 
 checkpointMinAda :: Integer
 checkpointMinAda = 2_000_000
@@ -281,7 +289,20 @@ stagedCheckpointDevnet action = do
     withinSecs 300 "checkpoint withDevnet" $
         withDevnet $ \lsq ltxs -> do
             env <- mkCheckpointEnv blueprintPath lsq ltxs
-            verifyCheckpointSizeBudget env
+            -- A-004 three-program deployment boundary: both observer hashes
+            -- distinct, and one signed reference-script creation shape each
+            -- for checkpoint and both observers within the stock cap. This
+            -- supersedes the old single-checkpoint 23,124-byte monolith
+            -- budget for the family-split architecture.
+            verifyThreeProgramDeploymentShapes env
+            -- Both observers' script stake credentials must be registered
+            -- before any evidence-bearing lifecycle transaction: the
+            -- checkpoint ran-check requires the zero-lovelace withdrawal, and
+            -- the ledger requires the reward account to be registered.
+            lifecycleRegistrationTxId <- observerLifecycleStakeRegistrationSetup env
+            dbg ("observer_lifecycle stake credential registered: " <> show lifecycleRegistrationTxId)
+            enforcementRegistrationTxId <- observerEnforcementStakeRegistrationSetup env
+            dbg ("observer_enforcement stake credential registered: " <> show enforcementRegistrationTxId)
             action env
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
@@ -297,14 +318,45 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             (fail "checkpoint compiled code not found in production blueprint")
             pure
             (extractCompiledCode "checkpoint." blueprint)
+    lifecycleCode <-
+        maybe
+            (fail "observer_lifecycle compiled code not found in production blueprint")
+            pure
+            (extractCompiledCode "checkpoint_observer.observer_lifecycle." blueprint)
+    enforcementCode <-
+        maybe
+            (fail "observer_enforcement compiled code not found in production blueprint")
+            pure
+            (extractCompiledCode "checkpoint_observer.observer_enforcement." blueprint)
     let hashProofScript = mkCageScript hashProofCode
         hashProofHash = computeScriptHash hashProofCode
         hashProofPolicy = PolicyID hashProofHash
+        -- A-004 family split: apply the lifecycle observer first (version,
+        -- hash-proof policy, D_reg) and derive its hash; apply the enforcement
+        -- observer (version) and derive its hash; then apply the checkpoint
+        -- with both hashes (version, lifecycle hash, enforcement hash, D_reg,
+        -- freeze bond, freeze window). Neither observer hash becomes an AID
+        -- policy or role hash; one checkpoint h remains the identity/policy/
+        -- role hash.
+        appliedLifecycle =
+            applyLifecycleParams
+                checkpointVersion
+                (policyBytes hashProofPolicy)
+                registrationBond
+                lifecycleCode
+        lifecycleScript = mkCageScript appliedLifecycle
+        lifecycleHash = computeScriptHash appliedLifecycle
+        appliedEnforcement =
+            applyEnforcementParams
+                checkpointVersion
+                enforcementCode
+        enforcementScript = mkCageScript appliedEnforcement
+        enforcementHash = computeScriptHash appliedEnforcement
         appliedCheckpoint =
             applyCheckpointParams
                 checkpointVersion
-                (policyBytes hashProofPolicy)
-                checkpointNetworkId
+                (policyBytes (PolicyID lifecycleHash))
+                (policyBytes (PolicyID enforcementHash))
                 registrationBond
                 freezeBond
                 freezeWindow
@@ -313,6 +365,8 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
         checkpointHash = computeScriptHash appliedCheckpoint
         checkpointPolicy = PolicyID checkpointHash
     dbg ("checkpoint script hash: " <> show checkpointHash)
+    dbg ("observer_lifecycle script hash: " <> show lifecycleHash)
+    dbg ("observer_enforcement script hash: " <> show enforcementHash)
     dbg ("hash-proof script hash: " <> show hashProofHash)
     pure
         CheckpointEnv
@@ -320,6 +374,12 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envCheckpointBytes = appliedCheckpoint
             , envCheckpointHash = checkpointHash
             , envCheckpointPolicy = checkpointPolicy
+            , envLifecycleScript = lifecycleScript
+            , envLifecycleBytes = appliedLifecycle
+            , envLifecycleHash = lifecycleHash
+            , envEnforcementScript = enforcementScript
+            , envEnforcementBytes = appliedEnforcement
+            , envEnforcementHash = enforcementHash
             , envHashProofScript = hashProofScript
             , envHashProofHash = hashProofHash
             , envHashProofPolicy = hashProofPolicy
@@ -328,85 +388,122 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envOwner = genesisAddr
             }
 
-{- | Measure the exact signed reference-script creation transaction shape and
-keep the production 16 KiB deployability boundary visible even though the
-A-015 semantic devnet raises only its transaction-size limit.
--}
-verifyCheckpointSizeBudget :: CheckpointEnv -> IO ()
-verifyCheckpointSizeBudget env = do
-    params <-
-        withinSecs 30 "query checkpoint size-budget parameters" $
-            queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 "query checkpoint size-budget wallet" $
-            queryUTxOs (envProvider env) (envOwner env)
-    seed <- requireJust "checkpoint size budget: no wallet UTxO" (largestFirst wallet)
-    let referenceOut =
-            mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
-                & referenceScriptTxOutL .~ SJust (envCheckpointScript env)
-        skeleton =
-            mkBasicTx
-                (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton referenceOut)
-    balanced <-
-        either
-            (fail . ("checkpoint size budget: balance failed: " <>) . show)
-            (pure . balancedTx)
-            (balanceTx params [seed] [] (envOwner env) skeleton)
-    let signed = addKeyWitness genesisSignKey balanced
-        programBytes = SBS.length (envCheckpointBytes env)
-        creationTxBytes = fromIntegral (BSL.length (serialize (eraProtVerLow @ConwayEra) signed))
-        framingOverhead = creationTxBytes - programBytes
-        deployableBudget = productionMaxTxBytes - framingOverhead
-        overBudgetBy = programBytes - deployableBudget
-        observed =
-            ( programBytes
-            , creationTxBytes
-            , framingOverhead
-            , deployableBudget
-            , overBudgetBy
-            )
-    dbg $
-        "checkpoint deployability: applied-program="
-            <> show programBytes
-            <> " creation-tx="
-            <> show creationTxBytes
-            <> " framing-overhead="
-            <> show framingOverhead
-            <> " deployable-budget="
-            <> show deployableBudget
-            <> " over-budget-by="
-            <> show overBudgetBy
-    unless (observed == expectedCheckpointSizeBudget) $
-        fail $
-            "checkpoint deployability budget drift: expected "
-                <> show expectedCheckpointSizeBudget
-                <> "; observed "
-                <> show observed
-
 productionMaxTxBytes :: Int
 productionMaxTxBytes = 16_384
 
--- Applied program, signed creation transaction, framing overhead, deployable
--- program budget, and current overage. This is the standing mark-ready gate
--- established by A-015; update only from a fresh real-shape measurement.
-expectedCheckpointSizeBudget :: (Int, Int, Int, Int, Int)
-expectedCheckpointSizeBudget = (23_124, 23_375, 251, 16_133, 6_991)
+{- | Register the applied observer's script stake credential on the devnet.
+
+The withdraw-0 coupling only validates if the observer's script stake
+credential is registered on-chain: the checkpoint ran-check requires the
+zero-lovelace withdrawal, and the ledger requires the reward account to be
+registered. This builds, signs, and submits a genuine Conway stake-registration
+certificate for the observer's script credential (paying the protocol key
+deposit) and returns the confirmed transaction id. It MUST run before any
+evidence-bearing lifecycle transaction; it is genuine setup behavior, not a
+marker or getter.
+-}
+
+-- | Shared genuine Conway script-stake-credential registration for one observer.
+registerObserverStakeCredential :: ScriptHash -> String -> CheckpointEnv -> IO TxId
+registerObserverStakeCredential observerHash label env = do
+    params <-
+        withinSecs 30 "query observer-registration protocol parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query observer-registration wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    seed <-
+        requireJust "observer registration: no wallet UTxO" (largestFirst wallet)
+    let keyDeposit = params ^. ppKeyDepositL
+        regCert =
+            ConwayTxCertDeleg
+                (ConwayRegCert (ScriptHashObj observerHash) (SJust keyDeposit))
+        body = mkBasicTxBody & certsTxBodyL .~ StrictSeq.singleton regCert
+        skeleton = mkBasicTx body
+    balanced <-
+        either
+            (fail . (\e -> label <> ": balance failed: " <> show e))
+            (pure . balancedTx)
+            (balanceTx params [seed] [] (envOwner env) skeleton)
+    submitSettling env label balanced
+
+{- | Register the applied observer_lifecycle script stake credential on the
+devnet. Genuine setup behavior: the checkpoint ran-check requires the
+zero-lovelace lifecycle withdrawal, and the ledger requires the reward account
+to be registered. Must run before the first Register/Advance lifecycle use.
+-}
+observerLifecycleStakeRegistrationSetup :: CheckpointEnv -> IO TxId
+observerLifecycleStakeRegistrationSetup env =
+    registerObserverStakeCredential
+        (envLifecycleHash env)
+        "observer_lifecycle stake-credential registration"
+        env
+
+{- | Register the applied observer_enforcement script stake credential on the
+devnet. Genuine setup behavior: the checkpoint ran-check requires the
+zero-lovelace enforcement withdrawal, and the ledger requires the reward
+account to be registered. Must run before the first Freeze/Convict use.
+-}
+observerEnforcementStakeRegistrationSetup :: CheckpointEnv -> IO TxId
+observerEnforcementStakeRegistrationSetup env =
+    registerObserverStakeCredential
+        (envEnforcementHash env)
+        "observer_enforcement stake-credential registration"
+        env
+
+{- | Staged-devnet boundary (A-004): assert the two observer hashes are
+distinct, then construct and sign one reference-script creation shape for the
+checkpoint and each observer, failing if any signed shape exceeds the stock
+16,384-byte transaction cap. This is a real boundary measurement, not a getter
+or marker.
+-}
+verifyThreeProgramDeploymentShapes :: CheckpointEnv -> IO ()
+verifyThreeProgramDeploymentShapes env = do
+    when (envLifecycleHash env == envEnforcementHash env) $
+        fail "observer_lifecycle and observer_enforcement hashes are not distinct"
+    params <-
+        withinSecs 30 "query three-program deployment parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query three-program deployment wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    seed <- requireJust "three-program deployment: no wallet UTxO" (largestFirst wallet)
+    let measureShape label script programBytes = do
+            let referenceOut =
+                    mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
+                        & referenceScriptTxOutL .~ SJust script
+                skeleton =
+                    mkBasicTx
+                        (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton referenceOut)
+            balanced <-
+                either
+                    (fail . (\e -> label <> ": balance failed: " <> show e))
+                    (pure . balancedTx)
+                    (balanceTx params [seed] [] (envOwner env) skeleton)
+            let signed = addKeyWitness genesisSignKey balanced
+                creationTxBytes = fromIntegral (BSL.length (serialize (eraProtVerLow @ConwayEra) signed))
+            dbg (label <> ": program=" <> show programBytes <> " signed-creation-tx=" <> show creationTxBytes)
+            when (creationTxBytes > productionMaxTxBytes) $
+                fail (label <> ": signed reference-script creation shape " <> show creationTxBytes <> " exceeds stock " <> show productionMaxTxBytes)
+    measureShape "checkpoint reference-script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
+    measureShape "observer_lifecycle reference-script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
+    measureShape "observer_enforcement reference-script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
 
 applyCheckpointParams ::
     Integer ->
     ByteString ->
-    Integer ->
+    ByteString ->
     Integer ->
     Integer ->
     Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version proofPolicy network dReg bond window code =
+applyCheckpointParams version lifecycleHash enforcementHash dReg bond window code =
     serialiseUPLC $
         uncheckedDeserialiseUPLC code
             `applyDataArg` I version
-            `applyDataArg` B proofPolicy
-            `applyDataArg` I network
+            `applyDataArg` B lifecycleHash
+            `applyDataArg` B enforcementHash
             `applyDataArg` I dReg
             `applyDataArg` I bond
             `applyDataArg` I window
@@ -420,6 +517,52 @@ applyCheckpointParams version proofPolicy network dReg bond window code =
                     (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
          in either
                 (error . ("applyCheckpointParams: " <>) . show)
+                id
+                (applyProgram program argument)
+
+applyLifecycleParams ::
+    Integer ->
+    ByteString ->
+    Integer ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyLifecycleParams version proofPolicy dReg code =
+    serialiseUPLC $
+        uncheckedDeserialiseUPLC code
+            `applyDataArg` I version
+            `applyDataArg` B proofPolicy
+            `applyDataArg` I dReg
+  where
+    applyDataArg program dat =
+        let Program _ versionTag _ = program
+            argument =
+                Program
+                    ()
+                    versionTag
+                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
+         in either
+                (error . ("applyLifecycleParams: " <>) . show)
+                id
+                (applyProgram program argument)
+
+applyEnforcementParams ::
+    Integer ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyEnforcementParams version code =
+    serialiseUPLC $
+        uncheckedDeserialiseUPLC code
+            `applyDataArg` I version
+  where
+    applyDataArg program dat =
+        let Program _ versionTag _ = program
+            argument =
+                Program
+                    ()
+                    versionTag
+                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
+         in either
+                (error . ("applyEnforcementParams: " <>) . show)
                 id
                 (applyProgram program argument)
 

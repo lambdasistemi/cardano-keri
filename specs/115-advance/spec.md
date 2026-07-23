@@ -48,13 +48,14 @@ authentication evidence. No fresh Cardano-domain signature exists.
 
 ### In scope
 
-1. R1 first: move heavy KERI evidence verification into a zero-value
-   withdrawal observer while the checkpoint retains mint/spend state-machine
-   and exact observer-ran checks. Both applied scripts must be strictly below
-   16,133 bytes before feature work continues.
+1. R1 first: move heavy KERI evidence verification into two zero-value
+   withdrawal observers split by evidence family while the checkpoint retains
+   mint/spend state-machine and exact observer-ran checks. The checkpoint and
+   both applied observers must each be strictly below 16,133 bytes before
+   feature work continues.
 2. R2 second: delete the isolated 32 KiB devnet genesis, restore the stock
    16,384-byte cap, remove the NON-DEPLOYABLE banner, and permanently gate
-   both applied sizes plus the absence of executable 32,768-byte overrides.
+   all three applied sizes plus the absence of executable 32,768-byte overrides.
 3. Delete AdvanceMessage and its canonical-CBOR fresh-signature domain in
    Haskell and Aiken. Controller signatures verify the exact KERI event bytes.
 4. Admit one Advance branch from ACTIVE, ARMED, and FROZEN with the exact
@@ -66,7 +67,7 @@ authentication evidence. No fresh Cardano-domain signature exists.
    advance-totality and bounded-interference adversarial coverage, and gate
    exactly thirteen full-handler ACCEPT measurements.
 7. Activate the honest live-node surface at the stock cap, ship a
-   manual-only preprod runner, settle both reference scripts and the required
+   manual-only preprod runner, settle all three reference scripts and the required
    lifecycle on preprod, and refresh the genuine-keripy demo.
 8. Update the #115-owned advance/replay fragments in architecture, trust
    model, M1 blog, and M1 milestones deck.
@@ -87,42 +88,59 @@ authentication evidence. No fresh Cardano-domain signature exists.
 
 ## R1 deployable architecture
 
-### Two scripts, one identity hash
+### Three applied scripts, one identity hash
 
-The production blueprint has two independently applied Plutus V3 programs:
+The production blueprint has three independently applied Plutus V3 programs:
 
 1. checkpoint: the existing minting policy and spending validator. Its script
    hash h remains the checkpoint policy id, ACTIVE payment credential, and
    input to every role-address derivation.
-2. checkpoint_observer: a generic withdrawal validator that performs the
-   expensive KERI event binding, signature, threshold, and receipt
-   predicates.
+2. observer_lifecycle: a withdrawal validator for Register and, when R3 opens
+   it, Advance. Those actions share KEL-event binding, threshold, signature,
+   and receipt machinery.
+3. observer_enforcement: a withdrawal validator for Freeze and Convict,
+   sharing the enforcement-evidence binding and fork/lag predicates.
 
-The observer hash is a deployment parameter of checkpoint. The observer does
-not become an AID identity or policy hash, and h is not split. The observer
-is parameterized only by immutable evidence-validation deployment values
-such as version, hash-proof policy, and D_reg; its redeemer names the
-checkpoint hash and the action context. This avoids a circular script hash
-dependency. The old network_id deployment parameter existed only to bind the
-deleted AdvanceMessage and is removed from the final applied scripts.
+Both observer hashes are deployment parameters of checkpoint. Neither
+observer becomes an AID identity or policy hash, and h is not split. Each
+observer is parameterized only by immutable values needed by its own evidence
+family; its redeemer names the checkpoint hash and action context. This avoids
+a circular script-hash dependency. The old network_id deployment parameter
+existed only to bind the deleted AdvanceMessage and is removed from the final
+applied scripts.
+
+The final R1 parameter order is exact: observer_lifecycle receives version,
+hash-proof policy, and D_reg; observer_enforcement receives version only; and
+checkpoint receives version, lifecycle observer hash, enforcement observer
+hash, D_reg, freeze bond, and freeze window. Both observers are applied and
+hashed before checkpoint. Event-own Advance does not restore network_id.
+
+A-004 selected this family split after an independently reproduced forward
+probe rejected the intermediate checkpoint-plus-Register partition: that
+checkpoint applied at 12,239 bytes, but a Freeze+Convict+Advance observer
+applied at 20,092 bytes and had -3,960 bytes of the required maximum-valid R3
+slack. The scratch probe does not count as an implementation attempt and is
+removed before the R1 commit. Shared predicate libraries remain read-only.
 
 ### Zero-withdrawal coupling
 
-Every evidence-bearing Register, Advance, Freeze, or Convict transaction
-contains exactly the observer reward-account entry at zero lovelace and a
-matching Withdraw observer redeemer. ClaimFreeze carries no KERI evidence
-and does not need the observer. Evidence exists once, in the observer
-redeemer. The checkpoint redeemers become slim state-machine commands:
-Register and Advance carry no evidence; Freeze retains hunter_pkh only;
-Convict retains beneficiaries and output indices only.
+Every evidence-bearing transaction contains exactly the selected family
+observer's reward-account entry at zero lovelace and a matching Withdraw
+redeemer: observer_lifecycle for Register/Advance, observer_enforcement for
+Freeze/Convict. A transaction cannot substitute the other family credential
+or action. ClaimFreeze carries no KERI evidence and needs neither observer.
+Evidence exists once, in the selected observer redeemer. The checkpoint
+redeemers remain slim state-machine commands: Register and Advance carry no
+evidence; Freeze retains hunter_pkh only; Convict retains beneficiaries and
+output indices only.
 
-The observer's script stake credential must be registered before, or in, the
-first evidence-bearing transaction on every network. An unregistered reward
+Each observer's script stake credential must be registered before, or in, the
+first transaction that selects it on every network. An unregistered reward
 account cannot supply the required withdrawal and therefore cannot satisfy
-the checkpoint ran-check. The devnet E2E setup registers the credential
-before lifecycle transactions. The manual preprod setup either registers it
-in a dedicated transaction or carries the certificate alongside a
-reference-script creation transaction, and records that transaction id.
+the checkpoint ran-check. Devnet E2E registers both credentials before
+lifecycle transactions. Manual preprod setup registers every deployed
+observer in dedicated transactions or alongside reference-script creation,
+and records every registration transaction id.
 
 The observer redeemer is an envelope with a small claim
 (action tag, checkpoint h, and optional own outref) plus an opaque evidence
@@ -130,24 +148,28 @@ payload. The checkpoint inspects only the claim and never imports or decodes
 the evidence type. The observer checks the same claim and decodes the payload
 as the exact evidence type selected by the action.
 
-The checkpoint performs an inexpensive ran-check:
+For each action, the checkpoint selects exactly one configured observer hash
+and performs an inexpensive ran-check:
 
-- its transaction contains Pair(Script(observer_hash), 0);
+- its transaction contains Pair(Script(selected_observer_hash), 0);
 - the redeemer map contains the matching Withdraw purpose;
-- that redeemer decodes to the expected observer action;
+- that redeemer decodes to the expected action for that observer family;
 - the action names the same checkpoint h and, for spends, the same own input
   reference; and
-- no alternative observer credential or mismatched action can satisfy the
-  check.
+- neither the other family observer nor any alternative credential or
+  mismatched action can satisfy the check.
 
-The observer sees the same transaction and validates one of:
+The selected observer sees the same transaction. observer_lifecycle validates:
 
 - ObserveRegister: proof-token input and exact hash-proof-policy burn,
   inception event binding, event-own controller signatures, witness receipts,
   projection, and registration reserve predicate for the named h output;
 - ObserveAdvance: rotation transition, event-own controller signatures,
   dual thresholds, witness delta, event binding, and incoming receipt quorum
-  for the named h input and ACTIVE successor;
+  for the named h input and ACTIVE successor.
+
+observer_enforcement validates:
+
 - ObserveFreeze: existing enforcement binding plus freeze predicate for the
   named h input;
 - ObserveConvict: existing enforcement binding plus conviction predicate for
@@ -160,38 +182,48 @@ event-derived token name is evidence verification. Moving verification
 between scripts must not weaken a predicate, change vector verdicts, or bound
 unrelated inputs/reference inputs. The observer action and checkpoint
 ran-check are covered by mismatch, absent-withdrawal, nonzero-withdrawal,
-wrong-purpose, wrong-h, wrong-outref, wrong-action, and malformed-envelope
-negatives.
+wrong-purpose, wrong-h, wrong-outref, wrong-action, cross-family-observer, and
+malformed-envelope negatives.
+
+For R1 only, observer_enforcement also owns the tombstone `evidence_said`
+equality; this transitional carve-out preserves the existing verdict until R5
+deletes the tombstone surface and removes the check without residue.
 
 ### Stake-credential liveness
 
-The observer validator admits only its Withdraw purpose. Every certificate,
-including deregistration of its own script stake credential, reaches the
-fail-closed handler. Under Conway's script-credential authorization rule, a
-deregistration therefore cannot be authorized: no payment key, operator, or
-third party can remove the registered credential. A focused full-context
-certificate test pins that refusal. The E2E coupling RED also covers an
-unregistered reward account if the node-client harness can construct the
-case; if it cannot, the slice records the harness limitation and retains the
-typed certificate refusal plus live registered-path proof.
+Each observer validator admits only its Withdraw purpose. Every certificate,
+including deregistration of either observer's own script stake credential,
+reaches that validator's fail-closed handler. Under Conway's
+script-credential authorization rule, a deregistration therefore cannot be
+authorized: no payment key, operator, or third party can remove either
+registered credential. Focused full-context certificate tests pin both
+refusals. The E2E coupling RED also covers an unregistered reward account per
+observer if the node-client harness can construct the case; if it cannot, the
+slice records the harness limitation and retains typed certificate refusals
+plus live registered-path proof for both.
 
-This matters for liveness: successful deregistration would make every
-evidence-bearing checkpoint path unsatisfiable, because the checkpoint
-requires the withdrawal and the ledger requires the reward account to be
-registered. Registration plus fail-closed certificate dispatch is therefore
-a deployment invariant, not an operator convention.
+This matters for liveness: successful deregistration would make that observer
+family's evidence-bearing checkpoint paths unsatisfiable, because the
+checkpoint requires its withdrawal and the ledger requires the reward account
+to be registered. Registration of both credentials plus fail-closed
+certificate dispatch is therefore a deployment invariant, not an operator
+convention.
 
 ### Size hard stop
 
-R1 is accepted only when the exact final-arity applied checkpoint and observer
-programs are each less than 16,133 bytes. The measurement uses silent traces,
-the pinned Aiken toolchain, and the same CBOR parameter order used by the
-off-chain transaction builder. A full signed reference-script creation
-transaction for each program is also constructed at the stock cap.
+R1 is accepted only when the exact final-arity applied checkpoint,
+observer_lifecycle, and observer_enforcement programs are each less than
+16,133 bytes. The measurement uses silent traces, the pinned Aiken toolchain,
+and the same CBOR parameter order used by the off-chain transaction builder. A
+full signed reference-script creation transaction for every program is also
+constructed at the stock cap.
 
-If either script misses after two reviewed RED/GREEN attempts, the pair stops
-and files a Q-file. Checks may not be weakened, traces required for behavior
-may not be hidden, and mint/spend splitting may not be attempted.
+The A-004 probe is followed by at most two complete, reviewed RED/GREEN
+attempts of this chosen family split. If any program still misses after those
+attempts, the pair stops and files a Q-file. Checks may not be weakened,
+traces required for behavior may not be hidden, shared predicate libraries
+may not be edited for byte hunting, and mint/spend splitting may not be
+attempted.
 
 ## R2 production-cap restoration
 
@@ -202,7 +234,7 @@ Immediately after R1:
 - use the one stock cardano-node-clients genesis for cage and checkpoint E2E;
 - remove the NON-DEPLOYABLE runtime banner and overage tuple;
 - add a permanent hermetic size recipe invoked by just ci that builds and
-  applies both programs and rejects either size greater than or equal to
+  applies all three programs and rejects any size greater than or equal to
   16,133;
 - add a permanent source guard rejecting 32768 in executable harness,
   workflow, or configuration files while allowing clearly labelled
@@ -365,18 +397,19 @@ Exactly these thirteen rows are gated:
 12. Advance ARMED response before deadline
 13. Advance FROZEN thaw with B top-up
 
-Each evidence-bearing row exercises both the checkpoint and observer in the
-same full transaction context and records per-script execution units where
-the tool exposes them. MEASUREMENTS.md records exact units, percentages,
-headroom, applied sizes, parameter CBOR, and the stock-cap verdict.
+Each evidence-bearing row exercises the checkpoint and its selected family
+observer in the same full transaction context and records per-script execution
+units where the tool exposes them. MEASUREMENTS.md records exact units,
+percentages, headroom, all three applied sizes, parameter CBOR, and the
+stock-cap verdict.
 
 ## Live-node, preprod, and demo boundary
 
 ### Hermetic live-node gate
 
-The repository E2E builder applies both production scripts with final
-parameter arity, posts both reference scripts under stock maxTxSize 16,384,
-and runs every row the pinned devnet can price honestly. The existing exact
+The repository E2E builder applies all three production scripts with final
+parameter arity, posts all three reference scripts under stock maxTxSize
+16,384, and runs every row the pinned devnet can price honestly. The existing exact
 old-cost Plomin rejection and PENDING(blocked-on=#190) labels remain truthful
 until the upstream fixture supports the production price table. No synthetic
 validator, injected state UTxO, or widened cap substitutes.
@@ -407,12 +440,13 @@ so no funding blocker exists.
 The recorded manual run must settle:
 
 1. one reference-script creation transaction for checkpoint;
-2. one reference-script creation transaction for checkpoint_observer;
-3. observer stake-credential registration, either as a dedicated setup tx or
-   in one of the reference-script transactions;
-4. a production-price permissionless Register of a genuine keripy AID;
-5. Arm of that checkpoint from genuine later-event evidence; and
-6. Claim at or after the stored deadline.
+2. one reference-script creation transaction for observer_lifecycle;
+3. one reference-script creation transaction for observer_enforcement;
+4. stake-credential registration for both observers, either as dedicated setup
+   transactions or in reference-script transactions;
+5. a production-price permissionless Register of a genuine keripy AID;
+6. Arm of that checkpoint from genuine later-event evidence; and
+7. Claim at or after the stored deadline.
 
 The rolling demo additionally exercises the #115 lifecycle available at the
 final tree: ordinary ACTIVE advance, ARMED response, and FROZEN thaw using a
@@ -457,16 +491,17 @@ link, and presentation checks must pass.
 
 ## Acceptance criteria
 
-- [ ] Both exact applied programs are less than 16,133 bytes and both signed
-      reference-script creation shapes fit stock 16,384.
+- [ ] The checkpoint and both observer exact applied programs are each less
+      than 16,133 bytes and all three signed reference-script creation shapes
+      fit stock 16,384.
 - [ ] No executable 32,768-byte devnet override or NON-DEPLOYABLE banner
       remains; permanent size and source guards run in just ci.
-- [ ] Observer forwarding is transaction-coupled and every absent/mismatched
-      withdrawal or observer action rejects without changing evidence
-      verdicts.
-- [ ] The observer stake credential is registered in devnet and preprod
-      setup; certificate-purpose tests prove the observer refuses
-      deregistration, and an unregistered-path limitation is explicit if the
+- [ ] Family-split observer forwarding is transaction-coupled and every
+      absent/mismatched withdrawal, cross-family credential, or observer action
+      rejects without changing evidence verdicts.
+- [ ] Both observer stake credentials are registered in devnet and preprod
+      setup; certificate-purpose tests prove both observers refuse
+      deregistration, and any unregistered-path limitation is explicit if the
       live harness cannot construct it.
 - [ ] AdvanceMessage and every fresh-signature preimage/helper/golden are
       deleted. Controller signatures and witness receipts cover event_bytes.
@@ -484,9 +519,9 @@ link, and presentation checks must pass.
 - [ ] Exactly thirteen full-handler rows pass with at least 25.00 percent
       memory and CPU headroom.
 - [ ] Stock-cap live-node checks are honest about cardano-node-clients#190.
-- [ ] The manual preprod record contains two reference-script txids, observer
-      stake-registration evidence, and the Register, Arm, and Claim txids,
-      all explorer-verifiable.
+- [ ] The manual preprod record contains three reference-script txids,
+      stake-registration evidence for both observers, and the Register, Arm,
+      and Claim txids, all explorer-verifiable.
 - [ ] The refreshed demo uses genuine pinned-keripy AIDs/KELs and proves
       ACTIVE advance, ARMED response, and FROZEN thaw on preprod.
 - [ ] The named #115 documentation fragments pass their strict gates and no

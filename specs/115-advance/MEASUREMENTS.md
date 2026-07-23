@@ -18,6 +18,26 @@ Mainnet per-transaction budget:
 Headroom is calculated as `(budget - used) / budget * 100`. The binding gate
 requires every resource in every cell to have at least 25.00% headroom.
 
+## R1 family-split deployability contract
+
+The A-007 full repository gate passed with the final family split. The
+permanent `check-checkpoint-deployability` recipe compiles the live Aiken
+sources with the pinned offchain compiler, applies parameters through the
+builder's `applyProgram`/`serialiseUPLC` path, and rejects any applied program
+at or above 16,133 bytes.
+
+| applied program | size (bytes) | script hash |
+| --- | ---: | --- |
+| `observer_lifecycle` | 6,454 | `e1ccfe3abf9a539beaa7bed9d4afd1341963c9ec0aa9389f4705dcfd` |
+| `observer_enforcement` | 14,347 | `d7d22ccdb22fa1abffec72dcac1d28cd0ca07514e133e40131e7d534` |
+| `checkpoint` | 7,063 | checkpoint identity `h`; the R1 gate records its applied size |
+
+**R1 verdict: PASS — all three programs are strictly below 16,133 bytes.**
+The binding program is `observer_enforcement`, with 1,786 bytes of strict
+stock-cap gate room. Reproduce with `just check-checkpoint-deployability`;
+the successful A-007 `./gate.sh` run reproduced both observer hashes and all
+three sizes above.
+
 ## Checkpoint `Advance` spend (`checkpoint.ak`)
 
 Measured with the pinned Aiken

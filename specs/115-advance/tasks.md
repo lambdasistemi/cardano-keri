@@ -15,24 +15,28 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [x] T115-P3 Obtain epic-owner approval through Q-001/A-001 before any
       implementation dispatch.
 
-## R1 — withdraw-0 observer forwarding
+## R1 — family-split withdraw-0 observer forwarding
 
-- [ ] T115-R1 Add the generic checkpoint_observer withdrawal validator;
-      forward Register, Freeze, and Convict evidence verification; retain
-      checkpoint state/Value/own-token/payout logic; move the hash-proof
-      evidence burn; slim checkpoint redeemers to an exact opaque-payload
-      observer claim; cover all coupling negatives; remove the obsolete
-      network_id parameter; register the observer stake credential in devnet
-      setup; prove its certificate handler rejects deregistration; apply/build
-      both scripts; prove each is less than 16,133 bytes without opening
-      Advance.
+- [x] T115-R1 Replace the oversized generic observer with
+      observer_lifecycle (Register; Advance reserved fail-closed) and
+      observer_enforcement (Freeze/Convict); retain checkpoint
+      state/Value/own-token/payout logic; move the hash-proof evidence burn;
+      slim checkpoint redeemers to an exact opaque-payload family claim; cover
+      all absent/mismatch/cross-family coupling negatives; remove the obsolete
+      network_id parameter; register both observer stake credentials in devnet
+      setup; prove both certificate handlers reject deregistration; apply/build
+      checkpoint plus both observers; prove all three are less than 16,133
+      bytes without opening Advance. The independently reviewed A-004 forward
+      probe (12,239 checkpoint-plus-Register / 20,092
+      Freeze+Convict+Advance) is a BUST and does not consume either of the two
+      permitted complete family-split attempts.
 
 ## R2 — production cap
 
 - [ ] T115-R2 Delete the 32 KiB genesis/runner and NON-DEPLOYABLE runtime
-      banner; restore stock maxTxSize 16,384; settle both reference-script
-      creation shapes on stock devnet; permanently gate both applied sizes and
-      executable/config source against 32768; preserve honest #190 pending
+      banner; restore stock maxTxSize 16,384; settle all three reference-script
+      creation shapes on stock devnet; permanently gate all three applied sizes
+      and executable/config source against 32768; preserve honest #190 pending
       labels.
 
 ## R3 — event-own advance authentication
@@ -40,8 +44,9 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R3 Delete AdvanceMessage, its domain/reconstruction/CBOR
       fresh-signature helpers and goldens; verify indexed controller
       signatures over event_bytes; preserve dual thresholds, W1-W3,
-      AE1-AE10, and incoming-set receipts; add ObserveAdvance and regenerate
-      Haskell/Aiken byte and verdict parity vectors.
+      AE1-AE10, and incoming-set receipts; add ObserveAdvance to
+      observer_lifecycle and regenerate Haskell/Aiken byte and verdict parity
+      vectors.
 
 ## R4 — all live Advance roles
 
@@ -63,16 +68,16 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 ## R6 — final budgets
 
 - [ ] T115-R6 Gate exactly thirteen full-handler ACCEPT rows at no more than
-      10.5M memory and 7.5B CPU each; measure observer plus checkpoint at final
-      arity; record exact headroom and both applied sizes in MEASUREMENTS.md;
-      run the stock-cap live-node boundary.
+      10.5M memory and 7.5B CPU each; measure the selected family observer plus
+      checkpoint at final arity; record exact headroom and all three applied
+      sizes in MEASUREMENTS.md; run the stock-cap live-node boundary.
 
 ## R7 — manual preprod and demo tooling
 
 - [ ] T115-R7 Ship a standalone manual preprod just recipe and runner using
       KERI_PREPROD_KEY_DIR, the ruled socket/container/magic/address,
       D_reg=5 ADA, B=5 ADA, W_freeze=120 seconds; protect/redact secrets; add
-      observer stake registration and record its txid; add genuine
+      both observer stake registrations and record their txids; add genuine
       pinned-keripy demo AIDs/KELs and hermetic dry-run tests; prove no
       gate.sh, just ci, Nix-check, or workflow dependency.
 
@@ -81,16 +86,16 @@ All PR #120 checkmarks are superseded. These tasks begin unchecked on the
 - [ ] T115-R8 Update only identity-ops, trust-model, M1 blog, and milestones
       deck advance fragments for permissionless replay, event-own evidence,
       response/thaw, advance-totality, bounded interference, conviction
-      history-by-burn, observer-registration/deregistration liveness, and the
-      rolling genuine-keripy preprod demo; keep #117 held; pass strict
+      history-by-burn, both observer-registration/deregistration liveness
+      dependencies, and the rolling genuine-keripy preprod demo; keep #117 held; pass strict
       docs/link/presentation gates.
 
 ## Final local and public evidence
 
-- [ ] T115-F1 Run clean final ./gate.sh; independently recompute both applied
-      sizes and audit the exact 13-row headroom table.
-- [ ] T115-F2 Manually settle both reference scripts and Register, Arm, Claim
-      on preprod after registering the observer stake credential; run the
+- [ ] T115-F1 Run clean final ./gate.sh; independently recompute all three
+      applied sizes and audit the exact 13-row headroom table.
+- [ ] T115-F2 Manually settle all three reference scripts and Register, Arm,
+      Claim on preprod after registering both observer stake credentials; run the
       ACTIVE advance, ARMED response, and FROZEN thaw demo; record redacted
       output, script hashes, AIDs, explorer URLs, and txids.
 - [ ] T115-F3 Update and independently verify the PR body, push final HEAD,

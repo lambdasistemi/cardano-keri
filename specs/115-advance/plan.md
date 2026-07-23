@@ -36,47 +36,62 @@ Implementation is blocked until the epic owner approves Q-001.
   a just recipe that is never a CI dependency.
 - Narrative: identity-ops, trust-model, M1 blog, and milestones deck only.
 
-## Slice R1 — withdraw-0 observer forwarding
+## Slice R1 — family-split withdraw-0 observer forwarding
 
-Goal: re-home the already-merged Register, Freeze, and Convict evidence
-verification without changing their accepted transaction semantics.
+Goal: re-home the already-merged evidence predicates into two observers by
+family without changing accepted transaction semantics: observer_lifecycle
+owns Register (and the reserved fail-closed Advance tag), while
+observer_enforcement owns Freeze and Convict. The A-004 forward probe rejected
+checkpoint-plus-Register / Freeze+Convict+Advance at 12,239 / 20,092 bytes, so
+the pre-agreed family split is binding and the scratch probe is removed before
+commit.
 
 RED:
 
-- add observer-ran coupling tests for missing withdrawal, nonzero amount,
-  wrong observer credential, missing/wrong Withdraw redeemer, wrong action,
-  wrong h, and wrong own outref;
-- add a certificate-purpose rejection proving the observer cannot authorize
-  its own deregistration, plus an unregistered-reward-account live negative
-  where the node-client harness can express it;
+- add exact family-ran coupling tests for missing withdrawal, nonzero amount,
+  wrong family observer credential, missing/wrong Withdraw redeemer, wrong
+  action, wrong h, and wrong own outref;
+- prove Register cannot use observer_enforcement, Freeze/Convict cannot use
+  observer_lifecycle, ObserveAdvance stays fail-closed in R1, and ClaimFreeze
+  needs neither observer;
+- add certificate-purpose rejections proving neither observer can authorize
+  its own deregistration, plus unregistered-reward-account live negatives per
+  observer where the node-client harness can express them;
 - port existing positive and adversarial predicate contexts through the
-  observer and demonstrate the monolithic checkpoint no longer supplies that
-  verification;
-- add exact applied-size assertions for both programs and observe the
-  pre-restructure checkpoint failure.
+  selected family observer and demonstrate the checkpoint no longer supplies
+  that verification;
+- add exact applied-size assertions for checkpoint, observer_lifecycle, and
+  observer_enforcement and observe the current single-observer partition fail.
 
 GREEN:
 
-- add checkpoint_observer with ObserveRegister, ObserveFreeze, and
-  ObserveConvict, using a small claim plus opaque evidence envelope;
-- parameterize checkpoint by the observer hash and replace inline heavy
-  predicate calls and evidence-bearing checkpoint redeemers with exact slim
-  ran-checks while retaining all state, Value, checkpoint-policy token, role,
-  payout, and deadline rules;
+- expose observer_lifecycle (ObserveRegister; ObserveAdvance reserved and
+  fail-closed in R1) and observer_enforcement (ObserveFreeze/ObserveConvict),
+  each using the same small claim plus opaque evidence envelope and admitting
+  only Withdraw;
+- parameterize checkpoint by both observer hashes, select exactly one family
+  hash per action, and retain slim ran-checks plus all state, Value,
+  checkpoint-policy token, role, payout, and deadline rules;
 - move the event-derived hash-proof input/burn calculation into
-  ObserveRegister and remove the fresh-message-only network_id parameter;
-- update the blueprint loader/builder to apply both scripts with one
-  checkpoint h;
-- construct both reference-script transaction shapes; and
-- register the observer stake credential in devnet setup before the first
-  evidence-bearing transaction and keep every certificate purpose fail
-  closed;
-- require each exact applied program to be less than 16,133 bytes.
+  observer_lifecycle's ObserveRegister and remove the fresh-message-only
+  network_id parameter;
+- update the blueprint loader/builder to apply both observers first, derive
+  both hashes, then apply checkpoint while retaining one checkpoint h;
+- freeze final parameter order as lifecycle(version, hash-proof policy,
+  D_reg), enforcement(version), then checkpoint(version, lifecycle hash,
+  enforcement hash, D_reg, freeze bond, freeze window); network_id remains
+  deleted;
+- construct all three reference-script transaction shapes; and
+- register both observer stake credentials in devnet setup before the first
+  selected-family transaction and keep every certificate purpose fail closed;
+- require all three exact applied programs to be less than 16,133 bytes.
 
 Primary owned files:
 
 - onchain/validators/checkpoint.ak
 - onchain/validators/checkpoint_observer.ak
+- onchain/lib/cardano_keri/checkpoint/observer.ak
+- onchain/lib/cardano_keri/checkpoint/observer_tests.ak
 - onchain/validators/checkpoint_tests.ak
 - onchain/validators/checkpoint_observer_tests.ak
 - offchain/e2e/CheckpointTxBuilder.hs
@@ -84,10 +99,12 @@ Primary owned files:
 - justfile, only the applied-size recipe and gate wiring
 
 No Advance branch is opened in R1. The full existing gate plus focused Aiken
-contexts and exact size probe must pass. After two failed reviewed attempts,
-stop with a Q-file; mint/spend splitting is forbidden.
+contexts and exact three-program sizing must pass. The A-004 probe does not
+consume the cap; after two failed complete reviewed attempts of this family
+split, stop with a Q-file. Shared predicate libraries stay read-only and
+mint/spend splitting is forbidden.
 
-Commit: feat(115): forward checkpoint evidence to an observer
+Commit: feat(115): split checkpoint evidence observers
 
 Trailer: Tasks: T115-R1
 
@@ -107,9 +124,9 @@ GREEN:
 
 - delete e2eGenesis and route checkpoint E2E to the stock 16,384 genesis;
 - delete the banner and overage tuple;
-- make the permanent just ci gate reject either program at or above 16,133
+- make the permanent just ci gate reject any of the three programs at or above 16,133
   and reject 32768 in executable/configuration surfaces;
-- settle both reference-script creation transactions on the local stock
+- settle all three reference-script creation transactions on the local stock
   devnet;
 - rerun the truthful old-cost boundary, preserving explicit
   PENDING(blocked-on=#190) positive hash-proof rows.
@@ -148,7 +165,8 @@ GREEN:
   both the NEW current threshold and OLD next-key commitment threshold;
 - preserve AE1-AE10, W1-W3, exact incoming-set receipts, and the no-d/no-p
   ruling;
-- add ObserveAdvance to the observer and regenerate shared verdict vectors.
+- add ObserveAdvance to observer_lifecycle and regenerate shared verdict
+  vectors; observer_enforcement remains Advance-fail-closed.
 
 Primary owned files:
 
@@ -275,9 +293,10 @@ RED:
 GREEN:
 
 - gate exactly the thirteen rows listed in spec.md;
-- measure full observer-plus-checkpoint contexts at final parameter arity;
+- measure full selected-observer-plus-checkpoint contexts at final parameter
+  arity and record all three applied program sizes;
 - retain limits of 10,500,000 memory and 7,500,000,000 CPU per ACCEPT row;
-- record exact units, headroom, both applied sizes, parameter CBOR, and
+- record exact units, headroom, all three applied sizes, parameter CBOR, and
   stock-cap verdict in MEASUREMENTS.md;
 - run the full stock-cap E2E boundary.
 
@@ -309,10 +328,10 @@ GREEN:
 
 - add a manual just recipe and repository runner for the ruled socket,
   container, magic, D_reg, B, and 120-second freeze window;
-- apply and create both reference scripts, then build/submit Register, Arm,
-  Claim and the extended Advance/response/thaw demo;
-- register the observer stake credential in setup and record the dedicated or
-  combined setup transaction id;
+- apply and create all three reference scripts, then build/submit Register,
+  Arm, Claim and the extended Advance/response/thaw demo;
+- register both observer stake credentials in setup and record every dedicated
+  or combined setup transaction id;
 - emit a redacted structured record with script hashes, AIDs, txids, and
   explorer URLs;
 - add genuine pinned-keripy demo material and verification;
@@ -355,7 +374,7 @@ GREEN:
 - update only the #115-owned fragments named by spec.md;
 - make ordinary replay, response, thaw, event-own signatures, incoming
   receipts, burn history, and genuine-keripy rolling demo explicit;
-- state the observer registration liveness dependency and why its
+- state both observer-registration liveness dependencies and why each
   fail-closed certificate handler prevents deregistration;
 - preserve all #117 work as held design language;
 - pass strict MkDocs, links, and presentation checks.
@@ -377,11 +396,12 @@ After R8:
 
 1. Run ./gate.sh from a clean final HEAD and retry once only on a genuine
    transient failure.
-2. Recompute both applied sizes independently and inspect the 13-row report.
-3. Manually run the preprod recipe. Record both reference-script txids,
-   observer stake-registration evidence, Register, Arm, Claim, and the
-   rolling demo transaction ids and explorer URLs. Never place secret
-   material in logs.
+2. Recompute all three applied sizes independently and inspect the 13-row
+   report.
+3. Manually run the preprod recipe. Record all three reference-script txids,
+   both observer stake-registration proofs, Register, Arm, Claim, and the
+   rolling demo transaction ids and explorer URLs. Never place secret material
+   in logs.
 4. Update the PR body with final contract, measurements, stock-cap result,
    preprod evidence, demo evidence, and exact verification.
 5. Push, monitor all required checks, and address failures through a new
@@ -394,8 +414,9 @@ After R8:
 ## Hard stops
 
 - No implementation before A-001.
-- Either applied script at or above 16,133 bytes after two reviewed R1
-  attempts.
+- Any of checkpoint, observer_lifecycle, or observer_enforcement at or above
+  16,133 bytes after two complete reviewed family-split R1 attempts (the A-004
+  forward probe does not consume an attempt).
 - Any ACCEPT row below 25.00 percent headroom.
 - Gate failure after one retry.
 - Unfunded preprod wallet, leaked/incorrect key permissions, or public-network

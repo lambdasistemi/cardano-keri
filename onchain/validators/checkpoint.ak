@@ -26,31 +26,27 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval
 use aiken/primitive/bytearray
-use cardano/address.{Script, from_script, from_verification_key}
+use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
   PolicyId, Value, from_asset, from_lovelace, lovelace_of, merge, quantity_of,
   tokens,
 }
 use cardano/transaction.{
-  InlineDatum, NoDatum, Output, OutputReference, Transaction, find_input,
-}
-use cardano_keri/checkpoint/advance.{
-  AdvanceEvidence, AdvancePredicateValid, advance_predicate,
+  InlineDatum, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  find_input,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/enforcement.{
-  ConvictValid, EnforcementBindingValid, EnforcementEvidence, FreezeValid,
-  TombstoneV1, bind_enforcement_evidence, convict_predicate, freeze_predicate,
-}
+use cardano_keri/checkpoint/enforcement.{TombstoneV1}
 use cardano_keri/checkpoint/freeze_bond.{
   ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
   freeze_bond_valid, freeze_window_valid,
 }
-use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
-use cardano_keri/checkpoint/registration.{
-  DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
-  registration_predicate, valid_registration_deposit,
+use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/observer.{
+  ObserverClaim, ObserverEnvelope, observe_convict, observe_freeze,
+  observe_register,
 }
+use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 
 /// The ledger min-ADA floor the R8 deposit arithmetic runs over (spec R8:
@@ -61,26 +57,24 @@ use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 /// for this output is lower, so the check only ever over-collects.
 pub const checkpoint_min_ada: Int = 2_000_000
 
-/// The checkpoint mint redeemer. `Register` carries the S3
-/// `RegistrationEvidence` (the full keripy `icp` serialization,
-/// prover-supplied offsets, controller signatures, and witness receipts
-/// over the exact KERI event bytes).
+/// The checkpoint mint redeemer. R1 slims `Register` to a bare state-machine
+/// command: it carries NO evidence. The RegistrationEvidence moved to the
+/// zero-lovelace withdrawal observer, which runs the unchanged registration
+/// predicate; the checkpoint validates only the exact observer claim.
 pub type MintRedeemer {
-  Register { evidence: RegistrationEvidence }
+  Register
 }
 
-/// The checkpoint spend redeemer. `Advance` carries the S5 `AdvanceEvidence`
-/// and runs V1-V7 (KERI rotation admission). `Freeze` carries the signed KERI
-/// wire evidence that opens ACTIVE -> ARMED; `ClaimFreeze` opens ARMED ->
-/// FROZEN; `Convict` carries the witnessed conflicting event, the convictor,
-/// and explicit payout indices for ACTIVE|ARMED|FROZEN -> TOMBSTONE. `Close`
-/// remains fail-closed.
+/// The checkpoint spend redeemer. R1 slims every evidence-bearing branch:
+/// `Advance` is bare and remains rejected in R1; `Freeze` retains only the
+/// hunter pkh; `ClaimFreeze` is unchanged and needs no observer; `Convict`
+/// retains only the convictor pkh and the two payout indices; `Close` remains
+/// fail-closed. The EnforcementEvidence moved to the observer.
 pub type SpendRedeemer {
-  Advance { evidence: AdvanceEvidence }
-  Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  Advance
+  Freeze { hunter_pkh: ByteArray }
   ClaimFreeze { hunter_output_index: Int }
   Convict {
-    evidence: EnforcementEvidence,
     convictor_pkh: ByteArray,
     convictor_output_index: Int,
     hunter_output_index: Int,
@@ -100,8 +94,8 @@ type SpendInputRole {
 
 validator checkpoint(
   _version: Int,
-  hash_proof_policy: PolicyId,
-  network_id: Int,
+  lifecycle_hash: PolicyId,
+  enforcement_hash: PolicyId,
   d_reg: Int,
   freeze_bond: Int,
   freeze_window: Int,
@@ -110,15 +104,12 @@ validator checkpoint(
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
     expect freeze_window_valid(freeze_window)
-    let Register { evidence } = redeemer
-    validate_register(
-      hash_proof_policy,
-      d_reg,
-      freeze_bond,
-      evidence,
-      policy_id,
-      tx,
-    )
+    let Register = redeemer
+    // R1 ran-check: Register selects the lifecycle observer at zero lovelace
+    // with a matching Withdraw redeemer whose claim is ObserveRegister over
+    // the current checkpoint h (no own_ref for a mint).
+    expect ran_check(lifecycle_hash, policy_id, observe_register, None, tx)
+    validate_register(d_reg, freeze_bond, policy_id, tx)
   }
 
   spend(
@@ -137,11 +128,22 @@ validator checkpoint(
       own_ref,
       tx,
     )
+    expect Some(own_input) = find_input(tx.inputs, own_ref)
+    expect Script(own_hash) = own_input.output.address.payment_credential
     when rdm is {
-      Freeze { evidence, hunter_pkh } ->
+      Freeze { hunter_pkh } ->
         when input_role is {
-          ActiveCheckpoint ->
-            validate_arm(freeze_window, evidence, hunter_pkh, own_ref, tx)
+          ActiveCheckpoint -> {
+            expect
+              ran_check(
+                enforcement_hash,
+                own_hash,
+                observe_freeze,
+                Some(own_ref),
+                tx,
+              )
+            validate_arm(freeze_window, hunter_pkh, own_ref, tx)
+          }
           _ -> fail
         }
       ClaimFreeze { hunter_output_index } ->
@@ -150,18 +152,20 @@ validator checkpoint(
             validate_claim(freeze_bond, hunter_output_index, own_ref, tx)
           _ -> fail
         }
-      Convict {
-        evidence,
-        convictor_pkh,
-        convictor_output_index,
-        hunter_output_index,
-      } ->
+      Convict { convictor_pkh, convictor_output_index, hunter_output_index } -> {
+        expect
+          ran_check(
+            enforcement_hash,
+            own_hash,
+            observe_convict,
+            Some(own_ref),
+            tx,
+          )
         when input_role is {
           ActiveCheckpoint ->
             validate_convict_active(
               d_reg,
               freeze_bond,
-              evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
@@ -172,7 +176,6 @@ validator checkpoint(
             validate_convict_armed(
               d_reg,
               freeze_bond,
-              evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
@@ -182,7 +185,6 @@ validator checkpoint(
           FrozenCheckpoint ->
             validate_convict_frozen(
               d_reg,
-              evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
@@ -191,6 +193,7 @@ validator checkpoint(
             )
           TerminalTombstone -> fail
         }
+      }
       _ -> fail
     }
   }
@@ -198,6 +201,51 @@ validator checkpoint(
   else(_) {
     fail
   }
+}
+
+/// The R1 ran-check: prove the observer ran over this exact claim. The
+/// transaction must contain `Pair(Script(observer_hash), 0)` in withdrawals
+/// (exactly zero lovelace; unrelated withdrawals are never rejected) and a
+/// matching `Withdraw(Script(observer_hash))` entry in redeemers whose
+/// envelope claim has the expected action, the current checkpoint h, and the
+/// expected own_ref (`None` for Register, the exact spent input for spends).
+/// The checkpoint reads only the claim; the payload stays opaque.
+fn ran_check(
+  observer_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  expected_action: Int,
+  expected_own_ref: Option<OutputReference>,
+  tx: Transaction,
+) -> Bool {
+  let credential: Credential = Script(observer_hash)
+  // The configured observer credential is withdrawn at exactly zero lovelace.
+  expect
+    list.any(
+      tx.withdrawals,
+      fn(Pair(w_cred, w_lovelace)) { w_cred == credential && w_lovelace == 0 },
+    )
+  // The matching Withdraw-purpose redeemer decodes to a well-shaped envelope
+  // whose claim names the expected action, the current checkpoint h, and the
+  // expected own_ref.
+  expect
+    list.any(
+      tx.redeemers,
+      fn(Pair(purpose, rdm)) {
+        when purpose is {
+          Withdraw(r_cred) ->
+            if r_cred == credential {
+              expect envelope: ObserverEnvelope = rdm
+              let ObserverClaim { action, checkpoint_policy: claim_h, own_ref }
+                = envelope.claim
+              action == expected_action && claim_h == checkpoint_policy && own_ref == expected_own_ref
+            } else {
+              False
+            }
+          _ -> False
+        }
+      },
+    )
+  True
 }
 
 /// Classify the named input by its whole role address and exact inline datum
@@ -266,13 +314,14 @@ fn checkpoint_input_value_valid(
   ) >= reserve
 }
 
-/// The `Register` branch: R1/R2/R5 transaction shape here, R3/R4/R6/R7/R8
-/// delegated to the S3 predicate.
+/// The `Register` branch: R1/R2/R5 transaction shape here. The R3/R4/R6/R7/R8
+/// evidence verification (registration predicate) and the distinct hash-proof
+/// event-derived proof input/burn moved to the observer; the checkpoint keeps
+/// only the state-machine, own-policy token, and reserve mechanics and never
+/// decodes the evidence payload.
 fn validate_register(
-  hash_proof_policy: PolicyId,
   d_reg: Int,
   freeze_bond: Int,
-  evidence: RegistrationEvidence,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
@@ -312,42 +361,22 @@ fn validate_register(
       inputs,
       fn(input) { input.output.address.payment_credential != Script(policy_id) },
     )
-  // R5 — some input carries the proof token named over the PAIR
-  // (event_bytes, aid) at quantity one (`list.any`: extra inputs are
-  // never rejected — gate-room), and the transaction burns it (the
-  // hash-proof policy's full mint map is exactly that burn).
-  let proof_name = proof_token_name(evidence.event_bytes, d.cesr_aid)
-  expect
-    list.any(
-      inputs,
-      fn(input) {
-        quantity_of(input.output.value, hash_proof_policy, proof_name) == 1
-      },
-    )
-  expect [Pair(burned_name, burned_qty)] = dict.to_pairs(
-    tokens(mint, hash_proof_policy),
-  )
-  expect burned_name == proof_name
-  expect burned_qty == -1
-  // R3/R4/R6/R7/R8 — the S3 predicate over the exact inception-event
-  // evidence, the datum, and the state output's lovelace.
-  let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
-  expect
-    registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
-  // Live bonded reserve weld: keep the shared predicate generic over d_reg,
-  // while the applied checkpoint also protects the independent freeze bond.
+  // Live bonded reserve weld: the state output protects the independent
+  // registration deposit and freeze bond. The registration predicate's own
+  // reserve check now runs in the observer over the same lovelace quantity.
   expect
     lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg + freeze_bond
   True
 }
 
 /// Permissionless ACTIVE -> ARMED transition. The signed wire evidence is
-/// EE0-EE9-bound before the unchanged freeze predicate runs. The raw finite
-/// validity upper endpoint anchors the stored deadline; inclusivity is never
-/// normalized inward.
+/// EE0-EE9-bound and the freeze predicate runs in the observer; the
+/// checkpoint keeps the deadline anchor, the ArmedV1 successor construction,
+/// and the complete-Value preservation. The raw finite validity upper
+/// endpoint anchors the stored deadline; inclusivity is never normalized
+/// inward.
 fn validate_arm(
   freeze_window: Int,
-  evidence: EnforcementEvidence,
   hunter_pkh: ByteArray,
   own_ref: OutputReference,
   tx: Transaction,
@@ -360,11 +389,6 @@ fn validate_arm(
   expect V1(tip): CheckpointDatum = tip_data
   let aid_name = deriveAidAssetName(tip.cesr_aid)
   expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
-  expect EnforcementBindingValid(decoded) = bind_enforcement_evidence(
-    tip.cesr_aid,
-    evidence,
-  )
-  expect freeze_predicate(tip, decoded) == FreezeValid
   expect !interval.is_empty(validity_range)
   expect interval.Finite(upper) = validity_range.upper_bound.bound_type
   let deadline = upper + freeze_window
@@ -425,11 +449,11 @@ fn validate_claim(
 }
 
 /// ACTIVE conviction routes the protected deposit and bond together to the
-/// named convictor before applying the shared terminal transition.
+/// named convictor before applying the shared terminal transition. The
+/// witnessed-fork evidence is bound and validated in the observer.
 fn validate_convict_active(
   d_reg: Int,
   freeze_bond: Int,
-  evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
   _hunter_output_index: Int,
@@ -450,7 +474,7 @@ fn validate_convict_active(
       convictor_pkh,
       d_reg + freeze_bond,
     )
-  validate_convict_terminal(tip, evidence, own_ref, tx)
+  validate_convict_terminal(tip, own_ref, tx)
 }
 
 /// ARMED conviction keeps the two protected payouts distinct: the deposit
@@ -458,7 +482,6 @@ fn validate_convict_active(
 fn validate_convict_armed(
   d_reg: Int,
   freeze_bond: Int,
-  evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
   hunter_output_index: Int,
@@ -479,14 +502,13 @@ fn validate_convict_armed(
     expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg)
   expect
     expect_exact_payout(outputs, hunter_output_index, hunter_pkh, freeze_bond)
-  validate_convict_terminal(tip, evidence, own_ref, tx)
+  validate_convict_terminal(tip, own_ref, tx)
 }
 
 /// FROZEN conviction routes only the protected registration deposit because
 /// the freeze bond has already left checkpoint state.
 fn validate_convict_frozen(
   d_reg: Int,
-  evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
   _hunter_output_index: Int,
@@ -502,15 +524,18 @@ fn validate_convict_frozen(
   expect bytearray.length(convictor_pkh) == 28
   expect
     expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg)
-  validate_convict_terminal(tip, evidence, own_ref, tx)
+  validate_convict_terminal(tip, own_ref, tx)
 }
 
-/// Shared conviction core: bind and validate the witnessed fork, then move
-/// only min-ADA plus the quantity-one AID token into the exact tombstone.
-/// Every unreserved input residual remains ordinary transaction change.
+/// Shared conviction core: the witnessed fork is bound and validated in the
+/// observer, which also pins the tombstone's `evidence_said` to the decoded
+/// evidence SAID (A-003 Option C). The checkpoint moves only min-ADA plus the
+/// quantity-one AID token into the exact tombstone and pins the tombstone
+/// fields it can derive from the spent datum (cesr_aid, convicted_at_native_sn);
+/// it never sees the evidence SAID. Every unreserved input residual remains
+/// ordinary transaction change.
 fn validate_convict_terminal(
   tip: CheckpointDatumV1,
-  evidence: EnforcementEvidence,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -519,11 +544,6 @@ fn validate_convict_terminal(
   expect Script(own_hash) = own_input.output.address.payment_credential
   let aid_name = deriveAidAssetName(tip.cesr_aid)
   expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
-  expect EnforcementBindingValid(decoded) = bind_enforcement_evidence(
-    tip.cesr_aid,
-    evidence,
-  )
-  expect convict_predicate(tip, decoded) == ConvictValid
   expect [state_output] = list.filter(
     outputs,
     fn(output) { output.address == role.address(own_hash, Tombstone) },
@@ -533,12 +553,8 @@ fn validate_convict_terminal(
   expect state_output.value == terminal_value
   expect InlineDatum(tombstone_data) = state_output.datum
   expect tombstone: TombstoneV1 = tombstone_data
-  expect
-    tombstone == TombstoneV1 {
-      cesr_aid: tip.cesr_aid,
-      convicted_at_native_sn: tip.native_sn,
-      evidence_said: evidence.said,
-    }
+  expect tombstone.cesr_aid == tip.cesr_aid
+  expect tombstone.convicted_at_native_sn == tip.native_sn
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
 }
@@ -555,67 +571,5 @@ fn expect_exact_payout(
   expect output.address == from_verification_key(recipient_pkh)
   expect output.value == from_lovelace(lovelace)
   expect NoDatum = output.datum
-  True
-}
-
-/// The `Advance` branch: V1 own input / V2 successor output / V3 deposit
-/// continuity live here; V4-V7 delegate to the S5 `advance_predicate` over
-/// a `SpentCheckpoint` built EXCLUSIVELY from the deployment parameters,
-/// the named spent outref, and OLD — nothing message-shaped beyond the
-/// evidence's own delta lists is caller-supplied.
-fn validate_advance(
-  network_id: Int,
-  d_reg: Int,
-  evidence: AdvanceEvidence,
-  own_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  // V1 — resolve the named own input at exactly ACTIVE or FROZEN, carrying
-  // exactly one checkpoint token derived from its inline V1(OLD) datum.
-  // TOMBSTONE, unknown roles, and non-V1 datums fail before the
-  // advance predicate.
-  expect Some(own_input) = find_input(inputs, own_ref)
-  expect Script(own_hash) = own_input.output.address.payment_credential
-  expect
-    own_input.output.address == role.address(own_hash, Active) || own_input.output.address == role.address(
-      own_hash,
-      Frozen,
-    )
-  expect InlineDatum(old_datum_data) = own_input.output.datum
-  expect V1(old): CheckpointDatum = old_datum_data
-  let aid_name = deriveAidAssetName(old.cesr_aid)
-  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
-  // V2 — exactly one ACTIVE successor output (the one-element filter is
-  // the datum-confusion guard, as in R2), carrying the same token at
-  // quantity one and inline V1(NEW); no mint/burn under own_hash — the
-  // token moves, it never mints.
-  let active = from_script(own_hash)
-  expect [state_output] = list.filter(
-    outputs,
-    fn(output) { output.address == active },
-  )
-  expect InlineDatum(new_datum_data) = state_output.datum
-  expect V1(new): CheckpointDatum = new_datum_data
-  expect quantity_of(state_output.value, own_hash, aid_name) == 1
-  expect dict.to_pairs(tokens(mint, own_hash)) == []
-  // V3 — deposit continuity (mechanism as R8; economics stay O3/#117).
-  expect lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg
-  // V4-V7 — the S5 predicate over the SpentCheckpoint built exclusively
-  // from deployment parameters, the named spent outref, and OLD.
-  let spent = SpentCheckpoint {
-    network_id,
-    policy_id: own_hash,
-    aid_asset_name: aid_name,
-    txid: own_ref.transaction_id,
-    index: own_ref.output_index,
-    cesr_aid: old.cesr_aid,
-    witnesses: old.witnesses,
-    next_keys: old.next_keys,
-    next_threshold: old.next_threshold,
-    seq: old.seq,
-    native_sn: old.native_sn,
-  }
-  expect advance_predicate(spent, new, evidence) == AdvancePredicateValid
   True
 }

@@ -55,6 +55,7 @@ library
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Advance
+    Cardano.KERI.AID.Checkpoint.Close
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.FreezeBond
@@ -97,6 +98,7 @@ test-suite unit-tests
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
+    Cardano.KERI.AID.Checkpoint.CloseSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
@@ -174,6 +176,18 @@ executable gen-advance-vectors
     , cardano-keri
     , memory                >=0.18 && <0.19
     , text
+
+executable gen-close-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenCloseVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , memory                >=0.18 && <0.19
 
 executable gen-freeze-bond-vectors
   import:           warnings

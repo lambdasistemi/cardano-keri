@@ -1,14 +1,18 @@
 //// #136 — real-script tests for the register-only checkpoint vertical.
 
+use aiken/interval
 use cage_context.{
-  input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id,
+  input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
 use cardano/address.{Script, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge}
 use cardano/certificate.{RegisterCredential, UnregisterCredential}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, Transaction, Withdraw, placeholder,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  placeholder,
 }
+use cardano_keri/checkpoint/close.{CloseEvidence}
+use cardano_keri/checkpoint/close_vectors as close_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
@@ -19,7 +23,7 @@ use cardano_keri/checkpoint/registration.{
 }
 use cardano_keri/checkpoint/registration_vectors as vec
 use checkpoint_observer
-use checkpoint_register.{Register}
+use checkpoint_register.{Close, CloseBurn, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -100,6 +104,7 @@ fn run_register(
   checkpoint_register.checkpoint_register.mint(
     0,
     lifecycle_hash,
+    0,
     d_reg,
     freeze_bond,
     Register,
@@ -156,4 +161,73 @@ test lifecycle_observer_deregistration_fails_closed() fail {
     UnregisterCredential { credential: Script(lifecycle_hash), refund: Never },
     placeholder,
   )
+}
+
+fn close_own_ref() -> OutputReference {
+  OutputReference {
+    transaction_id: close_vec.pos_2key_context.spent_txid,
+    output_index: close_vec.pos_2key_context.spent_index,
+  }
+}
+
+fn close_tx(evidence: CloseEvidence) -> Transaction {
+  let context = close_vec.pos_2key_context
+  let aid_name = deriveAidAssetName(context.old.cesr_aid)
+  let bonded = min_ada + d_reg + freeze_bond
+  let own_input = input_at(
+    close_own_ref(),
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(bonded) |> merge(from_asset(policy, aid_name, 1)),
+      datum: InlineDatum(V1(context.old)),
+      reference_script: None,
+    },
+  )
+  let refund = Output {
+    address: evidence.refund_address,
+    value: from_lovelace(bonded),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  spend_context(
+    [own_input],
+    [],
+    [refund],
+    from_asset(policy, aid_name, -1),
+    [],
+    interval.everything,
+    0,
+  )
+}
+
+fn run_close(evidence: CloseEvidence) -> Bool {
+  let tx = close_tx(evidence)
+  checkpoint_register.checkpoint_register.mint(
+    0,
+    lifecycle_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    CloseBurn { checkpoint_ref: close_own_ref() },
+    policy,
+    tx,
+  ) && checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    None,
+    Close { evidence },
+    close_own_ref(),
+    tx,
+  )
+}
+
+test close_small_accepts_controller_authorized_refund() {
+  run_close(close_vec.pos_2key_evidence)
+}
+
+test close_small_rejects_unauthorized_controller() fail {
+  run_close(close_vec.neg_below_threshold_evidence)
 }

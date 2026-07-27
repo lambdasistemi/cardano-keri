@@ -5,25 +5,30 @@ use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
 use cardano/address.{Script, from_script, from_verification_key}
-use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge}
+use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/certificate.{RegisterCredential, UnregisterCredential}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
   placeholder,
 }
+use cardano_keri/checkpoint/advance.{
+  AdvanceEvidence, AdvancePredicateValid, advance_predicate,
+}
+use cardano_keri/checkpoint/advance_vectors as advance_vec
 use cardano_keri/checkpoint/close.{CloseEvidence}
 use cardano_keri/checkpoint/close_vectors as close_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_register,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
 }
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
-use checkpoint_register.{Close, CloseBurn, Register}
+use checkpoint_register.{Advance, Close, CloseBurn, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -33,6 +38,9 @@ const policy: PolicyId =
 
 const lifecycle_hash: PolicyId =
   #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const advance_hash: PolicyId =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 const d_reg: Int = 1_000_000_000
 
@@ -104,6 +112,7 @@ fn run_register(
   checkpoint_register.checkpoint_register.mint(
     0,
     lifecycle_hash,
+    advance_hash,
     0,
     d_reg,
     freeze_bond,
@@ -205,6 +214,7 @@ fn run_close(evidence: CloseEvidence) -> Bool {
   checkpoint_register.checkpoint_register.mint(
     0,
     lifecycle_hash,
+    advance_hash,
     1,
     d_reg,
     freeze_bond,
@@ -214,6 +224,7 @@ fn run_close(evidence: CloseEvidence) -> Bool {
   ) && checkpoint_register.checkpoint_register.spend(
     0,
     lifecycle_hash,
+    advance_hash,
     1,
     d_reg,
     freeze_bond,
@@ -230,4 +241,179 @@ test close_small_accepts_controller_authorized_refund() {
 
 test close_small_rejects_unauthorized_controller() fail {
   run_close(close_vec.neg_below_threshold_evidence)
+}
+
+// ---------------------------------------------------------------------
+// #142 RED — the small checkpoint surface must admit the already-ratified
+// two-key KERI rotation and reject the three named authorization failures.
+// `Advance` is deliberately absent from checkpoint_register until GREEN.
+// ---------------------------------------------------------------------
+
+const rotate_deposit: Int = min_ada + d_reg
+
+fn rotate_old(spent: SpentCheckpoint) -> CheckpointDatumV1 {
+  CheckpointDatumV1 {
+    cesr_aid: spent.cesr_aid,
+    cur_keys: [
+      #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
+      #"95d507a9923dc62701d5619c117a3cbb8ae91cfe3f99e96cc0ae986cb52b586d",
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: spent.next_keys,
+    next_threshold: spent.next_threshold,
+    witnesses: spent.witnesses,
+    toad: 2,
+    seq: spent.seq,
+    native_sn: spent.native_sn,
+  }
+}
+
+fn rotate_ref(spent: SpentCheckpoint) -> OutputReference {
+  out_ref(spent.txid, spent.index)
+}
+
+fn rotate_value(spent: SpentCheckpoint) -> Value {
+  from_lovelace(rotate_deposit)
+    |> merge(from_asset(policy, spent.aid_asset_name, 1))
+}
+
+fn rotate_tx(spent: SpentCheckpoint, created: CheckpointDatumV1) -> Transaction {
+  let own_input = input_at(
+    rotate_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: rotate_value(spent),
+      datum: InlineDatum(V1(rotate_old(spent))),
+      reference_script: None,
+    },
+  )
+  let successor = Output {
+    address: from_script(policy),
+    value: rotate_value(spent),
+    datum: InlineDatum(V1(created)),
+    reference_script: None,
+  }
+  spend_context([own_input], [], [successor], zero, [], interval.everything, 0)
+}
+
+fn advance_envelope(
+  spent: SpentCheckpoint,
+  evidence: AdvanceEvidence,
+) -> ObserverEnvelope {
+  ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_advance,
+      checkpoint_policy: policy,
+      own_ref: Some(rotate_ref(spent)),
+    },
+    payload: evidence,
+  }
+}
+
+fn with_advance_observer(
+  tx: Transaction,
+  envelope: ObserverEnvelope,
+) -> Transaction {
+  let credential = Script(advance_hash)
+  let redeemer: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+}
+
+fn run_rotate_small(
+  spent: SpentCheckpoint,
+  created: CheckpointDatumV1,
+  evidence: AdvanceEvidence,
+) -> Bool {
+  let envelope = advance_envelope(spent, evidence)
+  let tx = with_advance_observer(rotate_tx(spent, created), envelope)
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    None,
+    Advance,
+    rotate_ref(spent),
+    tx,
+  ) && advance_predicate(spent, created, evidence) == AdvancePredicateValid
+}
+
+test rotate_small_rejects_missing_advance_observer() fail {
+  let spent = advance_vec.pos_adv_wit_2key_spent
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    None,
+    Advance,
+    rotate_ref(spent),
+    rotate_tx(spent, advance_vec.pos_adv_wit_2key_created),
+  )
+}
+
+test rotate_small_accepts_witnessed_two_key_rotation() {
+  run_rotate_small(
+    advance_vec.pos_adv_wit_2key_spent,
+    advance_vec.pos_adv_wit_2key_created,
+    advance_vec.pos_adv_wit_2key_evidence,
+  )
+}
+
+test rotate_small_rejects_stolen_current_keys() fail {
+  run_rotate_small(
+    advance_vec.ctrl_stolen_quorum_spent,
+    advance_vec.ctrl_stolen_quorum_created,
+    advance_vec.ctrl_stolen_quorum_evidence,
+  )
+}
+
+test rotate_small_rejects_below_successor_threshold() fail {
+  run_rotate_small(
+    advance_vec.ctrl_below_threshold_spent,
+    advance_vec.ctrl_below_threshold_created,
+    advance_vec.ctrl_below_threshold_evidence,
+  )
+}
+
+test rotate_small_rejects_under_witnessed_rotation() fail {
+  run_rotate_small(
+    advance_vec.v7_receipt_free_spent,
+    advance_vec.v7_receipt_free_created,
+    advance_vec.v7_receipt_free_evidence,
+  )
+}
+
+test rotate_small_rejects_changed_successor_value() fail {
+  let spent = advance_vec.pos_adv_wit_2key_spent
+  let tx = rotate_tx(spent, advance_vec.pos_adv_wit_2key_created)
+  expect [successor] = tx.outputs
+  let changed_successor = Output {
+    ..successor,
+    value: from_lovelace(rotate_deposit + 1)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+  }
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    None,
+    Advance,
+    rotate_ref(spent),
+    with_advance_observer(
+      Transaction { ..tx, outputs: [changed_successor] },
+      advance_envelope(spent, advance_vec.pos_adv_wit_2key_evidence),
+    ),
+  )
 }

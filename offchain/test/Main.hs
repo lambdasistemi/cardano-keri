@@ -6,6 +6,7 @@ import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec qualified as AdvanceFixturesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
+import Cardano.KERI.AID.Checkpoint.CloseSpec qualified as CloseSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
 import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
@@ -29,6 +30,7 @@ main = hspec $ do
     ThresholdSpec.spec
     AdvanceFixturesSpec.spec
     AdvanceSpec.spec
+    CloseSpec.spec
     DatumSpec.spec
     MessageSpec.spec
     Keri68OracleSpec.spec

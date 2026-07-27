@@ -32,6 +32,7 @@ module CheckpointTxBuilder (
     responseBoundaryCases,
     boundaryCasesCoverDeadline,
     productionRegisterScenario,
+    productionRegisterCloseScenario,
     buildArmTx,
     buildAdvanceTx,
     buildClaimTx,
@@ -39,13 +40,33 @@ module CheckpointTxBuilder (
     buildCloseTx,
 ) where
 
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    deriveVerKeyDSIGN,
+    genKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    rawSerialiseVerKeyDSIGN,
+    signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Close (
+    AddressCredential (..),
+    CloseContext (..),
+    CloseEvidence (..),
+    FullAddress (..),
+    closePredicate,
+    closeSpendRedeemerData,
+    reconstructCloseMessage,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
@@ -120,7 +141,7 @@ import Cardano.Ledger.Core (
     ppMaxTxSizeL,
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..), extractHash)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
@@ -130,7 +151,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.E2E.Setup (
     DevnetConfig (devnetTargetPV),
     TargetPV (PV11),
@@ -170,6 +191,7 @@ import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
+import Data.Functor ((<&>))
 import Data.List (elemIndex, find, isInfixOf, sort, sortOn)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, listToMaybe)
@@ -346,6 +368,7 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             applyCheckpointParams
                 checkpointVersion
                 (policyBytes (PolicyID lifecycleHash))
+                0
                 registrationBond
                 freezeBond
                 checkpointCode
@@ -464,13 +487,15 @@ applyCheckpointParams ::
     ByteString ->
     Integer ->
     Integer ->
+    Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version lifecycleHash dReg bond code =
+applyCheckpointParams version lifecycleHash network dReg bond code =
     serialiseUPLC $
         uncheckedDeserialiseUPLC code
             `applyDataArg` I version
             `applyDataArg` B lifecycleHash
+            `applyDataArg` I network
             `applyDataArg` I dReg
             `applyDataArg` I bond
   where
@@ -628,7 +653,14 @@ productionRegisterScenario env = do
     productionRegisterScenarioWith env fixture
 
 productionRegisterScenarioWith :: CheckpointEnv -> RegistrationFixture -> IO CheckpointInput
-productionRegisterScenarioWith env fixture = do
+productionRegisterScenarioWith env fixture =
+    fst <$> productionRegisterScenarioWithReference env fixture
+
+productionRegisterScenarioWithReference ::
+    CheckpointEnv ->
+    RegistrationFixture ->
+    IO (CheckpointInput, (TxIn, TxOut ConwayEra))
+productionRegisterScenarioWithReference env fixture = do
     checkpointRef <-
         deployReferenceScript
             env
@@ -670,7 +702,72 @@ productionRegisterScenarioWith env fixture = do
             (hasAsset (envCheckpointPolicy env) checkpointName)
             >>= requireJust "registered checkpoint output did not settle"
     assertActiveCheckpoint env fixture registered
-    pure CheckpointInput{checkpointUtxo = registered, checkpointDatum = rfDatum fixture}
+    pure
+        ( CheckpointInput
+            { checkpointUtxo = registered
+            , checkpointDatum = rfDatum fixture
+            }
+        , checkpointRef
+        )
+
+productionRegisterCloseScenario :: CheckpointEnv -> IO ()
+productionRegisterCloseScenario env = do
+    closeFixture <- loadCloseStoryFixture
+    let fixture = csRegistration closeFixture
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference env fixture
+    let evidence =
+            signedCloseEvidence
+                env
+                registered
+                (csCurrentSigners closeFixture)
+    case closePredicate (closeContext env registered) evidence of
+        Left closeError ->
+            fail
+                ( "checkpoint Close: signed evidence failed the pure predicate: "
+                    <> show closeError
+                )
+        Right () -> pure ()
+    closeTxId <-
+        submitTwoPassClose
+            env
+            "checkpoint Close"
+            checkpointRef
+            registered
+            evidence
+    let checkpointName =
+            deriveAidAssetName (cdCesrAid (checkpointDatum registered))
+        expectedRefund =
+            snd (checkpointUtxo registered) ^. coinTxOutL
+    refund <-
+        pollOutput
+            (envProvider env)
+            closeTxId
+            [0]
+            ( \output ->
+                output ^. addrTxOutL == envOwner env
+                    && output ^. coinTxOutL == expectedRefund
+                    && not
+                        ( hasAsset
+                            (envCheckpointPolicy env)
+                            checkpointName
+                            output
+                        )
+            )
+            >>= requireJust "Close controller refund did not settle"
+    remaining <-
+        withinSecs 30 "query closed checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst (checkpointUtxo registered)))
+    unless (Map.null remaining) $
+        fail "Close left the registered checkpoint input unspent"
+    dbg
+        ( "Close settled; tx id="
+            <> show closeTxId
+            <> "; refund="
+            <> show (fst refund)
+        )
 
 {- | This is deliberately not run on the old-cost devnet.  Referencing this
 scenario from the authorized PENDING row type-checks the real hash-proof mint,
@@ -909,6 +1006,11 @@ data RegistrationFixture = RegistrationFixture
     , rfProofName :: !ByteString
     }
 
+data CloseStoryFixture = CloseStoryFixture
+    { csRegistration :: !RegistrationFixture
+    , csCurrentSigners :: ![SignKeyDSIGN Ed25519DSIGN]
+    }
+
 data RegisterScriptPlan = RegisterScriptPlan
     { rspWithdrawals :: !Withdrawals
     , rspRedeemers :: !(Redeemers ConwayEra)
@@ -983,6 +1085,44 @@ loadLifecycleFixture = do
     registration <- either fail pure (registrationFixtureFrom inceptionWithOffsets inceptionSignatures [])
     armEvidence <- either fail pure (enforcementEvidenceFrom rotationWithOffsets rotationSignatures)
     pure (registration, armEvidence)
+
+loadCloseStoryFixture :: IO CloseStoryFixture
+loadCloseStoryFixture = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/registration.json"
+    root <- eitherDecodeFileStrict path >>= either fail pure
+    family <- either fail pure (atKey "reg_2key" root)
+    event <- either fail pure (atKey "event" family)
+    offsets <- either fail pure (atKey "offsets" family)
+    eventWithOffsets <-
+        case event of
+            Object fields ->
+                pure (Object (KeyMap.insert (Key.fromText "offsets") offsets fields))
+            _ -> fail "reg_2key.event is not an object"
+    signatures <- either fail pure (indexedSignaturesAt "event_sigs" family)
+    registration <-
+        either fail pure $
+            registrationFixtureFrom eventWithOffsets signatures []
+    signerSeeds <-
+        either fail pure $
+            atKey "signer_seeds" family
+                >>= atKey "current"
+                >>= arrayValues
+                >>= traverse
+                    ( \entry ->
+                        (textAt "seed_hex" entry >>= decodeHex)
+                            <&> genKeyDSIGN . mkSeedFromBytes
+                    )
+    let observedKeys =
+            map
+                (rawSerialiseVerKeyDSIGN . deriveVerKeyDSIGN)
+                signerSeeds
+    unless (observedKeys == cdCurKeys (rfDatum registration)) $
+        fail "reg_2key signer seeds do not reproduce the registered controller keys"
+    pure
+        CloseStoryFixture
+            { csRegistration = registration
+            , csCurrentSigners = signerSeeds
+            }
 
 registrationFixtureFrom ::
     Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String RegistrationFixture
@@ -1357,6 +1497,201 @@ submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
         Submitted txId -> pure txId
         Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
 
+signedCloseEvidence ::
+    CheckpointEnv ->
+    CheckpointInput ->
+    [SignKeyDSIGN Ed25519DSIGN] ->
+    CloseEvidence
+signedCloseEvidence env input signers = evidence
+  where
+    context = closeContext env input
+    unsigned =
+        CloseEvidence
+            { ceRefundAddress = ownerFullAddress env
+            , ceCtrlSigs = []
+            }
+    preimage = canonicalCbor (reconstructCloseMessage context unsigned)
+    evidence =
+        unsigned
+            { ceCtrlSigs =
+                [ (index, rawSerialiseSigDSIGN (signDSIGN () preimage signer))
+                | (index, signer) <- zip [0 ..] signers
+                ]
+            }
+
+closeContext :: CheckpointEnv -> CheckpointInput -> CloseContext
+closeContext env input =
+    case fst (checkpointUtxo input) of
+        TxIn (TxId safeHash) (TxIx outputIndex) ->
+            CloseContext
+                { ccNetworkId = 0
+                , ccCheckpointPolicyId = policyBytes (envCheckpointPolicy env)
+                , ccSpentTxid = hashToBytes (extractHash safeHash)
+                , ccSpentIndex = fromIntegral outputIndex
+                , ccOld = checkpointDatum input
+                }
+
+ownerFullAddress :: CheckpointEnv -> FullAddress
+ownerFullAddress env =
+    case envOwner env of
+        Addr _ (KeyHashObj (KeyHash paymentHash)) StakeRefNull ->
+            FullAddress
+                { faPaymentCredential =
+                    VerificationKeyCredential (hashToBytes paymentHash)
+                , faStakeCredential = Nothing
+                }
+        _ -> error "Close story requires an enterprise key owner address"
+
+buildCloseStoryTxWith ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    CloseEvidence ->
+    IO
+        ( ConwayTx
+        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
+        )
+buildCloseStoryTxWith budgets env checkpointRef input evidence = do
+    params <-
+        withinSecs 30 "query Close protocol parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query Close wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    (feeUtxo, collateralUtxo) <-
+        pickDisjoint wallet [stateIn, fst checkpointRef]
+    let (feeIn, feeOut) = feeUtxo
+        collateralIn = fst collateralUtxo
+        allInputs = Set.fromList [stateIn, feeIn]
+        stateIndex = spendingIndex stateIn allInputs
+        mintPurpose = ConwayMinting (AsIx 0)
+        spendPurpose = ConwaySpending (AsIx stateIndex)
+        expected = Set.fromList [mintPurpose, spendPurpose]
+        checkpointName =
+            AssetName $
+                SBS.toShort $
+                    deriveAidAssetName (cdCesrAid (checkpointDatum input))
+        minted =
+            MultiAsset $
+                Map.singleton
+                    (envCheckpointPolicy env)
+                    (Map.singleton checkpointName (-1))
+        refundValue =
+            removeAsset
+                (envCheckpointPolicy env)
+                checkpointName
+                (snd (checkpointUtxo input) ^. valueTxOutL)
+        refundOut = mkBasicTxOut (envOwner env) refundValue
+        changeOut =
+            mkBasicTxOut
+                (keyAddress (BS.replicate 28 0x71))
+                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+        redeemers =
+            Redeemers $
+                Map.fromList
+                    [
+                        ( mintPurpose
+                        ,
+                            ( ledgerData (closeBurnRedeemerData stateIn)
+                            , Map.findWithDefault scriptExUnits mintPurpose budgets
+                            )
+                        )
+                    ,
+                        ( spendPurpose
+                        ,
+                            ( ledgerData (closeSpendRedeemerData evidence)
+                            , Map.findWithDefault scriptExUnits spendPurpose budgets
+                            )
+                        )
+                    ]
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ allInputs
+                & outputsTxBodyL .~ StrictSeq.fromList [refundOut, changeOut]
+                & feeTxBodyL .~ Coin scriptFee
+                & mintTxBodyL .~ minted
+                & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & referenceInputsTxBodyL .~ Set.singleton (fst checkpointRef)
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
+    pure
+        ( mkBasicTx body
+            & witsTxL . rdmrsTxWitsL .~ redeemers
+        , expected
+        )
+  where
+    stateIn = fst (checkpointUtxo input)
+
+submitTwoPassClose ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    CloseEvidence ->
+    IO TxId
+submitTwoPassClose env label checkpointRef input evidence = do
+    (discovery, expected) <-
+        withinSecs 90 (label <> ": build discovery binding") $
+            buildCloseStoryTxWith Map.empty env checkpointRef input evidence
+    discoveryObserved <-
+        withinSecs 120 (label <> ": evaluate discovery binding") $
+            evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
+    discoveryUnits <-
+        requireExactAllRight (label <> ": discovery") expected discoveryObserved
+    let finalBudgets = Map.map deterministicMargin discoveryUnits
+    (final, finalExpected) <-
+        withinSecs 90 (label <> ": rebuild final binding") $
+            buildCloseStoryTxWith finalBudgets env checkpointRef input evidence
+    unless (finalExpected == expected) $
+        fail (label <> ": final purpose set changed after budget binding")
+    let signedFinal = addKeyWitness genesisSignKey final
+        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
+    finalObserved <-
+        withinSecs 120 (label <> ": evaluate final binding") $
+            evaluateTx (envProvider env) signedFinal
+    finalUnits <-
+        requireExactAllRight (label <> ": final") expected finalObserved
+    mapM_
+        ( \(purpose, observed) ->
+            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
+             in unless (withinDeclared observed declared) $
+                    fail
+                        ( label
+                            <> ": observed units exceed final declaration for "
+                            <> show purpose
+                        )
+        )
+        (Map.toList finalUnits)
+    params <-
+        withinSecs 30 (label <> ": query final maximum") $
+            queryProtocolParams (envProvider env)
+    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
+        maximumUnits = params ^. ppMaxTxExUnitsL
+    unless (withinDeclared aggregate maximumUnits) $
+        fail
+            ( label
+                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
+                <> show aggregate
+            )
+    dbg
+        ( label
+            <> ": two-pass final bytes="
+            <> show (BSL.length finalBytes)
+            <> " budgets="
+            <> show finalBudgets
+        )
+    result <-
+        withinSecs 60 ("submit unchanged " <> label) $
+            submitTx (envSubmitter env) signedFinal
+    case result of
+        Submitted txId -> pure txId
+        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+
 registerEvaluationPurposes ::
     CheckpointEnv ->
     Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
@@ -1389,6 +1724,7 @@ withinDeclared (ExUnits memory steps) (ExUnits declaredMemory declaredSteps) =
     memory <= declaredMemory && steps <= declaredSteps
 
 requireExactAllRight ::
+    (Show failure) =>
     String ->
     Set.Set (ConwayPlutusPurpose AsIx ConwayEra) ->
     Map.Map
@@ -1405,7 +1741,14 @@ requireExactAllRight label expected observed = do
     Map.traverseWithKey
         ( \purpose outcome -> case outcome of
             Right units -> pure units
-            Left _ -> fail (label <> ": failed purpose " <> show purpose)
+            Left failure ->
+                fail
+                    ( label
+                        <> ": failed purpose "
+                        <> show purpose
+                        <> ": "
+                        <> show failure
+                    )
         )
         observed
 
@@ -1593,6 +1936,14 @@ mkStateOutput env role value datum =
 addLovelace :: Integer -> MaryValue -> MaryValue
 addLovelace amount (MaryValue (Coin lovelace) assets) =
     MaryValue (Coin (lovelace + amount)) assets
+
+removeAsset :: PolicyID -> AssetName -> MaryValue -> MaryValue
+removeAsset policy name (MaryValue coin (MultiAsset policies)) =
+    MaryValue coin (MultiAsset (Map.update removeName policy policies))
+  where
+    removeName names =
+        let remaining = Map.delete name names
+         in if Map.null remaining then Nothing else Just remaining
 
 keyAddress :: ByteString -> Addr
 keyAddress bytes =
@@ -1874,6 +2225,17 @@ claimRedeemerData outputIndex = Constr 2 [I outputIndex]
 
 closeRedeemerData :: PLC.Data
 closeRedeemerData = Constr 4 []
+
+closeBurnRedeemerData :: TxIn -> PLC.Data
+closeBurnRedeemerData (TxIn (TxId safeHash) (TxIx outputIndex)) =
+    Constr
+        1
+        [ Constr
+            0
+            [ B (hashToBytes (extractHash safeHash))
+            , I (fromIntegral outputIndex)
+            ]
+        ]
 
 advanceEvidenceData :: AdvanceEvidence -> PLC.Data
 advanceEvidenceData AdvanceEvidence{..} =

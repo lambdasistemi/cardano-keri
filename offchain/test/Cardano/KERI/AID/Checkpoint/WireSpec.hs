@@ -7,13 +7,19 @@ Description : Offline regression for the Register observer wire
 module Cardano.KERI.AID.Checkpoint.WireSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
     advanceEvidenceData,
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
+    enforcementEvidenceData,
+    freezeObserverRedeemerData,
+    freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
+    responseAdvanceObserverRedeemerData,
  )
 import Data.ByteString qualified as BS
 import PlutusCore.Data (Data (..))
@@ -54,6 +60,36 @@ advanceEvidence =
         , aeWitAdd = ["add"]
         , aeCtrlSigs = [(0, BS.replicate 64 0xc1)]
         , aeWitReceipts = [(1, BS.replicate 64 0xd1)]
+        }
+
+freezeEvidence :: EnforcementEvidence
+freezeEvidence =
+    EnforcementEvidence
+        { eneEventBytes = "rot-2-conflict"
+        , eneOffT = 1
+        , eneOffI = 2
+        , eneOffS = 3
+        , eneOffD = 4
+        , eneOffK = [5, 6]
+        , eneOffKt = 7
+        , eneOffN = [8, 9]
+        , eneOffNt = 10
+        , eneOffBt = 11
+        , eneNativeSn = 2
+        , eneSaid = BS.replicate 32 0xa2
+        , eneRevealedKeys = [BS.replicate 32 0xb2, BS.replicate 32 0xb3]
+        , eneNextKeys = [BS.replicate 32 0xc2, BS.replicate 32 0xc3]
+        , eneCurThreshold = Unweighted 2
+        , eneNextThreshold = Unweighted 2
+        , eneToad = 2
+        , eneCtrlSigs =
+            [ (0, BS.replicate 64 0xd2)
+            , (1, BS.replicate 64 0xd3)
+            ]
+        , eneWitSigs =
+            [ (0, BS.replicate 64 0xe2)
+            , (2, BS.replicate 64 0xe3)
+            ]
         }
 
 spec :: Spec
@@ -117,6 +153,30 @@ spec = describe "#136 Register observer wire" $ do
                 , advanceEvidenceData advanceEvidence
                 ]
 
+    it "uses action three to route an Armed response Advance" $
+        responseAdvanceObserverRedeemerData
+            (BS.replicate 28 0xc0)
+            (BS.replicate 32 0xe0)
+            7
+            advanceEvidence
+            `shouldBe` Constr
+                0
+                [ Constr
+                    0
+                    [ I 3
+                    , B (BS.replicate 28 0xc0)
+                    , Constr
+                        0
+                        [ Constr
+                            0
+                            [ B (BS.replicate 32 0xe0)
+                            , I 7
+                            ]
+                        ]
+                    ]
+                , advanceEvidenceData advanceEvidence
+                ]
+
     it "encodes Advance signature tuples as two-item lists" $
         advanceEvidenceData advanceEvidence
             `shouldBe` Constr
@@ -136,4 +196,63 @@ spec = describe "#136 Register observer wire" $ do
                 , List [B "add"]
                 , List [List [I 0, B (BS.replicate 64 0xc1)]]
                 , List [List [I 1, B (BS.replicate 64 0xd1)]]
+                ]
+
+    it "encodes the thin Freeze arm without opening ClaimFreeze" $
+        freezeSpendRedeemerData (BS.replicate 28 0x42)
+            `shouldBe` Constr 2 [B (BS.replicate 28 0x42)]
+
+    it "forwards the exact Freeze evidence under observer action two" $
+        freezeObserverRedeemerData
+            (BS.replicate 28 0xc0)
+            (BS.replicate 32 0xf0)
+            9
+            freezeEvidence
+            `shouldBe` Constr
+                0
+                [ Constr
+                    0
+                    [ I 2
+                    , B (BS.replicate 28 0xc0)
+                    , Constr
+                        0
+                        [ Constr
+                            0
+                            [ B (BS.replicate 32 0xf0)
+                            , I 9
+                            ]
+                        ]
+                    ]
+                , enforcementEvidenceData freezeEvidence
+                ]
+
+    it "encodes enforcement signature tuples as two-item lists" $
+        enforcementEvidenceData freezeEvidence
+            `shouldBe` Constr
+                0
+                [ B "rot-2-conflict"
+                , I 1
+                , I 2
+                , I 3
+                , I 4
+                , List [I 5, I 6]
+                , I 7
+                , List [I 8, I 9]
+                , I 10
+                , I 11
+                , I 2
+                , B (BS.replicate 32 0xa2)
+                , List [B (BS.replicate 32 0xb2), B (BS.replicate 32 0xb3)]
+                , List [B (BS.replicate 32 0xc2), B (BS.replicate 32 0xc3)]
+                , Constr 0 [I 2]
+                , Constr 0 [I 2]
+                , I 2
+                , List
+                    [ List [I 0, B (BS.replicate 64 0xd2)]
+                    , List [I 1, B (BS.replicate 64 0xd3)]
+                    ]
+                , List
+                    [ List [I 0, B (BS.replicate 64 0xe2)]
+                    , List [I 2, B (BS.replicate 64 0xe3)]
+                    ]
                 ]

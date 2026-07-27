@@ -9,13 +9,18 @@ live validator decodes.
 module Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
     advanceObserverRedeemerData,
+    responseAdvanceObserverRedeemerData,
     advanceEvidenceData,
+    freezeSpendRedeemerData,
+    freezeObserverRedeemerData,
+    enforcementEvidenceData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Data.ByteString (ByteString)
 import PlutusCore.Data (Data (..))
@@ -50,16 +55,66 @@ advanceObserverRedeemerData ::
     Integer ->
     AdvanceEvidence ->
     Data
-advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+advanceObserverRedeemerData = advanceObserverRedeemerDataWithAction 1
+
+{- | The Armed response-Advance observer envelope uses action three so the
+heavy observer can select the Armed datum wire without repeating role-address
+derivation already enforced by the thin checkpoint arm.
+-}
+responseAdvanceObserverRedeemerData ::
+    ByteString ->
+    ByteString ->
+    Integer ->
+    AdvanceEvidence ->
+    Data
+responseAdvanceObserverRedeemerData = advanceObserverRedeemerDataWithAction 3
+
+advanceObserverRedeemerDataWithAction ::
+    Integer ->
+    ByteString ->
+    ByteString ->
+    Integer ->
+    AdvanceEvidence ->
+    Data
+advanceObserverRedeemerDataWithAction action checkpointPolicy spentTxId spentIndex evidence =
     Constr
         0
         [ Constr
             0
-            [ I 1
+            [ I action
             , B checkpointPolicy
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]
         , advanceEvidenceData evidence
+        ]
+
+{- | The small checkpoint keeps @Close@ at index zero and @Advance@ at index
+one. Story #137 opens only the thin @Freeze { hunter_pkh }@ constructor at
+index two; @ClaimFreeze@ remains absent and therefore fail-closed.
+-}
+freezeSpendRedeemerData :: ByteString -> Data
+freezeSpendRedeemerData hunterPkh = Constr 2 [B hunterPkh]
+
+{- | The enforcement observer envelope for @Freeze@: stable action two, the
+applied checkpoint policy, the named spent output reference, and the unchanged
+enforcement evidence.
+-}
+freezeObserverRedeemerData ::
+    ByteString ->
+    ByteString ->
+    Integer ->
+    EnforcementEvidence ->
+    Data
+freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+    Constr
+        0
+        [ Constr
+            0
+            [ I 2
+            , B checkpointPolicy
+            , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
+            ]
+        , enforcementEvidenceData evidence
         ]
 
 -- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 15 fields.
@@ -82,6 +137,32 @@ advanceEvidenceData AdvanceEvidence{..} =
         , List (map B aeWitAdd)
         , signatureListData aeCtrlSigs
         , signatureListData aeWitReceipts
+        ]
+
+-- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+enforcementEvidenceData :: EnforcementEvidence -> Data
+enforcementEvidenceData EnforcementEvidence{..} =
+    Constr
+        0
+        [ B eneEventBytes
+        , I (fromIntegral eneOffT)
+        , I (fromIntegral eneOffI)
+        , I (fromIntegral eneOffS)
+        , I (fromIntegral eneOffD)
+        , intListData eneOffK
+        , I (fromIntegral eneOffKt)
+        , intListData eneOffN
+        , I (fromIntegral eneOffNt)
+        , I (fromIntegral eneOffBt)
+        , I eneNativeSn
+        , B eneSaid
+        , List (map B eneRevealedKeys)
+        , List (map B eneNextKeys)
+        , asPlcData eneCurThreshold
+        , asPlcData eneNextThreshold
+        , I eneToad
+        , signatureListData eneCtrlSigs
+        , signatureListData eneWitSigs
         ]
 
 -- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 12 fields.

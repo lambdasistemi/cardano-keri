@@ -13,6 +13,7 @@ import Control.Monad (void)
 import Test.Hspec
 
 import CheckpointTxBuilder (
+    productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
     productionRegisterScenario,
     stagedCheckpointDevnet,
@@ -29,3 +30,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#143 settles Register then controller-authorized Close refund"
             productionRegisterCloseScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#142 settles Register then a genuine witnessed two-key Advance"
+            productionRegisterAdvanceScenario

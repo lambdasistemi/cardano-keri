@@ -32,6 +32,7 @@ module CheckpointTxBuilder (
     responseBoundaryCases,
     boundaryCasesCoverDeadline,
     productionRegisterScenario,
+    productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
     buildArmTx,
     buildAdvanceTx,
@@ -53,7 +54,11 @@ import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
-import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Advance (
+    AdvanceEvidence (..),
+    advancePredicate,
+    reconstructAdvanceMessage,
+ )
 import Cardano.KERI.AID.Checkpoint.Close (
     AddressCredential (..),
     CloseContext (..),
@@ -78,13 +83,18 @@ import Cardano.KERI.AID.Checkpoint.FreezeBond (
     responseBeforeDeadline,
     roleHash,
  )
-import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
+import Cardano.KERI.AID.Checkpoint.Message (
+    SpentCheckpoint (..),
+    deriveAidAssetName,
+ )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
+    advanceObserverRedeemerData,
+    advanceSpendRedeemerData,
     asPlcData,
     registerObserverRedeemerData,
  )
@@ -238,6 +248,10 @@ data CheckpointEnv = CheckpointEnv
     , envLifecycleScript :: !(Script ConwayEra)
     , envLifecycleBytes :: !SBS.ShortByteString
     , envLifecycleHash :: !ScriptHash
+    , envAdvanceScript :: !(Script ConwayEra)
+    , envAdvanceBytes :: !SBS.ShortByteString
+    , envAdvanceHash :: !ScriptHash
+    , envAdvanceReference :: !(Maybe (TxIn, TxOut ConwayEra))
     , envHashProofScript :: !(Script ConwayEra)
     , envHashProofBytes :: !SBS.ShortByteString
     , envHashProofHash :: !ScriptHash
@@ -333,7 +347,13 @@ stagedCheckpointDevnet action = do
             verifyRegisterScriptSizes env
             prepareWallet env
             _ <- registerLifecycleStakeCredential env
-            action env
+            advanceRef <-
+                deployReferenceScript
+                    env
+                    "observer_advance reference deployment"
+                    (envAdvanceScript env)
+            _ <- registerAdvanceStakeCredential env advanceRef
+            action env{envAdvanceReference = Just advanceRef}
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
 mkCheckpointEnv blueprintPath lsq ltxs = do
@@ -353,6 +373,11 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             (fail "observer_lifecycle compiled code not found in production blueprint")
             pure
             (extractCompiledCode "checkpoint_observer.observer_lifecycle." blueprint)
+    advanceCode <-
+        maybe
+            (fail "observer_advance compiled code not found in production blueprint")
+            pure
+            (extractCompiledCode "checkpoint_observer.observer_advance." blueprint)
     let hashProofScript = mkCageScript hashProofCode
         hashProofHash = computeScriptHash hashProofCode
         hashProofPolicy = PolicyID hashProofHash
@@ -364,10 +389,17 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
                 lifecycleCode
         lifecycleScript = mkCageScript appliedLifecycle
         lifecycleHash = computeScriptHash appliedLifecycle
+        appliedAdvance =
+            applyAdvanceParams
+                checkpointVersion
+                advanceCode
+        advanceScript = mkCageScript appliedAdvance
+        advanceHash = computeScriptHash appliedAdvance
         appliedCheckpoint =
             applyCheckpointParams
                 checkpointVersion
                 (policyBytes (PolicyID lifecycleHash))
+                (policyBytes (PolicyID advanceHash))
                 0
                 registrationBond
                 freezeBond
@@ -377,6 +409,7 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
         checkpointPolicy = PolicyID checkpointHash
     dbg ("checkpoint_register script hash: " <> show checkpointHash)
     dbg ("observer_lifecycle script hash: " <> show lifecycleHash)
+    dbg ("observer_advance script hash: " <> show advanceHash)
     dbg ("hash-proof script hash: " <> show hashProofHash)
     pure
         CheckpointEnv
@@ -387,6 +420,10 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envLifecycleScript = lifecycleScript
             , envLifecycleBytes = appliedLifecycle
             , envLifecycleHash = lifecycleHash
+            , envAdvanceScript = advanceScript
+            , envAdvanceBytes = appliedAdvance
+            , envAdvanceHash = advanceHash
+            , envAdvanceReference = Nothing
             , envHashProofScript = hashProofScript
             , envHashProofBytes = hashProofCode
             , envHashProofHash = hashProofHash
@@ -396,8 +433,8 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envOwner = genesisAddr
             }
 
-{- | Prove all three programs needed by Register fit in signed reference-script
-creation transactions under the stock production cap.
+{- | Prove the Register programs and the Advance observer fit both the applied
+program budget and signed reference-script creation transactions.
 -}
 verifyRegisterScriptSizes :: CheckpointEnv -> IO ()
 verifyRegisterScriptSizes env = do
@@ -409,6 +446,12 @@ verifyRegisterScriptSizes env = do
             queryUTxOs (envProvider env) (envOwner env)
     seed <- requireJust "Register script-size check: no wallet UTxO" (largestFirst wallet)
     let measure label script programBytes = do
+            unless (programBytes <= productionMaxReferenceProgramBytes) $
+                fail
+                    ( label
+                        <> " program exceeds applied 16,133-byte budget: "
+                        <> show programBytes
+                    )
             let output =
                     mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
                         & referenceScriptTxOutL .~ SJust script
@@ -429,7 +472,11 @@ verifyRegisterScriptSizes env = do
                 fail (label <> " exceeds stock maxTxSize: " <> show txBytes)
     measure "checkpoint_register reference script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
     measure "observer_lifecycle reference script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
+    measure "observer_advance reference script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
+
+productionMaxReferenceProgramBytes :: Int
+productionMaxReferenceProgramBytes = 16_133
 
 productionMaxTxBytes :: Int
 productionMaxTxBytes = 16_384
@@ -485,16 +532,18 @@ assertPinnedPv11Fixture = do
 applyCheckpointParams ::
     Integer ->
     ByteString ->
+    ByteString ->
     Integer ->
     Integer ->
     Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version lifecycleHash network dReg bond code =
+applyCheckpointParams version lifecycleHash advanceHash network dReg bond code =
     serialiseUPLC $
         uncheckedDeserialiseUPLC code
             `applyDataArg` I version
             `applyDataArg` B lifecycleHash
+            `applyDataArg` B advanceHash
             `applyDataArg` I network
             `applyDataArg` I dReg
             `applyDataArg` I bond
@@ -536,22 +585,71 @@ applyLifecycleParams version proofPolicy dReg code =
                 id
                 (applyProgram program argument)
 
+applyAdvanceParams ::
+    Integer ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyAdvanceParams version code =
+    serialiseUPLC $
+        uncheckedDeserialiseUPLC code
+            `applyDataArg` I version
+  where
+    applyDataArg program dat =
+        let Program _ versionTag _ = program
+            argument =
+                Program
+                    ()
+                    versionTag
+                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
+         in either
+                (error . ("applyAdvanceParams: " <>) . show)
+                id
+                (applyProgram program argument)
+
 policyBytes :: PolicyID -> ByteString
 policyBytes (PolicyID (ScriptHash hash)) = hashToBytes hash
 
 registerLifecycleStakeCredential :: CheckpointEnv -> IO TxId
-registerLifecycleStakeCredential env = do
+registerLifecycleStakeCredential env =
+    registerObserverStakeCredential
+        env
+        (envLifecycleHash env)
+        (envLifecycleScript env)
+        Nothing
+        "observer_lifecycle"
+
+registerAdvanceStakeCredential ::
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    IO TxId
+registerAdvanceStakeCredential env advanceRef =
+    registerObserverStakeCredential
+        env
+        (envAdvanceHash env)
+        (envAdvanceScript env)
+        (Just advanceRef)
+        "observer_advance"
+
+registerObserverStakeCredential ::
+    CheckpointEnv ->
+    ScriptHash ->
+    Script ConwayEra ->
+    Maybe (TxIn, TxOut ConwayEra) ->
+    String ->
+    IO TxId
+registerObserverStakeCredential env observerHash observerScript reference label = do
     params <-
-        withinSecs 30 "query lifecycle-registration parameters" $
+        withinSecs 30 ("query " <> label <> " registration parameters") $
             queryProtocolParams (envProvider env)
     wallet <-
-        withinSecs 30 "query lifecycle-registration wallet" $
+        withinSecs 30 ("query " <> label <> " registration wallet") $
             queryUTxOs (envProvider env) (envOwner env)
-    (seed, collateral) <- pickDisjoint wallet []
+    let referenceUtxos = maybe [] pure reference
+    (seed, collateral) <- pickDisjoint wallet (map fst referenceUtxos)
     let keyDeposit = params ^. ppKeyDepositL
         certificate =
             ConwayTxCertDeleg
-                (ConwayRegCert (ScriptHashObj (envLifecycleHash env)) (SJust keyDeposit))
+                (ConwayRegCert (ScriptHashObj observerHash) (SJust keyDeposit))
         redeemers =
             Redeemers $
                 Map.singleton
@@ -561,6 +659,8 @@ registerLifecycleStakeCredential env = do
             mkBasicTxBody
                 & certsTxBodyL .~ StrictSeq.singleton certificate
                 & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & referenceInputsTxBodyL
+                    .~ Set.fromList (map fst referenceUtxos)
                 & scriptIntegrityHashTxBodyL
                     .~ computeScriptIntegrity
                         (Set.singleton PlutusV3)
@@ -570,31 +670,32 @@ registerLifecycleStakeCredential env = do
         skeleton =
             mkBasicTx body
                 & witsTxL . scriptTxWitsL
-                    .~ Map.singleton
-                        (envLifecycleHash env)
-                        (envLifecycleScript env)
+                    .~ maybe
+                        (Map.singleton observerHash observerScript)
+                        (const Map.empty)
+                        reference
                 & witsTxL . rdmrsTxWitsL .~ redeemers
     balanced <-
         either
-            (fail . ("lifecycle registration balance failed: " <>) . show)
+            (fail . ((label <> " registration balance failed: ") <>) . show)
             (pure . balancedTx)
             ( balanceTxWith
                 params
                 [seed]
                 (CollateralUtxos [collateral])
-                []
+                referenceUtxos
                 (envOwner env)
                 Nothing
                 skeleton
             )
-    txId <- submitSettling env "observer_lifecycle registration" balanced
+    txId <- submitSettling env (label <> " registration") balanced
     _ <-
         pollOutput
             (envProvider env)
             txId
             [0, 1]
             (const True)
-            >>= requireJust "observer_lifecycle registration did not settle"
+            >>= requireJust (label <> " registration did not settle")
     pure txId
 
 roleAddress :: CheckpointEnv -> Role -> Addr
@@ -708,6 +809,107 @@ productionRegisterScenarioWithReference env fixture = do
             , checkpointDatum = rfDatum fixture
             }
         , checkpointRef
+        )
+
+productionRegisterAdvanceScenario :: CheckpointEnv -> IO ()
+productionRegisterAdvanceScenario env = do
+    fixture <- loadRotateStoryFixture
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference env (rsRegistration fixture)
+    advanceRef <-
+        requireJust
+            "observer_advance reference was not deployed during setup"
+            (envAdvanceReference env)
+    let honest =
+            signedRotateEvidence
+                env
+                registered
+                fixture
+                (rsRotationSigners fixture)
+                (aeWitReceipts (rsUnsignedEvidence fixture))
+        stolen =
+            signedRotateEvidence
+                env
+                registered
+                fixture
+                (rsCurrentSigners fixture)
+                (aeWitReceipts (rsUnsignedEvidence fixture))
+        belowThreshold = honest{aeCtrlSigs = take 1 (aeCtrlSigs honest)}
+        underWitnessed =
+            honest{aeWitReceipts = take 1 (aeWitReceipts honest)}
+        spent = rotateSpentCheckpoint env registered
+        created = rsCreated fixture
+    case advancePredicate spent created honest of
+        Left predicateError ->
+            fail
+                ( "checkpoint Advance: signed evidence failed the pure predicate: "
+                    <> show predicateError
+                )
+        Right () -> pure ()
+    sequence_
+        [ rejectRotateEvidence
+            env
+            checkpointRef
+            advanceRef
+            registered
+            created
+            "Advance stolen-current"
+            stolen
+        , rejectRotateEvidence
+            env
+            checkpointRef
+            advanceRef
+            registered
+            created
+            "Advance below-successor-threshold"
+            belowThreshold
+        , rejectRotateEvidence
+            env
+            checkpointRef
+            advanceRef
+            registered
+            created
+            "Advance under-witnessed"
+            underWitnessed
+        ]
+    advanceTxId <-
+        submitTwoPassAdvance
+            env
+            "checkpoint Advance"
+            checkpointRef
+            advanceRef
+            registered
+            created
+            honest
+    successor <-
+        pollOutput
+            (envProvider env)
+            advanceTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Advance successor did not settle"
+    unless
+        (snd successor ^. addrTxOutL == roleAddress env Active)
+        (fail "Advance successor is not at the ACTIVE address")
+    unless
+        (snd successor ^. valueTxOutL == snd (checkpointUtxo registered) ^. valueTxOutL)
+        (fail "Advance did not preserve the complete registered value")
+    case extractDatum (snd successor) of
+        Just (V1 datum)
+            | datum == created -> pure ()
+        _ -> fail "Advance successor does not carry the exact rotated V1 datum"
+    remaining <-
+        withinSecs 30 "query advanced checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst (checkpointUtxo registered)))
+    unless (Map.null remaining) $
+        fail "Advance left the registered checkpoint input unspent"
+    dbg
+        ( "Advance settled; tx id="
+            <> show advanceTxId
+            <> "; successor="
+            <> show (fst successor)
         )
 
 productionRegisterCloseScenario :: CheckpointEnv -> IO ()
@@ -1011,6 +1213,14 @@ data CloseStoryFixture = CloseStoryFixture
     , csCurrentSigners :: ![SignKeyDSIGN Ed25519DSIGN]
     }
 
+data RotateStoryFixture = RotateStoryFixture
+    { rsRegistration :: !RegistrationFixture
+    , rsCreated :: !CheckpointDatumV1
+    , rsUnsignedEvidence :: !AdvanceEvidence
+    , rsRotationSigners :: ![SignKeyDSIGN Ed25519DSIGN]
+    , rsCurrentSigners :: ![SignKeyDSIGN Ed25519DSIGN]
+    }
+
 data RegisterScriptPlan = RegisterScriptPlan
     { rspWithdrawals :: !Withdrawals
     , rspRedeemers :: !(Redeemers ConwayEra)
@@ -1085,6 +1295,171 @@ loadLifecycleFixture = do
     registration <- either fail pure (registrationFixtureFrom inceptionWithOffsets inceptionSignatures [])
     armEvidence <- either fail pure (enforcementEvidenceFrom rotationWithOffsets rotationSignatures)
     pure (registration, armEvidence)
+
+loadRotateStoryFixture :: IO RotateStoryFixture
+loadRotateStoryFixture = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/advance.json"
+    root <- eitherDecodeFileStrict path >>= either fail pure
+    family <- either fail pure (atKey "adv_wit_2key" root)
+    inception <- either fail pure (atKey "icp" family)
+    inceptionWithOffsets <- either fail pure (withDerivedOffsets inception)
+    inceptionSignatures <-
+        either fail pure (indexedSignaturesAt "icp_sigs" family)
+    seeds <- either fail pure (atKey "signer_seeds" family)
+    outgoingWitnessSigners <-
+        either fail pure (signersAt "witness_outgoing" seeds)
+    inceptionRaw <-
+        either fail pure (textAt "raw_hex" inception >>= decodeHex)
+    let inceptionReceipts =
+            indexedSignaturesOver inceptionRaw outgoingWitnessSigners
+    registration <-
+        either fail pure $
+            registrationFixtureFrom
+                inceptionWithOffsets
+                inceptionSignatures
+                inceptionReceipts
+    rotation <- either fail pure (atKey "rot" family)
+    rotationKed <- either fail pure (atKey "ked" rotation)
+    offsets <- either fail pure (atKey "offsets" family)
+    raw <- either fail pure (textAt "raw_hex" rotation >>= decodeHex)
+    currentKeys <-
+        either fail pure $
+            textArrayAt "k" rotationKed >>= traverse verkeyRaw
+    nextKeys <-
+        either fail pure $
+            textArrayAt "n" rotationKed >>= traverse digestRaw
+    oldWitnesses <-
+        either fail pure $
+            atKey "ked" inception
+                >>= textArrayAt "b"
+                >>= traverse verkeyRaw
+    cuts <-
+        either fail pure $
+            textArrayAt "br" rotationKed >>= traverse verkeyRaw
+    adds <-
+        either fail pure $
+            textArrayAt "ba" rotationKed >>= traverse verkeyRaw
+    currentThreshold <- either fail pure (thresholdAt "kt" rotationKed)
+    nextThreshold <- either fail pure (thresholdAt "nt" rotationKed)
+    toad <- either fail pure (hexIntegerAt "bt" rotationKed)
+    nativeSn <- either fail pure (hexIntegerAt "s" rotationKed)
+    rotationSigners <-
+        either fail pure (signersAt "rotation_current" seeds)
+    currentSigners <-
+        either fail pure (signersAt "inception_current" seeds)
+    witnessReceipts <-
+        either fail pure (indexedSignaturesAt "rot_witness_receipts" family)
+    let created =
+            CheckpointDatumV1
+                { cdCesrAid = cdCesrAid (rfDatum registration)
+                , cdCurKeys = currentKeys
+                , cdCurThreshold = currentThreshold
+                , cdNextKeys = nextKeys
+                , cdNextThreshold = nextThreshold
+                , cdWitnesses = filter (`notElem` cuts) oldWitnesses <> adds
+                , cdToad = toad
+                , cdSeq = cdSeq (rfDatum registration) + 1
+                , cdNativeSn = nativeSn
+                }
+        unsignedEvidence =
+            AdvanceEvidence
+                { aeEventBytes = raw
+                , aeOffT = fromInteger (offset "t" offsets)
+                , aeOffI = fromInteger (offset "i" offsets)
+                , aeOffS = fromInteger (offset "s" offsets)
+                , aeOffK = map fromInteger (offsetsAt "k" offsets)
+                , aeOffKt = fromInteger (offset "kt" offsets)
+                , aeOffN = map fromInteger (offsetsAt "n" offsets)
+                , aeOffNt = fromInteger (offset "nt" offsets)
+                , aeOffBr = map fromInteger (offsetsAt "br" offsets)
+                , aeOffBa = map fromInteger (offsetsAt "ba" offsets)
+                , aeOffBt = fromInteger (offset "bt" offsets)
+                , aeWitCut = cuts
+                , aeWitAdd = adds
+                , aeCtrlSigs = []
+                , aeWitReceipts = witnessReceipts
+                }
+    pure
+        RotateStoryFixture
+            { rsRegistration = registration
+            , rsCreated = created
+            , rsUnsignedEvidence = unsignedEvidence
+            , rsRotationSigners = rotationSigners
+            , rsCurrentSigners = currentSigners
+            }
+  where
+    signersAt key value =
+        atKey key value
+            >>= arrayValues
+            >>= traverse
+                ( \entry ->
+                    textAt "seed_hex" entry
+                        >>= decodeHex
+                        <&> genKeyDSIGN . mkSeedFromBytes
+                )
+    offset key value =
+        either
+            (error . ("loadRotateStoryFixture: " <>))
+            id
+            (integerAt key value)
+    offsetsAt key value =
+        either
+            (error . ("loadRotateStoryFixture: " <>))
+            id
+            (integerArrayAt key value)
+
+indexedSignaturesOver ::
+    ByteString ->
+    [SignKeyDSIGN Ed25519DSIGN] ->
+    [(Int, ByteString)]
+indexedSignaturesOver message signers =
+    [ (index, rawSerialiseSigDSIGN (signDSIGN () message signer))
+    | (index, signer) <- zip [0 ..] signers
+    ]
+
+rotateSpentCheckpoint ::
+    CheckpointEnv ->
+    CheckpointInput ->
+    SpentCheckpoint
+rotateSpentCheckpoint env input =
+    case fst (checkpointUtxo input) of
+        TxIn (TxId safeHash) (TxIx outputIndex) ->
+            SpentCheckpoint
+                { scNetworkId = 0
+                , scPolicyId = policyBytes (envCheckpointPolicy env)
+                , scAidAssetName =
+                    deriveAidAssetName (cdCesrAid (checkpointDatum input))
+                , scTxid = hashToBytes (extractHash safeHash)
+                , scIndex = fromIntegral outputIndex
+                , scCesrAid = cdCesrAid (checkpointDatum input)
+                , scWitnesses = cdWitnesses (checkpointDatum input)
+                , scNextKeys = cdNextKeys (checkpointDatum input)
+                , scNextThreshold = cdNextThreshold (checkpointDatum input)
+                , scSeq = cdSeq (checkpointDatum input)
+                , scNativeSn = cdNativeSn (checkpointDatum input)
+                }
+
+signedRotateEvidence ::
+    CheckpointEnv ->
+    CheckpointInput ->
+    RotateStoryFixture ->
+    [SignKeyDSIGN Ed25519DSIGN] ->
+    [(Int, ByteString)] ->
+    AdvanceEvidence
+signedRotateEvidence env input fixture signers receipts =
+    unsigned
+        { aeCtrlSigs = indexedSignaturesOver preimage signers
+        , aeWitReceipts = receipts
+        }
+  where
+    unsigned = rsUnsignedEvidence fixture
+    message =
+        reconstructAdvanceMessage
+            (rotateSpentCheckpoint env input)
+            (rsCreated fixture)
+            (aeWitCut unsigned)
+            (aeWitAdd unsigned)
+    preimage = canonicalCbor message
 
 loadCloseStoryFixture :: IO CloseStoryFixture
 loadCloseStoryFixture = do
@@ -1541,6 +1916,220 @@ ownerFullAddress env =
                 , faStakeCredential = Nothing
                 }
         _ -> error "Close story requires an enterprise key owner address"
+
+buildRotateStoryTxWith ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    CheckpointDatumV1 ->
+    AdvanceEvidence ->
+    IO
+        ( ConwayTx
+        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
+        )
+buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evidence = do
+    params <-
+        withinSecs 30 "query Advance protocol parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query Advance wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    (feeUtxo, collateralUtxo) <-
+        pickDisjoint wallet [stateIn, fst checkpointRef, fst advanceRef]
+    let (feeIn, feeOut) = feeUtxo
+        collateralIn = fst collateralUtxo
+        allInputs = Set.fromList [stateIn, feeIn]
+        stateIndex = spendingIndex stateIn allInputs
+        spendPurpose = ConwaySpending (AsIx stateIndex)
+        rewardPurpose = ConwayRewarding (AsIx 0)
+        expected = Set.fromList [spendPurpose, rewardPurpose]
+        stateOut =
+            mkStateOutput
+                env
+                Active
+                (snd (checkpointUtxo input) ^. valueTxOutL)
+                (asPlcData (V1 successor))
+        changeOut =
+            mkBasicTxOut
+                (envOwner env)
+                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+        redeemers =
+            Redeemers $
+                Map.fromList
+                    [
+                        ( spendPurpose
+                        ,
+                            ( ledgerData advanceSpendRedeemerData
+                            , Map.findWithDefault
+                                advanceSpendExUnits
+                                spendPurpose
+                                budgets
+                            )
+                        )
+                    ,
+                        ( rewardPurpose
+                        ,
+                            ( ledgerData
+                                ( advanceObserverRedeemerData
+                                    (policyBytes (envCheckpointPolicy env))
+                                    spentTxIdBytes
+                                    spentIndex
+                                    evidence
+                                )
+                            , Map.findWithDefault
+                                scriptExUnits
+                                rewardPurpose
+                                budgets
+                            )
+                        )
+                    ]
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ allInputs
+                & outputsTxBodyL .~ StrictSeq.fromList [stateOut, changeOut]
+                & feeTxBodyL .~ Coin scriptFee
+                & withdrawalsTxBodyL
+                    .~ Withdrawals
+                        ( Map.singleton
+                            ( AccountAddress
+                                Testnet
+                                (AccountId (ScriptHashObj (envAdvanceHash env)))
+                            )
+                            (Coin 0)
+                        )
+                & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & referenceInputsTxBodyL
+                    .~ Set.fromList [fst checkpointRef, fst advanceRef]
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
+    pure
+        ( mkBasicTx body
+            & witsTxL . rdmrsTxWitsL .~ redeemers
+        , expected
+        )
+  where
+    stateIn = fst (checkpointUtxo input)
+    (spentTxIdBytes, spentIndex) =
+        case stateIn of
+            TxIn (TxId safeHash) (TxIx outputIndex) ->
+                ( hashToBytes (extractHash safeHash)
+                , fromIntegral outputIndex
+                )
+
+advanceSpendExUnits :: ExUnits
+advanceSpendExUnits = ExUnits 2_000_000 1_000_000_000
+
+rejectRotateEvidence ::
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    CheckpointDatumV1 ->
+    String ->
+    AdvanceEvidence ->
+    IO ()
+rejectRotateEvidence env checkpointRef advanceRef input successor label evidence = do
+    (candidate, _) <-
+        withinSecs 90 (label <> ": build applied candidate") $
+            buildRotateStoryTxWith
+                Map.empty
+                env
+                checkpointRef
+                advanceRef
+                input
+                successor
+                evidence
+    _ <- expectProductionScriptRejection env label candidate
+    pure ()
+
+submitTwoPassAdvance ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    CheckpointDatumV1 ->
+    AdvanceEvidence ->
+    IO TxId
+submitTwoPassAdvance env label checkpointRef advanceRef input successor evidence = do
+    (discovery, expected) <-
+        withinSecs 90 (label <> ": build discovery binding") $
+            buildRotateStoryTxWith
+                Map.empty
+                env
+                checkpointRef
+                advanceRef
+                input
+                successor
+                evidence
+    discoveryObserved <-
+        withinSecs 120 (label <> ": evaluate discovery binding") $
+            evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
+    discoveryUnits <-
+        requireExactAllRight (label <> ": discovery") expected discoveryObserved
+    let finalBudgets = Map.map deterministicMargin discoveryUnits
+    (final, finalExpected) <-
+        withinSecs 90 (label <> ": rebuild final binding") $
+            buildRotateStoryTxWith
+                finalBudgets
+                env
+                checkpointRef
+                advanceRef
+                input
+                successor
+                evidence
+    unless (finalExpected == expected) $
+        fail (label <> ": final purpose set changed after budget binding")
+    let signedFinal = addKeyWitness genesisSignKey final
+        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
+    finalObserved <-
+        withinSecs 120 (label <> ": evaluate final binding") $
+            evaluateTx (envProvider env) signedFinal
+    finalUnits <-
+        requireExactAllRight (label <> ": final") expected finalObserved
+    mapM_
+        ( \(purpose, observed) ->
+            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
+             in unless (withinDeclared observed declared) $
+                    fail
+                        ( label
+                            <> ": observed units exceed final declaration for "
+                            <> show purpose
+                        )
+        )
+        (Map.toList finalUnits)
+    params <-
+        withinSecs 30 (label <> ": query final maximum") $
+            queryProtocolParams (envProvider env)
+    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
+        maximumUnits = params ^. ppMaxTxExUnitsL
+    unless (withinDeclared aggregate maximumUnits) $
+        fail
+            ( label
+                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
+                <> show aggregate
+            )
+    dbg
+        ( label
+            <> ": two-pass final bytes="
+            <> show (BSL.length finalBytes)
+            <> " observed="
+            <> show finalUnits
+            <> " declared="
+            <> show finalBudgets
+        )
+    result <-
+        withinSecs 60 ("submit unchanged " <> label) $
+            submitTx (envSubmitter env) signedFinal
+    case result of
+        Submitted txId -> pure txId
+        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
 
 buildCloseStoryTxWith ::
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->

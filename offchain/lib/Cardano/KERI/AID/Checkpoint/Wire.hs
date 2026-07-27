@@ -7,11 +7,15 @@ in the library lets a cheap unit test pin the exact tuple/list nesting that a
 live validator decodes.
 -}
 module Cardano.KERI.AID.Checkpoint.Wire (
+    advanceSpendRedeemerData,
+    advanceObserverRedeemerData,
+    advanceEvidenceData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
 ) where
 
+import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Data.ByteString (ByteString)
 import PlutusCore.Data (Data (..))
@@ -29,6 +33,55 @@ registerObserverRedeemerData checkpointPolicy evidence =
         0
         [ Constr 0 [I 0, B checkpointPolicy, Constr 1 []]
         , registrationEvidenceData evidence
+        ]
+
+{- | The small checkpoint validator keeps @Close@ at index zero and opens the
+thin, evidence-free @Advance@ arm at index one.
+-}
+advanceSpendRedeemerData :: Data
+advanceSpendRedeemerData = Constr 1 []
+
+{- | The dedicated Advance observer envelope: action one, checkpoint policy,
+the named spent output reference, and the unchanged rotation evidence.
+-}
+advanceObserverRedeemerData ::
+    ByteString ->
+    ByteString ->
+    Integer ->
+    AdvanceEvidence ->
+    Data
+advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+    Constr
+        0
+        [ Constr
+            0
+            [ I 1
+            , B checkpointPolicy
+            , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
+            ]
+        , advanceEvidenceData evidence
+        ]
+
+-- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 15 fields.
+advanceEvidenceData :: AdvanceEvidence -> Data
+advanceEvidenceData AdvanceEvidence{..} =
+    Constr
+        0
+        [ B aeEventBytes
+        , I (fromIntegral aeOffT)
+        , I (fromIntegral aeOffI)
+        , I (fromIntegral aeOffS)
+        , intListData aeOffK
+        , I (fromIntegral aeOffKt)
+        , intListData aeOffN
+        , I (fromIntegral aeOffNt)
+        , intListData aeOffBr
+        , intListData aeOffBa
+        , I (fromIntegral aeOffBt)
+        , List (map B aeWitCut)
+        , List (map B aeWitAdd)
+        , signatureListData aeCtrlSigs
+        , signatureListData aeWitReceipts
         ]
 
 -- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 12 fields.

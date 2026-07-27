@@ -21,7 +21,7 @@ use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_register,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 
@@ -33,6 +33,7 @@ pub type MintRedeemer {
 
 pub type SpendRedeemer {
   Close { evidence: CloseEvidence }
+  Advance
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -40,6 +41,7 @@ const checkpoint_min_ada: Int = 2_000_000
 validator checkpoint_register(
   _version: Int,
   lifecycle_hash: PolicyId,
+  advance_hash: PolicyId,
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -68,12 +70,23 @@ validator checkpoint_register(
     when redeemer is {
       Close { evidence } ->
         validate_close(network_id, d_reg, freeze_bond, evidence, own_ref, tx)
+      Advance -> {
+        expect
+          ran_advance_check(advance_hash, own_hash(tx, own_ref), own_ref, tx)
+        validate_advance(d_reg, own_ref, tx)
+      }
     }
   }
 
   else(_) {
     fail
   }
+}
+
+fn own_hash(tx: Transaction, own_ref: OutputReference) -> PolicyId {
+  expect Some(own_input) = find_input(tx.inputs, own_ref)
+  expect Script(hash) = own_input.output.address.payment_credential
+  hash
 }
 
 fn ran_register_check(
@@ -99,6 +112,42 @@ fn ran_register_check(
               expect envelope: ObserverEnvelope = redeemer
               let claim = envelope.claim
               claim.action == observe_register && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == None
+            } else {
+              False
+            }
+          _ -> False
+        }
+      },
+    )
+  True
+}
+
+fn ran_advance_check(
+  advance_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let credential: Credential = Script(advance_hash)
+  expect
+    list.any(
+      tx.withdrawals,
+      fn(Pair(withdrawal_credential, lovelace)) {
+        withdrawal_credential == credential && lovelace == 0
+      },
+    )
+  expect
+    list.any(
+      tx.redeemers,
+      fn(Pair(purpose, redeemer)) {
+        when purpose is {
+          Withdraw(redeemer_credential) ->
+            if redeemer_credential == credential {
+              expect envelope: ObserverEnvelope = redeemer
+              let claim = envelope.claim
+              claim.action == observe_advance && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+                own_ref,
+              )
             } else {
               False
             }
@@ -226,5 +275,31 @@ fn validate_close(
       outputs,
       fn(output) { quantity_of(output.value, own_hash, aid_name) == 0 },
     )
+  True
+}
+
+fn validate_advance(
+  d_reg: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == from_script(own_hash)
+  expect InlineDatum(old_datum_data) = own_input.output.datum
+  expect V1(old): CheckpointDatum = old_datum_data
+  let aid_name = deriveAidAssetName(old.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == from_script(own_hash) },
+  )
+  expect InlineDatum(new_datum_data) = state_output.datum
+  expect V1(_new): CheckpointDatum = new_datum_data
+  expect quantity_of(state_output.value, own_hash, aid_name) == 1
+  expect state_output.value == own_input.output.value
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg
   True
 }

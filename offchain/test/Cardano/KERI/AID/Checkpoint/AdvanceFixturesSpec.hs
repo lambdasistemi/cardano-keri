@@ -96,9 +96,9 @@ spec = do
                 checkDowngrade fx `shouldBe` Right ()
     describe "FreezeStoryFixtures - #137 contested witnessed rotation" $
         beforeAll (loadFixture "freeze_story.json") $ do
-            it "chains icp -> rot_1 -> two sibling rotations at sn=2" $ \fx ->
+            it "chains two successive witnessed sibling-rotation rounds" $ \fx ->
                 checkFreezeStoryShape fx `shouldBe` Right ()
-            it "authenticates both sibling rotations with the same controllers and witnesses" $ \fx ->
+            it "authenticates both rounds with their committed controllers and witnesses" $ \fx ->
                 checkFreezeStorySignatures fx `shouldBe` Right ()
 
 checkFreezeStoryShape :: Value -> Either String ()
@@ -107,13 +107,19 @@ checkFreezeStoryShape fx = do
     rot1Record <- field fx "rot_1"
     recordedRecord <- field fx "rot_2_recorded"
     conflictRecord <- field fx "rot_2_conflict"
+    secondRecordedRecord <- field fx "rot_3_recorded"
+    secondConflictRecord <- field fx "rot_3_conflict"
     rot1 <- eventOf rot1Record "event"
     recorded <- eventOf recordedRecord "event"
     conflict <- eventOf conflictRecord "event"
+    secondRecorded <- eventOf secondRecordedRecord "event"
+    secondConflict <- eventOf secondConflictRecord "event"
     icpKed <- kedOf icp
     rot1Ked <- kedOf rot1
     recordedKed <- kedOf recorded
     conflictKed <- kedOf conflict
+    secondRecordedKed <- kedOf secondRecorded
+    secondConflictKed <- kedOf secondConflict
     icpSaid <- textField icp "said"
     rot1Said <- textField rot1 "said"
     textField rot1Ked "p" >>= expectEqual "rot_1.p" icpSaid
@@ -140,6 +146,35 @@ checkFreezeStoryShape fx = do
     textField rot1Ked "bt" >>= expectEqual "rot_1.bt" "2"
     textField recordedKed "bt" >>= expectEqual "rot_2_recorded.bt" "2"
     textField conflictKed "bt" >>= expectEqual "rot_2_conflict.bt" "2"
+    recordedSaid <- textField recorded "said"
+    textField secondRecordedKed "p"
+        >>= expectEqual "rot_3_recorded.p" recordedSaid
+    textField secondConflictKed "p"
+        >>= expectEqual "rot_3_conflict.p" recordedSaid
+    secondRecordedAid <- textField secondRecordedKed "i"
+    secondConflictAid <- textField secondConflictKed "i"
+    expectEqual "rot_3 sibling AID" secondRecordedAid secondConflictAid
+    textField secondRecordedKed "s" >>= expectEqual "rot_3_recorded.s" "3"
+    textField secondConflictKed "s" >>= expectEqual "rot_3_conflict.s" "3"
+    secondRecordedKeys <- textArrayField secondRecordedKed "k"
+    secondConflictKeys <- textArrayField secondConflictKed "k"
+    unless (secondRecordedKeys == secondConflictKeys) $
+        Left "rot_3 siblings do not reveal the same controller keys"
+    recordedNextKeys <- traverse digestRaw =<< textArrayField recordedKed "n"
+    forM_ secondRecordedKeys $ \key -> do
+        raw <- verkeyRaw key
+        unless (blake3Hash (qb64Verkey raw) `elem` recordedNextKeys) $
+            Left "rot_3 siblings do not reveal rot_2_recorded's committed keys"
+    secondRecordedNext <- textArrayField secondRecordedKed "n"
+    secondConflictNext <- textArrayField secondConflictKed "n"
+    unless (secondRecordedNext /= secondConflictNext) $
+        Left "rot_3 siblings do not carry different next commitments"
+    secondRecordedRaw <- textField secondRecorded "raw_hex"
+    secondConflictRaw <- textField secondConflict "raw_hex"
+    unless (secondRecordedRaw /= secondConflictRaw) $
+        Left "rot_3 sibling serializations are byte-identical"
+    textField secondRecordedKed "bt" >>= expectEqual "rot_3_recorded.bt" "2"
+    textField secondConflictKed "bt" >>= expectEqual "rot_3_conflict.bt" "2"
 
 checkFreezeStorySignatures :: Value -> Either String ()
 checkFreezeStorySignatures fx = do
@@ -149,17 +184,26 @@ checkFreezeStorySignatures fx = do
     witnesses <- textArrayField icpKed "b"
     checkSignatures fx icp "icp_sigs" "controller" icpKeys
     checkSignatures fx icp "icp_witness_receipts" "witness" witnesses
-    forM_ (["rot_1", "rot_2_recorded", "rot_2_conflict"] :: [Text]) $ \key -> do
-        record <- field fx key
-        event <- eventOf record "event"
-        ked <- kedOf event
-        controllers <- textArrayField ked "k"
-        checkSignatures record event "controller_sigs" "controller" controllers
-        checkSignatures record event "witness_receipts" "witness" witnesses
-        expectCount (T.unpack key <> ".controller_sigs") 2
-            =<< arrayField record "controller_sigs"
-        expectCount (T.unpack key <> ".witness_receipts") 2
-            =<< arrayField record "witness_receipts"
+    forM_
+        ( [ "rot_1"
+          , "rot_2_recorded"
+          , "rot_2_conflict"
+          , "rot_3_recorded"
+          , "rot_3_conflict"
+          ] ::
+            [Text]
+        )
+        $ \key -> do
+            record <- field fx key
+            event <- eventOf record "event"
+            ked <- kedOf event
+            controllers <- textArrayField ked "k"
+            checkSignatures record event "controller_sigs" "controller" controllers
+            checkSignatures record event "witness_receipts" "witness" witnesses
+            expectCount (T.unpack key <> ".controller_sigs") 2
+                =<< arrayField record "controller_sigs"
+            expectCount (T.unpack key <> ".witness_receipts") 2
+                =<< arrayField record "witness_receipts"
 
 checkShape :: Value -> AdvanceFixture -> Either String ()
 checkShape fx cfg = do

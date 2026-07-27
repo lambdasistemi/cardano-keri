@@ -39,5 +39,5 @@ spec = describe "#136 register a small identity end to end" $ do
 
     around stagedCheckpointDevnet $ do
         it
-            "#137 settles Register -> Advance -> hunter Freeze -> response Advance"
+            "#137 rejects stale Freeze replay and settles two Freeze/response rounds"
             productionRegisterFreezeScenario

@@ -970,6 +970,7 @@ productionRegisterFreezeScenario env = do
     fixture <- loadFreezeStoryFixture
     let firstFixture = fsFirstRotation fixture
         responseFixture = fsResponseRotation fixture
+        secondResponseFixture = fsSecondResponseRotation fixture
         hunter = BS.replicate 28 0x42
     (registered, checkpointRef) <-
         productionRegisterScenarioWithReference
@@ -1151,6 +1152,114 @@ productionRegisterFreezeScenario env = do
                 (Set.singleton (fst armedUtxo))
     unless (Map.null remaining) $
         fail "response Advance left the ARMED checkpoint input unspent"
+    let responded =
+            CheckpointInput
+                { checkpointUtxo = responseUtxo
+                , checkpointDatum = rsCreated responseFixture
+                }
+        secondFreezeEvidence = fsSecondFreezeEvidence fixture
+    rejectFreezeEvidence
+        env
+        checkpointRef
+        enforcementRef
+        responded
+        hunter
+        "Freeze stale evidence replay"
+        honestFreeze
+    secondFreezeValidity <- currentValidity env
+    let secondDeadline = upperPosixMs secondFreezeValidity + freezeWindow
+    secondFreezeTxId <-
+        submitTwoPassFreeze
+            env
+            "checkpoint second Freeze"
+            checkpointRef
+            enforcementRef
+            responded
+            secondFreezeEvidence
+            hunter
+            secondFreezeValidity
+    secondArmedUtxo <-
+        pollOutput
+            (envProvider env)
+            secondFreezeTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (checkpointDatum responded)))
+            )
+            >>= requireJust "second Freeze ARMED output did not settle"
+    assertArmedCheckpoint
+        env
+        responded
+        hunter
+        secondDeadline
+        secondFreezeValidity
+        secondArmedUtxo
+    let secondArmed =
+            CheckpointInput
+                { checkpointUtxo = secondArmedUtxo
+                , checkpointDatum = checkpointDatum responded
+                }
+        secondResponseEvidence =
+            signedRotateEvidence
+                env
+                secondArmed
+                secondResponseFixture
+                (rsRotationSigners secondResponseFixture)
+                (aeWitReceipts (rsUnsignedEvidence secondResponseFixture))
+    case advancePredicate
+        (rotateSpentCheckpoint env secondArmed)
+        (rsCreated secondResponseFixture)
+        secondResponseEvidence of
+        Left predicateError ->
+            fail
+                ( "checkpoint second response Advance: signed evidence failed the pure predicate: "
+                    <> show predicateError
+                )
+        Right () -> pure ()
+    secondResponseValidity <- currentValidity env
+    unless
+        (upperPosixMs secondResponseValidity < secondDeadline)
+        (fail "second response Advance validity is not wholly before the stored Freeze deadline")
+    secondResponseTxId <-
+        submitTwoPassAdvanceWithValidity
+            env
+            "checkpoint second response Advance"
+            checkpointRef
+            advanceRef
+            secondArmed
+            (rsCreated secondResponseFixture)
+            secondResponseEvidence
+            (Just secondResponseValidity)
+    secondResponseUtxo <-
+        pollOutput
+            (envProvider env)
+            secondResponseTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (rsCreated secondResponseFixture)))
+            )
+            >>= requireJust "second response Advance successor did not settle"
+    unless
+        (snd secondResponseUtxo ^. addrTxOutL == roleAddress env Active)
+        (fail "second response Advance successor is not at the ACTIVE address")
+    unless
+        (snd secondResponseUtxo ^. valueTxOutL == snd secondArmedUtxo ^. valueTxOutL)
+        (fail "second response Advance did not preserve the bond and complete checkpoint value")
+    case extractDatum (snd secondResponseUtxo) of
+        Just (V1 datum)
+            | datum == rsCreated secondResponseFixture -> pure ()
+        _ ->
+            fail
+                "second response Advance successor does not carry the exact honest sibling datum"
+    secondRemaining <-
+        withinSecs 30 "query second response-advanced checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst secondArmedUtxo))
+    unless (Map.null secondRemaining) $
+        fail "second response Advance left the ARMED checkpoint input unspent"
     dbg
         ( "Freeze story settled; register="
             <> show (fst (checkpointUtxo registered))
@@ -1160,8 +1269,15 @@ productionRegisterFreezeScenario env = do
             <> show freezeTxId
             <> "; response-advance="
             <> show responseTxId
+            <> "; stale-freeze-replay=rejected"
+            <> "; second-freeze="
+            <> show secondFreezeTxId
+            <> "; second-response-advance="
+            <> show secondResponseTxId
             <> "; deadline="
             <> show deadline
+            <> "; second-deadline="
+            <> show secondDeadline
         )
 
 productionRegisterCloseScenario :: CheckpointEnv -> IO ()
@@ -1477,6 +1593,8 @@ data FreezeStoryFixture = FreezeStoryFixture
     { fsFirstRotation :: !RotateStoryFixture
     , fsFreezeEvidence :: !EnforcementEvidence
     , fsResponseRotation :: !RotateStoryFixture
+    , fsSecondFreezeEvidence :: !EnforcementEvidence
+    , fsSecondResponseRotation :: !RotateStoryFixture
     }
 
 data RegisterScriptPlan = RegisterScriptPlan
@@ -1688,6 +1806,8 @@ loadFreezeStoryFixture = do
         either fail pure (seedSignersAt "rotation_1_current" seeds)
     responseSigners <-
         either fail pure (seedSignersAt "rotation_2_current" seeds)
+    secondResponseSigners <-
+        either fail pure (seedSignersAt "rotation_3_current" seeds)
     firstRecord <- either fail pure (atKey "rot_1" root)
     first <-
         either fail pure $
@@ -1717,11 +1837,37 @@ loadFreezeStoryFixture = do
                 responseRecord
                 responseSigners
                 firstSigners
+    secondConflictRecord <- either fail pure (atKey "rot_3_conflict" root)
+    secondConflictEvent <- either fail pure (atKey "event" secondConflictRecord)
+    secondConflictWithOffsets <-
+        either fail pure (withDerivedOffsets secondConflictEvent)
+    secondConflictSignatures <-
+        either fail pure (indexedSignaturesAt "controller_sigs" secondConflictRecord)
+    secondConflictReceipts <-
+        either fail pure (indexedSignaturesAt "witness_receipts" secondConflictRecord)
+    unsignedSecondFreeze <-
+        either fail pure $
+            enforcementEvidenceFrom
+                secondConflictWithOffsets
+                secondConflictSignatures
+    let secondFreezeEvidence =
+            unsignedSecondFreeze{eneWitSigs = secondConflictReceipts}
+    secondResponseRecord <- either fail pure (atKey "rot_3_recorded" root)
+    secondResponse <-
+        either fail pure $
+            rotateStoryFrom
+                registration
+                (rsCreated response)
+                secondResponseRecord
+                secondResponseSigners
+                responseSigners
     pure
         FreezeStoryFixture
             { fsFirstRotation = first
             , fsFreezeEvidence = freezeEvidence
             , fsResponseRotation = response
+            , fsSecondFreezeEvidence = secondFreezeEvidence
+            , fsSecondResponseRotation = secondResponse
             }
 
 rotateStoryFrom ::

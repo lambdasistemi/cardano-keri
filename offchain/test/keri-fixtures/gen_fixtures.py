@@ -635,6 +635,8 @@ def build():
     fsn2 = salt.signers(count=2, transferable=True, temp=True, path="fsn2")
     fsn3a = salt.signers(count=2, transferable=True, temp=True, path="fsn3a")
     fsn3b = salt.signers(count=2, transferable=True, temp=True, path="fsn3b")
+    fsn4a = salt.signers(count=2, transferable=True, temp=True, path="fsn4a")
+    fsn4b = salt.signers(count=2, transferable=True, temp=True, path="fsn4b")
     fsw = salt.signers(count=3, transferable=False, temp=True, path="fsw")
     fsicp = eventing.incept(
         keys=[s.verfer.qb64 for s in fsc],
@@ -664,11 +666,31 @@ def build():
         isith="2", nsith="2", toad="2",
         wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
     )
+    fsrot3a = eventing.rotate(
+        pre=fsicp.pre, dig=fsrot2a.said, sn=3,
+        keys=[s.verfer.qb64 for s in fsn3a],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn4a],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
+    )
+    fsrot3b = eventing.rotate(
+        pre=fsicp.pre, dig=fsrot2a.said, sn=3,
+        keys=[s.verfer.qb64 for s in fsn3a],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn4b],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
+    )
     assert fsrot2a.ked["i"] == fsrot2b.ked["i"]
     assert fsrot2a.ked["s"] == fsrot2b.ked["s"] == "2"
     assert fsrot2a.ked["k"] == fsrot2b.ked["k"]
     assert fsrot2a.ked["n"] != fsrot2b.ked["n"]
     assert fsrot2a.raw != fsrot2b.raw
+    assert fsrot3a.ked["i"] == fsrot3b.ked["i"]
+    assert fsrot3a.ked["s"] == fsrot3b.ked["s"] == "3"
+    assert fsrot3a.ked["p"] == fsrot3b.ked["p"] == fsrot2a.said
+    assert fsrot3a.ked["k"] == fsrot3b.ked["k"]
+    assert fsrot3a.ked["n"] != fsrot3b.ked["n"]
+    assert fsrot3a.raw != fsrot3b.raw
 
     def freeze_story_event(serder, controllers, next_signers):
         event = _enforcement_event_record(serder, rotation_fields=True)
@@ -689,7 +711,9 @@ def build():
         "note": (
             "#137 Register -> witnessed rot_1 -> two witness-receipted sn=2 "
             "siblings signed by the same revealed keys; conflict Arms and "
-            "recorded branch responds by Advance"
+            "recorded branch responds by Advance; stale sn=2 evidence then "
+            "rejects before a fresh witnessed sn=3 sibling pair Arms and "
+            "responds again"
         ),
         "icp": _event_record(fsicp),
         "icp_sigs": [
@@ -703,10 +727,13 @@ def build():
         "rot_1": freeze_story_event(fsrot1, fsn1, fsn2),
         "rot_2_recorded": freeze_story_event(fsrot2a, fsn2, fsn3a),
         "rot_2_conflict": freeze_story_event(fsrot2b, fsn2, fsn3b),
+        "rot_3_recorded": freeze_story_event(fsrot3a, fsn3a, fsn4a),
+        "rot_3_conflict": freeze_story_event(fsrot3b, fsn3a, fsn4b),
         "signer_seeds": {
             "inception_current": _seed_records(fsc),
             "rotation_1_current": _seed_records(fsn1),
             "rotation_2_current": _seed_records(fsn2),
+            "rotation_3_current": _seed_records(fsn3a),
             "witnesses": _seed_records(fsw),
         },
     }

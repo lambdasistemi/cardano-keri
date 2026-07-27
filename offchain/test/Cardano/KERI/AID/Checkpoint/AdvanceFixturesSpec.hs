@@ -65,7 +65,7 @@ advanceFixtures =
     ]
 
 spec :: Spec
-spec =
+spec = do
     describe "AdvanceFixtures - #115 S1 keripy witness rotations" $
         beforeAll (loadFixture "advance.json") $ do
             describe "family completeness and event shapes" $
@@ -94,6 +94,72 @@ spec =
                         checkWitnessReceipts fx cfg `shouldBe` Right ()
             it "adv_downgrade cuts every witness, sets bt=0, and has zero receipts" $ \fx ->
                 checkDowngrade fx `shouldBe` Right ()
+    describe "FreezeStoryFixtures - #137 contested witnessed rotation" $
+        beforeAll (loadFixture "freeze_story.json") $ do
+            it "chains icp -> rot_1 -> two sibling rotations at sn=2" $ \fx ->
+                checkFreezeStoryShape fx `shouldBe` Right ()
+            it "authenticates both sibling rotations with the same controllers and witnesses" $ \fx ->
+                checkFreezeStorySignatures fx `shouldBe` Right ()
+
+checkFreezeStoryShape :: Value -> Either String ()
+checkFreezeStoryShape fx = do
+    icp <- eventOf fx "icp"
+    rot1Record <- field fx "rot_1"
+    recordedRecord <- field fx "rot_2_recorded"
+    conflictRecord <- field fx "rot_2_conflict"
+    rot1 <- eventOf rot1Record "event"
+    recorded <- eventOf recordedRecord "event"
+    conflict <- eventOf conflictRecord "event"
+    icpKed <- kedOf icp
+    rot1Ked <- kedOf rot1
+    recordedKed <- kedOf recorded
+    conflictKed <- kedOf conflict
+    icpSaid <- textField icp "said"
+    rot1Said <- textField rot1 "said"
+    textField rot1Ked "p" >>= expectEqual "rot_1.p" icpSaid
+    textField recordedKed "p" >>= expectEqual "rot_2_recorded.p" rot1Said
+    textField conflictKed "p" >>= expectEqual "rot_2_conflict.p" rot1Said
+    recordedAid <- textField recordedKed "i"
+    conflictAid <- textField conflictKed "i"
+    expectEqual "rot_2 sibling AID" recordedAid conflictAid
+    textField recordedKed "s" >>= expectEqual "rot_2_recorded.s" "2"
+    textField conflictKed "s" >>= expectEqual "rot_2_conflict.s" "2"
+    recordedKeys <- textArrayField recordedKed "k"
+    conflictKeys <- textArrayField conflictKed "k"
+    unless (recordedKeys == conflictKeys) $
+        Left "rot_2 siblings do not reveal the same controller keys"
+    recordedNext <- textArrayField recordedKed "n"
+    conflictNext <- textArrayField conflictKed "n"
+    unless (recordedNext /= conflictNext) $
+        Left "rot_2 siblings do not carry different next commitments"
+    recordedRaw <- textField recorded "raw_hex"
+    conflictRaw <- textField conflict "raw_hex"
+    unless (recordedRaw /= conflictRaw) $
+        Left "rot_2 sibling serializations are byte-identical"
+    textField icpKed "bt" >>= expectEqual "icp.bt" "2"
+    textField rot1Ked "bt" >>= expectEqual "rot_1.bt" "2"
+    textField recordedKed "bt" >>= expectEqual "rot_2_recorded.bt" "2"
+    textField conflictKed "bt" >>= expectEqual "rot_2_conflict.bt" "2"
+
+checkFreezeStorySignatures :: Value -> Either String ()
+checkFreezeStorySignatures fx = do
+    icp <- eventOf fx "icp"
+    icpKed <- kedOf icp
+    icpKeys <- textArrayField icpKed "k"
+    witnesses <- textArrayField icpKed "b"
+    checkSignatures fx icp "icp_sigs" "controller" icpKeys
+    checkSignatures fx icp "icp_witness_receipts" "witness" witnesses
+    forM_ (["rot_1", "rot_2_recorded", "rot_2_conflict"] :: [Text]) $ \key -> do
+        record <- field fx key
+        event <- eventOf record "event"
+        ked <- kedOf event
+        controllers <- textArrayField ked "k"
+        checkSignatures record event "controller_sigs" "controller" controllers
+        checkSignatures record event "witness_receipts" "witness" witnesses
+        expectCount (T.unpack key <> ".controller_sigs") 2
+            =<< arrayField record "controller_sigs"
+        expectCount (T.unpack key <> ".witness_receipts") 2
+            =<< arrayField record "witness_receipts"
 
 checkShape :: Value -> AdvanceFixture -> Either String ()
 checkShape fx cfg = do

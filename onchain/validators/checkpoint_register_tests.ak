@@ -18,17 +18,22 @@ use cardano_keri/checkpoint/advance_vectors as advance_vec
 use cardano_keri/checkpoint/close.{CloseEvidence}
 use cardano_keri/checkpoint/close_vectors as close_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
+use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
+use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_freeze,
+  observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/role.{Active, Armed}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
-use checkpoint_register.{Advance, Close, CloseBurn, Register}
+use checkpoint_register.{Advance, Close, CloseBurn, Freeze, Register}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -42,9 +47,14 @@ const lifecycle_hash: PolicyId =
 const advance_hash: PolicyId =
   #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
+const enforcement_hash: PolicyId =
+  #"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
 const d_reg: Int = 1_000_000_000
 
 const freeze_bond: Int = 5_000_000
+
+const freeze_window: Int = 10_000
 
 fn proof_input(name: ByteArray) -> Input {
   input_at(
@@ -113,9 +123,11 @@ fn run_register(
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     0,
     d_reg,
     freeze_bond,
+    freeze_window,
     Register,
     policy,
     tx,
@@ -215,9 +227,11 @@ fn run_close(evidence: CloseEvidence) -> Bool {
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     1,
     d_reg,
     freeze_bond,
+    freeze_window,
     CloseBurn { checkpoint_ref: close_own_ref() },
     policy,
     tx,
@@ -225,9 +239,11 @@ fn run_close(evidence: CloseEvidence) -> Bool {
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     1,
     d_reg,
     freeze_bond,
+    freeze_window,
     None,
     Close { evidence },
     close_own_ref(),
@@ -334,9 +350,11 @@ fn run_rotate_small(
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     1,
     d_reg,
     freeze_bond,
+    freeze_window,
     None,
     Advance,
     rotate_ref(spent),
@@ -350,9 +368,11 @@ test rotate_small_rejects_missing_advance_observer() fail {
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     1,
     d_reg,
     freeze_bond,
+    freeze_window,
     None,
     Advance,
     rotate_ref(spent),
@@ -405,9 +425,11 @@ test rotate_small_rejects_changed_successor_value() fail {
     0,
     lifecycle_hash,
     advance_hash,
+    enforcement_hash,
     1,
     d_reg,
     freeze_bond,
+    freeze_window,
     None,
     Advance,
     rotate_ref(spent),
@@ -416,4 +438,271 @@ test rotate_small_rejects_changed_successor_value() fail {
       advance_envelope(spent, advance_vec.pos_adv_wit_2key_evidence),
     ),
   )
+}
+
+// ---------------------------------------------------------------------
+// #137 RED — thin Freeze + enforcement observer, followed by an ARMED
+// response through the already-open Advance observer.
+// ---------------------------------------------------------------------
+
+const freeze_upper: Int = 1_000
+
+const freeze_deadline: Int = freeze_upper + freeze_window
+
+const hunter: ByteArray =
+  #"42424242424242424242424242424242424242424242424242424242"
+
+fn freeze_ref() -> OutputReference {
+  out_ref(seed_tx_id, 8)
+}
+
+fn freeze_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(min_ada + d_reg + freeze_bond)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+}
+
+fn freeze_envelope(evidence: EnforcementEvidence) -> ObserverEnvelope {
+  ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_freeze,
+      checkpoint_policy: policy,
+      own_ref: Some(freeze_ref()),
+    },
+    payload: evidence,
+  }
+}
+
+fn freeze_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  next_hunter: ByteArray,
+  successor_value: Value,
+) -> Transaction {
+  let own_input = input_at(
+    freeze_ref(),
+    Output {
+      address: role.address(policy, Active),
+      value: freeze_value(tip),
+      datum: InlineDatum(V1(tip)),
+      reference_script: None,
+    },
+  )
+  let armed = Output {
+    address: role.address(policy, Armed),
+    value: successor_value,
+    datum: InlineDatum(
+      ArmedV1 {
+        checkpoint: tip,
+        hunter_pkh: next_hunter,
+        deadline: freeze_deadline,
+      },
+    ),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [own_input],
+    [],
+    [armed],
+    zero,
+    [],
+    interval.between(0, freeze_upper),
+    0,
+  )
+  let credential = Script(enforcement_hash)
+  let envelope = freeze_envelope(evidence)
+  let redeemer: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+}
+
+fn freeze_tx(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  freeze_tx_with(tip, evidence, hunter, freeze_value(tip))
+}
+
+fn run_freeze_small(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  tx: Transaction,
+) -> Bool {
+  let envelope = freeze_envelope(evidence)
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Freeze { hunter_pkh: hunter },
+    freeze_ref(),
+    tx,
+  ) && checkpoint_observer.observer_enforcement.withdraw(0, envelope, 0, tx) && tip == tip
+}
+
+test freeze_small_accepts_genuine_witnessed_later_rotation() {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  run_freeze_small(tip, evidence, freeze_tx(tip, evidence))
+}
+
+test freeze_small_rejects_missing_enforcement_observer() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Freeze { hunter_pkh: hunter },
+    freeze_ref(),
+    spend_context(
+      [
+        input_at(
+          freeze_ref(),
+          Output {
+            address: role.address(policy, Active),
+            value: freeze_value(tip),
+            datum: InlineDatum(V1(tip)),
+            reference_script: None,
+          },
+        ),
+      ],
+      [],
+      [],
+      zero,
+      [],
+      interval.between(0, freeze_upper),
+      0,
+    ),
+  )
+}
+
+test freeze_small_rejects_below_prior_controller_threshold() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = EnforcementEvidence {
+    ..enforcement_vec.lag_freeze_wire,
+    ctrl_sigs: [],
+  }
+  run_freeze_small(tip, evidence, freeze_tx(tip, evidence))
+}
+
+test freeze_small_rejects_insufficient_witness_receipts() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = EnforcementEvidence {
+    ..enforcement_vec.lag_freeze_wire,
+    wit_sigs: [],
+  }
+  run_freeze_small(tip, evidence, freeze_tx(tip, evidence))
+}
+
+test freeze_small_rejects_crossed_aid() fail {
+  let tip = CheckpointDatumV1 {
+    ..enforcement_vec.lag_freeze_tip,
+    cesr_aid: #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  }
+  let evidence = enforcement_vec.lag_freeze_wire
+  run_freeze_small(tip, evidence, freeze_tx(tip, evidence))
+}
+
+test freeze_small_rejects_changed_successor_value() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  let changed = from_lovelace(min_ada + d_reg + freeze_bond + 1)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+  run_freeze_small(
+    tip,
+    evidence,
+    freeze_tx_with(tip, evidence, hunter, changed),
+  )
+}
+
+fn armed_rotate_tx(
+  spent: SpentCheckpoint,
+  created: CheckpointDatumV1,
+  upper: Int,
+) -> Transaction {
+  let value = from_lovelace(min_ada + d_reg + freeze_bond)
+    |> merge(from_asset(policy, spent.aid_asset_name, 1))
+  let own_input = input_at(
+    rotate_ref(spent),
+    Output {
+      address: role.address(policy, Armed),
+      value,
+      datum: InlineDatum(
+        ArmedV1 {
+          checkpoint: rotate_old(spent),
+          hunter_pkh: hunter,
+          deadline: freeze_deadline,
+        },
+      ),
+      reference_script: None,
+    },
+  )
+  let successor = Output {
+    address: role.address(policy, Active),
+    value,
+    datum: InlineDatum(V1(created)),
+    reference_script: None,
+  }
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_response_advance,
+      checkpoint_policy: policy,
+      own_ref: Some(rotate_ref(spent)),
+    },
+    payload: advance_vec.pos_adv_wit_2key_evidence,
+  }
+  with_advance_observer(
+    spend_context(
+      [own_input],
+      [],
+      [successor],
+      zero,
+      [],
+      interval.between(0, upper),
+      0,
+    ),
+    envelope,
+  )
+}
+
+fn run_armed_response(upper: Int) -> Bool {
+  let spent = advance_vec.pos_adv_wit_2key_spent
+  let created = advance_vec.pos_adv_wit_2key_created
+  let evidence = advance_vec.pos_adv_wit_2key_evidence
+  let tx = armed_rotate_tx(spent, created, upper)
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Advance,
+    rotate_ref(spent),
+    tx,
+  ) && advance_predicate(spent, created, evidence) == AdvancePredicateValid
+}
+
+test freeze_small_accepts_response_advance_before_deadline() {
+  run_armed_response(freeze_deadline - 1)
+}
+
+test freeze_small_rejects_response_advance_at_deadline() fail {
+  run_armed_response(freeze_deadline)
 }

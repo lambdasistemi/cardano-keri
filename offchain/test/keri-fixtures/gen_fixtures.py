@@ -25,6 +25,9 @@ Fixture families (each a JSON bundle under fixtures/):
   advance       — #115 witnessed rotations: 2-key and GLEIF 7-key cut/add,
                   all-witness downgrade, and no-delta keep, with incoming-set
                   receipts, rotation offsets, and controller/witness seeds.
+  freeze_story  — #137 witnessed two-key lineage: icp -> rot_1, followed by
+                  two differently committed rotations at sn=2 signed by the
+                  same revealed keys and receipted by the same witnesses.
 
 Every signature carries a `signing_target` field ("event_raw" | "said") that
 the generator sets by re-verifying the signature against BOTH candidate byte
@@ -620,6 +623,92 @@ def build():
             [(akw[0], 0), (akw[2], 2)],
             "no witness delta; threshold receipts from the unchanged set",
         ),
+    }
+
+    # --- freeze_story: witnessed contested second rotation ----------------
+    # Register -> rot_1 establishes the live ACTIVE tip. The same committed
+    # successor keys then sign TWO different sn=2 rotations, and the same
+    # incoming witness quorum receipts both. One branch is the hunter's Freeze
+    # evidence; the other is the honest response Advance.
+    fsc = salt.signers(count=2, transferable=True, temp=True, path="fsc")
+    fsn1 = salt.signers(count=2, transferable=True, temp=True, path="fsn1")
+    fsn2 = salt.signers(count=2, transferable=True, temp=True, path="fsn2")
+    fsn3a = salt.signers(count=2, transferable=True, temp=True, path="fsn3a")
+    fsn3b = salt.signers(count=2, transferable=True, temp=True, path="fsn3b")
+    fsw = salt.signers(count=3, transferable=False, temp=True, path="fsw")
+    fsicp = eventing.incept(
+        keys=[s.verfer.qb64 for s in fsc],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn1],
+        isith="2", nsith="2",
+        wits=[s.verfer.qb64 for s in fsw], toad="2",
+        code=coring.MtrDex.Blake3_256,
+    )
+    fsrot1 = eventing.rotate(
+        pre=fsicp.pre, dig=fsicp.said, sn=1,
+        keys=[s.verfer.qb64 for s in fsn1],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn2],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
+    )
+    fsrot2a = eventing.rotate(
+        pre=fsicp.pre, dig=fsrot1.said, sn=2,
+        keys=[s.verfer.qb64 for s in fsn2],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn3a],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
+    )
+    fsrot2b = eventing.rotate(
+        pre=fsicp.pre, dig=fsrot1.said, sn=2,
+        keys=[s.verfer.qb64 for s in fsn2],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in fsn3b],
+        isith="2", nsith="2", toad="2",
+        wits=[s.verfer.qb64 for s in fsw], cuts=[], adds=[],
+    )
+    assert fsrot2a.ked["i"] == fsrot2b.ked["i"]
+    assert fsrot2a.ked["s"] == fsrot2b.ked["s"] == "2"
+    assert fsrot2a.ked["k"] == fsrot2b.ked["k"]
+    assert fsrot2a.ked["n"] != fsrot2b.ked["n"]
+    assert fsrot2a.raw != fsrot2b.raw
+
+    def freeze_story_event(serder, controllers, next_signers):
+        event = _enforcement_event_record(serder, rotation_fields=True)
+        return {
+            "event": event,
+            "controller_sigs": [
+                _sig_record(signer, index, serder.raw, serder.said, "controller")
+                for index, signer in enumerate(controllers)
+            ],
+            "witness_receipts": [
+                _sig_record(signer, index, serder.raw, serder.said, "witness")
+                for signer, index in ((fsw[0], 0), (fsw[2], 2))
+            ],
+            "next_signer_seeds": _seed_records(next_signers),
+        }
+
+    bundles["freeze_story"] = {
+        "note": (
+            "#137 Register -> witnessed rot_1 -> two witness-receipted sn=2 "
+            "siblings signed by the same revealed keys; conflict Arms and "
+            "recorded branch responds by Advance"
+        ),
+        "icp": _event_record(fsicp),
+        "icp_sigs": [
+            _sig_record(signer, index, fsicp.raw, fsicp.said, "controller")
+            for index, signer in enumerate(fsc)
+        ],
+        "icp_witness_receipts": [
+            _sig_record(signer, index, fsicp.raw, fsicp.said, "witness")
+            for signer, index in ((fsw[0], 0), (fsw[2], 2))
+        ],
+        "rot_1": freeze_story_event(fsrot1, fsn1, fsn2),
+        "rot_2_recorded": freeze_story_event(fsrot2a, fsn2, fsn3a),
+        "rot_2_conflict": freeze_story_event(fsrot2b, fsn2, fsn3b),
+        "signer_seeds": {
+            "inception_current": _seed_records(fsc),
+            "rotation_1_current": _seed_records(fsn1),
+            "rotation_2_current": _seed_records(fsn2),
+            "witnesses": _seed_records(fsw),
+        },
     }
 
     # --- registration: #114 icp-admission ground truth --------------------

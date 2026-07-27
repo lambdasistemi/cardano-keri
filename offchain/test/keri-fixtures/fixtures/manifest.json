@@ -3,6 +3,7 @@
     "advance",
     "fork",
     "fork_witnessed",
+    "freeze_story",
     "honest_2key",
     "honest_7key",
     "lag",

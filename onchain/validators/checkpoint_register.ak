@@ -7,6 +7,7 @@
 
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/interval
 use cardano/address.{Credential, Script, from_script}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
@@ -18,12 +19,17 @@ use cardano_keri/checkpoint/close.{
   CloseContext, CloseEvidence, CloseValid, close_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
-use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
+use cardano_keri/checkpoint/freeze_bond.{
+  ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
+  freeze_bond_valid, freeze_window_valid,
+}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_freeze,
+  observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
+use cardano_keri/checkpoint/role.{Active, Armed}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
 pub type MintRedeemer {
@@ -34,6 +40,7 @@ pub type MintRedeemer {
 pub type SpendRedeemer {
   Close { evidence: CloseEvidence }
   Advance
+  Freeze { hunter_pkh: ByteArray }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -42,13 +49,16 @@ validator checkpoint_register(
   _version: Int,
   lifecycle_hash: PolicyId,
   advance_hash: PolicyId,
+  enforcement_hash: PolicyId,
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
+  freeze_window: Int,
 ) {
   mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
+    expect freeze_window_valid(freeze_window)
     when redeemer is {
       Register -> {
         expect ran_register_check(lifecycle_hash, policy_id, tx)
@@ -67,13 +77,31 @@ validator checkpoint_register(
   ) {
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
+    expect freeze_window_valid(freeze_window)
     when redeemer is {
       Close { evidence } ->
         validate_close(network_id, d_reg, freeze_bond, evidence, own_ref, tx)
       Advance -> {
         expect
           ran_advance_check(advance_hash, own_hash(tx, own_ref), own_ref, tx)
-        validate_advance(d_reg, own_ref, tx)
+        validate_advance(d_reg, freeze_bond, own_ref, tx)
+      }
+      Freeze { hunter_pkh } -> {
+        expect
+          ran_enforcement_check(
+            enforcement_hash,
+            own_hash(tx, own_ref),
+            own_ref,
+            tx,
+          )
+        validate_freeze(
+          d_reg,
+          freeze_bond,
+          freeze_window,
+          hunter_pkh,
+          own_ref,
+          tx,
+        )
       }
     }
   }
@@ -145,7 +173,45 @@ fn ran_advance_check(
             if redeemer_credential == credential {
               expect envelope: ObserverEnvelope = redeemer
               let claim = envelope.claim
-              claim.action == observe_advance && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+              (
+                claim.action == observe_advance || claim.action == observe_response_advance
+              ) && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+                own_ref,
+              )
+            } else {
+              False
+            }
+          _ -> False
+        }
+      },
+    )
+  True
+}
+
+fn ran_enforcement_check(
+  enforcement_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let credential: Credential = Script(enforcement_hash)
+  expect
+    list.any(
+      tx.withdrawals,
+      fn(Pair(withdrawal_credential, lovelace)) {
+        withdrawal_credential == credential && lovelace == 0
+      },
+    )
+  expect
+    list.any(
+      tx.redeemers,
+      fn(Pair(purpose, redeemer)) {
+        when purpose is {
+          Withdraw(redeemer_credential) ->
+            if redeemer_credential == credential {
+              expect envelope: ObserverEnvelope = redeemer
+              let claim = envelope.claim
+              claim.action == observe_freeze && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
                 own_ref,
               )
             } else {
@@ -280,15 +346,31 @@ fn validate_close(
 
 fn validate_advance(
   d_reg: Int,
+  freeze_bond: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
-  expect own_input.output.address == from_script(own_hash)
   expect InlineDatum(old_datum_data) = own_input.output.datum
-  expect V1(old): CheckpointDatum = old_datum_data
+  let (old, protected_lovelace) = if own_input.output.address == role.address(
+    own_hash,
+    Active,
+  ) {
+    expect V1(old): CheckpointDatum = old_datum_data
+    (old, checkpoint_min_ada + d_reg)
+  } else if own_input.output.address == role.address(own_hash, Armed) {
+    expect armed: ArmedDatum = old_datum_data
+    expect ArmedDatumValid = armed_datum_well_formed(armed)
+    let ArmedV1 { checkpoint: old, deadline, .. } = armed
+    expect !interval.is_empty(validity_range)
+    expect interval.Finite(upper) = validity_range.upper_bound.bound_type
+    expect upper < deadline
+    (old, checkpoint_min_ada + d_reg + freeze_bond)
+  } else {
+    fail
+  }
   let aid_name = deriveAidAssetName(old.cesr_aid)
   expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
   expect [state_output] = list.filter(
@@ -300,6 +382,45 @@ fn validate_advance(
   expect quantity_of(state_output.value, own_hash, aid_name) == 1
   expect state_output.value == own_input.output.value
   expect dict.to_pairs(tokens(mint, own_hash)) == []
-  expect lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg
+  expect lovelace_of(state_output.value) >= protected_lovelace
+  True
+}
+
+fn validate_freeze(
+  d_reg: Int,
+  freeze_bond: Int,
+  freeze_window: Int,
+  hunter_pkh: ByteArray,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(tip_data) = own_input.output.datum
+  expect V1(tip): CheckpointDatum = tip_data
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect
+    lovelace_of(own_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
+  expect !interval.is_empty(validity_range)
+  expect interval.Finite(upper) = validity_range.upper_bound.bound_type
+  let armed = ArmedV1 {
+    checkpoint: tip,
+    hunter_pkh,
+    deadline: upper + freeze_window,
+  }
+  expect ArmedDatumValid = armed_datum_well_formed(armed)
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == role.address(own_hash, Armed) },
+  )
+  expect state_output.value == own_input.output.value
+  expect quantity_of(state_output.value, own_hash, aid_name) == 1
+  expect InlineDatum(successor_data) = state_output.datum
+  expect successor: ArmedDatum = successor_data
+  expect successor == armed
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
 }

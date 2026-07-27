@@ -15,6 +15,7 @@ import Test.Hspec
 import CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
+    productionRegisterFreezeScenario,
     productionRegisterScenario,
     stagedCheckpointDevnet,
  )
@@ -35,3 +36,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#142 settles Register then a genuine witnessed two-key Advance"
             productionRegisterAdvanceScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#137 settles Register -> Advance -> hunter Freeze -> response Advance"
+            productionRegisterFreezeScenario

@@ -16,6 +16,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
@@ -27,6 +28,12 @@ pub const observe_register: Int = 0
 
 /// The stable action tag for Advance.
 pub const observe_advance: Int = 1
+
+/// The stable action tag for Freeze.
+pub const observe_freeze: Int = 2
+
+/// The stable action tag for an Armed response Advance.
+pub const observe_response_advance: Int = 3
 
 /// The claim checked independently by the checkpoint minting policy.
 pub type ObserverClaim {
@@ -85,32 +92,28 @@ pub fn validate_registration(
 /// Validate a genuine rotation against the named ACTIVE input and successor.
 pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   let ObserverEnvelope { claim, payload } = envelope
-  expect claim.action == observe_advance
-  observe_advance_impl(claim, payload, tx)
-}
-
-fn observe_advance_impl(
-  claim: ObserverClaim,
-  payload: Data,
-  tx: Transaction,
-) -> Bool {
   expect Some(own_ref) = claim.own_ref
   expect evidence: AdvanceEvidence = payload
-  let policy_id = claim.checkpoint_policy
   expect Some(own_input) = find_input(tx.inputs, own_ref)
-  let active = from_script(policy_id)
-  expect own_input.output.address == active
   expect InlineDatum(old_data) = own_input.output.datum
-  expect V1(old): CheckpointDatum = old_data
-  expect [state_output] = list.filter(
+  let old = if claim.action == observe_advance {
+    expect V1(old): CheckpointDatum = old_data
+    old
+  } else {
+    // The thin checkpoint arm admits only actions 1 and 3, so this branch is
+    // necessarily the Armed response form in the composed transaction.
+    expect ArmedV1 { checkpoint: old, .. }: ArmedDatum = old_data
+    old
+  }
+  expect Some(state_output) = list.find(
     tx.outputs,
-    fn(output) { output.address == active },
+    fn(output) { output.address == from_script(claim.checkpoint_policy) },
   )
   expect InlineDatum(new_data) = state_output.datum
   expect V1(new): CheckpointDatum = new_data
   let spent = SpentCheckpoint {
     network_id: 0,
-    policy_id,
+    policy_id: claim.checkpoint_policy,
     aid_asset_name: deriveAidAssetName(old.cesr_aid),
     txid: own_ref.transaction_id,
     index: own_ref.output_index,

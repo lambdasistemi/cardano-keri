@@ -548,6 +548,18 @@ def build():
         cuts=[a7w[0].verfer.qb64], adds=[a7w[3].verfer.qb64],
     )
 
+    # Honest seven-valid worst case on the SAME GLEIF-root lineage: the
+    # rotation reveals ALL SEVEN committed next keys and carries seven valid
+    # controller signatures, with the same one-cut/one-add witness delta.
+    a7fullrot = eventing.rotate(
+        pre=a7icp.pre, dig=a7icp.said, sn=1,
+        keys=[s.verfer.qb64 for s in a7n],
+        ndigs=[coring.Diger(ser=s.verfer.qb64b).qb64 for s in a7n2],
+        isith=["1/3"] * 7, nsith=["1/3"] * 7, toad="2",
+        wits=[s.verfer.qb64 for s in a7w[:3]],
+        cuts=[a7w[0].verfer.qb64], adds=[a7w[3].verfer.qb64],
+    )
+
     # Visible downgrade: all witnesses are cut, the incoming set is empty,
     # bt is zero, and no receipts exist.
     adc = salt.signers(count=2, transferable=True, temp=True, path="adc")
@@ -610,6 +622,11 @@ def build():
             a7icp, a7rot, a7c, a7reveal, a7n2, a7w[:3], [a7w[3]],
             [(a7w[1], 0), (a7w[3], 2)],
             "GLEIF-root partial 3-of-7 reveal with witness cut/add",
+        ),
+        "adv_wit_7key_full": _advance_record(
+            a7icp, a7fullrot, a7c, a7n, a7n2, a7w[:3], [a7w[3]],
+            [(a7w[1], 0), (a7w[3], 2)],
+            "GLEIF-root seven-valid-signature worst-case Advance with witness cut/add",
         ),
         "adv_downgrade": _advance_record(
             adicp, adrot, adc, adn, adn2, adw, [], [],

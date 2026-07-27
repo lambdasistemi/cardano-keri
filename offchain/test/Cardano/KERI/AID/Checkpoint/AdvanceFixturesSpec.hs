@@ -39,7 +39,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Char (isDigit)
 import Data.Foldable (toList)
-import Data.List (nub)
+import Data.List (nub, sort)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -54,19 +54,75 @@ data AdvanceFixture = AdvanceFixture
     , afAdds :: Int
     , afToad :: Text
     , afReceipts :: Int
+    , afNote :: Text
     }
+
+{- | The exact label carried by the binding seven-valid worst-case row.  It is
+quoted here verbatim so a renamed or re-noted row fails loudly rather than
+silently inheriting the partial row's weaker claim.
+-}
+sevenValidNote :: Text
+sevenValidNote =
+    "GLEIF-root seven-valid-signature worst-case Advance with witness cut/add"
+
+-- | The exact label carried by the supporting partial 3-of-7 row.
+partialSevenNote :: Text
+partialSevenNote = "GLEIF-root partial 3-of-7 reveal with witness cut/add"
 
 advanceFixtures :: [AdvanceFixture]
 advanceFixtures =
-    [ AdvanceFixture "adv_wit_2key" 2 2 3 1 1 "2" 2
-    , AdvanceFixture "adv_wit_7key" 7 3 3 1 1 "2" 2
-    , AdvanceFixture "adv_downgrade" 2 2 3 3 0 "0" 0
-    , AdvanceFixture "adv_keep" 2 2 3 0 0 "2" 2
+    [ AdvanceFixture
+        "adv_wit_2key"
+        2
+        2
+        3
+        1
+        1
+        "2"
+        2
+        "2-key witnessed rotation cutting witness 0 and adding witness 3"
+    , AdvanceFixture "adv_wit_7key" 7 3 3 1 1 "2" 2 partialSevenNote
+    , AdvanceFixture "adv_wit_7key_full" 7 7 3 1 1 "2" 2 sevenValidNote
+    , AdvanceFixture
+        "adv_downgrade"
+        2
+        2
+        3
+        3
+        0
+        "0"
+        0
+        "all witnesses cut, bt=0, and zero receipts"
+    , AdvanceFixture
+        "adv_keep"
+        2
+        2
+        3
+        0
+        0
+        "2"
+        2
+        "no witness delta; threshold receipts from the unchanged set"
     ]
+
+{- | The two GLEIF-root 7-key rows.  Both carry a weighted @1/3@-clause
+threshold family; they differ in how many of the seven committed next keys the
+rotation actually reveals.
+-}
+isGleifRootFamily :: AdvanceFixture -> Bool
+isGleifRootFamily cfg = afIcpKeys cfg == 7
+
+-- | The binding seven-valid worst-case row.
+sevenValidKey :: Text
+sevenValidKey = "adv_wit_7key_full"
+
+-- | The supporting partial 3-of-7 row.
+partialSevenKey :: Text
+partialSevenKey = "adv_wit_7key"
 
 spec :: Spec
 spec =
-    describe "AdvanceFixtures - #115 S1 keripy witness rotations" $
+    describe "Advance fixtures - #115 S1 keripy witness rotations" $
         beforeAll (loadFixture "advance.json") $ do
             describe "family completeness and event shapes" $
                 forM_ advanceFixtures $ \cfg ->
@@ -92,8 +148,21 @@ spec =
                 forM_ advanceFixtures $ \cfg ->
                     it (T.unpack (afKey cfg)) $ \fx ->
                         checkWitnessReceipts fx cfg `shouldBe` Right ()
+            describe "each row carries its exact committed label" $
+                forM_ advanceFixtures $ \cfg ->
+                    it (T.unpack (afKey cfg)) $ \fx ->
+                        checkNote fx cfg `shouldBe` Right ()
             it "adv_downgrade cuts every witness, sets bt=0, and has zero receipts" $ \fx ->
                 checkDowngrade fx `shouldBe` Right ()
+            describe "adv_wit_7key_full is the honest seven-valid worst case" $ do
+                it "reveals all seven committed next keys with seven valid controller signatures" $ \fx ->
+                    checkSevenValidReveal fx `shouldBe` Right ()
+                it "keeps the exact witness cut/add, toad, receipts, and SAID lineage" $ \fx ->
+                    checkSevenValidWitnessing fx `shouldBe` Right ()
+                it "carries deterministic seed material for every signer group" $ \fx ->
+                    checkSevenValidSeeds fx `shouldBe` Right ()
+                it "is substantively distinct from the partial 3-of-7 adv_wit_7key row" $ \fx ->
+                    checkSevenValidDistinctness fx `shouldBe` Right ()
 
 checkShape :: Value -> AdvanceFixture -> Either String ()
 checkShape fx cfg = do
@@ -123,14 +192,15 @@ checkShape fx cfg = do
     let toad = readHex (afToad cfg)
     unless ((toad == 0 && null incoming) || (toad > 0 && toad <= length incoming)) $
         Left (at cfg <> ": bt is not valid for the derived incoming witness set")
-    when (afKey cfg == "adv_wit_7key") $ do
-        expectWeighted "icp.ked.kt" 7 =<< field icpKed "kt"
-        expectWeighted "rot.ked.kt" 3 =<< field rotKed "kt"
-        expectCount "icp.ked.n" 7 =<< textArrayField icpKed "n"
-        expectCount "rot.ked.n" 7 =<< textArrayField rotKed "n"
-    when (afKey cfg /= "adv_wit_7key") $ do
-        textField icpKed "kt" >>= expectEqual "icp.ked.kt" "2"
-        textField rotKed "kt" >>= expectEqual "rot.ked.kt" "2"
+    if isGleifRootFamily cfg
+        then do
+            expectWeighted "icp.ked.kt" 7 =<< field icpKed "kt"
+            expectWeighted "rot.ked.kt" (afRotKeys cfg) =<< field rotKed "kt"
+            expectCount "icp.ked.n" 7 =<< textArrayField icpKed "n"
+            expectCount "rot.ked.n" 7 =<< textArrayField rotKed "n"
+        else do
+            textField icpKed "kt" >>= expectEqual "icp.ked.kt" "2"
+            textField rotKed "kt" >>= expectEqual "rot.ked.kt" "2"
 
 checkRawLengths :: Value -> AdvanceFixture -> Either String ()
 checkRawLengths fx cfg = do
@@ -220,7 +290,17 @@ checkWitnessReceipts fx cfg = do
 
 checkDowngrade :: Value -> Either String ()
 checkDowngrade fx = do
-    let cfg = AdvanceFixture "adv_downgrade" 2 2 3 3 0 "0" 0
+    let cfg =
+            AdvanceFixture
+                "adv_downgrade"
+                2
+                2
+                3
+                3
+                0
+                "0"
+                0
+                "all witnesses cut, bt=0, and zero receipts"
     sub <- subFixture fx cfg
     icp <- eventOf sub "icp"
     rot <- eventOf sub "rot"
@@ -234,6 +314,185 @@ checkDowngrade fx = do
     textField rotKed "bt" >>= expectEqual "adv_downgrade.rot.ked.bt" "0"
     receipts <- arrayField sub "rot_witness_receipts"
     unless (null receipts) $ Left "adv_downgrade: receipts are not empty"
+
+{- | Every row states its own label.  The binding seven-valid row and the
+supporting partial row must never share or swap labels, so the stronger
+worst-case claim cannot silently migrate onto the weaker measurement.
+-}
+checkNote :: Value -> AdvanceFixture -> Either String ()
+checkNote fx cfg = do
+    sub <- subFixture fx cfg
+    textField sub "note" >>= expectEqual (at cfg <> ".note") (afNote cfg)
+
+{- | The binding row's controller side: seven committed next keys, all seven
+revealed as rotation current keys, and seven indexed controller signatures
+that verify over the exact rotation raw event bytes.
+-}
+checkSevenValidReveal :: Value -> Either String ()
+checkSevenValidReveal fx = do
+    sub <- sevenValidRow fx
+    icp <- eventOf sub "icp"
+    rot <- eventOf sub "rot"
+    icpKed <- kedOf icp
+    rotKed <- kedOf rot
+    icpKeys <- textArrayField icpKed "k"
+    expectCount "adv_wit_7key_full.icp.ked.k" 7 icpKeys
+    expectWeighted "adv_wit_7key_full.icp.ked.kt" 7 =<< field icpKed "kt"
+    expectWeighted "adv_wit_7key_full.icp.ked.nt" 7 =<< field icpKed "nt"
+    committedTexts <- textArrayField icpKed "n"
+    expectCount "adv_wit_7key_full.icp.ked.n" 7 committedTexts
+    committed <- traverse digestRaw committedTexts
+    rotKeys <- textArrayField rotKed "k"
+    expectCount "adv_wit_7key_full.rot.ked.k" 7 rotKeys
+    expectWeighted "adv_wit_7key_full.rot.ked.kt" 7 =<< field rotKed "kt"
+    expectWeighted "adv_wit_7key_full.rot.ked.nt" 7 =<< field rotKed "nt"
+    expectCount "adv_wit_7key_full.rot.ked.n" 7 =<< textArrayField rotKed "n"
+    unless (length (nub rotKeys) == 7) $
+        Left "adv_wit_7key_full: rotation current keys are not seven distinct keys"
+    revealed <-
+        traverse (fmap (blake3Hash . qb64Verkey) . verkeyRaw) rotKeys
+    unless (sort revealed == sort committed) $
+        Left
+            ( "adv_wit_7key_full: the rotation does not reveal exactly the "
+                <> "seven keys committed by icp.ked.n"
+            )
+    -- Seven indexed controller signatures, one per revealed current key,
+    -- each over the exact rotation raw bytes and never over the SAID.
+    rotRaw <- decodeHex =<< textField rot "raw_hex"
+    rotSaid <- TE.encodeUtf8 <$> textField rot "said"
+    sigs <- arrayField sub "rot_sigs"
+    expectCount "adv_wit_7key_full.rot_sigs" 7 sigs
+    indices <- traverse (intFieldAt "index") sigs
+    unless (sort indices == [0 .. 6]) $
+        Left "adv_wit_7key_full.rot_sigs: indices are not exactly 0..6"
+    forM_ (zip [0 :: Int ..] sigs) $ \(j, sig) -> do
+        let sigAt = "adv_wit_7key_full.rot_sigs[" <> show j <> "]"
+        textField sig "kind" >>= expectEqual (sigAt <> ".kind") "controller"
+        textField sig "signing_target"
+            >>= expectEqual (sigAt <> ".signing_target") "event_raw"
+        index <- intField sig "index"
+        signer <- textField sig "signer_verkey_qb64"
+        unless (signer == rotKeys !! fromIntegral index) $
+            Left (sigAt <> ": signer does not identify its indexed current key")
+        keyRaw <- verkeyRaw signer
+        sigRaw <- decodeHex =<< textField sig "sig_hex"
+        unless (verifyEd25519 keyRaw rotRaw sigRaw) $
+            Left (sigAt <> ": signature does not verify over the exact rot raw bytes")
+        when (verifyEd25519 keyRaw rotSaid sigRaw) $
+            Left (sigAt <> ": signature unexpectedly verifies over the SAID")
+    -- The inception side stays fully signed too.
+    expectCount "adv_wit_7key_full.icp_sigs" 7 =<< arrayField sub "icp_sigs"
+
+{- | The binding row's witnessing side: the exact one-cut/one-add delta over a
+three-witness inception, an unchanged toad, two incoming-indexed receipts over
+the exact rotation raw bytes, and the icp -> rot SAID chain.
+-}
+checkSevenValidWitnessing :: Value -> Either String ()
+checkSevenValidWitnessing fx = do
+    sub <- sevenValidRow fx
+    icp <- eventOf sub "icp"
+    rot <- eventOf sub "rot"
+    icpKed <- kedOf icp
+    rotKed <- kedOf rot
+    textField icpKed "t" >>= expectEqual "adv_wit_7key_full.icp.ked.t" "icp"
+    textField rotKed "t" >>= expectEqual "adv_wit_7key_full.rot.ked.t" "rot"
+    textField icpKed "s" >>= expectEqual "adv_wit_7key_full.icp.ked.s" "0"
+    textField rotKed "s" >>= expectEqual "adv_wit_7key_full.rot.ked.s" "1"
+    -- SAID lineage: the rotation's prior digest is the inception's SAID, and
+    -- each event's SAID occurs verbatim in its own raw serialization.
+    icpSaid <- textField icp "said"
+    textField rotKed "p" >>= expectEqual "adv_wit_7key_full.rot.ked.p" icpSaid
+    forM_ ([("icp", icp), ("rot", rot)] :: [(String, Value)]) $ \(name, ev) -> do
+        raw <- decodeHex =<< textField ev "raw_hex"
+        said <- TE.encodeUtf8 <$> textField ev "said"
+        unless (said `BS.isInfixOf` raw) $
+            Left ("adv_wit_7key_full." <> name <> ": SAID is absent from its raw event")
+    old <- textArrayField icpKed "b"
+    cuts <- textArrayField rotKed "br"
+    adds <- textArrayField rotKed "ba"
+    expectCount "adv_wit_7key_full.icp.ked.b" 3 old
+    expectCount "adv_wit_7key_full.rot.ked.br" 1 cuts
+    expectCount "adv_wit_7key_full.rot.ked.ba" 1 adds
+    unless (cuts == take 1 old) $
+        Left "adv_wit_7key_full: rot.ked.br does not cut witness 0"
+    textField icpKed "bt" >>= expectEqual "adv_wit_7key_full.icp.ked.bt" "2"
+    textField rotKed "bt" >>= expectEqual "adv_wit_7key_full.rot.ked.bt" "2"
+    incoming <- deriveIncoming old cuts adds
+    expectCount "adv_wit_7key_full incoming witness set" 3 incoming
+    receipts <- arrayField sub "rot_witness_receipts"
+    expectCount "adv_wit_7key_full.rot_witness_receipts" 2 receipts
+    receiptIndices <- traverse (intFieldAt "index") receipts
+    unless (sort receiptIndices == [0, 2]) $
+        Left
+            ( "adv_wit_7key_full.rot_witness_receipts: indices are not the "
+                <> "incoming survivor/add pair [0,2]"
+            )
+    checkSignatures sub rot "rot_witness_receipts" "witness" incoming
+
+{- | Deterministic generator provenance: every signer group exports a 32-byte
+seed that derives its published verkey, and the seven next-key seeds digest
+into the rotation's own next-key commitments.
+-}
+checkSevenValidSeeds :: Value -> Either String ()
+checkSevenValidSeeds fx = do
+    sub <- sevenValidRow fx
+    icp <- eventOf sub "icp"
+    rot <- eventOf sub "rot"
+    icpKed <- kedOf icp
+    rotKed <- kedOf rot
+    seeds <- field sub "signer_seeds"
+    checkSeedKeys seeds "inception_current" =<< textArrayField icpKed "k"
+    checkSeedKeys seeds "rotation_current" =<< textArrayField rotKed "k"
+    checkNextSeeds seeds "rotation_next" =<< textArrayField rotKed "n"
+    checkSeedKeys seeds "witness_outgoing" =<< textArrayField icpKed "b"
+    checkSeedKeys seeds "witness_added" =<< textArrayField rotKed "ba"
+
+{- | The binding row must be a genuinely different rotation, not a relabelled
+copy of the supporting partial row.  Both rows are required to exist, to keep
+their own labels and reveal counts, and to differ in raw event bytes, SAID,
+and revealed current-key set.  A row that differed only by a missing key would
+not answer the worst-case question A-028 asks.
+-}
+checkSevenValidDistinctness :: Value -> Either String ()
+checkSevenValidDistinctness fx = do
+    full <- sevenValidRow fx
+    partial <-
+        note (partialSevenKey <> " missing from advance.json") (lookupKey partialSevenKey fx)
+    textField full "note" >>= expectEqual "adv_wit_7key_full.note" sevenValidNote
+    textField partial "note" >>= expectEqual "adv_wit_7key.note" partialSevenNote
+    fullRot <- eventOf full "rot"
+    partialRot <- eventOf partial "rot"
+    fullCurrent <- kedTextArray fullRot "k"
+    partialCurrent <- kedTextArray partialRot "k"
+    expectCount "adv_wit_7key_full.rot.ked.k" 7 fullCurrent
+    expectCount "adv_wit_7key.rot.ked.k" 3 partialCurrent
+    expectCount "adv_wit_7key_full.rot_sigs" 7 =<< arrayField full "rot_sigs"
+    expectCount "adv_wit_7key.rot_sigs" 3 =<< arrayField partial "rot_sigs"
+    fullRaw <- textField fullRot "raw_hex"
+    partialRaw <- textField partialRot "raw_hex"
+    unless (fullRaw /= partialRaw) $
+        Left "adv_wit_7key_full: rotation raw bytes are identical to the partial row"
+    fullSaid <- textField fullRot "said"
+    partialSaid <- textField partialRot "said"
+    unless (fullSaid /= partialSaid) $
+        Left "adv_wit_7key_full: rotation SAID is identical to the partial row"
+    unless (fullCurrent /= partialCurrent) $
+        Left "adv_wit_7key_full: revealed current-key set is identical to the partial row"
+    -- The partial row reveals three of the seven committed keys; the binding
+    -- row reveals all seven, so it must add exactly four further reveals.
+    unless (length fullCurrent - length partialCurrent == 4) $
+        Left
+            ( "adv_wit_7key_full: does not add exactly the four further reveals "
+                <> "that turn the partial 3-of-7 row into the seven-valid worst case"
+            )
+
+sevenValidRow :: Value -> Either String Value
+sevenValidRow fx =
+    note (sevenValidKey <> " missing from advance.json") (lookupKey sevenValidKey fx)
+
+-- | Read a text array out of an event's @ked@.
+kedTextArray :: Value -> Text -> Either String [Text]
+kedTextArray event key = kedOf event >>= \ked -> textArrayField ked key
 
 checkSeedKeys :: Value -> Text -> [Text] -> Either String ()
 checkSeedKeys seeds group expected = do

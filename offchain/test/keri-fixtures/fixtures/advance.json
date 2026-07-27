@@ -866,6 +866,398 @@
       ]
     }
   },
+  "adv_wit_7key_full": {
+    "icp": {
+      "ked": {
+        "b": [
+          "BKiG3G9fPM9gEE286VdYXHwmXBf5-psD2ba2sbcHILBa",
+          "BMrdVIy-VoVUce9zoFmuDGpTVI2We36pR5AdRSdQtPRo",
+          "BFb3Zw3fw8qspKyxXeZzjfwZgn4SeFdDiLCnZ16V6fTN"
+        ],
+        "bt": "2",
+        "i": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw",
+        "k": [
+          "DAOA_OvjsbPQ1qGWxgWckpdc9EbwPGm_CJwNDXvmEQY-",
+          "DIfUA0oZfFDpEz86l8gdRaKKI3RL6hmL94lgYNQMUC3c",
+          "DGtkMdN16NsIsfnjxcDB3HHNGG560VXAPdHgfPMtG89R",
+          "DPnwJxKr8I7iM9cptH129OeJ3Ez0bW6frowCDdYyOAb2",
+          "DJ0-Gt58TIfiocSxWV84rkBKE_Vza4okGhfEdQq0PMk1",
+          "DA23VJILOZ2v7IRmD39RYTim1QlSPOVTLRn_PksbQaIr",
+          "DPUKTJv2iOjOIQ-BCegkf8ge8g-NSgKVANTOt74OI77L"
+        ],
+        "kt": [
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3"
+        ],
+        "n": [
+          "EB6XBf8WVGr52WJA3aL-2ajjfFhymzJkJWtHNuR8Dezc",
+          "ELsql-jT4Ht6Ytar0HmBON7OvIedHjBHbGFp-d8A8xzL",
+          "EOU5iAeIILzbSUcKiuGMgY7M_7ON3RxciejaKJx4heZI",
+          "EPZizNqc2Hn2Ai5z-ccVDdiGIv9uKOoHI6dMUzDz_C_H",
+          "EIT36c4dPjlxwDF35XdhhK-Z-AeU2DGKphIsy7pWCqyy",
+          "ENE6vyNZ58DixAosiFvy3aHW6siNQ4UHOjQDuzjH5xep",
+          "EHhRzoosug3Pa9p8Y0A4LbQn6pUhi55Ztvg-panbDMwg"
+        ],
+        "nt": [
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3"
+        ],
+        "s": "0",
+        "t": "icp"
+      },
+      "pre": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303433625f222c2274223a22696370222c2264223a22454346697a615334314c454f5a50373757586d523671714e59683056513062796f5774507864716673794477222c2269223a22454346697a615334314c454f5a50373757586d523671714e59683056513062796f5774507864716673794477222c2273223a2230222c226b74223a5b22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33225d2c226b223a5b2244414f415f4f766a7362505131714757786757636b7064633945627750476d5f434a774e4458766d4551592d222c224449665541306f5a66464470457a38366c38676452614b4b4933524c36686d4c39346c67594e514d55433363222c224447746b4d644e31364e734973666e6a786344423348484e47473536305658415064486766504d7447383952222c2244506e774a784b72384937694d39637074483132394f654a33457a3062573666726f7743446459794f416232222c22444a302d47743538544966696f63537857563834726b424b455f567a61346f6b4768664564517130504d6b31222c2244413233564a494c4f5a32763749526d443339525954696d31516c53504f56544c526e5f506b736251614972222c224450554b544a7632694f6a4f49512d424365676b6638676538672d4e53674b56414e544f7437344f4937374c225d2c226e74223a5b22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33225d2c226e223a5b2245423658426638575647723532574a4133614c2d32616a6a664668796d7a4a6b4a5774484e75523844657a63222c22454c73716c2d6a54344874365974617230486d424f4e374f76496564486a4248624746702d64384138787a4c222c22454f553569416549494c7a625355634b6975474d6759374d5f374f4e3352786369656a614b4a783468655a49222c2245505a697a4e716332486e324169357a2d63635644646947497639754b4f6f484936644d557a447a5f435f48222c224549543336633464506a6c787744463335586468684b2d5a2d4165553244474b706849737937705743717979222c22454e453676794e5a3538446978416f7369467679336148573673694e513455484f6a5144757a6a4835786570222c22454868527a6f6f737567335061397038593041344c62516e367055686935355a7476672d70616e62444d7767225d2c226274223a2232222c2262223a5b22424b694733473966504d396745453238365664595848776d584266352d7073443262613273626348494c4261222c22424d72645649792d566f56556365397a6f466d7544477054564932576533367052354164525364517450526f222c22424662335a77336677387173704b797858655a7a6a66775a676e345365466444694c436e5a3136563666544e225d2c2263223a5b5d2c2261223a5b5d7d",
+      "raw_len": 1083,
+      "said": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw"
+    },
+    "icp_sigs": [
+      {
+        "index": 0,
+        "kind": "controller",
+        "sig_hex": "8fe47ca676bf4df9179017622ac09ff27f9877994aa8df4a87f6dbc892e06f5525b6f1d9fc90729352d39ec2d03a7cc2f1c5c22ae4a161ae5be076875255830d",
+        "sig_qb64": "AACP5Hymdr9N-ReQF2IqwJ_yf5h3mUqo30qH9tvIkuBvVSW28dn8kHKTUtOewtA6fMLxxcIq5KFhrlvgdodSVYMN",
+        "signer_verkey_qb64": "DAOA_OvjsbPQ1qGWxgWckpdc9EbwPGm_CJwNDXvmEQY-",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 1,
+        "kind": "controller",
+        "sig_hex": "96a185c9e516f1a79797b2348bb5bef5211e13b7195d6d428efc5a5f86638fe287b7fbc9f25ff391d524a153cc44b2f08a32a3734e7f53be148483351517d307",
+        "sig_qb64": "ABCWoYXJ5Rbxp5eXsjSLtb71IR4TtxldbUKO_FpfhmOP4oe3-8nyX_OR1SShU8xEsvCKMqNzTn9TvhSEgzUVF9MH",
+        "signer_verkey_qb64": "DIfUA0oZfFDpEz86l8gdRaKKI3RL6hmL94lgYNQMUC3c",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 2,
+        "kind": "controller",
+        "sig_hex": "b052a2ae7d85fe39fbaaf8a6546e73ffff30af963ce7a0cc163d28b199c8e6892adff500835cf777200950f38af975500f0f2b2ee822af63cc8e204442e8e405",
+        "sig_qb64": "ACCwUqKufYX-Ofuq-KZUbnP__zCvljznoMwWPSixmcjmiSrf9QCDXPd3IAlQ84r5dVAPDysu6CKvY8yOIERC6OQF",
+        "signer_verkey_qb64": "DGtkMdN16NsIsfnjxcDB3HHNGG560VXAPdHgfPMtG89R",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 3,
+        "kind": "controller",
+        "sig_hex": "077540b3b3a643d44f9044614245ec6af86217794b9a2ab48c1fbaf5c5ed0a24528b0d3c41555aed7a5c5db20587875ff6378540c530aa41169aa1c36308ec05",
+        "sig_qb64": "ADAHdUCzs6ZD1E-QRGFCRexq-GIXeUuaKrSMH7r1xe0KJFKLDTxBVVrtelxdsgWHh1_2N4VAxTCqQRaaocNjCOwF",
+        "signer_verkey_qb64": "DPnwJxKr8I7iM9cptH129OeJ3Ez0bW6frowCDdYyOAb2",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 4,
+        "kind": "controller",
+        "sig_hex": "5ea8e8e20452a1db0000abcffe3d7de6e33334c00238e43dea85bd5b2c96785e1badddf721ed4216544e5ac80a9b0b37f5bd0401166dab409c20d4b59541030c",
+        "sig_qb64": "AEBeqOjiBFKh2wAAq8_-PX3m4zM0wAI45D3qhb1bLJZ4Xhut3fch7UIWVE5ayAqbCzf1vQQBFm2rQJwg1LWVQQMM",
+        "signer_verkey_qb64": "DJ0-Gt58TIfiocSxWV84rkBKE_Vza4okGhfEdQq0PMk1",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 5,
+        "kind": "controller",
+        "sig_hex": "033f3ad0ca47d32286684c2c4afa8c0b94e522e69e3b521abdb7773b695f5516423d60a97f0aa8e6d38321d6f8b2134970e60ac0e3f5e844946aee176280a300",
+        "sig_qb64": "AFADPzrQykfTIoZoTCxK-owLlOUi5p47Uhq9t3c7aV9VFkI9YKl_Cqjm04Mh1viyE0lw5grA4_XoRJRq7hdigKMA",
+        "signer_verkey_qb64": "DA23VJILOZ2v7IRmD39RYTim1QlSPOVTLRn_PksbQaIr",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 6,
+        "kind": "controller",
+        "sig_hex": "76ff4f72675e312083f2d214e46200fe2484f244bb52163d10e3a2bc8403f06ca435981bde7e33514092bb60b16fd6020a3ebc321e6bcd53d45f9263193f5102",
+        "sig_qb64": "AGB2_09yZ14xIIPy0hTkYgD-JITyRLtSFj0Q46K8hAPwbKQ1mBvefjNRQJK7YLFv1gIKPrwyHmvNU9RfkmMZP1EC",
+        "signer_verkey_qb64": "DPUKTJv2iOjOIQ-BCegkf8ge8g-NSgKVANTOt74OI77L",
+        "signing_target": "event_raw"
+      }
+    ],
+    "note": "GLEIF-root seven-valid-signature worst-case Advance with witness cut/add",
+    "offsets": {
+      "b": [],
+      "ba": [
+        1034
+      ],
+      "br": [
+        980
+      ],
+      "bt": 970,
+      "i": 91,
+      "k": [
+        251,
+        298,
+        345,
+        392,
+        439,
+        486,
+        533
+      ],
+      "kt": 201,
+      "n": [
+        635,
+        682,
+        729,
+        776,
+        823,
+        870,
+        917
+      ],
+      "nt": 585,
+      "p": 150,
+      "s": 142,
+      "t": 30
+    },
+    "rot": {
+      "ked": {
+        "b": [],
+        "ba": [
+          "BHMer-Vrt8VWqc7JWsWE-O3YKabhNz0dNp9jZAnKx2BQ"
+        ],
+        "br": [
+          "BKiG3G9fPM9gEE286VdYXHwmXBf5-psD2ba2sbcHILBa"
+        ],
+        "bt": "2",
+        "i": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw",
+        "k": [
+          "DDDdmf4FBMd3C5OR9h6ZCjh4JOED-RjewtGe9tJ2JgDr",
+          "DDnpi53n0toEzNYtNxo-eSauUPjQD9zrneqmSEKp4sWz",
+          "DG7TCOOjq45YS7hHN60sdFiEYRJzpgD1US2MOXpNU_dT",
+          "DALsX9tuxUoAVcY7IWE4wSb9Jioxf9fV2PHC6ooAPn_Y",
+          "DEQ2jx2NRpvCdMf6SoIQ8D5k4ZEtx6NxL8v4uRA1-nl2",
+          "DLW6RsTfTGOwa9f-oy7dpihya3VOrt-oPIuAyoCc1c5t",
+          "DB6AHHRl00iXT2ogSFXZQJn86YNaAR7gxOffnRFJE5PO"
+        ],
+        "kt": [
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3"
+        ],
+        "n": [
+          "ELhplAygTFqijwXwDLq-dcj8T4fcWlc5N3FBp47r9sw-",
+          "ENMWpG1f8smVjPm0ux-dRD_G-Fs4jtzDxI-A66d3Ztpw",
+          "EKs-ySuEVdsGqhyyYVDY9Q7Q-q3ojwXwNXfVfDtOZWhh",
+          "EL82CXsjX5pRtlSApCjlxeCh12hTyUxAFqvN2YcdxxXw",
+          "EHuCYzaf9vAUw9kHchBcRxf6fNdHhnd264tY5neC1iqu",
+          "EO15irChl0eAKDfBI8D6QIIY_r0jT0yl0lnQhjnZWCLJ",
+          "EF4mLtE2v81HHYMZRr9w7h2E4gVKnbvc994JadF-3_QU"
+        ],
+        "nt": [
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3",
+          "1/3"
+        ],
+        "p": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw",
+        "s": "1",
+        "t": "rot"
+      },
+      "pre": "ECFizaS41LEOZP77WXmR6qqNYh0VQ0byoWtPxdqfsyDw",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303434305f222c2274223a22726f74222c2264223a22454d705766384f6d384769315168454242744579665f57697859727642544f315f7a734442644b63595f486b222c2269223a22454346697a615334314c454f5a50373757586d523671714e59683056513062796f5774507864716673794477222c2273223a2231222c2270223a22454346697a615334314c454f5a50373757586d523671714e59683056513062796f5774507864716673794477222c226b74223a5b22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33225d2c226b223a5b22444444646d663446424d643343354f523968365a436a68344a4f45442d526a657774476539744a324a674472222c2244446e706935336e30746f457a4e59744e786f2d6553617555506a5144397a726e65716d53454b703473577a222c2244473754434f4f6a71343559533768484e3630736446694559524a7a706744315553324d4f58704e555f6454222c2244414c735839747578556f415663593749574534775362394a696f786639665632504843366f6f41506e5f59222c22444551326a78324e52707643644d6636536f49513844356b345a457478364e784c387634755241312d6e6c32222c22444c57365273546654474f776139662d6f793764706968796133564f72742d6f50497541796f436331633574222c22444236414848526c3030695854326f675346585a514a6e3836594e6141523767784f66666e52464a4535504f225d2c226e74223a5b22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33222c22312f33225d2c226e223a5b22454c68706c417967544671696a775877444c712d64636a3854346663576c63354e334642703437723973772d222c22454e4d577047316638736d566a506d3075782d6452445f472d4673346a747a4478492d41363664335a747077222c22454b732d79537545566473477168797959564459395137512d71336f6a7758774e5866566644744f5a576868222c22454c38324358736a58357052746c534170436a6c7865436831326854795578414671764e3259636478785877222c2245487543597a61663976415577396b486368426352786636664e6448686e643236347459356e654331697175222c22454f3135697243686c3065414b44664249384436514949595f72306a5430796c306c6e51686a6e5a57434c4a222c224546346d4c7445327638314848594d5a52723977376832453467564b6e6276633939344a6164462d335f5155225d2c226274223a2232222c226272223a5b22424b694733473966504d396745453238365664595848776d584266352d7073443262613273626348494c4261225d2c226261223a5b2242484d65722d5672743856577163374a577357452d4f33594b6162684e7a30644e70396a5a416e4b78324251225d2c2261223a5b5d7d",
+      "raw_len": 1088,
+      "said": "EMpWf8Om8Gi1QhEBBtEyf_WixYrvBTO1_zsDBdKcY_Hk"
+    },
+    "rot_sigs": [
+      {
+        "index": 0,
+        "kind": "controller",
+        "sig_hex": "d66e71a2b02e6c9bd2828962228d0b7807e7dc53773cfc124dcd786ca48c585011022d7bb3fddadf2365aba555d56db63f25dc0ec700545fb9f2205f3b467d06",
+        "sig_qb64": "AADWbnGisC5sm9KCiWIijQt4B-fcU3c8_BJNzXhspIxYUBECLXuz_drfI2WrpVXVbbY_JdwOxwBUX7nyIF87Rn0G",
+        "signer_verkey_qb64": "DDDdmf4FBMd3C5OR9h6ZCjh4JOED-RjewtGe9tJ2JgDr",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 1,
+        "kind": "controller",
+        "sig_hex": "e4f9864c6e16646cb389e0f8e1dc8ffc688eccf4a4b61a38c0bbcf7a44330217b069108044a2314e0edc5c4a5f0ed08f1b01887d4641eafcc443d201252c9908",
+        "sig_qb64": "ABDk-YZMbhZkbLOJ4Pjh3I_8aI7M9KS2GjjAu896RDMCF7BpEIBEojFODtxcSl8O0I8bAYh9RkHq_MRD0gElLJkI",
+        "signer_verkey_qb64": "DDnpi53n0toEzNYtNxo-eSauUPjQD9zrneqmSEKp4sWz",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 2,
+        "kind": "controller",
+        "sig_hex": "0ed832cb1a71ad1b0b88f71eae49a955a22459fc09fe658a9eb9048f1b323973e0c9d17fafa3c3e21b315612b791a93af8e85add449a87afb41949555f810306",
+        "sig_qb64": "ACAO2DLLGnGtGwuI9x6uSalVoiRZ_An-ZYqeuQSPGzI5c-DJ0X-vo8PiGzFWEreRqTr46FrdRJqHr7QZSVVfgQMG",
+        "signer_verkey_qb64": "DG7TCOOjq45YS7hHN60sdFiEYRJzpgD1US2MOXpNU_dT",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 3,
+        "kind": "controller",
+        "sig_hex": "563d7cc3d3d405f3442faacc1ec4a86d977a35fd004a617228a682eccc0d1b4e61dba9392f21ba5d49a4c45c3144a2733763eb9f94a45722c988a429bb85e100",
+        "sig_qb64": "ADBWPXzD09QF80QvqswexKhtl3o1_QBKYXIopoLszA0bTmHbqTkvIbpdSaTEXDFEonM3Y-uflKRXIsmIpCm7heEA",
+        "signer_verkey_qb64": "DALsX9tuxUoAVcY7IWE4wSb9Jioxf9fV2PHC6ooAPn_Y",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 4,
+        "kind": "controller",
+        "sig_hex": "40b3d13edaa89ceb594f9274da7f4ebb1bebd4584f5f1baa45b6ac229e1a8bec293d27f43a1dfd1c411ec4348ae9b00a2b2096206a6e21334eecbce6e6661001",
+        "sig_qb64": "AEBAs9E-2qic61lPknTaf067G-vUWE9fG6pFtqwinhqL7Ck9J_Q6Hf0cQR7ENIrpsAorIJYgam4hM07svObmZhAB",
+        "signer_verkey_qb64": "DEQ2jx2NRpvCdMf6SoIQ8D5k4ZEtx6NxL8v4uRA1-nl2",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 5,
+        "kind": "controller",
+        "sig_hex": "9a4dc67fe13bfa377695ea9ae336ba54bbccea236314f2c530513f9969a89d11d0c1a99238d32b8459346313c6d1fe9cbda82abc9567aa084fbd03a4055c2e0d",
+        "sig_qb64": "AFCaTcZ_4Tv6N3aV6prjNrpUu8zqI2MU8sUwUT-ZaaidEdDBqZI40yuEWTRjE8bR_py9qCq8lWeqCE-9A6QFXC4N",
+        "signer_verkey_qb64": "DLW6RsTfTGOwa9f-oy7dpihya3VOrt-oPIuAyoCc1c5t",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 6,
+        "kind": "controller",
+        "sig_hex": "a14a82f5affb5a18a6507c0ae2eb2d42612eaccff4a65a154e825c1a131b394ce9a99ed1a7d45ed81c2a076cc78d76d3f54dd8b5eb3e317a1658c94a79b80e09",
+        "sig_qb64": "AGChSoL1r_taGKZQfAri6y1CYS6sz_SmWhVOglwaExs5TOmpntGn1F7YHCoHbMeNdtP1Tdi16z4xehZYyUp5uA4J",
+        "signer_verkey_qb64": "DB6AHHRl00iXT2ogSFXZQJn86YNaAR7gxOffnRFJE5PO",
+        "signing_target": "event_raw"
+      }
+    ],
+    "rot_witness_receipts": [
+      {
+        "index": 0,
+        "kind": "witness",
+        "sig_hex": "123dcfd32138f481ea16c52e46ac57d4b23729e725c8b19d5a616022269dd4203f4a1d9a9ca696fc21271a9dbc417e7750720d3644fa689431bc6ebe7742aa02",
+        "sig_qb64": "AAASPc_TITj0geoWxS5GrFfUsjcp5yXIsZ1aYWAiJp3UID9KHZqcppb8IScanbxBfndQcg02RPpolDG8br53QqoC",
+        "signer_verkey_qb64": "BMrdVIy-VoVUce9zoFmuDGpTVI2We36pR5AdRSdQtPRo",
+        "signing_target": "event_raw"
+      },
+      {
+        "index": 2,
+        "kind": "witness",
+        "sig_hex": "c1929af773c6d18d7140f1ae6629e424fa1c75dbf44d30dd8e80c7d4ddaa9f6fc902f6abe96486f77b40aa23723700d49704746179edccc9d6ba11eed35b8109",
+        "sig_qb64": "ACDBkpr3c8bRjXFA8a5mKeQk-hx12_RNMN2OgMfU3aqfb8kC9qvpZIb3e0CqI3I3ANSXBHRhee3Myda6Ee7TW4EJ",
+        "signer_verkey_qb64": "BHMer-Vrt8VWqc7JWsWE-O3YKabhNz0dNp9jZAnKx2BQ",
+        "signing_target": "event_raw"
+      }
+    ],
+    "signer_seeds": {
+      "inception_current": [
+        {
+          "seed_hex": "622253ab1aeeac100eb22c016d520b2a2e87c3be6747e744d7b6d5e6abd6c68e",
+          "verkey_qb64": "DAOA_OvjsbPQ1qGWxgWckpdc9EbwPGm_CJwNDXvmEQY-"
+        },
+        {
+          "seed_hex": "ea6656940b12ef17a39b60e96b35ff26a19421a6252d49c5ac2c2b4c69cf4fa9",
+          "verkey_qb64": "DIfUA0oZfFDpEz86l8gdRaKKI3RL6hmL94lgYNQMUC3c"
+        },
+        {
+          "seed_hex": "c43b8d83aa3d51b532b51185f4911ede999aa9c615e8b2390260658c344e36b6",
+          "verkey_qb64": "DGtkMdN16NsIsfnjxcDB3HHNGG560VXAPdHgfPMtG89R"
+        },
+        {
+          "seed_hex": "375f6c1c7671b197366f3320d1e62f88af4d3f0f2ff78d21e5f58dcaca92b5bc",
+          "verkey_qb64": "DPnwJxKr8I7iM9cptH129OeJ3Ez0bW6frowCDdYyOAb2"
+        },
+        {
+          "seed_hex": "36f5e87fb35ca43d0c9edae9b36e4453e93550f28bf3cbf5c07deefc319a5b88",
+          "verkey_qb64": "DJ0-Gt58TIfiocSxWV84rkBKE_Vza4okGhfEdQq0PMk1"
+        },
+        {
+          "seed_hex": "1be33d49e850c30e4341d9c871950fa594dae4372ab4e9c0baf830577e98fc09",
+          "verkey_qb64": "DA23VJILOZ2v7IRmD39RYTim1QlSPOVTLRn_PksbQaIr"
+        },
+        {
+          "seed_hex": "35d79fa854be1a5b34504e3869ea63f92ccb74abb47e03be965f3ed1cec46a2b",
+          "verkey_qb64": "DPUKTJv2iOjOIQ-BCegkf8ge8g-NSgKVANTOt74OI77L"
+        }
+      ],
+      "rotation_current": [
+        {
+          "seed_hex": "a8472683564419708a22bc1f88635a081cc56e5943227abbdafb8e3891da6989",
+          "verkey_qb64": "DDDdmf4FBMd3C5OR9h6ZCjh4JOED-RjewtGe9tJ2JgDr"
+        },
+        {
+          "seed_hex": "bca02b10f6c2bb2a82b65187a0a383a0692a37a2e57e8ecfe40239eb8b1db072",
+          "verkey_qb64": "DDnpi53n0toEzNYtNxo-eSauUPjQD9zrneqmSEKp4sWz"
+        },
+        {
+          "seed_hex": "a419b5297748458a6d25becef0dcb010bf9ffd402ce317492517c3913405ada7",
+          "verkey_qb64": "DG7TCOOjq45YS7hHN60sdFiEYRJzpgD1US2MOXpNU_dT"
+        },
+        {
+          "seed_hex": "6c3cd7ad7c8c38a5288d85033a2bd951d74eaae710f4eb7ebabf3400bc5e6bfb",
+          "verkey_qb64": "DALsX9tuxUoAVcY7IWE4wSb9Jioxf9fV2PHC6ooAPn_Y"
+        },
+        {
+          "seed_hex": "669710923e3f0a5e81bd80ba635474b15434a044e6f904771a897b0eab1670b6",
+          "verkey_qb64": "DEQ2jx2NRpvCdMf6SoIQ8D5k4ZEtx6NxL8v4uRA1-nl2"
+        },
+        {
+          "seed_hex": "3d877a2e5e9c03a87c6cd45fb72115c1e793fe1548c61f31bef5bb4ffb36527f",
+          "verkey_qb64": "DLW6RsTfTGOwa9f-oy7dpihya3VOrt-oPIuAyoCc1c5t"
+        },
+        {
+          "seed_hex": "40ff1c5a847f54e8207f33d35592d21c98407f0b9187ba1934e0e00f15baba43",
+          "verkey_qb64": "DB6AHHRl00iXT2ogSFXZQJn86YNaAR7gxOffnRFJE5PO"
+        }
+      ],
+      "rotation_next": [
+        {
+          "seed_hex": "ed97dc70e173802cd1ce254598e9d1ee7cb398e072ebc89611578da169c9ad92",
+          "verkey_qb64": "DBoMYFYIRwhYDLlqd5yf2SEq9Pm5RoONkfji0gb5ovLm"
+        },
+        {
+          "seed_hex": "fda5404edac83767160f0b2f162e9e150348beb4652b0a38a097153751967d69",
+          "verkey_qb64": "DOKRXQLttyU7TXWLTjmF5EqVQvoic9BouioBckzyJfvp"
+        },
+        {
+          "seed_hex": "13e74bb7dc285beba8cbbb75f94d76f4c659ba890ab8185c30d1ba297682992a",
+          "verkey_qb64": "DDK4NWmdzrmohbaJ8_kN6NFIKu-m9EAO48s85pZXRcsT"
+        },
+        {
+          "seed_hex": "0fb99568640e0c5f6e1f876c8fd8104d8f8c1069af2cb15896d36e9891ce95c0",
+          "verkey_qb64": "DDJrk3dfVDyOcbDChvlk9EUvvWYhHqVMXBkh58BjYzkz"
+        },
+        {
+          "seed_hex": "b0cd784af0b68dfc0dfebe30edd2a253f03451724b8270904675918a318d6686",
+          "verkey_qb64": "DPIFtJZVI50uqL34dRyAgED5og34WAxDNRF-NcMwW8Fj"
+        },
+        {
+          "seed_hex": "81db8e1157f4139b34d40bcb262d0a611b57e73722b2bfe8510db87efda4ef85",
+          "verkey_qb64": "DMNH3ZtOLCS9fpZADMC5J_wn-jIvD0JU6DlK7eWCD7Qq"
+        },
+        {
+          "seed_hex": "056196e8ca64a7562cb9105b53ace4ba3a1312cea6c5edb2da93e570bf9980e9",
+          "verkey_qb64": "DBK2wtR91-TH15MysWcUMZvheXj-iSS_ez-F5PqPzbha"
+        }
+      ],
+      "witness_added": [
+        {
+          "seed_hex": "221d6a618a9a21ca03aa7a3ecc975c4641ec765b4093a9b10b19e69ecd673e92",
+          "verkey_qb64": "BHMer-Vrt8VWqc7JWsWE-O3YKabhNz0dNp9jZAnKx2BQ"
+        }
+      ],
+      "witness_outgoing": [
+        {
+          "seed_hex": "7f3c020115b1d8f17af15c83a1a497822775db8d842fec7f402197b66e476704",
+          "verkey_qb64": "BKiG3G9fPM9gEE286VdYXHwmXBf5-psD2ba2sbcHILBa"
+        },
+        {
+          "seed_hex": "9ea340078f4faccfba4bf9031d90743a0959414d9749216f2d15e6d6bb87556e",
+          "verkey_qb64": "BMrdVIy-VoVUce9zoFmuDGpTVI2We36pR5AdRSdQtPRo"
+        },
+        {
+          "seed_hex": "35fb940cbf379c9b3820167bee4706194ffed9991964dddb9e20f0aa9365330e",
+          "verkey_qb64": "BFb3Zw3fw8qspKyxXeZzjfwZgn4SeFdDiLCnZ16V6fTN"
+        }
+      ]
+    }
+  },
   "note": "#115 witnessed rotations with controller and incoming-set witness signatures over exact keripy event raw bytes",
   "offset_convention": "Offsets index into rot.raw: string values point to unquoted content; array offsets identify each unquoted element. All t/i/s/k/kt/n/nt/p/br/ba/bt slices are self-checked against ked."
 }

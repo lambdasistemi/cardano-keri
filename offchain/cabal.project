@@ -27,8 +27,30 @@ repository cardano-haskell-packages
 source-repository-package
   type: git
   location: https://github.com/lambdasistemi/cardano-node-clients
-  tag: ca86f11d27b34e37d3814e4d3c3d66e256400403
-  --sha256: 01ic1620d3qs1y224qgvx21k1i4jzf5z6ygprwajsnrgjzacni5y
+  tag: 5877c54ab23e876292ccb1eabb89d85c6560eda2
+  --sha256: 10wv1b5p4mbm911f08nry2f271qj3x7rh8ncabv6svwjnpvwlkzl
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/cardano-tx-tools
+  tag: 3940d17476324d705be2b49181a6ed881ba95393
+  --sha256: 16x952r9qxpzppgxnbqa5yavscbw581y6csz5fdc55n88257qsmx
+
+-- ----------------------------------------------------------------------
+-- Git-only transitive dep of the FULL cardano-tx-tools library (the one
+-- exposing Cardano.Tx.Validate, built with +build-node-tools below).
+-- github-release-check is on neither hackage nor CHaP; cardano-tx-tools
+-- supplies it to itself via its own cabal.project, and a consumer does
+-- not inherit a dependency's source-repository-package stanzas. Mirrored
+-- verbatim at the rev cardano-tx-tools pins at 3940d174, exactly as the
+-- node-clients transitive block below is mirrored. Adds a package; changes
+-- no existing pin.
+-- ----------------------------------------------------------------------
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/github-release-check
+  tag: d90131112a4d6c048d1809adaffdefed92e8e841
+  --sha256: 0ad6yi431w8h5i3x9x661b99frcgvd39gm4164y8cx1ihpsjixn3
 
 -- ----------------------------------------------------------------------
 -- Transitive git deps of cardano-node-clients. Mirrored verbatim from
@@ -38,8 +60,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/lambdasistemi/chain-follower
-  tag: 371b5930976ac3bb4e8a4ef576d5098d706984ee
-  --sha256: 1rks78zmgmxz5cg4v82vnc6hwib8vrylwk2m7y82iqaymmnskdvf
+  tag: d592a5015f8d7edb2d6022936a67a054dfe5329f
+  --sha256: 1pm2yhsm2zg5nv01aixv6ss21f2ka8ysq6dv2q4mpf9smz0m8g78
 
 source-repository-package
   type: git
@@ -56,8 +78,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/cardano-foundation/cardano-ledger-read
-  tag: 34d0767bd5c3648ab77ecbc00db0ad0a2a5316a5
-  --sha256: 0v357pbw2s22lsizxidq67pn4dcjkajips6mlcskd1zna35nyyv6
+  tag: 242c5c856f51aebe17f2d39b2320df6de1c05293
+  --sha256: 1k6vjzng1qmjs4kpz5123wps6phxqyss6c44g48z6riwiwnkzpjw
 
 source-repository-package
   type: git
@@ -99,6 +121,9 @@ constraints:
   , ouroboros-consensus == 1.0.0.0
   , ouroboros-network == 1.1.0.0
   , typed-protocols == 1.2.0.0
+
+package cardano-tx-tools
+  flags: +build-node-tools
 
 package ouroboros-consensus
   tests: False

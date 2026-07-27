@@ -62,6 +62,7 @@ library
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
+    Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
 
   other-modules:
@@ -106,6 +107,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.RegistrationSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
+    Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
     Paths_cardano_keri
 
@@ -241,13 +243,17 @@ test-suite e2e-tests
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
+    , cardano-ledger-shelley
     , cardano-node-clients
     , cardano-node-clients:devnet
+    , cardano-slotting
     , cardano-strict-containers
+    , cardano-tx-tools
     , containers
     , hspec                        >=2.11 && <2.12
     , memory
     , microlens
+    , ouroboros-network:api
     , plutus-core
     , plutus-ledger-api
     , plutus-tx

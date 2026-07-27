@@ -22,9 +22,11 @@ recorded settlement evidence.
 module CageE2ESpec (spec) where
 
 import Control.Concurrent (threadDelay)
+import Control.Exception (SomeException, displayException, try)
 import Control.Monad (unless, when)
+import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as B8
-import Data.List (find, intercalate, isInfixOf, minimumBy)
+import Data.List (find, intercalate, isInfixOf, isSuffixOf, minimumBy)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (listToMaybe)
 import Data.Ord (comparing)
@@ -41,30 +43,61 @@ import System.Timeout (timeout)
 import Test.Hspec
 
 import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Alonzo.PParams (ppCostModelsL, ppMaxTxExUnitsL)
+import Cardano.Ledger.Alonzo.Scripts (costModelsValid, getCostModelParams)
+import Cardano.Ledger.Api.PParams (unCoinPerByte)
 import Cardano.Ledger.Api.Tx (txIdTx)
-import Cardano.Ledger.Api.Tx.Out (coinTxOutL)
-import Cardano.Ledger.BaseTypes (TxIx (..))
-import Cardano.Ledger.Coin (unCoin)
+import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, inputsTxBodyL)
+import Cardano.Ledger.Api.Tx.Out (coinTxOutL, mkBasicTxOut)
+import Cardano.Ledger.BaseTypes (
+    Inject (..),
+    ProtVer (..),
+    TxIx (..),
+    getVersion,
+ )
+import Cardano.Ledger.Coin (Coin (..), unCoin)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core (TxOut)
-import Cardano.Ledger.Plutus.ExUnits (exUnitsMem, exUnitsSteps)
+import Cardano.Ledger.Core (
+    TxOut,
+    bodyTxL,
+    ppMaxTxSizeL,
+    ppProtocolVersionL,
+    ppTxFeeFixedL,
+    ppTxFeePerByteL,
+ )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), exUnitsMem, exUnitsSteps)
+import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Key
+import Data.Aeson.KeyMap qualified as KeyMap
 import Lens.Micro ((^.))
 
 import Cardano.Node.Client.E2E.Setup (
+    DevnetConfig (devnetTargetPV),
+    TargetPV (PV11),
     addKeyWitness,
+    assertPV11Enacted,
+    defaultDevnetConfig,
     genesisAddr,
     genesisSignKey,
     keyHashFromSignKey,
-    withDevnet,
+    withDevnetConfig,
  )
-import Cardano.Node.Client.Provider (Provider (..))
+import Cardano.Node.Client.N2C.Provider (mkN2CProvider)
+import Cardano.Node.Client.Provider (
+    LedgerSnapshot (..),
+    Provider (..),
+    SlotNo (..),
+ )
 import Cardano.Node.Client.Submitter (SubmitResult (..), Submitter (..))
 
 import CageTxBuilder
 
 spec :: Spec
 spec = do
+    offlineBatchedPv11CaptureContract
     -- The numerical batch sweep (a measurement, not a behaviour assertion) is
     -- opt-in via @KERI_CAGE_SWEEP=1@ so the default smoke stays fast; when set,
     -- @KERI_CAGE_SWEEP_OUT@ names the artifact file it (re)generates. Each batch
@@ -93,6 +126,377 @@ spec = do
                         )
                         (zip [0 ..] sweepSchedule)
 
+-- ---------------------------------------------------------------------------
+-- Offline batched PV11 capture contract (RED 2 + RED 3)
+-- ---------------------------------------------------------------------------
+
+{- | Offline proof of the real Conway Phase-1 guard.
+
+Every example here is OFFLINE: no provider, socket, node, devnet, network,
+signing, or submission. Candidates are real Conway transactions handed to the
+pinned real ledger rule via 'runPhase1'; the ledger's own failure constructors
+are asserted, never a weaker predicate.
+
+Guard-parameter provenance (A-048 ruling 48A): protocol major, the 350-entry
+PlutusV3 cost model, and the maximum transaction execution units come from the
+committed real-mainnet PV11 fixture; every other Phase-1 field comes from the
+SAME pinned node-clients revision's DEVNET GENESIS. Assertions decided by a
+genesis-sourced field (@MaxTxSizeUTxO@, @FeeTooSmallUTxO@) rest on the pinned
+devnet genesis value and are NOT mainnet-authoritative.
+-}
+offlineBatchedPv11CaptureContract :: Spec
+offlineBatchedPv11CaptureContract = do
+    describe "offline batched PV11 capture contract" builderSeamsAreGuarded
+    describe "offline batched PV11 capture contract" remainingCageSeamsAreGuarded
+    describe "offline batched PV11 capture contract" realCageShapeAndAcceptance
+    describe "offline batched PV11 capture contract" $
+        beforeAll loadPv11GuardParams $ do
+            describe "committed real-PV11 fixture is the guard input" $ do
+                it "resolves the committed fixture path and hash" $ \guard -> do
+                    pv11FixtureFile guard
+                        `shouldSatisfy` isSuffixOf "pparams-pv11-mainnet.json"
+                    pv11FixtureSha256 guard
+                        `shouldBe` "2ff234b5b50ae9dc17355ffaedfadd9bbc2e166df6c8b0505004eecabd1be026"
+                it "decodes protocol major exactly 11 from the fixture" $ \guard ->
+                    pv11ProtocolMajor guard `shouldBe` 11
+                it "decodes exactly 350 PlutusV3 cost-model entries from the fixture" $ \guard ->
+                    pv11V3CostModelEntries guard `shouldBe` 350
+                it "decodes maxTxExUnits exactly 16,500,000 / 10,000,000,000" $ \guard ->
+                    pv11MaxTxExUnits guard `shouldBe` ExUnits 16_500_000 10_000_000_000
+                it "each composed field matches its ACTUAL decoded source (A-048 48A)" $ \guard -> do
+                    -- Decode both sources independently here, then compare the
+                    -- COMPOSED parameters field-by-field against whichever
+                    -- source is authoritative. This follows the real decoded
+                    -- values rather than a self-authored label list.
+                    genesisDir <-
+                        lookupEnv "E2E_GENESIS_DIR"
+                            >>= maybe (fail "E2E_GENESIS_DIR not set") pure
+                    fixtureJson <- decodeJsonAt (pv11FixtureFile guard)
+                    shelleyJson <- decodeJsonAt (genesisDir <> "/shelley-genesis.json")
+                    let composed = pv11ComposedParams guard
+                        ProtVer major minor = composed ^. ppProtocolVersionL
+                    -- FIXTURE wins for exactly these three.
+                    (getVersion major :: Integer)
+                        `shouldBe` jsonIntAt fixtureJson ["protocolVersion", "major"]
+                    composed ^. ppMaxTxExUnitsL
+                        `shouldBe` ExUnits
+                            (fromInteger (jsonIntAt fixtureJson ["maxTxExecutionUnits", "memory"]))
+                            (fromInteger (jsonIntAt fixtureJson ["maxTxExecutionUnits", "steps"]))
+                    pv11V3CostModelEntries guard `shouldBe` 350
+                    -- GENESIS wins for everything else, minor included.
+                    toInteger minor
+                        `shouldBe` jsonIntAt shelleyJson ["protocolParams", "protocolVersion", "minor"]
+                    toInteger (composed ^. ppMaxTxSizeL)
+                        `shouldBe` jsonIntAt shelleyJson ["protocolParams", "maxTxSize"]
+                    unCoin (fromCompact (unCoinPerByte (composed ^. ppTxFeePerByteL)))
+                        `shouldBe` jsonIntAt shelleyJson ["protocolParams", "minFeeA"]
+                    unCoin (composed ^. ppTxFeeFixedL)
+                        `shouldBe` jsonIntAt shelleyJson ["protocolParams", "minFeeB"]
+                    pv11ProtocolMinor guard
+                        `shouldBe` jsonIntAt shelleyJson ["protocolParams", "protocolVersion", "minor"]
+
+            describe "real ledger rule decides admissibility" $ do
+                it
+                    "aggregate-over-limit three-purpose Register yields exact ExUnitsTooBigUTxO"
+                    $ \guard -> do
+                        verdict <- judge guard NoRewardState overLimitRegisterTx
+                        renderPhase1 verdict
+                            `shouldSatisfy` isInfixOf "ExUnitsTooBigUTxO"
+                        phase1Accepted verdict `shouldBe` False
+                it
+                    "declared three-purpose aggregate 24,500,000 / 14,500,000,000 exceeds the PV11 maximum"
+                    $ \guard -> do
+                        let ExUnits maxMem maxSteps = pv11MaxTxExUnits guard
+                        aggregateMem `shouldBe` 24_500_000
+                        aggregateSteps `shouldBe` 14_500_000_000
+                        (aggregateMem > maxMem) `shouldBe` True
+                        (aggregateSteps > maxSteps) `shouldBe` True
+                it "script-integrity mutation yields the exact ledger integrity failure" $ \guard -> do
+                    verdict <- judge guard NoRewardState mutatedIntegrityTx
+                    renderPhase1 verdict
+                        `shouldSatisfy` isInfixOf "ScriptIntegrityHashMismatch"
+                    phase1Accepted verdict `shouldBe` False
+                it "zero-fee mutation yields the exact ledger fee failure" $ \guard -> do
+                    verdict <- judge guard NoRewardState zeroFeeTx
+                    renderPhase1 verdict
+                        `shouldSatisfy` isInfixOf "FeeTooSmallUTxO"
+                    phase1Accepted verdict `shouldBe` False
+                it "a mixed witness-plus-structural result names the COMPLETE structural set exactly" $ \guard -> do
+                    verdict <- judgeResolved guard NoRewardState overLimitRegisterTx
+                    structuralNames verdict `shouldBe` expectedOverLimitStructural
+                    phase1Accepted verdict `shouldBe` False
+                it "an unsigned but structurally valid candidate is accepted on witness-only failures" $ \guard -> do
+                    verdict <- judge guard NoRewardState witnessOnlyTx
+                    renderPhase1 verdict
+                        `shouldSatisfy` isInfixOf "MissingVKeyWitnessesUTXOW"
+                    phase1Structural verdict `shouldBe` []
+                    phase1Accepted verdict `shouldBe` True
+
+            describe "downstream sentinels stay zero on structural rejection" $
+                it "never evaluates, signs, or submits a structurally rejected candidate" $ \guard -> do
+                    sentinels <- newPhase1Sentinels
+                    verdict <- judge guard NoRewardState overLimitRegisterTx
+                    when (phase1Accepted verdict) $ do
+                        countEvaluation sentinels
+                        countSigning sentinels
+                        countSubmission sentinels
+                    readPhase1Sentinels sentinels `shouldReturn` (0, 0, 0)
+
+            describe "reward-state modelling does not blind the guard" $ do
+                it "1: plain validatePhase1 reports the withdrawal-account false positive (ConwayWithdrawalsMissingAccounts)" $ \guard -> do
+                    verdict <- judge guard NoRewardState withdrawalTx
+                    renderPhase1 verdict
+                        `shouldSatisfy` isInfixOf "ConwayWithdrawalsMissingAccounts"
+                it "2: seeding exactly the body's withdrawal accounts removes only that false positive" $ \guard -> do
+                    verdict <- judge guard seededObserverAccount withdrawalTx
+                    renderPhase1 verdict
+                        `shouldNotSatisfy` isInfixOf "ConwayWithdrawalsMissingAccounts"
+                it "3: ExUnitsTooBigUTxO remains visible through the same seeded call" $ \guard -> do
+                    verdict <- judge guard seededObserverAccount overLimitWithdrawalTx
+                    renderPhase1 verdict
+                        `shouldSatisfy` isInfixOf "ExUnitsTooBigUTxO"
+                    phase1Accepted verdict `shouldBe` False
+
+            describe "intentional Cage negative sweep is proved offline" $
+                mapM_
+                    ( \(n, needles) ->
+                        it
+                            ( "batch size "
+                                <> show n
+                                <> " is rejected by the real guard naming "
+                                <> intercalate " + " needles
+                            )
+                            $ \guard -> do
+                                sentinels <- newPhase1Sentinels
+                                let candidate = oversizedCageModifyTx n
+                                verdict <-
+                                    judgeResolved guard NoRewardState candidate
+                                let rendered = renderPhase1 verdict
+                                mapM_
+                                    (\needle -> rendered `shouldSatisfy` isInfixOf needle)
+                                    needles
+                                -- Complete normal+collateral resolved set, so
+                                -- no unresolved-input noise can appear.
+                                structuralNames verdict
+                                    `shouldNotSatisfy` elem "BadInputsUTxO"
+                                phase1Accepted verdict `shouldBe` False
+                                readPhase1Sentinels sentinels `shouldReturn` (0, 0, 0)
+                    )
+                    offlineCageNegatives
+
+{- | The builder-integration contract: the guard must be REACHED by the real
+builder seams, not merely available to a spec.
+
+This is the behaviour the slice adds. Until 'buildModifyTx' consults the real
+Phase-1 guard before returning a candidate, it hands back an inadmissible
+transaction and these examples fail — which is the point of running them
+first.
+-}
+
+{- | The four remaining Cage builder return seams.
+
+Each example drives its builder to a GENUINE structural failure using only
+legitimate inputs — a change output below the pinned genesis min-UTxO floor,
+collateral below the pinned genesis collateral percentage, or a request batch
+past the pinned genesis maximum transaction size. None of these seams consults
+the real guard yet, so each returns the inadmissible candidate and the example
+fails. That is the missing wiring this RED exists to expose.
+-}
+remainingCageSeamsAreGuarded :: Spec
+remainingCageSeamsAreGuarded =
+    describe "remaining builder return seams reach the real guard" $ do
+        it "buildSplitTx refuses a candidate whose change falls below min-UTxO" $ do
+            env <- offlineEnvWith [(0xaa, 31_000_000)]
+            expectGuardRejection "OutputTooSmallUTxO" $
+                buildSplitTx env offlineOwnerAddr
+        it "buildRequestTx refuses a candidate whose change falls below min-UTxO" $ do
+            env <- offlineEnvWith [(0xaa, 5_900_000)]
+            expectGuardRejection "OutputTooSmallUTxO" $
+                buildRequestTx env offlineOwnerKeyHash offlineOwnerAddr "offline-cage-token"
+        it "buildMintTx refuses a candidate whose change falls below min-UTxO" $ do
+            env <- offlineEnvWith [(0xaa, 3_400_000), (0xbb, 500_000_000)]
+            wallet <- queryUTxOs (envProvider env) offlineOwnerAddr
+            seedUtxo <-
+                maybe (fail "offline mint seed missing") pure (listToMaybe wallet)
+            expectGuardRejection "OutputTooSmallUTxO" $
+                buildMintTx env offlineOwnerKeyHash offlineOwnerAddr seedUtxo
+        it "buildRequestsTx refuses a batch past the maximum transaction size" $ do
+            env <- offlineEnvWith [(0xaa, 5_000_000_000)]
+            expectGuardRejection "MaxTxSizeUTxO" $
+                buildRequestsTx
+                    env
+                    offlineOwnerKeyHash
+                    offlineOwnerAddr
+                    "offline-cage-token"
+                    400
+
+{- | Build an offline cage environment whose wallet is exactly the supplied
+@(seed byte, lovelace)@ pairs.
+-}
+offlineEnvWith :: [(Int, Integer)] -> IO CageEnv
+offlineEnvWith entries = do
+    guardParams <- loadPv11GuardParams
+    blueprint <-
+        lookupEnv "KERI_CAGE_BLUEPRINT"
+            >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
+    offlineCageEnv blueprint guardParams (offlineWalletOf entries)
+
+{- | Assert a builder seam rejects at the real guard, naming the exact ledger
+failure. Fails loudly when the seam instead returns a candidate — which is the
+current, unwired behaviour.
+-}
+expectGuardRejection :: String -> IO a -> Expectation
+expectGuardRejection needle action = do
+    outcome <- tryAny action
+    case outcome of
+        Right _ ->
+            expectationFailure
+                ( "builder returned an inadmissible candidate instead of "
+                    <> "rejecting it at the guard with "
+                    <> needle
+                )
+        Left err -> displayException err `shouldSatisfy` isInfixOf needle
+
+builderSeamsAreGuarded :: Spec
+builderSeamsAreGuarded =
+    describe "builder return seams reach the real guard" $
+        mapM_
+            ( \n ->
+                it
+                    ( "buildModifyTx refuses to return the inadmissible n="
+                        <> show n
+                        <> " candidate"
+                    )
+                    $ do
+                        guardParams <- loadPv11GuardParams
+                        blueprint <-
+                            lookupEnv "KERI_CAGE_BLUEPRINT"
+                                >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
+                        submittedAt <- currentOfflinePosixMs
+                        env0 <- offlineCageEnv blueprint guardParams []
+                        let (wallet, stateUtxo, reqUtxos) =
+                                offlineModifyFixtures env0 n submittedAt
+                        env <- offlineCageEnv blueprint guardParams wallet
+                        outcome <-
+                            try
+                                ( buildModifyTx
+                                    env
+                                    offlineOwnerKeyHash
+                                    offlineOwnerAddr
+                                    stateUtxo
+                                    reqUtxos
+                                ) ::
+                                IO (Either SomeException (ConwayTx, ByteString, [(String, ExUnits)]))
+                        case outcome of
+                            Right _ ->
+                                expectationFailure
+                                    ( "buildModifyTx returned an inadmissible n="
+                                        <> show n
+                                        <> " candidate instead of rejecting it at the guard"
+                                    )
+                            Left err ->
+                                displayException err
+                                    `shouldSatisfy` isInfixOf "ExUnitsTooBigUTxO"
+            )
+            [5 :: Int, 8, 16, 24, 44]
+
+{- | The intentional over-limit rows converted from the live @KERI_CAGE_SWEEP@.
+
+Failure types are preserved exactly in kind, not merely in spirit: the same
+constructors the node assertions named.
+-}
+offlineCageNegatives :: [(Int, [String])]
+offlineCageNegatives =
+    [ (5, ["ExUnitsTooBigUTxO"])
+    , (8, ["ExUnitsTooBigUTxO"])
+    , (16, ["ExUnitsTooBigUTxO"])
+    , (24, ["ExUnitsTooBigUTxO"])
+    , (44, ["ExUnitsTooBigUTxO", "MaxTxSizeUTxO"])
+    ]
+
+{- | Resolve EVERY input the candidate spends, so no unrelated
+unresolved-input failure can appear in the structural partition (A-050 50D
+item 6).
+-}
+judgeResolved ::
+    Pv11GuardParams -> Phase1RewardState -> ConwayTx -> IO Phase1Verdict
+judgeResolved guard rewardState tx =
+    judgeThrough guard rewardState (resolveAllInputs tx) tx
+
+-- | The exact constructor names of a verdict's structural partition.
+structuralNames :: Phase1Verdict -> [String]
+structuralNames = map classifyFailure . phase1Structural
+
+-- | Name the specific ledger failure carried by a structural entry.
+classifyFailure :: (Show a) => a -> String
+classifyFailure failure =
+    case filter (`isInfixOf` rendered) knownLedgerFailures of
+        (name : _) -> name
+        [] -> takeWhile (\c -> c /= ' ' && c /= '(') rendered
+  where
+    rendered = show failure
+
+-- | The ledger failure constructors these REDs discriminate between.
+knownLedgerFailures :: [String]
+knownLedgerFailures =
+    [ "ExUnitsTooBigUTxO"
+    , "MaxTxSizeUTxO"
+    , "FeeTooSmallUTxO"
+    , "OutputTooSmallUTxO"
+    , "ValueNotConservedUTxO"
+    , "ScriptIntegrityHashMismatch"
+    , "BadInputsUTxO"
+    , "InsufficientCollateral"
+    , "ExtraRedeemers"
+    , "MissingScriptWitnessesUTXOW"
+    , "ConwayWithdrawalsMissingAccounts"
+    ]
+
+judge ::
+    Pv11GuardParams -> Phase1RewardState -> ConwayTx -> IO Phase1Verdict
+judge guard rewardState =
+    judgeThrough guard rewardState offlineUtxos
+
+{- | Run the real guard through the ONE offline acquisition callback
+(A-069 69A point 5).
+
+Both the 'Globals' and the slot come from that callback: the 'Globals' is the
+one the callback owns, and the slot is the callback PROVIDER's own acquired
+ledger tip. No fixture is loaded at a guard call site, no slot constant is
+invented there, and no 'Globals' is synthesized or reconstructed — which is
+the whole ownership point A-065 exists to enforce.
+-}
+judgeThrough ::
+    Pv11GuardParams ->
+    Phase1RewardState ->
+    [(TxIn, TxOut ConwayEra)] ->
+    ConwayTx ->
+    IO Phase1Verdict
+judgeThrough guard rewardState resolved tx = do
+    env <- offlineGuardEnv guard
+    envWithPhase1Snapshot env $ \globals provider -> do
+        snapshot <- queryLedgerSnapshot provider
+        pure $
+            runPhase1
+                Phase1Input
+                    { p1Globals = globals
+                    , p1Slot = ledgerTipSlot snapshot
+                    , p1Params = guard
+                    , p1ResolvedInputs = resolved
+                    }
+                rewardState
+                tx
+
+{- | The offline 'CageEnv' whose installed callback these pure-ledger guard
+examples borrow. Only the acquisition seam is used; no builder runs.
+-}
+offlineGuardEnv :: Pv11GuardParams -> IO CageEnv
+offlineGuardEnv guard = do
+    blueprint <-
+        lookupEnv "KERI_CAGE_BLUEPRINT"
+            >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
+    offlineCageEnv blueprint guard []
+
 type DevnetEnv = (CageEnv, Addr)
 
 {- | Bracket a real cardano-node devnet and construct the cage environment
@@ -103,9 +507,31 @@ withCageDevnet action = do
     bp <-
         lookupEnv "KERI_CAGE_BLUEPRINT"
             >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
-    withDevnet $ \lsq ltxs -> do
+    withDevnetConfig defaultDevnetConfig{devnetTargetPV = PV11} $ \lsq ltxs -> do
+        assertCageLivePV11GuardPairing (mkN2CProvider lsq)
         env <- mkCageEnv bp lsq ltxs
         action (env, genesisAddr)
+
+{- | Fail at the live boundary before 'mkCageEnv' loads or applies the Cage
+blueprint unless the node and the real guard compose the same PV11 PlutusV3
+language view.
+-}
+assertCageLivePV11GuardPairing :: Provider IO -> IO ()
+assertCageLivePV11GuardPairing provider = do
+    assertPV11Enacted provider
+    liveParams <- queryProtocolParams provider
+    guard <- loadPv11GuardParams
+    let v3Model params =
+            Map.lookup PlutusV3 (costModelsValid (params ^. ppCostModelsL))
+        liveV3 = v3Model liveParams
+        guardV3 = v3Model (pv11ComposedParams guard)
+        liveEntries = maybe 0 (length . getCostModelParams) liveV3
+    unless (liveEntries == 350 && liveV3 == guardV3) $
+        fail $
+            "Cage live/guard PV11 pairing mismatch: live PlutusV3 entries="
+                <> show liveEntries
+                <> ", guard entries="
+                <> show (pv11V3CostModelEntries guard)
 
 requireJust :: String -> Maybe a -> IO a
 requireJust msg = maybe (fail msg) pure
@@ -630,3 +1056,107 @@ renderSubmit (Rejected reason) = "Rejected " <> B8.unpack reason
 -- | Abort the running example with a message (unreachable continuation).
 failWith :: String -> IO a
 failWith msg = expectationFailure msg >> fail "unreachable"
+
+-- | Wall-clock POSIX milliseconds; used only to stamp offline request datums.
+
+{- | The offline fixtures' submission timestamp, taken from the ONE canonical
+downstream coordinate rather than a wall clock (A-069 69A points 3 and 5), so
+the request deadlines these fixtures carry live in the same coordinate the
+builder and the guard use.
+-}
+currentOfflinePosixMs :: IO Integer
+currentOfflinePosixMs = pure (syntheticSlotStartMs offlineFixtureNowSlot)
+
+-- | The tip slot the offline fixtures treat as "now", inside ..199@.
+offlineFixtureNowSlot :: SlotNo
+offlineFixtureNowSlot = SlotNo 100
+
+-- | 'try' specialised to 'SomeException' so callers need no annotation.
+tryAny :: IO a -> IO (Either SomeException a)
+tryAny = try
+
+{- | A-050 50D items 3 and 4: the real Cage builder shape at n=24, and a
+genuinely signed accepted case.
+-}
+realCageShapeAndAcceptance :: Spec
+realCageShapeAndAcceptance =
+    describe "real Cage shape and real-rule acceptance" $ do
+        it "real buildModifyTx at n=24 names both ExUnitsTooBigUTxO and MaxTxSizeUTxO" $ do
+            guardParams <- loadPv11GuardParams
+            blueprint <-
+                lookupEnv "KERI_CAGE_BLUEPRINT"
+                    >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
+            submittedAt <- currentOfflinePosixMs
+            env0 <- offlineCageEnv blueprint guardParams []
+            let (wallet, stateUtxo, reqUtxos) =
+                    offlineModifyFixtures env0 24 submittedAt
+            env <- offlineCageEnv blueprint guardParams wallet
+            outcome <-
+                tryAny
+                    ( buildModifyTx
+                        env
+                        offlineOwnerKeyHash
+                        offlineOwnerAddr
+                        stateUtxo
+                        reqUtxos
+                    )
+            case outcome of
+                Right _ ->
+                    expectationFailure
+                        "real n=24 Modify was returned instead of rejected"
+                Left err -> do
+                    let rendered = displayException err
+                    rendered `shouldSatisfy` isInfixOf "ExUnitsTooBigUTxO"
+                    rendered `shouldSatisfy` isInfixOf "MaxTxSizeUTxO"
+        it "a genuinely signed structurally valid candidate is accepted as Right ()" $ do
+            guardParams <- loadPv11GuardParams
+            verdict <-
+                judgeThrough
+                    guardParams
+                    NoRewardState
+                    genesisResolvedUtxos
+                    signedAdmissibleTx
+            renderPhase1 verdict `shouldBe` "Phase1Accepted"
+            phase1Accepted verdict `shouldBe` True
+
+{- | Every resolved input the candidate spends, including collateral, so the
+structural partition carries no unresolved-input noise.
+-}
+resolveAllInputs :: ConwayTx -> [(TxIn, TxOut ConwayEra)]
+resolveAllInputs tx =
+    [ (txIn, mkBasicTxOut offlineOwnerAddr (inject (Coin 1_000_000_000)))
+    | txIn <- Set.toList spent
+    ]
+  where
+    spent =
+        Set.union
+            (tx ^. bodyTxL . inputsTxBodyL)
+            (tx ^. bodyTxL . collateralInputsTxBodyL)
+
+{- | The COMPLETE expected structural partition for the aggregate-over-limit
+Register candidate, compared exactly rather than merely non-empty.
+-}
+expectedOverLimitStructural :: [String]
+expectedOverLimitStructural =
+    [ "ValueNotConservedUTxO"
+    , "ExUnitsTooBigUTxO"
+    , "ScriptIntegrityHashMismatch"
+    , "ExtraRedeemers"
+    ]
+
+-- | Decode a committed JSON file for independent provenance comparison.
+decodeJsonAt :: FilePath -> IO Aeson.Value
+decodeJsonAt path =
+    Aeson.eitherDecodeFileStrict path
+        >>= either (\err -> fail (path <> ": " <> err)) pure
+
+-- | Read an integer at a JSON path, failing loudly if absent.
+jsonIntAt :: Aeson.Value -> [Key.Key] -> Integer
+jsonIntAt value path = go value path
+  where
+    go (Aeson.Number n) [] = truncate n
+    go (Aeson.Object fields) (k : rest) =
+        case KeyMap.lookup k fields of
+            Just v -> go v rest
+            Nothing -> error ("jsonIntAt: missing " <> show k)
+    go _ _ = error ("jsonIntAt: bad path " <> show path)

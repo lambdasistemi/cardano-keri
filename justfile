@@ -358,7 +358,7 @@ check-checkpoint-deployability:
     #    populated it.
     cd "$repo/offchain"
     cabal update --project-file=cabal.project.devshell
-    cabal build -O0 --project-file=cabal.project.devshell --only-dependencies cardano-keri:e2e-tests
+    cabal build --enable-tests -O0 --project-file=cabal.project.devshell --only-dependencies cardano-keri:e2e-tests
     cabal exec -v0 --project-file=cabal.project.devshell -- ghc -O2 \
       "$tmp/serializer.hs" -o "$tmp/serializer"
 

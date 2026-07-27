@@ -33,7 +33,7 @@
     # supplies E2E_GENESIS_DIR; the rev matches the cabal.project pin.
     cardano-node-clients = {
       url =
-        "github:lambdasistemi/cardano-node-clients/ca86f11d27b34e37d3814e4d3c3d66e256400403";
+        "github:lambdasistemi/cardano-node-clients/5877c54ab23e876292ccb1eabb89d85c6560eda2";
       flake = false;
     };
   };
@@ -306,6 +306,7 @@
                 export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                cd "${inputs.cardano-node-clients}"
                 exec e2e-tests "$@"
               '';
             };

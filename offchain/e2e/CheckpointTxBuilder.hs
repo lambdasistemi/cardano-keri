@@ -63,22 +63,34 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.KERI.AID.Checkpoint.Wire (
+    asPlcData,
+    registerObserverRedeemerData,
+ )
+import Cardano.Ledger.Address (
+    AccountAddress (..),
+    AccountId (..),
+    Addr (..),
+    Withdrawals (..),
+ )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PParams (ppCostModelsL)
+import Cardano.Ledger.Alonzo.PParams (ppCostModelsL, ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..), costModelsValid, getCostModelParams)
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (mkBasicTx, txIdTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
+    certsTxBodyL,
     collateralInputsTxBodyL,
     feeTxBodyL,
     inputsTxBodyL,
     mintTxBodyL,
     mkBasicTxBody,
     outputsTxBodyL,
+    referenceInputsTxBodyL,
     vldtTxBodyL,
+    withdrawalsTxBodyL,
  )
 import Cardano.Ledger.Api.Tx.Out (
     TxOut,
@@ -100,7 +112,13 @@ import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin (Coin (..), unCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Core (Script, eraProtVerLow)
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
+import Cardano.Ledger.Core (
+    Script,
+    eraProtVerLow,
+    ppKeyDepositL,
+    ppMaxTxSizeL,
+ )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
@@ -113,18 +131,15 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Node.Client.Balance (
-    BalanceResult (..),
-    CollateralUtxos (..),
-    balanceTx,
-    balanceTxWith,
-    computeScriptIntegrity,
- )
 import Cardano.Node.Client.E2E.Setup (
+    DevnetConfig (devnetTargetPV),
+    TargetPV (PV11),
     addKeyWitness,
+    assertPV11Enacted,
+    defaultDevnetConfig,
     genesisAddr,
     genesisSignKey,
-    withDevnet,
+    withDevnetConfig,
  )
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.N2C.Provider (mkN2CProvider)
@@ -136,6 +151,13 @@ import Cardano.Node.Client.Provider (
     SlotNo (..),
  )
 import Cardano.Node.Client.Submitter (SubmitResult (..), Submitter (..))
+import Cardano.Tx.Balance (
+    BalanceResult (..),
+    CollateralUtxos (..),
+    balanceTx,
+    balanceTxWith,
+    computeScriptIntegrity,
+ )
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
@@ -165,9 +187,8 @@ import PlutusCore qualified as PLC
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
 import PlutusLedgerApi.V3 (serialiseUPLC, uncheckedDeserialiseUPLC)
-import PlutusTx.Builtins.Internal (BuiltinData (..))
-import PlutusTx.IsData.Class (ToData (..))
 import System.Environment (lookupEnv)
+import System.FilePath (takeDirectory, (</>))
 import System.IO (
     BufferMode (LineBuffering),
     hPutStrLn,
@@ -192,7 +213,11 @@ data CheckpointEnv = CheckpointEnv
     , envCheckpointBytes :: !SBS.ShortByteString
     , envCheckpointHash :: !ScriptHash
     , envCheckpointPolicy :: !PolicyID
+    , envLifecycleScript :: !(Script ConwayEra)
+    , envLifecycleBytes :: !SBS.ShortByteString
+    , envLifecycleHash :: !ScriptHash
     , envHashProofScript :: !(Script ConwayEra)
+    , envHashProofBytes :: !SBS.ShortByteString
     , envHashProofHash :: !ScriptHash
     , envHashProofPolicy :: !PolicyID
     , envProvider :: !(Provider IO)
@@ -234,9 +259,6 @@ data BoundaryCases = BoundaryCases
 checkpointVersion :: Integer
 checkpointVersion = 0
 
-checkpointNetworkId :: Integer
-checkpointNetworkId = 0
-
 checkpointMinAda :: Integer
 checkpointMinAda = 2_000_000
 
@@ -268,7 +290,6 @@ stagedCheckpointDevnet :: (CheckpointEnv -> IO ()) -> IO ()
 stagedCheckpointDevnet action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
-    dbg "=== NON-DEPLOYABLE UNDER THE PRODUCTION 16384-BYTE CAP ==="
     blueprintPath <-
         lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
             >>= maybe
@@ -278,10 +299,18 @@ stagedCheckpointDevnet action = do
                         pure
                 )
                 pure
-    withinSecs 300 "checkpoint withDevnet" $
-        withDevnet $ \lsq ltxs -> do
+    assertPinnedPv11Fixture
+    withinSecs 300 "checkpoint withDevnet"
+        $ withDevnetConfig
+            defaultDevnetConfig{devnetTargetPV = PV11}
+        $ \lsq ltxs -> do
+            let provider = mkN2CProvider lsq
+            assertPV11Enacted provider
+            assertLivePv11Boundary provider
             env <- mkCheckpointEnv blueprintPath lsq ltxs
-            verifyCheckpointSizeBudget env
+            verifyRegisterScriptSizes env
+            prepareWallet env
+            _ <- registerLifecycleStakeCredential env
             action env
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
@@ -294,25 +323,37 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             (extractCompiledCode "hash_proof." blueprint)
     checkpointCode <-
         maybe
-            (fail "checkpoint compiled code not found in production blueprint")
+            (fail "checkpoint_register compiled code not found in production blueprint")
             pure
-            (extractCompiledCode "checkpoint." blueprint)
+            (extractCompiledCode "checkpoint_register.checkpoint_register." blueprint)
+    lifecycleCode <-
+        maybe
+            (fail "observer_lifecycle compiled code not found in production blueprint")
+            pure
+            (extractCompiledCode "checkpoint_observer.observer_lifecycle." blueprint)
     let hashProofScript = mkCageScript hashProofCode
         hashProofHash = computeScriptHash hashProofCode
         hashProofPolicy = PolicyID hashProofHash
+        appliedLifecycle =
+            applyLifecycleParams
+                checkpointVersion
+                (policyBytes hashProofPolicy)
+                registrationBond
+                lifecycleCode
+        lifecycleScript = mkCageScript appliedLifecycle
+        lifecycleHash = computeScriptHash appliedLifecycle
         appliedCheckpoint =
             applyCheckpointParams
                 checkpointVersion
-                (policyBytes hashProofPolicy)
-                checkpointNetworkId
+                (policyBytes (PolicyID lifecycleHash))
                 registrationBond
                 freezeBond
-                freezeWindow
                 checkpointCode
         checkpointScript = mkCageScript appliedCheckpoint
         checkpointHash = computeScriptHash appliedCheckpoint
         checkpointPolicy = PolicyID checkpointHash
-    dbg ("checkpoint script hash: " <> show checkpointHash)
+    dbg ("checkpoint_register script hash: " <> show checkpointHash)
+    dbg ("observer_lifecycle script hash: " <> show lifecycleHash)
     dbg ("hash-proof script hash: " <> show hashProofHash)
     pure
         CheckpointEnv
@@ -320,7 +361,11 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envCheckpointBytes = appliedCheckpoint
             , envCheckpointHash = checkpointHash
             , envCheckpointPolicy = checkpointPolicy
+            , envLifecycleScript = lifecycleScript
+            , envLifecycleBytes = appliedLifecycle
+            , envLifecycleHash = lifecycleHash
             , envHashProofScript = hashProofScript
+            , envHashProofBytes = hashProofCode
             , envHashProofHash = hashProofHash
             , envHashProofPolicy = hashProofPolicy
             , envProvider = mkN2CProvider lsq
@@ -328,88 +373,106 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envOwner = genesisAddr
             }
 
-{- | Measure the exact signed reference-script creation transaction shape and
-keep the production 16 KiB deployability boundary visible even though the
-A-015 semantic devnet raises only its transaction-size limit.
+{- | Prove all three programs needed by Register fit in signed reference-script
+creation transactions under the stock production cap.
 -}
-verifyCheckpointSizeBudget :: CheckpointEnv -> IO ()
-verifyCheckpointSizeBudget env = do
+verifyRegisterScriptSizes :: CheckpointEnv -> IO ()
+verifyRegisterScriptSizes env = do
     params <-
-        withinSecs 30 "query checkpoint size-budget parameters" $
+        withinSecs 30 "query Register script-size parameters" $
             queryProtocolParams (envProvider env)
     wallet <-
-        withinSecs 30 "query checkpoint size-budget wallet" $
+        withinSecs 30 "query Register script-size wallet" $
             queryUTxOs (envProvider env) (envOwner env)
-    seed <- requireJust "checkpoint size budget: no wallet UTxO" (largestFirst wallet)
-    let referenceOut =
-            mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
-                & referenceScriptTxOutL .~ SJust (envCheckpointScript env)
-        skeleton =
-            mkBasicTx
-                (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton referenceOut)
-    balanced <-
-        either
-            (fail . ("checkpoint size budget: balance failed: " <>) . show)
-            (pure . balancedTx)
-            (balanceTx params [seed] [] (envOwner env) skeleton)
-    let signed = addKeyWitness genesisSignKey balanced
-        programBytes = SBS.length (envCheckpointBytes env)
-        creationTxBytes = fromIntegral (BSL.length (serialize (eraProtVerLow @ConwayEra) signed))
-        framingOverhead = creationTxBytes - programBytes
-        deployableBudget = productionMaxTxBytes - framingOverhead
-        overBudgetBy = programBytes - deployableBudget
-        observed =
-            ( programBytes
-            , creationTxBytes
-            , framingOverhead
-            , deployableBudget
-            , overBudgetBy
-            )
-    dbg $
-        "checkpoint deployability: applied-program="
-            <> show programBytes
-            <> " creation-tx="
-            <> show creationTxBytes
-            <> " framing-overhead="
-            <> show framingOverhead
-            <> " deployable-budget="
-            <> show deployableBudget
-            <> " over-budget-by="
-            <> show overBudgetBy
-    unless (observed == expectedCheckpointSizeBudget) $
-        fail $
-            "checkpoint deployability budget drift: expected "
-                <> show expectedCheckpointSizeBudget
-                <> "; observed "
-                <> show observed
+    seed <- requireJust "Register script-size check: no wallet UTxO" (largestFirst wallet)
+    let measure label script programBytes = do
+            let output =
+                    mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
+                        & referenceScriptTxOutL .~ SJust script
+                skeleton =
+                    mkBasicTx
+                        (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton output)
+            balanced <-
+                either
+                    (fail . ((label <> ": balance failed: ") <>) . show)
+                    (pure . balancedTx)
+                    (balanceTx params [seed] [] (envOwner env) skeleton)
+            let signed = addKeyWitness genesisSignKey balanced
+                txBytes =
+                    fromIntegral
+                        (BSL.length (serialize (eraProtVerLow @ConwayEra) signed))
+            dbg (label <> " program=" <> show programBytes <> " signed-tx=" <> show txBytes)
+            unless (txBytes <= productionMaxTxBytes) $
+                fail (label <> " exceeds stock maxTxSize: " <> show txBytes)
+    measure "checkpoint_register reference script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
+    measure "observer_lifecycle reference script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
+    measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
 
 productionMaxTxBytes :: Int
 productionMaxTxBytes = 16_384
 
--- Applied program, signed creation transaction, framing overhead, deployable
--- program budget, and current overage. This is the standing mark-ready gate
--- established by A-015; update only from a fresh real-shape measurement.
-expectedCheckpointSizeBudget :: (Int, Int, Int, Int, Int)
-expectedCheckpointSizeBudget = (23_124, 23_375, 251, 16_133, 6_991)
+productionPv11MaxTxExUnits :: ExUnits
+productionPv11MaxTxExUnits = ExUnits 16_500_000 10_000_000_000
+
+assertLivePv11Boundary :: Provider IO -> IO ()
+assertLivePv11Boundary provider = do
+    params <- withinSecs 30 "query live PV11 parameters" (queryProtocolParams provider)
+    let observedExUnits = params ^. ppMaxTxExUnitsL
+        observedMaxTxSize = fromIntegral (params ^. ppMaxTxSizeL)
+        v3Entries =
+            maybe 0 (length . getCostModelParams) $
+                Map.lookup PlutusV3 (costModelsValid (params ^. ppCostModelsL))
+    unless (observedExUnits == productionPv11MaxTxExUnits) $
+        fail ("live PV11 maxTxExUnits mismatch: " <> show observedExUnits)
+    unless (observedMaxTxSize == productionMaxTxBytes) $
+        fail ("live PV11 maxTxSize mismatch: " <> show observedMaxTxSize)
+    unless (v3Entries == 350) $
+        fail ("live PV11 PlutusV3 cost model has " <> show v3Entries <> " entries")
+
+{- | Load the committed nodeclients PV11 pparams fixture before booting. Only
+the three fields the fixture actually carries are claimed here.
+-}
+assertPinnedPv11Fixture :: IO ()
+assertPinnedPv11Fixture = do
+    genesisDir <-
+        lookupEnv "E2E_GENESIS_DIR"
+            >>= maybe (fail "E2E_GENESIS_DIR not set") pure
+    let path =
+            takeDirectory genesisDir
+                </> "fixtures"
+                </> "pparams-pv11-mainnet.json"
+    value <- eitherDecodeFileStrict path >>= either fail pure
+    protocol <- either fail pure (atKey "protocolVersion" value)
+    execution <- either fail pure (atKey "maxTxExecutionUnits" value)
+    models <- either fail pure (atKey "costModels" value)
+    major <- either fail pure (integerAt "major" protocol)
+    memory <- either fail pure (integerAt "memory" execution)
+    steps <- either fail pure (integerAt "steps" execution)
+    v3 <- either fail pure (atKey "PlutusV3" models)
+    entries <- either fail (pure . length) (arrayValues v3)
+    unless
+        ( major == 11
+            && memory == 16_500_000
+            && steps == 10_000_000_000
+            && entries == 350
+        )
+        (fail ("PV11 pparams fixture mismatch: " <> show (major, memory, steps, entries)))
+    dbg ("loaded PV11 pparams fixture: " <> path)
 
 applyCheckpointParams ::
     Integer ->
     ByteString ->
     Integer ->
     Integer ->
-    Integer ->
-    Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version proofPolicy network dReg bond window code =
+applyCheckpointParams version lifecycleHash dReg bond code =
     serialiseUPLC $
         uncheckedDeserialiseUPLC code
             `applyDataArg` I version
-            `applyDataArg` B proofPolicy
-            `applyDataArg` I network
+            `applyDataArg` B lifecycleHash
             `applyDataArg` I dReg
             `applyDataArg` I bond
-            `applyDataArg` I window
   where
     applyDataArg program dat =
         let Program _ versionTag _ = program
@@ -423,8 +486,91 @@ applyCheckpointParams version proofPolicy network dReg bond window code =
                 id
                 (applyProgram program argument)
 
+applyLifecycleParams ::
+    Integer ->
+    ByteString ->
+    Integer ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyLifecycleParams version proofPolicy dReg code =
+    serialiseUPLC $
+        uncheckedDeserialiseUPLC code
+            `applyDataArg` I version
+            `applyDataArg` B proofPolicy
+            `applyDataArg` I dReg
+  where
+    applyDataArg program dat =
+        let Program _ versionTag _ = program
+            argument =
+                Program
+                    ()
+                    versionTag
+                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
+         in either
+                (error . ("applyLifecycleParams: " <>) . show)
+                id
+                (applyProgram program argument)
+
 policyBytes :: PolicyID -> ByteString
 policyBytes (PolicyID (ScriptHash hash)) = hashToBytes hash
+
+registerLifecycleStakeCredential :: CheckpointEnv -> IO TxId
+registerLifecycleStakeCredential env = do
+    params <-
+        withinSecs 30 "query lifecycle-registration parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query lifecycle-registration wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    (seed, collateral) <- pickDisjoint wallet []
+    let keyDeposit = params ^. ppKeyDepositL
+        certificate =
+            ConwayTxCertDeleg
+                (ConwayRegCert (ScriptHashObj (envLifecycleHash env)) (SJust keyDeposit))
+        redeemers =
+            Redeemers $
+                Map.singleton
+                    (ConwayCertifying (AsIx 0))
+                    (ledgerData (I 0), scriptExUnits)
+        body =
+            mkBasicTxBody
+                & certsTxBodyL .~ StrictSeq.singleton certificate
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
+        skeleton =
+            mkBasicTx body
+                & witsTxL . scriptTxWitsL
+                    .~ Map.singleton
+                        (envLifecycleHash env)
+                        (envLifecycleScript env)
+                & witsTxL . rdmrsTxWitsL .~ redeemers
+    balanced <-
+        either
+            (fail . ("lifecycle registration balance failed: " <>) . show)
+            (pure . balancedTx)
+            ( balanceTxWith
+                params
+                [seed]
+                (CollateralUtxos [collateral])
+                []
+                (envOwner env)
+                Nothing
+                skeleton
+            )
+    txId <- submitSettling env "observer_lifecycle registration" balanced
+    _ <-
+        pollOutput
+            (envProvider env)
+            txId
+            [0, 1]
+            (const True)
+            >>= requireJust "observer_lifecycle registration did not settle"
+    pure txId
 
 roleAddress :: CheckpointEnv -> Role -> Addr
 roleAddress env Active =
@@ -444,6 +590,38 @@ roleAddress env role =
                 (error "roleAddress: role hash is not 28 bytes")
                 (hashFromBytes markerBytes)
 
+deployReferenceScript ::
+    CheckpointEnv ->
+    String ->
+    Script ConwayEra ->
+    IO (TxIn, TxOut ConwayEra)
+deployReferenceScript env label script = do
+    params <-
+        withinSecs 30 (label <> ": query parameters") $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 (label <> ": query wallet") $
+            queryUTxOs (envProvider env) (envOwner env)
+    seed <- requireJust (label <> ": no wallet UTxO") (largestFirst wallet)
+    let output =
+            mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
+                & referenceScriptTxOutL .~ SJust script
+        skeleton =
+            mkBasicTx
+                (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton output)
+    balanced <-
+        either
+            (fail . ((label <> ": balance failed: ") <>) . show)
+            (pure . balancedTx)
+            (balanceTx params [seed] [] (envOwner env) skeleton)
+    txId <- submitSettling env label balanced
+    pollOutput
+        (envProvider env)
+        txId
+        [0]
+        ((== SJust script) . (^. referenceScriptTxOutL))
+        >>= requireJust (label <> ": reference script did not settle")
+
 productionRegisterScenario :: CheckpointEnv -> IO CheckpointInput
 productionRegisterScenario env = do
     (fixture, _) <- loadLifecycleFixture
@@ -451,7 +629,22 @@ productionRegisterScenario env = do
 
 productionRegisterScenarioWith :: CheckpointEnv -> RegistrationFixture -> IO CheckpointInput
 productionRegisterScenarioWith env fixture = do
-    prepareWallet env
+    checkpointRef <-
+        deployReferenceScript
+            env
+            "checkpoint_register reference deployment"
+            (envCheckpointScript env)
+    lifecycleRef <-
+        deployReferenceScript
+            env
+            "observer_lifecycle reference deployment"
+            (envLifecycleScript env)
+    hashProofRef <-
+        deployReferenceScript
+            env
+            "hash_proof reference deployment"
+            (envHashProofScript env)
+    let referenceUtxos = [checkpointRef, lifecycleRef, hashProofRef]
     proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env fixture)
     proofTxId <- submitSettling env "hash-proof mint" proofTx
     proofUtxo <-
@@ -461,10 +654,13 @@ productionRegisterScenarioWith env fixture = do
             [0, 1]
             (hasAsset (envHashProofPolicy env) (rfProofName fixture))
             >>= requireJust "hash-proof output did not settle"
-    registerTx <-
-        withinSecs 90 "build checkpoint Register" $
-            buildRegisterTx env fixture proofUtxo
-    registerTxId <- submitSettling env "checkpoint Register" registerTx
+    registerTxId <-
+        submitTwoPassRegister
+            env
+            "checkpoint Register"
+            referenceUtxos
+            fixture
+            proofUtxo
     let checkpointName = deriveAidAssetName (cdCesrAid (rfDatum fixture))
     registered <-
         pollOutput
@@ -713,6 +909,63 @@ data RegistrationFixture = RegistrationFixture
     , rfProofName :: !ByteString
     }
 
+data RegisterScriptPlan = RegisterScriptPlan
+    { rspWithdrawals :: !Withdrawals
+    , rspRedeemers :: !(Redeemers ConwayEra)
+    }
+
+registerScriptPlan ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    ScriptHash ->
+    PolicyID ->
+    RegistrationEvidence ->
+    Word32 ->
+    Word32 ->
+    RegisterScriptPlan
+registerScriptPlan budgets lifecycleHash checkpointPolicy evidence checkpointIx hashProofIx =
+    RegisterScriptPlan
+        { rspWithdrawals =
+            Withdrawals $
+                Map.singleton
+                    (AccountAddress Testnet (AccountId (ScriptHashObj lifecycleHash)))
+                    (Coin 0)
+        , rspRedeemers =
+            Redeemers $
+                Map.fromList
+                    [
+                        ( ConwayMinting (AsIx checkpointIx)
+                        ,
+                            ( ledgerData registerRedeemerData
+                            , budgetFor
+                                (ConwayMinting (AsIx checkpointIx))
+                                scriptExUnits
+                            )
+                        )
+                    ,
+                        ( ConwayMinting (AsIx hashProofIx)
+                        ,
+                            ( ledgerData hashProofBurnRedeemerData
+                            , budgetFor
+                                (ConwayMinting (AsIx hashProofIx))
+                                hashProofBurnExUnits
+                            )
+                        )
+                    ,
+                        ( ConwayRewarding (AsIx 0)
+                        ,
+                            ( ledgerData
+                                ( registerObserverRedeemerData
+                                    (policyBytes checkpointPolicy)
+                                    evidence
+                                )
+                            , budgetFor (ConwayRewarding (AsIx 0)) scriptExUnits
+                            )
+                        )
+                    ]
+        }
+  where
+    budgetFor purpose fallback = Map.findWithDefault fallback purpose budgets
+
 {- | Use one committed KEL lineage for both the permissionless inception and
 the later signed rotation that Arms it.  That keeps the live test on the real
 Register output instead of manufacturing a checkpoint-shaped input.
@@ -923,7 +1176,11 @@ buildHashProofMintTx env fixture = do
                 & mintTxBodyL .~ minted
                 & collateralInputsTxBodyL .~ Set.singleton collateralIn
                 & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity PlutusV3 params redeemers
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
         tx =
             mkBasicTx body
                 & witsTxL . scriptTxWitsL
@@ -954,12 +1211,14 @@ saidBlank fixture =
     offI = fromInteger (rfOffI fixture)
     offD = fromInteger (rfOffD fixture)
 
-buildRegisterTx ::
+buildRegisterTxWith ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    [(TxIn, TxOut ConwayEra)] ->
     CheckpointEnv ->
     RegistrationFixture ->
     (TxIn, TxOut ConwayEra) ->
     IO ConwayTx
-buildRegisterTx env fixture proofUtxo = do
+buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
     params <- withinSecs 30 "query Register protocol parameters" (queryProtocolParams (envProvider env))
     wallet <- withinSecs 30 "query Register wallet" (queryUTxOs (envProvider env) (envOwner env))
     (feeUtxo, collateralUtxo) <- pickDisjoint wallet [fst proofUtxo]
@@ -999,43 +1258,156 @@ buildRegisterTx env fixture proofUtxo = do
         allInputs = Set.fromList [proofIn, feeIn]
         policies = sort [envCheckpointPolicy env, envHashProofPolicy env]
         mintIndex policy =
-            AsIx $
-                fromIntegral $
-                    fromMaybe
-                        (error "buildRegisterTx: policy missing from mint order")
-                        (elemIndex policy policies)
-        redeemers =
-            Redeemers $
-                Map.fromList
-                    [
-                        ( ConwayMinting (mintIndex (envCheckpointPolicy env))
-                        ,
-                            ( ledgerData (registerRedeemerData (rfEvidence fixture))
-                            , scriptExUnits
-                            )
-                        )
-                    ,
-                        ( ConwayMinting (mintIndex (envHashProofPolicy env))
-                        , (ledgerData hashProofBurnRedeemerData, hashProofBurnExUnits)
-                        )
-                    ]
+            fromIntegral $
+                fromMaybe
+                    (error "buildRegisterTx: policy missing from mint order")
+                    (elemIndex policy policies)
+        plan =
+            registerScriptPlan
+                budgets
+                (envLifecycleHash env)
+                (envCheckpointPolicy env)
+                (rfEvidence fixture)
+                (mintIndex (envCheckpointPolicy env))
+                (mintIndex (envHashProofPolicy env))
+        scriptWitnesses =
+            Map.fromList
+                [ (envCheckpointHash env, envCheckpointScript env)
+                , (envLifecycleHash env, envLifecycleScript env)
+                , (envHashProofHash env, envHashProofScript env)
+                ]
         body =
             mkBasicTxBody
                 & inputsTxBodyL .~ allInputs
                 & outputsTxBodyL .~ StrictSeq.fromList [stateOut, changeOut]
                 & feeTxBodyL .~ Coin scriptFee
                 & mintTxBodyL .~ minted
+                & withdrawalsTxBodyL .~ rspWithdrawals plan
                 & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & referenceInputsTxBodyL .~ Set.fromList (map fst referenceUtxos)
                 & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity PlutusV3 params redeemers
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        (rspRedeemers plan)
+                        (TxDats mempty)
     pure $
         mkBasicTx body
             & witsTxL . scriptTxWitsL
-                .~ Map.fromList
-                    [ (envCheckpointHash env, envCheckpointScript env)
-                    , (envHashProofHash env, envHashProofScript env)
-                    ]
-            & witsTxL . rdmrsTxWitsL .~ redeemers
+                .~ (if null referenceUtxos then scriptWitnesses else Map.empty)
+            & witsTxL . rdmrsTxWitsL .~ rspRedeemers plan
+
+submitTwoPassRegister ::
+    CheckpointEnv ->
+    String ->
+    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationFixture ->
+    (TxIn, TxOut ConwayEra) ->
+    IO TxId
+submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
+    let expected = registerEvaluationPurposes env
+    discovery <-
+        withinSecs 90 (label <> ": build discovery binding") $
+            buildRegisterTxWith Map.empty referenceUtxos env fixture proofUtxo
+    discoveryObserved <-
+        withinSecs 120 (label <> ": evaluate discovery binding") $
+            evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
+    discoveryUnits <- requireExactAllRight (label <> ": discovery") expected discoveryObserved
+    let finalBudgets = Map.map deterministicMargin discoveryUnits
+    final <-
+        withinSecs 90 (label <> ": rebuild final binding") $
+            buildRegisterTxWith finalBudgets referenceUtxos env fixture proofUtxo
+    let signedFinal = addKeyWitness genesisSignKey final
+        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
+    finalObserved <-
+        withinSecs 120 (label <> ": evaluate final binding") $
+            evaluateTx (envProvider env) signedFinal
+    finalUnits <- requireExactAllRight (label <> ": final") expected finalObserved
+    mapM_
+        ( \(purpose, observed) ->
+            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
+             in unless (withinDeclared observed declared) $
+                    fail
+                        ( label
+                            <> ": observed units exceed final declaration for "
+                            <> show purpose
+                        )
+        )
+        (Map.toList finalUnits)
+    params <- withinSecs 30 (label <> ": query final maximum") (queryProtocolParams (envProvider env))
+    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
+        maximumUnits = params ^. ppMaxTxExUnitsL
+    unless (withinDeclared aggregate maximumUnits) $
+        fail
+            ( label
+                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
+                <> show aggregate
+            )
+    dbg
+        ( label
+            <> ": two-pass final bytes="
+            <> show (BSL.length finalBytes)
+            <> " budgets="
+            <> show finalBudgets
+        )
+    result <-
+        withinSecs 60 ("submit unchanged " <> label) $
+            submitTx (envSubmitter env) signedFinal
+    case result of
+        Submitted txId -> pure txId
+        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+
+registerEvaluationPurposes ::
+    CheckpointEnv ->
+    Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
+registerEvaluationPurposes env =
+    Set.fromList
+        [ ConwayMinting (AsIx (mintIndex (envCheckpointPolicy env)))
+        , ConwayMinting (AsIx (mintIndex (envHashProofPolicy env)))
+        , ConwayRewarding (AsIx 0)
+        ]
+  where
+    policies = sort [envCheckpointPolicy env, envHashProofPolicy env]
+    mintIndex policy =
+        fromIntegral $
+            fromMaybe
+                (error "registerEvaluationPurposes: missing policy")
+                (elemIndex policy policies)
+
+deterministicMargin :: ExUnits -> ExUnits
+deterministicMargin (ExUnits memory steps) =
+    ExUnits (bump memory) (bump steps)
+  where
+    bump value = value + max 1 ((value + 9) `div` 10)
+
+addExUnits :: ExUnits -> ExUnits -> ExUnits
+addExUnits (ExUnits memoryA stepsA) (ExUnits memoryB stepsB) =
+    ExUnits (memoryA + memoryB) (stepsA + stepsB)
+
+withinDeclared :: ExUnits -> ExUnits -> Bool
+withinDeclared (ExUnits memory steps) (ExUnits declaredMemory declaredSteps) =
+    memory <= declaredMemory && steps <= declaredSteps
+
+requireExactAllRight ::
+    String ->
+    Set.Set (ConwayPlutusPurpose AsIx ConwayEra) ->
+    Map.Map
+        (ConwayPlutusPurpose AsIx ConwayEra)
+        (Either failure ExUnits) ->
+    IO (Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits)
+requireExactAllRight label expected observed = do
+    unless (Map.keysSet observed == expected) $
+        fail
+            ( label
+                <> ": unexpected evaluator purpose set: "
+                <> show (Map.keysSet observed)
+            )
+    Map.traverseWithKey
+        ( \purpose outcome -> case outcome of
+            Right units -> pure units
+            Left _ -> fail (label <> ": failed purpose " <> show purpose)
+        )
+        observed
 
 {- | The old-cost devnet cannot create the hash-proof input required for a
 real Register.  This deliberately tokenless output is therefore used only for
@@ -1199,7 +1571,11 @@ buildCheckpointSpend env input redeemerData validity outputs walletContribution 
                 & collateralInputsTxBodyL .~ Set.singleton collateralIn
                 & vldtTxBodyL .~ interval
                 & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity PlutusV3 params redeemers
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
     pure $
         mkBasicTx body
             & witsTxL . scriptTxWitsL
@@ -1483,8 +1859,8 @@ hashProofRedeemerData fixture =
 hashProofBurnRedeemerData :: PLC.Data
 hashProofBurnRedeemerData = Constr 0 [B "", B "", I 0, I 0]
 
-registerRedeemerData :: RegistrationEvidence -> PLC.Data
-registerRedeemerData evidence = Constr 0 [registrationEvidenceData evidence]
+registerRedeemerData :: PLC.Data
+registerRedeemerData = Constr 0 []
 
 advanceRedeemerData :: AdvanceEvidence -> PLC.Data
 advanceRedeemerData evidence = Constr 0 [advanceEvidenceData evidence]
@@ -1498,24 +1874,6 @@ claimRedeemerData outputIndex = Constr 2 [I outputIndex]
 
 closeRedeemerData :: PLC.Data
 closeRedeemerData = Constr 4 []
-
-registrationEvidenceData :: RegistrationEvidence -> PLC.Data
-registrationEvidenceData RegistrationEvidence{..} =
-    Constr
-        0
-        [ B reEventBytes
-        , I (fromIntegral reOffT)
-        , I (fromIntegral reOffI)
-        , I (fromIntegral reOffS)
-        , intListData reOffK
-        , I (fromIntegral reOffKt)
-        , intListData reOffN
-        , I (fromIntegral reOffNt)
-        , intListData reOffB
-        , I (fromIntegral reOffBt)
-        , signatureListData reCtrlSigs
-        , signatureListData reWitReceipts
-        ]
 
 advanceEvidenceData :: AdvanceEvidence -> PLC.Data
 advanceEvidenceData AdvanceEvidence{..} =
@@ -1569,9 +1927,6 @@ intListData = List . map (I . fromIntegral)
 signatureListData :: [(Int, ByteString)] -> PLC.Data
 signatureListData =
     List . map (\(index, signature) -> Constr 0 [I (fromIntegral index), B signature])
-
-asPlcData :: (ToData a) => a -> PLC.Data
-asPlcData value = let BuiltinData dat = toBuiltinData value in dat
 
 ledgerData :: PLC.Data -> Ledger.Data ConwayEra
 ledgerData = Ledger.Data

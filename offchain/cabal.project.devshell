@@ -40,8 +40,14 @@ packages: .
 source-repository-package
   type: git
   location: https://github.com/lambdasistemi/cardano-node-clients
-  tag: ca86f11d27b34e37d3814e4d3c3d66e256400403
-  --sha256: 01ic1620d3qs1y224qgvx21k1i4jzf5z6ygprwajsnrgjzacni5y
+  tag: a10cdb73317a2b6d5375b216f72f40b71736e648
+  --sha256: 16zdw74y1bj9nh0khlfk138x26ig8ibi4rb2bnyvrvklbzzf9lmw
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/cardano-tx-tools
+  tag: 7bfe95bf5ef3bfa846e62bcae94cf377b66ad0d0
+  --sha256: 139l4f43b3r6ybkihg2n6h1qxcijwbx1s5lni85api05480x7lxc
 
 -- ----------------------------------------------------------------------
 -- Transitive git deps of cardano-node-clients. Mirrored verbatim from
@@ -51,8 +57,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/lambdasistemi/chain-follower
-  tag: 371b5930976ac3bb4e8a4ef576d5098d706984ee
-  --sha256: 1rks78zmgmxz5cg4v82vnc6hwib8vrylwk2m7y82iqaymmnskdvf
+  tag: d592a5015f8d7edb2d6022936a67a054dfe5329f
+  --sha256: 1pm2yhsm2zg5nv01aixv6ss21f2ka8ysq6dv2q4mpf9smz0m8g78
 
 source-repository-package
   type: git
@@ -69,8 +75,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/cardano-foundation/cardano-ledger-read
-  tag: 34d0767bd5c3648ab77ecbc00db0ad0a2a5316a5
-  --sha256: 0v357pbw2s22lsizxidq67pn4dcjkajips6mlcskd1zna35nyyv6
+  tag: 242c5c856f51aebe17f2d39b2320df6de1c05293
+  --sha256: 1k6vjzng1qmjs4kpz5123wps6phxqyss6c44g48z6riwiwnkzpjw
 
 source-repository-package
   type: git
@@ -112,6 +118,9 @@ constraints:
   , ouroboros-consensus == 1.0.0.0
   , ouroboros-network == 1.1.0.0
   , typed-protocols == 1.2.0.0
+
+package cardano-tx-tools
+  flags: -build-node-tools
 
 package ouroboros-consensus
   tests: False

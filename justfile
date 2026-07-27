@@ -49,10 +49,9 @@ devshell-offchain:
 e2e:
     cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
 
-# Run only the #114 checkpoint boundary: real hash-proof/Register/Arm/Claim
-# settlement plus production-validator Advance and Close rejections.
+# Run only the #136 register-small vertical.
 e2e-checkpoint:
-    cd offchain && nix run --quiet .#e2e -- --match "#114 permissionless checkpoint boundary"
+    cd offchain && nix run --quiet .#e2e
 
 # --- checkpoint fixtures (#68) ---
 

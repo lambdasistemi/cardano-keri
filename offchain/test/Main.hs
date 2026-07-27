@@ -15,6 +15,7 @@ import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec qualified as RegistrationFixturesSpec
 import Cardano.KERI.AID.Checkpoint.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
+import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
 import Test.Hspec (hspec)
 
@@ -36,3 +37,4 @@ main = hspec $ do
     FreezeBondSpec.spec
     RegistrationFixturesSpec.spec
     RegistrationSpec.spec
+    WireSpec.spec

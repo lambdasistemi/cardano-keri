@@ -12,10 +12,11 @@ an exact observer ran-check; a dedicated reference-delivered
 predicate. Extend ordinary Advance to consume an ARMED wrapper before its
 deadline and return to ACTIVE with the complete value.
 
-The live story uses a new deterministic keripy fixture: Register, first
-witnessed rotation, then two different second rotations signed by the same
-revealed controller keys and receipted by the same incoming witnesses. The
-hunter Arms with one branch; the honest controller responds with the other.
+The live story uses a deterministic keripy fixture: Register, first witnessed
+rotation, then two successive pairs of conflicting rotations signed by the
+keys committed at each ACTIVE tip and receipted by the same incoming
+witnesses. The first pair Arms and resolves, replaying that first conflict at
+the advanced state rejects, and the fresh second pair Arms and resolves again.
 
 ## Constitution and scope
 
@@ -64,8 +65,11 @@ Extend the pinned fixture generator with one witnessed two-key lineage:
    used on Cardano;
 3. `rot_2_recorded` and `rot_2_conflict`, both at sequence two, both revealing
    the same keys committed by `rot_1`, but committing to different next keys;
-4. two controller signatures and threshold witness receipts over each exact
-   second-rotation serialization.
+4. `rot_3_recorded` and `rot_3_conflict`, both chained from
+   `rot_2_recorded`, both revealing its committed keys, but committing to
+   different next keys; and
+5. two controller signatures and threshold witness receipts over each exact
+   rotation serialization.
 
 The generator asserts same AID, sequence, and revealed keys; different raw
 bytes and next commitments; and signature/receipt verification. The committed
@@ -164,11 +168,15 @@ The single live story is:
 hash-proof -> Register -> first Advance
            -> Freeze(contested rot_2 branch)
            -> response Advance(other rot_2 branch)
+           -> reject stale replay(contested rot_2 branch)
+           -> Freeze(contested rot_3 branch)
+           -> response Advance(other rot_3 branch)
 ```
 
 It records all settled txids, the hunter/deadline, complete-value preservation,
-both applied program sizes, and observed/declared ex-units. Applied-boundary
-negative rows run without submission.
+both applied program sizes, and observed/declared ex-units. The stale replay
+and the existing evidence-negative rows run at the coupled applied boundary
+without submission.
 
 ## Verification and delivery
 

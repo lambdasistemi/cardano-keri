@@ -71,6 +71,20 @@ threshold, or lacks the required witness receipts.
 through the coupled applied checkpoint and enforcement-observer boundary and
 observe rejection before any state transition.
 
+### User Story 4 — Resolved duplicity evidence cannot be replayed (P1)
+
+After the honest response advances the checkpoint beyond a contested event,
+the evidence used for that resolved challenge is stale. Replaying it through
+the applied checkpoint and enforcement-observer boundary must reject without
+evaluation leading to submission. A later, genuinely new pair of conflicting
+rotations at the advanced state may still arm the checkpoint, and a second
+honest response must restore ACTIVE while preserving the complete bond.
+
+**Independent test**: complete the first Freeze/response round, evaluate the
+same old conflict against the resulting ACTIVE output and observe rejection,
+then settle a fresh Freeze and response from a new keripy-produced sibling
+pair at the next sequence number.
+
 ## Edge Cases
 
 - Missing, non-zero, wrong-action, wrong-policy, or wrong-outref enforcement
@@ -79,6 +93,9 @@ observe rejection before any state transition.
   deadline, wrong role, duplicate ARMED successor, changed value, missing
   token, or own-policy mint/burn rejects.
 - Freeze from ARMED, FROZEN, or any malformed role/datum combination rejects.
+- Freeze evidence whose sequence is no longer ahead of the ACTIVE checkpoint
+  rejects, including replay of evidence already resolved by a response
+  Advance.
 - An ARMED response with an unbounded upper endpoint or an endpoint at the
   deadline rejects.
 - ClaimFreeze remains unavailable and fail-closed until #138.
@@ -123,6 +140,12 @@ observe rejection before any state transition.
   `observer_enforcement` programs MUST each be no larger than 16,133 bytes.
 - **FR-012**: Existing Register, Close, and ACTIVE Advance suites MUST remain
   green.
+- **FR-013**: After a response Advance, replaying the same Freeze evidence
+  against the new ACTIVE checkpoint MUST reject through the coupled applied
+  checkpoint and enforcement-observer boundary before submission.
+- **FR-014**: The live story MUST continue with a new keripy-produced
+  contested-rotation pair at the advanced state; the second Freeze and second
+  response Advance MUST settle while preserving the complete value and bond.
 
 ## Key Entities
 
@@ -160,6 +183,9 @@ scripts; it does not change the pure lifecycle model.
   the coupled applied-validator boundary.
 - **SC-005**: Both applied scripts fit the 16,133-byte program budget and the
   full repository gate passes.
+- **SC-006**: The stale first-round evidence rejects after the first response,
+  while fresh second-round duplicity Arms and resolves successfully on the
+  same stock PV11 devnet.
 
 ## Assumptions and Boundaries
 

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "witness-1",
+    "aid": "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI",
+    "oobi": "https://witness-1.preprod.plutimus.com/oobi/BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI/controller"
+  },
+  {
+    "name": "witness-2",
+    "aid": "BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B",
+    "oobi": "https://witness-2.preprod.plutimus.com/oobi/BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B/controller"
+  },
+  {
+    "name": "witness-3",
+    "aid": "BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4",
+    "oobi": "https://witness-3.preprod.plutimus.com/oobi/BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4/controller"
+  }
+]

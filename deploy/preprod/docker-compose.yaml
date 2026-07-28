@@ -1,0 +1,90 @@
+name: cardano-keri-witnesses
+
+x-witness: &witness
+  image: ${WITNESS_IMAGE:-cardano-keri-witness:1.3.5}
+  restart: unless-stopped
+  networks:
+    - web
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  healthcheck:
+    test:
+      - CMD
+      - python
+      - -c
+      - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5642/metrics', timeout=5).read(1)"
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 60s
+  logging:
+    driver: json-file
+    options:
+      max-size: 50m
+      max-file: "10"
+
+services:
+  witness-1:
+    <<: *witness
+    build:
+      context: ../..
+      dockerfile: deploy/preprod/Dockerfile
+    container_name: cardano-keri-witness-1
+    environment:
+      KERI_WITNESS_NAME: witness-1
+    volumes:
+      - witness-1-data:/var/lib/keri/.keri
+      - ./witness-1.json:/etc/keri/witness.json:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.cardano-keri-witness-1.rule=Host(`witness-1.preprod.plutimus.com`)
+      - traefik.http.routers.cardano-keri-witness-1.tls=true
+      - traefik.http.routers.cardano-keri-witness-1.tls.certresolver=le
+      - traefik.http.services.cardano-keri-witness-1.loadbalancer.server.port=5642
+
+  witness-2:
+    <<: *witness
+    container_name: cardano-keri-witness-2
+    environment:
+      KERI_WITNESS_NAME: witness-2
+    volumes:
+      - witness-2-data:/var/lib/keri/.keri
+      - ./witness-2.json:/etc/keri/witness.json:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.cardano-keri-witness-2.rule=Host(`witness-2.preprod.plutimus.com`)
+      - traefik.http.routers.cardano-keri-witness-2.tls=true
+      - traefik.http.routers.cardano-keri-witness-2.tls.certresolver=le
+      - traefik.http.services.cardano-keri-witness-2.loadbalancer.server.port=5642
+
+  witness-3:
+    <<: *witness
+    container_name: cardano-keri-witness-3
+    environment:
+      KERI_WITNESS_NAME: witness-3
+    volumes:
+      - witness-3-data:/var/lib/keri/.keri
+      - ./witness-3.json:/etc/keri/witness.json:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.cardano-keri-witness-3.rule=Host(`witness-3.preprod.plutimus.com`)
+      - traefik.http.routers.cardano-keri-witness-3.tls=true
+      - traefik.http.routers.cardano-keri-witness-3.tls.certresolver=le
+      - traefik.http.services.cardano-keri-witness-3.loadbalancer.server.port=5642
+
+volumes:
+  witness-1-data:
+  witness-2-data:
+  witness-3-data:
+
+networks:
+  web:
+    external: true

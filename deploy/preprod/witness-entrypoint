@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -gt 0 ]; then
+  exec /opt/keripy/.venv/bin/kli "$@"
+fi
+
+: "${KERI_WITNESS_NAME:?KERI_WITNESS_NAME is required}"
+
+config_directory="$HOME/.keri/cf/main"
+config_target="$config_directory/$KERI_WITNESS_NAME.json"
+
+install -d -m 0700 "$config_directory"
+install -m 0600 /etc/keri/witness.json "$config_target"
+
+exec /opt/keripy/.venv/bin/kli witness start \
+  --name "$KERI_WITNESS_NAME" \
+  --base preprod \
+  --alias "$KERI_WITNESS_NAME" \
+  --http 5642 \
+  --tcp 5632 \
+  --config-file "$KERI_WITNESS_NAME" \
+  --loglevel "${KERI_LOG_LEVEL:-WARNING}"

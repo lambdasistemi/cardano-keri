@@ -82,17 +82,17 @@ registration protocol.
 
 Before preminting, `register` performs exact-asset discovery. If a live
 checkpoint for the AID already exists, it refuses by default and spends
-nothing. An explicit repeat-registration override is not exposed in this
-story.
+nothing. `--allow-existing-checkpoint` is an explicit acknowledgement that
+permits the sovereign controller to create another fully funded checkpoint
+copy and prints the benign-residual/watchability consequence.
 
 This refusal is deliberately off-chain. The merged #114 protocol and
 `specs/114-permissionless-registration/spec.md` require registration to remain
 repeatable, including duplicate and post-conviction registration. Duplicate
-ACTIVE outputs are a deposit-backed, fail-closed residual. Consequently the
-issue-body phrase “already-registered AID rejects at the validator” is
-incompatible with the ratified validator and cannot be truthfully captured by
-an application-only PR. The PR must disclose this exact exception; it must not
-claim or synthesize a validator failure.
+ACTIVE outputs are a deposit-backed, fail-closed residual. The epic owner
+confirmed this ratified law and corrected the issue body on 2026-07-28. The PR
+and transcript state it plainly; neither claims nor synthesizes a validator
+failure for repeat registration.
 
 The underfunded negative remains a real validator-boundary test. A transaction
 whose ACTIVE output is one lovelace below the applied
@@ -120,7 +120,8 @@ The PR body embeds a raw terminal transcript captured with `script(1)` and
 `tee`. It contains literal `$` commands and their unedited outputs for the
 full journey: clean keripy setup, witness OOBI resolution, both inceptions,
 both KEL exports, both successful registrations, both status queries, the
-already-registered preflight refusal, and the underfunded real validator
+already-registered preflight refusal, an explicitly overridden repeat
+registration with settled transaction IDs, and the underfunded real validator
 rejection. Settled preprod transaction IDs appear in command output.
 
 The committed transcript is byte-compared with the PR body. A cheap CI check
@@ -135,6 +136,7 @@ and node socket.
 - both successful registrations settle on preprod and `status` reports ACTIVE;
 - witnessed registration default-refuses until explicitly acknowledged;
 - an already-live AID default-refuses before preminting;
+- explicit repeat registration settles and explains the benign residual;
 - underfunded registration reaches and fails Plutus evaluation;
 - docs teach the complete stranger journey and the repeatability caveat;
 - raw transcript is committed and embedded byte-for-byte in PR #172;

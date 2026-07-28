@@ -19,8 +19,10 @@ import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.Deployment.ChainIndex (
     KoiosToken (..),
     matchesReference,
+    queryAssetUtxos,
     queryReferenceScripts,
  )
+import Cardano.KERI.Deployment.CheckpointIndex (queryCheckpointStatus)
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     parseInceptionExport,
@@ -39,6 +41,13 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.Publisher (
     PublishConfig (..),
     publishScripts,
+ )
+import Cardano.KERI.Deployment.Registration (
+    RegistrationPlan (..),
+    RegistrationResult (..),
+    RegistrationRunnerConfig (..),
+    mkRegistrationPlan,
+    runRegistration,
  )
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
@@ -548,6 +557,19 @@ runRegister settings = do
         fail "timeout-seconds must be positive"
     kel <- BS.readFile (registerKel settings)
     inception <- either fail pure (parseInceptionExport kel)
+    manifest <-
+        readManifest (registerManifest settings) >>= either fail pure
+    plan <-
+        either
+            fail
+            pure
+            (mkRegistrationPlan manifest (registerEscrowLovelace settings) inception)
+    existing <-
+        queryAssetUtxos
+            (registerKoiosUrl settings)
+            (registerKoiosToken settings)
+            (planCheckpointPolicy plan)
+            (planCheckpointName plan)
     either
         fail
         pure
@@ -556,17 +578,61 @@ runRegister settings = do
             (registerNetworkMagic settings)
             (registerAllowUnlistedWitnesses settings)
             (registerAllowExistingCheckpoint settings)
-            0
+            (length existing)
             inception
         )
-    fail "registration transaction runner is not implemented"
+    when
+        ( registerAllowUnlistedWitnesses settings
+            && not (null $ cdWitnesses $ inceptionDatum inception)
+        )
+        ( putStrLn
+            "warning: witness board membership is unverified; accepting \
+            \reduced public watchability"
+        )
+    when
+        (registerAllowExistingCheckpoint settings && not (null existing))
+        ( putStrLn
+            "warning: sovereign repeat registration creates another fully \
+            \funded checkpoint copy; the benign residual is intentional"
+        )
+    result <-
+        runRegistration
+            RegistrationRunnerConfig
+                { runnerCardanoCli = registerCardanoCli settings
+                , runnerNetworkMagic = registerNetworkMagic settings
+                , runnerNodeSocket = registerNodeSocket settings
+                , runnerFundingAddress = registerFundingAddress settings
+                , runnerSigningKeyFile = registerPayer settings
+                , runnerKoiosUrl = registerKoiosUrl settings
+                , runnerKoiosToken = registerKoiosToken settings
+                , runnerTimeoutSeconds = registerTimeoutSeconds settings
+                }
+            plan
+    putStrLn $
+        "premint txid: "
+            <> T.unpack (resultPremintTxId result)
+    putStrLn $
+        "register txid: "
+            <> T.unpack (resultRegisterTxId result)
+    putStrLn $
+        "escrow: "
+            <> show (registerEscrowLovelace settings `div` 1_000_000)
+            <> " tADA (min 2 + D 1000 + B 5)"
 
 runStatus :: StatusSettings -> IO ()
 runStatus settings = do
     unless
         (T.length (statusAid settings) == 44 && "E" `T.isPrefixOf` statusAid settings)
         (fail "AID must be one 44-character KERI E-code identifier")
-    fail "checkpoint status lookup is not implemented"
+    manifest <-
+        readManifest (statusManifest settings) >>= either fail pure
+    status <-
+        queryCheckpointStatus
+            (statusKoiosUrl settings)
+            (statusKoiosToken settings)
+            manifest
+            (statusAid settings)
+    putStrLn (T.unpack status)
 
 runDeploy :: DeploySettings -> IO ()
 runDeploy settings = do

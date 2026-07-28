@@ -105,10 +105,12 @@ library deployment
 
   exposed-modules:
     Cardano.KERI.Deployment.ChainIndex
+    Cardano.KERI.Deployment.CheckpointIndex
     Cardano.KERI.Deployment.CLI
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
+    Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Script
 
 executable ckeri
@@ -133,6 +135,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
+    Cardano.KERI.Deployment.RegistrationSpec
     Paths_cardano_keri
 
   build-depends:
@@ -143,6 +146,7 @@ test-suite deployment-tests
     , cardano-keri:deployment
     , hspec                    >=2.11 && <2.12
     , http-conduit
+    , plutus-core
     , text
 
   autogen-modules:  Paths_cardano_keri

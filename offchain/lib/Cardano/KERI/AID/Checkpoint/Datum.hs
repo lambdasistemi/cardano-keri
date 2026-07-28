@@ -37,6 +37,7 @@ module Cardano.KERI.AID.Checkpoint.Datum (
 
     -- * Canonical serialization
     canonicalCbor,
+    checkpointDatumFromData,
     blake2b_256,
 
     -- * Datum-level well-formedness (rule 14)
@@ -218,6 +219,10 @@ instance FromData CheckpointDatumV1 where
                     , cdNativeSn = nsn
                     }
     fromBuiltinData _ = Nothing
+
+-- | Decode the public Plutus 'Data' tree through the frozen V1 wire codec.
+checkpointDatumFromData :: Data -> Maybe CheckpointDatum
+checkpointDatumFromData = fromBuiltinData . BuiltinData
 
 -- ---------------------------------------------------------
 -- Canonical serialization

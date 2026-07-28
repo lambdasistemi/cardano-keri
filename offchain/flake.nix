@@ -290,7 +290,33 @@
               '';
             };
             cardanoNode = inputs.cardano-node.packages.${system}.cardano-node;
+            cardanoCli = inputs.cardano-node.packages.${system}.cardano-cli;
             e2eExe = project.hsPkgs.cardano-keri.components.tests.e2e-tests;
+            ckeriExe = project.hsPkgs.cardano-keri.components.exes.ckeri;
+            deploymentTestsExe =
+              project.hsPkgs.cardano-keri.components.tests.deployment-tests;
+            ckeriRunner = pkgs.writeShellApplication {
+              name = "ckeri";
+              runtimeInputs = [ ckeriExe cardanoCli pkgs.cacert pkgs.git ];
+              text = ''
+                export CKERI_BLUEPRINT="''${CKERI_BLUEPRINT:-${blueprint}}"
+                export SSL_CERT_FILE="''${SSL_CERT_FILE:-${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt}"
+                exec ${ckeriExe}/bin/ckeri "$@"
+              '';
+            };
+            deploymentTestsRunner = pkgs.writeShellApplication {
+              name = "deployment-tests";
+              runtimeInputs = [ deploymentTestsExe ];
+              text = ''
+                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                exec ${deploymentTestsExe}/bin/deployment-tests "$@"
+              '';
+            };
+            deploymentTestsCheck =
+              pkgs.runCommand "deployment-tests-check" { } ''
+                ${deploymentTestsRunner}/bin/deployment-tests
+                touch "$out"
+              '';
             # The merged PV11 fixture deliberately shortens epochs from 500 to
             # 100 slots. Register runs against that stock fixture. The legacy
             # Cage smoke still probes a fixed +30s horizon, so preserve its
@@ -397,7 +423,10 @@
               ' "$f"
               touch "$out"
             '';
-          in { inherit blueprint runner check sweepRunner sweepConsistency; });
+          in {
+            inherit blueprint ckeriRunner deploymentTestsCheck
+              deploymentTestsRunner runner check sweepRunner sweepConsistency;
+          });
 
         in {
           packages = {
@@ -406,6 +435,8 @@
             format-check = format-check-runner;
             hlint = hlint-runner;
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
+            ckeri = e2eWiring.ckeriRunner;
+            deployment-tests = e2eWiring.deploymentTestsRunner;
             e2e = e2eWiring.runner;
             e2e-sweep = e2eWiring.sweepRunner;
             plutus-blueprint = e2eWiring.blueprint;
@@ -413,6 +444,7 @@
           checks = {
             unit-tests = unit-tests-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
+            deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
             sweep-consistency = e2eWiring.sweepConsistency;
           };
@@ -434,6 +466,15 @@
               program = "${unit-tests-runner}/bin/unit-tests";
             };
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
+            ckeri = {
+              type = "app";
+              program = "${e2eWiring.ckeriRunner}/bin/ckeri";
+            };
+            deployment-tests = {
+              type = "app";
+              program =
+                "${e2eWiring.deploymentTestsRunner}/bin/deployment-tests";
+            };
             e2e = {
               type = "app";
               program = "${e2eWiring.runner}/bin/e2e";

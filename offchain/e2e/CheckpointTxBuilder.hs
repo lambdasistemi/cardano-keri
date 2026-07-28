@@ -108,6 +108,16 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     registerObserverRedeemerData,
     responseAdvanceObserverRedeemerData,
  )
+import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
+import Cardano.KERI.AID.E2E.Script (
+    ScriptArtifact (..),
+    deriveV1Scripts,
+    loadBlueprint,
+    mkCageScript,
+    v1FreezeBond,
+    v1FreezeWindow,
+    v1RegistrationBond,
+ )
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -225,10 +235,8 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_keri (getDataFileName)
-import PlutusCore qualified as PLC
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
-import PlutusLedgerApi.V3 (serialiseUPLC, uncheckedDeserialiseUPLC)
 import System.Environment (lookupEnv)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (
@@ -239,16 +247,6 @@ import System.IO (
     stdout,
  )
 import System.Timeout (timeout)
-import UntypedPlutusCore (Program (..), applyProgram)
-import UntypedPlutusCore qualified as UPLC
-
-import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
-import Cardano.KERI.AID.E2E.Script (
-    computeScriptHash,
-    extractCompiledCode,
-    loadBlueprint,
-    mkCageScript,
- )
 
 data CheckpointEnv = CheckpointEnv
     { envCheckpointScript :: !(Script ConwayEra)
@@ -311,20 +309,17 @@ data BoundaryCases = BoundaryCases
     }
     deriving stock (Show, Eq)
 
-checkpointVersion :: Integer
-checkpointVersion = 0
-
 checkpointMinAda :: Integer
 checkpointMinAda = 2_000_000
 
 registrationBond :: Integer
-registrationBond = 1_000_000_000
+registrationBond = v1RegistrationBond
 
 freezeBond :: Integer
-freezeBond = 5_000_000
+freezeBond = v1FreezeBond
 
 freezeWindow :: Integer
-freezeWindow = 10_000
+freezeWindow = v1FreezeWindow
 
 scriptFee :: Integer
 scriptFee = 3_000_000
@@ -387,67 +382,28 @@ stagedCheckpointDevnet action = do
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
 mkCheckpointEnv blueprintPath lsq ltxs = do
     blueprint <- loadBlueprint blueprintPath >>= either fail pure
-    hashProofCode <-
-        maybe
-            (fail "hash_proof compiled code not found in production blueprint")
-            pure
-            (extractCompiledCode "hash_proof." blueprint)
-    checkpointCode <-
-        maybe
-            (fail "checkpoint_register compiled code not found in production blueprint")
-            pure
-            (extractCompiledCode "checkpoint_register.checkpoint_register." blueprint)
-    lifecycleCode <-
-        maybe
-            (fail "observer_lifecycle compiled code not found in production blueprint")
-            pure
-            (extractCompiledCode "checkpoint_observer.observer_lifecycle." blueprint)
-    advanceCode <-
-        maybe
-            (fail "observer_advance compiled code not found in production blueprint")
-            pure
-            (extractCompiledCode "checkpoint_observer.observer_advance." blueprint)
-    enforcementCode <-
-        maybe
-            (fail "observer_enforcement compiled code not found in production blueprint")
-            pure
-            (extractCompiledCode "checkpoint_observer.observer_enforcement." blueprint)
-    let hashProofScript = mkCageScript hashProofCode
-        hashProofHash = computeScriptHash hashProofCode
+    artifacts <- either fail pure (deriveV1Scripts blueprint)
+    hashProof <- requireArtifact "hash-proof" artifacts
+    lifecycle <- requireArtifact "observer-lifecycle" artifacts
+    advance <- requireArtifact "observer-advance" artifacts
+    enforcement <- requireArtifact "observer-enforcement" artifacts
+    checkpoint <- requireArtifact "checkpoint-register" artifacts
+    let hashProofCode = artifactProgram hashProof
+        hashProofScript = mkCageScript hashProofCode
+        hashProofHash = artifactScriptHash hashProof
         hashProofPolicy = PolicyID hashProofHash
-        appliedLifecycle =
-            applyLifecycleParams
-                checkpointVersion
-                (policyBytes hashProofPolicy)
-                registrationBond
-                lifecycleCode
+        appliedLifecycle = artifactProgram lifecycle
         lifecycleScript = mkCageScript appliedLifecycle
-        lifecycleHash = computeScriptHash appliedLifecycle
-        appliedAdvance =
-            applyAdvanceParams
-                checkpointVersion
-                advanceCode
+        lifecycleHash = artifactScriptHash lifecycle
+        appliedAdvance = artifactProgram advance
         advanceScript = mkCageScript appliedAdvance
-        advanceHash = computeScriptHash appliedAdvance
-        appliedEnforcement =
-            applyAdvanceParams
-                checkpointVersion
-                enforcementCode
+        advanceHash = artifactScriptHash advance
+        appliedEnforcement = artifactProgram enforcement
         enforcementScript = mkCageScript appliedEnforcement
-        enforcementHash = computeScriptHash appliedEnforcement
-        appliedCheckpoint =
-            applyCheckpointParams
-                checkpointVersion
-                (policyBytes (PolicyID lifecycleHash))
-                (policyBytes (PolicyID advanceHash))
-                (policyBytes (PolicyID enforcementHash))
-                0
-                registrationBond
-                freezeBond
-                freezeWindow
-                checkpointCode
+        enforcementHash = artifactScriptHash enforcement
+        appliedCheckpoint = artifactProgram checkpoint
         checkpointScript = mkCageScript appliedCheckpoint
-        checkpointHash = computeScriptHash appliedCheckpoint
+        checkpointHash = artifactScriptHash checkpoint
         checkpointPolicy = PolicyID checkpointHash
     dbg ("checkpoint_register script hash: " <> show checkpointHash)
     dbg ("observer_lifecycle script hash: " <> show lifecycleHash)
@@ -479,6 +435,12 @@ mkCheckpointEnv blueprintPath lsq ltxs = do
             , envSubmitter = mkN2CSubmitter ltxs
             , envOwner = genesisAddr
             }
+
+requireArtifact :: Text -> [ScriptArtifact] -> IO ScriptArtifact
+requireArtifact name artifacts =
+    case filter ((== name) . artifactName) artifacts of
+        [artifact] -> pure artifact
+        _ -> fail ("V1 artifact not found uniquely: " <> Text.unpack name)
 
 {- | Prove the Register programs and the Advance observer fit both the applied
 program budget and signed reference-script creation transactions.
@@ -581,87 +543,6 @@ assertPinnedPv11Fixture = do
         )
         (fail ("PV11 pparams fixture mismatch: " <> show (major, memory, steps, entries)))
     dbg ("loaded PV11 pparams fixture: " <> path)
-
-applyCheckpointParams ::
-    Integer ->
-    ByteString ->
-    ByteString ->
-    ByteString ->
-    Integer ->
-    Integer ->
-    Integer ->
-    Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
-applyCheckpointParams version lifecycleHash advanceHash enforcementHash network dReg bond window code =
-    serialiseUPLC $
-        uncheckedDeserialiseUPLC code
-            `applyDataArg` I version
-            `applyDataArg` B lifecycleHash
-            `applyDataArg` B advanceHash
-            `applyDataArg` B enforcementHash
-            `applyDataArg` I network
-            `applyDataArg` I dReg
-            `applyDataArg` I bond
-            `applyDataArg` I window
-  where
-    applyDataArg program dat =
-        let Program _ versionTag _ = program
-            argument =
-                Program
-                    ()
-                    versionTag
-                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
-         in either
-                (error . ("applyCheckpointParams: " <>) . show)
-                id
-                (applyProgram program argument)
-
-applyLifecycleParams ::
-    Integer ->
-    ByteString ->
-    Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
-applyLifecycleParams version proofPolicy dReg code =
-    serialiseUPLC $
-        uncheckedDeserialiseUPLC code
-            `applyDataArg` I version
-            `applyDataArg` B proofPolicy
-            `applyDataArg` I dReg
-  where
-    applyDataArg program dat =
-        let Program _ versionTag _ = program
-            argument =
-                Program
-                    ()
-                    versionTag
-                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
-         in either
-                (error . ("applyLifecycleParams: " <>) . show)
-                id
-                (applyProgram program argument)
-
-applyAdvanceParams ::
-    Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
-applyAdvanceParams version code =
-    serialiseUPLC $
-        uncheckedDeserialiseUPLC code
-            `applyDataArg` I version
-  where
-    applyDataArg program dat =
-        let Program _ versionTag _ = program
-            argument =
-                Program
-                    ()
-                    versionTag
-                    (UPLC.Constant () (PLC.Some (PLC.ValueOf PLC.DefaultUniData dat)))
-         in either
-                (error . ("applyAdvanceParams: " <>) . show)
-                id
-                (applyProgram program argument)
 
 policyBytes :: PolicyID -> ByteString
 policyBytes (PolicyID (ScriptHash hash)) = hashToBytes hash

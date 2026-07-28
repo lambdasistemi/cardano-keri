@@ -13,11 +13,13 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     registrationPredicate,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
+import Cardano.KERI.Deployment.CLI (registerPreflight)
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     parseInceptionExport,
  )
 import Data.ByteString qualified as BS
+import Data.Either (isLeft)
 import Paths_cardano_keri (getDataFileName)
 import Test.Hspec (
     Spec,
@@ -25,6 +27,7 @@ import Test.Hspec (
     expectationFailure,
     it,
     shouldBe,
+    shouldSatisfy,
  )
 
 spec :: Spec
@@ -52,6 +55,26 @@ spec =
             reWitReceipts (inceptionEvidence parsed)
                 `shouldSatisfyLength` 3
             predicateAccepts parsed
+
+        it "refuses witnessed registration until explicitly acknowledged" $ do
+            parsed <- load "kli-export-2-of-5.cesr"
+            registerPreflight "preprod" 1 False False 0 parsed
+                `shouldSatisfy` isLeft
+            registerPreflight "preprod" 1 True False 0 parsed
+                `shouldBe` Right ()
+
+        it "refuses duplicate, ambiguous, and non-preprod registration" $ do
+            parsed <- load "kli-export-single.cesr"
+            registerPreflight "preprod" 1 False False 1 parsed
+                `shouldSatisfy` isLeft
+            registerPreflight "preprod" 1 False False 2 parsed
+                `shouldSatisfy` isLeft
+            registerPreflight "preprod" 1 False True 1 parsed
+                `shouldBe` Right ()
+            registerPreflight "preprod" 1 False True 2 parsed
+                `shouldBe` Right ()
+            registerPreflight "preview" 2 False False 0 parsed
+                `shouldSatisfy` isLeft
 
 load :: FilePath -> IO InceptionExport
 load name = do

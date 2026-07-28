@@ -9,13 +9,21 @@ module Cardano.KERI.Deployment.CLI (
     Instructions (..),
     DeploySettings (..),
     VerifySettings (..),
+    RegisterSettings (..),
+    StatusSettings (..),
+    registerPreflight,
     runInstructions,
 ) where
 
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.Deployment.ChainIndex (
     KoiosToken (..),
     matchesReference,
     queryReferenceScripts,
+ )
+import Cardano.KERI.Deployment.KEL (
+    InceptionExport (..),
+    parseInceptionExport,
  )
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
@@ -38,6 +46,7 @@ import Cardano.KERI.Deployment.Script (
     loadBlueprint,
  )
 import Control.Monad (forM_, unless, when)
+import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
@@ -48,6 +57,8 @@ import System.Process (readProcessWithExitCode)
 data Instructions
     = Deploy DeploySettings
     | ManifestVerify VerifySettings
+    | Register RegisterSettings
+    | Status StatusSettings
     deriving stock (Show, Eq)
 
 data DeploySettings = DeploySettings
@@ -75,6 +86,32 @@ data VerifySettings = VerifySettings
     , verifySourceRepo :: FilePath
     , verifyKoiosUrl :: Text
     , verifyKoiosToken :: Maybe KoiosToken
+    }
+    deriving stock (Show, Eq)
+
+data RegisterSettings = RegisterSettings
+    { registerNetwork :: Text
+    , registerNetworkMagic :: Int
+    , registerKel :: FilePath
+    , registerPayer :: FilePath
+    , registerNodeSocket :: FilePath
+    , registerFundingAddress :: Text
+    , registerCardanoCli :: FilePath
+    , registerManifest :: FilePath
+    , registerKoiosUrl :: Text
+    , registerKoiosToken :: Maybe KoiosToken
+    , registerTimeoutSeconds :: Int
+    , registerAllowUnlistedWitnesses :: Bool
+    , registerAllowExistingCheckpoint :: Bool
+    , registerEscrowLovelace :: Integer
+    }
+    deriving stock (Show, Eq)
+
+data StatusSettings = StatusSettings
+    { statusAid :: Text
+    , statusManifest :: FilePath
+    , statusKoiosUrl :: Text
+    , statusKoiosToken :: Maybe KoiosToken
     }
     deriving stock (Show, Eq)
 
@@ -108,6 +145,14 @@ instance Opt.HasParser Instructions where
                             )
                         ]
                     )
+                , Opt.command
+                    "register"
+                    "Register a kli inception KEL on preprod"
+                    (Register <$> Opt.subConfig "register" registerSettingsParser)
+                , Opt.command
+                    "status"
+                    "Report the live V1 checkpoint for an AID"
+                    (Status <$> Opt.subConfig "status" statusSettingsParser)
                 ]
 
 deploySettingsParser :: Opt.Parser DeploySettings
@@ -247,6 +292,135 @@ verifySettingsParser = do
     verifyKoiosToken <- optionalKoiosTokenParser
     pure VerifySettings{..}
 
+registerSettingsParser :: Opt.Parser RegisterSettings
+registerSettingsParser = do
+    registerNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    registerNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    registerKel <-
+        stringSetting
+            "kel"
+            "CKERI_KEL"
+            "kel"
+            "Binary-safe path to a kli export stream"
+            Nothing
+    registerPayer <-
+        stringSetting
+            "payer"
+            "CKERI_PAYER"
+            "payer"
+            "Cardano payment signing-key file"
+            Nothing
+    registerNodeSocket <-
+        stringSetting
+            "node-socket"
+            "CKERI_NODE_SOCKET"
+            "node-socket"
+            "Cardano node socket"
+            Nothing
+    registerFundingAddress <-
+        textSetting
+            "funding-address"
+            "CKERI_FUNDING_ADDRESS"
+            "funding-address"
+            "Bech32 payment address funding registration"
+            Nothing
+    registerCardanoCli <-
+        stringSetting
+            "cardano-cli"
+            "CKERI_CARDANO_CLI"
+            "cardano-cli"
+            "cardano-cli executable"
+            (Just "cardano-cli")
+    registerManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    registerKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    registerKoiosToken <- optionalKoiosTokenParser
+    registerTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout per transaction"
+            (Just 600)
+    registerAllowUnlistedWitnesses <-
+        Opt.yesNoSwitch
+            [ Opt.long "allow-unlisted-witnesses"
+            , Opt.env "CKERI_ALLOW_UNLISTED_WITNESSES"
+            , Opt.conf "allow-unlisted-witnesses"
+            , Opt.help
+                "Acknowledge that declared witnesses lack a board record check"
+            , Opt.value False
+            ]
+    registerAllowExistingCheckpoint <-
+        Opt.yesNoSwitch
+            [ Opt.long "allow-existing-checkpoint"
+            , Opt.env "CKERI_ALLOW_EXISTING_CHECKPOINT"
+            , Opt.conf "allow-existing-checkpoint"
+            , Opt.help
+                "Acknowledge sovereign repeat registration of a live AID"
+            , Opt.value False
+            ]
+    registerEscrowLovelace <-
+        integerSetting
+            "escrow-lovelace"
+            "CKERI_ESCROW_LOVELACE"
+            "escrow-lovelace"
+            "ACTIVE output lovelace (acceptance-only underfunding override)"
+            (Just 1_007_000_000)
+    pure RegisterSettings{..}
+
+statusSettingsParser :: Opt.Parser StatusSettings
+statusSettingsParser = do
+    statusAid <-
+        T.pack
+            <$> Opt.setting
+                [ Opt.reader Opt.str
+                , Opt.argument
+                , Opt.env "CKERI_AID"
+                , Opt.conf "aid"
+                , Opt.metavar "AID"
+                , Opt.help "44-character KERI E-code identifier"
+                ]
+    statusManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    statusKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    statusKoiosToken <- optionalKoiosTokenParser
+    pure StatusSettings{..}
+
 optionalKoiosTokenParser :: Opt.Parser (Maybe KoiosToken)
 optionalKoiosTokenParser =
     Opt.optional $
@@ -339,6 +513,60 @@ runInstructions :: Instructions -> IO ()
 runInstructions = \case
     Deploy settings -> runDeploy settings
     ManifestVerify settings -> runVerify settings
+    Register settings -> runRegister settings
+    Status settings -> runStatus settings
+
+registerPreflight ::
+    Text ->
+    Int ->
+    Bool ->
+    Bool ->
+    Int ->
+    InceptionExport ->
+    Either String ()
+registerPreflight network networkMagic allowUnlisted allowExisting existingCount inception = do
+    unless (network == "preprod" && networkMagic == 1) $
+        Left "M1 V1 registration supports only preprod network magic 1"
+    when (existingCount < 0) $
+        Left "checkpoint discovery count cannot be negative"
+    when (not allowExisting && existingCount == 1) $
+        Left "checkpoint already registered; refusing before premint"
+    when (not allowExisting && existingCount > 1) $
+        Left "checkpoint discovery is ambiguous; refusing before premint"
+    when
+        ( not allowUnlisted
+            && not (null $ cdWitnesses $ inceptionDatum inception)
+        )
+        ( Left
+            "declared witnesses have no board record check yet; pass \
+            \--allow-unlisted-witnesses to acknowledge reduced watchability"
+        )
+
+runRegister :: RegisterSettings -> IO ()
+runRegister settings = do
+    when (registerTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    kel <- BS.readFile (registerKel settings)
+    inception <- either fail pure (parseInceptionExport kel)
+    either
+        fail
+        pure
+        ( registerPreflight
+            (registerNetwork settings)
+            (registerNetworkMagic settings)
+            (registerAllowUnlistedWitnesses settings)
+            (registerAllowExistingCheckpoint settings)
+            0
+            inception
+        )
+    fail "registration transaction runner is not implemented"
+
+runStatus :: StatusSettings -> IO ()
+runStatus settings = do
+    unless
+        (T.length (statusAid settings) == 44 && "E" `T.isPrefixOf` statusAid settings)
+        (fail "AID must be one 44-character KERI E-code identifier")
+    fail "checkpoint status lookup is not implemented"
 
 runDeploy :: DeploySettings -> IO ()
 runDeploy settings = do

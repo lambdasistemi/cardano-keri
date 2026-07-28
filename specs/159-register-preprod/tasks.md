@@ -5,7 +5,7 @@
 - [x] T159-S1 RED/GREEN genuine keripy 1.3.5 `kli export` parsing for
   unwitnessed 1-of-1 and witnessed 2-of-5 inception, including offsets,
   indexed signatures, witness receipts, and pure predicate acceptance.
-- [ ] T159-S2 RED/GREEN `opt-env-conf` `register`/`status` settings,
+- [x] T159-S2 RED/GREEN `opt-env-conf` `register`/`status` settings,
   option-environment-YAML precedence, witness acknowledgement, exact-asset
   duplicate preflight, and forbidden-parser scan.
 - [ ] T159-S3 RED/GREEN detailed Plutus JSON and `cardano-cli` plans for the

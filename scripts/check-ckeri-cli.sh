@@ -7,6 +7,8 @@ trap 'rm -rf "$workspace"' EXIT
 
 "$ckeri" --help | grep -q "deploy"
 "$ckeri" --help | grep -q "manifest"
+"$ckeri" --help | grep -q "register"
+"$ckeri" --help | grep -q "status"
 "$ckeri" deploy --help | grep -q -- "--node-socket"
 "$ckeri" deploy --help | grep -q "CKERI_NODE_SOCKET"
 "$ckeri" deploy --help | grep -q -- "--koios-token"
@@ -15,6 +17,29 @@ trap 'rm -rf "$workspace"' EXIT
 "$ckeri" manifest verify --help | grep -q "CKERI_MANIFEST"
 "$ckeri" manifest verify --help | grep -q -- "--koios-token"
 "$ckeri" manifest verify --help | grep -q "KOIOS_TOKEN"
+"$ckeri" register --help | grep -q -- "--kel"
+"$ckeri" register --help | grep -q "CKERI_KEL"
+"$ckeri" register --help | grep -q -- "--payer"
+"$ckeri" register --help | grep -q "CKERI_PAYER"
+"$ckeri" register --help | grep -q "allow-unlisted-witnesses"
+"$ckeri" register --help | grep -q "CKERI_ALLOW_UNLISTED_WITNESSES"
+"$ckeri" register --help | grep -q "allow-existing-checkpoint"
+"$ckeri" register --help | grep -q "CKERI_ALLOW_EXISTING_CHECKPOINT"
+"$ckeri" register --help | grep -q -- "--koios-token"
+"$ckeri" register --help | grep -q "KOIOS_TOKEN"
+"$ckeri" status --help | grep -q "AID"
+"$ckeri" status --help | grep -q "CKERI_AID"
+"$ckeri" status --help | grep -q -- "--koios-token"
+"$ckeri" status --help | grep -q "KOIOS_TOKEN"
+
+if rg -n \
+  'Options\.Applicative|optparse-applicative' \
+  offchain/cardano-keri.cabal \
+  offchain/deployment \
+  offchain/app; then
+  echo "ckeri must use opt-env-conf exclusively" >&2
+  exit 1
+fi
 
 printf '%s\n' \
   'manifest:' \

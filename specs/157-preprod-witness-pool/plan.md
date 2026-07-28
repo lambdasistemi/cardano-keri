@@ -33,6 +33,7 @@ implementation with `gate.sh` and GitHub CI as reviewers.
 deploy/preprod/
 ├── Dockerfile
 ├── docker-compose.yaml
+├── witness-entrypoint
 ├── witness-1.json
 ├── witness-2.json
 ├── witness-3.json
@@ -55,7 +56,8 @@ gate.sh
 Build a small runtime image whose virtual environment is resolved with
 `uv sync --frozen` from the existing keripy fixture lock. Pin the Python and
 `uv` source images by digest, install only the libsodium runtime dependency,
-run as an unprivileged user, and expose `kli` as the entry point.
+run as an unprivileged user, and dispatch all explicit arguments directly to
+`kli`.
 
 ### Declarative services
 
@@ -63,7 +65,9 @@ Define three services from the same image. Each gets:
 
 - a distinct name/alias and named data volume;
 - the same internal HTTP/TCP ports in its isolated container;
-- a read-only endpoint configuration that advertises its public HTTPS URL;
+- a read-only endpoint configuration input, copied at startup to keripy's
+  writable persistent configuration path, that advertises its public HTTPS
+  URL;
 - a health check against the local HTTP service;
 - bounded JSON logs;
 - Traefik host routing on the external `web` network; and
@@ -138,4 +142,3 @@ Add `docs/user/preprod-witness-pool.md` to the User guide navigation. Explain:
 - The docs do not claim administrative independence or production SLA.
 - No future `ckeri` parser is introduced here. Story #158 remains bound to
   `opt-env-conf`; `optparse-applicative` remains forbidden.
-

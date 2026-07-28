@@ -52,6 +52,7 @@ nav:
   - User guide:
       - Freeze lifecycle: user/freeze-lifecycle.md
       - Conviction: user/conviction.md
+      - The preprod witness pool: user/preprod-witness-pool.md
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md

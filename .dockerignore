@@ -1,0 +1,5 @@
+**
+!deploy/preprod/Dockerfile
+!deploy/preprod/witness-entrypoint
+!offchain/test/keri-fixtures/pyproject.toml
+!offchain/test/keri-fixtures/uv.lock

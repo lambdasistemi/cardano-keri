@@ -11,6 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  preprod-witnesses:
+    name: Preprod witnesses (kli)
+    runs-on: nixos
+    env:
+      WITNESS_IMAGE: cardano-keri-witness:ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build locked keripy image
+        run: docker build --tag "$WITNESS_IMAGE" --file deploy/preprod/Dockerfile .
+      - name: Validate deployment and run clean-client acceptance
+        run: >-
+          nix shell
+          nixpkgs#coreutils
+          nixpkgs#curl
+          nixpkgs#docker-client
+          nixpkgs#docker-compose
+          nixpkgs#jq
+          --command bash scripts/check-preprod-witnesses.sh
+      - name: Remove CI image tag
+        if: always()
+        run: docker image rm "$WITNESS_IMAGE" >/dev/null 2>&1 || true
+
   build-gate:
     name: Build Gate
     runs-on: nixos

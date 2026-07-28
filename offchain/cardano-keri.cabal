@@ -18,7 +18,9 @@ build-type:    Simple
 
 -- Committed keripy oracle fixtures, read hermetically by the unit-tests
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
-data-files:    test/keri-fixtures/fixtures/*.json
+data-files:
+  deployment-test/fixtures/*.cesr
+  test/keri-fixtures/fixtures/*.json
 
 common warnings
   ghc-options:
@@ -82,6 +84,7 @@ library deployment
     , bech32
     , bytestring             >=0.11 && <0.13
     , cardano-crypto-class
+    , cardano-keri
     , cardano-ledger-alonzo
     , cardano-ledger-conway
     , cardano-ledger-core
@@ -103,6 +106,7 @@ library deployment
   exposed-modules:
     Cardano.KERI.Deployment.ChainIndex
     Cardano.KERI.Deployment.CLI
+    Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Script
@@ -127,16 +131,21 @@ test-suite deployment-tests
   main-is:          Main.hs
   other-modules:
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
+    Paths_cardano_keri
 
   build-depends:
     , aeson
     , base
     , bytestring
+    , cardano-keri
     , cardano-keri:deployment
     , hspec                    >=2.11 && <2.12
     , http-conduit
     , text
+
+  autogen-modules:  Paths_cardano_keri
 
 test-suite unit-tests
   import:           warnings

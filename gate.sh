@@ -19,6 +19,13 @@ if rg -n \
 fi
 
 if test -f deploy/preprod/m1-manifest.json; then
+  nix shell \
+    nixpkgs#bash \
+    nixpkgs#coreutils \
+    nixpkgs#gnugrep \
+    nixpkgs#jq \
+    --command bash scripts/check-m1-acceptance-transcript.sh
+
   nix run --quiet ./offchain#ckeri -- \
     manifest verify \
     --manifest deploy/preprod/m1-manifest.json

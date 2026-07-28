@@ -1,0 +1,24 @@
+$ git rev-parse HEAD
+50a582064ddfde15ebfa3649c6b6fea8d39fc697
+$ /nix/store/cw5gw6g92gqid73qnj1nailg3sxv5djr-ckeri/bin/ckeri --version
+ckeri 0.0.0 
+$ sudo /nix/store/cw5gw6g92gqid73qnj1nailg3sxv5djr-ckeri/bin/ckeri deploy --network preprod --network-magic 1 --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --signing-key-file /home/paolino/secrets/cardano-keri-preprod/payment.skey --source-repo . --source-commit 50a582064ddfde15ebfa3649c6b6fea8d39fc697 --out deploy/preprod/m1-manifest.json --timeout-seconds 1200
+deployed hash-proof hash=d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca reference=5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c#0
+deployed observer-lifecycle hash=3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7 reference=c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f#0
+deployed observer-advance hash=50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6 reference=aaeb5ebe4e9783dc614b8a48634ef7fd9bb517cc0fdc3a4d701a26bd94679734#0
+deployed observer-enforcement hash=a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e reference=2c9c6b3407332d08df895ab0e9e2cf15f7691d9ce24685e4fe8e6e1abb59506d#0
+deployed checkpoint-register hash=0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734 reference=8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0
+manifest: deploy/preprod/m1-manifest.json
+$ sudo /nix/store/cw5gw6g92gqid73qnj1nailg3sxv5djr-ckeri/bin/ckeri manifest verify --manifest deploy/preprod/m1-manifest.json --source-repo .
+source rebuild: OK commit=50a582064ddfde15ebfa3649c6b6fea8d39fc697
+hash hash-proof: OK d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca
+hash observer-lifecycle: OK 3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7
+hash observer-advance: OK 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+hash observer-enforcement: OK a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e
+hash checkpoint-register: OK 0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734
+on-chain hash-proof: OK 5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c#0
+on-chain observer-lifecycle: OK c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f#0
+on-chain observer-advance: OK aaeb5ebe4e9783dc614b8a48634ef7fd9bb517cc0fdc3a4d701a26bd94679734#0
+on-chain observer-enforcement: OK 2c9c6b3407332d08df895ab0e9e2cf15f7691d9ce24685e4fe8e6e1abb59506d#0
+on-chain checkpoint-register: OK 8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0
+manifest verify: OK — rebuilt from source; all hashes and on-chain references are live

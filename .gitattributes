@@ -1,0 +1,2 @@
+# The raw tee capture is byte evidence; preserve command output verbatim.
+deploy/preprod/m1-acceptance.txt whitespace=-blank-at-eol

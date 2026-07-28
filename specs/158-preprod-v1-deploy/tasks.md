@@ -29,10 +29,12 @@
 
 ## Slice 3 — preprod release and delivery
 
-- [ ] **T158-S8** Create and fund a dedicated preprod deployer, publish all
+- [x] **T158-S8** Create and fund a dedicated preprod deployer, publish all
   five V1 references, and commit the captured manifest.
-- [ ] **T158-S9** Add the navigable “The M1 preprod deployment” page with
-  settled transaction IDs and the captured successful verifier transcript.
+- [x] **T158-S9** Preserve the raw `tee`-captured source → `deploy` →
+  `manifest verify` transcript and add the navigable “The M1 preprod
+  deployment” narrative with settled transaction IDs and operator guidance.
 - [ ] **T158-S10** Add live manifest verification to CI, pass the exact local
-  gate, restore the standing gate, mark PR #169 ready, and park it for operator
-  merge.
+  gate, make CI match the raw transcript to the manifest, embed the unedited
+  transcript in PR #169, restore the standing gate, mark the PR ready, and
+  park it for operator merge.

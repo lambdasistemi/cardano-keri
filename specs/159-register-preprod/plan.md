@@ -47,7 +47,8 @@ absence of `Options.Applicative`.
 
 GREEN adds settings and runners. Pure tests cover network rejection,
 witness-default refusal/acknowledgement, exact-asset zero/one/many decisions,
-and already-registered refusal before any transaction command is run.
+already-registered refusal before any transaction command is run, and the
+explicit sovereign repeat-registration acknowledgement.
 
 ### S3 — reference-script transaction runner
 
@@ -86,8 +87,9 @@ Exercise:
 2. clean witnessed 2-of-5 inception/export;
 3. default witness-policy refusal and explicit acknowledgement;
 4. settled 2-of-5 register/status;
-5. already-registered off-chain refusal; and
-6. one-lovelace-underfunded Plutus evaluation rejection using a fresh KEL.
+5. already-registered off-chain refusal;
+6. explicitly acknowledged repeat registration with settled txids; and
+7. one-lovelace-underfunded Plutus evaluation rejection using a fresh KEL.
 
 Add the user guide and a CI transcript/parser check. Embed the exact committed
 capture in the PR body, run `./gate.sh`, push, wait for CI, perform the
@@ -116,5 +118,5 @@ plans, configuration precedence, and transcript integrity.
 - Treat Koios as discovery, then verify every output fact needed for status.
 - Fail closed on multiple checkpoint outputs.
 - Do not change an on-chain validator in this application story.
-- Preserve #114 repeat-registration semantics and disclose the issue-body
-  contradiction.
+- Preserve #114 repeat-registration semantics and disclose the off-chain
+  default/refusal boundary.

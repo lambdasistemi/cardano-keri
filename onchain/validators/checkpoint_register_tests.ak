@@ -4,7 +4,7 @@ use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
-use cardano/address.{Script, from_script, from_verification_key}
+use cardano/address.{Address, Script, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/certificate.{RegisterCredential, UnregisterCredential}
 use cardano/transaction.{
@@ -23,8 +23,8 @@ use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
 use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_advance, observe_freeze,
-  observe_register, observe_response_advance,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
+  observe_freeze, observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
@@ -34,7 +34,7 @@ use cardano_keri/checkpoint/role.{Active, Armed, Frozen}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
 use checkpoint_register.{
-  Advance, ClaimFreeze, Close, CloseBurn, Freeze, Register,
+  Advance, ClaimFreeze, Close, CloseBurn, Convict, ConvictBurn, Freeze, Register,
 }
 
 const hp_policy: PolicyId =
@@ -892,4 +892,527 @@ test seize_delay_accepts_thaw_with_reposted_bond() {
 
 test seize_delay_rejects_thaw_without_exact_bond() fail {
   run_thaw_small(min_ada + d_reg + freeze_bond - 1)
+}
+
+// ---------------------------------------------------------------------
+// #151 RED — witnessed conviction burns the AID token and atomically
+// distributes the complete source-state reserve. These tests compose the
+// applied checkpoint mint/spend validators with the applied enforcement
+// observer; the Convict constructors and action are deliberately absent
+// until GREEN.
+// ---------------------------------------------------------------------
+
+const convictor: ByteArray =
+  #"51515151515151515151515151515151515151515151515151515151"
+
+const other_recipient: ByteArray =
+  #"52525252525252525252525252525252525252525252525252525252"
+
+fn convict_ref() -> OutputReference {
+  out_ref(seed_tx_id, 15)
+}
+
+fn crossed_convict_ref() -> OutputReference {
+  out_ref(seed_tx_id, 16)
+}
+
+fn convict_payout(recipient: ByteArray, lovelace: Int) -> Output {
+  Output {
+    address: from_verification_key(recipient),
+    value: from_lovelace(lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
+fn convict_envelope_at(
+  action: Int,
+  own_ref: OutputReference,
+  evidence: EnforcementEvidence,
+) -> ObserverEnvelope {
+  ObserverEnvelope {
+    claim: ObserverClaim {
+      action,
+      checkpoint_policy: policy,
+      own_ref: Some(own_ref),
+    },
+    payload: evidence,
+  }
+}
+
+fn convict_context(
+  input_address: Address,
+  input_datum: Data,
+  input_lovelace: Int,
+  tip: CheckpointDatumV1,
+  outputs: List<Output>,
+  mint: Value,
+  action: Int,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  let own_input = input_at(
+    convict_ref(),
+    Output {
+      address: input_address,
+      value: from_lovelace(input_lovelace)
+        |> merge(from_asset(policy, aid_name, 1)),
+      datum: InlineDatum(input_datum),
+      reference_script: None,
+    },
+  )
+  let tx = spend_context(
+    [own_input],
+    [],
+    outputs,
+    mint,
+    [],
+    interval.everything,
+    0,
+  )
+  let credential = Script(enforcement_hash)
+  let envelope = convict_envelope_at(action, convict_ref(), evidence)
+  let observer_redeemer: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), observer_redeemer)],
+  }
+}
+
+fn active_convict_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  payout_lovelace: Int,
+  mint: Value,
+  action: Int,
+) -> Transaction {
+  convict_context(
+    role.address(policy, Active),
+    V1(tip),
+    min_ada + d_reg + freeze_bond,
+    tip,
+    [convict_payout(convictor, payout_lovelace)],
+    mint,
+    action,
+    evidence,
+  )
+}
+
+fn active_convict_tx(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  active_convict_tx_with(
+    tip,
+    evidence,
+    min_ada + d_reg + freeze_bond,
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_convict,
+  )
+}
+
+fn armed_convict_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  convictor_lovelace: Int,
+  payout_hunter: ByteArray,
+  hunter_lovelace: Int,
+) -> Transaction {
+  convict_context(
+    role.address(policy, Armed),
+    ArmedV1 { checkpoint: tip, hunter_pkh: hunter, deadline: freeze_deadline },
+    min_ada + d_reg + freeze_bond,
+    tip,
+    [
+      convict_payout(convictor, convictor_lovelace),
+      convict_payout(payout_hunter, hunter_lovelace),
+    ],
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_convict,
+    evidence,
+  )
+}
+
+fn armed_convict_tx(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  armed_convict_tx_with(tip, evidence, min_ada + d_reg, hunter, freeze_bond)
+}
+
+fn frozen_convict_tx_with(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+  payout_lovelace: Int,
+) -> Transaction {
+  convict_context(
+    role.address(policy, Frozen),
+    V1(tip),
+    min_ada + d_reg,
+    tip,
+    [convict_payout(convictor, payout_lovelace)],
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_convict,
+    evidence,
+  )
+}
+
+fn frozen_convict_tx(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  frozen_convict_tx_with(tip, evidence, min_ada + d_reg)
+}
+
+fn run_convict_with_action(
+  tx: Transaction,
+  evidence: EnforcementEvidence,
+  action: Int,
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+) -> Bool {
+  let envelope = convict_envelope_at(action, convict_ref(), evidence)
+  checkpoint_register.checkpoint_register.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    ConvictBurn { checkpoint_ref: convict_ref() },
+    policy,
+    tx,
+  ) && checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Convict {
+      convictor_pkh: convictor,
+      convictor_output_index,
+      hunter_output_index,
+    },
+    convict_ref(),
+    tx,
+  ) && checkpoint_observer.observer_enforcement.withdraw(0, envelope, 0, tx)
+}
+
+fn run_convict(
+  tx: Transaction,
+  evidence: EnforcementEvidence,
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+) -> Bool {
+  run_convict_with_action(
+    tx,
+    evidence,
+    observe_convict,
+    convictor_output_index,
+    hunter_output_index,
+  )
+}
+
+test convict_small_accepts_active_exact_burn_and_full_reserve_payout() {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(active_convict_tx(tip, evidence), evidence, 0, 0)
+}
+
+test convict_small_accepts_armed_exact_split_to_convictor_and_recorded_hunter() {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(armed_convict_tx(tip, evidence), evidence, 0, 1)
+}
+
+test convict_small_accepts_frozen_without_recreating_delay_bond() {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(frozen_convict_tx(tip, evidence), evidence, 0, 0)
+}
+
+test convict_small_accepts_surplus_lovelace_as_ordinary_change() {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let surplus = 17
+  let tx = convict_context(
+    role.address(policy, Active),
+    V1(tip),
+    min_ada + d_reg + freeze_bond + surplus,
+    tip,
+    [
+      convict_payout(convictor, min_ada + d_reg + freeze_bond),
+      convict_payout(other_recipient, surplus),
+    ],
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_convict,
+    evidence,
+  )
+  run_convict(tx, evidence, 0, 0)
+}
+
+test convict_small_rejects_active_non_exact_payout() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let tx = active_convict_tx_with(
+    tip,
+    evidence,
+    min_ada + d_reg + freeze_bond - 1,
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_convict,
+  )
+  run_convict(tx, evidence, 0, 0)
+}
+
+test convict_small_rejects_armed_non_exact_hunter_bond() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(
+    armed_convict_tx_with(
+      tip,
+      evidence,
+      min_ada + d_reg,
+      hunter,
+      freeze_bond - 1,
+    ),
+    evidence,
+    0,
+    1,
+  )
+}
+
+test convict_small_rejects_armed_hunter_redirection() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(
+    armed_convict_tx_with(
+      tip,
+      evidence,
+      min_ada + d_reg,
+      other_recipient,
+      freeze_bond,
+    ),
+    evidence,
+    0,
+    1,
+  )
+}
+
+test convict_small_rejects_armed_reused_payout_index() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(armed_convict_tx(tip, evidence), evidence, 0, 0)
+}
+
+test convict_small_rejects_frozen_second_delay_bond() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  run_convict(
+    frozen_convict_tx_with(tip, evidence, min_ada + d_reg + freeze_bond),
+    evidence,
+    0,
+    0,
+  )
+}
+
+test convict_small_rejects_missing_token_burn() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let tx = active_convict_tx_with(
+    tip,
+    evidence,
+    min_ada + d_reg + freeze_bond,
+    zero,
+    observe_convict,
+  )
+  run_convict(tx, evidence, 0, 0)
+}
+
+test convict_small_rejects_token_bearing_successor_output() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let tx = active_convict_tx(tip, evidence)
+  expect [payout] = tx.outputs
+  let token_bearing = Output {
+    ..payout,
+    value: payout.value
+      |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1)),
+  }
+  run_convict(Transaction { ..tx, outputs: [token_bearing] }, evidence, 0, 0)
+}
+
+test convict_small_rejects_unwitnessed_conflict_at_applied_observer() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  expect tip.toad == 1
+  let evidence = EnforcementEvidence {
+    ..enforcement_vec.fork_witnessed_convict_wire,
+    wit_sigs: [],
+  }
+  let tx = active_convict_tx(tip, evidence)
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    convict_envelope_at(observe_convict, convict_ref(), evidence),
+    0,
+    tx,
+  )
+}
+
+test convict_small_rejects_recorded_event_without_conflict_at_applied_observer() fail {
+  let tip = enforcement_vec.fork_witnessed_honest_tip
+  let evidence = enforcement_vec.fork_witnessed_honest_wire
+  let tx = active_convict_tx(tip, evidence)
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    convict_envelope_at(observe_convict, convict_ref(), evidence),
+    0,
+    tx,
+  )
+}
+
+test convict_small_rejects_freeze_action_tag_for_convict_spend() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let tx = active_convict_tx_with(
+    tip,
+    evidence,
+    min_ada + d_reg + freeze_bond,
+    from_asset(policy, deriveAidAssetName(tip.cesr_aid), -1),
+    observe_freeze,
+  )
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Convict {
+      convictor_pkh: convictor,
+      convictor_output_index: 0,
+      hunter_output_index: 0,
+    },
+    convict_ref(),
+    tx,
+  )
+}
+
+test convict_small_rejects_crossed_observer_and_spend_own_refs() fail {
+  let evidence_tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  let spent_tip = enforcement_vec.lag_freeze_tip
+  let evidence_aid_name = deriveAidAssetName(evidence_tip.cesr_aid)
+  let spent_aid_name = deriveAidAssetName(spent_tip.cesr_aid)
+  expect evidence_aid_name != spent_aid_name
+  let evidence_input = input_at(
+    convict_ref(),
+    Output {
+      address: role.address(policy, Active),
+      value: from_lovelace(min_ada + d_reg + freeze_bond)
+        |> merge(from_asset(policy, evidence_aid_name, 1)),
+      datum: InlineDatum(V1(evidence_tip)),
+      reference_script: None,
+    },
+  )
+  let spent_input = input_at(
+    crossed_convict_ref(),
+    Output {
+      address: role.address(policy, Active),
+      value: from_lovelace(min_ada + d_reg + freeze_bond)
+        |> merge(from_asset(policy, spent_aid_name, 1)),
+      datum: InlineDatum(V1(spent_tip)),
+      reference_script: None,
+    },
+  )
+  let evidence_change = Output {
+    address: from_verification_key(other_recipient),
+    value: from_lovelace(min_ada + d_reg + freeze_bond)
+      |> merge(from_asset(policy, evidence_aid_name, 1)),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  let base = spend_context(
+    [evidence_input, spent_input],
+    [],
+    [convict_payout(convictor, min_ada + d_reg + freeze_bond), evidence_change],
+    from_asset(policy, spent_aid_name, -1),
+    [],
+    interval.everything,
+    0,
+  )
+  let credential = Script(enforcement_hash)
+  let envelope = convict_envelope_at(observe_convict, convict_ref(), evidence)
+  let observer_redeemer: Data = envelope
+  let tx = Transaction {
+    ..base,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), observer_redeemer)],
+  }
+  checkpoint_register.checkpoint_register.mint(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    ConvictBurn { checkpoint_ref: crossed_convict_ref() },
+    policy,
+    tx,
+  ) && checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Convict {
+      convictor_pkh: convictor,
+      convictor_output_index: 0,
+      hunter_output_index: 0,
+    },
+    crossed_convict_ref(),
+    tx,
+  ) && checkpoint_observer.observer_enforcement.withdraw(0, envelope, 0, tx)
+}
+
+test freeze_small_rejects_convict_action_tag() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  let base = freeze_tx(tip, evidence)
+  let credential = Script(enforcement_hash)
+  let envelope = convict_envelope_at(observe_convict, freeze_ref(), evidence)
+  let observer_redeemer: Data = envelope
+  let tx = Transaction {
+    ..base,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), observer_redeemer)],
+  }
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Freeze { hunter_pkh: hunter },
+    freeze_ref(),
+    tx,
+  )
 }

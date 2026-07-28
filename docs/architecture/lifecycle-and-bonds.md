@@ -13,19 +13,20 @@ The lifecycle has four named states:
 - **FROZEN** — the response window expired and the hunter claimed the delay
   bond. Consumers continue to reject it, but a later genuine KERI event can
   still thaw it.
-- **TOMBSTONE** — a fully witnessed irreconcilable conflict convicted the
-  identity. This state is terminal for that checkpoint token.
+- **Convicted** — a fully witnessed irreconcilable conflict burned the
+  checkpoint token. There is no surviving checkpoint state; the transaction is
+  the terminal record.
 
 Only ACTIVE is accepted by a consumer. The other addresses are a structural
 fail-closed boundary: a consumer does not need to interpret a status flag in
 the datum.
 
 !!! info "Delivered subset"
-    ACTIVE, ordinary ACTIVE-to-ACTIVE Advance, ACTIVE-to-ARMED Freeze, and the
-    ARMED-to-ACTIVE response are settled for the small identity. FROZEN and
-    thaw are in-flight work in
-    [#138](https://github.com/lambdasistemi/cardano-keri/issues/138).
-    Conviction and TOMBSTONE are planned in
+    ACTIVE, ordinary ACTIVE-to-ACTIVE Advance, Freeze and response, FROZEN,
+    thaw, and conviction are implemented for the small identity. ClaimFreeze
+    and thaw settled in
+    [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154);
+    conviction is the burn-only terminal edge in
     [#151](https://github.com/lambdasistemi/cardano-keri/issues/151).
 
 ## State machine
@@ -38,9 +39,9 @@ stateDiagram-v2
     ARMED --> ACTIVE : response Advance<br/>before deadline, keep B
     ARMED --> FROZEN : ClaimFreeze<br/>at/after deadline, B to hunter (#138)
     FROZEN --> ACTIVE : thaw Advance<br/>genuine next event + re-post B (#138)
-    ACTIVE --> TOMBSTONE : Convict<br/>witnessed irreconcilable conflict (#151)
-    ARMED --> TOMBSTONE : Convict (#151)
-    FROZEN --> TOMBSTONE : Convict (#151)
+    ACTIVE --> [*] : Convict<br/>burn token; witnessed conflict (#151)
+    ARMED --> [*] : Convict<br/>burn token; preserve hunter payout (#151)
+    FROZEN --> [*] : Convict<br/>burn token (#151)
     ACTIVE --> [*] : Close<br/>burn token + refund escrow
 ```
 
@@ -104,15 +105,11 @@ Before the deadline, a genuine next KERI event is an ordinary Advance. It
 consumes ARMED, returns the token to ACTIVE, and preserves the whole escrow.
 The hunter receives nothing because the checkpoint answered.
 
-After the deadline, the target machine gives the hunter an earned claim to
-`B`. Issue #138 must open `ClaimFreeze`, prove the exact payout, and prove that
-the identity can return by advancing from FROZEN while adding a new `B`.
+After the deadline, `ClaimFreeze` gives the recorded hunter the earned `B`.
+[PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) proves that
+exact payout and the later Advance from FROZEN while adding a new `B`.
 
-[Freeze lifecycle walkthrough — reserved for story #138](https://github.com/lambdasistemi/cardano-keri/issues/138)
-
-The link above intentionally points to the issue. The detailed challenge,
-timeout, payout, and thaw walkthrough belongs to that vertical story and is not
-written on this branch.
+[Freeze lifecycle walkthrough](../user/freeze-lifecycle.md)
 
 ## Conviction polices truth
 
@@ -121,18 +118,17 @@ signature alone is not enough. The conflicting event must also carry the
 applicable KERI witness threshold's receipts, proving that the fork was
 published rather than remaining a private draft.
 
-The target transition accepts Convict from any live state:
+Convict accepts a witnessed conflict from any live state:
 
 - from ACTIVE, the divergence reserve is available to the conviction payout;
 - from ARMED, the transaction must also respect the recorded hunter's protected
   delay-bond interest;
 - from FROZEN, `B` has already been paid and `D_reg` remains; and
-- every successful path leaves a TOMBSTONE that consumers can never use as
-  authority.
+- every successful path burns the AID token and creates no checkpoint-role
+  successor.
 
-The exact small-identity payout and terminal-output story remains
-[#151](https://github.com/lambdasistemi/cardano-keri/issues/151). Until it
-settles, this is the ratified economic model, not a live-transaction claim.
+The exact payouts and burn-only terminal record are described in
+[Convicting a witnessed fork](../user/conviction.md).
 
 ## Advance-totality
 

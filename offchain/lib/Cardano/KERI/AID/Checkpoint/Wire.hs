@@ -12,6 +12,9 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     responseAdvanceObserverRedeemerData,
     advanceEvidenceData,
     claimFreezeSpendRedeemerData,
+    convictBurnRedeemerData,
+    convictObserverRedeemerData,
+    convictSpendRedeemerData,
     freezeSpendRedeemerData,
     freezeObserverRedeemerData,
     enforcementEvidenceData,
@@ -103,6 +106,25 @@ claimFreezeSpendRedeemerData :: Integer -> Data
 claimFreezeSpendRedeemerData hunterOutputIndex =
     Constr 3 [I hunterOutputIndex]
 
+{- | Conviction burns the token under mint constructor two and names the exact
+checkpoint input.
+-}
+convictBurnRedeemerData :: ByteString -> Integer -> Data
+convictBurnRedeemerData spentTxId spentIndex =
+    Constr 2 [Constr 0 [B spentTxId, I spentIndex]]
+
+{- | Conviction is spend constructor four; evidence remains in the isolated
+observer envelope.
+-}
+convictSpendRedeemerData :: ByteString -> Integer -> Integer -> Data
+convictSpendRedeemerData convictorPkh convictorOutputIndex hunterOutputIndex =
+    Constr
+        4
+        [ B convictorPkh
+        , I convictorOutputIndex
+        , I hunterOutputIndex
+        ]
+
 {- | The enforcement observer envelope for @Freeze@: stable action two, the
 applied checkpoint policy, the named spent output reference, and the unchanged
 enforcement evidence.
@@ -119,6 +141,25 @@ freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
         [ Constr
             0
             [ I 2
+            , B checkpointPolicy
+            , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
+            ]
+        , enforcementEvidenceData evidence
+        ]
+
+-- | The witnessed-conflict observer envelope uses isolated action four.
+convictObserverRedeemerData ::
+    ByteString ->
+    ByteString ->
+    Integer ->
+    EnforcementEvidence ->
+    Data
+convictObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+    Constr
+        0
+        [ Constr
+            0
+            [ I 4
             , B checkpointPolicy
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]

@@ -8,25 +8,27 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval
+use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
 use cardano/transaction.{
-  InlineDatum, NoDatum, OutputReference, Transaction, Withdraw, find_input,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  find_input,
 }
 use cardano_keri/checkpoint/close.{
   CloseContext, CloseEvidence, CloseValid, close_predicate,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
+use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/freeze_bond.{
   ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
   freeze_bond_valid, freeze_window_valid,
 }
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_advance, observe_freeze,
-  observe_register, observe_response_advance,
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
+  observe_freeze, observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active, Armed}
@@ -35,6 +37,7 @@ use cardano_keri/checkpoint/role.{Active, Armed}
 pub type MintRedeemer {
   Register
   CloseBurn { checkpoint_ref: OutputReference }
+  ConvictBurn { checkpoint_ref: OutputReference }
 }
 
 pub type SpendRedeemer {
@@ -42,6 +45,11 @@ pub type SpendRedeemer {
   Advance
   Freeze { hunter_pkh: ByteArray }
   ClaimFreeze { hunter_output_index: Int }
+  Convict {
+    convictor_pkh: ByteArray,
+    convictor_output_index: Int,
+    hunter_output_index: Int,
+  }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -67,6 +75,8 @@ validator checkpoint_register(
       }
       CloseBurn { checkpoint_ref } ->
         validate_close_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
+      ConvictBurn { checkpoint_ref } ->
+        validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
     }
   }
 
@@ -106,6 +116,24 @@ validator checkpoint_register(
       }
       ClaimFreeze { hunter_output_index } ->
         validate_claim(d_reg, freeze_bond, hunter_output_index, own_ref, tx)
+      Convict { convictor_pkh, convictor_output_index, hunter_output_index } -> {
+        expect
+          ran_convict_check(
+            enforcement_hash,
+            own_hash(tx, own_ref),
+            own_ref,
+            tx,
+          )
+        validate_convict(
+          d_reg,
+          freeze_bond,
+          convictor_pkh,
+          convictor_output_index,
+          hunter_output_index,
+          own_ref,
+          tx,
+        )
+      }
     }
   }
 
@@ -227,6 +255,42 @@ fn ran_enforcement_check(
   True
 }
 
+fn ran_convict_check(
+  enforcement_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let credential: Credential = Script(enforcement_hash)
+  expect
+    list.any(
+      tx.withdrawals,
+      fn(Pair(withdrawal_credential, lovelace)) {
+        withdrawal_credential == credential && lovelace == 0
+      },
+    )
+  expect
+    list.any(
+      tx.redeemers,
+      fn(Pair(purpose, redeemer)) {
+        when purpose is {
+          Withdraw(redeemer_credential) ->
+            if redeemer_credential == credential {
+              expect envelope: ObserverEnvelope = redeemer
+              let claim = envelope.claim
+              claim.action == observe_convict && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+                own_ref,
+              )
+            } else {
+              False
+            }
+          _ -> False
+        }
+      },
+    )
+  True
+}
+
 fn validate_register(
   d_reg: Int,
   freeze_bond: Int,
@@ -278,6 +342,67 @@ fn validate_close_burn(
     )
   expect
     lovelace_of(checkpoint_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
+  expect dict.to_pairs(tokens(mint, policy_id)) == [Pair(aid_name, -1)]
+  expect
+    list.length(
+      list.filter(
+        inputs,
+        fn(input) { quantity_of(input.output.value, policy_id, aid_name) == 1 },
+      ),
+    ) == 1
+  expect
+    list.all(
+      outputs,
+      fn(output) { quantity_of(output.value, policy_id, aid_name) == 0 },
+    )
+  True
+}
+
+fn convict_source(
+  d_reg: Int,
+  freeze_bond: Int,
+  policy_id: PolicyId,
+  input: Input,
+) -> (CheckpointDatumV1, Int, Option<ByteArray>) {
+  expect InlineDatum(source_data) = input.output.datum
+  if input.output.address == role.address(policy_id, Active) {
+    expect V1(tip): CheckpointDatum = source_data
+    (tip, checkpoint_min_ada + d_reg + freeze_bond, None)
+  } else if input.output.address == role.address(policy_id, Armed) {
+    expect armed: ArmedDatum = source_data
+    expect ArmedDatumValid = armed_datum_well_formed(armed)
+    let ArmedV1 { checkpoint: tip, hunter_pkh, .. } = armed
+    (tip, checkpoint_min_ada + d_reg + freeze_bond, Some(hunter_pkh))
+  } else if input.output.address == role.address(policy_id, role.Frozen) {
+    expect V1(tip): CheckpointDatum = source_data
+    (tip, checkpoint_min_ada + d_reg, None)
+  } else {
+    fail
+  }
+}
+
+fn validate_convict_burn(
+  d_reg: Int,
+  freeze_bond: Int,
+  checkpoint_ref: OutputReference,
+  policy_id: PolicyId,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(checkpoint_input) = find_input(inputs, checkpoint_ref)
+  let (tip, protected_lovelace, _) = convict_source(
+    d_reg,
+    freeze_bond,
+    policy_id,
+    checkpoint_input,
+  )
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect
+    checkpoint_input.output.value == (
+      from_lovelace(lovelace_of(checkpoint_input.output.value))
+        |> merge(from_asset(policy_id, aid_name, 1))
+    )
+  expect lovelace_of(checkpoint_input.output.value) >= protected_lovelace
   expect dict.to_pairs(tokens(mint, policy_id)) == [Pair(aid_name, -1)]
   expect
     list.length(
@@ -475,4 +600,78 @@ fn validate_claim(
   expect successor == tip
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
+}
+
+fn expect_exact_payout(
+  outputs: List<Output>,
+  output_index: Int,
+  recipient_pkh: ByteArray,
+  lovelace: Int,
+) -> Bool {
+  expect bytearray.length(recipient_pkh) == 28
+  expect Some(output) = list.at(outputs, output_index)
+  expect output.address == from_verification_key(recipient_pkh)
+  expect output.value == from_lovelace(lovelace)
+  expect output.datum == NoDatum
+  True
+}
+
+fn validate_convict(
+  d_reg: Int,
+  freeze_bond: Int,
+  convictor_pkh: ByteArray,
+  convictor_output_index: Int,
+  hunter_output_index: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  let (tip, protected_lovelace, hunter_pkh) = convict_source(
+    d_reg,
+    freeze_bond,
+    own_hash,
+    own_input,
+  )
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect
+    own_input.output.value == (
+      from_lovelace(lovelace_of(own_input.output.value))
+        |> merge(from_asset(own_hash, aid_name, 1))
+    )
+  expect lovelace_of(own_input.output.value) >= protected_lovelace
+  expect dict.to_pairs(tokens(mint, own_hash)) == [Pair(aid_name, -1)]
+  expect
+    list.all(
+      outputs,
+      fn(output) { quantity_of(output.value, own_hash, aid_name) == 0 },
+    )
+  when hunter_pkh is {
+    None ->
+      expect_exact_payout(
+        outputs,
+        convictor_output_index,
+        convictor_pkh,
+        protected_lovelace,
+      )
+    Some(recorded_hunter) -> {
+      expect convictor_output_index != hunter_output_index
+      expect
+        expect_exact_payout(
+          outputs,
+          convictor_output_index,
+          convictor_pkh,
+          checkpoint_min_ada + d_reg,
+        )
+      expect
+        expect_exact_payout(
+          outputs,
+          hunter_output_index,
+          recorded_hunter,
+          freeze_bond,
+        )
+      True
+    }
+  }
 }

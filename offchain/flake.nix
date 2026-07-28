@@ -275,7 +275,7 @@
               outputHashMode = "flat";
               outputHashAlgo = "sha256";
               outputHash =
-                "sha256-t8BkG1o9f9tgn+kC+TisObgKVs0gWxPxbCwyuEIhWTE=";
+                "sha256-FO4/PV2WF6XN0T+IVHfV7BMtBWflbqEY0ZJ8dSjlh98=";
               buildPhase = ''
                 export HOME="$TMPDIR"
                 export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt

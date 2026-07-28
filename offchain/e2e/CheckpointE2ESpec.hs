@@ -15,6 +15,7 @@ import Test.Hspec
 import CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
+    productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
     productionRegisterScenario,
     productionRegisterSeizeScenario,
@@ -47,3 +48,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#138 claims an unanswered delay bond then thaws the checkpoint"
             productionRegisterSeizeScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#151 convicts ACTIVE, ARMED, and FROZEN checkpoints"
+            productionRegisterConvictScenario

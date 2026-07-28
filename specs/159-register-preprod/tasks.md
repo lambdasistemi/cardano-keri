@@ -2,7 +2,7 @@
 
 - [x] T159-S0 Create the isolated branch, establish a green inherited
   `just ci` baseline, open draft PR #172, and record the acceptance conflict.
-- [ ] T159-S1 RED/GREEN genuine keripy 1.3.5 `kli export` parsing for
+- [x] T159-S1 RED/GREEN genuine keripy 1.3.5 `kli export` parsing for
   unwitnessed 1-of-1 and witnessed 2-of-5 inception, including offsets,
   indexed signatures, witness receipts, and pure predicate acceptance.
 - [ ] T159-S2 RED/GREEN `opt-env-conf` `register`/`status` settings,

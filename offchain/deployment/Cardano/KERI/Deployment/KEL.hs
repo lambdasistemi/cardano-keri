@@ -1,5 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
-
 {- |
 Module      : Cardano.KERI.Deployment.KEL
 Description : Parse a stock kli inception export for checkpoint registration
@@ -45,6 +43,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (digitToInt, isHexDigit)
 import Data.Foldable (toList)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -198,25 +197,25 @@ parseAttachments = go Nothing Nothing
     go controller witness rest
         | BS.null rest =
             pure
-                ( maybe [] id controller
-                , maybe [] id witness
+                ( fromMaybe [] controller
+                , fromMaybe [] witness
                 )
         | "-A" `BS.isPrefixOf` rest = do
-            when (controller /= Nothing) $
+            when (isJust controller) $
                 Left "duplicate controller signature group"
             (count, sigMaterial) <- parseCounter "-A" rest
             (sigs, remaining) <- parseIndexedSignatures count sigMaterial
             go (Just sigs) witness remaining
         | "-B" `BS.isPrefixOf` rest = do
-            when (witness /= Nothing) $
+            when (isJust witness) $
                 Left "duplicate witness signature group"
             (count, sigMaterial) <- parseCounter "-B" rest
             (sigs, remaining) <- parseIndexedSignatures count sigMaterial
             go controller (Just sigs) remaining
         | "-E" `BS.isPrefixOf` rest =
             pure
-                ( maybe [] id controller
-                , maybe [] id witness
+                ( fromMaybe [] controller
+                , fromMaybe [] witness
                 )
         | otherwise =
             Left $
@@ -356,7 +355,7 @@ parseHexBytes label bytes = do
 
 parseHexInteger :: String -> String -> Either String Integer
 parseHexInteger label spelling
-    | null spelling || any (not . isHexDigit) spelling =
+    | null spelling || not (all isHexDigit spelling) =
         Left (label <> " is not hexadecimal")
     | otherwise =
         pure $

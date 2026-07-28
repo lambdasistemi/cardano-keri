@@ -89,10 +89,10 @@ instance FromJSON ChainAssetUtxo where
     parseJSON = withObject "ChainAssetUtxo" $ \o -> do
         inline <- o .:? "inline_datum"
         chainAssetInlineDatum <-
-            traverse
-                (withObject "InlineDatum" (.:? "value"))
-                inline
-                >>= pure . joinMaybe
+            joinMaybe
+                <$> traverse
+                    (withObject "InlineDatum" (.:? "value"))
+                    inline
         ChainAssetUtxo
             <$> o .: "tx_hash"
             <*> o .: "tx_index"

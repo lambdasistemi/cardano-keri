@@ -15,6 +15,9 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
     claimFreezeSpendRedeemerData,
+    convictBurnRedeemerData,
+    convictObserverRedeemerData,
+    convictSpendRedeemerData,
     enforcementEvidenceData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
@@ -260,4 +263,48 @@ spec = describe "#136 Register observer wire" $ do
                     [ List [I 0, B (BS.replicate 64 0xe2)]
                     , List [I 2, B (BS.replicate 64 0xe3)]
                     ]
+                ]
+
+    it "keeps ConvictBurn at mint constructor two and names the checkpoint input" $
+        convictBurnRedeemerData (BS.replicate 32 0xf1) 11
+            `shouldBe` Constr
+                2
+                [ Constr
+                    0
+                    [ B (BS.replicate 32 0xf1)
+                    , I 11
+                    ]
+                ]
+
+    it "keeps Convict at spend constructor four with exact payout indices" $
+        convictSpendRedeemerData (BS.replicate 28 0x51) 3 7
+            `shouldBe` Constr
+                4
+                [ B (BS.replicate 28 0x51)
+                , I 3
+                , I 7
+                ]
+
+    it "forwards witnessed-conflict evidence under isolated observer action four" $
+        convictObserverRedeemerData
+            (BS.replicate 28 0xc0)
+            (BS.replicate 32 0xf1)
+            11
+            freezeEvidence
+            `shouldBe` Constr
+                0
+                [ Constr
+                    0
+                    [ I 4
+                    , B (BS.replicate 28 0xc0)
+                    , Constr
+                        0
+                        [ Constr
+                            0
+                            [ B (BS.replicate 32 0xf1)
+                            , I 11
+                            ]
+                        ]
+                    ]
+                , enforcementEvidenceData freezeEvidence
                 ]

@@ -29,13 +29,12 @@ implementation used to produce and verify the test history.
 | Close small | Have the current controllers authorize retirement, burn the checkpoint token, and refund the escrow | [PR #147](https://github.com/lambdasistemi/cardano-keri/pull/147) | Settled |
 | Rotate small | Relay a genuine witnessed rotation and advance the checkpoint by one event | [PR #148](https://github.com/lambdasistemi/cardano-keri/pull/148) | Settled |
 | Freeze and respond, small | Let a hunter present a witnessed conflicting rotation, move ACTIVE to ARMED, then let the honest history advance back to ACTIVE without losing the bond | [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) | Settled, including two rounds |
-| Seize the delay bond | After an unanswered deadline, pay the recorded hunter and enter FROZEN; later thaw by advancing and re-posting the bond | [Issue #138](https://github.com/lambdasistemi/cardano-keri/issues/138) | In flight |
-| Convict a fork, small | Prove a fully witnessed irreconcilable conflict, pay the protected rewards, and leave a terminal tombstone | [Issue #151](https://github.com/lambdasistemi/cardano-keri/issues/151) | Planned |
+| Seize the delay bond | After an unanswered deadline, pay the recorded hunter and enter FROZEN; later thaw by advancing and re-posting the bond | [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) | Settled |
+| Convict a fork, small | Prove a fully witnessed irreconcilable conflict, pay the protected rewards, burn the AID token, and create no checkpoint successor | [Issue #151](https://github.com/lambdasistemi/cardano-keri/issues/151) | Settled by this story |
 
-The four settled rungs are independently useful. Together they establish a
+The settled rungs are independently useful. Together they establish a
 vertical path through the production validators, transaction builder, node
-submission, and settlement boundary. They do not imply that later rungs are
-open.
+submission, and settlement boundary.
 
 ## Settlement evidence
 
@@ -97,25 +96,17 @@ challenges: every round needs fresh evidence.
 
 ## What is deliberately unavailable
 
-The current small-story checkpoint accepts `Register`, `Close`, `Advance`, and
-`Freeze`. It also accepts an `Advance` from ARMED before the recorded deadline,
-which is the honest response.
+The current small-story checkpoint accepts `Register`, `Close`, `Advance`,
+`Freeze`, `ClaimFreeze`, and `Convict`. It accepts an `Advance` from ARMED
+before the recorded deadline as the honest response, and an `Advance` from
+FROZEN that re-posts the delay bond as a thaw.
 
 The following boundaries still fail closed:
 
-- **`ClaimFreeze` is unavailable.** A transaction cannot take the delay bond
-  after the deadline or create FROZEN state until issue
-  [#138](https://github.com/lambdasistemi/cardano-keri/issues/138) opens and
-  proves that path.
-- **Thaw is not yet a live story.** It depends on ClaimFreeze first creating a
-  FROZEN checkpoint. Issue #138 must prove both the claim and the comeback.
-- **`Convict` is not exposed by the small-story checkpoint.** The economic and
-  tombstone model is planned in issue
-  [#151](https://github.com/lambdasistemi/cardano-keri/issues/151); do not treat
-  the existing predicate and model tests as settlement evidence.
-- **Non-ACTIVE roles are unusable by consumers.** ARMED already fails closed.
-  FROZEN and TOMBSTONE remain part of the target lifecycle and will also fail
-  closed when their stories open.
+- **Non-ACTIVE roles are unusable by consumers.** ARMED and FROZEN checkpoint
+  outputs remain fail-closed as current authority. Convict creates no terminal
+  checkpoint output at all; its spent input, evidence, burn, and payouts are
+  the historical record.
 - **The real GLEIF-scale identity has not been demonstrated.** The settled
   fixture proves the small two-key rung only.
 
@@ -151,8 +142,8 @@ cost; it will not mean “fits mainnet.”
 ## Where to read next
 
 - [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) explains
-  ACTIVE, ARMED, FROZEN, TOMBSTONE, and why the two deposits have different
-  jobs.
+  ACTIVE, ARMED, FROZEN, the burn-only conviction edge, and why the two
+  deposits have different jobs.
 - [Observer architecture](architecture/observer-architecture.md) explains the
   thin checkpoint, reference scripts, zero-lovelace withdrawal, and BLAKE3
   fact token.

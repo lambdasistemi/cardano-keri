@@ -51,6 +51,7 @@ nav:
   - Finance Primer: finance-primer.md
   - User guide:
       - Freeze lifecycle: user/freeze-lifecycle.md
+      - Conviction: user/conviction.md
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md

@@ -35,6 +35,9 @@ pub const observe_freeze: Int = 2
 /// The stable action tag for an Armed response Advance.
 pub const observe_response_advance: Int = 3
 
+/// The stable action tag for Convict.
+pub const observe_convict: Int = 4
+
 /// The claim checked independently by the checkpoint minting policy.
 pub type ObserverClaim {
   action: Int,

@@ -15,7 +15,7 @@ The design separates two jobs:
 This page describes the deployed small-checkpoint path completed by
 [issue #138](https://github.com/lambdasistemi/cardano-keri/issues/138).
 For the protocol-level security argument, see the
-[bonded lag lifecycle](../design/trust-model.md#bonded-lag-lifecycle).
+[bonded lag lifecycle](../design/trust-model.md#two-economic-reserves).
 
 ## The four states and moves
 

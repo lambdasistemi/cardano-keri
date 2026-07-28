@@ -11,6 +11,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     responseAdvanceObserverRedeemerData,
     advanceEvidenceData,
+    claimFreezeSpendRedeemerData,
     freezeSpendRedeemerData,
     freezeObserverRedeemerData,
     enforcementEvidenceData,
@@ -94,6 +95,13 @@ index two; @ClaimFreeze@ remains absent and therefore fail-closed.
 -}
 freezeSpendRedeemerData :: ByteString -> Data
 freezeSpendRedeemerData hunterPkh = Constr 2 [B hunterPkh]
+
+{- | Story #138 opens only @ClaimFreeze { hunter_output_index }@ at
+constructor index three. The index names the exact hunter payout output.
+-}
+claimFreezeSpendRedeemerData :: Integer -> Data
+claimFreezeSpendRedeemerData hunterOutputIndex =
+    Constr 3 [I hunterOutputIndex]
 
 {- | The enforcement observer envelope for @Freeze@: stable action two, the
 applied checkpoint policy, the named spent output reference, and the unchanged

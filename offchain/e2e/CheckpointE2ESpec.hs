@@ -17,6 +17,7 @@ import CheckpointTxBuilder (
     productionRegisterCloseScenario,
     productionRegisterFreezeScenario,
     productionRegisterScenario,
+    productionRegisterSeizeScenario,
     stagedCheckpointDevnet,
  )
 
@@ -41,3 +42,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#137 rejects stale Freeze replay and settles two Freeze/response rounds"
             productionRegisterFreezeScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#138 claims an unanswered delay bond then thaws the checkpoint"
+            productionRegisterSeizeScenario

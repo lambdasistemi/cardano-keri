@@ -35,6 +35,7 @@ import Data.Aeson (
     (.:),
  )
 import Data.Aeson.Types (Parser)
+import Data.Bits (shiftL, shiftR, (.&.))
 import Data.ByteArray.Encoding (
     Base (Base64URLUnpadded),
     convertFromBase,
@@ -247,13 +248,24 @@ parseIndexedSignatures count bytes = go count bytes []
             unless (BS.head token == 0x41) $
                 Left "unsupported CESR indexed signature code"
             index <- decodeBase64Digit (BS.index token 1)
-            signature <-
-                convertFromBase
-                    Base64URLUnpadded
-                    (BS.drop 2 token)
+            signature <- decodeSmallIndexedSignature token
             unless (BS.length signature == 64) $
                 Left "CESR indexed Ed25519 signature is not 64 bytes"
             go (remaining - 1) following ((index, signature) : acc)
+
+decodeSmallIndexedSignature :: ByteString -> Either String ByteString
+decodeSmallIndexedSignature token = do
+    encodedDigits <- traverse decodeBase64Digit (BS.unpack $ BS.drop 2 token)
+    let shiftedDigits =
+            zipWith
+                ( \current following ->
+                    ((current .&. 0x03) `shiftL` 4)
+                        + (following `shiftR` 2)
+                )
+                encodedDigits
+                (drop 1 encodedDigits <> [0])
+    normalized <- BS.pack <$> traverse encodeBase64Digit shiftedDigits
+    convertFromBase Base64URLUnpadded normalized
 
 decodeBase64Digit :: Word8 -> Either String Int
 decodeBase64Digit byte
@@ -266,6 +278,15 @@ decodeBase64Digit byte
     | byte == 0x2d = pure 62
     | byte == 0x5f = pure 63
     | otherwise = Left "invalid CESR base64 counter/index digit"
+
+encodeBase64Digit :: Int -> Either String Word8
+encodeBase64Digit value
+    | value >= 0 && value < 26 = pure (fromIntegral value + 0x41)
+    | value < 52 = pure (fromIntegral value - 26 + 0x61)
+    | value < 62 = pure (fromIntegral value - 52 + 0x30)
+    | value == 62 = pure 0x2d
+    | value == 63 = pure 0x5f
+    | otherwise = Left "invalid normalized base64 signature digit"
 
 decodePublicKey :: String -> Text -> Either String ByteString
 decodePublicKey field text =

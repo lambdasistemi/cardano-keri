@@ -12,9 +12,9 @@ ever back operators with a valid Legal Entity vLEI.
     aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum`, read as
     a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
     asset_name)` lookup** (candidate outref for liveness only, re-validated against the
-    ledger). "Active" is enforced as its **live UTxO in the accepted mint/spend lineage** (not
-    a closed/convicted one) **and** the AID **absent from the separate, shared,
-    attacker-contendable R-FRZ freeze registry** — not a status field in the datum. A
+    ledger). "Active" means exactly one current checkpoint at the **ACTIVE**
+    role address. ARMED, FROZEN, TOMBSTONE, missing, duplicated, and stale
+    candidates fail closed; there is no separate shared freeze registry. A
     `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so an owner signature
     made under the prior sequence is **stale** and must be **re-signed** by the current
     weighted keys over the fully bound message + current sequence, never merely re-pointed at
@@ -90,9 +90,8 @@ proof of `pool_id → PoolBinding` in the identified-pools registry, and — sin
 the binding carries the LE's **stable qualified AID** — resolves the bound LE
 AID's **current authority live in its sovereign per-AID checkpoint** — asset id
 `(checkpoint_policy_id, aid_asset_name)` derived from that qualified AID, read
-as a CIP-31 reference input, its live UTxO in the accepted mint/spend lineage
-and the AID absent from the shared R-FRZ freeze registry (#92) — and TEL
-non-revocation (L2), all against reference inputs.
+as a CIP-31 reference input, with exactly one current checkpoint in the
+**ACTIVE** role — and TEL non-revocation (L2), all against reference inputs.
 
 **Pool-side registration** is mutual attestation: the SPO submits
 `PoolBinding { pool_id, cold_vkey, aid, trie_key }` — carrying the LE's
@@ -182,10 +181,10 @@ New components on top of L1–L4:
   not delegatable).
 - **Throughput**: negligible. Current-AID rotation has **no shared registry
   ceiling** — the SPO LE rotates on its **own** sovereign per-AID checkpoint
-  UTxO (#92). The shared **identified-pools registry**, the **admission** plane,
-  and any **R-FRZ** freeze UTxO **retain their own serialization** as separate
-  contended objects, but at this case's certificate frequency (a few per year)
-  it is immaterial, not absent.
+  UTxO (#92). The shared **identified-pools registry** and **admission** plane
+  retain their own serialization as separate contended objects; the per-AID
+  lifecycle adds no shared freeze UTxO. At this case's certificate frequency
+  (a few per year), the remaining serialization is immaterial, not absent.
 - **Privacy**: pool identity is *meant* to be public (differentiation); the
   delegator's identity need not be on-chain at all — only its policy is.
   Mildest privacy profile of the four cases.

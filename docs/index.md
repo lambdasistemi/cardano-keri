@@ -1,156 +1,143 @@
 # cardano-keri
 
-Self-certifying identities on Cardano, bridged to the Veridian / [KERI](https://github.com/WebOfTrust/ietf-keri) ecosystem.
+cardano-keri projects a rotating KERI identity into a stable Cardano
+checkpoint.
 
-**New here? Start with the [KERI primer](keri-primer.md)** — it explains what KERI is, how pre-rotation works, what Veridian is, and what Cardano adds. Then the **[ACDC primer](acdc-primer.md)** covers the credential layer — how vLEI credentials chain, how revocation works, and how Cardano verifies a chain on-chain. For the financial and institutional concepts behind the use cases (securities, KYC/AML, custody, escrow, batchers…), see the **[Finance primer](finance-primer.md)**.
+**KERI** is Key Event Receipt Infrastructure, the identity protocol used by
+the Global Legal Entity Identifier Foundation's verifiable LEI ecosystem. A
+KERI **AID** (Autonomic Identifier) keeps its identity while its controller
+keys rotate. Cardano applications can refer to the AID-derived checkpoint
+token instead of permanently binding themselves to one key.
 
-!!! tip "Identity on Cardano"
-    Start with the [presentation](identity-on-cardano/index.html) for the user
-    journey, then read [Self-Certifying Identities on Cardano](blog/self-certifying-identities-on-cardano.md)
-    for the design decisions, measurements, threat model, and milestone boundary.
+!!! success "Current evidence"
+    A genuine two-key identity has registered, closed, rotated, and completed
+    two Freeze/response rounds on a protocol-11 development network running
+    production transaction limits. The detailed transaction IDs and limits
+    are on the [story ladder](story-ladder.md).
 
----
+!!! warning "Not a production deployment"
+    Settled development-network transactions prove the vertical path through
+    the production validators and node boundary. They do not make this a
+    mainnet service. Claim/thaw, conviction, real three-of-seven scale, full
+    vLEI credentials, and wallet integration still have open stories.
+
+## Start here
+
+- [Story ladder](story-ladder.md) — what is settled, in flight, planned, and
+  deliberately fail-closed.
+- [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,
+  and Veridian.
+- [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) —
+  ACTIVE, ARMED, FROZEN, TOMBSTONE, the delay bond, and the divergence bond.
+- [Observer architecture](architecture/observer-architecture.md) — thin
+  checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3
+  premint fact token.
+- [ACDC primer](acdc-primer.md) — the separate credential layer.
+
+For the financial and institutional concepts behind the later use cases, see
+the [Finance primer](finance-primer.md).
 
 ## Implementation status
 
-- **Shipped substrate:** MPFS plugin support. This is the concrete extension
-  point for domain-specific value-cage authorization.
-- **cardano-keri status:** research/design and prototypes for an MPFS identity
-  plugin. The identity registry, freeze registry, super watcher, and
-  Veridian/KERI bridge are not shipped runtime infrastructure in this repo.
-- **Security gates:** issue #99 hardened the value-cage validator's token and
-  AID-ownership invariants — a unique thread token confined to its state output,
-  a pinned migration predecessor, and an oracle that is necessary but not
-  sufficient for AID authority. This is **one** completed security gate among the
-  verification, hardening, bridge, and runtime work still required; it does not
-  make the cage production- or mainnet-ready, and closing it does not lift the
-  prototype label.
-- **Design target:** on-chain-verifiable key-state operations using
-  `blake2b_256`, Ed25519, MPF proofs, and MPFS cage/plugin composition.
-- **Delivery plan:** see the [Roadmap](roadmap.md) — five milestones building
-  the use-case-invariant core first (identity, verification, signing bridge),
-  each closed by a vertical E2E demo, with the business-case adapters last.
+The settled small-identity ladder covers:
 
----
+1. **Register.** Prove the BLAKE3 inception/AID binding in a premint
+   transaction, then mint one AID-derived checkpoint token into an ACTIVE
+   output holding `minimum ADA + D_reg + B`.
+2. **Close.** Have the current controller threshold authorize the exact input
+   and refund address, burn the token, and return the complete escrow.
+3. **Advance.** Relay a genuine KERI rotation with the required controller
+   signatures and witness receipts; consume the old checkpoint and create its
+   unique sequence-plus-one ACTIVE successor.
+4. **Freeze.** Let any hunter submit a witnessed conflicting event that is
+   ahead of the checkpoint; preserve the escrow but move the token to ARMED,
+   which consumers reject.
+5. **Respond.** Before the deadline, use the same ordinary Advance path to
+   return ARMED to ACTIVE and keep the delay bond.
+6. **Reject stale replay.** After advancing, reject the exact old Freeze proof;
+   a new round needs fresh evidence at the new sequence.
 
-## The one idea
+The current small-story wire does **not** expose `ClaimFreeze` or `Convict`.
+Issue [#138](https://github.com/lambdasistemi/cardano-keri/issues/138)
+must open timeout claim and thaw. Issue
+[#151](https://github.com/lambdasistemi/cardano-keri/issues/151) must open
+conviction and the terminal tombstone.
 
-In the proposed identity plugin, inception commits to two things: the key you
-use now, and the *hash* of the key you will use next. That commitment lives
-on-chain. When you rotate, you reveal the pre-committed next key. A thief who
-steals your current key cannot rotate your identity — they do not know the
-pre-committed next key.
+## The core architecture
 
-## Real-world use case: vLEI
-
-cardano-keri explores an MPFS plugin bridge for [GLEIF vLEI](design/vlei.md) —
-the cryptographic extension of the Legal Entity Identifier, the entity ID
-that MiFID II, Basel III, and eIDAS 2.0 already rely on for identification.
-(Identity evidence, not compliance: nothing here satisfies AML, sanctions
-screening, or reporting obligations by itself.) In the design, a legal
-entity's KERI AID
-(the root of its vLEI credential chain) maps to a stable Cardano `trie_key`,
-enabling compliance-gated contracts, non-censorable key history, governance
-eligibility, and on-chain ACDC notarization. See [vLEI Bridge](design/vlei.md)
-for the full use-case analysis.
-
-## Node-level attribution: the Amaru question
-
-Where does cardano-keri sit relative to the proposed Veridian × Amaru node-level attribution work, what is still missing for full ACDC support (schema + revocation/TEL anchoring), and does anything actually need to live *inside* the node? See [Amaru Integration Analysis](architecture/amaru-integration.md).
-
-That analysis also records the MPFS-side contention pattern: snapshot the cage
-UTxO datum/value root for a value-write, then rebuild from a newer snapshot if
-another write advances the cage before submission.
-
----
-
-## Key derivation: the AID keys the checkpoint
-
-One identifier keys the on-chain identity: the **CESR AID**. The former separate
-`trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` derivation is superseded — the
-identity leaf is keyed by `cesr_aid` and holds a KERI-shaped checkpoint, advanced only by
-witness-receipted anchoring seals (`specs/68-keystate-shape/identity-model.md`, PR #87).
-
-Its **physical current-authority store** is the **sovereign per-AID checkpoint UTxO** —
-each AID's own `(checkpoint_policy_id, aid_asset_name)` UTxO (inline `CheckpointDatum`,
-`delta = 0` rotation), discovered by a **generic `(policy_id, asset_name)` multi-asset
-lookup**, **not** a shared `identity_root` registry with a sliding-root window (the
-rejected Candidate B); see `specs/92-checkpoint-contention/DECISION.md`. The
-`trie_key → KeyState` / `identity_root` framing in the **System components** mermaid below
-is that superseded shared-registry shape; the mechanical re-cut is downstream #24, and the
-**freeze registry** stays a shared, attacker-contendable UTxO (not sovereign).
-
-**Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index lookup
-supplies **only a candidate outref / location for liveness — never identity or
-current-authority truth**. The **consuming transaction validates** the returned UTxO against
-the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint script /
-version / lineage**; a **well-formed inline datum with the expected AID / sequence binding
-and the current weighted key state**; and the **applicable active / freeze rules**
-(validation rules, **not** datum fields). A **stale or false outref fails ledger validation**
-(it no longer exists, or no longer matches) → refresh / retry; it can never yield forged
-authority. An **indexer outage only blocks transaction construction (liveness)** — it never
-grants false authority.
+Every identity has its own sovereign checkpoint **UTxO** (unspent transaction
+output):
 
 ```mermaid
 flowchart LR
-    ICP["cesr_inception_event"] --> H["blake3<br/>(E-native, the production KERI default)"]
-    H --> AID["cesr_aid<br/>(KERI identifier, 32 bytes)"]
-    style AID fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
-    AID -->|"asset name"| CK["Checkpoint<br/>raw keys+weights · kt · next_keys/nt (blake3)<br/>witnesses · toad · seq"]
-    style CK fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-    SEAL["witnessed anchoring seal<br/>(canonical payload commitments)"] -->|"advance tx:<br/>seal + threshold receipts"| CK
+    ICP["KERI inception"]
+    HASH["BLAKE3 premint<br/>fact token"]
+    ROT["KERI rotation<br/>controller signatures + witness receipts"]
+    TX["Thin checkpoint transaction"]
+    OBS["Heavy observer<br/>reference script"]
+    CK["Checkpoint UTxO<br/>AID token · key state · escrow"]
+    APP["Future Cardano application<br/>requires exactly one ACTIVE checkpoint"]
+
+    ICP --> HASH --> TX
+    ICP --> OBS
+    ROT --> OBS
+    OBS -->|"zero-lovelace withdrawal"| TX
+    TX --> CK
+    CK -->|"reference input"| APP
 ```
 
-The **[CESR](https://github.com/WebOfTrust/ietf-cesr) AID** is the KERI-native identifier
-used by Veridian and KERI witnesses. Native **Blake3** AIDs are served as-is — the checkpoint stores the standard
-KEL `n` digests byte-for-byte, so no digest-agility patch and no
-Cardano-specific AID flavor exist. The genesis binding
-`cesr_aid == blake3(icp_bytes)` is verified trustlessly by the hash-proof
-minter for inception events up to one blake3 chunk (1024 B — every observed
-production shape below GLEIF-Root scale); every later advance is cryptographic
-via the dual-threshold reveal. The historical F-prefix option is retired — see
-[Blake2b-256 AID Requirement](design/blake2b256-requirement.md) for the
-archived rationale.
+The checkpoint script protects the exact state input, token, role address,
+value, and successor. Large KERI evidence runs in an operation-specific
+observer reference script in the same transaction. The two scripts bind to
+the same policy, action, input, and output.
 
-## System components
+There is no global identity-registry UTxO and no separate shared Freeze
+registry in this story. Lifecycle state is carried by the sovereign
+checkpoint's role address.
 
-```mermaid
-flowchart TD
-    subgraph Chain
-        IR["Identity Registry UTxO<br/>thread_token + identity_root<br/>MPF trie: trie_key → KeyState"]
-        FR["Freeze Registry UTxO<br/>freeze_token + freeze_root<br/>emergency revocation"]
-        VC0["Value Cage UTxO<br/>tx_in A + value_root A<br/>(pre-state)"]
-        VC1["Value Cage UTxO<br/>tx_in B + value_root B<br/>(current after contention)"]
-    end
+## Two bonds
 
-    subgraph "MPFS Plugin / Sidecar Snapshot Cache"
-        SnapA["Snapshot A<br/>tx_in A + value_root A"]
-        SnapB["Snapshot B<br/>tx_in B + value_root B"]
-        Build["Build value-write<br/>proof + unsigned tx"]
-        Retry["Stale snapshot<br/>discard + rebuild"]
-    end
+The ACTIVE escrow has three parts:
 
-    VC0 -->|"snapshot live cage pre-state"| SnapA
-    SnapA --> Build
-    Owner["AID Owner<br/>(cur_pubkey)"] -->|"authorizes"| ITX["Identity / freeze tx"]
-    ITX -->|"rotation/inception<br/>(spends)"| IR
-    ITX -->|"freeze<br/>(next_key authorized)"| FR
-    Owner -->|"signs built tx"| VTX["Value-write tx"]
-    Build -->|"built against snapshot"| VTX
-    VTX -->|"tries to spend tx_in A"| VC0
-    VC0 -->|"another write wins first<br/>spends A, recreates B"| VC1
-    VTX -->|"tx_in A already spent"| Retry
-    Retry -->|"read newer live cage"| SnapB
-    VC1 -->|"snapshot current pre-state"| SnapB
-    SnapB -->|"rebuild against B"| Build
-    IR -->|"CIP-31 reference input"| VTX
-    FR -->|"CIP-31 reference input"| VTX
-
-    style IR fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-    style FR fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style VC0 fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
-    style VC1 fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
-    style SnapA fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
-    style SnapB fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
-    style Retry fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
+```text
+checkpoint minimum ADA + divergence bond D_reg + delay bond B
 ```
+
+- `B` is about 5 ADA in the reference deployment. It rewards a hunter only
+  when an ARMED challenge goes unanswered through its deadline. A response
+  keeps it; a later thaw must re-post it.
+- `D_reg` is about 1000 ADA in the reference deployment. It backs the much
+  narrower claim that the identity published a fully witnessed
+  irreconcilable fork.
+
+The values are deployment parameters. Keeping them separate stops ordinary
+lag from being treated as dishonesty.
+
+## Measured engineering boundary
+
+The latest settled Freeze story measured:
+
+- thin checkpoint: 9,155 bytes;
+- enforcement observer: 13,548 bytes; and
+- Advance observer: 16,130 bytes against a 16,133-byte applied-script limit.
+
+The Advance observer therefore has only 3 bytes of headroom.
+[#149](https://github.com/lambdasistemi/cardano-keri/issues/149) must create
+maintainable space before the real seven-key rotation.
+
+Register used about 1.9 million memory units. The two-key Advance observer used
+4,110,025 memory units. Full measurements and sources are in
+[Observer architecture](architecture/observer-architecture.md#measured-sizes-and-costs).
+
+## Real-world direction: vLEI
+
+The longer-term goal is to let Cardano applications combine:
+
+- a current ACTIVE AID checkpoint;
+- an ACDC credential chain proving a legal or organizational role; and
+- current TEL non-revocation evidence.
+
+Registering an AID answers “which keys control this identifier?” It does not
+answer “which legal entity is this?” The latter is a credential claim and
+remains a later roadmap layer. See the [vLEI design](design/vlei.md) and the
+[roadmap](roadmap.md).

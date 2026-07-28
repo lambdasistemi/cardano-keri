@@ -4,6 +4,14 @@ A primer on the flagship use case: what a compliance gate is, why the current
 industry pattern is weak, and precisely which part of the problem cardano-keri
 solves. Companion to the [vLEI Bridge](vlei.md) use-case analysis.
 
+!!! warning "The gate is a target consumer"
+    The settled small-identity stories prove checkpoint registration and
+    lifecycle moves. They do not yet ship this DeFi application. The boundary
+    below follows the current sovereign checkpoint model: only an **ACTIVE**
+    checkpoint may authorize a gated action. See
+    [Value authorization](../architecture/value-auth.md) for the complete
+    fail-closed consumer checklist.
+
 !!! tip "No finance background needed"
     Every financial and institutional concept used here (securities, KYC/AML,
     custody, allowlists, batchers, MEV…) is explained from zero in the
@@ -118,11 +126,12 @@ provide the Aiken verifier that walks the chain. The steps span two planes:
       generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only,
       revalidated by the consuming tx).
 
-    **Lifecycle / freeze are not datum fields.** The `CheckpointDatum` carries only the
-    AID/sequence binding + current weighted key state. Close / lifecycle is enforced by the
-    checkpoint's **asset mint/spend lineage** (the referenced checkpoint must be the current
-    live UTxO, not closed/convicted/migrated); freeze is the **separate shared R-FRZ** rule
-    (attacker-contendable residual). The mechanical re-cut is downstream #24.
+    **Lifecycle / freeze are not caller-supplied flags.** The
+    `CheckpointDatum` carries the AID/sequence binding and current weighted key
+    state. The token's role address carries the lifecycle. A consumer accepts
+    only the current **ACTIVE** checkpoint; ARMED, FROZEN, TOMBSTONE, missing,
+    duplicated, or stale candidates all reject. There is no separate shared
+    freeze registry.
 
 ### Gate flow
 
@@ -137,9 +146,8 @@ sequenceDiagram
     participant Cage as Protocol Cage Script
     participant Cred as Issuer KEL/TEL evidence (credential plane)
     participant Chk as Acting AID Checkpoint (per-AID, ref input)
-    participant FRZ as Shared R-FRZ registry (ref input)
 
-    Note over LE,FRZ: Admission — once per entity (historical credential plane)
+    Note over LE,Chk: Admission — once per entity (historical credential plane)
     LE->>PB: vLEI credential chain (full ACDC chain)
     PB->>Cage: admission tx: raw credentials + KEL/TEL proofs
     Cage->>Cred: each ACDC's historical issuance commitment (signature/seal on SAID) + KEL-anchored issuance-proof seal at the issuer's historical key state?
@@ -147,10 +155,9 @@ sequenceDiagram
     Cage->>Cage: SAIDs recompute — content integrity (L3)
     Cage-->>LE: admitted — credential chain cached (trie_key → AdmissionLeaf)
 
-    Note over LE,FRZ: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
+    Note over LE,Chk: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
     LE->>Cage: action tx, signed with the acting AID's current key(s)
-    Cage->>Chk: acting entity's sovereign per-AID checkpoint (ref input): signer(s) meet current weighted threshold? current live UTxO in the accepted lineage?
-    Cage->>FRZ: acting AID absent from the shared R-FRZ freeze registry?
+    Cage->>Chk: exactly one sovereign per-AID checkpoint (ref input): current, accepted lineage, ACTIVE role, signer(s) meet current weighted threshold?
     Cage->>Cred: still unrevoked (all issuer TELs in chain)?
     Cage-->>LE: trade executes — identity check atomic with it
 ```
@@ -163,10 +170,11 @@ no admission committee, and **without consulting any issuer's current
 checkpoint**. Every subsequent gated action then checks, atomically with the
 trade: the **acting entity's** signature(s) meeting the weighted threshold of the
 current keys in its **sovereign per-AID checkpoint** (read as a CIP-31 reference
-input); that the referenced checkpoint is the **current live UTxO in the accepted
-lineage** (not closed/convicted); **absence from the separate shared R-FRZ
-freeze registry**; and non-revocation across the credential chain's issuer TELs.
-Lifecycle and freeze are **validation rules**, not `CheckpointDatum` fields.
+input); that exactly one referenced checkpoint is the **current ACTIVE UTxO in
+the accepted lineage**; and non-revocation across the credential chain's issuer
+TELs. ARMED, FROZEN, TOMBSTONE, missing, duplicated, or stale candidates fail
+closed. Lifecycle is enforced by the checkpoint's role address and lineage,
+not by a separate shared registry.
 
 !!! danger "Correction from the case analysis"
     The flow above shows the entity signing the gated action directly. On most
@@ -274,7 +282,7 @@ rationale.
       is an argument, not evidence.
     - **Freshness has a floor.** Revocation bites at the next TEL root update,
       and Cardano settlement bounds how fast any status change reaches the
-      gate (see [Trust Model — synchronization lag](trust-model.md#synchronization-lag)).
+      gate (see [Trust Model — discovery lag](trust-model.md#discovery-lag)).
 
 ## One-line summary
 

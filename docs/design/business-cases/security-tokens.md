@@ -13,10 +13,11 @@ policy preference.
     asset id `(checkpoint_policy_id, aid_asset_name)`, current weighted keys/threshold in the
     inline `CheckpointDatum`, read as a **CIP-31 reference input** and discovered by a
     **generic exact-asset `(policy_id, asset_name)` lookup** (candidate outref for liveness
-    only, re-validated against the ledger). "Active" is enforced as **its live UTxO in the
-    accepted mint/spend lineage** (not a closed/convicted one) **and** the AID **absent from
-    the separate, shared, attacker-contendable R-FRZ freeze registry** — not a status field in
-    the datum. A `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so any
+    only, re-validated against the ledger). "Active" means exactly one current
+    checkpoint at the **ACTIVE** role address. ARMED, FROZEN, TOMBSTONE,
+    missing, duplicated, and stale candidates fail closed; there is no
+    separate shared freeze registry. A `delta = 0` rotation (`seq + 1`)
+    **consumes** the checkpoint UTxO, so any
     authorization pre-signed under the prior sequence is **stale** and MUST be **re-signed** by
     the current weighted keys over the fully bound transfer + current sequence, never merely
     re-pointed at the fresh checkpoint (Execute / Refresh-Re-sign / Cancel-Reclaim /
@@ -147,9 +148,9 @@ credential it runs the **eligibility** check — an **admitted** `trie_key`
 (admission mapping `stake_credential ↔ {trie_key, aid}` established once,
 on-chain — carrying the party's **stable qualified AID** so the current
 checkpoint can be selected; `trie_key` alone, a historical-cache key, cannot),
-that AID's checkpoint **live in the accepted mint/spend lineage** and **absent
-from the shared R-FRZ freeze registry**, and an **unrevoked** credential chain
-(L2 TEL). But only the **acting/authorizing AID(s)** must **produce witnesses**:
+exactly one current checkpoint for that AID in the **ACTIVE** role, and an
+**unrevoked** credential chain (L2 TEL). But only the
+**acting/authorizing AID(s)** must **produce witnesses**:
 normally the **sender** (plus the **issuer/agent** on a freeze/seize override)
 supplies a **witness set meeting its checkpoint's current weighted threshold**
 over the transfer + current sequence — read from its sovereign per-AID

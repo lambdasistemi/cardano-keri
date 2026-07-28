@@ -28,11 +28,13 @@
     derived; `trie_key` stays a historical-only key), the
     **GLEIF → QVI → LE** hierarchy, and all-TELs cascade revocation are preserved as written;
     KEL/ACDC admission may still gate protocol *eligibility*, but it never selects the current
-    checkpoint identity. Lifecycle/close is the checkpoint's **mint/spend lineage** and freeze
-    is the **separate shared R-FRZ** registry — neither is a datum field. The **factored-core
-    "list-shaped, threshold-capable KeyState" (item 1) remains the current weighted key state**;
-    only its **physical store** moves from a shared MPF identity registry to the per-AID
-    checkpoint (the mechanical re-cut is downstream #24/#23).
+    checkpoint identity. Lifecycle is structural: the checkpoint token moves
+    among role addresses, and a consumer accepts only the current **ACTIVE**
+    role. ARMED, FROZEN, TOMBSTONE, missing, duplicated, and stale candidates
+    fail closed; there is no separate shared freeze registry. The
+    **factored-core "list-shaped, threshold-capable KeyState" (item 1) remains
+    the current weighted key state**; only its physical store moves from a
+    shared MPF identity registry to the per-AID checkpoint.
 
 The [epic](https://github.com/lambdasistemi/cardano-keri/issues/21) names four
 use cases for ACDC verification on-chain. This section analyzes each as a

@@ -41,6 +41,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Story Ladder: story-ladder.md
   - Roadmap: roadmap.md
   - Identity on Cardano:
       - Presentation: identity-on-cardano/index.html
@@ -50,8 +51,11 @@ nav:
   - Finance Primer: finance-primer.md
   - Architecture:
       - Overview: architecture/overview.md
-      - System Architecture: architecture/system.md
       - Identity Operations: architecture/identity-ops.md
+      - Lifecycle and Two Bonds: architecture/lifecycle-and-bonds.md
+      - "Freeze Lifecycle (story #138)": https://github.com/lambdasistemi/cardano-keri/issues/138
+      - Observer Architecture: architecture/observer-architecture.md
+      - System Architecture: architecture/system.md
       - Value Authorization: architecture/value-auth.md
       - Veridian Bridge: architecture/veridian-bridge.md
       - Amaru Integration Analysis: architecture/amaru-integration.md

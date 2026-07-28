@@ -178,10 +178,11 @@ On top of L1–L4:
       different acting AID).
     - *Live per transition*: re-read the **acting officer AID's sovereign
       per-AID checkpoint** as a CIP-31 reference input at every spend — a
-      witness set meeting its current weighted keys/threshold, its live UTxO in
-      the accepted mint/spend lineage (not closed/convicted), the AID absent
-      from the shared R-FRZ freeze registry — plus OOR non-revocation (L2 TEL)
-      linking it to the fixed LE. The honest default for institutional risk:
+      witness set meeting its current weighted keys/threshold, with exactly one
+      current checkpoint at the **ACTIVE** role address — plus OOR
+      non-revocation (L2 TEL) linking it to the fixed LE. ARMED, FROZEN,
+      TOMBSTONE, missing, duplicated, and stale candidates reject. The honest
+      default for institutional risk:
       each transition is a fresh attestation; a `delta = 0` rotation of the
       acting AID stales any authorization bound to a prior sequence (⇒ re-sign),
       while OOR revocation (⇒ re-designation) swaps in a different acting AID.
@@ -218,11 +219,11 @@ On top of L1–L4:
   rotates independently on its **own** sovereign per-AID checkpoint UTxO (#92),
   with the counterparty LE identity **fixed** (any LE-root rotation would
   likewise be sovereign on the LE's own checkpoint, but the LE root does not act
-  here). But the **contract UTxO** itself, and any shared
-  **admission** or **R-FRZ** freeze UTxO in the path, **retain their own
-  serialization** as separate contended on-chain objects — at this case's
-  transition frequency (days/weeks) that serialization is simply immaterial, not
-  absent.
+  here). But the **contract UTxO** itself and any shared **admission** UTxO in
+  the path retain their own serialization as separate contended on-chain
+  objects. The per-AID lifecycle adds no shared freeze UTxO. At this case's
+  transition frequency (days/weeks), the remaining serialization is simply
+  immaterial, not absent.
 - **Privacy**: institutions *want* attributability of counterparties but not
   of terms. Keep terms as a hash in the datum (the full agreement stays
   bilateral, off-chain — consistent with the ACDC-notarization pattern in

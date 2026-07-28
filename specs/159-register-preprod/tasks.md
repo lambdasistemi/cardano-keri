@@ -12,10 +12,10 @@
   hash-proof premint and reference-script registration transactions.
 - [x] T159-S4 RED/GREEN Koios exact-asset discovery and fail-closed ACTIVE V1
   status decoding/rendering, with optional bearer authentication.
-- [ ] T159-S5 Build the packaged CLI; machine-capture the complete 1-of-1 and
+- [x] T159-S5 Build the packaged CLI; machine-capture the complete 1-of-1 and
   2-of-5 preprod journey, settled txids, duplicate preflight refusal, and real
   underfunded validator rejection.
-- [ ] T159-S6 Add the stranger registration guide, transcript integrity/CI
+- [x] T159-S6 Add the stranger registration guide, transcript integrity/CI
   checks, and the byte-exact raw transcript to PR #172.
 - [ ] T159-S7 Run `./gate.sh`, push, wait for green CI, audit PR metadata and
   worktree cleanliness, then park for operator merge.

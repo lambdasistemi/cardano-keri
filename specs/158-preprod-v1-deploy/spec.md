@@ -97,9 +97,15 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
   preprod manifest.
 - **FR-019**: The repository MUST add a navigable page titled “The M1 preprod
   deployment” with operator commands, all settled transaction IDs, the
-  successful verifier transcript, and trust/availability boundaries.
+  verifier result, and trust/availability boundaries. The raw successful
+  transcript belongs in the captured acceptance artifact and PR body.
 - **FR-020**: The full repository gate and all GitHub checks MUST be green
   before the PR is parked for operator merge.
+- **FR-021**: The PR body MUST embed the byte-for-byte `script(1)` or
+  `tee`-captured full vertical acceptance journey, with literal `$` commands,
+  command output, all settled transaction IDs, and the story's final
+  `manifest verify` result. CI MUST match that capture to the manifest; a
+  retyped or narrative substitute is not acceptance evidence.
 
 ## Key entities
 
@@ -122,8 +128,9 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
   and live-reference drift.
 - **SC-004**: CLI help/config documentation exposes option, environment, and
   YAML names for every operational setting, with no forbidden parser.
-- **SC-005**: The docs contain captured command output and settled
-  transaction IDs, never values copied from memory.
+- **SC-005**: The PR contains the raw captured source → `deploy` → `manifest
+  verify` transcript and settled transaction IDs, while the docs provide the
+  navigable narrative and operator guidance.
 - **SC-006**: Strict docs, local `./gate.sh`, and GitHub CI exit zero; draft PR
   #169 becomes ready and remains unmerged for the operator.
 
@@ -142,4 +149,6 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
 - `kli` continues to own every KERI operation. This story adds only Cardano
   release publication and verification.
 - Witness-host IaC follow-up from #157 is explicitly outside this story.
-
+- Raw full-journey acceptance evidence is cumulative for every application
+  story from #158 onward; later stories must capture the entire preceding
+  vertical journey through their own final verb.

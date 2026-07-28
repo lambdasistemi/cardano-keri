@@ -45,7 +45,9 @@ offchain/
 ├── cardano-keri.cabal
 └── flake.nix
 deploy/preprod/m1-manifest.json
+deploy/preprod/m1-acceptance.txt
 scripts/check-ckeri-cli.sh
+scripts/check-m1-acceptance-transcript.sh
 .github/workflows/ci.yml
 docs/user/m1-preprod-deployment.md
 mkdocs.yml
@@ -120,15 +122,19 @@ runner puts `cardano-cli`, Git, and CA certificates in its strict runtime
 environment and supplies the flake-owned blueprint path.
 
 A dedicated CI job checks out full history, builds the binary, asserts parser
-surface/forbidden-dependency rules, and runs live verification. The routine
-ticket gate invokes the same packaged verifier once the manifest exists.
+surface/forbidden-dependency rules, matches the raw acceptance transcript to
+every manifest hash and reference, and runs live verification. The routine
+ticket gate invokes the same transcript check and packaged verifier once the
+manifest exists.
 
 ### Live publication and evidence
 
-Create a dedicated preprod payment key under host secrets, request faucet test
-ada, and never copy the key into the repository. Run the packaged command
-against `/node/preprod/ipc/node.socket`, capture stdout, then run the packaged
-verifier from the clean worktree. Populate docs and PR metadata only from those
+Create a dedicated preprod payment key under host secrets, fund it with
+preprod test ada, and never copy the key into the repository. Run the packaged
+command against `/node/preprod/ipc/node.socket` and use `script(1)` or `tee`
+with shell tracing to capture the literal source → `deploy` → `manifest
+verify` journey. Preserve the raw capture, make CI match it to the manifest,
+embed it unedited in the PR body, and derive only narrative docs from those
 captured files.
 
 ## Verification and delivery
@@ -138,7 +144,8 @@ captured files.
 3. Run the full gate before any live transaction.
 4. Publish the five preprod references and retain the settled stdout.
 5. Run `manifest verify` locally and through the public boundary.
-6. Commit the manifest, transcript-backed docs, and CI.
+6. Commit the manifest, raw transcript, transcript-backed docs, and CI; embed
+   the raw captured bytes in the PR body.
 7. Run `./gate.sh` on the exact staged tree and inspect the complete diff.
 8. Restore the standing `gate.sh` byte-for-byte, run finalization audit, push,
    mark PR #169 ready, and wait for every GitHub check.
@@ -156,4 +163,3 @@ captured files.
 - Explicit runtime inputs prevent hidden host PATH dependencies.
 - All production-host mutations are limited to the dedicated testnet key and
   the explicitly requested preprod transactions.
-

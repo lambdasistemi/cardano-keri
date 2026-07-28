@@ -183,7 +183,7 @@ jobs:
         run: nix build --quiet -L .#checks.x86_64-linux.e2e
 
   m1-manifest:
-    name: M1 preprod manifest
+    name: M1 preprod deploy transcript + manifest
     needs: build-gate
     runs-on: nixos
     steps:
@@ -194,6 +194,14 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Match the raw deploy-to-verify transcript to the manifest
+        run: >-
+          nix shell
+          nixpkgs#bash
+          nixpkgs#coreutils
+          nixpkgs#gnugrep
+          nixpkgs#jq
+          --command bash scripts/check-m1-acceptance-transcript.sh
       - name: Rebuild hashes and verify live preprod references
         working-directory: offchain
         run: >-

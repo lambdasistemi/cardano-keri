@@ -1,193 +1,182 @@
-# Value Authorization
+# Value authorization
 
-A value-write operation mutates a leaf in a value cage MPFS trie. Every leaf
-mutation requires **two authorizations**: the leaf owner's Ed25519
-authorization against the identity registry key-state, and the cage oracle's
-co-signature (necessary-not-sufficient — the oracle provides liveness and
-cannot forge; see [Architecture Overview](overview.md#residual-oracle-trust-value-plane-only)).
+Value authorization is a future consumer of the identity checkpoint. The
+small settled stories prove checkpoint creation and lifecycle transitions;
+they do not yet ship an application that authorizes value writes from it.
 
-!!! warning "Current-authorization path reframed to the sovereign per-AID checkpoint (#92)"
-    The `trie_key` / sliding-root-window resolution described on this page is the
-    **rejected Candidate-B shared/global MPFS registry** shape. Per the #92 decision
-    (`specs/92-checkpoint-contention/DECISION.md`), each AID's current authority now lives
-    in its **own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** —
-    asset id `(checkpoint_policy_id, aid_asset_name)`, current keys in the inline
-    `CheckpointDatum`. A cage resolves current authority by reading that AID's checkpoint as
-    a CIP-31 **reference input**; a `delta = 0` rotation (`seq + 1`) advances it and makes
-    pending authorizations **stale** (universal re-authorization). Discovery is a **generic
-    `(policy_id, asset_name)` multi-asset index lookup** (any indexer / node / sidecar), not
-    a shared-registry inclusion proof against a windowed root. The mechanical redeemer/proof
-    re-cut is downstream #24.
+This page states the current integration boundary so later application
+validators do not reintroduce the retired shared-registry model.
 
-    **Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index
-    lookup supplies **only a candidate outref / location for liveness — never identity or
-    current-authority truth**. The **consuming transaction validates** the returned UTxO
-    against the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint
-    script / version / lineage**; a **well-formed inline datum with the expected AID /
-    sequence binding and the current weighted key state**; and the **applicable active /
-    freeze rules** (validation rules, **not** datum fields). The returned TxOut is **locked
-    at the designated script-hash address**; the **datum itself does not own an address**. A
-    **stale or false outref fails ledger validation** (it no longer exists, or no longer
-    matches) → refresh / retry; it can never yield forged authority. An **indexer outage
-    only blocks transaction construction (liveness)** — it never grants false authority.
+## Resolve current authority
 
-    The **freeze registry** below is preserved, but note honestly: it is a **shared,
-    attacker-contendable** UTxO — **not** sovereign. The sovereign emergency path must not
-    reintroduce a shared attacker-contendable UTxO; re-cutting R-FRZ sovereign is a
-    downstream residual.
+Given a KERI AID, an application derives the expected checkpoint asset:
 
-Under the superseded shared-registry shape the cage script resolved the authorizing
-identity by `trie_key`; under the sovereign per-AID checkpoint (#92) it instead reads the
-AID's own `(checkpoint_policy_id, aid_asset_name)` checkpoint UTxO (see
-[AID Model](../design/aid-model.md)).
-
-## Registry reference
-
-The cage takes the identity registry UTxO (and the freeze registry UTxO) as
-**CIP-31 reference inputs** (non-spending). The registry datum carries a
-sliding window of valid roots. The cage accepts an inclusion proof valid
-against any root in the window, tolerating registry write latency.
-
-## Signer resolution
-
-The cage resolves `cur_pubkey` by:
-
-1. Verifying an MPFS inclusion proof `trie_key → leaf` against a root in the registry datum window
-2. Checking `leaf.status == Active` — closed and frozen identities are rejected
-3. Checking no active `FreezeMarker` for `trie_key` (absence proof against the freeze root; a marker is active while `marker.seq == key_state.seq` — see [Identity Operations — Emergency freeze](identity-ops.md#emergency-freeze))
-4. Reading `leaf.key_state.cur_pubkey`
-
-The CESR AID plays no role in on-chain authorization.
-
-## Option A — Detached signature
-
-The transaction redeemer carries the raw public key and a detached
-[Ed25519](https://www.rfc-editor.org/rfc/rfc8032) signature over a
-fully-bound authorization message. The AID owner need not sign the Cardano
-transaction itself — the authorization travels as data.
-
-**On-chain checks:**
-
-1. Signer resolution above (Active + no freeze marker)
-2. `vk == leaf.key_state.cur_pubkey`
-3. `Ed25519.verify(vk, auth_msg, sig)`
-
-**Authorization message:**
-
-```
-auth_msg = cbor({
-  domain                     : "cardano-keri/value-write/v1",
-  network_id                 : NetworkId,
-  value_cage_policy_id       : PolicyId,
-  value_cage_thread_token    : AssetName,
-  trie_key                   : ByteArray[32],
-  key_seq                    : Int,
-  identity_root              : ByteArray,
-  value_input_root           : ByteArray,
-  value_output_root          : ByteArray,
-  op_hash                    : ByteArray,
-  counter                    : Int,
-  valid_from                 : POSIXTime,
-  valid_until                : POSIXTime
-})
+```text
+(checkpoint_policy_id, deriveAidAssetName(cesr_aid))
 ```
 
-The message binds to the specific cage, the `trie_key`, the key sequence,
-both MPFS roots, the operation, and a counter with validity window for replay
-protection.
+It includes the candidate checkpoint as a **CIP-31 reference input**. CIP-31
+lets the transaction read the UTxO without spending it.
 
-```mermaid
-flowchart TD
-    A["Redeemer: {trie_key, vk, sig, inclusion_proof, freeze_proof, auth_msg}"] --> B
-    B["inclusion_proof valid for trie_key at some root in window?"]
-    B -->|yes| C["leaf.status == Active and no active FreezeMarker?"]
-    B -->|no| FAIL1["Fail: bad inclusion proof"]
-    C -->|yes| D["vk == leaf.key_state.cur_pubkey?"]
-    C -->|no| FAIL2["Fail: identity closed/frozen"]
-    D -->|yes| E["Ed25519.verify(vk, auth_msg, sig)?"]
-    D -->|no| FAIL3["Fail: key mismatch"]
-    E -->|yes| F["Oracle co-signature + MPFS update valid?"]
-    E -->|no| FAIL4["Fail: bad signature"]
-    F -->|yes| OK["Value-write authorized"]
-    F -->|no| FAIL5["Fail: oracle/trie op"]
+The application validator must require:
 
-    style OK fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
-    style FAIL1 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL2 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL3 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL4 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL5 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
+1. exactly one supplied candidate for that AID;
+2. the accepted checkpoint policy and script lineage;
+3. exactly one AID-derived token;
+4. a well-formed inline `CheckpointDatumV1`;
+5. the expected AID and current sequence;
+6. the bare ACTIVE role address; and
+7. the operation's controller authorization against the current weighted key
+   state.
+
+Every other case fails closed:
+
+- no checkpoint;
+- multiple ACTIVE candidates;
+- stale or already spent outref;
+- wrong policy or asset;
+- malformed or mismatched datum;
+- ARMED;
+- FROZEN; or
+- TOMBSTONE.
+
+There is no identity-root inclusion proof and no separate Freeze-registry
+absence proof. Freeze changes the sovereign checkpoint's own role address.
+
+## Indexer boundary
+
+An indexer may return the candidate outref for
+`(checkpoint_policy_id, aid_asset_name)`. It is not trusted for authority.
+The ledger validations above remain mandatory.
+
+- A stale result refers to an input that no longer exists and rejects.
+- A false result fails token, script, datum, or AID validation.
+- An outage prevents construction but cannot authorize a fallback key.
+
+Clients should refresh on contention and fail over between indexers or local
+chain sync when availability matters.
+
+## Authorization modes
+
+Two application patterns remain useful.
+
+### Native Cardano signer
+
+The application may require Cardano transaction signatures corresponding to
+the current checkpoint controller keys. This is simple for software that can
+make those KERI-controlled Ed25519 keys available through a compatible signing
+interface.
+
+The validator:
+
+1. resolves the ACTIVE checkpoint;
+2. reads the current weighted key set;
+3. checks the required transaction signatories; and
+4. evaluates the checkpoint's threshold.
+
+This mode binds authorization to the complete Cardano transaction body but may
+not fit existing KERI wallet APIs.
+
+### Detached intent signature
+
+A future wallet bridge may put domain-separated signatures in the redeemer.
+The signed intent must bind at least:
+
+```text
+AuthorizationIntent {
+  domain
+  network_id
+  application_policy
+  operation
+  checkpoint_policy
+  aid_asset_name
+  checkpoint_input
+  checkpoint_sequence
+  application_input
+  intended_output_or_effect
+  nonce_or_counter
+  valid_from
+  valid_until
+}
 ```
 
-## Option B — Native signer
+The application reconstructs this message rather than accepting
+caller-supplied message bytes. It then evaluates signatures under the current
+checkpoint's weighted controller threshold.
 
-The AID owner signs the value-write transaction as a native Cardano
-`extra_signatory`. The cage verifies `blake2b_224(cur_pubkey)` is a
-transaction signatory.
+Binding the exact checkpoint input and sequence makes an authorization stale
+after rotation. Binding application input/output or operation effect prevents
+a batcher from repurposing a valid signature. Domain, network, policy, and
+validity fields prevent cross-protocol and cross-deployment replay.
 
-**On-chain checks:**
+The exact envelope remains a later roadmap deliverable. This shape is a
+security requirement, not a claim that the SDK is published.
 
-1. Signer resolution above (Active + no freeze marker)
-2. `blake2b_224(leaf.key_state.cur_pubkey) ∈ tx.extra_signatories`
-3. Oracle co-signature + MPFS update valid
+## Value-cage oracle
 
-No app-level signature required. The ledger enforces that the named key
-signed the transaction.
+Some MPFS value-cage designs have an operator or oracle that serializes writes
+to their own cage UTxO. That authority is separate from AID authority.
 
-```mermaid
-flowchart TD
-    A["tx.extra_signatories + inclusion_proof + freeze_proof"] --> B
-    B["inclusion_proof valid for trie_key at some root in window?"]
-    B -->|yes| C["leaf.status == Active and no active FreezeMarker?"]
-    B -->|no| FAIL1["Fail: bad inclusion proof"]
-    C -->|yes| D["blake2b_224(cur_pubkey) ∈ extra_signatories?"]
-    C -->|no| FAIL2["Fail: identity closed/frozen"]
-    D -->|yes| E["Oracle co-signature + MPFS update valid?"]
-    D -->|no| FAIL3["Fail: AID key not a signer"]
-    E -->|yes| OK["Value-write authorized"]
-    E -->|no| FAIL4["Fail: oracle/trie op"]
+If a cage keeps an oracle, a mutation should require both:
 
-    style OK fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
-    style FAIL1 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL2 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL3 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style FAIL4 fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-```
+- the AID controller threshold resolved from the current ACTIVE checkpoint;
+  and
+- the cage's own operator authorization.
 
-**Replay protection:** Cardano's UTxO model guarantees uniqueness — each
-value-write spends and recreates the cage UTxO. No counter or validity
-interval needed.
+The oracle is then necessary but not sufficient. It may affect liveness or
+ordering, but it cannot forge the identity owner's authorization.
 
-## Choosing the mode
+## Rotation and transaction races
 
-The two options are not a preference ranking — each is **structurally
-required** in different flows. The verifier library must expose both.
+A value transaction references one exact checkpoint UTxO. If Advance spends
+that checkpoint first, the value transaction becomes invalid and must be
+rebuilt against the successor.
 
-| Situation | Mode | Why |
-|---|---|---|
-| The AID owner signs the executing transaction (self-submitted cage writes, contract state transitions, delegation certificates) | **Option B** | Cheapest: no app-level signature, replay protection free from UTxO uniqueness |
-| A third party signs the executing transaction (batcher-executed DEX orders, ceremony assemblers, any order/intent consumed later) | **Option A — the only option** | The owner's key is *not* among the transaction signatories; the authorization must travel inside the data, fully bound and validity-bounded |
-| The AID key must stay isolated from any Cardano payment key (hardware custody constraints) | **Option A** | The key never signs a Cardano transaction |
+This is the desired safety property: pending authorization does not silently
+survive a key rotation. It is also an operational race that builders must
+handle.
 
-!!! warning "Option B cannot cover the flagship use case"
-    On batcher-model DEXes the trader never signs the executing transaction,
-    so a required-signer check has nothing to find. Detached-signature
-    authorization is part of the use-case-invariant core — see
-    [Business Cases — factored core](../design/business-cases/index.md#the-factored-core-required-by-every-case)
-    and the [Regulated DeFi case](../design/business-cases/regulated-defi.md).
-    Where the actor does sign the transaction, Option B remains the cheaper
-    path.
+## Freeze behavior
 
-When Option A is used, the `auth_msg` counter and validity bounds are
-required.
+As soon as Freeze settles, the checkpoint token moves from ACTIVE to ARMED.
+A value transaction referring to the old ACTIVE input is stale, and a new
+transaction resolving ARMED must reject by role.
 
-## Window root selection
+A timely response Advance creates a new ACTIVE checkpoint at the next
+sequence, so the application must obtain fresh authorization against that
+input.
 
-The cage redeemer includes the specific root from the window used for the
-inclusion proof. The cage script verifies that root is present in
-`registry_datum.roots`. This makes the proof deterministic and auditable.
+Future FROZEN and TOMBSTONE outputs follow the same fail-closed rule.
 
-If the registry advances the root (new inception, rotation, close, or freeze)
-between proof construction and tx inclusion, the old root may drop out of the
-window. The proof must be recomputed against a root still in the window.
-Window depth 10 gives strong liveness at typical registry write rates.
+## Credential-gated actions
+
+Identity authorization answers:
+
+> Do the current controllers of this AID authorize the operation?
+
+It does not answer:
+
+> Does this AID represent a particular legal entity or hold a current role?
+
+A credential-gated application must additionally verify the required ACDC
+credential chain and TEL non-revocation evidence. Those layers are later
+roadmap work.
+
+## Minimum consumer checklist
+
+Before treating an integration as secure, prove with applied-boundary tests
+that it rejects:
+
+- the right token at the wrong role;
+- the right AID with multiple ACTIVE candidates;
+- a stale checkpoint outref;
+- a well-signed intent for another checkpoint sequence;
+- a well-signed intent for another application input or output;
+- signatures below the weighted threshold;
+- an expired intent;
+- a wrong network or policy; and
+- a valid identity signature with missing or revoked credentials when the
+  application requires credentials.
+
+See the [Trust model](../design/trust-model.md) and
+[Architecture overview](overview.md).

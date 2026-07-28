@@ -1,248 +1,170 @@
-# Architecture Overview
+# Architecture overview
 
-cardano-keri is structured as four layers. This page covers Layer 1 — the
-identity plane — and the MPFS value-cage plane it authorizes. The credential
-layers (2–4) are analyzed in [vLEI Bridge](../design/vlei.md) and the
-[business cases](../design/business-cases/index.md).
+cardano-keri gives one KERI identity a stable Cardano checkpoint while its keys
+rotate. KERI is Key Event Receipt Infrastructure; its **AID** (Autonomic
+Identifier) names an identity, and its **KEL** (Key Event Log) is the signed
+history of that identity's key events.
 
-```
-Layer 1 — AID Key-State Registry    (on-chain MPF: trie_key → IdentityLeaf)
-Layer 2 — TEL Revocation Registry   (on-chain MPF per issuer: SAID → issued | revoked)
-Layer 3 — ACDC Chain Verifier       (Aiken: SAID + signature + MPF proofs, bounded hops)
-Layer 4 — Off-chain Proof Builder   (Haskell/WASM: CESR decode + proof generation)
-```
+The current identity plane has no shared key-state registry. Every registered
+AID owns a sovereign **checkpoint UTxO** (unspent transaction output) carrying
+one AID-derived token and an inline datum with its current state.
 
-!!! warning "Layer-1 current-authority storage reframed to the sovereign per-AID checkpoint (#92)"
-    The single-UTxO MPF-trie registry (`trie_key → IdentityLeaf`, `identity_root`, the
-    sliding-root window) described below is the **rejected Candidate-B shared/global**
-    shape. Per `specs/92-checkpoint-contention/DECISION.md`, each AID's current authority is
-    a **sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO** — asset id
-    `(checkpoint_policy_id, aid_asset_name)`, current keys in the inline `CheckpointDatum`,
-    `delta = 0` rotation (`seq + 1`). Consumers **discover** it by a **generic
-    `(policy_id, asset_name)` multi-asset index lookup** (any indexer / node / sidecar) and
-    read it as a CIP-31 reference input — no shared-registry inclusion proof against a
-    windowed root, and no bespoke QVI-owned `AID → UTxO` directory. The mechanical MPF-trie
-    re-cut is downstream #24.
-
-    **Indexer / discovery trust boundary.** The generic `(policy_id, asset_name)` index
-    lookup supplies **only a candidate outref / location for liveness — never identity or
-    current-authority truth**. The **consuming transaction validates** the returned UTxO
-    against the ledger: the exact **quantity-one policy + asset**; an **accepted checkpoint
-    script / version / lineage**; a **well-formed inline datum with the expected AID /
-    sequence binding and the current weighted key state**; and the **applicable active /
-    freeze rules** (validation rules, **not** datum fields). A **stale or false outref fails
-    ledger validation** (it no longer exists, or no longer matches) → refresh / retry; it
-    can never yield forged authority. An **indexer outage only blocks transaction
-    construction (liveness)** — it never grants false authority.
-
-    The **freeze registry** stays a **shared, attacker-contendable**
-    UTxO (**not** sovereign) — the sovereign emergency path must not reintroduce one; a
-    downstream residual.
-
-Two planes with different trust models:
-
-- The **identity plane** (Layer 1 + the freeze registry) is **permissionless**:
-  anyone can incept an identity by posting a deposit and proving key
-  possession. No oracle mediates identity operations.
-- The **value plane** (MPFS cages) keeps its oracle, but the oracle is
-  **necessary-not-sufficient**: every leaf mutation requires *both* the leaf
-  owner's Ed25519 authorization and the oracle signature. The oracle provides
-  liveness; it cannot forge.
-
-## Identity Registry (Layer 1)
-
-A single-UTxO [MPFS](https://github.com/aiken-lang/merkle-patricia-forestry)
-trie mapping:
-
-```
-trie_key → IdentityLeaf { key_state, status }
-```
-
-```
-KeyState {
-  cur_pubkey  : ByteArray[32]   -- current Ed25519 public key (raw bytes)
-  next_digest : ByteArray[32]   -- blake2b_256(next pubkey), committed not yet revealed
-  seq         : Int             -- monotonic rotation counter, starts at 0
-  cesr_aid    : ByteArray[32]   -- decoded CESR AID, metadata only (never verified on-chain)
-  deposit     : Lovelace        -- locked at inception, returned at close
-}
-
-IdentityStatus {
-  Active
-  FrozenFatal { event_1, sig_1, event_2, sig_2, seq }  -- duplicity proof, irrecoverable
-  Closed                                               -- token burnt; deposit returned
-}
-```
-
-`trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))` — derived from
-inception material, stable across rotations, front-run-proof (see
-[AID Model](../design/aid-model.md)).
-
-The registry UTxO datum holds a **sliding window of recent roots**:
-
-```
-RegistryDatum {
-  roots : List<ByteArray>  -- [root_t, root_t-1, ..., root_t-k], newest first
-}
-```
-
-The sliding window decouples consumers from registry write cadence — a
-value-write built against an older root remains valid as long as that root is
-still in the window.
-
-!!! note "Scope change: list-shaped KeyState"
-    The business-case analyses concluded that `KeyState` must be list-shaped
-    and threshold-capable from v1 (organizational AIDs are k-of-n multisig; a
-    single key is the 1-of-1 degenerate case). The shape above is the
-    singleton illustration. See the
-    [factored core](../design/business-cases/index.md#the-factored-core-required-by-every-case).
-
-## Identity operations and their authorization
-
-All identity operations are **permissionless** — authorized by cryptographic
-material, not by any operator key:
-
-| Operation | Authorization |
-|---|---|
-| Inception | `cur_pubkey` signature over `inc_msg` + ADA deposit + absence proof |
-| Rotation | `blake2b_256(reveal_key) == next_digest` **and** `reveal_key` signature over `rot_msg` |
-| Close (burn + refund) | `cur_pubkey` signature over `close_msg`; deposit returned |
-| Duplicity freeze | machine-verifiable `DuplicityProof` (two conflicting signed KERI events) |
-| Emergency freeze | `next_key` signature — marker in the separate freeze registry |
-
-Exact message formats and on-chain checks are specified in
-[Identity Operations](identity-ops.md).
-
-!!! danger "The preimage alone never authorizes a rotation"
-    Rotation requires **both** the preimage check and an Ed25519 signature by
-    `reveal_key` over `rot_msg` (which binds the *new* next-key commitment).
-    The preimage becomes public in the KERI KEL the moment the owner rotates
-    there — without the signature requirement, any observer could replay it
-    on-chain with an attacker-chosen `new_next` and capture the identity. See
-    [Identity Operations — Rotation](identity-ops.md#rotation).
-
-A convicted checkpoint token is **burnt** (a closed identity's token is likewise
-burnt, its deposit refunded) — everything not spendable, even by reference, is
-burnt (the burn axiom). There is no tombstone: the conviction is recorded the way
-everything is on a blockchain — in the convict transaction, in history, forever —
-and the ledger's permanent footprint stays exactly the live identities. Burning
-does **not** bar re-registration. There is no inception
-absence proof and no global uniqueness gate, so if KERI still carries the AID it
-may register a fresh checkpoint: Cardano mirrors KERI and never permanently
-blocks an identity. A duplicate registration is possible but self-defeating —
-consumers fail closed on more than one live checkpoint, so it only harms the
-controller who mints it.
-
-## Freeze registry
-
-A **separate single-UTxO registry** for emergency revocation, so a compromise
-response never queues behind inception/rotation traffic on the main registry.
-It stores sequence-scoped markers:
-
-```
-FreezeMarker { trie_key, seq, cur_pubkey_hash, next_digest }
-```
-
-A marker is authorized by the *next* key (the thief holds the current one) and
-dissolves automatically once the on-chain rotation lands (`seq` advances).
-Value cages must check **both** registries: identity leaf `Active` and no
-active `FreezeMarker`. See
-[Identity Operations — Emergency freeze](identity-ops.md#emergency-freeze) for
-the canonical definition and
-[Veridian Bridge — Synchronization lag](veridian-bridge.md#synchronization-lag)
-for the compromise-window workflow.
-
-## Value Cages (MPFS plane)
-
-Existing MPFS cage UTxOs storing domain-specific leaf data, where leaves are
-owned by AIDs. Every leaf mutation requires **two signatures**:
-
-1. **Leaf owner** — Ed25519 authorization against the identity registry
-   key-state, in one of two modes (native signer or detached signature); see
-   [Value Authorization](value-auth.md).
-2. **Cage oracle** — the MPFS operator co-signs. The oracle is
-   necessary-not-sufficient: it cannot mutate a leaf without the owner's
-   authorization.
-
-When a cage checks AID authorization it takes the identity registry (and the
-freeze registry) as **CIP-31 reference inputs** and:
-
-1. Checks the registry datum's root window for a root matching the supplied inclusion proof
-2. Verifies `trie_key → leaf` where `leaf.status == Active`
-3. Verifies no active `FreezeMarker` for `trie_key` (absence proof against the freeze root)
-4. Reads `cur_pubkey` from `leaf.key_state`
-5. Verifies the owner's authorization in the mode the flow requires (see the
-   [mode matrix](value-auth.md#choosing-the-mode))
-
-The cage is configured at deploy time with the specific registries it trusts.
-
-## Residual oracle trust (value plane only)
-
-The cage oracle controls **liveness**: it can reject or delay writes, garbage-
-collect, squat unowned value keys, and end the cage. It **cannot forge data**
-— no leaf mutation passes without the owner's signature. "Cannot forge" is not
-"cannot censor"; protocols that need censorship-resistance on the value plane
-must design for oracle exit (see [Trust Model](../design/trust-model.md)).
-
-## On-chain interaction
+## Current identity plane
 
 ```mermaid
-flowchart TD
-    subgraph "Identity Plane (permissionless)"
-        IR_UTxO["Identity Registry UTxO<br/>thread token<br/>datum: {roots}<br/>MPF trie: trie_key → IdentityLeaf"]
-        FR_UTxO["Freeze Registry UTxO<br/>freeze token + freeze_root<br/>FreezeMarker entries"]
-        IR_Script["Registry Script<br/>verify inception self-auth + deposit<br/>verify rotation (preimage + rot_msg sig)<br/>verify close / duplicity freeze"]
-    end
+flowchart LR
+    KEL["KERI KEL<br/>inception · rotations · witness receipts"]
+    PRE["BLAKE3 premint<br/>one-use fact token"]
+    TX["Cardano operation tx<br/>Register · Close · Advance · Freeze"]
+    CK["Sovereign checkpoint UTxO<br/>AID token · inline key state · escrow"]
+    OBS["Reference observers<br/>registration · advance · enforcement"]
+    APP["Future consumer<br/>accept exactly one ACTIVE checkpoint"]
 
-    subgraph "Value Cage (oracle + owner)"
-        VC_UTxO["Cage UTxO<br/>cage thread token<br/>datum: value_root"]
-        VC_Script["Cage Script<br/>owner auth (Option A/B)<br/>+ oracle co-signature<br/>+ Active + no freeze marker"]
-    end
-
-    subgraph "MPFS Plugin / Sidecar"
-        Snapshot["Cage UTxO snapshot<br/>tx_in + value_root @ chain point"]
-        Builder["Value-write builder<br/>proof + unsigned tx"]
-        Rebuild["If cage advanced first<br/>discard snapshot + rebuild"]
-    end
-
-    Owner["AID Owner<br/>(KERI wallet)"] -->|"inception / rotation / close"| IR_UTxO
-    Owner -->|"emergency freeze<br/>(next_key sig)"| FR_UTxO
-    VC_UTxO -->|"read stable pre-state"| Snapshot
-    Snapshot --> Builder
-    Owner -->|"authorizes value-write"| TX
-    Oracle["Cage Oracle"] -->|"co-signs"| TX
-    Builder -->|"builds value-write against snapshot"| TX
-    TX -->|"spends snapshotted tx_in"| VC_UTxO
-    VC_UTxO -->|"another write wins first"| Rebuild
-    Rebuild -->|"newer snapshot"| Snapshot
-    IR_UTxO -->|"CIP-31 reference input<br/>(root window + inclusion proof)"| VC_Script
-    FR_UTxO -->|"CIP-31 reference input<br/>(freeze absence proof)"| VC_Script
-
-    IR_Script --> IR_UTxO
-    VC_Script --> VC_UTxO
-
-    style IR_UTxO fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-    style FR_UTxO fill:#3a1e1e,stroke:#d94a4a,color:#e0e0e0
-    style VC_UTxO fill:#1e3a2f,stroke:#4a9040,color:#e0e0e0
-    style Snapshot fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
+    KEL --> PRE
+    KEL --> TX
+    PRE --> TX
+    TX --> CK
+    OBS -->|"zero-lovelace withdrawal<br/>in the same tx"| TX
+    CK -->|"CIP-31 reference input"| APP
 ```
 
-The registry UTxOs are not consumed by value-writes. Value-writes use them as
-non-spending CIP-31 reference inputs.
+The parts have deliberately narrow jobs:
 
-The cage UTxO is consumed, so the MPFS plugin/sidecar builds each value-write
-against a cage snapshot (`tx_in` + `value_root`) and rebuilds from a newer
-snapshot if another write spends that UTxO first.
+- **KERI** produces the identity events, controller signatures, and witness
+  receipts.
+- **The BLAKE3 premint policy** proves that inception bytes bind to the AID and
+  mints a short-lived fact token.
+- **The thin checkpoint validator** protects the token, value, role address,
+  exact input, and unique successor.
+- **Reference observers** validate large KERI evidence through a zero-lovelace
+  withdrawal in the same transaction.
+- **The checkpoint UTxO** is the current Cardano projection. Rotation spends
+  it and creates its next version; no shared root or inclusion proof is needed.
 
-## What lives off-chain
+## Stable identity, changing authority
 
-- Full KERI KEL history
-- CESR AID ↔ trie_key binding verification (KEL replay — see
-  [Binding verification protocol](veridian-bridge.md#binding-verification-protocol))
-- KERI watchers (monitor KELs for rotations and duplicity)
-- Witness receipts and duplicity detection
-- Settlement depth tracking
+The checkpoint token's asset name is derived from the qualified KERI AID. That
+policy ID and asset name form the stable Cardano handle. The datum changes as
+KERI rotates:
 
-The on-chain layer is a minimal root of trust: trie_key-keyed identity,
-pre-rotation binding, and key possession proofs — permissionless on the
-identity plane, owner-plus-oracle on the value plane.
+```text
+CheckpointDatumV1 {
+  cesr_aid
+  current controller keys and weighted threshold
+  next-key commitments and committed next threshold
+  witnesses and toad
+  Cardano sequence
+  native KERI sequence and event digest
+}
+```
+
+**CESR** is KERI's compact encoding format. `toad` is the threshold of
+accountable duplicity: the number of witness receipts required by the event.
+
+An indexer may locate a candidate UTxO by policy and asset name, but it does
+not establish authority. A consuming Cardano transaction must revalidate:
+
+- the exact policy and quantity-one asset;
+- an accepted checkpoint script/version;
+- the expected AID and a well-formed datum;
+- the current role address; and
+- the consumer's own authorization rule.
+
+A stale index result points to a spent input and fails. An indexer outage can
+block discovery, but it cannot create false authority.
+
+## State is structural
+
+Lifecycle state is represented by the checkpoint's script role address, not
+by a caller-controlled status field:
+
+| Role | Meaning | Consumer result |
+|---|---|---|
+| ACTIVE | Current checkpoint | May be considered, subject to all other checks |
+| ARMED | Later-event challenge is open | Reject |
+| FROZEN | Delay bond was claimed | Reject |
+| TOMBSTONE | Fork conviction is terminal | Reject |
+
+The small story has settled ACTIVE, ARMED, and the response back to ACTIVE.
+FROZEN and TOMBSTONE are target roles whose opening stories remain
+[#138](https://github.com/lambdasistemi/cardano-keri/issues/138) and
+[#151](https://github.com/lambdasistemi/cardano-keri/issues/151). See
+[Lifecycle and the two bonds](lifecycle-and-bonds.md).
+
+There is no separate global Freeze registry in this production story. Freeze
+moves the sovereign checkpoint itself from the ACTIVE address to ARMED, so a
+consumer sees the fail-closed state through the exact asset it already
+resolves.
+
+## Transaction architecture
+
+The checkpoint is intentionally small. Heavy KERI verification runs in
+operation-specific observer reference scripts:
+
+```mermaid
+sequenceDiagram
+    participant R as Relayer
+    participant C as Thin checkpoint
+    participant O as Observer reference script
+    participant L as Cardano ledger
+
+    R->>L: transaction + checkpoint input/output
+    R->>L: zero-lovelace observer withdrawal + envelope
+    L->>C: evaluate state, token, value, role, observer claim
+    L->>O: evaluate KERI evidence against the same transaction
+    C-->>L: accept only the exact coupled transition
+    O-->>L: accept only valid KERI evidence
+    L-->>R: settle or reject atomically
+```
+
+The current observer families are:
+
+- lifecycle observer for Register;
+- Advance observer for rotation and ARMED response; and
+- enforcement observer for Freeze.
+
+The scripts are stored in reference-script outputs. Copying all of them inline
+would exceed the protocol transaction-size limit. See
+[Observer architecture](observer-architecture.md) for the wire shape,
+BLAKE3 fact token, sizes, and execution costs.
+
+## Permissionless does not mean unauthenticated
+
+Register, Advance, Freeze, and response may be submitted by anyone because
+their result is fixed by public evidence. The submitter cannot choose new
+keys, skip a sequence, lower a threshold, remove required witnesses, or
+redirect escrow.
+
+Close is different: it is a voluntary action authorized by the checkpoint's
+current controller threshold, and its signed message binds the refund address.
+
+The four settled small-identity stories and their transaction IDs are listed
+on the [story ladder](../story-ladder.md).
+
+## Current boundary and future planes
+
+The present repository proves the first identity-plane rungs on a
+protocol-11 development network. It does **not** yet provide:
+
+- ClaimFreeze, thaw, or conviction as settled small-identity stories;
+- real three-of-seven GLEIF-scale settlement;
+- a production deployment or mainnet service;
+- a full vLEI credential-chain verifier;
+- a credential revocation mirror; or
+- a wallet-to-Cardano authorization product.
+
+The credential verifier, revocation state, value-cage authorization, and
+wallet integration remain later roadmap layers. They will consume the
+checkpoint as a reference input; they are not part of the settled identity
+story itself.
+
+## Related pages
+
+- [Story ladder](../story-ladder.md) — settled evidence and planned scale-up.
+- [Identity operations](identity-ops.md) — exact operation behavior.
+- [Lifecycle and the two bonds](lifecycle-and-bonds.md) — states and
+  incentives.
+- [Observer architecture](observer-architecture.md) — reference-script
+  composition and measured budgets.
+- [Trust model](../design/trust-model.md) — guarantees, assumptions, and
+  fail-closed boundaries.

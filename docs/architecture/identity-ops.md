@@ -1,337 +1,244 @@
-# Identity Operations
+# Identity operations
 
-!!! warning "Written against the Cardano-native key-state model (superseded 2026-07-09)"
-    The operations below use the self-certifying `trie_key` inception and a
-    Cardano-native rotation redeemer — the original #24 shape. Per
-    `specs/68-keystate-shape/identity-model.md` (PR #87): the leaf is now keyed by
-    `cesr_aid`; **rotation is driven by a witnessed anchoring seal** from the
-    controller's KEL (the reveal / `next_digest` / threshold-sig / `seq+1` mechanics
-    below survive as the induction step, plus Ed25519 witness-receipt verification and
-    the §6a incoming-set validation for witness changes); and **inception (genesis) is
-    registration-attested, not yet self-certifying** (§7a — the lane-packed spike #88
-    core now fits the whole single-chunk domain, 54.3% cpu / 71.7% mem at the full
-    1024-byte chunk, but the full single-transaction registration path has not been
-    measured).
-    The operation taxonomy and the freeze paths remain current.
+This page describes the current sovereign checkpoint design and marks every
+unsettled transition explicitly. For the evidence and transaction IDs, start
+with the [story ladder](../story-ladder.md).
 
-    **Storage / contention (#92):** the physical current-authority store is now the
-    **sovereign per-AID checkpoint UTxO** — each AID's own
-    `(checkpoint_policy_id, aid_asset_name)` UTxO (inline `CheckpointDatum`, `delta = 0`
-    rotation; generic `(policy_id, asset_name)` discovery) — **not** the shared single-UTxO
-    MPF registry / sliding-root window the inception, rotation, close, and duplicity checks
-    below describe (`specs/92-checkpoint-contention/DECISION.md`, the rejected Candidate B).
-    The mechanical re-cut is downstream #24; the emergency **freeze registry** stays a
-    **shared, attacker-contendable** UTxO (not sovereign), a downstream residual. The generic
-    `(policy_id, asset_name)` discovery supplies **only a candidate outref for liveness,
-    never current-authority truth** — the consuming tx revalidates the quantity-one
-    policy+asset, an accepted checkpoint script/version/lineage, a well-formed inline datum
-    with the expected AID/sequence binding and current weighted key state, and the applicable
-    active/freeze rules against the ledger; a stale/false outref fails validation, and an
-    indexer outage blocks construction only, not authority (see
-    [Value Authorization](value-auth.md) and
-    `specs/92-checkpoint-contention/spec.md` §Indexer / discovery trust boundary).
+A **KERI AID** (Key Event Receipt Infrastructure Autonomic Identifier) has a
+signed **KEL** (Key Event Log). cardano-keri does not put the whole KEL on
+Cardano. It stores one current checkpoint in a sovereign **UTxO** (unspent
+transaction output) identified by a quantity-one token derived from the AID.
 
-There are five operations on the identity plane: inception, rotation, close,
-duplicity freeze, and emergency freeze. All except inception are authorized by
-cryptographic material alone (signatures, preimages, receipts, proofs), never
-by an operator key; inception's AID binding is registration-attested (see the
-banner above). Value-write authorization is covered in
-[Value Authorization](value-auth.md).
+The inline checkpoint datum carries:
 
-All signed messages are canonical CBOR with domain separation — see
-[AID Model](../design/aid-model.md#cbor-determinism).
+- the AID;
+- current controller public keys and their weighted threshold;
+- commitments to the next controller keys and their next threshold;
+- the current KERI witness set and its threshold, called `toad`;
+- a Cardano checkpoint sequence; and
+- the native KERI sequence and event digest needed to bind the next event.
 
-## Inception
+The token remains the stable handle while the datum advances.
 
-Registers a new identity. Anyone can incept by posting the ADA deposit and
-proving possession of the current key.
+## Operation status
 
-The registrant derives:
+| Operation | Result | Small-identity status |
+|---|---|---|
+| Register | Create ACTIVE sequence zero with `min + D_reg + B` escrow | Settled in [PR #146](https://github.com/lambdasistemi/cardano-keri/pull/146) |
+| Close | Burn the checkpoint token and refund its complete value to the signed address | Settled in [PR #147](https://github.com/lambdasistemi/cardano-keri/pull/147) |
+| Advance | Apply one genuine witnessed KERI rotation and return ACTIVE | Settled in [PR #148](https://github.com/lambdasistemi/cardano-keri/pull/148) |
+| Freeze | Move a genuinely lagging or disputed ACTIVE checkpoint to ARMED | Settled in [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
+| Response Advance | Apply the genuine next event before the ARMED deadline and keep `B` | Settled in [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
+| ClaimFreeze | Pay `B` to the recorded hunter and enter FROZEN after the deadline | Fail closed; [#138](https://github.com/lambdasistemi/cardano-keri/issues/138) |
+| Thaw Advance | Advance FROZEN back to ACTIVE while re-posting `B` | Depends on #138 |
+| Convict | Pay for a fully witnessed irreconcilable fork and enter TOMBSTONE | Not exposed by the small-story checkpoint; [#151](https://github.com/lambdasistemi/cardano-keri/issues/151) |
 
-```
-trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
-```
+## Register
 
-**Inception message — signed by the registrant, verified on-chain:**
+Registration is permissionless: anyone may relay a public KERI inception and
+fund the escrow. The inception itself determines the keys; the relayer cannot
+substitute different controller authority.
 
-```
-inc_msg = cbor({
-  domain               : "cardano-keri/inception/v1",
-  network_id           : NetworkId,
-  registry_policy_id   : PolicyId,
-  registry_thread_token: AssetName,
-  trie_key             : ByteArray[32],
-  cur_pubkey           : ByteArray[32],
-  next_digest          : ByteArray[32],
-  cesr_aid             : ByteArray[32],   -- signed to prevent front-run metadata poisoning
-  identity_root        : ByteArray[32]
-})
+Registration has two transactions.
+
+### 1. BLAKE3 premint
+
+The KERI AID is a BLAKE3 digest of the inception bytes in KERI's
+saidification form. Plutus has no native BLAKE3 builtin, so a dedicated Aiken
+policy performs that expensive check and mints a deterministic proof token.
+
+This token records one fact:
+
+```text
+the supplied inception bytes have the supplied KERI AID
 ```
 
-Binding the registry identity (`registry_policy_id` + thread token) scopes the
-authorization to this specific registry; binding `cesr_aid` inside the signed
-message prevents an adversary from copying in-flight inception material and
-substituting their own CESR AID (see
-[AID Model — inception security](../design/aid-model.md#inception-security-two-attacks-different-fixes)).
+It grants no identity authority.
 
-**On-chain checks:**
+### 2. Checkpoint mint
 
-1. `trie_key == blake2b_256(cbor({cur_pubkey, next_digest}))`
-2. Absence proof: `trie_key` not in trie (any leaf — including `Closed` and
-   `FrozenFatal` tombstones — blocks re-registration)
-3. `Ed25519.verify(cur_pubkey, inc_msg, sig)`
-4. ADA value locked `>= deposit_amount`, recorded in `KeyState.deposit`
-5. New root pushed onto the sliding window (oldest dropped if over depth)
+The checkpoint transaction:
 
-**Resulting leaf:**
+1. uses the bare mint redeemer `Register`;
+2. includes a zero-lovelace withdrawal from the registration observer;
+3. puts the complete `RegistrationEvidence` in that observer's envelope;
+4. consumes an input carrying the matching proof token and burns it;
+5. verifies the inception's controller signatures and witness receipts over
+   the exact event bytes;
+6. verifies that the new datum projects the event's AID, keys, thresholds,
+   next commitments, witnesses, and `toad`;
+7. mints exactly one AID-derived checkpoint token; and
+8. creates exactly one ACTIVE output holding the token and at least
+   `checkpoint minimum + D_reg + B`.
 
-```
-trie_key → IdentityLeaf {
-  key_state: KeyState {
-    cur_pubkey  = cur_pubkey
-    next_digest = next_digest
-    seq         = 0
-    cesr_aid    = cesr_aid    -- metadata only, never verified on-chain
-    deposit     = deposit
-  }
-  status: Active
-}
-```
+The checkpoint and observer programs are delivered by reference. The evidence
+is **not** duplicated in the mint redeemer. See
+[Observer architecture](observer-architecture.md#registrations-premint-fact-token)
+for the transaction coupling.
 
-```mermaid
-sequenceDiagram
-    participant U as Owner (Veridian)
-    participant N as Cardano Node
-    participant S as Registry Script
+### Duplicate registration boundary
 
-    U->>U: Generate cur_pubkey, next_pubkey
-    U->>U: next_digest = blake2b_256(next_pubkey)
-    U->>U: trie_key = blake2b_256(cbor({cur_pubkey, next_digest}))
-    U->>U: sig = Ed25519.sign(cur_key, inc_msg)
-    U->>N: Submit inception tx (deposit + redeemer)
-    N->>S: Execute registry script
-    S->>S: Check trie_key derivation
-    S->>S: Check absence proof for trie_key
-    S->>S: Check Ed25519.verify(cur_pubkey, inc_msg, sig)
-    S->>S: Check deposit locked
-    S->>S: Insert leaf, push new root to window
-    S-->>U: Identity registered
-```
+Registration uses no shared global registry or absence proof. Two independent
+transactions can therefore mint live candidates for the same AID. This avoids
+global contention but leaves a deliberate residual: a consumer must resolve
+exactly one ACTIVE checkpoint and fail closed on zero or multiple candidates.
 
-## Rotation
-
-Advances the key-state by revealing the pre-committed next key and committing
-to a new one. The `trie_key` never changes.
-
-**Rotation message — this is the normative definition:**
-
-```
-rot_msg = cbor({
-  domain               : "cardano-keri/rotation/v1",
-  network_id           : NetworkId,
-  registry_policy_id   : PolicyId,
-  registry_thread_token: AssetName,
-  trie_key             : ByteArray[32],
-  reveal_key           : ByteArray[32],   -- the previously committed next key, now revealed
-  new_next             : ByteArray[32],   -- blake2b_256(new next key)
-  seq_to               : Int              -- must equal cur_state.seq + 1
-})
-```
-
-**On-chain checks:**
-
-1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
-2. `blake2b_256(reveal_key) == leaf.key_state.next_digest` — reveal binds to commitment
-3. `seq_to == leaf.key_state.seq + 1` — monotonic
-4. `Ed25519.verify(reveal_key, rot_msg, sig)` — possession of the next key,
-   binding the **new** commitment
-
-**Resulting leaf:**
-
-```
-trie_key → IdentityLeaf {
-  key_state: KeyState {
-    cur_pubkey  = reveal_key
-    next_digest = new_next
-    seq         = seq_to
-    cesr_aid    = cur_state.cesr_aid   -- unchanged
-    deposit     = cur_state.deposit    -- unchanged
-  }
-  status: Active
-}
-```
-
-!!! danger "Why the preimage check alone is not authorization"
-    `reveal_key` stops being secret the moment the owner rotates in KERI — it
-    is published in the KEL. If the on-chain check were only
-    `blake2b_256(reveal_key) == next_digest`, anyone reading the witness
-    network could submit a Cardano rotation carrying the real `reveal_key`
-    and an **attacker-chosen** `new_next`, capturing the identity at the next
-    step. Check 4 closes this: the signature over `rot_msg` proves possession
-    of the next *private* key and binds the new commitment the owner actually
-    chose.
+A third party who registers somebody else's genuine inception cannot choose
+its keys and gains no refund right; they donate the escrow to a checkpoint
+controlled by that AID.
 
 ## Close
 
-Retires the identity and returns the deposit. This is the owner's exit; no
-operator exists who could offboard an identity or block the owner from
-leaving.
+Close is the controller-authorized retirement path that is live today. It is
+accepted only from ACTIVE.
 
-**Close message:**
+The signed Close evidence binds:
 
-```
-close_msg = cbor({
-  domain               : "cardano-keri/close/v1",
-  network_id           : NetworkId,
-  registry_policy_id   : PolicyId,
-  registry_thread_token: AssetName,
-  trie_key             : ByteArray[32],
-  refund_address       : Address        -- where the deposit goes
-})
-```
+- the network;
+- checkpoint policy;
+- exact checkpoint input reference;
+- AID and current sequence;
+- refund address; and
+- current controller threshold.
 
-Binding `refund_address` prevents whoever assembles the transaction from
-redirecting the deposit.
+The transaction must:
 
-**On-chain checks:**
+1. consume the exact ACTIVE checkpoint;
+2. satisfy the current weighted controller threshold;
+3. burn its quantity-one token;
+4. create no successor carrying that token; and
+5. refund the checkpoint's complete remaining value to the signed refund
+   address.
 
-1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
-2. `Ed25519.verify(leaf.key_state.cur_pubkey, close_msg, sig)`
-3. Deposit paid to `refund_address`
-4. Leaf status updated to `Closed`, new root pushed to window
+Binding the input reference makes the authorization single-use. Binding the
+refund address prevents a transaction builder from redirecting the escrow.
+PR [#147](https://github.com/lambdasistemi/cardano-keri/pull/147) settled this
+path and rejection vectors cover unauthorized Close attempts.
 
-**Tombstone semantics.** The leaf is **not removed** — it remains in the trie
-with status `Closed` forever. Consequences:
+## Advance
 
-- The `trie_key` can never be re-registered (the inception absence proof
-  fails against a tombstone), so "a `trie_key` is registered at most once"
-  holds over the registry's whole lifetime.
-- A `close_msg` is inherently single-use: it verifies only against an
-  `Active` leaf, so no nonce or counter is needed.
-- Value cages reject `Closed` leaves (status check), so closing revokes
-  value-write authority at the same instant.
+Advance moves one KERI rotation into the on-chain checkpoint. Anyone may relay
+it because the public event and its receipts determine the only valid
+successor.
 
-## Duplicity freeze
+The transaction consumes exactly one current checkpoint and creates exactly
+one ACTIVE successor with:
 
-Records a permanent duplicity proof in the trie leaf: the identity holder
-published two conflicting KERI events at the same `seq` — a protocol
-violation that cannot be retracted.
+- the same quantity-one token;
+- the same complete value;
+- Cardano sequence increased by one;
+- the event's current keys and weighted threshold;
+- the event's next-key commitments and next threshold;
+- the event's incoming witness set and `toad`; and
+- the bound native KERI event sequence and digest.
 
-**DuplicityProof:**
+The heavy checks run in `observer_advance`. They require:
 
-```
-DuplicityProof {
-  event_1 : ByteArray    -- first conflicting rotation event bytes
-  sig_1   : ByteArray    -- Ed25519 signature over event_1
-  event_2 : ByteArray    -- second conflicting rotation event bytes
-  sig_2   : ByteArray    -- Ed25519 signature over event_2
-  seq     : Int          -- sequence number at which the fork occurred
+1. the event to continue from the stored prior event;
+2. revealed keys to match the stored next-key commitments;
+3. both KERI controller thresholds to pass — the event's own threshold and
+   the previously committed next threshold;
+4. signatures to cover the exact rotation bytes and the reconstructed
+   Cardano Advance message;
+5. witness receipts to cover the exact event bytes; and
+6. witness-set changes to satisfy the **incoming** witness threshold.
+
+When incoming `toad` is greater than zero, elapsed time and controller
+signatures never replace the required receipts. This prevents a controller
+from activating an unpublished Cardano-first branch and trying to repair the
+KERI history afterward.
+
+PR [#148](https://github.com/lambdasistemi/cardano-keri/pull/148) settled a
+genuine witnessed two-key Advance and rejected:
+
+- a stolen-current-key attempt;
+- signatures below the committed successor threshold; and
+- insufficient witness receipts.
+
+## Freeze
+
+Freeze is a public challenge to a checkpoint that KERI evidence shows is
+behind. A **hunter** is simply the party that supplies and pays to submit that
+evidence.
+
+The thin checkpoint requires an `observer_enforcement` withdrawal. The
+observer proves that the contested rotation:
+
+- belongs to the same AID;
+- continues from the checkpoint's recorded KERI event;
+- is strictly ahead of the ACTIVE tip;
+- reveals keys committed by the old checkpoint;
+- satisfies its controller threshold; and
+- carries enough witness receipts.
+
+The state transition:
+
+```text
+ACTIVE -> ARMED {
+  checkpoint: unchanged inner checkpoint
+  hunter_pkh: hunter payment-key hash
+  deadline: transaction upper validity bound + freeze window
 }
 ```
 
-**On-chain checks:**
+The transaction preserves the complete token and value, including `D_reg+B`.
+ARMED is a different script role address, so consumers fail closed
+immediately.
 
-1. Inclusion proof: `trie_key → leaf` where `leaf.status == Active`
-2. `proof.seq == leaf.key_state.seq`
-3. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_1, proof.sig_1)`
-4. `Ed25519.verify(leaf.key_state.cur_pubkey, proof.event_2, proof.sig_2)`
-5. `proof.event_1 != proof.event_2`
-6. Leaf updated to `FrozenFatal(proof)`, new root pushed to window
+## Respond to ARMED
 
-There is no unfreeze path for `FrozenFatal`. The duplicity proof is
-permanently embedded in the trie and publicly inspectable. Value cages that
-encounter a `FrozenFatal` leaf reject the authorization. The deposit stays
-locked — a duplicitous identity does not get its bond back.
+A response is not a special owner-only command. It is the same ordinary
+Advance, applied to the ARMED checkpoint before its deadline.
 
-!!! note "Decision: submission is permissionless"
-    The proof is self-authenticating (two verifying signatures by the
-    identity's own current key over conflicting events), so nothing is
-    gained by gating it, and no invalid freeze can pass. An earlier
-    oracle-mediated draft required an operator key as DDoS protection; in
-    the permissionless model, proof validity is the spam defense. Ratified
-    2026-07-07; revisit only if fee-level griefing proves real in practice.
+The Advance observer unwraps ARMED only to read the previous checkpoint. It
+validates the genuine next event, and the thin checkpoint creates the single
+ACTIVE successor. The value is unchanged, so the identity keeps `B` and the
+hunter is not paid.
 
-## Emergency freeze
+This makes honest KERI catch-up permissionless: a relayer may do the work
+without possessing retired or current private keys.
 
-The fast compromise-response channel, and the canonical definition of the
-`FreezeMarker`. It lives in the **separate freeze registry** so a response to
-key theft never queues behind inception/rotation traffic on the main
-registry (see
-[Veridian Bridge — synchronization lag](veridian-bridge.md#synchronization-lag)).
+## Multi-round replay protection
 
-Scenario: `cur_key` is stolen. The thief can authorize value-writes until the
-owner's rotation lands. The owner holds the *next* key — the thief does not
-(pre-rotation) — so possession of the next key is what authorizes the freeze.
+Evidence is bound to the challenged KERI tip. After a response advances the
+tip, the same evidence is no longer ahead and must reject.
 
-**FreezeMarker — stored in the freeze registry trie:**
+PR [#150](https://github.com/lambdasistemi/cardano-keri/pull/150) settled:
 
-```
-FreezeMarker {
-  trie_key        : ByteArray[32]
-  seq             : Int             -- the key-state sequence being frozen
-  cur_pubkey_hash : ByteArray[28]   -- blake2b_224 of the compromised current key
-  next_digest     : ByteArray[32]   -- the commitment the freeze signature proved
-}
+```text
+Freeze 1 -> response 1 -> reject exact Freeze-1 replay
+         -> fresh Freeze 2 -> response 2
 ```
 
-**Freeze message:**
+The second Freeze used newly generated sibling rotations at the new sequence.
+This proves that a hunter needs fresh evidence for every round.
 
-```
-freeze_msg = cbor({
-  domain             : "cardano-keri/freeze/v1",
-  network_id         : NetworkId,
-  freeze_policy_id   : PolicyId,
-  freeze_thread_token: AssetName,
-  trie_key           : ByteArray[32],
-  seq                : Int
-})
-```
+## Claim, thaw, and conviction
 
-**On-chain checks (freeze registry script):**
+These operations belong to the target lifecycle but are not current
+small-story claims:
 
-1. Identity registry as CIP-31 reference input: inclusion proof
-   `trie_key → leaf`, `leaf.status == Active`
-2. `blake2b_256(reveal_key) == leaf.key_state.next_digest` — the signer holds
-   the pre-committed next key
-3. `Ed25519.verify(reveal_key, freeze_msg, sig)`
-4. `marker.seq == leaf.key_state.seq`
-5. Marker inserted at `trie_key`, new freeze root published
+- [Claim and thaw — #138](https://github.com/lambdasistemi/cardano-keri/issues/138)
+  must prove the timeout boundary, exact hunter payment, retained
+  `min + D_reg`, and the Advance that re-posts `B`.
+- [Conviction — #151](https://github.com/lambdasistemi/cardano-keri/issues/151)
+  must prove the fully witnessed conflict, protected payouts from every live
+  state, and terminal TOMBSTONE output.
 
-**Expiry is automatic.** The marker freezes one sequence number. Value cages
-treat a marker as active only while `marker.seq == key_state.seq`; once the
-owner's on-chain rotation lands (`seq` advances), the marker is spent
-evidence, not a live freeze. No unfreeze transaction exists or is needed.
+The high-level state and economics are documented in
+[Lifecycle and the two bonds](lifecycle-and-bonds.md). The detailed freeze
+lifecycle page is intentionally reserved for #138.
 
-Value cages MUST check the freeze registry (absence of an active marker)
-alongside the identity registry — see
-[Value Authorization](value-auth.md) and the redeemer shape in
-[Veridian Bridge](veridian-bridge.md#value-write-transaction).
+## What is off chain
 
-## AID lifecycle
+The ledger validates the event presented for a transition. It does not:
 
-```mermaid
-stateDiagram-v2
-    [*] --> Active: Inception<br/>(self-auth sig + deposit)
-    Active --> Active: Rotation<br/>(preimage + rot_msg sig)
-    Active --> Closed: Close<br/>(cur_pubkey sig, deposit returned)
-    Active --> FrozenFatal: Duplicity freeze<br/>(DuplicityProof)
+- discover new KERI events by itself;
+- store or replay the entire KEL;
+- operate KERI witnesses;
+- decide whether an unseen event exists; or
+- submit transactions.
 
-    note right of FrozenFatal
-        Tombstone. Permanent audit record.
-        All value-write auth rejected.
-        Deposit stays locked. No unfreeze.
-    end note
-
-    note right of Closed
-        Tombstone. trie_key can never
-        be re-registered. Value-write
-        auth rejected from this point.
-    end note
-
-    note left of Active
-        An emergency FreezeMarker
-        (separate registry) suspends
-        value-writes for the current seq
-        and dissolves when rotation lands.
-    end note
-```
+Watchers, controllers, and ordinary relayers discover evidence off chain.
+They do not become trusted authorities: the on-chain validators accept or
+reject the supplied bytes.

@@ -391,7 +391,7 @@ match the discussion order above.
 11. ~~Blake2b-256 / F-prefix digest agility in Veridian~~ — dissolved by the
     E-native contract (2026-07-16): the seq-0 binding holds for unmodified
     Blake3 Veridian identities — see
-    [Veridian Bridge](veridian-bridge.md#digest-agility-requirement).
+    [Veridian Bridge](veridian-bridge.md#digest-boundary).
 12. Without on-chain Blake3 + CESR parsing builtins, trustless burn/duplicity
     checks are weakened. Is that a protocol ask, or do we accept the challenge-
     period mitigation?

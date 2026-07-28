@@ -73,7 +73,10 @@ The original `auth_msg` lacked a binding to the value cage's current state, maki
 
 ### Inception self-auth
 
-The original spec did not require the registrant to prove possession of `cur_key` at inception. Without this, an observer who sees an `InceptionEvent` in the mempool can front-run the registration. **Resolution:** the current spec requires `Ed25519(cur_pubkey, inc_msg)` at inception. See [Identity Operations — Inception](../architecture/identity-ops.md#inception).
+The original spec did not require event-own controller authentication at
+inception. **Resolution:** current registration verifies the inception event's
+indexed controller signatures and witness receipts over the exact event bytes.
+See [Identity Operations — Register](../architecture/identity-ops.md#register).
 
 ### Canonical CBOR
 

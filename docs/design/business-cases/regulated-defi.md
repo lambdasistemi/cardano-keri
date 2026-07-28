@@ -154,9 +154,8 @@ On top of L1–L4:
   plane) + the acting AID's **sovereign per-AID checkpoint** as a CIP-31
   reference input — current weighted keys/threshold in the inline
   `CheckpointDatum`, discovered by a generic exact-asset `(policy_id,
-  asset_name)` lookup, its live UTxO in the accepted mint/spend lineage (not a
-  closed/convicted one) and the AID absent from the shared R-FRZ freeze
-  registry — + verification that the order's **detached witness set meets that
+  asset_name)` lookup, with exactly one current checkpoint in the **ACTIVE**
+  role — + verification that the order's **detached witness set meets that
   checkpoint's current weighted threshold** +
   TEL non-revocation proofs (reference input) + `tx validity range ⊂
   not_after`. A `delta = 0` rotation consumes the checkpoint, staling any order

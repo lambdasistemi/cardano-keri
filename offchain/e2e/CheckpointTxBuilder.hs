@@ -35,6 +35,7 @@ module CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
     productionRegisterFreezeScenario,
+    productionRegisterSeizeScenario,
     buildArmTx,
     buildAdvanceTx,
     buildClaimTx,
@@ -97,6 +98,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
     asPlcData,
+    claimFreezeSpendRedeemerData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
     registerObserverRedeemerData,
@@ -1280,6 +1282,217 @@ productionRegisterFreezeScenario env = do
             <> show secondDeadline
         )
 
+productionRegisterSeizeScenario :: CheckpointEnv -> IO ()
+productionRegisterSeizeScenario env = do
+    fixture <- loadFreezeStoryFixture
+    let firstFixture = fsFirstRotation fixture
+        thawFixture = fsResponseRotation fixture
+        hunter = BS.replicate 28 0x42
+        wrongHunter = BS.replicate 28 0x43
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference
+            env
+            (rsRegistration firstFixture)
+    advanceRef <-
+        requireJust
+            "observer_advance reference was not deployed during setup"
+            (envAdvanceReference env)
+    enforcementRef <-
+        requireJust
+            "observer_enforcement reference was not deployed during setup"
+            (envEnforcementReference env)
+    let firstEvidence =
+            signedRotateEvidence
+                env
+                registered
+                firstFixture
+                (rsRotationSigners firstFixture)
+                (aeWitReceipts (rsUnsignedEvidence firstFixture))
+    case advancePredicate
+        (rotateSpentCheckpoint env registered)
+        (rsCreated firstFixture)
+        firstEvidence of
+        Left predicateError ->
+            fail
+                ( "seize-delay first Advance failed the pure predicate: "
+                    <> show predicateError
+                )
+        Right () -> pure ()
+    firstAdvanceTxId <-
+        submitTwoPassAdvance
+            env
+            "seize-delay first Advance"
+            checkpointRef
+            advanceRef
+            registered
+            (rsCreated firstFixture)
+            firstEvidence
+    advancedUtxo <-
+        pollOutput
+            (envProvider env)
+            firstAdvanceTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (rsCreated firstFixture)))
+            )
+            >>= requireJust "seize-delay first Advance successor did not settle"
+    let advanced =
+            CheckpointInput
+                { checkpointUtxo = advancedUtxo
+                , checkpointDatum = rsCreated firstFixture
+                }
+        freezeEvidence = fsFreezeEvidence fixture
+    freezeValidity <- currentValidity env
+    let deadline = upperPosixMs freezeValidity + freezeWindow
+    freezeTxId <-
+        submitTwoPassFreeze
+            env
+            "seize-delay Freeze"
+            checkpointRef
+            enforcementRef
+            advanced
+            freezeEvidence
+            hunter
+            freezeValidity
+    armedUtxo <-
+        pollOutput
+            (envProvider env)
+            freezeTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (checkpointDatum advanced)))
+            )
+            >>= requireJust "seize-delay ARMED output did not settle"
+    assertArmedCheckpoint
+        env
+        advanced
+        hunter
+        deadline
+        freezeValidity
+        armedUtxo
+    let armed =
+            CheckpointInput
+                { checkpointUtxo = armedUtxo
+                , checkpointDatum = checkpointDatum advanced
+                }
+    earlyValidity <- currentValidity env
+    unless
+        (lowerPosixMs earlyValidity < deadline)
+        (fail "seize-delay live early-claim window already elapsed")
+    rejectClaim
+        env
+        checkpointRef
+        armed
+        hunter
+        earlyValidity
+        "seize-delay early ClaimFreeze"
+    claimValidity <- awaitClaimValidity env deadline
+    rejectClaim
+        env
+        checkpointRef
+        armed
+        wrongHunter
+        claimValidity
+        "seize-delay wrong-hunter ClaimFreeze"
+    claimTxId <-
+        submitTwoPassClaim
+            env
+            "seize-delay ClaimFreeze"
+            checkpointRef
+            armed
+            hunter
+            claimValidity
+    frozenUtxo <-
+        assertClaimSettlement
+            env
+            (checkpointDatum armed)
+            hunter
+            armedUtxo
+            claimTxId
+    let frozen =
+            CheckpointInput
+                { checkpointUtxo = frozenUtxo
+                , checkpointDatum = checkpointDatum armed
+                }
+        thawEvidence =
+            signedRotateEvidence
+                env
+                frozen
+                thawFixture
+                (rsRotationSigners thawFixture)
+                (aeWitReceipts (rsUnsignedEvidence thawFixture))
+        thawSuccessor = rsCreated thawFixture
+    case advancePredicate
+        (rotateSpentCheckpoint env frozen)
+        thawSuccessor
+        thawEvidence of
+        Left predicateError ->
+            fail
+                ( "seize-delay thaw Advance failed the pure predicate: "
+                    <> show predicateError
+                )
+        Right () -> pure ()
+    thawTxId <-
+        submitTwoPassAdvance
+            env
+            "seize-delay thaw Advance"
+            checkpointRef
+            advanceRef
+            frozen
+            thawSuccessor
+            thawEvidence
+    thawedUtxo <-
+        pollOutput
+            (envProvider env)
+            thawTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid thawSuccessor))
+            )
+            >>= requireJust "seize-delay thaw successor did not settle"
+    unless
+        (snd thawedUtxo ^. addrTxOutL == roleAddress env Active)
+        (fail "seize-delay thaw successor is not ACTIVE")
+    unless
+        ( snd thawedUtxo ^. valueTxOutL
+            == addLovelace freezeBond (snd frozenUtxo ^. valueTxOutL)
+        )
+        (fail "seize-delay thaw did not re-post exactly B")
+    case extractDatum (snd thawedUtxo) of
+        Just (V1 datum)
+            | datum == thawSuccessor -> pure ()
+        _ -> fail "seize-delay thaw successor does not carry the real next datum"
+    remaining <-
+        withinSecs 30 "query seize-delay FROZEN checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst frozenUtxo))
+    unless (Map.null remaining) $
+        fail "seize-delay thaw left the FROZEN checkpoint input unspent"
+    dbg
+        ( "Seize-delay story settled; register="
+            <> show (fst (checkpointUtxo registered))
+            <> "; first-advance="
+            <> show firstAdvanceTxId
+            <> "; freeze="
+            <> show freezeTxId
+            <> "; early-claim=rejected"
+            <> "; wrong-hunter=rejected"
+            <> "; claim="
+            <> show claimTxId
+            <> "; thaw-advance="
+            <> show thawTxId
+            <> "; hunter-payout="
+            <> show freezeBond
+            <> "; frozen-reserve="
+            <> show (checkpointMinAda + registrationBond)
+            <> "; thaw-repost="
+            <> show freezeBond
+        )
+
 productionRegisterCloseScenario :: CheckpointEnv -> IO ()
 productionRegisterCloseScenario env = do
     closeFixture <- loadCloseStoryFixture
@@ -1376,7 +1589,14 @@ pendingHashProofRegisterArmClaimScenario env = do
                 hunter
                 claimValidity
     claimTxId <- submitSettling env "checkpoint Claim" claimTx
-    assertClaimSettlement env fixture hunter armed claimTxId
+    _ <-
+        assertClaimSettlement
+            env
+            (rfDatum fixture)
+            hunter
+            armed
+            claimTxId
+    pure ()
 
 advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
@@ -2496,8 +2716,10 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
         spendPurpose = ConwaySpending (AsIx stateIndex)
         rewardPurpose = ConwayRewarding (AsIx 0)
         expected = Set.fromList [spendPurpose, rewardPurpose]
+        inputAddress = snd (checkpointUtxo input) ^. addrTxOutL
+        repostBond = inputAddress == roleAddress env Frozen
         observerRedeemerData
-            | snd (checkpointUtxo input) ^. addrTxOutL == roleAddress env Armed =
+            | inputAddress == roleAddress env Armed =
                 responseAdvanceObserverRedeemerData
                     (policyBytes (envCheckpointPolicy env))
                     spentTxIdBytes
@@ -2513,12 +2735,18 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
             mkStateOutput
                 env
                 Active
-                (snd (checkpointUtxo input) ^. valueTxOutL)
+                ( addLovelace
+                    (if repostBond then freezeBond else 0)
+                    (snd (checkpointUtxo input) ^. valueTxOutL)
+                )
                 (asPlcData (V1 successor))
         changeOut =
             mkBasicTxOut
                 (envOwner env)
-                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+                ( addLovelace
+                    (-scriptFee - if repostBond then freezeBond else 0)
+                    (feeOut ^. valueTxOutL)
+                )
         redeemers =
             Redeemers $
                 Map.fromList
@@ -2772,6 +3000,186 @@ submitTwoPassFreeze env label checkpointRef enforcementRef input evidence hunter
                 enforcementRef
                 input
                 evidence
+                hunter
+                validity
+    unless (finalExpected == expected) $
+        fail (label <> ": final purpose set changed after budget binding")
+    let signedFinal = addKeyWitness genesisSignKey final
+        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
+    finalObserved <-
+        withinSecs 120 (label <> ": evaluate final binding") $
+            evaluateTx (envProvider env) signedFinal
+    finalUnits <-
+        requireExactAllRight (label <> ": final") expected finalObserved
+    mapM_
+        ( \(purpose, observed) ->
+            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
+             in unless (withinDeclared observed declared) $
+                    fail
+                        ( label
+                            <> ": observed units exceed final declaration for "
+                            <> show purpose
+                        )
+        )
+        (Map.toList finalUnits)
+    params <-
+        withinSecs 30 (label <> ": query final maximum") $
+            queryProtocolParams (envProvider env)
+    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
+        maximumUnits = params ^. ppMaxTxExUnitsL
+    unless (withinDeclared aggregate maximumUnits) $
+        fail
+            ( label
+                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
+                <> show aggregate
+            )
+    dbg
+        ( label
+            <> ": two-pass final bytes="
+            <> show (BSL.length finalBytes)
+            <> " observed="
+            <> show finalUnits
+            <> " declared="
+            <> show finalBudgets
+        )
+    result <-
+        withinSecs 60 ("submit unchanged " <> label) $
+            submitTx (envSubmitter env) signedFinal
+    case result of
+        Submitted txId -> pure txId
+        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+
+buildClaimStoryTxWith ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    ByteString ->
+    ValidityPlan ->
+    IO
+        ( ConwayTx
+        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
+        )
+buildClaimStoryTxWith budgets env checkpointRef input payoutHunter validity = do
+    params <-
+        withinSecs 30 "query ClaimFreeze protocol parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query ClaimFreeze wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    (feeUtxo, collateralUtxo) <-
+        pickDisjoint wallet [stateIn, fst checkpointRef]
+    let (feeIn, feeOut) = feeUtxo
+        collateralIn = fst collateralUtxo
+        allInputs = Set.fromList [stateIn, feeIn]
+        stateIndex = spendingIndex stateIn allInputs
+        spendPurpose = ConwaySpending (AsIx stateIndex)
+        expected = Set.singleton spendPurpose
+        payoutOut =
+            mkBasicTxOut
+                (keyAddress payoutHunter)
+                (inject (Coin freezeBond))
+        stateOut =
+            mkStateOutput
+                env
+                Frozen
+                ( addLovelace
+                    (-freezeBond)
+                    (snd (checkpointUtxo input) ^. valueTxOutL)
+                )
+                (asPlcData (V1 (checkpointDatum input)))
+        changeOut =
+            mkBasicTxOut
+                (envOwner env)
+                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+        redeemers =
+            Redeemers $
+                Map.singleton
+                    spendPurpose
+                    ( ledgerData (claimFreezeSpendRedeemerData 0)
+                    , Map.findWithDefault
+                        advanceSpendExUnits
+                        spendPurpose
+                        budgets
+                    )
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ allInputs
+                & outputsTxBodyL
+                    .~ StrictSeq.fromList [payoutOut, stateOut, changeOut]
+                & feeTxBodyL .~ Coin scriptFee
+                & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & referenceInputsTxBodyL .~ Set.singleton (fst checkpointRef)
+                & vldtTxBodyL
+                    .~ ValidityInterval
+                        (SJust (lowerSlot validity))
+                        (SJust (upperSlot validity))
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
+    pure
+        ( mkBasicTx body
+            & witsTxL . rdmrsTxWitsL .~ redeemers
+        , expected
+        )
+  where
+    stateIn = fst (checkpointUtxo input)
+
+rejectClaim ::
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    ByteString ->
+    ValidityPlan ->
+    String ->
+    IO ()
+rejectClaim env checkpointRef input payoutHunter validity label = do
+    (candidate, _) <-
+        withinSecs 90 (label <> ": build applied candidate") $
+            buildClaimStoryTxWith
+                Map.empty
+                env
+                checkpointRef
+                input
+                payoutHunter
+                validity
+    _ <- expectProductionScriptRejection env label candidate
+    pure ()
+
+submitTwoPassClaim ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    ByteString ->
+    ValidityPlan ->
+    IO TxId
+submitTwoPassClaim env label checkpointRef input hunter validity = do
+    (discovery, expected) <-
+        withinSecs 90 (label <> ": build discovery binding") $
+            buildClaimStoryTxWith
+                Map.empty
+                env
+                checkpointRef
+                input
+                hunter
+                validity
+    discoveryObserved <-
+        withinSecs 120 (label <> ": evaluate discovery binding") $
+            evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
+    discoveryUnits <-
+        requireExactAllRight (label <> ": discovery") expected discoveryObserved
+    let finalBudgets = Map.map deterministicMargin discoveryUnits
+    (final, finalExpected) <-
+        withinSecs 90 (label <> ": rebuild final binding") $
+            buildClaimStoryTxWith
+                finalBudgets
+                env
+                checkpointRef
+                input
                 hunter
                 validity
     unless (finalExpected == expected) $
@@ -3442,16 +3850,17 @@ node; it is deliberately not a wall-clock sleep.
 awaitClaimValidity :: CheckpointEnv -> Integer -> IO ValidityPlan
 awaitClaimValidity env deadline = go pollAttempts
   where
-    provider = envProvider env
     go remaining
         | remaining <= 0 = fail "node did not reach the Claim deadline before polling timed out"
         | otherwise = do
-            lower <- withinSecs 30 "query node Claim lower slot" (posixMsCeilSlot provider deadline)
-            snapshot <- withinSecs 30 "query node Claim tip" (queryLedgerSnapshot provider)
-            if ledgerTipSlot snapshot < lower
+            snapshot <-
+                withinSecs 30 "query node Claim tip" $
+                    queryLedgerSnapshot (envProvider env)
+            let lower = ledgerTipSlot snapshot
+            lowerMs <- slotStartPosixMs env lower
+            if lowerMs < deadline
                 then threadDelay 1_000_000 >> go (remaining - 1)
                 else do
-                    lowerMs <- slotStartPosixMs env lower
                     let upper = SlotNo (unSlotNo lower + 20)
                     upperMs <- slotStartPosixMs env upper
                     unless
@@ -3518,12 +3927,12 @@ assertArmedCheckpoint env input hunter deadline armValidity (_, output) = do
 
 assertClaimSettlement ::
     CheckpointEnv ->
-    RegistrationFixture ->
+    CheckpointDatumV1 ->
     ByteString ->
     (TxIn, TxOut ConwayEra) ->
     TxId ->
-    IO ()
-assertClaimSettlement env fixture hunter armed claimTxId = do
+    IO (TxIn, TxOut ConwayEra)
+assertClaimSettlement env expectedDatum hunter armed claimTxId = do
     payout <-
         pollOutput
             (envProvider env)
@@ -3536,7 +3945,7 @@ assertClaimSettlement env fixture hunter armed claimTxId = do
             (envProvider env)
             claimTxId
             [0, 1, 2]
-            (isFrozenCheckpoint env fixture)
+            (isFrozenCheckpoint env expectedDatum)
             >>= requireJust "Claim FROZEN checkpoint output did not settle"
     unless
         (isExactHunterPayout hunter (snd payout))
@@ -3544,6 +3953,7 @@ assertClaimSettlement env fixture hunter armed claimTxId = do
     unless
         (snd frozen ^. valueTxOutL == addLovelace (-freezeBond) (snd armed ^. valueTxOutL))
         (fail "Claim FROZEN checkpoint does not retain the remaining reserve and AID token")
+    pure frozen
 
 isExactHunterPayout :: ByteString -> TxOut ConwayEra -> Bool
 isExactHunterPayout hunter output =
@@ -3551,12 +3961,12 @@ isExactHunterPayout hunter output =
         && case output ^. valueTxOutL of
             MaryValue (Coin lovelace) (MultiAsset assets) -> lovelace == freezeBond && Map.null assets
 
-isFrozenCheckpoint :: CheckpointEnv -> RegistrationFixture -> TxOut ConwayEra -> Bool
-isFrozenCheckpoint env fixture output =
+isFrozenCheckpoint :: CheckpointEnv -> CheckpointDatumV1 -> TxOut ConwayEra -> Bool
+isFrozenCheckpoint env expectedDatum output =
     output ^. addrTxOutL == roleAddress env Frozen
-        && hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))) output
+        && hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid expectedDatum)) output
         && case extractDatum output of
-            Just (V1 datum) -> datum == rfDatum fixture
+            Just (V1 datum) -> datum == expectedDatum
             _ -> False
 
 slotStartPosixMs :: CheckpointEnv -> SlotNo -> IO Integer

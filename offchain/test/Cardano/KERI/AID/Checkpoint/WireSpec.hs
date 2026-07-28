@@ -14,6 +14,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceEvidenceData,
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
+    claimFreezeSpendRedeemerData,
     enforcementEvidenceData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
@@ -201,6 +202,10 @@ spec = describe "#136 Register observer wire" $ do
     it "encodes the thin Freeze arm without opening ClaimFreeze" $
         freezeSpendRedeemerData (BS.replicate 28 0x42)
             `shouldBe` Constr 2 [B (BS.replicate 28 0x42)]
+
+    it "opens only ClaimFreeze at constructor three with its payout index" $
+        claimFreezeSpendRedeemerData 5
+            `shouldBe` Constr 3 [I 5]
 
     it "forwards the exact Freeze evidence under observer action two" $
         freezeObserverRedeemerData

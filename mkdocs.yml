@@ -48,6 +48,8 @@ nav:
   - KERI Primer: keri-primer.md
   - ACDC Primer: acdc-primer.md
   - Finance Primer: finance-primer.md
+  - User guide:
+      - Freeze lifecycle: user/freeze-lifecycle.md
   - Architecture:
       - Overview: architecture/overview.md
       - System Architecture: architecture/system.md

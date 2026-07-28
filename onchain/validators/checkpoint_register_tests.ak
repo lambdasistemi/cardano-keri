@@ -30,10 +30,12 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
-use cardano_keri/checkpoint/role.{Active, Armed}
+use cardano_keri/checkpoint/role.{Active, Armed, Frozen}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
-use checkpoint_register.{Advance, Close, CloseBurn, Freeze, Register}
+use checkpoint_register.{
+  Advance, ClaimFreeze, Close, CloseBurn, Freeze, Register,
+}
 
 const hp_policy: PolicyId =
   #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
@@ -705,4 +707,189 @@ test freeze_small_accepts_response_advance_before_deadline() {
 
 test freeze_small_rejects_response_advance_at_deadline() fail {
   run_armed_response(freeze_deadline)
+}
+
+// ---------------------------------------------------------------------
+// #138 RED — timeout ClaimFreeze pays exactly B to the recorded hunter,
+// then ordinary Advance thaws FROZEN by re-posting B.
+// ---------------------------------------------------------------------
+
+const wrong_hunter: ByteArray =
+  #"43434343434343434343434343434343434343434343434343434343"
+
+fn claim_tx_with(
+  tip: CheckpointDatumV1,
+  payout_hunter: ByteArray,
+  payout_lovelace: Int,
+  lower: Int,
+  frozen_value: Value,
+) -> Transaction {
+  let own_input = input_at(
+    freeze_ref(),
+    Output {
+      address: role.address(policy, Armed),
+      value: freeze_value(tip),
+      datum: InlineDatum(
+        ArmedV1 {
+          checkpoint: tip,
+          hunter_pkh: hunter,
+          deadline: freeze_deadline,
+        },
+      ),
+      reference_script: None,
+    },
+  )
+  let payout = Output {
+    address: from_verification_key(payout_hunter),
+    value: from_lovelace(payout_lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  let frozen = Output {
+    address: role.address(policy, Frozen),
+    value: frozen_value,
+    datum: InlineDatum(V1(tip)),
+    reference_script: None,
+  }
+  spend_context(
+    [own_input],
+    [],
+    [payout, frozen],
+    zero,
+    [],
+    interval.between(lower, lower + 1_000),
+    0,
+  )
+}
+
+fn claimed_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(min_ada + d_reg)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+}
+
+fn run_claim_small(tx: Transaction) -> Bool {
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    ClaimFreeze { hunter_output_index: 0 },
+    freeze_ref(),
+    tx,
+  )
+}
+
+test seize_delay_accepts_claim_at_deadline() {
+  let tip = enforcement_vec.lag_freeze_tip
+  run_claim_small(
+    claim_tx_with(tip, hunter, freeze_bond, freeze_deadline, claimed_value(tip)),
+  )
+}
+
+test seize_delay_rejects_early_claim() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  run_claim_small(
+    claim_tx_with(
+      tip,
+      hunter,
+      freeze_bond,
+      freeze_deadline - 1,
+      claimed_value(tip),
+    ),
+  )
+}
+
+test seize_delay_rejects_wrong_hunter() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  run_claim_small(
+    claim_tx_with(
+      tip,
+      wrong_hunter,
+      freeze_bond,
+      freeze_deadline,
+      claimed_value(tip),
+    ),
+  )
+}
+
+test seize_delay_rejects_non_exact_hunter_payout() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  run_claim_small(
+    claim_tx_with(
+      tip,
+      hunter,
+      freeze_bond + 1,
+      freeze_deadline,
+      claimed_value(tip),
+    ),
+  )
+}
+
+fn thaw_tx_with(
+  spent: SpentCheckpoint,
+  created: CheckpointDatumV1,
+  successor_lovelace: Int,
+) -> Transaction {
+  let own_input = input_at(
+    rotate_ref(spent),
+    Output {
+      address: role.address(policy, Frozen),
+      value: from_lovelace(min_ada + d_reg)
+        |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+      datum: InlineDatum(V1(rotate_old(spent))),
+      reference_script: None,
+    },
+  )
+  let successor = Output {
+    address: role.address(policy, Active),
+    value: from_lovelace(successor_lovelace)
+      |> merge(from_asset(policy, spent.aid_asset_name, 1)),
+    datum: InlineDatum(V1(created)),
+    reference_script: None,
+  }
+  with_advance_observer(
+    spend_context(
+      [own_input],
+      [],
+      [successor],
+      zero,
+      [],
+      interval.everything,
+      0,
+    ),
+    advance_envelope(spent, advance_vec.pos_adv_wit_2key_evidence),
+  )
+}
+
+fn run_thaw_small(successor_lovelace: Int) -> Bool {
+  let spent = advance_vec.pos_adv_wit_2key_spent
+  let created = advance_vec.pos_adv_wit_2key_created
+  let evidence = advance_vec.pos_adv_wit_2key_evidence
+  checkpoint_register.checkpoint_register.spend(
+    0,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Advance,
+    rotate_ref(spent),
+    thaw_tx_with(spent, created, successor_lovelace),
+  ) && advance_predicate(spent, created, evidence) == AdvancePredicateValid
+}
+
+test seize_delay_accepts_thaw_with_reposted_bond() {
+  run_thaw_small(min_ada + d_reg + freeze_bond)
+}
+
+test seize_delay_rejects_thaw_without_exact_bond() fail {
+  run_thaw_small(min_ada + d_reg + freeze_bond - 1)
 }

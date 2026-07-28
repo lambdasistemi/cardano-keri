@@ -8,7 +8,7 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval
-use cardano/address.{Credential, Script, from_script}
+use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
@@ -41,6 +41,7 @@ pub type SpendRedeemer {
   Close { evidence: CloseEvidence }
   Advance
   Freeze { hunter_pkh: ByteArray }
+  ClaimFreeze { hunter_output_index: Int }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -103,6 +104,8 @@ validator checkpoint_register(
           tx,
         )
       }
+      ClaimFreeze { hunter_output_index } ->
+        validate_claim(d_reg, freeze_bond, hunter_output_index, own_ref, tx)
     }
   }
 
@@ -354,12 +357,12 @@ fn validate_advance(
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect InlineDatum(old_datum_data) = own_input.output.datum
-  let (old, protected_lovelace) = if own_input.output.address == role.address(
+  let (old, expected_value, protected_lovelace) = if own_input.output.address == role.address(
     own_hash,
     Active,
   ) {
     expect V1(old): CheckpointDatum = old_datum_data
-    (old, checkpoint_min_ada + d_reg)
+    (old, own_input.output.value, checkpoint_min_ada + d_reg)
   } else if own_input.output.address == role.address(own_hash, Armed) {
     expect armed: ArmedDatum = old_datum_data
     expect ArmedDatumValid = armed_datum_well_formed(armed)
@@ -367,7 +370,14 @@ fn validate_advance(
     expect !interval.is_empty(validity_range)
     expect interval.Finite(upper) = validity_range.upper_bound.bound_type
     expect upper < deadline
-    (old, checkpoint_min_ada + d_reg + freeze_bond)
+    (old, own_input.output.value, checkpoint_min_ada + d_reg + freeze_bond)
+  } else if own_input.output.address == role.address(own_hash, role.Frozen) {
+    expect V1(old): CheckpointDatum = old_datum_data
+    (
+      old,
+      own_input.output.value |> merge(from_lovelace(freeze_bond)),
+      checkpoint_min_ada + d_reg + freeze_bond,
+    )
   } else {
     fail
   }
@@ -380,7 +390,7 @@ fn validate_advance(
   expect InlineDatum(new_datum_data) = state_output.datum
   expect V1(_new): CheckpointDatum = new_datum_data
   expect quantity_of(state_output.value, own_hash, aid_name) == 1
-  expect state_output.value == own_input.output.value
+  expect state_output.value == expected_value
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   expect lovelace_of(state_output.value) >= protected_lovelace
   True
@@ -421,6 +431,48 @@ fn validate_freeze(
   expect InlineDatum(successor_data) = state_output.datum
   expect successor: ArmedDatum = successor_data
   expect successor == armed
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  True
+}
+
+fn validate_claim(
+  d_reg: Int,
+  freeze_bond: Int,
+  hunter_output_index: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, role.Armed)
+  expect InlineDatum(armed_data) = own_input.output.datum
+  expect armed: ArmedDatum = armed_data
+  expect ArmedDatumValid = armed_datum_well_formed(armed)
+  let ArmedV1 { checkpoint: tip, hunter_pkh, deadline } = armed
+  let aid_name = deriveAidAssetName(tip.cesr_aid)
+  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect
+    lovelace_of(own_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
+  expect !interval.is_empty(validity_range)
+  expect interval.Finite(lower) = validity_range.lower_bound.bound_type
+  expect lower >= deadline
+  expect Some(hunter_output) = list.at(outputs, hunter_output_index)
+  expect hunter_output.address == from_verification_key(hunter_pkh)
+  expect hunter_output.value == from_lovelace(freeze_bond)
+  expect NoDatum = hunter_output.datum
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == role.address(own_hash, role.Frozen) },
+  )
+  let expected_value = own_input.output.value
+    |> merge(from_lovelace(-freeze_bond))
+  expect state_output.value == expected_value
+  expect lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg
+  expect quantity_of(state_output.value, own_hash, aid_name) == 1
+  expect InlineDatum(successor_data) = state_output.datum
+  expect V1(successor): CheckpointDatum = successor_data
+  expect successor == tip
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   True
 }

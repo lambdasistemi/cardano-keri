@@ -93,6 +93,14 @@ manifest:
     koios-url: https://preprod.koios.rest/api/v1
 ```
 
+Set `KOIOS_TOKEN` to send an `Authorization: Bearer` header for either
+`deploy` settlement polling or `manifest verify`. The token also has
+`--koios-token` and `koios-token` YAML surfaces, but the environment variable
+is preferred so the value does not enter shell history or a committed file.
+When the setting is absent, `ckeri` deliberately uses anonymous Koios
+requests so third parties can verify the release without project secrets.
+The repository CI reads `KOIOS_TOKEN` from its encrypted Actions secret.
+
 Run `ckeri deploy --help` or `ckeri manifest verify --help` for the complete
 option, environment, and YAML documentation. The payment key is an
 operator-side secret; it is read only by `deploy` and never belongs in a
@@ -104,7 +112,8 @@ configuration file committed to this repository.
   do not make later source changes part of this release.
 - The deployment submits through a synced preprod node. Verification uses
   Koios as an independent read boundary and fails closed if that boundary is
-  unavailable or inconsistent.
+  unavailable or inconsistent. A Koios token changes API authorization and
+  rate limits, not the hashes or chain facts being checked.
 - Reference scripts are immutable while their UTxOs remain unspent. Spending
   one makes this manifest fail verification and requires an explicit new
   release.

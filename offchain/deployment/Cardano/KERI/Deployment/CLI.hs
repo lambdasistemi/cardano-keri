@@ -13,6 +13,7 @@ module Cardano.KERI.Deployment.CLI (
 ) where
 
 import Cardano.KERI.Deployment.ChainIndex (
+    KoiosToken (..),
     matchesReference,
     queryReferenceScripts,
  )
@@ -63,6 +64,7 @@ data DeploySettings = DeploySettings
     , deployOut :: FilePath
     , deployReferenceLovelace :: Integer
     , deployKoiosUrl :: Text
+    , deployKoiosToken :: Maybe KoiosToken
     , deployTimeoutSeconds :: Int
     }
     deriving stock (Show, Eq)
@@ -72,6 +74,7 @@ data VerifySettings = VerifySettings
     , verifyBlueprint :: FilePath
     , verifySourceRepo :: FilePath
     , verifyKoiosUrl :: Text
+    , verifyKoiosToken :: Maybe KoiosToken
     }
     deriving stock (Show, Eq)
 
@@ -201,6 +204,7 @@ deploySettingsParser = do
             "koios-url"
             "Koios API base URL"
             (Just "https://preprod.koios.rest/api/v1")
+    deployKoiosToken <- optionalKoiosTokenParser
     deployTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -240,7 +244,19 @@ verifySettingsParser = do
             "koios-url"
             "Koios API base URL"
             (Just "https://preprod.koios.rest/api/v1")
+    verifyKoiosToken <- optionalKoiosTokenParser
     pure VerifySettings{..}
+
+optionalKoiosTokenParser :: Opt.Parser (Maybe KoiosToken)
+optionalKoiosTokenParser =
+    Opt.optional $
+        KoiosToken
+            <$> textSetting
+                "koios-token"
+                "KOIOS_TOKEN"
+                "koios-token"
+                "Optional Koios bearer token"
+                Nothing
 
 stringSetting ::
     String ->
@@ -352,6 +368,7 @@ runDeploy settings = do
                 , publishReferenceLovelace =
                     deployReferenceLovelace settings
                 , publishKoiosUrl = deployKoiosUrl settings
+                , publishKoiosToken = deployKoiosToken settings
                 , publishTimeoutSeconds = deployTimeoutSeconds settings
                 }
             artifacts
@@ -398,6 +415,7 @@ runVerify settings = do
     chainReferences <-
         queryReferenceScripts
             (verifyKoiosUrl settings)
+            (verifyKoiosToken settings)
             (map scriptHash $ manifestScripts manifest)
     forM_ (manifestScripts manifest) $ \script -> do
         unless

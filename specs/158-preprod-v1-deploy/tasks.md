@@ -38,3 +38,10 @@
   gate, make CI match the raw transcript to the manifest, embed the unedited
   transcript in PR #169, restore the standing gate, mark the PR ready, and
   park it for operator merge.
+- [x] **T158-S11** Authenticate the pinned public GHCR witness-image pull with
+  the job-scoped token after anonymous registry authorization failed on the
+  NixOS runner; retain the immutable image digest and logout on exit.
+- [x] **T158-S12** Add optional redacted Koios bearer authentication to both
+  command paths through `KOIOS_TOKEN` and the other opt-env-conf surfaces,
+  retain anonymous verification, test both request modes, and inject the
+  repository secret in the M1 manifest CI job.

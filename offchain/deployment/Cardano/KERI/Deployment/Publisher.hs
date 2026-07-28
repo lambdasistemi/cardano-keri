@@ -14,6 +14,7 @@ module Cardano.KERI.Deployment.Publisher (
 
 import Cardano.KERI.Deployment.ChainIndex (
     ChainReference (..),
+    KoiosToken,
     queryReferenceScripts,
  )
 import Cardano.KERI.Deployment.Manifest (Reference (..))
@@ -65,6 +66,7 @@ data PublishConfig = PublishConfig
     , publishSigningKeyFile :: FilePath
     , publishReferenceLovelace :: Integer
     , publishKoiosUrl :: Text
+    , publishKoiosToken :: Maybe KoiosToken
     , publishTimeoutSeconds :: Int
     }
     deriving stock (Show, Eq)
@@ -245,6 +247,7 @@ waitForReference config scriptHash txId = do
             try $
                 queryReferenceScripts
                     (publishKoiosUrl config)
+                    (publishKoiosToken config)
                     [scriptHash]
         case result of
             Right chainReferences ->

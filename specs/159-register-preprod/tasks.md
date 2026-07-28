@@ -17,5 +17,5 @@
   underfunded validator rejection.
 - [x] T159-S6 Add the stranger registration guide, transcript integrity/CI
   checks, and the byte-exact raw transcript to PR #172.
-- [ ] T159-S7 Run `./gate.sh`, push, wait for green CI, audit PR metadata and
+- [x] T159-S7 Run `./gate.sh`, push, wait for green CI, audit PR metadata and
   worktree cleanliness, then park for operator merge.

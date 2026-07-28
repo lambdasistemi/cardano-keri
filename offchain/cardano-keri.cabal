@@ -71,6 +71,69 @@ library
     Cardano.KERI.AID.E2E.MpfProof
     Cardano.KERI.AID.E2E.MpfTrie
 
+library deployment
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   deployment
+  build-depends:
+    , aeson
+    , base                   >=4.18 && <5
+    , bech32
+    , bytestring             >=0.11 && <0.13
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , containers
+    , crypton
+    , directory
+    , filepath
+    , http-conduit
+    , memory                 >=0.18 && <0.19
+    , opt-env-conf           >=0.13 && <0.16
+    , plutus-core
+    , plutus-ledger-api
+    , process
+    , temporary
+    , text
+    , time
+
+  exposed-modules:
+    Cardano.KERI.Deployment.ChainIndex
+    Cardano.KERI.Deployment.CLI
+    Cardano.KERI.Deployment.Manifest
+    Cardano.KERI.Deployment.Publisher
+    Cardano.KERI.Deployment.Script
+
+executable ckeri
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          Ckeri.hs
+  autogen-modules:  Paths_cardano_keri
+  other-modules:    Paths_cardano_keri
+  build-depends:
+    , base
+    , cardano-keri:deployment
+    , opt-env-conf             >=0.13 && <0.16
+
+test-suite deployment-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          Main.hs
+  other-modules:    Cardano.KERI.Deployment.ManifestSpec
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-keri:deployment
+    , hspec                    >=2.11 && <2.12
+    , text
+
 test-suite unit-tests
   import:           warnings
   type:             exitcode-stdio-1.0
@@ -251,6 +314,7 @@ test-suite e2e-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:deployment
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-api
@@ -268,7 +332,6 @@ test-suite e2e-tests
     , memory
     , microlens
     , plutus-core
-    , plutus-ledger-api
     , plutus-tx
     , text
     , time

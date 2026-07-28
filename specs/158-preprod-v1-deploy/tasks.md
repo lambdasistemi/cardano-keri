@@ -9,22 +9,22 @@
 
 ## Slice 1 — shared derivation and manifest
 
-- [ ] **T158-S2** Extract one shared production V1 script derivation used by
+- [x] **T158-S2** Extract one shared production V1 script derivation used by
   E2E and `ckeri`.
-- [ ] **T158-S3** Add deterministic manifest encoding/decoding and pure
+- [x] **T158-S3** Add deterministic manifest encoding/decoding and pure
   source/blueprint/script mismatch checks with tests.
 
 ## Slice 2 — binary, publisher, and verifier
 
-- [ ] **T158-S4** Birth `ckeri` with nested `deploy` and `manifest verify`
+- [x] **T158-S4** Birth `ckeri` with nested `deploy` and `manifest verify`
   commands, using `opt-env-conf` exclusively across options, environment, and
   YAML.
-- [ ] **T158-S5** Publish temporary Plutus V3 envelopes through the configured
+- [x] **T158-S5** Publish temporary Plutus V3 envelopes through the configured
   `cardano-cli`, wait for exact unspent references, and atomically write the
   manifest.
-- [ ] **T158-S6** Verify blueprint/source rebuild plus exact live preprod
+- [x] **T158-S6** Verify blueprint/source rebuild plus exact live preprod
   references through the independent public chain index.
-- [ ] **T158-S7** Package `ckeri` and its runtime tools with Nix and add parser
+- [x] **T158-S7** Package `ckeri` and its runtime tools with Nix and add parser
   surface/forbidden-dependency acceptance.
 
 ## Slice 3 — preprod release and delivery
@@ -36,4 +36,3 @@
 - [ ] **T158-S10** Add live manifest verification to CI, pass the exact local
   gate, restore the standing gate, mark PR #169 ready, and park it for operator
   merge.
-

@@ -34,6 +34,15 @@ unit match="":
 build-offchain:
     cd offchain && nix build --quiet .#checks.x86_64-linux.unit-tests
 
+# Run the release-script derivation and manifest unit tests.
+deployment-unit:
+    cd offchain && nix run --quiet .#deployment-tests
+
+# Check the opt-env-conf CLI surface and option/environment/YAML precedence.
+check-ckeri-cli:
+    cd offchain && nix build --quiet .#ckeri
+    ./scripts/check-ckeri-cli.sh ./offchain/result/bin/ckeri
+
 # Build the whole offchain project (incl. e2e test component) from the dev shell,
 # CHaP-offline via the Nix-local CHaP repo (issue #99 S9c) — no fetch of the
 # secure https CHaP index (hackage over http + the git SRPs stay live). `cabal
@@ -256,7 +265,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit check-ckeri-cli hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

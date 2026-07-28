@@ -57,6 +57,8 @@ jobs:
           .#packages.x86_64-linux.format
           .#packages.x86_64-linux.format-check
           .#packages.x86_64-linux.hlint
+          .#packages.x86_64-linux.ckeri
+          .#checks.x86_64-linux.deployment-tests
           .#devShells.x86_64-linux.default.inputDerivation
 
   onchain:
@@ -125,6 +127,13 @@ jobs:
       - name: Run unit tests
         working-directory: offchain
         run: nix run --quiet .#unit-tests
+      - name: Run deployment and manifest tests
+        working-directory: offchain
+        run: nix run --quiet .#deployment-tests
+      - name: Check ckeri opt-env-conf surface and precedence
+        run: |
+          nix build --quiet ./offchain#ckeri
+          ./scripts/check-ckeri-cli.sh ./result/bin/ckeri
       - name: Check formatting
         working-directory: offchain
         run: nix run --quiet .#format-check
@@ -172,6 +181,26 @@ jobs:
       - name: withDevnet cage + checkpoint staging smoke
         working-directory: offchain
         run: nix build --quiet -L .#checks.x86_64-linux.e2e
+
+  m1-manifest:
+    name: M1 preprod manifest
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Rebuild hashes and verify live preprod references
+        working-directory: offchain
+        run: >-
+          nix run --quiet .#ckeri --
+          manifest verify
+          --manifest ../deploy/preprod/m1-manifest.json
+          --source-repo ..
 
   e2e-sweep:
     name: E2E batch sweep (withDevnet)

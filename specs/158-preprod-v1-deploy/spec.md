@@ -106,6 +106,11 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
   command output, all settled transaction IDs, and the story's final
   `manifest verify` result. CI MUST match that capture to the manifest; a
   retyped or narrative substitute is not acceptance evidence.
+- **FR-022**: `deploy` and `manifest verify` MUST accept an optional Koios
+  bearer token through the shared `KOIOS_TOKEN` opt-env-conf environment
+  setting (plus option and YAML surfaces), set the `Authorization` header when
+  present, and retain anonymous verification when absent. The M1 manifest CI
+  job MUST inject the repository `KOIOS_TOKEN` secret.
 
 ## Key entities
 
@@ -133,6 +138,9 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
   navigable narrative and operator guidance.
 - **SC-006**: Strict docs, local `./gate.sh`, and GitHub CI exit zero; draft PR
   #169 becomes ready and remains unmerged for the operator.
+- **SC-007**: Request tests prove the bearer header is exact when configured
+  and absent when no token is configured; CLI help exposes `KOIOS_TOKEN` on
+  both command paths.
 
 ## Assumptions and boundaries
 
@@ -144,6 +152,8 @@ imports contain `opt-env-conf` and contain no `optparse-applicative` or
 - Koios preprod's unspent reference-script query is the independent public
   verification boundary. The deployment itself submits through the configured
   local node socket.
+- Koios authentication is optional and must never be printed. CI uses its
+  repository secret; public verifiers require no token.
 - The payment signing key and faucet funding are host-side operator material.
   The key is never logged or committed.
 - `kli` continues to own every KERI operation. This story adds only Cardano

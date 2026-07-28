@@ -125,13 +125,17 @@ test-suite deployment-tests
   default-language: GHC2021
   hs-source-dirs:   deployment-test
   main-is:          Main.hs
-  other-modules:    Cardano.KERI.Deployment.ManifestSpec
+  other-modules:
+    Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.ManifestSpec
+
   build-depends:
     , aeson
     , base
     , bytestring
     , cardano-keri:deployment
     , hspec                    >=2.11 && <2.12
+    , http-conduit
     , text
 
 test-suite unit-tests

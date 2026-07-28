@@ -26,6 +26,8 @@ only.
   signing key file.
 - **Live verifier**: Koios preprod
   `POST /api/v1/reference_script_utxos`.
+- **Koios authentication**: optional redacted bearer token from
+  `KOIOS_TOKEN`; anonymous fallback.
 - **Network**: Cardano preprod, magic `1`.
 - **Reference precedent**:
   `/code/amaru-treasury-tx/lib/Amaru/Treasury/Config/OptEnv.hs`.
@@ -87,7 +89,9 @@ ckeri
 Use one `OptEnvConf.setting` per field with explicit option, `CKERI_*`
 environment variable, and YAML key. `--config-file` /
 `CKERI_CONFIG_FILE` selects the optional YAML input through
-`withYamlConfig`. The executable has no second parser.
+`withYamlConfig`. Koios authentication follows the same parser path but uses
+the operator-standard `KOIOS_TOKEN` environment name. The executable has no
+second parser.
 
 ### Publication
 
@@ -110,7 +114,8 @@ stdout, JSON, or documentation.
 3. rebuilds all five applied programs;
 4. compares every program fact plus the checkpoint address/policy;
 5. runs a read-only `git diff` for the manifest source commit and `onchain/`;
-6. POSTs all rebuilt hashes to Koios and matches each exact unspent reference.
+6. optionally attaches the redacted Koios bearer token, POSTs all rebuilt
+   hashes, and matches each exact unspent reference.
 
 The final line is a concise acceptance result suitable for a captured
 transcript and CI.
@@ -123,9 +128,11 @@ environment and supplies the flake-owned blueprint path.
 
 A dedicated CI job checks out full history, builds the binary, asserts parser
 surface/forbidden-dependency rules, matches the raw acceptance transcript to
-every manifest hash and reference, and runs live verification. The routine
-ticket gate invokes the same transcript check and packaged verifier once the
-manifest exists.
+every manifest hash and reference, injects the repository `KOIOS_TOKEN`
+secret, and runs live verification. Unit tests also prove that requests remain
+anonymous when the optional token is absent. The routine ticket gate invokes
+the same transcript check and packaged anonymous verifier once the manifest
+exists.
 
 ### Live publication and evidence
 

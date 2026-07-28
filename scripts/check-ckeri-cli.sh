@@ -9,8 +9,12 @@ trap 'rm -rf "$workspace"' EXIT
 "$ckeri" --help | grep -q "manifest"
 "$ckeri" deploy --help | grep -q -- "--node-socket"
 "$ckeri" deploy --help | grep -q "CKERI_NODE_SOCKET"
+"$ckeri" deploy --help | grep -q -- "--koios-token"
+"$ckeri" deploy --help | grep -q "KOIOS_TOKEN"
 "$ckeri" manifest verify --help | grep -q -- "--manifest"
 "$ckeri" manifest verify --help | grep -q "CKERI_MANIFEST"
+"$ckeri" manifest verify --help | grep -q -- "--koios-token"
+"$ckeri" manifest verify --help | grep -q "KOIOS_TOKEN"
 
 printf '%s\n' \
   'manifest:' \

@@ -19,12 +19,26 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build locked keripy image
-        run: >-
-          nix shell nixpkgs#docker-client
-          --command docker build
-          --tag "$WITNESS_IMAGE"
-          --file deploy/preprod/Dockerfile
-          .
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          # shellcheck disable=SC2016
+          # The nested bash expands the job environment after Nix supplies Docker.
+          nix shell nixpkgs#bash nixpkgs#docker-client --command \
+            bash -euo pipefail -c '
+              cleanup() {
+                docker logout ghcr.io >/dev/null 2>&1 || true
+              }
+              trap cleanup EXIT
+              printf "%s" "$GHCR_TOKEN" |
+                docker login ghcr.io \
+                  --username "$GITHUB_ACTOR" \
+                  --password-stdin
+              docker build \
+                --tag "$WITNESS_IMAGE" \
+                --file deploy/preprod/Dockerfile \
+                .
+            '
       - name: Validate deployment and run clean-client acceptance
         run: >-
           nix shell
@@ -203,6 +217,8 @@ jobs:
           nixpkgs#jq
           --command bash scripts/check-m1-acceptance-transcript.sh
       - name: Rebuild hashes and verify live preprod references
+        env:
+          KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
         working-directory: offchain
         run: >-
           nix run --quiet .#ckeri --

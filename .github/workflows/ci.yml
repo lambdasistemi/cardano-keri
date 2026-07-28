@@ -19,7 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build locked keripy image
-        run: docker build --tag "$WITNESS_IMAGE" --file deploy/preprod/Dockerfile .
+        run: >-
+          nix shell nixpkgs#docker-client
+          --command docker build
+          --tag "$WITNESS_IMAGE"
+          --file deploy/preprod/Dockerfile
+          .
       - name: Validate deployment and run clean-client acceptance
         run: >-
           nix shell
@@ -31,7 +36,9 @@ jobs:
           --command bash scripts/check-preprod-witnesses.sh
       - name: Remove CI image tag
         if: always()
-        run: docker image rm "$WITNESS_IMAGE" >/dev/null 2>&1 || true
+        run: |
+          nix shell nixpkgs#docker-client \
+            --command docker image rm "$WITNESS_IMAGE" >/dev/null 2>&1 || true
 
   build-gate:
     name: Build Gate

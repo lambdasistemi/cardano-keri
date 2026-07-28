@@ -16,6 +16,7 @@ module Cardano.KERI.Deployment.Registration (
     runRegistration,
     plutusDataJson,
     plutusDataFromJson,
+    renderCardanoCliFailure,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
@@ -715,12 +716,40 @@ runCardanoCli config arguments = do
     case exitCode of
         ExitSuccess -> pure output
         ExitFailure code ->
-            fail $
-                unlines
-                    [ "cardano-cli failed with exit " <> show code
-                    , "stderr: " <> err
-                    , "stdout: " <> output
-                    ]
+            fail (renderCardanoCliFailure code err output)
+
+{- | Keep validator failures actionable without echoing cardano-cli's opaque,
+multi-kilobyte base64 script dump. Other failures remain verbatim.
+-}
+renderCardanoCliFailure :: Int -> String -> String -> String
+renderCardanoCliFailure code err output =
+    unlines
+        [ "cardano-cli failed with exit " <> show code
+        , "stderr: " <> summariseValidatorFailure err
+        , "stdout: " <> output
+        ]
+
+summariseValidatorFailure :: String -> String
+summariseValidatorFailure err
+    | "scripts have execution failures" `T.isInfixOf` rendered =
+        T.unpack . T.unlines . filter isMachineFact . T.lines $ rendered
+    | otherwise = err
+  where
+    rendered = T.pack err
+    isMachineFact line =
+        any
+            (`T.isPrefixOf` T.stripStart line)
+            [ "Command failed:"
+            , "Error: The following scripts have execution failures:"
+            , "the script for policyId "
+            , "Script hash:"
+            , "Script language:"
+            , "Protocol version:"
+            , "ScriptInfo:"
+            , "Script evaluation error:"
+            , "The machine terminated because of an error"
+            , "Caused by:"
+            ]
 
 waitForAsset ::
     RegistrationRunnerConfig ->

@@ -26,6 +26,7 @@ import Cardano.KERI.Deployment.Registration (
     plutusDataJson,
     premintBuildArguments,
     registerBuildArguments,
+    renderCardanoCliFailure,
  )
 import Data.Aeson (object, (.=))
 import Data.ByteString qualified as BS
@@ -54,6 +55,35 @@ spec =
                            , object ["int" .= (7 :: Integer)]
                            ]
                     ]
+
+        it "keeps validator machine facts without opaque base64 dumps" $ do
+            let rendered =
+                    renderCardanoCliFailure
+                        1
+                        ( unlines
+                            [ "Command failed: transaction build"
+                            , "Error: The following scripts have execution failures:"
+                            , "the script for policyId 0 failed with:"
+                            , "Script hash: 581c0c16"
+                            , "Script language: PlutusV3"
+                            , "Protocol version: Version 11"
+                            , "   ScriptInfo: MintingScript 0c16"
+                            , "     TxInfo: enormous"
+                            , "Script evaluation error: An error has occurred:"
+                            , "The machine terminated because of an error"
+                            , "Caused by: (error)"
+                            , "Script base64 encoded arguments: opaque"
+                            , "Script base64 encoded bytes: opaque"
+                            ]
+                        )
+                        ""
+            rendered `shouldContain` "ScriptInfo: MintingScript 0c16"
+            rendered `shouldContain` "Caused by: (error)"
+            rendered `shouldSatisfy` not . T.isInfixOf "opaque" . T.pack
+
+        it "preserves non-validator cardano-cli failures verbatim" $
+            renderCardanoCliFailure 2 "socket denied\n" ""
+                `shouldContain` "stderr: socket denied"
 
         it "binds the genuine KLI export to the immutable V1 manifest" $ do
             fixture <-

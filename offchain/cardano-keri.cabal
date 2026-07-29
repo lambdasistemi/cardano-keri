@@ -104,6 +104,7 @@ library deployment
     , time
 
   exposed-modules:
+    Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.ChainIndex
     Cardano.KERI.Deployment.CheckpointIndex
     Cardano.KERI.Deployment.CLI
@@ -132,6 +133,7 @@ test-suite deployment-tests
   hs-source-dirs:   deployment-test
   main-is:          Main.hs
   other-modules:
+    Cardano.KERI.Deployment.AdvanceSpec
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
@@ -147,6 +149,7 @@ test-suite deployment-tests
     , hspec                    >=2.11 && <2.12
     , http-conduit
     , plutus-core
+    , temporary
     , text
 
   autogen-modules:  Paths_cardano_keri

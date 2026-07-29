@@ -21,6 +21,7 @@ import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
     parseInceptionExport,
+    parseIndexedSignatureLines,
     parseRotationExport,
  )
 import Data.ByteString qualified as BS
@@ -108,6 +109,26 @@ spec =
                     (aeOffI $ rotationEvidence parsed)
                     44
                     `shouldBe` "EDujsIfURabzXyyBulukdlPkG_BX9d4px6VEQFMd33zT"
+
+            it "decodes bare indexed CESR controller-signature lines" $ do
+                path <-
+                    getDataFileName
+                        "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                bytes <- BS.readFile path
+                let afterCounter =
+                        BS.drop 4 $
+                            snd $
+                                BS.breakSubstring "-AAFA" bytes
+                    token = BS.take 88 afterCounter
+                signatures <-
+                    either
+                        fail
+                        pure
+                        (parseIndexedSignatureLines $ token <> "\n")
+                map fst signatures `shouldBe` [0]
+                map (BS.length . snd) signatures `shouldBe` [64]
+                parseIndexedSignatureLines ("1. " <> token)
+                    `shouldSatisfy` isLeft
 
 load :: FilePath -> IO InceptionExport
 load name = do

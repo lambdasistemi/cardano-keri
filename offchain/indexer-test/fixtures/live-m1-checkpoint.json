@@ -1,0 +1,38 @@
+{
+  "provenance": {
+    "source": "Koios preprod REST API",
+    "endpoint": "POST https://preprod.koios.rest/api/v1/asset_utxos",
+    "query": {
+      "_asset_list": [
+        [
+          "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
+          "ababbe19b3edeb46f67a09a55a7a9b9cf5fbfff26e813adc82f860d12955399e"
+        ]
+      ],
+      "_extended": true
+    },
+    "retrievedBy": "ticket-orchestrator, supplied in the slice brief",
+    "retrievedAtUtc": "2026-07-29T07:53:00Z",
+    "capturedFromChain": [
+      "transaction id and output index",
+      "address",
+      "lovelace value",
+      "checkpoint policy id",
+      "asset name and quantity",
+      "inline datum CBOR bytes"
+    ],
+    "assembledLocally": [
+      "the Conway era-serialised TxOut envelope"
+    ],
+    "caveat": "There is no preprod node socket on this host. The era-serialised TxOut bytes were not captured from chain; the test assembles that envelope locally from the chain-captured address, value, asset, and inline datum components."
+  },
+  "txHash": "2f2d0cdfd7d44a1a8d0a1bb5f6a9f72240d0d29a3d495a43e07507f376406e59",
+  "txIndex": 0,
+  "addressBech32": "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822",
+  "addressBytes": "700c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
+  "lovelace": 1007000000,
+  "policyId": "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
+  "assetName": "ababbe19b3edeb46f67a09a55a7a9b9cf5fbfff26e813adc82f860d12955399e",
+  "assetQuantity": 1,
+  "inlineDatumCbor": "d8799fd8799f5820f72f797359b865886da85505520c58de5fc884133065ea6b469f5d3382b2ad469f58202949f7b46498ab88fdedb1160f44723cd04cb1df8209974c57773a9c4ab60688ffd8799f01ff9f5820b9e60ef4194482de6da2c79f40eca6f278eebfa65070010439dac3e769ab8937ffd8799f01ff80000000ffff"
+}

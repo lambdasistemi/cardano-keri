@@ -191,6 +191,8 @@
 
           unit-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.unit-tests;
+          indexer-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.indexer-tests;
 
           # writeShellApplication gives each runner a strict PATH — every
           # binary it calls must be listed in runtimeInputs.
@@ -240,6 +242,16 @@
           # the tests too (not just compiles them).
           unit-tests-check = pkgs.runCommand "unit-tests-check" { } ''
             ${unit-tests-runner}/bin/unit-tests
+            touch $out
+          '';
+          indexer-tests-runner = pkgs.writeShellApplication {
+            name = "indexer-tests";
+            text = ''
+              exec ${indexer-tests-exe}/bin/indexer-tests "$@"
+            '';
+          };
+          indexer-tests-check = pkgs.runCommand "indexer-tests-check" { } ''
+            ${indexer-tests-runner}/bin/indexer-tests
             touch $out
           '';
 
@@ -431,6 +443,7 @@
         in {
           packages = {
             unit-tests = unit-tests-exe;
+            indexer-tests = indexer-tests-exe;
             format = format-runner;
             format-check = format-check-runner;
             hlint = hlint-runner;
@@ -443,6 +456,7 @@
           };
           checks = {
             unit-tests = unit-tests-check;
+            indexer-tests = indexer-tests-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
@@ -464,6 +478,10 @@
             unit-tests = {
               type = "app";
               program = "${unit-tests-runner}/bin/unit-tests";
+            };
+            indexer-tests = {
+              type = "app";
+              program = "${indexer-tests-runner}/bin/indexer-tests";
             };
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             ckeri = {

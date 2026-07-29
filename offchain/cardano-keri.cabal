@@ -20,6 +20,7 @@ build-type:    Simple
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
 data-files:
   deployment-test/fixtures/*.cesr
+  indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
 
 common warnings
@@ -115,6 +116,26 @@ library deployment
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Script
 
+library indexer
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   indexer
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients:utxo-indexer-lib
+    , containers
+    , microlens
+
+  exposed-modules:  Cardano.KERI.Indexer.Codecs
+
 executable ckeri
   import:           warnings
   default-language: GHC2021
@@ -151,6 +172,40 @@ test-suite deployment-tests
     , http-conduit
     , plutus-core
     , temporary
+    , text
+
+  autogen-modules:  Paths_cardano_keri
+
+test-suite indexer-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   indexer-test
+  main-is:          Main.hs
+  other-modules:
+    Cardano.KERI.Indexer.CodecsSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:indexer
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients:utxo-indexer-lib
+    , containers
+    , hspec
+    , memory
+    , microlens
+    , plutus-core
+    , plutus-tx
+    , serialise
     , text
 
   autogen-modules:  Paths_cardano_keri

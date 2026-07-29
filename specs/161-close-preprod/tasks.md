@@ -9,7 +9,7 @@
 - [x] T161-S2 RED/GREEN the deployed reference-script spend+CloseBurn
   transaction plan, exact full-value target output, funding/collateral
   separation, submission, and settlement polling.
-- [ ] T161-S3 RED/GREEN typed Koios burn/redeemer/output history and truthful
+- [x] T161-S3 RED/GREEN typed Koios burn/redeemer/output history and truthful
   `status` rendering that distinguishes Close from generic absence and
   ConvictBurn.
 - [ ] T161-S4 RED/GREEN the `opt-env-conf` `ckeri close` prepare/submit

@@ -1,5 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
-
 {- |
 Module      : Cardano.KERI.Deployment.Close
 Description : Build and authenticate the V1 Close signing package

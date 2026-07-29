@@ -65,6 +65,26 @@ spec = do
                 [closeTransaction]
                 `shouldBe` Right Nothing
 
+        it "does not accept a value-lookalike output carrying another asset" $ do
+            let polluted =
+                    ChainTransactionUtxos
+                        closeTxId
+                        (chainTransactionInputs closeTransaction)
+                        [ ChainTransactionPart
+                            closeTxId
+                            0
+                            "addr_test1refund"
+                            1_007_000_000
+                            [ChainAsset policy "other" 1]
+                        ]
+            resolveClosedCheckpoint
+                policy
+                assetName
+                [history]
+                [closeRedeemers]
+                [polluted]
+                `shouldBe` Right Nothing
+
 policy, assetName, closeTxId :: T.Text
 policy = "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
 assetName = "ababbe19b3edeb46f67a09a55a7a9b9cf5fbfff26e813adc82f860d12955399e"

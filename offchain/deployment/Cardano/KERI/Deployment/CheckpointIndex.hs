@@ -216,11 +216,12 @@ resolveClosedCheckpoint policy assetName histories redeemerSets transactions = d
     checkpointInputs transaction =
         filter
             ( \input ->
-                assetQuantity
-                    policy
-                    assetName
-                    (chainTransactionPartAssets input)
-                    == 1
+                case chainTransactionPartAssets input of
+                    [asset] ->
+                        chainAssetPolicy asset == policy
+                            && chainAssetName asset == assetName
+                            && chainAssetQuantity asset == 1
+                    _ -> False
             )
             (chainTransactionInputs transaction)
     hasCloseBurn minting input redeemers =
@@ -258,11 +259,7 @@ resolveClosedCheckpoint policy assetName histories redeemerSets transactions = d
                     == chainTransactionPartLovelace input
                     && chainTransactionPartAddress output
                         /= chainTransactionPartAddress input
-                    && assetQuantity
-                        policy
-                        assetName
-                        (chainTransactionPartAssets output)
-                        == 0
+                    && null (chainTransactionPartAssets output)
             )
             (chainTransactionOutputs transaction)
 

@@ -12,7 +12,7 @@
 - [x] T161-S3 RED/GREEN typed Koios burn/redeemer/output history and truthful
   `status` rendering that distinguishes Close from generic absence and
   ConvictBurn.
-- [ ] T161-S4 RED/GREEN the `opt-env-conf` `ckeri close` prepare/submit
+- [x] T161-S4 RED/GREEN the `opt-env-conf` `ckeri close` prepare/submit
   surface, KLI-side binary signer, and acceptance-only non-controller path;
   keep `optparse-applicative` forbidden.
 - [ ] T161-S5 Capture the full fresh KLI inception→register→close preprod

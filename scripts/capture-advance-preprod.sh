@@ -15,6 +15,7 @@ manifest="${CKERI_MANIFEST:-$workspace/deploy/preprod/m1-manifest.json}"
 output_dir="${CKERI_ACCEPTANCE_DIR:-/tmp/ckeri-160-acceptance}"
 volume="${CKERI_KLI_VOLUME:-ckeri-160-acceptance-2of5-20260729}"
 base="${CKERI_KLI_BASE:-ckeri-160-acceptance-2of5}"
+resume="${CKERI_ACCEPTANCE_RESUME:-0}"
 
 witness_1="BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
 witness_2="BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B"
@@ -135,6 +136,45 @@ advance_capture() {
     --controller-signatures "$output_dir/controller-signatures.cesr"
 }
 
+sign_and_finish() {
+  local aid=$1
+  capture chmod 0777 "$output_dir"
+  capture docker run --rm \
+    --volume "$volume:/var/lib/keri/.keri" \
+    --volume "$output_dir:/acceptance" \
+    --volume "$workspace/scripts/kli-sign-advance.py:/usr/local/bin/kli-sign-advance.py:ro" \
+    --entrypoint python \
+    "$image" \
+    /usr/local/bin/kli-sign-advance.py \
+    --name org \
+    --base "$base" \
+    --alias org \
+    --package /acceptance/package \
+    --out /acceptance/controller-signatures.cesr
+
+  advance_failure "$aid" --validator-test-under-signed
+  advance_failure "$aid" --validator-test-under-witnessed
+  advance_capture "$aid"
+  status_capture "$aid"
+  advance_failure "$aid" --validator-test-stale
+
+  capture docker volume rm "$volume"
+}
+
+if [[ "$resume" == 1 ]]; then
+  docker volume inspect "$volume" >/dev/null
+  test -f "$output_dir/rotation.cesr"
+  test -f "$output_dir/package/package.json"
+  run_kli "$volume" status \
+    --name org \
+    --base "$base" \
+    --alias org
+  aid="$(awk '$1 == "Identifier:" {print $2}' <<<"$last_output")"
+  test -n "$aid"
+  sign_and_finish "$aid"
+  exit
+fi
+
 mkdir -p "$output_dir"
 if find "$output_dir" -mindepth 1 -print -quit | grep -q .; then
   printf 'refusing non-empty acceptance directory %s\n' "$output_dir" >&2
@@ -209,24 +249,4 @@ run_kli "$volume" status \
 capture_shell \
   "docker run --rm --volume $volume:/var/lib/keri/.keri $image export --name org --base $base --alias org > $output_dir/rotation.cesr"
 advance_prepare "$aid"
-capture chmod 0777 "$output_dir/package"
-capture docker run --rm \
-  --volume "$volume:/var/lib/keri/.keri" \
-  --volume "$output_dir:/acceptance" \
-  --volume "$workspace/scripts/kli-sign-advance.py:/usr/local/bin/kli-sign-advance.py:ro" \
-  --entrypoint python \
-  "$image" \
-  /usr/local/bin/kli-sign-advance.py \
-  --name org \
-  --base "$base" \
-  --alias org \
-  --package /acceptance/package \
-  --out /acceptance/controller-signatures.cesr
-
-advance_failure "$aid" --validator-test-under-signed
-advance_failure "$aid" --validator-test-under-witnessed
-advance_capture "$aid"
-status_capture "$aid"
-advance_failure "$aid" --validator-test-stale
-
-capture docker volume rm "$volume"
+sign_and_finish "$aid"

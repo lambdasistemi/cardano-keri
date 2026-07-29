@@ -6,10 +6,19 @@ module Cardano.KERI.Deployment.ChainIndex (
     ChainReference (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
+    ChainAssetHistory (..),
+    ChainMintingTransaction (..),
+    ChainScriptRedeemers (..),
+    ChainScriptRedeemer (..),
+    ChainTransactionUtxos (..),
+    ChainTransactionPart (..),
     KoiosToken (..),
     authorizeKoiosRequest,
     queryReferenceScripts,
     queryAssetUtxos,
+    queryAssetHistory,
+    queryScriptRedeemers,
+    queryTransactionUtxos,
     matchesReference,
 ) where
 
@@ -64,6 +73,49 @@ data ChainAssetUtxo = ChainAssetUtxo
     }
     deriving stock (Show, Eq)
 
+data ChainAssetHistory = ChainAssetHistory
+    { chainHistoryPolicy :: !Text
+    , chainHistoryAssetName :: !Text
+    , chainMintingTransactions :: ![ChainMintingTransaction]
+    }
+    deriving stock (Show, Eq)
+
+data ChainMintingTransaction = ChainMintingTransaction
+    { chainMintingTxId :: !Text
+    , chainMintingQuantity :: !Integer
+    , chainMintingBlockTime :: !Integer
+    }
+    deriving stock (Show, Eq)
+
+data ChainScriptRedeemers = ChainScriptRedeemers
+    { chainRedeemerScriptHash :: !Text
+    , chainScriptRedeemers :: ![ChainScriptRedeemer]
+    }
+    deriving stock (Show, Eq)
+
+data ChainScriptRedeemer = ChainScriptRedeemer
+    { chainRedeemerPurpose :: !Text
+    , chainRedeemerTxId :: !Text
+    , chainRedeemerData :: !Value
+    }
+    deriving stock (Show, Eq)
+
+data ChainTransactionUtxos = ChainTransactionUtxos
+    { chainTransactionTxId :: !Text
+    , chainTransactionInputs :: ![ChainTransactionPart]
+    , chainTransactionOutputs :: ![ChainTransactionPart]
+    }
+    deriving stock (Show, Eq)
+
+data ChainTransactionPart = ChainTransactionPart
+    { chainTransactionPartTxId :: !Text
+    , chainTransactionPartIndex :: !Int
+    , chainTransactionPartAddress :: !Text
+    , chainTransactionPartLovelace :: !Integer
+    , chainTransactionPartAssets :: ![ChainAsset]
+    }
+    deriving stock (Show, Eq)
+
 -- | Koios API bearer token whose 'Show' instance never reveals the secret.
 newtype KoiosToken = KoiosToken Text
     deriving stock (Eq)
@@ -100,6 +152,52 @@ instance FromJSON ChainAssetUtxo where
             <*> integerTextField o "value"
             <*> o .: "asset_list"
             <*> pure chainAssetInlineDatum
+
+instance FromJSON ChainAssetHistory where
+    parseJSON = withObject "ChainAssetHistory" $ \o ->
+        ChainAssetHistory
+            <$> o .: "policy_id"
+            <*> o .: "asset_name"
+            <*> o .: "minting_txs"
+
+instance FromJSON ChainMintingTransaction where
+    parseJSON = withObject "ChainMintingTransaction" $ \o ->
+        ChainMintingTransaction
+            <$> o .: "tx_hash"
+            <*> integerTextField o "quantity"
+            <*> o .: "block_time"
+
+instance FromJSON ChainScriptRedeemers where
+    parseJSON = withObject "ChainScriptRedeemers" $ \o ->
+        ChainScriptRedeemers
+            <$> o .: "script_hash"
+            <*> o .: "redeemers"
+
+instance FromJSON ChainScriptRedeemer where
+    parseJSON = withObject "ChainScriptRedeemer" $ \o ->
+        ChainScriptRedeemer
+            <$> o .: "purpose"
+            <*> o .: "tx_hash"
+            <*> o .: "datum_value"
+
+instance FromJSON ChainTransactionUtxos where
+    parseJSON = withObject "ChainTransactionUtxos" $ \o ->
+        ChainTransactionUtxos
+            <$> o .: "tx_hash"
+            <*> o .: "inputs"
+            <*> o .: "outputs"
+
+instance FromJSON ChainTransactionPart where
+    parseJSON = withObject "ChainTransactionPart" $ \o -> do
+        paymentAddress <- o .: "payment_addr"
+        chainTransactionPartAddress <-
+            withObject "PaymentAddress" (.: "bech32") paymentAddress
+        ChainTransactionPart
+            <$> o .: "tx_hash"
+            <*> o .: "tx_index"
+            <*> pure chainTransactionPartAddress
+            <*> integerTextField o "value"
+            <*> o .: "asset_list"
 
 -- | Attach bearer authorization when a token is configured.
 authorizeKoiosRequest :: Maybe KoiosToken -> Request -> Request
@@ -150,6 +248,48 @@ queryAssetUtxos baseUrl token policyId assetName = do
                 $ setRequestMethod "POST" initial
     getResponseBody <$> httpJSON (authorizeKoiosRequest token request)
 
+queryAssetHistory ::
+    Text ->
+    Maybe KoiosToken ->
+    Text ->
+    Text ->
+    IO [ChainAssetHistory]
+queryAssetHistory baseUrl token policyId assetName = do
+    initial <-
+        parseRequest $
+            endpoint baseUrl "asset_history"
+                <> "?_asset_policy="
+                <> T.unpack policyId
+                <> "&_asset_name="
+                <> T.unpack assetName
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token initial)
+
+queryScriptRedeemers ::
+    Text ->
+    Maybe KoiosToken ->
+    Text ->
+    IO [ChainScriptRedeemers]
+queryScriptRedeemers baseUrl token scriptHash = do
+    initial <-
+        parseRequest $
+            endpoint baseUrl "script_redeemers"
+                <> "?_script_hash="
+                <> T.unpack scriptHash
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token initial)
+
+queryTransactionUtxos ::
+    Text ->
+    Maybe KoiosToken ->
+    [Text] ->
+    IO [ChainTransactionUtxos]
+queryTransactionUtxos baseUrl token txIds = do
+    initial <- parseRequest (endpoint baseUrl "tx_utxos")
+    let request =
+            setRequestBodyJSON (object ["_tx_hashes" .= txIds]) $
+                setRequestHeader "content-type" ["application/json"] $
+                    setRequestMethod "POST" initial
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token request)
+
 matchesReference :: Text -> Reference -> ChainReference -> Bool
 matchesReference scriptHash reference chainReference =
     chainScriptHash chainReference == scriptHash
@@ -168,3 +308,7 @@ joinMaybe :: Maybe (Maybe a) -> Maybe a
 joinMaybe = \case
     Nothing -> Nothing
     Just value -> value
+
+endpoint :: Text -> String -> String
+endpoint baseUrl path =
+    T.unpack (T.dropWhileEnd (== '/') baseUrl) <> "/" <> path

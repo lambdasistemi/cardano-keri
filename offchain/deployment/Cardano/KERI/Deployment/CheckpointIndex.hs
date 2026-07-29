@@ -8,6 +8,7 @@ module Cardano.KERI.Deployment.CheckpointIndex (
     queryActiveCheckpoint,
     resolveActiveCheckpoint,
     renderCheckpointStatus,
+    resolveClosedCheckpoint,
     queryCheckpointStatus,
 ) where
 
@@ -24,9 +25,18 @@ import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
+    ChainAssetHistory (..),
     ChainAssetUtxo (..),
+    ChainMintingTransaction (..),
+    ChainScriptRedeemer (..),
+    ChainScriptRedeemers (..),
+    ChainTransactionPart (..),
+    ChainTransactionUtxos (..),
     KoiosToken,
+    queryAssetHistory,
     queryAssetUtxos,
+    queryScriptRedeemers,
+    queryTransactionUtxos,
  )
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
@@ -37,9 +47,12 @@ import Cardano.KERI.Deployment.Registration (plutusDataFromJson)
 import Control.Monad (unless)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
+import Data.List (maximumBy)
+import Data.Ord (comparing)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
+import PlutusCore.Data (Data (..))
 
 data ActiveCheckpoint = ActiveCheckpoint
     { activeCheckpointAid :: !Text
@@ -78,7 +91,42 @@ queryCheckpointStatus baseUrl token manifest aid = do
             token
             (checkpointPolicyId $ manifestCheckpoint manifest)
             assetName
-    either fail pure (renderCheckpointStatus manifest aid assetName utxos)
+    if null utxos
+        then do
+            let policy = checkpointPolicyId $ manifestCheckpoint manifest
+            history <- queryAssetHistory baseUrl token policy assetName
+            case latestMintingTransaction policy assetName history of
+                Left err -> fail err
+                Right Nothing ->
+                    either fail pure $
+                        renderCheckpointStatus manifest aid assetName []
+                Right (Just latest) -> do
+                    redeemers <- queryScriptRedeemers baseUrl token policy
+                    transaction <-
+                        queryTransactionUtxos
+                            baseUrl
+                            token
+                            [chainMintingTxId latest]
+                    closed <-
+                        either fail pure $
+                            resolveClosedCheckpoint
+                                policy
+                                assetName
+                                history
+                                redeemers
+                                transaction
+                    pure $
+                        case closed of
+                            Just txId ->
+                                "state NOT REGISTERED (closed at "
+                                    <> txId
+                                    <> ") aid "
+                                    <> aid
+                            Nothing ->
+                                "state NOT REGISTERED aid " <> aid
+        else
+            either fail pure $
+                renderCheckpointStatus manifest aid assetName utxos
 
 queryActiveCheckpoint ::
     Text ->
@@ -126,6 +174,130 @@ renderCheckpointStatus manifest aid assetName matches = do
                 <> "#"
                 <> T.pack (show $ activeCheckpointIndex active)
             ]
+
+resolveClosedCheckpoint ::
+    Text ->
+    Text ->
+    [ChainAssetHistory] ->
+    [ChainScriptRedeemers] ->
+    [ChainTransactionUtxos] ->
+    Either String (Maybe Text)
+resolveClosedCheckpoint policy assetName histories redeemerSets transactions = do
+    latest <- latestMintingTransaction policy assetName histories
+    case latest of
+        Nothing -> pure Nothing
+        Just minting
+            | chainMintingQuantity minting /= -1 ->
+                pure Nothing
+            | otherwise ->
+                pure $
+                    if provesClose minting
+                        then Just (chainMintingTxId minting)
+                        else Nothing
+  where
+    provesClose minting =
+        case ( matchingRedeemers
+             , filter
+                ( (== chainMintingTxId minting)
+                    . chainTransactionTxId
+                )
+                transactions
+             ) of
+            ([redeemers], [transaction]) ->
+                case checkpointInputs transaction of
+                    [checkpointInput] ->
+                        hasCloseBurn minting checkpointInput redeemers
+                            && hasCloseSpend minting redeemers
+                            && hasExactRefund checkpointInput transaction
+                    _ -> False
+            _ -> False
+    matchingRedeemers =
+        filter ((== policy) . chainRedeemerScriptHash) redeemerSets
+    checkpointInputs transaction =
+        filter
+            ( \input ->
+                assetQuantity
+                    policy
+                    assetName
+                    (chainTransactionPartAssets input)
+                    == 1
+            )
+            (chainTransactionInputs transaction)
+    hasCloseBurn minting input redeemers =
+        any
+            ( \redeemer ->
+                chainRedeemerPurpose redeemer == "mint"
+                    && chainRedeemerTxId redeemer == chainMintingTxId minting
+                    && case plutusDataFromJson (chainRedeemerData redeemer) of
+                        Right
+                            ( Constr
+                                    1
+                                    [Constr 0 [B spentTxId, I spentIndex]]
+                                ) ->
+                                hexText spentTxId == chainTransactionPartTxId input
+                                    && spentIndex
+                                        == fromIntegral
+                                            (chainTransactionPartIndex input)
+                        _ -> False
+            )
+            (chainScriptRedeemers redeemers)
+    hasCloseSpend minting redeemers =
+        any
+            ( \redeemer ->
+                chainRedeemerPurpose redeemer == "spend"
+                    && chainRedeemerTxId redeemer == chainMintingTxId minting
+                    && case plutusDataFromJson (chainRedeemerData redeemer) of
+                        Right (Constr 0 [_closeEvidence]) -> True
+                        _ -> False
+            )
+            (chainScriptRedeemers redeemers)
+    hasExactRefund input transaction =
+        any
+            ( \output ->
+                chainTransactionPartLovelace output
+                    == chainTransactionPartLovelace input
+                    && chainTransactionPartAddress output
+                        /= chainTransactionPartAddress input
+                    && assetQuantity
+                        policy
+                        assetName
+                        (chainTransactionPartAssets output)
+                        == 0
+            )
+            (chainTransactionOutputs transaction)
+
+latestMintingTransaction ::
+    Text ->
+    Text ->
+    [ChainAssetHistory] ->
+    Either String (Maybe ChainMintingTransaction)
+latestMintingTransaction policy assetName histories =
+    case filter
+        ( \history ->
+            chainHistoryPolicy history == policy
+                && chainHistoryAssetName history == assetName
+        )
+        histories of
+        [] -> Right Nothing
+        [history] ->
+            Right $
+                case chainMintingTransactions history of
+                    [] -> Nothing
+                    transactions ->
+                        Just $
+                            maximumBy
+                                ( comparing
+                                    ( \transaction ->
+                                        ( chainMintingBlockTime transaction
+                                        , chainMintingTxId transaction
+                                        )
+                                    )
+                                )
+                                transactions
+        _ -> Left "Koios returned ambiguous checkpoint asset history"
+
+hexText :: BS.ByteString -> Text
+hexText = TE.decodeUtf8 . convertToBase Base16
 
 resolveActiveCheckpoint ::
     Manifest ->

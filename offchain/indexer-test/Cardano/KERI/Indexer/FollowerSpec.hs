@@ -34,6 +34,9 @@ import Data.ByteString qualified as BS
 import Data.Char (
     isDigit,
  )
+import Data.List (
+    isInfixOf,
+ )
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set qualified as Set
 import Data.Text (
@@ -54,6 +57,7 @@ import Test.Hspec (
     expectationFailure,
     it,
     shouldBe,
+    shouldSatisfy,
  )
 
 spec :: Spec
@@ -201,6 +205,45 @@ spec =
                     , icBoardAddr = Nothing
                     }
 
+        it "rejects config without the mandatory Byron epoch size" $ do
+            -- The two successful parses are positive controls over this same
+            -- input. They prove both configured routes are live and attribute
+            -- the failure specifically to omitting the Byron epoch size.
+            result <-
+                OptRun.runParserOn
+                    OptCapability.allCapabilities
+                    Nothing
+                    (Opt.settingsParser :: Opt.Parser IndexerConfig)
+                    (OptArgs.parseArgs requiredConfigWithoutByronArgs)
+                    (OptEnv.parse requiredConfigWithoutByronEnv)
+                    Nothing
+            case result of
+                Left errors ->
+                    show errors
+                        `shouldSatisfy` \message ->
+                            "byron-epoch-slots" `isInfixOf` message
+                                || "CKERI_BYRON_EPOCH_SLOTS" `isInfixOf` message
+                Right config ->
+                    expectationFailure $
+                        "expected missing Byron epoch size to fail, parsed: "
+                            <> show config
+
+            fromArgv <-
+                parseConfig
+                    ( requiredConfigWithoutByronArgs
+                        <> ["--byron-epoch-slots", "21600"]
+                    )
+                    requiredConfigWithoutByronEnv
+            icByronEpochSlots fromArgv `shouldBe` 21_600
+
+            fromEnv <-
+                parseConfig
+                    requiredConfigWithoutByronArgs
+                    ( ("CKERI_BYRON_EPOCH_SLOTS", "21601")
+                        : requiredConfigWithoutByronEnv
+                    )
+            icByronEpochSlots fromEnv `shouldBe` 21_601
+
 baseConfig :: IndexerConfig
 baseConfig =
     IndexerConfig
@@ -236,6 +279,20 @@ fundingA, fundingB, board :: Address
 fundingA = taggedAddress 0x21
 fundingB = taggedAddress 0x32
 board = taggedAddress 0x43
+
+requiredConfigWithoutByronArgs :: [String]
+requiredConfigWithoutByronArgs =
+    [ "--network-magic"
+    , "314159"
+    , "--security-param-k"
+    , "901"
+    , "--store-path"
+    , "/tmp/mandatory-byron-indexer"
+    ]
+
+requiredConfigWithoutByronEnv :: [(String, String)]
+requiredConfigWithoutByronEnv =
+    [("CKERI_NODE_SOCKET", "/tmp/mandatory-byron-node.socket")]
 
 taggedAddress :: Word -> Address
 taggedAddress tag =

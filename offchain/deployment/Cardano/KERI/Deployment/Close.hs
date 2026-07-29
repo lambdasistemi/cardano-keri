@@ -87,6 +87,14 @@ import System.IO (
     hClose,
     openBinaryTempFile,
  )
+import System.Posix.Files (
+    groupReadMode,
+    otherReadMode,
+    ownerReadMode,
+    ownerWriteMode,
+    setFileMode,
+    unionFileModes,
+ )
 
 data ClosePackage = ClosePackage
     { closeAid :: !Text
@@ -309,3 +317,10 @@ writeAtomic output bytes = do
     BS.hPut handle bytes
     hClose handle
     renameFile temporary output
+    setFileMode
+        output
+        ( ownerReadMode
+            `unionFileModes` ownerWriteMode
+            `unionFileModes` groupReadMode
+            `unionFileModes` otherReadMode
+        )

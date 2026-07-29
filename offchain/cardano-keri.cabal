@@ -101,8 +101,8 @@ library deployment
     , process
     , temporary
     , text
-    , unix
     , time
+    , unix
 
   exposed-modules:
     Cardano.KERI.Deployment.Advance

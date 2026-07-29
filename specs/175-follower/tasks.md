@@ -54,20 +54,29 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 3 — follower configuration + CLI config
 
-- [ ] T175-S3-1 RED: tests asserting the assembled `ChainSyncConfig` takes its interest
+- [X] T175-S3-1 RED: tests asserting the assembled `ChainSyncConfig` takes its interest
       set from the manifest checkpoint address, its start point from the deployment slot,
       and `k` from network params — not from defaults
-- [ ] T175-S3-2 RED: opt-env-conf parser tests over argv and env for socket path, network
+- [X] T175-S3-2 RED: opt-env-conf parser tests over argv and env for socket path, network
       magic, `k`, start point, store path
-- [ ] T175-S3-3 GREEN: implement `Cardano.KERI.Indexer.Follower` and
+- [X] T175-S3-3 GREEN: implement `Cardano.KERI.Indexer.Follower` and
       `Cardano.KERI.Indexer.Config`
-- [ ] T175-S3-5 Funding addresses (PLURAL, opt-env-conf) join the interest set alongside
+- [X] T175-S3-5 Funding addresses (PLURAL, opt-env-conf) join the interest set alongside
       the manifest checkpoint address (FR-9b)
-- [ ] T175-S3-6 An OPTIONAL configured board address joins the same list (endpoint board
+- [X] T175-S3-6 An OPTIONAL configured board address joins the same list (endpoint board
       released 2026-07-29: policy 54494f8a.., addr_test1wp2yjnu2..) — bound by config, NEVER
       as a constant. No schema parsing, no fixture, no board step in the journey: board
       record reads are #176, where board records can actually exist
-- [ ] T175-S3-4 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S3-4 `./gate.sh` green; one commit, `Tasks:` trailer
+
+## Slice 3b — prove the mandatory flag is actually mandatory (micro-slice)
+
+- [ ] T175-S3b-1 RED: parsing an `IndexerConfig` WITHOUT `--byron-epoch-slots` must FAIL.
+      Navigator finding at slice-3 COMPLETE: the fix replaced an invented constant with a
+      mandatory field, but nothing asserts the mandatory-ness — a later `Opt.value` would
+      silently reinstate a guessed default and no test would notice. The repair is only as
+      durable as the check that protects it
+- [ ] T175-S3b-2 GREEN/verify + `./gate.sh`; its own bisect-safe commit, `Tasks:` trailer
 
 ## Slice 4 — rollback exactness property (acceptance heart)
 
@@ -137,6 +146,19 @@ orchestrator when the slice is accepted, in the same amended commit.
 - [ ] T175-S6b-5 Journey transcript recorded in the PR as the acceptance artefact (evidence
       dated after the final code change it covers)
 - [ ] T175-S6b-6 `./gate.sh` green; one commit, `Tasks:` trailer
+## Slice 6c — preprod recognition measurement (supplementary, non-gating)
+
+- [ ] T175-S6c-1 Follow the real preprod socket from the manifest deployment point and
+      measure wall-clock to reach the live checkpoint 2f2d0cdf..#0 (not created by us)
+- [ ] T175-S6c-2 Evidence to desk standard: exact command, raw output, own STATUS line,
+      captured after the last code change; store under /code/tmp/cardano-keri-175/, cleaned
+      up pass or fail
+- [ ] T175-S6c-3 NEVER wired into gate.sh or ci-live — depends on a live socket and a chain
+      state nobody controls
+- [ ] T175-S6c-4 A handshake protocol-version failure STOPS the run and is Q-filed as a
+      contract-2 finding, not worked around
+- [ ] T175-S6c-5 Record the contract-2 outcome explicitly for #176 planner to inherit
+
 ## Slice 7 — docs
 
 - [ ] T175-S7-1 `docs/` page: what the follower indexes, running it from a node socket
@@ -151,6 +173,10 @@ orchestrator when the slice is accepted, in the same amended commit.
 - [ ] T175-S8-1 PR body written for a human reader: what this makes possible, a prose
       chapter per landed slice, no raw hash dumps in prose, normative detail quarantined
       in a technical appendix
+- [ ] T175-S8-1b Preserve the slice-3 RED negative-control transcript into the PR record
+      (`specs/175-follower/evidence/`) — it is the acceptance evidence for T175-S3-1
+      "not from defaults" but currently lives in a driver runtime root that gets archived,
+      and the desk standard is output committed or linked, never summarised
 - [ ] T175-S8-2 Deliverables re-checked against the epic's patched list (codecs, reads,
       follower config, CLI, docs, rollback property, resume test, live leg)
 - [ ] T175-S8-2b Restore `gate.sh` to `just ci` in its own `chore:` commit at finalize, and

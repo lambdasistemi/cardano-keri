@@ -18,11 +18,16 @@
 
 ## Slice 4 — mutation transactions and CLI
 
-- [ ] T008-S4 Add RED transaction-plan/runner and opt-env-conf surface tests.
-- [ ] T009-S4 Implement board deploy/post/update/retire transactions and command settings.
+- [x] T008-S4 Add RED transaction-plan/runner and opt-env-conf surface tests.
+- [x] T009-S4 Implement board deploy/post/update/retire transactions and command settings.
 
 ## Slice 5 — docs, live proof, and CI
 
 - [ ] T010-S5 Add the endpoint-board user page, navigation, capture/check scripts, and CI tripwire.
-- [ ] T011-S5 Capture the post-change full preprod journey with settled txids and commit the raw machine transcript.
-- [ ] T012-S5 Embed the exact raw capture in the PR body, pass the final gate and CI, and park for desk merge.
+- [ ] T011-S5 Capture the binding witness-operator → clean stranger-machine
+      public-docs-only post/list/verify/dial journey with nothing mocked.
+- [ ] T012-S5 Continue the same raw capture through forged/stale failures,
+      status watchability, update, retire/refund, and all-three-live restore;
+      commit settled txids and machine facts.
+- [ ] T013-S5 Embed the exact raw capture in the PR body, pass the final gate
+      and CI, and park for desk merge.

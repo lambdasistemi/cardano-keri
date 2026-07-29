@@ -14,6 +14,23 @@ This story proves the board itself. Hunter chain-bootstrap acceptance belongs
 to #163 and relayer chain-bootstrap acceptance belongs to #162, as the issue's
 reordering note states.
 
+## Vertical E2E user story
+
+As a witness operator, I publish my genuine KERI OOBI record on preprod with
+`ckeri board post`. A stranger on another machine, with no private handoff,
+static witness file, repository-local fixture, or operator explanation, follows
+only the public user documentation. They install `ckeri`, run
+`ckeri board list`, obtain and cryptographically verify my current record from
+the chain, then dial the listed HTTPS endpoint and receive a real successful
+response from my witness.
+
+This is a binding acceptance journey, not a mocked integration scenario. The
+S5 raw capture must visibly distinguish the operator and stranger seats,
+identify their different machines, show the literal commands and outputs at
+both seats, and preserve the board post txid, verified list result, and live
+witness response. The same vertical-E2E-user-story requirement applies to
+every later application story in this milestone.
+
 ## Ratified ledger shape
 
 - A single, well-known Plutus V3 script is both the marker minting policy and
@@ -111,17 +128,22 @@ the numerator.
 After the last behavior-changing commit:
 
 1. deploy/verify the fixed board script on preprod;
-2. post all three pool witness records and cite settled txids;
-3. list the live catalog;
+2. from the witness-operator seat, post all three pool witness records and cite
+   settled txids;
+3. from a stranger seat on another machine, using only the public docs and a
+   clean client installation, list and cryptographically verify the live
+   catalog, then dial a listed witness and capture its real successful HTTPS
+   response;
 4. show a checkpoint status with its watchability grade;
 5. capture forged and stale read failures;
 6. update one record and cite the settled replacement txid;
 7. retire one record, show its complete deposit refund, and cite the txid;
 8. repost that witness so all three pool records are live at handoff.
 
-The proof is a literal-dollar-command `script(1)`/`tee` capture, never
-retyped. The raw full journey is embedded verbatim in the PR body and checked
-mechanically in CI where feasible.
+The proof is one literal-dollar-command `script(1)`/`tee` capture, never
+retyped, with explicit operator-seat and stranger-seat machine facts. Nothing
+in the vertical path is mocked. The raw full journey is embedded verbatim in
+the PR body and checked mechanically in CI where feasible.
 
 ## Non-functional requirements
 

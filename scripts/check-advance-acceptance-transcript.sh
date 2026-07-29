@@ -120,8 +120,12 @@ test "$(wc -l <"$package_dir/controller-signatures.cesr")" -eq 5
 awk 'length != 88 { exit 1 }' "$package_dir/controller-signatures.cesr"
 
 if [[ -n "${CKERI_BIN:-}" ]]; then
-  actual_status="$("$CKERI_BIN" status "$aid" --manifest "$manifest")"
-  test "$actual_status" = "$seq_one"
+  actual_status="$(
+    "$CKERI_BIN" status "$aid" \
+      --manifest "$manifest" \
+      --board-manifest deploy/preprod/board-manifest.json
+  )"
+  test "$actual_status" = "$seq_one watchable 3/3"
 
   tx_payload="$(
     printf '%s\n' \

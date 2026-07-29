@@ -2,9 +2,9 @@
 
 ## Slice 1 — validator and contract seam
 
-- [ ] T001-S1 Add RED Aiken board lifecycle and adversarial tests.
-- [ ] T002-S1 Implement the combined board validator and frozen wire types.
-- [ ] T003-S1 Derive and drift-check the script policy/address; publish the release seam.
+- [x] T001-S1 Add RED Aiken board lifecycle and adversarial tests.
+- [x] T002-S1 Implement the combined board validator and frozen wire types.
+- [x] T003-S1 Derive and drift-check the script policy/address; publish the release seam.
 
 ## Slice 2 — signed record and catalog
 

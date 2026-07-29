@@ -4,6 +4,13 @@ This file is the follower contract published with the endpoint-board policy
 and marker address. Its field order and constructor indices are immutable for
 the M1 board policy.
 
+## Release identity
+
+- Blueprint entry: `endpoint_board.endpoint_board.mint`
+- Policy ID: `398a358ad6729f877809b6bd573b680c0e247be00f380a1f93279d4d`
+- Preprod marker address:
+  `addr_test1wquc5dv26eeflpmcpxmt64emdqxqufrmuq8nszsljvne6nglkxzx3`
+
 ## `BoardDatumV1`
 
 Canonical Plutus Data:
@@ -48,3 +55,10 @@ Update requires the recorded owner, preserves the exact marker and deposit,
 and replaces the datum with another valid `BoardDatumV1` for the same
 `witness_key`. Retire requires the recorded owner, burns exactly one matching
 marker, and pays the complete board deposit to `refund_address`.
+
+The minting-policy redeemer is likewise frozen:
+
+```text
+Post = Constr 0 []
+Burn = Constr 1 []
+```

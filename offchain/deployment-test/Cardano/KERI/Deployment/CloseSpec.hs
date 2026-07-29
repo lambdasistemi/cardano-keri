@@ -20,6 +20,7 @@ import Cardano.KERI.AID.Checkpoint.Close (
     AddressCredential (..),
     CloseEvidence (..),
     FullAddress (..),
+    closeSpendRedeemerData,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
@@ -44,6 +45,13 @@ import Cardano.KERI.Deployment.Close (
     decodeRefundAddress,
     mkClosePackage,
     writeCloseSigningPackage,
+ )
+import Cardano.KERI.Deployment.CloseTransaction (
+    CloseFiles (..),
+    ClosePlan (..),
+    CloseRunnerConfig (..),
+    closeBuildArguments,
+    mkClosePlan,
  )
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
@@ -70,13 +78,16 @@ import Data.Either (isLeft, isRight)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
+import PlutusCore.Data (Data (..))
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (
     Spec,
     describe,
     it,
     shouldBe,
+    shouldContain,
     shouldNotBe,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -158,6 +169,78 @@ spec =
             attachCloseControllerSignatures [(0, outsider)] package
                 `shouldSatisfy` isLeft
 
+        it "spends and burns the checkpoint while refunding the complete escrow" $ do
+            active <- sampleActive
+            unsigned <-
+                either fail pure $
+                    mkClosePackage sampleManifest active refundAddress
+            let signature =
+                    rawSerialiseSigDSIGN $
+                        signDSIGN
+                            ()
+                            (closeSigningPreimage unsigned)
+                            controllerSigningKey
+            package <-
+                either fail pure $
+                    attachCloseControllerSignatures [(0, signature)] unsigned
+            plan <- either fail pure (mkClosePlan sampleManifest package)
+            closePlanSpentReference plan
+                `shouldBe` T.replicate 64 "1" <> "#2"
+            closePlanCheckpointReference plan
+                `shouldBe` "8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0"
+            closePlanRefundOutput plan
+                `shouldBe` refundAddress <> "+1007000000"
+            closePlanSpendRedeemer plan
+                `shouldBe` plutusDataJson
+                    (closeSpendRedeemerData $ closeEvidence package)
+            closePlanMintRedeemer plan
+                `shouldBe` plutusDataJson
+                    ( Constr
+                        1
+                        [ Constr
+                            0
+                            [B (BS.replicate 32 0x11), I 2]
+                        ]
+                    )
+            let arguments =
+                    closeBuildArguments
+                        sampleCloseRunner
+                        plan
+                        sampleCloseFiles
+                        "funding#0"
+                        "collateral#1"
+            arguments
+                `shouldContain` [ "--tx-in"
+                                , T.unpack (closePlanSpentReference plan)
+                                , "--spending-tx-in-reference"
+                                , T.unpack (closePlanCheckpointReference plan)
+                                , "--spending-plutus-script-v3"
+                                , "--spending-reference-tx-in-inline-datum-present"
+                                , "--spending-reference-tx-in-redeemer-file"
+                                , closeFilesSpendRedeemer sampleCloseFiles
+                                ]
+            arguments
+                `shouldContain` [ "--mint"
+                                , "-1 "
+                                    <> T.unpack checkpointPolicy
+                                    <> "."
+                                    <> T.unpack (closePlanAssetName plan)
+                                , "--mint-tx-in-reference"
+                                , T.unpack (closePlanCheckpointReference plan)
+                                , "--mint-plutus-script-v3"
+                                , "--mint-reference-tx-in-redeemer-file"
+                                , closeFilesMintRedeemer sampleCloseFiles
+                                , "--policy-id"
+                                , T.unpack checkpointPolicy
+                                ]
+            arguments
+                `shouldContain` [ "--tx-out"
+                                , T.unpack (closePlanRefundOutput plan)
+                                , "--change-address"
+                                , T.unpack otherRefundAddress
+                                ]
+            arguments `shouldNotContain` ["--tx-out-inline-datum-file"]
+
 sampleActive :: IO ActiveCheckpoint
 sampleActive = do
     path <-
@@ -212,6 +295,29 @@ refundAddress =
 otherRefundAddress :: T.Text
 otherRefundAddress =
     "addr_test1vpchzut3w9chzut3w9chzut3w9chzut3w9chzut3w9chzugnd3d2k"
+
+sampleCloseRunner :: CloseRunnerConfig
+sampleCloseRunner =
+    CloseRunnerConfig
+        { closeRunnerCardanoCli = "cardano-cli"
+        , closeRunnerNetworkMagic = 1
+        , closeRunnerNodeSocket = "node.socket"
+        , closeRunnerFundingAddress = refundAddress
+        , closeRunnerChangeAddress = otherRefundAddress
+        , closeRunnerSigningKeyFile = "payment.skey"
+        , closeRunnerKoiosUrl = "https://preprod.koios.rest/api/v1"
+        , closeRunnerKoiosToken = Nothing
+        , closeRunnerTimeoutSeconds = 600
+        }
+
+sampleCloseFiles :: CloseFiles
+sampleCloseFiles =
+    CloseFiles
+        { closeFilesSpendRedeemer = "spend.json"
+        , closeFilesMintRedeemer = "mint.json"
+        , closeFilesBody = "close.body"
+        , closeFilesSigned = "close.signed"
+        }
 
 checkpointPolicy :: T.Text
 checkpointPolicy =

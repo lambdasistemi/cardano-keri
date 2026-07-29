@@ -110,6 +110,7 @@ library deployment
     Cardano.KERI.Deployment.CheckpointIndex
     Cardano.KERI.Deployment.CLI
     Cardano.KERI.Deployment.Close
+    Cardano.KERI.Deployment.CloseTransaction
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher

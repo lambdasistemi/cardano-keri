@@ -219,12 +219,14 @@ jobs:
       - name: Rebuild hashes and verify live preprod references
         env:
           KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
-        working-directory: offchain
-        run: >-
-          nix run --quiet .#ckeri --
-          manifest verify
-          --manifest ../deploy/preprod/m1-manifest.json
-          --source-repo ..
+        run: |
+          nix shell \
+            nixpkgs#bash \
+            nixpkgs#coreutils \
+            nixpkgs#git \
+            nixpkgs#gnugrep \
+            nixpkgs#jq \
+            --command bash scripts/check-m1-manifest-live.sh
 
   m1-register:
     name: M1 preprod registration transcript

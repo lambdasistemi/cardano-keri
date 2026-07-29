@@ -47,7 +47,8 @@ verification.
 
 ## Verify from a checkout
 
-From the repository root, build the flake-owned binary and verify the release:
+From the repository root at the manifest's source commit, build the
+flake-owned binary and verify the release:
 
 ```console
 $ nix run ./offchain#ckeri -- \
@@ -67,6 +68,12 @@ manifest verify: OK — rebuilt from source; all hashes and on-chain references 
 A changed source tree, blueprint, parameter, hash, byte length, transaction
 ID, output index, spent reference, or unavailable verification boundary makes
 the command fail non-zero.
+
+The checkout must be at source commit
+`50a582064ddfde15ebfa3649c6b6fea8d39fc697`. Later on-chain development
+deliberately changes the current blueprint, so the standing CI tripwire uses
+`scripts/check-m1-manifest-live.sh` to create a detached checkout at that
+immutable commit before rebuilding and querying preprod.
 
 ## Configuration
 

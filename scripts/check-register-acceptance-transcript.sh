@@ -114,8 +114,12 @@ if [[ -n "${CKERI_BIN:-}" ]]; then
       "state ACTIVE seq 0 native 0 keys 2-of-5 witnesses 3 (toad 2) bond intact tx ${register_txids[2]}#0" \
       "$transcript"
   )"
-  actual_status="$("$CKERI_BIN" status "$multi_aid" --manifest "$manifest")"
-  test "$actual_status" = "$expected_status"
+  actual_status="$(
+    "$CKERI_BIN" status "$multi_aid" \
+      --manifest "$manifest" \
+      --board-manifest deploy/preprod/board-manifest.json
+  )"
+  test "$actual_status" = "$expected_status watchable 3/3"
 
   tx_payload="$(
     printf '%s\n' "${premint_txids[@]}" "${register_txids[@]}" |

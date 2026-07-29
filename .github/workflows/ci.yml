@@ -281,6 +281,34 @@ jobs:
               KOIOS_TOKEN="$KOIOS_TOKEN" \
               bash scripts/check-advance-acceptance-transcript.sh
 
+  m1-close:
+    name: M1 preprod register + close transcript
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v15
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Match the raw full journey, signatures, validator negative, refund, and settled txids
+        env:
+          KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
+        run: |
+          nix build --quiet ./offchain#ckeri
+          nix shell \
+            nixpkgs#bash \
+            nixpkgs#coreutils \
+            nixpkgs#curl \
+            nixpkgs#gawk \
+            nixpkgs#gnugrep \
+            nixpkgs#gnused \
+            nixpkgs#jq \
+            --command env \
+              CKERI_BIN=./result/bin/ckeri \
+              KOIOS_TOKEN="$KOIOS_TOKEN" \
+              bash scripts/check-close-acceptance-transcript.sh
+
   e2e-sweep:
     name: E2E batch sweep (withDevnet)
     needs: build-gate

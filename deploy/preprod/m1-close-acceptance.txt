@@ -1,0 +1,108 @@
+$ /tmp/ckeri-161-src-green/offchain/result/bin/ckeri --version
+ckeri 0.0.0 
+$ docker run --rm cardano-keri-witness:1.3.5 version
+Library version: 1.3.5
+$ mkdir -m 0777 /tmp/ckeri-161-acceptance
+$ cat /home/paolino/secrets/cardano-keri-preprod/close-161-change-20260729.addr
+addr_test1vzywlcrkf4hj7t8cpuvyutcelxt7z48ksvmrpfeklc4uhkqnr730s
+$ docker volume create ckeri-161-controller-final-20260729
+ckeri-161-controller-final-20260729
+$ docker run --rm --volume ckeri-161-controller-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 init --name controller --base ckeri-161-controller-final --nopasscode
+KERI Keystore created at: /var/lib/keri/.keri/ks/ckeri-161-controller-final/controller
+KERI Database created at: /var/lib/keri/.keri/db/ckeri-161-controller-final/controller
+KERI Credential Store created at: /var/lib/keri/.keri/reg/ckeri-161-controller-final/controller
+$ docker run --rm --volume ckeri-161-controller-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 incept --name controller --base ckeri-161-controller-final --alias controller --transferable --icount 1 --isith 1 --ncount 1 --nsith 1 --toad 0
+Prefix  EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD
+	Public key 1:  DAb-ZlCbgxjlUsy4tIcEdVXY3AglDnj10XoIYXr-nQ98
+
+$ docker run --rm --volume ckeri-161-controller-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 status --name controller --base ckeri-161-controller-final --alias controller | tee /tmp/ckeri-161-acceptance/controller-status.txt
+Alias: 	controller
+Identifier: EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD
+Seq No:	0
+
+Witnesses:
+Count:		0
+Receipts:	0
+Threshold:	0
+
+Public Keys:	
+	1. DAb-ZlCbgxjlUsy4tIcEdVXY3AglDnj10XoIYXr-nQ98
+
+$ AID=$(sed -n s/\^Identifier:\[\[:space:\]\]\*//p /tmp/ckeri-161-acceptance/controller-status.txt)
+$ docker run --rm --volume ckeri-161-controller-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 export --name controller --base ckeri-161-controller-final --alias controller > /tmp/ckeri-161-acceptance/controller.cesr
+$ docker volume create ckeri-161-outsider-final-20260729
+ckeri-161-outsider-final-20260729
+$ docker run --rm --volume ckeri-161-outsider-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 init --name outsider --base ckeri-161-outsider-final --nopasscode
+KERI Keystore created at: /var/lib/keri/.keri/ks/ckeri-161-outsider-final/outsider
+KERI Database created at: /var/lib/keri/.keri/db/ckeri-161-outsider-final/outsider
+KERI Credential Store created at: /var/lib/keri/.keri/reg/ckeri-161-outsider-final/outsider
+$ docker run --rm --volume ckeri-161-outsider-final-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 incept --name outsider --base ckeri-161-outsider-final --alias outsider --transferable --icount 1 --isith 1 --ncount 1 --nsith 1 --toad 0
+Prefix  EAh7KoTm1HJjASMoepB_fUBhfhmniDwlZvVW5xNUJgFg
+	Public key 1:  DA6nUtc_VnqPvDu3598VhZgtKs8eJUBpRwa9nqXw08JC
+
+$ /tmp/ckeri-161-src-green/offchain/result/bin/ckeri status EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json
+state NOT REGISTERED aid EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD
+$ sudo env CKERI_NETWORK=preprod CKERI_NETWORK_MAGIC=1 CKERI_KEL=/tmp/ckeri-161-acceptance/controller.cesr CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d CKERI_MANIFEST=/tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json /tmp/ckeri-161-src-green/offchain/result/bin/ckeri register
+^@premint txid: 71a61bd14caee7c0b60158a3bb9d9251bae688faf8cd72552708994735fa21de
+register txid: 89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7
+escrow: 1007 tADA (min 2 + D 1000 + B 5)
+$ /tmp/ckeri-161-src-green/offchain/result/bin/ckeri status EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json
+state ACTIVE seq 0 native 0 keys 1-of-1 witnesses 0 (toad 0) bond intact tx 89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7#0
+$ /tmp/ckeri-161-src-green/offchain/result/bin/ckeri close --network preprod --network-magic 1 --aid EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --kel /tmp/ckeri-161-acceptance/controller.cesr --to addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json --signing-package /tmp/ckeri-161-acceptance/package
+signing package: /tmp/ckeri-161-acceptance/package/close-message.cbor
+preimage sha256: 4474f57666be0bdc25c2a32e683368294f6bb58524667962b4a970ab367d4989
+spent checkpoint: 89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7#0
+refund: 1007 tADA to addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d
+$ docker run --rm --volume ckeri-161-outsider-final-20260729:/var/lib/keri/.keri --volume /tmp/ckeri-161-acceptance:/acceptance --volume /tmp/ckeri-161-src-green/scripts/kli-sign-close.py:/usr/local/bin/kli-sign-close.py:ro --entrypoint python cardano-keri-witness:1.3.5 /usr/local/bin/kli-sign-close.py --name outsider --base ckeri-161-outsider-final --alias outsider --package /acceptance/package --out /acceptance/outsider-signatures.cesr --validator-test-non-controller
+warning: ACCEPTANCE-ONLY signing CloseMessage with non-controller AID EAh7KoTm1HJjASMoepB_fUBhfhmniDwlZvVW5xNUJgFg
+controller signatures: /acceptance/outsider-signatures.cesr
+signature count: 1
+preimage sha256: 4474f57666be0bdc25c2a32e683368294f6bb58524667962b4a970ab367d4989
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d CKERI_CHANGE_ADDRESS=addr_test1vzywlcrkf4hj7t8cpuvyutcelxt7z48ksvmrpfeklc4uhkqnr730s /tmp/ckeri-161-src-green/offchain/result/bin/ckeri close --network preprod --network-magic 1 --aid EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --kel /tmp/ckeri-161-acceptance/controller.cesr --to addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-161-acceptance/outsider-signatures.cesr --validator-test-non-controller
+warning: ACCEPTANCE-ONLY non-controller close package will be sent to real validator evaluation
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: SpendingScript (TxOutRef {txOutRefId = 89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7, txOutRefIdx = 0}) (Just (Datum {getDatum = Constr 0 [Constr 0 [B "\221\169\132G<,\216\&2\181\234\226\226\205Zi\243\246\200\171\151\&3\205\202\218\167K\200\233}6\ENQ\131",List [B "\ACK\254fP\155\131\CAN\229R\204\184\180\135\EOTuU\216\220\b%\SOx\245\209z\baz\254\157\SI|"],Constr 0 [I 1],List [B "\189}\132\238i\166\174E\174\139x\FS\SO\189\ENQ\136\254|7\133\231\173Py\154H\185\a\ESC\DC1\238K"],Constr 0 [I 1],List [],I 0,I 0,I 0]]}))
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: SpendingScript (TxOutRef {txOutRefId = 89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7, txOutRefIdx = 0}) (Just (Datum {getDatum = Constr 0 [Constr 0 [B "\221\169\132G<,\216\&2\181\234\226\226\205Zi\243\246\200\171\151\&3\205\202\218\167K\200\233}6\ENQ\131",List [B "\ACK\254fP\155\131\CAN\229R\204\184\180\135\EOTuU\216\220\b%\SOx\245\209z\baz\254\157\SI|"],Constr 0 [I 1],List [B "\189}\132\238i\166\174E\174\139x\FS\SO\189\ENQ\136\254|7\133\231\173Py\154H\185\a\ESC\DC1\238K"],Constr 0 [I 1],List [],I 0,I 0,I 0]]}))
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+
+$ docker run --rm --volume ckeri-161-controller-final-20260729:/var/lib/keri/.keri --volume /tmp/ckeri-161-acceptance:/acceptance --volume /tmp/ckeri-161-src-green/scripts/kli-sign-close.py:/usr/local/bin/kli-sign-close.py:ro --entrypoint python cardano-keri-witness:1.3.5 /usr/local/bin/kli-sign-close.py --name controller --base ckeri-161-controller-final --alias controller --package /acceptance/package --out /acceptance/controller-signatures.cesr
+controller signatures: /acceptance/controller-signatures.cesr
+signature count: 1
+preimage sha256: 4474f57666be0bdc25c2a32e683368294f6bb58524667962b4a970ab367d4989
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d CKERI_CHANGE_ADDRESS=addr_test1vzywlcrkf4hj7t8cpuvyutcelxt7z48ksvmrpfeklc4uhkqnr730s /tmp/ckeri-161-src-green/offchain/result/bin/ckeri close --network preprod --network-magic 1 --aid EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --kel /tmp/ckeri-161-acceptance/controller.cesr --to addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-161-acceptance/controller-signatures.cesr
+close txid: f88bb6138da9153818bd543d9ebd548cb09ff221530e936766671f02d1d82392
+refunded: 1007 tADA to addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d
+$ /tmp/ckeri-161-src-green/offchain/result/bin/ckeri status EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD --manifest /tmp/ckeri-161-src-green/deploy/preprod/m1-manifest.json
+state NOT REGISTERED (closed at f88bb6138da9153818bd543d9ebd548cb09ff221530e936766671f02d1d82392) aid EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD
+$ docker volume rm ckeri-161-controller-final-20260729
+ckeri-161-controller-final-20260729
+$ docker volume rm ckeri-161-outsider-final-20260729
+ckeri-161-outsider-final-20260729

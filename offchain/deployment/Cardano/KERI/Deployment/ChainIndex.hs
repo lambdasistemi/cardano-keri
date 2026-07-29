@@ -15,6 +15,7 @@ module Cardano.KERI.Deployment.ChainIndex (
     KoiosToken (..),
     authorizeKoiosRequest,
     queryReferenceScripts,
+    queryAddressUtxos,
     queryAssetUtxos,
     queryAssetHistory,
     queryScriptRedeemers,
@@ -224,6 +225,25 @@ queryReferenceScripts baseUrl token hashes = do
             setRequestBodyJSON (object ["_script_hashes" .= hashes]) $
                 setRequestHeader "content-type" ["application/json"] $
                     setRequestMethod "POST" initial
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token request)
+
+-- | Discover every current output at an address, including inline datum data.
+queryAddressUtxos ::
+    Text ->
+    Maybe KoiosToken ->
+    Text ->
+    IO [ChainAssetUtxo]
+queryAddressUtxos baseUrl token address = do
+    initial <- parseRequest (endpoint baseUrl "address_utxos")
+    let request =
+            setRequestBodyJSON
+                ( object
+                    [ "_addresses" .= [address]
+                    , "_extended" .= True
+                    ]
+                )
+                $ setRequestHeader "content-type" ["application/json"]
+                $ setRequestMethod "POST" initial
     getResponseBody <$> httpJSON (authorizeKoiosRequest token request)
 
 queryAssetUtxos ::

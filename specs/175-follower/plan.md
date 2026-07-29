@@ -59,15 +59,16 @@ wiring.
 `0c16c12c…`; the settled txids are in `deploy/preprod/m1-*-acceptance.txt`).
 A decoder proven only on bytes we generated ourselves is not proven.
 
-**S2 — reads.** `Cardano.KERI.Indexer.Reads`: `liveCheckpoints` (prefix scan at
+**S2 — reads.** `Cardano.KERI.Indexer.Reads`: `payerUtxos` (raw `(TxIn, TxOut)` at a
+funding address, shaped for a coin selector — see FR-9b), `liveCheckpoints` (prefix scan at
 the checkpoint address, decode, drop non-checkpoints) and `checkpointForAid`.
 *Proof*: unit tests over `withInMemoryIndexer` seeded through the real handler
 path — create/spend sequences in, expected view out. Includes the negative
 control: a non-checkpoint UTxO at the same address must not appear.
 
 **S3 — follower config + CLI.** `Cardano.KERI.Indexer.Follower` assembles
-`ChainSyncConfig` (`csInterestSet = IndexAddressSet {manifest checkpoint
-address}`, `csHandlers = liveUtxoHandler that :| []`, `csStartPoint` from the
+`ChainSyncConfig` (`csInterestSet = IndexAddressSet {manifest checkpoint address + the configured
+funding addresses}` (FR-9b: plural funding addresses via opt-env-conf), `csHandlers = liveUtxoHandler that :| []`, `csStartPoint` from the
 deployment slot, `csSecurityParamK` from network params) and
 `Cardano.KERI.Indexer.Config` declares socket/magic/k/start/store-path via
 opt-env-conf, matching `Deployment.CLI` conventions.
@@ -107,7 +108,10 @@ real node and a real N2C socket and neither touching Koios:
   rewind drill as a live-boundary test. If S0 DISPROVED or INCONCLUSIVE: back to
   the epic owner (A-001 is explicit — no auto-fallback to a weaker criterion).
 
-Both legs run on a **private `TMPDIR`** (see Risks).
+Both legs run on a **private `TMPDIR` under `/code/tmp/cardano-keri-175/`** — desk
+convention (A-003 + A-007), not `/tmp`. One move fixes two things: the fixed-path
+collision becomes impossible, and node databases stop landing on a 95%-full root
+(`/` has 24G free; `/code` has 402G).
 
 ### S6 ships an upstream workaround — three binding conditions
 
@@ -141,6 +145,27 @@ So: assert the node is actually **down** before touching the database, and asser
 the rollback was actually **observed** rather than inferred from the test reaching
 its end. *If the workaround were broken, would this test still be green?* If yes,
 it is not finished.
+
+**S6b — the vertical journey (the acceptance artefact).** One readable test that
+runs SC-0 end to end for a single identity, no layer mocked: devnet up → the test
+posts a real checkpoint registration → follower starts from the deployment slot
+with only the socket → the watcher reads the current checkpoint and its slot →
+follower killed and restarted, resuming without genesis replay and answering
+identically → node rewound and forked, after which the pre-fork record is gone
+with no stale record anywhere in the store.
+
+*Placement, which the epic left to me*: **its own slice, immediately after S6**,
+not folded into it. S6 establishes the fork-drill *mechanism* (with the #197
+workaround and its three conditions); S6b *composes* the parts into the user's
+story. Keeping them separate means each commit stays a clean vertical and a
+failure in the mechanism work does not block the journey's own review — and the
+journey reads as one narrative rather than as an appendix to a harness change.
+
+*Proof of the proof*: the journey must be able to fail for the right reason at
+each step. In particular step 5 must assert the **absence** of the pre-fork
+record by scanning the store, not merely that a read returns the new value — an
+assertion that only checks the new answer would pass with a stale record sitting
+beside it, which is the exact failure this story exists to prevent.
 
 **S7 — docs.** `docs/` page "the follower — indexed chain state from a node
 socket": what it indexes, how to run it with nothing but a node socket, the

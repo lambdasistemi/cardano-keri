@@ -5,38 +5,38 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 0 — fork-spike (investigation; no commit)
 
-- [ ] T175-S0-1 Build a scratch harness under `.llm/175-fork-spike/` that starts the
+- [X] T175-S0-1 Build a scratch harness under `.llm/175-fork-spike/` that starts the
       pinned devnet with a private `TMPDIR`, follows it over N2C, and records
       `(slot, block hash)` per block
-- [ ] T175-S0-2 Settle a transaction on chain A at a slot `> P`, snapshot the node db at
+- [X] T175-S0-2 Settle a transaction on chain A at a slot `> P`, snapshot the node db at
       P, rewind, restart, and reconnect without resubmitting that transaction
-- [ ] T175-S0-3 Record a decisive verdict (PROVED / DISPROVED / INCONCLUSIVE) in
+- [X] T175-S0-3 Record a decisive verdict (PROVED / DISPROVED / INCONCLUSIVE) in
       `.llm/175-fork-spike/REPORT.md` with reproduction commands and raw evidence copied
       out of the devnet tmpdir before the bracket exits
-- [ ] T175-S0-4 Navigator independently re-runs the decisive command and signs off
-- [ ] T175-S0-5 Orchestrator reports the verdict to the epic owner (A-001: on failure it
+- [X] T175-S0-4 Navigator independently re-runs the decisive command and signs off
+- [X] T175-S0-5 Orchestrator reports the verdict to the epic owner (A-001: on failure it
       goes back to the epic; there is no auto-fallback to a weaker criterion)
 
 ## Slice 1 — codecs
 
-- [ ] T175-S1-1 Add the `indexer` sublibrary to `offchain/cardano-keri.cabal` (deps on
+- [X] T175-S1-1 Add the `indexer` sublibrary to `offchain/cardano-keri.cabal` (deps on
       `cardano-node-clients:{utxo-indexer-lib,block-indexer}`, `cardano-keri`,
       `cardano-keri:deployment`) plus its test-suite wiring
-- [ ] T175-S1-2 RED: unit tests for `Cardano.KERI.Indexer.Codecs` — a synthetic
+- [X] T175-S1-2 RED: unit tests for `Cardano.KERI.Indexer.Codecs` — a synthetic
       cardano-ledger `TxOut` carrying the checkpoint asset and inline datum decodes to a
       `CheckpointRecord`; wrong policy, absent datum, undecodable datum, and a
       multi-candidate output are each rejected
-- [ ] T175-S1-3 RED: a golden test over a **real preprod checkpoint output** captured from
+- [X] T175-S1-3 RED: a golden test over a **real preprod checkpoint output** captured from
       the live M1 deployment (address/policy in `deploy/preprod/m1-manifest.json`, settled
       txids in `deploy/preprod/m1-*-acceptance.txt`), committed as a fixture
-- [ ] T175-S1-4 GREEN: implement `Cardano.KERI.Indexer.Codecs`
-- [ ] T175-S1-5 Module header names the upstream modules consumed (FR-11)
-- [ ] T175-S1-7 Wire `indexer-tests` into the gate: `offchain/flake.nix` exe+runner+check+app
+- [X] T175-S1-4 GREEN: implement `Cardano.KERI.Indexer.Codecs`
+- [X] T175-S1-5 Module header names the upstream modules consumed (FR-11)
+- [X] T175-S1-7 Wire `indexer-tests` into the gate: `offchain/flake.nix` exe+runner+check+app
       mirroring `deployment-tests`, and a `justfile` `indexer-unit` recipe added to
       `ci-offchain` (flake.lock and every pin untouched)
-- [ ] T175-S1-8 PROVE the wiring: break one indexer test on purpose, observe `just ci-offchain`
+- [X] T175-S1-8 PROVE the wiring: break one indexer test on purpose, observe `just ci-offchain`
       go RED naming that test, restore, then full `./gate.sh` green — both transcripts in WIP.md
-- [ ] T175-S1-6 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S1-6 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 2 — read primitives
 
@@ -47,6 +47,9 @@ orchestrator when the slice is accepted, in the same amended commit.
       must not appear in the view; a spent checkpoint must disappear
 - [ ] T175-S2-3 GREEN: implement `liveCheckpoints`, `checkpointForAid`, `storePoint` over
       `snapshotAt`
+- [ ] T175-S2-5 `payerUtxos`: raw `(TxIn, TxOut)` at a funding address, shaped for a coin
+      selector (FR-9b) — created returned, spent gone, other-address absent, no decoding or
+      checkpoint-flavoured wrapping, same no-cached-state rule
 - [ ] T175-S2-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 3 — follower configuration + CLI config
@@ -58,6 +61,12 @@ orchestrator when the slice is accepted, in the same amended commit.
       magic, `k`, start point, store path
 - [ ] T175-S3-3 GREEN: implement `Cardano.KERI.Indexer.Follower` and
       `Cardano.KERI.Indexer.Config`
+- [ ] T175-S3-5 Funding addresses (PLURAL, opt-env-conf) join the interest set alongside
+      the manifest checkpoint address (FR-9b)
+- [ ] T175-S3-6 An OPTIONAL configured board address joins the same list (endpoint board
+      released 2026-07-29: policy 54494f8a.., addr_test1wp2yjnu2..) — bound by config, NEVER
+      as a constant. No schema parsing, no fixture, no board step in the journey: board
+      record reads are #176, where board records can actually exist
 - [ ] T175-S3-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 4 — rollback exactness property (acceptance heart)
@@ -99,8 +108,35 @@ orchestrator when the slice is accepted, in the same amended commit.
       rollback was actually OBSERVED — the test must fail loudly if the workaround stops
       working, never report a green rollback that never happened
 - [ ] T175-S6-3 Evidence recorded in the PR body whichever way S0 landed (A-001)
+- [ ] T175-S6-5 Add a `just ci-live` recipe (desk A-005, option 3) and extend `gate.sh` to
+      call it: `just ci` stays lean so a docs fix does not pay for a devnet run, while any
+      ticket whose acceptance names live behaviour must run `ci-live`. Desk review checks
+      this wiring at acceptance
+      — EXTEND `gate.sh` for the life of this PR (repo convention, proven by its own history:
+      `chore: extend gate.sh for #158` then `chore: restore gate.sh after #158`)
+- [ ] T175-S6-6 Devnet runs use a private `TMPDIR` under `/code/tmp/cardano-keri-175/`,
+      never `/tmp` (desk convention; keeps node dbs off the 95%-full root)
 - [ ] T175-S6-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
+## Slice 6b — the vertical journey (the acceptance artefact, SC-0)
+
+- [ ] T175-S6b-1 One readable end-to-end test for ONE identity, no layer mocked: devnet up →
+      the test posts a real checkpoint registration → follower starts from the deployment
+      slot with only the node socket → watcher reads the current checkpoint and its slot
+- [ ] T175-S6b-2 Follower killed and restarted mid-journey: resumes without genesis replay
+      and answers IDENTICALLY
+- [ ] T175-S6b-3 Node rewound and forked: afterwards the pre-fork record is gone and the
+      store carries NO stale record — asserted by SCANNING the store for absence, not by a
+      read returning the new value (that would pass with a stale record beside it)
+- [ ] T175-S6b-3b Journey step 6: the watcher reads its OWN funding UTxOs from the store —
+      no `cardano-cli query utxo`, no `GetUTxOByAddress` anywhere in the path — and after the
+      fork a funding UTxO that existed only on the abandoned chain is gone from that answer
+- [ ] T175-S6b-3c Block atomicity PROVEN at the restart step: a crash mid-block leaves the
+      store on a block boundary (inherited from the engine — shown, not cited)
+- [ ] T175-S6b-4 Each step demonstrated able to fail for its own reason
+- [ ] T175-S6b-5 Journey transcript recorded in the PR as the acceptance artefact (evidence
+      dated after the final code change it covers)
+- [ ] T175-S6b-6 `./gate.sh` green; one commit, `Tasks:` trailer
 ## Slice 7 — docs
 
 - [ ] T175-S7-1 `docs/` page: what the follower indexes, running it from a node socket
@@ -117,5 +153,9 @@ orchestrator when the slice is accepted, in the same amended commit.
       in a technical appendix
 - [ ] T175-S8-2 Deliverables re-checked against the epic's patched list (codecs, reads,
       follower config, CLI, docs, rollback property, resume test, live leg)
+- [ ] T175-S8-2b Restore `gate.sh` to `just ci` in its own `chore:` commit at finalize, and
+      say WHY in the message ("`ci-live` remains available in the justfile for the next
+      ticket with live acceptance") — a future reader finding a bare restore commit will
+      suspect the gate was weakened to get green, which is the opposite of what happened
 - [ ] T175-S8-3 Final gate green at HEAD; `COMPLETE` logged with PR URL, head SHA and
       gate evidence; merge requested through the epic owner (never self-merged)

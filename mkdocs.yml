@@ -55,6 +55,7 @@ nav:
       - The preprod witness pool: user/preprod-witness-pool.md
       - The M1 preprod deployment: user/m1-preprod-deployment.md
       - Register your identity: user/register-preprod-identity.md
+      - Rotate your identity: user/rotate-preprod-identity.md
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md

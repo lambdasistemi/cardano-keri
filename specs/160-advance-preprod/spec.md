@@ -28,8 +28,8 @@ re-encodes it. It cannot sign the binary canonical-CBOR preimage byte-for-byte.
 Therefore a one-shot `ckeri advance --kel ...` cannot truthfully derive all
 deployed-validator evidence from a KEL export alone.
 
-Subject to the epic owner's ratification, this story uses one `advance` verb
-with two explicit modes:
+The implementation parked for epic-owner review uses one `advance` verb with
+two explicit modes:
 
 1. `ckeri advance ... --signing-package DIR` discovers the current checkpoint,
    parses the rotation and receipts, and writes the exact binary preimage plus

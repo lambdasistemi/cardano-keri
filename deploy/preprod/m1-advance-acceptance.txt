@@ -1,0 +1,350 @@
+$ /tmp/ckeri-160-src/offchain/result/bin/ckeri --version
+ckeri 0.0.0 
+$ docker run --rm cardano-keri-witness:1.3.5 version
+Library version: 1.3.5
+$ docker volume create ckeri-160-acceptance-2of5-20260729
+ckeri-160-acceptance-2of5-20260729
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 init --name org --base ckeri-160-acceptance-2of5 --nopasscode
+KERI Keystore created at: /var/lib/keri/.keri/ks/ckeri-160-acceptance-2of5/org
+KERI Database created at: /var/lib/keri/.keri/db/ckeri-160-acceptance-2of5/org
+KERI Credential Store created at: /var/lib/keri/.keri/reg/ckeri-160-acceptance-2of5/org
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 oobi resolve --name org --base ckeri-160-acceptance-2of5 --oobi https://witness-1.preprod.plutimus.com/oobi/BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI/controller --oobi-alias witness-1
+https://witness-1.preprod.plutimus.com/oobi/BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI/controller resolved
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 oobi resolve --name org --base ckeri-160-acceptance-2of5 --oobi https://witness-2.preprod.plutimus.com/oobi/BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B/controller --oobi-alias witness-2
+https://witness-2.preprod.plutimus.com/oobi/BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B/controller resolved
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 oobi resolve --name org --base ckeri-160-acceptance-2of5 --oobi https://witness-3.preprod.plutimus.com/oobi/BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4/controller --oobi-alias witness-3
+https://witness-3.preprod.plutimus.com/oobi/BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4/controller resolved
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 incept --name org --base ckeri-160-acceptance-2of5 --alias org --transferable --icount 5 --isith 2 --ncount 5 --nsith 2 --wits BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI --wits BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B --wits BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 --toad 2 --receipt-endpoint
+Waiting for witness receipts...
+Prefix  EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+	Public key 1:  DMwJkGDylvZ5N6UKk_3djl7Zhgq2MnwHS44h4tC8790x
+	Public key 2:  DA6qhTd_iuF9mcpzoLGm-kzHK9nAjDy5mb5MSj0TxdPq
+	Public key 3:  DF7bYAHUozkRqodRM3lvc_uJ8bFSIF8waqQxISN77qml
+	Public key 4:  DA4K4OD7P5O8ouhg8JGSl1uSAz8AfI4h6G2Hg3SGQ7d0
+	Public key 5:  DEPwWnFLWM4gGwfzYjRXirKe2muMaVO4XtomWCULGsQ8
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 status --name org --base ckeri-160-acceptance-2of5 --alias org
+Alias: 	org
+Identifier: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+Seq No:	0
+
+Witnesses:
+Count:		3
+Receipts:	3
+Threshold:	2
+
+Public Keys:	
+	1. DMwJkGDylvZ5N6UKk_3djl7Zhgq2MnwHS44h4tC8790x
+	2. DA6qhTd_iuF9mcpzoLGm-kzHK9nAjDy5mb5MSj0TxdPq
+	3. DF7bYAHUozkRqodRM3lvc_uJ8bFSIF8waqQxISN77qml
+	4. DA4K4OD7P5O8ouhg8JGSl1uSAz8AfI4h6G2Hg3SGQ7d0
+	5. DEPwWnFLWM4gGwfzYjRXirKe2muMaVO4XtomWCULGsQ8
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 export --name org --base ckeri-160-acceptance-2of5 --alias org > /tmp/ckeri-160-acceptance/inception.cesr
+
+$ /tmp/ckeri-160-src/offchain/result/bin/ckeri status EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json
+state NOT REGISTERED aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+$ sudo env CKERI_NETWORK=preprod CKERI_NETWORK_MAGIC=1 CKERI_KEL=/tmp/ckeri-160-acceptance/inception.cesr CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d CKERI_MANIFEST=/tmp/ckeri-160-src/deploy/preprod/m1-manifest.json /tmp/ckeri-160-src/offchain/result/bin/ckeri register --allow-unlisted-witnesses
+warning: witness board membership is unverified; accepting reduced public watchability
+premint txid: 11c9b559dfdf8dce7e53a294db1e0c5db68e5363574fcf6aea2c765e6934ee56
+register txid: f7edc5af3dd3e9777ac07bc8ac0eb771656cd239750361bd991f1b6371372c7e
+escrow: 1007 tADA (min 2 + D 1000 + B 5)
+$ /tmp/ckeri-160-src/offchain/result/bin/ckeri status EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json
+state ACTIVE seq 0 native 0 keys 2-of-5 witnesses 3 (toad 2) bond intact tx f7edc5af3dd3e9777ac07bc8ac0eb771656cd239750361bd991f1b6371372c7e#0
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 rotate --name org --base ckeri-160-acceptance-2of5 --alias org --next-count 5 --isith 2 --nsith 2 --toad 2 --receipt-endpoint
+Prefix  EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+New Sequence No.  1
+	Public key 1:  DLUuc0HBXXbDbRmAaqQlQGXX2deyEHyh7qcOlHe6ppkZ
+	Public key 2:  DFySo4XQ8__YYRosw9csLXplQ45R6K4h8CG1JgMjcgFN
+	Public key 3:  DMFWsCQ0FK-Baof0mWzENTX3jgLEJqZpwVJc37KhQdCB
+	Public key 4:  DGwkRoph0eTa-91PKqWUpThQ7K0joGBFD8mXxyAPEgfi
+	Public key 5:  DItBoBq1v-n09Q0DXhCUrZIp3-I2GOP2CXFaTO6Y4_YW
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 status --name org --base ckeri-160-acceptance-2of5 --alias org
+Alias: 	org
+Identifier: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+Seq No:	1
+
+Witnesses:
+Count:		3
+Receipts:	3
+Threshold:	2
+
+Public Keys:	
+	1. DLUuc0HBXXbDbRmAaqQlQGXX2deyEHyh7qcOlHe6ppkZ
+	2. DFySo4XQ8__YYRosw9csLXplQ45R6K4h8CG1JgMjcgFN
+	3. DMFWsCQ0FK-Baof0mWzENTX3jgLEJqZpwVJc37KhQdCB
+	4. DGwkRoph0eTa-91PKqWUpThQ7K0joGBFD8mXxyAPEgfi
+	5. DItBoBq1v-n09Q0DXhCUrZIp3-I2GOP2CXFaTO6Y4_YW
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 export --name org --base ckeri-160-acceptance-2of5 --alias org > /tmp/ckeri-160-acceptance/rotation.cesr
+
+$ /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --signing-package /tmp/ckeri-160-acceptance/package
+signing package: /tmp/ckeri-160-acceptance/package/advance-message.cbor
+preimage sha256: f1fc773f9ef45c1b6181abb0e567ee8efa90609c78bfa122e2969610f9250528
+spent checkpoint: f7edc5af3dd3e9777ac07bc8ac0eb771656cd239750361bd991f1b6371372c7e#0
+$ chmod 0777 /tmp/ckeri-160-acceptance/package
+
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri --volume /tmp/ckeri-160-acceptance:/acceptance --volume /tmp/ckeri-160-src/scripts/kli-sign-advance.py:/usr/local/bin/kli-sign-advance.py:ro --entrypoint python cardano-keri-witness:1.3.5 /usr/local/bin/kli-sign-advance.py --name org --base ckeri-160-acceptance-2of5 --alias org --package /acceptance/package --out /acceptance/controller-signatures.cesr
+Traceback (most recent call last):
+  File "/usr/local/bin/kli-sign-advance.py", line 97, in <module>
+    main()
+  File "/usr/local/bin/kli-sign-advance.py", line 88, in main
+    temporary.write_bytes(encoded)
+  File "/usr/local/lib/python3.12/pathlib.py", line 1036, in write_bytes
+    with self.open(mode='wb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/acceptance/.controller-signatures.cesr.tmp'
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 status --name org --base ckeri-160-acceptance-2of5 --alias org
+Alias: 	org
+Identifier: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+Seq No:	1
+
+Witnesses:
+Count:		3
+Receipts:	3
+Threshold:	2
+
+Public Keys:	
+	1. DLUuc0HBXXbDbRmAaqQlQGXX2deyEHyh7qcOlHe6ppkZ
+	2. DFySo4XQ8__YYRosw9csLXplQ45R6K4h8CG1JgMjcgFN
+	3. DMFWsCQ0FK-Baof0mWzENTX3jgLEJqZpwVJc37KhQdCB
+	4. DGwkRoph0eTa-91PKqWUpThQ7K0joGBFD8mXxyAPEgfi
+	5. DItBoBq1v-n09Q0DXhCUrZIp3-I2GOP2CXFaTO6Y4_YW
+$ chmod 0777 /tmp/ckeri-160-acceptance
+
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri --volume /tmp/ckeri-160-acceptance:/acceptance --volume /tmp/ckeri-160-src/scripts/kli-sign-advance.py:/usr/local/bin/kli-sign-advance.py:ro --entrypoint python cardano-keri-witness:1.3.5 /usr/local/bin/kli-sign-advance.py --name org --base ckeri-160-acceptance-2of5 --alias org --package /acceptance/package --out /acceptance/controller-signatures.cesr
+controller signatures: /acceptance/controller-signatures.cesr
+signature count: 5
+preimage sha256: f1fc773f9ef45c1b6181abb0e567ee8efa90609c78bfa122e2969610f9250528
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr --validator-test-under-signed
+warning: ACCEPTANCE-ONLY under-signed package will be sent to real validator evaluation
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr --validator-test-under-witnessed
+warning: ACCEPTANCE-ONLY under-witnessed package will be sent to real validator evaluation
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction submit
+Error: Error while submitting tx: ShelleyTxValidationError ShelleyBasedEraConway (ConwayApplyTxError (ConwayWithdrawalsMissingAccounts (Withdrawals {unWithdrawals = fromList [(AccountAddress {aaNetworkId = Testnet, aaId = AccountId {unAccountId = ScriptHashObj (ScriptHash "50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6")}},Coin 0)]}) :| []))
+CallStack (from HasCallStack):
+  fromExceptTCli, called at src/Cardano/CLI/EraBased/Transaction/Run.hs:107:36 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Transaction.Run
+  runTransactionCmds, called at src/Cardano/CLI/EraBased/Run.hs:61:5 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Run
+  runCmds, called at src/Cardano/CLI/EraBased/Run.hs:35:35 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Run
+  runAnyEraCommand, called at src/Cardano/CLI/Run.hs:56:5 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.Run
+  runClientCommand, called at app/cardano-cli.hs:58:14 in cardano-cli-10.15.1.0-4apf1NZDuR2JhPrmd9GAsX-cardano-cli:Main
+
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction submit
+  | Error: Error while submitting tx: ShelleyTxValidationError ShelleyBasedEraConway (ConwayApplyTxError (ConwayWithdrawalsMissingAccounts (Withdrawals {unWithdrawals = fromList [(AccountAddress {aaNetworkId = Testnet, aaId = AccountId {unAccountId = ScriptHashObj (ScriptHash "50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6")}},Coin 0)]}) :| []))
+  | CallStack (from HasCallStack):
+  |   fromExceptTCli, called at src/Cardano/CLI/EraBased/Transaction/Run.hs:107:36 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Transaction.Run
+  |   runTransactionCmds, called at src/Cardano/CLI/EraBased/Run.hs:61:5 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Run
+  |   runCmds, called at src/Cardano/CLI/EraBased/Run.hs:35:35 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.EraBased.Run
+  |   runAnyEraCommand, called at src/Cardano/CLI/Run.hs:56:5 in cardano-cli-10.15.1.0-IbXQgEDlj0GJ3zkxk9pQjV:Cardano.CLI.Run
+  |   runClientCommand, called at app/cardano-cli.hs:58:14 in cardano-cli-10.15.1.0-4apf1NZDuR2JhPrmd9GAsX-cardano-cli:Main
+  |
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri cardano-keri-witness:1.3.5 status --name org --base ckeri-160-acceptance-2of5 --alias org
+Alias: 	org
+Identifier: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+Seq No:	1
+
+Witnesses:
+Count:		3
+Receipts:	3
+Threshold:	2
+
+Public Keys:	
+	1. DLUuc0HBXXbDbRmAaqQlQGXX2deyEHyh7qcOlHe6ppkZ
+	2. DFySo4XQ8__YYRosw9csLXplQ45R6K4h8CG1JgMjcgFN
+	3. DMFWsCQ0FK-Baof0mWzENTX3jgLEJqZpwVJc37KhQdCB
+	4. DGwkRoph0eTa-91PKqWUpThQ7K0joGBFD8mXxyAPEgfi
+	5. DItBoBq1v-n09Q0DXhCUrZIp3-I2GOP2CXFaTO6Y4_YW
+$ chmod 0777 /tmp/ckeri-160-acceptance
+
+$ docker run --rm --volume ckeri-160-acceptance-2of5-20260729:/var/lib/keri/.keri --volume /tmp/ckeri-160-acceptance:/acceptance --volume /tmp/ckeri-160-src/scripts/kli-sign-advance.py:/usr/local/bin/kli-sign-advance.py:ro --entrypoint python cardano-keri-witness:1.3.5 /usr/local/bin/kli-sign-advance.py --name org --base ckeri-160-acceptance-2of5 --alias org --package /acceptance/package --out /acceptance/controller-signatures.cesr
+controller signatures: /acceptance/controller-signatures.cesr
+signature count: 5
+preimage sha256: f1fc773f9ef45c1b6181abb0e567ee8efa90609c78bfa122e2969610f9250528
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr --validator-test-under-signed
+warning: ACCEPTANCE-ONLY under-signed package will be sent to real validator evaluation
+observer registration txid: c37798c222ff680e44603e8dcd1c990ad6d1a040efdb2fc2a167e707d840ba25
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr --validator-test-under-witnessed
+warning: ACCEPTANCE-ONLY under-witnessed package will be sent to real validator evaluation
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr
+advance txid: ccf10efe3b90833374cf712fdbe2b246f88aadf34c170c9074d16754cdf5c6f2
+$ /tmp/ckeri-160-src/offchain/result/bin/ckeri status EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json
+state ACTIVE seq 1 native 1 keys 2-of-5 witnesses 3 (toad 2) bond intact tx ccf10efe3b90833374cf712fdbe2b246f88aadf34c170c9074d16754cdf5c6f2#0
+$ sudo env CKERI_PAYER=/home/paolino/secrets/cardano-keri-preprod/payment.skey CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket CKERI_FUNDING_ADDRESS=addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d /tmp/ckeri-160-src/offchain/result/bin/ckeri advance --network preprod --network-magic 1 --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --kel /tmp/ckeri-160-acceptance/rotation.cesr --manifest /tmp/ckeri-160-src/deploy/preprod/m1-manifest.json --controller-signatures /tmp/ckeri-160-acceptance/controller-signatures.cesr --validator-test-stale
+warning: ACCEPTANCE-ONLY stale replay package will be sent to real validator evaluation
+ckeri: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+user error (cardano-cli failed with exit 1
+stderr: Command failed: transaction build
+Error: The following scripts have execution failures:
+Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+Script language: PlutusV3
+Protocol version: Version 11
+   ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+Script evaluation error: An error has occurred:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Caused by: (error)
+
+stdout: 
+)
+
+While handling user error (cardano-cli failed with exit 1
+  | stderr: Command failed: transaction build
+  | Error: The following scripts have execution failures:
+  | Script hash: 581c50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6
+  | Script language: PlutusV3
+  | Protocol version: Version 11
+  |    ScriptInfo: RewardingScript (ScriptCredential 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6)
+  | Script evaluation error: An error has occurred:
+  | The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+  | Caused by: (error)
+  |
+  | stdout: 
+  | )
+
+HasCallStack backtrace:
+  bracket, called at ./System/IO/Temp.hs:114:3 in temporary-1.3-9hyISYypAkSLjQIgh7RTOc:System.IO.Temp
+$ docker volume rm ckeri-160-acceptance-2of5-20260729
+ckeri-160-acceptance-2of5-20260729

@@ -6,6 +6,8 @@ Description : Genuine witness OOBI parsing and fail-closed board catalog tests
 -}
 module Cardano.KERI.Deployment.EndpointBoardSpec (spec) where
 
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.Deployment.CLI (registerPreflight)
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetUtxo (..),
@@ -15,7 +17,13 @@ import Cardano.KERI.Deployment.EndpointBoard (
     EndpointRecord (..),
     parseEndpointRecord,
     renderBoardCatalog,
+    renderWatchability,
     resolveBoardCatalog,
+    watchabilityGrade,
+ )
+import Cardano.KERI.Deployment.KEL (
+    InceptionExport (..),
+    parseInceptionExport,
  )
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Control.Monad (forM_)
@@ -197,6 +205,39 @@ spec = do
             resolveBoardCatalog policy markerAddress [versionDrift]
                 `shouldSatisfy` isLeftContaining "version"
 
+    describe "checkpoint witness watchability" $ do
+        it "grades 0/0, absent, partial, complete, and duplicate records" $ do
+            inception <- loadWitnessedInception
+            pool <- loadPoolEntries
+            let witnesses = cdWitnesses (inceptionDatum inception)
+            watchabilityGrade [] [] `shouldBe` (0, 0)
+            watchabilityGrade witnesses [] `shouldBe` (0, 3)
+            watchabilityGrade witnesses (take 2 pool) `shouldBe` (2, 3)
+            watchabilityGrade witnesses pool `shouldBe` (3, 3)
+            watchabilityGrade witnesses (take 1 pool <> pool)
+                `shouldBe` (3, 3)
+            renderWatchability witnesses (take 2 pool)
+                `shouldBe` "watchable 2/3"
+
+        it "refuses missing witnesses and accepts complete or explicit override" $ do
+            inception <- loadWitnessedInception
+            pool <- loadPoolEntries
+            registerPreflight "preprod" 1 False False 0 [] inception
+                `shouldSatisfy` isLeftContaining "3/3"
+            registerPreflight
+                "preprod"
+                1
+                False
+                False
+                0
+                (take 2 pool)
+                inception
+                `shouldSatisfy` isLeftContaining "1/3"
+            registerPreflight "preprod" 1 False False 0 pool inception
+                `shouldBe` Right ()
+            registerPreflight "preprod" 1 True False 0 [] inception
+                `shouldBe` Right ()
+
 policy, markerAddress, txId :: Text
 policy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
 markerAddress = "addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4"
@@ -237,7 +278,8 @@ onlyMarker record =
 expectedEntry :: EndpointRecord -> Int -> BoardEntry
 expectedEntry record index =
     BoardEntry
-        { boardAid = endpointAid record
+        { boardWitnessKey = endpointWitnessKey record
+        , boardAid = endpointAid record
         , boardScheme = endpointScheme record
         , boardUrl = endpointUrl record
         , boardTxId = txId
@@ -258,6 +300,27 @@ loadFixtureNamed name = do
         getDataFileName
             ("deployment-test/fixtures/" <> name)
     BS.readFile path
+
+loadWitnessedInception :: IO InceptionExport
+loadWitnessedInception = do
+    path <-
+        getDataFileName
+            "deployment-test/fixtures/kli-export-2-of-5.cesr"
+    BS.readFile path >>= expectRight . parseInceptionExport
+
+loadPoolEntries :: IO [BoardEntry]
+loadPoolEntries =
+    sequence
+        [ loadFixtureNamed ("witness-" <> show index <> "-oobi.cesr")
+            >>= expectRight . parseEndpointRecord
+            >>= \record ->
+                pure
+                    ( (expectedEntry record index)
+                        { boardTxId = T.replicate 63 "0" <> T.pack (show index)
+                        }
+                    )
+        | index <- [1 .. 3]
+        ]
 
 expectRight :: Either String a -> IO a
 expectRight = \case

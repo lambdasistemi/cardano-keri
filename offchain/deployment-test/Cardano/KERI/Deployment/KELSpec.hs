@@ -64,22 +64,22 @@ spec =
 
         it "refuses witnessed registration until explicitly acknowledged" $ do
             parsed <- load "kli-export-2-of-5.cesr"
-            registerPreflight "preprod" 1 False False 0 parsed
+            registerPreflight "preprod" 1 False False 0 [] parsed
                 `shouldSatisfy` isLeft
-            registerPreflight "preprod" 1 True False 0 parsed
+            registerPreflight "preprod" 1 True False 0 [] parsed
                 `shouldBe` Right ()
 
         it "refuses duplicate, ambiguous, and non-preprod registration" $ do
             parsed <- load "kli-export-single.cesr"
-            registerPreflight "preprod" 1 False False 1 parsed
+            registerPreflight "preprod" 1 False False 1 [] parsed
                 `shouldSatisfy` isLeft
-            registerPreflight "preprod" 1 False False 2 parsed
+            registerPreflight "preprod" 1 False False 2 [] parsed
                 `shouldSatisfy` isLeft
-            registerPreflight "preprod" 1 False True 1 parsed
+            registerPreflight "preprod" 1 False True 1 [] parsed
                 `shouldBe` Right ()
-            registerPreflight "preprod" 1 False True 2 parsed
+            registerPreflight "preprod" 1 False True 2 [] parsed
                 `shouldBe` Right ()
-            registerPreflight "preview" 2 False False 0 parsed
+            registerPreflight "preview" 2 False False 0 [] parsed
                 `shouldSatisfy` isLeft
 
         describe "witnessed rotation" $ do

@@ -13,8 +13,8 @@
 
 ## Slice 3 — status and preflight
 
-- [ ] T006-S3 Add RED watchability and witnessed-registration preflight tests.
-- [ ] T007-S3 Wire verified board membership into `ckeri status` and `ckeri register`.
+- [x] T006-S3 Add RED watchability and witnessed-registration preflight tests.
+- [x] T007-S3 Wire verified board membership into `ckeri status` and `ckeri register`.
 
 ## Slice 4 — mutation transactions and CLI
 

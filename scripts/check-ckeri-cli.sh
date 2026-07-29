@@ -29,6 +29,8 @@ trap 'rm -rf "$workspace"' EXIT
 "$ckeri" register --help | grep -q "CKERI_ALLOW_EXISTING_CHECKPOINT"
 "$ckeri" register --help | grep -q -- "--koios-token"
 "$ckeri" register --help | grep -q "KOIOS_TOKEN"
+"$ckeri" register --help | grep -q -- "--board-manifest"
+"$ckeri" register --help | grep -q "CKERI_BOARD_MANIFEST"
 "$ckeri" advance --help | grep -q -- "--aid"
 "$ckeri" advance --help | grep -q "CKERI_AID"
 "$ckeri" advance --help | grep -q -- "--kel"
@@ -63,6 +65,8 @@ trap 'rm -rf "$workspace"' EXIT
 "$ckeri" status --help | grep -q "CKERI_AID"
 "$ckeri" status --help | grep -q -- "--koios-token"
 "$ckeri" status --help | grep -q "KOIOS_TOKEN"
+"$ckeri" status --help | grep -q -- "--board-manifest"
+"$ckeri" status --help | grep -q "CKERI_BOARD_MANIFEST"
 
 if rg -n \
   'Options\.Applicative|optparse-applicative' \

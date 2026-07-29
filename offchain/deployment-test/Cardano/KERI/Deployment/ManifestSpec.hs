@@ -2,6 +2,12 @@
 
 module Cardano.KERI.Deployment.ManifestSpec (spec) where
 
+import Cardano.KERI.Deployment.EndpointBoardManifest (
+    EndpointBoardInfo (..),
+    EndpointBoardManifest (..),
+    endpointBoardManifestValidationErrors,
+    mkEndpointBoardManifest,
+ )
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
     Reference (..),
@@ -60,6 +66,37 @@ spec =
                 scriptHashText (artifactScriptHash board)
                     `shouldBe` expectedBoardPolicy
                 boardAddress board `shouldBe` Right expectedBoardAddress
+            it "round-trips and validates the reproducible board manifest" $ \_ -> do
+                board <- loadBoardArtifact
+                manifest <-
+                    either fail pure $
+                        mkEndpointBoardManifest
+                            "https://github.com/lambdasistemi/cardano-keri"
+                            "0000000000000000000000000000000000000000"
+                            testBlueprintDigest
+                            "2026-07-29T00:00:00Z"
+                            board
+                            (Reference testTxId 0)
+                Aeson.eitherDecode (Aeson.encode manifest)
+                    `shouldBe` Right manifest
+                endpointBoardManifestValidationErrors
+                    testBlueprintDigest
+                    board
+                    manifest
+                    `shouldBe` []
+                let info = endpointBoardManifestInfo manifest
+                    tampered =
+                        manifest
+                            { endpointBoardManifestInfo =
+                                info{endpointBoardPolicyId = "00"}
+                            }
+                unlines
+                    ( endpointBoardManifestValidationErrors
+                        testBlueprintDigest
+                        board
+                        tampered
+                    )
+                    `shouldContain` "board policy id mismatch"
         describe "M1 V1 manifest" $ do
             it "round-trips deterministically" $ \artifacts -> do
                 manifest <- requireManifest artifacts

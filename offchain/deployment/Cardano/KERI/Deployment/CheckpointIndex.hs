@@ -8,6 +8,7 @@ module Cardano.KERI.Deployment.CheckpointIndex (
     queryActiveCheckpoint,
     resolveActiveCheckpoint,
     renderCheckpointStatus,
+    renderResolvedCheckpointStatus,
     resolveClosedCheckpoint,
     queryCheckpointStatus,
 ) where
@@ -85,48 +86,60 @@ queryCheckpointStatus ::
     IO Text
 queryCheckpointStatus baseUrl token manifest aid = do
     assetName <- either fail pure (checkpointAssetName aid)
-    utxos <-
-        queryAssetUtxos
-            baseUrl
-            token
-            (checkpointPolicyId $ manifestCheckpoint manifest)
-            assetName
-    if null utxos
-        then do
-            let policy = checkpointPolicyId $ manifestCheckpoint manifest
-            history <- queryAssetHistory baseUrl token policy assetName
-            case latestMintingTransaction policy assetName history of
-                Left err -> fail err
-                Right Nothing ->
+    let policy = checkpointPolicyId $ manifestCheckpoint manifest
+    history <- queryAssetHistory baseUrl token policy assetName
+    latest <- either fail pure (latestMintingTransaction policy assetName history)
+    case latest of
+        Just minting
+            | chainMintingQuantity minting == -1 -> do
+                redeemers <- queryScriptRedeemers baseUrl token policy
+                transaction <-
+                    queryTransactionUtxos
+                        baseUrl
+                        token
+                        [chainMintingTxId minting]
+                closed <-
                     either fail pure $
-                        renderCheckpointStatus manifest aid assetName []
-                Right (Just latest) -> do
-                    redeemers <- queryScriptRedeemers baseUrl token policy
-                    transaction <-
-                        queryTransactionUtxos
-                            baseUrl
-                            token
-                            [chainMintingTxId latest]
-                    closed <-
-                        either fail pure $
-                            resolveClosedCheckpoint
-                                policy
-                                assetName
-                                history
-                                redeemers
-                                transaction
-                    pure $
-                        case closed of
-                            Just txId ->
-                                "state NOT REGISTERED (closed at "
-                                    <> txId
-                                    <> ") aid "
-                                    <> aid
-                            Nothing ->
-                                "state NOT REGISTERED aid " <> aid
-        else
+                        resolveClosedCheckpoint
+                            policy
+                            assetName
+                            history
+                            redeemers
+                            transaction
+                either fail pure $
+                    renderResolvedCheckpointStatus
+                        manifest
+                        aid
+                        assetName
+                        []
+                        closed
+        _ -> do
+            utxos <- queryAssetUtxos baseUrl token policy assetName
             either fail pure $
-                renderCheckpointStatus manifest aid assetName utxos
+                renderResolvedCheckpointStatus
+                    manifest
+                    aid
+                    assetName
+                    utxos
+                    Nothing
+
+renderResolvedCheckpointStatus ::
+    Manifest ->
+    Text ->
+    Text ->
+    [ChainAssetUtxo] ->
+    Maybe Text ->
+    Either String Text
+renderResolvedCheckpointStatus manifest aid assetName utxos closed =
+    case closed of
+        Just txId ->
+            Right $
+                "state NOT REGISTERED (closed at "
+                    <> txId
+                    <> ") aid "
+                    <> aid
+        Nothing ->
+            renderCheckpointStatus manifest aid assetName utxos
 
 queryActiveCheckpoint ::
     Text ->

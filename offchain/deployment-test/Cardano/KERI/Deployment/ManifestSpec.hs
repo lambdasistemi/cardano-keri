@@ -152,11 +152,11 @@ loadBoardArtifact = do
     either fail pure (deriveBoardScript blueprint)
 
 expectedBoardPolicy :: Text
-expectedBoardPolicy = "398a358ad6729f877809b6bd573b680c0e247be00f380a1f93279d4d"
+expectedBoardPolicy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
 
 expectedBoardAddress :: Text
 expectedBoardAddress =
-    "addr_test1wquc5dv26eeflpmcpxmt64emdqxqufrmuq8nszsljvne6nglkxzx3"
+    "addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4"
 
 requireManifest :: [ScriptArtifact] -> IO Manifest
 requireManifest artifacts =

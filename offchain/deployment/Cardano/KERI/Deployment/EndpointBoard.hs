@@ -10,6 +10,7 @@ module Cardano.KERI.Deployment.EndpointBoard (
     EndpointRecord (..),
     BoardEntry (..),
     parseEndpointRecord,
+    parseWitnessKey,
     queryBoardCatalog,
     resolveBoardCatalog,
     renderBoardCatalog,
@@ -140,6 +141,10 @@ parseEndpointRecord stream = do
             else do
                 event <- decodeReply raw
                 Just <$> recordFromAttachedEvent raw attachments event
+
+-- | Decode one witness's KERI B-code to its raw 32-byte Ed25519 key.
+parseWitnessKey :: Text -> Either String ByteString
+parseWitnessKey = decodeWitnessKey "witness identifier" . TE.encodeUtf8
 
 -- | Query and verify the exact current board set.
 queryBoardCatalog ::

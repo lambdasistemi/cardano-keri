@@ -37,7 +37,8 @@ $ export CKERI_REF=main
 $ git clone --filter=blob:none https://github.com/lambdasistemi/cardano-keri
 $ cd cardano-keri
 $ git checkout "$CKERI_REF"
-$ nix run --quiet ./offchain#ckeri -- board list \
+$ nix shell nixpkgs#nix -c nix run --accept-flake-config --quiet \
+    ./offchain#ckeri -- board list \
     --board-manifest deploy/preprod/board-manifest.json
 board records: 3
 B... verified https https://witness-1.preprod.plutimus.com/ tx <txid>#<index> deposit 4000000
@@ -48,6 +49,12 @@ B... verified https https://witness-3.preprod.plutimus.com/ tx <txid>#<index> de
 Use `main` for a released story. During public PR acceptance, set `CKERI_REF`
 to the exact public commit or branch named by that PR; no private artifact is
 required.
+
+The outer `nix shell` supplies a current Nix client. This keeps the clean-client
+journey portable on hosts whose installed Nix predates support for the
+repository's locked sibling `onchain` source. On Nix 2.31 or newer, you may run
+the inner `nix run` command directly. `--accept-flake-config` enables the public
+IOG cache declared by the project.
 
 `verified` is not a server claim. It means the client:
 

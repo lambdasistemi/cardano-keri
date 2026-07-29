@@ -123,19 +123,29 @@ library indexer
   hs-source-dirs:   indexer
   build-depends:
     , base
+    , base16-bytestring
+    , bech32
     , bytestring
     , cardano-keri
+    , cardano-keri:deployment
     , cardano-ledger-api
     , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
+    , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
     , containers
+    , contra-tracer
     , microlens
+    , opt-env-conf
+    , ouroboros-network:api
+    , text
 
   exposed-modules:
     Cardano.KERI.Indexer.Codecs
+    Cardano.KERI.Indexer.Config
+    Cardano.KERI.Indexer.Follower
     Cardano.KERI.Indexer.Reads
 
 executable ckeri
@@ -186,26 +196,32 @@ test-suite indexer-tests
   main-is:          Main.hs
   other-modules:
     Cardano.KERI.Indexer.CodecsSpec
+    Cardano.KERI.Indexer.FollowerSpec
     Cardano.KERI.Indexer.ReadsSpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
     , base
+    , bech32
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:deployment
     , cardano-keri:indexer
     , cardano-ledger-api
     , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
+    , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
     , containers
     , hspec
     , memory
     , microlens
+    , opt-env-conf
+    , ouroboros-network:api
     , plutus-core
     , plutus-tx
     , serialise

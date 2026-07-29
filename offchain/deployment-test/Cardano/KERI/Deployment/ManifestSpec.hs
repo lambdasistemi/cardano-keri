@@ -12,8 +12,11 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.Publisher (parseTransactionId)
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
+    boardAddress,
+    deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
+    scriptHashText,
  )
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Short qualified as SBS
@@ -48,6 +51,15 @@ spec =
                 map (SBS.length . artifactProgram) artifacts
                     `shouldSatisfy` all (<= 16_133)
                 programLength "observer-advance" artifacts `shouldBe` 16_130
+        describe "M1 endpoint-board script" $ do
+            it "derives the frozen policy id and preprod address" $ \_ -> do
+                board <- loadBoardArtifact
+                artifactName board `shouldBe` "endpoint-board"
+                artifactBlueprintTitle board
+                    `shouldBe` "endpoint_board.endpoint_board.mint"
+                scriptHashText (artifactScriptHash board)
+                    `shouldBe` expectedBoardPolicy
+                boardAddress board `shouldBe` Right expectedBoardAddress
         describe "M1 V1 manifest" $ do
             it "round-trips deterministically" $ \artifacts -> do
                 manifest <- requireManifest artifacts
@@ -132,6 +144,19 @@ programLength name artifacts =
          ] of
         [size] -> size
         _ -> error "programLength: artifact not found uniquely"
+
+loadBoardArtifact :: IO ScriptArtifact
+loadBoardArtifact = do
+    path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+    blueprint <- loadBlueprint path >>= either fail pure
+    either fail pure (deriveBoardScript blueprint)
+
+expectedBoardPolicy :: Text
+expectedBoardPolicy = "398a358ad6729f877809b6bd573b680c0e247be00f380a1f93279d4d"
+
+expectedBoardAddress :: Text
+expectedBoardAddress =
+    "addr_test1wquc5dv26eeflpmcpxmt64emdqxqufrmuq8nszsljvne6nglkxzx3"
 
 requireManifest :: [ScriptArtifact] -> IO Manifest
 requireManifest artifacts =

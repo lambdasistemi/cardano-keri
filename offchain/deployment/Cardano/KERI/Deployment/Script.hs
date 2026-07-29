@@ -24,7 +24,9 @@ module Cardano.KERI.Deployment.Script (
     computeScriptHash,
     cagePolicyId,
     cageScriptAddr,
+    deriveBoardScript,
     deriveV1Scripts,
+    boardAddress,
     checkpointAddress,
     scriptHashText,
     v1CheckpointVersion,
@@ -325,6 +327,27 @@ deriveV1Scripts blueprint = do
             , artifactScriptHash = computeScriptHash program
             }
 
+{- | Derive the parameter-free endpoint-board combined validator exactly.
+
+The mint handler is the canonical blueprint entry because every handler of a
+combined Aiken validator carries the same compiled program.
+-}
+deriveBoardScript :: Blueprint -> Either String ScriptArtifact
+deriveBoardScript blueprint = do
+    (title, program) <-
+        maybe
+            (Left "endpoint-board compiled code not found in production blueprint")
+            Right
+            (extractValidatorExact "endpoint_board.endpoint_board.mint" blueprint)
+    pure
+        ScriptArtifact
+            { artifactName = "endpoint-board"
+            , artifactBlueprintTitle = title
+            , artifactRole = "validator-and-minting-policy"
+            , artifactProgram = program
+            , artifactScriptHash = computeScriptHash program
+            }
+
 scriptHashBytes :: ScriptHash -> ByteString
 scriptHashBytes (ScriptHash hash) = hashToBytes hash
 
@@ -338,10 +361,24 @@ checkpointAddress artifacts = do
         case filter ((== "checkpoint-register") . artifactName) artifacts of
             [match] -> Right match
             _ -> Left "checkpoint-register artifact not found uniquely"
+    artifactAddress checkpoint
+
+{- | Render the endpoint-board enterprise address on preprod/testnet.
+
+The script is parameter-free, so this address and its policy ID are a single
+reproducible contract seam.
+-}
+boardAddress :: ScriptArtifact -> Either String Text
+boardAddress artifact
+    | artifactName artifact == "endpoint-board" = artifactAddress artifact
+    | otherwise = Left "endpoint-board artifact required"
+
+artifactAddress :: ScriptArtifact -> Either String Text
+artifactAddress artifact = do
     let address =
             Addr
                 Testnet
-                (ScriptHashObj (artifactScriptHash checkpoint))
+                (ScriptHashObj (artifactScriptHash artifact))
                 StakeRefNull
     hrp <-
         either

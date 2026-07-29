@@ -19,7 +19,7 @@ The M1 board contract is:
 - preprod address
   `addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4`;
 - datum schema
-  [`specs/165-endpoint-board/datum-schema.md`](https://github.com/lambdasistemi/cardano-keri/blob/main/specs/165-endpoint-board/datum-schema.md);
+  [`specs/165-endpoint-board/datum-schema.md`](https://github.com/lambdasistemi/cardano-keri/blob/bb26876cb81c2fb268b95baf7889bb17a57edf3f/specs/165-endpoint-board/datum-schema.md);
   and
 - deployment locator `deploy/preprod/board-manifest.json`.
 

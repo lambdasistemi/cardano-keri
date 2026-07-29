@@ -13,7 +13,9 @@ token instead of permanently binding themselves to one key.
     A genuine two-key identity has registered, closed, rotated, and completed
     two Freeze/response rounds on a protocol-11 development network running
     production transaction limits. The detailed transaction IDs and limits
-    are on the [story ladder](story-ladder.md).
+    are on the [story ladder](story-ladder.md). Separately, a witnessed
+    2-of-5 KLI identity has registered and advanced its live V1 checkpoint on
+    preprod; see [Rotate your identity](user/rotate-preprod-identity.md).
 
 !!! warning "Not a production deployment"
     Settled development-network transactions prove the vertical path through
@@ -32,6 +34,8 @@ token instead of permanently binding themselves to one key.
 - [Observer architecture](architecture/observer-architecture.md) — thin
   checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3
   premint fact token.
+- [Rotate your preprod identity](user/rotate-preprod-identity.md) — export a
+  witnessed KLI rotation, sign its binary Cardano package, and settle Advance.
 - [ACDC primer](acdc-primer.md) — the separate credential layer.
 
 For the financial and institutional concepts behind the later use cases, see

@@ -7,6 +7,7 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardManifest (..),
     endpointBoardManifestValidationErrors,
     mkEndpointBoardManifest,
+    writeEndpointBoardManifestAtomic,
  )
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
@@ -30,6 +31,14 @@ import Data.List (sort)
 import Data.Text (Text)
 import Data.Text qualified as T
 import System.Environment (getEnv)
+import System.IO.Temp (withSystemTempDirectory)
+import System.Posix.Files (
+    fileMode,
+    getFileStatus,
+    groupReadMode,
+    intersectFileModes,
+    otherReadMode,
+ )
 import Test.Hspec (
     Spec,
     aroundAll,
@@ -97,6 +106,14 @@ spec =
                         tampered
                     )
                     `shouldContain` "board policy id mismatch"
+                withSystemTempDirectory "ckeri-board-manifest" $ \directory -> do
+                    let output = directory <> "/board-manifest.json"
+                    writeEndpointBoardManifestAtomic output manifest
+                    mode <- fileMode <$> getFileStatus output
+                    mode `intersectFileModes` groupReadMode
+                        `shouldBe` groupReadMode
+                    mode `intersectFileModes` otherReadMode
+                        `shouldBe` otherReadMode
         describe "M1 V1 manifest" $ do
             it "round-trips deterministically" $ \artifacts -> do
                 manifest <- requireManifest artifacts

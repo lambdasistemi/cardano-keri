@@ -43,6 +43,14 @@ import Data.Text qualified as T
 import System.Directory (createDirectoryIfMissing, renameFile)
 import System.FilePath (takeDirectory)
 import System.IO (hClose, openBinaryTempFile)
+import System.Posix.Files (
+    groupReadMode,
+    otherReadMode,
+    ownerReadMode,
+    ownerWriteMode,
+    setFileMode,
+    unionFileModes,
+ )
 
 data EndpointBoardManifest = EndpointBoardManifest
     { endpointBoardManifestSchemaVersion :: !Text
@@ -203,6 +211,13 @@ writeEndpointBoardManifestAtomic path manifest = do
     BSL.hPut handle (Aeson.encode manifest)
     hClose handle
     renameFile temporary path
+    setFileMode
+        path
+        ( ownerReadMode
+            `unionFileModes` ownerWriteMode
+            `unionFileModes` groupReadMode
+            `unionFileModes` otherReadMode
+        )
 
 consumerErrors :: EndpointBoardManifest -> [String]
 consumerErrors manifest =

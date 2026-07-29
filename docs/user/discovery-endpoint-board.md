@@ -64,15 +64,22 @@ client never returns a partial trusted-looking list. An optional
 `KOIOS_TOKEN` environment variable supplies Koios bearer authorization.
 Anonymous reads remain supported.
 
-Dial a listed endpoint through its public URL:
+Dial the witness through its public KERI OOBI route. The catalog gives both
+the witness AID and base URL, so no private path is needed:
 
 ```console
+$ aid=BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI
+$ endpoint=https://witness-1.preprod.plutimus.com/
 $ curl --fail --silent --show-error \
     --output /dev/null \
-    --write-out 'HTTP %{http_code}\n' \
-    https://witness-1.preprod.plutimus.com/
-HTTP 200
+    --write-out 'HTTP %{http_code} bytes %{size_download}\n' \
+    "${endpoint}oobi/${aid}/controller"
+HTTP 200 bytes 1239
 ```
+
+The base URL is a KERI service endpoint, not a web home page; a generic
+`GET /` may correctly return method-not-allowed. The OOBI route above is the
+protocol-level dial.
 
 ## Witness operator journey: post
 

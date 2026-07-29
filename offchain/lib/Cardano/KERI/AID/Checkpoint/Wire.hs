@@ -7,6 +7,7 @@ in the library lets a cheap unit test pin the exact tuple/list nesting that a
 live validator decodes.
 -}
 module Cardano.KERI.AID.Checkpoint.Wire (
+    closeBurnRedeemerData,
     advanceSpendRedeemerData,
     advanceObserverRedeemerData,
     responseAdvanceObserverRedeemerData,
@@ -30,6 +31,13 @@ import Data.ByteString (ByteString)
 import PlutusCore.Data (Data (..))
 import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.IsData.Class (ToData (..))
+
+{- | CloseBurn is the second mint constructor and names the exact checkpoint
+input whose singleton token must be burned.
+-}
+closeBurnRedeemerData :: ByteString -> Integer -> Data
+closeBurnRedeemerData spentTxId spentIndex =
+    Constr 1 [Constr 0 [B spentTxId, I spentIndex]]
 
 {- | The lifecycle observer's @ObserverEnvelope@ for @Register@: a claim
 containing action zero, the checkpoint policy, and no input reference,

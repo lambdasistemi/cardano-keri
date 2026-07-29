@@ -6,7 +6,7 @@
 - [x] T161-S1 RED/GREEN exact Close address decoding and deterministic binary
   signing packages bound to the live ACTIVE outref, full refund target, and
   current controller threshold.
-- [ ] T161-S2 RED/GREEN the deployed reference-script spend+CloseBurn
+- [x] T161-S2 RED/GREEN the deployed reference-script spend+CloseBurn
   transaction plan, exact full-value target output, funding/collateral
   separation, submission, and settlement polling.
 - [ ] T161-S3 RED/GREEN typed Koios burn/redeemer/output history and truthful

@@ -3,7 +3,9 @@ Module      : Cardano.KERI.Deployment.CheckpointIndex
 Description : Exact-asset Koios discovery and fail-closed V1 status rendering
 -}
 module Cardano.KERI.Deployment.CheckpointIndex (
+    ActiveCheckpoint (..),
     checkpointAssetName,
+    resolveActiveCheckpoint,
     renderCheckpointStatus,
     queryCheckpointStatus,
 ) where
@@ -37,6 +39,18 @@ import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
+
+data ActiveCheckpoint = ActiveCheckpoint
+    { activeCheckpointAid :: !Text
+    , activeCheckpointAssetName :: !Text
+    , activeCheckpointTxId :: !Text
+    , activeCheckpointIndex :: !Int
+    , activeCheckpointAddress :: !Text
+    , activeCheckpointLovelace :: !Integer
+    , activeCheckpointAssets :: ![ChainAsset]
+    , activeCheckpointDatum :: !CheckpointDatumV1
+    }
+    deriving stock (Show, Eq)
 
 checkpointAssetName :: Text -> Either String Text
 checkpointAssetName aid =
@@ -73,7 +87,38 @@ renderCheckpointStatus ::
     Either String Text
 renderCheckpointStatus _ aid _ [] =
     Right ("state NOT REGISTERED aid " <> aid)
-renderCheckpointStatus manifest aid assetName [utxo] = do
+renderCheckpointStatus manifest aid assetName matches = do
+    active <- resolveActiveCheckpoint manifest aid assetName matches
+    let datum = activeCheckpointDatum active
+    pure $
+        T.unwords
+            [ "state ACTIVE"
+            , "seq"
+            , T.pack (show $ cdSeq datum)
+            , "native"
+            , T.pack (show $ cdNativeSn datum)
+            , "keys"
+            , renderThreshold (cdCurThreshold datum) (length $ cdCurKeys datum)
+            , "witnesses"
+            , T.pack (show $ length $ cdWitnesses datum)
+            , "(toad"
+            , T.pack (show $ cdToad datum) <> ")"
+            , "bond intact"
+            , "tx"
+            , activeCheckpointTxId active
+                <> "#"
+                <> T.pack (show $ activeCheckpointIndex active)
+            ]
+
+resolveActiveCheckpoint ::
+    Manifest ->
+    Text ->
+    Text ->
+    [ChainAssetUtxo] ->
+    Either String ActiveCheckpoint
+resolveActiveCheckpoint _ _ _ [] =
+    Left "checkpoint is not registered"
+resolveActiveCheckpoint manifest aid assetName [utxo] = do
     unless
         (chainAssetAddress utxo == checkpointAddressBech32 (manifestCheckpoint manifest))
         (Left "checkpoint asset is not at the known V1 ACTIVE role address")
@@ -113,26 +158,18 @@ renderCheckpointStatus manifest aid assetName [utxo] = do
                 + parameterFreezeBond (manifestParameters manifest)
     unless (chainAssetLovelace utxo >= minimumEscrow) $
         Left "checkpoint escrow is below min ADA + registration bond + freeze bond"
-    pure $
-        T.unwords
-            [ "state ACTIVE"
-            , "seq"
-            , T.pack (show $ cdSeq datum)
-            , "native"
-            , T.pack (show $ cdNativeSn datum)
-            , "keys"
-            , renderThreshold (cdCurThreshold datum) (length $ cdCurKeys datum)
-            , "witnesses"
-            , T.pack (show $ length $ cdWitnesses datum)
-            , "(toad"
-            , T.pack (show $ cdToad datum) <> ")"
-            , "bond intact"
-            , "tx"
-            , chainAssetTxId utxo
-                <> "#"
-                <> T.pack (show $ chainAssetIndex utxo)
-            ]
-renderCheckpointStatus _ _ _ matches =
+    pure
+        ActiveCheckpoint
+            { activeCheckpointAid = aid
+            , activeCheckpointAssetName = assetName
+            , activeCheckpointTxId = chainAssetTxId utxo
+            , activeCheckpointIndex = chainAssetIndex utxo
+            , activeCheckpointAddress = chainAssetAddress utxo
+            , activeCheckpointLovelace = chainAssetLovelace utxo
+            , activeCheckpointAssets = chainAssetList utxo
+            , activeCheckpointDatum = datum
+            }
+resolveActiveCheckpoint _ _ _ matches =
     Left $
         "checkpoint lookup is ambiguous: "
             <> show (length matches)

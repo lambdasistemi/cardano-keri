@@ -10,6 +10,7 @@ module Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
     parseInceptionExport,
+    parseIndexedSignatureLines,
     parseRotationExport,
 ) where
 
@@ -479,6 +480,34 @@ parseIndexedSignatures count bytes = go count bytes []
             unless (BS.length signature == 64) $
                 Left "CESR indexed Ed25519 signature is not 64 bytes"
             go (remaining - 1) following ((index, signature) : acc)
+
+{- | Decode one bare 88-character CESR indexed Ed25519 signature per line.
+
+This is the public controller-signature interchange accepted by
+@ckeri advance@. Human labels from @kli sign@ are rejected so that indexes
+cannot be silently reinterpreted.
+-}
+parseIndexedSignatureLines ::
+    ByteString ->
+    Either String [(Int, ByteString)]
+parseIndexedSignatureLines bytes =
+    traverse parseLine nonEmptyLines
+  where
+    nonEmptyLines =
+        filter (not . BS.null) $
+            map (BS.dropWhile isAsciiWhitespace . dropTrailingWhitespace) $
+                B8.lines bytes
+    parseLine line = do
+        unless (BS.length line == 88) $
+            Left "controller signature line is not one 88-character CESR token"
+        (signatures, trailing) <- parseIndexedSignatures 1 line
+        unless (BS.null trailing) $
+            Left "controller signature line has trailing material"
+        case signatures of
+            [signature] -> Right signature
+            _ -> Left "controller signature line did not decode exactly once"
+    dropTrailingWhitespace =
+        BS.reverse . BS.dropWhile isAsciiWhitespace . BS.reverse
 
 decodeSmallIndexedSignature :: ByteString -> Either String ByteString
 decodeSmallIndexedSignature token = do

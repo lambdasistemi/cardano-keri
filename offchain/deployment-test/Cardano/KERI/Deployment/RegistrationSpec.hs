@@ -6,7 +6,10 @@ import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetUtxo (..),
  )
-import Cardano.KERI.Deployment.CheckpointIndex (renderCheckpointStatus)
+import Cardano.KERI.Deployment.CheckpointIndex (
+    renderCheckpointStatus,
+    renderCheckpointStatusWithBoard,
+ )
 import Cardano.KERI.Deployment.KEL (parseInceptionExport)
 import Cardano.KERI.Deployment.Manifest (
     BlueprintInfo (..),
@@ -158,6 +161,15 @@ spec =
                 (planCheckpointName plan)
                 [active]
                 `shouldSatisfy` either (const False) (T.isInfixOf "keys 1-of-1")
+            renderCheckpointStatusWithBoard
+                sampleManifest
+                (planAid plan)
+                (planCheckpointName plan)
+                [active]
+                []
+                `shouldSatisfy` either
+                    (const False)
+                    (T.isSuffixOf "watchable 0/0")
             renderCheckpointStatus
                 sampleManifest
                 (planAid plan)

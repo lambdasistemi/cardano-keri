@@ -13,6 +13,9 @@ module Cardano.KERI.Deployment.EndpointBoard (
     queryBoardCatalog,
     resolveBoardCatalog,
     renderBoardCatalog,
+    watchabilityGrade,
+    missingBoardWitnesses,
+    renderWatchability,
 ) where
 
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
@@ -47,6 +50,7 @@ import Data.ByteString.Char8 qualified as B8
 import Data.Char (digitToInt, isHexDigit)
 import Data.List (sortOn)
 import Data.Maybe (catMaybes)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -64,7 +68,8 @@ data EndpointRecord = EndpointRecord
     deriving stock (Show, Eq)
 
 data BoardEntry = BoardEntry
-    { boardAid :: !Text
+    { boardWitnessKey :: !ByteString
+    , boardAid :: !Text
     , boardScheme :: !Text
     , boardUrl :: !Text
     , boardTxId :: !Text
@@ -190,7 +195,8 @@ resolveBoardCatalog policy markerAddress =
                 validateEndpointEvent datumKey eventBytes signature
             pure
                 BoardEntry
-                    { boardAid = endpointAid record
+                    { boardWitnessKey = endpointWitnessKey record
+                    , boardAid = endpointAid record
                     , boardScheme = endpointScheme record
                     , boardUrl = endpointUrl record
                     , boardTxId = chainAssetTxId output
@@ -215,6 +221,39 @@ renderBoardCatalog =
             , "deposit"
             , T.pack (show $ boardLovelace entry)
             ]
+
+{- | Count declared witness keys with at least one current verified record.
+Duplicate board records never increase the numerator.
+-}
+watchabilityGrade :: [ByteString] -> [BoardEntry] -> (Int, Int)
+watchabilityGrade witnesses entries =
+    ( length
+        [ ()
+        | witness <- witnesses
+        , witness `Set.member` catalogKeys
+        ]
+    , length witnesses
+    )
+  where
+    catalogKeys = Set.fromList (map boardWitnessKey entries)
+
+-- | Declared witness keys that have no current verified board record.
+missingBoardWitnesses :: [ByteString] -> [BoardEntry] -> [ByteString]
+missingBoardWitnesses witnesses entries =
+    [ witness
+    | witness <- witnesses
+    , witness `Set.notMember` catalogKeys
+    ]
+  where
+    catalogKeys = Set.fromList (map boardWitnessKey entries)
+
+renderWatchability :: [ByteString] -> [BoardEntry] -> Text
+renderWatchability witnesses entries =
+    let (watchable, declared) = watchabilityGrade witnesses entries
+     in "watchable "
+            <> T.pack (show watchable)
+            <> "/"
+            <> T.pack (show declared)
 
 recordFromAttachedEvent ::
     ByteString ->

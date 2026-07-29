@@ -37,7 +37,7 @@ import Cardano.KERI.Deployment.ChainIndex (
 import Cardano.KERI.Deployment.CheckpointIndex (
     ActiveCheckpoint (..),
     queryActiveCheckpoint,
-    queryCheckpointStatus,
+    queryCheckpointStatusWithBoard,
  )
 import Cardano.KERI.Deployment.Close (
     ClosePackage (..),
@@ -47,6 +47,16 @@ import Cardano.KERI.Deployment.Close (
     writeCloseSigningPackage,
  )
 import Cardano.KERI.Deployment.CloseTransaction qualified as CloseTx
+import Cardano.KERI.Deployment.EndpointBoard (
+    BoardEntry,
+    missingBoardWitnesses,
+    queryBoardCatalog,
+ )
+import Cardano.KERI.Deployment.EndpointBoardManifest (
+    EndpointBoardInfo (..),
+    EndpointBoardManifest (..),
+    readEndpointBoardManifest,
+ )
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
@@ -136,6 +146,7 @@ data RegisterSettings = RegisterSettings
     , registerFundingAddress :: Text
     , registerCardanoCli :: FilePath
     , registerManifest :: FilePath
+    , registerBoardManifest :: FilePath
     , registerKoiosUrl :: Text
     , registerKoiosToken :: Maybe KoiosToken
     , registerTimeoutSeconds :: Int
@@ -190,6 +201,7 @@ data CloseSettings = CloseSettings
 data StatusSettings = StatusSettings
     { statusAid :: Text
     , statusManifest :: FilePath
+    , statusBoardManifest :: FilePath
     , statusKoiosUrl :: Text
     , statusKoiosToken :: Maybe KoiosToken
     }
@@ -438,6 +450,13 @@ registerSettingsParser = do
             "manifest"
             "V1 preprod deployment manifest"
             (Just "deploy/preprod/m1-manifest.json")
+    registerBoardManifest <-
+        stringSetting
+            "board-manifest"
+            "CKERI_BOARD_MANIFEST"
+            "board-manifest"
+            "Endpoint-board preprod deployment manifest"
+            (Just "deploy/preprod/board-manifest.json")
     registerKoiosUrl <-
         textSetting
             "koios-url"
@@ -752,6 +771,13 @@ statusSettingsParser = do
             "manifest"
             "V1 preprod deployment manifest"
             (Just "deploy/preprod/m1-manifest.json")
+    statusBoardManifest <-
+        stringSetting
+            "board-manifest"
+            "CKERI_BOARD_MANIFEST"
+            "board-manifest"
+            "Endpoint-board preprod deployment manifest"
+            (Just "deploy/preprod/board-manifest.json")
     statusKoiosUrl <-
         textSetting
             "koios-url"
@@ -865,9 +891,10 @@ registerPreflight ::
     Bool ->
     Bool ->
     Int ->
+    [BoardEntry] ->
     InceptionExport ->
     Either String ()
-registerPreflight network networkMagic allowUnlisted allowExisting existingCount inception = do
+registerPreflight network networkMagic allowUnlisted allowExisting existingCount catalog inception = do
     unless (network == "preprod" && networkMagic == 1) $
         Left "M1 V1 registration supports only preprod network magic 1"
     when (existingCount < 0) $
@@ -876,14 +903,15 @@ registerPreflight network networkMagic allowUnlisted allowExisting existingCount
         Left "checkpoint already registered; refusing before premint"
     when (not allowExisting && existingCount > 1) $
         Left "checkpoint discovery is ambiguous; refusing before premint"
-    when
-        ( not allowUnlisted
-            && not (null $ cdWitnesses $ inceptionDatum inception)
-        )
-        ( Left
-            "declared witnesses have no board record check yet; pass \
-            \--allow-unlisted-witnesses to acknowledge reduced watchability"
-        )
+    let witnesses = cdWitnesses (inceptionDatum inception)
+        missing = missingBoardWitnesses witnesses catalog
+    when (not allowUnlisted && not (null missing)) $
+        Left $
+            show (length missing)
+                <> "/"
+                <> show (length witnesses)
+                <> " declared witnesses are absent from the verified board; pass \
+                   \--allow-unlisted-witnesses to acknowledge reduced watchability"
 
 runRegister :: RegisterSettings -> IO ()
 runRegister settings = do
@@ -904,6 +932,21 @@ runRegister settings = do
             (registerKoiosToken settings)
             (planCheckpointPolicy plan)
             (planCheckpointName plan)
+    let witnesses = cdWitnesses (inceptionDatum inception)
+    catalog <-
+        if null witnesses
+            then pure []
+            else do
+                boardManifest <-
+                    readEndpointBoardManifest
+                        (registerBoardManifest settings)
+                        >>= either fail pure
+                let boardInfo = endpointBoardManifestInfo boardManifest
+                queryBoardCatalog
+                    (registerKoiosUrl settings)
+                    (registerKoiosToken settings)
+                    (endpointBoardPolicyId boardInfo)
+                    (endpointBoardAddress boardInfo)
     either
         fail
         pure
@@ -913,15 +956,21 @@ runRegister settings = do
             (registerAllowUnlistedWitnesses settings)
             (registerAllowExistingCheckpoint settings)
             (length existing)
+            catalog
             inception
         )
+    let missing = missingBoardWitnesses witnesses catalog
     when
         ( registerAllowUnlistedWitnesses settings
-            && not (null $ cdWitnesses $ inceptionDatum inception)
+            && not (null missing)
         )
-        ( putStrLn
-            "warning: witness board membership is unverified; accepting \
-            \reduced public watchability"
+        ( putStrLn $
+            "warning: "
+                <> show (length missing)
+                <> "/"
+                <> show (length witnesses)
+                <> " declared witnesses are absent from the verified board; \
+                   \accepting reduced public watchability"
         )
     when
         (registerAllowExistingCheckpoint settings && not (null existing))
@@ -1234,11 +1283,15 @@ runStatus settings = do
         (fail "AID must be one 44-character KERI E-code identifier")
     manifest <-
         readManifest (statusManifest settings) >>= either fail pure
+    boardManifest <-
+        readEndpointBoardManifest (statusBoardManifest settings)
+            >>= either fail pure
     status <-
-        queryCheckpointStatus
+        queryCheckpointStatusWithBoard
             (statusKoiosUrl settings)
             (statusKoiosToken settings)
             manifest
+            boardManifest
             (statusAid settings)
     putStrLn (T.unpack status)
 

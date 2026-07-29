@@ -11,6 +11,8 @@ module Cardano.KERI.Deployment.CheckpointIndex (
     renderResolvedCheckpointStatus,
     resolveClosedCheckpoint,
     queryCheckpointStatus,
+    queryCheckpointStatusWithBoard,
+    renderCheckpointStatusWithBoard,
 ) where
 
 import Cardano.KERI.AID.CESR (
@@ -38,6 +40,15 @@ import Cardano.KERI.Deployment.ChainIndex (
     queryAssetUtxos,
     queryScriptRedeemers,
     queryTransactionUtxos,
+ )
+import Cardano.KERI.Deployment.EndpointBoard (
+    BoardEntry,
+    queryBoardCatalog,
+    renderWatchability,
+ )
+import Cardano.KERI.Deployment.EndpointBoardManifest (
+    EndpointBoardInfo (..),
+    EndpointBoardManifest (..),
  )
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
@@ -84,7 +95,64 @@ queryCheckpointStatus ::
     Manifest ->
     Text ->
     IO Text
-queryCheckpointStatus baseUrl token manifest aid = do
+queryCheckpointStatus baseUrl token manifest aid =
+    queryCheckpointStatusUsing
+        baseUrl
+        token
+        manifest
+        aid
+        ( \assetName utxos ->
+            either fail pure $
+                renderCheckpointStatus manifest aid assetName utxos
+        )
+
+queryCheckpointStatusWithBoard ::
+    Text ->
+    Maybe KoiosToken ->
+    Manifest ->
+    EndpointBoardManifest ->
+    Text ->
+    IO Text
+queryCheckpointStatusWithBoard baseUrl token manifest boardManifest aid =
+    queryCheckpointStatusUsing
+        baseUrl
+        token
+        manifest
+        aid
+        renderActive
+  where
+    info = endpointBoardManifestInfo boardManifest
+    renderActive assetName [] =
+        either fail pure $
+            renderCheckpointStatusWithBoard
+                manifest
+                aid
+                assetName
+                []
+                []
+    renderActive assetName utxos = do
+        catalog <-
+            queryBoardCatalog
+                baseUrl
+                token
+                (endpointBoardPolicyId info)
+                (endpointBoardAddress info)
+        either fail pure $
+            renderCheckpointStatusWithBoard
+                manifest
+                aid
+                assetName
+                utxos
+                catalog
+
+queryCheckpointStatusUsing ::
+    Text ->
+    Maybe KoiosToken ->
+    Manifest ->
+    Text ->
+    (Text -> [ChainAssetUtxo] -> IO Text) ->
+    IO Text
+queryCheckpointStatusUsing baseUrl token manifest aid renderActive = do
     assetName <- either fail pure (checkpointAssetName aid)
     let policy = checkpointPolicyId $ manifestCheckpoint manifest
     history <- queryAssetHistory baseUrl token policy assetName
@@ -106,22 +174,17 @@ queryCheckpointStatus baseUrl token manifest aid = do
                             history
                             redeemers
                             transaction
-                either fail pure $
-                    renderResolvedCheckpointStatus
-                        manifest
-                        aid
-                        assetName
-                        []
-                        closed
+                case closed of
+                    Just txId ->
+                        pure $
+                            "state NOT REGISTERED (closed at "
+                                <> txId
+                                <> ") aid "
+                                <> aid
+                    Nothing -> renderActive assetName []
         _ -> do
             utxos <- queryAssetUtxos baseUrl token policy assetName
-            either fail pure $
-                renderResolvedCheckpointStatus
-                    manifest
-                    aid
-                    assetName
-                    utxos
-                    Nothing
+            renderActive assetName utxos
 
 renderResolvedCheckpointStatus ::
     Manifest ->
@@ -187,6 +250,27 @@ renderCheckpointStatus manifest aid assetName matches = do
                 <> "#"
                 <> T.pack (show $ activeCheckpointIndex active)
             ]
+
+renderCheckpointStatusWithBoard ::
+    Manifest ->
+    Text ->
+    Text ->
+    [ChainAssetUtxo] ->
+    [BoardEntry] ->
+    Either String Text
+renderCheckpointStatusWithBoard manifest aid assetName matches catalog = do
+    status <- renderCheckpointStatus manifest aid assetName matches
+    case matches of
+        [] -> pure status
+        _ -> do
+            active <-
+                resolveActiveCheckpoint manifest aid assetName matches
+            pure $
+                status
+                    <> " "
+                    <> renderWatchability
+                        (cdWitnesses $ activeCheckpointDatum active)
+                        catalog
 
 resolveClosedCheckpoint ::
     Text ->

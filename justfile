@@ -51,6 +51,10 @@ check-register-acceptance:
 check-advance-acceptance:
     ./scripts/check-advance-acceptance-transcript.sh
 
+# Check the raw M1 register/close transcript, signatures, refund, and tx facts.
+check-close-acceptance:
+    ./scripts/check-close-acceptance-transcript.sh
+
 # Build the whole offchain project (incl. e2e test component) from the dev shell,
 # CHaP-offline via the Nix-local CHaP repo (issue #99 S9c) — no fetch of the
 # secure https CHaP index (hackage over http + the git SRPs stay live). `cabal
@@ -273,7 +277,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit check-ckeri-cli check-register-acceptance check-advance-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

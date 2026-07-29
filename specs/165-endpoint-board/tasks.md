@@ -23,10 +23,10 @@
 
 ## Slice 5 — docs, live proof, and CI
 
-- [ ] T010-S5 Add the endpoint-board user page, navigation, capture/check scripts, and CI tripwire.
-- [ ] T011-S5 Capture the binding witness-operator → clean stranger-machine
+- [x] T010-S5 Add the endpoint-board user page, navigation, capture/check scripts, and CI tripwire.
+- [x] T011-S5 Capture the binding witness-operator → clean stranger-machine
       public-docs-only post/list/verify/dial journey with nothing mocked.
-- [ ] T012-S5 Continue the same raw capture through forged/stale failures,
+- [x] T012-S5 Continue the same raw capture through forged/stale failures,
       status watchability, update, retire/refund, and all-three-live restore;
       commit settled txids and machine facts.
 - [ ] T013-S5 Embed the exact raw capture in the PR body, pass the final gate

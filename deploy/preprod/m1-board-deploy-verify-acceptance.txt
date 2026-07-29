@@ -1,0 +1,17 @@
+$ hostname -f
+production
+$ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-07-29T12:47:56Z
+$ cd /code/cardano-keri-165-operator
+$ git rev-parse HEAD
+6f47a9ff490d2e5bece81e51fb67fd613ae0d932
+$ ./result/bin/ckeri --version
+ckeri 0.0.0 
+$ stat --format=%a,%U,%G,%n deploy/preprod/board-manifest.json
+644,paolino,users,deploy/preprod/board-manifest.json
+$ sed -n 1p deploy/preprod/board-manifest.json
+{"blueprint":{"sha256":"896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c"},"board":{"address":"addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4","policyId":"54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c","programBytes":3158,"reference":{"index":0,"txId":"967b86211ab7c80876ae4b6bec0e478dd92a98f14d5c3d751a99ad01c04654d4"}},"network":{"magic":1,"name":"preprod"},"publishedAt":"2026-07-29T12:01:47Z","schema":"cardano-keri/m1-endpoint-board-manifest/v1","source":{"commit":"95b554fbdc9dee5b4437d3a8deeb882f114a0bf3","repository":"https://github.com/lambdasistemi/cardano-keri"}}$ ./result/bin/ckeri board list --board-manifest deploy/preprod/board-manifest.json
+board records: 3
+BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B verified https https://witness-2.preprod.plutimus.com/ tx 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9#0 deposit 4000000
+BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx 5e705ac1f08aee4119a52fe890e040b6fb4f716603598ee3eaf0027201e4a526#0 deposit 4000000
+BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx a01062724b678b988d294f1a7d352ee13fa8fc7c682340d61f89911364e2a365#0 deposit 4000000

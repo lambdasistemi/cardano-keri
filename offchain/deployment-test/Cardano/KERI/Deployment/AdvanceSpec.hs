@@ -15,6 +15,13 @@ import Cardano.KERI.Deployment.Advance (
     mkAdvancePackage,
     writeAdvanceSigningPackage,
  )
+import Cardano.KERI.Deployment.AdvanceTransaction (
+    AdvanceFiles (..),
+    AdvancePlan (..),
+    AdvanceRunnerConfig (..),
+    advanceBuildArguments,
+    mkAdvancePlan,
+ )
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetUtxo (..),
@@ -52,6 +59,8 @@ import Test.Hspec (
     describe,
     it,
     shouldBe,
+    shouldContain,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -136,6 +145,66 @@ spec =
                 package
                 `shouldSatisfy` isLeft
 
+        it "builds the thin observer transaction while preserving the complete state value" $ do
+            (inception, rotation) <- loadJourney
+            assetName <- either fail pure (checkpointAssetName $ rotationAid rotation)
+            let activeUtxo =
+                    ChainAssetUtxo
+                        (T.replicate 64 "1")
+                        2
+                        checkpointAddress
+                        1_007_000_000
+                        [ChainAsset checkpointPolicy assetName 1]
+                        ( Just $
+                            plutusDataJson $
+                                asPlcData $
+                                    V1 $
+                                        inceptionDatum inception
+                        )
+            active <-
+                either fail pure $
+                    resolveActiveCheckpoint
+                        sampleManifest
+                        (rotationAid rotation)
+                        assetName
+                        [activeUtxo]
+            package <-
+                either fail pure (mkAdvancePackage sampleManifest active rotation)
+            plan <- either fail pure (mkAdvancePlan sampleManifest package)
+            planSpentReference plan `shouldBe` T.replicate 64 "1" <> "#2"
+            planCheckpointReference plan
+                `shouldBe` "8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0"
+            planAdvanceReference plan
+                `shouldBe` "aaeb5ebe4e9783dc614b8a48634ef7fd9bb517cc0fdc3a4d701a26bd94679734#0"
+            planStateOutput plan
+                `shouldBe` checkpointAddress
+                    <> "+1007000000 + 1 "
+                    <> checkpointPolicy
+                    <> "."
+                    <> assetName
+            let arguments =
+                    advanceBuildArguments
+                        sampleRunner
+                        plan
+                        sampleAdvanceFiles
+                        "funding#0"
+                        "collateral#1"
+            arguments
+                `shouldContain` [ "--withdrawal"
+                                , T.unpack (planAdvanceRewardAddress plan) <> "+0"
+                                , "--withdrawal-tx-in-reference"
+                                , T.unpack (planAdvanceReference plan)
+                                , "--withdrawal-plutus-script-v3"
+                                ]
+            arguments
+                `shouldContain` [ "--tx-in"
+                                , T.unpack (planSpentReference plan)
+                                , "--spending-tx-in-reference"
+                                , T.unpack (planCheckpointReference plan)
+                                , "--spending-plutus-script-v3"
+                                ]
+            arguments `shouldNotContain` ["--mint"]
+
 loadJourney :: IO (InceptionExport, RotationExport)
 loadJourney = do
     path <-
@@ -153,6 +222,29 @@ checkpointAddress =
 checkpointPolicy :: T.Text
 checkpointPolicy =
     "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
+
+sampleRunner :: AdvanceRunnerConfig
+sampleRunner =
+    AdvanceRunnerConfig
+        { runnerCardanoCli = "cardano-cli"
+        , runnerNetworkMagic = 1
+        , runnerNodeSocket = "node.socket"
+        , runnerFundingAddress = "addr_test1funding"
+        , runnerSigningKeyFile = "payment.skey"
+        , runnerKoiosUrl = "https://preprod.koios.rest/api/v1"
+        , runnerKoiosToken = Nothing
+        , runnerTimeoutSeconds = 600
+        }
+
+sampleAdvanceFiles :: AdvanceFiles
+sampleAdvanceFiles =
+    AdvanceFiles
+        { filesSpendRedeemer = "spend.json"
+        , filesObserverRedeemer = "observer.json"
+        , filesSuccessorDatum = "successor.json"
+        , filesBody = "advance.body"
+        , filesSigned = "advance.signed"
+        }
 
 sampleManifest :: Manifest
 sampleManifest =

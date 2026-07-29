@@ -105,6 +105,7 @@ library deployment
 
   exposed-modules:
     Cardano.KERI.Deployment.Advance
+    Cardano.KERI.Deployment.AdvanceTransaction
     Cardano.KERI.Deployment.ChainIndex
     Cardano.KERI.Deployment.CheckpointIndex
     Cardano.KERI.Deployment.CLI

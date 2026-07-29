@@ -217,6 +217,7 @@ renderBoardCatalog =
     renderEntry entry =
         T.unwords
             [ boardAid entry
+            , "verified"
             , boardScheme entry
             , boardUrl entry
             , "tx"

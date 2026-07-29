@@ -11,12 +11,14 @@ module Cardano.KERI.Deployment.CLI (
     VerifySettings (..),
     RegisterSettings (..),
     AdvanceSettings (..),
+    CloseSettings (..),
     StatusSettings (..),
     registerPreflight,
     runInstructions,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Close (CloseEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.Deployment.Advance (
     AdvancePackage (..),
@@ -37,6 +39,14 @@ import Cardano.KERI.Deployment.CheckpointIndex (
     queryActiveCheckpoint,
     queryCheckpointStatus,
  )
+import Cardano.KERI.Deployment.Close (
+    ClosePackage (..),
+    CloseSigningFiles (..),
+    attachCloseControllerSignatures,
+    mkClosePackage,
+    writeCloseSigningPackage,
+ )
+import Cardano.KERI.Deployment.CloseTransaction qualified as CloseTx
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
@@ -85,6 +95,7 @@ data Instructions
     | ManifestVerify VerifySettings
     | Register RegisterSettings
     | Advance AdvanceSettings
+    | Close CloseSettings
     | Status StatusSettings
     deriving stock (Show, Eq)
 
@@ -155,6 +166,27 @@ data AdvanceSettings = AdvanceSettings
     }
     deriving stock (Show, Eq)
 
+data CloseSettings = CloseSettings
+    { closeNetwork :: Text
+    , closeNetworkMagic :: Int
+    , closeConfiguredAid :: Text
+    , closeKel :: FilePath
+    , closeTo :: Text
+    , closeSigningPackage :: Maybe FilePath
+    , closeControllerSignatures :: Maybe FilePath
+    , closePayer :: Maybe FilePath
+    , closeNodeSocket :: Maybe FilePath
+    , closeFundingAddress :: Maybe Text
+    , closeChangeAddress :: Maybe Text
+    , closeCardanoCli :: FilePath
+    , closeManifest :: FilePath
+    , closeKoiosUrl :: Text
+    , closeKoiosToken :: Maybe KoiosToken
+    , closeTimeoutSeconds :: Int
+    , closeValidatorTestNonController :: Bool
+    }
+    deriving stock (Show, Eq)
+
 data StatusSettings = StatusSettings
     { statusAid :: Text
     , statusManifest :: FilePath
@@ -201,6 +233,10 @@ instance Opt.HasParser Instructions where
                     "advance"
                     "Advance a live checkpoint from a witnessed kli rotation"
                     (Advance <$> Opt.subConfig "advance" advanceSettingsParser)
+                , Opt.command
+                    "close"
+                    "Close a live checkpoint and refund its complete escrow"
+                    (Close <$> Opt.subConfig "close" closeSettingsParser)
                 , Opt.command
                     "status"
                     "Report the live V1 checkpoint for an AID"
@@ -572,6 +608,131 @@ advanceSettingsParser = do
             ]
     pure AdvanceSettings{..}
 
+closeSettingsParser :: Opt.Parser CloseSettings
+closeSettingsParser = do
+    closeNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    closeNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    closeConfiguredAid <-
+        textSetting
+            "aid"
+            "CKERI_AID"
+            "aid"
+            "44-character KERI E-code identifier"
+            Nothing
+    closeKel <-
+        stringSetting
+            "kel"
+            "CKERI_KEL"
+            "kel"
+            "Binary-safe path to the controller's kli inception export"
+            Nothing
+    closeTo <-
+        textSetting
+            "to"
+            "CKERI_TO"
+            "to"
+            "Preprod payment address receiving the complete escrow"
+            Nothing
+    closeSigningPackage <-
+        Opt.optional $
+            stringSetting
+                "signing-package"
+                "CKERI_SIGNING_PACKAGE"
+                "signing-package"
+                "Directory receiving the binary CloseMessage package"
+                Nothing
+    closeControllerSignatures <-
+        Opt.optional $
+            stringSetting
+                "controller-signatures"
+                "CKERI_CONTROLLER_SIGNATURES"
+                "controller-signatures"
+                "Bare indexed CESR signatures over close-message.cbor"
+                Nothing
+    closePayer <-
+        Opt.optional $
+            stringSetting
+                "payer"
+                "CKERI_PAYER"
+                "payer"
+                "Cardano payment signing-key file"
+                Nothing
+    closeNodeSocket <-
+        Opt.optional $
+            stringSetting
+                "node-socket"
+                "CKERI_NODE_SOCKET"
+                "node-socket"
+                "Cardano node socket"
+                Nothing
+    closeFundingAddress <-
+        Opt.optional $
+            textSetting
+                "funding-address"
+                "CKERI_FUNDING_ADDRESS"
+                "funding-address"
+                "Bech32 payment address funding the close fee"
+                Nothing
+    closeChangeAddress <-
+        Opt.optional $
+            textSetting
+                "change-address"
+                "CKERI_CHANGE_ADDRESS"
+                "change-address"
+                "Fee change address, distinct from the exact refund target"
+                Nothing
+    closeCardanoCli <-
+        stringSetting
+            "cardano-cli"
+            "CKERI_CARDANO_CLI"
+            "cardano-cli"
+            "cardano-cli executable"
+            (Just "cardano-cli")
+    closeManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    closeKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    closeKoiosToken <- optionalKoiosTokenParser
+    closeTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout"
+            (Just 600)
+    closeValidatorTestNonController <-
+        Opt.yesNoSwitch
+            [ Opt.long "validator-test-non-controller"
+            , Opt.env "CKERI_VALIDATOR_TEST_NON_CONTROLLER"
+            , Opt.conf "validator-test-non-controller"
+            , Opt.help
+                "ACCEPTANCE ONLY: bypass local signature proof and reach the validator"
+            , Opt.value False
+            ]
+    pure CloseSettings{..}
+
 statusSettingsParser :: Opt.Parser StatusSettings
 statusSettingsParser = do
     statusAid <-
@@ -695,6 +856,7 @@ runInstructions = \case
     ManifestVerify settings -> runVerify settings
     Register settings -> runRegister settings
     Advance settings -> runAdvance settings
+    Close settings -> runClose settings
     Status settings -> runStatus settings
 
 registerPreflight ::
@@ -946,6 +1108,124 @@ warnValidatorTest label =
 requireAdvanceSetting :: String -> Maybe a -> IO a
 requireAdvanceSetting name =
     maybe (fail $ name <> " is required when submitting an advance") pure
+
+runClose :: CloseSettings -> IO ()
+runClose settings = do
+    unless
+        (closeNetwork settings == "preprod" && closeNetworkMagic settings == 1)
+        (fail "M1 V1 close supports only preprod network magic 1")
+    unless
+        ( T.length (closeConfiguredAid settings) == 44
+            && "E" `T.isPrefixOf` closeConfiguredAid settings
+        )
+        (fail "AID must be one 44-character KERI E-code identifier")
+    when (closeTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    kel <- BS.readFile (closeKel settings)
+    inception <- either fail pure (parseInceptionExport kel)
+    unless (closeConfiguredAid settings == inceptionAid inception) $
+        fail "configured AID does not match the kli inception export"
+    manifest <-
+        readManifest (closeManifest settings) >>= either fail pure
+    active <-
+        queryActiveCheckpoint
+            (closeKoiosUrl settings)
+            (closeKoiosToken settings)
+            manifest
+            (closeConfiguredAid settings)
+    package <-
+        either fail pure (mkClosePackage manifest active $ closeTo settings)
+    case (closeSigningPackage settings, closeControllerSignatures settings) of
+        (Just directory, Nothing) -> do
+            when (closeValidatorTestNonController settings) $
+                fail "validator-test mode applies only when submitting"
+            files <- writeCloseSigningPackage directory package
+            putStrLn $
+                "signing package: "
+                    <> closePreimageFile files
+            putStrLn $
+                "preimage sha256: "
+                    <> T.unpack (closePackageSha256 package)
+            putStrLn $
+                "spent checkpoint: "
+                    <> T.unpack (closeSpentReference package)
+            putStrLn $
+                "refund: "
+                    <> show (closeRefundLovelace package `div` 1_000_000)
+                    <> " tADA to "
+                    <> T.unpack (closeRefundAddress package)
+        (Nothing, Just signatureFile) ->
+            submitClose settings manifest package signatureFile
+        _ ->
+            fail
+                "choose exactly one of --signing-package DIR or \
+                \--controller-signatures FILE"
+
+submitClose ::
+    CloseSettings ->
+    Manifest ->
+    ClosePackage ->
+    FilePath ->
+    IO ()
+submitClose settings manifest package signatureFile = do
+    payer <- requireCloseSetting "--payer" (closePayer settings)
+    nodeSocket <-
+        requireCloseSetting "--node-socket" (closeNodeSocket settings)
+    fundingAddress <-
+        requireCloseSetting
+            "--funding-address"
+            (closeFundingAddress settings)
+    changeAddress <-
+        requireCloseSetting "--change-address" (closeChangeAddress settings)
+    signatureBytes <- BS.readFile signatureFile
+    signatures <-
+        either fail pure (parseIndexedSignatureLines signatureBytes)
+    submittedPackage <-
+        if closeValidatorTestNonController settings
+            then do
+                when (null signatures) $
+                    fail
+                        "non-controller validator test needs at least one signature"
+                warnValidatorTest "non-controller close"
+                pure
+                    package
+                        { closeEvidence =
+                            (closeEvidence package)
+                                { ceCtrlSigs = signatures
+                                }
+                        }
+            else
+                either
+                    fail
+                    pure
+                    (attachCloseControllerSignatures signatures package)
+    plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
+    result <-
+        CloseTx.runCloseTransaction
+            CloseTx.CloseRunnerConfig
+                { CloseTx.closeRunnerCardanoCli = closeCardanoCli settings
+                , CloseTx.closeRunnerNetworkMagic = closeNetworkMagic settings
+                , CloseTx.closeRunnerNodeSocket = nodeSocket
+                , CloseTx.closeRunnerFundingAddress = fundingAddress
+                , CloseTx.closeRunnerChangeAddress = changeAddress
+                , CloseTx.closeRunnerSigningKeyFile = payer
+                , CloseTx.closeRunnerKoiosUrl = closeKoiosUrl settings
+                , CloseTx.closeRunnerKoiosToken = closeKoiosToken settings
+                , CloseTx.closeRunnerTimeoutSeconds = closeTimeoutSeconds settings
+                }
+            plan
+    putStrLn $
+        "close txid: "
+            <> T.unpack (CloseTx.closeResultTxId result)
+    putStrLn $
+        "refunded: "
+            <> show (closeRefundLovelace submittedPackage `div` 1_000_000)
+            <> " tADA to "
+            <> T.unpack (closeRefundAddress submittedPackage)
+
+requireCloseSetting :: String -> Maybe a -> IO a
+requireCloseSetting name =
+    maybe (fail $ name <> " is required when submitting a close") pure
 
 runStatus :: StatusSettings -> IO ()
 runStatus settings = do

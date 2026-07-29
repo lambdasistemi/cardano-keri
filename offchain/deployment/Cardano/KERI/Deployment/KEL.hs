@@ -1,29 +1,40 @@
 {- |
 Module      : Cardano.KERI.Deployment.KEL
-Description : Parse a stock kli inception export for checkpoint registration
+Description : Parse stock kli inception and rotation exports
 
-The parser consumes the first message in a keripy 1.3.5 @kli export@ stream.
-It preserves the exact inception event bytes and decodes only the CESR 1.0
-attachment material required by the frozen registration validator.
+The parser consumes the framed messages in a keripy 1.3.5 @kli export@ stream.
+It preserves the exact event bytes and decodes only the CESR 1.0 attachment
+material required by the frozen checkpoint validators.
 -}
 module Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
+    RotationExport (..),
     parseInceptionExport,
+    parseRotationExport,
 ) where
 
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
+    qb64Verkey,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Advance (
+    AdvanceEvidence (..),
+ )
+import Cardano.KERI.AID.Checkpoint.Datum (
+    CheckpointDatumV1 (..),
+    datumWellFormed,
+ )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
+    evaluate,
  )
+import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Control.Monad (unless, when)
 import Data.Aeson (
     FromJSON (..),
@@ -43,6 +54,8 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (digitToInt, isHexDigit)
 import Data.Foldable (toList)
+import Data.IntSet qualified as IntSet
+import Data.List (nub)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -60,6 +73,20 @@ data InceptionExport = InceptionExport
     , inceptionDatum :: !CheckpointDatumV1
     , inceptionEvidence :: !RegistrationEvidence
     , inceptionDigestOffset :: !Int
+    }
+    deriving stock (Show, Eq)
+
+{- | Rotation material derived from the first @rot@ after an inception.
+
+The KERI event signatures are retained separately because they authenticate
+the exact @rot@ bytes but are not the Cardano-specific, outref-bound
+@AdvanceMessage@ signatures consumed in 'aeCtrlSigs'.
+-}
+data RotationExport = RotationExport
+    { rotationAid :: !Text
+    , rotationDatum :: !CheckpointDatumV1
+    , rotationEvidence :: !AdvanceEvidence
+    , rotationEventSignatures :: ![(Int, ByteString)]
     }
     deriving stock (Show, Eq)
 
@@ -90,6 +117,37 @@ instance FromJSON InceptionEvent where
         eventWitnesses <- o .: "b"
         pure InceptionEvent{..}
 
+data RotationEvent = RotationEvent
+    { rotationType :: !Text
+    , rotationDigest :: !Text
+    , rotationEventAid :: !Text
+    , rotationSequence :: !Text
+    , rotationPrior :: !Text
+    , rotationCurrentThreshold :: !Threshold
+    , rotationCurrentKeys :: ![Text]
+    , rotationNextThreshold :: !Threshold
+    , rotationNextKeys :: ![Text]
+    , rotationToad :: !Text
+    , rotationWitnessCuts :: ![Text]
+    , rotationWitnessAdds :: ![Text]
+    }
+
+instance FromJSON RotationEvent where
+    parseJSON = withObject "KERI rotation event" $ \o -> do
+        rotationType <- o .: "t"
+        rotationDigest <- o .: "d"
+        rotationEventAid <- o .: "i"
+        rotationSequence <- o .: "s"
+        rotationPrior <- o .: "p"
+        rotationCurrentThreshold <- o .: "kt" >>= parseThreshold
+        rotationCurrentKeys <- o .: "k"
+        rotationNextThreshold <- o .: "nt" >>= parseThreshold
+        rotationNextKeys <- o .: "n"
+        rotationToad <- o .: "bt"
+        rotationWitnessCuts <- o .: "br"
+        rotationWitnessAdds <- o .: "ba"
+        pure RotationEvent{..}
+
 {- | Parse the first complete inception message in a @kli export@ stream.
 
 The function rejects non-inception events, malformed version framing,
@@ -99,7 +157,7 @@ event bytes.
 -}
 parseInceptionExport :: ByteString -> Either String InceptionExport
 parseInceptionExport stream = do
-    (raw, attachments) <- splitFirstMessage stream
+    (raw, attachments, _) <- splitMessage stream
     event <- eitherDecodeStrict' raw
     unless (eventType event == "icp") $
         Left "KEL first event is not an icp inception"
@@ -170,8 +228,148 @@ parseInceptionExport stream = do
             , inceptionDigestOffset = digestOffset
             }
 
-splitFirstMessage :: ByteString -> Either String (ByteString, ByteString)
-splitFirstMessage stream = do
+{- | Parse the first rotation in a complete inception-to-rotation export.
+
+The native KERI event signatures and witness receipts must authenticate the
+exact @rot.raw@ bytes. The native signatures are deliberately not copied into
+the Cardano-specific controller-signature field.
+-}
+parseRotationExport :: ByteString -> Either String RotationExport
+parseRotationExport stream = do
+    inception <- parseInceptionExport stream
+    let old = inceptionDatum inception
+    (_, _, afterInception) <- splitMessage stream
+    when (BS.null afterInception) $
+        Left "KEL export has no rotation after inception"
+    (raw, attachments, trailing) <- splitMessage afterInception
+    unless (BS.all isAsciiWhitespace trailing) $
+        Left "KEL export has unsupported messages after the first rotation"
+    event <- eitherDecodeStrict' raw
+    unless (rotationType event == "rot") $
+        Left "KEL second event is not a rot rotation"
+    unless (rotationEventAid event == inceptionAid inception) $
+        Left "rotation AID does not match inception"
+    unless (rotationPrior event == inceptionAid inception) $
+        Left "rotation prior digest does not match inception"
+    sequenceNumber <- parseHexText "s" (rotationSequence event)
+    unless (sequenceNumber == cdNativeSn old + 1) $
+        Left "rotation native sequence does not immediately follow inception"
+    toad <- parseHexText "bt" (rotationToad event)
+    aid <- decodeSelfAddressing "i" (rotationEventAid event)
+    digest <- decodeSelfAddressing "d" (rotationDigest event)
+    currentKeys <-
+        traverse (decodePublicKey "k") (rotationCurrentKeys event)
+    nextKeys <-
+        traverse (decodeSelfAddressing "n") (rotationNextKeys event)
+    witnessCuts <-
+        traverse (decodePublicKey "br") (rotationWitnessCuts event)
+    witnessAdds <-
+        traverse (decodePublicKey "ba") (rotationWitnessAdds event)
+    unless
+        (map (blake3Hash . qb64Verkey) currentKeys == cdNextKeys old)
+        (Left "rotation current keys do not match inception next-key commitments")
+    unless
+        ( distinct witnessCuts
+            && all (`elem` cdWitnesses old) witnessCuts
+        )
+        (Left "rotation witness cuts are not a distinct subset")
+    let survivingWitnesses =
+            filter (`notElem` witnessCuts) (cdWitnesses old)
+    unless
+        ( distinct witnessAdds
+            && all (`notElem` witnessCuts) witnessAdds
+            && all (`notElem` survivingWitnesses) witnessAdds
+        )
+        (Left "rotation witness additions are not a valid delta")
+    let incomingWitnesses = survivingWitnesses <> witnessAdds
+        datum =
+            CheckpointDatumV1
+                { cdCesrAid = aid
+                , cdCurKeys = currentKeys
+                , cdCurThreshold = rotationCurrentThreshold event
+                , cdNextKeys = nextKeys
+                , cdNextThreshold = rotationNextThreshold event
+                , cdWitnesses = incomingWitnesses
+                , cdToad = toad
+                , cdSeq = cdSeq old + 1
+                , cdNativeSn = sequenceNumber
+                }
+    either
+        (Left . ("rotation successor datum is malformed: " <>) . show)
+        Right
+        (datumWellFormed datum)
+    (eventSignatures, witnessReceipts) <- parseAttachments attachments
+    when (null eventSignatures) $
+        Left "KEL rotation has no controller indexed signatures"
+    let controllerPositions =
+            verifiedPositions currentKeys raw eventSignatures
+    unless
+        ( evaluate
+            (rotationCurrentThreshold event)
+            (length currentKeys)
+            controllerPositions
+        )
+        (Left "KEL rotation controller signatures are below threshold")
+    unless
+        ( evaluate
+            (cdNextThreshold old)
+            (length $ cdNextKeys old)
+            controllerPositions
+        )
+        (Left "KEL rotation signatures do not satisfy the prior next threshold")
+    if toad == 0
+        then
+            unless (null witnessReceipts) $
+                Left "KEL witnessless rotation carries unexpected receipts"
+        else
+            unless
+                ( fromIntegral
+                    ( IntSet.size $
+                        verifiedPositions incomingWitnesses raw witnessReceipts
+                    )
+                    >= toad
+                )
+                (Left "KEL rotation witness receipts are below toad")
+    digestOffset <- scalarOffset raw "d" (rotationDigest event)
+    unless (blake3Hash (blankDigest raw digestOffset) == digest) $
+        Left "KEL rotation SAID does not bind the exact event bytes"
+    evidence <-
+        AdvanceEvidence
+            raw
+            <$> scalarOffset raw "t" (rotationType event)
+            <*> scalarOffset raw "i" (rotationEventAid event)
+            <*> scalarOffset raw "s" (rotationSequence event)
+            <*> traverse (arrayOffset raw "k") (rotationCurrentKeys event)
+            <*> thresholdOffset
+                raw
+                "kt"
+                (rotationCurrentThreshold event)
+                (thresholdSpelling $ rotationCurrentThreshold event)
+            <*> traverse (arrayOffset raw "n") (rotationNextKeys event)
+            <*> thresholdOffset
+                raw
+                "nt"
+                (rotationNextThreshold event)
+                (thresholdSpelling $ rotationNextThreshold event)
+            <*> traverse (arrayOffset raw "br") (rotationWitnessCuts event)
+            <*> traverse (arrayOffset raw "ba") (rotationWitnessAdds event)
+            <*> scalarOffset raw "bt" (rotationToad event)
+            <*> pure witnessCuts
+            <*> pure witnessAdds
+            <*> pure []
+            <*> pure witnessReceipts
+    pure
+        RotationExport
+            { rotationAid = rotationEventAid event
+            , rotationDatum = datum
+            , rotationEvidence = evidence
+            , rotationEventSignatures = eventSignatures
+            }
+
+splitMessage ::
+    ByteString ->
+    Either String (ByteString, ByteString, ByteString)
+splitMessage stream = do
     let prefix = "{\"v\":\"KERI10JSON"
     unless (prefix `BS.isPrefixOf` stream) $
         Left "KEL does not start with a KERI 1.0 JSON message"
@@ -187,7 +385,9 @@ splitFirstMessage stream = do
     let attachmentBytes = attachmentQuadlets * 4
     when (BS.length afterCounter < attachmentBytes) $
         Left "KEL attachment group is truncated"
-    pure (raw, BS.take attachmentBytes afterCounter)
+    let (attachments, remaining) =
+            BS.splitAt attachmentBytes afterCounter
+    pure (raw, attachments, BS.dropWhile isAsciiWhitespace remaining)
 
 parseAttachments ::
     ByteString ->
@@ -221,6 +421,34 @@ parseAttachments = go Nothing Nothing
             Left $
                 "unsupported CESR inception attachment: "
                     <> B8.unpack (BS.take 4 rest)
+
+verifiedPositions ::
+    [ByteString] ->
+    ByteString ->
+    [(Int, ByteString)] ->
+    IntSet.IntSet
+verifiedPositions verkeys message signatures =
+    IntSet.fromList
+        [ index
+        | (index, signature) <- signatures
+        , Just verkey <- [atMay verkeys index]
+        , verifyEd25519 verkey message signature
+        ]
+
+atMay :: [a] -> Int -> Maybe a
+atMay values index
+    | index < 0 = Nothing
+    | otherwise =
+        case drop index values of
+            value : _ -> Just value
+            [] -> Nothing
+
+isAsciiWhitespace :: Word8 -> Bool
+isAsciiWhitespace byte =
+    byte == 0x09 || byte == 0x0a || byte == 0x0d || byte == 0x20
+
+distinct :: (Eq a) => [a] -> Bool
+distinct values = nub values == values
 
 parseCounter :: ByteString -> ByteString -> Either String (Int, ByteString)
 parseCounter code bytes = do
@@ -450,3 +678,9 @@ blankSaid raw digestOffset aidOffset =
             (BS.drop (digestOffset + 44) raw)
         <> B8.replicate 44 '#'
         <> BS.drop (aidOffset + 44) raw
+
+blankDigest :: ByteString -> Int -> ByteString
+blankDigest raw digestOffset =
+    BS.take digestOffset raw
+        <> B8.replicate 44 '#'
+        <> BS.drop (digestOffset + 44) raw

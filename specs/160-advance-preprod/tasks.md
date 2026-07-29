@@ -17,5 +17,5 @@
   capture the raw transcript with settled txids, and verify seq-1 status.
 - [x] T160-S6 Add the rotate guide, transcript/package integrity CI, and embed
   the committed raw full-journey transcript byte-for-byte in the PR body.
-- [ ] T160-S7 Run `./gate.sh`, push, wait for all GitHub checks, audit PR
+- [x] T160-S7 Run `./gate.sh`, push, wait for all GitHub checks, audit PR
   metadata/worktree cleanliness, and park for operator merge.

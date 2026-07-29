@@ -101,6 +101,7 @@ library deployment
     , process
     , temporary
     , text
+    , unix
     , time
 
   exposed-modules:
@@ -157,6 +158,7 @@ test-suite deployment-tests
     , plutus-core
     , temporary
     , text
+    , unix
 
   autogen-modules:  Paths_cardano_keri
 

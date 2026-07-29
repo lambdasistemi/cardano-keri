@@ -35,6 +35,7 @@ import Cardano.KERI.Deployment.ChainIndex (
 import Cardano.KERI.Deployment.CheckpointIndex (
     ActiveCheckpoint (..),
     checkpointAssetName,
+    renderResolvedCheckpointStatus,
     resolveActiveCheckpoint,
  )
 import Cardano.KERI.Deployment.Close (
@@ -80,6 +81,13 @@ import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import System.IO.Temp (withSystemTempDirectory)
+import System.Posix.Files (
+    fileMode,
+    getFileStatus,
+    groupReadMode,
+    intersectFileModes,
+    otherReadMode,
+ )
 import Test.Hspec (
     Spec,
     describe,
@@ -146,6 +154,39 @@ spec =
                 eitherDecodeFileStrict' (closeMetadataFile files)
                     >>= either fail pure
                     >>= (`shouldBe` closeSigningMetadata package)
+                mapM_
+                    ( \output -> do
+                        mode <- fileMode <$> getFileStatus output
+                        mode `intersectFileModes` groupReadMode
+                            `shouldBe` groupReadMode
+                        mode `intersectFileModes` otherReadMode
+                            `shouldBe` otherReadMode
+                    )
+                    [closePreimageFile files, closeMetadataFile files]
+
+        it "prefers a proved latest Close over a stale ACTIVE index row" $ do
+            active <- sampleActive
+            let stale =
+                    ChainAssetUtxo
+                        (activeCheckpointTxId active)
+                        (activeCheckpointIndex active)
+                        (activeCheckpointAddress active)
+                        (activeCheckpointLovelace active)
+                        (activeCheckpointAssets active)
+                        (Just $ plutusDataJson $ asPlcData $ V1 $ activeCheckpointDatum active)
+                closeTxId = T.replicate 64 "2"
+            renderResolvedCheckpointStatus
+                sampleManifest
+                (activeCheckpointAid active)
+                (activeCheckpointAssetName active)
+                [stale]
+                (Just closeTxId)
+                `shouldBe` Right
+                    ( "state NOT REGISTERED (closed at "
+                        <> closeTxId
+                        <> ") aid "
+                        <> activeCheckpointAid active
+                    )
 
         it "accepts only signatures from the live current controller set" $ do
             active <- sampleActive

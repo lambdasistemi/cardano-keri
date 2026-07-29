@@ -67,6 +67,7 @@ trap 'rm -rf "$workspace"' EXIT
 "$ckeri" status --help | grep -q "KOIOS_TOKEN"
 "$ckeri" status --help | grep -q -- "--board-manifest"
 "$ckeri" status --help | grep -q "CKERI_BOARD_MANIFEST"
+"$ckeri" board post --help | grep -q "default: 4000000"
 
 if rg -n \
   'Options\.Applicative|optparse-applicative' \

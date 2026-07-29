@@ -1012,7 +1012,7 @@ boardPostSettingsParser = do
             "CKERI_BOARD_DEPOSIT_LOVELACE"
             "deposit-lovelace"
             "Exact lovelace deposit carried by the record"
-            (Just 2_000_000)
+            (Just 4_000_000)
     boardPostTransaction <- boardTransactionSettingsParser
     pure BoardPostSettings{..}
 

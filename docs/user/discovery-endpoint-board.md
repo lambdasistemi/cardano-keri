@@ -40,9 +40,9 @@ $ git checkout "$CKERI_REF"
 $ nix run --quiet ./offchain#ckeri -- board list \
     --board-manifest deploy/preprod/board-manifest.json
 board records: 3
-B... verified https https://witness-1.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
-B... verified https https://witness-2.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
-B... verified https https://witness-3.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
+B... verified https https://witness-1.preprod.plutimus.com/ tx <txid>#<index> deposit 4000000
+B... verified https https://witness-2.preprod.plutimus.com/ tx <txid>#<index> deposit 4000000
+B... verified https https://witness-3.preprod.plutimus.com/ tx <txid>#<index> deposit 4000000
 ```
 
 Use `main` for a released story. During public PR acceptance, set `CKERI_REF`
@@ -98,7 +98,7 @@ $ nix run --quiet ./offchain#ckeri -- board post \
     --network-magic 1 \
     --endpoint-record witness-1-oobi.cesr \
     --board-manifest deploy/preprod/board-manifest.json
-board txid: <settled-txid> deposit: 2 tADA
+board txid: <settled-txid> deposit: 4 tADA
 ```
 
 The marker asset name is the witness's raw Ed25519 key. The inline datum wraps
@@ -141,7 +141,7 @@ $ nix run --quiet ./offchain#ckeri -- board retire \
     --to addr_test1refund... \
     --board-manifest deploy/preprod/board-manifest.json
 board retire txid: <settled-retire-txid>
-refunded: 2 tADA to addr_test1refund...
+refunded: 4 tADA to addr_test1refund...
 ```
 
 After settlement, the spent predecessor is stale and disappears from

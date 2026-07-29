@@ -13,6 +13,11 @@ module Cardano.KERI.Deployment.CLI (
     AdvanceSettings (..),
     CloseSettings (..),
     StatusSettings (..),
+    BoardInstructions (..),
+    BoardListSettings (..),
+    BoardPostSettings (..),
+    BoardUpdateSettings (..),
+    BoardRetireSettings (..),
     registerPreflight,
     runInstructions,
 ) where
@@ -49,14 +54,21 @@ import Cardano.KERI.Deployment.Close (
 import Cardano.KERI.Deployment.CloseTransaction qualified as CloseTx
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry,
+    EndpointRecord (..),
     missingBoardWitnesses,
+    parseEndpointRecord,
+    parseWitnessKey,
     queryBoardCatalog,
+    renderBoardCatalog,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
+    mkEndpointBoardManifest,
     readEndpointBoardManifest,
+    writeEndpointBoardManifestAtomic,
  )
+import Cardano.KERI.Deployment.EndpointBoardTransaction qualified as BoardTx
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
@@ -88,11 +100,13 @@ import Cardano.KERI.Deployment.Registration (
  )
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
+    deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
  )
 import Control.Monad (forM_, unless, when)
 import Data.ByteString qualified as BS
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
@@ -107,6 +121,15 @@ data Instructions
     | Advance AdvanceSettings
     | Close CloseSettings
     | Status StatusSettings
+    | Board BoardInstructions
+    deriving stock (Show, Eq)
+
+data BoardInstructions
+    = BoardDeploy DeploySettings
+    | BoardList BoardListSettings
+    | BoardPost BoardPostSettings
+    | BoardUpdate BoardUpdateSettings
+    | BoardRetire BoardRetireSettings
     deriving stock (Show, Eq)
 
 data DeploySettings = DeploySettings
@@ -207,6 +230,50 @@ data StatusSettings = StatusSettings
     }
     deriving stock (Show, Eq)
 
+data BoardListSettings = BoardListSettings
+    { boardListManifest :: !FilePath
+    , boardListKoiosUrl :: !Text
+    , boardListKoiosToken :: !(Maybe KoiosToken)
+    }
+    deriving stock (Show, Eq)
+
+data BoardTransactionSettings = BoardTransactionSettings
+    { boardTransactionNetwork :: !Text
+    , boardTransactionNetworkMagic :: !Int
+    , boardTransactionPayer :: !FilePath
+    , boardTransactionNodeSocket :: !FilePath
+    , boardTransactionFundingAddress :: !Text
+    , boardTransactionChangeAddress :: !(Maybe Text)
+    , boardTransactionCardanoCli :: !FilePath
+    , boardTransactionManifest :: !FilePath
+    , boardTransactionKoiosUrl :: !Text
+    , boardTransactionKoiosToken :: !(Maybe KoiosToken)
+    , boardTransactionTimeoutSeconds :: !Int
+    }
+    deriving stock (Show, Eq)
+
+data BoardPostSettings = BoardPostSettings
+    { boardPostEndpointRecord :: !FilePath
+    , boardPostDepositLovelace :: !Integer
+    , boardPostTransaction :: !BoardTransactionSettings
+    }
+    deriving stock (Show, Eq)
+
+data BoardUpdateSettings = BoardUpdateSettings
+    { boardUpdateEndpointRecord :: !FilePath
+    , boardUpdateOutReference :: !(Maybe Text)
+    , boardUpdateTransaction :: !BoardTransactionSettings
+    }
+    deriving stock (Show, Eq)
+
+data BoardRetireSettings = BoardRetireSettings
+    { boardRetireWitness :: !Text
+    , boardRetireOutReference :: !(Maybe Text)
+    , boardRetireTo :: !Text
+    , boardRetireTransaction :: !BoardTransactionSettings
+    }
+    deriving stock (Show, Eq)
+
 instance Opt.HasParser Instructions where
     settingsParser =
         Opt.withYamlConfig
@@ -253,10 +320,18 @@ instance Opt.HasParser Instructions where
                     "status"
                     "Report the live V1 checkpoint for an AID"
                     (Status <$> Opt.subConfig "status" statusSettingsParser)
+                , Opt.command
+                    "board"
+                    "Operate the current on-chain endpoint catalog"
+                    (Board <$> Opt.subConfig "board" boardInstructionsParser)
                 ]
 
 deploySettingsParser :: Opt.Parser DeploySettings
-deploySettingsParser = do
+deploySettingsParser =
+    deploySettingsParserWithOut "deploy/preprod/m1-manifest.json"
+
+deploySettingsParserWithOut :: FilePath -> Opt.Parser DeploySettings
+deploySettingsParserWithOut defaultOut = do
     deployNetwork <-
         textSetting
             "network"
@@ -334,7 +409,7 @@ deploySettingsParser = do
             "CKERI_OUT"
             "out"
             "Output manifest path"
-            (Just "deploy/preprod/m1-manifest.json")
+            (Just defaultOut)
     deployReferenceLovelace <-
         integerSetting
             "reference-lovelace"
@@ -788,6 +863,206 @@ statusSettingsParser = do
     statusKoiosToken <- optionalKoiosTokenParser
     pure StatusSettings{..}
 
+boardInstructionsParser :: Opt.Parser BoardInstructions
+boardInstructionsParser =
+    Opt.commands
+        [ Opt.command
+            "deploy"
+            "Publish the frozen endpoint-board reference script"
+            ( BoardDeploy
+                <$> Opt.subConfig
+                    "deploy"
+                    ( deploySettingsParserWithOut
+                        "deploy/preprod/board-manifest.json"
+                    )
+            )
+        , Opt.command
+            "list"
+            "List the exact verified current endpoint catalog"
+            ( BoardList
+                <$> Opt.subConfig "list" boardListSettingsParser
+            )
+        , Opt.command
+            "post"
+            "Post one witness-signed endpoint record"
+            ( BoardPost
+                <$> Opt.subConfig "post" boardPostSettingsParser
+            )
+        , Opt.command
+            "update"
+            "Spend and recreate one owned endpoint record"
+            ( BoardUpdate
+                <$> Opt.subConfig "update" boardUpdateSettingsParser
+            )
+        , Opt.command
+            "retire"
+            "Burn one owned marker and refund its complete deposit"
+            ( BoardRetire
+                <$> Opt.subConfig "retire" boardRetireSettingsParser
+            )
+        ]
+
+boardListSettingsParser :: Opt.Parser BoardListSettings
+boardListSettingsParser = do
+    boardListManifest <-
+        stringSetting
+            "board-manifest"
+            "CKERI_BOARD_MANIFEST"
+            "board-manifest"
+            "Endpoint-board preprod deployment manifest"
+            (Just "deploy/preprod/board-manifest.json")
+    boardListKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    boardListKoiosToken <- optionalKoiosTokenParser
+    pure BoardListSettings{..}
+
+boardTransactionSettingsParser :: Opt.Parser BoardTransactionSettings
+boardTransactionSettingsParser = do
+    boardTransactionNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    boardTransactionNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    boardTransactionPayer <-
+        stringSetting
+            "payer"
+            "CKERI_PAYER"
+            "payer"
+            "Cardano payment signing-key file for the board owner"
+            Nothing
+    boardTransactionNodeSocket <-
+        stringSetting
+            "node-socket"
+            "CKERI_NODE_SOCKET"
+            "node-socket"
+            "Cardano node socket"
+            Nothing
+    boardTransactionFundingAddress <-
+        textSetting
+            "funding-address"
+            "CKERI_FUNDING_ADDRESS"
+            "funding-address"
+            "Bech32 payment address funding and owning the board record"
+            Nothing
+    boardTransactionChangeAddress <-
+        Opt.optional $
+            textSetting
+                "change-address"
+                "CKERI_CHANGE_ADDRESS"
+                "change-address"
+                "Fee change address (must differ from an identical retire target)"
+                Nothing
+    boardTransactionCardanoCli <-
+        stringSetting
+            "cardano-cli"
+            "CKERI_CARDANO_CLI"
+            "cardano-cli"
+            "cardano-cli executable"
+            (Just "cardano-cli")
+    boardTransactionManifest <-
+        stringSetting
+            "board-manifest"
+            "CKERI_BOARD_MANIFEST"
+            "board-manifest"
+            "Endpoint-board preprod deployment manifest"
+            (Just "deploy/preprod/board-manifest.json")
+    boardTransactionKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    boardTransactionKoiosToken <- optionalKoiosTokenParser
+    boardTransactionTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout"
+            (Just 600)
+    pure BoardTransactionSettings{..}
+
+boardPostSettingsParser :: Opt.Parser BoardPostSettings
+boardPostSettingsParser = do
+    boardPostEndpointRecord <-
+        stringSetting
+            "endpoint-record"
+            "CKERI_ENDPOINT_RECORD"
+            "endpoint-record"
+            "Binary-safe path to a witness-signed KERI OOBI stream"
+            Nothing
+    boardPostDepositLovelace <-
+        integerSetting
+            "deposit-lovelace"
+            "CKERI_BOARD_DEPOSIT_LOVELACE"
+            "deposit-lovelace"
+            "Exact lovelace deposit carried by the record"
+            (Just 2_000_000)
+    boardPostTransaction <- boardTransactionSettingsParser
+    pure BoardPostSettings{..}
+
+boardUpdateSettingsParser :: Opt.Parser BoardUpdateSettings
+boardUpdateSettingsParser = do
+    boardUpdateEndpointRecord <-
+        stringSetting
+            "endpoint-record"
+            "CKERI_ENDPOINT_RECORD"
+            "endpoint-record"
+            "Binary-safe path to the replacement witness-signed KERI OOBI stream"
+            Nothing
+    boardUpdateOutReference <-
+        Opt.optional $
+            textSetting
+                "board-out-ref"
+                "CKERI_BOARD_OUT_REF"
+                "board-out-ref"
+                "Exact TXID#INDEX to select when duplicate records exist"
+                Nothing
+    boardUpdateTransaction <- boardTransactionSettingsParser
+    pure BoardUpdateSettings{..}
+
+boardRetireSettingsParser :: Opt.Parser BoardRetireSettings
+boardRetireSettingsParser = do
+    boardRetireWitness <-
+        textSetting
+            "witness"
+            "CKERI_WITNESS"
+            "witness"
+            "44-character KERI B-code witness identifier"
+            Nothing
+    boardRetireOutReference <-
+        Opt.optional $
+            textSetting
+                "board-out-ref"
+                "CKERI_BOARD_OUT_REF"
+                "board-out-ref"
+                "Exact TXID#INDEX to select when duplicate records exist"
+                Nothing
+    boardRetireTo <-
+        textSetting
+            "to"
+            "CKERI_TO"
+            "to"
+            "Preprod payment address receiving the complete board deposit"
+            Nothing
+    boardRetireTransaction <- boardTransactionSettingsParser
+    pure BoardRetireSettings{..}
+
 optionalKoiosTokenParser :: Opt.Parser (Maybe KoiosToken)
 optionalKoiosTokenParser =
     Opt.optional $
@@ -884,6 +1159,233 @@ runInstructions = \case
     Advance settings -> runAdvance settings
     Close settings -> runClose settings
     Status settings -> runStatus settings
+    Board instructions -> runBoard instructions
+
+runBoard :: BoardInstructions -> IO ()
+runBoard = \case
+    BoardDeploy settings -> runBoardDeploy settings
+    BoardList settings -> runBoardList settings
+    BoardPost settings -> runBoardPost settings
+    BoardUpdate settings -> runBoardUpdate settings
+    BoardRetire settings -> runBoardRetire settings
+
+runBoardDeploy :: DeploySettings -> IO ()
+runBoardDeploy settings = do
+    unless
+        (deployNetwork settings == "preprod" && deployNetworkMagic settings == 1)
+        (fail "M1 endpoint-board deployment supports only preprod network magic 1")
+    when (deployReferenceLovelace settings <= 0) $
+        fail "reference-lovelace must be positive"
+    when (deployTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    blueprint <-
+        loadBlueprint (deployBlueprint settings) >>= either fail pure
+    artifact <- either fail pure (deriveBoardScript blueprint)
+    digest <- blueprintSha256 (deployBlueprint settings)
+    commit <-
+        maybe
+            (gitOutput (deploySourceRepo settings) ["rev-parse", "HEAD"])
+            pure
+            (deploySourceCommit settings)
+    verifySourceTree (deploySourceRepo settings) commit
+    references <-
+        publishScripts
+            PublishConfig
+                { publishCardanoCli = deployCardanoCli settings
+                , publishNetworkMagic = deployNetworkMagic settings
+                , publishNodeSocket = deployNodeSocket settings
+                , publishFundingAddress = deployFundingAddress settings
+                , publishSigningKeyFile = deploySigningKeyFile settings
+                , publishReferenceLovelace =
+                    deployReferenceLovelace settings
+                , publishKoiosUrl = deployKoiosUrl settings
+                , publishKoiosToken = deployKoiosToken settings
+                , publishTimeoutSeconds = deployTimeoutSeconds settings
+                }
+            [artifact]
+    reference <-
+        case references of
+            [("endpoint-board", settled)] -> pure settled
+            _ -> fail "publisher did not return exactly the endpoint-board reference"
+    now <- getCurrentTime
+    let publishedAt =
+            T.pack $
+                formatTime
+                    defaultTimeLocale
+                    "%Y-%m-%dT%H:%M:%SZ"
+                    now
+    manifest <-
+        either fail pure $
+            mkEndpointBoardManifest
+                (deploySourceRepositoryUrl settings)
+                commit
+                digest
+                publishedAt
+                artifact
+                reference
+    writeEndpointBoardManifestAtomic (deployOut settings) manifest
+    putStrLn ("board manifest: " <> deployOut settings)
+
+runBoardList :: BoardListSettings -> IO ()
+runBoardList settings = do
+    manifest <-
+        readEndpointBoardManifest (boardListManifest settings)
+            >>= either fail pure
+    let info = endpointBoardManifestInfo manifest
+    entries <-
+        queryBoardCatalog
+            (boardListKoiosUrl settings)
+            (boardListKoiosToken settings)
+            (endpointBoardPolicyId info)
+            (endpointBoardAddress info)
+    putStrLn ("board records: " <> show (length entries))
+    putStr (T.unpack $ renderBoardCatalog entries)
+
+runBoardPost :: BoardPostSettings -> IO ()
+runBoardPost settings = do
+    let transaction = boardPostTransaction settings
+    validateBoardTransactionSettings transaction
+    endpointBytes <- BS.readFile (boardPostEndpointRecord settings)
+    record <- either fail pure (parseEndpointRecord endpointBytes)
+    manifest <- readBoardTransactionManifest transaction
+    plan <-
+        either fail pure $
+            BoardTx.mkBoardPostPlan
+                manifest
+                (boardTransactionFundingAddress transaction)
+                (boardPostDepositLovelace settings)
+                record
+    result <-
+        BoardTx.runBoardPostTransaction
+            (boardRunnerConfig transaction)
+            plan
+    putStrLn $
+        "board txid: "
+            <> T.unpack (BoardTx.boardResultTxId result)
+            <> " deposit: "
+            <> show (boardPostDepositLovelace settings `div` 1_000_000)
+            <> " tADA"
+
+runBoardUpdate :: BoardUpdateSettings -> IO ()
+runBoardUpdate settings = do
+    let transaction = boardUpdateTransaction settings
+    validateBoardTransactionSettings transaction
+    endpointBytes <- BS.readFile (boardUpdateEndpointRecord settings)
+    record <- either fail pure (parseEndpointRecord endpointBytes)
+    manifest <- readBoardTransactionManifest transaction
+    entries <- queryBoardTransactionCatalog transaction manifest
+    entry <-
+        either fail pure $
+            BoardTx.selectBoardEntry
+                (boardUpdateOutReference settings)
+                (endpointWitnessKey record)
+                entries
+    plan <-
+        either fail pure $
+            BoardTx.mkBoardUpdatePlan
+                manifest
+                (boardTransactionFundingAddress transaction)
+                entry
+                record
+    result <-
+        BoardTx.runBoardUpdateTransaction
+            (boardRunnerConfig transaction)
+            plan
+    putStrLn $
+        "board update txid: "
+            <> T.unpack (BoardTx.boardResultTxId result)
+    putStrLn $
+        "replaced: "
+            <> T.unpack (BoardTx.boardUpdateSpentReference plan)
+
+runBoardRetire :: BoardRetireSettings -> IO ()
+runBoardRetire settings = do
+    let transaction = boardRetireTransaction settings
+    validateBoardTransactionSettings transaction
+    witness <- either fail pure (parseWitnessKey $ boardRetireWitness settings)
+    manifest <- readBoardTransactionManifest transaction
+    entries <- queryBoardTransactionCatalog transaction manifest
+    entry <-
+        either fail pure $
+            BoardTx.selectBoardEntry
+                (boardRetireOutReference settings)
+                witness
+                entries
+    plan <-
+        either fail pure $
+            BoardTx.mkBoardRetirePlan
+                manifest
+                (boardTransactionFundingAddress transaction)
+                (boardRetireTo settings)
+                entry
+    result <-
+        BoardTx.runBoardRetireTransaction
+            (boardRunnerConfig transaction)
+            plan
+    putStrLn $
+        "board retire txid: "
+            <> T.unpack (BoardTx.boardResultTxId result)
+    putStrLn $
+        "refunded: "
+            <> show (BoardTx.boardRetireRefundLovelace plan `div` 1_000_000)
+            <> " tADA to "
+            <> T.unpack (boardRetireTo settings)
+
+validateBoardTransactionSettings :: BoardTransactionSettings -> IO ()
+validateBoardTransactionSettings settings = do
+    unless
+        ( boardTransactionNetwork settings == "preprod"
+            && boardTransactionNetworkMagic settings == 1
+        )
+        (fail "M1 endpoint-board transactions support only preprod network magic 1")
+    when (boardTransactionTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+
+readBoardTransactionManifest ::
+    BoardTransactionSettings ->
+    IO EndpointBoardManifest
+readBoardTransactionManifest settings =
+    readEndpointBoardManifest (boardTransactionManifest settings)
+        >>= either fail pure
+
+queryBoardTransactionCatalog ::
+    BoardTransactionSettings ->
+    EndpointBoardManifest ->
+    IO [BoardEntry]
+queryBoardTransactionCatalog settings manifest =
+    let info = endpointBoardManifestInfo manifest
+     in queryBoardCatalog
+            (boardTransactionKoiosUrl settings)
+            (boardTransactionKoiosToken settings)
+            (endpointBoardPolicyId info)
+            (endpointBoardAddress info)
+
+boardRunnerConfig ::
+    BoardTransactionSettings ->
+    BoardTx.BoardRunnerConfig
+boardRunnerConfig settings =
+    BoardTx.BoardRunnerConfig
+        { BoardTx.boardRunnerCardanoCli =
+            boardTransactionCardanoCli settings
+        , BoardTx.boardRunnerNetworkMagic =
+            boardTransactionNetworkMagic settings
+        , BoardTx.boardRunnerNodeSocket =
+            boardTransactionNodeSocket settings
+        , BoardTx.boardRunnerFundingAddress =
+            boardTransactionFundingAddress settings
+        , BoardTx.boardRunnerChangeAddress =
+            fromMaybe
+                (boardTransactionFundingAddress settings)
+                (boardTransactionChangeAddress settings)
+        , BoardTx.boardRunnerSigningKeyFile =
+            boardTransactionPayer settings
+        , BoardTx.boardRunnerKoiosUrl =
+            boardTransactionKoiosUrl settings
+        , BoardTx.boardRunnerKoiosToken =
+            boardTransactionKoiosToken settings
+        , BoardTx.boardRunnerTimeoutSeconds =
+            boardTransactionTimeoutSeconds settings
+        }
 
 registerPreflight ::
     Text ->

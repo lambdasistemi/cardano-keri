@@ -134,7 +134,9 @@ library indexer
     , containers
     , microlens
 
-  exposed-modules:  Cardano.KERI.Indexer.Codecs
+  exposed-modules:
+    Cardano.KERI.Indexer.Codecs
+    Cardano.KERI.Indexer.Reads
 
 executable ckeri
   import:           warnings
@@ -184,6 +186,7 @@ test-suite indexer-tests
   main-is:          Main.hs
   other-modules:
     Cardano.KERI.Indexer.CodecsSpec
+    Cardano.KERI.Indexer.ReadsSpec
     Paths_cardano_keri
 
   build-depends:

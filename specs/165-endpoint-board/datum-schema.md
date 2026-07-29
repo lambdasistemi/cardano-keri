@@ -7,9 +7,10 @@ the M1 board policy.
 ## Release identity
 
 - Blueprint entry: `endpoint_board.endpoint_board.mint`
-- Policy ID: `398a358ad6729f877809b6bd573b680c0e247be00f380a1f93279d4d`
+- Production compiler: Aiken `v1.1.21` via the flake-owned blueprint
+- Policy ID: `54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c`
 - Preprod marker address:
-  `addr_test1wquc5dv26eeflpmcpxmt64emdqxqufrmuq8nszsljvne6nglkxzx3`
+  `addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4`
 
 ## `BoardDatumV1`
 

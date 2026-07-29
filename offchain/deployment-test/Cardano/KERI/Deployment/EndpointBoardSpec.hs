@@ -112,6 +112,8 @@ spec = do
             T.unpack (renderBoardCatalog entries)
                 `shouldContain` T.unpack (endpointAid record)
             T.unpack (renderBoardCatalog entries)
+                `shouldContain` "verified"
+            T.unpack (renderBoardCatalog entries)
                 `shouldContain` (T.unpack txId <> "#0")
 
         it "surfaces every valid unspent duplicate in output-reference order" $ do

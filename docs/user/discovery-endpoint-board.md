@@ -1,0 +1,158 @@
+# Discovery — the endpoint board
+
+The endpoint board is a public, current OOBI catalog on Cardano preprod. A
+witness publishes its own KERI-signed `/loc/scheme` reply. Anyone can then find
+the record from the chain, verify its KERI SAID and Ed25519 signature, and dial
+the advertised endpoint without receiving a private `witnesses.json` file.
+
+The chain contributes availability and currency, not trust. The witness signs
+the endpoint record; `ckeri board list` verifies that signature and the KERI
+record semantics. The current catalog is exactly the unspent set at the frozen
+board address.
+
+## Public release facts
+
+The M1 board contract is:
+
+- policy id
+  `54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c`;
+- preprod address
+  `addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4`;
+- datum schema
+  [`specs/165-endpoint-board/datum-schema.md`](https://github.com/lambdasistemi/cardano-keri/blob/main/specs/165-endpoint-board/datum-schema.md);
+  and
+- deployment locator `deploy/preprod/board-manifest.json`.
+
+The manifest freezes the policy, address, exact source commit, blueprint
+digest, and unspent reference-script output. Consumers reject drift from the
+policy and address above.
+
+## Stranger journey: find, verify, and dial
+
+Start in a clean directory on any Nix machine. The repository and Cardano
+chain are the only inputs:
+
+```console
+$ export CKERI_REF=main
+$ git clone --filter=blob:none https://github.com/lambdasistemi/cardano-keri
+$ cd cardano-keri
+$ git checkout "$CKERI_REF"
+$ nix run --quiet ./offchain#ckeri -- board list \
+    --board-manifest deploy/preprod/board-manifest.json
+board records: 3
+B... verified https https://witness-1.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
+B... verified https https://witness-2.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
+B... verified https https://witness-3.preprod.plutimus.com/ tx <txid>#<index> deposit 2000000
+```
+
+Use `main` for a released story. During public PR acceptance, set `CKERI_REF`
+to the exact public commit or branch named by that PR; no private artifact is
+required.
+
+`verified` is not a server claim. It means the client:
+
+1. queried the exact current UTxO set at the frozen address;
+2. required exactly one amount-1 marker under the frozen policy;
+3. bound its raw 32-byte asset name to the datum's witness key;
+4. decoded the frozen datum including its Cardano lifecycle owner;
+5. verified the KERI 1.0 JSON size, `/loc/scheme` route, SAID, scheme and URL;
+   and
+6. verified the witness's Ed25519 signature over the exact endpoint bytes.
+
+An invalid output fails the complete catalog read and names its out-ref; the
+client never returns a partial trusted-looking list. An optional
+`KOIOS_TOKEN` environment variable supplies Koios bearer authorization.
+Anonymous reads remain supported.
+
+Dial a listed endpoint through its public URL:
+
+```console
+$ curl --fail --silent --show-error \
+    --output /dev/null \
+    --write-out 'HTTP %{http_code}\n' \
+    https://witness-1.preprod.plutimus.com/
+HTTP 200
+```
+
+## Witness operator journey: post
+
+Fetch the witness's live controller OOBI response as binary data. Do not copy
+and paste CESR through a text editor:
+
+```console
+$ curl --fail --silent --show-error \
+    --output witness-1-oobi.cesr \
+    https://witness-1.preprod.plutimus.com/oobi/B.../controller
+$ export CKERI_PAYER=/run/secrets/payment.skey
+$ export CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket
+$ export CKERI_FUNDING_ADDRESS=addr_test1...
+$ nix run --quiet ./offchain#ckeri -- board post \
+    --network preprod \
+    --network-magic 1 \
+    --endpoint-record witness-1-oobi.cesr \
+    --board-manifest deploy/preprod/board-manifest.json
+board txid: <settled-txid> deposit: 2 tADA
+```
+
+The marker asset name is the witness's raw Ed25519 key. The inline datum wraps
+the exact endpoint reply, its signature, and the 28-byte Cardano payment-key
+hash that controls its lifecycle. Posting mints exactly one marker, and the
+policy verifies the witness signature before minting.
+
+All configuration uses `opt-env-conf`: command options, environment variables,
+and YAML are equivalent. `optparse-applicative` is not used. Secrets are read
+from environment-selected files and are never placed in the manifest or
+printed.
+
+## Update
+
+An update spends and recreates the selected record with the same marker and
+complete deposit. The recorded Cardano owner must sign:
+
+```console
+$ nix run --quiet ./offchain#ckeri -- board update \
+    --endpoint-record witness-1-replacement-oobi.cesr \
+    --board-manifest deploy/preprod/board-manifest.json
+board update txid: <settled-replacement-txid>
+replaced: <old-txid>#<old-index>
+```
+
+Global uniqueness is intentionally not an on-chain rule. If the same witness
+has multiple live records, all remain visible and update refuses ambiguity.
+Pass `--board-out-ref TXID#INDEX` to select one explicitly.
+
+## Retire and refund
+
+Retirement spends the selected board output, burns exactly one marker, and
+refunds the complete deposit to `--to`. Fee change must use a different
+address when the funding address is also the refund target:
+
+```console
+$ export CKERI_CHANGE_ADDRESS=addr_test1change...
+$ nix run --quiet ./offchain#ckeri -- board retire \
+    --witness B... \
+    --to addr_test1refund... \
+    --board-manifest deploy/preprod/board-manifest.json
+board retire txid: <settled-retire-txid>
+refunded: 2 tADA to addr_test1refund...
+```
+
+After settlement, the spent predecessor is stale and disappears from
+`board list`. There is no TTL or wall-clock rule: current means unspent.
+
+## Checkpoint watchability
+
+Checkpoint datums say *who* the controller chose; the endpoint board says
+*where* those witnesses currently advertise service. `ckeri status` joins the
+two verified sets:
+
+```console
+$ nix run --quiet ./offchain#ckeri -- status E... \
+    --manifest deploy/preprod/m1-manifest.json \
+    --board-manifest deploy/preprod/board-manifest.json
+state ACTIVE ... witnesses 3 (toad 2) ... watchable 3/3
+```
+
+Duplicates never increase the numerator. Witnessed registration refuses
+missing board entries by default; `--allow-unlisted-witnesses` is an explicit
+acknowledgement of reduced public watchability.

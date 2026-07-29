@@ -3,7 +3,7 @@
 - [x] T161-S0 Verify Story #160 closed, archive its worktree/branches, refresh
   merged main, create the isolated #161 worktree, log START, and pass the
   inherited `just ci` baseline.
-- [ ] T161-S1 RED/GREEN exact Close address decoding and deterministic binary
+- [x] T161-S1 RED/GREEN exact Close address decoding and deterministic binary
   signing packages bound to the live ACTIVE outref, full refund target, and
   current controller threshold.
 - [ ] T161-S2 RED/GREEN the deployed reference-script spend+CloseBurn

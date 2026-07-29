@@ -8,8 +8,8 @@
 
 ## Slice 2 — signed record and catalog
 
-- [ ] T004-S2 Add genuine and adversarial KERI endpoint-record fixtures/tests.
-- [ ] T005-S2 Implement fail-closed record parsing, board manifest, Koios address query, and catalog rendering.
+- [x] T004-S2 Add genuine and adversarial KERI endpoint-record fixtures/tests.
+- [x] T005-S2 Implement fail-closed record parsing, board manifest, Koios address query, and catalog rendering.
 
 ## Slice 3 — status and preflight
 

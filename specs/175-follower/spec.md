@@ -105,6 +105,19 @@ observable and bounded by `csSecurityParamK`.
 store's current point/tip, exposed as pure store reads usable in-process by
 #176 and #177 without a socket.
 
+**FR-9b — Payer UTxOs are a third indexed pattern.** Funding addresses —
+**plural**, via opt-env-conf, since an operator may fund from more than one —
+join the interest set, and their live UTxOs are readable through the same store
+and the same no-cached-state rule. Motivation: the relayer and hunter do not only
+watch, they **act**, and building a transaction needs inputs for fees, collateral
+and min-ADA. Today `Deployment.Publisher` obtains those by shelling out to
+`cardano-cli query utxo`, i.e. `GetUTxOByAddress` over N2C — the exact query this
+epic exists to eliminate, surviving on preprod only because our funding addresses
+are tiny. The read returns raw `(TxIn, TxOut)` pairs shaped for a coin selector.
+**Rewiring `Publisher` or any transaction builder off `cardano-cli` is NOT this
+story** — that is story 4 (#181), and those are the producer lane's surfaces.
+This story provides the data and proves it readable.
+
 **FR-10 — CLI config via opt-env-conf.** Socket path, network magic, `k`, start
 point, and store path are declared with `opt-env-conf`, consistent with
 `Cardano.KERI.Deployment.CLI`.
@@ -115,6 +128,48 @@ modules it consumes.
 **FR-12 — Docs.** A `docs/` page: "the follower — indexed chain state from a
 node socket", covering what it indexes, how to run it with nothing but a node
 socket, what rollback guarantees it gives, and what it deliberately does not do.
+
+## The acceptance artefact — SC-0, the vertical journey
+
+Operator direction (2026-07-29, via the epic): this story is validated by a
+**vertical end-to-end user story**, not only by the component criteria below.
+
+> **A watcher with nothing but a node socket asks "is this identity's checkpoint
+> current?" — and keeps getting the truth across a restart and a chain fork.**
+
+One identity, one sequence, **no layer mocked**:
+
+1. a devnet comes up, and **the test posts a real checkpoint registration** to it;
+2. the follower starts from the deployment slot with **only the node socket**;
+3. the watcher asks and gets that identity's current checkpoint, with its slot;
+4. the follower is **killed and restarted** — it resumes without replaying from
+   genesis and answers **identically**;
+5. the node is **rewound and forked** — and afterwards the pre-fork record is
+   gone, with **no stale record anywhere in the store**;
+6. the watcher reads **its own funding UTxOs** from the store — no
+   `cardano-cli query utxo`, no `GetUTxOByAddress` anywhere in the path — and
+   after the fork a funding UTxO that existed only on the abandoned chain is gone
+   from that answer too.
+
+Step 4 additionally proves **block atomicity**: a crash mid-block must leave the
+store on a block boundary. A torn write is a lie with a timestamp on it — a
+reader catching the store mid-block sees some of a block's effects and not
+others, and every answer derived from that looks perfectly current while being
+wrong. Rollback exactness depends on it too, since the engine's inverse payload
+is computed per block: a half-applied block has an inverse that no longer
+describes the state it must undo. Like rollback exactness, this is **inherited
+from the engine and must be shown, not cited**.
+
+**SC-1 … SC-8 remain, underneath this, as the individually-checkable
+assertions.** They are sharp, and each is kept — but they are *component*
+assertions: every one of them can pass while the thing a watcher actually wants
+stays broken. Nothing in that set requires registration, chain-sync, the store,
+rollback, resume and the read path to work **in one sequence, for one identity**.
+That sequence is the story; the criteria are its parts.
+
+This is composition, not new machinery: the registration vehicle exists
+(`stagedCheckpointDevnet`), the rewind mechanism is proved (slice 0), resume is
+already a criterion, and the read path is built in slice 2.
 
 ## Success criteria
 
@@ -208,6 +263,11 @@ local branch tips:
   coarse filter, and `AddressIndex` keeps each output's full serialised `TxOut`;
   policy and asset-name discrimination happen when we decode in the read path.
   **No upstream `InterestSet` extension is proposed.**
+  The irony is worth recording: the address-only shape we first read as a
+  limitation needing an upstream extension turns out to fit **all three**
+  patterns exactly — checkpoints, the future endpoint board, and now the payer's
+  funding addresses. `IndexAddressSet` is literally "index the UTxOs at these
+  addresses", which is what every one of them wants.
 
 ## Non-goals
 

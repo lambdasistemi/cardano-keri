@@ -21,6 +21,7 @@ import Cardano.KERI.Deployment.AdvanceTransaction (
     AdvanceRunnerConfig (..),
     advanceBuildArguments,
     mkAdvancePlan,
+    observerRegistrationBuildArguments,
  )
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
@@ -204,6 +205,20 @@ spec =
                                 , "--spending-plutus-script-v3"
                                 ]
             arguments `shouldNotContain` ["--mint"]
+            observerRegistrationBuildArguments
+                sampleRunner
+                plan
+                sampleAdvanceFiles
+                "funding#0"
+                "collateral#1"
+                `shouldContain` [ "--certificate-file"
+                                , filesObserverCertificate sampleAdvanceFiles
+                                , "--certificate-tx-in-reference"
+                                , T.unpack (planAdvanceReference plan)
+                                , "--certificate-plutus-script-v3"
+                                , "--certificate-reference-tx-in-redeemer-file"
+                                , filesObserverCertificateRedeemer sampleAdvanceFiles
+                                ]
 
 loadJourney :: IO (InceptionExport, RotationExport)
 loadJourney = do
@@ -241,6 +256,10 @@ sampleAdvanceFiles =
     AdvanceFiles
         { filesSpendRedeemer = "spend.json"
         , filesObserverRedeemer = "observer.json"
+        , filesObserverCertificateRedeemer = "observer-certificate.json"
+        , filesObserverCertificate = "observer.cert"
+        , filesObserverRegistrationBody = "observer-registration.body"
+        , filesObserverRegistrationSigned = "observer-registration.signed"
         , filesSuccessorDatum = "successor.json"
         , filesBody = "advance.body"
         , filesSigned = "advance.signed"

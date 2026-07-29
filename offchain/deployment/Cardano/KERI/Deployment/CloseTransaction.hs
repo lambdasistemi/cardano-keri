@@ -24,9 +24,15 @@ import Cardano.KERI.AID.Checkpoint.Wire (closeBurnRedeemerData)
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAssetUtxo (..),
     KoiosToken,
+    queryAssetHistory,
     queryAssetUtxos,
+    queryScriptRedeemers,
+    queryTransactionUtxos,
  )
-import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
+import Cardano.KERI.Deployment.CheckpointIndex (
+    ActiveCheckpoint (..),
+    resolveClosedCheckpoint,
+ )
 import Cardano.KERI.Deployment.Close (ClosePackage (..))
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
@@ -239,7 +245,7 @@ runCloseTransaction config plan = do
                 config
                 (closeBuildArguments config plan files funding collateral)
         txId <- signSubmit config (closeFilesBody files) (closeFilesSigned files)
-        waitForSpentCheckpoint config plan txId
+        waitForClosedCheckpoint config plan txId
         pure $ CloseResult txId
 
 closeFiles :: FilePath -> CloseFiles
@@ -364,26 +370,58 @@ runCardanoCli config arguments = do
         ExitFailure code ->
             fail (renderCardanoCliFailure code err output)
 
-waitForSpentCheckpoint ::
+waitForClosedCheckpoint ::
     CloseRunnerConfig ->
     ClosePlan ->
     Text ->
     IO ()
-waitForSpentCheckpoint config plan txId = do
+waitForClosedCheckpoint config plan txId = do
     started <- getCurrentTime
     go started
   where
     go started = do
         result <-
-            try $
-                queryAssetUtxos
-                    (closeRunnerKoiosUrl config)
-                    (closeRunnerKoiosToken config)
-                    (closePlanPolicy plan)
-                    (closePlanAssetName plan)
+            try $ do
+                utxos <-
+                    queryAssetUtxos
+                        (closeRunnerKoiosUrl config)
+                        (closeRunnerKoiosToken config)
+                        (closePlanPolicy plan)
+                        (closePlanAssetName plan)
+                history <-
+                    queryAssetHistory
+                        (closeRunnerKoiosUrl config)
+                        (closeRunnerKoiosToken config)
+                        (closePlanPolicy plan)
+                        (closePlanAssetName plan)
+                redeemers <-
+                    queryScriptRedeemers
+                        (closeRunnerKoiosUrl config)
+                        (closeRunnerKoiosToken config)
+                        (closePlanPolicy plan)
+                transaction <-
+                    queryTransactionUtxos
+                        (closeRunnerKoiosUrl config)
+                        (closeRunnerKoiosToken config)
+                        [txId]
+                closed <-
+                    either
+                        fail
+                        pure
+                        ( resolveClosedCheckpoint
+                            (closePlanPolicy plan)
+                            (closePlanAssetName plan)
+                            history
+                            redeemers
+                            transaction
+                        )
+                pure
+                    ( not (any isSpentReference utxos)
+                    , closed
+                    )
         case result of
-            Right utxos
-                | all (not . isSpentReference) utxos ->
+            Right (True, Just settledTxId)
+                | settledTxId == txId ->
                     pure ()
             Right _ -> retry started
             Left (_ :: SomeException) -> retry started
@@ -399,7 +437,7 @@ waitForSpentCheckpoint config plan txId = do
             >= fromIntegral (closeRunnerTimeoutSeconds config)
             then
                 fail $
-                    "timed out waiting for settled close transaction "
+                    "timed out waiting for proved settled close transaction "
                         <> T.unpack txId
             else threadDelay 5_000_000 >> go started
 

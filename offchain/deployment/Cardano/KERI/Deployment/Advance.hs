@@ -64,6 +64,7 @@ import System.FilePath ((</>))
 
 data AdvancePackage = AdvancePackage
     { advanceAid :: !Text
+    , advanceActiveCheckpoint :: !ActiveCheckpoint
     , advanceSpentReference :: !Text
     , advanceSpent :: !SpentCheckpoint
     , advanceSuccessor :: !CheckpointDatumV1
@@ -140,6 +141,7 @@ mkAdvancePackage manifest active rotation = do
     pure
         AdvancePackage
             { advanceAid = rotationAid rotation
+            , advanceActiveCheckpoint = active
             , advanceSpentReference =
                 activeCheckpointTxId active
                     <> "#"

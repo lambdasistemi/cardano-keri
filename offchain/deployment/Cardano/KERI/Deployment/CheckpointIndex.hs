@@ -5,6 +5,7 @@ Description : Exact-asset Koios discovery and fail-closed V1 status rendering
 module Cardano.KERI.Deployment.CheckpointIndex (
     ActiveCheckpoint (..),
     checkpointAssetName,
+    queryActiveCheckpoint,
     resolveActiveCheckpoint,
     renderCheckpointStatus,
     queryCheckpointStatus,
@@ -78,6 +79,22 @@ queryCheckpointStatus baseUrl token manifest aid = do
             (checkpointPolicyId $ manifestCheckpoint manifest)
             assetName
     either fail pure (renderCheckpointStatus manifest aid assetName utxos)
+
+queryActiveCheckpoint ::
+    Text ->
+    Maybe KoiosToken ->
+    Manifest ->
+    Text ->
+    IO ActiveCheckpoint
+queryActiveCheckpoint baseUrl token manifest aid = do
+    assetName <- either fail pure (checkpointAssetName aid)
+    utxos <-
+        queryAssetUtxos
+            baseUrl
+            token
+            (checkpointPolicyId $ manifestCheckpoint manifest)
+            assetName
+    either fail pure (resolveActiveCheckpoint manifest aid assetName utxos)
 
 renderCheckpointStatus ::
     Manifest ->

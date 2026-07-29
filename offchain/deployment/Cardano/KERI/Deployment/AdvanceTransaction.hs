@@ -12,6 +12,7 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
     AdvanceResult (..),
     mkAdvancePlan,
     advanceBuildArguments,
+    observerRegistrationBuildArguments,
     runAdvanceTransaction,
 ) where
 
@@ -79,6 +80,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+import PlutusCore.Data (Data (I))
 import System.Exit (ExitCode (..))
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
@@ -114,14 +116,19 @@ data AdvanceRunnerConfig = AdvanceRunnerConfig
 data AdvanceFiles = AdvanceFiles
     { filesSpendRedeemer :: !FilePath
     , filesObserverRedeemer :: !FilePath
+    , filesObserverCertificateRedeemer :: !FilePath
+    , filesObserverCertificate :: !FilePath
+    , filesObserverRegistrationBody :: !FilePath
+    , filesObserverRegistrationSigned :: !FilePath
     , filesSuccessorDatum :: !FilePath
     , filesBody :: !FilePath
     , filesSigned :: !FilePath
     }
     deriving stock (Show, Eq)
 
-newtype AdvanceResult = AdvanceResult
-    { resultAdvanceTxId :: Text
+data AdvanceResult = AdvanceResult
+    { resultObserverRegistrationTxId :: !(Maybe Text)
+    , resultAdvanceTxId :: !Text
     }
     deriving stock (Show, Eq)
 
@@ -131,6 +138,14 @@ data WalletUtxo = WalletUtxo
     , walletAssetCount :: !Int
     }
     deriving stock (Show)
+
+newtype ProtocolParameters = ProtocolParameters
+    { protocolStakeAddressDeposit :: Integer
+    }
+
+instance FromJSON ProtocolParameters where
+    parseJSON = withObject "ProtocolParameters" $ \o ->
+        ProtocolParameters <$> o .: "stakeAddressDeposit"
 
 instance FromJSON WalletUtxo where
     parseJSON = withObject "WalletUtxo" $ \o -> do
@@ -233,6 +248,38 @@ advanceBuildArguments config plan files funding collateral =
     , filesBody files
     ]
 
+observerRegistrationBuildArguments ::
+    AdvanceRunnerConfig ->
+    AdvancePlan ->
+    AdvanceFiles ->
+    Text ->
+    Text ->
+    [String]
+observerRegistrationBuildArguments config plan files funding collateral =
+    [ "conway"
+    , "transaction"
+    , "build"
+    , "--tx-in"
+    , T.unpack funding
+    , "--tx-in-collateral"
+    , T.unpack collateral
+    , "--change-address"
+    , T.unpack (runnerFundingAddress config)
+    , "--certificate-file"
+    , filesObserverCertificate files
+    , "--certificate-tx-in-reference"
+    , T.unpack (planAdvanceReference plan)
+    , "--certificate-plutus-script-v3"
+    , "--certificate-reference-tx-in-redeemer-file"
+    , filesObserverCertificateRedeemer files
+    , "--testnet-magic"
+    , show (runnerNetworkMagic config)
+    , "--socket-path"
+    , runnerNodeSocket config
+    , "--out-file"
+    , filesObserverRegistrationBody files
+    ]
+
 runAdvanceTransaction ::
     AdvanceRunnerConfig ->
     AdvancePlan ->
@@ -243,6 +290,11 @@ runAdvanceTransaction config plan = do
     withSystemTempDirectory "ckeri-advance" $ \directory -> do
         let files = advanceFiles directory
         writeAdvanceFiles files plan
+        resultObserverRegistrationTxId <-
+            ensureObserverRegistered config plan files directory
+        mapM_
+            (putStrLn . ("observer registration txid: " <>) . T.unpack)
+            resultObserverRegistrationTxId
         wallet <- queryWallet config (directory </> "wallet.json")
         (funding, collateral) <-
             selectFundingPair 5_000_000 "checkpoint advance" wallet
@@ -258,13 +310,21 @@ runAdvanceTransaction config plan = do
                 (planCheckpointAssetName plan)
                 txId
                 (planCheckpointAddress plan)
-        pure (AdvanceResult txId)
+        pure AdvanceResult{resultAdvanceTxId = txId, ..}
 
 advanceFiles :: FilePath -> AdvanceFiles
 advanceFiles directory =
     AdvanceFiles
         { filesSpendRedeemer = directory </> "spend-redeemer.json"
         , filesObserverRedeemer = directory </> "observer-redeemer.json"
+        , filesObserverCertificateRedeemer =
+            directory </> "observer-certificate-redeemer.json"
+        , filesObserverCertificate =
+            directory </> "observer-registration.cert"
+        , filesObserverRegistrationBody =
+            directory </> "observer-registration.body"
+        , filesObserverRegistrationSigned =
+            directory </> "observer-registration.signed"
         , filesSuccessorDatum = directory </> "successor-datum.json"
         , filesBody = directory </> "advance.body"
         , filesSigned = directory </> "advance.signed"
@@ -274,7 +334,154 @@ writeAdvanceFiles :: AdvanceFiles -> AdvancePlan -> IO ()
 writeAdvanceFiles files plan = do
     Aeson.encodeFile (filesSpendRedeemer files) (planSpendRedeemer plan)
     Aeson.encodeFile (filesObserverRedeemer files) (planObserverRedeemer plan)
+    Aeson.encodeFile
+        (filesObserverCertificateRedeemer files)
+        (plutusDataJson $ I 0)
     Aeson.encodeFile (filesSuccessorDatum files) (planSuccessorDatum plan)
+
+ensureObserverRegistered ::
+    AdvanceRunnerConfig ->
+    AdvancePlan ->
+    AdvanceFiles ->
+    FilePath ->
+    IO (Maybe Text)
+ensureObserverRegistered config plan files directory = do
+    registered <-
+        observerRegistered
+            config
+            plan
+            (directory </> "observer-stake-address-info.json")
+    if registered
+        then pure Nothing
+        else do
+            writeObserverCertificate
+                config
+                plan
+                files
+                (directory </> "protocol-parameters.json")
+            wallet <-
+                queryWallet config (directory </> "wallet-observer-registration.json")
+            (funding, collateral) <-
+                selectFundingPair
+                    8_000_000
+                    "observer stake registration"
+                    wallet
+            _ <-
+                runCardanoCli
+                    config
+                    ( observerRegistrationBuildArguments
+                        config
+                        plan
+                        files
+                        funding
+                        collateral
+                    )
+            txId <-
+                signSubmit
+                    config
+                    (filesObserverRegistrationBody files)
+                    (filesObserverRegistrationSigned files)
+            waitForObserverRegistration config plan txId directory
+            pure (Just txId)
+
+observerRegistered ::
+    AdvanceRunnerConfig ->
+    AdvancePlan ->
+    FilePath ->
+    IO Bool
+observerRegistered config plan output = do
+    _ <-
+        runCardanoCli
+            config
+            [ "query"
+            , "stake-address-info"
+            , "--address"
+            , T.unpack (planAdvanceRewardAddress plan)
+            , "--testnet-magic"
+            , show (runnerNetworkMagic config)
+            , "--socket-path"
+            , runnerNodeSocket config
+            , "--out-file"
+            , output
+            ]
+    accounts <-
+        eitherDecodeFileStrict' output
+            >>= either
+                (fail . ("cannot decode advance observer stake address info: " <>))
+                pure
+    pure (not $ null (accounts :: [Value]))
+
+writeObserverCertificate ::
+    AdvanceRunnerConfig ->
+    AdvancePlan ->
+    AdvanceFiles ->
+    FilePath ->
+    IO ()
+writeObserverCertificate config plan files parametersFile = do
+    _ <-
+        runCardanoCli
+            config
+            [ "query"
+            , "protocol-parameters"
+            , "--testnet-magic"
+            , show (runnerNetworkMagic config)
+            , "--socket-path"
+            , runnerNodeSocket config
+            , "--out-file"
+            , parametersFile
+            ]
+    parameters <-
+        eitherDecodeFileStrict' parametersFile
+            >>= either
+                (fail . ("cannot decode protocol parameters: " <>))
+                pure
+    _ <-
+        runCardanoCli
+            config
+            [ "conway"
+            , "stake-address"
+            , "registration-certificate"
+            , "--stake-address"
+            , T.unpack (planAdvanceRewardAddress plan)
+            , "--key-reg-deposit-amt"
+            , show (protocolStakeAddressDeposit parameters)
+            , "--out-file"
+            , filesObserverCertificate files
+            ]
+    pure ()
+
+waitForObserverRegistration ::
+    AdvanceRunnerConfig ->
+    AdvancePlan ->
+    Text ->
+    FilePath ->
+    IO ()
+waitForObserverRegistration config plan txId directory = do
+    started <- getCurrentTime
+    go started
+  where
+    go started = do
+        result <-
+            ( try $
+                observerRegistered
+                    config
+                    plan
+                    (directory </> "observer-stake-address-info-settled.json")
+            ) ::
+                IO (Either SomeException Bool)
+        case result of
+            Right True -> pure ()
+            _ -> retry started
+    retry started = do
+        now <- getCurrentTime
+        if diffUTCTime now started
+            >= fromIntegral (runnerTimeoutSeconds config)
+            then
+                fail $
+                    "timed out waiting for advance observer registration \
+                    \transaction "
+                        <> T.unpack txId
+            else threadDelay 5_000_000 >> go started
 
 queryWallet ::
     AdvanceRunnerConfig ->

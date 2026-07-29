@@ -81,10 +81,13 @@ Every setting has CLI/env/YAML sources through `opt-env-conf`.
 
 Add the user page and navigation, capture/check scripts, board drift and
 acceptance recipes, and CI tripwire. After all behavior changes are committed,
-build the packaged binary, capture the complete live journey with `script(1)`
-or `tee`, verify tx settlement independently, commit the raw transcript and
-final manifest, embed the exact capture in the PR body, run the full exported-
-TMPDIR gate, and wait for green GitHub CI.
+build the packaged binary and capture one real two-seat user journey: the
+witness-operator machine posts, then a clean stranger machine follows only the
+public docs to install the client, list and verify the record, and dial the
+live witness. Continue that same raw `script(1)`/`tee` capture through the
+complete update/retire/restore lifecycle, verify tx settlement independently,
+commit the raw transcript and final manifest, embed the exact capture in the
+PR body, run the full exported-TMPDIR gate, and wait for green GitHub CI.
 
 ## Merge and release discipline
 

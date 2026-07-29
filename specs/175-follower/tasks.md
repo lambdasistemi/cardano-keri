@@ -40,17 +40,17 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 2 — read primitives
 
-- [ ] T175-S2-1 RED: tests for `Cardano.KERI.Indexer.Reads` over `withInMemoryIndexer`
+- [X] T175-S2-1 RED: tests for `Cardano.KERI.Indexer.Reads` over `withInMemoryIndexer`
       seeded through the real handler path — create/spend sequences in, expected
       `liveCheckpoints` / `checkpointForAid` out
-- [ ] T175-S2-2 RED: negative control — a non-checkpoint UTxO at the checkpoint address
+- [X] T175-S2-2 RED: negative control — a non-checkpoint UTxO at the checkpoint address
       must not appear in the view; a spent checkpoint must disappear
-- [ ] T175-S2-3 GREEN: implement `liveCheckpoints`, `checkpointForAid`, `storePoint` over
+- [X] T175-S2-3 GREEN: implement `liveCheckpoints`, `checkpointForAid`, `storePoint` over
       `snapshotAt`
-- [ ] T175-S2-5 `payerUtxos`: raw `(TxIn, TxOut)` at a funding address, shaped for a coin
+- [X] T175-S2-5 `payerUtxos`: raw `(TxIn, TxOut)` at a funding address, shaped for a coin
       selector (FR-9b) — created returned, spent gone, other-address absent, no decoding or
       checkpoint-flavoured wrapping, same no-cached-state rule
-- [ ] T175-S2-4 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S2-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 3 — follower configuration + CLI config
 

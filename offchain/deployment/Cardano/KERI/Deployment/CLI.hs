@@ -10,22 +10,39 @@ module Cardano.KERI.Deployment.CLI (
     DeploySettings (..),
     VerifySettings (..),
     RegisterSettings (..),
+    AdvanceSettings (..),
     StatusSettings (..),
     registerPreflight,
     runInstructions,
 ) where
 
+import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.Deployment.Advance (
+    AdvancePackage (..),
+    AdvanceSigningFiles (..),
+    attachControllerSignatures,
+    mkAdvancePackage,
+    writeAdvanceSigningPackage,
+ )
+import Cardano.KERI.Deployment.AdvanceTransaction qualified as AdvanceTx
 import Cardano.KERI.Deployment.ChainIndex (
     KoiosToken (..),
     matchesReference,
     queryAssetUtxos,
     queryReferenceScripts,
  )
-import Cardano.KERI.Deployment.CheckpointIndex (queryCheckpointStatus)
+import Cardano.KERI.Deployment.CheckpointIndex (
+    ActiveCheckpoint (..),
+    queryActiveCheckpoint,
+    queryCheckpointStatus,
+ )
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
+    RotationExport (..),
     parseInceptionExport,
+    parseIndexedSignatureLines,
+    parseRotationExport,
  )
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
@@ -67,6 +84,7 @@ data Instructions
     = Deploy DeploySettings
     | ManifestVerify VerifySettings
     | Register RegisterSettings
+    | Advance AdvanceSettings
     | Status StatusSettings
     deriving stock (Show, Eq)
 
@@ -116,6 +134,27 @@ data RegisterSettings = RegisterSettings
     }
     deriving stock (Show, Eq)
 
+data AdvanceSettings = AdvanceSettings
+    { advanceNetwork :: Text
+    , advanceNetworkMagic :: Int
+    , advanceConfiguredAid :: Text
+    , advanceKel :: FilePath
+    , advanceSigningPackage :: Maybe FilePath
+    , advanceControllerSignatures :: Maybe FilePath
+    , advancePayer :: Maybe FilePath
+    , advanceNodeSocket :: Maybe FilePath
+    , advanceFundingAddress :: Maybe Text
+    , advanceCardanoCli :: FilePath
+    , advanceManifest :: FilePath
+    , advanceKoiosUrl :: Text
+    , advanceKoiosToken :: Maybe KoiosToken
+    , advanceTimeoutSeconds :: Int
+    , advanceValidatorTestUnderSigned :: Bool
+    , advanceValidatorTestUnderWitnessed :: Bool
+    , advanceValidatorTestStale :: Bool
+    }
+    deriving stock (Show, Eq)
+
 data StatusSettings = StatusSettings
     { statusAid :: Text
     , statusManifest :: FilePath
@@ -158,6 +197,10 @@ instance Opt.HasParser Instructions where
                     "register"
                     "Register a kli inception KEL on preprod"
                     (Register <$> Opt.subConfig "register" registerSettingsParser)
+                , Opt.command
+                    "advance"
+                    "Advance a live checkpoint from a witnessed kli rotation"
+                    (Advance <$> Opt.subConfig "advance" advanceSettingsParser)
                 , Opt.command
                     "status"
                     "Report the live V1 checkpoint for an AID"
@@ -401,6 +444,134 @@ registerSettingsParser = do
             (Just 1_007_000_000)
     pure RegisterSettings{..}
 
+advanceSettingsParser :: Opt.Parser AdvanceSettings
+advanceSettingsParser = do
+    advanceNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    advanceNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    advanceConfiguredAid <-
+        textSetting
+            "aid"
+            "CKERI_AID"
+            "aid"
+            "44-character KERI E-code identifier"
+            Nothing
+    advanceKel <-
+        stringSetting
+            "kel"
+            "CKERI_KEL"
+            "kel"
+            "Binary-safe path to a witnessed kli rotation export"
+            Nothing
+    advanceSigningPackage <-
+        Opt.optional $
+            stringSetting
+                "signing-package"
+                "CKERI_SIGNING_PACKAGE"
+                "signing-package"
+                "Directory receiving the binary AdvanceMessage package"
+                Nothing
+    advanceControllerSignatures <-
+        Opt.optional $
+            stringSetting
+                "controller-signatures"
+                "CKERI_CONTROLLER_SIGNATURES"
+                "controller-signatures"
+                "Bare indexed CESR signatures over advance-message.cbor"
+                Nothing
+    advancePayer <-
+        Opt.optional $
+            stringSetting
+                "payer"
+                "CKERI_PAYER"
+                "payer"
+                "Cardano payment signing-key file"
+                Nothing
+    advanceNodeSocket <-
+        Opt.optional $
+            stringSetting
+                "node-socket"
+                "CKERI_NODE_SOCKET"
+                "node-socket"
+                "Cardano node socket"
+                Nothing
+    advanceFundingAddress <-
+        Opt.optional $
+            textSetting
+                "funding-address"
+                "CKERI_FUNDING_ADDRESS"
+                "funding-address"
+                "Bech32 payment address funding the advance"
+                Nothing
+    advanceCardanoCli <-
+        stringSetting
+            "cardano-cli"
+            "CKERI_CARDANO_CLI"
+            "cardano-cli"
+            "cardano-cli executable"
+            (Just "cardano-cli")
+    advanceManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    advanceKoiosUrl <-
+        textSetting
+            "koios-url"
+            "CKERI_KOIOS_URL"
+            "koios-url"
+            "Koios API base URL"
+            (Just "https://preprod.koios.rest/api/v1")
+    advanceKoiosToken <- optionalKoiosTokenParser
+    advanceTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout"
+            (Just 600)
+    advanceValidatorTestUnderSigned <-
+        Opt.yesNoSwitch
+            [ Opt.long "validator-test-under-signed"
+            , Opt.env "CKERI_VALIDATOR_TEST_UNDER_SIGNED"
+            , Opt.conf "validator-test-under-signed"
+            , Opt.help
+                "ACCEPTANCE ONLY: send one signature to real script evaluation"
+            , Opt.value False
+            ]
+    advanceValidatorTestUnderWitnessed <-
+        Opt.yesNoSwitch
+            [ Opt.long "validator-test-under-witnessed"
+            , Opt.env "CKERI_VALIDATOR_TEST_UNDER_WITNESSED"
+            , Opt.conf "validator-test-under-witnessed"
+            , Opt.help
+                "ACCEPTANCE ONLY: send one witness receipt to real script evaluation"
+            , Opt.value False
+            ]
+    advanceValidatorTestStale <-
+        Opt.yesNoSwitch
+            [ Opt.long "validator-test-stale"
+            , Opt.env "CKERI_VALIDATOR_TEST_STALE"
+            , Opt.conf "validator-test-stale"
+            , Opt.help
+                "ACCEPTANCE ONLY: replay the rotation against current live state"
+            , Opt.value False
+            ]
+    pure AdvanceSettings{..}
+
 statusSettingsParser :: Opt.Parser StatusSettings
 statusSettingsParser = do
     statusAid <-
@@ -523,6 +694,7 @@ runInstructions = \case
     Deploy settings -> runDeploy settings
     ManifestVerify settings -> runVerify settings
     Register settings -> runRegister settings
+    Advance settings -> runAdvance settings
     Status settings -> runStatus settings
 
 registerPreflight ::
@@ -618,6 +790,162 @@ runRegister settings = do
         "escrow: "
             <> show (registerEscrowLovelace settings `div` 1_000_000)
             <> " tADA (min 2 + D 1000 + B 5)"
+
+runAdvance :: AdvanceSettings -> IO ()
+runAdvance settings = do
+    unless
+        (advanceNetwork settings == "preprod" && advanceNetworkMagic settings == 1)
+        (fail "M1 V1 advance supports only preprod network magic 1")
+    unless
+        ( T.length (advanceConfiguredAid settings) == 44
+            && "E" `T.isPrefixOf` advanceConfiguredAid settings
+        )
+        (fail "AID must be one 44-character KERI E-code identifier")
+    when (advanceTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    let negativeCount =
+            length $
+                filter
+                    id
+                    [ advanceValidatorTestUnderSigned settings
+                    , advanceValidatorTestUnderWitnessed settings
+                    , advanceValidatorTestStale settings
+                    ]
+    when (negativeCount > 1) $
+        fail "choose at most one validator-test mode"
+    kel <- BS.readFile (advanceKel settings)
+    rotation <- either fail pure (parseRotationExport kel)
+    unless (advanceConfiguredAid settings == rotationAid rotation) $
+        fail "configured AID does not match the kli rotation export"
+    manifest <-
+        readManifest (advanceManifest settings) >>= either fail pure
+    active <-
+        queryActiveCheckpoint
+            (advanceKoiosUrl settings)
+            (advanceKoiosToken settings)
+            manifest
+            (advanceConfiguredAid settings)
+    package <-
+        either fail pure (mkAdvancePackage manifest active rotation)
+    case ( advanceSigningPackage settings
+         , advanceControllerSignatures settings
+         ) of
+        (Just directory, Nothing) -> do
+            when (negativeCount /= 0) $
+                fail "validator-test modes apply only when submitting"
+            files <- writeAdvanceSigningPackage directory package
+            putStrLn $
+                "signing package: "
+                    <> advancePreimageFile files
+            putStrLn $
+                "preimage sha256: "
+                    <> T.unpack (advancePackageSha256 package)
+            putStrLn $
+                "spent checkpoint: "
+                    <> T.unpack (advanceSpentReference package)
+        (Nothing, Just signatureFile) ->
+            submitAdvance settings manifest active package signatureFile
+        _ ->
+            fail
+                "choose exactly one of --signing-package DIR or \
+                \--controller-signatures FILE"
+
+submitAdvance ::
+    AdvanceSettings ->
+    Manifest ->
+    ActiveCheckpoint ->
+    AdvancePackage ->
+    FilePath ->
+    IO ()
+submitAdvance settings manifest active package signatureFile = do
+    payer <-
+        requireAdvanceSetting "--payer" (advancePayer settings)
+    nodeSocket <-
+        requireAdvanceSetting "--node-socket" (advanceNodeSocket settings)
+    fundingAddress <-
+        requireAdvanceSetting "--funding-address" (advanceFundingAddress settings)
+    signatureBytes <- BS.readFile signatureFile
+    signatures <-
+        either fail pure (parseIndexedSignatureLines signatureBytes)
+    submittedPackage <-
+        prepareSubmittedPackage settings active signatures package
+    plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
+    result <-
+        AdvanceTx.runAdvanceTransaction
+            AdvanceTx.AdvanceRunnerConfig
+                { AdvanceTx.runnerCardanoCli = advanceCardanoCli settings
+                , AdvanceTx.runnerNetworkMagic = advanceNetworkMagic settings
+                , AdvanceTx.runnerNodeSocket = nodeSocket
+                , AdvanceTx.runnerFundingAddress = fundingAddress
+                , AdvanceTx.runnerSigningKeyFile = payer
+                , AdvanceTx.runnerKoiosUrl = advanceKoiosUrl settings
+                , AdvanceTx.runnerKoiosToken = advanceKoiosToken settings
+                , AdvanceTx.runnerTimeoutSeconds = advanceTimeoutSeconds settings
+                }
+            plan
+    putStrLn $
+        "advance txid: "
+            <> T.unpack (AdvanceTx.resultAdvanceTxId result)
+
+prepareSubmittedPackage ::
+    AdvanceSettings ->
+    ActiveCheckpoint ->
+    [(Int, BS.ByteString)] ->
+    AdvancePackage ->
+    IO AdvancePackage
+prepareSubmittedPackage settings active signatures package
+    | advanceValidatorTestUnderSigned settings = do
+        when (null signatures) $
+            fail "under-signed validator test needs at least one valid signature"
+        warnValidatorTest "under-signed"
+        pure $
+            package
+                { advanceEvidence =
+                    (advanceEvidence package)
+                        { aeCtrlSigs = take 1 signatures
+                        }
+                }
+    | advanceValidatorTestUnderWitnessed settings = do
+        validated <-
+            either fail pure (attachControllerSignatures signatures package)
+        when (length (aeWitReceipts $ advanceEvidence validated) < 2) $
+            fail "under-witnessed validator test needs at least two receipts"
+        warnValidatorTest "under-witnessed"
+        pure $
+            validated
+                { advanceEvidence =
+                    (advanceEvidence validated)
+                        { aeWitReceipts =
+                            take 1 (aeWitReceipts $ advanceEvidence validated)
+                        }
+                }
+    | advanceValidatorTestStale settings = do
+        unless
+            ( cdNativeSn (activeCheckpointDatum active)
+                >= cdNativeSn (advanceSuccessor package)
+            )
+            (fail "stale validator test requires an already-applied rotation")
+        warnValidatorTest "stale replay"
+        pure $
+            package
+                { advanceEvidence =
+                    (advanceEvidence package)
+                        { aeCtrlSigs = signatures
+                        }
+                }
+    | otherwise =
+        either fail pure (attachControllerSignatures signatures package)
+
+warnValidatorTest :: String -> IO ()
+warnValidatorTest label =
+    putStrLn $
+        "warning: ACCEPTANCE-ONLY "
+            <> label
+            <> " package will be sent to real validator evaluation"
+
+requireAdvanceSetting :: String -> Maybe a -> IO a
+requireAdvanceSetting name =
+    maybe (fail $ name <> " is required when submitting an advance") pure
 
 runStatus :: StatusSettings -> IO ()
 runStatus settings = do

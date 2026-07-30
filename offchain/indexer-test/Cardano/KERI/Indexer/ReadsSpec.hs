@@ -1,6 +1,11 @@
 {-# LANGUAGE NumericUnderscores #-}
 
-module Cardano.KERI.Indexer.ReadsSpec (spec) where
+module Cardano.KERI.Indexer.ReadsSpec (
+    spec,
+    checkpointCreate,
+    checkpointDatum,
+    checkpointView,
+) where
 
 import Cardano.Crypto.Hash.Class (
     hashFromBytes,

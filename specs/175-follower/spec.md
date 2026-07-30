@@ -186,10 +186,11 @@ already a criterion, and the read path is built in slice 2.
   Koios is legitimate only for sourcing the *golden fixture's* content (SC-2's
   decoder input), which is not an acceptance path.
   **Residual gap, recorded not hidden**: this proves a devnet node, not preprod.
-  There is no preprod socket on this host (`/node/preprod/ipc/node.socket` does
-  not exist), and provisioning one is infrastructure — it belongs with #176's
-  hosted daemon, not here. A preprod-socket leg is therefore *not* claimed by
-  this story.
+  A preprod socket DOES exist on this host (`/code/cardano-preprod/ipc/node.socket`,
+  verified; the documented `/node/preprod/...` path is stale docs), but following
+  preprod cannot demonstrate the full journey: only a devnet lets the test POST
+  the checkpoint it then reads, and only a devnet can be forked. A preprod-socket
+  leg is therefore not claimed by this story as its acceptance path.
 - **SC-2 (the heart)** — Rollback exactness is proved as a **property** in the
   `ChainFollower.Laws` / mpfs `ArmageddonSpec` shape, over a real store:
   for a generated block sequence with a fork, `follow-then-rollback` and

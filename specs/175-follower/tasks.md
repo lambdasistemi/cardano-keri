@@ -71,26 +71,26 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 3b — prove the mandatory flag is actually mandatory (micro-slice)
 
-- [ ] T175-S3b-1 RED: parsing an `IndexerConfig` WITHOUT `--byron-epoch-slots` must FAIL.
+- [X] T175-S3b-1 RED: parsing an `IndexerConfig` WITHOUT `--byron-epoch-slots` must FAIL.
       Navigator finding at slice-3 COMPLETE: the fix replaced an invented constant with a
       mandatory field, but nothing asserts the mandatory-ness — a later `Opt.value` would
       silently reinstate a guessed default and no test would notice. The repair is only as
       durable as the check that protects it
-- [ ] T175-S3b-2 GREEN/verify + `./gate.sh`; its own bisect-safe commit, `Tasks:` trailer
+- [X] T175-S3b-2 GREEN/verify + `./gate.sh`; its own bisect-safe commit, `Tasks:` trailer
 
 ## Slice 4 — rollback exactness property (acceptance heart)
 
-- [ ] T175-S4-1 RED: property over a real store — generate a block sequence with a fork;
+- [X] T175-S4-1 RED: property over a real store — generate a block sequence with a fork;
       `follow → rollback → follow winning branch` yields a store byte-equal to following
       the winning chain from the start, and an equal derived view
-- [ ] T175-S4-2 Demonstrate the property is **able to fail**: seed a mutation (e.g. drop
+- [X] T175-S4-2 Demonstrate the property is **able to fail**: seed a mutation (e.g. drop
       one inverse) and record it turning the property red; the demonstration ships with
       the slice
-- [ ] T175-S4-3 GREEN: whatever wiring the property needs (no engine code — the engine
+- [X] T175-S4-3 GREEN: whatever wiring the property needs (no engine code — the engine
       already owns the inverse)
-- [ ] T175-S4-4 The property's comment states the inheritance argument: the engine owns
+- [X] T175-S4-4 The property's comment states the inheritance argument: the engine owns
       the inverse and our view is a pure function of the store (A-002)
-- [ ] T175-S4-5 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S4-5 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 5 — resume regression guard
 

@@ -94,12 +94,12 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 5 — resume regression guard
 
-- [ ] T175-S5-1 RED: resume candidates are offered newest-first over the composed system
+- [X] T175-S5-1 RED: resume candidates are offered newest-first over the composed system
       (mpfs #355 guarded, not re-implemented)
-- [ ] T175-S5-2 RED: a restart resumes from the persisted point, not the configured start
+- [X] T175-S5-2 RED: a restart resumes from the persisted point, not the configured start
       point and not genesis
-- [ ] T175-S5-3 GREEN: wiring as needed
-- [ ] T175-S5-4 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S5-3 GREEN: wiring as needed
+- [X] T175-S5-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Slice 6 — the live leg (shape set by Slice 0's verdict)
 

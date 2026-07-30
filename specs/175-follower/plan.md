@@ -146,6 +146,31 @@ the rollback was actually **observed** rather than inferred from the test reachi
 its end. *If the workaround were broken, would this test still be green?* If yes,
 it is not finished.
 
+**S6c — preprod recognition measurement (supplementary evidence, non-gating).**
+Authorised by the epic (A-008) as a time-boxed measurement, not a criterion:
+connect to the real preprod socket `/code/cardano-preprod/ipc/node.socket`,
+follow from the manifest deployment point (`csStartPoint` — no genesis walk),
+and report the wall-clock to reach the live checkpoint `2f2d0cdf…#0` that this
+project did not create.
+
+*Standing conditions*: **SC-1 does not move in either direction** — devnet stays
+the acceptance leg, because only a devnet can post its own checkpoint and be
+forked; this is complementary evidence, never a replacement. **Non-gating
+permanently**: it depends on a live socket and a chain state nobody controls, so
+it must never enter `gate.sh` or `ci-live`. Store under
+`/code/tmp/cardano-keri-175/`, cleaned up pass or fail. **The first decisive
+obstacle stops the run** — in particular a protocol-version failure at the
+handshake is not a bug to work around but a FINDING about registered contract 2
+(N2C protocol version): Q-file it immediately, because a version bump is its own
+bisect-safe slice by standing contract. If the measurement says hours, drop it
+and record "deliberately declined, measured at N".
+
+*Why it matters beyond this story*: it is the earliest live exercise of contract
+2 against the real preprod node, which otherwise stays untested until #176 puts
+its daemon on this same socket. Either outcome de-risks #176 — a clean follow
+proves the stack, a handshake failure surfaces a contract problem while it is
+still cheap. The S6 evidence must say so, so #176 planner inherits it.
+
 **S6b — the vertical journey (the acceptance artefact).** One readable test that
 runs SC-0 end to end for a single identity, no layer mocked: devnet up → the test
 posts a real checkpoint registration → follower starts from the deployment slot

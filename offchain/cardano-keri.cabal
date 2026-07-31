@@ -207,6 +207,7 @@ test-suite indexer-tests
   hs-source-dirs:   indexer-test
   main-is:          Main.hs
   other-modules:
+    Cardano.KERI.Indexer.AtomicitySpec
     Cardano.KERI.Indexer.CodecsSpec
     Cardano.KERI.Indexer.FollowerSpec
     Cardano.KERI.Indexer.ReadsSpec
@@ -229,6 +230,7 @@ test-suite indexer-tests
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-node-clients:block-indexer
     , cardano-node-clients:utxo-indexer-lib
     , chain-follower
     , containers

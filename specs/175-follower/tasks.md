@@ -149,8 +149,10 @@ orchestrator when the slice is accepted, in the same amended commit.
 - [X] T175-S6b-3b **RETIRED AS A LIVE-FORK STEP** — payer UTxOs remain covered
       by the library read-path tests and docs. Audit:
       [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29).
-- [X] T175-S6b-3c **RETIRED** — crash-mid-block atomicity is an upstream engine
-      invariant, not a KERI consumer-local live proof. Audit:
+- [X] T175-S6b-3c **RETIRED AS A LIVE CRASH DRILL** — crash injection against a
+      live node duplicated the upstream engine and stays retired. The binding
+      atomicity invariant is retained and verified at KERI's own composition
+      seam by Slice 9's deterministic failed-transaction test. Audit:
       [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29).
 - [X] T175-S6b-4 **RETIRED AS WRITTEN** — only the retained `ci-live` smoke must
       now be demonstrated able to fail. Audit:
@@ -224,3 +226,22 @@ orchestrator when the slice is accepted, in the same amended commit.
       suspect the gate was weakened to get green, which is the opposite of what happened
 - [X] T175-S8-3 Final gate green at HEAD; `COMPLETE` logged with PR URL, head SHA and
       gate evidence; merge requested through the epic owner (never self-merged)
+
+## Slice 9 — epic acceptance corrections
+
+- [X] T175-S9-1 RED/negative control: run KERI's configured handler outside the
+      engine transaction, fail before rollback-point storage, and prove the
+      checkpoint and payer views expose the partial state.
+- [X] T175-S9-2 GREEN: run the same configured handler through
+      `withFollowerHandlers` + `processFollowerBlock`, inject a failing second
+      handler mid-block, and prove the store, rollback log, checkpoint view,
+      and payer view all remain empty.
+- [X] T175-S9-3 Prove the succeeding production-composed run commits checkpoint
+      state, payer state, and exactly one rollback point together; no KERI
+      cache, memo, file, or `IORef` participates in either view.
+- [X] T175-S9-4 Correct the follower guide: #175 is a library with no runnable
+      binary, link the preprod/query vertical filed as #188, and record the
+      young-store behaviour as correct but underdocumented upstream rather
+      than a behavioural contract gap.
+- [X] T175-S9-5 `./gate.sh` green; one commit, `Tasks:` trailer; PR republished
+      ready-for-review and never self-merged.

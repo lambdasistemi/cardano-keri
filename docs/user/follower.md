@@ -10,14 +10,15 @@ the chain forks.
 
 ## What it indexes
 
-The follower registers exactly one interest-set entry, the deployment's
-checkpoint address, with the upstream
+The follower always registers the deployment's checkpoint address, plus every
+configured funding address and the optional board address, with the upstream
 `Cardano.Node.Client.UTxOIndexer.Follower.withChainSyncFollower` bring-up. The
-upstream store then holds the live UTxOs at that address — which *is* the
-live-checkpoint set. An indexed output is recognised as a checkpoint at read
-time, not at index time: it carries an asset of the manifest's checkpoint
-policy id whose asset name is the AID-derived name, and whose inline datum
-decodes as `CheckpointDatumV1`. This repo owns the derived view
+upstream store then holds the live UTxOs at those addresses. The UTxOs at the
+checkpoint address are the live-checkpoint candidates. An indexed output is
+recognised as a checkpoint at read time, not at index time: it carries an asset
+of the manifest's checkpoint policy id whose asset name is the AID-derived
+name, and whose inline datum decodes as `CheckpointDatumV1`. This repo owns the
+derived view
 (`Cardano.KERI.Indexer.Reads`) and its codecs
 (`Cardano.KERI.Indexer.Codecs`); it does not own chain-sync, the reconnect
 loop, or the rollback engine — those are consumed from
@@ -41,39 +42,42 @@ decodes the live checkpoint set on every read rather than maintaining a
 precomputed AID-keyed index — at M1 scale (tens to hundreds of registered
 AIDs) that is not a cost worth engineering around.
 
-**Rollback exactness is inherited, not re-proved.** Every mutation for a
-block commits in one store transaction together with its rollback point —
-that is the upstream engine's invariant, not one this repo implements. Since
-the derived checkpoint view is a pure function of that store, and the store
-is provably exact after an unwind (proved upstream as a property, mirrored
-here over the real store), the view is exact too, by construction: there is
-no side cache, no derived file, and nothing that a rollback could leave
-stale. A consumer-local live fork drill that tried to re-prove this by
-snapshotting and restoring a real node's database duplicated the upstream
-rollback engine in the wrong repository; it has been retired (see
+**Rollback exactness is inherited and verified at the KERI seam.** Every
+mutation for a block commits in one store transaction together with its
+rollback point. The upstream engine owns that boundary; KERI registers only
+its upstream `liveUtxoHandler` inside it and derives checkpoint and payer
+views directly from the committed store. A deterministic test first proves
+its instrument by putting the crash outside that transaction and observing
+partial derived state with no rollback point. It then injects the same failure
+as a second handler inside KERI's production composition and observes an
+empty store, empty derived views, and no rollback point. The succeeding run
+commits all three together. There is no KERI side cache, derived file, memo,
+or `IORef` that could survive the failed transaction or a rollback.
+
+A consumer-local live fork drill that tried to re-prove the engine by
+snapshotting and restoring a real node's database duplicated upstream
+machinery in the wrong repository; it has been retired (see
 [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29)).
 
-## Running it: node socket, network magic, start point
+## Configuring the library
 
-The follower is configured entirely through `opt-env-conf` — a socket path,
-a network magic, the Byron epoch size, the security parameter `k`, a store
-path, and an optional cold-boot start point (`--start-slot` /
-`--start-block-hash`, or `CKERI_START_SLOT` / `CKERI_START_BLOCK_HASH`).
-Nothing else is required: no HTTP index, no third-party service, no
-extra credential. Point it at any reachable `cardano-node` N2C socket
-(`CKERI_NODE_SOCKET`) and it indexes forward from either genesis or the
-configured point.
+Story #175 ships a library, not a runnable follower executable. A host creates
+an `IndexerConfig`, passes it with the deployment `Manifest` to
+`Cardano.KERI.Indexer.Follower.mkChainSyncConfig`, opens the configured store
+with the upstream indexer, and supplies both to
+`withChainSyncFollower`. The runnable preprod process and interactive query
+surface are filed as
+[`cardano-keri#188`](https://github.com/lambdasistemi/cardano-keri/issues/188);
+until that lands, commands such as `ckeri-follower` are not available.
 
-```console
-$ ckeri-follower \
-    --node-socket /path/to/node.socket \
-    --network-magic 1 \
-    --byron-epoch-slots 21600 \
-    --security-param-k 2160 \
-    --store-path ./follower-store \
-    --start-slot <deployment-slot> \
-    --start-block-hash <deployment-block-hash>
-```
+`IndexerConfig` has an `opt-env-conf` surface for the node socket, network
+magic, Byron epoch size, security parameter `k`, store path, funding
+addresses, optional board address, and optional cold-boot start point. Its
+start point uses the paired `--start-slot` / `--start-block-hash` options or
+`CKERI_START_SLOT` / `CKERI_START_BLOCK_HASH`; the socket environment field is
+`CKERI_NODE_SOCKET`. A host needs no HTTP index, third-party service, or extra
+credential: it points the library at a reachable `cardano-node` N2C socket,
+and the follower indexes from genesis or the configured cold start.
 
 ### Cold-only start point — the young-store fail-closed case
 
@@ -84,12 +88,13 @@ newest first — and resumes from there, ignoring the configured start point.
 A *young* warm store, whose few retained rows do not intersect the node
 (for example, after the node itself was rolled back further than the
 store's retention), **fails closed**: it does not silently fall back to
-re-using the configured cold-boot point. This is an operator-visible gap in
-the upstream follower's warm-boot contract, tracked upstream as
+re-using the configured cold-boot point. This is correct but underdocumented
+upstream warm-boot behaviour, tracked for documentation and clearer
+diagnostics as
 [`cardano-node-clients#198`](https://github.com/lambdasistemi/cardano-node-clients/issues/198)
-— not something this repo works around locally. If you hit it, the correct
-recovery is a fresh store with a `--start-slot`/`--start-block-hash` cold
-boot, not a patched warm-boot fallback.
+— not a request for a behaviour change and not something this repo works
+around locally. If you hit it, the safe recovery is a fresh store with a
+configured cold start, not a warm-boot fallback that the store cannot justify.
 
 ## Reading it: no node round trip
 
@@ -126,8 +131,9 @@ provides the data and proves it readable.
   not own; its audit and follow-ups are recorded in
   [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29)
   and [`cardano-node-clients#197`](https://github.com/lambdasistemi/cardano-node-clients/issues/197).
-- No new binary and no query API surface. The hosted daemon and `ckeri`
-  backend selection are separate stories.
+- No binary and no query API surface in #175. The runnable preprod follower and
+  interactive query loop belong to
+  [`cardano-keri#188`](https://github.com/lambdasistemi/cardano-keri/issues/188).
 
 ## Proof: the live composition smoke
 

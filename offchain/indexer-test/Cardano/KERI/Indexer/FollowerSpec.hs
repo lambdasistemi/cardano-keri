@@ -1,6 +1,10 @@
 {-# LANGUAGE NumericUnderscores #-}
 
-module Cardano.KERI.Indexer.FollowerSpec (spec) where
+module Cardano.KERI.Indexer.FollowerSpec (
+    spec,
+    baseConfig,
+    m1Manifest,
+) where
 
 import Cardano.KERI.Deployment.Manifest (
     BlueprintInfo (..),

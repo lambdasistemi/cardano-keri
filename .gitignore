@@ -2,6 +2,7 @@
 .llm/
 
 # Build artifacts
+/dist-newstyle/
 offchain/dist-newstyle/
 onchain/build/
 onchain/plutus.json

@@ -351,6 +351,53 @@
               ${pkgs.jq}/bin/jq -S 'del(.epochLength)' "$target" > target.rest
               cmp source.rest target.rest
             '';
+            # The #175 live fork drill restores an exact pre-checkpoint node
+            # database after deliberately doing more Chain-A work. Give only
+            # that harness a 90-slot standard safe zone (3k/f) while retaining
+            # every other pinned devnet parameter unchanged.
+            followerGenesis =
+              assert builtins.pathExists
+                "${inputs.cardano-node-clients}/e2e-test/fixtures/pparams-pv11-mainnet.json";
+              pkgs.runCommand "keri-follower-genesis-ledger-forecast" {
+                nativeBuildInputs = [ pkgs.coreutils pkgs.diffutils pkgs.jq ];
+              } ''
+              mkdir -p "$out"
+              cp -rL ${inputs.cardano-node-clients}/e2e-test/genesis "$out/genesis"
+              ln -s ${inputs.cardano-node-clients}/e2e-test/fixtures "$out/fixtures"
+              chmod -R u+w "$out/genesis"
+
+              fixtureSource=${inputs.cardano-node-clients}/e2e-test/fixtures/pparams-pv11-mainnet.json
+              fixtureTarget="$out/fixtures/pparams-pv11-mainnet.json"
+              test -f "$fixtureTarget"
+              cmp "$fixtureSource" "$fixtureTarget"
+
+              source=${inputs.cardano-node-clients}/e2e-test/genesis/shelley-genesis.json
+              target="$out/genesis/shelley-genesis.json"
+
+              ${pkgs.jq}/bin/jq -e '
+                .slotLength == 0.1
+                and .securityParam == 10
+                and .activeSlotsCoeff == 1.0
+                and .epochLength == 100
+              ' "$source" >/dev/null
+              ${pkgs.jq}/bin/jq '.securityParam = 30' "$source" > "$target.new"
+              mv "$target.new" "$target"
+              ${pkgs.jq}/bin/jq -e '
+                .slotLength == 0.1
+                and .securityParam == 30
+                and .activeSlotsCoeff == 1.0
+                and .epochLength == 100
+              ' "$target" >/dev/null
+
+              ${pkgs.jq}/bin/jq -S 'del(.securityParam)' "$source" > source.rest
+              ${pkgs.jq}/bin/jq -S 'del(.securityParam)' "$target" > target.rest
+              cmp source.rest target.rest
+
+              diff -qr \
+                --exclude=shelley-genesis.json \
+                ${inputs.cardano-node-clients}/e2e-test/genesis \
+                "$out/genesis"
+            '';
             # One strict-PATH app exposed twice (apps.e2e via nix run +
             # checks.e2e via a runCommand that invokes it), modeled on
             # cardano-tx-tools/nix/checks.nix. E2E_GENESIS_DIR is the stock
@@ -437,7 +484,8 @@
             '';
           in {
             inherit blueprint ckeriRunner deploymentTestsCheck
-              deploymentTestsRunner runner check sweepRunner sweepConsistency;
+              deploymentTestsRunner followerGenesis runner check sweepRunner
+              sweepConsistency;
           });
 
         in {
@@ -452,6 +500,7 @@
             deployment-tests = e2eWiring.deploymentTestsRunner;
             e2e = e2eWiring.runner;
             e2e-sweep = e2eWiring.sweepRunner;
+            follower-genesis = e2eWiring.followerGenesis;
             plutus-blueprint = e2eWiring.blueprint;
           };
           checks = {

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- |
@@ -18,11 +19,12 @@ coverage for the positive Register -> Arm -> Claim chain.  Advance and Close
 remain real production-script staging rejections.
 -}
 module CheckpointTxBuilder (
-    CheckpointEnv,
+    CheckpointEnv (..),
     CheckpointInput (..),
     RejectionEvidence,
     BoundaryCases,
     stagedCheckpointDevnet,
+    stagedCheckpointFollowerDevnet,
     advanceRejection,
     closeRejection,
     hashProofMintOldCostRejection,
@@ -192,7 +194,14 @@ import Cardano.Node.Client.E2E.Setup (
     genesisSignKey,
     withDevnetConfig,
  )
+import Cardano.Node.Client.E2E.Devnet qualified as Devnet
+import Cardano.Node.Client.E2E.Governance (enactPV11Transition)
 import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.N2C.Connection (
+    newLSQChannel,
+    newLTxSChannel,
+    runNodeClient,
+ )
 import Cardano.Node.Client.N2C.Provider (mkN2CProvider)
 import Cardano.Node.Client.N2C.Submitter (mkN2CSubmitter)
 import Cardano.Node.Client.N2C.Types (LSQChannel, LTxSChannel)
@@ -210,6 +219,14 @@ import Cardano.Tx.Balance (
     computeScriptIntegrity,
  )
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (async, cancel)
+import Control.Exception (
+    SomeException,
+    displayException,
+    finally,
+    throwIO,
+    try,
+ )
 import Control.Monad (unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
@@ -234,9 +251,11 @@ import Data.Text.Encoding qualified as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
+import Ouroboros.Network.Magic (NetworkMagic (..))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
+import System.Directory (copyFile, doesFileExist)
 import System.Environment (lookupEnv)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (
@@ -340,44 +359,130 @@ stagedCheckpointDevnet :: (CheckpointEnv -> IO ()) -> IO ()
 stagedCheckpointDevnet action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
-    blueprintPath <-
-        lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
-            >>= maybe
-                ( lookupEnv "KERI_CAGE_BLUEPRINT"
-                    >>= maybe
-                        (fail "KERI_CHECKPOINT_BLUEPRINT not set")
-                        pure
-                )
-                pure
+    blueprintPath <- resolveBlueprintPath
     assertPinnedPv11Fixture
     withinSecs 300 "checkpoint withDevnet"
         $ withDevnetConfig
             defaultDevnetConfig{devnetTargetPV = PV11}
-        $ \lsq ltxs -> do
-            let provider = mkN2CProvider lsq
-            assertPV11Enacted provider
-            assertLivePv11Boundary provider
-            env <- mkCheckpointEnv blueprintPath lsq ltxs
-            verifyRegisterScriptSizes env
-            prepareWallet env
-            _ <- registerLifecycleStakeCredential env
-            advanceRef <-
-                deployReferenceScript
-                    env
-                    "observer_advance reference deployment"
-                    (envAdvanceScript env)
-            _ <- registerAdvanceStakeCredential env advanceRef
-            enforcementRef <-
-                deployReferenceScript
-                    env
-                    "observer_enforcement reference deployment"
-                    (envEnforcementScript env)
-            _ <- registerEnforcementStakeCredential env enforcementRef
-            action
-                env
-                    { envAdvanceReference = Just advanceRef
-                    , envEnforcementReference = Just enforcementRef
-                    }
+        $ \lsq ltxs -> setupCheckpointEnv blueprintPath lsq ltxs action
+
+{- | Start a restartable PV11 devnet with a live N2C client, then hand the
+socket, restart callback, and a deferred staging action to the caller.
+
+The expensive PV11 checkpoint staging runs only when the caller invokes the
+third argument. Socket/root preflight and negative controls that need only a
+live node therefore avoid the shared setup work. The node-client async is
+bracketed around the whole action (including any staging).
+-}
+stagedCheckpointFollowerDevnet ::
+    ( FilePath ->
+      IO () ->
+      (forall b. (CheckpointEnv -> IO b) -> IO b) ->
+      IO a
+    ) ->
+    IO a
+stagedCheckpointFollowerDevnet action = do
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    blueprintPath <- resolveBlueprintPath
+    assertPinnedPv11Fixture
+    genesisDir <-
+        lookupEnv "E2E_GENESIS_DIR"
+            >>= maybe (fail "E2E_GENESIS_DIR not set") pure
+    withinSecs 900 "follower withRestartableCardanoNode"
+        $ Devnet.withRestartableCardanoNode genesisDir
+        $ \sock _startMs restart -> do
+            lsq <- newLSQChannel 16
+            ltxs <- newLTxSChannel 16
+            client <-
+                async $
+                    runNodeClient (NetworkMagic 42) sock lsq ltxs
+            let stage k = do
+                    -- Restartable node boots at PV10; enact PV11 before the
+                    -- shared checkpoint setup (mirrors withDevnetConfig PV11).
+                    enactPV11Transition lsq ltxs
+                    setupCheckpointEnv blueprintPath lsq ltxs k
+                runAction =
+                    action sock restart stage
+                        `finally` cancel client
+            captureDestination <-
+                lookupEnv "KERI_S6_HEALTHY_NODE_LOG_CAPTURE"
+            case captureDestination of
+                Nothing -> runAction
+                Just capturePath -> do
+                    let nodeLog = takeDirectory sock </> "node.log"
+                        captureNodeLog = do
+                            sourceExists <- doesFileExist nodeLog
+                            unless sourceExists $
+                                fail $
+                                    "S6-HEALTHY-NODE-LOG-CAPTURE-FAIL \
+                                    \source-missing="
+                                        <> nodeLog
+                            copyFile nodeLog capturePath
+                            putStrLn $
+                                "S6-HEALTHY-NODE-LOG-CAPTURE socket="
+                                    <> sock
+                                    <> " source="
+                                    <> nodeLog
+                                    <> " destination="
+                                    <> capturePath
+                    actionResult <- try @SomeException runAction
+                    captureResult <- try @SomeException captureNodeLog
+                    case (actionResult, captureResult) of
+                        (Left actionException, Left captureException) -> do
+                            _ <-
+                                try @SomeException $
+                                    hPutStrLn stderr $
+                                        "S6-HEALTHY-NODE-LOG-CAPTURE-FAIL "
+                                            <> displayException captureException
+                            throwIO actionException
+                        (Left actionException, Right ()) ->
+                            throwIO actionException
+                        (Right _, Left captureException) ->
+                            fail $
+                                "S6-HEALTHY-NODE-LOG-CAPTURE-FAIL "
+                                    <> displayException captureException
+                        (Right actionValue, Right ()) ->
+                            pure actionValue
+
+resolveBlueprintPath :: IO FilePath
+resolveBlueprintPath =
+    lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
+        >>= maybe
+            ( lookupEnv "KERI_CAGE_BLUEPRINT"
+                >>= maybe
+                    (fail "KERI_CHECKPOINT_BLUEPRINT not set")
+                    pure
+            )
+            pure
+
+setupCheckpointEnv ::
+    FilePath -> LSQChannel -> LTxSChannel -> (CheckpointEnv -> IO a) -> IO a
+setupCheckpointEnv blueprintPath lsq ltxs action = do
+    let provider = mkN2CProvider lsq
+    assertPV11Enacted provider
+    assertLivePv11Boundary provider
+    env <- mkCheckpointEnv blueprintPath lsq ltxs
+    verifyRegisterScriptSizes env
+    prepareWallet env
+    _ <- registerLifecycleStakeCredential env
+    advanceRef <-
+        deployReferenceScript
+            env
+            "observer_advance reference deployment"
+            (envAdvanceScript env)
+    _ <- registerAdvanceStakeCredential env advanceRef
+    enforcementRef <-
+        deployReferenceScript
+            env
+            "observer_enforcement reference deployment"
+            (envEnforcementScript env)
+    _ <- registerEnforcementStakeCredential env enforcementRef
+    action
+        env
+            { envAdvanceReference = Just advanceRef
+            , envEnforcementReference = Just enforcementRef
+            }
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
 mkCheckpointEnv blueprintPath lsq ltxs = do

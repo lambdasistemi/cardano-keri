@@ -74,6 +74,211 @@ e2e:
 e2e-checkpoint:
     cd offchain && nix run --quiet .#e2e
 
+# Run the #175 live-leg follower/fork drill with a private TMPDIR.
+# Separate from `ci` so a docs fix does not pay for a devnet run.
+# Exercises mismatch-tmp, mid-way orphan, no-op stop, then the healthy path.
+#
+# Non-index-mutating source path: build/run e2e-tests from the worktree via
+# cabal inside `nix develop` so untracked GREEN sources are visible. Node,
+# genesis, and blueprint come from flake-resolved store paths (never `git add`).
+ci-live:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p /code/tmp/cardano-keri-175
+    run_root=$(mktemp -d /code/tmp/cardano-keri-175/run.XXXXXX)
+    cleanup() { rm -rf "$run_root"; }
+    trap cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    match='#175 live follower indexes and removes a checkpoint across a real fork'
+    # Resolve runtime deps without packaging the e2e suite from filtered git.
+    blueprint=$(nix build --no-link --print-out-paths ./offchain#plutus-blueprint)
+    clients_source=$(nix eval --impure --raw --expr 'let f = builtins.getFlake "git+file:///code/cardano-keri-175-follower?dir=offchain"; in f.inputs.cardano-node-clients.outPath')
+    genesis=$(nix build --no-link --print-out-paths ./offchain#follower-genesis)
+    node_pkg=$(nix build --no-link --print-out-paths 'github:IntersectMBO/cardano-node/10.7.0#packages.x86_64-linux.cardano-node')
+    export E2E_GENESIS_DIR="$genesis/genesis"
+    export KERI_CHECKPOINT_BLUEPRINT="$blueprint"
+    export KERI_CAGE_BLUEPRINT="$blueprint"
+    export PATH="${node_pkg}/bin:$PATH"
+    # A-007: process CWD = pinned clients source (upstream relative pparams
+    # fixture). Invoke via cabal run with explicit worktree --project-dir and
+    # qualified cardano-keri:e2e-tests so in-place data-files resolve. No bare
+    # list-bin/exec, no cardano_keri_datadir override, no fixture copy/stage.
+    run_e2e() {
+      nix develop ./offchain -c bash -c "
+        set -euo pipefail
+        cd \"$clients_source\"
+        cabal run -O0 \
+          --project-dir=/code/cardano-keri-175-follower/offchain \
+          cardano-keri:e2e-tests -- --match \"$match\"
+      "
+    }
+    export TMPDIR="$run_root"
+    # Prove the shared index is empty (NOTE-015: no GREEN staging).
+    if [[ -n "$(git diff --cached --name-only)" ]]; then
+      echo "ci-live: shared index is not empty; refuse to run"
+      git diff --cached --name-only
+      exit 1
+    fi
+
+    # 1) deliberately mismatched independent TMP reference must fail named.
+    unset KERI_S6_HEALTHY_NODE_LOG_CAPTURE || true
+    export KERI_S6_EXPECTED_TMP_ROOT=/tmp/keri-s6-deliberately-wrong-root
+    unset KERI_S6_CONTROL || true
+    set +e
+    mismatch_out=$(run_e2e 2>&1)
+    mismatch_ec=$?
+    set -e
+    echo "===== S6-CONTROL-MISMATCH-TMP raw (exit=$mismatch_ec) ====="
+    echo "$mismatch_out"
+    if [[ "$mismatch_ec" -eq 0 ]]; then
+      echo "ci-live: expected S6-PRIVATE-ROOT failure, got exit 0"
+      exit 1
+    fi
+    if ! grep -q 'S6-PRIVATE-ROOT' <<<"$mismatch_out"; then
+      echo "ci-live: mismatch control failed for the wrong reason"
+      exit 1
+    fi
+    echo "S6-CONTROL-MISMATCH-TMP-OK"
+
+    # 2) deliberate mid-way exception: failure + zero orphans for this root.
+    export KERI_S6_EXPECTED_TMP_ROOT="$run_root"
+    export KERI_S6_CONTROL=midway
+    set +e
+    midway_out=$(run_e2e 2>&1)
+    midway_ec=$?
+    set -e
+    echo "===== S6-CONTROL-MIDWAY raw (exit=$midway_ec) ====="
+    echo "$midway_out"
+    if [[ "$midway_ec" -eq 0 ]]; then
+      echo "ci-live: expected S6-MIDWAY-EXCEPTION failure, got exit 0"
+      exit 1
+    fi
+    if ! grep -q 'S6-MIDWAY-EXCEPTION' <<<"$midway_out"; then
+      echo "ci-live: midway control failed for the wrong reason"
+      exit 1
+    fi
+    if pgrep -af "cardano-node run.*${run_root}" >/dev/null 2>&1; then
+      echo "ci-live: orphan cardano-node remains after midway failure"
+      pgrep -af "cardano-node run.*${run_root}" || true
+      exit 1
+    fi
+    echo "S6-CONTROL-MIDWAY-NO-ORPHAN-OK"
+
+    # 3) no-op #197 stop signal must fail node-still-running before DB mutation.
+    export KERI_S6_CONTROL=noop-stop
+    set +e
+    noop_out=$(run_e2e 2>&1)
+    noop_ec=$?
+    set -e
+    echo "===== S6-CONTROL-NOOP-STOP raw (exit=$noop_ec) ====="
+    echo "$noop_out"
+    if [[ "$noop_ec" -eq 0 ]]; then
+      echo "ci-live: expected S6-NODE-STILL-RUNNING failure, got exit 0"
+      exit 1
+    fi
+    if ! grep -q 'S6-NODE-STILL-RUNNING' <<<"$noop_out"; then
+      echo "ci-live: noop-stop control failed for the wrong reason"
+      exit 1
+    fi
+    if grep -q 'S6-NOOP-STOP-REACHED-DB-MUTATION' <<<"$noop_out"; then
+      echo "ci-live: noop-stop reached DB mutation"
+      exit 1
+    fi
+    if pgrep -af "cardano-node run.*${run_root}" >/dev/null 2>&1; then
+      echo "ci-live: orphan cardano-node remains after noop-stop control"
+      pgrep -af "cardano-node run.*${run_root}" || true
+      exit 1
+    fi
+    echo "S6-CONTROL-NOOP-STOP-OK"
+
+    # 4) healthy live leg: real register, follower read, rollback, absence.
+    validate_healthy_node_log_capture() {
+      mapfile -t healthy_node_log_records < <(
+        grep '^S6-HEALTHY-NODE-LOG-CAPTURE socket=' <<<"$healthy_out" || true
+      )
+      if [[ "${#healthy_node_log_records[@]}" -ne 1 ]]; then
+        echo "S6-HEALTHY-NODE-LOG-IDENTITY-FAIL expected=1 observed=${#healthy_node_log_records[@]}"
+        return 1
+      fi
+      healthy_node_log_record=${healthy_node_log_records[0]}
+      if [[ ! "$healthy_node_log_record" =~ ^S6-HEALTHY-NODE-LOG-CAPTURE\ socket=([^[:space:]]+)\ source=([^[:space:]]+)\ destination=([^[:space:]]+)$ ]]; then
+        echo "S6-HEALTHY-NODE-LOG-IDENTITY-FAIL malformed-record=$healthy_node_log_record"
+        return 1
+      fi
+      healthy_node_socket=${BASH_REMATCH[1]}
+      healthy_node_log_source=${BASH_REMATCH[2]}
+      healthy_node_log=${BASH_REMATCH[3]}
+      if [[ "$healthy_node_socket" != "$run_root/"* ]] \
+        || [[ "$healthy_node_log_source" != "${healthy_node_socket%/*}/node.log" ]] \
+        || [[ "$healthy_node_log_source" != "$run_root/"* ]] \
+        || [[ "$healthy_node_log" != "$healthy_node_log_capture" ]]; then
+        echo "S6-HEALTHY-NODE-LOG-IDENTITY-FAIL socket=$healthy_node_socket source=$healthy_node_log_source destination=$healthy_node_log"
+        return 1
+      fi
+      if [[ ! -f "$healthy_node_log" || -L "$healthy_node_log" || ! -s "$healthy_node_log" ]]; then
+        echo "S6-HEALTHY-NODE-LOG-IDENTITY-FAIL capture-not-nonempty-regular=$healthy_node_log"
+        return 1
+      fi
+      healthy_node_log_sha256=$(sha256sum "$healthy_node_log" | cut -d' ' -f1)
+    }
+
+    print_healthy_node_log_evidence() {
+      echo "===== S6-HEALTHY-NODE-LOG source=$healthy_node_log_source sha256=$healthy_node_log_sha256 ====="
+      cat "$healthy_node_log"
+      echo "===== S6-HEALTHY-NODE-LOG-END ====="
+    }
+
+    unset KERI_S6_CONTROL || true
+    export KERI_S6_EXPECTED_TMP_ROOT="$run_root"
+    healthy_node_log_capture="$run_root/healthy-node.log"
+    if [[ -e "$healthy_node_log_capture" ]]; then
+      echo "S6-HEALTHY-NODE-LOG-IDENTITY-FAIL capture-preexists=$healthy_node_log_capture"
+      exit 1
+    fi
+    export KERI_S6_HEALTHY_NODE_LOG_CAPTURE="$healthy_node_log_capture"
+    set +e
+    healthy_out=$(run_e2e 2>&1)
+    healthy_ec=$?
+    set -e
+    echo "===== S6-CONTROL-HEALTHY raw (exit=$healthy_ec) ====="
+    echo "$healthy_out"
+    if ! validate_healthy_node_log_capture; then
+      echo "ci-live: healthy node-log capture validation failed"
+      exit 1
+    fi
+    if [[ "$healthy_ec" -ne 0 ]]; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run failed with exit $healthy_ec"
+      exit 1
+    fi
+    if ! grep -q 'SC1_CHECKPOINT_FOUND' <<<"$healthy_out"; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run missing SC1_CHECKPOINT_FOUND"
+      exit 1
+    fi
+    if ! grep -q 'CHAIN_B_ROLL_BACKWARD ' <<<"$healthy_out"; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run missing CHAIN_B_ROLL_BACKWARD marker"
+      exit 1
+    fi
+    if ! grep -q 'CHAIN_B_ROLL_FORWARD ' <<<"$healthy_out"; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run missing CHAIN_B_ROLL_FORWARD marker"
+      exit 1
+    fi
+    if ! grep -q 'CHAIN_A_CHECKPOINT_ABSENT=True' <<<"$healthy_out"; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run missing chain-A absence proof"
+      exit 1
+    fi
+    if ! grep -q 'FORK_DRILL_COMPLETE' <<<"$healthy_out"; then
+      print_healthy_node_log_evidence
+      echo "ci-live: healthy run missing FORK_DRILL_COMPLETE"
+      exit 1
+    fi
+    echo "S6-CONTROL-HEALTHY-OK"
+
 # --- checkpoint fixtures (#68) ---
 
 # Regenerate the committed Aiken checkpoint fixtures from the Haskell encoder.

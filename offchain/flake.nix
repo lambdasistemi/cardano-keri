@@ -381,6 +381,22 @@
                 exec e2e-tests --match "#99 cage withDevnet Phase-2 smoke" "$@"
               '';
             };
+            # #175 SC-1 live composition smoke: real devnet, real checkpoint
+            # registration, the production follower over a real N2C socket.
+            # Deliberately a standalone app (via `just ci-live`), NOT folded
+            # into `checks.e2e`/`checks.follower-e2e` — its RED/GREEN proof
+            # runs outside the Nix sandbox so `TMPDIR` from the invoking
+            # shell is honored (see justfile's `ci-live`).
+            followerRunner = pkgs.writeShellApplication {
+              name = "follower-e2e";
+              runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
+              text = ''
+                export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
+                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                cd "${inputs.cardano-node-clients}"
+                exec e2e-tests --match "#175 follower live leg" "$@"
+              '';
+            };
             check = pkgs.runCommand "e2e-check" { } ''
               ${pkgs.lib.getExe cageRunner}
               ${pkgs.lib.getExe runner}
@@ -437,7 +453,8 @@
             '';
           in {
             inherit blueprint ckeriRunner deploymentTestsCheck
-              deploymentTestsRunner runner check sweepRunner sweepConsistency;
+              deploymentTestsRunner runner followerRunner check sweepRunner
+              sweepConsistency;
           });
 
         in {
@@ -452,6 +469,7 @@
             deployment-tests = e2eWiring.deploymentTestsRunner;
             e2e = e2eWiring.runner;
             e2e-sweep = e2eWiring.sweepRunner;
+            follower-e2e = e2eWiring.followerRunner;
             plutus-blueprint = e2eWiring.blueprint;
           };
           checks = {
@@ -500,6 +518,10 @@
             e2e-sweep = {
               type = "app";
               program = "${e2eWiring.sweepRunner}/bin/e2e-sweep";
+            };
+            follower-e2e = {
+              type = "app";
+              program = "${e2eWiring.followerRunner}/bin/follower-e2e";
             };
           };
           devShells.default = project.shell;

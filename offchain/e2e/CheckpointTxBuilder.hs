@@ -18,11 +18,12 @@ coverage for the positive Register -> Arm -> Claim chain.  Advance and Close
 remain real production-script staging rejections.
 -}
 module CheckpointTxBuilder (
-    CheckpointEnv,
+    CheckpointEnv (..),
     CheckpointInput (..),
     RejectionEvidence,
     BoundaryCases,
     stagedCheckpointDevnet,
+    stagedCheckpointDevnetSocket,
     advanceRejection,
     closeRejection,
     hashProofMintOldCostRejection,
@@ -182,17 +183,26 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Node.Client.E2E.Devnet (withCardanoNode)
+import Cardano.Node.Client.E2E.Governance (enactPV11Transition)
 import Cardano.Node.Client.E2E.Setup (
     DevnetConfig (devnetTargetPV),
     TargetPV (PV11),
     addKeyWitness,
     assertPV11Enacted,
     defaultDevnetConfig,
+    devnetMagic,
     genesisAddr,
+    genesisDir,
     genesisSignKey,
     withDevnetConfig,
  )
 import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.N2C.Connection (
+    newLSQChannel,
+    newLTxSChannel,
+    runNodeClient,
+ )
 import Cardano.Node.Client.N2C.Provider (mkN2CProvider)
 import Cardano.Node.Client.N2C.Submitter (mkN2CSubmitter)
 import Cardano.Node.Client.N2C.Types (LSQChannel, LTxSChannel)
@@ -210,6 +220,8 @@ import Cardano.Tx.Balance (
     computeScriptIntegrity,
  )
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (async, cancel)
+import Control.Exception (finally)
 import Control.Monad (unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
@@ -340,44 +352,80 @@ stagedCheckpointDevnet :: (CheckpointEnv -> IO ()) -> IO ()
 stagedCheckpointDevnet action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
-    blueprintPath <-
-        lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
-            >>= maybe
-                ( lookupEnv "KERI_CAGE_BLUEPRINT"
-                    >>= maybe
-                        (fail "KERI_CHECKPOINT_BLUEPRINT not set")
-                        pure
-                )
-                pure
+    blueprintPath <- resolveBlueprintPath
     assertPinnedPv11Fixture
     withinSecs 300 "checkpoint withDevnet"
         $ withDevnetConfig
             defaultDevnetConfig{devnetTargetPV = PV11}
-        $ \lsq ltxs -> do
-            let provider = mkN2CProvider lsq
-            assertPV11Enacted provider
-            assertLivePv11Boundary provider
-            env <- mkCheckpointEnv blueprintPath lsq ltxs
-            verifyRegisterScriptSizes env
-            prepareWallet env
-            _ <- registerLifecycleStakeCredential env
-            advanceRef <-
-                deployReferenceScript
-                    env
-                    "observer_advance reference deployment"
-                    (envAdvanceScript env)
-            _ <- registerAdvanceStakeCredential env advanceRef
-            enforcementRef <-
-                deployReferenceScript
-                    env
-                    "observer_enforcement reference deployment"
-                    (envEnforcementScript env)
-            _ <- registerEnforcementStakeCredential env enforcementRef
-            action
-                env
-                    { envAdvanceReference = Just advanceRef
-                    , envEnforcementReference = Just enforcementRef
-                    }
+        $ \lsq ltxs -> setupCheckpointEnv blueprintPath lsq ltxs action
+
+{- | Like 'stagedCheckpointDevnet' but also hands the caller the devnet's real
+N2C socket path, needed by a consumer that brings its own client up against
+the same node (#175's live follower composition smoke).
+
+Uses the plain, non-restartable 'withCardanoNode' bracket — the same PV11 +
+N2C bring-up 'withDevnetConfig' performs internally, just with the socket
+exposed. No restart, pause, or signal capability is exposed: the retained
+SC-1 leg needs none of it.
+-}
+stagedCheckpointDevnetSocket ::
+    (FilePath -> CheckpointEnv -> IO a) -> IO a
+stagedCheckpointDevnetSocket action = do
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    blueprintPath <- resolveBlueprintPath
+    assertPinnedPv11Fixture
+    gDir <- genesisDir
+    withinSecs 300 "follower withDevnet+socket" $
+        withCardanoNode gDir $
+            \sock _startMs -> do
+                lsq <- newLSQChannel 16
+                ltxs <- newLTxSChannel 16
+                client <- async $ runNodeClient devnetMagic sock lsq ltxs
+                ( do
+                        enactPV11Transition lsq ltxs
+                        setupCheckpointEnv blueprintPath lsq ltxs (action sock)
+                    )
+                    `finally` cancel client
+
+resolveBlueprintPath :: IO FilePath
+resolveBlueprintPath =
+    lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
+        >>= maybe
+            ( lookupEnv "KERI_CAGE_BLUEPRINT"
+                >>= maybe
+                    (fail "KERI_CHECKPOINT_BLUEPRINT not set")
+                    pure
+            )
+            pure
+
+setupCheckpointEnv ::
+    FilePath -> LSQChannel -> LTxSChannel -> (CheckpointEnv -> IO a) -> IO a
+setupCheckpointEnv blueprintPath lsq ltxs action = do
+    let provider = mkN2CProvider lsq
+    assertPV11Enacted provider
+    assertLivePv11Boundary provider
+    env <- mkCheckpointEnv blueprintPath lsq ltxs
+    verifyRegisterScriptSizes env
+    prepareWallet env
+    _ <- registerLifecycleStakeCredential env
+    advanceRef <-
+        deployReferenceScript
+            env
+            "observer_advance reference deployment"
+            (envAdvanceScript env)
+    _ <- registerAdvanceStakeCredential env advanceRef
+    enforcementRef <-
+        deployReferenceScript
+            env
+            "observer_enforcement reference deployment"
+            (envEnforcementScript env)
+    _ <- registerEnforcementStakeCredential env enforcementRef
+    action
+        env
+            { envAdvanceReference = Just advanceRef
+            , envEnforcementReference = Just enforcementRef
+            }
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> IO CheckpointEnv
 mkCheckpointEnv blueprintPath lsq ltxs = do
@@ -519,11 +567,11 @@ the three fields the fixture actually carries are claimed here.
 -}
 assertPinnedPv11Fixture :: IO ()
 assertPinnedPv11Fixture = do
-    genesisDir <-
+    fixtureGenesisDir <-
         lookupEnv "E2E_GENESIS_DIR"
             >>= maybe (fail "E2E_GENESIS_DIR not set") pure
     let path =
-            takeDirectory genesisDir
+            takeDirectory fixtureGenesisDir
                 </> "fixtures"
                 </> "pparams-pv11-mainnet.json"
     value <- eitherDecodeFileStrict path >>= either fail pure

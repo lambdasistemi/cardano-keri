@@ -419,15 +419,19 @@ test-suite e2e-tests
     Cardano.Node.Client.Balance
     CheckpointE2ESpec
     CheckpointTxBuilder
+    FollowerE2ESpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
+    , async
     , base
+    , bech32
     , bytestring
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-keri:indexer
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-api
@@ -437,13 +441,17 @@ test-suite e2e-tests
     , cardano-ledger-mary
     , cardano-node-clients
     , cardano-node-clients:devnet
+    , cardano-node-clients:utxo-indexer-lib
     , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , containers
+    , directory
     , filepath
-    , hspec                        >=2.11 && <2.12
+    , hspec                                  >=2.11 && <2.12
     , memory
     , microlens
+    , ouroboros-consensus
+    , ouroboros-network:api
     , plutus-core
     , plutus-tx
     , text

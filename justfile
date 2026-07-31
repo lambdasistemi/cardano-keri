@@ -82,6 +82,24 @@ e2e:
 e2e-checkpoint:
     cd offchain && nix run --quiet .#e2e
 
+# #175 live composition smoke: devnet up, post a real checkpoint
+# registration, follow it over a real N2C socket, read it back from the
+# follower store and match the datum. Always visible via `just --list` on
+# every platform; the recipe itself decides support, never a silent Nix
+# conditional. Linux/x86_64-only (spawns a real cardano-node) — elsewhere it
+# fails loudly with a clear message instead of vanishing.
+ci-live:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "$(uname -s)-$(uname -m)" in
+        Linux-x86_64) ;;
+        *)
+            echo "ci-live: #175 follower live smoke requires Linux/x86_64 (spawns a real cardano-node); unsupported on $(uname -s)-$(uname -m)" >&2
+            exit 1
+            ;;
+    esac
+    cd offchain && nix run --quiet .#follower-e2e
+
 # --- checkpoint fixtures (#68) ---
 
 # Regenerate the committed Aiken checkpoint fixtures from the Haskell encoder.

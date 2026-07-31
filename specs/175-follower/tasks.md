@@ -181,30 +181,30 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Slice 6d — retained live composition smoke
 
-- [ ] T175-S6d-1 Minimal live test: devnet up → real checkpoint registration →
+- [X] T175-S6d-1 Minimal live test: devnet up → real checkpoint registration →
       production follower over the real node socket → read back matching datum.
-- [ ] T175-S6d-2 Remove every fork-drill-only helper, recorder, negative
+- [X] T175-S6d-2 Remove every fork-drill-only helper, recorder, negative
       control, signalling seam, raw evidence file, and build/dependency wiring.
-- [ ] T175-S6d-3 Add `just ci-live` that executes the smoke and fails explicitly
+- [X] T175-S6d-3 Add `just ci-live` that executes the smoke and fails explicitly
       on unsupported platforms; do not hide it behind a platform conditional.
-- [ ] T175-S6d-4 Demonstrate `ci-live` can go red by intentionally breaking the
+- [X] T175-S6d-4 Demonstrate `ci-live` can go red by intentionally breaking the
       live assertion, capturing the non-zero transcript, then restore and run it
       green.
-- [ ] T175-S6d-5 Live runs use a private root under
+- [X] T175-S6d-5 Live runs use a private root under
       `/code/tmp/cardano-keri-175/`; `dist-newstyle/` remains unstaged.
-- [ ] T175-S6d-6 `./gate.sh` and the named flake checks are green; one commit
+- [X] T175-S6d-6 `./gate.sh` and the named flake checks are green; one commit
       with a `Tasks:` trailer.
 
 ## Slice 7 — docs
 
-- [ ] T175-S7-1 `docs/` page: what the follower indexes, running it from a node socket
+- [X] T175-S7-1 `docs/` page: what the follower indexes, running it from a node socket
       alone, payer UTxOs, the rollback guarantee and why a derived view has it,
       and what it does not do
-- [ ] T175-S7-2 The D1 decision trail and scale trigger for revisiting, plus the
+- [X] T175-S7-2 The D1 decision trail and scale trigger for revisiting, plus the
       cold-only `csStartPoint` and young-store fail-closed semantics citing
       `lambdasistemi/cardano-node-clients#198`
-- [ ] T175-S7-3 Page registered in `mkdocs.yml`
-- [ ] T175-S7-4 `./gate.sh` green; one commit, `Tasks:` trailer
+- [X] T175-S7-3 Page registered in `mkdocs.yml`
+- [X] T175-S7-4 `./gate.sh` green; one commit, `Tasks:` trailer
 
 ## Orchestrator-owned (no pair)
 

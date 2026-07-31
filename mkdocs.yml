@@ -50,6 +50,7 @@ nav:
   - ACDC Primer: acdc-primer.md
   - Finance Primer: finance-primer.md
   - User guide:
+      - The follower: user/follower.md
       - Freeze lifecycle: user/freeze-lifecycle.md
       - Conviction: user/conviction.md
       - The preprod witness pool: user/preprod-witness-pool.md

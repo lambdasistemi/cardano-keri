@@ -38,6 +38,10 @@ build-offchain:
 deployment-unit:
     cd offchain && nix run --quiet .#deployment-tests
 
+# Run checkpoint indexer codec tests (executes the binary).
+indexer-unit:
+    cd offchain && nix run --quiet .#indexer-tests
+
 # Check the opt-env-conf CLI surface and option/environment/YAML precedence.
 check-ckeri-cli:
     cd offchain && nix build --quiet .#ckeri
@@ -77,6 +81,24 @@ e2e:
 # Run only the #136 register-small vertical.
 e2e-checkpoint:
     cd offchain && nix run --quiet .#e2e
+
+# #175 live composition smoke: devnet up, post a real checkpoint
+# registration, follow it over a real N2C socket, read it back from the
+# follower store and match the datum. Always visible via `just --list` on
+# every platform; the recipe itself decides support, never a silent Nix
+# conditional. Linux/x86_64-only (spawns a real cardano-node) — elsewhere it
+# fails loudly with a clear message instead of vanishing.
+ci-live:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "$(uname -s)-$(uname -m)" in
+        Linux-x86_64) ;;
+        *)
+            echo "ci-live: #175 follower live smoke requires Linux/x86_64 (spawns a real cardano-node); unsupported on $(uname -s)-$(uname -m)" >&2
+            exit 1
+            ;;
+    esac
+    cd offchain && nix run --quiet .#follower-e2e
 
 # --- checkpoint fixtures (#68) ---
 
@@ -281,7 +303,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit indexer-unit check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

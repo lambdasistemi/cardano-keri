@@ -20,6 +20,7 @@ build-type:    Simple
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
 data-files:
   deployment-test/fixtures/*.cesr
+  indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
 
 common warnings
@@ -121,6 +122,38 @@ library deployment
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Script
 
+library indexer
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   indexer
+  build-depends:
+    , base
+    , base16-bytestring
+    , bech32
+    , bytestring
+    , cardano-keri
+    , cardano-keri:deployment
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:utxo-indexer-lib
+    , containers
+    , contra-tracer
+    , microlens
+    , opt-env-conf
+    , ouroboros-network:api
+    , text
+
+  exposed-modules:
+    Cardano.KERI.Indexer.Codecs
+    Cardano.KERI.Indexer.Config
+    Cardano.KERI.Indexer.Follower
+    Cardano.KERI.Indexer.Reads
+
 executable ckeri
   import:           warnings
   default-language: GHC2021
@@ -164,6 +197,55 @@ test-suite deployment-tests
     , temporary
     , text
     , unix
+
+  autogen-modules:  Paths_cardano_keri
+
+test-suite indexer-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   indexer-test
+  main-is:          Main.hs
+  other-modules:
+    Cardano.KERI.Indexer.AtomicitySpec
+    Cardano.KERI.Indexer.CodecsSpec
+    Cardano.KERI.Indexer.FollowerSpec
+    Cardano.KERI.Indexer.ReadsSpec
+    Cardano.KERI.Indexer.ResumeSpec
+    Cardano.KERI.Indexer.RollbackSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:block-indexer
+    , cardano-node-clients:utxo-indexer-lib
+    , chain-follower
+    , containers
+    , hspec
+    , memory
+    , microlens
+    , opt-env-conf
+    , ouroboros-network:api
+    , plutus-core
+    , plutus-tx
+    , QuickCheck
+    , rocksdb-kv-transactions:kv-transactions
+    , serialise
+    , temporary
+    , text
 
   autogen-modules:  Paths_cardano_keri
 
@@ -339,15 +421,19 @@ test-suite e2e-tests
     Cardano.Node.Client.Balance
     CheckpointE2ESpec
     CheckpointTxBuilder
+    FollowerE2ESpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
+    , async
     , base
+    , bech32
     , bytestring
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-keri:indexer
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-api
@@ -357,13 +443,17 @@ test-suite e2e-tests
     , cardano-ledger-mary
     , cardano-node-clients
     , cardano-node-clients:devnet
+    , cardano-node-clients:utxo-indexer-lib
     , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , containers
+    , directory
     , filepath
-    , hspec                        >=2.11 && <2.12
+    , hspec                                  >=2.11 && <2.12
     , memory
     , microlens
+    , ouroboros-consensus
+    , ouroboros-network:api
     , plutus-core
     , plutus-tx
     , text

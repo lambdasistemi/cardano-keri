@@ -95,8 +95,12 @@ taken on faith.
 
 **FR-7 — Resume.** On restart the follower offers chain-sync intersection
 candidates **newest-first** (the mpfs #355 contract, already implemented
-upstream as `getResumePoints`) and resumes from the persisted point. Cold boot
-falls back to the deployment start point, never to genesis-by-accident.
+upstream as `getResumePoints`) and resumes from the persisted point.
+`csStartPoint` is a cold-boot start only: once a store has retained rollback
+rows, warm boot offers only `getResumePoints`. A young store whose retained
+rows do not intersect the node fails closed; it does not silently reuse
+`csStartPoint`. This operator-visible semantic is tracked in
+[`cardano-node-clients#198`](https://github.com/lambdasistemi/cardano-node-clients/issues/198).
 
 **FR-8 — Volatile window.** The number of retained rollback entries is
 observable and bounded by `csSecurityParamK`.
@@ -129,47 +133,30 @@ modules it consumes.
 node socket", covering what it indexes, how to run it with nothing but a node
 socket, what rollback guarantees it gives, and what it deliberately does not do.
 
-## The acceptance artefact — SC-0, the vertical journey
+## Acceptance model
 
-Operator direction (2026-07-29, via the epic): this story is validated by a
-**vertical end-to-end user story**, not only by the component criteria below.
+This is a library ticket. KERI owns the derived view, its codecs and reads, the
+follower configuration, and proof that those pieces compose across one real
+node-socket boundary. The upstream follower owns transactional rollback,
+retention, intersection, and restart behavior.
 
-> **A watcher with nothing but a node socket asks "is this identity's checkpoint
-> current?" — and keeps getting the truth across a restart and a chain fork.**
+The acceptance evidence is therefore:
 
-One identity, one sequence, **no layer mocked**:
+1. property and unit tests over the real upstream store/handler path, proving
+   the KERI-derived view has the same exactness as the rolled-back store;
+2. one live composition smoke: devnet up → post a real checkpoint registration
+   → follow it over a real N2C socket → read it back from the follower store and
+   match the datum;
+3. an explicit `ci-live` recipe whose wiring is proved by deliberately breaking
+   the live test and capturing a non-zero run before restoring it.
 
-1. a devnet comes up, and **the test posts a real checkpoint registration** to it;
-2. the follower starts from the deployment slot with **only the node socket**;
-3. the watcher asks and gets that identity's current checkpoint, with its slot;
-4. the follower is **killed and restarted** — it resumes without replaying from
-   genesis and answers **identically**;
-5. the node is **rewound and forked** — and afterwards the pre-fork record is
-   gone, with **no stale record anywhere in the store**;
-6. the watcher reads **its own funding UTxOs** from the store — no
-   `cardano-cli query utxo`, no `GetUTxOByAddress` anywhere in the path — and
-   after the fork a funding UTxO that existed only on the abandoned chain is gone
-   from that answer too.
-
-Step 4 additionally proves **block atomicity**: a crash mid-block must leave the
-store on a block boundary. A torn write is a lie with a timestamp on it — a
-reader catching the store mid-block sees some of a block's effects and not
-others, and every answer derived from that looks perfectly current while being
-wrong. Rollback exactness depends on it too, since the engine's inverse payload
-is computed per block: a half-applied block has an inverse that no longer
-describes the state it must undo. Like rollback exactness, this is **inherited
-from the engine and must be shown, not cited**.
-
-**SC-1 … SC-8 remain, underneath this, as the individually-checkable
-assertions.** They are sharp, and each is kept — but they are *component*
-assertions: every one of them can pass while the thing a watcher actually wants
-stays broken. Nothing in that set requires registration, chain-sync, the store,
-rollback, resume and the read path to work **in one sequence, for one identity**.
-That sequence is the story; the criteria are its parts.
-
-This is composition, not new machinery: the registration vehicle exists
-(`stagedCheckpointDevnet`), the rewind mechanism is proved (slice 0), resume is
-already a criterion, and the read path is built in slice 2.
+The retired consumer-local fork drill is not acceptance. It duplicated the
+upstream rollback engine in the wrong repository and used `csStartPoint` as if
+it were a warm-boot fallback. The audit and follow-ups are recorded in
+[`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29),
+[`cardano-node-clients#197`](https://github.com/lambdasistemi/cardano-node-clients/issues/197),
+and
+[`cardano-node-clients#198`](https://github.com/lambdasistemi/cardano-node-clients/issues/198).
 
 ## Success criteria
 
@@ -187,22 +174,21 @@ already a criterion, and the read path is built in slice 2.
   decoder input), which is not an acceptance path.
   **Residual gap, recorded not hidden**: this proves a devnet node, not preprod.
   A preprod socket DOES exist on this host (`/code/cardano-preprod/ipc/node.socket`,
-  verified; the documented `/node/preprod/...` path is stale docs), but following
-  preprod cannot demonstrate the full journey: only a devnet lets the test POST
-  the checkpoint it then reads, and only a devnet can be forked. A preprod-socket
-  leg is therefore not claimed by this story as its acceptance path.
+  verified; the documented `/node/preprod/...` path is stale docs), but the
+  deterministic acceptance path is the devnet that posts its own checkpoint.
 - **SC-2 (the heart)** — Rollback exactness is proved as a **property** in the
   `ChainFollower.Laws` / mpfs `ArmageddonSpec` shape, over a real store:
   for a generated block sequence with a fork, `follow-then-rollback` and
   `follow-the-winning-chain-only` produce byte-equal store contents.
-- **SC-3 (open — Q-001)** — Rollback exactness is *additionally* demonstrated
-  against a live node. **No upstream primitive can currently fork a chain**
-  (single-node devnet; the adversary module is an N2N client, not an N2C
-  server), so the executable form of this criterion is with the epic owner as
-  Q-001. This spec does not weaken SC-3 on its own authority.
+- **SC-3** — KERI does not re-prove the upstream rollback engine with a local
+  live fork drill. Exactness is inherited because the derived view is a pure
+  read of the store that upstream rolls back transactionally. The retired
+  drill and the no-action audit are preserved in
+  [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29).
 - **SC-4** — A restart mid-follow resumes from the persisted point; a test
   asserts the offered intersection candidates are newest-first (#355 not
-  re-made).
+  re-made). The test and docs also state that `csStartPoint` is cold-only and a
+  young warm store can fail closed when none of its retained rows intersects.
 - **SC-5** — Retained rollback entries stay bounded by `k` across a follow run.
 - **SC-6** — A second pattern (the endpoint board) can be added **without any
   new handler and without reshaping the store**: its address joins the
@@ -220,8 +206,10 @@ already a criterion, and the read path is built in slice 2.
 - **SC-7** — Any upstream capability gap is either shown unnecessary **with
   evidence in the PR** or landed as a linked `cardano-node-clients` PR with MPFS
   E2E evidence — never forked into this repo.
-- **SC-8** — Docs page ships in this PR; CLI config via opt-env-conf; every
-  commit bisect-safe with a `Tasks:` trailer; the nix gate green.
+- **SC-8** — Docs page ships in this PR; CLI config via opt-env-conf; `ci-live`
+  executes the live smoke and is demonstrated able to go red; every commit is
+  bisect-safe with a `Tasks:` trailer; `./gate.sh` and the flake checks are
+  green.
 
 ### The D1 ruling (epic A-002, 2026-07-29)
 
@@ -281,13 +269,14 @@ local branch tips:
 - No replacement of the existing Koios path (`Deployment.ChainIndex` /
   `.CheckpointIndex`) — that becomes a backend tier in #177.
 
-## Open axes (tracked, not decided here)
+## Closed and deferred axes
 
-| Axis | Owner | Status |
-|---|---|---|
-| Store: sqlite (epic body) vs RocksDB (the entire reusable stack) | M1 desk, via epic Q-001 | open — acceptance above is identical either way |
-| How the live fork drill is executed (SC-3) | epic #171, via my Q-001 | open — spec/columns/codecs/handler/reads/resume/docs all proceed meanwhile |
-| Endpoint-board address & policy | e156 lane via desk (#165) | out of scope by design (SC-6) |
+| Axis | Ruling |
+|---|---|
+| Store | RocksDB, inherited from the upstream follower stack |
+| Consumer-local live fork drill | Retired; upstream audit closed with no action in `chain-follower#29` |
+| `csStartPoint` warm fallback | Not supported; cold-only semantics and young-store diagnostics tracked in `cardano-node-clients#198` |
+| Endpoint-board address & policy | Out of scope by design (SC-6) |
 
 ## Upstream consumed (the reuse contract)
 

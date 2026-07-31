@@ -193,6 +193,8 @@
             project.hsPkgs.cardano-keri.components.tests.unit-tests;
           indexer-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.indexer-tests;
+          ckeri-follower-exe =
+            project.hsPkgs.cardano-keri.components.exes.ckeri-follower;
 
           # writeShellApplication gives each runner a strict PATH — every
           # binary it calls must be listed in runtimeInputs.
@@ -252,6 +254,22 @@
           };
           indexer-tests-check = pkgs.runCommand "indexer-tests-check" { } ''
             ${indexer-tests-runner}/bin/indexer-tests
+            touch $out
+          '';
+          # #188: one strict-PATH app that proves BOTH the packaged executable
+          # is runnable (--help) AND the focused #188 tests pass, exposed
+          # twice per the runCommand-invokes-app shape so `nix flake check`
+          # actually executes it rather than merely building a wrapper.
+          follower-cli-runner = pkgs.writeShellApplication {
+            name = "follower-cli";
+            runtimeInputs = [ ckeri-follower-exe indexer-tests-exe ];
+            text = ''
+              ckeri-follower --help >/dev/null
+              indexer-tests --match "#188"
+            '';
+          };
+          follower-cli-check = pkgs.runCommand "follower-cli-check" { } ''
+            ${follower-cli-runner}/bin/follower-cli
             touch $out
           '';
 
@@ -461,6 +479,7 @@
           packages = {
             unit-tests = unit-tests-exe;
             indexer-tests = indexer-tests-exe;
+            ckeri-follower = ckeri-follower-exe;
             format = format-runner;
             format-check = format-check-runner;
             hlint = hlint-runner;
@@ -475,6 +494,7 @@
           checks = {
             unit-tests = unit-tests-check;
             indexer-tests = indexer-tests-check;
+            follower-cli = follower-cli-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
@@ -500,6 +520,14 @@
             indexer-tests = {
               type = "app";
               program = "${indexer-tests-runner}/bin/indexer-tests";
+            };
+            ckeri-follower = {
+              type = "app";
+              program = "${ckeri-follower-exe}/bin/ckeri-follower";
+            };
+            follower-cli = {
+              type = "app";
+              program = "${follower-cli-runner}/bin/follower-cli";
             };
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             ckeri = {

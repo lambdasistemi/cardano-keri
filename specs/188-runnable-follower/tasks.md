@@ -2,17 +2,17 @@
 
 ## Slice 1 — runnable local-store follower
 
-- [ ] T18801 Add the standalone `ckeri-follower` process using the existing
+- [x] T18801 Add the standalone `ckeri-follower` process using the existing
   config, manifest, RocksDB, and bracketed follower path.
-- [ ] T18802 Add Haskeline verbs, completion/history, rendering, and live
+- [x] T18802 Add Haskeline verbs, completion/history, rendering, and live
   progress over one local query interface with no backend selection.
-- [ ] T18803 Prove every verb re-reads the real local store/readiness after
+- [x] T18803 Prove every verb re-reads the real local store/readiness after
   apply, spend, and rollback-shaped changes; prove malformed input rejection.
-- [ ] T18804 Expose and invoke the executable/focused tests through Cabal,
+- [x] T18804 Expose and invoke the executable/focused tests through Cabal,
   Nix package/app/runCommand checks, and deterministic `just ci` wiring.
-- [ ] T18805 Commit the separately-versioned M1 preprod follower start point
+- [x] T18805 Commit the separately-versioned M1 preprod follower start point
   with earliest-reference-transaction resolution provenance.
-- [ ] T18806 Make the frozen Slice 1 gate and full deterministic gate GREEN.
+- [x] T18806 Make the frozen Slice 1 gate and full deterministic gate GREEN.
 
 ## Slice 2 — preprod documentation and cast
 
@@ -26,4 +26,3 @@
   the cast through preview-safe MkDocs configuration.
 - [ ] T18811 Make strict docs, the frozen Slice 2 gate, and the full final gate
   GREEN at the final commit.
-

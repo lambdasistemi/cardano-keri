@@ -128,10 +128,12 @@ library indexer
   default-language: GHC2021
   hs-source-dirs:   indexer
   build-depends:
+    , async
     , base
     , base16-bytestring
     , bech32
     , bytestring
+    , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-api
@@ -143,16 +145,20 @@ library indexer
     , cardano-node-clients:utxo-indexer-lib
     , containers
     , contra-tracer
+    , haskeline
     , microlens
     , opt-env-conf
     , ouroboros-network:api
+    , stm
     , text
 
   exposed-modules:
+    Cardano.KERI.Indexer.App
     Cardano.KERI.Indexer.Codecs
     Cardano.KERI.Indexer.Config
     Cardano.KERI.Indexer.Follower
     Cardano.KERI.Indexer.Reads
+    Cardano.KERI.Indexer.Shell
 
 executable ckeri
   import:           warnings
@@ -165,6 +171,18 @@ executable ckeri
     , base
     , cardano-keri:deployment
     , opt-env-conf             >=0.13 && <0.16
+
+executable ckeri-follower
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          CkeriFollower.hs
+  autogen-modules:  Paths_cardano_keri
+  other-modules:    Paths_cardano_keri
+  build-depends:
+    , base
+    , cardano-keri:indexer
+    , opt-env-conf          >=0.13 && <0.16
 
 test-suite deployment-tests
   import:           warnings
@@ -207,17 +225,21 @@ test-suite indexer-tests
   hs-source-dirs:   indexer-test
   main-is:          Main.hs
   other-modules:
+    Cardano.KERI.Indexer.AppSpec
     Cardano.KERI.Indexer.AtomicitySpec
     Cardano.KERI.Indexer.CodecsSpec
     Cardano.KERI.Indexer.FollowerSpec
     Cardano.KERI.Indexer.ReadsSpec
     Cardano.KERI.Indexer.ResumeSpec
     Cardano.KERI.Indexer.RollbackSpec
+    Cardano.KERI.Indexer.ShellSpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
+    , async
     , base
+    , base16-bytestring
     , bech32
     , bytestring
     , cardano-crypto-class
@@ -244,8 +266,10 @@ test-suite indexer-tests
     , QuickCheck
     , rocksdb-kv-transactions:kv-transactions
     , serialise
+    , stm
     , temporary
     , text
+    , time
 
   autogen-modules:  Paths_cardano_keri
 

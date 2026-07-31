@@ -208,19 +208,19 @@ orchestrator when the slice is accepted, in the same amended commit.
 
 ## Orchestrator-owned (no pair)
 
-- [ ] T175-S8-1 PR body written for a human reader: what this makes possible, a prose
+- [X] T175-S8-1 PR body written for a human reader: what this makes possible, a prose
       chapter per landed slice, no raw hash dumps in prose, normative detail quarantined
       in a technical appendix
 - [X] T175-S8-1b **RETIRED** — do not land `specs/175-follower/evidence/`;
       raw fork-drill evidence is preserved on the archive branch and in the
       upstream record:
       [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29).
-- [ ] T175-S8-2 Deliverables re-checked against the epic's patched list (codecs, reads,
+- [X] T175-S8-2 Deliverables re-checked against the epic's patched list (codecs, reads,
       follower config, CLI, docs, rollback property, resume test, retained live
       composition smoke)
-- [ ] T175-S8-2b Restore `gate.sh` to `just ci` in its own `chore:` commit at finalize, and
+- [X] T175-S8-2b Restore `gate.sh` to `just ci` in its own `chore:` commit at finalize, and
       say WHY in the message ("`ci-live` remains available in the justfile for the next
       ticket with live acceptance") — a future reader finding a bare restore commit will
       suspect the gate was weakened to get green, which is the opposite of what happened
-- [ ] T175-S8-3 Final gate green at HEAD; `COMPLETE` logged with PR URL, head SHA and
+- [X] T175-S8-3 Final gate green at HEAD; `COMPLETE` logged with PR URL, head SHA and
       gate evidence; merge requested through the epic owner (never self-merged)

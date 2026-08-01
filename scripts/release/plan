@@ -9,11 +9,13 @@
 #   1. Read the Cabal version (the version of the last release, or the
 #      seed 0.0.0 before any release exists).
 #   2. If an open release PR (release/cabal-release) exists → wait.
-#   3. If the Cabal version is already tagged AND the changelog has a
-#      section for it → the release PR was merged; create and push the tag.
-#      (The stale "## 0.0.0" section from before version-selection existed
-#      is explicitly excluded — that version was never released.)
-#   4. Otherwise → compute the NEXT version via scripts/release/next-version
+#   3. If the tag for the current version does NOT exist yet → the release
+#      PR was merged; create and push the tag (provided the changelog has
+#      a section for it; the stale "## 0.0.0" is excluded — that version
+#      was never released).
+#   4. If the tag already exists → check for new commits since the last
+#      tag; if none, nothing to do; otherwise fall through.
+#   5. Compute the NEXT version via scripts/release/next-version
 #      (which seeds 0.1.0 when no v* tag exists, or classifies commits
 #      since the last tag), write it into the Cabal file, add a changelog
 #      section, create the release branch, push, and open a PR.
@@ -34,36 +36,37 @@ if gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/n
   exit 0
 fi
 
-# ── Changelog section present for the current version? → tag ──────────
-# This means the release PR was merged and the Cabal file already carries
-# the version to be tagged.  Exception: the stale "## 0.0.0" section that
-# predates version-selection logic must NOT trigger a v0.0.0 tag — that
-# version was never actually released.
+# ── Tag existence decides the two main paths ─────────────────────────
+# Check the tag for the current Cabal version exactly once and branch:
+#   • Tag missing → the release PR was merged; create the tag (if the
+#     changelog is ready) or fall through to compute/prepare.
+#   • Tag present → the release is fully published; check whether new
+#     commits since the tag warrant a new release PR.
 current_tag="v${current_version}"
-if [[ -f CHANGELOG.md ]] && grep -qE "^## ${current_version//./\\.}" CHANGELOG.md; then
-  if [[ -n "$has_any_tag" ]] || [[ "$current_version" != "0.0.0" ]]; then
-    if git rev-parse --verify "refs/tags/${current_tag}" >/dev/null 2>&1; then
-      echo "release/plan: tag $current_tag already exists — nothing to do"
-      exit 0
-    fi
-    echo "release/plan: changelog section for $current_version found — creating tag $current_tag"
-    git tag "$current_tag"
-    git push origin "$current_tag"
-    echo "release/plan: pushed $current_tag"
-    exit 0
-  fi
-  echo "release/plan: ignoring stale ## 0.0.0 changelog section (never released)"
-fi
 
-# ── Already tagged (no changelog section case)? ───────────────────────
 if git rev-parse --verify "refs/tags/${current_tag}" >/dev/null 2>&1; then
-  # The current Cabal version is tagged.  If there are no new commits
-  # since that tag, there is nothing to release.
+  # ── Tag already exists — is there new unreleased work? ────────────
   last_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
   if [[ -n "$last_tag" ]] && [[ -z "$(git log --oneline "${last_tag}..HEAD" 2>/dev/null)" ]]; then
     echo "release/plan: tag $current_tag exists and no commits since — nothing to do"
     exit 0
   fi
+  # New commits since the last tag → fall through to compute next version.
+else
+  # ── Tag does not exist yet — create it if the changelog is ready ──
+  # The stale "## 0.0.0" section that predates version-selection logic
+  # must NOT trigger a v0.0.0 tag — that version was never released.
+  if [[ -f CHANGELOG.md ]] && grep -qE "^## ${current_version//./\\.}" CHANGELOG.md; then
+    if [[ -n "$has_any_tag" ]] || [[ "$current_version" != "0.0.0" ]]; then
+      echo "release/plan: changelog section for $current_version found — creating tag $current_tag"
+      git tag "$current_tag"
+      git push origin "$current_tag"
+      echo "release/plan: pushed $current_tag"
+      exit 0
+    fi
+    echo "release/plan: ignoring stale ## 0.0.0 changelog section (never released)"
+  fi
+  # No changelog section (or stale 0.0.0) → fall through to compute/prepare.
 fi
 
 # ── Compute the next version and prepare a release PR ─────────────────

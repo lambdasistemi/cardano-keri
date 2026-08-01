@@ -47,25 +47,30 @@ connected, a tip is known, and `tip_lag_slots <= 60`. The nullable freshness
 fields honestly describe cold start. `reason` is non-null when disconnected or
 not yet ready.
 
-Successful data reads return HTTP 200 with one common envelope:
+Successful data reads return HTTP 200 with freshness beside an
+endpoint-specific payload, matching the issue's acceptance transcript:
 
 ```json
 {
+  "aid": "E...",
   "as_of_slot": 129600000,
   "tip_lag_slots": 3,
-  "data": {}
+  "checkpoint": {}
 }
 ```
 
-`data` has one of these endpoint-specific shapes:
+The complete top-level shapes are:
 
-- checkpoint: `aid`, `tx_id`, `output_index`, `sequence`, `native_sequence`,
-  `current_keys`, `current_threshold`, `next_key_digests`, `next_threshold`,
-  `witnesses`, and `witness_threshold`;
-- board: `witness_key`, `aid`, `scheme`, `url`, `tx_id`, `output_index`,
-  `lovelace`, and `owner_key_hash`;
-- watchability: `aid`, `checkpoint_present`, `witnesses_declared`,
-  `witnesses_listed`, and `missing_witnesses`.
+- checkpoint: top-level `aid`, `as_of_slot`, `tip_lag_slots`, and `checkpoint`;
+  the nullable `checkpoint` contains `tx_id`, `output_index`, `sequence`,
+  `native_sequence`, `current_keys`, `current_threshold`, `next_key_digests`,
+  `next_threshold`, `witnesses`, and `witness_threshold`;
+- board: top-level `witness_key`, `as_of_slot`, `tip_lag_slots`, and `board`;
+  the nullable `board` contains `aid`, `scheme`, `url`, `tx_id`,
+  `output_index`, `lovelace`, and `owner_key_hash`;
+- watchability: top-level `aid`, `as_of_slot`, `tip_lag_slots`, and
+  `watchability`; `watchability` contains `checkpoint_present`,
+  `witnesses_declared`, `witnesses_listed`, and `missing_witnesses`.
 
 CESR values are rendered in their canonical qualified-base64 form. Transaction
 ids and owner key hashes are lowercase hex. Thresholds preserve their actual
@@ -75,8 +80,8 @@ weighted/unweighted datum shape: an unweighted threshold is
 
 When readiness is false, every data path fails closed with HTTP 503 and the
 same readiness object as `/ready`, plus `error: "service_unavailable"`; it does
-not include a `data` field. This prevents previously decoded data from being
-mistaken for a current answer.
+not include `checkpoint`, `board`, or `watchability`. This prevents previously
+decoded data from being mistaken for a current answer.
 
 ## Functional requirements
 
@@ -169,8 +174,8 @@ Deterministic acceptance proves the invariant at the application seam:
    lower transactional `as_of_slot`;
 4. count transaction-runner invocations and prove each composed response uses
    exactly one store transaction;
-5. disconnect or exceed 60 slots and observe 503 with no `data`; reconnect and
-   recover through the same process;
+5. disconnect or exceed 60 slots and observe 503 with no endpoint payload;
+   reconnect and recover through the same process;
 6. rename one golden field, observe the contract test red, then restore it.
 
 Live acceptance then proves the production boundary:

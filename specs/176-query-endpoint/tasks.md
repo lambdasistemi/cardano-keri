@@ -11,7 +11,7 @@ commit with a `Tasks:` trailer.
       JSON including `as_of_slot` and `tip_lag_slots`
 - [ ] T176-S1-2 RED: malformed identifiers return 400; unknown valid records
       return 200/null; disconnected, cold, impossible-tip, and lag-over-60 data
-      requests return 503 with no `data`
+      requests return 503 with no endpoint payload field
 - [ ] T176-S1-3 RED: one request after mutation changes immediately; one after
       rollback loses abandoned data and reports the lower store watermark even
       when readiness's processed slot remains ahead
@@ -68,7 +68,7 @@ commit with a `Tasks:` trailer.
       and container/image references before applying
 - [ ] T176-S3-4 Run the declarative host rebuild; prove public HTTPS readiness
       and an M1 checkpoint/board/watchability response from a nodeless context
-- [ ] T176-S3-5 Stop only `cardano-preprod`; prove 503/no-data and degraded
+- [ ] T176-S3-5 Stop only `cardano-preprod`; prove 503/no-payload and degraded
       `/ready`; restore it and prove automatic recovery without restarting the
       endpoint
 - [ ] T176-S3-6 Re-run the declarative rebuild and prove the endpoint returns

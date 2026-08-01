@@ -36,10 +36,16 @@
         "github:lambdasistemi/cardano-node-clients/a10cdb73317a2b6d5375b216f72f40b71736e648";
       flake = false;
     };
+    # NixOS/bundlers provides toAppImage, toDEB, toRPM for Linux release
+    # artifacts. Follows our nixpkgs so the bundlers share the same store.
+    bundlers = {
+      url = "github:NixOS/bundlers";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, ... }:
+    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, bundlers, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-darwin" ];
       perSystem = { system, ... }:
@@ -457,6 +463,36 @@
               sweepConsistency;
           });
 
+          # Linux release artifacts (AppImage, DEB, RPM) via NixOS/bundlers.
+          # Release artifacts use the bare Cabal version; dev artifacts append
+          # -<shortRev> so PR/manual runs never collide with tag publications.
+          cabalVersion = pkgs.lib.fileContents (
+            pkgs.runCommand "cabal-version" { } ''
+              sed -n 's/^version:[[:space:]]*//p' ${./cardano-keri.cabal} | head -1 | tr -d '[:space:]' > $out
+            ''
+          );
+          linuxArtifacts =
+            if system == "x86_64-linux" && e2eWiring ? ckeriRunner then
+              import ./nix/linux-release.nix {
+                lib = pkgs.lib;
+                bundlers = bundlers.bundlers.${system};
+                exePackage = e2eWiring.ckeriRunner;
+                version = cabalVersion;
+              }
+            else
+              { };
+          linuxDevArtifacts =
+            if system == "x86_64-linux" && e2eWiring ? ckeriRunner then
+              import ./nix/linux-release.nix {
+                lib = pkgs.lib;
+                bundlers = bundlers.bundlers.${system};
+                exePackage = e2eWiring.ckeriRunner;
+                version = cabalVersion;
+                shortRev = self.shortRev or "dirty";
+              }
+            else
+              { };
+
         in {
           packages = {
             unit-tests = unit-tests-exe;
@@ -471,6 +507,31 @@
             e2e-sweep = e2eWiring.sweepRunner;
             follower-e2e = e2eWiring.followerRunner;
             plutus-blueprint = e2eWiring.blueprint;
+          } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
+            ckeri-appimage = linuxArtifacts.appimage;
+            ckeri-deb = linuxArtifacts.deb;
+            ckeri-rpm = linuxArtifacts.rpm;
+            linux-release-artifacts = pkgs.runCommand "ckeri-linux-release-artifacts"
+              { inherit (linuxArtifacts) appimage deb rpm; version = cabalVersion; } ''
+              mkdir -p $out
+              cp "$appimage" "$out/ckeri-$version-x86_64.AppImage"
+              cp "$deb"/* $out/ 2>/dev/null || true
+              cp "$rpm"/* $out/ 2>/dev/null || true
+            '';
+          } // pkgs.lib.optionalAttrs (linuxDevArtifacts ? appimage) {
+            ckeri-dev-appimage = linuxDevArtifacts.appimage;
+            ckeri-dev-deb = linuxDevArtifacts.deb;
+            ckeri-dev-rpm = linuxDevArtifacts.rpm;
+            linux-dev-release-artifacts = pkgs.runCommand "ckeri-linux-dev-release-artifacts"
+              { inherit (linuxDevArtifacts) appimage deb rpm;
+                version = cabalVersion;
+                shortRev = self.shortRev or "dirty";
+              } ''
+              mkdir -p $out
+              cp "$appimage" "$out/ckeri-$version-$shortRev-x86_64.AppImage"
+              cp "$deb"/* $out/ 2>/dev/null || true
+              cp "$rpm"/* $out/ 2>/dev/null || true
+            '';
           };
           checks = {
             unit-tests = unit-tests-check;
@@ -522,6 +583,15 @@
             follower-e2e = {
               type = "app";
               program = "${e2eWiring.followerRunner}/bin/follower-e2e";
+            };
+          } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+            linux-artifact-smoke = {
+              type = "app";
+              program = "${pkgs.writeShellApplication {
+                name = "linux-artifact-smoke";
+                runtimeInputs = [ pkgs.cpio pkgs.rpm pkgs.dpkg ];
+                text = builtins.readFile ./nix/linux-artifact-smoke.sh;
+              }}/bin/linux-artifact-smoke";
             };
           };
           devShells.default = project.shell;

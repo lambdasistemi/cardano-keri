@@ -1,0 +1,133 @@
+name: Linux Release
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to the dev-linux release channel"
+        required: false
+        default: "no"
+        type: choice
+        options: ["no", "yes"]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-release:
+    runs-on: nixos
+    env:
+      # Publication is gated: only tag-push and explicit publish=yes dispatch
+      # may mutate the GitHub release. PR mode always builds smoke-only.
+      publish: >-
+        ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) && 'true'
+            || (github.event_name == 'workflow_dispatch' && inputs.publish == 'yes' && 'true'
+            || 'false') }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: paolino
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Build Linux artifacts
+        run: |
+          if [ "$publish" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
+            # Tag-push: build release artifacts (bare version).
+            nix build .#ckeri-appimage .#ckeri-deb .#ckeri-rpm \
+              --extra-experimental-features 'nix-command flakes'
+          else
+            # PR / manual dispatch: build dev artifacts (version-shortRev).
+            nix build .#ckeri-dev-appimage .#ckeri-dev-deb .#ckeri-dev-rpm \
+              --extra-experimental-features 'nix-command flakes'
+          fi
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          if [ "$publish" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
+            cp result*/ dist/ 2>/dev/null || true
+            for r in result result-2 result-3; do
+              [ -e "$r" ] && cp -L "$r"/* dist/ 2>/dev/null || true
+            done
+          else
+            for r in result result-2 result-3; do
+              [ -e "$r" ] && cp -L "$r"/* dist/ 2>/dev/null || true
+            done
+          fi
+          ls -la dist/
+
+      - name: Smoke-test artifacts
+        run: |
+          version="$(scripts/release/version)"
+          if [ "$publish" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
+            scripts/release/smoke-linux.sh dist "$version"
+          else
+            short_rev="$(git rev-parse --short HEAD)"
+            scripts/release/smoke-linux.sh dist "${version}-${short_rev}"
+          fi
+
+      - name: Create GitHub release (tag-push only)
+        if: env.publish == 'true' && github.event_name == 'push'
+        run: |
+          version="$(scripts/release/version)"
+          tag="v${version}"
+          channel="$(jq -r '.channel' .release-channel.json)"
+          prerelease="$(jq -r '.prerelease' .release-channel.json)"
+
+          notes_file="$(mktemp)"
+          scripts/release/notes "$version" > "$notes_file"
+
+          prerelease_flag=""
+          [ "$prerelease" = "true" ] && prerelease_flag="--prerelease"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --title "ckeri ${version} [${channel}]" \
+              --notes-file "$notes_file" \
+              $prerelease_flag
+          else
+            gh release create "$tag" \
+              --title "ckeri ${version} [${channel}]" \
+              --notes-file "$notes_file" \
+              $prerelease_flag
+          fi
+          rm -f "$notes_file"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload release assets (tag-push only)
+        if: env.publish == 'true' && github.event_name == 'push'
+        run: |
+          version="$(scripts/release/version)"
+          tag="v${version}"
+          for f in dist/*; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload to dev-linux channel (manual dispatch only)
+        if: env.publish == 'true' && github.event_name == 'workflow_dispatch'
+        run: |
+          tag="dev-linux"
+
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "Development builds (Linux)" \
+              --notes "Continuous development builds. Not for production use."
+          fi
+
+          for f in dist/*; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}

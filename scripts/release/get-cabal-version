@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# scripts/release/get-cabal-version — print the Cabal version.
+# Delegates to scripts/release/version (the canonical name).
+set -euo pipefail
+exec "$(dirname "$0")/version" "$@"

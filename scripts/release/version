@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# scripts/release/version — print the Cabal version (the single source of truth).
+# Usage: scripts/release/version [path-to-cabal-file]
+# Defaults to offchain/cardano-keri.cabal relative to the repo root.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cabal_file="${1:-$repo_root/offchain/cardano-keri.cabal}"
+
+if [[ ! -f "$cabal_file" ]]; then
+  echo "ERROR: cabal file not found: $cabal_file" >&2
+  exit 1
+fi
+
+# Extract the top-level `version:` field (not indented — the cabal file has
+# no other top-level version field).
+version="$(sed -n 's/^version:[[:space:]]*//p' "$cabal_file" | head -1 | tr -d '[:space:]')"
+
+if [[ -z "$version" ]]; then
+  echo "ERROR: could not extract version from $cabal_file" >&2
+  exit 1
+fi
+
+echo "$version"

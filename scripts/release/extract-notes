@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# scripts/release/extract-notes — extract the changelog section for a version.
+#
+# Usage:
+#   scripts/release/extract-notes [version]
+#
+# Prints the CHANGELOG.md section for the given version (default: cabal
+# version) to stdout. Suitable for use as GitHub release notes.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+version="${1:-$(scripts/release/version)}"
+
+if [[ ! -f CHANGELOG.md ]]; then
+  echo "ERROR: CHANGELOG.md not found" >&2
+  exit 1
+fi
+
+# Extract the section: from "## <version>" to the next "## " or EOF.
+awk -v ver="$version" '
+  /^## / {
+    if (found) exit
+    if ($0 ~ ("^## " ver)) found=1
+  }
+  found { print }
+' CHANGELOG.md

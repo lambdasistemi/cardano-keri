@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# scripts/release/check — release-contract validator.
+#
+# Runs every static check the release pipeline requires BEFORE packaging:
+#   1. Cabal version is readable
+#   2. Tag (if given) agrees with the Cabal version
+#   3. CHANGELOG.md exists and has a section for the current version
+#   4. Release-please state is absent (rejected)
+#   5. .release-channel.json is valid
+#   6. Release planner workflow exists and mints an App token
+#   7. Linux release workflow exists and PR mode cannot publish
+#
+# Usage:
+#   scripts/release/check              # run all checks, no tag context
+#   scripts/release/check v0.1.0       # additionally verify tag matches Cabal
+#
+# Exit 0 only when every check passes.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+FAIL=0
+fail() { echo "FAIL: $*" >&2; FAIL=1; }
+pass() { echo "PASS: $*"; }
+
+TAG="${1:-}"
+
+# ── 1. Cabal version readable ──────────────────────────────────────────
+VERSION="$(scripts/release/version)" \
+  && pass "cabal version: $VERSION" \
+  || fail "cannot read Cabal version"
+
+# ── 2. Tag ↔ Cabal agreement (only when a tag is supplied) ────────────
+if [[ -n "$TAG" ]]; then
+  tag_version="${TAG#v}"
+  if [[ "$tag_version" == "$VERSION" ]]; then
+    pass "tag $TAG matches Cabal version $VERSION"
+  else
+    fail "tag $TAG does not match Cabal version $VERSION"
+  fi
+fi
+
+# ── 3. CHANGELOG.md has a section for the current version ─────────────
+if [[ ! -f CHANGELOG.md ]]; then
+  fail "CHANGELOG.md not found at repo root"
+elif grep -qE "^## ${VERSION//./\\.}" CHANGELOG.md; then
+  pass "CHANGELOG.md has a section for $VERSION"
+else
+  fail "CHANGELOG.md has no section for version $VERSION"
+fi
+
+# ── 4. Release-please state is rejected ───────────────────────────────
+rp_found=0
+for f in release-please-config.json .release-please-manifest.json; do
+  if [[ -f "$f" ]]; then
+    fail "release-please file present (rejected): $f"
+    rp_found=1
+  fi
+done
+[[ $rp_found -eq 0 ]] && pass "no release-please state"
+
+# ── 5. Release-channel config is valid ────────────────────────────────
+scripts/release/channel \
+  && pass "release-channel config valid" \
+  || fail "release-channel config invalid or missing"
+
+# ── 6. Release planner workflow exists and uses App-token auth ────────
+PLAN_WF=".github/workflows/release-plan.yml"
+if [[ ! -f "$PLAN_WF" ]]; then
+  fail "release planner workflow not found: $PLAN_WF"
+else
+  if grep -q 'create-github-app-token' "$PLAN_WF"; then
+    pass "planner workflow mints App token"
+  else
+    fail "planner workflow does not mint an App token"
+  fi
+fi
+
+# ── 7. Linux release workflow: exists, PR cannot publish ──────────────
+REL_WF=".github/workflows/release.yml"
+if [[ ! -f "$REL_WF" ]]; then
+  fail "linux release workflow not found: $REL_WF"
+else
+  # PR mode must not carry a publish step that runs unconditionally.
+  # Static guard: the workflow must reference pull_request AND gate
+  # publication behind a tag-push or explicit publish=yes condition.
+  if grep -q 'pull_request' "$REL_WF" && grep -qE "github\.event_name\s*==\s*'push'" "$REL_WF"; then
+    pass "release workflow has PR mode and tag-gated publication"
+  else
+    fail "release workflow missing PR mode or tag-gated publication"
+  fi
+fi
+
+# ── Summary ────────────────────────────────────────────────────────────
+echo ""
+if [[ $FAIL -ne 0 ]]; then
+  echo "release-contract check: FAILED" >&2
+  exit 1
+fi
+echo "release-contract check: all checks passed"

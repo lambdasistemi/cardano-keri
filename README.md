@@ -46,6 +46,13 @@ The same content lives in the repository as an MkDocs site rooted at
   `nix develop` for a GHC shell); `cabal run gen-vectors` regenerates the
   Aiken test vectors
 
+## Releases
+
+Tagged releases publish self-contained Linux binaries (AppImage, DEB, RPM)
+to the [GitHub releases page](https://github.com/lambdasistemi/cardano-keri/releases).
+See [docs/user/releases.md](docs/user/releases.md) for install instructions,
+artifact verification, and the release process.
+
 ## Status
 
 Work is planned in five GitHub

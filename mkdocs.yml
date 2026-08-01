@@ -55,6 +55,7 @@ nav:
       - Conviction: user/conviction.md
       - The preprod witness pool: user/preprod-witness-pool.md
       - "Discovery — the endpoint board": user/discovery-endpoint-board.md
+      - Releases: user/releases.md
       - The M1 preprod deployment: user/m1-preprod-deployment.md
       - Register your identity: user/register-preprod-identity.md
       - Rotate your identity: user/rotate-preprod-identity.md

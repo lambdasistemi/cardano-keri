@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# scripts/release/test-next-version — fixture tests for the version-bump
+# computation in scripts/release/next-version.
+#
+# Creates throwaway git repositories with controlled commit histories and
+# asserts the selected bump for each case.  Run RED before next-version
+# exists (or is wrong), GREEN after.
+#
+# Usage: scripts/release/test-next-version
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NEXT_VERSION="$SCRIPT_DIR/next-version"
+
+FAIL=0
+fail() { echo "FAIL: $*" >&2; FAIL=1; }
+pass() { echo "PASS: $*"; }
+
+# ── helpers ───────────────────────────────────────────────────────────
+
+# assert_seed <description> <current-version> <expected>
+# Creates a repo with NO tags and asserts next-version seeds correctly.
+assert_seed() {
+  local desc="$1" current="$2" expected="$3"
+
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  git -C "$tmpdir" init -q
+  git -C "$tmpdir" config user.email "test@test.com"
+  git -C "$tmpdir" config user.name "Test"
+  echo "init" > "$tmpdir/file.txt"
+  git -C "$tmpdir" add .
+  git -C "$tmpdir" commit -q -m "init"
+  # deliberately no tags
+
+  local actual
+  actual="$(cd "$tmpdir" && "$NEXT_VERSION" "$current")" || actual="<exit $?>"
+
+  if [[ "$actual" == "$expected" ]]; then
+    pass "$desc: $current → $actual (seeded)"
+  else
+    fail "$desc: expected $expected, got $actual (current=$current, seeded)"
+  fi
+
+  rm -rf "$tmpdir"
+}
+
+# assert_bump <description> <current-version> <expected> <commit-msg>...
+# Creates a repo tagged at v<current-version>, adds the given commits,
+# and asserts next-version computes the correct bump.
+# Commit messages may contain newlines (subject + body).
+assert_bump() {
+  local desc="$1" current="$2" expected="$3"
+  shift 3
+
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  git -C "$tmpdir" init -q
+  git -C "$tmpdir" config user.email "test@test.com"
+  git -C "$tmpdir" config user.name "Test"
+  echo "init" > "$tmpdir/file.txt"
+  git -C "$tmpdir" add .
+  git -C "$tmpdir" commit -q -m "init"
+  git -C "$tmpdir" tag "v${current}"
+
+  local msg
+  for msg in "$@"; do
+    echo "$msg" >> "$tmpdir/file.txt"
+    git -C "$tmpdir" add .
+    git -C "$tmpdir" commit -q -m "$msg"
+  done
+
+  local actual
+  actual="$(cd "$tmpdir" && "$NEXT_VERSION" "$current")" || actual="<exit $?>"
+
+  if [[ "$actual" == "$expected" ]]; then
+    pass "$desc: $current → $actual"
+  else
+    fail "$desc: expected $expected, got $actual (current=$current)"
+  fi
+
+  rm -rf "$tmpdir"
+}
+
+# ── fixture cases ─────────────────────────────────────────────────────
+
+echo "=== next-version fixture tests ==="
+echo ""
+
+# 1. Seeding: no v* tags anywhere → 0.1.0 regardless of history.
+assert_seed "seed: no tags → 0.1.0" "0.0.0" "0.1.0"
+
+# 2. fix-only range → patch bump.
+assert_bump "fix-only → patch" "0.1.0" "0.1.1" \
+  "fix: correct edge case in parser" \
+  "fix(ui): align buttons on mobile"
+
+# 3. feat-only range → minor bump.
+assert_bump "feat-only → minor" "0.1.0" "0.2.0" \
+  "feat: add new endpoint" \
+  "feat(api): support pagination"
+
+# 4. Breaking (! marker) in 0.x → minor, NOT major.
+#    This is the critical negative control: if the rule were inverted
+#    to bump major, this would produce 1.0.0 and go RED.
+assert_bump "breaking ! in 0.x → minor (not major)" "0.1.0" "0.2.0" \
+  "feat!: remove deprecated API"
+
+# 5. Breaking (BREAKING CHANGE in body) in 0.x → minor, NOT major.
+assert_bump "BREAKING CHANGE body in 0.x → minor (not major)" "0.3.2" "0.4.0" \
+  $'feat: rework config loader\n\nBREAKING CHANGE: config file format changed'
+
+# 6. Mixed feat + fix → minor (feature wins over patch).
+assert_bump "mixed feat+fix → minor" "0.1.0" "0.2.0" \
+  "fix: patch a thing" \
+  "feat: add a thing"
+
+# 7. Breaking in >=1.0 → major bump (ordinary SemVer).
+assert_bump "breaking ! in 1.x → major" "1.2.3" "2.0.0" \
+  "feat!: breaking change"
+
+# 8. chore/docs only → patch.
+assert_bump "chore-only → patch" "0.5.0" "0.5.1" \
+  "chore: update CI config" \
+  "docs: fix typo in README"
+
+echo ""
+if [[ $FAIL -ne 0 ]]; then
+  echo "next-version tests: FAILED" >&2
+  exit 1
+fi
+echo "next-version tests: all passed"

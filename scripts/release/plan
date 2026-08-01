@@ -6,29 +6,27 @@
 # pushes trigger downstream workflows.
 #
 # Logic:
-#   1. Read the Cabal version (single source of truth).
-#   2. If tag v<version> already exists → nothing to do.
-#   3. If an open release PR (release/cabal-release) exists → nothing to do.
-#   4. If CHANGELOG.md has a section for the version but no tag →
-#      the release PR was merged; create and push the tag.
-#   5. Otherwise → bump is needed; add a changelog section, create the
-#      release branch, push, and open a PR.
+#   1. Read the Cabal version (the version of the last release, or the
+#      seed 0.0.0 before any release exists).
+#   2. If an open release PR (release/cabal-release) exists → wait.
+#   3. If the Cabal version is already tagged AND the changelog has a
+#      section for it → the release PR was merged; create and push the tag.
+#      (The stale "## 0.0.0" section from before version-selection existed
+#      is explicitly excluded — that version was never released.)
+#   4. Otherwise → compute the NEXT version via scripts/release/next-version
+#      (which seeds 0.1.0 when no v* tag exists, or classifies commits
+#      since the last tag), write it into the Cabal file, add a changelog
+#      section, create the release branch, push, and open a PR.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repo_root"
 
-version="$(scripts/release/version)"
-tag="v${version}"
+current_version="$(scripts/release/version)"
 branch="release/cabal-release"
+has_any_tag="$(git tag -l 'v*' | head -1 || true)"
 
-echo "release/plan: cabal version=$version tag=$tag"
-
-# ── Already tagged? ────────────────────────────────────────────────────
-if git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
-  echo "release/plan: tag $tag already exists — nothing to do"
-  exit 0
-fi
+echo "release/plan: cabal version=$current_version"
 
 # ── Open release PR? ──────────────────────────────────────────────────
 if gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/null | grep -qv '^0$'; then
@@ -36,28 +34,69 @@ if gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/n
   exit 0
 fi
 
-# ── Changelog section present? → tag ──────────────────────────────────
-if [[ -f CHANGELOG.md ]] && grep -qE "^## ${version//./\\.}" CHANGELOG.md; then
-  echo "release/plan: changelog section for $version found — creating tag $tag"
-  git tag "$tag"
-  git push origin "$tag"
-  echo "release/plan: pushed $tag"
-  exit 0
+# ── Changelog section present for the current version? → tag ──────────
+# This means the release PR was merged and the Cabal file already carries
+# the version to be tagged.  Exception: the stale "## 0.0.0" section that
+# predates version-selection logic must NOT trigger a v0.0.0 tag — that
+# version was never actually released.
+current_tag="v${current_version}"
+if [[ -f CHANGELOG.md ]] && grep -qE "^## ${current_version//./\\.}" CHANGELOG.md; then
+  if [[ -n "$has_any_tag" ]] || [[ "$current_version" != "0.0.0" ]]; then
+    if git rev-parse --verify "refs/tags/${current_tag}" >/dev/null 2>&1; then
+      echo "release/plan: tag $current_tag already exists — nothing to do"
+      exit 0
+    fi
+    echo "release/plan: changelog section for $current_version found — creating tag $current_tag"
+    git tag "$current_tag"
+    git push origin "$current_tag"
+    echo "release/plan: pushed $current_tag"
+    exit 0
+  fi
+  echo "release/plan: ignoring stale ## 0.0.0 changelog section (never released)"
 fi
 
-# ── Otherwise: prepare a release PR ───────────────────────────────────
-echo "release/plan: no tag, no open PR, no changelog section — preparing release PR"
+# ── Already tagged (no changelog section case)? ───────────────────────
+if git rev-parse --verify "refs/tags/${current_tag}" >/dev/null 2>&1; then
+  # The current Cabal version is tagged.  If there are no new commits
+  # since that tag, there is nothing to release.
+  last_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+  if [[ -n "$last_tag" ]] && [[ -z "$(git log --oneline "${last_tag}..HEAD" 2>/dev/null)" ]]; then
+    echo "release/plan: tag $current_tag exists and no commits since — nothing to do"
+    exit 0
+  fi
+fi
+
+# ── Compute the next version and prepare a release PR ─────────────────
+version="$(scripts/release/next-version "$current_version")"
+tag="v${version}"
+
+echo "release/plan: next version=$version (current=$current_version) — preparing release PR"
 
 # Ensure CHANGELOG.md exists.
 if [[ ! -f CHANGELOG.md ]]; then
   scripts/release/changelog init
 fi
 
-# Add a changelog section for this version.
-scripts/release/changelog add "$version"
+# SEED PATH: when no prior v* tag exists and the changelog still carries
+# the stale "## 0.0.0" section, replace it with the real first version.
+# The 0.1.0 seed is a deliberate choice — see scripts/release/next-version
+# and docs/user/releases.md.
+if [[ -z "$has_any_tag" ]] && grep -qE '^## 0\.0\.0' CHANGELOG.md; then
+  sed -i "s/^## 0\.0\.0/## ${version}/" CHANGELOG.md
+  echo "release/plan: replaced stale ## 0.0.0 with ## ${version}"
+fi
+
+# Write the new version into the Cabal file (single source of truth).
+sed -i "s/^version:.*/version:       ${version}/" offchain/cardano-keri.cabal
+
+# Add a changelog section if not already present (the seed-path replacement
+# above may have already created it).
+if ! grep -qE "^## ${version//./\\.}" CHANGELOG.md; then
+  scripts/release/changelog add "$version"
+fi
 
 git checkout -b "$branch"
-git add CHANGELOG.md
+git add CHANGELOG.md offchain/cardano-keri.cabal
 git commit -m "chore(release): prepare ${version}"
 git push -u origin "$branch"
 

@@ -7,28 +7,32 @@
 # SSL_CERT_FILE inside the wrapper, so the CA bundle is in the closure and
 # the bundlers preserve it automatically.
 #
-# Known limitation: DEB/RPM package metadata shows version "1.0" (the
-# nix-utils bundler default) because writeShellApplication carries no
-# version attribute for it to read. The binary itself reports the correct
-# Cabal version in all three formats; only the package manager metadata is
-# wrong. Fixing this requires a different derivation shape (out of scope
-# for this slice).
+# The nix-utils DEB/RPM bundlers recover the package version by running
+# builtins.parseDrvName on the executable's store-path name. A bare name
+# like "ckeri" parses to an empty version, which the bundler then replaces
+# with its hardcoded "1.0" default. We therefore override the derivation
+# `name` (not just `pname`) below so the store-path name embeds the Cabal
+# version, e.g. "ckeri-0.1.0", letting parseDrvName extract the real
+# version into the DEB/RPM metadata.
 { lib, bundlers, exePackage, version, shortRev ? null }:
 
 let
-  # Ensure meta.mainProgram is set (bundlers require it for getExe).
+  # Set the derivation `name` so the store-path name embeds the Cabal
+  # version (the bundlers parse it back out with parseDrvName); also ensure
+  # meta.mainProgram is set (bundlers require it for getExe).
   exe = exePackage.overrideAttrs (old: {
+    name = "ckeri-${version}";
     meta = (old.meta or { }) // {
       mainProgram = old.meta.mainProgram or "ckeri";
     };
   });
 
-  # For dev artifacts, rename the package so the output file carries
-  # the <version>-<shortRev> suffix.
+  # For dev artifacts, embed <version>-<shortRev> in the store-path name so
+  # the output file and the DEB/RPM package version carry the dev suffix.
   devExe =
     if shortRev != null then
       exePackage.overrideAttrs (old: {
-        pname = "${old.pname or "ckeri"}-${version}-${shortRev}";
+        name = "ckeri-${version}-${shortRev}";
         meta = (old.meta or { }) // {
           mainProgram = old.meta.mainProgram or "ckeri";
         };

@@ -28,10 +28,17 @@
 
 ## Post-merge acceptance — real release
 
-- [ ] T196-A-1 Epic owner merges the pipeline PR; this lane resumes rather
-      than declaring the ticket complete.
-- [ ] T196-A-2 Release planner opens/updates `release/cabal-release`; checks
+- [x] T196-A-1 Milestone desk merges the pipeline PR; this lane resumes
+      rather than declaring the ticket complete. (Corrected: #196 is a
+      standalone milestone ticket, not epic-owned — there is no epic owner
+      in this chain. Merged as `705a423` via merge-guard, method=merge,
+      authorized in `answers/A-001-merge-197-authorized.md`.)
+- [x] T196-A-2 Release planner opens/updates `release/cabal-release`; checks
       pass and this lane merges only that planner-generated PR under A-001.
+      (Not needed this cycle: `CHANGELOG.md` already carried the `## 0.0.0`
+      section from the slice-1 commit, so the planner's first push-to-main
+      run went straight to tagging — see A-3 — with no intermediate release
+      PR to merge.)
 - [ ] T196-A-3 The next planner run pushes the matching `v<version>` tag and
       the tag workflow publishes the epic-marked prerelease.
 - [ ] T196-A-4 Verify the release URL/assets and attached clean-environment

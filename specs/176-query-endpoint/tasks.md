@@ -6,37 +6,37 @@ commit with a `Tasks:` trailer.
 
 ## Slice 1 — transactional HTTP service and frozen contract
 
-- [ ] T176-S1-1 RED: application-level tests freeze exact `/ready`,
+- [x] T176-S1-1 RED: application-level tests freeze exact `/ready`,
       `/checkpoint/{aid}`, `/board/{witness_key}`, and `/watchability/{aid}`
       JSON including `as_of_slot` and `tip_lag_slots`
-- [ ] T176-S1-2 RED: malformed identifiers return 400; unknown valid records
+- [x] T176-S1-2 RED: malformed identifiers return 400; unknown valid records
       return 200/null; disconnected, cold, impossible-tip, and lag-over-60 data
       requests return 503 with no endpoint payload field
-- [ ] T176-S1-3 RED: one request after mutation changes immediately; one after
+- [x] T176-S1-3 RED: one request after mutation changes immediately; one after
       rollback loses abandoned data and reports the lower store watermark even
       when readiness's processed slot remains ahead
-- [ ] T176-S1-4 RED: runner instrumentation proves checkpoint/board/watermark—and
+- [x] T176-S1-4 RED: runner instrumentation proves checkpoint/board/watermark—and
       both watchability address scans—execute in exactly one transaction per
       response
-- [ ] T176-S1-5 RED: forged/malformed board output fails the whole catalog;
+- [x] T176-S1-5 RED: forged/malformed board output fails the whole catalog;
       valid signed board data resolves by B-code witness key; duplicates do not
       inflate watchability
-- [ ] T176-S1-6 GREEN: implement transaction-scoped reads, board codec, public
+- [x] T176-S1-6 GREEN: implement transaction-scoped reads, board codec, public
       types/API/server, and common readiness/freshness gating without mutable
       derived state
-- [ ] T176-S1-7 GREEN: implement `ckeri-query` using one
+- [x] T176-S1-7 GREEN: implement `ckeri-query` using one
       `withRocksDBIndexerRunner` + one linked follower + Warp lifetime; preserve
       `ckeri-follower`
-- [ ] T176-S1-8 Commit generated Swagger/OpenAPI, serve Swagger UI, and add a
+- [x] T176-S1-8 Commit generated Swagger/OpenAPI, serve Swagger UI, and add a
       drift check against the exact public routes and response types
-- [ ] T176-S1-9 Add Cabal dependencies/modules/executable and flake
+- [x] T176-S1-9 Add Cabal dependencies/modules/executable and flake
       package/app/check/OCI-image outputs; invoke binary help and image contents
       in checks
-- [ ] T176-S1-10 Prove the contract check can fail: rename one freshness field,
+- [x] T176-S1-10 Prove the contract check can fail: rename one freshness field,
       capture the expected named golden failure, restore, and re-run green
-- [ ] T176-S1-11 Prove the no-cache guard can fail using its positive-control
+- [x] T176-S1-11 Prove the no-cache guard can fail using its positive-control
       fixture, then pass it against the real HTTP modules
-- [ ] T176-S1-12 `just query-endpoint-check`, immutable slice gate,
+- [x] T176-S1-12 `just query-endpoint-check`, immutable slice gate,
       `./gate.sh`, and named flake checks green; navigator approves; one commit
       with task stamps and `Tasks:` trailer
 

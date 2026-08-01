@@ -13,9 +13,11 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Indexer.App (
     FollowerSettings (..),
     ManifestOutcome (..),
+    QuerySettings (..),
     loadManifestResult,
     mkCheckpointView,
     runFollowerAppWith,
+    runQueryAppWith,
  )
 import Cardano.KERI.Indexer.Config (
     IndexerConfig (..),
@@ -41,6 +43,7 @@ import Cardano.Node.Client.UTxOIndexer.Follower (
  )
 import Cardano.Node.Client.UTxOIndexer.Indexer (
     withInMemoryIndexer,
+    withInMemoryIndexerRunner,
  )
 import Cardano.Node.Client.UTxOIndexer.Types (
     Address,
@@ -55,6 +58,19 @@ import Control.Monad (forever)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BS8
+import Data.IORef (
+    newIORef,
+    readIORef,
+    writeIORef,
+ )
+import Network.HTTP.Types (status200)
+import Network.Wai qualified as Wai
+import Network.Wai.Test (
+    SResponse (..),
+    request,
+    runSession,
+    setPath,
+ )
 import OptEnvConf qualified as Opt
 import OptEnvConf.Args qualified as OptArgs
 import OptEnvConf.Capability qualified as OptCapability
@@ -89,6 +105,7 @@ spec = describe "#188 runnable follower app composition" $ do
     checkpointViewSpec
     settingsParserSpec
     lifetimeSpec
+    queryLifetimeSpec
 
 -- ---------------------------------------------------------------------------
 -- manifest loading
@@ -221,6 +238,68 @@ lifetimeSpec =
                     Just (Right ()) ->
                         expectationFailure
                             "runFollowerAppWith returned normally despite an injected follower failure"
+
+-- ---------------------------------------------------------------------------
+-- process lifetime (#176 T176-S1-7): same shape as 'lifetimeSpec' above, for
+-- 'runQueryAppWith'. Proves the one-indexer/one-follower/foreground-server
+-- invariant is executable, not source inspection: a follower async failure
+-- must take the HTTP action down instead of leaving a stale server
+-- answering, and the HTTP action must actually receive the real composed
+-- 'Application' (not a placeholder) built from the runner/handle this same
+-- call opened.
+
+queryLifetimeSpec :: Spec
+queryLifetimeSpec =
+    describe "runQueryAppWith lifetime" $ do
+        it "propagates a follower async failure instead of the HTTP action hanging" $
+            withTempManifestFile validManifest $ \manifestPath -> do
+                let settings = QuerySettings (FollowerSettings queryBaseConfig manifestPath) 9080
+                result <-
+                    timeout (5 * 1_000_000) $
+                        try @SomeException $
+                            runQueryAppWith
+                                (\_path action -> withInMemoryIndexerRunner action)
+                                (withChainSyncFollowerUsing throwingRunner)
+                                (\_port _app -> forever (threadDelay maxBound))
+                                settings
+                case result of
+                    Nothing ->
+                        expectationFailure
+                            "runQueryAppWith hung instead of propagating the follower failure"
+                    Just (Left err) ->
+                        show err `shouldContain` "#188 injected follower failure"
+                    Just (Right ()) ->
+                        expectationFailure
+                            "runQueryAppWith returned normally despite an injected follower failure"
+
+        it "the injected HTTP action receives the composed query application, not a placeholder" $
+            withTempManifestFile validManifest $ \manifestPath -> do
+                capturedRef <- newIORef Nothing
+                let settings = QuerySettings (FollowerSettings queryBaseConfig manifestPath) 9081
+                _ <-
+                    timeout (5 * 1_000_000) $
+                        runQueryAppWith
+                            (\_path action -> withInMemoryIndexerRunner action)
+                            (withChainSyncFollowerUsing succeedingRunner)
+                            ( \port app -> do
+                                resp <- runSession (request (setPath Wai.defaultRequest "/ready")) app
+                                writeIORef capturedRef (Just (port, simpleStatus resp))
+                            )
+                            settings
+                captured <- readIORef capturedRef
+                captured `shouldBe` Just (9081, status200)
+
+{- | 'baseConfig' leaves the board address optional (the general follower's
+own requirement); 'runQueryAppWith' makes it mandatory (FR-9), so these
+lifetime tests need a decodable one. Reusing the checkpoint fixture address
+is sufficient here — these tests prove wiring/lifetime, not board content.
+-}
+queryBaseConfig :: IndexerConfig
+queryBaseConfig = baseConfig{icBoardAddr = Just decodeExpectedAddress}
+
+-- | A chain-sync runner that "connects" successfully and returns immediately.
+succeedingRunner :: ChainSyncRunner
+succeedingRunner _ _ _ _ _ _ _ = pure (Right ())
 
 {- | 'CheckpointView' has no 'Show' instance upstream, so match explicitly
 rather than reach for 'shouldSatisfy isLeft' (which needs one).

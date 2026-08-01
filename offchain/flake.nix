@@ -26,6 +26,15 @@
       url = "path:../onchain";
       flake = false;
     };
+    # #176 Slice 1: the canonical OpenAPI contract lives at the repo-root
+    # docs/assets/swagger/ (read by mkdocs and this flake's SwaggerDriftSpec
+    # alike) but this flake's own `src` is necessarily scoped to offchain/,
+    # same reasoning as the `onchain` input above. Sourced as its own flake
+    # input rather than a second tracked copy under offchain/.
+    docsSwagger = {
+      url = "path:../docs/assets/swagger";
+      flake = false;
+    };
     # cardano-node 10.7.0 provides the node binary the withDevnet e2e smoke
     # spawns (runtime input only — never a Cabal source-repository-package).
     cardano-node.url = "github:IntersectMBO/cardano-node/10.7.0";
@@ -90,11 +99,31 @@
                 lib.mkForce [ [ pkgs.liburing ] ];
             };
 
+          # #176 Slice 1: `data-files` declares docs/assets/swagger/query-api.json
+          # (the one repo-root canonical file, via the docsSwagger input
+          # above) but this flake's `src` is necessarily scoped to offchain/
+          # (haskell.nix re-roots `src` into its own isolated store copy, so
+          # a relative symlink pointing above it cannot survive). Cabal's
+          # `copy` phase installs the package's data-files for every single
+          # component (library, each sublibrary, every exe/test-suite), each
+          # built from its own unpacked source copy — so this is a
+          # package-level `postUnpack` (not a single component's preBuild),
+          # which haskell.nix passes down as the default for every
+          # component's own hook. No second hand-maintained copy tracked
+          # under offchain/.
+          swagger-data-overlay = { lib, pkgs, ... }: {
+            packages.cardano-keri.postUnpack = ''
+              mkdir -p "$sourceRoot/docs/assets/swagger"
+              cp ${inputs.docsSwagger}/query-api.json \
+                "$sourceRoot/docs/assets/swagger/query-api.json"
+            '';
+          };
+
           project = pkgs.haskell-nix.cabalProject' {
             name = "cardano-keri";
             src = ./.;
             compiler-nix-name = "ghc9123";
-            modules = [ fix-libs ];
+            modules = [ fix-libs swagger-data-overlay ];
             inputMap = { "https://chap.intersectmbo.org/" = CHaP; };
             shell = {
               tools = {
@@ -195,6 +224,8 @@
             project.hsPkgs.cardano-keri.components.tests.indexer-tests;
           ckeri-follower-exe =
             project.hsPkgs.cardano-keri.components.exes.ckeri-follower;
+          ckeri-query-exe =
+            project.hsPkgs.cardano-keri.components.exes.ckeri-query;
 
           # writeShellApplication gives each runner a strict PATH — every
           # binary it calls must be listed in runtimeInputs.
@@ -256,6 +287,40 @@
             ${indexer-tests-runner}/bin/indexer-tests
             touch $out
           '';
+          # #176 Slice 1: the same "run the compiled test binary" shape as
+          # indexer-tests-check/-runner, distinctly named so the immutable
+          # slice gate can invoke this slice's contract check by a stable
+          # name rather than an hspec --match string.
+          query-endpoint-runner = pkgs.writeShellApplication {
+            name = "query-endpoint-check";
+            text = ''
+              exec ${indexer-tests-exe}/bin/indexer-tests "$@"
+            '';
+          };
+          query-endpoint-check = pkgs.runCommand "query-endpoint-check" { } ''
+            ${query-endpoint-runner}/bin/query-endpoint-check
+            touch $out
+          '';
+          # #176 Slice 1 Linux-only OCI image: the ckeri-query executable and
+          # CA/runtime material only (FR-10) — the RocksDB store and node
+          # socket are mounted at deploy time, never baked in. Gated on
+          # x86_64-linux the same way e2eWiring is: dockerTools layered
+          # images are a Linux-specific artifact and must not break
+          # `nix flake check` on aarch64-darwin.
+          queryImageWiring = pkgs.lib.optionalAttrs (system == "x86_64-linux")
+            (let
+              image = pkgs.dockerTools.buildLayeredImage {
+                name = "ckeri-query";
+                tag = "latest";
+                contents = [ ckeri-query-exe pkgs.cacert ];
+                config = {
+                  Entrypoint = [ "${ckeri-query-exe}/bin/ckeri-query" ];
+                  Env = [
+                    "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  ];
+                };
+              };
+            in { inherit image; });
           # #188: one strict-PATH app that proves BOTH the packaged executable
           # is runnable (--help) AND the focused #188 tests pass, exposed
           # twice per the runCommand-invokes-app shape so `nix flake check`
@@ -487,9 +552,12 @@
             unit-tests = unit-tests-exe;
             indexer-tests = indexer-tests-exe;
             ckeri-follower = ckeri-follower-exe;
+            ckeri-query = ckeri-query-exe;
             format = format-runner;
             format-check = format-check-runner;
             hlint = hlint-runner;
+          } // pkgs.lib.optionalAttrs (queryImageWiring ? image) {
+            ckeri-query-image = queryImageWiring.image;
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             ckeri = e2eWiring.ckeriRunner;
             deployment-tests = e2eWiring.deploymentTestsRunner;
@@ -502,6 +570,7 @@
             unit-tests = unit-tests-check;
             indexer-tests = indexer-tests-check;
             follower-cli = follower-cli-check;
+            query-endpoint = query-endpoint-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
@@ -532,9 +601,17 @@
               type = "app";
               program = "${ckeri-follower-exe}/bin/ckeri-follower";
             };
+            ckeri-query = {
+              type = "app";
+              program = "${ckeri-query-exe}/bin/ckeri-query";
+            };
             follower-cli = {
               type = "app";
               program = "${follower-cli-runner}/bin/follower-cli";
+            };
+            query-endpoint-check = {
+              type = "app";
+              program = "${query-endpoint-runner}/bin/query-endpoint-check";
             };
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             ckeri = {

@@ -1,0 +1,269 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ckeri-query",
+    "description": "The hosted checkpoint/board/watchability query endpoint for #171's M1 KERI-on-Cardano deployment. Read-only; no node socket or local store required by the caller.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/ready": {
+      "get": {
+        "summary": "Service readiness and freshness",
+        "responses": {
+          "200": {
+            "description": "Always 200. `ready` is true only when the store has a transactional watermark, upstream is connected, a tip is known, and tip_lag_slots <= 60.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadyResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkpoint/{aid}": {
+      "get": {
+        "summary": "The current authenticated checkpoint for a KERI AID",
+        "parameters": [
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "description": "Self-addressing CESR E-code identifier",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "checkpoint is null when the AID is well-formed but unknown",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CheckpointResponse" }
+              }
+            }
+          },
+          "400": { "description": "Malformed CESR AID" },
+          "503": {
+            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board/{witness_key}": {
+      "get": {
+        "summary": "The authenticated endpoint-board record for a witness key",
+        "parameters": [
+          {
+            "name": "witness_key",
+            "in": "path",
+            "required": true,
+            "description": "Non-transferable CESR B-code witness identifier",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "board is null when the witness key is well-formed but unknown",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BoardResponse" }
+              }
+            }
+          },
+          "400": { "description": "Malformed CESR witness key" },
+          "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
+          "503": {
+            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watchability/{aid}": {
+      "get": {
+        "summary": "Whether all witnesses declared by an AID's checkpoint are on the authenticated board",
+        "parameters": [
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "description": "Self-addressing CESR E-code identifier",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "checkpoint_present is false with zero counts and an empty list when there is no current checkpoint",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WatchabilityResponse" }
+              }
+            }
+          },
+          "400": { "description": "Malformed CESR AID" },
+          "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
+          "503": {
+            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReadyResponse": {
+        "type": "object",
+        "required": ["ready", "as_of_slot", "tip_lag_slots", "upstream", "reason"],
+        "properties": {
+          "ready": { "type": "boolean" },
+          "as_of_slot": { "type": ["integer", "null"] },
+          "tip_lag_slots": { "type": ["integer", "null"] },
+          "upstream": { "type": "string", "enum": ["connected", "disconnected"] },
+          "reason": { "type": ["string", "null"] }
+        }
+      },
+      "UnavailableResponse": {
+        "type": "object",
+        "required": ["ready", "as_of_slot", "tip_lag_slots", "upstream", "reason", "error"],
+        "properties": {
+          "ready": { "type": "boolean", "enum": [false] },
+          "as_of_slot": { "type": ["integer", "null"] },
+          "tip_lag_slots": { "type": ["integer", "null"] },
+          "upstream": { "type": "string", "enum": ["connected", "disconnected"] },
+          "reason": { "type": "string" },
+          "error": { "type": "string", "enum": ["service_unavailable"] }
+        }
+      },
+      "Threshold": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "value"],
+            "properties": {
+              "type": { "type": "string", "enum": ["unweighted"] },
+              "value": { "type": "integer" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "clauses"],
+            "properties": {
+              "type": { "type": "string", "enum": ["weighted"] },
+              "clauses": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["numerator", "denominator"],
+                    "properties": {
+                      "numerator": { "type": "integer" },
+                      "denominator": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CheckpointData": {
+        "type": "object",
+        "required": [
+          "tx_id", "output_index", "sequence", "native_sequence",
+          "current_keys", "current_threshold", "next_key_digests",
+          "next_threshold", "witnesses", "witness_threshold"
+        ],
+        "properties": {
+          "tx_id": { "type": "string" },
+          "output_index": { "type": "integer" },
+          "sequence": { "type": "integer" },
+          "native_sequence": { "type": "integer" },
+          "current_keys": { "type": "array", "items": { "type": "string" } },
+          "current_threshold": { "$ref": "#/components/schemas/Threshold" },
+          "next_key_digests": { "type": "array", "items": { "type": "string" } },
+          "next_threshold": { "$ref": "#/components/schemas/Threshold" },
+          "witnesses": { "type": "array", "items": { "type": "string" } },
+          "witness_threshold": { "type": "integer" }
+        }
+      },
+      "CheckpointResponse": {
+        "type": "object",
+        "required": ["aid", "as_of_slot", "tip_lag_slots", "checkpoint"],
+        "properties": {
+          "aid": { "type": "string" },
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "checkpoint": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/CheckpointData" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "BoardData": {
+        "type": "object",
+        "required": ["aid", "scheme", "url", "tx_id", "output_index", "lovelace", "owner_key_hash"],
+        "properties": {
+          "aid": { "type": "string" },
+          "scheme": { "type": "string" },
+          "url": { "type": "string" },
+          "tx_id": { "type": "string" },
+          "output_index": { "type": "integer" },
+          "lovelace": { "type": "integer" },
+          "owner_key_hash": { "type": "string" }
+        }
+      },
+      "BoardResponse": {
+        "type": "object",
+        "required": ["witness_key", "as_of_slot", "tip_lag_slots", "board"],
+        "properties": {
+          "witness_key": { "type": "string" },
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "board": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/BoardData" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "WatchabilityData": {
+        "type": "object",
+        "required": ["checkpoint_present", "witnesses_declared", "witnesses_listed", "missing_witnesses"],
+        "properties": {
+          "checkpoint_present": { "type": "boolean" },
+          "witnesses_declared": { "type": "integer" },
+          "witnesses_listed": { "type": "integer" },
+          "missing_witnesses": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "WatchabilityResponse": {
+        "type": "object",
+        "required": ["aid", "as_of_slot", "tip_lag_slots", "watchability"],
+        "properties": {
+          "aid": { "type": "string" },
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "watchability": { "$ref": "#/components/schemas/WatchabilityData" }
+        }
+      }
+    }
+  }
+}

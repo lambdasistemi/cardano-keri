@@ -1,0 +1,14 @@
+-- Deliberate positive-control fixture for
+-- scripts/check-query-endpoint-cache.sh.
+--
+-- Contains a forbidden mutable-state primitive on purpose, so the guard can
+-- prove it is actually able to fail before it is trusted to scan the real
+-- query HTTP layer. Named .hs.txt (not .hs) so the repo's `find . -name
+-- '*.hs'` formatter/hlint globs never pick it up: it is grepped only, never
+-- compiled or linted.
+module CacheGuardPositiveControl (forbidden) where
+
+import Data.IORef (IORef, newIORef)
+
+forbidden :: IO (IORef Int)
+forbidden = newIORef 0

@@ -1,7 +1,10 @@
 # Spec — #196 day-0 release pipeline
 
-Child of epic #171. This ticket runs in parallel with #188 and proves the
-release path using the `ckeri` executable that already exists today.
+Standalone M1 milestone ticket (re-seated out of epic #171's subtree on
+2026-07-31; #196 publishes the product's release line, which is
+milestone-owned, not epic-owned). It runs in parallel with epic #171's #188
+and proves the release path using the `ckeri` executable that already exists
+today.
 
 ## User story
 

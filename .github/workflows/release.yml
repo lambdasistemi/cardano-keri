@@ -42,11 +42,11 @@ jobs:
         run: |
           if [ "$publish" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
             # Tag-push: build release artifacts (bare version).
-            nix build .#ckeri-appimage .#ckeri-deb .#ckeri-rpm \
+            nix build ./offchain#ckeri-appimage ./offchain#ckeri-deb ./offchain#ckeri-rpm \
               --extra-experimental-features 'nix-command flakes'
           else
             # PR / manual dispatch: build dev artifacts (version-shortRev).
-            nix build .#ckeri-dev-appimage .#ckeri-dev-deb .#ckeri-dev-rpm \
+            nix build ./offchain#ckeri-dev-appimage ./offchain#ckeri-dev-deb ./offchain#ckeri-dev-rpm \
               --extra-experimental-features 'nix-command flakes'
           fi
 

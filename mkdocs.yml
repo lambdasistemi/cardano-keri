@@ -1,8 +1,11 @@
 site_name: cardano-keri
 site_description: Self-certifying identities on Cardano with pre-rotation
-site_url: https://lambdasistemi.github.io/cardano-keri/
+site_url: !ENV [MKDOCS_SITE_URL, "https://lambdasistemi.github.io/cardano-keri/"]
 repo_url: https://github.com/lambdasistemi/cardano-keri
 docs_dir: docs
+
+plugins:
+  - asciinema-player
 
 theme:
   name: material

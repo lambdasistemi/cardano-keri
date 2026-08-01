@@ -81,6 +81,11 @@ jobs:
       - name: Create GitHub release (tag-push only)
         if: env.publish == 'true' && github.event_name == 'push'
         run: |
+          # jq reads .release-channel.json; the bare runner shell does not
+          # guarantee it.  Provide it via a nix shell, mirroring the
+          # smoke-test step above.
+          nix shell --extra-experimental-features 'nix-command flakes' \
+            nixpkgs#jq --command bash -e <<'RELEASE_SCRIPT'
           version="$(scripts/release/version)"
           tag="v${version}"
           channel="$(jq -r '.channel' .release-channel.json)"
@@ -104,6 +109,7 @@ jobs:
               $prerelease_flag
           fi
           rm -f "$notes_file"
+          RELEASE_SCRIPT
         env:
           GH_TOKEN: ${{ github.token }}
 

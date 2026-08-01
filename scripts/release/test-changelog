@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# scripts/release/test-changelog — fixture tests for the section insertion
+# in scripts/release/changelog add.
+#
+# Creates throwaway git repositories with controlled commit histories and
+# asserts the generated section actually lands in CHANGELOG.md.  Run RED
+# before the insertion-quoting fix, GREEN after.
+#
+# Usage: scripts/release/test-changelog
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+FAIL=0
+fail() { echo "FAIL: $*" >&2; FAIL=1; }
+pass() { echo "PASS: $*"; }
+
+# ── helpers ───────────────────────────────────────────────────────────
+
+# setup_repo <workdir>
+# Initialises a git repo with the changelog script, a CHANGELOG.md
+# carrying an ## Unreleased header, and a v0.1.0 tag.
+setup_repo() {
+  local workdir="$1"
+
+  git -C "$workdir" init -q
+  git -C "$workdir" config user.email "test@test.com"
+  git -C "$workdir" config user.name "Test"
+
+  mkdir -p "$workdir/scripts/release"
+  cp "$SCRIPT_DIR/changelog" "$workdir/scripts/release/"
+  chmod +x "$workdir/scripts/release/"*
+
+  cat > "$workdir/CHANGELOG.md" <<'CHANGELOG'
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## Unreleased
+CHANGELOG
+
+  git -C "$workdir" add .
+  git -C "$workdir" commit -q -m "chore(release): prepare 0.1.0"
+  git -C "$workdir" tag v0.1.0
+}
+
+# ── fixture cases ─────────────────────────────────────────────────────
+
+echo "=== changelog insertion fixture tests ==="
+echo ""
+
+# 1. fix: commit → "## <version>" section with a "### Fixed" entry
+#    actually appears in CHANGELOG.md (not just exit 0).
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "fix" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: correct edge case in parser"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+if grep -q '^## 0\.1\.1' "$workdir/CHANGELOG.md"; then
+  pass "fix: commit → ## 0.1.1 section inserted"
+else
+  fail "fix: commit → ## 0.1.1 section NOT found in CHANGELOG.md"
+fi
+
+if grep -q '^- correct edge case in parser' "$workdir/CHANGELOG.md"; then
+  pass "fix: commit → entry line present"
+else
+  fail "fix: commit → entry line NOT found in CHANGELOG.md"
+fi
+rm -rf "$workdir"
+
+# 2. feat: commit → "### Added" entry.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "feat" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "feat: add new endpoint"
+
+(cd "$workdir" && scripts/release/changelog add 0.2.0)
+
+if grep -q '^## 0\.2\.0' "$workdir/CHANGELOG.md" \
+   && grep -q '^- add new endpoint' "$workdir/CHANGELOG.md"; then
+  pass "feat: commit → ## 0.2.0 section with entry inserted"
+else
+  fail "feat: commit → section or entry NOT found in CHANGELOG.md"
+fi
+rm -rf "$workdir"
+
+# 3. Section is inserted AFTER the ## Unreleased line, not before it.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "fix" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: another fix"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+unreleased_line="$(grep -n '^## Unreleased' "$workdir/CHANGELOG.md" | head -1 | cut -d: -f1 || true)"
+version_line="$(grep -n '^## 0\.1\.1' "$workdir/CHANGELOG.md" | head -1 | cut -d: -f1 || true)"
+if [[ -n "$unreleased_line" && -n "$version_line" && "$version_line" -gt "$unreleased_line" ]]; then
+  pass "section inserted after ## Unreleased"
+else
+  fail "section NOT after ## Unreleased (unreleased=$unreleased_line, version=$version_line)"
+fi
+rm -rf "$workdir"
+
+# 4. No Unreleased header → section inserted after the adheres line.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+# Remove the ## Unreleased line
+sed -i '/^## Unreleased/d' "$workdir/CHANGELOG.md"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "chore: drop unreleased"
+
+echo "fix" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: fallback path fix"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+if grep -q '^## 0\.1\.1' "$workdir/CHANGELOG.md"; then
+  pass "no Unreleased → section still inserted (fallback path)"
+else
+  fail "no Unreleased → section NOT found in CHANGELOG.md"
+fi
+rm -rf "$workdir"
+
+echo ""
+if [[ $FAIL -ne 0 ]]; then
+  echo "changelog tests: FAILED" >&2
+  exit 1
+fi
+echo "changelog tests: all passed"

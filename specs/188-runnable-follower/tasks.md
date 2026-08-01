@@ -16,13 +16,13 @@
 
 ## Slice 2 — preprod documentation and cast
 
-- [ ] T18807 Dry-run the final documented command against the live preprod
+- [x] T18807 Dry-run the final documented command against the live preprod
   node with the committed manifest/start point and a fresh store.
-- [ ] T18808 Record the 80x24 preprod cast from the production executable,
+- [x] T18808 Record the 80x24 preprod cast from the production executable,
   identifying the runner/date and demonstrating the interactive query surface.
-- [ ] T18809 Validate the cast for JSONL/header, sanitization, event length,
+- [x] T18809 Validate the cast for JSONL/header, sanitization, event length,
   exact command provenance, and real output.
-- [ ] T18810 Make `docs/user/follower.md` executable documentation and embed
+- [x] T18810 Make `docs/user/follower.md` executable documentation and embed
   the cast through preview-safe MkDocs configuration.
-- [ ] T18811 Make strict docs, the frozen Slice 2 gate, and the full final gate
+- [x] T18811 Make strict docs, the frozen Slice 2 gate, and the full final gate
   GREEN at the final commit.

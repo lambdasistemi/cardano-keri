@@ -64,6 +64,8 @@ EOF
       range="HEAD"
     fi
 
+    section_file="$(mktemp /tmp/changelog-section-XXXXXX)"
+
     {
       echo "## ${version}"
       echo ""
@@ -85,17 +87,17 @@ EOF
           echo ""
         fi
       done
-    } > /tmp/changelog-section-$$
+    } > "$section_file"
 
     # Insert after the "## Unreleased" block (or at the top if no Unreleased).
     if grep -q '^## Unreleased' CHANGELOG.md; then
       # Insert after the Unreleased section's content
-      sed -i '/^## Unreleased/r /tmp/changelog-section-$$' CHANGELOG.md
+      sed -i "/^## Unreleased/r $section_file" CHANGELOG.md
     else
       # Insert after the header block
-      sed -i '/^and this project adheres/r /tmp/changelog-section-$$' CHANGELOG.md
+      sed -i "/^and this project adheres/r $section_file" CHANGELOG.md
     fi
-    rm -f /tmp/changelog-section-$$
+    rm -f "$section_file"
     echo "Added section for $version to CHANGELOG.md"
     ;;
 

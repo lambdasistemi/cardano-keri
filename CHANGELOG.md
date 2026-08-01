@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
+## 0.1.2
+
+### Maintenance
+
+- 196): record the real v0.1.1 acceptance and the full defect trail
+
 ## 0.1.1
 
 ### Fixed

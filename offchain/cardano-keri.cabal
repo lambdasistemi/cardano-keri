@@ -1,6 +1,6 @@
 cabal-version: 3.4
 name:          cardano-keri
-version:       0.1.0
+version:       0.1.1
 synopsis:
   Haskell library for KERI-AID identity operations and cage validator types
 

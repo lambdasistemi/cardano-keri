@@ -55,14 +55,25 @@
       (AppImage/DEB/RPM, all three correctly versioned `0.1.1`).
 - [x] T196-A-4 Verify the release URL/assets and attached clean-environment
       transcript show downloaded `ckeri --version` matching tag and Cabal,
-      **for all three shipped formats**. Done for `v0.1.1`: a plain
-      `ubuntu:22.04` container with no clone and no pre-existing nix store
-      downloaded each public asset and exercised it the way a real user
-      would — AppImage run directly, DEB installed via real `dpkg -i` (and
-      `dpkg -s` confirms the installed package version), RPM verified via
-      `rpm -qp` metadata and its extracted binary executed. All three report
-      `ckeri 0.1.1`, matching tag `v0.1.1` and Cabal `0.1.1` exactly.
-      Transcript attached to the `v0.1.1` release.
+      **for all three shipped formats, each through its own real
+      install/execution mechanism** (not payload extraction). Done for
+      `v0.1.1`, in two transcripts attached to the release:
+      - AppImage: a plain `ubuntu:22.04` container with no clone and no
+        pre-existing nix store downloaded the public asset and ran it
+        directly (FUSE-mounted, exactly as an end user would).
+      - DEB: real `dpkg -i` install; `dpkg -s` confirms the installed
+        package version.
+      - RPM: real `rpm -i` install (not `rpm2cpio` extraction) in a plain
+        `fedora:40` container; `rpm -q ckeri` confirms
+        `ckeri-0.1.1-1.x86_64` registered in the RPM package database, and
+        the *installed* binary (placed by `rpm -i`, not hand-extracted) is
+        what was executed.
+      All three report `ckeri 0.1.1`, matching tag `v0.1.1` and Cabal
+      `0.1.1` exactly. A first pass verified the RPM by extraction only
+      (`rpm2cpio | cpio` + direct execution) — accepted on reflection as
+      insufficient (same "extraction bypasses the real mechanism" shape as
+      the AppImage/#205 finding, on a second artifact) and superseded by the
+      real `rpm -i` transcript above before this ticket closed.
 
       **What the automated CI smoke does and does not prove**: the frozen
       slice gate's `linux-artifact-smoke` and CI's smoke steps only extract

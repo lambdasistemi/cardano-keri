@@ -5,7 +5,7 @@
 #   scripts/release/smoke-linux.sh <artifact-dir> <expected-version>
 #
 # For each artifact found in <artifact-dir>:
-#   - AppImage: execute directly with --version
+#   - AppImage: extract with --appimage-extract (no FUSE), run the binary
 #   - DEB: extract with dpkg-deb, run the binary
 #   - RPM: extract with rpm2cpio, run the binary
 #
@@ -27,15 +27,31 @@ appimage="$(find "$artifact_dir" -name '*.AppImage' -type f | head -1 || true)"
 if [[ -n "$appimage" ]]; then
   echo "--- AppImage: $(basename "$appimage")"
   chmod +x "$appimage"
-  if output="$("$appimage" --version 2>&1)"; then
-    if echo "$output" | grep -q "$expected_version"; then
-      pass "AppImage --version contains $expected_version"
+  # Resolve to an absolute path: the extraction below cd's into a temp dir.
+  appimage="$(cd "$(dirname "$appimage")" && pwd)/$(basename "$appimage")"
+  extract_dir="$(mktemp -d)"
+  # --appimage-extract unpacks into squashfs-root/ without mounting via FUSE,
+  # which the CI runner does not have. Mirrors offchain/nix/linux-artifact-smoke.sh.
+  if (cd "$extract_dir" && "$appimage" --appimage-extract >/dev/null 2>&1); then
+    bin="$(find "$extract_dir/squashfs-root" -name ckeri -type f | head -1 || true)"
+    if [[ -n "$bin" ]]; then
+      chmod +x "$bin"
+      if output="$("$bin" --version 2>&1)"; then
+        if echo "$output" | grep -q "$expected_version"; then
+          pass "AppImage --version contains $expected_version"
+        else
+          fail "AppImage --version output '$output' does not contain $expected_version"
+        fi
+      else
+        fail "AppImage --version exited non-zero: $output"
+      fi
     else
-      fail "AppImage --version output '$output' does not contain $expected_version"
+      fail "no ckeri binary found in extracted AppImage"
     fi
   else
-    fail "AppImage --version exited non-zero: $output"
+    fail "could not extract AppImage (tried --appimage-extract)"
   fi
+  rm -rf "$extract_dir"
 else
   fail "no AppImage found in $artifact_dir"
 fi
@@ -78,6 +94,9 @@ fi
 rpm="$(find "$artifact_dir" -name '*.rpm' -type f | head -1 || true)"
 if [[ -n "$rpm" ]]; then
   echo "--- RPM: $(basename "$rpm")"
+  # Resolve to an absolute path: the subshell below cd's into a temp dir,
+  # so a relative $rpm would no longer resolve.
+  rpm="$(cd "$(dirname "$rpm")" && pwd)/$(basename "$rpm")"
   extract_dir="$(mktemp -d)"
   (cd "$extract_dir" && rpm2cpio "$rpm" | cpio -idm 2>/dev/null)
   bin="$(find "$extract_dir" -name ckeri -type f | head -1 || true)"

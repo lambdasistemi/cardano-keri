@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# scripts/release/channel — validate .release-channel.json.
+# Checks: file exists, is valid JSON, carries a non-empty "channel" string
+# and a boolean "prerelease" field.
+# Usage: scripts/release/channel [path-to-channel-file]
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+channel_file="${1:-$repo_root/.release-channel.json}"
+
+if [[ ! -f "$channel_file" ]]; then
+  echo "FAIL: release-channel config not found: $channel_file" >&2
+  exit 1
+fi
+
+if ! jq empty "$channel_file" 2>/dev/null; then
+  echo "FAIL: $channel_file is not valid JSON" >&2
+  exit 1
+fi
+
+channel="$(jq -r '.channel // empty' "$channel_file")"
+if [[ -z "$channel" ]]; then
+  echo "FAIL: $channel_file missing or empty .channel" >&2
+  exit 1
+fi
+
+prerelease="$(jq -r 'if .prerelease == null then "" else (.prerelease | tostring) end' "$channel_file")"
+if [[ "$prerelease" != "true" && "$prerelease" != "false" ]]; then
+  echo "FAIL: $channel_file .prerelease must be a boolean (true/false), got: ${prerelease:-<absent>}" >&2
+  exit 1
+fi
+
+echo "OK: channel=$channel prerelease=$prerelease"

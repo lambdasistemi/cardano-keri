@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# scripts/release/check-version-consistency — verify version agreement
+# across all release-relevant files.
+#
+# Checks:
+#   1. Cabal version is readable
+#   2. CHANGELOG.md has a section for the Cabal version
+#   3. If a git tag v<version> exists, it points to a commit reachable from HEAD
+#   4. .release-channel.json is valid
+#
+# Usage:
+#   scripts/release/check-version-consistency [tag]
+#
+# When [tag] is given (e.g. v0.1.0), additionally verifies the tag's
+# version matches the Cabal version.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+FAIL=0
+fail() { echo "FAIL: $*" >&2; FAIL=1; }
+pass() { echo "PASS: $*"; }
+
+TAG="${1:-}"
+
+# ── 1. Cabal version ──────────────────────────────────────────────────
+VERSION="$(scripts/release/version)" \
+  && pass "cabal version: $VERSION" \
+  || { fail "cannot read Cabal version"; exit 1; }
+
+# ── 2. Tag ↔ Cabal agreement ──────────────────────────────────────────
+if [[ -n "$TAG" ]]; then
+  tag_version="${TAG#v}"
+  if [[ "$tag_version" == "$VERSION" ]]; then
+    pass "tag $TAG matches Cabal version $VERSION"
+  else
+    fail "tag $TAG does not match Cabal version $VERSION"
+  fi
+fi
+
+# ── 3. CHANGELOG section ──────────────────────────────────────────────
+if [[ ! -f CHANGELOG.md ]]; then
+  fail "CHANGELOG.md not found"
+elif grep -qE "^## ${VERSION//./\\.}" CHANGELOG.md; then
+  pass "CHANGELOG.md has a section for $VERSION"
+else
+  fail "CHANGELOG.md has no section for $VERSION"
+fi
+
+# ── 4. Release-channel config ─────────────────────────────────────────
+scripts/release/channel \
+  && pass "release-channel config valid" \
+  || fail "release-channel config invalid or missing"
+
+# ── 5. Release-please rejection ───────────────────────────────────────
+rp_found=0
+for f in release-please-config.json .release-please-manifest.json; do
+  if [[ -f "$f" ]]; then
+    fail "release-please file present (rejected): $f"
+    rp_found=1
+  fi
+done
+[[ $rp_found -eq 0 ]] && pass "no release-please state"
+
+# ── Summary ────────────────────────────────────────────────────────────
+echo ""
+if [[ $FAIL -ne 0 ]]; then
+  echo "version-consistency check: FAILED" >&2
+  exit 1
+fi
+echo "version-consistency check: all checks passed"

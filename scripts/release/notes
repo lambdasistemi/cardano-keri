@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# scripts/release/notes — generate release notes from conventional commits.
+#
+# Usage:
+#   scripts/release/notes [version]
+#
+# Prints Markdown release notes for the given version (default: cabal version).
+# Groups commits by conventional-commit type. Intended for pasting into a
+# GitHub release body.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+version="${1:-$(scripts/release/version)}"
+tag="v${version}"
+
+# Determine the commit range: from the previous tag to this tag (or HEAD).
+prev_tag="$(git tag --sort=-creatordate | grep -v "^${tag}$" | head -1 || true)"
+if [[ -n "$prev_tag" ]]; then
+  range="${prev_tag}..${tag}"
+  # Fall back to HEAD if the tag doesn't exist yet.
+  git rev-parse --verify "$tag" >/dev/null 2>&1 || range="${prev_tag}..HEAD"
+else
+  git rev-parse --verify "$tag" >/dev/null 2>&1 && range="$tag" || range="HEAD"
+fi
+
+echo "# ckeri ${version}"
+echo ""
+
+for type_label in "feat:Features" "fix:Bug Fixes" "perf:Performance" "refactor:Refactoring" "docs:Documentation" "test:Testing" "chore:Maintenance" "build:Build"; do
+  prefix="${type_label%%:*}"
+  label="${type_label##*:}"
+  entries="$(git log --oneline --no-merges --grep="^${prefix}" "$range" 2>/dev/null \
+    | sed 's/^[a-f0-9]* //' || true)"
+  if [[ -n "$entries" ]]; then
+    echo "## ${label}"
+    echo ""
+    while IFS= read -r line; do
+      echo "- ${line}"
+    done <<< "$entries"
+    echo ""
+  fi
+done

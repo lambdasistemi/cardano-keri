@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# scripts/release/changelog — validate or generate a CHANGELOG.md section.
+#
+# Usage:
+#   scripts/release/changelog check [version]   # verify a section exists (default: cabal version)
+#   scripts/release/changelog init              # create CHANGELOG.md with an Unreleased section
+#   scripts/release/changelog add <version>     # add a section for <version> with conventional-commit entries
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+cmd="${1:-check}"
+
+case "$cmd" in
+  check)
+    version="${2:-$(scripts/release/version)}"
+    if [[ ! -f CHANGELOG.md ]]; then
+      echo "FAIL: CHANGELOG.md not found" >&2
+      exit 1
+    fi
+    if grep -qE "^## ${version//./\\.}" CHANGELOG.md; then
+      echo "OK: CHANGELOG.md has a section for $version"
+    else
+      echo "FAIL: CHANGELOG.md has no section for $version" >&2
+      exit 1
+    fi
+    ;;
+
+  init)
+    if [[ -f CHANGELOG.md ]]; then
+      echo "CHANGELOG.md already exists" >&2
+      exit 1
+    fi
+    cat > CHANGELOG.md <<'EOF'
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## Unreleased
+EOF
+    echo "Created CHANGELOG.md"
+    ;;
+
+  add)
+    version="${2:?usage: scripts/release/changelog add <version>}"
+    if [[ ! -f CHANGELOG.md ]]; then
+      echo "FAIL: CHANGELOG.md not found; run 'scripts/release/changelog init' first" >&2
+      exit 1
+    fi
+    if grep -qE "^## ${version//./\\.}" CHANGELOG.md; then
+      echo "Section for $version already exists" >&2
+      exit 1
+    fi
+
+    # Gather conventional-commit entries since the last tag (or all history).
+    last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+    if [[ -n "$last_tag" ]]; then
+      range="${last_tag}..HEAD"
+    else
+      range="HEAD"
+    fi
+
+    {
+      echo "## ${version}"
+      echo ""
+      # Group by type
+      for type_label in "feat:Added" "fix:Fixed" "perf:Changed" "refactor:Changed" "docs:Documentation" "test:Testing" "chore:Maintenance"; do
+        prefix="${type_label%%:*}"
+        label="${type_label##*:}"
+        entries="$(git log --oneline --no-merges --grep="^${prefix}" "$range" 2>/dev/null \
+          | sed 's/^[a-f0-9]* //' \
+          | sed "s/^${prefix}[(:]*//" \
+          | sed 's/^)//' \
+          | sed 's/^ *//' || true)"
+        if [[ -n "$entries" ]]; then
+          echo "### ${label}"
+          echo ""
+          while IFS= read -r line; do
+            echo "- ${line}"
+          done <<< "$entries"
+          echo ""
+        fi
+      done
+    } > /tmp/changelog-section-$$
+
+    # Insert after the "## Unreleased" block (or at the top if no Unreleased).
+    if grep -q '^## Unreleased' CHANGELOG.md; then
+      # Insert after the Unreleased section's content
+      sed -i '/^## Unreleased/r /tmp/changelog-section-$$' CHANGELOG.md
+    else
+      # Insert after the header block
+      sed -i '/^and this project adheres/r /tmp/changelog-section-$$' CHANGELOG.md
+    fi
+    rm -f /tmp/changelog-section-$$
+    echo "Added section for $version to CHANGELOG.md"
+    ;;
+
+  *)
+    echo "usage: scripts/release/changelog {check|init|add}" >&2
+    exit 1
+    ;;
+esac

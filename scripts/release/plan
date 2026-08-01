@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# scripts/release/plan — release planner entry point.
+#
+# Called by .github/workflows/release-plan.yml on push-to-main and manual
+# dispatch. Assumes the checkout was done with an App-token so that git
+# pushes trigger downstream workflows.
+#
+# Logic:
+#   1. Read the Cabal version (single source of truth).
+#   2. If tag v<version> already exists → nothing to do.
+#   3. If an open release PR (release/cabal-release) exists → nothing to do.
+#   4. If CHANGELOG.md has a section for the version but no tag →
+#      the release PR was merged; create and push the tag.
+#   5. Otherwise → bump is needed; add a changelog section, create the
+#      release branch, push, and open a PR.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+version="$(scripts/release/version)"
+tag="v${version}"
+branch="release/cabal-release"
+
+echo "release/plan: cabal version=$version tag=$tag"
+
+# ── Already tagged? ────────────────────────────────────────────────────
+if git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
+  echo "release/plan: tag $tag already exists — nothing to do"
+  exit 0
+fi
+
+# ── Open release PR? ──────────────────────────────────────────────────
+if gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/null | grep -qv '^0$'; then
+  echo "release/plan: open PR from $branch exists — waiting for merge"
+  exit 0
+fi
+
+# ── Changelog section present? → tag ──────────────────────────────────
+if [[ -f CHANGELOG.md ]] && grep -qE "^## ${version//./\\.}" CHANGELOG.md; then
+  echo "release/plan: changelog section for $version found — creating tag $tag"
+  git tag "$tag"
+  git push origin "$tag"
+  echo "release/plan: pushed $tag"
+  exit 0
+fi
+
+# ── Otherwise: prepare a release PR ───────────────────────────────────
+echo "release/plan: no tag, no open PR, no changelog section — preparing release PR"
+
+# Ensure CHANGELOG.md exists.
+if [[ ! -f CHANGELOG.md ]]; then
+  scripts/release/changelog init
+fi
+
+# Add a changelog section for this version.
+scripts/release/changelog add "$version"
+
+git checkout -b "$branch"
+git add CHANGELOG.md
+git commit -m "chore(release): prepare ${version}"
+git push -u origin "$branch"
+
+gh pr create \
+  --title "chore(release): ${version}" \
+  --body "Release preparation for ${version}. Merging this PR does not publish; the next planner run on main will create the tag." \
+  --head "$branch" \
+  --base main
+
+echo "release/plan: opened release PR for $version"

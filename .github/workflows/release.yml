@@ -1,0 +1,136 @@
+name: Linux Release
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to the dev-linux release channel"
+        required: false
+        default: "no"
+        type: choice
+        options: ["no", "yes"]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-release:
+    runs-on: nixos
+    env:
+      # Publication is gated: only tag-push and explicit publish=yes dispatch
+      # may mutate the GitHub release. PR mode always builds smoke-only.
+      publish: >-
+        ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) && 'true'
+            || (github.event_name == 'workflow_dispatch' && inputs.publish == 'yes' && 'true'
+            || 'false') }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: paolino
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Build Linux artifacts
+        run: |
+          if [ "$publish" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
+            # Tag-push: build the staged release artifacts (bare version).
+            nix build ./offchain#linux-release-artifacts \
+              --extra-experimental-features 'nix-command flakes'
+          else
+            # PR / manual dispatch: build the staged dev artifacts (version-shortRev).
+            nix build ./offchain#linux-dev-release-artifacts \
+              --extra-experimental-features 'nix-command flakes'
+          fi
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          # The flake's linux(-dev)-release-artifacts package already stages all
+          # three formats into one flat directory with correctly-versioned names,
+          # handling the AppImage-is-a-file vs DEB/RPM-are-directories distinction.
+          # Copy that single result's contents; no per-format guessing, no silent
+          # swallowing of cp failures.
+          cp -rL result/* dist/
+          ls -la dist/
+
+      - name: Smoke-test artifacts
+        run: |
+          # smoke-linux.sh extracts the DEB/RPM to run the binary inside, so it
+          # needs dpkg-deb, rpm2cpio, and cpio on PATH. The bare runner shell
+          # does not guarantee these; provide them via a nix shell (it augments
+          # PATH, so the script's host tools stay available too).
+          #
+          # The expected runtime version is the bare Cabal version in every mode:
+          # the binary reports `ckeri <cabal-version>` (Paths_cardano_keri), and
+          # the dev -<shortRev> suffix lives only in the artifact *filename* (which
+          # smoke-linux.sh locates by glob), never in the --version output. This
+          # matches the frozen gate, which passes --expected-version "$version".
+          version="$(scripts/release/version)"
+          nix shell --extra-experimental-features 'nix-command flakes' \
+            nixpkgs#dpkg nixpkgs#rpm nixpkgs#cpio --command \
+            scripts/release/smoke-linux.sh dist "$version"
+
+      - name: Create GitHub release (tag-push only)
+        if: env.publish == 'true' && github.event_name == 'push'
+        run: |
+          version="$(scripts/release/version)"
+          tag="v${version}"
+          channel="$(jq -r '.channel' .release-channel.json)"
+          prerelease="$(jq -r '.prerelease' .release-channel.json)"
+
+          notes_file="$(mktemp)"
+          scripts/release/notes "$version" > "$notes_file"
+
+          prerelease_flag=""
+          [ "$prerelease" = "true" ] && prerelease_flag="--prerelease"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --title "ckeri ${version} [${channel}]" \
+              --notes-file "$notes_file" \
+              $prerelease_flag
+          else
+            gh release create "$tag" \
+              --title "ckeri ${version} [${channel}]" \
+              --notes-file "$notes_file" \
+              $prerelease_flag
+          fi
+          rm -f "$notes_file"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload release assets (tag-push only)
+        if: env.publish == 'true' && github.event_name == 'push'
+        run: |
+          version="$(scripts/release/version)"
+          tag="v${version}"
+          for f in dist/*; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload to dev-linux channel (manual dispatch only)
+        if: env.publish == 'true' && github.event_name == 'workflow_dispatch'
+        run: |
+          tag="dev-linux"
+
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "Development builds (Linux)" \
+              --notes "Continuous development builds. Not for production use."
+          fi
+
+          for f in dist/*; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}

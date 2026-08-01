@@ -13,9 +13,6 @@ permissions:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Mint a scoped release token
         id: app-token
@@ -30,6 +27,11 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+
+      - name: Export App token for gh CLI
+        run: |
+          echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
+          echo "GITHUB_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
 
       - name: Configure git commit identity
         run: |

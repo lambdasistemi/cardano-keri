@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# scripts/release/test-plan — fixture tests for the control flow in
+# scripts/release/plan.
+#
+# Creates throwaway git repositories that simulate specific release states
+# and asserts the planner takes the correct branch.  Run RED before the
+# control-flow fix (steady state exits early), GREEN after.
+#
+# Usage: scripts/release/test-plan
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+FAIL=0
+fail() { echo "FAIL: $*" >&2; FAIL=1; }
+pass() { echo "PASS: $*"; }
+
+# ── helpers ───────────────────────────────────────────────────────────
+
+# setup_repo <workdir> <bare>
+# Initialises a git repo with the release scripts, a cabal file carrying
+# version 0.1.0, a changelog with a ## 0.1.0 section, a v0.1.0 tag, and
+# a bare "origin" remote so git push works offline.
+setup_repo() {
+  local workdir="$1" bare="$2"
+
+  git -C "$workdir" init -q
+  git -C "$workdir" config user.email "test@test.com"
+  git -C "$workdir" config user.name "Test"
+
+  # Copy the release scripts so repo_root resolves to $workdir.
+  mkdir -p "$workdir/scripts/release"
+  cp "$SCRIPT_DIR"/plan "$SCRIPT_DIR"/version \
+     "$SCRIPT_DIR"/next-version "$SCRIPT_DIR"/changelog \
+     "$workdir/scripts/release/"
+  chmod +x "$workdir/scripts/release/"*
+
+  # Cabal file (single source of truth for the version).
+  mkdir -p "$workdir/offchain"
+  cat > "$workdir/offchain/cardano-keri.cabal" <<'CABAL'
+name:          cardano-keri
+version:       0.1.0
+CABAL
+
+  # Changelog with a section for 0.1.0.
+  cat > "$workdir/CHANGELOG.md" <<'CHANGELOG'
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## Unreleased
+
+## 0.1.0
+
+### Fixed
+
+- initial release fixes
+CHANGELOG
+
+  git -C "$workdir" add .
+  git -C "$workdir" commit -q -m "chore(release): prepare 0.1.0"
+  git -C "$workdir" tag v0.1.0
+
+  # Bare remote so git push works.
+  git init -q --bare "$bare"
+  git -C "$workdir" remote add origin "$bare"
+  git -C "$workdir" push -q origin "$(git -C "$workdir" branch --show-current)"
+  git -C "$workdir" push -q origin v0.1.0
+}
+
+# stub_gh <workdir>
+# Creates a stub gh CLI in $workdir/bin that answers the two calls the
+# planner makes: "gh pr list" (no open PRs) and "gh pr create" (success).
+stub_gh() {
+  local workdir="$1"
+  mkdir -p "$workdir/bin"
+  cat > "$workdir/bin/gh" <<'GHSTUB'
+#!/usr/bin/env bash
+case "$1" in
+  pr)
+    case "$2" in
+      list)   echo "0" ;;
+      create) echo "https://github.com/test/test/pull/1" ;;
+    esac
+    ;;
+esac
+GHSTUB
+  chmod +x "$workdir/bin/gh"
+}
+
+# ── fixture cases ─────────────────────────────────────────────────────
+
+echo "=== plan control-flow fixture tests ==="
+echo ""
+
+# 1. STEADY STATE (the bug): tag v0.1.0 exists, changelog has ## 0.1.0,
+#    cabal says 0.1.0, and a fix: commit lands AFTER the tag.
+#    Before the fix: "tag v0.1.0 already exists — nothing to do" (exit 0).
+#    After the fix: reaches "next version=0.1.1 … preparing release PR".
+workdir="$(mktemp -d)"
+bare="$(mktemp -d)/origin.git"
+setup_repo "$workdir" "$bare"
+stub_gh "$workdir"
+
+echo "fix" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: correct edge case in parser"
+
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)" || true
+
+if echo "$output" | grep -q "preparing release PR"; then
+  pass "steady state: tag exists + new fix: commit → reaches next-version"
+elif echo "$output" | grep -q "already exists — nothing to do"; then
+  fail "steady state: tag exists + new fix: commit → hit early exit (the bug)"
+else
+  fail "steady state: unexpected output: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+# 2. Tag exists, NO new commits → truly nothing to do.
+workdir="$(mktemp -d)"
+bare="$(mktemp -d)/origin.git"
+setup_repo "$workdir" "$bare"
+stub_gh "$workdir"
+
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)" || true
+
+if echo "$output" | grep -q "no commits since — nothing to do"; then
+  pass "tag exists + no new commits → nothing to do"
+else
+  fail "tag exists + no new commits: unexpected output: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+# 3. Tag does NOT exist, changelog section present → create tag.
+workdir="$(mktemp -d)"
+bare="$(mktemp -d)/origin.git"
+setup_repo "$workdir" "$bare"
+stub_gh "$workdir"
+git -C "$workdir" tag -d v0.1.0 >/dev/null 2>&1
+
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)" || true
+
+if echo "$output" | grep -q "creating tag v0.1.0"; then
+  pass "tag missing + changelog section → creates tag"
+else
+  fail "tag missing + changelog section: unexpected output: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+# 4. Seed path: no tags, version 0.0.0, stale ## 0.0.0 → compute 0.1.0.
+workdir="$(mktemp -d)"
+bare="$(mktemp -d)/origin.git"
+git -C "$workdir" init -q
+git -C "$workdir" config user.email "test@test.com"
+git -C "$workdir" config user.name "Test"
+mkdir -p "$workdir/scripts/release" "$workdir/offchain"
+cp "$SCRIPT_DIR"/plan "$SCRIPT_DIR"/version \
+   "$SCRIPT_DIR"/next-version "$SCRIPT_DIR"/changelog \
+   "$workdir/scripts/release/"
+chmod +x "$workdir/scripts/release/"*
+cat > "$workdir/offchain/cardano-keri.cabal" <<'CABAL'
+name:          cardano-keri
+version:       0.0.0
+CABAL
+cat > "$workdir/CHANGELOG.md" <<'CHANGELOG'
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## Unreleased
+
+## 0.0.0
+
+### Maintenance
+
+- seed
+CHANGELOG
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "init"
+git init -q --bare "$bare"
+git -C "$workdir" remote add origin "$bare"
+git -C "$workdir" push -q origin "$(git -C "$workdir" branch --show-current)"
+stub_gh "$workdir"
+
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)" || true
+
+if echo "$output" | grep -q "next version=0.1.0"; then
+  pass "seed: no tags + stale 0.0.0 → computes 0.1.0"
+else
+  fail "seed: no tags + stale 0.0.0: unexpected output: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+echo ""
+if [[ $FAIL -ne 0 ]]; then
+  echo "plan tests: FAILED" >&2
+  exit 1
+fi
+echo "plan tests: all passed"

@@ -14,5 +14,8 @@ result-*
 # resolve-ticket live log
 WIP.md
 
+# Ticket-local immutable acceptance gate (runtime artifact)
+/gate.sh
+
 # keripy fixture regeneration venv (network-installed, not committed)
 /tmp/keri-venv*

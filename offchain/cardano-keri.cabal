@@ -184,6 +184,8 @@ executable ckeri-follower
     , cardano-keri:indexer
     , opt-env-conf          >=0.13 && <0.16
 
+  ghc-options:      -threaded
+
 test-suite deployment-tests
   import:           warnings
   type:             exitcode-stdio-1.0

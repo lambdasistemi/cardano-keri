@@ -264,6 +264,13 @@
             name = "follower-cli";
             runtimeInputs = [ ckeri-follower-exe indexer-tests-exe ];
             text = ''
+              # The shipped package must be linked with the threaded RTS: a
+              # non-threaded runtime lets Haskeline's blocking foreground read
+              # starve the follower's own async before it ever opens a node
+              # socket (see #188 Slice 1.5 diagnosis). Keep this a permanent,
+              # executable Nix check, not only a source-text grep.
+              rts_info=$(ckeri-follower +RTS --info -RTS)
+              grep -Fq '("RTS way", "rts_thr")' <<<"$rts_info"
               ckeri-follower --help >/dev/null
               indexer-tests --match "#188"
             '';

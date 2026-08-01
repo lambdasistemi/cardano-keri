@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# scripts/release/next-version — compute the next PVP/SemVer version.
+#
+# Usage: scripts/release/next-version <current-version>
+#
+# Operates on the git repository containing the current directory.
+# Prints the next version to stdout and exits 0.
+#
+# Two modes:
+#   SEED — when no v* tag exists anywhere in the repository, the first
+#          version is a deliberate choice (0.1.0), NOT derived from
+#          scanning history.  Those early commits were written before any
+#          release rule existed; scanning them would produce a number that
+#          looks derived but means nothing.
+#   COMPUTE — when a v* tag exists, classify commits since the latest tag
+#          using conventional-commit prefixes and bump accordingly:
+#            breaking (type! or BREAKING CHANGE body) in 0.x → minor
+#            breaking in >=1.x                              → major
+#            feat                                           → minor
+#            anything else (fix, chore, docs, …)            → patch
+#
+# The 0.x-breaking-stays-minor rule guarantees 1.0.0 is never reachable
+# by accident — a major bump requires an explicit non-zero major already
+# present in the Cabal file.
+set -euo pipefail
+
+current="${1:?usage: scripts/release/next-version <current-version>}"
+
+IFS='.' read -r major minor patch <<< "$current"
+
+# ── SEED: no v* tags → first release is 0.1.0 ────────────────────────
+# Deliberate choice, not computed.  See docs/user/releases.md.
+last_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+
+if [[ -z "$last_tag" ]]; then
+  echo "0.1.0"
+  exit 0
+fi
+
+# ── COMPUTE: classify commits since the last tag ─────────────────────
+range="${last_tag}..HEAD"
+
+bump="patch"
+
+# Breaking: ! suffix on type/scope  (feat!:, fix(scope)!:, etc.)
+if git log --format='%s' "$range" | grep -qE '^[a-z]+(\([^)]*\))?!:'; then
+  bump="breaking"
+# Breaking: BREAKING CHANGE line in the commit body
+elif git log --format='%b' "$range" | grep -q '^BREAKING CHANGE:'; then
+  bump="breaking"
+# Feature: feat or feat(scope)
+elif git log --format='%s' "$range" | grep -qE '^feat(\([^)]*\))?:'; then
+  bump="feature"
+fi
+
+# ── Apply the bump ───────────────────────────────────────────────────
+case "$bump" in
+  breaking)
+    if [[ "$major" -eq 0 ]]; then
+      # 0.x breaking → bump MINOR, reset PATCH.  Never reach 1.0.0.
+      echo "0.$((minor + 1)).0"
+    else
+      echo "$((major + 1)).0.0"
+    fi
+    ;;
+  feature)
+    echo "${major}.$((minor + 1)).0"
+    ;;
+  patch)
+    echo "${major}.${minor}.$((patch + 1))"
+    ;;
+esac

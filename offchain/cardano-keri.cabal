@@ -20,6 +20,7 @@ build-type:    Simple
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
 data-files:
   deployment-test/fixtures/*.cesr
+  docs/assets/swagger/query-api.json
   indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
 
@@ -128,6 +129,7 @@ library indexer
   default-language: GHC2021
   hs-source-dirs:   indexer
   build-depends:
+    , aeson
     , async
     , base
     , base16-bytestring
@@ -146,19 +148,31 @@ library indexer
     , containers
     , contra-tracer
     , haskeline
+    , http-types
+    , memory
     , microlens
     , opt-env-conf
     , ouroboros-network:api
+    , rocksdb-kv-transactions:kv-transactions
     , stm
     , text
+    , wai
+    , warp
 
   exposed-modules:
     Cardano.KERI.Indexer.App
+    Cardano.KERI.Indexer.Board
     Cardano.KERI.Indexer.Codecs
     Cardano.KERI.Indexer.Config
     Cardano.KERI.Indexer.Follower
+    Cardano.KERI.Indexer.Query.Server
+    Cardano.KERI.Indexer.Query.Tx
+    Cardano.KERI.Indexer.Query.Types
     Cardano.KERI.Indexer.Reads
     Cardano.KERI.Indexer.Shell
+
+  other-modules:    Paths_cardano_keri
+  autogen-modules:  Paths_cardano_keri
 
 executable ckeri
   import:           warnings
@@ -177,6 +191,20 @@ executable ckeri-follower
   default-language: GHC2021
   hs-source-dirs:   app
   main-is:          CkeriFollower.hs
+  autogen-modules:  Paths_cardano_keri
+  other-modules:    Paths_cardano_keri
+  build-depends:
+    , base
+    , cardano-keri:indexer
+    , opt-env-conf          >=0.13 && <0.16
+
+  ghc-options:      -threaded
+
+executable ckeri-query
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          CkeriQuery.hs
   autogen-modules:  Paths_cardano_keri
   other-modules:    Paths_cardano_keri
   build-depends:
@@ -229,8 +257,12 @@ test-suite indexer-tests
   other-modules:
     Cardano.KERI.Indexer.AppSpec
     Cardano.KERI.Indexer.AtomicitySpec
+    Cardano.KERI.Indexer.BoardSpec
     Cardano.KERI.Indexer.CodecsSpec
     Cardano.KERI.Indexer.FollowerSpec
+    Cardano.KERI.Indexer.Query.ServerSpec
+    Cardano.KERI.Indexer.Query.SwaggerDriftSpec
+    Cardano.KERI.Indexer.Query.TypesSpec
     Cardano.KERI.Indexer.ReadsSpec
     Cardano.KERI.Indexer.ResumeSpec
     Cardano.KERI.Indexer.RollbackSpec
@@ -259,6 +291,7 @@ test-suite indexer-tests
     , chain-follower
     , containers
     , hspec
+    , http-types
     , memory
     , microlens
     , opt-env-conf
@@ -272,6 +305,8 @@ test-suite indexer-tests
     , temporary
     , text
     , time
+    , wai
+    , wai-extra
 
   autogen-modules:  Paths_cardano_keri
 

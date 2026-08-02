@@ -332,6 +332,18 @@
         "type": "github"
       }
     },
+    "docsSwagger": {
+      "flake": false,
+      "locked": {
+        "path": "../docs/assets/swagger",
+        "type": "path"
+      },
+      "original": {
+        "path": "../docs/assets/swagger",
+        "type": "path"
+      },
+      "parent": []
+    },
     "empty-flake": {
       "locked": {
         "lastModified": 1630400035,
@@ -1579,6 +1591,7 @@
         "bundlers": "bundlers",
         "cardano-node": "cardano-node",
         "cardano-node-clients": "cardano-node-clients",
+        "docsSwagger": "docsSwagger",
         "flake-parts": "flake-parts",
         "haskellNix": "haskellNix_2",
         "iohkNix": "iohkNix_2",

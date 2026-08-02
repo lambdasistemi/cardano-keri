@@ -47,6 +47,17 @@ indexer-unit:
 follower-check:
     cd offchain && nix run --quiet .#follower-cli
 
+# #176 Slice 1: run the query-endpoint contract suite (application-level
+# JSON/freshness/transaction-count/board-authenticity tests).
+query-endpoint-check:
+    cd offchain && nix run --quiet .#query-endpoint-check
+
+# #176 Slice 1: static guard proving the query HTTP layer owns no mutable
+# derived state (FR-4), proven able to fail against its own positive-control
+# fixture before trusting a clean scan of the real source.
+query-endpoint-cache-guard:
+    ./scripts/check-query-endpoint-cache.sh
+
 # Check the opt-env-conf CLI surface and option/environment/YAML precedence.
 check-ckeri-cli:
     cd offchain && nix build --quiet .#ckeri
@@ -308,7 +319,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit follower-check check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit indexer-unit follower-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

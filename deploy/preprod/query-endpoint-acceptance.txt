@@ -1,0 +1,92 @@
+query-endpoint-acceptance.txt
+Dated: 2026-08-01 (declarative rebuild and decisive recovery test),
+report compiled 2026-08-02.
+
+Source of record: /tmp/ms-keri-1/e171/cardano-keri-176/evidence/
+s3-live-generation94-acceptance.md and .../evidence/
+note017-recovery-and-generation-timeline.md (infrastructure ticket-owner
+runtime root, cardano-keri #176). This report restates those raw records;
+it does not add or infer any new fact.
+
+IMPORTANT PROVENANCE NOTE: the checked-in operator helper
+(scripts/check-query-endpoint-preprod.sh, handoff sha256
+cabdbf43d3cdff8ec0d0f63958cd2ea7dd6fc60f61bf3bbd5a48e2db481e4e07) was NOT
+run with --live on 2026-08-02 to produce this report. NOTE-017 explicitly
+forbids disturbing the live cardano-preprod/ckeri-query-preprod services
+merely to regenerate evidence that already exists. The helper has only
+been checked non-live on 2026-08-02: bash -n, shellcheck, --help,
+bare/no-live invocation, and its own --selftest all exit 0. This
+transcript therefore records the historic, already-executed, and already
+owner-accepted 2026-08-01 live journey; it is not the helper's own
+output, and the helper's live behavior against a real host remains
+unexercised until an operator explicitly runs it with --live in a future
+round.
+
+== Declarative rebuild ==
+
+Generation 94 was brought up by a declarative rebuild:
+
+  $ sudo nixos-rebuild switch --flake \
+      /code/infrastructure-cardano-keri-176/nixos/development#default
+
+Pre-switch generation: 93. Immediate rebuild start: 2026-08-01T17:17:22Z,
+with / at 47,754,354,688 bytes free. Exit status: 0; no disk threshold
+was crossed. Post-switch generation: 94, profile system-94-link, timestamp
+2026-08-01T17:17:39.161503679Z. Stabilized post-switch /: 47,750,377,472
+bytes free (peak observed burn 5,619,712 bytes). New ckeri-query-preprod
+container start: 2026-08-01T17:19:31.846318327Z. This is the declarative
+rebuild that carries the read-only IPC-directory mount
+(/code/cardano-preprod/ipc -> /ipc) validated by this ticket's S3 slice.
+
+== Decisive upstream restart recovery test ==
+
+The query instance was not restarted at any point during this test; only
+the real cardano-preprod upstream container was stopped and started.
+
+Pre-outage baseline, 2026-08-01T17:20:33Z: query PID 3435491 connected,
+as_of_slot before the outage = 129921603. Container, query, and systemd
+restart counts were all zero. Host socket inode: 57952269.
+
+The cardano-preprod container was stopped. Within one second, the public
+endpoint (https://ckeri.dev.plutimus.com) reported readiness false with
+upstream disconnected, and the M1 checkpoint route returned HTTP 503 with
+only the structured service-unavailable envelope -- no checkpoint
+payload.
+
+The cardano-preprod container was started again and became healthy. It
+recreated the node socket as inode 57951709. Without restarting or
+recreating the query process, public readiness automatically became
+connected on recovery attempt 5, and as_of_slot after recovery advanced
+to 129921648.
+
+Across the entire outage and recovery: query PID unchanged (3435491
+throughout), and restart count 0 for the container, the query process,
+and the systemd unit -- confirming automatic recovery happened without
+the query service being restarted, recreated, or otherwise imperatively
+brought up. The M1 checkpoint route returned HTTP 200 again after
+recovery, with the accepted transaction
+ccf10efe3b90833374cf712fdbe2b246f88aadf34c170c9074d16754cdf5c6f2#0
+(sequence/native sequence 1, 2-of-5 key threshold, three witnesses,
+witness threshold 2).
+
+Final live-surface evidence was recorded at 2026-08-01T17:21:20Z. The
+decisive sequence -- pre-outage baseline through confirmed recovery --
+ran within the 47-second interval beginning at the 17:20:33Z pre-restart
+sample.
+
+== Public surface at acceptance ==
+
+https://ckeri.dev.plutimus.com/ready returned readiness true, slot
+129921673, lag 0. /swagger.json returned HTTP 200,
+application/json, 9,685 bytes. TLS 1.3, certificate subject
+CN=ckeri.dev.plutimus.com, issuer Let's Encrypt YR1; curl hostname
+verification succeeded without -k, over HTTP/2.
+
+== Store size ==
+
+At the same acceptance sample: store 75 MiB allocated, 296,947 apparent
+bytes (RocksDB preallocates, so allocated and apparent measures diverge;
+both are recorded per standing practice). The mandatory 24-hour
+follow-up sample is tracked separately and was due around
+2026-08-02T16:54Z; it is not part of this declarative-rebuild/recovery
+acceptance record.

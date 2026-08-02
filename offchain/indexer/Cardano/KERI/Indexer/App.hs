@@ -2,18 +2,18 @@
 
 {- |
 Module      : Cardano.KERI.Indexer.App
-Description : Composition root for the standalone runnable follower
+Description : Composition root for the hosted query service
 
 Combines the existing 'Cardano.KERI.Indexer.Config.IndexerConfig' opt-env-conf
 surface with a required deployment manifest path, loads the manifest, builds
 the checkpoint read view and chain-sync configuration via
 'Cardano.KERI.Indexer.Follower.mkChainSyncConfig', and runs the one-process
-lifetime: 'Cardano.Node.Client.UTxOIndexer.Indexer.withRocksDBIndexer' owns the
-store, 'Cardano.Node.Client.UTxOIndexer.Follower.withChainSyncFollower' runs
-as its linked async, and 'Cardano.KERI.Indexer.Shell.runShell' stays in the
-foreground on the same handle. 'runFollowerAppWith' parameterizes the indexer
-opener, the follower bring-up function, and the interactive action so the
-async-failure/lifetime seam is testable without a live node or RocksDB.
+lifetime: 'Cardano.Node.Client.UTxOIndexer.Indexer.withRocksDBIndexerRunner'
+owns the store, 'Cardano.Node.Client.UTxOIndexer.Follower.withChainSyncFollower'
+runs as its linked async, and the HTTP application serves from the same
+handle. 'runQueryAppWith' parameterizes the indexer-plus-runner opener, the
+follower bring-up function, and the HTTP-serving action so the
+async-failure/lifetime seam is testable without a live node, RocksDB, or Warp.
 -}
 module Cardano.KERI.Indexer.App (
     FollowerSettings (..),
@@ -22,8 +22,6 @@ module Cardano.KERI.Indexer.App (
     loadManifestOrDie,
     mkCheckpointView,
     decodePolicyId,
-    runFollowerAppWith,
-    runFollowerApp,
     QuerySettings (..),
     runQueryAppWith,
     runQueryApp,
@@ -53,11 +51,6 @@ import Cardano.KERI.Indexer.Query.Tx (
 import Cardano.KERI.Indexer.Reads (
     CheckpointView (..),
  )
-import Cardano.KERI.Indexer.Shell (
-    QueryAction,
-    localQueryAction,
-    runShell,
- )
 import Cardano.Ledger.Hashes (
     ScriptHash (..),
  )
@@ -78,7 +71,6 @@ import Cardano.Node.Client.UTxOIndexer.Follower (
  )
 import Cardano.Node.Client.UTxOIndexer.Indexer (
     IndexerHandle,
-    withRocksDBIndexer,
     withRocksDBIndexerRunner,
  )
 import Cardano.Node.Client.UTxOIndexer.Types (
@@ -169,7 +161,7 @@ loadManifestOrDie path = do
 
 dieConcisely :: String -> IO a
 dieConcisely message = do
-    hPutStrLn stderr ("ckeri-follower: " <> message)
+    hPutStrLn stderr ("ckeri-query: " <> message)
     exitFailure
 
 {- | Build the checkpoint read view from the manifest's checkpoint address and
@@ -190,33 +182,6 @@ decodePolicyId hex = do
     case hashFromBytes bytes of
         Just h -> Right (PolicyID (ScriptHash h))
         Nothing -> Left "policy id must decode to exactly 28 bytes"
-
-{- | The injectable composition: the indexer opener, the follower bring-up
-function, and the interactive action are all parameters so tests can
-substitute an in-memory indexer, an injectable 'Cardano.Node.Client.N2C.ChainSync.ChainSyncRunner',
-and a non-terminal interactive stand-in.
--}
-runFollowerAppWith ::
-    (forall a. FilePath -> (IndexerHandle -> IO a) -> IO a) ->
-    (Tracer IO N2CEvent -> ChainSyncConfig -> IndexerHandle -> (FollowerHandle -> IO ()) -> IO ()) ->
-    (QueryAction -> FollowerHandle -> IO ()) ->
-    FollowerSettings ->
-    IO ()
-runFollowerAppWith withIndexer withFollower runInteractive settings = do
-    manifest <- loadManifestOrDie (fsManifestPath settings)
-    let chainSyncConfig = mkChainSyncConfig (fsIndexer settings) manifest
-    withIndexer (icStorePath (fsIndexer settings)) $ \handle ->
-        case mkCheckpointView handle manifest of
-            Left err -> dieConcisely err
-            Right view ->
-                withFollower nullN2CTracer chainSyncConfig handle $ \fh -> do
-                    link (fhAsync fh)
-                    runInteractive (localQueryAction view fh) fh
-
--- | Production wiring: real RocksDB store, real chain-sync follower, real shell.
-runFollowerApp :: FollowerSettings -> IO ()
-runFollowerApp =
-    runFollowerAppWith withRocksDBIndexer withChainSyncFollower (\qa _fh -> runShell qa)
 
 {- | 'FollowerSettings' plus the query service's own opt-env-conf listen
 port (FR-9: @--port@\/@CKERI_PORT@, default 8080). FR-9 also requires

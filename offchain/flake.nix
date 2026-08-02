@@ -228,8 +228,13 @@
             project.hsPkgs.cardano-keri.components.tests.unit-tests;
           indexer-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.indexer-tests;
-          ckeri-follower-exe =
-            project.hsPkgs.cardano-keri.components.exes.ckeri-follower;
+          # #177 Slice 1: the packaged `ckeri` executable itself, top-level
+          # (unlike e2eWiring.ckeriRunner below) so `backend-check` can prove
+          # its --help/status surface without depending on the Aiken
+          # blueprint e2eWiring exists for.
+          ckeri-exe = project.hsPkgs.cardano-keri.components.exes.ckeri;
+          cli-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.cli-tests;
           ckeri-query-exe =
             project.hsPkgs.cardano-keri.components.exes.ckeri-query;
 
@@ -327,27 +332,45 @@
                 };
               };
             in { inherit image; });
-          # #188: one strict-PATH app that proves BOTH the packaged executable
-          # is runnable (--help) AND the focused #188 tests pass, exposed
+          # #177 Slice 1: one strict-PATH app that proves the focused
+          # cli-tests suite passes AND the packaged `ckeri` binary's
+          # status/backend surface and fork-retirement absence hold, exposed
           # twice per the runCommand-invokes-app shape so `nix flake check`
-          # actually executes it rather than merely building a wrapper.
-          follower-cli-runner = pkgs.writeShellApplication {
-            name = "follower-cli";
-            runtimeInputs = [ ckeri-follower-exe indexer-tests-exe ];
+          # actually executes it rather than merely building a wrapper. This
+          # is `just backend-check`'s focused command.
+          backend-check-runner = pkgs.writeShellApplication {
+            name = "backend-check";
+            runtimeInputs = [ ckeri-exe cli-tests-exe pkgs.gnugrep ];
             text = ''
-              # The shipped package must be linked with the threaded RTS: a
-              # non-threaded runtime lets Haskeline's blocking foreground read
-              # starve the follower's own async before it ever opens a node
-              # socket (see #188 Slice 1.5 diagnosis). Keep this a permanent,
-              # executable Nix check, not only a source-text grep.
-              rts_info=$(ckeri-follower +RTS --info -RTS)
-              grep -Fq '("RTS way", "rts_thr")' <<<"$rts_info"
-              ckeri-follower --help >/dev/null
-              indexer-tests --match "#188"
+              cli-tests
+
+              top_help="$(ckeri --help)"
+              grep -q "status" <<<"$top_help"
+              grep -q "board" <<<"$top_help"
+              # The retired temporary follower's interactive-shell verbs
+              # must not reappear as top-level ckeri commands (board's own
+              # "list" subcommand is unaffected — checked only at this
+              # top level).
+              if grep -qE '^  (list|checkpoint|payer)( |$)' <<<"$top_help"; then
+                echo "backend-check: a retired shell verb is a top-level ckeri command" >&2
+                exit 1
+              fi
+
+              status_help="$(ckeri status --help)"
+              grep -q -- "--aid" <<<"$status_help"
+              grep -q "CKERI_AID" <<<"$status_help"
+              grep -q -- "--backend" <<<"$status_help"
+              grep -q "CKERI_BACKEND" <<<"$status_help"
+              grep -q -- "--endpoint" <<<"$status_help"
+              grep -q "CKERI_ENDPOINT" <<<"$status_help"
+              grep -q -- "--store" <<<"$status_help"
+              grep -q "CKERI_STORE" <<<"$status_help"
+              grep -q -- "--koios-token" <<<"$status_help"
+              grep -q "KOIOS_TOKEN" <<<"$status_help"
             '';
           };
-          follower-cli-check = pkgs.runCommand "follower-cli-check" { } ''
-            ${follower-cli-runner}/bin/follower-cli
+          backend-check-check = pkgs.runCommand "backend-check-check" { } ''
+            ${backend-check-runner}/bin/backend-check
             touch $out
           '';
 
@@ -587,7 +610,6 @@
           packages = {
             unit-tests = unit-tests-exe;
             indexer-tests = indexer-tests-exe;
-            ckeri-follower = ckeri-follower-exe;
             ckeri-query = ckeri-query-exe;
             format = format-runner;
             format-check = format-check-runner;
@@ -630,7 +652,7 @@
           checks = {
             unit-tests = unit-tests-check;
             indexer-tests = indexer-tests-check;
-            follower-cli = follower-cli-check;
+            backend-check = backend-check-check;
             query-endpoint = query-endpoint-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
@@ -658,17 +680,13 @@
               type = "app";
               program = "${indexer-tests-runner}/bin/indexer-tests";
             };
-            ckeri-follower = {
-              type = "app";
-              program = "${ckeri-follower-exe}/bin/ckeri-follower";
-            };
             ckeri-query = {
               type = "app";
               program = "${ckeri-query-exe}/bin/ckeri-query";
             };
-            follower-cli = {
+            backend-check = {
               type = "app";
-              program = "${follower-cli-runner}/bin/follower-cli";
+              program = "${backend-check-runner}/bin/backend-check";
             };
             query-endpoint-check = {
               type = "app";

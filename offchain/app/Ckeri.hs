@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Cardano.KERI.Deployment.CLI (Instructions, runInstructions)
+import Cardano.KERI.CLI (Instructions, runInstructions)
 import OptEnvConf (runSettingsParser)
 import Paths_cardano_keri (version)
 

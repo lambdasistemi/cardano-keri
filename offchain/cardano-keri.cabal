@@ -147,7 +147,6 @@ library indexer
     , cardano-node-clients:utxo-indexer-lib
     , containers
     , contra-tracer
-    , haskeline
     , http-types
     , memory
     , microlens
@@ -169,10 +168,39 @@ library indexer
     Cardano.KERI.Indexer.Query.Tx
     Cardano.KERI.Indexer.Query.Types
     Cardano.KERI.Indexer.Reads
-    Cardano.KERI.Indexer.Shell
 
   other-modules:    Paths_cardano_keri
   autogen-modules:  Paths_cardano_keri
+
+-- #177 Slice 1: the production `ckeri status` backend seam. Depends on both
+-- `deployment` (Koios/manifest/endpoint-board reuse) and `indexer` (the local
+-- transactional query engine) — acyclic since neither of those depends back
+-- on this library. See specs/177-backends/plan.md.
+library cli
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   cli
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-keri
+    , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-node-clients:utxo-indexer-lib
+    , http-conduit
+    , opt-env-conf                             >=0.13 && <0.16
+    , rocksdb-kv-transactions:kv-transactions
+    , stm
+    , text
+
+  exposed-modules:
+    Cardano.KERI.CLI
+    Cardano.KERI.CLI.Backend
+    Cardano.KERI.CLI.Backend.Endpoint
+    Cardano.KERI.CLI.Backend.Koios
+    Cardano.KERI.CLI.Backend.Local
 
 executable ckeri
   import:           warnings
@@ -183,22 +211,8 @@ executable ckeri
   other-modules:    Paths_cardano_keri
   build-depends:
     , base
-    , cardano-keri:deployment
-    , opt-env-conf             >=0.13 && <0.16
-
-executable ckeri-follower
-  import:           warnings
-  default-language: GHC2021
-  hs-source-dirs:   app
-  main-is:          CkeriFollower.hs
-  autogen-modules:  Paths_cardano_keri
-  other-modules:    Paths_cardano_keri
-  build-depends:
-    , base
-    , cardano-keri:indexer
-    , opt-env-conf          >=0.13 && <0.16
-
-  ghc-options:      -threaded
+    , cardano-keri:cli
+    , opt-env-conf      >=0.13 && <0.16
 
 executable ckeri-query
   import:           warnings
@@ -266,12 +280,10 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.ReadsSpec
     Cardano.KERI.Indexer.ResumeSpec
     Cardano.KERI.Indexer.RollbackSpec
-    Cardano.KERI.Indexer.ShellSpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
-    , async
     , base
     , base16-bytestring
     , bech32
@@ -309,6 +321,55 @@ test-suite indexer-tests
     , wai-extra
 
   autogen-modules:  Paths_cardano_keri
+
+-- #177 Slice 1: focused adapter/parser/dispatch contract tests for
+-- `cardano-keri:cli`. This is `just backend-check`'s focused command.
+test-suite cli-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   cli-test
+  main-is:          Main.hs
+  other-modules:
+    Cardano.KERI.CLI.Backend.ConfigSpec
+    Cardano.KERI.CLI.Backend.ContractSpec
+    Cardano.KERI.CLI.Backend.DispatchSpec
+    Cardano.KERI.CLI.Backend.EndpointSpec
+    Cardano.KERI.CLI.Backend.KoiosSpec
+    Cardano.KERI.CLI.Backend.LocalSpec
+    Cardano.KERI.CLI.ProductionSpec
+
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:cli
+    , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:utxo-indexer-lib
+    , containers
+    , hspec                                    >=2.11 && <2.12
+    , http-types
+    , microlens
+    , opt-env-conf
+    , plutus-core
+    , plutus-tx
+    , rocksdb-kv-transactions:kv-transactions
+    , stm
+    , text
+    , time
+    , wai
+    , warp
+
+  ghc-options:      -threaded -with-rtsopts=-N
 
 test-suite unit-tests
   import:           warnings

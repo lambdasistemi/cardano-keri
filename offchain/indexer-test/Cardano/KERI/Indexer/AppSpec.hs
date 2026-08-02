@@ -16,7 +16,6 @@ import Cardano.KERI.Indexer.App (
     QuerySettings (..),
     loadManifestResult,
     mkCheckpointView,
-    runFollowerAppWith,
     runQueryAppWith,
  )
 import Cardano.KERI.Indexer.Config (
@@ -38,7 +37,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Node.Client.UTxOIndexer.Follower (
     ChainSyncRunner,
-    withChainSyncFollower,
     withChainSyncFollowerUsing,
  )
 import Cardano.Node.Client.UTxOIndexer.Indexer (
@@ -76,9 +74,6 @@ import OptEnvConf.Args qualified as OptArgs
 import OptEnvConf.Capability qualified as OptCapability
 import OptEnvConf.EnvMap qualified as OptEnv
 import OptEnvConf.Run qualified as OptRun
-import System.Exit (
-    ExitCode (..),
- )
 import System.IO (
     hClose,
  )
@@ -104,7 +99,6 @@ spec = describe "#188 runnable follower app composition" $ do
     manifestLoadSpec
     checkpointViewSpec
     settingsParserSpec
-    lifetimeSpec
     queryLifetimeSpec
 
 -- ---------------------------------------------------------------------------
@@ -199,49 +193,8 @@ settingsParserSpec =
             fsManifestPath parsed `shouldBe` "/tmp/env-manifest.json"
 
 -- ---------------------------------------------------------------------------
--- process lifetime: rejection-before-prompt, async failure propagation
-
-lifetimeSpec :: Spec
-lifetimeSpec =
-    describe "runFollowerAppWith lifetime" $ do
-        it "fails before opening the prompt when the manifest path is invalid" $ do
-            let settings = FollowerSettings baseConfig "/nonexistent-188-dir/manifest.json"
-            outcome <-
-                try @ExitCode $
-                    runFollowerAppWith
-                        (\_path action -> withInMemoryIndexer action)
-                        withChainSyncFollower
-                        (\_qa _fh -> expectationFailure "must not reach the interactive shell")
-                        settings
-            case outcome of
-                Left (ExitFailure code) -> code `shouldBe` 1
-                Left ExitSuccess -> expectationFailure "expected ExitFailure, got ExitSuccess"
-                Right () -> expectationFailure "expected a concise ExitFailure before any interaction"
-
-        it "propagates a follower async failure instead of hanging the shell" $
-            withTempManifestFile validManifest $ \manifestPath -> do
-                let settings = FollowerSettings baseConfig manifestPath
-                result <-
-                    timeout (5 * 1_000_000) $
-                        try @SomeException $
-                            runFollowerAppWith
-                                (\_path action -> withInMemoryIndexer action)
-                                (withChainSyncFollowerUsing throwingRunner)
-                                (\_qa _fh -> forever (threadDelay maxBound))
-                                settings
-                case result of
-                    Nothing ->
-                        expectationFailure
-                            "runFollowerAppWith hung instead of propagating the follower failure"
-                    Just (Left err) ->
-                        show err `shouldContain` "#188 injected follower failure"
-                    Just (Right ()) ->
-                        expectationFailure
-                            "runFollowerAppWith returned normally despite an injected follower failure"
-
--- ---------------------------------------------------------------------------
--- process lifetime (#176 T176-S1-7): same shape as 'lifetimeSpec' above, for
--- 'runQueryAppWith'. Proves the one-indexer/one-follower/foreground-server
+-- process lifetime (#176 T176-S1-7) for 'runQueryAppWith'. Proves the
+-- one-indexer/one-follower/foreground-server
 -- invariant is executable, not source inspection: a follower async failure
 -- must take the HTTP action down instead of leaving a stale server
 -- answering, and the HTTP action must actually receive the real composed

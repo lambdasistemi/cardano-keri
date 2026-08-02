@@ -33,18 +33,18 @@ independent navigator review pass. Each slice is one bisect-safe commit with a
 
 ## Corrective Slice 1R — capability-safe fork retirement
 
-- [ ] T177-S1R-1 Freeze the complete six-verb inventory from base `8153606`,
+- [x] T177-S1R-1 Freeze the complete six-verb inventory from base `8153606`,
       classifying `status`/`list`/`checkpoint`/`payer` as retained capabilities
       and `help`/`quit` as excluded REPL affordances
-- [ ] T177-S1R-2 RED: focused production-surface tests fail because packaged
+- [x] T177-S1R-2 RED: focused production-surface tests fail because packaged
       `ckeri` does not yet expose every retained capability
-- [ ] T177-S1R-3 RED: separate no-loss and no-leak controls are each able to
+- [x] T177-S1R-3 RED: separate no-loss and no-leak controls are each able to
       fail on, respectively, a disconnected retained verb and an added
       forbidden affordance/output marker
-- [ ] T177-S1R-4 GREEN: route all four retained capabilities through the typed
+- [x] T177-S1R-4 GREEN: route all four retained capabilities through the typed
       backend seam with production configuration/rendering and named
       unsupported-capability errors without fallback
-- [ ] T177-S1R-5 Remove both mutations, pass focused/package/full gates, and
+- [x] T177-S1R-5 Remove both mutations, pass focused/package/full gates, and
       obtain independent navigator acceptance of the corrective behavior
 
 ## Slice 2 — user docs and truthful three-tier evidence

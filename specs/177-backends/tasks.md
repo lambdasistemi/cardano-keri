@@ -6,29 +6,29 @@ independent navigator review pass. Each slice is one bisect-safe commit with a
 
 ## Slice 1 — backend seam, production CLI, and fork retirement
 
-- [ ] T177-S1-1 RED: parser tests cover `--aid`, explicit local/endpoint/Koios
+- [x] T177-S1-1 RED: parser tests cover `--aid`, explicit local/endpoint/Koios
       selection, endpoint shorthand, default Koios, opt-env-conf inputs, and
       rejection of missing or cross-backend settings
-- [ ] T177-S1-2 RED: adapter contract tests cover common successful rendering,
+- [x] T177-S1-2 RED: adapter contract tests cover common successful rendering,
       malformed identifiers/payloads, stale or impossible freshness, named
       unsupported operations, and no fallback
-- [ ] T177-S1-3 RED: local mutation/rollback proves payload plus `as_of_slot`
+- [x] T177-S1-3 RED: local mutation/rollback proves payload plus `as_of_slot`
       come from one transaction and no derived cache survives
-- [ ] T177-S1-4 RED: endpoint tests consume exact #176 response shapes and
+- [x] T177-S1-4 RED: endpoint tests consume exact #176 response shapes and
       reject mismatched AID, HTTP 503, malformed JSON, and dishonest freshness
-- [ ] T177-S1-5 RED: Koios tests derive `as_of_slot` from supporting records,
+- [x] T177-S1-5 RED: Koios tests derive `as_of_slot` from supporting records,
       compare a fresh tip, and reject missing/incoherent provenance
-- [ ] T177-S1-6 GREEN: implement one typed query backend seam, the local,
+- [x] T177-S1-6 GREEN: implement one typed query backend seam, the local,
       endpoint, and Koios adapters, validated configuration, and one renderer
-- [ ] T177-S1-7 GREEN: route packaged `ckeri status` through the selected
+- [x] T177-S1-7 GREEN: route packaged `ckeri status` through the selected
       backend while preserving released Koios defaults and exact endpoint
       shorthand journey
-- [ ] T177-S1-8 Remove `ckeri-follower`, its interactive shell surface,
+- [x] T177-S1-8 Remove `ckeri-follower`, its interactive shell surface,
       package/app/check wiring, fork-only tests/docs/cast; retain engine/query
       code used by `ckeri` and `ckeri-query`
-- [ ] T177-S1-9 Prove dispatch wiring can fail by disconnecting one adapter,
+- [x] T177-S1-9 Prove dispatch wiring can fail by disconnecting one adapter,
       capture the named failure, restore, and rerun green
-- [ ] T177-S1-10 `just backend-check`, immutable slice gate, `./gate.sh`, and
+- [x] T177-S1-10 `just backend-check`, immutable slice gate, `./gate.sh`, and
       named Nix/package checks green; navigator verifies one behavior commit
 
 ## Slice 2 — user docs and truthful three-tier evidence

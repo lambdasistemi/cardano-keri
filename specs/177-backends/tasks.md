@@ -70,11 +70,11 @@ supersedes the earlier `list`/`checkpoint`/`payer` retirement classification.
 
 ## Orchestrator-owned completion
 
-- [ ] T177-O-1 Independently inspect both accepted commits/diffs, task stamps,
+- [x] T177-O-1 Independently inspect both accepted commits/diffs, task stamps,
       gate hashes, no-fork audit, and exact packaged binary help
 - [ ] T177-O-2 Push the branch, keep the issue-linked PR draft during work,
       and ensure assignment/labels/body/checks are correct
-- [ ] T177-O-3 Run fresh final `just ci` and `./gate.sh`, record filesystem
+- [x] T177-O-3 Run fresh final `just ci` and `./gate.sh`, record filesystem
       deltas, and confirm no live service or flake pin was changed
 - [ ] T177-O-4 Mark the PR ready only after three-tier evidence and CI are
       green; append `COMPLETE <pr> ready-for-review`; never self-merge

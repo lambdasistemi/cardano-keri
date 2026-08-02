@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
+## 0.2.0
+
+### Added
+
+- indexer): add transactional query endpoint
+
+### Fixed
+
+- release): use the App token for gh so release PRs get real CI
+
+### Documentation
+
+- publish hosted query journey
+- spec): align query JSON with acceptance contract
+- spec): freeze hosted query endpoint contract
+
+### Maintenance
+
+- 196): record the real RPM install evidence, close out the ticket
+- 196): record the real v0.1.1 acceptance and the full defect trail
+- retire legacy tracked gate script
+- ignore ticket gate runtime
+
 ## 0.1.1
 
 ### Fixed

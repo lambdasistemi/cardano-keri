@@ -12,12 +12,14 @@ slice, so there is no honest lag to report (never a fabricated zero).
 -}
 module Cardano.KERI.CLI.Backend.Local (mkLocalBackend, openLocalBackend) where
 
-import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive, qb64Verkey)
+import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive, qb64Aid, qb64Verkey)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
     CheckpointFields (..),
+    CheckpointListItem (..),
     Freshness (..),
+    PayerUtxoFields (..),
     QueryBackend (..),
     StatusView (..),
     WatchabilityFields (..),
@@ -34,7 +36,13 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Indexer.App (decodePolicyId)
 import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..))
 import Cardano.KERI.Indexer.Config (decodeAddress)
-import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..), watchabilityTx)
+import Cardano.KERI.Indexer.Query.Tx (
+    QueryHandle (..),
+    checkpointTx,
+    listCheckpointsTx,
+    payerUtxosTx,
+    watchabilityTx,
+ )
 import Cardano.KERI.Indexer.Query.Types (hexTxId, qb64Witness)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withRocksDBIndexerRunner)
 import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
@@ -52,6 +60,9 @@ mkLocalBackend handle =
         , qbStatus = localStatus handle
         , qbBoardByWitness = \_ ->
             pure (Left (UnsupportedCapability "board-by-witness is not exposed by the local backend in this slice"))
+        , qbListCheckpoints = localListCheckpoints handle
+        , qbCheckpointByAid = localCheckpointByAid handle
+        , qbPayerUtxos = localPayerUtxos handle
         }
 
 {- | Production wiring: decode the checkpoint\/board addresses once, then open
@@ -77,6 +88,20 @@ openLocalBackend manifest boardManifest storePath = do
                         aidText
             , qbBoardByWitness = \_ ->
                 pure (Left (UnsupportedCapability "board-by-witness is not exposed by the local backend in this slice"))
+            , qbListCheckpoints =
+                withRocksDBIndexerRunner storePath $ \_handle runner ->
+                    qbListCheckpoints
+                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+            , qbCheckpointByAid = \aidText ->
+                withRocksDBIndexerRunner storePath $ \_handle runner ->
+                    qbCheckpointByAid
+                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                        aidText
+            , qbPayerUtxos = \addressText ->
+                withRocksDBIndexerRunner storePath $ \_handle runner ->
+                    qbPayerUtxos
+                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                        addressText
             }
   where
     checkpoint = manifestCheckpoint manifest
@@ -101,6 +126,50 @@ localStatus handle aidText =
                             }
   where
     slotWord (Indexer.SlotNo w) = w
+
+localListCheckpoints :: QueryHandle cf op -> IO (Either BackendError (Freshness, [CheckpointListItem]))
+localListCheckpoints handle = do
+    (records, watermark) <- runTransaction (qhRunner handle) (listCheckpointsTx handle)
+    pure $
+        Right
+            ( localFreshness watermark
+            , map
+                ( \record ->
+                    CheckpointListItem
+                        { cliAid = TE.decodeUtf8 (qb64Aid (crAid record))
+                        , cliCheckpoint = checkpointFieldsOf record
+                        }
+                )
+                records
+            )
+
+localCheckpointByAid :: QueryHandle cf op -> Text -> IO (Either BackendError (Freshness, Maybe CheckpointFields))
+localCheckpointByAid handle aidText =
+    case decodeAid aidText of
+        Left err -> pure (Left (MalformedResponse err))
+        Right aid -> do
+            (record, watermark) <- runTransaction (qhRunner handle) (checkpointTx handle aid)
+            pure (Right (localFreshness watermark, checkpointFieldsOf <$> record))
+
+localPayerUtxos :: QueryHandle cf op -> Text -> IO (Either BackendError (Freshness, [PayerUtxoFields]))
+localPayerUtxos handle addressText =
+    case decodeAddress addressText of
+        Left err -> pure (Left (MalformedResponse (T.pack err)))
+        Right address -> do
+            (utxos, watermark) <- runTransaction (qhRunner handle) (payerUtxosTx handle address)
+            pure (Right (localFreshness watermark, map (payerFieldsOf . fst) utxos))
+
+localFreshness :: Maybe Indexer.SlotNo -> Freshness
+localFreshness watermark = Freshness (slotWord <$> watermark) Nothing
+  where
+    slotWord (Indexer.SlotNo w) = w
+
+payerFieldsOf :: Indexer.TxIn -> PayerUtxoFields
+payerFieldsOf txIn =
+    PayerUtxoFields
+        { pufTxId = hexTxId (Indexer.txInId txIn)
+        , pufOutputIndex = fromIntegral (Indexer.txInIx txIn)
+        }
 
 decodeAid :: Text -> Either Text BS.ByteString
 decodeAid aidText =

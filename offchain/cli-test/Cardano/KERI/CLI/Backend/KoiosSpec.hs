@@ -21,8 +21,20 @@ module Cardano.KERI.CLI.Backend.KoiosSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
-import Cardano.KERI.CLI.Backend (BackendError (..), Freshness (..))
-import Cardano.KERI.CLI.Backend.Koios (resolveKoiosActive, resolveKoiosFreshness)
+import Cardano.KERI.CLI.Backend (
+    BackendError (..),
+    CheckpointListItem (..),
+    Freshness (..),
+    PayerUtxoFields (..),
+ )
+import Cardano.KERI.CLI.Backend.Koios (
+    catchKoios,
+    resolveKoiosActive,
+    resolveKoiosFreshness,
+    resolveKoiosList,
+    resolveKoiosPayer,
+    resolveKoiosTransactionFreshness,
+ )
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetHistory (..),
@@ -44,6 +56,7 @@ import Cardano.KERI.Deployment.Manifest (
     SourceInfo (..),
  )
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
+import Control.Exception (AsyncException (ThreadKilled), throwIO, try)
 import Data.Aeson (Value)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -56,6 +69,8 @@ import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
 spec :: Spec
 spec = do
     freshnessSpec
+    retainedCapabilityFreshnessSpec
+    retainedCapabilityAdapterSpec
     activePrecedenceSpec
 
 freshnessSpec :: Spec
@@ -86,6 +101,163 @@ freshnessSpec = describe "resolveKoiosFreshness (T177-S1-5)" $ do
     it "a tip behind the checkpoint's own slot is an incoherent bound and fails closed" $
         resolveKoiosFreshness registrationFixture (Just registrationTxInfo) (Just (ChainTip 100))
             `shouldSatisfy` isMalformed
+
+retainedCapabilityFreshnessSpec :: Spec
+retainedCapabilityFreshnessSpec = describe "Koios retained list/payer provenance (T177-S1R)" $ do
+    it "checkpoint-list rows derive freshness from each supporting transaction and one fresh tip" $
+        resolveKoiosTransactionFreshness
+            ["list-tx-a", "list-tx-b"]
+            [ ChainTransactionInfo "list-tx-a" 129_700_000
+            , ChainTransactionInfo "list-tx-b" 129_700_005
+            ]
+            (Just (ChainTip 129_700_010))
+            `shouldBe` Right (Freshness (Just 129_700_000) (Just 10))
+
+    it "operation freshness is independent of requested-row and tx-info order" $ do
+        let expected = Right (Freshness (Just 129_700_000) (Just 10))
+        resolveKoiosTransactionFreshness
+            ["list-tx-a", "list-tx-b"]
+            [ ChainTransactionInfo "list-tx-a" 129_700_000
+            , ChainTransactionInfo "list-tx-b" 129_700_005
+            ]
+            (Just (ChainTip 129_700_010))
+            `shouldBe` expected
+        resolveKoiosTransactionFreshness
+            ["list-tx-b", "list-tx-a"]
+            [ ChainTransactionInfo "list-tx-b" 129_700_005
+            , ChainTransactionInfo "list-tx-a" 129_700_000
+            ]
+            (Just (ChainTip 129_700_010))
+            `shouldBe` expected
+
+    it "payer rows derive freshness from their supporting transaction and a fresh tip" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            [ChainTransactionInfo "payer-tx" 129_800_000]
+            (Just (ChainTip 129_800_009))
+            `shouldBe` Right (Freshness (Just 129_800_000) (Just 9))
+
+    it "missing supporting transaction provenance for a list/payer row fails closed" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            []
+            (Just (ChainTip 129_800_009))
+            `shouldSatisfy` isMalformed
+
+    it "duplicate supporting transaction provenance fails closed" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            [ ChainTransactionInfo "payer-tx" 129_800_000
+            , ChainTransactionInfo "payer-tx" 129_800_000
+            ]
+            (Just (ChainTip 129_800_009))
+            `shouldSatisfy` isMalformed
+
+    it "mismatched extra transaction provenance fails closed" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            [ ChainTransactionInfo "payer-tx" 129_800_000
+            , ChainTransactionInfo "unrequested-tx" 129_799_000
+            ]
+            (Just (ChainTip 129_800_009))
+            `shouldSatisfy` isMalformed
+
+    it "a missing fresh tip for list/payer rows fails closed" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            [ChainTransactionInfo "payer-tx" 129_800_000]
+            Nothing
+            `shouldSatisfy` isMalformed
+
+    it "a tip behind any supporting row fails closed" $
+        resolveKoiosTransactionFreshness
+            ["payer-tx"]
+            [ChainTransactionInfo "payer-tx" 129_800_000]
+            (Just (ChainTip 129_799_999))
+            `shouldSatisfy` isMalformed
+
+    it "an empty supporting set cannot borrow the observed tip as data provenance" $
+        resolveKoiosTransactionFreshness
+            []
+            []
+            (Just (ChainTip 129_800_009))
+            `shouldSatisfy` isMalformed
+
+    it "asynchronous cancellation is rethrown instead of becoming UpstreamUnavailable" $ do
+        outcome <-
+            try @AsyncException
+                (catchKoios (throwIO ThreadKilled) :: IO (Either BackendError ()))
+        outcome `shouldBe` Left ThreadKilled
+
+retainedCapabilityAdapterSpec :: Spec
+retainedCapabilityAdapterSpec = describe "Koios retained list/payer exact adapter results (T177-S1R)" $ do
+    it "decodes and validates current checkpoint UTxOs into typed list rows" $
+        resolveKoiosList
+            sampleManifest
+            [liveLookingUtxo]
+            [ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000]
+            (Just (ChainTip 129_700_010))
+            `shouldSatisfy` isExpectedList
+
+    it "fails closed when a checkpoint row is not at the manifest address" $
+        resolveKoiosList
+            sampleManifest
+            [liveLookingUtxo{chainAssetAddress = "wrong-address"}]
+            [ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000]
+            (Just (ChainTip 129_700_010))
+            `shouldSatisfy` isMalformed
+
+    it "rejects duplicate checkpoint UTxO references" $
+        resolveKoiosList
+            sampleManifest
+            [liveLookingUtxo, liveLookingUtxo]
+            [ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000]
+            (Just (ChainTip 129_700_010))
+            `shouldBe` Left (MalformedResponse "Koios returned duplicate UTxO references")
+
+    it "rejects two live checkpoint UTxOs that decode to the same AID" $
+        resolveKoiosList
+            sampleManifest
+            [ liveLookingUtxo
+            , liveLookingUtxo{chainAssetTxId = T.replicate 64 "2"}
+            ]
+            [ ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000
+            , ChainTransactionInfo (T.replicate 64 "2") 129_700_001
+            ]
+            (Just (ChainTip 129_700_010))
+            `shouldBe` Left (MalformedResponse "Koios returned duplicate live checkpoints for one AID")
+
+    it "validates current payer UTxOs and returns one conservative freshness envelope" $
+        resolveKoiosPayer
+            payerAddress
+            [payerUtxo]
+            [ChainTransactionInfo (chainAssetTxId payerUtxo) 129_800_000]
+            (Just (ChainTip 129_800_009))
+            `shouldBe` Right
+                ( Freshness (Just 129_800_000) (Just 9)
+                , [PayerUtxoFields (chainAssetTxId payerUtxo) 0]
+                )
+
+    it "fails closed when Koios returns a payer row for another address" $
+        resolveKoiosPayer
+            payerAddress
+            [payerUtxo{chainAssetAddress = "wrong-address"}]
+            [ChainTransactionInfo (chainAssetTxId payerUtxo) 129_800_000]
+            (Just (ChainTip 129_800_009))
+            `shouldSatisfy` isMalformed
+
+    it "rejects duplicate payer UTxO references" $
+        resolveKoiosPayer
+            payerAddress
+            [payerUtxo, payerUtxo]
+            [ChainTransactionInfo (chainAssetTxId payerUtxo) 129_800_000]
+            (Just (ChainTip 129_800_009))
+            `shouldBe` Left (MalformedResponse "Koios returned duplicate UTxO references")
+
+isExpectedList :: Either BackendError (Freshness, [CheckpointListItem]) -> Bool
+isExpectedList (Right (Freshness (Just 129_700_000) (Just 10), [item])) =
+    cliAid item == aidText
+isExpectedList _ = False
 
 activePrecedenceSpec :: Spec
 activePrecedenceSpec = describe "resolveKoiosActive (DIRECTION-001)" $ do
@@ -157,6 +329,17 @@ liveLookingUtxo =
             , cdSeq = 0
             , cdNativeSn = 0
             }
+
+payerAddress :: Text
+payerAddress = "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
+
+payerUtxo :: ChainAssetUtxo
+payerUtxo =
+    liveLookingUtxo
+        { chainAssetAddress = payerAddress
+        , chainAssetList = []
+        , chainAssetInlineDatum = Nothing
+        }
 
 burnHistory :: ChainAssetHistory
 burnHistory =

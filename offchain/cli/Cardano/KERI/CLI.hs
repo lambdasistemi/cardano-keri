@@ -17,13 +17,31 @@ module Cardano.KERI.CLI (
 ) where
 
 import Cardano.KERI.CLI.Backend (
+    BackendCommonSettings (..),
     BackendSettings (..),
+    CheckpointListView (..),
+    CheckpointSettings (..),
+    CheckpointView (..),
+    ListSettings (..),
+    PayerSettings (..),
+    PayerView (..),
+    QueryBackend (..),
+    backendCommonSettings,
     backendSettingsParser,
+    checkpointSettingsParser,
+    listSettingsParser,
+    payerSettingsParser,
     renderBackendError,
+    renderCheckpointListView,
+    renderCheckpointView,
+    renderPayerView,
     renderStatusView,
     resolveBackend,
+    runBackendCheckpointByAid,
+    runBackendListCheckpoints,
+    runBackendPayerUtxos,
     runBackendStatus,
-    selectBackend,
+    selectCommonBackend,
  )
 import Cardano.KERI.CLI.Backend.Endpoint (mkEndpointBackend)
 import Cardano.KERI.CLI.Backend.Koios (mkKoiosBackend)
@@ -65,6 +83,9 @@ data Instructions
     | Advance !AdvanceSettings
     | Close !CloseSettings
     | Status !BackendSettings
+    | List !ListSettings
+    | Checkpoint !CheckpointSettings
+    | Payer !PayerSettings
     | Board !BoardInstructions
 
 instance Opt.HasParser Instructions where
@@ -114,6 +135,18 @@ instance Opt.HasParser Instructions where
                     "Report an AID's checkpoint from a selected backend"
                     (Status <$> Opt.subConfig "status" backendSettingsParser)
                 , Opt.command
+                    "list"
+                    "List live checkpoints from a selected backend"
+                    (List <$> Opt.subConfig "list" listSettingsParser)
+                , Opt.command
+                    "checkpoint"
+                    "Report one checkpoint from a selected backend"
+                    (Checkpoint <$> Opt.subConfig "checkpoint" checkpointSettingsParser)
+                , Opt.command
+                    "payer"
+                    "List current payer UTxOs from a selected backend"
+                    (Payer <$> Opt.subConfig "payer" payerSettingsParser)
+                , Opt.command
                     "board"
                     "Operate the current on-chain endpoint catalog"
                     (Board <$> Opt.subConfig "board" boardInstructionsParser)
@@ -127,6 +160,9 @@ runInstructions = \case
     Advance settings -> runAdvance settings
     Close settings -> runClose settings
     Status settings -> runBackendStatusCLI settings
+    List settings -> runBackendListCLI settings
+    Checkpoint settings -> runBackendCheckpointCLI settings
+    Payer settings -> runBackendPayerCLI settings
     Board instructions -> runBoard instructions
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
@@ -135,33 +171,86 @@ constructor closures alone: the installed @--endpoint@ shortcut needs
 neither file and must not require a checkout to run (NOTE-032).
 -}
 runBackendStatusCLI :: BackendSettings -> IO ()
-runBackendStatusCLI settings =
-    case selectBackend settings of
+runBackendStatusCLI settings = do
+    backend <- resolveConfiguredBackend (backendCommonSettings settings)
+    result <- runBackendStatus backend (backendAid settings)
+    case result of
         Left err -> dieConcisely (T.unpack (renderBackendError err))
-        Right selected -> do
-            backend <-
-                resolveBackend
-                    ( \store -> do
-                        (manifest, boardManifest) <- loadManifests settings
-                        openLocalBackend manifest boardManifest store
-                    )
-                    (pure . mkEndpointBackend)
-                    ( \url token -> do
-                        (manifest, boardManifest) <- loadManifests settings
-                        pure (mkKoiosBackend manifest boardManifest url token)
-                    )
-                    selected
-            result <- runBackendStatus backend (backendAid settings)
-            case result of
-                Left err -> dieConcisely (T.unpack (renderBackendError err))
-                Right view -> putStrLn (T.unpack (renderStatusView view))
+        Right view -> putStrLn (T.unpack (renderStatusView view))
+
+runBackendListCLI :: ListSettings -> IO ()
+runBackendListCLI (ListSettings settings) = do
+    backend <- resolveConfiguredBackend settings
+    result <- runBackendListCheckpoints backend
+    case result of
+        Left err -> dieConcisely (T.unpack (renderBackendError err))
+        Right (freshness, checkpoints) ->
+            putStrLn $
+                T.unpack $
+                    renderCheckpointListView
+                        CheckpointListView
+                            { clvSource = qbSourceLabel backend
+                            , clvFreshness = freshness
+                            , clvCheckpoints = checkpoints
+                            }
+
+runBackendCheckpointCLI :: CheckpointSettings -> IO ()
+runBackendCheckpointCLI (CheckpointSettings aid settings) = do
+    backend <- resolveConfiguredBackend settings
+    result <- runBackendCheckpointByAid backend aid
+    case result of
+        Left err -> dieConcisely (T.unpack (renderBackendError err))
+        Right (freshness, checkpoint) ->
+            putStrLn $
+                T.unpack $
+                    renderCheckpointView
+                        CheckpointView
+                            { cvSource = qbSourceLabel backend
+                            , cvFreshness = freshness
+                            , cvAid = aid
+                            , cvCheckpoint = checkpoint
+                            }
+
+runBackendPayerCLI :: PayerSettings -> IO ()
+runBackendPayerCLI (PayerSettings address settings) = do
+    backend <- resolveConfiguredBackend settings
+    result <- runBackendPayerUtxos backend address
+    case result of
+        Left err -> dieConcisely (T.unpack (renderBackendError err))
+        Right (freshness, utxos) ->
+            putStrLn $
+                T.unpack $
+                    renderPayerView
+                        PayerView
+                            { pvSource = qbSourceLabel backend
+                            , pvFreshness = freshness
+                            , pvAddress = address
+                            , pvUtxos = utxos
+                            }
+
+resolveConfiguredBackend :: BackendCommonSettings -> IO QueryBackend
+resolveConfiguredBackend settings =
+    case selectCommonBackend settings of
+        Left err -> dieConcisely (T.unpack (renderBackendError err))
+        Right selected ->
+            resolveBackend
+                ( \store -> do
+                    (manifest, boardManifest) <- loadManifests settings
+                    openLocalBackend manifest boardManifest store
+                )
+                (pure . mkEndpointBackend)
+                ( \url token -> do
+                    (manifest, boardManifest) <- loadManifests settings
+                    pure (mkKoiosBackend manifest boardManifest url token)
+                )
+                selected
 
 -- | Read and validate both manifests, dying concisely on either failure.
-loadManifests :: BackendSettings -> IO (Manifest, EndpointBoardManifest)
+loadManifests :: BackendCommonSettings -> IO (Manifest, EndpointBoardManifest)
 loadManifests settings = do
-    manifest <- readManifest (backendManifest settings) >>= either dieConcisely pure
+    manifest <- readManifest (commonBackendManifest settings) >>= either dieConcisely pure
     boardManifest <-
-        readEndpointBoardManifest (backendBoardManifest settings)
+        readEndpointBoardManifest (commonBackendBoardManifest settings)
             >>= either dieConcisely pure
     pure (manifest, boardManifest)
 

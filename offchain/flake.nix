@@ -340,21 +340,17 @@
           # is `just backend-check`'s focused command.
           backend-check-runner = pkgs.writeShellApplication {
             name = "backend-check";
-            runtimeInputs = [ ckeri-exe cli-tests-exe pkgs.gnugrep ];
+            runtimeInputs = [ ckeri-exe cli-tests-exe pkgs.bash pkgs.coreutils pkgs.gnugrep ];
             text = ''
               cli-tests
 
               top_help="$(ckeri --help)"
               grep -q "status" <<<"$top_help"
               grep -q "board" <<<"$top_help"
-              # The retired temporary follower's interactive-shell verbs
-              # must not reappear as top-level ckeri commands (board's own
-              # "list" subcommand is unaffected — checked only at this
-              # top level).
-              if grep -qE '^  (list|checkpoint|payer)( |$)' <<<"$top_help"; then
-                echo "backend-check: a retired shell verb is a top-level ckeri command" >&2
-                exit 1
-              fi
+              capability_checker=${./scripts/check-follower-capabilities.sh}
+              bash "$capability_checker" --self-test
+              bash "$capability_checker" --no-loss "$(command -v ckeri)"
+              bash "$capability_checker" --no-leak "$(command -v ckeri)"
 
               status_help="$(ckeri status --help)"
               grep -q -- "--aid" <<<"$status_help"

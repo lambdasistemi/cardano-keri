@@ -15,10 +15,18 @@ module Cardano.KERI.CLI.Backend (
     -- * Freshness / rendered envelope
     Freshness (..),
     CheckpointFields (..),
+    CheckpointListItem (..),
+    CheckpointListView (..),
+    CheckpointView (..),
+    PayerUtxoFields (..),
+    PayerView (..),
     BoardFields (..),
     WatchabilityFields (..),
     StatusView (..),
     renderStatusView,
+    renderCheckpointListView,
+    renderCheckpointView,
+    renderPayerView,
 
     -- * Errors
     BackendError (..),
@@ -26,23 +34,39 @@ module Cardano.KERI.CLI.Backend (
 
     -- * The interface
     QueryBackend (..),
+    runBackendListCheckpoints,
+    runBackendCheckpointByAid,
+    runBackendPayerUtxos,
     runBackendStatus,
 
     -- * Selection / configuration
     Backend (..),
     BackendSettings (..),
+    BackendCommonSettings (..),
+    ListSettings (..),
+    CheckpointSettings (..),
+    PayerSettings (..),
     SelectedBackend (..),
     selectBackend,
+    selectCommonBackend,
     backendSettingsParser,
+    listSettingsParser,
+    checkpointSettingsParser,
+    payerSettingsParser,
+    backendCommonSettings,
 
     -- * Dispatch
     resolveBackend,
 ) where
 
+import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.Deployment.ChainIndex (KoiosToken (..))
+import Cardano.KERI.Indexer.Config (decodeAddress)
+import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import Data.Word (Word64)
 import OptEnvConf qualified as Opt
 
@@ -66,6 +90,46 @@ data CheckpointFields = CheckpointFields
     , cfCurrentThreshold :: !Threshold
     , cfWitnesses :: ![Text]
     , cfWitnessThreshold :: !Integer
+    }
+    deriving stock (Show, Eq)
+
+-- | One live checkpoint in a catalog result.
+data CheckpointListItem = CheckpointListItem
+    { cliAid :: !Text
+    , cliCheckpoint :: !CheckpointFields
+    }
+    deriving stock (Show, Eq)
+
+-- | Production rendering envelope for one checkpoint-list observation.
+data CheckpointListView = CheckpointListView
+    { clvSource :: !Text
+    , clvFreshness :: !Freshness
+    , clvCheckpoints :: ![CheckpointListItem]
+    }
+    deriving stock (Show, Eq)
+
+-- | Production rendering envelope for one checkpoint-by-AID observation.
+data CheckpointView = CheckpointView
+    { cvSource :: !Text
+    , cvFreshness :: !Freshness
+    , cvAid :: !Text
+    , cvCheckpoint :: !(Maybe CheckpointFields)
+    }
+    deriving stock (Show, Eq)
+
+-- | A payer UTxO's stable cross-backend identity.
+data PayerUtxoFields = PayerUtxoFields
+    { pufTxId :: !Text
+    , pufOutputIndex :: !Int
+    }
+    deriving stock (Show, Eq)
+
+-- | Production rendering envelope for one payer-address observation.
+data PayerView = PayerView
+    { pvSource :: !Text
+    , pvFreshness :: !Freshness
+    , pvAddress :: !Text
+    , pvUtxos :: ![PayerUtxoFields]
     }
     deriving stock (Show, Eq)
 
@@ -116,29 +180,69 @@ renderStatusView view =
             <> checkpointWords (svCheckpoint view)
             <> watchabilityWords (svWatchability view)
   where
-    checkpointWords Nothing = ["state", "NOT", "REGISTERED"]
-    checkpointWords (Just cf) =
-        [ "state"
-        , "ACTIVE"
-        , "seq"
-        , T.pack (show $ cfSequence cf)
-        , "native"
-        , T.pack (show $ cfNativeSequence cf)
-        , "keys"
-        , renderThreshold (cfCurrentThreshold cf) (length $ cfCurrentKeys cf)
-        , "witnesses"
-        , T.pack (show $ length $ cfWitnesses cf)
-        , "(toad"
-        , T.pack (show $ cfWitnessThreshold cf) <> ")"
-        , "tx"
-        , cfTxId cf <> "#" <> T.pack (show $ cfOutputIndex cf)
-        ]
     watchabilityWords wf =
         [ "watchable"
         , T.pack (show $ wfWitnessesListed wf)
             <> "/"
             <> T.pack (show $ wfWitnessesDeclared wf)
         ]
+
+renderCheckpointListView :: CheckpointListView -> Text
+renderCheckpointListView view =
+    T.intercalate "\n" $
+        operationHeader (clvSource view) (clvFreshness view)
+            <> ["count " <> T.pack (show (length (clvCheckpoints view)))]
+            <> map renderItem (clvCheckpoints view)
+  where
+    renderItem item =
+        T.unwords (["aid", cliAid item] <> checkpointWords (Just (cliCheckpoint item)))
+
+renderCheckpointView :: CheckpointView -> Text
+renderCheckpointView view =
+    T.intercalate "\n" $
+        operationHeader (cvSource view) (cvFreshness view)
+            <> [T.unwords (["aid", cvAid view] <> checkpointWords (cvCheckpoint view))]
+
+renderPayerView :: PayerView -> Text
+renderPayerView view =
+    T.intercalate "\n" $
+        operationHeader (pvSource view) (pvFreshness view)
+            <> ["address " <> pvAddress view <> " count " <> T.pack (show (length (pvUtxos view)))]
+            <> map renderUtxo (pvUtxos view)
+  where
+    renderUtxo utxo =
+        "tx " <> pufTxId utxo <> "#" <> T.pack (show (pufOutputIndex utxo))
+
+operationHeader :: Text -> Freshness -> [Text]
+operationHeader source freshness =
+    [ T.unwords
+        [ "source"
+        , source
+        , "as_of_slot"
+        , maybe "unknown" (T.pack . show) (freshAsOfSlot freshness)
+        , "tip_lag_slots"
+        , maybe "unknown" (T.pack . show) (freshTipLagSlots freshness)
+        ]
+    ]
+
+checkpointWords :: Maybe CheckpointFields -> [Text]
+checkpointWords Nothing = ["state", "NOT", "REGISTERED"]
+checkpointWords (Just cf) =
+    [ "state"
+    , "ACTIVE"
+    , "seq"
+    , T.pack (show $ cfSequence cf)
+    , "native"
+    , T.pack (show $ cfNativeSequence cf)
+    , "keys"
+    , renderThreshold (cfCurrentThreshold cf) (length $ cfCurrentKeys cf)
+    , "witnesses"
+    , T.pack (show $ length $ cfWitnesses cf)
+    , "(toad"
+    , T.pack (show $ cfWitnessThreshold cf) <> ")"
+    , "tx"
+    , cfTxId cf <> "#" <> T.pack (show $ cfOutputIndex cf)
+    ]
 
 renderThreshold :: Threshold -> Int -> Text
 renderThreshold (Unweighted required) keyCount =
@@ -179,11 +283,39 @@ data QueryBackend = QueryBackend
     , qbStatus :: !(Text -> IO (Either BackendError StatusView))
     , qbBoardByWitness ::
         !(Text -> IO (Either BackendError (Freshness, Maybe BoardFields)))
+    , qbListCheckpoints ::
+        !(IO (Either BackendError (Freshness, [CheckpointListItem])))
+    , qbCheckpointByAid ::
+        !(Text -> IO (Either BackendError (Freshness, Maybe CheckpointFields)))
+    , qbPayerUtxos ::
+        !(Text -> IO (Either BackendError (Freshness, [PayerUtxoFields])))
     }
 
 -- | Dispatch exactly one operation on the selected backend. Never falls through.
 runBackendStatus :: QueryBackend -> Text -> IO (Either BackendError StatusView)
 runBackendStatus = qbStatus
+
+runBackendListCheckpoints :: QueryBackend -> IO (Either BackendError (Freshness, [CheckpointListItem]))
+runBackendListCheckpoints = qbListCheckpoints
+
+runBackendCheckpointByAid :: QueryBackend -> Text -> IO (Either BackendError (Freshness, Maybe CheckpointFields))
+runBackendCheckpointByAid backend aidText =
+    case decodeAidText aidText of
+        Left err -> pure (Left (MalformedResponse err))
+        Right () -> qbCheckpointByAid backend aidText
+
+runBackendPayerUtxos :: QueryBackend -> Text -> IO (Either BackendError (Freshness, [PayerUtxoFields]))
+runBackendPayerUtxos backend addressText =
+    case decodeAddress addressText of
+        Left err -> pure (Left (MalformedResponse (T.pack err)))
+        Right _ -> qbPayerUtxos backend addressText
+
+decodeAidText :: Text -> Either Text ()
+decodeAidText aidText =
+    case parsePrimitive (TE.encodeUtf8 aidText) of
+        Right (SelfAddressing _, rest)
+            | BS.null rest -> Right ()
+        _ -> Left "AID must be one 44-character KERI E-code identifier"
 
 -- ---------------------------------------------------------------------------
 -- Selection / configuration
@@ -203,6 +335,35 @@ data BackendSettings = BackendSettings
     }
     deriving stock (Show, Eq)
 
+-- | Backend selection and adapter construction shared by every query command.
+data BackendCommonSettings = BackendCommonSettings
+    { commonBackendExplicit :: !(Maybe Backend)
+    , commonBackendEndpointUrl :: !(Maybe Text)
+    , commonBackendStorePath :: !(Maybe FilePath)
+    , commonBackendManifest :: !FilePath
+    , commonBackendBoardManifest :: !FilePath
+    , commonBackendKoiosUrl :: !Text
+    , commonBackendKoiosToken :: !(Maybe KoiosToken)
+    }
+    deriving stock (Show, Eq)
+
+newtype ListSettings = ListSettings
+    { listBackendSettings :: BackendCommonSettings
+    }
+    deriving stock (Show, Eq)
+
+data CheckpointSettings = CheckpointSettings
+    { checkpointAid :: !Text
+    , checkpointBackendSettings :: !BackendCommonSettings
+    }
+    deriving stock (Show, Eq)
+
+data PayerSettings = PayerSettings
+    { payerAddress :: !Text
+    , payerBackendSettings :: !BackendCommonSettings
+    }
+    deriving stock (Show, Eq)
+
 -- | The exactly-one-backend outcome of 'selectBackend'.
 data SelectedBackend
     = SelectedLocal !FilePath
@@ -217,8 +378,11 @@ rejected rather than silently ignored (FR-5's "no implicit fallback" starts
 here, at configuration time).
 -}
 selectBackend :: BackendSettings -> Either BackendError SelectedBackend
-selectBackend settings =
-    case (backendExplicit settings, backendEndpointUrl settings, backendStorePath settings) of
+selectBackend = selectCommonBackend . backendCommonSettings
+
+selectCommonBackend :: BackendCommonSettings -> Either BackendError SelectedBackend
+selectCommonBackend settings =
+    case (commonBackendExplicit settings, commonBackendEndpointUrl settings, commonBackendStorePath settings) of
         (Just BackendLocal, Nothing, Just store) -> Right (SelectedLocal store)
         (Just BackendLocal, Just _, _) -> crossFlag "local" "--endpoint"
         (Just BackendLocal, Nothing, Nothing) -> missingFlag "local" "--store"
@@ -240,24 +404,64 @@ selectBackend settings =
     missingFlag backend flag =
         Left $ ConfigError $ "--backend " <> backend <> " requires " <> flag
 
-koiosSelection :: BackendSettings -> SelectedBackend
+koiosSelection :: BackendCommonSettings -> SelectedBackend
 koiosSelection settings =
-    SelectedKoios (backendKoiosUrl settings) (backendKoiosToken settings)
+    SelectedKoios (commonBackendKoiosUrl settings) (commonBackendKoiosToken settings)
 
 backendSettingsParser :: Opt.Parser BackendSettings
 backendSettingsParser = do
-    backendAid <-
-        T.pack
-            <$> Opt.setting
-                [ Opt.reader Opt.str
-                , Opt.option
-                , Opt.long "aid"
-                , Opt.env "CKERI_AID"
-                , Opt.conf "aid"
-                , Opt.metavar "AID"
-                , Opt.help "44-character KERI E-code identifier"
-                ]
-    backendExplicit <-
+    backendAid <- aidSetting
+    common <- commonBackendSettingsParser
+    pure
+        BackendSettings
+            { backendAid
+            , backendExplicit = commonBackendExplicit common
+            , backendEndpointUrl = commonBackendEndpointUrl common
+            , backendStorePath = commonBackendStorePath common
+            , backendManifest = commonBackendManifest common
+            , backendBoardManifest = commonBackendBoardManifest common
+            , backendKoiosUrl = commonBackendKoiosUrl common
+            , backendKoiosToken = commonBackendKoiosToken common
+            }
+
+listSettingsParser :: Opt.Parser ListSettings
+listSettingsParser = ListSettings <$> commonBackendSettingsParser
+
+checkpointSettingsParser :: Opt.Parser CheckpointSettings
+checkpointSettingsParser = CheckpointSettings <$> aidSetting <*> commonBackendSettingsParser
+
+payerSettingsParser :: Opt.Parser PayerSettings
+payerSettingsParser = PayerSettings <$> addressSetting <*> commonBackendSettingsParser
+
+aidSetting :: Opt.Parser Text
+aidSetting =
+    T.pack
+        <$> Opt.setting
+            [ Opt.reader Opt.str
+            , Opt.option
+            , Opt.long "aid"
+            , Opt.env "CKERI_AID"
+            , Opt.conf "aid"
+            , Opt.metavar "AID"
+            , Opt.help "44-character KERI E-code identifier"
+            ]
+
+addressSetting :: Opt.Parser Text
+addressSetting =
+    T.pack
+        <$> Opt.setting
+            [ Opt.reader Opt.str
+            , Opt.option
+            , Opt.long "address"
+            , Opt.env "CKERI_ADDRESS"
+            , Opt.conf "address"
+            , Opt.metavar "ADDRESS"
+            , Opt.help "Bech32 payer address"
+            ]
+
+commonBackendSettingsParser :: Opt.Parser BackendCommonSettings
+commonBackendSettingsParser = do
+    commonBackendExplicit <-
         Opt.mapIO (traverse parseBackendOrDie) $
             Opt.optional $
                 T.pack
@@ -270,7 +474,7 @@ backendSettingsParser = do
                         , Opt.metavar "local|endpoint|koios"
                         , Opt.help "Explicit backend selection"
                         ]
-    backendEndpointUrl <-
+    commonBackendEndpointUrl <-
         Opt.optional $
             T.pack
                 <$> Opt.setting
@@ -282,7 +486,7 @@ backendSettingsParser = do
                     , Opt.metavar "URL"
                     , Opt.help "Hosted #176 query endpoint base URL"
                     ]
-    backendStorePath <-
+    commonBackendStorePath <-
         Opt.optional $
             Opt.setting
                 [ Opt.reader Opt.str
@@ -293,7 +497,7 @@ backendSettingsParser = do
                 , Opt.metavar "PATH"
                 , Opt.help "Local follower RocksDB store path"
                 ]
-    backendManifest <-
+    commonBackendManifest <-
         Opt.withDefault "deploy/preprod/m1-manifest.json" $
             Opt.setting
                 [ Opt.reader Opt.str
@@ -304,7 +508,7 @@ backendSettingsParser = do
                 , Opt.metavar "VALUE"
                 , Opt.help "V1 preprod deployment manifest"
                 ]
-    backendBoardManifest <-
+    commonBackendBoardManifest <-
         Opt.withDefault "deploy/preprod/board-manifest.json" $
             Opt.setting
                 [ Opt.reader Opt.str
@@ -315,7 +519,7 @@ backendSettingsParser = do
                 , Opt.metavar "VALUE"
                 , Opt.help "Endpoint-board preprod deployment manifest"
                 ]
-    backendKoiosUrl <-
+    commonBackendKoiosUrl <-
         Opt.withDefault "https://preprod.koios.rest/api/v1" $
             T.pack
                 <$> Opt.setting
@@ -327,7 +531,7 @@ backendSettingsParser = do
                     , Opt.metavar "VALUE"
                     , Opt.help "Koios API base URL"
                     ]
-    backendKoiosToken <-
+    commonBackendKoiosToken <-
         Opt.optional $
             KoiosToken . T.pack
                 <$> Opt.setting
@@ -339,7 +543,19 @@ backendSettingsParser = do
                     , Opt.metavar "VALUE"
                     , Opt.help "Optional Koios bearer token"
                     ]
-    pure BackendSettings{..}
+    pure BackendCommonSettings{..}
+
+backendCommonSettings :: BackendSettings -> BackendCommonSettings
+backendCommonSettings settings =
+    BackendCommonSettings
+        { commonBackendExplicit = backendExplicit settings
+        , commonBackendEndpointUrl = backendEndpointUrl settings
+        , commonBackendStorePath = backendStorePath settings
+        , commonBackendManifest = backendManifest settings
+        , commonBackendBoardManifest = backendBoardManifest settings
+        , commonBackendKoiosUrl = backendKoiosUrl settings
+        , commonBackendKoiosToken = backendKoiosToken settings
+        }
 
 {- | 'Opt.conf' requires an 'autodocodec' @HasCodec@ instance to decode a
 YAML enum, and adding that dependency edge forces cabal to re-solve (and

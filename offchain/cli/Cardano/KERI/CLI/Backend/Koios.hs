@@ -16,25 +16,37 @@ live UTxO, mirroring the retired @queryCheckpointStatusUsing@'s precedence.
 pinned at registration through any advance, since an advance spends and
 recreates the checkpoint UTxO in place without touching the minting policy).
 -}
-module Cardano.KERI.CLI.Backend.Koios (mkKoiosBackend, resolveKoiosActive, resolveKoiosFreshness) where
+module Cardano.KERI.CLI.Backend.Koios (
+    mkKoiosBackend,
+    resolveKoiosActive,
+    resolveKoiosFreshness,
+    resolveKoiosTransactionFreshness,
+    resolveKoiosList,
+    resolveKoiosPayer,
+    catchKoios,
+) where
 
-import Cardano.KERI.AID.CESR (qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (..), CheckpointDatumV1 (..), checkpointDatumFromData)
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
     CheckpointFields (..),
+    CheckpointListItem (..),
     Freshness (..),
+    PayerUtxoFields (..),
     QueryBackend (..),
     StatusView (..),
     WatchabilityFields (..),
  )
 import Cardano.KERI.Deployment.ChainIndex (
+    ChainAsset (..),
     ChainAssetHistory (..),
-    ChainAssetUtxo,
+    ChainAssetUtxo (..),
     ChainMintingTransaction (..),
     ChainTip (..),
     ChainTransactionInfo (..),
     KoiosToken,
+    queryAddressUtxos,
     queryAssetHistory,
     queryAssetUtxos,
     queryTip,
@@ -60,8 +72,15 @@ import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
     Manifest (..),
  )
+import Cardano.KERI.Deployment.Registration (plutusDataFromJson)
 import Cardano.KERI.Indexer.Query.Types (qb64Witness)
+import Control.Exception (AsyncException, SomeException, fromException, tryJust)
+import Control.Monad (unless, when)
+import Data.Char (isHexDigit)
+import Data.Foldable (traverse_)
 import Data.List (find)
+import Data.List qualified as List
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -74,6 +93,9 @@ mkKoiosBackend manifest boardManifest baseUrl token =
         , qbStatus = koiosStatus manifest boardManifest baseUrl token
         , qbBoardByWitness = \_ ->
             pure (Left (UnsupportedCapability "board-by-witness is not exposed by the Koios backend in this slice"))
+        , qbListCheckpoints = koiosListCheckpoints manifest baseUrl token
+        , qbCheckpointByAid = koiosCheckpointByAid manifest baseUrl token
+        , qbPayerUtxos = koiosPayerUtxos baseUrl token
         }
 
 koiosStatus ::
@@ -115,6 +137,248 @@ koiosStatus manifest boardManifest baseUrl token aidText =
     boardInfo = endpointBoardManifestInfo boardManifest
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
+
+koiosCheckpointByAid ::
+    Manifest ->
+    Text ->
+    Maybe KoiosToken ->
+    Text ->
+    IO (Either BackendError (Freshness, Maybe CheckpointFields))
+koiosCheckpointByAid manifest baseUrl token aidText =
+    catchKoios $ case checkpointAssetName aidText of
+        Left err -> pure (Left (MalformedResponse (T.pack err)))
+        Right assetName -> do
+            histories <- queryAssetHistory baseUrl token policy assetName
+            case latestBurn policy assetName histories of
+                Left err -> pure (Left err)
+                Right (Just _) -> freshnessWithoutRows
+                Right Nothing -> do
+                    utxos <- queryAssetUtxos baseUrl token policy assetName
+                    case resolveKoiosActive manifest aidText assetName histories utxos of
+                        Left err -> pure (Left err)
+                        Right Nothing -> freshnessWithoutRows
+                        Right (Just active) -> do
+                            tips <- queryTip baseUrl token
+                            txInfos <- queryTransactionInfo baseUrl token [activeCheckpointTxId active]
+                            pure $ do
+                                tip <- singleTip tips
+                                freshness <-
+                                    resolveKoiosTransactionFreshness
+                                        [activeCheckpointTxId active]
+                                        txInfos
+                                        (Just tip)
+                                pure (freshness, Just (checkpointFieldsOf active))
+  where
+    policy = checkpointPolicyId (manifestCheckpoint manifest)
+    freshnessWithoutRows = do
+        tips <- queryTip baseUrl token
+        pure $ do
+            tip <- singleTip tips
+            freshness <- resolveKoiosTransactionFreshness [] [] (Just tip)
+            pure (freshness, Nothing)
+
+koiosListCheckpoints ::
+    Manifest ->
+    Text ->
+    Maybe KoiosToken ->
+    IO (Either BackendError (Freshness, [CheckpointListItem]))
+koiosListCheckpoints manifest baseUrl token =
+    catchKoios $ do
+        utxos <- queryAddressUtxos baseUrl token checkpointAddress
+        tips <- queryTip baseUrl token
+        case traverse (decodeCheckpointUtxo manifest) utxos of
+            Left err -> pure (Left err)
+            Right decoded -> do
+                let checkpoints = catMaybes decoded
+                    txIds = map activeCheckpointTxId checkpoints
+                txInfos <-
+                    if null txIds
+                        then pure []
+                        else queryTransactionInfo baseUrl token (List.nub txIds)
+                pure (resolveKoiosList manifest utxos txInfos =<< singleTipMaybe tips)
+  where
+    checkpointAddress = checkpointAddressBech32 (manifestCheckpoint manifest)
+
+koiosPayerUtxos ::
+    Text ->
+    Maybe KoiosToken ->
+    Text ->
+    IO (Either BackendError (Freshness, [PayerUtxoFields]))
+koiosPayerUtxos baseUrl token addressText =
+    catchKoios $ do
+        utxos <- queryAddressUtxos baseUrl token addressText
+        tips <- queryTip baseUrl token
+        let txIds = map chainAssetTxId utxos
+        txInfos <-
+            if null txIds
+                then pure []
+                else queryTransactionInfo baseUrl token (List.nub txIds)
+        pure (resolveKoiosPayer addressText utxos txInfos =<< singleTipMaybe tips)
+
+resolveKoiosList ::
+    Manifest ->
+    [ChainAssetUtxo] ->
+    [ChainTransactionInfo] ->
+    Maybe ChainTip ->
+    Either BackendError (Freshness, [CheckpointListItem])
+resolveKoiosList manifest utxos txInfos maybeTip = do
+    decoded <- traverse (decodeCheckpointUtxo manifest) utxos
+    let checkpoints = catMaybes decoded
+        txIds = map activeCheckpointTxId checkpoints
+    ensureUniqueOutputs utxos
+    ensureUniqueAids checkpoints
+    freshness <- resolveKoiosTransactionFreshness txIds txInfos maybeTip
+    pure
+        ( freshness
+        , map
+            ( \active ->
+                CheckpointListItem
+                    { cliAid = activeCheckpointAid active
+                    , cliCheckpoint = checkpointFieldsOf active
+                    }
+            )
+            checkpoints
+        )
+
+resolveKoiosPayer ::
+    Text ->
+    [ChainAssetUtxo] ->
+    [ChainTransactionInfo] ->
+    Maybe ChainTip ->
+    Either BackendError (Freshness, [PayerUtxoFields])
+resolveKoiosPayer addressText utxos txInfos maybeTip = do
+    traverse_ (validatePayerUtxo addressText) utxos
+    ensureUniqueOutputs utxos
+    freshness <-
+        resolveKoiosTransactionFreshness
+            (map chainAssetTxId utxos)
+            txInfos
+            maybeTip
+    pure (freshness, map payerFieldsOf utxos)
+
+resolveKoiosTransactionFreshness ::
+    [Text] ->
+    [ChainTransactionInfo] ->
+    Maybe ChainTip ->
+    Either BackendError Freshness
+resolveKoiosTransactionFreshness _ _ Nothing =
+    Left (MalformedResponse "no observed Koios tip")
+resolveKoiosTransactionFreshness requestedTxIds txInfos (Just (ChainTip tipSlot)) = do
+    unless (tipSlot >= 0) $
+        Left (MalformedResponse "observed Koios tip has a negative absolute slot")
+    let expected = List.sort (List.nub requestedTxIds)
+        actualHashes = map txInfoTxHash txInfos
+    when (null expected) $
+        Left (MalformedResponse "no supporting transactions for Koios operation freshness")
+    unless (length actualHashes == length (List.nub actualHashes)) $
+        Left (MalformedResponse "duplicate tx_info provenance for a supporting transaction")
+    unless (List.sort actualHashes == expected) $
+        Left (MalformedResponse "tx_info provenance does not exactly match supporting transactions")
+    unless (all ((>= 0) . txInfoAbsoluteSlot) txInfos) $
+        Left (MalformedResponse "supporting tx_info has a negative absolute slot")
+    unless (all ((<= tipSlot) . txInfoAbsoluteSlot) txInfos) $
+        Left (MalformedResponse "observed tip is behind a supporting transaction slot")
+    let asOfSlot =
+            case map txInfoAbsoluteSlot txInfos of
+                [] -> tipSlot
+                slots -> minimum slots
+    pure $
+        Freshness
+            (Just (fromInteger asOfSlot))
+            (Just (fromInteger (tipSlot - asOfSlot)))
+
+decodeCheckpointUtxo :: Manifest -> ChainAssetUtxo -> Either BackendError (Maybe ActiveCheckpoint)
+decodeCheckpointUtxo manifest utxo =
+    case filter ((== policy) . chainAssetPolicy) (chainAssetList utxo) of
+        [] -> Right Nothing
+        [asset] -> do
+            unless (chainAssetQuantity asset == 1) $
+                Left (MalformedResponse "checkpoint output does not hold exactly one policy token")
+            inline <-
+                maybe
+                    (Left (MalformedResponse "checkpoint output has no inline datum"))
+                    Right
+                    (chainAssetInlineDatum utxo)
+            dat <- either (Left . MalformedResponse . T.pack) Right (plutusDataFromJson inline)
+            checkpoint <-
+                maybe
+                    (Left (MalformedResponse "checkpoint inline datum is not the frozen V1 schema"))
+                    Right
+                    (checkpointDatumFromData dat)
+            datum <- case checkpoint of
+                V1 value -> Right value
+            let aid = TE.decodeUtf8 (qb64Aid (cdCesrAid datum))
+            assetName <- either (Left . MalformedResponse . T.pack) Right (checkpointAssetName aid)
+            unless (chainAssetName asset == assetName) $
+                Left (MalformedResponse "checkpoint asset name does not match inline datum AID")
+            validateChainUtxo utxo
+            Just
+                <$> either
+                    (Left . MalformedResponse . T.pack)
+                    Right
+                    (resolveActiveCheckpoint manifest aid assetName [utxo])
+        _ -> Left (MalformedResponse "checkpoint output carries multiple assets under the checkpoint policy")
+  where
+    policy = checkpointPolicyId (manifestCheckpoint manifest)
+
+validatePayerUtxo :: Text -> ChainAssetUtxo -> Either BackendError ()
+validatePayerUtxo expectedAddress utxo = do
+    unless (chainAssetAddress utxo == expectedAddress) $
+        Left (MalformedResponse "payer UTxO address does not match the requested address")
+    validateChainUtxo utxo
+
+validateChainUtxo :: ChainAssetUtxo -> Either BackendError ()
+validateChainUtxo utxo = do
+    unless (T.length txId == 64 && T.all isHexDigit txId) $
+        Left (MalformedResponse "UTxO transaction hash is not 32-byte hexadecimal text")
+    unless (chainAssetIndex utxo >= 0) $
+        Left (MalformedResponse "UTxO output index is negative")
+    unless (chainAssetLovelace utxo >= 0) $
+        Left (MalformedResponse "UTxO lovelace value is negative")
+  where
+    txId = chainAssetTxId utxo
+
+ensureUniqueOutputs :: [ChainAssetUtxo] -> Either BackendError ()
+ensureUniqueOutputs utxos =
+    unless (length references == length (List.nub references)) $
+        Left (MalformedResponse "Koios returned duplicate UTxO references")
+  where
+    references = map (\utxo -> (chainAssetTxId utxo, chainAssetIndex utxo)) utxos
+
+ensureUniqueAids :: [ActiveCheckpoint] -> Either BackendError ()
+ensureUniqueAids checkpoints =
+    unless (length aids == length (List.nub aids)) $
+        Left (MalformedResponse "Koios returned duplicate live checkpoints for one AID")
+  where
+    aids = map activeCheckpointAid checkpoints
+
+singleTip :: [ChainTip] -> Either BackendError ChainTip
+singleTip [tip] = Right tip
+singleTip [] = Left (MalformedResponse "no observed Koios tip")
+singleTip _ = Left (MalformedResponse "Koios returned multiple tip rows")
+
+singleTipMaybe :: [ChainTip] -> Either BackendError (Maybe ChainTip)
+singleTipMaybe tips = Just <$> singleTip tips
+
+payerFieldsOf :: ChainAssetUtxo -> PayerUtxoFields
+payerFieldsOf utxo =
+    PayerUtxoFields
+        { pufTxId = chainAssetTxId utxo
+        , pufOutputIndex = chainAssetIndex utxo
+        }
+
+catchKoios :: IO (Either BackendError a) -> IO (Either BackendError a)
+catchKoios action = do
+    outcome <- tryJust synchronousException action
+    pure $ case outcome of
+        Left err -> Left (UpstreamUnavailable (T.pack (show err)))
+        Right result -> result
+  where
+    synchronousException :: SomeException -> Maybe SomeException
+    synchronousException err =
+        case fromException err :: Maybe AsyncException of
+            Just _ -> Nothing
+            Nothing -> Just err
 
 {- | Resolve the currently active checkpoint, preferring a proven latest
 burn in @asset_history@ over a live-looking @asset_utxos@ answer

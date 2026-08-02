@@ -20,9 +20,13 @@ import Cardano.KERI.CLI.Backend (
     CheckpointFields (..),
     Freshness (..),
     StatusView (..),
+    runBackendCheckpointByAid,
+    runBackendListCheckpoints,
+    runBackendPayerUtxos,
     runBackendStatus,
  )
 import Cardano.KERI.CLI.Backend.Local (mkLocalBackend)
+import Cardano.KERI.Indexer.Config (decodeAddress)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
@@ -87,6 +91,76 @@ spec = describe "local backend mutation/rollback coherence (T177-S1-3)" $ do
             svCheckpoint view `shouldBe` Nothing
             svFreshness view `shouldBe` Freshness (Just 10) Nothing
 
+    it "lists checkpoints and their watermark from the same mutation-visible transaction" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 10 0x01 []
+            let backend = mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress undefinedReadiness)
+            Right (beforeFreshness, before) <- runBackendListCheckpoints backend
+            beforeFreshness `shouldBe` Freshness (Just 10) Nothing
+            length before `shouldBe` 0
+
+            applyBatch handle 100 0x02 [checkpointCreate (sampleTxIn 0x10) aidX datumX0]
+            Right (afterFreshness, after) <- runBackendListCheckpoints backend
+            afterFreshness `shouldBe` Freshness (Just 100) Nothing
+            length after `shouldBe` 1
+
+    it "reads checkpoint-by-AID from the current transaction after a rotation" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 100 0x01 [checkpointCreate (sampleTxIn 0x10) aidX datumX0]
+            let backend = mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress undefinedReadiness)
+            Right (firstFreshness, Just first) <- runBackendCheckpointByAid backend (renderAid aidX)
+            firstFreshness `shouldBe` Freshness (Just 100) Nothing
+            cfSequence first `shouldBe` 0
+
+            applyBatch
+                handle
+                200
+                0x02
+                [ UtxoSpend (sampleTxIn 0x10)
+                , checkpointCreate (sampleTxIn 0x20) aidX datumX1
+                ]
+            Right (secondFreshness, Just second) <- runBackendCheckpointByAid backend (renderAid aidX)
+            secondFreshness `shouldBe` Freshness (Just 200) Nothing
+            cfSequence second `shouldBe` 1
+
+    it "reads payer UTxOs and their watermark from the same mutation-visible transaction" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 10 0x01 []
+            let backend = mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress undefinedReadiness)
+            Right (beforeFreshness, before) <- runBackendPayerUtxos backend payerAddressText
+            beforeFreshness `shouldBe` Freshness (Just 10) Nothing
+            length before `shouldBe` 0
+
+            applyBatch handle 50 0x02 [UtxoCreate (sampleTxIn 0x60) payerAddress payerOutput]
+            Right (afterFreshness, after) <- runBackendPayerUtxos backend payerAddressText
+            afterFreshness `shouldBe` Freshness (Just 50) Nothing
+            length after `shouldBe` 1
+
+    it "list, checkpoint, and payer all reflect rollback with the rolled-back watermark" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 10 0x01 []
+            applyBatch
+                handle
+                100
+                0x02
+                [ checkpointCreate (sampleTxIn 0x10) aidX datumX0
+                , UtxoCreate (sampleTxIn 0x60) payerAddress payerOutput
+                ]
+            rollbackTo handle (Indexer.SlotNo 10)
+            let backend = mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress undefinedReadiness)
+
+            Right (listFreshness, checkpoints) <- runBackendListCheckpoints backend
+            listFreshness `shouldBe` Freshness (Just 10) Nothing
+            length checkpoints `shouldBe` 0
+
+            Right (checkpointFreshness, checkpoint) <- runBackendCheckpointByAid backend (renderAid aidX)
+            checkpointFreshness `shouldBe` Freshness (Just 10) Nothing
+            checkpoint `shouldBe` Nothing
+
+            Right (payerFreshness, payerRows) <- runBackendPayerUtxos backend payerAddressText
+            payerFreshness `shouldBe` Freshness (Just 10) Nothing
+            length payerRows `shouldBe` 0
+
 -- ---------------------------------------------------------------------------
 -- Fixtures (mirrors Query.ServerSpec's shape; not shared/exported cross-module)
 
@@ -131,6 +205,18 @@ checkpointAddress = Indexer.Address (serialiseAddr checkpointLedgerAddress)
 
 boardAddress :: Indexer.Address
 boardAddress = Indexer.Address (serialiseAddr (Addr Testnet (ScriptHashObj (ScriptHash (case hashFromBytes (BS.replicate 28 0x51) of Just h -> h; Nothing -> error "LocalSpec: invalid board policy id width"))) StakeRefNull))
+
+payerAddressText :: Text
+payerAddressText = "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
+
+payerAddress :: Indexer.Address
+payerAddress =
+    case decodeAddress payerAddressText of
+        Left err -> error ("LocalSpec: invalid payer address fixture: " <> err)
+        Right address -> address
+
+payerOutput :: Indexer.TxOut
+payerOutput = Indexer.TxOut "payer-output"
 
 {- | 'QueryHandle.qhReadiness' is a strict field, so a bottom placeholder
 would throw the instant a 'QueryHandle' is constructed — before

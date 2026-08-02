@@ -6,12 +6,20 @@ module Cardano.KERI.CLI.Backend.ConfigSpec (spec) where
 
 import Cardano.KERI.CLI.Backend (
     Backend (..),
+    BackendCommonSettings (..),
     BackendError (..),
     BackendSettings (..),
+    CheckpointSettings (..),
+    ListSettings (..),
+    PayerSettings (..),
     SelectedBackend (..),
     backendSettingsParser,
+    checkpointSettingsParser,
+    listSettingsParser,
+    payerSettingsParser,
     selectBackend,
  )
+import OptEnvConf qualified as Opt
 import OptEnvConf.Args qualified as OptArgs
 import OptEnvConf.Capability qualified as OptCapability
 import OptEnvConf.EnvMap qualified as OptEnv
@@ -155,17 +163,55 @@ parserSpec = describe "backendSettingsParser (T177-S1-1)" $ do
                 []
         backendKoiosUrl parsed `shouldBe` "https://preprod.koios.rest/api/v1"
 
+    it "list shares backend selection from argv without requiring an identity" $ do
+        ListSettings common <-
+            parseSettings
+                listSettingsParser
+                ["--backend", "local", "--store", "/tmp/list-store"]
+                []
+        commonBackendExplicit common `shouldBe` Just BackendLocal
+        commonBackendStorePath common `shouldBe` Just "/tmp/list-store"
+
+    it "checkpoint reads its validated AID and shared backend selection from the environment" $ do
+        CheckpointSettings aid common <-
+            parseSettings
+                checkpointSettingsParser
+                []
+                [ ("CKERI_AID", "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                , ("CKERI_BACKEND", "endpoint")
+                , ("CKERI_ENDPOINT", "https://ckeri.dev.plutimus.com")
+                ]
+        aid `shouldBe` "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        commonBackendExplicit common `shouldBe` Just BackendEndpoint
+        commonBackendEndpointUrl common `shouldBe` Just "https://ckeri.dev.plutimus.com"
+
+    it "payer reads its address and shared backend selection from the environment" $ do
+        PayerSettings address common <-
+            parseSettings
+                payerSettingsParser
+                []
+                [ ("CKERI_ADDRESS", "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d")
+                , ("CKERI_BACKEND", "local")
+                , ("CKERI_STORE", "/tmp/payer-store")
+                ]
+        address `shouldBe` "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
+        commonBackendExplicit common `shouldBe` Just BackendLocal
+        commonBackendStorePath common `shouldBe` Just "/tmp/payer-store"
+
 isConfigError :: Either BackendError a -> Bool
 isConfigError (Left (ConfigError _)) = True
 isConfigError _ = False
 
 parseBackendSettings :: [String] -> [(String, String)] -> IO BackendSettings
-parseBackendSettings args environment = do
+parseBackendSettings = parseSettings backendSettingsParser
+
+parseSettings :: Opt.Parser a -> [String] -> [(String, String)] -> IO a
+parseSettings parser args environment = do
     result <-
         OptRun.runParserOn
             OptCapability.allCapabilities
             Nothing
-            backendSettingsParser
+            parser
             (OptArgs.parseArgs args)
             (OptEnv.parse environment)
             Nothing

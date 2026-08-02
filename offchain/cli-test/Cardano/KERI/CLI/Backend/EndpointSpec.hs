@@ -20,7 +20,16 @@ import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
-import Cardano.KERI.CLI.Backend (BackendError (..), CheckpointFields (..), StatusView (..), runBackendStatus)
+import Cardano.KERI.CLI.Backend (
+    BackendError (..),
+    CheckpointFields (..),
+    Freshness (..),
+    StatusView (..),
+    runBackendCheckpointByAid,
+    runBackendListCheckpoints,
+    runBackendPayerUtxos,
+    runBackendStatus,
+ )
 import Cardano.KERI.CLI.Backend.Endpoint (mkEndpointBackend)
 import Cardano.KERI.Indexer.Query.Server (mkQueryApplication)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
@@ -90,6 +99,14 @@ goldenSpec = describe "golden path against the real mkQueryApplication" $ do
                 let backend = mkEndpointBackend baseUrl
                 Right view <- runBackendStatus backend (renderAid aidY)
                 svCheckpoint view `shouldBe` Just expectedFields
+
+    it "checkpoint-by-AID reuses the strict #176 checkpoint response path" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 100 0x06 [checkpointCreate (sampleTxIn 0x30) aidY datumY]
+            withRealServer runner $ \baseUrl -> do
+                Right (freshness, checkpoint) <- runBackendCheckpointByAid (mkEndpointBackend baseUrl) (renderAid aidY)
+                freshness `shouldBe` Freshness (Just 100) (Just 0)
+                checkpoint `shouldBe` Just expectedFields
 
 expectedFields :: CheckpointFields
 expectedFields =
@@ -233,6 +250,17 @@ blockHash byte = Indexer.BlockHash (BS.replicate 32 byte)
 
 violationSpec :: Spec
 violationSpec = describe "contract-violation rejection" $ do
+    it "checkpoint listing is a named unsupported capability, without another adapter" $ do
+        result <- runBackendListCheckpoints (mkEndpointBackend "http://127.0.0.1:1")
+        result `shouldSatisfy` isUnsupportedCapability
+
+    it "payer UTxOs are a named unsupported capability, without another adapter" $ do
+        result <-
+            runBackendPayerUtxos
+                (mkEndpointBackend "http://127.0.0.1:1")
+                "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
+        result `shouldSatisfy` isUnsupportedCapability
+
     it "HTTP 503 is a closed UpstreamUnavailable error" $
         withStubApp unavailableApp $ \baseUrl -> do
             result <- runBackendStatus (mkEndpointBackend baseUrl) aidText
@@ -260,6 +288,10 @@ isUpstreamUnavailable _ = False
 isMalformedResponse :: Either BackendError a -> Bool
 isMalformedResponse (Left (MalformedResponse _)) = True
 isMalformedResponse _ = False
+
+isUnsupportedCapability :: Either BackendError a -> Bool
+isUnsupportedCapability (Left (UnsupportedCapability _)) = True
+isUnsupportedCapability _ = False
 
 withStubApp :: Application -> (Text -> IO a) -> IO a
 withStubApp app act =

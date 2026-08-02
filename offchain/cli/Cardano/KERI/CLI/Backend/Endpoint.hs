@@ -45,6 +45,11 @@ mkEndpointBackend baseUrl =
         { qbSourceLabel = baseUrl
         , qbStatus = endpointStatus baseUrl
         , qbBoardByWitness = endpointBoardByWitness baseUrl
+        , qbListCheckpoints =
+            pure (Left (UnsupportedCapability "checkpoint listing is not available from the #176 endpoint"))
+        , qbCheckpointByAid = fetchCheckpoint baseUrl
+        , qbPayerUtxos = \_ ->
+            pure (Left (UnsupportedCapability "payer UTxOs are not available from the #176 endpoint"))
         }
 
 endpointStatus :: Text -> Text -> IO (Either BackendError StatusView)

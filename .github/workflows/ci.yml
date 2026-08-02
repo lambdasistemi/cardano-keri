@@ -73,6 +73,7 @@ jobs:
           .#packages.x86_64-linux.hlint
           .#packages.x86_64-linux.ckeri
           .#checks.x86_64-linux.deployment-tests
+          .#checks.x86_64-linux.blaster
           .#devShells.x86_64-linux.default.inputDerivation
 
   onchain:
@@ -104,7 +105,7 @@ jobs:
         working-directory: lean
         run: |
           set -o pipefail
-          nix shell nixpkgs#lean4 --command lake build 2>&1 | tee build.log
+          nix shell ../offchain#lean --command lake build 2>&1 | tee build.log
           ! grep -q "uses 'sorry'" build.log
       # Map completeness + name existence + Haskell-regenerated verdict-vector
       # drift (the script ends in `just check-lifecycle-trace-vectors`, which

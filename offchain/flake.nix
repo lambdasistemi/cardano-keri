@@ -51,10 +51,29 @@
       url = "github:NixOS/bundlers";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The compiled-UPLC tractability toolchain is acceptance-critical. Direct
+    # sources name immutable revisions; their transitive inputs are bound by
+    # flake.lock and audited by the runnable `blaster` surface.
+    leanBlaster.url =
+      "github:paolino/Lean-blaster/d57a9079a164ca25e58f119112162efea617b5e6";
+    lean4Nix.follows = "leanBlaster/lean4-nix";
+    leanNixpkgs.follows = "leanBlaster/nixpkgs";
+    plutusCoreBlaster = {
+      url =
+        "github:input-output-hk/PlutusCoreBlaster/17cee18a2058790bca36282d82c19146587fb2d1";
+      flake = false;
+    };
+    cardanoLedgerApiBlaster = {
+      url =
+        "github:input-output-hk/CardanoLedgerApiBlaster/577e3eb03b5be09354cfdb1c0d0c12e9e16541a0";
+      flake = false;
+    };
   };
 
   outputs =
-    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, bundlers, ... }:
+    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, bundlers
+      , leanBlaster, lean4Nix, leanNixpkgs, plutusCoreBlaster
+      , cardanoLedgerApiBlaster, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-darwin" ];
       perSystem = { system, ... }:
@@ -66,6 +85,37 @@
               iohkNix.overlays.haskell-nix-crypto
             ];
             inherit system;
+          };
+
+          leanNixPkgs = import leanNixpkgs {
+            inherit system;
+            overlays = [
+              (lean4Nix.readToolchainFile {
+                toolchain = leanBlaster.outPath + "/lean-toolchain";
+                binary = true;
+              })
+              (_final: prev: {
+                z3 = prev.z3.overrideAttrs {
+                  version = "4.15.2";
+                  src = prev.fetchFromGitHub {
+                    owner = "Z3Prover";
+                    repo = "z3";
+                    rev = "z3-4.15.2";
+                    hash =
+                      "sha256-hUGZdr0VPxZ0mEUpcck1AC0MpyZMjiMw/kK8WX7t0xU=";
+                  };
+                };
+              })
+            ];
+          };
+          leanPkgs = leanNixPkgs.lean;
+          cleanBlasterSource = pkgs.lib.cleanSourceWith {
+            src = ./blaster;
+            filter = path: type:
+              let baseName = builtins.baseNameOf (toString path);
+              in pkgs.lib.cleanSourceFilter path type
+              && baseName != ".lake"
+              && !(pkgs.lib.hasPrefix "result" baseName);
           };
 
           # Tooling is pinned to the cabal.project hackage index-state so the
@@ -596,6 +646,197 @@
               sweepConsistency;
           });
 
+          # S1 exact-artifact and complete pinned-toolchain surface. This is
+          # Linux-only because the sole production blueprint is Linux-only.
+          blasterWiring = pkgs.lib.optionalAttrs
+            (system == "x86_64-linux" && e2eWiring ? blueprint) (let
+              title = "checkpoint.checkpoint.spend";
+              expectedBlueprintSha256 =
+                "896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c";
+              sourceIdentity =
+                if self ? rev then self.rev else (self.dirtyRev or "dirty");
+              lockSha256 = builtins.hashFile "sha256" ./flake.lock;
+              leanToolchain = pkgs.lib.removeSuffix "\n"
+                (builtins.readFile ./blaster/lean-toolchain);
+
+              leanBlasterPackage = leanBlaster.legacyPackages.${system}.blaster;
+              plutusCoreBlasterPackage = leanPkgs.buildLeanPackage {
+                name = "PlutusCore";
+                roots = [ "PlutusCore" ];
+                src = plutusCoreBlaster;
+                deps = [ leanBlasterPackage ];
+              };
+              cardanoLedgerApiBlasterPackage = leanPkgs.buildLeanPackage {
+                name = "CardanoLedgerApi";
+                roots = [ "CardanoLedgerApi" ];
+                src = cardanoLedgerApiBlaster;
+                deps = [ leanBlasterPackage plutusCoreBlasterPackage ];
+              };
+              keriBlasterPackage = leanPkgs.buildLeanPackage {
+                name = "KeriBlaster";
+                roots = [ "KeriBlaster" ];
+                src = cleanBlasterSource;
+                deps = [
+                  leanBlasterPackage
+                  plutusCoreBlasterPackage
+                  cardanoLedgerApiBlasterPackage
+                ];
+                overrideBuildModAttrs = _final: prev: {
+                  buildInputs = (prev.buildInputs or [ ]) ++ [ leanNixPkgs.z3 ];
+                };
+              };
+
+              artifact = pkgs.runCommand "cardano-keri-blaster-artifact" {
+                nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+              } ''
+                set -euo pipefail
+                mkdir -p "$out"
+                blueprint=${e2eWiring.blueprint}
+                actual_blueprint_sha256="$(sha256sum "$blueprint" | cut -d ' ' -f 1)"
+                test "$actual_blueprint_sha256" = "${expectedBlueprintSha256}"
+
+                jq -er --arg title "${title}" \
+                  -f ${./blaster/extract-program.jq} "$blueprint" \
+                  | tr -d '\n\r[:space:]' \
+                  > "$out/checkpoint.checkpoint.spend.flat"
+                test -s "$out/checkpoint.checkpoint.spend.flat"
+
+                title_count="$(jq -er --arg title "${title}" \
+                  '[.validators[] | select(.title == $title)] | length' \
+                  "$blueprint")"
+                test "$title_count" -eq 1
+                program_sha256="$(sha256sum \
+                  "$out/checkpoint.checkpoint.spend.flat" | cut -d ' ' -f 1)"
+
+                printf '%s\t%s\n' \
+                  blueprint_sha256 "$actual_blueprint_sha256" \
+                  title "${title}" \
+                  title_count "$title_count" \
+                  program_sha256 "$program_sha256" \
+                  source_identity "${sourceIdentity}" \
+                  lock_sha256 "${lockSha256}" \
+                  > "$out/artifact-identities.tsv"
+              '';
+
+              auditRunner = pkgs.writeShellApplication {
+                name = "blaster-audit";
+                runtimeInputs = [
+                  pkgs.coreutils
+                  pkgs.diffutils
+                  pkgs.gnugrep
+                  pkgs.jq
+                ];
+                text = ''
+                  if (( $# != 0 )); then
+                    echo "blaster-audit: accepts no blueprint path or arguments" >&2
+                    exit 64
+                  fi
+
+                  blueprint=${e2eWiring.blueprint}
+                  artifact=${artifact}
+                  actual_blueprint_sha256="$(sha256sum "$blueprint" | cut -d ' ' -f 1)"
+                  test "$actual_blueprint_sha256" = "${expectedBlueprintSha256}"
+                  test "$(jq -er --arg title "${title}" \
+                    '[.validators[] | select(.title == $title)] | length' \
+                    "$blueprint")" -eq 1
+
+                  selected="$(mktemp)"
+                  trap 'rm -f "$selected"' EXIT
+                  jq -er --arg title "${title}" \
+                    -f ${./blaster/extract-program.jq} "$blueprint" \
+                    | tr -d '\n\r[:space:]' > "$selected"
+                  cmp "$selected" "$artifact/checkpoint.checkpoint.spend.flat"
+                  program_sha256="$(sha256sum "$selected" | cut -d ' ' -f 1)"
+
+                  grep -Fxq $'blueprint_sha256\t'"$actual_blueprint_sha256" \
+                    "$artifact/artifact-identities.tsv"
+                  grep -Fxq $'title\t${title}' \
+                    "$artifact/artifact-identities.tsv"
+                  grep -Fxq $'title_count\t1' \
+                    "$artifact/artifact-identities.tsv"
+                  grep -Fxq $'program_sha256\t'"$program_sha256" \
+                    "$artifact/artifact-identities.tsv"
+                  grep -Fxq $'source_identity\t${sourceIdentity}' \
+                    "$artifact/artifact-identities.tsv"
+                  grep -Fxq $'lock_sha256\t${lockSha256}' \
+                    "$artifact/artifact-identities.tsv"
+
+                  jq -er \
+                    --arg lean_blaster "d57a9079a164ca25e58f119112162efea617b5e6" \
+                    --arg plutus_core "17cee18a2058790bca36282d82c19146587fb2d1" \
+                    --arg ledger_api "577e3eb03b5be09354cfdb1c0d0c12e9e16541a0" '
+                    def direct($name): .nodes[.nodes[.root].inputs[$name]];
+                    (direct("leanBlaster").locked.rev == $lean_blaster)
+                    and (direct("leanBlaster").original.rev == $lean_blaster)
+                    and (direct("plutusCoreBlaster").locked.rev == $plutus_core)
+                    and (direct("plutusCoreBlaster").original.rev == $plutus_core)
+                    and (direct("cardanoLedgerApiBlaster").locked.rev == $ledger_api)
+                    and (direct("cardanoLedgerApiBlaster").original.rev == $ledger_api)
+                    and ([.nodes[]
+                      | select(.locked.type? == "github"
+                        or .locked.type? == "gitlab"
+                        or .locked.type? == "git")
+                      | select((.locked.rev? | type) != "string"
+                        or (.locked.rev | length) == 0
+                        or (.locked.narHash? | type) != "string"
+                        or (.locked.narHash | length) == 0)] | length == 0)
+                  ' ${./flake.lock} >/dev/null
+
+                  test -e ${keriBlasterPackage.modRoot}
+                  if grep -R -n -E '(^|[^[:alnum:]_])(sorry|axiom)([^[:alnum:]_]|$)' \
+                    ${cleanBlasterSource}/*.lean; then
+                    echo "blaster-audit: forbidden sorry/axiom in S1 Lean source" >&2
+                    exit 1
+                  fi
+
+                  printf '%s\n' \
+                    "artifact.blueprint_sha256=$actual_blueprint_sha256" \
+                    "artifact.title=${title}" \
+                    "artifact.title_count=1" \
+                    "artifact.program_sha256=$program_sha256" \
+                    "artifact.source_identity=${sourceIdentity}" \
+                    "artifact.lock_sha256=${lockSha256}" \
+                    "toolchain.lean=${leanToolchain}" \
+                    "toolchain.lean_blaster=${leanBlaster.rev}:${leanBlaster.narHash}" \
+                    "toolchain.plutus_core_blaster=${plutusCoreBlaster.rev}:${plutusCoreBlaster.narHash}" \
+                    "toolchain.cardano_ledger_api_blaster=${cardanoLedgerApiBlaster.rev}:${cardanoLedgerApiBlaster.narHash}" \
+                    "toolchain.z3=${leanNixPkgs.z3.version}:z3-4.15.2:sha256-hUGZdr0VPxZ0mEUpcck1AC0MpyZMjiMw/kK8WX7t0xU=" \
+                    "toolchain.aiken=${pkgs.aiken.version}:${nixpkgs.rev}:${nixpkgs.narHash}" \
+                    "toolchain.nixpkgs=${nixpkgs.rev}:${nixpkgs.narHash}" \
+                    "toolchain.lean4_nix=${lean4Nix.rev}:${lean4Nix.narHash}" \
+                    "toolchain.lean_nixpkgs=${leanNixpkgs.rev}:${leanNixpkgs.narHash}" \
+                    "PASS: exact production artifact and pinned Blaster toolchain audited"
+                '';
+              };
+
+              runner = pkgs.writeShellApplication {
+                name = "blaster";
+                runtimeInputs = [
+                  auditRunner
+                  pkgs.bash
+                  pkgs.coreutils
+                  pkgs.diffutils
+                  pkgs.gnugrep
+                  pkgs.jq
+                ];
+                text = ''
+                  bash ${./blaster/test-extraction.sh} \
+                    ${./blaster/extract-program.jq}
+                  bash ${./blaster/test-production-source.sh} \
+                    ${pkgs.lib.getExe auditRunner}
+                  ${pkgs.lib.getExe auditRunner}
+                  echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
+                '';
+              };
+              check = pkgs.runCommand "blaster-check" { } ''
+                ${pkgs.lib.getExe runner}
+                touch "$out"
+              '';
+            in {
+              inherit artifact auditRunner check runner;
+              lean = leanPkgs.lean-all;
+            });
+
           # Linux release artifacts (AppImage, DEB, RPM) via NixOS/bundlers.
           # Release artifacts use the bare Cabal version; dev artifacts append
           # -<shortRev> so PR/manual runs never collide with tag publications.
@@ -643,6 +884,9 @@
             e2e-sweep = e2eWiring.sweepRunner;
             follower-e2e = e2eWiring.followerRunner;
             plutus-blueprint = e2eWiring.blueprint;
+          } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
+            blaster = blasterWiring.runner;
+            lean = blasterWiring.lean;
           } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
             ckeri-appimage = linuxArtifacts.appimage;
             ckeri-deb = linuxArtifacts.deb;
@@ -679,6 +923,8 @@
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
             sweep-consistency = e2eWiring.sweepConsistency;
+          } // pkgs.lib.optionalAttrs (blasterWiring ? check) {
+            blaster = blasterWiring.check;
           };
           apps = {
             format = {
@@ -739,6 +985,11 @@
             follower-e2e = {
               type = "app";
               program = "${e2eWiring.followerRunner}/bin/follower-e2e";
+            };
+          } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
+            blaster = {
+              type = "app";
+              program = "${blasterWiring.runner}/bin/blaster";
             };
           } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
             linux-artifact-smoke = {

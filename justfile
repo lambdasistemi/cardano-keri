@@ -68,6 +68,10 @@ query-endpoint-check:
 query-endpoint-cache-guard:
     ./scripts/check-query-endpoint-cache.sh
 
+# Audit exact production UPLC extraction and the complete pinned Blaster graph.
+blaster:
+    cd offchain && nix run --quiet .#blaster
+
 # Check the opt-env-conf CLI surface and option/environment/YAML precedence.
 check-ckeri-cli:
     cd offchain && nix build --quiet .#ckeri

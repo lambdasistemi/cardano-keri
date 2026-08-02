@@ -42,19 +42,20 @@ commit with a `Tasks:` trailer.
 
 ## Slice 2 — docs and live acceptance helper
 
-- [ ] T176-S2-1 Document “the query endpoint — checkpoint answers without a
+- [x] T176-S2-1 Document “the query endpoint — checkpoint answers without a
       node”, the public URL, every route/field, curl examples, freshness, and
       fail-closed semantics
-- [ ] T176-S2-2 Document opt-env-conf/service configuration, the one-process
+- [x] T176-S2-2 Document opt-env-conf/service configuration, the one-process
       architecture, no-cache/rollback guarantee, and explicit #177 consumer
       handoff
-- [ ] T176-S2-3 Register the page in MkDocs and verify the docs build
-- [ ] T176-S2-4 Add a checked operator helper for the public curl, exact
+- [x] T176-S2-3 Register the page in MkDocs and verify the docs build
+- [x] T176-S2-4 Add a checked operator helper for the public curl, exact
       upstream stop/restart with cleanup, recovery, and declarative rebuild
       journey; it must not imperatively bring up the query service
-- [ ] T176-S2-5 Run the helper only after deployment and commit a concise dated
-      transcript whose claims match preserved raw runtime evidence
-- [ ] T176-S2-6 Immutable slice gate and `./gate.sh` green; navigator approves;
+- [x] T176-S2-5 Use the accepted post-deployment live journey without rerunning
+      it under NOTE-017, and commit a concise dated transcript whose claims
+      match preserved raw runtime evidence
+- [x] T176-S2-6 Immutable slice gate and `./gate.sh` green; navigator approves;
       one commit with task stamps and `Tasks:` trailer
 
 ## Slice 3 — `/code/infrastructure` declarative deployment

@@ -48,6 +48,15 @@ indexer-unit:
 backend-check:
     cd offchain && nix run --quiet .#backend-check
 
+# #177 Slice 2: exercise the deterministic transcript validator and every
+# approved negative control. Live raw-file reconciliation remains an explicit
+# validator invocation because CI has no ticket-runtime captures.
+backend-transcript-check:
+    ./scripts/test-backend-status-transcripts.sh
+    ./scripts/check-backend-status-transcripts.sh --transcript deploy/preprod/m1-backend-status-acceptance.txt
+    nix run --quiet path:./offchain#backend-transcript-check
+    nix build --quiet --no-link path:./offchain#checks.x86_64-linux.backend-transcript-check
+
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:
@@ -320,7 +329,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit backend-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit indexer-unit backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

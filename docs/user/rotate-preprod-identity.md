@@ -96,7 +96,9 @@ $ ckeri advance \
     --manifest deploy/preprod/m1-manifest.json \
     --controller-signatures controller-signatures.cesr
 advance txid: <settled-txid>
-$ ckeri status E... --manifest deploy/preprod/m1-manifest.json
+$ ckeri status --aid E... --backend koios \
+    --manifest deploy/preprod/m1-manifest.json \
+    --board-manifest deploy/preprod/board-manifest.json
 state ACTIVE seq 1 native 1 keys 2-of-5 witnesses 3 (toad 2) bond intact tx <settled-txid>#0
 ```
 

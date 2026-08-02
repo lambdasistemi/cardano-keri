@@ -370,6 +370,30 @@
             touch $out
           '';
 
+          # #177 Slice 2: the strict-PATH app and sandboxed check execute the
+          # same canonical in-flake validator and negative-control self-test.
+          backend-transcript-check-runner = pkgs.writeShellApplication {
+            name = "backend-transcript-check";
+            runtimeInputs = [
+              pkgs.bash
+              pkgs.coreutils
+              pkgs.gawk
+              pkgs.gnugrep
+              pkgs.gnused
+            ];
+            text = ''
+              export BACKEND_TRANSCRIPT_VALIDATOR=${./scripts/check-backend-status-transcripts.sh}
+              bash ${./scripts/test-backend-status-transcripts.sh}
+              bash ${./scripts/check-backend-status-transcripts.sh} \
+                --transcript ${./evidence/m1-backend-status-acceptance.txt}
+            '';
+          };
+          backend-transcript-check-check =
+            pkgs.runCommand "backend-transcript-check-check" { } ''
+              ${backend-transcript-check-runner}/bin/backend-transcript-check
+              touch $out
+            '';
+
           # Live-boundary withDevnet e2e wiring. Linux-only (the smoke spawns a
           # real cardano-node); the whole attrset is empty on Darwin so its
           # node/blueprint references are never forced there.
@@ -649,6 +673,7 @@
             unit-tests = unit-tests-check;
             indexer-tests = indexer-tests-check;
             backend-check = backend-check-check;
+            backend-transcript-check = backend-transcript-check-check;
             query-endpoint = query-endpoint-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
@@ -683,6 +708,11 @@
             backend-check = {
               type = "app";
               program = "${backend-check-runner}/bin/backend-check";
+            };
+            backend-transcript-check = {
+              type = "app";
+              program =
+                "${backend-transcript-check-runner}/bin/backend-transcript-check";
             };
             query-endpoint-check = {
               type = "app";

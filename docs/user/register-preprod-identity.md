@@ -82,7 +82,9 @@ $ ckeri register
 premint txid: <settled-hash-proof-txid>
 register txid: <settled-checkpoint-txid>
 escrow: 1007 tADA (min 2 + D 1000 + B 5)
-$ ckeri status E...
+$ ckeri status --aid E... --backend koios \
+    --manifest "$CKERI_MANIFEST" \
+    --board-manifest "$PWD/deploy/preprod/board-manifest.json"
 state ACTIVE seq 0 native 0 keys 1-of-1 witnesses 0 (toad 0) bond intact tx <txid>#0
 ```
 

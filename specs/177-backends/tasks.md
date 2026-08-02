@@ -52,20 +52,20 @@ independent navigator review pass. Each slice is one bisect-safe commit with a
 Slice 2 remains paused until corrective Slice 1R is accepted. Parent NOTE-001
 supersedes the earlier `list`/`checkpoint`/`payer` retirement classification.
 
-- [ ] T177-S2-1 Document exact installed `ckeri` commands for local, hosted,
+- [x] T177-S2-1 Document exact installed `ckeri` commands for local, hosted,
       and Koios tiers, configuration precedence, source/freshness, and closed
       errors
-- [ ] T177-S2-2 Explicitly document capability-safe fork retirement: production
+- [x] T177-S2-2 Explicitly document capability-safe fork retirement: production
       `status`/`list`/`checkpoint`/`payer` kept; `help`/`quit`, the prompt,
       completion/history, progress framing, and rough rendering dropped
-- [ ] T177-S2-3 Add an executable validator/helper for UTC-dated transcript
+- [x] T177-S2-3 Add an executable validator/helper for UTC-dated transcript
       provenance and exact production command shapes
-- [ ] T177-S2-4 Run the same AID through local, hosted, and Koios using the
+- [x] T177-S2-4 Run the same AID through local, hosted, and Koios using the
       built production binary; preserve exact commands, raw output, source,
       binary/store provenance, operator identity, timestamp, and exit status
-- [ ] T177-S2-5 Validate committed concise evidence against preserved raw
+- [x] T177-S2-5 Validate committed concise evidence against preserved raw
       runtime artifacts without touching the hosted service lifecycle
-- [ ] T177-S2-6 Immutable slice gate and `./gate.sh` green; navigator verifies
+- [x] T177-S2-6 Immutable slice gate and `./gate.sh` green; navigator verifies
       one docs/evidence commit
 
 ## Orchestrator-owned completion

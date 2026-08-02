@@ -3,8 +3,10 @@
 Story 3 of epic #171. The local read engine from #188 and the hosted HTTP
 contract from #176 become implementations behind the released `ckeri` binary.
 This ticket is also the retirement boundary for the temporary
-`ckeri-follower` executable: useful read machinery survives, but its rough
-interactive surface does not.
+`ckeri-follower` executable: its four data capabilities survive on production
+`ckeri`, but its interactive shell affordances and rough presentation do not.
+The complete inherited boundary is frozen in
+`follower-capability-inventory.md`.
 
 ## User story
 
@@ -92,19 +94,26 @@ request time or the tip itself as the data slot.
 errors, missing provenance, and unsupported capabilities are errors from the
 chosen backend. They never trigger local/endpoint/Koios fallback.
 
-**FR-6 — fork retirement.** Remove the `ckeri-follower` Cabal executable,
-flake package/app/check, interactive shell entry point, completion/history,
-and fork-only tests/docs/cast claims. Keep the transactional follower/store,
-read codecs, query types, HTTP producer, and any local adapter code used by
-`ckeri` or `ckeri-query`. Released artifacts remain the packaged `ckeri`
-runner and its AppImage/DEB/RPM outputs; the hosted producer remains
+**FR-6 — fork retirement without capability loss.** Remove the
+`ckeri-follower` Cabal executable, flake package/app/check, interactive shell
+entry point, completion/history, and fork-only tests/docs/cast claims. Keep the
+transactional follower/store, read codecs, query types, HTTP producer, and any
+local adapter code used by
+`ckeri` or `ckeri-query`. Production `ckeri` exposes the inherited `status`,
+`list`, `checkpoint`, and `payer` capabilities through the typed backend seam;
+a selected backend that cannot supply one fails with a named unsupported
+capability and never falls through. Released artifacts remain the packaged
+`ckeri` runner and its AppImage/DEB/RPM outputs; the hosted producer remains
 `ckeri-query`.
 
-**FR-7 — production language only.** The rough `list`, `checkpoint`, and
-`payer` shell verbs, prompt text, and ad-hoc output are not copied into
-`ckeri`. Existing released commands such as `manifest verify`, `status`, and
-`board list` stay production-shaped. Any retained behavior must be reachable
-from the packaged `ckeri` command and named in user documentation.
+**FR-7 — no leak and no loss.** Preserve the capabilities, not the REPL:
+`status`, `list`, `checkpoint`, and `payer` are reachable from packaged
+`ckeri` using opt-env-conf settings, typed results, and production renderers.
+`help` and `quit` do not become top-level commands; prompt text, completion,
+history, progress-loop framing, and the fork's ad-hoc rendering do not leak.
+Standard CLI `--help` remains. The no-loss and no-leak gates are separately
+proved able to fail by disconnecting one retained verb and by adding one
+forbidden affordance, then restoring both mutations.
 
 **FR-8 — executable checks.** Deterministic tests exercise the real CLI parser
 and each adapter with controlled boundaries. They cover configuration
@@ -135,9 +144,12 @@ Deterministic acceptance proves:
    answer when a coherent bound cannot be proven;
 6. a deliberate dispatch disconnection makes the wiring test red before
    restoration;
-7. `ckeri-follower` is absent from Cabal, flake packages/apps/checks, installed
-   artifacts, public docs, and the final diff's new command surface;
-8. focused gates and a fresh `just ci` pass at the accepted commit.
+7. `ckeri-follower` is absent from Cabal, flake packages/apps/checks, and
+   installed artifacts, while the committed inventory and packaged help prove
+   all four retained capabilities are reachable;
+8. independent no-loss and no-leak mutations each make their named gate red,
+   and neither mutation remains;
+9. focused gates and a fresh `just ci` pass at the accepted commit.
 
 Live acceptance runs the built production binary against local, hosted, and
 Koios tiers for the same AID and preserves the truthful transcripts. It does

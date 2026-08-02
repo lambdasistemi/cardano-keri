@@ -33,7 +33,11 @@ the deployment library merely to share a type.
 5. Koios data slot comes from the supporting records, never wall clock or tip;
 6. all successful adapters feed one renderer;
 7. no derived cache exists outside the engine transaction;
-8. `ckeri-follower` has no surviving package, app, check, docs, or CLI surface.
+8. `ckeri-follower` has no surviving package, app, check, or interactive shell
+   surface, while its `status`, `list`, `checkpoint`, and `payer` capabilities
+   remain reachable from packaged `ckeri`;
+9. `help`, `quit`, prompt/completion/history, progress-loop framing, and ad-hoc
+   fork output do not leak into production.
 
 ## Slice 1 — backend seam, production CLI, and fork retirement
 
@@ -51,15 +55,17 @@ Expected implementation surface includes:
 - deployment/indexer tests and exact CLI checks;
 - Cabal, flake, justfile, and public docs affected by fork retirement.
 
-The immutable slice gate runs a focused `just backend-check`, asserts the
-packaged CLI contract, rejects every `ckeri-follower` artifact and rough verb,
-and runs repository `./gate.sh`. It is first falsified against the base by the
-missing focused recipe and absent backend CLI surface. The pair must also
-demonstrate a dispatch-wiring mutation makes the focused test fail.
+The original Slice 1 gate proved backend dispatch and artifact retirement, but
+encoded only one half of the retirement boundary. Corrective Slice 1R freezes
+the six-verb inventory, exposes the four retained capabilities on packaged
+`ckeri`, and rejects the two REPL affordances plus shell-only presentation.
+Its no-loss and no-leak checks are distinct and each is mutation-proven red
+before restoration. Existing backend dispatch mutation evidence remains valid.
 
-Bisect condition: one behavior commit leaves `ckeri` and `ckeri-query`
-buildable, the three adapters tested, the fork retired, all focused/full gates
-green, and Slice 1 tasks stamped in the same commit.
+Bisect condition after Slice 1R: the accepted behavior commits leave `ckeri`
+and `ckeri-query` buildable, the three adapters tested, the fork retired, all
+focused/full gates green, and the corrective tasks stamped without rewriting
+the accepted Slice 1 history.
 
 ## Slice 2 — user docs and truthful three-tier evidence
 
@@ -81,8 +87,10 @@ one docs/evidence commit.
 
 - negative-control the frozen slice gate on base;
 - PAIR RED/GREEN review and navigator verification for Slice 1;
-- `just backend-check`, packaged `ckeri --help`/`status --help`, and fork
-  absence checks;
+- `just backend-check`, packaged help for every retained capability, and fork
+  artifact absence checks;
+- independent no-loss (disconnect one retained verb) and no-leak (add one
+  forbidden affordance/output marker) negative controls;
 - deliberate dispatch disconnection with named failing assertion, then restore;
 - exact local rollback, endpoint contract, and Koios provenance tests;
 - live three-tier commands using the same AID and production binary;

@@ -31,14 +31,33 @@ independent navigator review pass. Each slice is one bisect-safe commit with a
 - [x] T177-S1-10 `just backend-check`, immutable slice gate, `./gate.sh`, and
       named Nix/package checks green; navigator verifies one behavior commit
 
+## Corrective Slice 1R — capability-safe fork retirement
+
+- [ ] T177-S1R-1 Freeze the complete six-verb inventory from base `8153606`,
+      classifying `status`/`list`/`checkpoint`/`payer` as retained capabilities
+      and `help`/`quit` as excluded REPL affordances
+- [ ] T177-S1R-2 RED: focused production-surface tests fail because packaged
+      `ckeri` does not yet expose every retained capability
+- [ ] T177-S1R-3 RED: separate no-loss and no-leak controls are each able to
+      fail on, respectively, a disconnected retained verb and an added
+      forbidden affordance/output marker
+- [ ] T177-S1R-4 GREEN: route all four retained capabilities through the typed
+      backend seam with production configuration/rendering and named
+      unsupported-capability errors without fallback
+- [ ] T177-S1R-5 Remove both mutations, pass focused/package/full gates, and
+      obtain independent navigator acceptance of the corrective behavior
+
 ## Slice 2 — user docs and truthful three-tier evidence
+
+Slice 2 remains paused until corrective Slice 1R is accepted. Parent NOTE-001
+supersedes the earlier `list`/`checkpoint`/`payer` retirement classification.
 
 - [ ] T177-S2-1 Document exact installed `ckeri` commands for local, hosted,
       and Koios tiers, configuration precedence, source/freshness, and closed
       errors
-- [ ] T177-S2-2 Explicitly document fork retirement: rough
-      `list`/`checkpoint`/`payer` shell behavior dropped; transactional
-      store/query engine and production `status`/board/manifest commands kept
+- [ ] T177-S2-2 Explicitly document capability-safe fork retirement: production
+      `status`/`list`/`checkpoint`/`payer` kept; `help`/`quit`, the prompt,
+      completion/history, progress framing, and rough rendering dropped
 - [ ] T177-S2-3 Add an executable validator/helper for UTC-dated transcript
       provenance and exact production command shapes
 - [ ] T177-S2-4 Run the same AID through local, hosted, and Koios using the

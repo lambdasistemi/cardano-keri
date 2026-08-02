@@ -109,17 +109,14 @@ grep -Fqx '$ docker volume rm ckeri-159-acceptance-single-20260728' "$transcript
 grep -Fqx '$ docker volume rm ckeri-159-acceptance-2of5-20260728' "$transcript"
 
 if [[ -n "${CKERI_BIN:-}" ]]; then
-  expected_status="$(
-    grep -F \
-      "state ACTIVE seq 0 native 0 keys 2-of-5 witnesses 3 (toad 2) bond intact tx ${register_txids[2]}#0" \
-      "$transcript"
-  )"
   actual_status="$(
-    "$CKERI_BIN" status "$multi_aid" \
+    "$CKERI_BIN" status --aid "$multi_aid" \
       --manifest "$manifest" \
       --board-manifest deploy/preprod/board-manifest.json
   )"
-  test "$actual_status" = "$expected_status watchable 3/3"
+  grep -Eq \
+    "^source https://preprod[.]koios[.]rest/api/v1 as_of_slot [0-9]+ tip_lag_slots [0-9]+ aid $multi_aid state ACTIVE seq 0 native 0 keys 2-of-5 witnesses 3 [(]toad 2[)] tx ${register_txids[2]}#0 watchable 3/3$" \
+    <<<"$actual_status"
 
   tx_payload="$(
     printf '%s\n' "${premint_txids[@]}" "${register_txids[@]}" |

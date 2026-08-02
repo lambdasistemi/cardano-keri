@@ -180,12 +180,13 @@ if [[ -n "${CKERI_BIN:-}" ]]; then
   grep -Fq "$restore_txid#0 deposit 4000000" <<<"$final_board"
   final_status="$(
     "$CKERI_BIN" status \
-      EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi \
+      --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi \
       --manifest deploy/preprod/m1-manifest.json \
       --board-manifest "$manifest"
   )"
-  grep -Fq "keys 2-of-5 witnesses 3 (toad 2)" <<<"$final_status"
-  grep -Fq "watchable 3/3" <<<"$final_status"
+  grep -Eq \
+    '^source https://preprod[.]koios[.]rest/api/v1 as_of_slot [0-9]+ tip_lag_slots [0-9]+ aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi state ACTIVE seq 1 native 1 keys 2-of-5 witnesses 3 [(]toad 2[)] tx ccf10efe3b90833374cf712fdbe2b246f88aadf34c170c9074d16754cdf5c6f2#0 watchable 3/3$' \
+    <<<"$final_status"
 
   koios_curl_args=(--fail --silent --show-error)
   if [[ -n "${KOIOS_TOKEN:-}" ]]; then

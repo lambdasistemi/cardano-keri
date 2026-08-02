@@ -152,8 +152,9 @@ grep -Fqx \
   "$transcript"
 
 if [[ -n "${CKERI_BIN:-}" ]]; then
-  actual_status="$("$CKERI_BIN" status "$aid" --manifest "$manifest")"
-  test "$actual_status" = "$closed_status"
+  actual_status="$("$CKERI_BIN" status --aid "$aid" --manifest "$manifest")"
+  test "$actual_status" = \
+    "source koios as_of_slot unknown tip_lag_slots unknown aid $aid state NOT REGISTERED watchable 0/0"
 
   curl_args=(
     --fail

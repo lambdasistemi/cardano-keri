@@ -12,7 +12,6 @@ module Cardano.KERI.Deployment.CLI (
     RegisterSettings (..),
     AdvanceSettings (..),
     CloseSettings (..),
-    StatusSettings (..),
     BoardInstructions (..),
     BoardListSettings (..),
     BoardPostSettings (..),
@@ -20,6 +19,20 @@ module Cardano.KERI.Deployment.CLI (
     BoardRetireSettings (..),
     registerPreflight,
     runInstructions,
+
+    -- * Reused by "Cardano.KERI.CLI" to compose the top-level command list
+    deploySettingsParser,
+    verifySettingsParser,
+    registerSettingsParser,
+    advanceSettingsParser,
+    closeSettingsParser,
+    boardInstructionsParser,
+    runDeploy,
+    runVerify,
+    runRegister,
+    runAdvance,
+    runClose,
+    runBoard,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
@@ -42,7 +55,6 @@ import Cardano.KERI.Deployment.ChainIndex (
 import Cardano.KERI.Deployment.CheckpointIndex (
     ActiveCheckpoint (..),
     queryActiveCheckpoint,
-    queryCheckpointStatusWithBoard,
  )
 import Cardano.KERI.Deployment.Close (
     ClosePackage (..),
@@ -120,7 +132,6 @@ data Instructions
     | Register RegisterSettings
     | Advance AdvanceSettings
     | Close CloseSettings
-    | Status StatusSettings
     | Board BoardInstructions
     deriving stock (Show, Eq)
 
@@ -221,15 +232,6 @@ data CloseSettings = CloseSettings
     }
     deriving stock (Show, Eq)
 
-data StatusSettings = StatusSettings
-    { statusAid :: Text
-    , statusManifest :: FilePath
-    , statusBoardManifest :: FilePath
-    , statusKoiosUrl :: Text
-    , statusKoiosToken :: Maybe KoiosToken
-    }
-    deriving stock (Show, Eq)
-
 data BoardListSettings = BoardListSettings
     { boardListManifest :: !FilePath
     , boardListKoiosUrl :: !Text
@@ -316,10 +318,6 @@ instance Opt.HasParser Instructions where
                     "close"
                     "Close a live checkpoint and refund its complete escrow"
                     (Close <$> Opt.subConfig "close" closeSettingsParser)
-                , Opt.command
-                    "status"
-                    "Report the live V1 checkpoint for an AID"
-                    (Status <$> Opt.subConfig "status" statusSettingsParser)
                 , Opt.command
                     "board"
                     "Operate the current on-chain endpoint catalog"
@@ -827,42 +825,6 @@ closeSettingsParser = do
             ]
     pure CloseSettings{..}
 
-statusSettingsParser :: Opt.Parser StatusSettings
-statusSettingsParser = do
-    statusAid <-
-        T.pack
-            <$> Opt.setting
-                [ Opt.reader Opt.str
-                , Opt.argument
-                , Opt.env "CKERI_AID"
-                , Opt.conf "aid"
-                , Opt.metavar "AID"
-                , Opt.help "44-character KERI E-code identifier"
-                ]
-    statusManifest <-
-        stringSetting
-            "manifest"
-            "CKERI_MANIFEST"
-            "manifest"
-            "V1 preprod deployment manifest"
-            (Just "deploy/preprod/m1-manifest.json")
-    statusBoardManifest <-
-        stringSetting
-            "board-manifest"
-            "CKERI_BOARD_MANIFEST"
-            "board-manifest"
-            "Endpoint-board preprod deployment manifest"
-            (Just "deploy/preprod/board-manifest.json")
-    statusKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    statusKoiosToken <- optionalKoiosTokenParser
-    pure StatusSettings{..}
-
 boardInstructionsParser :: Opt.Parser BoardInstructions
 boardInstructionsParser =
     Opt.commands
@@ -1158,7 +1120,6 @@ runInstructions = \case
     Register settings -> runRegister settings
     Advance settings -> runAdvance settings
     Close settings -> runClose settings
-    Status settings -> runStatus settings
     Board instructions -> runBoard instructions
 
 runBoard :: BoardInstructions -> IO ()
@@ -1777,25 +1738,6 @@ submitClose settings manifest package signatureFile = do
 requireCloseSetting :: String -> Maybe a -> IO a
 requireCloseSetting name =
     maybe (fail $ name <> " is required when submitting a close") pure
-
-runStatus :: StatusSettings -> IO ()
-runStatus settings = do
-    unless
-        (T.length (statusAid settings) == 44 && "E" `T.isPrefixOf` statusAid settings)
-        (fail "AID must be one 44-character KERI E-code identifier")
-    manifest <-
-        readManifest (statusManifest settings) >>= either fail pure
-    boardManifest <-
-        readEndpointBoardManifest (statusBoardManifest settings)
-            >>= either fail pure
-    status <-
-        queryCheckpointStatusWithBoard
-            (statusKoiosUrl settings)
-            (statusKoiosToken settings)
-            manifest
-            boardManifest
-            (statusAid settings)
-    putStrLn (T.unpack status)
 
 runDeploy :: DeploySettings -> IO ()
 runDeploy settings = do

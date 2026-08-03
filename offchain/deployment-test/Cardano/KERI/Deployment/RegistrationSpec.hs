@@ -2,13 +2,15 @@
 
 module Cardano.KERI.Deployment.RegistrationSpec (spec) where
 
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetUtxo (..),
  )
 import Cardano.KERI.Deployment.CheckpointIndex (
-    renderCheckpointStatus,
-    renderCheckpointStatusWithBoard,
+    ActiveCheckpoint (..),
+    resolveActiveCheckpoint,
  )
 import Cardano.KERI.Deployment.KEL (parseInceptionExport)
 import Cardano.KERI.Deployment.Manifest (
@@ -149,28 +151,21 @@ spec =
                             1
                         ]
                         (Just $ planCheckpointDatum plan)
-            renderCheckpointStatus
+            resolveActiveCheckpoint
                 sampleManifest
                 (planAid plan)
                 (planCheckpointName plan)
                 []
-                `shouldBe` Right ("state NOT REGISTERED aid " <> planAid plan)
-            renderCheckpointStatus
+                `shouldSatisfy` isLeft
+            resolveActiveCheckpoint
                 sampleManifest
                 (planAid plan)
                 (planCheckpointName plan)
                 [active]
-                `shouldSatisfy` either (const False) (T.isInfixOf "keys 1-of-1")
-            renderCheckpointStatusWithBoard
-                sampleManifest
-                (planAid plan)
-                (planCheckpointName plan)
-                [active]
-                []
                 `shouldSatisfy` either
                     (const False)
-                    (T.isSuffixOf "watchable 0/0")
-            renderCheckpointStatus
+                    ((== Unweighted 1) . cdCurThreshold . activeCheckpointDatum)
+            resolveActiveCheckpoint
                 sampleManifest
                 (planAid plan)
                 (planCheckpointName plan)

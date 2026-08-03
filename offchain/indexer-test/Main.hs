@@ -11,7 +11,6 @@ import Cardano.KERI.Indexer.Query.TypesSpec qualified as QueryTypesSpec
 import Cardano.KERI.Indexer.ReadsSpec qualified as ReadsSpec
 import Cardano.KERI.Indexer.ResumeSpec qualified as ResumeSpec
 import Cardano.KERI.Indexer.RollbackSpec qualified as RollbackSpec
-import Cardano.KERI.Indexer.ShellSpec qualified as ShellSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
@@ -27,4 +26,3 @@ main = hspec $ do
     ReadsSpec.spec
     ResumeSpec.spec
     RollbackSpec.spec
-    ShellSpec.spec

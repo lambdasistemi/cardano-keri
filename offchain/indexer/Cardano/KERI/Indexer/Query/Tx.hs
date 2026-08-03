@@ -19,6 +19,8 @@ module Cardano.KERI.Indexer.Query.Tx (
     scanAddressTx,
     watermarkTx,
     checkpointTx,
+    listCheckpointsTx,
+    payerUtxosTx,
     boardTx,
     watchabilityTx,
 ) where
@@ -107,6 +109,34 @@ checkpointTx handle aid = do
                 ]
     watermark <- watermarkTx
     pure (find ((== aid) . crAid) decoded, watermark)
+
+-- | Decode every live checkpoint and read the store watermark atomically.
+listCheckpointsTx ::
+    QueryHandle cf op ->
+    Transaction IO cf Cols op ([CheckpointRecord], Maybe SlotNo)
+listCheckpointsTx handle = do
+    entries <- scanAddressTx (qhCheckpointAddress handle)
+    let decoded =
+            rights
+                [ decodeCheckpointOutput
+                    (qhCheckpointPolicy handle)
+                    txIn
+                    (qhCheckpointAddress handle)
+                    txOut
+                | (txIn, txOut) <- entries
+                ]
+    watermark <- watermarkTx
+    pure (decoded, watermark)
+
+-- | Read payer UTxOs and the store watermark in the same transaction.
+payerUtxosTx ::
+    QueryHandle cf op ->
+    Address ->
+    Transaction IO cf Cols op ([(TxIn, TxOut)], Maybe SlotNo)
+payerUtxosTx _handle address = do
+    utxos <- scanAddressTx address
+    watermark <- watermarkTx
+    pure (utxos, watermark)
 
 {- | The composed board read: the authenticated catalog (or the fail-closed
 'Left' from 'indexedBoardCatalog') plus the store watermark, in one

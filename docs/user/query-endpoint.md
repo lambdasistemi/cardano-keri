@@ -250,8 +250,9 @@ reads.
 
 ## What this endpoint does not do
 
-`ckeri status --endpoint` — a CLI command that talks to this HTTP service
-instead of a local node/store — is explicitly **not** part of this ticket.
-It is assigned to
-[#177](https://github.com/lambdasistemi/cardano-keri/issues/177), which
-consumes the contract documented on this page.
+`ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com` now
+consumes this contract through the production CLI, delivered by
+[#177](https://github.com/lambdasistemi/cardano-keri/issues/177). It validates
+the checkpoint and watchability responses, including their echoed identity
+and shared freshness envelope, and fails closed without falling back to a
+local store or Koios.

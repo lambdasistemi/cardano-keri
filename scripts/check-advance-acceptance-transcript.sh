@@ -121,11 +121,13 @@ awk 'length != 88 { exit 1 }' "$package_dir/controller-signatures.cesr"
 
 if [[ -n "${CKERI_BIN:-}" ]]; then
   actual_status="$(
-    "$CKERI_BIN" status "$aid" \
+    "$CKERI_BIN" status --aid "$aid" \
       --manifest "$manifest" \
       --board-manifest deploy/preprod/board-manifest.json
   )"
-  test "$actual_status" = "$seq_one watchable 3/3"
+  grep -Eq \
+    "^source https://preprod[.]koios[.]rest/api/v1 as_of_slot [0-9]+ tip_lag_slots [0-9]+ aid $aid state ACTIVE seq 1 native 1 keys 2-of-5 witnesses 3 [(]toad 2[)] tx ${advance_txid}#0 watchable 3/3$" \
+    <<<"$actual_status"
 
   tx_payload="$(
     printf '%s\n' \

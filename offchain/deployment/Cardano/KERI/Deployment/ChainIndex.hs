@@ -12,6 +12,8 @@ module Cardano.KERI.Deployment.ChainIndex (
     ChainScriptRedeemer (..),
     ChainTransactionUtxos (..),
     ChainTransactionPart (..),
+    ChainTip (..),
+    ChainTransactionInfo (..),
     KoiosToken (..),
     authorizeKoiosRequest,
     queryReferenceScripts,
@@ -20,6 +22,8 @@ module Cardano.KERI.Deployment.ChainIndex (
     queryAssetHistory,
     queryScriptRedeemers,
     queryTransactionUtxos,
+    queryTip,
+    queryTransactionInfo,
     matchesReference,
 ) where
 
@@ -117,6 +121,26 @@ data ChainTransactionPart = ChainTransactionPart
     }
     deriving stock (Show, Eq)
 
+{- | The observed chain tip's absolute slot (Koios @GET \/tip@'s @abs_slot@),
+FR-4's independently-observed freshness bound.
+-}
+newtype ChainTip = ChainTip
+    { tipAbsSlot :: Integer
+    }
+    deriving stock (Show, Eq)
+
+{- | One transaction's absolute slot (Koios @POST \/tx_info@'s
+@absolute_slot@) — FR-4's honest @as_of_slot@ source, keyed by the exact
+originating tx of the live UTxO being rendered, never by an
+@asset_history@ minting/burn event (see RULING-001: an advance never
+mints/burns, so that event stays pinned at registration).
+-}
+data ChainTransactionInfo = ChainTransactionInfo
+    { txInfoTxHash :: !Text
+    , txInfoAbsoluteSlot :: !Integer
+    }
+    deriving stock (Show, Eq)
+
 -- | Koios API bearer token whose 'Show' instance never reveals the secret.
 newtype KoiosToken = KoiosToken Text
     deriving stock (Eq)
@@ -187,6 +211,16 @@ instance FromJSON ChainTransactionUtxos where
             <$> o .: "tx_hash"
             <*> o .: "inputs"
             <*> o .: "outputs"
+
+instance FromJSON ChainTip where
+    parseJSON = withObject "ChainTip" $ \o ->
+        ChainTip <$> o .: "abs_slot"
+
+instance FromJSON ChainTransactionInfo where
+    parseJSON = withObject "ChainTransactionInfo" $ \o ->
+        ChainTransactionInfo
+            <$> o .: "tx_hash"
+            <*> o .: "absolute_slot"
 
 instance FromJSON ChainTransactionPart where
     parseJSON = withObject "ChainTransactionPart" $ \o -> do
@@ -304,6 +338,22 @@ queryTransactionUtxos ::
     IO [ChainTransactionUtxos]
 queryTransactionUtxos baseUrl token txIds = do
     initial <- parseRequest (endpoint baseUrl "tx_utxos")
+    let request =
+            setRequestBodyJSON (object ["_tx_hashes" .= txIds]) $
+                setRequestHeader "content-type" ["application/json"] $
+                    setRequestMethod "POST" initial
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token request)
+
+-- | The observed chain tip (Koios @GET \/tip@, a singleton array).
+queryTip :: Text -> Maybe KoiosToken -> IO [ChainTip]
+queryTip baseUrl token = do
+    initial <- parseRequest (endpoint baseUrl "tip")
+    getResponseBody <$> httpJSON (authorizeKoiosRequest token initial)
+
+-- | One or more transactions' absolute slots (Koios @POST \/tx_info@).
+queryTransactionInfo :: Text -> Maybe KoiosToken -> [Text] -> IO [ChainTransactionInfo]
+queryTransactionInfo baseUrl token txIds = do
+    initial <- parseRequest (endpoint baseUrl "tx_info")
     let request =
             setRequestBodyJSON (object ["_tx_hashes" .= txIds]) $
                 setRequestHeader "content-type" ["application/json"] $

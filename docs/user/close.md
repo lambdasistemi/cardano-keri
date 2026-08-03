@@ -88,7 +88,9 @@ $ ckeri close \
     --controller-signatures controller-signatures.cesr
 close txid: <settled-close-txid>
 refunded: 1007 tADA to addr_test1refund...
-$ ckeri status E... --manifest deploy/preprod/m1-manifest.json
+$ ckeri status --aid E... --backend koios \
+    --manifest deploy/preprod/m1-manifest.json \
+    --board-manifest deploy/preprod/board-manifest.json
 state NOT REGISTERED (closed at <settled-close-txid>) aid E...
 ```
 

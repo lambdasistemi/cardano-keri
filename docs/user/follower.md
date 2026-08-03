@@ -66,8 +66,9 @@ A host creates an `IndexerConfig`, passes it with the deployment `Manifest` to
 with the upstream indexer, and supplies both to
 `withChainSyncFollower`.
 [`cardano-keri#188`](https://github.com/lambdasistemi/cardano-keri/issues/188)
-builds exactly this composition into the runnable `ckeri-follower` executable
-and interactive query prompt documented below.
+built exactly this composition into a runnable proof; the hosted `ckeri-query`
+service (#176) and the packaged `ckeri status` command's local backend (#177)
+are its production consumers today.
 
 `IndexerConfig` has an `opt-env-conf` surface for the node socket, network
 magic, Byron epoch size, security parameter `k`, store path, funding
@@ -119,125 +120,24 @@ may configure more than one — and `payerUtxos` returns the raw
 transaction builder) off `cardano-cli` is a separate story; this library only
 provides the data and proves it readable.
 
-## Running it: the interactive preprod follower
-
-`ckeri-follower` is the runnable executable built from this library: it opens
-a store, drives the production `withChainSyncFollower` composition against a
-live node socket, and serves an interactive local-store query prompt in the
-foreground for as long as it runs.
-
-### Prerequisites
-
-- A synced preprod `cardano-node` reachable over a local N2C socket, for
-  example `/code/cardano-preprod/ipc/node.socket`.
-- Preprod's network parameters: network magic `1`, Byron epoch slots `21600`,
-  security parameter `--security-param-k 2160`.
-- The committed deployment manifest `deploy/preprod/m1-manifest.json`.
-- For a cold-boot start, this deployment's committed start-point record
-  `deploy/preprod/m1-follower-start.json` — slot `129566111`, block hash
-  `52457d38ab799de201f67936cec9bbc86948adcc2a2685bf80b5690eb1377887`.
-- One or more funding addresses to inspect payer UTxOs for, for example the M1
-  operator payer
-  `addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d`.
-
-### The exact invocation
-
-```console
-$ nix run ./offchain#ckeri-follower -- \
-    --node-socket /code/cardano-preprod/ipc/node.socket \
-    --network-magic 1 \
-    --byron-epoch-slots 21600 \
-    --security-param-k 2160 \
-    --start-slot 129566111 \
-    --start-block-hash 52457d38ab799de201f67936cec9bbc86948adcc2a2685bf80b5690eb1377887 \
-    --store-path <a-store-directory> \
-    --manifest-path deploy/preprod/m1-manifest.json \
-    --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d
-```
-
-Every flag has a `CKERI_*` environment fallback (`CKERI_NODE_SOCKET`,
-`CKERI_NETWORK_MAGIC`, `CKERI_BYRON_EPOCH_SLOTS`, `CKERI_SECURITY_PARAM_K`,
-`CKERI_START_SLOT`/`CKERI_START_BLOCK_HASH`, `CKERI_STORE_PATH`,
-`CKERI_MANIFEST_PATH`, optional `CKERI_BOARD_ADDRESS`, and
-`CKERI_FUNDING_ADDRESSES` for a comma-separated list); repeat
-`--funding-address` on the command line for more than one operator address.
-
-While it runs, the process prints a live progress line every two seconds —
-`processed=… tip=… lag=… upstream=… store=… live=… rejects=…` — interleaved
-with a `ckeri> ` prompt for the verbs below.
-
-### The interactive verbs
-
-Typed at the `ckeri> ` prompt:
-
-- **`status`** — one fresh local-store read: processed/tip slot, lag,
-  upstream connection state, and current store point. Safe to run repeatedly
-  in the same process; every call re-reads the store, nothing is cached.
-- **`list`** — every live checkpoint right now, decoded from the local store.
-- **`checkpoint <AID>`** — the current checkpoint for one 44-character E-code
-  AID, or `checkpoint not found`. The rendered `aid=` field is the raw
-  checkpoint asset name in **hex**, not re-encoded as an E-code CESR
-  primitive — a display detail worth knowing when cross-checking against a
-  `kli` identity.
-- **`payer <ADDRESS>`** — every live UTxO at a bech32 funding address.
-- **`help`** — the verb list.
-- **`quit`** — clean shutdown; the process exits once the store and follower
-  finish tearing down (`Ctrl-D` on the prompt does the same).
-
-### Cold boot, warm boot, store reuse, and recovery
-
-A fresh, non-existent `--store-path` cold-boots from the configured
-`--start-slot`/`--start-block-hash` above. Pointing the same flags at a store
-directory from a previous run instead warm-boots: the store's own persisted
-resume points take over and the configured cold-boot start point is ignored.
-See "The young-store fail-closed case" above for the young-store fail-closed
-case and its recovery path (a fresh store with the configured cold start)
-when a warm store's retained rows cannot intersect the node.
-
-### Shutdown
-
-`quit` at the prompt (or `Ctrl-D`) stops the interactive loop and lets the
-follower and store shut down cleanly before the process exits; there is no
-separate stop command or signal handling to know about.
-
-### Watch it: a real preprod session
-
-Recorded by the resident coding agent against the live preprod deployment
-above, 2026-08-01, using the exact invocation shown, the committed M1 start
-point, and the configured payer. Every catch-up progress line and verb result
-below is genuine `ckeri-follower` output over a real preprod node socket,
-unedited. The `ckeri> <command>` lines are rendered by the recording helper
-immediately before it forwards the same command to the running process —
-Haskeline does not echo the FIFO-fed input the helper uses, so the helper
-renders the faithful interactive line itself. No command, argument, or result
-is altered, reordered, or fabricated.
-
-```asciinema-player
-{ "file": "assets/video/follower-preprod.cast"
-, "mkap_theme": "none"
-, "cols": 80
-}
-```
-
-A reproducible recording helper lives at
-`scripts/record-follower-preprod-cast.sh`; point `CKERI_TOUR_STORE` at a
-fresh store directory and it drives this exact tour against a live preprod
-socket.
-
 ## What it deliberately does not do
 
 - No chain-sync client, reconnect loop, or rollback engine of its own —
   those are `cardano-node-clients` responsibilities, consumed not written.
-- No HTTP index, no Koios, no third-party data source of any kind.
+- No HTTP index, no Koios, no third-party data source of any kind. The
+  packaged `ckeri status` command's local backend is a thin batch reader
+  over this library's store, added separately in `specs/177-backends`.
 - No node database snapshot/restore, no process signalling, and no
   hand-rolled N2C chain-sync recorder/intersector — the retired
   consumer-local fork drill duplicated upstream machinery this repo does
   not own; its audit and follow-ups are recorded in
   [`chain-follower#29`](https://github.com/lambdasistemi/chain-follower/issues/29)
   and [`cardano-node-clients#197`](https://github.com/lambdasistemi/cardano-node-clients/issues/197).
-- No remote/HTTP query API of its own — the runnable `ckeri-follower` process
-  below exposes only the local, in-process interactive prompt over its own
-  store.
+- No standalone interactive process of its own: the temporary follower
+  executable and its interactive local-store prompt existed only while
+  story #175/#188 needed a runnable proof and have been retired now that the
+  packaged `ckeri status` command and the hosted `ckeri-query` service (#176)
+  are the production surfaces reading this store.
 
 ## Proof: the live composition smoke
 

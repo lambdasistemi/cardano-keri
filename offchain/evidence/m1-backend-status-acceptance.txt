@@ -1,0 +1,69 @@
+evidence-version: 1
+source-commit: 0a8ed578b808fbb02a1df61e220ce07246262627
+backend-code-commit: 65017f325388947cce42b9e8410e03eca3e274a7
+candidate-build-handoff-sha256: fac93a886c6a3ca3b1cdf4c44e4c3a1791b11e2c3e76b6face8b9e4c808a5f3a
+candidate-out-link: /code/tmp/cardano-keri-177/ckeri-package-capability
+candidate-store-path: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri
+source-store: /code/cardano-keri-188-runnable/.llm/slice2-record-store-v3
+source-store-sha256-before: d878e2d1b3bf396f3a88b81b50c590c85aced001e25f9c8b3cbe85002dab33d7
+source-store-sha256-after: d878e2d1b3bf396f3a88b81b50c590c85aced001e25f9c8b3cbe85002dab33d7
+store-copy: /code/tmp/cardano-keri-177/local-store-copy-capability-20260802T191303Z
+store-copy-sha256-preopen: d878e2d1b3bf396f3a88b81b50c590c85aced001e25f9c8b3cbe85002dab33d7
+store-copy-sha256-postopen: 5e6299255d6a215402a7e177a84181a1f91b018aef085fea09e38208f7ede601
+local-as-of-source: transactional-store-watermark
+endpoint-as-of-source: endpoint-response
+koios-as-of-source: supporting-checkpoint-transaction-slot-compared-with-fresh-tip
+
+record: 1
+backend: local
+aid: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+utc: 2026-08-02T19:13:03Z
+operator: paolino via cardano-keri#177 driver pane %5284
+host: development
+pane: %5284
+binary: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri
+binary-sha256: c9281088e00af413619098dafbc83584e69e661b7863f4f8716a7b82b3eda3e0
+store: /code/tmp/cardano-keri-177/local-store-copy-capability-20260802T191303Z
+source: local
+cwd: /tmp
+command: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri status --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --backend local --store /code/tmp/cardano-keri-177/local-store-copy-capability-20260802T191303Z --manifest /code/cardano-keri-177-backends/deploy/preprod/m1-manifest.json --board-manifest /code/cardano-keri-177-backends/deploy/preprod/board-manifest.json
+raw-file: local.raw
+raw-sha256: 70200f363eeb8e61e8b380b7e53b21193885877bc27a4922e93cf8cd2760aeda
+exit-status: 0
+result: success
+
+record: 2
+backend: endpoint
+aid: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+utc: 2026-08-02T19:13:03Z
+operator: paolino via cardano-keri#177 driver pane %5284
+host: development
+pane: %5284
+binary: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri
+binary-sha256: c9281088e00af413619098dafbc83584e69e661b7863f4f8716a7b82b3eda3e0
+store: n/a
+source: https://ckeri.dev.plutimus.com
+cwd: /tmp
+command: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri status --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --endpoint https://ckeri.dev.plutimus.com
+raw-file: endpoint.raw
+raw-sha256: 09711e96f2ccd9421b69297a47132166a1549f8b11e8dca89b8ff0e473f0d767
+exit-status: 0
+result: success
+
+record: 3
+backend: koios
+aid: EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi
+utc: 2026-08-02T19:13:03Z
+operator: paolino via cardano-keri#177 driver pane %5284
+host: development
+pane: %5284
+binary: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri
+binary-sha256: c9281088e00af413619098dafbc83584e69e661b7863f4f8716a7b82b3eda3e0
+store: n/a
+source: https://preprod.koios.rest/api/v1
+cwd: /tmp
+command: /nix/store/ic6xry5wfb9mhvhnb0l5p1slzg3ch5h7-ckeri/bin/ckeri status --aid EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi --backend koios --manifest /code/cardano-keri-177-backends/deploy/preprod/m1-manifest.json --board-manifest /code/cardano-keri-177-backends/deploy/preprod/board-manifest.json
+raw-file: koios.raw
+raw-sha256: 595ad0f8b95f60f8564366787b6da17dc3ed2a6aff7fb6bb184d094ac7cf1d9b
+exit-status: 0
+result: success

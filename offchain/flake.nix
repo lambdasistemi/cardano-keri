@@ -186,7 +186,8 @@
               # devshell-offchain` and CI run `cabal update
               # --project-file=cabal.project.devshell` first (hackage over http + the
               # local CHaP index generated offline). The augmented config is written
-              # under the gitignored dist-newstyle/, never the tracked tree. root-keys
+              # under $PWD/dist-newstyle/, which is gitignored both at the repo root
+              # (/dist-newstyle/) and under offchain/ (offchain/dist-newstyle/). root-keys
               # mirror offchain/cabal.project.
               shellHook = ''
                 if [ -n "$CABAL_CONFIG" ] && [ -f "$CABAL_CONFIG" ]; then

@@ -101,6 +101,7 @@ spec = describe "Cardano.KERI.Indexer.Query.Server (#176 Slice 1 contract)" $ do
     readySpec
     checkpointSpec
     boardSpec
+    boardListSpec
     watchabilitySpec
     noCacheSpec
     rollbackSkewSpec
@@ -300,6 +301,94 @@ boardSpec = describe "GET /board/{witness_key}" $ do
                 runSession (get ("/board/" <> qb64Witness (endpointWitnessKey good))) $
                     mkQueryApplication handle'
             simpleStatus resp `shouldBe` status500
+
+-- ---------------------------------------------------------------------------
+-- /board
+
+boardListSpec :: Spec
+boardListSpec = describe "GET /board catalog" $ do
+    it "returns the complete authenticated catalog with transactional freshness" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            first <- loadRecord "witness-1-oobi.cesr"
+            second <- loadRecord "witness-2-oobi.cesr"
+            let firstTxIn = sampleTxIn 0x33
+                secondTxIn = sampleTxIn 0x34
+            applyBatch
+                handle
+                62
+                0x17
+                [ boardCreate firstTxIn first
+                , boardCreate secondTxIn second
+                ]
+            let handle' =
+                    QueryHandle
+                        runner
+                        checkpointAddress
+                        checkpointPolicy
+                        boardAddress
+                        (constReadiness (readinessAt 62 64))
+            resp <- runSession (get "/board") (mkQueryApplication handle')
+            simpleStatus resp `shouldBe` status200
+            decode (simpleBody resp)
+                `shouldBe` Just (expectedBoardListJson [(first, firstTxIn), (second, secondTxIn)] 62 2)
+
+    it "returns an empty array for an empty authenticated catalog" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyBatch handle 6 0x18 []
+            let handle' =
+                    QueryHandle
+                        runner
+                        checkpointAddress
+                        checkpointPolicy
+                        boardAddress
+                        (constReadiness (readinessAt 6 6))
+            resp <- runSession (get "/board") (mkQueryApplication handle')
+            simpleStatus resp `shouldBe` status200
+            withObject resp $ \obj ->
+                KeyMap.lookup "board" obj `shouldBe` Just (Aeson.Array mempty)
+
+    it "fails the whole catalog closed on one forged record" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            good <- loadRecord "witness-1-oobi.cesr"
+            forged <- loadRecord "witness-2-oobi.cesr"
+            let forged' =
+                    forged
+                        { endpointEventBytes =
+                            replaceOnce "witness-2" "witness-X" (endpointEventBytes forged)
+                        }
+            applyBatch
+                handle
+                63
+                0x19
+                [ boardCreate (sampleTxIn 0x35) good
+                , boardCreate (sampleTxIn 0x36) forged'
+                ]
+            let handle' =
+                    QueryHandle
+                        runner
+                        checkpointAddress
+                        checkpointPolicy
+                        boardAddress
+                        (constReadiness (readinessAt 63 63))
+            resp <- runSession (get "/board") (mkQueryApplication handle')
+            simpleStatus resp `shouldBe` status500
+
+    it "returns 503 without a board payload when readiness fails" $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            record <- loadRecord "witness-1-oobi.cesr"
+            applyBatch handle 64 0x1a [boardCreate (sampleTxIn 0x37) record]
+            let handle' =
+                    QueryHandle
+                        runner
+                        checkpointAddress
+                        checkpointPolicy
+                        boardAddress
+                        (constReadiness disconnectedReadiness)
+            resp <- runSession (get "/board") (mkQueryApplication handle')
+            simpleStatus resp `shouldBe` status503
+            withObject resp $ \obj -> do
+                KeyMap.lookup "error" obj `shouldBe` Just (Aeson.String "service_unavailable")
+                KeyMap.member "board" obj `shouldBe` False
 
 -- ---------------------------------------------------------------------------
 -- /watchability/{aid}
@@ -542,6 +631,8 @@ oneTransactionSpec = describe "one transaction per response (FR-2)" $ do
     it "/board/{witness_key} runs exactly one transaction" $
         countedTransactionsFor ("/board/" <> qb64Witness (BS.replicate 32 0x77))
             `shouldReturnCount` 1
+    it "/board catalog runs exactly one transaction" $
+        countedTransactionsFor "/board" `shouldReturnCount` 1
     it "/watchability/{aid} runs exactly one transaction (both address scans + watermark)" $
         countedTransactionsFor ("/watchability/" <> qb64Aid aidX) `shouldReturnCount` 1
 
@@ -652,6 +743,27 @@ expectedBoardJson record txIn asOfSlot tipLag =
                 , "lovelace" .= (2_000_000 :: Int)
                 , "owner_key_hash" .= hexBytes boardOwner
                 ]
+        ]
+
+expectedBoardListJson :: [(EndpointRecord, Indexer.TxIn)] -> Int -> Int -> Value
+expectedBoardListJson records asOfSlot tipLag =
+    object
+        [ "as_of_slot" .= asOfSlot
+        , "tip_lag_slots" .= tipLag
+        , "board" .= map (uncurry expectedBoardListEntryJson) records
+        ]
+
+expectedBoardListEntryJson :: EndpointRecord -> Indexer.TxIn -> Value
+expectedBoardListEntryJson record txIn =
+    object
+        [ "witness_key" .= TE.decodeUtf8 (qb64Witness (endpointWitnessKey record))
+        , "aid" .= endpointAid record
+        , "scheme" .= endpointScheme record
+        , "url" .= endpointUrl record
+        , "tx_id" .= hexBytes (Indexer.txInId txIn)
+        , "output_index" .= Indexer.txInIx txIn
+        , "lovelace" .= (2_000_000 :: Int)
+        , "owner_key_hash" .= hexBytes boardOwner
         ]
 
 thresholdJson :: Threshold -> Value

@@ -68,6 +68,18 @@ supersedes the earlier `list`/`checkpoint`/`payer` retirement classification.
 - [x] T177-S2-6 Immutable slice gate and `./gate.sh` green; navigator verifies
       one docs/evidence commit
 
+## Slice 3 — hosted board enumeration after retirement
+
+- [x] T177-S3-1 Freeze `GET /board` as an authenticated deterministic catalog
+      with top-level `as_of_slot` and `tip_lag_slots`
+- [x] T177-S3-2 RED: HTTP and encoder-derived OpenAPI drift tests cover the
+      populated list shape; demonstrate a drifted response field makes the
+      enforcing check fail, then restore it
+- [x] T177-S3-3 GREEN: reuse one `boardTx` for populated/empty catalogs, fail
+      the whole route closed on a forged record, and omit `board` on 503
+- [x] T177-S3-4 Amend OpenAPI and user docs, pass the immutable Slice 3 gate and
+      full gate, then publish the registry-facing `NOTE RELEASE` line
+
 ## Orchestrator-owned completion
 
 - [x] T177-O-1 Independently inspect both accepted commits/diffs, task stamps,

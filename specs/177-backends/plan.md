@@ -83,6 +83,27 @@ Bisect condition: docs and validator are executable, no fork-era public claim
 remains, the three-tier record is honest, and Slice 2 gate/tasks are green in
 one docs/evidence commit.
 
+## Slice 3 — hosted board enumeration, sequenced after retirement
+
+After Slice 1R and Slice 2 are accepted, extend the #176 producer surface with
+`GET /board`. Reuse the existing `boardTx` authenticated catalog and watermark
+transaction; do not add a cache, local index, or second scan. Render one
+top-level freshness pair beside a deterministic `board` array whose entries
+include their witness key and the existing board-record fields.
+
+RED first: add an HTTP application example for a populated catalog and extend
+the encoder-derived Swagger field-set check for `BoardListResponse` and
+`BoardListEntry`. Capture the drift check failing when one response field is
+intentionally renamed or removed, then restore the mutation. GREEN adds the
+minimal route, response types, OpenAPI path/schemas, empty/forged/503 and
+one-transaction coverage, and user documentation. Publish the amended-surface
+release note only at the accepted implementation commit so the registry can
+move before #162 consumes it.
+
+Bisect condition: retirement history remains unchanged; the new commit exposes
+only the additive read route, all focused/full gates are green, and the
+amended registered surface is named in STATUS.
+
 ## Verification
 
 - negative-control the frozen slice gate on base;
@@ -94,6 +115,8 @@ one docs/evidence commit.
 - deliberate dispatch disconnection with named failing assertion, then restore;
 - exact local rollback, endpoint contract, and Koios provenance tests;
 - live three-tier commands using the same AID and production binary;
+- `GET /board` populated/empty/forged/unready/one-transaction HTTP coverage;
+- encoder-derived list response and entry field drift, mutation-proven red;
 - fresh `just ci`, `./gate.sh`, diff audit, PR checks, and task stamping at the
   final head.
 

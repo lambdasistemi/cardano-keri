@@ -21,6 +21,7 @@ paths and snake-case JSON field names are the registry contract consumed by
 
 - `GET /ready`
 - `GET /checkpoint/{aid}` where `aid` is a self-addressing CESR E-code
+- `GET /board` for the complete authenticated board catalog
 - `GET /board/{witness_key}` where `witness_key` is a CESR B-code
 - `GET /watchability/{aid}`
 - `GET /swagger.json`
@@ -68,6 +69,9 @@ The complete top-level shapes are:
 - board: top-level `witness_key`, `as_of_slot`, `tip_lag_slots`, and `board`;
   the nullable `board` contains `aid`, `scheme`, `url`, `tx_id`,
   `output_index`, `lovelace`, and `owner_key_hash`;
+- board catalog: top-level `as_of_slot`, `tip_lag_slots`, and `board`; `board`
+  is an array whose entries contain `witness_key` plus the seven board-record
+  fields above; an empty authenticated catalog is `[]`;
 - watchability: top-level `aid`, `as_of_slot`, `tip_lag_slots`, and
   `watchability`; `watchability` contains `checkpoint_present`,
   `witnesses_declared`, `witnesses_listed`, and `missing_witnesses`.
@@ -114,11 +118,13 @@ auxiliary invalidation path.
 address in the upstream index, decodes the current authenticated checkpoint
 records, and selects the requested AID. It does not query the node UTxO set.
 
-**FR-6 — authenticated board lookup.** The endpoint scans the configured board
-address and validates the frozen board marker, datum, KERI event, and signature
-using the existing `Cardano.KERI.Deployment.EndpointBoard` semantics. A forged
-or malformed output fails the entire board view closed; a partial catalog is
-never returned. Koios is absent from the serving path.
+**FR-6 — authenticated board lookup and enumeration.** The endpoint scans the
+configured board address and validates the frozen board marker, datum, KERI
+event, and signature using the existing
+`Cardano.KERI.Deployment.EndpointBoard` semantics. Both witness lookup and
+catalog enumeration reuse that authenticated view and its transactional
+watermark. A forged or malformed output fails the entire board view closed; a
+partial catalog is never returned. Koios is absent from the serving path.
 
 **FR-7 — watchability.** For the requested checkpoint, the endpoint compares
 the datum's declared witness keys with the current authenticated board catalog.
@@ -147,8 +153,8 @@ and CA/runtime material only; its store and node socket are mounted.
 
 **FR-11 — executable contract check.** A deterministic test starts the real WAI
 application over an in-memory upstream indexer and compares complete response
-JSON to committed goldens. It covers payload and freshness fields for all four
-routes, 400/503 behavior, and OpenAPI drift. The proof record includes an
+JSON to committed goldens. It covers payload and freshness fields for all five
+data routes, 400/503 behavior, and OpenAPI drift. The proof record includes an
 intentional field rename that makes the contract check fail before restoration.
 
 **FR-12 — documentation.** The docs page is titled “the query endpoint —

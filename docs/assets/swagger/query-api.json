@@ -54,6 +54,30 @@
         }
       }
     },
+    "/board": {
+      "get": {
+        "summary": "The complete authenticated endpoint-board catalog",
+        "responses": {
+          "200": {
+            "description": "board is an empty array when no current records exist",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BoardListResponse" }
+              }
+            }
+          },
+          "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
+          "503": {
+            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/board/{witness_key}": {
       "get": {
         "summary": "The authenticated endpoint-board record for a witness key",
@@ -241,6 +265,32 @@
               { "$ref": "#/components/schemas/BoardData" },
               { "type": "null" }
             ]
+          }
+        }
+      },
+      "BoardListEntry": {
+        "type": "object",
+        "required": ["witness_key", "aid", "scheme", "url", "tx_id", "output_index", "lovelace", "owner_key_hash"],
+        "properties": {
+          "witness_key": { "type": "string" },
+          "aid": { "type": "string" },
+          "scheme": { "type": "string" },
+          "url": { "type": "string" },
+          "tx_id": { "type": "string" },
+          "output_index": { "type": "integer" },
+          "lovelace": { "type": "integer" },
+          "owner_key_hash": { "type": "string" }
+        }
+      },
+      "BoardListResponse": {
+        "type": "object",
+        "required": ["as_of_slot", "tip_lag_slots", "board"],
+        "properties": {
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "board": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BoardListEntry" }
           }
         }
       },

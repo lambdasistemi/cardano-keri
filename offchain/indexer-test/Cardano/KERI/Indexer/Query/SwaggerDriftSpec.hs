@@ -18,6 +18,8 @@ module Cardano.KERI.Indexer.Query.SwaggerDriftSpec (spec) where
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.Indexer.Query.Types (
     BoardData (..),
+    BoardListEntry (..),
+    BoardListResponse (..),
     BoardResponse (..),
     CheckpointData (..),
     CheckpointResponse (..),
@@ -63,6 +65,12 @@ spec = describe "docs/assets/swagger/query-api.json field-set drift (#176 PROVE-
 
     it "BoardData (nested) matches components.schemas.BoardData" $
         checkTopLevel "BoardData" sampleBoardData
+
+    it "BoardListResponse (top level) matches components.schemas.BoardListResponse" $
+        checkTopLevel "BoardListResponse" sampleBoardListResponse
+
+    it "BoardListEntry (nested) matches components.schemas.BoardListEntry" $
+        checkTopLevel "BoardListEntry" sampleBoardListEntry
 
     it "WatchabilityResponse (top level) matches components.schemas.WatchabilityResponse" $
         checkTopLevel "WatchabilityResponse" sampleWatchabilityResponse
@@ -177,6 +185,20 @@ sampleBoardResponse =
         { brWitnessKey = sampleBytes
         , brFreshness = sampleFreshness
         , brBoard = Just sampleBoardData
+        }
+
+sampleBoardListEntry :: BoardListEntry
+sampleBoardListEntry =
+    BoardListEntry
+        { bleWitnessKey = sampleBytes
+        , bleBoard = sampleBoardData
+        }
+
+sampleBoardListResponse :: BoardListResponse
+sampleBoardListResponse =
+    BoardListResponse
+        { blrFreshness = sampleFreshness
+        , blrBoard = [sampleBoardListEntry]
         }
 
 sampleWatchabilityData :: WatchabilityData

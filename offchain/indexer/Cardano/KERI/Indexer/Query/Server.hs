@@ -45,6 +45,8 @@ import Cardano.KERI.Indexer.Query.Tx (
  )
 import Cardano.KERI.Indexer.Query.Types (
     BoardData (..),
+    BoardListEntry (..),
+    BoardListResponse (..),
     BoardResponse (..),
     CheckpointData (..),
     CheckpointResponse (..),
@@ -98,6 +100,7 @@ route handle request =
     case (requestMethod request, pathInfo request) of
         ("GET", ["ready"]) -> handleReady handle
         ("GET", ["checkpoint", aidText]) -> handleCheckpoint handle aidText
+        ("GET", ["board"]) -> handleBoardList handle
         ("GET", ["board", witnessText]) -> handleBoard handle witnessText
         ("GET", ["watchability", aidText]) -> handleWatchability handle aidText
         ("GET", ["swagger.json"]) -> swaggerJsonResponse
@@ -197,6 +200,33 @@ boardDataOf entry =
         , bdOutputIndex = boardIndex entry
         , bdLovelace = boardLovelace entry
         , bdOwnerKeyHash = boardOwnerKeyHash entry
+        }
+
+-- ---------------------------------------------------------------------------
+-- /board
+
+handleBoardList :: QueryHandle cf op -> IO Response
+handleBoardList handle = do
+    (catalogResult, watermark) <- runTransaction (qhRunner handle) (boardTx handle)
+    case catalogResult of
+        Left _ -> pure internalErrorResponse
+        Right catalog -> do
+            status <- sampleReadinessStatus handle watermark
+            pure $
+                if rsReady status
+                    then
+                        jsonResponse status200 $
+                            BoardListResponse
+                                { blrFreshness = statusFreshness status
+                                , blrBoard = map boardListEntryOf catalog
+                                }
+                    else unavailableResponse status
+
+boardListEntryOf :: BoardEntry -> BoardListEntry
+boardListEntryOf entry =
+    BoardListEntry
+        { bleWitnessKey = boardWitnessKey entry
+        , bleBoard = boardDataOf entry
         }
 
 -- ---------------------------------------------------------------------------

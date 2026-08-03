@@ -19,6 +19,7 @@ https://ckeri.dev.plutimus.com
 | --- | --- | --- | --- |
 | `GET` | `/ready` | yes | Service and freshness status |
 | `GET` | `/checkpoint/{aid}` | no (503 when not ready) | Current authenticated checkpoint for an AID |
+| `GET` | `/board` | no (503 when not ready) | Complete authenticated endpoint-board catalog |
 | `GET` | `/board/{witness_key}` | no (503 when not ready) | Authenticated endpoint-board record for a witness key |
 | `GET` | `/watchability/{aid}` | no (503 when not ready) | Whether a checkpoint's declared witnesses are all listed on the board |
 | `GET` | `/swagger.json` | yes | Machine-readable OpenAPI document |
@@ -124,6 +125,37 @@ board marker, datum, KERI event, and signature — a forged or malformed
 output fails the entire lookup closed rather than returning a partial or
 untrusted catalog. Koios is not part of this serving path.
 
+## `GET /board`
+
+```console
+$ curl -s https://ckeri.dev.plutimus.com/board | jq
+```
+
+```json
+{
+  "as_of_slot": 129921673,
+  "tip_lag_slots": 0,
+  "board": [
+    {
+      "witness_key": "B...",
+      "aid": "E...",
+      "scheme": "https",
+      "url": "https://witness.example/",
+      "tx_id": "5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c",
+      "output_index": 0,
+      "lovelace": 5000000,
+      "owner_key_hash": "3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7"
+    }
+  ]
+}
+```
+
+The array contains every current authenticated record in deterministic
+output-reference order; an empty catalog is `"board": []`. The complete
+catalog and `as_of_slot` come from one store transaction. As with the
+single-record route, one forged or malformed output fails the whole response
+closed with HTTP 500 rather than returning a partial catalog.
+
 ## `GET /watchability/{aid}`
 
 ```console
@@ -178,7 +210,7 @@ freshness number it cannot stand behind.
 ## Fail-closed semantics
 
 When `/ready` would report `ready: false`, every data route (`/checkpoint`,
-`/board`, `/watchability`) fails closed with **HTTP 503** and the same
+both `/board` forms, `/watchability`) fails closed with **HTTP 503** and the same
 readiness fields, plus an explicit error tag — never a stale or partial
 payload:
 

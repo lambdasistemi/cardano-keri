@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
+## 0.3.0
+
+### Added
+
+- cli): preserve follower capabilities
+- cli): add production query backends
+
+### Fixed
+
+- ci): follow named status interface
+
+### Documentation
+
+- spec): stamp PR finalization
+- spec): stamp orchestrator verification
+- spec): stamp backend evidence slice
+- cli): record backend status evidence
+- spec): stamp capability retirement slice
+- spec): recut retirement around capabilities
+- spec): stamp backend implementation slice
+- spec): define production query backends
+
 ## 0.2.0
 
 ### Added

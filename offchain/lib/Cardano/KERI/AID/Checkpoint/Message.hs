@@ -1,30 +1,38 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Message
-Description : Frozen signed advance message domain + F10 equalities, #68
+Description : Locator asset-name derivation + F10 advance checks, #68/#219
 
-The signed 'AdvanceMessage', locator asset-name derivation
-('deriveAidAssetName'), and F10 advance checks as pure predicates.
-Validator-free: this fixes the message bytes and the equality checks #24 runs
-over them, not the transaction context.
+'deriveAidAssetName' and the F10 advance checks as pure predicates.
+Validator-free: this fixes the equality checks #24 runs over the spent
+context and the actual successor datum, not the transaction context.
 
 The advance is authorized by the KERI __dual-threshold rule__: the attached
 signer evidence must satisfy the rotation's own current threshold over
-@new_cur_keys@ __and__ the spent checkpoint's pre-rotation threshold
+@new.cur_keys@ __and__ the spent checkpoint's pre-rotation threshold
 (@next_threshold@) over the committed @next_keys@ digests. The spent current
 set never authorizes (KERI pre-rotation; parent #21). Partial\/reserve
 rotation is supported: any satisfiable subset of the committed digests may be
-revealed, and @new_cur_threshold@ may differ from the committed
-@next_threshold@ — exactly the KERI rotation-validation rule. Each message
-binds the deployment (@network_id@, @checkpoint_policy_id@) and token
-(@aid_asset_name@), and every carried @aid_asset_name@ must equal
-@deriveAidAssetName(cesr_aid)@.
+revealed, and @new.cur_threshold@ may differ from the committed
+@next_threshold@ — exactly the KERI rotation-validation rule.
 
-The advance additionally carries the __incoming-set witness rule__ (#115): the
-signed preimage carries KERI's delta (@wit_cut@\/@wit_add@) rather than a full
-witness list, and 'advanceEqualities' derives the incoming set
-(@new_set = (spent.witnesses - wit_cut) ++ wit_add@, survivors first in spent
-order, then adds in add order) and requires the created datum's witnesses to
-equal it exactly.
+'advanceEqualities' (#219) checks the actual spent context and the actual
+successor datum directly — no reconstructed signed-message layer sits
+between them. The controller-signature evidence
+("Cardano.KERI.AID.Checkpoint.Advance" V5) verifies against the KERI event's
+own bytes (mirrors registration's R7, @0f6a88c@); the checks here need no
+txid-shaped or deployment-shaped field to bind them.
+
+The advance additionally carries the __incoming-set witness rule__ (#115):
+@wit_cut@\/@wit_add@ are KERI's delta (never a full witness list), and
+'advanceEqualities' derives the incoming set (@new_set = (spent.witnesses -
+wit_cut) ++ wit_add@, survivors first in spent order, then adds in add
+order) and requires the created datum's witnesses to equal it exactly.
+
+'AdvanceMessage'\/'advanceDomain'\/'advanceMessage' are retained only for
+'Cardano.KERI.Deployment.Advance.mkAdvancePackage' (offchain\/deployment,
+out of #219 phase-1 scope) — dead to 'advanceEqualities' since #219, which
+takes the spent context and successor datum directly. Tracked fast-follow
+deletion after #181.
 -}
 module Cardano.KERI.AID.Checkpoint.Message (
     -- * Frozen constants
@@ -281,22 +289,11 @@ position, so it fails the pre-rotation threshold and is rejected.
 newtype RevealedSuccessorSigners = RevealedSuccessorSigners [Verkey]
     deriving stock (Show, Eq)
 
--- | Which advance validation rejected: the frozen domain gate or one of eq1-eq8.
+-- | Which advance validation rejected: one of the F10 checks.
 data AdvanceError
-    = -- | The signed preimage domain was not the frozen @adv@ literal.
-      AdvanceDomainMismatch
-    | {- | eq1: @network_id@ / @checkpoint_policy_id@ do not match the deployment.
-
-      The numbered constructors below mirror the eight F10 advance checks.
-      -}
-      Eq1NetworkPolicyMismatch
-    | -- | eq2: asset name is not the AID's derived locator, or the AID crossed.
+    = -- | eq2: asset name is not the AID's derived locator, or the AID crossed.
       Eq2AssetOrAidMismatch
-    | -- | eq3: @(spent_txid, spent_index)@ is not the spent @TxOutRef@.
-      Eq3OutRefMismatch
-    | -- | eq4: @prior_seq@ / @prior_native_sn@ do not match the spent datum.
-      Eq4PriorMismatch
-    | -- | eq5: @seq_to /= spent.seq + 1@ or @native_sn_to@ did not advance.
+    | -- | eq5: @new.seq /= spent.seq + 1@ or @new.native_sn@ did not advance.
       Eq5SequenceMismatch
     | {- | W1: @wit_cut@ entries are not pairwise distinct, or one is not a
       member of the spent witness set.
@@ -312,104 +309,92 @@ data AdvanceError
       @(next_keys, next_threshold)@ — the KERI pre-rotation gate.
       -}
       Eq6PriorNextQuorumUnsatisfied
-    | -- | eq7: the created datum does not equal the message's new-state fields.
+    | {- | eq7 (W3): the created datum's witnesses do not equal the derived
+      incoming set.
+      -}
       Eq7CreatedStateMismatch
     | -- | eq8: the created datum failed 'datumWellFormed' (F18 + rule 14).
       Eq8CreatedIllFormed DatumError
     deriving stock (Show, Eq)
 
 {- | The F10 advance checks as pure predicates, checked in order, against the
-actual created checkpoint datum. W1\/W2 (between eq5 and eq6) validate the
-witness delta against the spent witness set: @wit_cut@ entries must be
-pairwise distinct and all members of @spent.witnesses@ (W1); @wit_add@
-entries must be pairwise distinct, disjoint from @wit_cut@, and not already
-among the surviving (uncut) witnesses (W2). eq6 is the KERI
-__dual-threshold rule__: the signer evidence must satisfy the rotation's own
-@new_cur_threshold@ over @new_cur_keys@ __and__ the spent checkpoint's
-committed @next_threshold@ over its @next_keys@ digests — where only
-evidence from keys revealed in @new_cur_keys@ counts toward the pre-rotation
-gate (in KERI, rotation signatures are indexed over the event's own key
-list). A full stolen spent-current quorum maps to no committed @next_keys@
-position and is rejected; partial\/reserve rotation (a satisfiable subset
-reveal, with a restated current threshold) is accepted. eq7 (amended, W3)
-requires the created datum to equal the message's new-state fields exactly,
-with its witnesses equal to the __derived__ incoming set — survivors (the
-spent witnesses minus @wit_cut@, in spent order) followed by @wit_add@ (in
-add order) — never the signed lists directly; eq8 requires that state to be
-well-formed (which alone bounds @new_toad@: rule 14 requires
-@0 <= new_toad <= length(new_set)@, @0@ only when @new_set@ is empty).
+actual spent context and the actual successor datum directly — no
+reconstructed signed-message layer sits between them (#219). W1\/W2
+(between eq5 and eq6) validate the witness delta against the spent witness
+set: @wit_cut@ entries must be pairwise distinct and all members of
+@spent.witnesses@ (W1); @wit_add@ entries must be pairwise distinct,
+disjoint from @wit_cut@, and not already among the surviving (uncut)
+witnesses (W2). eq6 is the KERI __dual-threshold rule__: the signer
+evidence must satisfy the rotation's own @new.cur_threshold@ over
+@new.cur_keys@ __and__ the spent checkpoint's committed @next_threshold@
+over its @next_keys@ digests — where only evidence from keys revealed in
+@new.cur_keys@ counts toward the pre-rotation gate (in KERI, rotation
+signatures are indexed over the event's own key list). A full stolen
+spent-current quorum maps to no committed @next_keys@ position and is
+rejected; partial\/reserve rotation (a satisfiable subset reveal, with a
+restated current threshold) is accepted. eq7 (W3) requires the created
+datum's witnesses to equal the __derived__ incoming set exactly — survivors
+(the spent witnesses minus @wit_cut@, in spent order) followed by @wit_add@
+(in add order) — never the signed lists directly; eq8 requires that state
+to be well-formed (which alone bounds @toad@: rule 14 requires
+@0 <= toad <= length(new_set)@, @0@ only when @new_set@ is empty).
 -}
 advanceEqualities ::
     SpentCheckpoint ->
-    AdvanceMessage ->
+    -- | The created (successor) datum @NEW@.
     CheckpointDatumV1 ->
+    -- | @wit_cut@ (KERI @br@).
+    [Verkey] ->
+    -- | @wit_add@ (KERI @ba@).
+    [Verkey] ->
     RevealedSuccessorSigners ->
     Either AdvanceError ()
-advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
-    unless (amDomain am == advanceDomain) (Left AdvanceDomainMismatch)
-    -- eq1: deployment (network + policy) binding.
+advanceEqualities sc new witCut witAdd (RevealedSuccessorSigners controlled) = do
+    -- eq2: the successor's own derived asset locator matches the spent
+    -- asset, and the AID is unchanged across the advance.
     unless
-        ( amNetworkId am == scNetworkId sc
-            && amCheckpointPolicyId am == scPolicyId sc
-        )
-        (Left Eq1NetworkPolicyMismatch)
-    -- eq2: asset name is the AID's own derived locator, spent asset, and AID.
-    unless
-        ( amAidAssetName am == deriveAidAssetName (amCesrAid am)
-            && amAidAssetName am == scAidAssetName sc
-            && amCesrAid am == scCesrAid sc
+        ( deriveAidAssetName (cdCesrAid new) == scAidAssetName sc
+            && cdCesrAid new == scCesrAid sc
         )
         (Left Eq2AssetOrAidMismatch)
-    -- eq3: exact spent TxOutRef.
-    unless
-        (amSpentTxid am == scTxid sc && amSpentIndex am == scIndex sc)
-        (Left Eq3OutRefMismatch)
-    -- eq4: the message binds the exact prior projection state.
-    unless
-        ( amPriorSeq am == scSeq sc
-            && amPriorNativeSn am == scNativeSn sc
-        )
-        (Left Eq4PriorMismatch)
     -- eq5: exact successor sequence; native KERI sequence advances.
     unless
-        (amSeqTo am == scSeq sc + 1 && amNativeSnTo am > scNativeSn sc)
+        (cdSeq new == scSeq sc + 1 && cdNativeSn new > scNativeSn sc)
         (Left Eq5SequenceMismatch)
     -- W1: wit_cut entries are pairwise distinct and all members of the spent
     -- witness set (a dup cut or a cut of a non-member is a malformed
     -- rotation — neither is otherwise caught, as set-wise both are no-ops).
     unless
-        ( distinct (amWitCut am)
-            && all (`elem` scWitnesses sc) (amWitCut am)
-        )
+        (distinct witCut && all (`elem` scWitnesses sc) witCut)
         (Left EqW1CutInvalid)
     -- The surviving (uncut) witnesses, in spent order — the W3 derivation
     -- base, reused by W2 and eq7 below.
-    let survivors = filter (`notElem` amWitCut am) (scWitnesses sc)
+    let survivors = filter (`notElem` witCut) (scWitnesses sc)
     -- W2: wit_add entries are pairwise distinct, disjoint from wit_cut (no
     -- cut-then-re-add in one event), and not already among the survivors
     -- (no add-already-present).
     unless
-        ( distinct (amWitAdd am)
-            && all (`notElem` amWitCut am) (amWitAdd am)
-            && all (`notElem` survivors) (amWitAdd am)
+        ( distinct witAdd
+            && all (`notElem` witCut) witAdd
+            && all (`notElem` survivors) witAdd
         )
         (Left EqW2AddInvalid)
     -- eq6 (dual threshold, KERI rotation rule):
     -- (a) the evidence satisfies the rotation's own current threshold over
-    --     new_cur_keys;
+    --     new.cur_keys;
     unless
         ( evaluate
-            (amNewCurThreshold am)
-            (length (amNewCurKeys am))
-            (positionsIn (amNewCurKeys am) controlled)
+            (cdCurThreshold new)
+            (length (cdCurKeys new))
+            (positionsIn (cdCurKeys new) controlled)
         )
         (Left Eq6CurrentQuorumUnsatisfied)
-    -- (b) the evidence revealed in new_cur_keys satisfies the spent
+    -- (b) the evidence revealed in new.cur_keys satisfies the spent
     --     checkpoint's committed (next_keys, next_threshold) — pre-rotation.
     --     Each revealing key is digested once (blake3 over its 44-char qb64)
     --     to find its committed position; the KEL n entries are matched
     --     byte-for-byte.
-    let revealed = filter (`elem` amNewCurKeys am) controlled
+    let revealed = filter (`elem` cdCurKeys new) controlled
         revealedDigests = map (blake3Hash . qb64Verkey) revealed
     unless
         ( evaluate
@@ -418,25 +403,13 @@ advanceEqualities sc am created (RevealedSuccessorSigners controlled) = do
             (positionsIn (scNextKeys sc) revealedDigests)
         )
         (Left Eq6PriorNextQuorumUnsatisfied)
-    -- eq7 (amended, W3): the created datum equals the message's new-state
-    -- fields exactly, with witnesses equal to the derived incoming set:
-    -- survivors (spent order) followed by wit_add (add order).
-    let newSet = survivors <> amWitAdd am
-        expected =
-            CheckpointDatumV1
-                { cdCesrAid = amCesrAid am
-                , cdCurKeys = amNewCurKeys am
-                , cdCurThreshold = amNewCurThreshold am
-                , cdNextKeys = amNewNextKeys am
-                , cdNextThreshold = amNewNextThreshold am
-                , cdWitnesses = newSet
-                , cdToad = amNewToad am
-                , cdSeq = amSeqTo am
-                , cdNativeSn = amNativeSnTo am
-                }
-    unless (created == expected) (Left Eq7CreatedStateMismatch)
+    -- eq7 (W3): the created datum's witnesses equal the derived incoming
+    -- set: survivors (spent order) followed by wit_add (add order) — never
+    -- the signed lists directly.
+    let newSet = survivors <> witAdd
+    unless (cdWitnesses new == newSet) (Left Eq7CreatedStateMismatch)
     -- eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
-    first Eq8CreatedIllFormed (datumWellFormed created)
+    first Eq8CreatedIllFormed (datumWellFormed new)
 
 -- | Positions in @keys@ whose entry appears in the given evidence list.
 positionsIn :: [ByteString] -> [ByteString] -> IntSet

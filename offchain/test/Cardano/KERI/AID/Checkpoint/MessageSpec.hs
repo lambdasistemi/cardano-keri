@@ -12,7 +12,6 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     DatumError (..),
     blake2b_256,
-    canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     digestRaw,
@@ -25,12 +24,10 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
-    AdvanceMessage (..),
     RevealedSuccessorSigners (..),
     SpentCheckpoint (..),
     advanceDomain,
     advanceEqualities,
-    advanceMessage,
     checkpointAssetDomainTag,
     deriveAidAssetName,
  )
@@ -171,28 +168,7 @@ spent =
         , scNativeSn = 0
         }
 
-validAdv :: AdvanceMessage
-validAdv =
-    advanceMessage
-        1 -- network_id
-        policy
-        (deriveAidAssetName cesrA)
-        cesrA
-        spentTxid
-        1 -- spent_index
-        0 -- prior_seq
-        0 -- prior_native_sn
-        newKeys
-        newThr
-        newNextKeys
-        newNextThr
-        [] -- wit_cut
-        [] -- wit_add
-        0 -- new_toad
-        1 -- seq_to
-        1 -- native_sn_to
-
--- The created checkpoint datum that matches validAdv's new-state fields.
+-- The created (successor) checkpoint datum for a valid succession.
 createdValid :: CheckpointDatumV1
 createdValid =
     CheckpointDatumV1
@@ -253,15 +229,6 @@ reserveSpent =
         , scNextThreshold = third 7
         }
 
-reserveAdv :: AdvanceMessage
-reserveAdv =
-    validAdv
-        { amNewCurKeys = reserveRevealed
-        , amNewCurThreshold = third 3
-        , amNewNextKeys = reserveNextN
-        , amNewNextThreshold = third 7
-        }
-
 reserveCreated :: CheckpointDatumV1
 reserveCreated =
     createdValid
@@ -291,7 +258,8 @@ deltaSpentTxid = b32 0xd1
 -- | One committed advance fixture's fully-derived validation material.
 data DeltaFixture = DeltaFixture
     { dfSpent :: SpentCheckpoint
-    , dfMessage :: AdvanceMessage
+    , dfWitCut :: [ByteString]
+    , dfWitAdd :: [ByteString]
     , dfCreated :: CheckpointDatumV1
     , dfSigners :: RevealedSuccessorSigners
     , dfIcpKeys :: [ByteString]
@@ -366,25 +334,6 @@ deltaFixture doc key = either error id $ do
                 , scSeq = 0
                 , scNativeSn = 0
                 }
-        msg =
-            advanceMessage
-                1
-                policy
-                asset
-                aid
-                deltaSpentTxid
-                0
-                0
-                0
-                rotKeys
-                rotThr
-                rotNext
-                rotNextThr
-                cuts
-                adds
-                toad
-                1
-                1
         created =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -400,7 +349,8 @@ deltaFixture doc key = either error id $ do
     pure
         DeltaFixture
             { dfSpent = sc
-            , dfMessage = msg
+            , dfWitCut = cuts
+            , dfWitAdd = adds
             , dfCreated = created
             , dfSigners = RevealedSuccessorSigners rotKeys
             , dfIcpKeys = icpKeys
@@ -416,7 +366,7 @@ spec = do
     -- Frozen domain constants
     -- ------------------------------------------------------
     describe "frozen domain constants" $ do
-        it "advanceDomain is the adv/v1 literal" $
+        it "advanceDomain (retained only for mkAdvancePackage, #219) is the adv/v1 literal" $
             advanceDomain `shouldBe` ("cardano-keri/checkpoint/adv/v1" :: ByteString)
         it "checkpointAssetDomainTag is the 32-byte asset/v1 tag" $
             checkpointAssetDomainTag
@@ -449,26 +399,15 @@ spec = do
             deriveAidAssetName cesrAFlipped `shouldSatisfy` (/= aidNameGolden)
 
     -- ------------------------------------------------------
-    -- AdvanceMessage golden
-    -- ------------------------------------------------------
-    describe "AdvanceMessage golden" $ do
-        it "advance (valid succession) canonical CBOR golden" $
-            canonicalCbor validAdv
-                `shouldBe` hexBs
-                    "d8799f581e63617264616e6f2d6b6572692f636865636b706f696e742f6164762f763101581ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc582067cf5c95ae280e04d9d4b50854cc74aa198f0ff0335c615758e50f40dbb785365820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d00100009f58201111111111111111111111111111111111111111111111111111111111111111ffd8799f01ff9f58202222222222222222222222222222222222222222222222222222222222222222ffd8799f01ff8080000101ff"
-        it "builder fills the frozen adv domain" $
-            amDomain validAdv `shouldBe` advanceDomain
-
-    -- ------------------------------------------------------
-    -- The F10 advance checks (exact rejections).
+    -- The F10 advance checks (exact rejections). #219: checked directly
+    -- against the spent context and the actual successor datum -- no
+    -- reconstructed signed-message layer; eq1/eq3/eq4/domain (tautological
+    -- on the wired path) are deleted with that layer (see spec.md).
     -- ------------------------------------------------------
     describe "advanceEqualities" $ do
         it "valid succession signed by the revealed successor set" $
-            advanceEqualities spent validAdv createdValid sigsRevealed
+            advanceEqualities spent createdValid [] [] sigsRevealed
                 `shouldBe` Right ()
-        it "wrong adv domain -> AdvanceDomainMismatch" $
-            advanceEqualities spent validAdv{amDomain = checkpointAssetDomainTag} createdValid sigsRevealed
-                `shouldBe` Left AdvanceDomainMismatch
 
         -- eq6 — the parent #21 pre-rotation invariant (security-critical).
         -- The SAME attacker evidence satisfies the spent-current threshold but
@@ -479,104 +418,59 @@ spec = do
         it "the same evidence maps to no committed next-key position" $
             evaluate (scNextThreshold spent) (length (scNextKeys spent)) (positionsIn (scNextKeys spent) (map nkd attackerKeys))
                 `shouldBe` False
-        it "stolen current quorum on the honest message -> Eq6CurrentQuorumUnsatisfied" $
-            advanceEqualities spent validAdv createdValid sigsStolenCurrent
+        it "stolen current quorum on the honest datum -> Eq6CurrentQuorumUnsatisfied" $
+            advanceEqualities spent createdValid [] [] sigsStolenCurrent
                 `shouldBe` Left Eq6CurrentQuorumUnsatisfied
-        it "stolen current quorum on an attacker-crafted message -> Eq6PriorNextQuorumUnsatisfied" $
+        it "stolen current quorum on an attacker-crafted successor -> Eq6PriorNextQuorumUnsatisfied" $
             -- The attacker reveals THEIR OWN keys as the successor set and
             -- satisfies their own threshold, but none of their keys was
             -- pre-committed, so the pre-rotation gate rejects.
-            let atkAdv =
-                    validAdv
-                        { amNewCurKeys = attackerKeys
-                        , amNewCurThreshold = spentCurThr
-                        }
-                atkCreated =
+            let atkCreated =
                     createdValid
                         { cdCurKeys = attackerKeys
                         , cdCurThreshold = spentCurThr
                         }
-             in advanceEqualities spent atkAdv atkCreated sigsStolenCurrent
+             in advanceEqualities spent atkCreated [] [] sigsStolenCurrent
                     `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
         it "substituted successor set with fresh keys -> Eq6PriorNextQuorumUnsatisfied" $
             let subKeys = [b32 0x99]
-                subAdv =
-                    validAdv
-                        { amNewCurKeys = subKeys
-                        }
                 subCreated = createdValid{cdCurKeys = subKeys}
-             in advanceEqualities spent subAdv subCreated (RevealedSuccessorSigners subKeys)
+             in advanceEqualities spent subCreated [] [] (RevealedSuccessorSigners subKeys)
                     `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
 
         -- eq5 — sequence advance.
-        it "bad seq_to (!= prior_seq + 1) -> Eq5SequenceMismatch" $
-            advanceEqualities spent validAdv{amSeqTo = 5} createdValid sigsRevealed
+        it "bad seq (!= spent.seq + 1) -> Eq5SequenceMismatch" $
+            advanceEqualities spent createdValid{cdSeq = 5} [] [] sigsRevealed
                 `shouldBe` Left Eq5SequenceMismatch
         it "non-increasing native_sn -> Eq5SequenceMismatch" $
-            advanceEqualities spent validAdv{amNativeSnTo = 0} createdValid sigsRevealed
+            advanceEqualities spent createdValid{cdNativeSn = 0} [] [] sigsRevealed
                 `shouldBe` Left Eq5SequenceMismatch
-
-        -- eq4 — the message binds the exact prior projection state.
-        it "wrong prior_seq -> Eq4PriorMismatch" $
-            advanceEqualities spent validAdv{amPriorSeq = 3} createdValid sigsRevealed
-                `shouldBe` Left Eq4PriorMismatch
-        it "wrong prior_native_sn -> Eq4PriorMismatch" $
-            advanceEqualities spent validAdv{amPriorNativeSn = 3} createdValid sigsRevealed
-                `shouldBe` Left Eq4PriorMismatch
 
         -- eq2 — AID / asset binding.
         it "crossed cesr_aid -> Eq2AssetOrAidMismatch" $
-            advanceEqualities spent validAdv{amCesrAid = b32 0x55} createdValid sigsRevealed
+            advanceEqualities spent createdValid{cdCesrAid = b32 0x55} [] [] sigsRevealed
                 `shouldBe` Left Eq2AssetOrAidMismatch
-        it "cross aid_asset_name -> Eq2AssetOrAidMismatch" $
-            advanceEqualities spent validAdv{amAidAssetName = b32 0x00} createdValid sigsRevealed
+        it "spent context's own asset name drifted from its derived locator -> Eq2AssetOrAidMismatch" $
+            advanceEqualities spent{scAidAssetName = b32 0x00} createdValid [] [] sigsRevealed
                 `shouldBe` Left Eq2AssetOrAidMismatch
-
-        -- eq1 — deployment binding.
-        it "cross network_id -> Eq1NetworkPolicyMismatch" $
-            advanceEqualities spent validAdv{amNetworkId = 0} createdValid sigsRevealed
-                `shouldBe` Left Eq1NetworkPolicyMismatch
-        it "cross checkpoint_policy_id -> Eq1NetworkPolicyMismatch" $
-            advanceEqualities spent validAdv{amCheckpointPolicyId = b28 0xee} createdValid sigsRevealed
-                `shouldBe` Left Eq1NetworkPolicyMismatch
-
-        -- eq3 — exact spent TxOutRef.
-        it "wrong spent_txid -> Eq3OutRefMismatch" $
-            advanceEqualities spent validAdv{amSpentTxid = b32 0x00} createdValid sigsRevealed
-                `shouldBe` Left Eq3OutRefMismatch
-        it "wrong spent_index -> Eq3OutRefMismatch" $
-            advanceEqualities spent validAdv{amSpentIndex = 2} createdValid sigsRevealed
-                `shouldBe` Left Eq3OutRefMismatch
-
-        -- eq7 — the created datum equals the message's new-state fields.
-        it "created datum disagreeing with the message (seq) -> Eq7CreatedStateMismatch" $
-            advanceEqualities spent validAdv createdValid{cdSeq = 9} sigsRevealed
-                `shouldBe` Left Eq7CreatedStateMismatch
-        it "substituted new next keys in the message (created unchanged) -> Eq7CreatedStateMismatch" $
-            advanceEqualities spent validAdv{amNewNextKeys = [b32 0x00]} createdValid sigsRevealed
-                `shouldBe` Left Eq7CreatedStateMismatch
 
         -- eq8 — nothing ill-formed can be written.
-        it "message and created agreeing on toad=1 with no witnesses -> Eq8CreatedIllFormed" $
+        it "toad=1 with no witnesses -> Eq8CreatedIllFormed" $
             advanceEqualities
                 spent
-                validAdv{amNewToad = 1}
                 createdValid{cdToad = 1}
+                []
+                []
                 sigsRevealed
                 `shouldBe` Left (Eq8CreatedIllFormed ToadRange)
         it "duplicated successor key in the written state -> Eq8CreatedIllFormed" $
             let dupKey = b32 0x11 -- the committed key, listed twice
-                dupAdv =
-                    validAdv
-                        { amNewCurKeys = [dupKey, dupKey]
-                        , amNewCurThreshold = Unweighted 2
-                        }
                 dupCreated =
                     createdValid
                         { cdCurKeys = [dupKey, dupKey]
                         , cdCurThreshold = Unweighted 2
                         }
-             in advanceEqualities spent dupAdv dupCreated (RevealedSuccessorSigners [dupKey])
+             in advanceEqualities spent dupCreated [] [] (RevealedSuccessorSigners [dupKey])
                     `shouldBe` Left (Eq8CreatedIllFormed (ThresholdIllFormed DuplicateKey))
 
     -- ------------------------------------------------------
@@ -587,23 +481,19 @@ spec = do
         it "revealing 3 of 7 committed digests with a restated kt is accepted" $
             advanceEqualities
                 reserveSpent
-                reserveAdv
                 reserveCreated
+                []
+                []
                 (RevealedSuccessorSigners reserveRevealed)
                 `shouldBe` Right ()
         it "the restated kt differs from the committed nt (KERI-legal)" $
-            amNewCurThreshold reserveAdv `shouldSatisfy` (/= scNextThreshold reserveSpent)
+            cdCurThreshold reserveCreated `shouldSatisfy` (/= scNextThreshold reserveSpent)
         it "an insufficient reveal fails the pre-rotation gate" $
             -- Two committed keys + one augmented fresh key satisfy the
             -- rotation's own lenient threshold, but only 2/3 of the
             -- committed weight signs: the pre-rotation gate rejects.
             let aug = b32 0x77
                 curKeys = [rn 0, rn 5, aug]
-                shortAdv =
-                    reserveAdv
-                        { amNewCurKeys = curKeys
-                        , amNewCurThreshold = Unweighted 1
-                        }
                 shortCreated =
                     reserveCreated
                         { cdCurKeys = curKeys
@@ -611,8 +501,9 @@ spec = do
                         }
              in advanceEqualities
                     reserveSpent
-                    shortAdv
                     shortCreated
+                    []
+                    []
                     (RevealedSuccessorSigners [rn 0, aug])
                     `shouldBe` Left Eq6PriorNextQuorumUnsatisfied
         it "an augmented (never-committed) key counts only toward the current threshold" $
@@ -620,11 +511,6 @@ spec = do
             -- augmented key's signature is harmless and the advance passes.
             let aug = b32 0x77
                 curKeys = [rn 0, rn 5, rn 6, aug]
-                augAdv =
-                    reserveAdv
-                        { amNewCurKeys = curKeys
-                        , amNewCurThreshold = Unweighted 3
-                        }
                 augCreated =
                     reserveCreated
                         { cdCurKeys = curKeys
@@ -632,8 +518,9 @@ spec = do
                         }
              in advanceEqualities
                     reserveSpent
-                    augAdv
                     augCreated
+                    []
+                    []
                     (RevealedSuccessorSigners (aug : reserveRevealed))
                     `shouldBe` Right ()
 
@@ -646,27 +533,27 @@ spec = do
         beforeAll (loadFixture "advance.json") $ do
             it "adv_wit_2key: witnessed cut+add accepted with the W3-derived set" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Right ()
             it "adv_wit_7key: GLEIF-scale witnessed cut+add accepted" $ \doc ->
                 let df = deltaFixture doc "adv_wit_7key"
-                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Right ()
             it "adv_keep: no-delta rotation accepted; witnesses unchanged" $ \doc -> do
                 let df = deltaFixture doc "adv_keep"
-                advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitAdd df) (dfSigners df)
                     `shouldBe` Right ()
                 cdWitnesses (dfCreated df) `shouldBe` dfOldWitnesses df
             it "adv_downgrade: cutting every witness yields toad=0 and an empty derived set" $ \doc -> do
                 let df = deltaFixture doc "adv_downgrade"
-                advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) (dfSigners df)
+                advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitAdd df) (dfSigners df)
                     `shouldBe` Right ()
                 cdWitnesses (dfCreated df) `shouldBe` []
                 cdToad (dfCreated df) `shouldBe` 0
             it "stolen spent-current quorum (real icp keys) rejected -> Eq6CurrentQuorumUnsatisfied" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
                     attacker = RevealedSuccessorSigners (dfIcpKeys df)
-                 in advanceEqualities (dfSpent df) (dfMessage df) (dfCreated df) attacker
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitAdd df) attacker
                         `shouldBe` Left Eq6CurrentQuorumUnsatisfied
 
     -- ------------------------------------------------------
@@ -677,48 +564,41 @@ spec = do
         beforeAll (loadFixture "advance.json") $ do
             it "duplicate cut -> EqW1CutInvalid" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                    cut = firstOf "amWitCut" (amWitCut (dfMessage df))
-                    msg = (dfMessage df){amWitCut = [cut, cut]}
-                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                    cut = firstOf "dfWitCut" (dfWitCut df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) [cut, cut] (dfWitAdd df) (dfSigners df)
                         `shouldBe` Left EqW1CutInvalid
             it "cut of a non-member witness -> EqW1CutInvalid" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                    msg = (dfMessage df){amWitCut = amWitAdd (dfMessage df)}
-                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitAdd df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Left EqW1CutInvalid
             it "duplicate add -> EqW2AddInvalid" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                    add = firstOf "amWitAdd" (amWitAdd (dfMessage df))
-                    msg = (dfMessage df){amWitAdd = [add, add]}
-                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                    add = firstOf "dfWitAdd" (dfWitAdd df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) [add, add] (dfSigners df)
                         `shouldBe` Left EqW2AddInvalid
             it "add already present among survivors -> EqW2AddInvalid" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
                     survivor = firstOf "dfSurvivors" (dfSurvivors df)
-                    msg = (dfMessage df){amWitAdd = [survivor]}
-                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) [survivor] (dfSigners df)
                         `shouldBe` Left EqW2AddInvalid
             it "cut/add overlap (re-adding the cut witness) -> EqW2AddInvalid" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                    msg = (dfMessage df){amWitAdd = amWitCut (dfMessage df)}
-                 in advanceEqualities (dfSpent df) msg (dfCreated df) (dfSigners df)
+                 in advanceEqualities (dfSpent df) (dfCreated df) (dfWitCut df) (dfWitCut df) (dfSigners df)
                         `shouldBe` Left EqW2AddInvalid
             it "derived-set mismatch (datum keeps the outgoing set) -> Eq7CreatedStateMismatch" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
                     created = (dfCreated df){cdWitnesses = dfOldWitnesses df}
-                 in advanceEqualities (dfSpent df) (dfMessage df) created (dfSigners df)
+                 in advanceEqualities (dfSpent df) created (dfWitCut df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Left Eq7CreatedStateMismatch
             it "wrong survivor order (adds before survivors) -> Eq7CreatedStateMismatch" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
-                    msg = dfMessage df
-                    wrongOrder = amWitAdd msg <> dfSurvivors df
+                    wrongOrder = dfWitAdd df <> dfSurvivors df
                     created = (dfCreated df){cdWitnesses = wrongOrder}
-                 in advanceEqualities (dfSpent df) msg created (dfSigners df)
+                 in advanceEqualities (dfSpent df) created (dfWitCut df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Left Eq7CreatedStateMismatch
-            it "toad out of bounds (message+datum agree) -> Eq8CreatedIllFormed ToadRange" $ \doc ->
+            it "toad out of bounds -> Eq8CreatedIllFormed ToadRange" $ \doc ->
                 let df = deltaFixture doc "adv_wit_2key"
                     badToad = toInteger (length (cdWitnesses (dfCreated df))) + 5
-                    msg = (dfMessage df){amNewToad = badToad}
                     created = (dfCreated df){cdToad = badToad}
-                 in advanceEqualities (dfSpent df) msg created (dfSigners df)
+                 in advanceEqualities (dfSpent df) created (dfWitCut df) (dfWitAdd df) (dfSigners df)
                         `shouldBe` Left (Eq8CreatedIllFormed ToadRange)

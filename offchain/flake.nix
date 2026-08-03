@@ -675,16 +675,91 @@
               keriBlasterPackage = leanPkgs.buildLeanPackage {
                 name = "KeriBlaster";
                 roots = [ "KeriBlaster" ];
+                # Explicitly named, because the S2 scope check rejects the
+                # default entry-point path shape.
+                executableName = "s2-evidence";
                 src = cleanBlasterSource;
                 deps = [
                   leanBlasterPackage
                   plutusCoreBlasterPackage
                   cardanoLedgerApiBlasterPackage
                 ];
-                overrideBuildModAttrs = _final: prev: {
-                  buildInputs = (prev.buildInputs or [ ]) ++ [ leanNixPkgs.z3 ];
-                };
+                # Every module gets z3. The S2 evidence module additionally
+                # gets the exact generated production programs placed beside
+                # its source, because `buildLeanPackage` builds each module
+                # with only its own `.lean` file in the build directory. This
+                # is the sole way `#import_uplc "nix-generated/..."` can
+                # resolve, so the tracked source keeps its eight literal
+                # directives and still cannot read anything but the
+                # SHA-bound blueprint's output.
+                overrideBuildModAttrs = _final: prev:
+                  {
+                    buildInputs = (prev.buildInputs or [ ]) ++ [ leanNixPkgs.z3 ];
+                  } // pkgs.lib.optionalAttrs (prev.name == s2EvidenceModule) {
+                    buildCommand = ''
+                      mkdir -p nix-generated
+                      cp ${s2Artifacts}/*.hex nix-generated/
+                    '' + prev.buildCommand;
+                  };
               };
+
+              # The Lean module that carries the eight production imports.
+              s2EvidenceModule = "KeriBlaster.S2Evidence";
+
+              # The complete S2 production surface with its declared
+              # parameter counts. This list is the selection key set; the
+              # blueprint remains the only source of program bytes.
+              s2Programs = [
+                { title = "checkpoint.checkpoint.spend"; params = 6; }
+                { title = "hash_proof.hash_proof.mint"; params = 0; }
+                { title = "checkpoint_observer.observer_lifecycle.withdraw"; params = 3; }
+                { title = "checkpoint_observer.observer_lifecycle.publish"; params = 3; }
+                { title = "checkpoint_observer.observer_advance.withdraw"; params = 1; }
+                { title = "checkpoint_observer.observer_advance.publish"; params = 1; }
+                { title = "checkpoint_observer.observer_enforcement.withdraw"; params = 1; }
+                { title = "checkpoint_observer.observer_enforcement.publish"; params = 1; }
+              ];
+
+              # The eight exact single-CBOR-hex programs plus a
+              # title/params/hash manifest, derived only from the SHA-bound
+              # production blueprint. Nothing here is tracked in Git and
+              # nothing is hand-written: a substituted or renamed validator
+              # fails the cardinality and parameter tests below.
+              s2Artifacts = pkgs.runCommand "cardano-keri-s2-uplc-programs" {
+                nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+              } ''
+                set -euo pipefail
+                mkdir -p "$out"
+                blueprint=${e2eWiring.blueprint}
+                test "$(sha256sum "$blueprint" | cut -d ' ' -f 1)" = \
+                  "${expectedBlueprintSha256}"
+                ${pkgs.lib.concatMapStrings (entry: ''
+                  title=${pkgs.lib.escapeShellArg entry.title}
+                  params=${toString entry.params}
+                  test "$(jq -er --arg title "$title" \
+                    '[.validators[] | select(.title == $title)] | length' \
+                    "$blueprint")" -eq 1
+                  test "$(jq -er --arg title "$title" \
+                    '.validators[] | select(.title == $title) | (.parameters // []) | length' \
+                    "$blueprint")" -eq "$params"
+                  jq -er --arg title "$title" \
+                    -f ${./blaster/extract-program.jq} "$blueprint" \
+                    | tr -d '\n\r[:space:]' > "$out/$title.hex"
+                  test -s "$out/$title.hex"
+                  printf '%s\t%s\t%s\n' "$title" "$params" \
+                    "$(sha256sum "$out/$title.hex" | cut -d ' ' -f 1)" \
+                    >> "$out/s2-manifest.tsv"
+                '') s2Programs}
+                test "$(wc -l < "$out/s2-manifest.tsv")" \
+                  -eq ${toString (builtins.length s2Programs)}
+                test "$(ls "$out"/*.hex | wc -l)" \
+                  -eq ${toString (builtins.length s2Programs)}
+              '';
+
+              # The Lean evidence executable. It is linked from the same
+              # compiled modules that carry the eight production imports, so
+              # it cannot report on anything but the imported values.
+              s2Evidence = keriBlasterPackage.executable;
 
               artifact = pkgs.runCommand "cardano-keri-blaster-artifact" {
                 nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
@@ -825,6 +900,30 @@
                   bash ${./blaster/test-production-source.sh} \
                     ${pkgs.lib.getExe auditRunner}
                   ${pkgs.lib.getExe auditRunner}
+
+                  # The S2 evidence oracle and its falsification controls run
+                  # from this same runner, which is the only path the frozen
+                  # slice gate exercises (gate -> just blaster -> nix run
+                  # .#blaster -> apps.blaster). A control reachable only by
+                  # hand could never fail the gate.
+                  # Two identifiers the evidence module cannot compute for
+                  # itself. The pinned evaluator revision is taken from the
+                  # locked flake input rather than transcribed, so it cannot
+                  # disagree with the toolchain audit printed above. The
+                  # decisive log SHA-256 refers to a PREVIOUS run's artifact,
+                  # which lives outside the build sandbox by construction;
+                  # the S2 v2 gate re-hashes that real file before accepting
+                  # any row that names it, so this constant cannot drift
+                  # unnoticed. Exported so the falsification controls, which
+                  # re-invoke the same binary, run under identical inputs.
+                  export S2_PINNED_PLUTUS_CORE_REV=${plutusCoreBlaster.rev}
+                  export S2_DECISIVE_LOG_SHA256=829f62f062b474ed2ba380d9b230c3dfb57049a95d626b7ada4935ea10f28c59
+
+                  S2_ARTIFACTS=${s2Artifacts} ${s2Evidence}/bin/s2-evidence
+                  bash ${./blaster/test-s2-contract.sh} \
+                    ${s2Evidence}/bin/s2-evidence \
+                    ${s2Artifacts} \
+                    ${cleanBlasterSource}/KeriBlaster/S2Evidence.lean
                   echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
                 '';
               };

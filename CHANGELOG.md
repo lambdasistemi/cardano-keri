@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
+## 0.4.0
+
+### Added
+
+- blaster): record the S2 terminal builtin-support FAIL
+- blaster): pin exact UPLC extraction path
+
+### Documentation
+
+- 192): plan exact-UPLC tractability experiment
+
 ## 0.3.0
 
 ### Added

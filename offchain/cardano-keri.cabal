@@ -117,6 +117,7 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoard
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
+    Cardano.KERI.Deployment.History
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
@@ -240,6 +241,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.CloseSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
+    Cardano.KERI.Deployment.HistorySpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.RegistrationSpec

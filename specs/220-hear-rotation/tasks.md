@@ -17,24 +17,27 @@ accepted by the ticket owner. These boxes are stamped only after acceptance.
   asserting closure-owned `kli` reports keripy 1.3.5 under
   `--unshare-net --clearenv`, including the missing-libsodium-path negative
   control.
-- [ ] T220-P3 Create the ignored ticket gate, GPG-signed planning commit, push,
+- [x] T220-P3 Create the ignored ticket gate, GPG-signed planning commit, push,
   and draft PR with issue linkage, label, and assignee.
+- [ ] T220-P5 After Slice 1 acceptance, rebase onto #216 merge `8c0e0043`,
+  resolve the expected Cabal conflict, then rerun full CI and the negative-first
+  sandboxed release-closure assertion before Slice 2.
 - [ ] T220-P4 Bind the command-registration paragraph to the landed #216 CLI
   contract; escalate any shared-backend-record change before implementation.
 
 ## Slice 1 — verified-history and verdict core
 
-- [ ] T220-S1-1 Freeze and falsify the Slice 1 gate, including the 2/3
+- [x] T220-S1-1 Freeze and falsify the Slice 1 gate, including the 2/3
   non-unanimity mutation and planted-duplicity positive control.
-- [ ] T220-S1-2 RED: add complete-history rejection tests for truncation,
+- [x] T220-S1-2 RED: add complete-history rejection tests for truncation,
   forgery, lineage, sequence, commitments, signatures, witness deltas, and
   receipt threshold; observe the focused failures.
-- [ ] T220-S1-3 RED: add the 3/3, 2/3, 1/3, strict-coverage, checkpoint, and
+- [x] T220-S1-3 RED: add the 3/3, 2/3, 1/3, strict-coverage, checkpoint, and
   duplicity verdict matrix; observe the focused failures.
-- [ ] T220-S1-4 GREEN: implement the minimal verified-history projection,
+- [x] T220-S1-4 GREEN: implement the minimal verified-history projection,
   quorum, chain comparison, coverage qualification, and exit-class model
   in a new general-history module without changing transaction behavior.
-- [ ] T220-S1-5 Navigator verifies RED/GREEN, exact gate, scope, signed commit,
+- [x] T220-S1-5 Navigator verifies RED/GREEN, exact gate, scope, signed commit,
   and planted controls; ticket owner independently accepts and pushes. Notify
   the parent before committing any edit to `Deployment/KEL.hs`.
 
@@ -61,9 +64,8 @@ accepted by the ticket owner. These boxes are stamped only after acceptance.
 
 ## Slice 3 — authenticated bootstrap and command
 
-- [ ] T220-S3-1 After the parent releases Slice 3 from the #216 dependency,
-  freeze and falsify the Slice 3
-  gate against the landed CLI/backend contract.
+- [ ] T220-S3-1 Freeze and falsify the Slice 3 gate against the landed #216
+  CLI/backend contract after the post-Slice-1 rebase and contract inspection.
 - [ ] T220-S3-2 RED: prove positional AID and opt-env-conf precedence, default
   chain bootstrap, explicit-only file fallback, and fail-closed catalog errors.
 - [ ] T220-S3-3 RED: prove fixed-point witness discovery, endpoint enumeration

@@ -251,6 +251,38 @@ weakening of it: the type does no authorization work anywhere reachable from
 the validator after this change; it is inert leftover kept alive by one
 still-forbidden file.
 
+## Emergent CLI permissionlessness (driver `Q-003` -> ticket-owner `A-003`, 2026-08-03)
+
+`offchain/deployment/Cardano/KERI/Deployment/Advance.hs`'s
+`attachControllerSignatures` — the deployment/CLI package-builder's own
+internal validity self-check — calls `advancePredicate` directly, the same
+function this ticket changes. Its sibling test,
+`offchain/deployment-test/Cardano/KERI/Deployment/AdvanceSpec.hs:119-147`
+("does not substitute KERI rot.raw signatures for AdvanceMessage
+signatures"), asserted the pre-#219 invariant and started failing —
+correctly, because that invariant is exactly what this ticket overturns.
+
+Consequence, not a bug: the `ckeri advance --controller-signatures`/
+`--signing-package` CLI surface has **already, silently, become
+permissionless too**, as an emergent effect of sharing `advancePredicate`
+with the validator — not by this ticket's design, and not something #181's
+retirement work was scoped assuming. The flags still exist and still work
+unchanged; the gate behind them no longer enforces what
+`deployment/Advance.hs`'s own docstring (lines 7-8, *"Native KERI event
+signatures are never treated as Cardano Advance signatures"*) claims. That
+docstring is now false as a statement of enforced behavior — the same
+tautology-vs-appearance pattern this spec already documents for the
+validator itself, now also present one layer up, in a file this ticket
+does not own.
+
+Ruling: fence extended to exactly the one test file (sibling of, not nested
+under, the forbidden `offchain/deployment/**` glob) to correct its stale
+assertion. `deployment/Advance.hs` itself — including its now-inaccurate
+docstring — stays untouched; both it and the broader product question of
+whether/how to surface this to CLI operators are tracked as phase-2/#181
+fast-follow items, escalated to the desk for awareness before that ticket's
+brief is finalized.
+
 ## TDD contract (mirrors the brief)
 
 1. RED on current validator (permissionless-holds), GREEN after.

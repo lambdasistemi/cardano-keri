@@ -53,6 +53,7 @@ offchain/test/Cardano/KERI/AID/Checkpoint/MessageSpec.hs
 offchain/app/GenAdvanceVectors.hs
 offchain/app/GenCheckpointVectors.hs         (driver Q-001 -> A-001: delete AdvanceMessage goldens here)
 offchain/e2e/CheckpointTxBuilder.hs          (driver Q-001 -> A-001: signedRotateEvidence signs event_bytes directly)
+offchain/deployment-test/Cardano/KERI/Deployment/AdvanceSpec.hs   (driver Q-003 -> A-003: one stale assertion, see "Emergent CLI permissionlessness" below)
 specs/219-permissionless-advance/{spec.md,plan.md,tasks.md}
 docs/user/rotate-preprod-identity.md
 ```

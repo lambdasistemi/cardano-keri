@@ -51,6 +51,8 @@ offchain/test/Cardano/KERI/AID/Checkpoint/AdvanceSpec.hs
 offchain/test/Cardano/KERI/AID/Checkpoint/AdvanceFixturesSpec.hs
 offchain/test/Cardano/KERI/AID/Checkpoint/MessageSpec.hs
 offchain/app/GenAdvanceVectors.hs
+offchain/app/GenCheckpointVectors.hs         (driver Q-001 -> A-001: delete AdvanceMessage goldens here)
+offchain/e2e/CheckpointTxBuilder.hs          (driver Q-001 -> A-001: signedRotateEvidence signs event_bytes directly)
 specs/219-permissionless-advance/{spec.md,plan.md,tasks.md}
 docs/user/rotate-preprod-identity.md
 ```
@@ -59,6 +61,14 @@ No new fixture capture: `advance.json`'s existing `rot_sigs`/`event_raw`
 suffices — mirrors `0f6a88c`'s real file list for registration exactly,
 swapping Registration→Advance. Goldens under `onchain/` are produced BY the
 generator, never hand-edited.
+
+**Cross-fence leftover (driver `Q-001` -> ticket-owner `A-001`):**
+`AdvanceMessage`/`advance_domain`/`reconstruct_advance_message` stay
+**defined** (not deleted) in the two `offchain/lib/.../{Advance,Message}.hs`
+files above, unused by the validation path, Haddock-noted as retained only
+for `offchain/deployment/Cardano/KERI/Deployment/Advance.hs`'s still-forbidden
+import — a tracked phase-2/#181 fast-follow deletes them. See spec.md
+"Cross-fence leftover" for the full reasoning.
 
 **Forbidden (unconditional):**
 

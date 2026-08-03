@@ -49,6 +49,13 @@ scope.
       Message}.hs` and `offchain/app/GenAdvanceVectors.hs` to consume the
       fixture's existing `rot_sigs`/`event_raw` entries; regenerate
       `advance_vectors.ak`; Haskell/Aiken drift check green.
+- [ ] T219-A1 (driver Q-001 -> A-001) Delete `AdvanceMessage` construction in
+      `offchain/app/GenCheckpointVectors.hs` and
+      `offchain/e2e/CheckpointTxBuilder.hs`; retain the bare
+      `AdvanceMessage`/`advance_domain`/`reconstruct_advance_message`
+      Haskell definitions, Haddock-noted, solely for
+      `offchain/deployment/Cardano/KERI/Deployment/Advance.hs`'s forbidden
+      import — do not touch that file.
 - [ ] T219-A1 Full gate green; land the Haskell+generator+goldens+Aiken
       change as ONE commit (or an ordered series that keeps `just ci` green
       throughout) exactly `refactor(219): authenticate advance events from

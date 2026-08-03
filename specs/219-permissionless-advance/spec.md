@@ -70,7 +70,11 @@ Advance, restoring conformance rather than changing the invariant.
    layer once nothing verifies against it: the type, `advance_domain`,
    `reconstruct_advance_message`, and the `AdvanceError` constructors that
    only ever fire against reconstructed-not-evidence fields (see "Anti-replay
-   analysis" for exactly which ones are load-bearing vs. dead).
+   analysis" for exactly which ones are load-bearing vs. dead). **Full on the
+   Aiken (onchain) side. On the Haskell mirror, full from the validation
+   path; the bare type/function definitions may remain solely because
+   `offchain/deployment/Cardano/KERI/Deployment/Advance.hs` (forbidden,
+   #181/phase-2) still imports them — see "Cross-fence leftover" below.**
 3. Restate the F10 checks that survive the deletion as direct `spent`-vs-
    `new` structural checks (no intermediate "message" object), mirroring how
    `0f6a88c` replaced `registration_message`/`validate_inception` with
@@ -89,11 +93,14 @@ Advance, restoring conformance rather than changing the invariant.
 6. Haskell/Aiken parity for every changed predicate and regenerated vectors:
    `offchain/lib/Cardano/KERI/AID/Checkpoint/{Advance,Message}.hs`, their
    `{Advance,AdvanceFixtures,Message}Spec.hs` tests, `offchain/app/
-   GenAdvanceVectors.hs`, and the goldens it regenerates under `onchain/`
-   (never hand-edited) — ratified by `A-001` as constitutionally welded to
-   the onchain change, distinct from the deployment/CLI surface below. No
-   new keripy capture: consume the existing `advance.json` `rot_sigs`
-   (`signing_target=event_raw`), mirroring `0f6a88c`'s `rcEventSigs` swap.
+   {GenAdvanceVectors,GenCheckpointVectors}.hs`, `offchain/e2e/
+   CheckpointTxBuilder.hs`, and the goldens regenerated under `onchain/`
+   (never hand-edited) — ratified by `A-001` (desk) and its driver-found
+   extension (ticket-owner `A-001` to the driver's `Q-001`, "Cross-fence
+   leftover" below) as constitutionally welded to the onchain change,
+   distinct from the deployment/CLI surface below. No new keripy capture:
+   consume the existing `advance.json` `rot_sigs` (`signing_target=
+   event_raw`), mirroring `0f6a88c`'s `rcEventSigs` swap.
 
 **Out of scope (phase 1 — re-briefed separately)**
 
@@ -209,6 +216,41 @@ place that outref appeared in signed evidence.
    field); only Cardano's ordinary single-spend rule decides which one
    lands. No evidence field or validator check may distinguish between them.
 
+## Cross-fence leftover (driver `Q-001` -> ticket-owner `A-001`, 2026-08-03)
+
+The driver found, before writing PLAN-POSTED, that `AdvanceMessage`/
+`advance_domain`/`reconstruct_advance_message`'s Haskell mirror has three
+consumers beyond the validation path this ticket changes:
+
+1. `offchain/app/GenCheckpointVectors.hs` (golden CBOR vector construction)
+2. `offchain/e2e/CheckpointTxBuilder.hs` (e2e advance-transaction test
+   builder, `signedRotateEvidence`)
+3. `offchain/deployment/Cardano/KERI/Deployment/Advance.hs`
+   (`mkAdvancePackage` — the live `--signing-package` construction for
+   `ckeri advance --controller-signatures`)
+
+(1) and (2) are test-vector/e2e-harness surface, precisely analogous to what
+`0f6a88c` itself touched for the equivalent `InceptionMessage` deletion (its
+own file list includes both files' registration-side counterparts) — added
+to the owned-files fence; their `AdvanceMessage` construction is deleted
+along with everything else.
+
+(3) is different in kind, not just in fence. Reading `mkAdvancePackage`
+shows it is not a narrow call site: it **is** the artifact this ticket's own
+spec already describes as retired in phase 2, after #181. There is no
+"minimum edit to stop calling the deleted symbol" available without deciding
+that module's retirement now — that decision belongs to #181, not this
+slice. So: `offchain/deployment/**` stays unconditionally forbidden, and
+`AdvanceMessage`/`advance_domain`/`reconstruct_advance_message` remain
+**defined** (not deleted) in `offchain/lib/Cardano/KERI/AID/Checkpoint/
+{Advance,Message}.hs` — unused by `advancePredicate`/the validation path,
+carrying an explicit Haddock note naming `Deployment/Advance.hs` as the sole
+remaining consumer and the phase-2/#181 fast-follow that removes them. This
+is a scoped, documented exception to "deleted, not repurposed" — not a
+weakening of it: the type does no authorization work anywhere reachable from
+the validator after this change; it is inert leftover kept alive by one
+still-forbidden file.
+
 ## TDD contract (mirrors the brief)
 
 1. RED on current validator (permissionless-holds), GREEN after.
@@ -227,7 +269,12 @@ place that outref appeared in signed evidence.
 
 - [ ] `ctrl_sigs` verify against `event_bytes` (mirrors registration's R7);
       the `AdvanceMessage` type, `advance_domain`, and
-      `reconstruct_advance_message` are deleted, not repurposed.
+      `reconstruct_advance_message` are deleted from the onchain Aiken
+      surface and from every Haskell validation path, not repurposed. The
+      bare Haskell definitions may remain solely for
+      `Deployment/Advance.hs`'s forbidden-fence import, explicitly
+      Haddock-noted as a phase-2/#181 fast-follow deletion (see "Cross-fence
+      leftover").
 - [ ] `Eq1NetworkPolicyMismatch`, `Eq3OutRefMismatch`, `Eq4PriorMismatch` (and
       their message-only fields) are removed with the message layer, not
       left as unreachable dead constructors.

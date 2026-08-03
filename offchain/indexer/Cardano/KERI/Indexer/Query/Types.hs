@@ -23,6 +23,8 @@ module Cardano.KERI.Indexer.Query.Types (
     -- * Board
     BoardResponse (..),
     BoardData (..),
+    BoardListResponse (..),
+    BoardListEntry (..),
 
     -- * Watchability
     WatchabilityResponse (..),
@@ -228,6 +230,44 @@ instance ToJSON BoardResponse where
             , "as_of_slot" .= freshAsOfSlot brFreshness
             , "tip_lag_slots" .= freshTipLagSlots brFreshness
             , "board" .= brBoard
+            ]
+
+{- | One authenticated entry in @GET /board@. The wire shape is flat so a
+catalog consumer can associate the witness key with its endpoint record
+without reconstructing the single-record response envelope.
+-}
+data BoardListEntry = BoardListEntry
+    { bleWitnessKey :: !ByteString
+    , bleBoard :: !BoardData
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON BoardListEntry where
+    toJSON BoardListEntry{bleWitnessKey, bleBoard = BoardData{..}} =
+        object
+            [ "witness_key" .= qb64TextWitness bleWitnessKey
+            , "aid" .= bdAid
+            , "scheme" .= bdScheme
+            , "url" .= bdUrl
+            , "tx_id" .= bdTxId
+            , "output_index" .= bdOutputIndex
+            , "lovelace" .= bdLovelace
+            , "owner_key_hash" .= hexBytes bdOwnerKeyHash
+            ]
+
+-- | Exact @GET /board@ HTTP 200 body.
+data BoardListResponse = BoardListResponse
+    { blrFreshness :: !Freshness
+    , blrBoard :: ![BoardListEntry]
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON BoardListResponse where
+    toJSON BoardListResponse{blrFreshness, blrBoard} =
+        object
+            [ "as_of_slot" .= freshAsOfSlot blrFreshness
+            , "tip_lag_slots" .= freshTipLagSlots blrFreshness
+            , "board" .= blrBoard
             ]
 
 -- | The non-nullable @watchability@ payload's fields.

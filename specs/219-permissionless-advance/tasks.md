@@ -78,7 +78,50 @@ scope.
 - [x] T219-A3 File a Q proposing the preprod V1 redeploy/cutover plan
       (manifest, live-consumer re-pin sequencing) without executing it.
       (`Q-004-preprod-redeploy-cutover-plan.md`, filed to the desk.)
-- [x] T219-A3 Full repo gate green on the accepted commit; PR
+- [x] T219-A3 Full repo gate green on the accepted commit (ticket-owner-run
+      `just ci`, fresh detached worktree at `7e88d87`, zero errors
+      end-to-end — real drift checks included).
+- [ ] T219-A3 Real GitHub Actions CI green on the pushed PR, **including an
+      honest `E2E (withDevnet)`** (see Slice A4 — retracted once found to be
+      testing a stale cached blueprint, not this branch's source); PR
       description current; labels + assignee (`paolino`) set; report
-      `COMPLETE`. (Ticket-owner-run `just ci`, fresh detached worktree at
-      `7e88d87`, zero errors end-to-end — real drift checks included.)
+      `COMPLETE` only after.
+
+## Slice A4 — E2E blueprint fixed-output-derivation fix (desk `A-005`)
+
+`E2E (withDevnet)` failed on the pushed PR. Traced to a pre-existing,
+project-wide defect: `offchain/flake.nix`'s `blueprint` derivation is a Nix
+fixed-output derivation pinned since `8edfa8b` and never updated —
+content-addressed caching has likely been silently substituting a frozen,
+ancient compiled script for every PR since, decoupling `E2E (withDevnet)`
+from actual `onchain/` source changes. #219 is the first change whose
+Haskell-side behavior diverges enough from that frozen script to cause a
+hard on-chain rejection instead of silently continuing to agree by
+accident. Full evidence: `Q-005-e2e-blueprint-fod-stale-cache.md` /
+`A-005-e2e-blueprint-fod-stale-cache.md`. Infra issue:
+lambdasistemi/cardano-keri#235.
+
+Fence: the blueprint derivation block in `offchain/flake.nix` only (desk
+`A-005`, extending `A-001`'s scope). No other flake surface.
+
+- [ ] T219-A4 Confirm whether `aiken build -t silent` is hermetic under the
+      repo's pinned toolchain (no network access needed once package
+      dependencies are resolved) — determines fix shape (a) vs (b) below.
+- [ ] T219-A4 Fix shape (a), preferred: convert `blueprint` to an ordinary
+      input-addressed derivation if hermetic — staleness becomes
+      structurally impossible.
+- [ ] T219-A4 Fix shape (b), fallback (document why (a) doesn't hold): keep
+      the FOD but add a CI drift check that rebuilds from source with the
+      pinned `aiken` and reds on mismatch, mirroring
+      `check-checkpoint-vectors`/`check-advance-vectors`.
+- [ ] T219-A4 Enumerate all ~22 `blueprint` reference sites in
+      `offchain/flake.nix` and state which build paths consume it.
+- [ ] T219-A4 Confirm with evidence (not inference) that the production
+      deploy path (`ckeri deploy`/`manifest verify`,
+      `deploy/preprod/m1-manifest.json`) never consumed this FOD.
+- [ ] T219-A4 Full gate green; land as its own bisect-safe commit(s),
+      separate from the T219-A1 commit, with its own `Tasks: T219-A4`
+      trailer.
+- [ ] T219-A4 Push; confirm `E2E (withDevnet)` runs a freshly-rebuilt
+      blueprint (verify via CI log: `aiken build`/`Generating project's
+      blueprint` now appears) and goes green honestly.

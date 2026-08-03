@@ -283,6 +283,47 @@ whether/how to surface this to CLI operators are tracked as phase-2/#181
 fast-follow items, escalated to the desk for awareness before that ticket's
 brief is finalized.
 
+## E2E blueprint fixed-output-derivation staleness (Q-005 -> A-005, 2026-08-03)
+
+`E2E (withDevnet)` failed on the pushed PR with a live on-chain rejection
+(`ConwayRewarding`/`observer-advance` withdrawal script) of evidence that
+both the pure Haskell predicate and the driver's own `advance_predicate`
+already accept. Traced to a pre-existing, project-wide defect, not a bug in
+this ticket's change: `offchain/flake.nix`'s `blueprint` derivation (the
+compiled `plutus.json` every E2E job consumes) is a Nix fixed-output
+derivation whose `outputHash` has been pinned since a single commit
+(`8edfa8b`) and never updated, despite `onchain/` changing substantially in
+every intervening ticket. Fixed-output derivations are content-addressed by
+their declared hash, not their inputs, so Nix has likely been silently
+substituting a frozen, ancient compiled script instead of rebuilding —
+confirmed by the absence of any `aiken build`/`Generating project's
+blueprint` output in the failing job's CI log. #219 is (as far as currently
+known) the first change whose Haskell-side behavior diverges enough from
+that frozen script's expectations to produce a hard rejection instead of
+silently continuing to agree by accident.
+
+Independently corroborated that the production deploy/verify path never
+consumed this FOD: `ckeri`'s `deploy`/`manifest verify` commands
+(`offchain/deployment/Cardano/KERI/Deployment/CLI.hs`) require an explicit
+`--blueprint`/`CKERI_BLUEPRINT` with no internal default; only the flake's
+own `ckeriRunner` convenience wrapper supplies a default (the FOD path),
+and only when the caller hasn't already set the env var. The documented
+preprod deploy/verify flow (`docs/user/m1-preprod-deployment.md`) rebuilds
+from source directly.
+
+Ruling (`A-005`): fence extended to the `blueprint` derivation block in
+`offchain/flake.nix` (that hunk only). Fix must be structural — an
+input-addressed derivation if `aiken build` is hermetic under the pinned
+toolchain, or (if not) a CI drift check mirroring
+`check-checkpoint-vectors` — not a bare hash bump, which would re-arm the
+same trap for the next onchain change. Infra issue filed:
+lambdasistemi/cardano-keri#235 (ticket-owner's finding, filed before the
+fix per the ruling's ordering). Fix rides this PR as its own bisect-safe
+commit(s), separate from the T219-A1 behavior commit. PR #222 stays not
+ready for review until `E2E (withDevnet)` runs against a blueprint built
+from this branch's actual source and goes green honestly — see Slice A4 in
+`tasks.md`.
+
 ## TDD contract (mirrors the brief)
 
 1. RED on current validator (permissionless-holds), GREEN after.

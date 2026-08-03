@@ -177,10 +177,20 @@ split) — docs
 ## Verification commands
 
 - `cd onchain && aiken check` (fast inner loop, every iteration)
-- `nix develop --quiet -c just ci` before every push (repo gate; a timeout is
-  not a verdict, rerun warm)
-- If Q-001 -> Option 1: the repository's Haskell/Aiken drift-check target
-  (name TBD from `justfile` — navigator confirms before GREEN)
+- `./gate.sh` (v3) before every commit — `just check-onchain` +
+  `just ci-onchain ci-blake3` + `ci-offchain`'s recipes named individually,
+  minus `check-advance-vectors`/`check-checkpoint-vectors` (git-diff-vs-HEAD
+  can never pass pre-commit for a slice that legitimately changes those
+  generated files — navigator `GATE-CHALLENGE-002`/`A-GATE-CHALLENGE-002`),
+  replaced pre-commit with a regenerate-twice idempotency proof. A timeout
+  is `GATE-INCOMPLETE`, not a verdict — the nix store was GC'd mid-slice
+  (2026-08-03T~11:05Z); rerun warm, record cold/warm elapsed per the
+  machine-owner ask.
+- At ticket-level final acceptance (post-commit, ticket owner only, from a
+  fresh clean detached worktree at the accepted commit): the real
+  `just check-advance-vectors`/`just check-checkpoint-vectors`
+  (git-diff-vs-HEAD form, unmodified) run directly — meaningful again once
+  the commit exists — alongside full `just ci`.
 
 ## Reporting
 

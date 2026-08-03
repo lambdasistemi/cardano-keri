@@ -68,6 +68,16 @@
         "github:input-output-hk/CardanoLedgerApiBlaster/577e3eb03b5be09354cfdb1c0d0c12e9e16541a0";
       flake = false;
     };
+    # #219 A4: the exact nixpkgs rev this repo's justfile already pins for
+    # every aiken invocation (`check-onchain`, `aiken fmt`, every
+    # `gen-*-vectors` recipe) — aiken v1.1.23. The flake's own `nixpkgs`
+    # (haskellNix's `nixpkgs-unstable`) resolves `pkgs.aiken` to v1.1.21, a
+    # DIFFERENT compiler than the one the rest of the repo validates
+    # against; the blueprint derivation must use the same v1.1.23 the repo
+    # already treats as canonical, not whatever `nixpkgs-unstable` happens
+    # to carry.
+    aikenNixpkgs.url =
+      "github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46";
   };
 
   outputs =
@@ -117,6 +127,11 @@
               && baseName != ".lake"
               && !(pkgs.lib.hasPrefix "result" baseName);
           };
+          # #219 A4: the repo-pinned aiken (v1.1.23) — see the `aikenNixpkgs`
+          # input comment. Used only by the blueprint derivation, so its
+          # compiled bytecode matches what `just check-onchain`/`aiken fmt`/
+          # every `gen-*-vectors` recipe already validates against.
+          aikenPkgs = import inputs.aikenNixpkgs { inherit system; };
 
           # Tooling is pinned to the cabal.project hackage index-state so the
           # fourmolu/hlint versions used by `format` and `format-check` agree.
@@ -450,10 +465,9 @@
           # node/blueprint references are never forced there.
           e2eWiring = pkgs.lib.optionalAttrs (system == "x86_64-linux") (let
             # Flake-owned Aiken blueprint: build plutus.json from the TRACKED
-            # onchain sources + aiken.lock in a fixed-output derivation (aiken
-            # fetches its locked deps over the network), yielding an immutable
-            # /nix/store blueprint the e2e smoke consumes instead of the
-            # gitignored worktree plutus.json (NOTE-016).
+            # onchain sources, yielding an immutable /nix/store blueprint the
+            # e2e smoke consumes instead of the gitignored worktree
+            # plutus.json (NOTE-016).
             # Filtered onchain source: the `onchain` input already resolves
             # via the repo git tree (so gitignored build/ + plutus.json are
             # absent), but we ALSO filter explicitly so the blueprint's
@@ -470,21 +484,84 @@
                   top = pkgs.lib.head (pkgs.lib.splitString "/" rel);
                 in top != "build" && rel != "plutus.json";
             };
+            # #219 A4: the three `onchain/aiken.lock` GitHub dependencies,
+            # vendored as ordinary pinned fetches (each individually
+            # immutable — pinned to the exact tag `aiken.lock` names, exactly
+            # what a fixed-output fetch is for) rather than left for `aiken
+            # build` to re-resolve over the network on every blueprint build.
+            # This is the only genuinely impure step (fetching); compiling
+            # from a pre-populated `build/packages/` is fully hermetic (see
+            # the blueprint derivation below), so vendoring here lets the
+            # blueprint itself become an ordinary input-addressed derivation.
+            aikenPkgSource = { owner, repo, rev, hash }:
+              pkgs.fetchFromGitHub { inherit owner repo rev hash; };
+            aikenStdlib = aikenPkgSource {
+              owner = "aiken-lang";
+              repo = "stdlib";
+              rev = "v2.2.0";
+              hash = "sha256-BDaM+JdswlPasHsI03rLl4OR7u5HsbAd3/VFaoiDTh4=";
+            };
+            aikenMpfsOnchain = aikenPkgSource {
+              owner = "cardano-foundation";
+              repo = "cardano-mpfs-onchain";
+              rev = "v0.1.0";
+              hash = "sha256-1NplnTMCKeK7ZasAmn+28bGM6CcWqJp7SvBqhCkuSJM=";
+            };
+            aikenMerklePatriciaForestry = aikenPkgSource {
+              owner = "aiken-lang";
+              repo = "merkle-patricia-forestry";
+              rev = "v2.0.0";
+              hash = "sha256-uHVQxA1dYDuPbH+pf6SkGNBF7nBlDXdULrPFkfUDjzU=";
+            };
+            # Mirrors the `[[packages]]` records `aiken build` itself writes
+            # into `build/packages/packages.toml` on a real fetch — aiken
+            # trusts a pre-populated cache in this shape with no network and
+            # no re-verification fetch (confirmed empirically under
+            # `unshare -rn`, zero network, repo-pinned aiken, rc=0).
+            aikenPackagesToml = pkgs.writeText "packages.toml" ''
+              [[packages]]
+              name = "aiken-lang/stdlib"
+              version = "v2.2.0"
+              requirements = []
+              source = "github"
+
+              [[packages]]
+              name = "cardano-foundation/cardano-mpfs-onchain"
+              version = "v0.1.0"
+              requirements = []
+              source = "github"
+
+              [[packages]]
+              name = "aiken-lang/merkle-patricia-forestry"
+              version = "v2.0.0"
+              requirements = []
+              source = "github"
+            '';
+            # #219 A4: ordinary input-addressed derivation (no
+            # outputHash/outputHashMode/outputHashAlgo) — any `onchain/`
+            # source change is now a Nix input change, so a stale
+            # cache-substituted blueprint is structurally impossible. Uses
+            # `aikenPkgs.aiken` (the repo-pinned v1.1.23, matching
+            # `check-onchain`/`aiken fmt`/every `gen-*-vectors` recipe), not
+            # the flake's own `pkgs.aiken` (v1.1.21 via nixpkgs-unstable).
             blueprint = pkgs.stdenvNoCC.mkDerivation {
               name = "keri-plutus-blueprint-silent";
               dontUnpack = true;
-              nativeBuildInputs = [ pkgs.aiken pkgs.cacert ];
-              outputHashMode = "flat";
-              outputHashAlgo = "sha256";
-              outputHash =
-                "sha256-iW0sRkJ0CiYkjcRs3uy84YcwBheF54z77cKhOlycV3w=";
+              nativeBuildInputs = [ aikenPkgs.aiken ];
               buildPhase = ''
                 export HOME="$TMPDIR"
-                export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
                 cp -rL ${onchainSrc}/. ./work
                 chmod -R +w ./work
+                mkdir -p ./work/build/packages
+                cp ${aikenPackagesToml} ./work/build/packages/packages.toml
+                cp -rL ${aikenStdlib} \
+                  ./work/build/packages/aiken-lang-stdlib
+                cp -rL ${aikenMpfsOnchain} \
+                  ./work/build/packages/cardano-foundation-cardano-mpfs-onchain
+                cp -rL ${aikenMerklePatriciaForestry} \
+                  ./work/build/packages/aiken-lang-merkle-patricia-forestry
+                chmod -R +w ./work/build
                 cd ./work
-                rm -rf build plutus.json
                 aiken build -t silent
               '';
               installPhase = ''

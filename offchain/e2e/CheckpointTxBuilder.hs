@@ -532,9 +532,16 @@ verifyRegisterScriptSizes env = do
     measure "observer_advance reference script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measure "observer_enforcement reference script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
-    unless (SBS.length (envAdvanceBytes env) == 16_130) $
+    -- #219 A4: re-measured after the blueprint FOD staleness fix (the
+    -- prior 16,130 pin was silently checked against a blueprint stale
+    -- relative to this branch, last refreshed at a09058f, never this
+    -- branch's actual compiled size). Current value measured via
+    -- `nix build ./offchain#plutus-blueprint` against this branch's
+    -- `onchain/advance.ak` (post-T219-A1/A2's dead-code deletion, which
+    -- shrinks the compiled validator).
+    unless (SBS.length (envAdvanceBytes env) == 14_775) $
         fail
-            ( "observer_advance applied program changed from 16,130 bytes: "
+            ( "observer_advance applied program changed from 14,775 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 

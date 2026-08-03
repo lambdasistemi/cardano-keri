@@ -17,6 +17,7 @@ surface, not a copy of anything this package could import.
 module Cardano.KERI.Indexer.Query.Tx (
     QueryHandle (..),
     scanAddressTx,
+    payerUtxosTx,
     watermarkTx,
     checkpointTx,
     listCheckpointsTx,
@@ -45,7 +46,7 @@ import Control.Concurrent.STM (STM)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Either (rights)
-import Data.List (find)
+import Data.List (find, nub, sortOn)
 import Database.KV.Cursor (Entry (..), lastEntry, nextEntry, seekKey)
 import Database.KV.Transaction (RunTransaction, Transaction, iterating)
 
@@ -76,6 +77,17 @@ scanAddressTx addr = iterating AddressIndex (seekKey seekTo >>= go [])
         | addrKeyAddress key == addr =
             nextEntry >>= go ((addrKeyTxIn key, value) : acc)
         | otherwise = pure (reverse acc)
+
+{- | Every live UTxO across several payer addresses, gathered in exactly one
+engine transaction by composing 'scanAddressTx' per deduplicated address.
+The combined result is sorted by 'TxIn' so that operand order or duplicate
+address configuration cannot change the selected candidate set (FR-2).
+-}
+payerUtxosTx ::
+    [Address] -> Transaction IO cf Cols op [(TxIn, TxOut)]
+payerUtxosTx addrs = do
+    scanned <- traverse scanAddressTx (nub addrs)
+    pure (sortOn fst (concat scanned))
 
 {- | The store's own freshness watermark: the highest 'SlotNo' key currently
 in @RollbackCol@ (both restoration and following rows are keyed by slot, so

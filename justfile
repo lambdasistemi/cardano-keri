@@ -57,6 +57,15 @@ backend-transcript-check:
     nix run --quiet path:./offchain#backend-transcript-check
     nix build --quiet --no-link path:./offchain#checks.x86_64-linux.backend-transcript-check
 
+# #181 Slice 1: coherent input/runtime seam focused tests — plural payer
+# addresses through one engine transaction (payerUtxosTx) and the
+# indexer-neutral TransactionRuntime call-order/fail-closed/signing proofs.
+transaction-path-check:
+    cd offchain && nix develop --quiet -c cabal test deployment-tests -O0 \
+        --test-options='--match "classifyEvaluation" --match "signWithCardanoCliKey" --match "runTransactionOperation"'
+    cd offchain && nix develop --quiet -c cabal test indexer-tests -O0 \
+        --test-options='--match "payerUtxosTx"'
+
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:

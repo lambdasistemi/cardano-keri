@@ -82,22 +82,25 @@ library deployment
   hs-source-dirs:   deployment
   build-depends:
     , aeson
-    , base                   >=4.18 && <5
+    , base                           >=4.18 && <5
     , bech32
-    , bytestring             >=0.11 && <0.13
+    , bytestring                     >=0.11 && <0.13
     , cardano-crypto-class
     , cardano-keri
     , cardano-ledger-alonzo
+    , cardano-ledger-api
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-tx-tools:tx-sign-core
     , containers
     , crypton
     , directory
     , filepath
     , http-conduit
-    , memory                 >=0.18 && <0.19
-    , opt-env-conf           >=0.13 && <0.16
+    , memory                         >=0.18 && <0.19
+    , opt-env-conf                   >=0.13 && <0.16
     , plutus-core
     , plutus-ledger-api
     , process
@@ -122,6 +125,7 @@ library deployment
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Script
+    Cardano.KERI.Deployment.TransactionRuntime
 
 library indexer
   import:           warnings
@@ -243,6 +247,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
 
   build-depends:
@@ -252,9 +257,14 @@ test-suite deployment-tests
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-ledger-api
+    , cardano-ledger-core
+    , cardano-node-clients
+    , containers
     , hspec                    >=2.11 && <2.12
     , http-conduit
     , memory                   >=0.18 && <0.19
+    , microlens
     , plutus-core
     , temporary
     , text
@@ -276,6 +286,7 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.FollowerSpec
     Cardano.KERI.Indexer.Query.ServerSpec
     Cardano.KERI.Indexer.Query.SwaggerDriftSpec
+    Cardano.KERI.Indexer.Query.TxSpec
     Cardano.KERI.Indexer.Query.TypesSpec
     Cardano.KERI.Indexer.ReadsSpec
     Cardano.KERI.Indexer.ResumeSpec

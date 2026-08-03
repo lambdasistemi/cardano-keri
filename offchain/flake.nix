@@ -719,7 +719,7 @@
               touch "$out"
             '';
           in {
-            inherit blueprint ckeriRunner deploymentTestsCheck
+            inherit blueprint onchainSrc ckeriRunner deploymentTestsCheck
               deploymentTestsRunner runner followerRunner check sweepRunner
               sweepConsistency;
           });
@@ -731,6 +731,40 @@
               title = "checkpoint.checkpoint.spend";
               expectedBlueprintSha256 =
                 "896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c";
+              # #219 A4 follow-up (cross-milestone consumer missed by the
+              # original enumeration): ms8's baseline deliberately targets
+              # the exact DEPLOYED bytecode (`expectedBlueprintSha256`
+              # above), not "whatever the tree currently compiles to" — the
+              # live `e2eWiring.blueprint` is correctly fresh after #219 A4
+              # and will never equal this frozen value again. Give ms8's
+              # check its own STABLE input instead of coupling it to the
+              # live blueprint: the exact same fixed-output derivation the
+              # live blueprint used to be, scoped only to this baseline, so
+              # ms8's pin stays exactly what they pinned regardless of any
+              # future onchain/ change. Never route checks.e2e/ckeriRunner/
+              # packages.ckeri through this — those need the live blueprint,
+              # which is the whole point of A4.
+              frozenM8Blueprint = pkgs.stdenvNoCC.mkDerivation {
+                name = "keri-plutus-blueprint-m8-baseline";
+                dontUnpack = true;
+                nativeBuildInputs = [ pkgs.aiken pkgs.cacert ];
+                outputHashMode = "flat";
+                outputHashAlgo = "sha256";
+                outputHash =
+                  "sha256-iW0sRkJ0CiYkjcRs3uy84YcwBheF54z77cKhOlycV3w=";
+                buildPhase = ''
+                  export HOME="$TMPDIR"
+                  export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+                  cp -rL ${e2eWiring.onchainSrc}/. ./work
+                  chmod -R +w ./work
+                  cd ./work
+                  rm -rf build plutus.json
+                  aiken build -t silent
+                '';
+                installPhase = ''
+                  cp plutus.json "$out"
+                '';
+              };
               sourceIdentity =
                 if self ? rev then self.rev else (self.dirtyRev or "dirty");
               lockSha256 = builtins.hashFile "sha256" ./flake.lock;
@@ -808,9 +842,11 @@
               } ''
                 set -euo pipefail
                 mkdir -p "$out"
-                blueprint=${e2eWiring.blueprint}
-                test "$(sha256sum "$blueprint" | cut -d ' ' -f 1)" = \
-                  "${expectedBlueprintSha256}"
+                blueprint=${frozenM8Blueprint}
+                actual_blueprint_sha256="$(sha256sum "$blueprint" | cut -d ' ' -f 1)"
+                echo "expected blueprint sha256: ${expectedBlueprintSha256}" >&2
+                echo "actual blueprint sha256:   $actual_blueprint_sha256" >&2
+                test "$actual_blueprint_sha256" = "${expectedBlueprintSha256}"
                 ${pkgs.lib.concatMapStrings (entry: ''
                   title=${pkgs.lib.escapeShellArg entry.title}
                   params=${toString entry.params}
@@ -844,8 +880,10 @@
               } ''
                 set -euo pipefail
                 mkdir -p "$out"
-                blueprint=${e2eWiring.blueprint}
+                blueprint=${frozenM8Blueprint}
                 actual_blueprint_sha256="$(sha256sum "$blueprint" | cut -d ' ' -f 1)"
+                echo "expected blueprint sha256: ${expectedBlueprintSha256}" >&2
+                echo "actual blueprint sha256:   $actual_blueprint_sha256" >&2
                 test "$actual_blueprint_sha256" = "${expectedBlueprintSha256}"
 
                 jq -er --arg title "${title}" \
@@ -885,9 +923,11 @@
                     exit 64
                   fi
 
-                  blueprint=${e2eWiring.blueprint}
+                  blueprint=${frozenM8Blueprint}
                   artifact=${artifact}
                   actual_blueprint_sha256="$(sha256sum "$blueprint" | cut -d ' ' -f 1)"
+                  echo "expected blueprint sha256: ${expectedBlueprintSha256}" >&2
+                  echo "actual blueprint sha256:   $actual_blueprint_sha256" >&2
                   test "$actual_blueprint_sha256" = "${expectedBlueprintSha256}"
                   test "$(jq -er --arg title "${title}" \
                     '[.validators[] | select(.title == $title)] | length' \

@@ -68,13 +68,25 @@ supersedes the earlier `list`/`checkpoint`/`payer` retirement classification.
 - [x] T177-S2-6 Immutable slice gate and `./gate.sh` green; navigator verifies
       one docs/evidence commit
 
+## Slice 3 — hosted board enumeration after retirement
+
+- [ ] T177-S3-1 Freeze `GET /board` as an authenticated deterministic catalog
+      with top-level `as_of_slot` and `tip_lag_slots`
+- [ ] T177-S3-2 RED: HTTP and encoder-derived OpenAPI drift tests cover the
+      populated list shape; demonstrate a drifted response field makes the
+      enforcing check fail, then restore it
+- [ ] T177-S3-3 GREEN: reuse one `boardTx` for populated/empty catalogs, fail
+      the whole route closed on a forged record, and omit `board` on 503
+- [ ] T177-S3-4 Amend OpenAPI and user docs, pass the immutable Slice 3 gate and
+      full gate, then publish the registry-facing `NOTE RELEASE` line
+
 ## Orchestrator-owned completion
 
 - [x] T177-O-1 Independently inspect both accepted commits/diffs, task stamps,
       gate hashes, no-fork audit, and exact packaged binary help
-- [x] T177-O-2 Push the branch, keep the issue-linked PR draft during work,
+- [ ] T177-O-2 Push the branch, keep the issue-linked PR draft during work,
       and ensure assignment/labels/body/checks are correct
-- [x] T177-O-3 Run fresh final `just ci` and `./gate.sh`, record filesystem
+- [ ] T177-O-3 Run fresh final `just ci` and `./gate.sh`, record filesystem
       deltas, and confirm no live service or flake pin was changed
-- [x] T177-O-4 Mark the PR ready only after three-tier evidence and CI are
+- [ ] T177-O-4 Mark the PR ready only after three-tier evidence and CI are
       green; append `COMPLETE <pr> ready-for-review`; never self-merge

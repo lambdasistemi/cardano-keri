@@ -47,9 +47,9 @@ through `--backend` / `CKERI_BACKEND` / YAML `backend` with values `local`,
 The same backend abstraction exposes checkpoint-by-AID, authenticated
 board-by-witness, and watchability operations. The production CLI uses those
 operations for `status`; existing production `board list` remains available.
-If a selected upstream cannot supply a requested operation coherently (the
-#176 endpoint intentionally has no catalog-list route), it returns a named
-unsupported-capability error. It must never fall through to another backend.
+If a selected upstream cannot supply a requested operation coherently, it
+returns a named unsupported-capability error. It must never fall through to
+another backend.
 
 Every successful status output has one stable rendered envelope containing:
 
@@ -129,6 +129,25 @@ UTC-dated, operator-identified transcripts for one AID through local,
 command, binary provenance, backend source, raw output, and exit status. Never
 fabricate parity when a tier honestly fails closed.
 
+**FR-10 — post-retirement hosted board enumeration.** After the capability-safe
+fork retirement is accepted, amend #176's registered hosted read surface with
+`GET /board`. A successful response has top-level `as_of_slot`,
+`tip_lag_slots`, and `board`; `board` is an array in the authenticated
+catalog's deterministic output-reference order. Every entry contains
+`witness_key`, `aid`, `scheme`, `url`, `tx_id`, `output_index`, `lovelace`, and
+`owner_key_hash`. An empty catalog is `[]`. The catalog and transactional
+watermark come from one existing `boardTx`; readiness is sampled afterward.
+One forged or malformed record returns HTTP 500 with no partial catalog, and
+failed readiness returns the common HTTP 503 envelope with no `board` field.
+
+**FR-11 — amended surface enforcement.** `GET /board`, `BoardListResponse`, and
+`BoardListEntry` join the committed OpenAPI document and its encoder-derived
+field-set drift check. The check must be observed red against an intentionally
+drifted list response shape before restoration, then green with the route,
+response encoder, OpenAPI contract, HTTP golden, and user documentation in
+agreement. Landing publishes `NOTE RELEASE: <amended surface> at <commit>` so
+the registry is updated before #162 binds.
+
 ## Acceptance
 
 Deterministic acceptance proves:
@@ -150,6 +169,9 @@ Deterministic acceptance proves:
 8. independent no-loss and no-leak mutations each make their named gate red,
    and neither mutation remains;
 9. focused gates and a fresh `just ci` pass at the accepted commit.
+10. `GET /board` returns the full authenticated catalog with the same
+    transactional freshness claim as single-record lookup, and its HTTP and
+    OpenAPI drift checks are independently proven able to fail.
 
 Live acceptance runs the built production binary against local, hosted, and
 Koios tiers for the same AID and preserves the truthful transcripts. It does

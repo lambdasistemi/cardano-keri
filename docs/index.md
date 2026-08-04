@@ -25,6 +25,8 @@ token instead of permanently binding themselves to one key.
 
 ## Start here
 
+- [Why Cardano](why-cardano.md) — how this differs from anchoring or "rooting"
+  a KEL on a ledger, and the two properties a validated checkpoint adds.
 - [Story ladder](story-ladder.md) — what is settled, in flight, planned, and
   deliberately fail-closed.
 - [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,

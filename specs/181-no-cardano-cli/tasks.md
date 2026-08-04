@@ -25,15 +25,15 @@ commit with an exact `Tasks:` trailer.
 
 ## Slice 2A — shared build/sign kernel
 
-- [ ] T181-S2A-1 RED: shared tests distinguish empty indexed input,
+- [x] T181-S2A-1 RED: shared tests distinguish empty indexed input,
       insufficient value, and missing distinct collateral
-- [ ] T181-S2A-2 RED: evaluation, bad-key, submission, and restricted-`PATH`
+- [x] T181-S2A-2 RED: evaluation, bad-key, submission, and restricted-`PATH`
       failures are distinct, actionable, and proven able to fail
-- [ ] T181-S2A-3 GREEN: add the operation-neutral build/balance/input/signing
+- [x] T181-S2A-3 GREEN: add the operation-neutral build/balance/input/signing
       composition using the pinned transaction-tool APIs
-- [ ] T181-S2A-4 Focused matcher rejects zero selection and executes every
+- [x] T181-S2A-4 Focused matcher rejects zero selection and executes every
       named proof; frozen Slice 2A and accumulated gates are green
-- [ ] T181-S2A-5 Navigator verifies one commit with
+- [x] T181-S2A-5 Navigator verifies one commit with
       `Tasks: T181-S2A-1,...,T181-S2A-5`
 
 ## Slice 2B — deploy / Publisher migration

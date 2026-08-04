@@ -14,7 +14,7 @@ format-offchain:
 
 # Check Haskell/cabal formatting without modifying files
 format-check-offchain:
-    cd offchain && nix run --quiet .#format-check
+    cd offchain && nix run --quiet --no-write-lock-file .#format-check
 
 # Run hlint over Haskell sources
 hlint:
@@ -78,7 +78,7 @@ transaction-build-sign-check matcher="":
         test_options+=("--test-option=--match=$matcher")
     fi
     cd offchain
-    nix develop --quiet -c cabal test transaction-build-sign-tests -O0 \
+    nix develop --quiet --no-write-lock-file -c cabal test transaction-build-sign-tests -O0 \
         --test-show-details=direct "${test_options[@]}"
 
 # #176 Slice 1: run the query-endpoint contract suite (application-level

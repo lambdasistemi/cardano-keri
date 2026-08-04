@@ -50,7 +50,7 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Data.Aeson (eitherDecodeFileStrict')
 import Data.ByteString qualified as BS
-import Data.Either (isLeft)
+import Data.Either (isLeft, isRight)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8')
 import Paths_cardano_keri (getDataFileName)
@@ -116,7 +116,15 @@ spec =
                     >>= either fail pure
                     >>= (`shouldBe` advanceSigningMetadata package)
 
-        it "does not substitute KERI rot.raw signatures for AdvanceMessage signatures" $ do
+        it "accepts KERI rot.raw signatures directly (permissionless advance, #219)" $ do
+            -- #219 (specs/219-permissionless-advance/spec.md) moved
+            -- `advancePredicate`'s controller-signature check onto
+            -- `event_bytes` directly. `attachControllerSignatures` shares
+            -- that same predicate as its own self-check, so it now accepts
+            -- exactly the signatures this test attaches -- it no longer
+            -- requires a signature over the (now-dead) `AdvanceMessage`
+            -- preimage. This is the correct, intended consequence of #219,
+            -- not a regression.
             (inception, rotation) <- loadJourney
             assetName <- either fail pure (checkpointAssetName $ rotationAid rotation)
             let activeUtxo =
@@ -144,7 +152,7 @@ spec =
             attachControllerSignatures
                 (rotationEventSignatures rotation)
                 package
-                `shouldSatisfy` isLeft
+                `shouldSatisfy` isRight
 
         it "builds the thin observer transaction while preserving the complete state value" $ do
             (inception, rotation) <- loadJourney

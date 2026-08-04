@@ -1,48 +1,46 @@
-//// Advance verdict-parity + byte-parity tests (#115 S5).
+//// Advance verdict-parity tests (#115 S5, #219 permissionless).
 ////
 //// Drives `advance_predicate` over the generated `advance_vectors.ak`
 //// (the spent context, created/successor datum, evidence, and
 //// Haskell-computed verdict the S4 `AdvanceSpec` families build from the
 //// same committed keripy `advance.json`) and asserts, per vector, that
 //// the Aiken predicate returns the SAME verdict the vector records —
-//// verdict parity is the acceptance bar, not just byte parity. Each test
-//// additionally pins the expected constructor in-line (a third
-//// independent spelling next to the S4 hspec and the generator's own
-//// assertion), so a generator bug cannot silently weaken the suite.
+//// verdict parity is the acceptance bar. Each test additionally pins the
+//// expected constructor in-line (a third independent spelling next to the
+//// S4 hspec and the generator's own assertion), so a generator bug cannot
+//// silently weaken the suite.
 ////
 //// Covers: the four honest fixture families (`adv_wit_2key`,
-//// `adv_wit_7key`, `adv_keep`, `adv_downgrade`); one executable rejection
-//// per AE1-AE10 axis; the A-001 offset-misdirection family (spans into
-//// `a`/`p`/`d`, cross-field/code confusion, truncated/negative/duplicated/
-//// shortened/emptied offsets); controller-evidence negatives (bad index,
-//// wrong preimage, below threshold, stolen current quorum, substituted
-//// successor); W1/W2/eq7/eq8 delta malformations (dup cut/add, cut of a
+//// `adv_wit_7key`, `adv_keep`, `adv_downgrade`) — each now genuinely
+//// permissionless: `ctrl_sigs` are the fixture's own `rot_sigs`
+//// (`signing_target: "event_raw"`), no Cardano-domain signing step; one
+//// executable rejection per AE1-AE10 axis; the A-001 offset-misdirection
+//// family (spans into `a`/`p`/`d`, cross-field/code confusion,
+//// truncated/negative/duplicated/shortened/emptied offsets);
+//// controller-evidence negatives (bad index, a signature over the now-dead
+//// `AdvanceMessage` CBOR preimage, below threshold, stolen current quorum,
+//// substituted successor); the #219 anti-replay isolation of eq5's seq
+//// conjunct; W1/W2/eq7/eq8 delta malformations (dup cut/add, cut of a
 //// non-member, add-already-present, cut/add overlap, derived-set
 //// mismatch, wrong survivor order, toad out of bounds); and V7
 //// receipt-quorum negatives (receipt-free, below-toad, bad/out-of-range
 //// index, bad signature, duplicate index, wrong-member index, cut-witness
-//// receipt, outgoing-only quorum, non-empty receipts at toad=0). Byte
-//// parity is asserted for the four honest families' reconstructed
-//// `AdvanceMessage` canonical-CBOR preimage (the V5 controller-signature
-//// target).
+//// receipt, outgoing-only quorum, non-empty receipts at toad=0).
 
-use aiken/cbor
-use aiken/collection/list
-use aiken/crypto.{verify_ed25519_signature}
 use cardano_keri/checkpoint/advance.{
   AE10ToadMismatch, AE1EventTypeMismatch, AE2AidMismatch, AE3SequenceMismatch,
   AE4CurKeysMismatch, AE5CurThresholdMismatch, AE6NextKeysMismatch,
   AE7NextThresholdMismatch, AE8WitCutMismatch, AE9WitAddMismatch,
   AdvEventBinding, AdvMessageInvalid, AdvReceiptQuorumUnsatisfied,
   AdvanceEvidence, AdvancePredicateInvalid, AdvancePredicateValid,
-  AdvancePredicateVerdict, advance_predicate, reconstruct_advance_message,
+  AdvancePredicateVerdict, advance_predicate,
 }
 use cardano_keri/checkpoint/advance_vectors as vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ToadRange}
 use cardano_keri/checkpoint/message.{
-  Eq6CurrentQuorumUnsatisfied, Eq6PriorNextQuorumUnsatisfied,
-  Eq7CreatedStateMismatch, Eq8CreatedIllFormed, EqW1CutInvalid, EqW2AddInvalid,
-  SpentCheckpoint,
+  Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
+  Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
+  EqW1CutInvalid, EqW2AddInvalid, SpentCheckpoint,
 }
 
 // ---------------------------------------------------------
@@ -60,70 +58,6 @@ fn parity(
   pinned: AdvancePredicateVerdict,
 ) -> Bool {
   advance_predicate(spent, created, e) == recorded && recorded == pinned
-}
-
-// ---------------------------------------------------------
-// Byte parity: the reconstructed message preimage (V5 target)
-// ---------------------------------------------------------
-
-test preimage_parity_adv_wit_2key() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_2key_spent,
-      vec.pos_adv_wit_2key_created,
-      vec.pos_adv_wit_2key_evidence.wit_cut,
-      vec.pos_adv_wit_2key_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_wit_2key_preimage
-}
-
-test preimage_parity_adv_wit_7key() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_7key_spent,
-      vec.pos_adv_wit_7key_created,
-      vec.pos_adv_wit_7key_evidence.wit_cut,
-      vec.pos_adv_wit_7key_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_wit_7key_preimage
-}
-
-test preimage_parity_adv_keep() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_keep_spent,
-      vec.pos_adv_keep_created,
-      vec.pos_adv_keep_evidence.wit_cut,
-      vec.pos_adv_keep_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_keep_preimage
-}
-
-test preimage_parity_adv_downgrade() {
-  cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_downgrade_spent,
-      vec.pos_adv_downgrade_created,
-      vec.pos_adv_downgrade_evidence.wit_cut,
-      vec.pos_adv_downgrade_evidence.wit_add,
-    ),
-  ) == vec.pos_adv_downgrade_preimage
-}
-
-// A committed ctrl signature verifies over the Aiken-recomputed preimage:
-// the two languages agree on the exact signature target bytes.
-test ctrl_sig_verifies_over_preimage() {
-  let preimage = cbor.serialise(
-    reconstruct_advance_message(
-      vec.pos_adv_wit_2key_spent,
-      vec.pos_adv_wit_2key_created,
-      vec.pos_adv_wit_2key_evidence.wit_cut,
-      vec.pos_adv_wit_2key_evidence.wit_add,
-    ),
-  )
-  expect Some((idx, sig)) = list.head(vec.pos_adv_wit_2key_evidence.ctrl_sigs)
-  expect Some(key) = list.at(vec.pos_adv_wit_2key_created.cur_keys, idx)
-  verify_ed25519_signature(key, preimage, sig)
 }
 
 // ---------------------------------------------------------
@@ -425,12 +359,14 @@ test ctrl_bad_index_rejects() {
   )
 }
 
-test ctrl_wrong_preimage_rejects() {
+// #219: a signature over the now-dead `AdvanceMessage` CBOR preimage no
+// longer verifies against `event_bytes` -- PROVE-LIST item 2.
+test ctrl_old_message_preimage_rejects() {
   parity(
-    vec.ctrl_wrong_preimage_spent,
-    vec.ctrl_wrong_preimage_created,
-    vec.ctrl_wrong_preimage_evidence,
-    vec.ctrl_wrong_preimage_verdict,
+    vec.ctrl_old_message_preimage_spent,
+    vec.ctrl_old_message_preimage_created,
+    vec.ctrl_old_message_preimage_evidence,
+    vec.ctrl_old_message_preimage_verdict,
     AdvancePredicateInvalid(AdvMessageInvalid(Eq6CurrentQuorumUnsatisfied)),
   )
 }
@@ -547,6 +483,60 @@ test eq8_toad_out_of_bounds_rejects() {
     vec.eq8_toad_out_of_bounds_verdict,
     AdvancePredicateInvalid(AdvMessageInvalid(Eq8CreatedIllFormed(ToadRange))),
   )
+}
+
+// ---------------------------------------------------------
+// #219 anti-replay falsifiability (spec.md "Anti-replay analysis",
+// A-001 condition 3): eq5's seq conjunct is the exclusive wired
+// mechanism this scenario isolates. native_sn stays AE3-legitimate
+// (unchanged from the honest adv_wit_2key event); only the Cardano-side
+// seq counter skips ahead of spent.seq+1. Real, unmodified eq5 rejects
+// it today; this test must keep passing after GREEN (restated eq5).
+// Falsifiability against a transient, reverted one-line weakening of
+// eq5's own comparison in message.ak is proven out-of-band per
+// DIRECTION-001 and recorded in handoffs/, not encoded as a second test
+// (a duplicated/weakened copy of eq5 would prove nothing about the wired
+// check).
+// ---------------------------------------------------------
+
+test eq5_seq_skip_ahead_rejects() {
+  parity(
+    vec.eq5_seq_skip_ahead_spent,
+    vec.eq5_seq_skip_ahead_created,
+    vec.eq5_seq_skip_ahead_evidence,
+    vec.eq5_seq_skip_ahead_verdict,
+    AdvancePredicateInvalid(AdvMessageInvalid(Eq5SequenceMismatch)),
+  )
+}
+
+// ---------------------------------------------------------
+// #219 permissionless-holds (spec.md "Anti-replay analysis" property 1):
+// a stranger holding only `event_bytes` + the KEL's own genuine
+// `rot`-event signatures (the fixture's `rot_sigs`, `signing_target:
+// "event_raw"`) -- no Cardano-domain preimage signing step, no
+// `TxOutRef` knowledge -- is ACCEPTED, since V5 verifies `ctrl_sigs`
+// against `event_bytes` directly. Every honest fixture family's evidence
+// is now genuinely this construction (`GenAdvanceVectors.hs`'s
+// `aeCtrlSigs = eventRawCtrlSigs`, mirroring `0f6a88c`'s `rcEventSigs`
+// swap) -- named explicitly here for two families (single-key delta and
+// no-delta) so the property has its own witnesses, not only an inference
+// from the general positive tests passing.
+// ---------------------------------------------------------
+
+test permissionless_holds_wit_2key() {
+  advance_predicate(
+    vec.pos_adv_wit_2key_spent,
+    vec.pos_adv_wit_2key_created,
+    vec.pos_adv_wit_2key_evidence,
+  ) == AdvancePredicateValid
+}
+
+test permissionless_holds_keep() {
+  advance_predicate(
+    vec.pos_adv_keep_spent,
+    vec.pos_adv_keep_created,
+    vec.pos_adv_keep_evidence,
+  ) == AdvancePredicateValid
 }
 
 // ---------------------------------------------------------

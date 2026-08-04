@@ -64,10 +64,11 @@ spec =
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
                     `shouldSatisfy` all (<= 16_133)
-                -- PR #243 CI follow-up: measured from the freshly built
-                -- blueprint for this main-based fix/235 branch, whose
-                -- observer-advance source retains main's full program.
-                programLength "observer-advance" artifacts `shouldBe` 15_647
+                -- Slice A6: freshly measured from the combined tree with
+                -- main's input-addressed blueprint fix and T219-A1's
+                -- advance.ak deletions. Matching the old pre-rebase pin is
+                -- coincidental; this value was re-derived, not reused.
+                programLength "observer-advance" artifacts `shouldBe` 14_775
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint

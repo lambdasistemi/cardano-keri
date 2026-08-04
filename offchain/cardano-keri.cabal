@@ -93,6 +93,7 @@ library deployment
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-tx-tools:tx-build
     , cardano-tx-tools:tx-sign-core
     , containers
     , crypton
@@ -271,6 +272,41 @@ test-suite deployment-tests
     , unix
 
   autogen-modules:  Paths_cardano_keri
+
+test-suite transaction-build-sign-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          transaction-build-sign/TransactionBuildSignMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+    Cardano.KERI.Deployment.TransactionRuntimeSpec
+
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:deployment
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-tx-tools:tx-build
+    , containers
+    , directory
+    , filepath
+    , hspec                      >=2.11 && <2.12
+    , hspec-core                 >=2.11 && <2.12
+    , memory                     >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , process
+    , text
 
 test-suite indexer-tests
   import:           warnings

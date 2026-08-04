@@ -24,11 +24,26 @@ lightweight stand-ins in tests without constructing internal ledger
 is a thin wrapper over the generic core.
 -}
 module Cardano.KERI.Deployment.TransactionRuntime (
+    -- * Funding selection
+    FundingPair (..),
+    PayerSelectionError (..),
+    selectFundingPair,
+
     -- * Runtime capability
     TransactionRuntime (..),
     TransactionRuntimeError (..),
     runTransactionOperation,
     runTransactionOperationGeneric,
+
+    -- * Converged build/sign/submit kernel
+    BuildEvaluationResult,
+    TransactionBuildError (..),
+    runTransactionBuild,
+    runTransactionBuildGeneric,
+
+    -- * Aggregate execution-unit check
+    AggregateExUnitsError (..),
+    checkAggregateExUnits,
 
     -- * Evaluation classification
     classifyEvaluation,
@@ -42,10 +57,19 @@ module Cardano.KERI.Deployment.TransactionRuntime (
     signWithCardanoCliKey,
 ) where
 
-import Cardano.Ledger.Api.Tx (txIdTx)
+import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
+import Cardano.Ledger.Alonzo.Scripts (AsIx)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.Tx (txIdTx, witsTxL)
+import Cardano.Ledger.Api.Tx.Out (TxOut, coinTxOutL)
+import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose)
 import Cardano.Ledger.Core (PParams)
-import Cardano.Ledger.TxIn (TxId)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits, pointWiseExUnits)
+import Cardano.Ledger.TxIn (TxId, TxIn)
 
 -- cardano-node-clients is new relative to pair base 8bc604e: this Slice 1
 -- runtime module deliberately introduces it for 'ConwayTx',
@@ -54,6 +78,17 @@ import Cardano.Ledger.TxIn (TxId)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Provider (EvaluateTxResult)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
+import Cardano.Tx.Balance (BalanceError)
+import Cardano.Tx.Build (
+    BuildError (..),
+    BuildOptions,
+    Check (..),
+    InterpretIO,
+    TxBuild,
+    buildWith,
+    mkPParamsBound,
+ )
+import Cardano.Tx.Inputs (spendingIndex)
 import Cardano.Tx.Sign.Core (
     PureSignError (..),
     attachPaymentWitness,
@@ -62,11 +97,100 @@ import Cardano.Tx.Sign.Core (
     signConwayTxBodyHash,
  )
 import Data.Aeson (Value)
+import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS8
-import Data.List (intercalate)
+import Data.Functor.Const (Const (..))
+import Data.List (intercalate, sortBy)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Ord (Down (..))
+import Data.Set qualified as Set
+
+-- ---------------------------------------------------------------------------
+-- Funding selection
+
+-- | Distinct spending and collateral inputs selected from one indexed view.
+data FundingPair = FundingPair
+    { fundingSpend :: !(TxIn, TxOut ConwayEra)
+    , fundingCollateral :: !(TxIn, TxOut ConwayEra)
+    }
+    deriving stock (Eq, Show)
+
+-- | Actionable failures from deterministic payer selection.
+data PayerSelectionError
+    = -- | The indexer returned no rows at all.
+      EmptyIndexedSnapshot
+    | -- | No eligible row carries the required spending value.
+      InsufficientFundingValue
+        { requiredFundingValue :: !Coin
+        , greatestAvailableValue :: !Coin
+        }
+    | -- | A spend was selected, but no distinct collateral row remained.
+      MissingCollateral
+        { selectedFundingInput :: !TxIn
+        }
+    deriving stock (Eq, Show)
+
+{- | Select a deterministic spending/collateral pair from a caller-supplied
+indexed snapshot.
+
+Rows are deduplicated by 'TxIn', filtered by the operation-owned eligibility
+predicate, then ranked by descending lovelace and ascending 'TxIn'. The minimum
+applies to the spending input; collateral need only be the next distinct
+eligible row. Empty raw input remains distinguishable from a non-empty snapshot
+with no eligible value.
+-}
+selectFundingPair ::
+    (TxOut ConwayEra -> Bool) ->
+    Coin ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Either PayerSelectionError FundingPair
+selectFundingPair _ _ [] = Left EmptyIndexedSnapshot
+selectFundingPair eligible required rows =
+    case ranked of
+        [] -> insufficient (Coin 0)
+        spendRow : remaining
+            | outputCoin spendRow < required -> insufficient (outputCoin spendRow)
+            | otherwise ->
+                case remaining of
+                    [] -> Left (MissingCollateral (fst spendRow))
+                    collateralRow : _ -> Right (FundingPair spendRow collateralRow)
+  where
+    ranked =
+        sortBy compareRank eligibleRows
+
+    eligibleRows =
+        filter (eligible . snd)
+            . Map.elems
+            $ Map.fromListWith
+                preferDuplicate
+                [(txIn, row) | row@(txIn, _) <- rows]
+
+    eligibleInputs = Set.fromList (map fst eligibleRows)
+
+    insufficient available =
+        Left
+            InsufficientFundingValue
+                { requiredFundingValue = required
+                , greatestAvailableValue = available
+                }
+
+    outputCoin (_, txOut) = getConst (coinTxOutL Const txOut)
+
+    compareRank left right =
+        compare
+            (Down (outputCoin left), spendingIndex (fst left) eligibleInputs)
+            (Down (outputCoin right), spendingIndex (fst right) eligibleInputs)
+
+    -- Conflicting duplicate rows are not expected from a committed snapshot,
+    -- but choosing by a total key keeps even malformed input order-independent.
+    preferDuplicate left right =
+        maxBy (outputCoin left, show (snd left)) (outputCoin right, show (snd right)) left right
+
+    maxBy leftKey rightKey left right
+        | leftKey >= rightKey = left
+        | otherwise = right
 
 -- ---------------------------------------------------------------------------
 -- Errors
@@ -77,6 +201,8 @@ data TransactionRuntimeError
       actionable per-purpose detail from 'classifyEvaluation'.
       -}
       TransactionEvaluationRejected !ByteString
+    | -- | Signing failed before submission; carries the typed key failure.
+      TransactionSigningRejected !TransactionSigningError
     | -- | The node rejected submission; carries its stated reason.
       TransactionSubmissionRejected !ByteString
     deriving stock (Eq, Show)
@@ -161,7 +287,7 @@ transaction evolution. The higher composition layer supplies the real
 data TransactionRuntime m = TransactionRuntime
     { trQueryProtocolParams :: m (PParams ConwayEra)
     , trEvaluate :: ConwayTx -> m (EvaluateTxResult ConwayEra)
-    , trSign :: ConwayTx -> m ConwayTx
+    , trSign :: ConwayTx -> m (Either TransactionSigningError ConwayTx)
     , trSubmit :: ConwayTx -> m SubmitResult
     , trObserve :: TxId -> m ()
     }
@@ -180,7 +306,7 @@ runTransactionOperationGeneric ::
     (Monad m, Show purpose, Show failure) =>
     m (PParams ConwayEra) ->
     (ConwayTx -> m (Map purpose (Either failure success))) ->
-    (ConwayTx -> m ConwayTx) ->
+    (ConwayTx -> m (Either TransactionSigningError ConwayTx)) ->
     (ConwayTx -> m SubmitResult) ->
     (TxId -> m ()) ->
     (PParams ConwayEra -> ConwayTx) ->
@@ -192,12 +318,15 @@ runTransactionOperationGeneric queryPParams evaluate sign submit observe buildDr
     case classifyEvaluation evaluated of
         Left detail -> pure (Left (TransactionEvaluationRejected detail))
         Right () -> do
-            signed <- sign draft
-            let txId = transactionId signed
-            result <- submit signed
-            case result of
-                Rejected reason -> pure (Left (TransactionSubmissionRejected reason))
-                Submitted _submittedId -> observe txId >> pure (Right txId)
+            signedResult <- sign draft
+            case signedResult of
+                Left err -> pure (Left (TransactionSigningRejected err))
+                Right signed -> do
+                    let txId = transactionId signed
+                    result <- submit signed
+                    case result of
+                        Rejected reason -> pure (Left (TransactionSubmissionRejected reason))
+                        Submitted _submittedId -> observe txId >> pure (Right txId)
 
 {- | Thin, exact-boundary wrapper: the production 'TransactionRuntime' calls
 the generic core with the real pinned 'EvaluateTxResult' and
@@ -215,3 +344,145 @@ runTransactionOperation TransactionRuntime{..} =
         trSign
         trSubmit
         trObserve
+
+-- ---------------------------------------------------------------------------
+-- Converged build/sign/submit kernel
+
+-- | Exact evaluator shape consumed by pinned 'buildWith'.
+type BuildEvaluationResult =
+    Map
+        (ConwayPlutusPurpose AsIx ConwayEra)
+        (Either String ExUnits)
+
+-- | Typed failure of the shared in-process build/sign/submit evolution.
+data TransactionBuildError e
+    = TransactionBuildEvaluationRejected
+        !(ConwayPlutusPurpose AsIx ConwayEra)
+        !String
+    | TransactionBuildBalanceRejected !BalanceError
+    | TransactionBuildChecksRejected ![Check e]
+    | TransactionBuildInternalError !String
+    | TransactionBuildSigningRejected !TransactionSigningError
+    | TransactionBuildSubmissionRejected !ByteString
+    deriving stock (Eq, Show)
+
+{- | Build one transaction to convergence with the pinned transaction-tool
+kernel, then sign, derive its pure id, submit exactly that signed transaction,
+and observe the derived id. Every failure is fail-closed at its phase.
+-}
+runTransactionBuildGeneric ::
+    BuildOptions ->
+    IO (PParams ConwayEra) ->
+    (ConwayTx -> IO BuildEvaluationResult) ->
+    (ConwayTx -> IO (Either TransactionSigningError ConwayTx)) ->
+    (ConwayTx -> IO SubmitResult) ->
+    (TxId -> IO ()) ->
+    InterpretIO q ->
+    [(TxIn, TxOut ConwayEra)] ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Addr ->
+    TxBuild q e a ->
+    IO (Either (TransactionBuildError e) TxId)
+runTransactionBuildGeneric
+    options
+    queryPParams
+    evaluate
+    sign
+    submit
+    observe
+    interpret
+    inputUtxos
+    referenceUtxos
+    changeAddress
+    program = do
+        pparams <- queryPParams
+        builtResult <-
+            buildWith
+                options
+                (mkPParamsBound pparams)
+                interpret
+                evaluate
+                inputUtxos
+                referenceUtxos
+                changeAddress
+                program
+        case builtResult of
+            Left err -> pure (Left (mapBuildError err))
+            Right built -> do
+                signedResult <- sign built
+                case signedResult of
+                    Left err -> pure (Left (TransactionBuildSigningRejected err))
+                    Right signed -> do
+                        let signedId = transactionId signed
+                        submission <- submit signed
+                        case submission of
+                            Rejected reason ->
+                                pure (Left (TransactionBuildSubmissionRejected reason))
+                            Submitted _submittedId -> do
+                                observe signedId
+                                pure (Right signedId)
+      where
+        mapBuildError (EvalFailure purpose detail) =
+            TransactionBuildEvaluationRejected purpose detail
+        mapBuildError (BalanceFailed err) =
+            TransactionBuildBalanceRejected err
+        mapBuildError (ChecksFailed failures) =
+            TransactionBuildChecksRejected failures
+        mapBuildError (BumpFeeFailed detail) =
+            TransactionBuildInternalError detail
+
+{- | Production record wrapper over 'runTransactionBuildGeneric'. It adapts
+the real node-client evaluation failure to the string detail expected by
+pinned 'buildWith', while preserving every purpose key.
+-}
+runTransactionBuild ::
+    BuildOptions ->
+    TransactionRuntime IO ->
+    InterpretIO q ->
+    [(TxIn, TxOut ConwayEra)] ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Addr ->
+    TxBuild q e a ->
+    IO (Either (TransactionBuildError e) TxId)
+runTransactionBuild options TransactionRuntime{..} =
+    runTransactionBuildGeneric
+        options
+        trQueryProtocolParams
+        adaptEvaluation
+        trSign
+        trSubmit
+        trObserve
+  where
+    adaptEvaluation tx =
+        fmap (Map.map (first show)) (trEvaluate tx)
+
+-- ---------------------------------------------------------------------------
+-- Aggregate execution units
+
+-- | The final transaction declares more aggregate budget than the snapshot permits.
+data AggregateExUnitsError = AggregateExUnitsExceeded
+    { aggregateDeclaredExUnits :: !ExUnits
+    , aggregateMaximumExUnits :: !ExUnits
+    }
+    deriving stock (Eq, Show)
+
+{- | Check the final transaction's semantic redeemer budgets against the
+maximum aggregate execution units from the same protocol-parameter snapshot.
+-}
+checkAggregateExUnits ::
+    PParams ConwayEra ->
+    ConwayTx ->
+    Check AggregateExUnitsError
+checkAggregateExUnits pparams tx
+    | pointWiseExUnits (<=) declared maximumUnits = Pass
+    | otherwise =
+        CustomFail
+            AggregateExUnitsExceeded
+                { aggregateDeclaredExUnits = declared
+                , aggregateMaximumExUnits = maximumUnits
+                }
+  where
+    txWits = getConst (witsTxL Const tx)
+    Redeemers redeemers = getConst (rdmrsTxWitsL Const txWits)
+    declared = foldMap snd redeemers
+    maximumUnits = getConst (ppMaxTxExUnitsL Const pparams)

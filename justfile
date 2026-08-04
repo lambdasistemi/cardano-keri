@@ -66,6 +66,21 @@ transaction-path-check:
     cd offchain && nix develop --quiet -c cabal test indexer-tests -O0 \
         --test-options='--match "payerUtxosTx"'
 
+# #181 Slice 2A: focused shared build/sign kernel. The focused executable
+# enforces a non-zero Hspec example count, so a stale matcher fails closed.
+# Gate-visible recipe name: transaction-build-sign-check:
+transaction-build-sign-check matcher="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    matcher='{{ matcher }}'
+    test_options=()
+    if [[ -n "$matcher" ]]; then
+        test_options+=("--test-option=--match=$matcher")
+    fi
+    cd offchain
+    nix develop --quiet -c cabal test transaction-build-sign-tests -O0 \
+        --test-show-details=direct "${test_options[@]}"
+
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:

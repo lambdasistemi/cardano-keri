@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 {- |
 Module      : Cardano.KERI.Deployment.TransactionRuntimeSpec
 Description : #181 Slice 1 — indexer-neutral transaction runtime
@@ -22,35 +24,105 @@ ever built by this test.
 module Cardano.KERI.Deployment.TransactionRuntimeSpec (spec) where
 
 import Cardano.Crypto.DSIGN.Class (deriveVerKeyDSIGN, rawDeserialiseSignKeyDSIGN)
+import Cardano.Crypto.Hash (hashFromStringAsHex)
 import Cardano.KERI.Deployment.TransactionRuntime (
+    AggregateExUnitsError (..),
+    BuildEvaluationResult,
+    FundingPair (..),
+    PayerSelectionError (..),
     PureSignError (..),
+    TransactionBuildError (..),
     TransactionRuntime (..),
     TransactionRuntimeError (..),
     TransactionSigningError (..),
+    checkAggregateExUnits,
     classifyEvaluation,
+    runTransactionBuild,
+    runTransactionBuildGeneric,
     runTransactionOperation,
     runTransactionOperationGeneric,
+    selectFundingPair,
     signWithCardanoCliKey,
     transactionId,
  )
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.Scripts.Data (Data (..))
 import Cardano.Ledger.Api.Tx (addrTxWitsL, bodyTxL)
-import Cardano.Ledger.Api.Tx.Body (feeTxBodyL, mkBasicTxBody)
+import Cardano.Ledger.Api.Tx.Body (
+    collateralInputsTxBodyL,
+    feeTxBodyL,
+    inputsTxBodyL,
+    mkBasicTxBody,
+    outputsTxBodyL,
+ )
+import Cardano.Ledger.Api.Tx.Out (TxOut, coinTxOutL, mkBasicTxOut)
+import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
+import Cardano.Ledger.BaseTypes (Network (Testnet), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (ConwaySpending))
 import Cardano.Ledger.Core (mkBasicTx, witsTxL)
-import Cardano.Ledger.Hashes (KeyHash (..))
-import Cardano.Ledger.Keys (DSIGN, KeyRole (Guard, Witness), VKey (..), WitVKey (..), hashKey)
+import Cardano.Ledger.Credential (
+    Credential (KeyHashObj),
+    StakeReference (StakeRefNull),
+ )
+import Cardano.Ledger.Hashes (KeyHash (..), unsafeMakeSafeHash)
+import Cardano.Ledger.Keys (
+    DSIGN,
+    KeyRole (Guard, Payment, Witness),
+    VKey (..),
+    WitVKey (..),
+    hashKey,
+ )
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
+import Cardano.Tx.Balance (CollateralUtxos (..))
+import Cardano.Tx.Build (
+    BuildOptions (..),
+    Check (..),
+    InterpretIO (..),
+    TxBuild,
+    collateral,
+    defaultBuildOptions,
+    spend,
+    valid,
+ )
+import Cardano.Tx.Inputs (spendingIndex)
 import Data.Aeson (Value, object, (.=))
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString.Char8 qualified as BS8
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Foldable (toList)
+import Data.IORef (
+    IORef,
+    modifyIORef',
+    newIORef,
+    readIORef,
+    writeIORef,
+ )
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
 import Data.Set qualified as Set
 import Data.Text qualified as T
 import Lens.Micro ((&), (.~), (^.))
-import Test.Hspec (Spec, describe, it, shouldBe)
+import PlutusCore.Data qualified as PLC
+import Test.Hspec (
+    Spec,
+    describe,
+    it,
+    shouldBe,
+    shouldContain,
+    shouldNotBe,
+    shouldNotContain,
+    shouldReturn,
+    shouldSatisfy,
+ )
 
 -- ---------------------------------------------------------------------------
 -- classifyEvaluation: parametric raw-map proof (NOTE-007)
@@ -223,7 +295,7 @@ runOrderSpec = describe "runTransactionOperation" $ do
                     { trQueryProtocolParams =
                         recordCall callsRef "query" >> pure (error "unused pparams")
                     , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
-                    , trSign = \tx -> recordCall callsRef "sign" >> pure tx
+                    , trSign = \tx -> recordCall callsRef "sign" >> pure (Right tx)
                     , trSubmit = \_ ->
                         recordCall callsRef "submit" >> pure (Submitted disagreeingId)
                     , trObserve = \_ -> recordCall callsRef "observe"
@@ -241,7 +313,7 @@ runOrderSpec = describe "runTransactionOperation" $ do
                 TransactionRuntime
                     { trQueryProtocolParams = pure (error "unused pparams")
                     , trEvaluate = \_ -> pure Map.empty
-                    , trSign = \tx -> recordCall callsRef "sign" >> pure tx
+                    , trSign = \tx -> recordCall callsRef "sign" >> pure (Right tx)
                     , trSubmit = \_ ->
                         recordCall callsRef "submit" >> pure (Rejected "node rejected it")
                     , trObserve = \_ -> recordCall callsRef "observe"
@@ -262,7 +334,7 @@ runOrderSpec = describe "runTransactionOperation" $ do
             runTransactionOperationGeneric
                 (recordCall callsRef "query" >> pure (error "unused pparams"))
                 (\_ -> recordCall callsRef "evaluate" >> pure rejecting)
-                (\_ -> recordCall callsRef "sign" >> pure draftTx)
+                (\_ -> recordCall callsRef "sign" >> pure (Right draftTx))
                 (\_ -> recordCall callsRef "submit" >> pure (Submitted (transactionId draftTx)))
                 (\_ -> recordCall callsRef "observe")
                 (const draftTx)
@@ -270,8 +342,320 @@ runOrderSpec = describe "runTransactionOperation" $ do
         order <- readIORef callsRef
         reverse order `shouldBe` ["query", "evaluate"]
 
+-- ---------------------------------------------------------------------------
+-- Slice 2A funding selection
+
+stubAddr :: Addr
+stubAddr =
+    let h = fromJust (hashFromStringAsHex (replicate 56 '0'))
+     in Addr
+            Testnet
+            (KeyHashObj (KeyHash h :: KeyHash Payment))
+            StakeRefNull
+
+stubTxIn :: Int -> TxIn
+stubTxIn n =
+    let hex =
+            replicate 60 '0'
+                <> hexByte (n `div` 256)
+                <> hexByte (n `mod` 256)
+        h = fromJust (hashFromStringAsHex hex)
+     in TxIn (TxId (unsafeMakeSafeHash h)) (TxIx 0)
+  where
+    hexByte x =
+        let digits = "0123456789abcdef"
+         in [digits !! (x `div` 16), digits !! (x `mod` 16)]
+
+fundingOutput :: Int -> Coin -> (TxIn, CardanoTxOut)
+fundingOutput inputNumber amount =
+    ( stubTxIn inputNumber
+    , mkBasicTxOut stubAddr (MaryValue amount (MultiAsset mempty))
+    )
+
+type CardanoTxOut = TxOut ConwayEra
+
+selectionSpec :: Spec
+selectionSpec = describe "selectFundingPair" $ do
+    it "distinguishes an empty indexed snapshot" $
+        selectFundingPair (const True) (Coin 5_000_000) []
+            `shouldBe` Left EmptyIndexedSnapshot
+
+    it "distinguishes insufficient funding value" $ do
+        let rows =
+                [ fundingOutput 1 (Coin 2_000_000)
+                , fundingOutput 2 (Coin 3_000_000)
+                ]
+        selectFundingPair (const True) (Coin 5_000_000) rows
+            `shouldBe` Left
+                InsufficientFundingValue
+                    { requiredFundingValue = Coin 5_000_000
+                    , greatestAvailableValue = Coin 3_000_000
+                    }
+
+    it "reports zero eligible value for a non-empty indexed snapshot" $ do
+        let rows =
+                [ fundingOutput 3 (Coin 7_000_000)
+                , fundingOutput 4 (Coin 9_000_000)
+                ]
+        selectFundingPair (const False) (Coin 5_000_000) rows
+            `shouldBe` Left
+                InsufficientFundingValue
+                    { requiredFundingValue = Coin 5_000_000
+                    , greatestAvailableValue = Coin 0
+                    }
+
+    it "distinguishes missing collateral" $ do
+        let onlySpend = fundingOutput 5 (Coin 9_000_000)
+        selectFundingPair (const True) (Coin 5_000_000) [onlySpend]
+            `shouldBe` Left
+                MissingCollateral
+                    { selectedFundingInput = fst onlySpend
+                    }
+
+    it "is stable under indexed-row permutation and duplication" $ do
+        let low = fundingOutput 6 (Coin 7_000_000)
+            high = fundingOutput 7 (Coin 9_000_000)
+            expected =
+                Right
+                    FundingPair
+                        { fundingSpend = high
+                        , fundingCollateral = low
+                        }
+        selectFundingPair (const True) (Coin 5_000_000) [low, high]
+            `shouldBe` expected
+        selectFundingPair (const True) (Coin 5_000_000) [high, low, high, low]
+            `shouldBe` expected
+
+-- ---------------------------------------------------------------------------
+-- Slice 2A converged build/sign/submit kernel
+
+data NoCtx a
+
+noCtx :: InterpretIO NoCtx
+noCtx = InterpretIO $ \_ -> error "TransactionRuntimeSpec.noCtx: unreachable"
+
+fundingUtxo :: (TxIn, CardanoTxOut)
+fundingUtxo = fundingOutput 10 (Coin 100_000_000)
+
+collateralUtxo :: (TxIn, CardanoTxOut)
+collateralUtxo = fundingOutput 20 (Coin 20_000_000)
+
+buildOptions :: BuildOptions
+buildOptions =
+    defaultBuildOptions
+        { boCollateralUtxos = CollateralUtxos [collateralUtxo]
+        }
+
+buildProgram :: TxBuild NoCtx String ()
+buildProgram = do
+    resolvedIx <- spend (fst fundingUtxo)
+    collateral (fst collateralUtxo)
+    valid $ \tx ->
+        let finalInputs = tx ^. bodyTxL . inputsTxBodyL
+            pinnedIx = spendingIndex (fst fundingUtxo) finalInputs
+         in if resolvedIx == pinnedIx && pinnedIx == 0
+                then Pass
+                else
+                    CustomFail
+                        ( "unexpected spending index: build="
+                            <> show resolvedIx
+                            <> ", inputs="
+                            <> show pinnedIx
+                        )
+
+emptyBuildEvaluation :: ConwayTx -> IO BuildEvaluationResult
+emptyBuildEvaluation _ = pure Map.empty
+
+buildKernelSpec :: Spec
+buildKernelSpec = describe "runTransactionBuild" $ do
+    it "builds, balances, signs, derives, submits, and observes one transaction evolution" $ do
+        callsRef <- newIORef []
+        lastEvaluatedRef <- newIORef Nothing
+        signInputRef <- newIORef Nothing
+        submittedRef <- newIORef Nothing
+        observedRef <- newIORef Nothing
+        let evaluate tx = do
+                recordCall callsRef "evaluate"
+                writeIORef lastEvaluatedRef (Just tx)
+                pure Map.empty
+            sign tx = do
+                recordCall callsRef "sign"
+                writeIORef signInputRef (Just tx)
+                pure (signWithCardanoCliKey goodEnvelope tx)
+            submit tx = do
+                recordCall callsRef "submit"
+                writeIORef submittedRef (Just tx)
+                pure (Submitted (transactionId differentTx))
+            observe txId = do
+                recordCall callsRef "observe"
+                writeIORef observedRef (Just txId)
+            runtime =
+                TransactionRuntime
+                    { trQueryProtocolParams =
+                        recordCall callsRef "query" >> pure testPParams
+                    , trEvaluate = evaluate
+                    , trSign = sign
+                    , trSubmit = submit
+                    , trObserve = observe
+                    }
+        result <-
+            runTransactionBuild
+                buildOptions
+                runtime
+                noCtx
+                [fundingUtxo]
+                []
+                stubAddr
+                buildProgram
+        signed <-
+            readIORef submittedRef >>= \case
+                Nothing -> fail "submit did not receive a transaction"
+                Just tx -> pure tx
+        signInput <-
+            readIORef signInputRef >>= \case
+                Nothing -> fail "sign did not receive a transaction"
+                Just tx -> pure tx
+        lastEvaluated <-
+            readIORef lastEvaluatedRef >>= \case
+                Nothing -> fail "build evaluator did not receive a transaction"
+                Just tx -> pure tx
+        let expectedId = transactionId signed
+            finalBody = signed ^. bodyTxL
+            finalInputs = finalBody ^. inputsTxBodyL
+            finalCollateral = finalBody ^. collateralInputsTxBodyL
+            finalOutputs = toList (finalBody ^. outputsTxBodyL)
+        result `shouldBe` Right expectedId
+        transactionId differentTx `shouldNotBe` expectedId
+        readIORef observedRef `shouldReturn` Just expectedId
+        lastEvaluated ^. bodyTxL `shouldBe` signInput ^. bodyTxL
+        signInput ^. bodyTxL `shouldBe` finalBody
+        finalInputs `shouldBe` Set.singleton (fst fundingUtxo)
+        finalCollateral `shouldBe` Set.singleton (fst collateralUtxo)
+        finalBody ^. feeTxBodyL `shouldSatisfy` (> Coin 0)
+        finalOutputs `shouldSatisfy` (not . null)
+        map (^. coinTxOutL) finalOutputs `shouldSatisfy` all (> Coin 0)
+        spendingIndex (fst fundingUtxo) finalInputs `shouldBe` 0
+        order <- reverse <$> readIORef callsRef
+        take 1 order `shouldBe` ["query"]
+        order `shouldContain` ["evaluate", "sign", "submit", "observe"]
+        drop (length order - 3) order `shouldBe` ["sign", "submit", "observe"]
+
+    it "reports script evaluation rejection" $ do
+        callsRef <- newIORef []
+        let purpose = ConwaySpending (AsIx 0)
+            detail = "SpendPurpose: budget exceeded"
+            evaluate _ =
+                recordCall callsRef "evaluate"
+                    >> pure (Map.singleton purpose (Left detail))
+        result <-
+            runTransactionBuildGeneric
+                buildOptions
+                (recordCall callsRef "query" >> pure testPParams)
+                evaluate
+                (\tx -> recordCall callsRef "sign" >> pure (Right tx))
+                (\_ -> recordCall callsRef "submit" >> pure (Submitted (transactionId draftTx)))
+                (\_ -> recordCall callsRef "observe")
+                noCtx
+                [fundingUtxo]
+                []
+                stubAddr
+                buildProgram
+        result `shouldBe` Left (TransactionBuildEvaluationRejected purpose detail)
+        order <- reverse <$> readIORef callsRef
+        -- Pinned Build.hs:1603,1667-1682 performs the second evaluation as its
+        -- fee-estimate retry against a changed body; this is not our retry policy.
+        order `shouldBe` ["query", "evaluate", "evaluate"]
+
+    it "reports bad signing key" $ do
+        callsRef <- newIORef []
+        result <-
+            runTransactionBuildGeneric
+                buildOptions
+                (recordCall callsRef "query" >> pure testPParams)
+                (\tx -> recordCall callsRef "evaluate" >> emptyBuildEvaluation tx)
+                ( \tx ->
+                    recordCall callsRef "sign"
+                        >> pure (signWithCardanoCliKey trulyMalformedEnvelope tx)
+                )
+                (\_ -> recordCall callsRef "submit" >> pure (Submitted (transactionId draftTx)))
+                (\_ -> recordCall callsRef "observe")
+                noCtx
+                [fundingUtxo]
+                []
+                stubAddr
+                buildProgram
+        case result of
+            Left
+                ( TransactionBuildSigningRejected
+                        (TransactionSigningError (PureSignMalformedSigningKey message))
+                    ) -> do
+                    T.isInfixOf "key \"type\" not found" message `shouldBe` True
+                    T.isInfixOf (T.pack rawSigningKeyHex) message `shouldBe` False
+            other -> fail ("expected typed bad-key rejection, got " <> show other)
+        order <- reverse <$> readIORef callsRef
+        order `shouldContain` ["evaluate", "sign"]
+        order `shouldNotContain` ["submit", "observe"]
+        last order `shouldBe` "sign"
+
+    it "reports submission rejection" $ do
+        callsRef <- newIORef []
+        let reason = "node rejected shared build"
+        result <-
+            runTransactionBuildGeneric
+                buildOptions
+                (recordCall callsRef "query" >> pure testPParams)
+                (\tx -> recordCall callsRef "evaluate" >> emptyBuildEvaluation tx)
+                ( \tx ->
+                    recordCall callsRef "sign"
+                        >> pure (signWithCardanoCliKey goodEnvelope tx)
+                )
+                (\_ -> recordCall callsRef "submit" >> pure (Rejected reason))
+                (\_ -> recordCall callsRef "observe")
+                noCtx
+                [fundingUtxo]
+                []
+                stubAddr
+                buildProgram
+        result `shouldBe` Left (TransactionBuildSubmissionRejected reason)
+        order <- reverse <$> readIORef callsRef
+        order `shouldContain` ["evaluate", "sign", "submit"]
+        order `shouldNotContain` ["observe"]
+        last order `shouldBe` "submit"
+
+-- ---------------------------------------------------------------------------
+-- Slice 2A aggregate execution-unit invariant
+
+withDeclaredExUnits :: ExUnits -> ConwayTx
+withDeclaredExUnits units =
+    mkBasicTx mkBasicTxBody
+        & witsTxL . rdmrsTxWitsL
+            .~ Redeemers
+                ( Map.singleton
+                    (ConwaySpending (AsIx 0))
+                    (Data (PLC.Constr 0 []), units)
+                )
+
+aggregateExUnitsSpec :: Spec
+aggregateExUnitsSpec = describe "checkAggregateExUnits" $ do
+    it "accepts aggregate execution units within the protocol maximum" $
+        checkAggregateExUnits testPParams (withDeclaredExUnits (ExUnits 1 1))
+            `shouldBe` Pass
+
+    it "rejects aggregate execution units above the protocol maximum" $ do
+        let declared = ExUnits 14_000_001 10_000_000_001
+            maximumUnits = ExUnits 14_000_000 10_000_000_000
+        checkAggregateExUnits testPParams (withDeclaredExUnits declared)
+            `shouldBe` CustomFail
+                AggregateExUnitsExceeded
+                    { aggregateDeclaredExUnits = declared
+                    , aggregateMaximumExUnits = maximumUnits
+                    }
+
 spec :: Spec
 spec = do
     evaluationSpec
     signingSpec
     runOrderSpec
+    selectionSpec
+    buildKernelSpec
+    aggregateExUnitsSpec

@@ -23,24 +23,47 @@ commit with an exact `Tasks:` trailer.
 - [x] T181-S1-7 Frozen slice gate and accumulated `./gate.sh` green; navigator
       verifies one commit with `Tasks: T181-S1-1,...,T181-S1-7`
 
-## Slice 2 — deploy and register migration
+## Slice 2A — shared build/sign kernel
 
-- [ ] T181-S2-1 RED: deploy and register tests freeze datum, mint,
-      reference-script/input, fee/change, collateral, signing, tx-id,
-      submission, and settlement behavior at the ledger boundary
-- [ ] T181-S2-2 RED: empty index, insufficient value, missing collateral,
-      script-evaluation failure, bad signing key, submission rejection, and
-      observation timeout each produce a distinct actionable failure
-- [ ] T181-S2-3 GREEN: migrate `Publisher` completely from subprocess query,
+- [ ] T181-S2A-1 RED: shared tests distinguish empty indexed input,
+      insufficient value, and missing distinct collateral
+- [ ] T181-S2A-2 RED: evaluation, bad-key, submission, and restricted-`PATH`
+      failures are distinct, actionable, and proven able to fail
+- [ ] T181-S2A-3 GREEN: add the operation-neutral build/balance/input/signing
+      composition using the pinned transaction-tool APIs
+- [ ] T181-S2A-4 Focused matcher rejects zero selection and executes every
+      named proof; frozen Slice 2A and accumulated gates are green
+- [ ] T181-S2A-5 Navigator verifies one commit with
+      `Tasks: T181-S2A-1,...,T181-S2A-5`
+
+## Slice 2B — deploy / Publisher migration
+
+- [ ] T181-S2B-1 RED: Publisher tests freeze reference output/script,
+      fee/change, collateral, signing, tx-id, submission, and settlement
+- [ ] T181-S2B-2 RED: Publisher selection and exact-id observation failures
+      remain distinct and timeout polling reaches its real deadline branch
+- [ ] T181-S2B-3 GREEN: migrate `Publisher` completely from subprocess query,
       build, sign, txid, and submit to the shared runtime
-- [ ] T181-S2-4 GREEN: migrate `Registration` completely from subprocess query,
-      build, sign, txid, and submit to the shared runtime
-- [ ] T181-S2-5 Rewire deploy/register composition atomically and remove their
-      `cardano-cli` configuration fields without breaking executable help
-- [ ] T181-S2-6 Prove source guard red on an isolated subprocess fixture, then
-      green on Publisher/Registration; focused and accumulated gates green
-- [ ] T181-S2-7 Navigator verifies one commit with
-      `Tasks: T181-S2-1,...,T181-S2-7`
+- [ ] T181-S2B-4 Prove the Publisher-only source guard and restricted-`PATH`
+      suite can fail, reject zero selection, and pass restored production
+- [ ] T181-S2B-5 Navigator verifies one commit with
+      `Tasks: T181-S2B-1,...,T181-S2B-5`
+
+## Slice 2C — register migration and fail-closed old CLI
+
+- [ ] T181-S2C-1 RED: Registration tests freeze datum, mint, reference inputs,
+      lifecycle withdrawal, fee/change, collateral, signing, tx-id,
+      submission, and settlement
+- [ ] T181-S2C-2 RED: evaluation, bad-key, submission, and timeout failures
+      retain exact actionable detail and exercise the real operation path
+- [ ] T181-S2C-3 GREEN: migrate `Registration` completely from subprocess
+      query, build, sign, txid, and submit to the shared runtime
+- [ ] T181-S2C-4 Retire deploy/register `cardano-cli` fields and make the old
+      commands fail closed before funding/build/sign/submit pending Slice 4
+- [ ] T181-S2C-5 Prove the combined source guard and restricted-`PATH` suite
+      can fail, reject zero selection, and pass restored production
+- [ ] T181-S2C-6 Navigator verifies one commit with
+      `Tasks: T181-S2C-1,...,T181-S2C-6`
 
 ## Slice 3 — advance, close, and endpoint-board migration
 

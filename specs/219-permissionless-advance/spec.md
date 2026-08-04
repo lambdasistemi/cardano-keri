@@ -318,11 +318,23 @@ toolchain, or (if not) a CI drift check mirroring
 `check-checkpoint-vectors` — not a bare hash bump, which would re-arm the
 same trap for the next onchain change. Infra issue filed:
 lambdasistemi/cardano-keri#235 (ticket-owner's finding, filed before the
-fix per the ruling's ordering). Fix rides this PR as its own bisect-safe
-commit(s), separate from the T219-A1 behavior commit. PR #222 stays not
-ready for review until `E2E (withDevnet)` runs against a blueprint built
-from this branch's actual source and goes green honestly — see Slice A4 in
-`tasks.md`.
+fix per the ruling's ordering). Fix originally rode this PR as its own
+bisect-safe commit (landed here as `f664089`) — see Slice A4 in `tasks.md`.
+
+**Amendment (operator order via desk `NOTE-007`):** rather than merging
+alongside #219's own behavior change, the fix was packaged as a standalone
+PR against #235 (`fix/235-e2e-blueprint-fod-staleness`, cherry-picked from
+this branch onto fresh `main`, PR #243) and fast-tracked independently. That
+PR surfaced and fixed a wider cross-consumer defect than originally scoped:
+ms8's Lean/blaster UPLC-tractability baseline (`#192`) also silently
+depended on the same frozen FOD and needed its own decoupled
+`frozenM8Blueprint`; and the cherry-pick onto `main` (without this branch's
+own `advance.ak` deletions) exposed two more bugs — a size pin measured on
+the wrong branch and a relative path that doesn't resolve inside the Nix
+sandbox, both fixed in a follow-up correction commit (`b0a52b4`). PR #243
+merged 2026-08-04, closing #235. This PR (#222) now rebases onto that merged
+`main` — see Slice A6 in `tasks.md` — rather than carrying its own copy of
+the infra fix forward.
 
 ## TDD contract (mirrors the brief)
 

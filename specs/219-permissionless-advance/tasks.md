@@ -104,24 +104,68 @@ lambdasistemi/cardano-keri#235.
 Fence: the blueprint derivation block in `offchain/flake.nix` only (desk
 `A-005`, extending `A-001`'s scope). No other flake surface.
 
-- [ ] T219-A4 Confirm whether `aiken build -t silent` is hermetic under the
-      repo's pinned toolchain (no network access needed once package
-      dependencies are resolved) — determines fix shape (a) vs (b) below.
-- [ ] T219-A4 Fix shape (a), preferred: convert `blueprint` to an ordinary
-      input-addressed derivation if hermetic — staleness becomes
-      structurally impossible.
-- [ ] T219-A4 Fix shape (b), fallback (document why (a) doesn't hold): keep
-      the FOD but add a CI drift check that rebuilds from source with the
-      pinned `aiken` and reds on mismatch, mirroring
-      `check-checkpoint-vectors`/`check-advance-vectors`.
-- [ ] T219-A4 Enumerate all ~22 `blueprint` reference sites in
-      `offchain/flake.nix` and state which build paths consume it.
-- [ ] T219-A4 Confirm with evidence (not inference) that the production
-      deploy path (`ckeri deploy`/`manifest verify`,
-      `deploy/preprod/m1-manifest.json`) never consumed this FOD.
-- [ ] T219-A4 Full gate green; land as its own bisect-safe commit(s),
-      separate from the T219-A1 commit, with its own `Tasks: T219-A4`
-      trailer.
-- [ ] T219-A4 Push; confirm `E2E (withDevnet)` runs a freshly-rebuilt
-      blueprint (verify via CI log: `aiken build`/`Generating project's
-      blueprint` now appears) and goes green honestly.
+**Superseded (`NOTE-007`):** the fix landed here as `f664089`, then per
+operator order was repackaged as a standalone PR against #235
+(`fix/235-e2e-blueprint-fod-staleness`, PR #243), which also picked up an
+ms8/blaster cross-consumer fix and a correction commit (`b0a52b4`) for two
+bugs the main-based cherry-pick exposed (wrong size pin, unresolved
+sandbox path). PR #243 **merged 2026-08-04**, closing #235. The tasks below
+are satisfied by that merged PR, not by a commit on this branch — see
+`spec.md`'s amendment. This branch now rebases onto the merged result: see
+Slice A6.
+
+- [x] T219-A4 Confirm whether `aiken build -t silent` is hermetic under the
+      repo's pinned toolchain — yes; landed as fix shape (a) via #243.
+- [x] T219-A4 Fix shape (a): converted `blueprint` to an ordinary
+      input-addressed derivation — via #243, not this branch's own commit.
+- [x] T219-A4 Enumerate all `blueprint` reference sites — done in #243's
+      review (~22 sites; plus the missed ms8/blaster cross-consumer, fixed
+      via `frozenM8Blueprint`).
+- [x] T219-A4 Confirmed with evidence that the production deploy path never
+      consumed this FOD by default divergence (it does consume the FOD via
+      `ckeriRunner`'s baked default, which is exactly why the fix needed to
+      make that FOD track source, not just document non-consumption — see
+      `Q-006`/`A-006`).
+- [x] T219-A4 Full gate green; landed via #243 (`514dc9f`, `b0a52b4`), not
+      as a commit on this branch.
+- [x] T219-A4 Confirmed `E2E (withDevnet)`-equivalent (`checks.deployment-tests`,
+      `checks.blaster`) runs a freshly-rebuilt blueprint and goes green
+      honestly, on #243. This branch's own `E2E (withDevnet)` run is
+      Slice A6's job, now that main carries the fix.
+
+## Slice A6 — rebase onto merged main, retire the superseded local A4 copy,
+## rerun honest E2E
+
+`f664089` (this branch's own copy of the A4 infra fix) and merged `main`'s
+`514dc9f`/`b0a52b4` (via #243) both touch `offchain/flake.nix`,
+`offchain/deployment-test/Cardano/KERI/Deployment/ManifestSpec.hs`, and
+`offchain/e2e/CheckpointTxBuilder.hs` for overlapping reasons. Main's
+version is the later, independently-accepted, CI-green one and wins.
+
+- [ ] T219-A6 Rebase `feat/219-permissionless-advance` onto post-merge
+      `origin/main`. Resolve the 3-file conflict by taking `main`'s side of
+      the infra fix (input-addressed blueprint, `frozenM8Blueprint`,
+      `KERI_BOARD_MANIFEST` env var, corrected path handling) and this
+      branch's side of the `advance.ak`/`message.ak`/vectors changes
+      (T219-A1's own scope). Do not hand-merge textually where a clean
+      "ours"/"theirs" resolution exists; only touch a hunk where both
+      sides genuinely changed the same lines.
+- [ ] T219-A6 Neither `main`'s `15_647` pin nor this branch's original
+      `14_775` pin is necessarily correct for the rebased result (T219-A1's
+      `advance.ak` deletions change the compiled size independent of the
+      infra fix). Re-measure `observer-advance`'s applied-program size
+      fresh, from a real build of the rebased tree — do not reuse either
+      number.
+- [ ] T219-A6 Full gate green on the rebased tree.
+- [ ] T219-A6 Force-push the rebased branch (published PR #222 commits are
+      being rewritten deliberately here, per this ticket's own long-standing
+      plan to rerun E2E honestly post-#243 — not an ordinary history
+      rewrite of accepted work).
+- [ ] T219-A6 Confirm real GitHub Actions `E2E (withDevnet)` runs a
+      freshly-rebuilt blueprint (CI log shows `aiken build`/`Generating
+      project's blueprint`) and goes green honestly. This is the original
+      T219-A3 acceptance criterion, finally satisfiable now that the FOD
+      staleness defect is fixed upstream of this branch.
+- [ ] T219-A3 (resumed) Real GitHub Actions CI green on the pushed PR
+      including the now-honest `E2E (withDevnet)`; PR description current;
+      report `COMPLETE`.

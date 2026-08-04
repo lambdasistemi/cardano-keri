@@ -142,30 +142,27 @@ Slice A6.
 `offchain/e2e/CheckpointTxBuilder.hs` for overlapping reasons. Main's
 version is the later, independently-accepted, CI-green one and wins.
 
-- [ ] T219-A6 Rebase `feat/219-permissionless-advance` onto post-merge
-      `origin/main`. Resolve the 3-file conflict by taking `main`'s side of
-      the infra fix (input-addressed blueprint, `frozenM8Blueprint`,
-      `KERI_BOARD_MANIFEST` env var, corrected path handling) and this
-      branch's side of the `advance.ak`/`message.ak`/vectors changes
-      (T219-A1's own scope). Do not hand-merge textually where a clean
-      "ours"/"theirs" resolution exists; only touch a hunk where both
-      sides genuinely changed the same lines.
-- [ ] T219-A6 Neither `main`'s `15_647` pin nor this branch's original
-      `14_775` pin is necessarily correct for the rebased result (T219-A1's
-      `advance.ak` deletions change the compiled size independent of the
-      infra fix). Re-measure `observer-advance`'s applied-program size
-      fresh, from a real build of the rebased tree — do not reuse either
-      number.
-- [ ] T219-A6 Full gate green on the rebased tree.
-- [ ] T219-A6 Force-push the rebased branch (published PR #222 commits are
-      being rewritten deliberately here, per this ticket's own long-standing
-      plan to rerun E2E honestly post-#243 — not an ordinary history
-      rewrite of accepted work).
-- [ ] T219-A6 Confirm real GitHub Actions `E2E (withDevnet)` runs a
-      freshly-rebuilt blueprint (CI log shows `aiken build`/`Generating
-      project's blueprint`) and goes green honestly. This is the original
-      T219-A3 acceptance criterion, finally satisfiable now that the FOD
-      staleness defect is fixed upstream of this branch.
-- [ ] T219-A3 (resumed) Real GitHub Actions CI green on the pushed PR
-      including the now-honest `E2E (withDevnet)`; PR description current;
+- [x] T219-A6 Rebase `feat/219-permissionless-advance` onto post-merge
+      `origin/main` (cherry-pick, dropping the superseded `f664089`;
+      applied clean, git auto-merged the one real file overlap with zero
+      conflict markers — no manual "ours"/"theirs" resolution was actually
+      needed once `f664089` was correctly identified as dropped).
+- [x] T219-A6 Neither `main`'s `15_647` pin nor this branch's original
+      `14_775` pin was assumed correct for the rebased result. Re-measured
+      `observer-advance`'s applied-program size fresh via a real PAIR
+      slice (driver+navigator both independently rebuilt): confirmed
+      `14,775` bytes — additive effect of `main`'s infra fix and this
+      branch's own `advance.ak` deletions, not a reused number (commit
+      `8fea43a3b432b50f7cc4d28bf37adbd1198e51a6`).
+- [x] T219-A6 Full gate green on the rebased tree (ticket-owner's own
+      independent `./gate.sh` rerun, exit 0).
+- [x] T219-A6 (per operator order: verify locally, not via GitHub Actions)
+      Real local `nix build .#checks.x86_64-linux.e2e` against an actual
+      local devnet: 6 examples, 0 failures, including genuine `Advance`
+      transactions validated on-chain with real `ExUnits` budgets. This is
+      the original T219-A3 acceptance criterion, finally satisfiable now
+      that the FOD staleness defect is fixed upstream of this branch —
+      confirmed locally rather than by watching CI.
+- [x] T219-A3 (resumed) Local full gate + local honest `checks.e2e` both
+      green on the commit about to be pushed; PR description current;
       report `COMPLETE`.

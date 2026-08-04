@@ -35,6 +35,18 @@
       url = "path:../docs/assets/swagger";
       flake = false;
     };
+    # #219 A4 follow-up: ManifestSpec.hs's board-manifest-integrity check
+    # (added restructuring the live board-policy assertion into a
+    # manifest-integrity check, per A-009) reads the committed
+    # deploy/preprod/board-manifest.json — repo-root, outside offchain/'s
+    # own `src`, same reasoning as `onchain`/`docsSwagger` above. Sourced as
+    # its own flake input and passed via an env var (mirrors how `blueprint`
+    # itself reaches deploymentTestsRunner) rather than a symlink, which
+    # cannot survive haskell.nix re-rooting `src` into its own store copy.
+    deployPreprod = {
+      url = "path:../deploy/preprod";
+      flake = false;
+    };
     # cardano-node 10.7.0 provides the node binary the withDevnet e2e smoke
     # spawns (runtime input only — never a Cabal source-repository-package).
     cardano-node.url = "github:IntersectMBO/cardano-node/10.7.0";
@@ -588,6 +600,7 @@
               runtimeInputs = [ deploymentTestsExe ];
               text = ''
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
                 exec ${deploymentTestsExe}/bin/deployment-tests "$@"
               '';
             };

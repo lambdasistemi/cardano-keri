@@ -64,15 +64,10 @@ spec =
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
                     `shouldSatisfy` all (<= 16_133)
-                -- #219 A4: re-measured after the blueprint FOD staleness fix
-                -- (the prior 16,130 pin was silently checked against a
-                -- blueprint stale relative to this branch, last refreshed at
-                -- a09058f, never this branch's actual compiled size).
-                -- Current value measured via `nix build
-                -- ./offchain#plutus-blueprint` against this branch's
-                -- `onchain/advance.ak` (post-T219-A1/A2's dead-code
-                -- deletion, which shrinks the compiled validator).
-                programLength "observer-advance" artifacts `shouldBe` 14_775
+                -- PR #243 CI follow-up: measured from the freshly built
+                -- blueprint for this main-based fix/235 branch, whose
+                -- observer-advance source retains main's full program.
+                programLength "observer-advance" artifacts `shouldBe` 15_647
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint
@@ -88,9 +83,10 @@ spec =
             -- recorded preprod manifest's own fields against the literals
             -- (a manifest-integrity check), not a live blueprint derivation.
             it "derives the frozen policy id and preprod address" $ \_ -> do
+                path <- getEnv "KERI_BOARD_MANIFEST"
                 manifest <-
                     Aeson.eitherDecodeFileStrict'
-                        "../deploy/preprod/board-manifest.json"
+                        path
                         >>= either fail pure
                 let info = endpointBoardManifestInfo manifest
                 endpointBoardPolicyId info `shouldBe` expectedBoardPolicy

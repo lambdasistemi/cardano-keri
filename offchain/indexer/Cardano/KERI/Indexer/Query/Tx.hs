@@ -17,7 +17,7 @@ surface, not a copy of anything this package could import.
 module Cardano.KERI.Indexer.Query.Tx (
     QueryHandle (..),
     scanAddressTx,
-    payerUtxosTx,
+    payerUtxosTxAcrossAddresses,
     watermarkTx,
     checkpointTx,
     listCheckpointsTx,
@@ -83,9 +83,9 @@ engine transaction by composing 'scanAddressTx' per deduplicated address.
 The combined result is sorted by 'TxIn' so that operand order or duplicate
 address configuration cannot change the selected candidate set (FR-2).
 -}
-payerUtxosTx ::
+payerUtxosTxAcrossAddresses ::
     [Address] -> Transaction IO cf Cols op [(TxIn, TxOut)]
-payerUtxosTx addrs = do
+payerUtxosTxAcrossAddresses addrs = do
     scanned <- traverse scanAddressTx (nub addrs)
     pure (sortOn fst (concat scanned))
 

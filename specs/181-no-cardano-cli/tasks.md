@@ -22,6 +22,10 @@ commit with an exact `Tasks:` trailer.
       and a dependency-pin guard
 - [x] T181-S1-7 Frozen slice gate and accumulated `./gate.sh` green; navigator
       verifies one commit with `Tasks: T181-S1-1,...,T181-S1-7`
+- [x] T181-S1-8 Correction: the multi-address payer scan no longer collides with
+      the `payerUtxosTx` that #219 merged into `main`, so the indexer library
+      compiles again; `main`'s API is untouched and Slice 1's FR-2 proofs survive
+      the rename
 
 ## Slice 2A — shared build/sign kernel
 

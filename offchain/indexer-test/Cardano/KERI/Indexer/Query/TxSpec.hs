@@ -6,13 +6,13 @@ Focused proof for @specs\/181-no-cardano-cli\/plan.md@: plural payer
 addresses must be scanned through exactly one engine transaction, reusing the
 sole 'Cardano.KERI.Indexer.Query.Tx.scanAddressTx' cursor walk, and the
 resulting candidate set must be independent of address order or duplication.
-'Cardano.KERI.Indexer.Query.Tx.payerUtxosTx' composes that scan and is proven
+'Cardano.KERI.Indexer.Query.Tx.payerUtxosTxAcrossAddresses' composes that scan and is proven
 green here (gate v3, sha256
 175b6e638eeb14b2952250559ba39f8c64f6be5b4ca1572dae704ceb2ba6d63e).
 -}
 module Cardano.KERI.Indexer.Query.TxSpec (spec) where
 
-import Cardano.KERI.Indexer.Query.Tx (payerUtxosTx)
+import Cardano.KERI.Indexer.Query.Tx (payerUtxosTxAcrossAddresses)
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (
     IndexerHandle (..),
@@ -28,7 +28,7 @@ import Database.KV.Transaction (RunTransaction (..))
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 spec :: Spec
-spec = describe "payerUtxosTx (#181 Slice 1, FR-2)" $ do
+spec = describe "payerUtxosTxAcrossAddresses (#181 Slice 1, FR-2)" $ do
     it "reads plural payer addresses in one engine transaction" $
         withInMemoryIndexerRunner $ \handle runner -> do
             applyBatch handle 10 0x01 [payerCreate (sampleTxIn 0x10) addrA]
@@ -36,7 +36,7 @@ spec = describe "payerUtxosTx (#181 Slice 1, FR-2)" $ do
             counter <- newIORef (0 :: Int)
             let counting = countingRunner counter runner
             result <-
-                runTransaction counting (payerUtxosTx [addrA, addrB])
+                runTransaction counting (payerUtxosTxAcrossAddresses [addrA, addrB])
             count <- readIORef counter
             count `shouldBe` 1
             sortOn fst result
@@ -50,10 +50,10 @@ spec = describe "payerUtxosTx (#181 Slice 1, FR-2)" $ do
         withInMemoryIndexerRunner $ \handle runner -> do
             applyBatch handle 10 0x03 [payerCreate (sampleTxIn 0x30) addrA]
             applyBatch handle 11 0x04 [payerCreate (sampleTxIn 0x31) addrB]
-            direct <- runTransaction runner (payerUtxosTx [addrA, addrB])
-            permuted <- runTransaction runner (payerUtxosTx [addrB, addrA])
+            direct <- runTransaction runner (payerUtxosTxAcrossAddresses [addrA, addrB])
+            permuted <- runTransaction runner (payerUtxosTxAcrossAddresses [addrB, addrA])
             duplicated <-
-                runTransaction runner (payerUtxosTx [addrA, addrA, addrB])
+                runTransaction runner (payerUtxosTxAcrossAddresses [addrA, addrA, addrB])
             sortOn fst permuted `shouldBe` sortOn fst direct
             sortOn fst duplicated `shouldBe` sortOn fst direct
 
@@ -62,7 +62,7 @@ spec = describe "payerUtxosTx (#181 Slice 1, FR-2)" $ do
             applyBatch handle 10 0x05 [payerCreate (sampleTxIn 0x40) addrA]
             counter <- newIORef (0 :: Int)
             let counting = countingRunner counter runner
-            result <- runTransaction counting (payerUtxosTx [])
+            result <- runTransaction counting (payerUtxosTxAcrossAddresses [])
             count <- readIORef counter
             count `shouldBe` 1
             result `shouldBe` []

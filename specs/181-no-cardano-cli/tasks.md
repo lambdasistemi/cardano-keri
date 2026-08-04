@@ -35,6 +35,10 @@ commit with an exact `Tasks:` trailer.
       named proof; frozen Slice 2A and accumulated gates are green
 - [x] T181-S2A-5 Navigator verifies one commit with
       `Tasks: T181-S2A-1,...,T181-S2A-5`
+- [x] T181-S2A-6 Correction: the `deployment-tests` component builds and runs
+      from a clean checkout again, after Slice 2A gave it an import its own
+      `other-modules` did not list; every added line forced by a named
+      compiler or `cabal-fmt` error, with the preserved 2B/2C work untouched
 
 ## Slice 2B — deploy / Publisher migration
 

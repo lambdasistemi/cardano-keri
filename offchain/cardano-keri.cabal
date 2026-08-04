@@ -248,6 +248,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
 
@@ -258,13 +259,17 @@ test-suite deployment-tests
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-conway
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-tx-tools:tx-build
     , containers
-    , hspec                    >=2.11 && <2.12
+    , hspec                      >=2.11 && <2.12
     , http-conduit
-    , memory                   >=0.18 && <0.19
+    , memory                     >=0.18 && <0.19
     , microlens
     , plutus-core
     , temporary

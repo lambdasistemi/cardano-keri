@@ -28,7 +28,7 @@ The production CLI contains these same-class defaults:
 | `register` | M1 and board manifests | Same installed-release usability class, but transaction flow is outside this read-only status slice; report separately. |
 | `advance`, `close` | M1 manifest | Same installed-release usability class; report separately. |
 | `board list/post/update/retire` | board manifest | Same installed-release usability class; report separately. |
-| `deploy`, `board deploy` | relative output path | Output default, not a missing checkout input; no crash dependency. |
+| `deploy`, `board deploy` | source repo `.` input and relative output path | Checkout-oriented provenance input; report separately, with no behavior change in this micro-slice. The output default itself has no missing-checkout crash dependency. |
 
 The PR body must retain this inventory so the audit is visible even though the micro-slice changes only the shared read-query loader.
 

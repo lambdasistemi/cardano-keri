@@ -7,7 +7,8 @@ if (( $# != 0 )); then
 fi
 
 required_env=(
-  AUDIT_COMMIT AUDIT_COLLECTOR AUDIT_SOURCE_ROOT AUDIT_SEED
+  AUDIT_COMMIT AUDIT_COLLECTOR AUDIT_INDEXER AUDIT_SOURCE_ROOT AUDIT_SEED
+  AUDIT_NAMESPACE_SEED
   AUDIT_LEAN_BLASTER_ROOT AUDIT_PLUTUS_CORE_ROOT AUDIT_LEDGER_API_ROOT
   AUDIT_LEAN_BLASTER_REV AUDIT_PLUTUS_CORE_REV AUDIT_LEDGER_API_REV
   AUDIT_TRACKED_BUILD
@@ -30,17 +31,20 @@ target_root() {
   esac
 }
 
+target_index() {
+  case "$1" in
+    leanBlaster) printf '%s\n' "$work/leanBlaster.index" ;;
+    plutusCoreBlaster) printf '%s\n' "$work/plutusCoreBlaster.index" ;;
+    cardanoLedgerApiBlaster) printf '%s\n' "$work/cardanoLedgerApiBlaster.index" ;;
+    *) return 1 ;;
+  esac
+}
+
 resolve_reference() {
-  local package="$1" reference="$2" kind="$3" root leaf module_path
-  root="$(target_root "$package")" || return 2
-  if [[ $kind == module ]]; then
-    module_path="${reference//./\/}.lean"
-    [[ -f "$root/$module_path" ]]
-    return
-  fi
-  leaf="${reference##*.}"
-  grep -RqsE "(^|[^[:alnum:]_'])${leaf}([^[:alnum:]_']|$)" \
-    --include='*.lean' "$root"
+  local package="$1" reference="$2" kind="$3" index record_kind
+  index="$(target_index "$package")" || return 2
+  if [[ $kind == module ]]; then record_kind=module; else record_kind=symbol; fi
+  grep -Fxq "$record_kind"$'\t'"$reference" "$index"
 }
 
 collect() {
@@ -65,8 +69,25 @@ emit_records() {
   printf '%s\t%s\n' "$resolved" "$unresolved"
 }
 
+run_scope() {
+  local scope="$1" records="$2" output="$3"
+  emit_records "$scope" "$records" >"$output"
+  read -r scope_resolved scope_unresolved < <(tail -n 1 "$output")
+  (( scope_unresolved == 0 && scope_resolved > 0 ))
+}
+
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+
+for package in leanBlaster plutusCoreBlaster cardanoLedgerApiBlaster; do
+  root="$(target_root "$package")" || exit 1
+  if ! "$AUDIT_INDEXER" "$root" >"$work/$package.index"; then
+    printf 'AUDIT-IDENTITY commit=%s outcome=COULD-NOT-EVALUATE layer=resolver-index\n' \
+      "$AUDIT_COMMIT"
+    printf 'AUDIT-VERDICT FAIL\n'
+    exit 1
+  fi
+done
 
 mapfile -d '' tracked_sources < <(
   find "$AUDIT_SOURCE_ROOT/KeriBlaster" -type f -name '*.lean' -print0
@@ -93,11 +114,13 @@ printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_LEDG
 }
 
 collect "${tracked_sources[@]}" >"$work/tracked.tsv"
-emit_records tracked "$work/tracked.tsv" >"$work/tracked.out"
-read -r tracked_resolved tracked_unresolved < <(tail -n 1 "$work/tracked.out")
+tracked_rc=0
+run_scope tracked "$work/tracked.tsv" "$work/tracked.out" || tracked_rc=$?
+tracked_resolved="$scope_resolved"
+tracked_unresolved="$scope_unresolved"
 sed '$d' "$work/tracked.out"
 printf 'AUDIT-RESOLVED count=%s\n' "$tracked_resolved"
-if (( tracked_unresolved == 0 && tracked_resolved > 0 )); then
+if (( tracked_rc == 0 )); then
   printf 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0\n'
 else
   printf 'AUDIT-RUN scope=tracked verdict=FAIL unresolved=%s\n' "$tracked_unresolved"
@@ -122,11 +145,14 @@ else
 fi
 
 collect "$AUDIT_SEED" >"$work/seed.tsv"
-emit_records seeded-retired "$work/seed.tsv" >"$work/seed.out"
-read -r seed_resolved seed_unresolved < <(tail -n 1 "$work/seed.out")
+seed_rc=0
+run_scope seeded-retired "$work/seed.tsv" "$work/seed.out" || seed_rc=$?
+seed_resolved="$scope_resolved"
+seed_unresolved="$scope_unresolved"
 sed '$d' "$work/seed.out"
-if (( seed_unresolved > 0 )); then
-  printf 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=%s\n' "$seed_unresolved"
+combined_unresolved=$((tracked_unresolved + seed_unresolved))
+if (( combined_unresolved > 0 )); then
+  printf 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=%s\n' "$combined_unresolved"
   printf '%s\n' 'AUDIT-CONTROL id=retired-cek-selector kind=seeded-retired-reference expected=unresolved observed=unresolved outcome=REFUTED'
   retired_control=true
 else
@@ -134,6 +160,35 @@ else
   printf '%s\n' 'AUDIT-CONTROL id=retired-cek-selector kind=seeded-retired-reference expected=unresolved observed=resolved outcome=ESTABLISHED'
   retired_control=false
 fi
+
+selftests_pass=true
+for leg in unresolved-in-tracked-scope namespace-move; do
+  case "$leg" in
+    unresolved-in-tracked-scope)
+      selftest_source="$AUDIT_SEED"
+      expected_resolved=1
+      expected_unresolved=1
+      ;;
+    namespace-move)
+      selftest_source="$AUDIT_NAMESPACE_SEED"
+      expected_resolved=3
+      expected_unresolved=2
+      ;;
+  esac
+  collect "$selftest_source" >"$work/selftest-$leg.tsv"
+  selftest_rc=0
+  run_scope "selftest-$leg" "$work/selftest-$leg.tsv" \
+    "$work/selftest-$leg.out" || selftest_rc=$?
+  if (( selftest_rc > 0 \
+      && scope_resolved == expected_resolved \
+      && scope_unresolved == expected_unresolved )); then
+    printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=REFUTED\n' "$leg" "$selftest_rc"
+  else
+    printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=COULD-NOT-EVALUATE layer=selftest-shape\n' \
+      "$leg" "$selftest_rc"
+    selftests_pass=false
+  fi
+done
 
 default_basic="$AUDIT_PLUTUS_CORE_ROOT/PlutusCore/Default/Basic.lean"
 if [[ ! -f $default_basic ]]; then
@@ -165,7 +220,7 @@ fi
 
 if (( tracked_unresolved == 0 && tracked_resolved > 0 )) \
   && [[ $positive_control == true && $retired_control == true \
-     && $variant_evaluated == true ]]; then
+     && $selftests_pass == true && $variant_evaluated == true ]]; then
   echo 'AUDIT-VERDICT PASS'
 else
   echo 'AUDIT-VERDICT FAIL'

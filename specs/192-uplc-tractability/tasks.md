@@ -152,5 +152,5 @@ decisive log
   `d530662a55dcc2ca433e881a76e1cbf376a3d79d6921091de67a407c40d5f638`, exact
   accepted commit `91e910d997c26516c49bdc275e20615a5e531a99`, literal result
   `TRACTABILITY-RESULT: FAIL`, limiting class `builtin-support` at
-  `Blake2b_256` under pin `17cee18a2058790bca36282d82c19146587fb2d1`.
+  `Blake2b_256` under pin `7cf5a78c54b9694ef093bf49edb5d3799b2a49c9`.
   Not merged; #234 undispatched; #193–#195 parked

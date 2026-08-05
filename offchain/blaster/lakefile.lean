@@ -8,11 +8,11 @@ package «cardano-keri-blaster» where
 
 require Blaster from git
   "https://github.com/paolino/Lean-blaster" @
-    "d57a9079a164ca25e58f119112162efea617b5e6"
+    "62d2d59abda37e90097e655b40e27545bba16f3c"
 
 require PlutusCore from git
   "https://github.com/input-output-hk/PlutusCoreBlaster" @
-    "17cee18a2058790bca36282d82c19146587fb2d1"
+    "7cf5a78c54b9694ef093bf49edb5d3799b2a49c9"
 
 require CardanoLedgerApi from git
   "https://github.com/input-output-hk/CardanoLedgerApiBlaster" @

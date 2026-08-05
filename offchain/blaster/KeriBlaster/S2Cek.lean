@@ -23,7 +23,7 @@ open PlutusCore.Default (BuiltinSemanticsVariant)
 open PlutusCore.UPLC.Term (BuiltinFun Program Term Version)
 open PlutusCore.UPLC.CekValue (CekValue Environment)
 open PlutusCore.UPLC.CekMachine
-  (State applyParams initialState step versionToSemanticsVariant)
+  (State applyParams initialState step)
 
 /-- What the machine did, as opposed to what the program contains. -/
 structure Trace where
@@ -145,9 +145,21 @@ def runTraced (variant : BuiltinSemanticsVariant) (budget : Nat)
     (start : State) : Trace :=
   runFrom variant start budget [] none none 0
 
-/-- The semantics variant a program's own version selects. -/
+/-- The semantics variant this boundary runs under.
+
+Upstream PlutusCore.UPLC.CekMachine version-to-semantics-variant function was removed in
+629f9408 (PR #2). It returned `defaultFunSemanticsVariantC` on every branch,
+because a UPLC program `Version` cannot determine the semantics variant —
+upstream now derives it from ledger language × protocol era via
+`PlutusVersion.toSemanticsVariant`.
+
+We pin C explicitly to preserve the behaviour our existing evidence was produced
+under. Do NOT substitute `BuiltinSemanticsVariant`'s `Inhabited` default, which
+is `defaultFunSemanticsVariantE`: that would silently change our CEK semantics.
+Moving to E is a stated semantic decision with its own evidence, not a compile
+fix. -/
 def variantOf : Program → BuiltinSemanticsVariant
-  | .Program version _ => versionToSemanticsVariant version
+  | .Program _ _ => .defaultFunSemanticsVariantC
 
 /-- Apply arguments to a program body and run the pinned machine. -/
 def runProgram (program : Program) (arguments : List Term) (budget : Nat) :

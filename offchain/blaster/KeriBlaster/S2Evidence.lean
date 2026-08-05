@@ -52,7 +52,7 @@ open PlutusCore.UPLC.PlutusScript (PlutusScript)
 open PlutusCore.UPLC.Term (Term BuiltinFun Program)
 open PlutusCore.UPLC.Builtins (ExpectedBuiltinArgs expectedArgs)
 open PlutusCore.UPLC.CekValue (CekValue)
-open PlutusCore.UPLC.Evaluate (evaluateBuiltinFunction)
+open PlutusCore.UPLC.BuiltinFunctions.Evaluate (evaluateBuiltinFunction)
 
 /-- One production program, named by its exact blueprint validator title.
 

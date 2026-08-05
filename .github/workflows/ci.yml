@@ -76,6 +76,26 @@ jobs:
           .#checks.x86_64-linux.blaster
           .#devShells.x86_64-linux.default.inputDerivation
 
+  blaster-identity-consistency:
+    name: Blaster trust-base identities (doc vs flake.lock)
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      # Standing contract from #234 Stage-D: every identity documented in the
+      # Blaster trust-base table must byte-match its authoritative lock node.
+      # Runs the same canonical executable as `just
+      # check-blaster-identity-consistency` — no copied comparison logic.
+      - name: Check documented identities against offchain/flake.lock
+        run: >-
+          nix shell
+          nixpkgs#bash
+          nixpkgs#coreutils
+          nixpkgs#gnugrep
+          nixpkgs#gnused
+          nixpkgs#gawk
+          nixpkgs#jq
+          --command bash scripts/check-blaster-identity-consistency.sh
+
   onchain:
     name: Onchain (Aiken)
     runs-on: nixos

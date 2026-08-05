@@ -36,8 +36,8 @@ remote closure. The principal identities audited at runtime are:
 | Component | Version or revision | Source identity |
 | --- | --- | --- |
 | Lean | `v4.24.0` | `leanprover/lean4:v4.24.0` |
-| Lean-Blaster | `d57a9079a164ca25e58f119112162efea617b5e6` | `sha256-pXH5QpO7bJEmmtfOTkSdU31lF6tVZROjRLea+i+Hya0=` |
-| PlutusCoreBlaster | `17cee18a2058790bca36282d82c19146587fb2d1` | `sha256-tzdKOl9R9f/N1uQ2Algk6zTbbb119uBGByejNQOOe1U=` |
+| Lean-Blaster | `62d2d59abda37e90097e655b40e27545bba16f3c` | `sha256-c3+XHSj1KJ3P0O7Mp23vXhXdgrkeP/DSc9qfCoQXyOM=` |
+| PlutusCoreBlaster | `7cf5a78c54b9694ef093bf49edb5d3799b2a49c9` | `sha256-Nq6wG/XMeWubb1PXPhuD62jhmQe8Dy61ZFNZfeFYgTg=` |
 | CardanoLedgerApiBlaster | `577e3eb03b5be09354cfdb1c0d0c12e9e16541a0` | `sha256-EORoTM/YbdjV7sc+7e1VTl7IuP2IyIgBvT0Oe9HhxSk=` |
 | lean4-nix | `faebfa2e0d7093fea3ffaa493b316bf3449c1dbf` | `sha256-D3PN4o8RtyHEjlAtsLa6M9xRjIwtMUk4pIkfsNSMAvQ=` |
 | Lean nixpkgs | `1306659b587dc277866c7b69eb97e5f07864d8c4` | `sha256-KJ2wa/BLSrTqDjbfyNx70ov/HdgNBCBBSQP3BIzKnv4=` |

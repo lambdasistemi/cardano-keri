@@ -37,6 +37,8 @@ layer that failed, and is never "no counterexample found".
 | R-06 | The record schema that downstream tickets must fill exists and is enforced here: one required per-claim falsifiability field pair (`REFUTED` before `ESTABLISHED`, same slice, same frozen identity) and, for the Advance family, two distinctly labelled E records whose distinct purposes are stated in the records themselves. |
 | R-07 | Every emitted record carries its `evaluation_outcome`. A missing variant, missing toolchain, unresolved reference, unbuilt artifact, or unread output is `COULD-NOT-EVALUATE` and RED. |
 | R-08 | No credential, secret, or network-authenticated resource is in scope. |
+| R-09 | **Every** record the bundle carries — theorem records, control records and verification receipts alike — names an internally consistent `COMMIT + TOOLCHAIN + VARIANT`. An element that is unnamed is `COULD-NOT-EVALUATE` and RED. Elements that are each true of a different configuration are RED even when every command exited 0. |
+| R-10 | The check enforcing R-09 is demonstrated RED against the retained pre-slice receipt — a real run that exited 0 while naming a post-#219 commit, pre-#219 artifact bytes, a toolchain the repository does not validate with, and no variant at all — before any clean baseline is accepted. That receipt is retained with provenance as a `REFUTED` measurement; it is never repaired in place, rewritten, or deleted. |
 
 ## Rejection behaviour
 

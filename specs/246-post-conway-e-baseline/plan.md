@@ -65,6 +65,14 @@ inconsistent.
 what is announcing the inconsistent triple. Slice B's job is not to fix a red
 signal but to make this green mean what it claims.
 
+That receipt is retained as a `REFUTED`/RED measurement with full provenance
+(`evidence/RED-baseline-receipt.md` under the ticket runtime root). It is never
+repaired in place, rewritten, or deleted, and it is read-only to every slice.
+It has a second job: it is the **falsification case** for the identity
+consistency check (R-09/R-10, T246-B7/B8). A checker validated only against an
+invented broken input would not have been shown to catch the case that actually
+happened here.
+
 ## Strategy
 
 Three bisect-safe slices, in dependency order. Each ends at a commit that
@@ -124,6 +132,7 @@ labelled Advance records.
 | INV-A7 | Both controls are reached by the single flake-owned command the gate runs. | A control is reachable only by a hand-typed command, or the gate passes with a control removed. |
 | INV-A8 | Evaluating the offchain flake from a clean checkout leaves the tracked lock unmodified. | Evaluation dirties the working tree. |
 | INV-A9 | The audit changes no bridge semantics: no assertion, theorem, or existing check is weakened, and the audit does not write tracked sources. | Any tracked Lean assertion changes, or the audit mutates tracked files. |
+| INV-A10 | The audit's own records name the commit they describe, so a source-compatibility result cannot be read against the wrong tree. | The report is silent about which tree it audited. |
 
 Slices B and C carry their own invariant sets, versioned before their
 dispatch, not pre-committed here.

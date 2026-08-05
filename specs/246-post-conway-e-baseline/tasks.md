@@ -27,6 +27,9 @@ and the slice has been independently audited and accepted.
   clean checkout leaves the working tree unmodified (INV-A8).
 - [ ] T246-A10 — Evidence that no bridge assertion, theorem, or existing check
   was weakened and no tracked Lean source was rewritten by the audit (INV-A9).
+- [ ] T246-A11 — The audit's own records name the commit they are about, so a
+  source-compatibility result cannot be read against the wrong tree (R-09,
+  INV-A10).
 
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 
@@ -45,6 +48,12 @@ dispatch.
   non-zero and name which input moved.
 - [ ] T246-B6 — Historical C / pre-#219 material relabelled in place, neither
   deleted nor reinterpreted.
+- [ ] T246-B7 — Identity-consistency check that goes RED when any element of
+  the triple is unnamed or when the elements describe different configurations,
+  applied to every record including verification receipts (R-09, D-08).
+- [ ] T246-B8 — That check demonstrated RED against the retained pre-slice
+  receipt before any clean baseline is accepted; the retained receipt is not
+  repaired, rewritten, or deleted (R-10).
 
 ## Slice C — stranger-runnable bundle skeleton and downstream record schema
 

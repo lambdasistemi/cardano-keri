@@ -39,6 +39,7 @@ import Cardano.Ledger.Api.PParams (
     ppCoinsPerUTxOByteL,
     ppCollateralPercentageL,
     ppCostModelsL,
+    ppKeyDepositL,
     ppMaxCollateralInputsL,
     ppMaxTxExUnitsL,
     ppTxFeeFixedL,
@@ -66,6 +67,7 @@ testPParams =
         & ppTxFeePerByteL .~ CoinPerByte (compactCoinOrError (Coin 44))
         & ppTxFeeFixedL .~ Coin 155_381
         & ppCoinsPerUTxOByteL .~ CoinPerByte (compactCoinOrError (Coin 4_310))
+        & ppKeyDepositL .~ Coin 2_000_000
         & ppMaxTxExUnitsL .~ ExUnits 14_000_000 10_000_000_000
         & ppCollateralPercentageL .~ 150
         & ppMaxCollateralInputsL .~ 3

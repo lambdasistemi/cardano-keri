@@ -108,8 +108,7 @@ publishScripts ::
     PublishConfig ->
     [ScriptArtifact] ->
     IO [(Text, Reference)]
-publishScripts config artifacts =
-    traverse publishOneOrFail artifacts
+publishScripts config = traverse publishOneOrFail
   where
     publishOneOrFail artifact = do
         result <- publishOne config artifact

@@ -32,16 +32,14 @@ import Cardano.KERI.Deployment.ChainIndex (
     queryAssetUtxos,
  )
 import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
+import Cardano.KERI.Deployment.LegacyCardanoCli (renderCardanoCliFailure)
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
     Reference (..),
     ScriptEntry (..),
  )
 import Cardano.KERI.Deployment.Publisher (parseTransactionId)
-import Cardano.KERI.Deployment.Registration (
-    plutusDataJson,
-    renderCardanoCliFailure,
- )
+import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),

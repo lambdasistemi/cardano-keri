@@ -97,10 +97,7 @@ import Cardano.KERI.Deployment.Manifest (
  )
 import Cardano.KERI.Deployment.Registration (
     RegistrationPlan (..),
-    RegistrationResult (..),
-    RegistrationRunnerConfig (..),
     mkRegistrationPlan,
-    runRegistration,
  )
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
@@ -1395,29 +1392,7 @@ runRegister settings = do
             "warning: sovereign repeat registration creates another fully \
             \funded checkpoint copy; the benign residual is intentional"
         )
-    result <-
-        runRegistration
-            RegistrationRunnerConfig
-                { runnerCardanoCli = registerCardanoCli settings
-                , runnerNetworkMagic = registerNetworkMagic settings
-                , runnerNodeSocket = registerNodeSocket settings
-                , runnerFundingAddress = registerFundingAddress settings
-                , runnerSigningKeyFile = registerPayer settings
-                , runnerKoiosUrl = registerKoiosUrl settings
-                , runnerKoiosToken = registerKoiosToken settings
-                , runnerTimeoutSeconds = registerTimeoutSeconds settings
-                }
-            plan
-    putStrLn $
-        "premint txid: "
-            <> T.unpack (resultPremintTxId result)
-    putStrLn $
-        "register txid: "
-            <> T.unpack (resultRegisterTxId result)
-    putStrLn $
-        "escrow: "
-            <> show (registerEscrowLovelace settings `div` 1_000_000)
-            <> " tADA (min 2 + D 1000 + B 5)"
+    fail "registering pending #181 Slice 4 composition"
 
 runAdvance :: AdvanceSettings -> IO ()
 runAdvance settings = do

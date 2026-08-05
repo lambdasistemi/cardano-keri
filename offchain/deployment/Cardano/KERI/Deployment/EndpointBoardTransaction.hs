@@ -53,15 +53,13 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     frozenEndpointBoardAddress,
     frozenEndpointBoardPolicyId,
  )
+import Cardano.KERI.Deployment.LegacyCardanoCli (renderCardanoCliFailure)
 import Cardano.KERI.Deployment.Manifest (
     NetworkInfo (..),
     Reference (..),
  )
 import Cardano.KERI.Deployment.Publisher (parseTransactionId)
-import Cardano.KERI.Deployment.Registration (
-    plutusDataJson,
-    renderCardanoCliFailure,
- )
+import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
 import Control.Monad (unless, when)

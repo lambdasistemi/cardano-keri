@@ -101,9 +101,11 @@ library deployment
     , filepath
     , http-conduit
     , memory                         >=0.18 && <0.19
+    , microlens
     , opt-env-conf                   >=0.13 && <0.16
     , plutus-core
     , plutus-ledger-api
+    , plutus-tx
     , process
     , temporary
     , text
@@ -122,6 +124,7 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
     Cardano.KERI.Deployment.KEL
+    Cardano.KERI.Deployment.LegacyCardanoCli
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
@@ -247,7 +250,6 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
-    Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
@@ -348,6 +350,51 @@ test-suite publisher-migration-tests
     , microlens
     , process
     , text
+
+-- #181 Slice 2C: focused in-process Registration migration proofs. Mirrors
+-- publisher-migration-tests: the focused executable enforces a non-zero
+-- Hspec example count, so a stale matcher fails closed. Gate-visible recipe
+-- name: registration-path-check.
+test-suite registration-migration-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          registration-migration/RegistrationMigrationMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.CLISpec
+    Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:deployment
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-tx-tools:tx-build
+    , containers
+    , directory
+    , filepath
+    , hspec                      >=2.11 && <2.12
+    , hspec-core                 >=2.11 && <2.12
+    , memory                     >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , process
+    , text
+
+  autogen-modules:  Paths_cardano_keri
 
 test-suite indexer-tests
   import:           warnings

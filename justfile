@@ -108,6 +108,52 @@ publisher-path-check matcher="":
     PATH="$restricted_path" nix develop --quiet --no-write-lock-file -c cabal test publisher-migration-tests -O0 \
         --test-show-details=direct "${test_options[@]}"
 
+# #181 Slice 2C: focused in-process Registration migration. The dedicated
+# runner fails on zero selected examples, while the PATH probe and paired
+# RestrictedPathSpec make the external-command absence proof non-vacuous.
+registration-path-check matcher="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    restricted_path="$(dirname "$(command -v nix)")"
+    echo "registration-path-check: PATH=$restricted_path"
+    if PATH="$restricted_path" command -v cardano-cli >/dev/null 2>&1; then
+        echo "registration-path-check: cardano-cli is reachable under the restricted PATH; the control is not meaningful" >&2
+        exit 1
+    fi
+    echo "registration-path-check: cardano-cli absent from the restricted PATH (expected)"
+    matcher='{{ matcher }}'
+    test_options=()
+    if [[ -n "$matcher" ]]; then
+        test_options+=("--test-option=--match=$matcher")
+    fi
+    cd offchain
+    PATH="$restricted_path" nix develop --quiet --no-write-lock-file -c cabal test registration-migration-tests -O0 \
+        --test-show-details=direct "${test_options[@]}"
+
+# #181 Slice 2: static guard proving Publisher/Registration own no
+# subprocess/cardano-cli transaction path, proven able to fail against its
+# own positive-control fixture before trusting a clean scan of the real
+# source.
+deploy-register-no-cli-guard:
+    ./scripts/check-deploy-register-no-cli.sh
+
+# #181 Slice 2: restricted-PATH runtime control (DIRECTION-002). Sets an
+# explicit PATH for the process that runs the focused Publisher/
+# Registration/restricted-PATH suite, keeping only what nix/cabal need and
+# nothing that provides cardano-cli; records the PATH in force and a
+# command -v cardano-cli probe (expected non-zero) before the suite starts.
+# This layer alone is not proof of anything — the paired RestrictedPathSpec.hs
+# positive control is what makes the suite's silence about cardano-cli
+# meaningful rather than vacuous.
+deploy-register-path-check matcher="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    matcher='{{ matcher }}'
+    if [[ -z "$matcher" ]]; then
+        just publisher-path-check
+    fi
+    just registration-path-check "$matcher"
+
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:

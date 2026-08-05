@@ -313,6 +313,42 @@ test-suite transaction-build-sign-tests
     , process
     , text
 
+-- #181 Slice 2B: focused in-process Publisher migration proofs. Mirrors
+-- transaction-build-sign-tests: the focused executable enforces a non-zero
+-- Hspec example count, so a stale matcher fails closed. Gate-visible recipe
+-- name: publisher-path-check.
+test-suite publisher-migration-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          publisher-migration/PublisherMigrationMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.PublisherSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:deployment
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , containers
+    , directory
+    , filepath
+    , hspec                    >=2.11 && <2.12
+    , hspec-core               >=2.11 && <2.12
+    , memory                   >=0.18 && <0.19
+    , microlens
+    , process
+    , text
+
 test-suite indexer-tests
   import:           warnings
   type:             exitcode-stdio-1.0

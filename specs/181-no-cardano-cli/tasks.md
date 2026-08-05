@@ -46,16 +46,33 @@ commit with an exact `Tasks:` trailer.
 
 ## Slice 2B — deploy / Publisher migration
 
-- [ ] T181-S2B-1 RED: Publisher tests freeze reference output/script,
+- [x] T181-S2B-1 RED: Publisher tests freeze reference output/script,
       fee/change, collateral, signing, tx-id, submission, and settlement
-- [ ] T181-S2B-2 RED: Publisher selection and exact-id observation failures
+- [x] T181-S2B-2 RED: Publisher selection and exact-id observation failures
       remain distinct and timeout polling reaches its real deadline branch
-- [ ] T181-S2B-3 GREEN: migrate `Publisher` completely from subprocess query,
-      build, sign, txid, and submit to the shared runtime
-- [ ] T181-S2B-4 Prove the Publisher-only source guard and restricted-`PATH`
-      suite can fail, reject zero selection, and pass restored production
-- [ ] T181-S2B-5 Navigator verifies one commit with
-      `Tasks: T181-S2B-1,...,T181-S2B-5`
+- [x] T181-S2B-3 GREEN: migrate `Publisher` completely from subprocess query,
+      build, sign, txid, and submit to the shared runtime; retire `CLI.hs`'s
+      two `Publisher`-construction call sites (`runDeploy`, `runBoardDeploy`)
+      to fail closed with an actionable error before funding/build/sign/
+      submit, pending Slice 4 composition — ruled 2026-08-05 in answer to
+      Q-001-red-oracle-kernel-conflicts: changing `Publisher`'s config shape
+      mechanically breaks these two call sites regardless of Registration's
+      own migration state, so their half of the fail-closed retirement moves
+      here from Slice 2C. CLI flag parsing (`DeploySettings` etc.) is
+      untouched; removing the flags themselves stays Slice 4's T181-S4-2.
+- [x] T181-S2B-4 Prove the restricted-`PATH` suite can fail, reject zero
+      selection, and pass restored production. (No standalone Publisher-only
+      source-guard script — superseded by Slice 2C's combined
+      `scripts/check-deploy-register-no-cli.sh`, already preserved in the
+      worktree; ruled 2026-08-05 in the same gate v3 correction that fixed
+      the post-#219-rebase `base=` drift.)
+- [x] T181-S2B-5 One commit with `Tasks: T181-S2B-1,...,T181-S2B-5`,
+      independently verified by a fresh commit auditor (not a navigator —
+      this slice was redispatched mid-ticket from PAIR to the alternation
+      contract: Claude ticket owner → Codex commit owner → fresh Claude
+      auditor, per NOTE-006/007). Candidate `246c998ad1090f7612ccf3e6ed659d6955b549dd`,
+      audit verdict PASS, 10/10 invariants, 0 blocking findings, report hash
+      `89d16db2735bf2a8472d6c320183f4ebbbb29d10bf3ce53776112f211c074137`.
 
 ## Slice 2C — register migration and fail-closed old CLI
 
@@ -66,8 +83,10 @@ commit with an exact `Tasks:` trailer.
       retain exact actionable detail and exercise the real operation path
 - [ ] T181-S2C-3 GREEN: migrate `Registration` completely from subprocess
       query, build, sign, txid, and submit to the shared runtime
-- [ ] T181-S2C-4 Retire deploy/register `cardano-cli` fields and make the old
-      commands fail closed before funding/build/sign/submit pending Slice 4
+- [ ] T181-S2C-4 Retire register `cardano-cli` fields and make the old
+      register command fail closed before funding/build/sign/submit pending
+      Slice 4. (Publisher's half — `runDeploy`/`runBoardDeploy` — already
+      moved to T181-S2B-3; ruled 2026-08-05.)
 - [ ] T181-S2C-5 Prove the combined source guard and restricted-`PATH` suite
       can fail, reject zero selection, and pass restored production
 - [ ] T181-S2C-6 Navigator verifies one commit with

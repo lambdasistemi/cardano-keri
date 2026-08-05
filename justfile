@@ -81,6 +81,33 @@ transaction-build-sign-check matcher="":
     nix develop --quiet --no-write-lock-file -c cabal test transaction-build-sign-tests -O0 \
         --test-show-details=direct "${test_options[@]}"
 
+# #181 Slice 2B: focused in-process Publisher migration. Mirrors
+# transaction-build-sign-check's zero-example enforcement (the focused
+# executable fails closed on a matcher selecting zero examples) and applies a
+# restricted-PATH control: the suite runs with cardano-cli absent, and a
+# command -v cardano-cli probe records that absence before the suite starts so
+# "publishes without cardano-cli" is non-vacuous. The paired
+# RestrictedPathSpec positive control proves the restriction mechanism can
+# detect presence. Gate-visible recipe name: publisher-path-check:
+publisher-path-check matcher="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    restricted_path="$(dirname "$(command -v nix)")"
+    echo "publisher-path-check: PATH=$restricted_path"
+    if PATH="$restricted_path" command -v cardano-cli >/dev/null 2>&1; then
+        echo "publisher-path-check: cardano-cli is reachable under the restricted PATH; the control is not meaningful" >&2
+        exit 1
+    fi
+    echo "publisher-path-check: cardano-cli absent from the restricted PATH (expected)"
+    matcher='{{ matcher }}'
+    test_options=()
+    if [[ -n "$matcher" ]]; then
+        test_options+=("--test-option=--match=$matcher")
+    fi
+    cd offchain
+    PATH="$restricted_path" nix develop --quiet --no-write-lock-file -c cabal test publisher-migration-tests -O0 \
+        --test-show-details=direct "${test_options[@]}"
+
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:

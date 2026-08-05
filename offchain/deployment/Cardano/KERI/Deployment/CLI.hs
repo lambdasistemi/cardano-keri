@@ -76,9 +76,7 @@ import Cardano.KERI.Deployment.EndpointBoard (
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
-    mkEndpointBoardManifest,
     readEndpointBoardManifest,
-    writeEndpointBoardManifestAtomic,
  )
 import Cardano.KERI.Deployment.EndpointBoardTransaction qualified as BoardTx
 import Cardano.KERI.Deployment.KEL (
@@ -95,13 +93,7 @@ import Cardano.KERI.Deployment.Manifest (
     SourceInfo (..),
     blueprintSha256,
     manifestValidationErrors,
-    mkManifest,
     readManifest,
-    writeManifestAtomic,
- )
-import Cardano.KERI.Deployment.Publisher (
-    PublishConfig (..),
-    publishScripts,
  )
 import Cardano.KERI.Deployment.Registration (
     RegistrationPlan (..),
@@ -112,7 +104,6 @@ import Cardano.KERI.Deployment.Registration (
  )
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
-    deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
  )
@@ -121,7 +112,6 @@ import Data.ByteString qualified as BS
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import OptEnvConf qualified as Opt
 import System.Exit (ExitCode (..))
 import System.Process (readProcessWithExitCode)
@@ -1139,53 +1129,17 @@ runBoardDeploy settings = do
         fail "reference-lovelace must be positive"
     when (deployTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
-    blueprint <-
-        loadBlueprint (deployBlueprint settings) >>= either fail pure
-    artifact <- either fail pure (deriveBoardScript blueprint)
-    digest <- blueprintSha256 (deployBlueprint settings)
     commit <-
         maybe
             (gitOutput (deploySourceRepo settings) ["rev-parse", "HEAD"])
             pure
             (deploySourceCommit settings)
     verifySourceTree (deploySourceRepo settings) commit
-    references <-
-        publishScripts
-            PublishConfig
-                { publishCardanoCli = deployCardanoCli settings
-                , publishNetworkMagic = deployNetworkMagic settings
-                , publishNodeSocket = deployNodeSocket settings
-                , publishFundingAddress = deployFundingAddress settings
-                , publishSigningKeyFile = deploySigningKeyFile settings
-                , publishReferenceLovelace =
-                    deployReferenceLovelace settings
-                , publishKoiosUrl = deployKoiosUrl settings
-                , publishKoiosToken = deployKoiosToken settings
-                , publishTimeoutSeconds = deployTimeoutSeconds settings
-                }
-            [artifact]
-    reference <-
-        case references of
-            [("endpoint-board", settled)] -> pure settled
-            _ -> fail "publisher did not return exactly the endpoint-board reference"
-    now <- getCurrentTime
-    let publishedAt =
-            T.pack $
-                formatTime
-                    defaultTimeLocale
-                    "%Y-%m-%dT%H:%M:%SZ"
-                    now
-    manifest <-
-        either fail pure $
-            mkEndpointBoardManifest
-                (deploySourceRepositoryUrl settings)
-                commit
-                digest
-                publishedAt
-                artifact
-                reference
-    writeEndpointBoardManifestAtomic (deployOut settings) manifest
-    putStrLn ("board manifest: " <> deployOut settings)
+    -- #181 Slice 2B (T181-S2B-3, per the 2026-08-03 standing ruling): the
+    -- subprocess publish path is retired and the in-process
+    -- 'TransactionRuntime' composition lands in #181 Slice 4. Fail closed
+    -- before any funding/build/sign/submit attempt.
+    fail "endpoint-board deploy disabled: publishing pending #181 Slice 4 composition"
 
 runBoardList :: BoardListSettings -> IO ()
 runBoardList settings = do
@@ -1748,47 +1702,17 @@ runDeploy settings = do
         fail "reference-lovelace must be positive"
     when (deployTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
-    artifacts <- loadArtifacts (deployBlueprint settings)
-    digest <- blueprintSha256 (deployBlueprint settings)
     commit <-
         maybe
             (gitOutput (deploySourceRepo settings) ["rev-parse", "HEAD"])
             pure
             (deploySourceCommit settings)
     verifySourceTree (deploySourceRepo settings) commit
-    references <-
-        publishScripts
-            PublishConfig
-                { publishCardanoCli = deployCardanoCli settings
-                , publishNetworkMagic = deployNetworkMagic settings
-                , publishNodeSocket = deployNodeSocket settings
-                , publishFundingAddress = deployFundingAddress settings
-                , publishSigningKeyFile = deploySigningKeyFile settings
-                , publishReferenceLovelace =
-                    deployReferenceLovelace settings
-                , publishKoiosUrl = deployKoiosUrl settings
-                , publishKoiosToken = deployKoiosToken settings
-                , publishTimeoutSeconds = deployTimeoutSeconds settings
-                }
-            artifacts
-    now <- getCurrentTime
-    let publishedAt =
-            T.pack $
-                formatTime
-                    defaultTimeLocale
-                    "%Y-%m-%dT%H:%M:%SZ"
-                    now
-    manifest <-
-        either fail pure $
-            mkManifest
-                (deploySourceRepositoryUrl settings)
-                commit
-                digest
-                publishedAt
-                artifacts
-                references
-    writeManifestAtomic (deployOut settings) manifest
-    putStrLn ("manifest: " <> deployOut settings)
+    -- #181 Slice 2B (T181-S2B-3, per the 2026-08-03 standing ruling): the
+    -- subprocess publish path is retired and the in-process
+    -- 'TransactionRuntime' composition lands in #181 Slice 4. Fail closed
+    -- before any funding/build/sign/submit attempt.
+    fail "deploy disabled: publishing pending #181 Slice 4 composition"
 
 runVerify :: VerifySettings -> IO ()
 runVerify settings = do

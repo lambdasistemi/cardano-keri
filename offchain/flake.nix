@@ -1015,10 +1015,41 @@
                 '';
               };
 
+              # Source-compatibility is a separate, argument-free audit.  Its
+              # package identities and source roots come directly from the
+              # locked flake inputs; the tracked bridge build is the Lean
+              # elaboration oracle, while the scanner makes the complete
+              # external reference surface and both controls observable.
+              compatibilityAuditRunner = pkgs.writeShellApplication {
+                name = "blaster-compatibility-audit";
+                runtimeInputs = [
+                  pkgs.bash
+                  pkgs.coreutils
+                  pkgs.findutils
+                  pkgs.gnugrep
+                  pkgs.perl
+                ];
+                text = ''
+                  export AUDIT_COMMIT=${sourceIdentity}
+                  export AUDIT_COLLECTOR=${./blaster/collect-lean-references.pl}
+                  export AUDIT_SOURCE_ROOT=${cleanBlasterSource}
+                  export AUDIT_SEED=${cleanBlasterSource}/CompatibilityRetiredReference.lean
+                  export AUDIT_LEAN_BLASTER_ROOT=${leanBlaster}
+                  export AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster}
+                  export AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster}
+                  export AUDIT_LEAN_BLASTER_REV=${leanBlaster.rev}
+                  export AUDIT_PLUTUS_CORE_REV=${plutusCoreBlaster.rev}
+                  export AUDIT_LEDGER_API_REV=${cardanoLedgerApiBlaster.rev}
+                  export AUDIT_TRACKED_BUILD=${keriBlasterPackage.modRoot}
+                  bash ${./blaster/compatibility-audit.sh} "$@"
+                '';
+              };
+
               runner = pkgs.writeShellApplication {
                 name = "blaster";
                 runtimeInputs = [
                   auditRunner
+                  compatibilityAuditRunner
                   pkgs.bash
                   pkgs.coreutils
                   pkgs.diffutils
@@ -1031,6 +1062,13 @@
                   bash ${./blaster/test-production-source.sh} \
                     ${pkgs.lib.getExe auditRunner}
                   ${pkgs.lib.getExe auditRunner}
+                  bash ${./blaster/test-compatibility-audit.sh} \
+                    ${pkgs.lib.getExe compatibilityAuditRunner} \
+                    ${./flake.lock} \
+                    ${cleanBlasterSource} \
+                    ${cleanBlasterSource}/CompatibilityRetiredReference.lean \
+                    40e23e6c2c1d966bc2290adb338c7ea7b365cc10 \
+                    ${sourceIdentity}
 
                   # The S2 evidence oracle and its falsification controls run
                   # from this same runner, which is the only path the frozen
@@ -1063,7 +1101,7 @@
                 touch "$out"
               '';
             in {
-              inherit artifact auditRunner check runner;
+              inherit artifact auditRunner check compatibilityAuditRunner runner;
               lean = leanPkgs.lean-all;
             });
 

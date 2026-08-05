@@ -1881,8 +1881,10 @@
                 text = ''
                   export AUDIT_COMMIT=${sourceIdentity}
                   export AUDIT_COLLECTOR=${./blaster/collect-lean-references.pl}
+                  export AUDIT_INDEXER=${./blaster/index-lean-declarations.pl}
                   export AUDIT_SOURCE_ROOT=${cleanBlasterSource}
                   export AUDIT_SEED=${cleanBlasterSource}/CompatibilityRetiredReference.lean
+                  export AUDIT_NAMESPACE_SEED=${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean
                   export AUDIT_LEAN_BLASTER_ROOT=${leanBlaster}
                   export AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster}
                   export AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster}
@@ -1916,6 +1918,7 @@
                     ${./flake.lock} \
                     ${cleanBlasterSource} \
                     ${cleanBlasterSource}/CompatibilityRetiredReference.lean \
+                    ${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean \
                     40e23e6c2c1d966bc2290adb338c7ea7b365cc10 \
                     ${sourceIdentity}
 

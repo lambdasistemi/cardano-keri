@@ -9,8 +9,9 @@ runner="${1:-}"
 lock="${2:-}"
 source_root="${3:-}"
 seed="${4:-}"
-base="${5:-}"
-expected_commit="${6:-}"
+namespace_seed="${5:-}"
+base="${6:-}"
+expected_commit="${7:-}"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -51,6 +52,14 @@ validate_a3() {
   grep -Eq '^AUDIT-CONTROL id=[^ ]+ kind=seeded-retired-reference .*outcome=REFUTED$' "$out"
 }
 
+validate_selftests() {
+  local out="$1" leg
+  for leg in unresolved-in-tracked-scope namespace-move; do
+    grep -Eq "^AUDIT-SELFTEST leg=$leg rc=[1-9][0-9]* outcome=REFUTED$" "$out" \
+      || return 1
+  done
+}
+
 validate_a4() {
   local out="$1" pkg rev
   for pkg in leanBlaster plutusCoreBlaster cardanoLedgerApiBlaster; do
@@ -67,9 +76,9 @@ validate_a5() {
 
 validate_a6() {
   local out="$1" checked
-  checked="$(grep -Ec '^AUDIT-(IDENTITY|PIN|REFERENCE|CONTROL|VARIANT) ' "$out" || true)"
+  checked="$(grep -Ec '^AUDIT-(IDENTITY|PIN|REFERENCE|CONTROL|SELFTEST|VARIANT) ' "$out" || true)"
   [[ $checked -gt 0 ]] || return 1
-  ! grep -E '^AUDIT-(IDENTITY|PIN|REFERENCE|CONTROL|VARIANT) ' "$out" \
+  ! grep -E '^AUDIT-(IDENTITY|PIN|REFERENCE|CONTROL|SELFTEST|VARIANT) ' "$out" \
     | grep -Evq ' outcome=(ESTABLISHED|REFUTED|COULD-NOT-EVALUATE)( layer=[^ ]+)?$' || return 1
   ! grep -Eq '^AUDIT-.* outcome=COULD-NOT-EVALUATE( |$)' "$out"
 }
@@ -77,6 +86,7 @@ validate_a6() {
 validate_a7() {
   local out="$1"
   [[ $(grep -Ec '^AUDIT-CONTROL id=[^ ]+ kind=(positive-resolution|seeded-retired-reference) ' "$out") -eq 2 ]] || return 1
+  [[ $(grep -Ec '^AUDIT-SELFTEST leg=(unresolved-in-tracked-scope|namespace-move) rc=[1-9][0-9]* outcome=REFUTED$' "$out") -eq 2 ]] || return 1
   grep -Fxq 'AUDIT-VERDICT PASS' "$out"
 }
 
@@ -123,18 +133,24 @@ prove_assertions_can_fail() {
     printf '%s\n' 'AUDIT-REFERENCE scope=seeded-retired source_path=offchain/blaster/CompatibilityRetiredReference.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticsVariant resolved=false outcome=REFUTED'
     printf '%s\n' 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=1'
     printf '%s\n' 'AUDIT-CONTROL id=retired-reference kind=seeded-retired-reference expected=unresolved observed=unresolved outcome=REFUTED'
+    printf '%s\n' 'AUDIT-SELFTEST leg=unresolved-in-tracked-scope rc=1 outcome=REFUTED'
+    printf '%s\n' 'AUDIT-SELFTEST leg=namespace-move rc=1 outcome=REFUTED'
     printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=true selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantE outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-VERDICT PASS'
   } >"$good"
 
   sed 's/AUDIT-RESOLVED count=2/AUDIT-RESOLVED count=3/' "$good" >"$mutant"
   expect_red INV-A1 incomplete-resolution-set validate_a1 "$mutant"
+  grep -v 'AUDIT-SELFTEST leg=namespace-move' "$good" >"$mutant"
+  expect_red INV-A1 namespace-move-not-exercised validate_selftests "$mutant"
   grep -v 'kind=positive-resolution' "$good" >"$mutant"
   expect_red INV-A2 missing-positive-control validate_a2 "$mutant"
   grep -v 'reference=.*defaultFunSemanticsVariantC ' "$good" >"$mutant"
   expect_red INV-A2 missing-required-probe validate_a2 "$mutant"
   grep -v 'scope=tracked+seeded-retired\|scope=seeded-retired\|kind=seeded-retired-reference' "$good" >"$mutant"
   expect_red INV-A3 skipped-seeded-reference validate_a3 "$mutant"
+  grep -v 'AUDIT-SELFTEST leg=unresolved-in-tracked-scope' "$good" >"$mutant"
+  expect_red INV-A3 failure-path-not-exercised validate_selftests "$mutant"
   sed "s/leanBlaster=$lean_rev/leanBlaster=transcribed-stale-pin/" "$good" >"$mutant"
   expect_red INV-A4 stale-pin-identity validate_a4 "$mutant"
   grep -v '^AUDIT-VARIANT ' "$good" >"$mutant"
@@ -153,6 +169,7 @@ prove_assertions_can_fail() {
 [[ -n $lock && -f $lock ]] || fail "locked input record is unavailable: $lock"
 [[ -n $source_root && -d $source_root ]] || fail "tracked source root is unavailable: $source_root"
 [[ -n $seed && -f $seed ]] || fail "seeded retired-reference artefact is unavailable: $seed"
+[[ -n $namespace_seed && -f $namespace_seed ]] || fail "namespace-move seed is unavailable: $namespace_seed"
 [[ -n $base ]] || fail 'pre-slice base was not provided'
 
 # First prove each assertion independently rejects the defect it names.  These
@@ -179,6 +196,10 @@ for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
 done
 grep -Fq 'cekExecuteProgramWithSemanticsVariant' "$seed" \
   || fail 'seeded retired reference is absent from its artefact'
+grep -Fq 'PlutusCore.UPLC.CekMachine (evaluateBuiltinFunction)' "$namespace_seed" \
+  || fail 'namespace-move evaluateBuiltinFunction reference is absent'
+grep -Fq 'PlutusCore.Default (cekExecuteProgramWithSemanticVariant)' "$namespace_seed" \
+  || fail 'namespace-move CEK reference is absent'
 
 if [[ ! -x $runner ]]; then
   printf 'RED: compatibility audit executable absent after live contract controls: %s\n' \
@@ -197,6 +218,7 @@ after_lock="$(sha256sum "$lock" | cut -d ' ' -f 1)"
 validate_a1 "$work/audit.out" || fail 'INV-A1 resolution set is incomplete'
 validate_a2 "$work/audit.out" || fail 'INV-A2 positive resolution control failed'
 validate_a3 "$work/audit.out" || fail 'INV-A3 retired-reference control failed'
+validate_selftests "$work/audit.out" || fail 'INV-A1/A3 self-test failure paths were not both reached'
 validate_a4 "$work/audit.out" || fail 'INV-A4 pin identity does not match the lock'
 validate_a5 "$work/audit.out" || fail 'INV-A5 variant answer is absent'
 validate_a6 "$work/audit.out" || fail 'INV-A6 outcome discipline failed'

@@ -77,6 +77,22 @@ means uncovered by default.
 | `mode` | required file mode, executable bit included | asserted on the assembled bundle, not only on the source |
 | `required` | whether absence is RED | absence of a required entry is RED; there is no warning level |
 
+## D-08 identity consistency (applies to every record, receipts included)
+
+A record does not merely carry the triple; the triple has to agree with
+itself.
+
+| field | meaning | validation |
+|---|---|---|
+| `commit` | source commit the record is about | named; non-empty |
+| `toolchain` | the Aiken version that produced the artifact, and the pinned bridge upstreams | named; the Aiken value must be the one the repository validates its onchain sources with, stated rather than assumed |
+| `variant` | `BuiltinSemanticsVariant` | named explicitly; absence is `COULD-NOT-EVALUATE`, never a default |
+| `artifact` | blueprint and program identity the record describes | must be the artifact that `commit` and `toolchain` together produce |
+
+A record whose elements are each true of a *different* configuration is RED,
+irrespective of every command in it exiting 0. The enforcing check's
+falsification case is the retained pre-slice receipt, not an invented input.
+
 ## State invariants
 
 - any unresolved reference ⇒ the run is RED;

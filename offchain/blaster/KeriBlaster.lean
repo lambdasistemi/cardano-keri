@@ -466,20 +466,36 @@ def main : IO UInt32 := do
     | do
       IO.eprintln "S2: no observer_advance reward observation; the terminal FAIL record has no basis"
       return 1
-  let some limitingClass := limitingClassOf advance.trace
-    | do
-      IO.eprintln s!"S2: observer_advance reward is {KeriBlaster.S2.Cek.errorKind advance.trace}, not a refused builtin dispatch; a builtin-support FAIL is not licensed by this run"
-      return 1
-  let some failingBuiltin := advance.trace.dispatchFailure
-    | do
-      IO.eprintln "S2: observer_advance reward names no refused builtin; the record would be unattributed"
-      return 1
-  let some advanceRow := rows.find? (fun r => r.title == advance.title)
-    | do
-      IO.eprintln s!"S2: no manifest row for {advance.title}; the record cannot bind a program identity"
-      return 1
+  /- ### The observer_advance terminal FAIL record — scoped by #234
 
-  IO.println s!"S2.result verdict=FAIL limiting_class={limitingClass} observer={advance.name} case=reward dispatch_failed_builtin={shortBuiltinName failingBuiltin} program_sha256={advanceRow.hash} pinned_rev={pinnedRev} decisive_log_sha256={decisiveLogSha}"
+  The advance family moved in #219 (PR #222). Under the post-#219 program this
+  reward is a term error rather than a refused builtin dispatch, so the record
+  below no longer describes it.
+
+  The guards are unchanged and still decide: if the machine is still failing at
+  an unsupported builtin dispatch, the FAIL record is published exactly as
+  before, so a regression to the old behaviour is still caught. When it is not,
+  this run publishes an explicit NON-CLAIM rather than a stale record — and
+  rather than a false one adjusted to keep the build green.
+
+  Establishing the post-#219 (and post-Conway) advance behaviour is #246's
+  work, not this run's. This run has not observed it and does not claim it.
+  -/
+  let decisiveBuiltin? ← match limitingClassOf advance.trace with
+    | none => do
+        IO.println s!"S2.not-established subject=observer_advance-reward observed={KeriBlaster.S2.Cek.errorKind advance.trace} required_basis=refused-builtin-dispatch owner=#246 reason=advance-family-moved-in-219"
+        pure none
+    | some limitingClass => do
+        let some failingBuiltin := advance.trace.dispatchFailure
+          | do
+            IO.eprintln "S2: observer_advance reward names no refused builtin; the record would be unattributed"
+            return 1
+        let some advanceRow := rows.find? (fun r => r.title == advance.title)
+          | do
+            IO.eprintln s!"S2: no manifest row for {advance.title}; the record cannot bind a program identity"
+            return 1
+        IO.println s!"S2.result verdict=FAIL limiting_class={limitingClass} observer={advance.name} case=reward dispatch_failed_builtin={shortBuiltinName failingBuiltin} program_sha256={advanceRow.hash} pinned_rev={pinnedRev} decisive_log_sha256={decisiveLogSha}"
+        pure (some failingBuiltin)
 
   /- ## What this run does NOT establish
 
@@ -517,17 +533,25 @@ def main : IO UInt32 := do
       | do
         IO.eprintln s!"S2: no reward observation for {observerName}; its bound cannot be recorded"
         return 1
-    let some earlier := observation.trace.dispatchFailure
-      | do
-        IO.eprintln s!"S2: {observerName} reward did not stop at a refused dispatch; basis=bounded-at-earlier-dispatch-failure is unsupported"
+    -- These bounds are stated RELATIVE to the decisive advance path. When that
+    -- path is not established (post-#219), their basis does not exist either,
+    -- so they are published as explicit non-claims rather than as bounds
+    -- against a builtin this run never identified.
+    match decisiveBuiltin? with
+    | none =>
+      IO.println s!"S2.not-established subject={subject} required_basis=bounded-at-earlier-dispatch-failure owner=#246 reason=decisive-advance-path-not-established"
+    | some failingBuiltin => do
+      let some earlier := observation.trace.dispatchFailure
+        | do
+          IO.eprintln s!"S2: {observerName} reward did not stop at a refused dispatch; basis=bounded-at-earlier-dispatch-failure is unsupported"
+          return 1
+      if earlier == failingBuiltin then
+        IO.eprintln s!"S2: {observerName} reward stopped at {shortBuiltinName earlier}, the same builtin as the decisive path; it is not bounded earlier"
         return 1
-    if earlier == failingBuiltin then
-      IO.eprintln s!"S2: {observerName} reward stopped at {shortBuiltinName earlier}, the same builtin as the decisive path; it is not bounded EARLIER and would be a separate confirmation"
-      return 1
-    if observation.trace.reached.contains failingBuiltin then
-      IO.eprintln s!"S2: {observerName} reward reached {shortBuiltinName failingBuiltin}; it may not be recorded as reached=NO"
-      return 1
-    IO.println s!"S2.unproved subject={subject} basis=bounded-at-earlier-dispatch-failure reached=NO"
+      if observation.trace.reached.contains failingBuiltin then
+        IO.eprintln s!"S2: {observerName} reward reached {shortBuiltinName failingBuiltin}; it may not be recorded as reached=NO"
+        return 1
+      IO.println s!"S2.unproved subject={subject} basis=bounded-at-earlier-dispatch-failure reached=NO"
 
   IO.println "S2.boundary crypto=UNINTERPRETED semantic_claims=LIMITED"
   return 0

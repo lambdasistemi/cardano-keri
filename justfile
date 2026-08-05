@@ -232,6 +232,13 @@ check-lifecycle-trace-vectors: gen-lifecycle-trace-vectors
 check-lean-traceability:
     ./scripts/check-lean-traceability.sh
 
+# Standing repository-CI contract (#234 Stage-D): every identity documented in
+# the Blaster trust-base table must byte-match its authoritative flake.lock
+# node. One canonical executable, shared by this recipe, ci-offchain, the
+# workflow job, and the Stage-D gate.
+check-blaster-identity-consistency:
+    ./scripts/check-blaster-identity-consistency.sh
+
 # --- onchain (Aiken) ---
 
 # Format Aiken sources
@@ -333,7 +340,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability
+ci-offchain: build-offchain unit deployment-unit indexer-unit backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

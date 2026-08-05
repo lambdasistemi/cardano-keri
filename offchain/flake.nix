@@ -67,12 +67,12 @@
     # sources name immutable revisions; their transitive inputs are bound by
     # flake.lock and audited by the runnable `blaster` surface.
     leanBlaster.url =
-      "github:paolino/Lean-blaster/d57a9079a164ca25e58f119112162efea617b5e6";
+      "github:paolino/Lean-blaster/62d2d59abda37e90097e655b40e27545bba16f3c";
     lean4Nix.follows = "leanBlaster/lean4-nix";
     leanNixpkgs.follows = "leanBlaster/nixpkgs";
     plutusCoreBlaster = {
       url =
-        "github:input-output-hk/PlutusCoreBlaster/17cee18a2058790bca36282d82c19146587fb2d1";
+        "github:input-output-hk/PlutusCoreBlaster/7cf5a78c54b9694ef093bf49edb5d3799b2a49c9";
       flake = false;
     };
     cardanoLedgerApiBlaster = {
@@ -787,7 +787,7 @@
               leanBlasterPackage = leanBlaster.legacyPackages.${system}.blaster;
               plutusCoreBlasterPackage = leanPkgs.buildLeanPackage {
                 name = "PlutusCore";
-                roots = [ "PlutusCore" ];
+                roots = [ "PlutusCore" "Cryptograph" ];
                 src = plutusCoreBlaster;
                 deps = [ leanBlasterPackage ];
               };
@@ -968,8 +968,8 @@
                     "$artifact/artifact-identities.tsv"
 
                   jq -er \
-                    --arg lean_blaster "d57a9079a164ca25e58f119112162efea617b5e6" \
-                    --arg plutus_core "17cee18a2058790bca36282d82c19146587fb2d1" \
+                    --arg lean_blaster "62d2d59abda37e90097e655b40e27545bba16f3c" \
+                    --arg plutus_core "7cf5a78c54b9694ef093bf49edb5d3799b2a49c9" \
                     --arg ledger_api "577e3eb03b5be09354cfdb1c0d0c12e9e16541a0" '
                     def direct($name): .nodes[.nodes[.root].inputs[$name]];
                     (direct("leanBlaster").locked.rev == $lean_blaster)

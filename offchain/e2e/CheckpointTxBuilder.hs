@@ -61,7 +61,6 @@ import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
     advancePredicate,
-    reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Close (
     AddressCredential (..),
@@ -532,9 +531,13 @@ verifyRegisterScriptSizes env = do
     measure "observer_advance reference script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measure "observer_enforcement reference script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
-    unless (SBS.length (envAdvanceBytes env) == 16_130) $
+    -- Slice A6: freshly measured from the combined tree with main's
+    -- input-addressed blueprint fix and T219-A1's advance.ak deletions.
+    -- Matching the old pre-rebase pin is coincidental; this value was
+    -- re-derived, not reused.
+    unless (SBS.length (envAdvanceBytes env) == 14_775) $
         fail
-            ( "observer_advance applied program changed from 16,130 bytes: "
+            ( "observer_advance applied program changed from 14,775 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -2495,6 +2498,9 @@ rotateSpentCheckpoint env input =
                 , scNativeSn = cdNativeSn (checkpointDatum input)
                 }
 
+{- | #219: 'aeCtrlSigs' sign the KERI event's own bytes directly, not a
+reconstructed Cardano-domain message preimage.
+-}
 signedRotateEvidence ::
     CheckpointEnv ->
     CheckpointInput ->
@@ -2502,20 +2508,13 @@ signedRotateEvidence ::
     [SignKeyDSIGN Ed25519DSIGN] ->
     [(Int, ByteString)] ->
     AdvanceEvidence
-signedRotateEvidence env input fixture signers receipts =
+signedRotateEvidence _env _input fixture signers receipts =
     unsigned
-        { aeCtrlSigs = indexedSignaturesOver preimage signers
+        { aeCtrlSigs = indexedSignaturesOver (aeEventBytes unsigned) signers
         , aeWitReceipts = receipts
         }
   where
     unsigned = rsUnsignedEvidence fixture
-    message =
-        reconstructAdvanceMessage
-            (rotateSpentCheckpoint env input)
-            (rsCreated fixture)
-            (aeWitCut unsigned)
-            (aeWitAdd unsigned)
-    preimage = canonicalCbor message
 
 loadCloseStoryFixture :: IO CloseStoryFixture
 loadCloseStoryFixture = do

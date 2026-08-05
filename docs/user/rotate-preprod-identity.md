@@ -37,18 +37,40 @@ $ kli export --name org --alias org > rotation.cesr
 lineage, native sequence, old next-key commitments, KERI event signatures,
 witness delta, incoming witness set, and receipt threshold.
 
-## Why signing has two steps
+## Why there is only one signing step
 
-The native signatures in the KEL cover the exact KERI `rot` event. The
-deployed V1 validator separately requires the rotated keys to sign an
-`AdvanceMessage` that binds the live Cardano checkpoint outref and successor
-state. Substituting the KERI event signatures would be invalid.
+There is one signing step: the native KERI `rot` event signatures produced by
+`kli rotate` above. `ckeri advance`'s on-chain validator (#219) verifies the
+rotated keys' signatures directly against the KERI event bytes exported in
+`rotation.cesr` — the same bytes `kli export` already produced, with no
+second, Cardano-domain signature required.
 
-Keripy 1.3.5's `kli sign --text @file` opens a text file and UTF-8 re-encodes
-it. The canonical-CBOR `AdvanceMessage` is binary, so the stock command cannot
-sign those bytes exactly. The repository provides a small KLI-side helper
-which uses keripy's own habitat and current verifiers without exporting any
-private key:
+This has a consequence worth stating plainly: **anyone who holds the
+exported `rotation.cesr` — the public event plus its existing controller and
+witness signatures — can submit the advance transaction.** The controller
+does not need to be present or reachable at submission time, and a relayer,
+a witness, or any third party can settle the advance on the controller's
+behalf. The signatures were already produced once, by the controller, over
+data they control (the rotation itself); nothing about *who* submits the
+transaction or *which* Cardano UTxO happens to be live when it lands changes
+what was authorized. Anti-replay is enforced independently by the checkpoint's
+own sequence numbers, not by anything in the submitted signatures — see
+`specs/219-permissionless-advance/spec.md` for the full argument.
+
+**Provisional, pending #219 phase 2 (after #181):** the CLI still requires
+passing exactly one of `--signing-package DIR` or `--controller-signatures
+FILE` — that dispatch does not change in this slice. What changed is what the
+validator accepts *inside* that file: it no longer checks the Cardano-domain
+`AdvanceMessage` preimage, so `--controller-signatures` can now point at the
+KERI `rot` event signatures already present in `rotation.cesr`, unmodified —
+the separate Cardano-domain signing step (`scripts/kli-sign-advance.py`,
+signing the `AdvanceMessage` preimage) is no longer required to produce a
+file the validator accepts. The two-step `--signing-package` /
+`kli-sign-advance.py` procedure below still works and remains available, but
+is no longer the only way to get an accepted `--controller-signatures` file;
+both paths are scheduled for removal once #181's transaction-building rework
+lands and drops the `--signing-package`/`--controller-signatures` flags
+entirely:
 
 ```console
 $ ckeri advance \
@@ -83,6 +105,12 @@ outref changes.
 
 All `ckeri` settings use `opt-env-conf`; options, environment variables, and
 YAML are equivalent. `optparse-applicative` is not used.
+
+The CLI still requires `--controller-signatures FILE` (or
+`--signing-package`, see above) — that flag is not going away in this slice.
+What is provisional is only what the *validator* checks inside that file: it
+no longer requires a Cardano-domain signature, so the file may now simply be
+the KERI `rot` event signatures from `rotation.cesr`.
 
 ```console
 $ export CKERI_PAYER=/run/secrets/payment.skey

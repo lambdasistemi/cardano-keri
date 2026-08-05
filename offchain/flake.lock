@@ -66,6 +66,22 @@
         "type": "github"
       }
     },
+    "aikenNixpkgs": {
+      "locked": {
+        "lastModified": 1784120854,
+        "narHash": "sha256-KesHgItiZPgGX740axSiQLcIQ8D24MDqNpkKYWIek8k=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "753cc8a3a87467296ddd1fa93f0cc3e81120ee46",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "753cc8a3a87467296ddd1fa93f0cc3e81120ee46",
+        "type": "github"
+      }
+    },
     "blst": {
       "flake": false,
       "locked": {
@@ -1831,6 +1847,7 @@
     "root": {
       "inputs": {
         "CHaP": "CHaP",
+        "aikenNixpkgs": "aikenNixpkgs",
         "bundlers": "bundlers",
         "cardano-node": "cardano-node",
         "cardano-node-clients": "cardano-node-clients",

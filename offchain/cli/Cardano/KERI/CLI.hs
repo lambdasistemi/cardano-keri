@@ -71,6 +71,7 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     readEndpointBoardManifest,
  )
 import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
+import Control.Exception (IOException, try)
 import Data.Text qualified as T
 import OptEnvConf qualified as Opt
 import System.Exit (exitFailure)
@@ -248,11 +249,36 @@ resolveConfiguredBackend settings =
 -- | Read and validate both manifests, dying concisely on either failure.
 loadManifests :: BackendCommonSettings -> IO (Manifest, EndpointBoardManifest)
 loadManifests settings = do
-    manifest <- readManifest (commonBackendManifest settings) >>= either dieConcisely pure
+    manifest <-
+        loadConfiguredManifest
+            "--manifest"
+            (commonBackendManifest settings)
+            readManifest
     boardManifest <-
-        readEndpointBoardManifest (commonBackendBoardManifest settings)
-            >>= either dieConcisely pure
+        loadConfiguredManifest
+            "--board-manifest"
+            (commonBackendBoardManifest settings)
+            readEndpointBoardManifest
     pure (manifest, boardManifest)
+
+loadConfiguredManifest ::
+    String ->
+    FilePath ->
+    (FilePath -> IO (Either String manifest)) ->
+    IO manifest
+loadConfiguredManifest option path readConfiguredManifest = do
+    result <- try @IOException (readConfiguredManifest path)
+    case result of
+        Left _ ->
+            dieConcisely $
+                "cannot open "
+                    <> option
+                    <> " path "
+                    <> path
+                    <> "; pass "
+                    <> option
+                    <> " with a readable path"
+        Right decoded -> either dieConcisely pure decoded
 
 dieConcisely :: String -> IO a
 dieConcisely message = do

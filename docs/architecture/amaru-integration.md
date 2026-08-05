@@ -120,16 +120,30 @@ The two models differ on the one property that matters for smart contracts:
 **does the chain verify the KERI cryptography, and can a downstream contract
 consume the current key?**
 
-A ledger backer **anchors**. It writes the SAID (digest) of a key event into a
-transaction and submits it. The chain records the digest — data availability,
-immutability, global ordering — and verifies the *backer's own* Cardano
-signature (its endorsement). The chain does **not** replay the controller's
-Ed25519 signatures or the pre-rotation chain; the KEL event is opaque bytes.
-The cryptographic verification stays off-chain, in the backer before it submits
+A ledger backer **anchors**. It writes the **full serialized KEL event** into a
+transaction as **metadata**: metadatum label `13456` for KELs and `13457` for
+schemas, chunked into 64-byte strings and carried as auxiliary data on an
+ordinary self-payment signed by the backer's own payment key
+([`src/backer/cardaning.py`](https://github.com/cardano-foundation/cardano-backer/blob/main/src/backer/cardaning.py)).
+The chain records those bytes — data availability of the complete log,
+immutability, global ordering — and verifies only the *backer's own* Cardano
+payment signature. It does **not** replay the controller's Ed25519 signatures
+or the pre-rotation chain; the KEL event is opaque bytes to the ledger. The
+cryptographic verification stays off-chain, in the backer before it submits
 and in watchers afterward. And because the anchor is metadata, it is **not
 script-consumable** — a Plutus validator cannot read `cur_key` out of it. The
 anchor is a timestamped receipt you *trust the backer to have earned honestly*
 ("tertiary root of trust").
+
+The writer is also **designated, not open**. The backer refuses any event for
+an AID whose KEL does not list it as a witness
+([`src/backer/backering.py`](https://github.com/cardano-foundation/cardano-backer/blob/main/src/backer/backering.py)),
+so what reaches the chain is selected by a party the controller chose. Two
+consequences follow. No on-chain evidence can establish that a backer *should*
+have anchored something and did not — omission is invisible to the ledger. And
+there is no notion of a *wrong* anchor: metadata cannot be rejected, so two
+contradictory events can both be anchored and the ledger holds no opinion about
+the conflict.
 
 The proposed cardano-keri MPFS plugin **would verify**. Its Aiken validators
 would check the derivation (`trie_key == blake2b_256(cbor{cur_pubkey,
@@ -148,9 +162,9 @@ verification**, trust-minimized.
 | | `cardano-backer` (anchor) | cardano-keri MPFS plugin design (verify + compose) |
 |---|---|---|
 | KERI event crypto checked on-chain? | ❌ off-chain; chain only orders + times + carries the backer's endorsement | Proposed: Ed25519 + pre-rotation + derivation in Aiken |
-| What the chain stores | opaque SAID / receipt | Proposed: script-readable `KeyState { cur_pubkey, next_digest, seq }` |
+| What the chain stores | full KEL event bytes as transaction metadata — readable off-chain, unreachable from a script | Proposed: script-readable `KeyState { cur_pubkey, next_digest, seq }` |
 | Can a Plutus contract consume `cur_key`? | ❌ no — it's metadata | Proposed: yes — CIP-31 reference input + inclusion proof |
-| Trust model | trust the backer did the off-chain check | Proposed: chain enforces the key-state binding |
+| Trust model | trust the designated backer did the off-chain check — and chose to submit at all | Proposed: chain enforces the key-state binding |
 | Gives KERI | ledger anchoring (order + availability) | Proposed: **composability** — on-chain authorization |
 
 The two are complementary, not competing: the backer gives KERI a *ledger

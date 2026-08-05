@@ -4,24 +4,24 @@
 //// verdict-for-verdict: the `AdvanceEvidence` record (the full keripy
 //// `rot` serialization, per-field value offsets, the witness-delta lists,
 //// the controller signatures, and the incoming-set witness receipts), the
-//// message reconstruction that feeds the frozen `advance_equalities`
-//// (eq1-eq8/W1-W3), the AE1-AE10 event-binding slice set (V6), and the
-//// incoming-set witness receipt gate (V7).
+//// direct `spent`-vs-`new` `advance_equalities` (eq2/eq5/W1-W3/eq6-eq8;
+//// #219: no reconstructed signed-message layer), the AE1-AE10
+//// event-binding slice set (V6), and the incoming-set witness receipt
+//// gate (V7).
 ////
-//// `advance_predicate` runs, in order: V4 (reconstruction + the frozen
-//// `advance_equalities`, with V5's controller-signature evidence folded
-//// in as the revealed-signer positions), V6 (AE1-AE10 event binding), V7
-//// (the receipt quorum). No SAID/blake3 proof is taken over the rot bytes
-//// (ratified QC): `d` and `p` spans are deliberately unchecked.
+//// `advance_predicate` runs, in order: V4 (`advance_equalities`, with
+//// V5's controller-signature evidence — verified against `event_bytes`
+//// directly, #219 — folded in as the revealed-signer positions), V6
+//// (AE1-AE10 event binding), V7 (the receipt quorum). No SAID/blake3 proof
+//// is taken over the rot bytes (ratified QC): `d` and `p` spans are
+//// deliberately unchecked.
 
-use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/message.{
-  AdvanceError, AdvanceInvalid, AdvanceMessage, AdvanceValid,
-  RevealedSuccessorSigners, SpentCheckpoint, advance_domain, advance_equalities,
-  deriveAidAssetName, qb64_aid, qb64_verkey,
+  AdvanceError, AdvanceInvalid, AdvanceValid, RevealedSuccessorSigners,
+  SpentCheckpoint, advance_equalities, qb64_aid, qb64_verkey,
 }
 use cardano_keri/checkpoint/registration.{
   qb64_witness_verkey, respell_hex, respell_threshold, slice_matches,
@@ -37,11 +37,11 @@ use cardano_keri/checkpoint/registration.{
 /// lists themselves, the controller signatures, and the incoming-set
 /// witness receipts.
 ///
-/// `ctrl_sigs` index into the RECONSTRUCTED `AdvanceMessage`'s
-/// `new_cur_keys` and sign its canonical-CBOR preimage — NOT the KERI
-/// event bytes (`event_bytes`). `wit_receipts` index into the DERIVED
-/// incoming witness set (the created datum's own `witnesses`, already
-/// W3-derived and eq7-pinned) and sign `event_bytes` exactly (O1).
+/// `ctrl_sigs` index into `NEW.cur_keys` and sign `event_bytes` directly
+/// (#219: mirrors registration's R7 — no reconstructed Cardano-domain
+/// message preimage). `wit_receipts` index into the DERIVED incoming
+/// witness set (the created datum's own `witnesses`, already W3-derived
+/// and eq7-pinned) and sign `event_bytes` exactly (O1).
 pub type AdvanceEvidence {
   event_bytes: ByteArray,
   off_t: Int,
@@ -58,45 +58,6 @@ pub type AdvanceEvidence {
   wit_add: List<ByteArray>,
   ctrl_sigs: List<(Int, ByteArray)>,
   wit_receipts: List<(Int, ByteArray)>,
-}
-
-// ---------------------------------------------------------
-// Message reconstruction (V4)
-// ---------------------------------------------------------
-
-/// The RECONSTRUCTED `AdvanceMessage`: the spent context's
-/// deployment/outref/prior fields, the created (successor) datum's own
-/// key-state fields, and the evidence's witness-delta lists. This is the
-/// only message shape the predicate ever consults — nothing
-/// message-shaped is caller-supplied beyond the delta lists (V4), which
-/// W1/W2 validate against the spent witness set and AE8/AE9 pin to the
-/// receipted event bytes.
-pub fn reconstruct_advance_message(
-  spent: SpentCheckpoint,
-  new: CheckpointDatumV1,
-  wit_cut: List<ByteArray>,
-  wit_add: List<ByteArray>,
-) -> AdvanceMessage {
-  AdvanceMessage {
-    domain: advance_domain,
-    network_id: spent.network_id,
-    checkpoint_policy_id: spent.policy_id,
-    aid_asset_name: deriveAidAssetName(new.cesr_aid),
-    cesr_aid: new.cesr_aid,
-    spent_txid: spent.txid,
-    spent_index: spent.index,
-    prior_seq: spent.seq,
-    prior_native_sn: spent.native_sn,
-    new_cur_keys: new.cur_keys,
-    new_cur_threshold: new.cur_threshold,
-    new_next_keys: new.next_keys,
-    new_next_threshold: new.next_threshold,
-    wit_cut,
-    wit_add,
-    new_toad: new.toad,
-    seq_to: new.seq,
-    native_sn_to: new.native_sn,
-  }
 }
 
 // ---------------------------------------------------------
@@ -248,9 +209,9 @@ pub type AdvancePredicateVerdict {
 /// receipt gate), in order.
 ///
 /// V5's controller evidence is the distinct positions of `ctrl_sigs` whose
-/// signature verifies over the reconstructed message's canonical-CBOR
-/// preimage against `NEW.cur_keys` at that position (bad index or bad
-/// signature never counts, never aborts — the `verified_positions`
+/// signature verifies over `event_bytes` directly (#219: mirrors
+/// registration's R7) against `NEW.cur_keys` at that position (bad index
+/// or bad signature never counts, never aborts — the `verified_positions`
 /// convention).
 ///
 /// V7 counts distinct indices of `wit_receipts` whose signature verifies
@@ -267,12 +228,13 @@ pub fn advance_predicate(
   new: CheckpointDatumV1,
   e: AdvanceEvidence,
 ) -> AdvancePredicateVerdict {
-  let msg = reconstruct_advance_message(spent, new, e.wit_cut, e.wit_add)
-  let preimage = cbor.serialise(msg)
   let revealed = RevealedSuccessorSigners(
-    keys_at(new.cur_keys, verified_indices(new.cur_keys, preimage, e.ctrl_sigs)),
+    keys_at(
+      new.cur_keys,
+      verified_indices(new.cur_keys, e.event_bytes, e.ctrl_sigs),
+    ),
   )
-  when advance_equalities(spent, msg, new, revealed) is {
+  when advance_equalities(spent, new, e.wit_cut, e.wit_add, revealed) is {
     AdvanceInvalid(err) -> AdvancePredicateInvalid(AdvMessageInvalid(err))
     AdvanceValid ->
       when event_binding(new, e) is {

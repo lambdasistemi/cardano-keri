@@ -1,20 +1,21 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.AdvanceSpec
-Description : #115 S4 pure advance predicate over keripy fixtures
+Description : #115 S4 / #219 pure advance predicate over keripy fixtures
 
 Fixture-driven hspec for "Cardano.KERI.AID.Checkpoint.Advance": the pure
-advance predicate (message reconstruction + eq1-eq8\/W1-W3, AE1-AE10
-event binding, the incoming-set witness receipt gate).
+advance predicate (direct @spent@-vs-@new@ equalities, eq2\/eq5\/W1-W3,
+AE1-AE10 event binding, the incoming-set witness receipt gate).
 
 Every honest artifact comes from the committed @advance.json@ keripy
 bundle (#115 S1): the witnessed\/keep\/downgrade rotation family,
-per-field offsets, and signer seeds. Controller signatures are produced
-HERE from the exported @rotation_current@ seeds, over the reconstructed
-'AdvanceMessage' canonical-CBOR preimage — never over the KERI event
-bytes (the bundle's own @rot_sigs@ sign @event_raw@ and MUST fail the
-controller-evidence gate). Incoming-set witness receipts, by contrast,
-sign @event_raw@ (O1) — the bundle's own @rot_witness_receipts@ are
-used directly, already indexed into the W3-derived incoming set.
+per-field offsets, and signer seeds. Controller signatures are the
+bundle's own @rot_sigs@ (@signing_target: "event_raw"@) — genuine KERI
+controller signatures over the raw @rot@ event bytes, consumed directly
+(#219: mirrors registration's R7, no reconstructed Cardano-domain
+message preimage; a stranger holding only the public event + these
+signatures can produce accepted evidence). Incoming-set witness receipts
+likewise sign @event_raw@ (O1) — the bundle's own @rot_witness_receipts@
+are used directly, already indexed into the W3-derived incoming set.
 
 Adversarial vectors are deterministic constructions over the honest
 artifacts (offset misdirection, delta malformations, stolen\/
@@ -59,7 +60,6 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     AdvanceError (..),
-    AdvanceMessage,
     SpentCheckpoint (..),
     deriveAidAssetName,
  )
@@ -164,7 +164,7 @@ data AdvCase = AdvCase
     , acCreated :: CheckpointDatumV1
     -- ^ The @NEW@ successor datum implied by the rot event.
     , acEvidence :: AdvanceEvidence
-    -- ^ Honest offsets + fresh preimage signatures + fixture receipts.
+    -- ^ Honest offsets, the fixture's own event_raw ctrl sigs + receipts.
     , acNewSet :: [ByteString]
     -- ^ The W3-derived incoming witness set.
     , acOldWitnesses :: [ByteString]
@@ -266,7 +266,6 @@ advCase doc key = do
                 , cdSeq = 1
                 , cdNativeSn = 1
                 }
-        msg = reconstructAdvanceMessage sc created cuts adds
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
@@ -282,7 +281,7 @@ advCase doc key = do
                 , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
-                , aeCtrlSigs = signAll msg rotSigners
+                , aeCtrlSigs = eventRawCtrlSigs
                 , aeWitReceipts = honestReceipts
                 }
     pure
@@ -351,13 +350,10 @@ mkSigner seed = genKeyDSIGN (mkSeedFromBytes seed)
 signOver :: SignKeyDSIGN Ed25519DSIGN -> ByteString -> ByteString
 signOver sk msg = rawSerialiseSigDSIGN (signDSIGN () msg sk)
 
--- | Indexed signatures of all given signers over an 'AdvanceMessage' preimage.
-signAll ::
-    AdvanceMessage -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
-signAll msg signers =
+-- | Indexed signatures of all given signers over a raw message.
+signAll :: ByteString -> [SignKeyDSIGN Ed25519DSIGN] -> [(Int, ByteString)]
+signAll preimage signers =
     [(j, signOver sk preimage) | (j, sk) <- zip [0 ..] signers]
-  where
-    preimage = canonicalCbor msg
 
 -- | The signer of a known raw verkey in an @(verkey, signer)@ association.
 signerFor ::
@@ -401,6 +397,7 @@ spec =
             eventBindingNegatives
             misdirectionFamily
             controllerEvidenceNegatives
+            permissionlessHoldsAndAntiReplay
             deltaMalformations
             receiptQuorumNegatives
 
@@ -581,13 +578,20 @@ controllerEvidenceNegatives =
                         `shouldBe` Left
                             (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
         it
-            "wrong preimage: KERI event_raw sigs MUST fail -> Eq6CurrentQuorumUnsatisfied"
+            "#219: a signature over the old AdvanceMessage CBOR preimage no longer verifies against event_bytes -> Eq6CurrentQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeCtrlSigs = acEventRawCtrlSigs c}
-                    `shouldBe` Left
-                        (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
+                let msg =
+                        reconstructAdvanceMessage
+                            (acSpent c)
+                            (acCreated c)
+                            (aeWitCut (acEvidence c))
+                            (aeWitAdd (acEvidence c))
+                    oldPreimageSigs = signAll (canonicalCbor msg) (acRotSigners c)
+                 in runAdvWith
+                        c
+                        (acEvidence c){aeCtrlSigs = oldPreimageSigs}
+                        `shouldBe` Left
+                            (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
         it "below threshold: 1 of kt=2 -> Eq6CurrentQuorumUnsatisfied" $
             \fx -> withCase fx "adv_wit_2key" $ \c ->
                 runAdvWith
@@ -600,13 +604,7 @@ controllerEvidenceNegatives =
         it
             "stolen full spent-current quorum (icp keys) cannot rotate -> Eq6CurrentQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                let msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            (acCreated c)
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    stolen = signAll msg (acIcpSigners c)
+                let stolen = signAll (acRaw c) (acIcpSigners c)
                  in runAdvWith c (acEvidence c){aeCtrlSigs = stolen}
                         `shouldBe` Left
                             (AdvMessageInvalid Eq6CurrentQuorumUnsatisfied)
@@ -614,19 +612,44 @@ controllerEvidenceNegatives =
             "substituted successor evidence (uncommitted board) -> Eq6PriorNextQuorumUnsatisfied"
             $ \fx -> withCase fx "adv_wit_2key" $ \c -> do
                 let substituted = (acCreated c){cdCurKeys = acIcpKeys c}
-                    msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            substituted
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    sigs = signAll msg (acIcpSigners c)
+                    sigs = signAll (acRaw c) (acIcpSigners c)
                 advancePredicate
                     (acSpent c)
                     substituted
                     (acEvidence c){aeCtrlSigs = sigs}
                     `shouldBe` Left
                         (AdvMessageInvalid Eq6PriorNextQuorumUnsatisfied)
+
+-- ---------------------------------------------------------------
+-- #219 permissionless-holds + anti-replay falsifiability (spec.md
+-- "Anti-replay analysis"). RED on the current (unmodified) validator.
+-- ---------------------------------------------------------------
+
+permissionlessHoldsAndAntiReplay :: SpecWith Value
+permissionlessHoldsAndAntiReplay =
+    describe "#219 permissionless-holds + anti-replay (eq5)" $ do
+        it
+            "adv_wit_2key: stranger evidence (event_bytes + rot_sigs only) accepted"
+            $ \fx -> withCase fx "adv_wit_2key" $ \c ->
+                runAdvWith c (acEvidence c) `shouldBe` Right ()
+        it
+            "adv_keep: stranger evidence (event_bytes + rot_sigs only) accepted"
+            $ \fx -> withCase fx "adv_keep" $ \c ->
+                runAdvWith c (acEvidence c) `shouldBe` Right ()
+        it
+            "seq skips ahead of spent.seq+1 (native_sn otherwise legitimate) -> Eq5SequenceMismatch"
+            $ \fx -> withCase fx "adv_wit_2key" $ \c ->
+                -- #219: ctrl_sigs verify against event_bytes directly,
+                -- independent of any created-datum field, so the honest
+                -- (already event_raw-signed) evidence needs no re-signing
+                -- for this datum-only mutation.
+                let skippedCreated =
+                        (acCreated c){cdSeq = cdSeq (acCreated c) + 1}
+                 in advancePredicate
+                        (acSpent c)
+                        skippedCreated
+                        (acEvidence c)
+                        `shouldBe` Left (AdvMessageInvalid Eq5SequenceMismatch)
 
 -- ---------------------------------------------------------------
 -- V4 delta malformations (W1/W2/eq7/eq8)
@@ -686,17 +709,10 @@ deltaMalformations =
             withCase fx "adv_wit_2key" $ \c -> do
                 let badToad = toInteger (length (acNewSet c)) + 5
                     created = (acCreated c){cdToad = badToad}
-                    msg =
-                        reconstructAdvanceMessage
-                            (acSpent c)
-                            created
-                            (aeWitCut (acEvidence c))
-                            (aeWitAdd (acEvidence c))
-                    sigs = signAll msg (acRotSigners c)
                 advancePredicate
                     (acSpent c)
                     created
-                    (acEvidence c){aeCtrlSigs = sigs}
+                    (acEvidence c)
                     `shouldBe` Left
                         (AdvMessageInvalid (Eq8CreatedIllFormed ToadRange))
 

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ckeri="${1:?usage: check-ckeri-cli.sh CKERI}"
+ckeri="$(realpath -- "${1:?usage: check-ckeri-cli.sh CKERI}")"
+worktree="$(pwd -P)"
 workspace="$(mktemp -d)"
 trap 'rm -rf "$workspace"' EXIT
+outside="$workspace/outside-checkout"
+mkdir "$outside"
 
 "$ckeri" --help | grep -q "deploy"
 "$ckeri" --help | grep -q "manifest"
@@ -110,4 +113,141 @@ expect_failure_path \
   "$ckeri" --config-file "$workspace/ckeri.yaml" manifest verify \
   --manifest option-marker.json
 
+run_outside_failure() {
+  local label="$1"
+  shift
+  local output
+  local rc
+  set +e
+  output="$(
+    cd "$outside"
+    env \
+      -u CKERI_CONFIG_FILE \
+      -u CKERI_MANIFEST \
+      -u CKERI_BOARD_MANIFEST \
+      -u CKERI_BACKEND \
+      -u CKERI_ENDPOINT \
+      "$ckeri" "$@" 2>&1
+  )"
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    echo "$label: expected ckeri to fail" >&2
+    exit 1
+  fi
+  printf '%s\n' "$output"
+}
+
+require_contains() {
+  local label="$1"
+  local needle="$2"
+  local output="$3"
+  if ! grep -Fq -- "$needle" <<<"$output"; then
+    printf '%s: expected output to contain %s; got:\n%s\n' \
+      "$label" "$needle" "$output" >&2
+    exit 1
+  fi
+}
+
+reject_contains() {
+  local label="$1"
+  local needle="$2"
+  local output="$3"
+  if grep -Fq -- "$needle" <<<"$output"; then
+    printf '%s: output must not contain %s; got:\n%s\n' \
+      "$label" "$needle" "$output" >&2
+    exit 1
+  fi
+}
+
+require_single_line() {
+  local label="$1"
+  local output="$2"
+  if [[ "$output" == *$'\n'* ]]; then
+    printf '%s: expected one concise diagnostic line; got:\n%s\n' \
+      "$label" "$output" >&2
+    exit 1
+  fi
+}
+
+require_named_missing() {
+  local label="$1"
+  local option="$2"
+  local path="$3"
+  local output="$4"
+  require_single_line "$label" "$output"
+  require_contains "$label" "ckeri:" "$output"
+  require_contains "$label" "$option" "$output"
+  require_contains "$label" "$path" "$output"
+  require_contains "$label" "pass $option" "$output"
+  reject_contains "$label" "withBinaryFile" "$output"
+}
+
+aid=EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+board_output="$(
+  run_outside_failure \
+    missing-board-default \
+    status \
+    --aid "$aid" \
+    --backend koios \
+    --manifest "$worktree/deploy/preprod/m1-manifest.json"
+)"
+require_named_missing \
+  missing-board-default \
+  --board-manifest \
+  deploy/preprod/board-manifest.json \
+  "$board_output"
+
+missing_manifest="$outside/missing-m1-manifest.json"
+manifest_output="$(
+  run_outside_failure \
+    missing-explicit-manifest \
+    status \
+    --aid "$aid" \
+    --backend koios \
+    --manifest "$missing_manifest" \
+    --board-manifest "$worktree/deploy/preprod/board-manifest.json"
+)"
+require_named_missing \
+  missing-explicit-manifest \
+  --manifest \
+  "$missing_manifest" \
+  "$manifest_output"
+
+printf '{' >"$outside/malformed-m1-manifest.json"
+malformed_manifest_output="$(
+  run_outside_failure \
+    malformed-manifest \
+    status \
+    --aid "$aid" \
+    --backend koios \
+    --manifest "$outside/malformed-m1-manifest.json" \
+    --board-manifest "$worktree/deploy/preprod/board-manifest.json"
+)"
+require_single_line malformed-manifest "$malformed_manifest_output"
+require_contains \
+  malformed-manifest \
+  "ckeri: Unexpected end-of-input, expecting record key literal or }" \
+  "$malformed_manifest_output"
+reject_contains malformed-manifest "pass --manifest" "$malformed_manifest_output"
+
+printf '{' >"$outside/malformed-board-manifest.json"
+malformed_board_output="$(
+  run_outside_failure \
+    malformed-board-manifest \
+    status \
+    --aid "$aid" \
+    --backend koios \
+    --manifest "$worktree/deploy/preprod/m1-manifest.json" \
+    --board-manifest "$outside/malformed-board-manifest.json"
+)"
+require_single_line malformed-board-manifest "$malformed_board_output"
+require_contains \
+  malformed-board-manifest \
+  "ckeri: Unexpected end-of-input, expecting record key literal or }" \
+  "$malformed_board_output"
+reject_contains malformed-board-manifest "pass --board-manifest" "$malformed_board_output"
+
 echo "ckeri opt-env-conf surface and option/environment/YAML precedence: OK"
+echo "ckeri outside-checkout manifest diagnostics: 4/4 exercised"

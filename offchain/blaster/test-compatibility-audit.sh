@@ -10,6 +10,7 @@ lock="${2:-}"
 source_root="${3:-}"
 seed="${4:-}"
 base="${5:-}"
+expected_commit="${6:-}"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -34,10 +35,13 @@ validate_a1() {
 }
 
 validate_a2() {
-  local out="$1"
+  local out="$1" probe
   [[ $(reference_count "$out") -gt 0 ]] || return 1
   grep -Eq '^AUDIT-CONTROL id=[^ ]+ kind=positive-resolution .*outcome=ESTABLISHED$' "$out" || return 1
-  grep -Eq '^AUDIT-REFERENCE scope=tracked .*reference=[^ ]*versionToSemanticsVariant .*resolved=true outcome=ESTABLISHED$' "$out"
+  for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
+    grep -Eq "^AUDIT-REFERENCE scope=tracked .*reference=[^ ]*$probe .*resolved=true outcome=ESTABLISHED$" "$out" \
+      || return 1
+  done
 }
 
 validate_a3() {
@@ -100,7 +104,7 @@ expect_red() {
 
 prove_assertions_can_fail() {
   local good="$work/good.out" mutant="$work/mutant.out" head
-  head="$(git rev-parse HEAD 2>/dev/null || printf fixture-commit)"
+  head="${expected_commit:-fixture-commit}"
   local lean_rev plutus_rev ledger_rev
   lean_rev="$(jq -er 'def direct($x): .nodes[.nodes[.root].inputs[$x]]; direct("leanBlaster").locked.rev' "$lock")"
   plutus_rev="$(jq -er 'def direct($x): .nodes[.nodes[.root].inputs[$x]]; direct("plutusCoreBlaster").locked.rev' "$lock")"
@@ -111,21 +115,24 @@ prove_assertions_can_fail() {
     printf 'AUDIT-PIN leanBlaster=%s outcome=ESTABLISHED\n' "$lean_rev"
     printf 'AUDIT-PIN plutusCoreBlaster=%s outcome=ESTABLISHED\n' "$plutus_rev"
     printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$ledger_rev"
-    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.CekMachine.versionToSemanticsVariant resolved=true outcome=ESTABLISHED'
-    printf '%s\n' 'AUDIT-RESOLVED count=1'
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Evidence.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.BuiltinFunctions.Evaluate.evaluateBuiltinFunction resolved=true outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster reference=PlutusCore.Default.BuiltinSemanticsVariant.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-RESOLVED count=2'
     printf '%s\n' 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0'
     printf '%s\n' 'AUDIT-CONTROL id=source-positive kind=positive-resolution expected=resolve observed=resolved outcome=ESTABLISHED'
-    printf '%s\n' 'AUDIT-REFERENCE scope=seeded-retired source_path=offchain/blaster/CompatibilityRetiredReference.lean target_package=plutusCoreBlaster reference=PlutusCore.Default.defaultFunSemanticsVariantE resolved=false outcome=REFUTED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=seeded-retired source_path=offchain/blaster/CompatibilityRetiredReference.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticsVariant resolved=false outcome=REFUTED'
     printf '%s\n' 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=1'
     printf '%s\n' 'AUDIT-CONTROL id=retired-reference kind=seeded-retired-reference expected=unresolved observed=unresolved outcome=REFUTED'
-    printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=false selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantC outcome=REFUTED'
+    printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=true selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantE outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-VERDICT PASS'
   } >"$good"
 
-  sed 's/AUDIT-RESOLVED count=1/AUDIT-RESOLVED count=2/' "$good" >"$mutant"
+  sed 's/AUDIT-RESOLVED count=2/AUDIT-RESOLVED count=3/' "$good" >"$mutant"
   expect_red INV-A1 incomplete-resolution-set validate_a1 "$mutant"
   grep -v 'kind=positive-resolution' "$good" >"$mutant"
   expect_red INV-A2 missing-positive-control validate_a2 "$mutant"
+  grep -v 'reference=.*defaultFunSemanticsVariantC ' "$good" >"$mutant"
+  expect_red INV-A2 missing-required-probe validate_a2 "$mutant"
   grep -v 'scope=tracked+seeded-retired\|scope=seeded-retired\|kind=seeded-retired-reference' "$good" >"$mutant"
   expect_red INV-A3 skipped-seeded-reference validate_a3 "$mutant"
   sed "s/leanBlaster=$lean_rev/leanBlaster=transcribed-stale-pin/" "$good" >"$mutant"
@@ -153,17 +160,24 @@ prove_assertions_can_fail() {
 # contract look successfully falsified.
 prove_assertions_can_fail
 
-repo_root="$(git rev-parse --show-toplevel)"
 changed_lean="$work/changed-lean"
-git -C "$repo_root" diff --name-only "$base" -- \
-  offchain/blaster/KeriBlaster.lean offchain/blaster/KeriBlaster \
-  >"$changed_lean"
+repo_root=''
+if repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  git -C "$repo_root" diff --name-only "$base" -- \
+    offchain/blaster/KeriBlaster.lean offchain/blaster/KeriBlaster \
+    >"$changed_lean"
+  [[ -n $expected_commit ]] || expected_commit="$(git -C "$repo_root" rev-parse HEAD)"
+else
+  : >"$changed_lean"
+fi
 validate_a9 "$changed_lean" || fail 'INV-A9: tracked Lean bridge source changed'
+[[ -n $expected_commit ]] || fail 'expected audited commit is unavailable'
 
-grep -Rq 'versionToSemanticsVariant' \
-  "$source_root/KeriBlaster.lean" "$source_root/KeriBlaster" \
-  || fail 'positive source reference is absent'
-grep -Fq 'defaultFunSemanticsVariantE' "$seed" \
+for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
+  grep -Rq "$probe" "$source_root/KeriBlaster.lean" "$source_root/KeriBlaster" \
+    || fail "positive source reference is absent: $probe"
+done
+grep -Fq 'cekExecuteProgramWithSemanticsVariant' "$seed" \
   || fail 'seeded retired reference is absent from its artefact'
 
 if [[ ! -x $runner ]]; then
@@ -172,9 +186,13 @@ if [[ ! -x $runner ]]; then
   exit 68
 fi
 
-before_lock="$(sha256sum "$repo_root/offchain/flake.lock" | cut -d ' ' -f 1)"
+before_lock="$(sha256sum "$lock" | cut -d ' ' -f 1)"
+before_worktree_lock=''
+if [[ -n $repo_root ]]; then
+  before_worktree_lock="$(sha256sum "$repo_root/offchain/flake.lock" | cut -d ' ' -f 1)"
+fi
 "$runner" | tee "$work/audit.out"
-after_lock="$(sha256sum "$repo_root/offchain/flake.lock" | cut -d ' ' -f 1)"
+after_lock="$(sha256sum "$lock" | cut -d ' ' -f 1)"
 
 validate_a1 "$work/audit.out" || fail 'INV-A1 resolution set is incomplete'
 validate_a2 "$work/audit.out" || fail 'INV-A2 positive resolution control failed'
@@ -184,7 +202,12 @@ validate_a5 "$work/audit.out" || fail 'INV-A5 variant answer is absent'
 validate_a6 "$work/audit.out" || fail 'INV-A6 outcome discipline failed'
 validate_a7 "$work/audit.out" || fail 'INV-A7 controls were not both reached'
 validate_a8 "$before_lock" "$after_lock" || fail 'INV-A8 audit mutated flake.lock'
-validate_a10 "$work/audit.out" "$(git -C "$repo_root" rev-parse HEAD)" \
+if [[ -n $repo_root ]]; then
+  after_worktree_lock="$(sha256sum "$repo_root/offchain/flake.lock" | cut -d ' ' -f 1)"
+  validate_a8 "$before_worktree_lock" "$after_worktree_lock" \
+    || fail 'INV-A8 audit mutated the checkout lock'
+fi
+validate_a10 "$work/audit.out" "$expected_commit" \
   || fail 'INV-A10 audit identity does not name HEAD'
 
 argument_rc=0

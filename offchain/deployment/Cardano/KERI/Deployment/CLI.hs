@@ -10,6 +10,7 @@ module Cardano.KERI.Deployment.CLI (
     DeploySettings (..),
     VerifySettings (..),
     RegisterSettings (..),
+    RegisterRuntime (..),
     AdvanceSettings (..),
     CloseSettings (..),
     BoardInstructions (..),
@@ -30,6 +31,7 @@ module Cardano.KERI.Deployment.CLI (
     runDeploy,
     runVerify,
     runRegister,
+    runRegisterWith,
     runAdvance,
     runClose,
     runBoard,
@@ -47,6 +49,7 @@ import Cardano.KERI.Deployment.Advance (
  )
 import Cardano.KERI.Deployment.AdvanceTransaction qualified as AdvanceTx
 import Cardano.KERI.Deployment.ChainIndex (
+    ChainAssetUtxo,
     KoiosToken (..),
     matchesReference,
     queryAssetUtxos,
@@ -176,6 +179,33 @@ data RegisterSettings = RegisterSettings
     , registerEscrowLovelace :: Integer
     }
     deriving stock (Show, Eq)
+
+{- | Read-only effects used by the register preflight and its fail-closed
+composition boundary. Keeping them explicit makes the required execution
+order observable without granting tests a funding, signing, or submission
+capability.
+-}
+data RegisterRuntime = RegisterRuntime
+    { registerReadKel :: FilePath -> IO BS.ByteString
+    , registerReadManifest :: FilePath -> IO (Either String Manifest)
+    , registerQueryAssets ::
+        Text ->
+        Maybe KoiosToken ->
+        Text ->
+        Text ->
+        IO [ChainAssetUtxo]
+    , registerReadBoardManifest ::
+        FilePath ->
+        IO (Either String EndpointBoardManifest)
+    , registerQueryBoard ::
+        Text ->
+        Maybe KoiosToken ->
+        Text ->
+        Text ->
+        IO [BoardEntry]
+    , registerWriteLine :: String -> IO ()
+    , registerStop :: String -> IO ()
+    }
 
 data AdvanceSettings = AdvanceSettings
     { advanceNetwork :: Text
@@ -1328,20 +1358,28 @@ registerPreflight network networkMagic allowUnlisted allowExisting existingCount
                    \--allow-unlisted-witnesses to acknowledge reduced watchability"
 
 runRegister :: RegisterSettings -> IO ()
-runRegister settings = do
+runRegister = runRegisterWith productionRegisterRuntime
+
+{- | Execute every read-only registration preflight effect in order, then
+stop before the Slice 4 transaction composition boundary.
+-}
+runRegisterWith :: RegisterRuntime -> RegisterSettings -> IO ()
+runRegisterWith runtime settings = do
     when (registerTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
-    kel <- BS.readFile (registerKel settings)
+    kel <- registerReadKel runtime (registerKel settings)
     inception <- either fail pure (parseInceptionExport kel)
     manifest <-
-        readManifest (registerManifest settings) >>= either fail pure
+        registerReadManifest runtime (registerManifest settings)
+            >>= either fail pure
     plan <-
         either
             fail
             pure
             (mkRegistrationPlan manifest (registerEscrowLovelace settings) inception)
     existing <-
-        queryAssetUtxos
+        registerQueryAssets
+            runtime
             (registerKoiosUrl settings)
             (registerKoiosToken settings)
             (planCheckpointPolicy plan)
@@ -1352,11 +1390,13 @@ runRegister settings = do
             then pure []
             else do
                 boardManifest <-
-                    readEndpointBoardManifest
+                    registerReadBoardManifest
+                        runtime
                         (registerBoardManifest settings)
                         >>= either fail pure
                 let boardInfo = endpointBoardManifestInfo boardManifest
-                queryBoardCatalog
+                registerQueryBoard
+                    runtime
                     (registerKoiosUrl settings)
                     (registerKoiosToken settings)
                     (endpointBoardPolicyId boardInfo)
@@ -1378,7 +1418,7 @@ runRegister settings = do
         ( registerAllowUnlistedWitnesses settings
             && not (null missing)
         )
-        ( putStrLn $
+        ( registerWriteLine runtime $
             "warning: "
                 <> show (length missing)
                 <> "/"
@@ -1388,11 +1428,24 @@ runRegister settings = do
         )
     when
         (registerAllowExistingCheckpoint settings && not (null existing))
-        ( putStrLn
+        ( registerWriteLine
+            runtime
             "warning: sovereign repeat registration creates another fully \
             \funded checkpoint copy; the benign residual is intentional"
         )
-    fail "registering pending #181 Slice 4 composition"
+    registerStop runtime "registering pending #181 Slice 4 composition"
+
+productionRegisterRuntime :: RegisterRuntime
+productionRegisterRuntime =
+    RegisterRuntime
+        { registerReadKel = BS.readFile
+        , registerReadManifest = readManifest
+        , registerQueryAssets = queryAssetUtxos
+        , registerReadBoardManifest = readEndpointBoardManifest
+        , registerQueryBoard = queryBoardCatalog
+        , registerWriteLine = putStrLn
+        , registerStop = fail
+        }
 
 runAdvance :: AdvanceSettings -> IO ()
 runAdvance settings = do

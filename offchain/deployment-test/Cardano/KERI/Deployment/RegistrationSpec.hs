@@ -93,9 +93,12 @@ import Cardano.Ledger.Address (
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (TransactionScriptFailure (UnknownTxIn))
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (Datum (Datum))
+import Cardano.Ledger.Api.Scripts.Data qualified as LedgerData
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
+    certsTxBodyL,
     collateralInputsTxBodyL,
     feeTxBodyL,
     inputsTxBodyL,
@@ -110,17 +113,22 @@ import Cardano.Ledger.Api.Tx.Out (
     datumTxOutL,
     referenceScriptTxOutL,
  )
-import Cardano.Ledger.Api.Tx.Wits (addrTxWitsL)
+import Cardano.Ledger.Api.Tx.Wits (addrTxWitsL, rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (SJust), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxCert (
+    ConwayDelegCert (ConwayRegCert),
+    ConwayTxCert (ConwayTxCertDeleg),
+ )
 import Cardano.Ledger.Core (
     Script,
     TxOut,
     coinTxOutL,
     mkBasicTx,
     mkBasicTxOut,
+    ppKeyDepositL,
  )
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (StakeRefNull))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..), extractHash, unsafeMakeSafeHash)
@@ -138,6 +146,7 @@ import Data.ByteString.Short qualified as SBS
 import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.List (elemIndex)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
@@ -405,13 +414,32 @@ syntheticPlan =
                 "stake_test"
                 (serialiseAccountAddress lifecycleRewardAccount)
         , planEscrowLovelace = 5_000_000
-        , planPremintRedeemer = plutusDataJson (Constr 0 [])
-        , planCheckpointRedeemer = plutusDataJson (Constr 0 [])
-        , planProofBurnRedeemer = plutusDataJson (Constr 0 [])
-        , planObserverRedeemer = plutusDataJson (Constr 0 [])
-        , planLifecycleCertificateRedeemer = plutusDataJson (I 0)
-        , planCheckpointDatum = plutusDataJson (Constr 0 [I 1])
+        , planPremintRedeemer = plutusDataJson syntheticPremintRedeemer
+        , planCheckpointRedeemer = plutusDataJson syntheticCheckpointRedeemer
+        , planProofBurnRedeemer = plutusDataJson syntheticProofBurnRedeemer
+        , planObserverRedeemer = plutusDataJson syntheticObserverRedeemer
+        , planLifecycleCertificateRedeemer =
+            plutusDataJson syntheticLifecycleRedeemer
+        , planCheckpointDatum = plutusDataJson syntheticCheckpointDatum
         }
+
+syntheticPremintRedeemer :: Data
+syntheticPremintRedeemer = Constr 6 [I 606]
+
+syntheticCheckpointRedeemer :: Data
+syntheticCheckpointRedeemer = Constr 1 [I 101]
+
+syntheticProofBurnRedeemer :: Data
+syntheticProofBurnRedeemer = Constr 2 [I 202]
+
+syntheticObserverRedeemer :: Data
+syntheticObserverRedeemer = Constr 3 [I 303]
+
+syntheticLifecycleRedeemer :: Data
+syntheticLifecycleRedeemer = Constr 4 [I 404]
+
+syntheticCheckpointDatum :: Data
+syntheticCheckpointDatum = Constr 5 [I 505]
 
 lifecycleRewardAccount :: AccountAddress
 lifecycleRewardAccount =
@@ -549,6 +577,61 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
             Right _registerTxId -> pure ()
         pure ()
 
+    it "premint freezes lifecycle certificate, deposit, redeemers, mint, references, collateral, signing, and settlement" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        let config = mkConfig runtime (standInQueryAsset signedRef)
+            premintInputs =
+                [ (stubTxIn 1, plainTxOut 200_000_000)
+                , (stubTxIn 2, plainTxOut 50_000_000)
+                ]
+        result <- premintOne config syntheticPlan premintInputs True
+        case result of
+            Left err -> fail ("expected lifecycle premint success, got " <> show err)
+            Right premintTxId -> do
+                signed <- readIORef signedRef
+                case signed of
+                    Nothing -> fail "trSign was never called: no premint tx was built"
+                    Just tx -> do
+                        let body = tx ^. bodyTxL
+                            MultiAsset minted = body ^. mintTxBodyL
+                            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+                            expectedCertificate =
+                                ConwayTxCertDeleg $
+                                    ConwayRegCert
+                                        (ScriptHashObj lifecycleScriptHash)
+                                        (SJust $ testPParams ^. ppKeyDepositL)
+                        minted
+                            `shouldBe` Map.singleton
+                                (PolicyID proofScriptHash)
+                                (Map.singleton syntheticProofAssetName 1)
+                        body ^. inputsTxBodyL
+                            `shouldBe` Set.singleton (stubTxIn 1)
+                        body ^. collateralInputsTxBodyL
+                            `shouldBe` Set.singleton (stubTxIn 2)
+                        body ^. referenceInputsTxBodyL
+                            `shouldBe` Set.fromList
+                                [proofReferenceInput, lifecycleReferenceInput]
+                        toList (body ^. certsTxBodyL)
+                            `shouldBe` [expectedCertificate]
+                        redeemerData
+                            (mintPurpose (PolicyID proofScriptHash) minted)
+                            redeemers
+                            `shouldBe` Just syntheticPremintRedeemer
+                        redeemerData
+                            (ConwayCertifying (AsIx 0))
+                            redeemers
+                            `shouldBe` Just syntheticLifecycleRedeemer
+                        length (tx ^. witsTxL . addrTxWitsL) `shouldBe` 1
+                        transactionId tx `shouldBe` premintTxId
+                        transactionId tx `shouldSatisfy` (/= disagreeingId)
+                order <- reverse <$> readIORef callsRef
+                take 1 order `shouldBe` ["query"]
+                order `shouldContain` ["evaluate"]
+                drop (length order - 3) order
+                    `shouldBe` ["sign", "submit", "observe"]
+
     it "registration freezes datum, mint, reference inputs, fee, change, collateral, signing, tx id, submission, and settlement" $ do
         callsRef <- newIORef []
         signedRef <- newIORef Nothing
@@ -573,6 +656,7 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                             outputs = toList (body ^. outputsTxBodyL)
                             MultiAsset minted = body ^. mintTxBodyL
                             Withdrawals withdrawals = body ^. withdrawalsTxBodyL
+                            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
                         -- mint: +1 checkpoint, -1 hash-proof, exactly these
                         -- two policies, no third.
                         minted
@@ -592,7 +676,10 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                             [checkpointOut] -> do
                                 checkpointOut ^. addrTxOutL `shouldBe` checkpointAddr
                                 case checkpointOut ^. datumTxOutL of
-                                    Datum _ -> pure ()
+                                    Datum binaryDatum ->
+                                        let LedgerData.Data datum =
+                                                LedgerData.binaryDataToData binaryDatum
+                                         in datum `shouldBe` syntheticCheckpointDatum
                                     other -> fail ("expected inline checkpoint datum, got " <> show other)
                             other -> fail ("expected exactly one checkpoint output, got " <> show (length other))
                         -- change: a second output at the funding address.
@@ -619,6 +706,21 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                         -- configured reward account.
                         Map.lookup lifecycleRewardAccount withdrawals
                             `shouldBe` Just (Coin 0)
+                        -- Every same-typed Plutus value is deliberately
+                        -- distinct, freezing its purpose and preventing
+                        -- argument swaps from surviving this proof.
+                        redeemerData
+                            (mintPurpose (PolicyID checkpointScriptHash) minted)
+                            redeemers
+                            `shouldBe` Just syntheticCheckpointRedeemer
+                        redeemerData
+                            (mintPurpose (PolicyID proofScriptHash) minted)
+                            redeemers
+                            `shouldBe` Just syntheticProofBurnRedeemer
+                        redeemerData
+                            (ConwayRewarding (AsIx 0))
+                            redeemers
+                            `shouldBe` Just syntheticObserverRedeemer
                         -- signing: exactly one vkey witness attached.
                         length (tx ^. witsTxL . addrTxWitsL) `shouldBe` 1
                         -- the reported id is the signed tx's own pure id,
@@ -686,6 +788,23 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 detail `shouldContain` "proof reference script hash"
             other -> fail ("expected reference-script mismatch, got " <> show other)
         readIORef callsRef >>= (`shouldBe` [])
+
+mintPurpose ::
+    PolicyID ->
+    Map.Map PolicyID (Map.Map AssetName Integer) ->
+    ConwayPlutusPurpose AsIx ConwayEra
+mintPurpose policy minted =
+    ConwayMinting . AsIx . fromIntegral . fromJust $
+        elemIndex policy (Map.keys minted)
+
+redeemerData ::
+    ConwayPlutusPurpose AsIx ConwayEra ->
+    Map.Map
+        (ConwayPlutusPurpose AsIx ConwayEra)
+        (LedgerData.Data ConwayEra, ExUnits) ->
+    Maybe Data
+redeemerData purpose redeemers =
+    (\(LedgerData.Data datum, _units) -> datum) <$> Map.lookup purpose redeemers
 
 -- ---------------------------------------------------------------------------
 -- Error taxonomy through the real register path.

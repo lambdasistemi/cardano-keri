@@ -250,6 +250,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
+    Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
@@ -257,6 +258,7 @@ test-suite deployment-tests
   build-depends:
     , aeson
     , base
+    , bech32
     , bytestring
     , cardano-crypto-class
     , cardano-keri
@@ -269,6 +271,7 @@ test-suite deployment-tests
     , cardano-node-clients
     , cardano-tx-tools:tx-build
     , containers
+    , directory
     , hspec                      >=2.11 && <2.12
     , http-conduit
     , memory                     >=0.18 && <0.19

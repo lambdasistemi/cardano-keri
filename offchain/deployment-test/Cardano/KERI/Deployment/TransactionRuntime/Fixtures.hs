@@ -52,7 +52,7 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Data.Int (Int64)
 import Data.Map.Strict qualified as Map
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.))
 
 {- | Real, non-degenerate Conway protocol parameters. Non-zero minimum fee
 coefficients, a real @coinsPerUTxOByte@, mainnet-shaped 'ppMaxTxExUnits', a
@@ -63,15 +63,31 @@ non-vacuous work.
 -}
 testPParams :: PParams ConwayEra
 testPParams =
-    emptyPParams
-        & ppTxFeePerByteL .~ CoinPerByte (compactCoinOrError (Coin 44))
-        & ppTxFeeFixedL .~ Coin 155_381
-        & ppCoinsPerUTxOByteL .~ CoinPerByte (compactCoinOrError (Coin 4_310))
-        & ppKeyDepositL .~ Coin 2_000_000
-        & ppMaxTxExUnitsL .~ ExUnits 14_000_000 10_000_000_000
-        & ppCollateralPercentageL .~ 150
-        & ppMaxCollateralInputsL .~ 3
-        & ppCostModelsL .~ testCostModels
+    requireNonZeroKeyDeposit $
+        emptyPParams
+            & ppTxFeePerByteL .~ CoinPerByte (compactCoinOrError (Coin 44))
+            & ppTxFeeFixedL .~ Coin 155_381
+            & ppCoinsPerUTxOByteL .~ CoinPerByte (compactCoinOrError (Coin 4_310))
+            & ppKeyDepositL .~ Coin 2_000_000
+            & ppMaxTxExUnitsL .~ ExUnits 14_000_000 10_000_000_000
+            & ppCollateralPercentageL .~ 150
+            & ppMaxCollateralInputsL .~ 3
+            & ppCostModelsL .~ testCostModels
+
+{- | Fail closed if the fixture's lifecycle-certificate oracle becomes
+degenerate. This guard deliberately reads the completed fixture rather than
+the literal assigned above, so a future record-update refactor cannot bypass
+the invariant accidentally.
+-}
+requireNonZeroKeyDeposit :: PParams ConwayEra -> PParams ConwayEra
+requireNonZeroKeyDeposit pparams =
+    case pparams ^. ppKeyDepositL of
+        Coin deposit
+            | deposit > 0 -> pparams
+        deposit ->
+            error $
+                "Fixtures.testPParams: ppKeyDepositL must be positive, got "
+                    <> show deposit
 
 testCostModels :: CostModels
 testCostModels =

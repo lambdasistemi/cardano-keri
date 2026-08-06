@@ -144,7 +144,6 @@ library indexer
     , bech32
     , bytestring
     , cardano-crypto-class
-    , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-api
     , cardano-ledger-binary
@@ -269,17 +268,14 @@ test-suite deployment-tests
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
-    , cardano-tx-tools:tx-build
     , containers
     , directory
-    , hspec                      >=2.11 && <2.12
+    , hspec                    >=2.11 && <2.12
     , http-conduit
-    , memory                     >=0.18 && <0.19
+    , memory                   >=0.18 && <0.19
     , microlens
     , plutus-core
-    , temporary
     , text
-    , unix
 
   autogen-modules:  Paths_cardano_keri
 
@@ -392,6 +388,125 @@ test-suite registration-migration-tests
     , hspec                      >=2.11 && <2.12
     , hspec-core                 >=2.11 && <2.12
     , memory                     >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , process
+    , text
+
+  autogen-modules:  Paths_cardano_keri
+
+-- #181 Slice 3: focused in-process Advance migration proof. The dedicated
+-- executable rejects zero Hspec selection and carries the restricted-PATH
+-- positive control used by advance-path-check.
+test-suite advance-migration-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          advance-migration/AdvanceMigrationMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:deployment
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , containers
+    , directory
+    , filepath
+    , hspec                    >=2.11 && <2.12
+    , hspec-core               >=2.11 && <2.12
+    , memory                   >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , process
+    , text
+
+  autogen-modules:  Paths_cardano_keri
+
+-- #181 Slice 3: focused in-process Close migration proof.
+test-suite close-migration-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          close-migration/CloseMigrationMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.CloseSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:deployment
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , containers
+    , directory
+    , filepath
+    , hspec                    >=2.11 && <2.12
+    , hspec-core               >=2.11 && <2.12
+    , memory                   >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , process
+    , text
+
+  autogen-modules:  Paths_cardano_keri
+
+-- #181 Slice 3: focused in-process endpoint-board post/update/retire proof.
+test-suite board-migration-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   deployment-test
+  main-is:          board-migration/BoardMigrationMain.hs
+  other-modules:
+    Cardano.KERI.Deployment.EndpointBoardTransactionSpec
+    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
+    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:deployment
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , containers
+    , directory
+    , filepath
+    , hspec                    >=2.11 && <2.12
+    , hspec-core               >=2.11 && <2.12
+    , memory                   >=0.18 && <0.19
     , microlens
     , plutus-core
     , process

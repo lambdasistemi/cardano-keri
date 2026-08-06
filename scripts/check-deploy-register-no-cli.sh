@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# #181 Slice 2 — deploy/register in-process transaction path: Publisher.hs
-# and Registration.hs own no subprocess/cardano-cli transaction path, and
-# their retired internal runner fields. CLI parsing remains intentionally
-# unchanged until #181 Slice 4; only the register command's use is fenced.
+# #181 Slices 2-3 — all migrated deployment transaction modules own no
+# subprocess/cardano-cli path or retired runner configuration. CLI parsing
+# remains intentionally unchanged until #181 Slice 4; only the live tails are
+# fenced there.
 #
 # Proves itself able to fail before it is trusted to pass the real source:
 # a positive-control fixture deliberately contains a forbidden cardano-cli
@@ -13,6 +13,9 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fixture="$repo_root/scripts/fixtures/deploy-register-cardano-cli-positive-control.hs.txt"
 publisher="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Publisher.hs"
 registration="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Registration.hs"
+advance="$repo_root/offchain/deployment/Cardano/KERI/Deployment/AdvanceTransaction.hs"
+close="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CloseTransaction.hs"
+board="$repo_root/offchain/deployment/Cardano/KERI/Deployment/EndpointBoardTransaction.hs"
 
 subprocess_pattern='System\.Process|readProcessWithExitCode|callProcess|createProcess|cardano-cli'
 
@@ -23,11 +26,12 @@ fi
 echo "deploy-register-no-cli-guard: positive control OK (guard detects $fixture)"
 
 # This closes both the visible query and transaction-build-in-disguise paths.
-# CLI.hs legitimately keeps System.Process/cardano-cli for advance/close/
-# board (Slice 3 territory) so it is never scanned for this regex.
-violations="$(grep -nE "$subprocess_pattern" "$publisher" "$registration" || true)"
+# CLI.hs legitimately keeps its option/settings surface until Slice 4, so it
+# is never scanned for this regex.
+modules=("$publisher" "$registration" "$advance" "$close" "$board")
+violations="$(grep -nE "$subprocess_pattern" "${modules[@]}" || true)"
 if [ -n "$violations" ]; then
-  echo "deploy-register-no-cli-guard: Publisher/Registration still contain a subprocess transaction path:" >&2
+  echo "deploy-register-no-cli-guard: a migrated transaction module still contains a subprocess path:" >&2
   echo "$violations" >&2
   exit 1
 fi
@@ -35,9 +39,14 @@ fi
 retired_fields=(
   publishCardanoCli
   runnerCardanoCli
+  closeRunnerCardanoCli
+  boardRunnerCardanoCli
+  AdvanceRunnerConfig
+  CloseRunnerConfig
+  BoardRunnerConfig
 )
 for field in "${retired_fields[@]}"; do
-  survivors="$(grep -nF -- "$field" "$publisher" "$registration" || true)"
+  survivors="$(grep -nF -- "$field" "${modules[@]}" || true)"
   if [ -n "$survivors" ]; then
     echo "deploy-register-no-cli-guard: retired deploy/register cardano-cli field survives ($field):" >&2
     echo "$survivors" >&2
@@ -45,4 +54,4 @@ for field in "${retired_fields[@]}"; do
   fi
 done
 
-echo "deploy-register-no-cli-guard: OK — no subprocess path or retired runner field in Publisher/Registration"
+echo "deploy-register-no-cli-guard: OK — no subprocess path or retired runner surface in migrated modules"

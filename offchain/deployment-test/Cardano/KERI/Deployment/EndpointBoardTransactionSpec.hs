@@ -1,308 +1,451 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 
+{- |
+Module      : Cardano.KERI.Deployment.EndpointBoardTransactionSpec
+Description : #181 Slice 3 in-process endpoint-board migration proof
+-}
 module Cardano.KERI.Deployment.EndpointBoardTransactionSpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Close (
-    AddressCredential (..),
-    FullAddress (..),
- )
-import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
-import Cardano.KERI.Deployment.EndpointBoard (
-    BoardEntry (..),
-    EndpointRecord (..),
-    parseEndpointRecord,
- )
-import Cardano.KERI.Deployment.EndpointBoardManifest (
-    EndpointBoardInfo (..),
-    EndpointBoardManifest (..),
+import Cardano.Crypto.Hash (
+    hashFromBytes,
+    hashFromStringAsHex,
+    hashToBytes,
  )
 import Cardano.KERI.Deployment.EndpointBoardTransaction (
-    BoardFiles (..),
+    BoardConfig (..),
+    BoardError (..),
+    BoardObservationTimeout (..),
     BoardPostPlan (..),
+    BoardResult (..),
     BoardRetirePlan (..),
-    BoardRunnerConfig (..),
     BoardUpdatePlan (..),
-    boardPostBuildArguments,
-    boardRetireBuildArguments,
-    boardUpdateBuildArguments,
-    mkBoardPostPlan,
-    mkBoardRetirePlan,
-    mkBoardUpdatePlan,
-    selectBoardEntry,
- )
-import Cardano.KERI.Deployment.Manifest (
-    BlueprintInfo (..),
-    NetworkInfo (..),
-    Reference (..),
-    SourceInfo (..),
+    awaitBoard,
+    runBoardPostTransaction,
+    runBoardRetireTransaction,
+    runBoardUpdateTransaction,
  )
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
+import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
+import Cardano.KERI.Deployment.TransactionRuntime (
+    TransactionBuildError (..),
+    TransactionRuntime (..),
+    signWithCardanoCliKey,
+    transactionId,
+ )
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.Scripts.Data qualified as LedgerData
+import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
+import Cardano.Ledger.Api.Tx.Body (
+    collateralInputsTxBodyL,
+    feeTxBodyL,
+    inputsTxBodyL,
+    mintTxBodyL,
+    mkBasicTxBody,
+    outputsTxBodyL,
+    referenceInputsTxBodyL,
+    reqSignerHashesTxBodyL,
+ )
+import Cardano.Ledger.Api.Tx.Out (
+    addrTxOutL,
+    coinTxOutL,
+    datumTxOutL,
+    referenceScriptTxOutL,
+ )
+import Cardano.Ledger.Api.Tx.Wits (addrTxWitsL, rdmrsTxWitsL)
+import Cardano.Ledger.BaseTypes (
+    Network (Testnet),
+    StrictMaybe (SJust),
+    TxIx (..),
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Core (Script, TxOut, mkBasicTx, mkBasicTxOut)
+import Cardano.Ledger.Credential (
+    Credential (..),
+    StakeReference (StakeRefNull),
+ )
+import Cardano.Ledger.Hashes (
+    KeyHash (..),
+    ScriptHash,
+    extractHash,
+    unsafeMakeSafeHash,
+ )
+import Cardano.Ledger.Keys (KeyRole (Guard))
+import Cardano.Ledger.Mary.Value (
+    AssetName (..),
+    MaryValue (..),
+    MultiAsset (..),
+    PolicyID (..),
+ )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), unTxId)
+import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.Submitter (SubmitResult (..))
+import Codec.Binary.Bech32 qualified as Bech32
+import Data.Aeson (Value, object, (.=))
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
-import Data.Either (isLeft)
+import Data.ByteString.Short qualified as SBS
+import Data.Foldable (toList)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Paths_cardano_keri (getDataFileName)
+import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
+import System.Directory (findExecutable)
 import Test.Hspec (
     Spec,
     describe,
     it,
     shouldBe,
     shouldContain,
-    shouldNotContain,
     shouldSatisfy,
  )
 
 spec :: Spec
-spec =
-    describe "endpoint-board transaction plans" $ do
-        it "posts exactly one authenticated marker owned by the payment key" $ do
-            record <- loadRecord "witness-1-oobi.cesr"
-            plan <-
-                either fail pure $
-                    mkBoardPostPlan sampleManifest fundingAddress 2_000_000 record
-            boardPostPolicy plan `shouldBe` policy
-            boardPostAddress plan `shouldBe` markerAddress
-            boardPostAssetName plan `shouldBe` witnessHex record
-            boardPostOutput plan
-                `shouldBe` markerAddress
-                    <> "+2000000 + 1 "
-                    <> policy
-                    <> "."
-                    <> witnessHex record
-            boardPostDatum plan
-                `shouldBe` plutusDataJson
-                    ( Constr
-                        0
-                        [ B (endpointWitnessKey record)
-                        , B (endpointEventBytes record)
-                        , B (endpointSignature record)
-                        , B owner
-                        ]
-                    )
-            boardPostMintRedeemer plan
-                `shouldBe` plutusDataJson (Constr 0 [])
-            let arguments =
-                    boardPostBuildArguments
-                        sampleRunner
-                        plan
-                        sampleFiles
-                        "funding#0"
-                        "collateral#1"
-            arguments
-                `shouldContain` [ "--tx-out"
-                                , T.unpack (boardPostOutput plan)
-                                , "--tx-out-inline-datum-file"
-                                , boardFilesDatum sampleFiles
-                                ]
-            arguments
-                `shouldContain` [ "--mint"
-                                , "1 " <> T.unpack policy <> "." <> T.unpack (witnessHex record)
-                                , "--mint-tx-in-reference"
-                                , referenceText
-                                , "--mint-plutus-script-v3"
-                                , "--mint-reference-tx-in-redeemer-file"
-                                , boardFilesMintRedeemer sampleFiles
-                                , "--policy-id"
-                                , T.unpack policy
-                                ]
+spec = describe "in-process endpoint-board transactions" $ do
+    it "post freezes ownership datum, marker mint, references, collateral, signing, tx-id, and settlement" $ do
+        findExecutable "cardano-cli" >>= (`shouldBe` Nothing)
+        (result, tx, order) <- capture $ \runtime ->
+            runBoardPostTransaction
+                (boardConfig runtime)
+                postPlan
+                fundingInputs
+        BoardResult txId <- either (fail . show) pure result
+        let body = tx ^. bodyTxL
+            outputs = toList (body ^. outputsTxBodyL)
+            MultiAsset minted = body ^. mintTxBodyL
+            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+        body ^. inputsTxBodyL `shouldBe` Set.singleton (stubTxIn 1)
+        body ^. collateralInputsTxBodyL `shouldBe` Set.singleton (stubTxIn 2)
+        body ^. referenceInputsTxBodyL `shouldBe` Set.singleton boardReference
+        minted
+            `shouldBe` Map.singleton
+                (PolicyID boardScriptHash)
+                (Map.singleton markerAssetName 1)
+        case [output | output <- outputs, output ^. addrTxOutL == markerAddr] of
+            [marker] -> do
+                marker ^. coinTxOutL `shouldBe` Coin 2_000_000
+                marker ^. datumTxOutL `shouldSatisfy` (/= LedgerData.NoDatum)
+            other -> fail ("expected one marker output, got " <> show (length other))
+        redeemerData (ConwayMinting $ AsIx 0) redeemers
+            `shouldBe` Just mintRedeemer
+        assertTerminal tx txId order
 
-        it "updates only an explicitly resolved owned output without minting" $ do
-            oldRecord <- loadRecord "witness-1-oobi.cesr"
-            newRecord <- loadRecord "witness-1-oobi.cesr"
-            let entry = sampleEntry oldRecord 0
-            selectBoardEntry Nothing (endpointWitnessKey oldRecord) [entry]
-                `shouldBe` Right entry
-            selectBoardEntry
-                Nothing
-                (endpointWitnessKey oldRecord)
-                [entry, entry{boardIndex = 1}]
-                `shouldSatisfy` isLeft
-            selectBoardEntry
-                (Just $ txId <> "#1")
-                (endpointWitnessKey oldRecord)
-                [entry, entry{boardIndex = 1}]
-                `shouldBe` Right entry{boardIndex = 1}
-            plan <-
-                either fail pure $
-                    mkBoardUpdatePlan
-                        sampleManifest
-                        fundingAddress
-                        entry
-                        newRecord
-            boardUpdateSpentReference plan `shouldBe` txId <> "#0"
-            boardUpdateOutput plan
-                `shouldBe` markerAddress
-                    <> "+2000000 + 1 "
-                    <> policy
-                    <> "."
-                    <> witnessHex oldRecord
-            boardUpdateSpendRedeemer plan
-                `shouldBe` plutusDataJson (Constr 0 [])
-            let arguments =
-                    boardUpdateBuildArguments
-                        sampleRunner
-                        plan
-                        sampleFiles
-                        "funding#0"
-                        "collateral#1"
-            arguments
-                `shouldContain` [ "--tx-in"
-                                , T.unpack (boardUpdateSpentReference plan)
-                                , "--spending-tx-in-reference"
-                                , referenceText
-                                ]
-            arguments
-                `shouldContain` [ "--required-signer-hash"
-                                , T.unpack ownerHex
-                                ]
-            arguments `shouldNotContain` ["--mint"]
+    it "update freezes owned spend, replacement datum, required signer, and no mint" $ do
+        (result, tx, order) <- capture $ \runtime ->
+            runBoardUpdateTransaction
+                (boardConfig runtime)
+                updatePlan
+                fundingInputs
+                boardInput
+        BoardResult txId <- either (fail . show) pure result
+        let body = tx ^. bodyTxL
+            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+            spendPurpose =
+                ConwaySpending . AsIx . fromIntegral . fromJust $
+                    Set.lookupIndex boardTxIn (body ^. inputsTxBodyL)
+        body ^. inputsTxBodyL
+            `shouldBe` Set.fromList [stubTxIn 1, boardTxIn]
+        body ^. referenceInputsTxBodyL `shouldBe` Set.singleton boardReference
+        body ^. mintTxBodyL `shouldBe` mempty
+        body ^. reqSignerHashesTxBodyL `shouldBe` Set.singleton ownerKeyHash
+        redeemerData spendPurpose redeemers `shouldBe` Just spendRedeemer
+        assertTerminal tx txId order
 
-        it "retires by burning the marker and refunding the exact deposit" $ do
-            record <- loadRecord "witness-1-oobi.cesr"
-            plan <-
-                either fail pure $
-                    mkBoardRetirePlan
-                        sampleManifest
-                        fundingAddress
-                        refundAddress
-                        (sampleEntry record 0)
-            boardRetireSpentReference plan `shouldBe` txId <> "#0"
-            boardRetireRefundOutput plan
-                `shouldBe` refundAddress <> "+2000000"
-            boardRetireSpendRedeemer plan
-                `shouldBe` plutusDataJson
-                    (Constr 1 [asPlcData refundFullAddress])
-            boardRetireMintRedeemer plan
-                `shouldBe` plutusDataJson (Constr 1 [])
-            let arguments =
-                    boardRetireBuildArguments
-                        sampleRunner
-                        plan
-                        sampleFiles
-                        "funding#0"
-                        "collateral#1"
-            arguments
-                `shouldContain` [ "--tx-out"
-                                , T.unpack (boardRetireRefundOutput plan)
-                                ]
-            arguments
-                `shouldContain` [ "--mint"
-                                , "-1 " <> T.unpack policy <> "." <> T.unpack (witnessHex record)
-                                ]
-            arguments
-                `shouldContain` [ "--required-signer-hash"
-                                , T.unpack ownerHex
-                                ]
-            arguments `shouldNotContain` ["--tx-out-inline-datum-file"]
+    it "retire freezes owned spend, marker burn, exact refund, required signer, and settlement" $ do
+        (result, tx, order) <- capture $ \runtime ->
+            runBoardRetireTransaction
+                (boardConfig runtime)
+                retirePlan
+                fundingInputs
+                boardInput
+        BoardResult txId <- either (fail . show) pure result
+        let body = tx ^. bodyTxL
+            outputs = toList (body ^. outputsTxBodyL)
+            MultiAsset minted = body ^. mintTxBodyL
+            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+            spendPurpose =
+                ConwaySpending . AsIx . fromIntegral . fromJust $
+                    Set.lookupIndex boardTxIn (body ^. inputsTxBodyL)
+        minted
+            `shouldBe` Map.singleton
+                (PolicyID boardScriptHash)
+                (Map.singleton markerAssetName (-1))
+        body ^. reqSignerHashesTxBodyL `shouldBe` Set.singleton ownerKeyHash
+        case [output | output <- outputs, output ^. addrTxOutL == refundAddr] of
+            [refund] -> do
+                refund ^. coinTxOutL `shouldBe` Coin 2_000_000
+                refund ^. datumTxOutL `shouldBe` LedgerData.NoDatum
+            other -> fail ("expected one exact refund output, got " <> show (length other))
+        redeemerData spendPurpose redeemers `shouldBe` Just retireSpendRedeemer
+        redeemerData (ConwayMinting $ AsIx 0) redeemers
+            `shouldBe` Just burnRedeemer
+        assertTerminal tx txId order
 
-        it "rejects a wrong owner, wrong witness update, and non-positive deposit" $ do
-            first <- loadRecord "witness-1-oobi.cesr"
-            second <- loadRecord "witness-2-oobi.cesr"
-            let entry = sampleEntry first 0
-            mkBoardPostPlan sampleManifest fundingAddress 0 first
-                `shouldSatisfy` isLeft
-            mkBoardUpdatePlan sampleManifest fundingAddress entry second
-                `shouldSatisfy` isLeft
-            mkBoardRetirePlan
-                sampleManifest
-                otherOwnerAddress
-                refundAddress
-                entry
-                `shouldSatisfy` isLeft
+    it "fails closed on underfunding, evaluation rejection, and submission rejection" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        baseRuntime <- standInRuntime callsRef signedRef
+        underfunded <-
+            runBoardPostTransaction
+                (boardConfig baseRuntime)
+                postPlan
+                [(stubTxIn 1, plainTxOut 1_000_000), (stubTxIn 2, plainTxOut 500_000)]
+        underfunded `shouldSatisfy` isFundingFailure
+        evaluation <-
+            runBoardPostTransaction
+                (boardConfig baseRuntime{trEvaluate = \_ -> pure (Map.singleton (ConwayMinting $ AsIx 0) (Left "board rejected"))})
+                postPlan
+                fundingInputs
+        evaluation `shouldSatisfy` isEvaluationFailure
+        submission <-
+            runBoardPostTransaction
+                (boardConfig baseRuntime{trSubmit = \_ -> pure (Rejected "board submit rejected")})
+                postPlan
+                fundingInputs
+        submission `shouldSatisfy` isSubmissionFailure
 
-loadRecord :: FilePath -> IO EndpointRecord
-loadRecord name = do
-    path <- getDataFileName ("deployment-test/fixtures/" <> name)
-    BS.readFile path >>= either fail pure . parseEndpointRecord
+    it "reports timeout only after polling the board settlement source" $ do
+        pollsRef <- newIORef (0 :: Int)
+        let query _ = modifyIORef' pollsRef (+ 1) >> pure False
+        result <- awaitBoard query 1 0 disagreeingId
+        readIORef pollsRef >>= (`shouldSatisfy` (>= 1))
+        result `shouldBe` Left (BoardObservationTimeout disagreeingId)
 
-sampleEntry :: EndpointRecord -> Int -> BoardEntry
-sampleEntry record index =
-    BoardEntry
-        { boardWitnessKey = endpointWitnessKey record
-        , boardAid = endpointAid record
-        , boardScheme = endpointScheme record
-        , boardUrl = endpointUrl record
-        , boardTxId = txId
-        , boardIndex = index
-        , boardLovelace = 2_000_000
-        , boardOwnerKeyHash = owner
+assertTerminal :: ConwayTx -> TxId -> [String] -> IO ()
+assertTerminal tx txId order = do
+    tx ^. bodyTxL . feeTxBodyL `shouldSatisfy` (> Coin 0)
+    length (tx ^. witsTxL . addrTxWitsL) `shouldBe` 1
+    transactionId tx `shouldBe` txId
+    transactionId tx `shouldSatisfy` (/= disagreeingId)
+    take 1 order `shouldBe` ["query"]
+    order `shouldContain` ["evaluate"]
+    drop (length order - 3) order `shouldBe` ["sign", "submit", "observe"]
+
+isFundingFailure :: Either BoardError BoardResult -> Bool
+isFundingFailure (Left BoardFundingSelectionFailed{}) = True
+isFundingFailure _ = False
+
+isEvaluationFailure :: Either BoardError BoardResult -> Bool
+isEvaluationFailure (Left (BoardBuildFailed TransactionBuildEvaluationRejected{})) = True
+isEvaluationFailure _ = False
+
+isSubmissionFailure :: Either BoardError BoardResult -> Bool
+isSubmissionFailure (Left (BoardBuildFailed TransactionBuildSubmissionRejected{})) = True
+isSubmissionFailure _ = False
+
+capture ::
+    (TransactionRuntime IO -> IO (Either BoardError BoardResult)) ->
+    IO (Either BoardError BoardResult, ConwayTx, [String])
+capture action = do
+    callsRef <- newIORef []
+    signedRef <- newIORef Nothing
+    runtime <- standInRuntime callsRef signedRef
+    result <- action runtime
+    tx <- readIORef signedRef >>= maybe (fail "trSign was never called") pure
+    order <- reverse <$> readIORef callsRef
+    pure (result, tx, order)
+
+boardConfig :: TransactionRuntime IO -> BoardConfig
+boardConfig runtime =
+    BoardConfig
+        { boardRuntime = runtime
+        , boardReferenceUtxos = [(boardReference, referenceTxOut boardScript)]
+        , boardFundingAddress = fundingAddr
+        , boardChangeAddress = changeAddr
         }
 
-witnessHex :: EndpointRecord -> Text
-witnessHex =
-    TE.decodeUtf8 . convertToBase Base16 . endpointWitnessKey
+fundingInputs :: [(TxIn, TxOut ConwayEra)]
+fundingInputs =
+    [ (stubTxIn 1, plainTxOut 200_000_000)
+    , (stubTxIn 2, plainTxOut 50_000_000)
+    ]
 
-policy, markerAddress, txId, ownerHex :: Text
-policy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
-markerAddress = "addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4"
-txId = T.replicate 64 "1"
-ownerHex = TE.decodeUtf8 (convertToBase Base16 owner)
+boardInput :: (TxIn, TxOut ConwayEra)
+boardInput =
+    ( boardTxIn
+    , mkBasicTxOut
+        markerAddr
+        ( MaryValue
+            (Coin 2_000_000)
+            ( MultiAsset $
+                Map.singleton
+                    (PolicyID boardScriptHash)
+                    (Map.singleton markerAssetName 1)
+            )
+        )
+    )
 
-owner :: BS.ByteString
-owner = BS.pack [0x88, 0x83, 0xcd, 0xb7, 0x14, 0x31, 0x3b, 0x7a, 0xc3, 0x82, 0x46, 0xc1, 0xdd, 0x8d, 0x6f, 0xc3, 0xf8, 0x04, 0xf1, 0x53, 0xc1, 0xf1, 0xc4, 0xca, 0x38, 0x56, 0x1b, 0xa0]
+boardTxIn, boardReference :: TxIn
+boardTxIn = stubTxIn 20
+boardReference = stubTxIn 21
 
-fundingAddress, otherOwnerAddress, refundAddress :: Text
-fundingAddress =
-    "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
-otherOwnerAddress =
-    "addr_test1vpchzut3w9chzut3w9chzut3w9chzut3w9chzut3w9chzugnd3d2k"
-refundAddress =
-    fundingAddress
+boardProgram :: SBS.ShortByteString
+boardProgram = SBS.toShort "slice3-endpoint-board-script"
 
-refundFullAddress :: FullAddress
-refundFullAddress =
-    FullAddress
-        { faPaymentCredential =
-            VerificationKeyCredential owner
-        , faStakeCredential = Nothing
+boardScript :: Script ConwayEra
+boardScript = mkCageScript boardProgram
+
+boardScriptHash :: ScriptHash
+boardScriptHash = computeScriptHash boardProgram
+
+markerAssetName :: AssetName
+markerAssetName = AssetName (SBS.toShort $ BS.replicate 32 0x51)
+
+postPlan :: BoardPostPlan
+postPlan =
+    BoardPostPlan
+        { boardPostPolicy = scriptHashText boardScriptHash
+        , boardPostAddress = renderAddr markerAddr
+        , boardPostReference = renderTxIn boardReference
+        , boardPostAssetName = hexText (BS.replicate 32 0x51)
+        , boardPostDepositLovelace = 2_000_000
+        , boardPostOutput = "retired-cardano-cli-rendering"
+        , boardPostDatum = plutusDataJson postDatum
+        , boardPostMintRedeemer = plutusDataJson mintRedeemer
         }
 
-sampleManifest :: EndpointBoardManifest
-sampleManifest =
-    EndpointBoardManifest
-        { endpointBoardManifestSchemaVersion =
-            "cardano-keri/m1-endpoint-board-manifest/v1"
-        , endpointBoardManifestNetwork = NetworkInfo "preprod" 1
-        , endpointBoardManifestSource =
-            SourceInfo "https://github.com/lambdasistemi/cardano-keri" (T.replicate 40 "a")
-        , endpointBoardManifestBlueprint = BlueprintInfo (T.replicate 64 "b")
-        , endpointBoardManifestInfo =
-            EndpointBoardInfo
-                { endpointBoardPolicyId = policy
-                , endpointBoardAddress = markerAddress
-                , endpointBoardProgramBytes = 1
-                , endpointBoardReference =
-                    Reference (T.replicate 64 "c") 0
-                }
-        , endpointBoardManifestPublishedAt = "2026-07-29T11:00:00Z"
+updatePlan :: BoardUpdatePlan
+updatePlan =
+    BoardUpdatePlan
+        { boardUpdatePolicy = scriptHashText boardScriptHash
+        , boardUpdateAddress = renderAddr markerAddr
+        , boardUpdateReference = renderTxIn boardReference
+        , boardUpdateSpentReference = renderTxIn boardTxIn
+        , boardUpdateAssetName = hexText (BS.replicate 32 0x51)
+        , boardUpdateDepositLovelace = 2_000_000
+        , boardUpdateOwnerKeyHash = hexText ownerBytes
+        , boardUpdateOutput = "retired-cardano-cli-rendering"
+        , boardUpdateDatum = plutusDataJson updateDatum
+        , boardUpdateSpendRedeemer = plutusDataJson spendRedeemer
         }
 
-referenceText :: String
-referenceText = T.unpack (T.replicate 64 "c" <> "#0")
-
-sampleRunner :: BoardRunnerConfig
-sampleRunner =
-    BoardRunnerConfig
-        { boardRunnerCardanoCli = "cardano-cli"
-        , boardRunnerNetworkMagic = 1
-        , boardRunnerNodeSocket = "node.socket"
-        , boardRunnerFundingAddress = fundingAddress
-        , boardRunnerChangeAddress = fundingAddress
-        , boardRunnerSigningKeyFile = "payment.skey"
-        , boardRunnerKoiosUrl = "https://preprod.koios.rest/api/v1"
-        , boardRunnerKoiosToken = Nothing
-        , boardRunnerTimeoutSeconds = 600
+retirePlan :: BoardRetirePlan
+retirePlan =
+    BoardRetirePlan
+        { boardRetirePolicy = scriptHashText boardScriptHash
+        , boardRetireReference = renderTxIn boardReference
+        , boardRetireSpentReference = renderTxIn boardTxIn
+        , boardRetireAssetName = hexText (BS.replicate 32 0x51)
+        , boardRetireOwnerKeyHash = hexText ownerBytes
+        , boardRetireRefundAddress = renderAddr refundAddr
+        , boardRetireRefundLovelace = 2_000_000
+        , boardRetireRefundOutput = "retired-cardano-cli-rendering"
+        , boardRetireSpendRedeemer = plutusDataJson retireSpendRedeemer
+        , boardRetireMintRedeemer = plutusDataJson burnRedeemer
         }
 
-sampleFiles :: BoardFiles
-sampleFiles =
-    BoardFiles
-        { boardFilesDatum = "datum.json"
-        , boardFilesSpendRedeemer = "spend.json"
-        , boardFilesMintRedeemer = "mint.json"
-        , boardFilesBody = "board.body"
-        , boardFilesSigned = "board.signed"
-        }
+postDatum, updateDatum, spendRedeemer, retireSpendRedeemer, mintRedeemer, burnRedeemer :: Data
+postDatum = Constr 1 [I 101]
+updateDatum = Constr 2 [I 202]
+spendRedeemer = Constr 3 [I 303]
+retireSpendRedeemer = Constr 4 [I 404]
+mintRedeemer = Constr 5 [I 505]
+burnRedeemer = Constr 6 [I 606]
+
+ownerBytes :: BS.ByteString
+ownerBytes = BS.replicate 28 0x44
+
+ownerKeyHash :: KeyHash Guard
+ownerKeyHash = KeyHash (fromJust $ hashFromBytes ownerBytes)
+
+fundingAddr, changeAddr, refundAddr, markerAddr :: Addr
+fundingAddr = Addr Testnet (KeyHashObj ownerKeyHash) StakeRefNull
+changeAddr = testAddr 2
+refundAddr = testAddr 3
+markerAddr = Addr Testnet (ScriptHashObj boardScriptHash) StakeRefNull
+
+testAddr :: Int -> Addr
+testAddr n =
+    Addr
+        Testnet
+        (KeyHashObj $ KeyHash $ fromJust $ hashFromStringAsHex $ replicate 55 '0' <> show n)
+        StakeRefNull
+
+stubTxIn :: Int -> TxIn
+stubTxIn n =
+    TxIn
+        (TxId $ unsafeMakeSafeHash $ fromJust $ hashFromStringAsHex hex)
+        (TxIx 0)
+  where
+    hex = replicate 62 '0' <> hexByte n
+    hexByte k =
+        let digit i = "0123456789abcdef" !! i
+         in [digit (k `div` 16 `mod` 16), digit (k `mod` 16)]
+
+plainTxOut :: Integer -> TxOut ConwayEra
+plainTxOut amount =
+    mkBasicTxOut fundingAddr (MaryValue (Coin amount) $ MultiAsset mempty)
+
+referenceTxOut :: Script ConwayEra -> TxOut ConwayEra
+referenceTxOut script =
+    plainTxOut 20_000_000 & referenceScriptTxOutL .~ SJust script
+
+renderTxIn :: TxIn -> Text
+renderTxIn (TxIn txId (TxIx index)) = renderTxId txId <> "#" <> T.pack (show index)
+
+renderTxId :: TxId -> Text
+renderTxId = TE.decodeUtf8 . convertToBase Base16 . hashToBytes . extractHash . unTxId
+
+renderAddr :: Addr -> Text
+renderAddr address =
+    Bech32.encodeLenient
+        (either (error . show) id $ Bech32.humanReadablePartFromText "addr_test")
+        (Bech32.dataPartFromBytes $ serialiseAddr address)
+
+hexText :: BS.ByteString -> Text
+hexText = TE.decodeUtf8 . convertToBase Base16
+
+recordCall :: IORef [String] -> String -> IO ()
+recordCall ref tag = modifyIORef' ref (tag :)
+
+standInRuntime :: IORef [String] -> IORef (Maybe ConwayTx) -> IO (TransactionRuntime IO)
+standInRuntime callsRef signedRef =
+    pure
+        TransactionRuntime
+            { trQueryProtocolParams = recordCall callsRef "query" >> pure testPParams
+            , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
+            , trSign = \tx -> do
+                recordCall callsRef "sign"
+                let result = signWithCardanoCliKey testEnvelope tx
+                modifyIORef' signedRef (const $ either (const Nothing) Just result)
+                pure result
+            , trSubmit = \tx -> do
+                readIORef signedRef >>= (`shouldBe` Just tx)
+                recordCall callsRef "submit"
+                pure (Submitted disagreeingId)
+            , trObserve = \txId -> do
+                fmap transactionId (readIORef signedRef) >>= (`shouldBe` Just txId)
+                recordCall callsRef "observe"
+            }
+
+testEnvelope :: Value
+testEnvelope =
+    object
+        [ "type" .= ("PaymentSigningKeyShelley_ed25519" :: String)
+        , "description" .= ("Payment Signing Key" :: String)
+        , "cborHex"
+            .= ("582083c69e0facc37e938558a50b4335f0ca9855857bb5625f583a68464f54496bde" :: String)
+        ]
+
+disagreeingId :: TxId
+disagreeingId = transactionId (mkBasicTx $ mkBasicTxBody & feeTxBodyL .~ Coin 999_999)
+
+redeemerData ::
+    ConwayPlutusPurpose AsIx ConwayEra ->
+    Map.Map
+        (ConwayPlutusPurpose AsIx ConwayEra)
+        (LedgerData.Data ConwayEra, ExUnits) ->
+    Maybe Data
+redeemerData purpose redeemers =
+    (\(LedgerData.Data datum, _) -> datum) <$> Map.lookup purpose redeemers

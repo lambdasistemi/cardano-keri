@@ -109,23 +109,24 @@ commit with an exact `Tasks:` trailer.
 
 ## Slice 3 — advance, close, and endpoint-board migration
 
-- [ ] T181-S3-1 RED: advance/rotate tests freeze spending/reference inputs,
+- [x] T181-S3-1 RED: advance/rotate tests freeze spending/reference inputs,
       checkpoint datum/redeemer, validity, collateral, signing, submission,
       tx-id, and settlement
-- [ ] T181-S3-2 RED: close tests freeze burn/close semantics and board tests
+- [x] T181-S3-2 RED: close tests freeze burn/close semantics and board tests
       freeze post/update/retire ownership, datum, mint/burn, and settlement
-- [ ] T181-S3-3 RED: all three operations demonstrate underfunded,
+- [x] T181-S3-3 RED: all three operations demonstrate underfunded,
       evaluation/script, submission-rejection, and timeout signals fail closed
-- [ ] T181-S3-4 GREEN: migrate `AdvanceTransaction` and `CloseTransaction` to
+- [x] T181-S3-4 GREEN: migrate `AdvanceTransaction` and `CloseTransaction` to
       the shared in-process runtime
-- [ ] T181-S3-5 GREEN: migrate `EndpointBoardTransaction` post/update/retire to
+- [x] T181-S3-5 GREEN: migrate `EndpointBoardTransaction` post/update/retire to
       the shared in-process runtime
-- [ ] T181-S3-6 Remove remaining transaction runner subprocess/configuration
+- [x] T181-S3-6 Remove remaining transaction runner subprocess/configuration
       surface; source/closure guard fails on deliberate reintroduction and
       passes restored
-- [ ] T181-S3-7 Focused and accumulated gates green; navigator verifies one
-      commit with `Tasks: T181-S3-1,...,T181-S3-7`
-- [ ] T181-S3-8 Guard `TransactionRuntime/Fixtures.hs`'s `testPParams` key
+- [x] T181-S3-7 Focused and accumulated gates green; verified via OWNER/fresh-
+      auditor alternation (not a navigator), commit `8b36d9f830fda17781314e24006ef844b90003d0`
+      with `Tasks: T181-S3-1,...,T181-S3-8`
+- [x] T181-S3-8 Guard `TransactionRuntime/Fixtures.hs`'s `testPParams` key
       deposit against silently going degenerate again (placed here 2026-08-06,
       found by the desk verifying `slice2c-deposit-oracle`'s acceptance):
       `RegistrationSpec.hs:604` derives its expectation from the same fixture

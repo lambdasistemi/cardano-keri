@@ -141,20 +141,20 @@ commit with an exact `Tasks:` trailer.
 
 ## Slice 4 — #177 composition and live no-CLI journey
 
-- [ ] T181-S4-1 Record the epic-owner-approved #177 integration base and wire
+- [x] T181-S4-1 Record the epic-owner-approved #177 integration base and wire
       the CLI library to one follower/runner plus one N2C provider/submitter
       without a deployment/indexer cycle
-- [ ] T181-S4-2 Remove all transaction-command `cardano-cli` options and the
+- [x] T181-S4-2 Remove all transaction-command `cardano-cli` options and the
       packaged runtime dependency; executable help and closure guards pass
-- [ ] T181-S4-3 Add a deterministic restricted-PATH helper whose positive
+- [x] T181-S4-3 Add a deterministic restricted-PATH helper whose positive
       control proves a reintroduced shellout fails
-- [ ] T181-S4-4 Run the production deploy/register/advance-or-rotate/board/close
+- [x] T181-S4-4 Run the production deploy/register/advance-or-rotate/board/close
       journey on the real node with `cardano-cli` absent and observe every tx
-- [ ] T181-S4-5 Run a deliberately underfunded production attempt and preserve
+- [x] T181-S4-5 Run a deliberately underfunded production attempt and preserve
       its named non-zero error without submitting a transaction
-- [ ] T181-S4-6 Regenerate exact UTC/network/node/tx-id/settlement transcripts
+- [x] T181-S4-6 Regenerate exact UTC/network/node/tx-id/settlement transcripts
       mechanically and update operator docs
-- [ ] T181-S4-7 Frozen live gate, `just ci`, and accumulated `./gate.sh` green;
+- [x] T181-S4-7 Frozen live gate, `just ci`, and accumulated `./gate.sh` green;
       navigator verifies one commit with `Tasks: T181-S4-1,...,T181-S4-7`
 
 ## Orchestrator-owned completion

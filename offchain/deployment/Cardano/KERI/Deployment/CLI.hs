@@ -109,7 +109,6 @@ import Cardano.KERI.Deployment.Script (
  )
 import Control.Monad (forM_, unless, when)
 import Data.ByteString qualified as BS
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import OptEnvConf qualified as Opt
@@ -1197,16 +1196,7 @@ runBoardPost settings = do
                 (boardTransactionFundingAddress transaction)
                 (boardPostDepositLovelace settings)
                 record
-    result <-
-        BoardTx.runBoardPostTransaction
-            (boardRunnerConfig transaction)
-            plan
-    putStrLn $
-        "board txid: "
-            <> T.unpack (BoardTx.boardResultTxId result)
-            <> " deposit: "
-            <> show (boardPostDepositLovelace settings `div` 1_000_000)
-            <> " tADA"
+    plan `seq` fail "posting board record pending #181 Slice 4 composition"
 
 runBoardUpdate :: BoardUpdateSettings -> IO ()
 runBoardUpdate settings = do
@@ -1229,16 +1219,7 @@ runBoardUpdate settings = do
                 (boardTransactionFundingAddress transaction)
                 entry
                 record
-    result <-
-        BoardTx.runBoardUpdateTransaction
-            (boardRunnerConfig transaction)
-            plan
-    putStrLn $
-        "board update txid: "
-            <> T.unpack (BoardTx.boardResultTxId result)
-    putStrLn $
-        "replaced: "
-            <> T.unpack (BoardTx.boardUpdateSpentReference plan)
+    plan `seq` fail "updating board record pending #181 Slice 4 composition"
 
 runBoardRetire :: BoardRetireSettings -> IO ()
 runBoardRetire settings = do
@@ -1260,18 +1241,7 @@ runBoardRetire settings = do
                 (boardTransactionFundingAddress transaction)
                 (boardRetireTo settings)
                 entry
-    result <-
-        BoardTx.runBoardRetireTransaction
-            (boardRunnerConfig transaction)
-            plan
-    putStrLn $
-        "board retire txid: "
-            <> T.unpack (BoardTx.boardResultTxId result)
-    putStrLn $
-        "refunded: "
-            <> show (BoardTx.boardRetireRefundLovelace plan `div` 1_000_000)
-            <> " tADA to "
-            <> T.unpack (boardRetireTo settings)
+    plan `seq` fail "retiring board record pending #181 Slice 4 composition"
 
 validateBoardTransactionSettings :: BoardTransactionSettings -> IO ()
 validateBoardTransactionSettings settings = do
@@ -1301,33 +1271,6 @@ queryBoardTransactionCatalog settings manifest =
             (boardTransactionKoiosToken settings)
             (endpointBoardPolicyId info)
             (endpointBoardAddress info)
-
-boardRunnerConfig ::
-    BoardTransactionSettings ->
-    BoardTx.BoardRunnerConfig
-boardRunnerConfig settings =
-    BoardTx.BoardRunnerConfig
-        { BoardTx.boardRunnerCardanoCli =
-            boardTransactionCardanoCli settings
-        , BoardTx.boardRunnerNetworkMagic =
-            boardTransactionNetworkMagic settings
-        , BoardTx.boardRunnerNodeSocket =
-            boardTransactionNodeSocket settings
-        , BoardTx.boardRunnerFundingAddress =
-            boardTransactionFundingAddress settings
-        , BoardTx.boardRunnerChangeAddress =
-            fromMaybe
-                (boardTransactionFundingAddress settings)
-                (boardTransactionChangeAddress settings)
-        , BoardTx.boardRunnerSigningKeyFile =
-            boardTransactionPayer settings
-        , BoardTx.boardRunnerKoiosUrl =
-            boardTransactionKoiosUrl settings
-        , BoardTx.boardRunnerKoiosToken =
-            boardTransactionKoiosToken settings
-        , BoardTx.boardRunnerTimeoutSeconds =
-            boardTransactionTimeoutSeconds settings
-        }
 
 registerPreflight ::
     Text ->
@@ -1526,22 +1469,11 @@ submitAdvance settings manifest active package signatureFile = do
     submittedPackage <-
         prepareSubmittedPackage settings active signatures package
     plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
-    result <-
-        AdvanceTx.runAdvanceTransaction
-            AdvanceTx.AdvanceRunnerConfig
-                { AdvanceTx.runnerCardanoCli = advanceCardanoCli settings
-                , AdvanceTx.runnerNetworkMagic = advanceNetworkMagic settings
-                , AdvanceTx.runnerNodeSocket = nodeSocket
-                , AdvanceTx.runnerFundingAddress = fundingAddress
-                , AdvanceTx.runnerSigningKeyFile = payer
-                , AdvanceTx.runnerKoiosUrl = advanceKoiosUrl settings
-                , AdvanceTx.runnerKoiosToken = advanceKoiosToken settings
-                , AdvanceTx.runnerTimeoutSeconds = advanceTimeoutSeconds settings
-                }
-            plan
-    putStrLn $
-        "advance txid: "
-            <> T.unpack (AdvanceTx.resultAdvanceTxId result)
+    payer `seq`
+        nodeSocket `seq`
+            fundingAddress `seq`
+                plan `seq`
+                    fail "advancing pending #181 Slice 4 composition"
 
 prepareSubmittedPackage ::
     AdvanceSettings ->
@@ -1694,28 +1626,12 @@ submitClose settings manifest package signatureFile = do
                     pure
                     (attachCloseControllerSignatures signatures package)
     plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
-    result <-
-        CloseTx.runCloseTransaction
-            CloseTx.CloseRunnerConfig
-                { CloseTx.closeRunnerCardanoCli = closeCardanoCli settings
-                , CloseTx.closeRunnerNetworkMagic = closeNetworkMagic settings
-                , CloseTx.closeRunnerNodeSocket = nodeSocket
-                , CloseTx.closeRunnerFundingAddress = fundingAddress
-                , CloseTx.closeRunnerChangeAddress = changeAddress
-                , CloseTx.closeRunnerSigningKeyFile = payer
-                , CloseTx.closeRunnerKoiosUrl = closeKoiosUrl settings
-                , CloseTx.closeRunnerKoiosToken = closeKoiosToken settings
-                , CloseTx.closeRunnerTimeoutSeconds = closeTimeoutSeconds settings
-                }
-            plan
-    putStrLn $
-        "close txid: "
-            <> T.unpack (CloseTx.closeResultTxId result)
-    putStrLn $
-        "refunded: "
-            <> show (closeRefundLovelace submittedPackage `div` 1_000_000)
-            <> " tADA to "
-            <> T.unpack (closeRefundAddress submittedPackage)
+    payer `seq`
+        nodeSocket `seq`
+            fundingAddress `seq`
+                changeAddress `seq`
+                    plan `seq`
+                        fail "closing pending #181 Slice 4 composition"
 
 requireCloseSetting :: String -> Maybe a -> IO a
 requireCloseSetting name =

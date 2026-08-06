@@ -107,7 +107,6 @@ library deployment
     , plutus-ledger-api
     , plutus-tx
     , process
-    , temporary
     , text
     , time
     , unix
@@ -144,6 +143,7 @@ library indexer
     , bech32
     , bytestring
     , cardano-crypto-class
+    , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-api
     , cardano-ledger-binary
@@ -268,14 +268,17 @@ test-suite deployment-tests
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-tx-tools:tx-build
     , containers
     , directory
-    , hspec                    >=2.11 && <2.12
+    , hspec                      >=2.11 && <2.12
     , http-conduit
-    , memory                   >=0.18 && <0.19
+    , memory                     >=0.18 && <0.19
     , microlens
     , plutus-core
+    , temporary
     , text
+    , unix
 
   autogen-modules:  Paths_cardano_keri
 

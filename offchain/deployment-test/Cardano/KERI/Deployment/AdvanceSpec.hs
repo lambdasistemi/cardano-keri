@@ -7,7 +7,7 @@ Description : #181 Slice 3 in-process Advance migration proof
 -}
 module Cardano.KERI.Deployment.AdvanceSpec (spec) where
 
-import Cardano.Crypto.Hash (hashFromStringAsHex)
+import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
 import Cardano.KERI.Deployment.AdvanceTransaction (
     AdvanceConfig (..),
     AdvanceError (..),
@@ -17,6 +17,7 @@ import Cardano.KERI.Deployment.AdvanceTransaction (
     awaitAdvance,
     runAdvanceTransaction,
  )
+import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError (..),
@@ -29,8 +30,12 @@ import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
     Addr (..),
+    Withdrawals (..),
     serialiseAccountAddress,
     serialiseAddr,
+ )
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+    TransactionScriptFailure (UnknownTxIn),
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -76,7 +81,12 @@ import Cardano.Ledger.Credential (
     Credential (..),
     StakeReference (StakeRefNull),
  )
-import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash)
+import Cardano.Ledger.Hashes (
+    KeyHash (..),
+    ScriptHash,
+    extractHash,
+    unsafeMakeSafeHash,
+ )
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
     MaryValue (..),
@@ -84,7 +94,7 @@ import Cardano.Ledger.Mary.Value (
     PolicyID (..),
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), unTxId)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Codec.Binary.Bech32 qualified as Bech32
@@ -170,7 +180,7 @@ spec = describe "in-process advance transaction" $ do
                         redeemerData withdrawalPurpose redeemers `shouldBe` Just observerRedeemer
                         redeemerData certificatePurpose redeemers
                             `shouldBe` Just (I 0)
-                        let Cardano.Ledger.Address.Withdrawals withdrawals =
+                        let Withdrawals withdrawals =
                                 body ^. withdrawalsTxBodyL
                         Map.lookup observerRewardAccount withdrawals
                             `shouldBe` Just (Coin 0)
@@ -199,7 +209,11 @@ spec = describe "in-process advance transaction" $ do
         let evaluationRuntime =
                 baseRuntime
                     { trEvaluate = \_ ->
-                        pure (Map.singleton (ConwaySpending $ AsIx 0) (Left "advance rejected"))
+                        pure
+                            ( Map.singleton
+                                (ConwaySpending $ AsIx 0)
+                                (Left $ UnknownTxIn $ stubTxIn 99)
+                            )
                     }
         evaluation <-
             runAdvanceTransaction
@@ -327,9 +341,9 @@ syntheticPlan =
         , planCheckpointAssetName = syntheticAssetNameText
         , planCheckpointAddress = syntheticCheckpointAddress
         , planStateOutput = "retired-cardano-cli-rendering"
-        , planSpendRedeemer = Cardano.KERI.Deployment.Registration.plutusDataJson spendRedeemer
-        , planObserverRedeemer = Cardano.KERI.Deployment.Registration.plutusDataJson observerRedeemer
-        , planSuccessorDatum = Cardano.KERI.Deployment.Registration.plutusDataJson successorDatum
+        , planSpendRedeemer = plutusDataJson spendRedeemer
+        , planObserverRedeemer = plutusDataJson observerRedeemer
+        , planSuccessorDatum = plutusDataJson successorDatum
         }
 
 spendRedeemer, observerRedeemer, successorDatum :: Data
@@ -355,7 +369,7 @@ testAddr n =
 stubTxIn :: Int -> TxIn
 stubTxIn n =
     TxIn
-        (TxId $ Cardano.Ledger.Hashes.unsafeMakeSafeHash $ fromJust $ hashFromStringAsHex hex)
+        (TxId $ unsafeMakeSafeHash $ fromJust $ hashFromStringAsHex hex)
         (TxIx 0)
   where
     hex = replicate 62 '0' <> hexByte n
@@ -378,9 +392,9 @@ renderTxId :: TxId -> Text
 renderTxId =
     TE.decodeUtf8
         . convertToBase Base16
-        . Cardano.Crypto.Hash.hashToBytes
-        . Cardano.Ledger.Hashes.extractHash
-        . Cardano.Ledger.TxIn.unTxId
+        . hashToBytes
+        . extractHash
+        . unTxId
 
 renderAddr :: Addr -> Text
 renderAddr = renderBech32 "addr_test" . serialiseAddr
@@ -416,7 +430,8 @@ standInRuntime callsRef signedRef =
                 recordCall callsRef "submit"
                 pure (Submitted disagreeingId)
             , trObserve = \txId -> do
-                fmap transactionId (readIORef signedRef) >>= (`shouldBe` Just txId)
+                signed <- readIORef signedRef
+                fmap transactionId signed `shouldBe` Just txId
                 recordCall callsRef "observe"
             }
 

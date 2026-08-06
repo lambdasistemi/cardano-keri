@@ -30,6 +30,9 @@ import Cardano.KERI.Deployment.TransactionRuntime (
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+    TransactionScriptFailure (UnknownTxIn),
+ )
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as LedgerData
@@ -160,10 +163,17 @@ spec = describe "in-process close transaction" $ do
                 drop (length order - 3) order
                     `shouldBe` ["sign", "submit", "observe"]
 
-    it "fails closed on underfunding, evaluation rejection, and submission rejection" $ do
+    it "fails closed on stale value, underfunding, evaluation rejection, and submission rejection" $ do
         callsRef <- newIORef []
         signedRef <- newIORef Nothing
         baseRuntime <- standInRuntime callsRef signedRef
+        staleValue <-
+            runCloseTransaction
+                (closeConfig baseRuntime)
+                syntheticPlan{closePlanRefundLovelace = 7_000_001}
+                fundingInputs
+                activeInput
+        staleValue `shouldSatisfy` isPlanFailure
         underfunded <-
             runCloseTransaction
                 (closeConfig baseRuntime)
@@ -173,7 +183,16 @@ spec = describe "in-process close transaction" $ do
         underfunded `shouldSatisfy` isFundingFailure
         evaluation <-
             runCloseTransaction
-                (closeConfig baseRuntime{trEvaluate = \_ -> pure (Map.singleton (ConwayMinting $ AsIx 0) (Left "close rejected"))})
+                ( closeConfig
+                    baseRuntime
+                        { trEvaluate = \_ ->
+                            pure
+                                ( Map.singleton
+                                    (ConwayMinting $ AsIx 0)
+                                    (Left $ UnknownTxIn $ stubTxIn 99)
+                                )
+                        }
+                )
                 syntheticPlan
                 fundingInputs
                 activeInput
@@ -196,6 +215,10 @@ spec = describe "in-process close transaction" $ do
 isFundingFailure :: Either CloseError CloseResult -> Bool
 isFundingFailure (Left CloseFundingSelectionFailed{}) = True
 isFundingFailure _ = False
+
+isPlanFailure :: Either CloseError CloseResult -> Bool
+isPlanFailure (Left ClosePlanRejected{}) = True
+isPlanFailure _ = False
 
 isEvaluationFailure :: Either CloseError CloseResult -> Bool
 isEvaluationFailure (Left (CloseBuildFailed TransactionBuildEvaluationRejected{})) = True
@@ -335,7 +358,8 @@ standInRuntime callsRef signedRef =
                 recordCall callsRef "submit"
                 pure (Submitted disagreeingId)
             , trObserve = \txId -> do
-                fmap transactionId (readIORef signedRef) >>= (`shouldBe` Just txId)
+                signed <- readIORef signedRef
+                fmap transactionId signed `shouldBe` Just txId
                 recordCall callsRef "observe"
             }
 

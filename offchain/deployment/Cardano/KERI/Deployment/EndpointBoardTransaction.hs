@@ -1,46 +1,41 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.EndpointBoardTransaction
-Description : Build and settle endpoint-board post, update, and retire actions
+Description : Build and settle endpoint-board actions in process
 
 The plans in this module are the off-chain mirror of the frozen board
-validator. A post mints one raw-witness-key marker. An update spends and
-recreates the exact marker value. A retire burns the marker and preserves the
-complete lovelace deposit in one datum-free refund output.
+validator. The shared transaction kernel builds, evaluates, signs, derives the
+pure id, submits exactly the signed value, and observes settlement without an
+external command or temporary transaction files.
 -}
 module Cardano.KERI.Deployment.EndpointBoardTransaction (
     BoardPostPlan (..),
     BoardUpdatePlan (..),
     BoardRetirePlan (..),
-    BoardRunnerConfig (..),
-    BoardFiles (..),
+    BoardConfig (..),
+    BoardCheckError (..),
+    BoardError (..),
+    BoardObservationTimeout (..),
     BoardResult (..),
     selectBoardEntry,
     mkBoardPostPlan,
     mkBoardUpdatePlan,
     mkBoardRetirePlan,
-    boardPostBuildArguments,
-    boardUpdateBuildArguments,
-    boardRetireBuildArguments,
     runBoardPostTransaction,
     runBoardUpdateTransaction,
     runBoardRetireTransaction,
+    awaitBoard,
 ) where
 
+import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Close (
     AddressCredential (..),
     FullAddress (..),
  )
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainAssetUtxo (..),
-    ChainTransactionUtxos (..),
-    KoiosToken,
-    queryAssetUtxos,
-    queryTransactionUtxos,
- )
 import Cardano.KERI.Deployment.Close (decodeRefundAddress)
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
@@ -53,46 +48,95 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     frozenEndpointBoardAddress,
     frozenEndpointBoardPolicyId,
  )
-import Cardano.KERI.Deployment.LegacyCardanoCli (renderCardanoCliFailure)
 import Cardano.KERI.Deployment.Manifest (
     NetworkInfo (..),
     Reference (..),
  )
-import Cardano.KERI.Deployment.Publisher (parseTransactionId)
-import Cardano.KERI.Deployment.Registration (plutusDataJson)
+import Cardano.KERI.Deployment.Registration (
+    plutusDataFromJson,
+    plutusDataJson,
+ )
+import Cardano.KERI.Deployment.TransactionRuntime (
+    AggregateExUnitsError,
+    FundingPair (..),
+    PayerSelectionError,
+    TransactionBuildError,
+    TransactionRuntime (..),
+    checkAggregateExUnits,
+    runTransactionBuild,
+    selectFundingPair,
+ )
+import Cardano.Ledger.Address (Addr (..), decodeAddr)
+import Cardano.Ledger.Api.Tx.Out (referenceScriptTxOutL, valueTxOutL)
+import Cardano.Ledger.BaseTypes (
+    Network (Mainnet, Testnet),
+    StrictMaybe (SJust, SNothing),
+    TxIx (..),
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core (
+    PParams,
+    TxOut,
+    hashScript,
+    mkBasicTxOut,
+ )
+import Cardano.Ledger.Hashes (
+    KeyHash (..),
+    ScriptHash (..),
+    unsafeMakeSafeHash,
+ )
+import Cardano.Ledger.Keys (KeyRole (Guard))
+import Cardano.Ledger.Mary.Value (
+    AssetName (..),
+    MaryValue (..),
+    MultiAsset (..),
+    PolicyID (..),
+ )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Tx.Balance (CollateralUtxos (..))
+import Cardano.Tx.Build (
+    BuildOptions (..),
+    Check (..),
+    InterpretIO (..),
+    TxBuild,
+    collateral,
+    defaultBuildOptions,
+    mint,
+    output,
+    payTo',
+    reference,
+    requireSignature,
+    spend,
+    spendScript,
+    valid,
+ )
+import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
 import Control.Monad (unless, when)
-import Data.Aeson (
-    FromJSON (..),
-    Value,
-    eitherDecodeFileStrict',
-    withObject,
-    (.:),
-    (.:?),
- )
-import Data.Aeson qualified as Aeson
-import Data.Aeson.Key qualified as Key
-import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson (Value)
+import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (
     Base (Base16),
+    convertFromBase,
     convertToBase,
  )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.List (sortOn)
-import Data.Map.Strict (Map)
+import Data.ByteString.Short qualified as SBS
+import Data.List (find)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (isNothing)
-import Data.Ord (Down (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+import Data.Time.Clock (diffUTCTime, getCurrentTime)
+import Lens.Micro ((^.))
 import PlutusCore.Data (Data (..))
-import System.Exit (ExitCode (..))
-import System.FilePath ((</>))
-import System.IO.Temp (withSystemTempDirectory)
-import System.Process (readProcessWithExitCode)
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (ToData (..))
+import Text.Read (readMaybe)
 
 data BoardPostPlan = BoardPostPlan
     { boardPostPolicy :: !Text
@@ -134,57 +178,35 @@ data BoardRetirePlan = BoardRetirePlan
     }
     deriving stock (Show, Eq)
 
-data BoardRunnerConfig = BoardRunnerConfig
-    { boardRunnerCardanoCli :: !FilePath
-    , boardRunnerNetworkMagic :: !Int
-    , boardRunnerNodeSocket :: !FilePath
-    , boardRunnerFundingAddress :: !Text
-    , boardRunnerChangeAddress :: !Text
-    , boardRunnerSigningKeyFile :: !FilePath
-    , boardRunnerKoiosUrl :: !Text
-    , boardRunnerKoiosToken :: !(Maybe KoiosToken)
-    , boardRunnerTimeoutSeconds :: !Int
+data BoardConfig = BoardConfig
+    { boardRuntime :: !(TransactionRuntime IO)
+    , boardReferenceUtxos :: ![(TxIn, TxOut ConwayEra)]
+    , boardFundingAddress :: !Addr
+    , boardChangeAddress :: !Addr
     }
-    deriving stock (Show, Eq)
 
-data BoardFiles = BoardFiles
-    { boardFilesDatum :: !FilePath
-    , boardFilesSpendRedeemer :: !FilePath
-    , boardFilesMintRedeemer :: !FilePath
-    , boardFilesBody :: !FilePath
-    , boardFilesSigned :: !FilePath
-    }
-    deriving stock (Show, Eq)
+newtype BoardCheckError
+    = BoardAggregateExUnitsExceeded AggregateExUnitsError
+    deriving stock (Eq, Show)
+
+data BoardError
+    = BoardFundingSelectionFailed !PayerSelectionError
+    | BoardPlanRejected !String
+    | BoardBuildFailed !(TransactionBuildError BoardCheckError)
+    deriving stock (Eq, Show)
+
+newtype BoardObservationTimeout = BoardObservationTimeout TxId
+    deriving stock (Eq, Show)
 
 newtype BoardResult = BoardResult
-    { boardResultTxId :: Text
+    { boardResultTxId :: TxId
     }
-    deriving stock (Show, Eq)
+    deriving stock (Eq, Show)
 
-data WalletUtxo = WalletUtxo
-    { walletLovelace :: !Integer
-    , walletReferenceScript :: !(Maybe Value)
-    , walletAssetCount :: !Int
-    }
-    deriving stock (Show)
+newtype RawData = RawData Data
 
-instance FromJSON WalletUtxo where
-    parseJSON = withObject "WalletUtxo" $ \objectValue -> do
-        value <- objectValue .: "value"
-        (walletLovelace, walletAssetCount) <-
-            withObject "WalletValue" parseWalletValue value
-        walletReferenceScript <- objectValue .:? "referenceScript"
-        pure WalletUtxo{..}
-      where
-        parseWalletValue values = do
-            lovelace <- values .: "lovelace"
-            let assetCount =
-                    length
-                        [ ()
-                        | key <- KeyMap.keys values
-                        , Key.toText key /= "lovelace"
-                        ]
-            pure (lovelace, assetCount)
+instance ToData RawData where
+    toBuiltinData (RawData datum) = BuiltinData datum
 
 -- | Resolve one current witness record without hiding ratified duplicates.
 selectBoardEntry ::
@@ -194,25 +216,18 @@ selectBoardEntry ::
     Either String BoardEntry
 selectBoardEntry selectedReference witnessKey entries =
     case selectedReference of
-        Just reference ->
-            case filter ((== reference) . boardEntryReference) matching of
+        Just selected ->
+            case filter ((== selected) . boardEntryReference) matching of
                 [entry] -> Right entry
-                [] ->
-                    Left
-                        "the selected board output is not a current record for \
-                        \this witness"
+                [] -> Left "the selected board output is not a current record for this witness"
                 _ -> Left "the selected board output reference is ambiguous"
         Nothing ->
             case matching of
                 [entry] -> Right entry
                 [] -> Left "the witness has no current board record"
-                _ ->
-                    Left
-                        "the witness has duplicate current board records; pass \
-                        \--board-out-ref TXID#INDEX to select one explicitly"
+                _ -> Left "the witness has duplicate current board records; pass --board-out-ref TXID#INDEX to select one explicitly"
   where
-    matching =
-        filter ((== witnessKey) . boardWitnessKey) entries
+    matching = filter ((== witnessKey) . boardWitnessKey) entries
 
 mkBoardPostPlan ::
     EndpointBoardManifest ->
@@ -222,22 +237,15 @@ mkBoardPostPlan ::
     Either String BoardPostPlan
 mkBoardPostPlan manifest ownerAddress deposit record = do
     info <- validatedBoardInfo manifest
-    when (deposit <= 0) $
-        Left "deposit-lovelace must be positive"
+    when (deposit <= 0) $ Left "deposit-lovelace must be positive"
     owner <- paymentKeyHash ownerAddress
     let boardPostPolicy = endpointBoardPolicyId info
         boardPostAddress = endpointBoardAddress info
         boardPostReference = renderReference (endpointBoardReference info)
         boardPostAssetName = hexText (endpointWitnessKey record)
         boardPostDepositLovelace = deposit
-        boardPostOutput =
-            markerOutput
-                boardPostAddress
-                deposit
-                boardPostPolicy
-                boardPostAssetName
-        boardPostDatum =
-            endpointDatum owner record
+        boardPostOutput = markerOutput boardPostAddress deposit boardPostPolicy boardPostAssetName
+        boardPostDatum = endpointDatum owner record
         boardPostMintRedeemer = plutusDataJson (Constr 0 [])
     pure BoardPostPlan{..}
 
@@ -263,12 +271,7 @@ mkBoardUpdatePlan manifest ownerAddress entry record = do
         boardUpdateAssetName = hexText (boardWitnessKey entry)
         boardUpdateDepositLovelace = boardLovelace entry
         boardUpdateOwnerKeyHash = hexText owner
-        boardUpdateOutput =
-            markerOutput
-                boardUpdateAddress
-                boardUpdateDepositLovelace
-                boardUpdatePolicy
-                boardUpdateAssetName
+        boardUpdateOutput = markerOutput boardUpdateAddress boardUpdateDepositLovelace boardUpdatePolicy boardUpdateAssetName
         boardUpdateDatum = endpointDatum owner record
         boardUpdateSpendRedeemer = plutusDataJson (Constr 0 [])
     pure BoardUpdatePlan{..}
@@ -294,417 +297,414 @@ mkBoardRetirePlan manifest ownerAddress refundAddress entry = do
         boardRetireOwnerKeyHash = hexText owner
         boardRetireRefundAddress = refundAddress
         boardRetireRefundLovelace = boardLovelace entry
-        boardRetireRefundOutput =
-            refundAddress <> "+" <> T.pack (show boardRetireRefundLovelace)
-        boardRetireSpendRedeemer =
-            plutusDataJson (Constr 1 [asPlcData refund])
+        boardRetireRefundOutput = refundAddress <> "+" <> T.pack (show boardRetireRefundLovelace)
+        boardRetireSpendRedeemer = plutusDataJson (Constr 1 [asPlcData refund])
         boardRetireMintRedeemer = plutusDataJson (Constr 1 [])
     pure BoardRetirePlan{..}
 
-boardPostBuildArguments ::
-    BoardRunnerConfig ->
-    BoardPostPlan ->
-    BoardFiles ->
-    Text ->
-    Text ->
-    [String]
-boardPostBuildArguments config plan files funding collateral =
-    transactionPrefix funding collateral
-        <> [ "--tx-out"
-           , T.unpack (boardPostOutput plan)
-           , "--tx-out-inline-datum-file"
-           , boardFilesDatum files
-           , "--change-address"
-           , T.unpack (boardRunnerChangeAddress config)
-           , "--mint"
-           , "1 "
-                <> assetId
-                    (boardPostPolicy plan)
-                    (boardPostAssetName plan)
-           ]
-        <> mintReferenceArguments
-            (boardPostReference plan)
-            (boardPostPolicy plan)
-            files
-        <> transactionSuffix config files
-  where
-    transactionPrefix = commonTransactionPrefix config
-
-boardUpdateBuildArguments ::
-    BoardRunnerConfig ->
-    BoardUpdatePlan ->
-    BoardFiles ->
-    Text ->
-    Text ->
-    [String]
-boardUpdateBuildArguments config plan files funding collateral =
-    spendPrefix
-        config
-        files
-        (boardUpdateSpentReference plan)
-        (boardUpdateReference plan)
-        funding
-        collateral
-        <> [ "--tx-out"
-           , T.unpack (boardUpdateOutput plan)
-           , "--tx-out-inline-datum-file"
-           , boardFilesDatum files
-           , "--change-address"
-           , T.unpack (boardRunnerChangeAddress config)
-           , "--required-signer-hash"
-           , T.unpack (boardUpdateOwnerKeyHash plan)
-           ]
-        <> transactionSuffix config files
-
-boardRetireBuildArguments ::
-    BoardRunnerConfig ->
-    BoardRetirePlan ->
-    BoardFiles ->
-    Text ->
-    Text ->
-    [String]
-boardRetireBuildArguments config plan files funding collateral =
-    spendPrefix
-        config
-        files
-        (boardRetireSpentReference plan)
-        (boardRetireReference plan)
-        funding
-        collateral
-        <> [ "--tx-out"
-           , T.unpack (boardRetireRefundOutput plan)
-           , "--change-address"
-           , T.unpack (boardRunnerChangeAddress config)
-           , "--mint"
-           , "-1 "
-                <> assetId
-                    (boardRetirePolicy plan)
-                    (boardRetireAssetName plan)
-           ]
-        <> mintReferenceArguments
-            (boardRetireReference plan)
-            (boardRetirePolicy plan)
-            files
-        <> [ "--required-signer-hash"
-           , T.unpack (boardRetireOwnerKeyHash plan)
-           ]
-        <> transactionSuffix config files
-
 runBoardPostTransaction ::
-    BoardRunnerConfig ->
+    BoardConfig ->
     BoardPostPlan ->
-    IO BoardResult
-runBoardPostTransaction config plan =
-    runBoardTransaction
-        config
-        (boardPostDepositLovelace plan + 5_000_000)
-        "endpoint-board post"
-        (boardPostBuildArguments config plan)
-        ( \files -> do
-            Aeson.encodeFile (boardFilesDatum files) (boardPostDatum plan)
-            Aeson.encodeFile
-                (boardFilesMintRedeemer files)
-                (boardPostMintRedeemer plan)
-        )
-        ( waitForBoardOutput
-            config
-            (boardPostPolicy plan)
-            (boardPostAssetName plan)
-            (boardPostAddress plan)
-        )
+    [(TxIn, TxOut ConwayEra)] ->
+    IO (Either BoardError BoardResult)
+runBoardPostTransaction config plan fundingInputs =
+    case postInputs config plan fundingInputs of
+        Left err -> pure (Left err)
+        Right inputs@BoardPostInputs{postFunding = funding} ->
+            runBoardBuild
+                config
+                funding
+                []
+                (postReferences inputs)
+                (postProgram inputs)
 
 runBoardUpdateTransaction ::
-    BoardRunnerConfig ->
+    BoardConfig ->
     BoardUpdatePlan ->
-    IO BoardResult
-runBoardUpdateTransaction config plan =
-    runBoardTransaction
-        config
-        5_000_000
-        "endpoint-board update"
-        (boardUpdateBuildArguments config plan)
-        ( \files -> do
-            Aeson.encodeFile (boardFilesDatum files) (boardUpdateDatum plan)
-            Aeson.encodeFile
-                (boardFilesSpendRedeemer files)
-                (boardUpdateSpendRedeemer plan)
-        )
-        ( waitForBoardOutput
-            config
-            (boardUpdatePolicy plan)
-            (boardUpdateAssetName plan)
-            (boardUpdateAddress plan)
-        )
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    IO (Either BoardError BoardResult)
+runBoardUpdateTransaction config plan fundingInputs boardInput =
+    case updateInputs config plan fundingInputs boardInput of
+        Left err -> pure (Left err)
+        Right inputs@BoardUpdateInputs{updateFunding = funding} ->
+            runBoardBuild
+                config
+                funding
+                [boardInput]
+                (updateReferences inputs)
+                (updateProgram inputs)
 
 runBoardRetireTransaction ::
-    BoardRunnerConfig ->
+    BoardConfig ->
     BoardRetirePlan ->
-    IO BoardResult
-runBoardRetireTransaction config plan = do
-    when
-        (boardRunnerChangeAddress config == boardRetireRefundAddress plan)
-        ( fail
-            "change address must differ from the exact board retire refund target"
-        )
-    runBoardTransaction
-        config
-        5_000_000
-        "endpoint-board retire"
-        (boardRetireBuildArguments config plan)
-        ( \files -> do
-            Aeson.encodeFile
-                (boardFilesSpendRedeemer files)
-                (boardRetireSpendRedeemer plan)
-            Aeson.encodeFile
-                (boardFilesMintRedeemer files)
-                (boardRetireMintRedeemer plan)
-        )
-        ( waitForBoardRetirement
-            config
-            (boardRetirePolicy plan)
-            (boardRetireAssetName plan)
-            (boardRetireSpentReference plan)
-        )
-
-runBoardTransaction ::
-    BoardRunnerConfig ->
-    Integer ->
-    String ->
-    (BoardFiles -> Text -> Text -> [String]) ->
-    (BoardFiles -> IO ()) ->
-    (Text -> IO ()) ->
-    IO BoardResult
-runBoardTransaction config minimumFunding label buildArguments writeFiles wait = do
-    validateRunner config
-    withSystemTempDirectory "ckeri-board" $ \directory -> do
-        let files = boardFiles directory
-        writeFiles files
-        wallet <- queryWallet config (directory </> "wallet.json")
-        (funding, collateral) <-
-            selectFundingPair minimumFunding label wallet
-        _ <-
-            runCardanoCli config (buildArguments files funding collateral)
-        txId <-
-            signSubmit
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    IO (Either BoardError BoardResult)
+runBoardRetireTransaction config plan fundingInputs boardInput =
+    case retireInputs config plan fundingInputs boardInput of
+        Left err -> pure (Left err)
+        Right inputs@BoardRetireInputs{retireFunding = funding} ->
+            runBoardBuild
                 config
-                (boardFilesBody files)
-                (boardFilesSigned files)
-        wait txId
-        pure (BoardResult txId)
+                funding
+                [boardInput]
+                (retireReferences inputs)
+                (retireProgram inputs)
 
-validateRunner :: BoardRunnerConfig -> IO ()
-validateRunner config = do
-    when (boardRunnerTimeoutSeconds config <= 0) $
-        fail "timeout-seconds must be positive"
-    when (boardRunnerNetworkMagic config /= 1) $
-        fail "endpoint-board transactions are frozen to preprod network magic 1"
+runBoardBuild ::
+    BoardConfig ->
+    FundingPair ->
+    [(TxIn, TxOut ConwayEra)] ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (PParams ConwayEra -> TxBuild BoardCtx BoardCheckError ()) ->
+    IO (Either BoardError BoardResult)
+runBoardBuild config funding extraInputs references program = do
+    let runtime = boardRuntime config
+    pparams <- trQueryProtocolParams runtime
+    let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
+        options =
+            defaultBuildOptions
+                { boCollateralUtxos = CollateralUtxos [fundingCollateral funding]
+                }
+    result <-
+        runTransactionBuild
+            options
+            frozenRuntime
+            boardInterpret
+            (fundingSpend funding : extraInputs)
+            references
+            (boardChangeAddress config)
+            (program pparams)
+    pure (BoardResult <$> first BoardBuildFailed result)
 
-boardFiles :: FilePath -> BoardFiles
-boardFiles directory =
-    BoardFiles
-        { boardFilesDatum = directory </> "datum.json"
-        , boardFilesSpendRedeemer = directory </> "spend-redeemer.json"
-        , boardFilesMintRedeemer = directory </> "mint-redeemer.json"
-        , boardFilesBody = directory </> "board.body"
-        , boardFilesSigned = directory </> "board.signed"
-        }
+data BoardPostInputs = BoardPostInputs
+    { postFunding :: !FundingPair
+    , postReferences :: ![(TxIn, TxOut ConwayEra)]
+    , postAddress :: !Addr
+    , postValue :: !MaryValue
+    , postDatum :: !RawData
+    , postPolicy :: !PolicyID
+    , postAsset :: !AssetName
+    , postMintData :: !RawData
+    }
 
-queryWallet ::
-    BoardRunnerConfig ->
-    FilePath ->
-    IO (Map Text WalletUtxo)
-queryWallet config output = do
-    _ <-
-        runCardanoCli
-            config
-            [ "query"
-            , "utxo"
-            , "--address"
-            , T.unpack (boardRunnerFundingAddress config)
-            , "--testnet-magic"
-            , show (boardRunnerNetworkMagic config)
-            , "--socket-path"
-            , boardRunnerNodeSocket config
-            , "--out-file"
-            , output
-            ]
-    eitherDecodeFileStrict' output
-        >>= either (fail . ("cannot decode funding UTxOs: " <>)) pure
+postInputs ::
+    BoardConfig ->
+    BoardPostPlan ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Either BoardError BoardPostInputs
+postInputs config plan fundingInputs = do
+    policyHash <- planScriptHash "board policy" (boardPostPolicy plan)
+    postAsset <- planAssetName "board asset name" (boardPostAssetName plan)
+    postAddress <- planAddress "board address" (boardPostAddress plan)
+    when (boardPostDepositLovelace plan <= 0) $
+        Left (BoardPlanRejected "board deposit must be positive")
+    boardReference <- resolveReference policyHash (boardPostReference plan) (boardReferenceUtxos config)
+    postDatum <- rawPlanData "board datum" (boardPostDatum plan)
+    postMintData <- rawPlanData "board mint redeemer" (boardPostMintRedeemer plan)
+    postFunding <-
+        first BoardFundingSelectionFailed $
+            selectFundingPair
+                isPlainUtxo
+                (Coin $ boardPostDepositLovelace plan + 5_000_000)
+                fundingInputs
+    let postPolicy = PolicyID policyHash
+        postValue = singletonMarkerValue (boardPostDepositLovelace plan) postPolicy postAsset
+        postReferences = [boardReference]
+    pure BoardPostInputs{..}
 
-selectFundingPair ::
-    Integer ->
-    String ->
-    Map Text WalletUtxo ->
-    IO (Text, Text)
-selectFundingPair minimumFunding label wallet =
-    case candidates of
-        (funding, fundingUtxo) : (collateral, _) : _
-            | walletLovelace fundingUtxo >= minimumFunding ->
-                pure (funding, collateral)
-            | otherwise ->
-                fail $
-                    label
-                        <> " needs a plain funding UTxO of at least "
-                        <> show minimumFunding
-                        <> " lovelace"
-        _ -> fail (label <> " needs two distinct plain funding UTxOs")
-  where
-    candidates =
-        sortOn
-            (Down . walletLovelace . snd)
-            [ (txIn, utxo)
-            | (txIn, utxo) <- Map.toList wallet
-            , isNothing (walletReferenceScript utxo)
-            , walletAssetCount utxo == 0
-            ]
+data BoardUpdateInputs = BoardUpdateInputs
+    { updateFunding :: !FundingPair
+    , updateInput :: !(TxIn, TxOut ConwayEra)
+    , updateReferences :: ![(TxIn, TxOut ConwayEra)]
+    , updateAddress :: !Addr
+    , updateValue :: !MaryValue
+    , updateDatumData :: !RawData
+    , updateSpendData :: !RawData
+    , updateOwner :: !(KeyHash Guard)
+    }
 
-signSubmit ::
-    BoardRunnerConfig ->
-    FilePath ->
-    FilePath ->
-    IO Text
-signSubmit config body signed = do
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "sign"
-            , "--tx-body-file"
-            , body
-            , "--signing-key-file"
-            , boardRunnerSigningKeyFile config
-            , "--testnet-magic"
-            , show (boardRunnerNetworkMagic config)
-            , "--out-file"
-            , signed
-            ]
-    txIdOutput <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "txid"
-            , "--tx-file"
-            , signed
-            ]
-    txId <- either fail pure (parseTransactionId txIdOutput)
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "submit"
-            , "--tx-file"
-            , signed
-            , "--testnet-magic"
-            , show (boardRunnerNetworkMagic config)
-            , "--socket-path"
-            , boardRunnerNodeSocket config
-            ]
-    pure txId
+updateInputs ::
+    BoardConfig ->
+    BoardUpdatePlan ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Either BoardError BoardUpdateInputs
+updateInputs config plan fundingInputs boardInput = do
+    spent <- planTxIn (boardUpdateSpentReference plan)
+    unless (fst boardInput == spent) $
+        Left (BoardPlanRejected "resolved board record disagrees with the update plan")
+    policyHash <- planScriptHash "board policy" (boardUpdatePolicy plan)
+    asset <- planAssetName "board asset name" (boardUpdateAssetName plan)
+    requireMarkerValue
+        (Coin $ boardUpdateDepositLovelace plan)
+        (PolicyID policyHash)
+        asset
+        boardInput
+    updateAddress <- planAddress "board address" (boardUpdateAddress plan)
+    when (boardUpdateDepositLovelace plan <= 0) $
+        Left (BoardPlanRejected "board deposit must be positive")
+    boardReference <- resolveReference policyHash (boardUpdateReference plan) (boardReferenceUtxos config)
+    updateDatumData <- rawPlanData "board datum" (boardUpdateDatum plan)
+    updateSpendData <- rawPlanData "board update redeemer" (boardUpdateSpendRedeemer plan)
+    updateOwner <- planOwnerKeyHash (boardUpdateOwnerKeyHash plan)
+    updateFunding <- selectBoardFunding fundingInputs
+    let updateInput = boardInput
+        updateReferences = [boardReference]
+        updateValue = singletonMarkerValue (boardUpdateDepositLovelace plan) (PolicyID policyHash) asset
+    pure BoardUpdateInputs{..}
 
-runCardanoCli :: BoardRunnerConfig -> [String] -> IO String
-runCardanoCli config arguments = do
-    (exitCode, output, err) <-
-        readProcessWithExitCode (boardRunnerCardanoCli config) arguments ""
-    case exitCode of
-        ExitSuccess -> pure output
-        ExitFailure code ->
-            fail (renderCardanoCliFailure code err output)
+data BoardRetireInputs = BoardRetireInputs
+    { retireFunding :: !FundingPair
+    , retireInput :: !(TxIn, TxOut ConwayEra)
+    , retireReferences :: ![(TxIn, TxOut ConwayEra)]
+    , retireRefundAddr :: !Addr
+    , retireRefundCoin :: !Integer
+    , retirePolicy :: !PolicyID
+    , retireAsset :: !AssetName
+    , retireSpendData :: !RawData
+    , retireMintData :: !RawData
+    , retireOwner :: !(KeyHash Guard)
+    }
 
-waitForBoardOutput ::
-    BoardRunnerConfig ->
-    Text ->
-    Text ->
-    Text ->
-    Text ->
-    IO ()
-waitForBoardOutput config policy assetName expectedAddress txId =
-    retryUntil config description $ do
-        outputs <-
-            queryAssetUtxos
-                (boardRunnerKoiosUrl config)
-                (boardRunnerKoiosToken config)
-                policy
-                assetName
-        pure $
-            any
-                ( \output ->
-                    chainAssetTxId output == txId
-                        && chainAssetAddress output == expectedAddress
-                )
-                outputs
-  where
-    description =
-        "settled endpoint-board output "
-            <> T.unpack txId
-            <> " for "
-            <> T.unpack policy
-            <> "."
-            <> T.unpack assetName
+retireInputs ::
+    BoardConfig ->
+    BoardRetirePlan ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Either BoardError BoardRetireInputs
+retireInputs config plan fundingInputs boardInput = do
+    spent <- planTxIn (boardRetireSpentReference plan)
+    unless (fst boardInput == spent) $
+        Left (BoardPlanRejected "resolved board record disagrees with the retire plan")
+    policyHash <- planScriptHash "board policy" (boardRetirePolicy plan)
+    retireAsset <- planAssetName "board asset name" (boardRetireAssetName plan)
+    requireMarkerValue
+        (Coin $ boardRetireRefundLovelace plan)
+        (PolicyID policyHash)
+        retireAsset
+        boardInput
+    boardReference <- resolveReference policyHash (boardRetireReference plan) (boardReferenceUtxos config)
+    retireRefundAddr <- planAddress "board refund address" (boardRetireRefundAddress plan)
+    when (boardChangeAddress config == retireRefundAddr) $
+        Left (BoardPlanRejected "change address must differ from the exact board retire refund target")
+    when (boardRetireRefundLovelace plan <= 0) $
+        Left (BoardPlanRejected "board refund must be positive")
+    retireSpendData <- rawPlanData "board retire spend redeemer" (boardRetireSpendRedeemer plan)
+    retireMintData <- rawPlanData "board retire mint redeemer" (boardRetireMintRedeemer plan)
+    retireOwner <- planOwnerKeyHash (boardRetireOwnerKeyHash plan)
+    retireFunding <- selectBoardFunding fundingInputs
+    let retireInput = boardInput
+        retireReferences = [boardReference]
+        retireRefundCoin = boardRetireRefundLovelace plan
+        retirePolicy = PolicyID policyHash
+    pure BoardRetireInputs{..}
 
-waitForBoardRetirement ::
-    BoardRunnerConfig ->
-    Text ->
-    Text ->
-    Text ->
-    Text ->
-    IO ()
-waitForBoardRetirement config policy assetName spentReference txId =
-    retryUntil config description $ do
-        outputs <-
-            queryAssetUtxos
-                (boardRunnerKoiosUrl config)
-                (boardRunnerKoiosToken config)
-                policy
-                assetName
-        transaction <-
-            queryTransactionUtxos
-                (boardRunnerKoiosUrl config)
-                (boardRunnerKoiosToken config)
-                [txId]
-        pure $
-            not (any ((== spentReference) . boardUtxoReference) outputs)
-                && any ((== txId) . chainTransactionTxId) transaction
-  where
-    description =
-        "settled endpoint-board retirement "
-            <> T.unpack txId
-            <> " consuming "
-            <> T.unpack spentReference
+selectBoardFunding :: [(TxIn, TxOut ConwayEra)] -> Either BoardError FundingPair
+selectBoardFunding =
+    first BoardFundingSelectionFailed
+        . selectFundingPair isPlainUtxo (Coin 5_000_000)
 
-retryUntil ::
-    BoardRunnerConfig ->
-    String ->
-    IO Bool ->
-    IO ()
-retryUntil config description predicate = do
+postProgram ::
+    BoardPostInputs ->
+    PParams ConwayEra ->
+    TxBuild BoardCtx BoardCheckError ()
+postProgram BoardPostInputs{postFunding = FundingPair{..}, ..} pparams = do
+    _ <- spend (fst fundingSpend)
+    collateral (fst fundingCollateral)
+    _ <- payTo' postAddress postValue postDatum
+    mint postPolicy (Map.singleton postAsset 1) postMintData
+    mapM_ (reference . fst) postReferences
+    valid (boardCheck pparams)
+
+updateProgram ::
+    BoardUpdateInputs ->
+    PParams ConwayEra ->
+    TxBuild BoardCtx BoardCheckError ()
+updateProgram BoardUpdateInputs{updateFunding = FundingPair{..}, ..} pparams = do
+    _ <- spend (fst fundingSpend)
+    _ <- spendScript (fst updateInput) updateSpendData
+    collateral (fst fundingCollateral)
+    _ <- payTo' updateAddress updateValue updateDatumData
+    mapM_ (reference . fst) updateReferences
+    requireSignature updateOwner
+    valid (boardCheck pparams)
+
+retireProgram ::
+    BoardRetireInputs ->
+    PParams ConwayEra ->
+    TxBuild BoardCtx BoardCheckError ()
+retireProgram BoardRetireInputs{retireFunding = FundingPair{..}, ..} pparams = do
+    _ <- spend (fst fundingSpend)
+    _ <- spendScript (fst retireInput) retireSpendData
+    collateral (fst fundingCollateral)
+    _ <- output $ mkBasicTxOut retireRefundAddr (MaryValue (Coin retireRefundCoin) $ MultiAsset mempty)
+    mint retirePolicy (Map.singleton retireAsset (-1)) retireMintData
+    mapM_ (reference . fst) retireReferences
+    requireSignature retireOwner
+    valid (boardCheck pparams)
+
+data BoardCtx a
+
+boardInterpret :: InterpretIO BoardCtx
+boardInterpret = InterpretIO (\case {})
+
+boardCheck :: PParams ConwayEra -> ConwayTx -> Check BoardCheckError
+boardCheck pparams tx =
+    case checkAggregateExUnits pparams tx of
+        Pass -> Pass
+        LedgerFail failure -> LedgerFail failure
+        CustomFail failure -> CustomFail (BoardAggregateExUnitsExceeded failure)
+
+awaitBoard ::
+    (TxId -> IO Bool) ->
+    Int ->
+    Int ->
+    TxId ->
+    IO (Either BoardObservationTimeout ())
+awaitBoard settled pollMicros timeoutSeconds txId = do
     started <- getCurrentTime
-    go started
-  where
-    go started = do
-        result <- try predicate
-        case result of
-            Right True -> pure ()
-            Right False -> retry started
-            Left (_ :: SomeException) -> retry started
-    retry :: UTCTime -> IO ()
-    retry started = do
-        now <- getCurrentTime
-        if diffUTCTime now started
-            >= fromIntegral (boardRunnerTimeoutSeconds config)
-            then fail ("timed out waiting for " <> description)
-            else threadDelay 5_000_000 >> go started
+    let loop = do
+            result <- try (settled txId)
+            case result of
+                Right True -> pure (Right ())
+                Right False -> retry started
+                Left (_ :: SomeException) -> retry started
+        retry startedAt = do
+            now <- getCurrentTime
+            if diffUTCTime now startedAt >= fromIntegral timeoutSeconds
+                then pure (Left $ BoardObservationTimeout txId)
+                else threadDelay pollMicros >> loop
+    loop
 
-validatedBoardInfo ::
-    EndpointBoardManifest ->
-    Either String EndpointBoardInfo
+resolveReference ::
+    ScriptHash ->
+    Text ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Either BoardError (TxIn, TxOut ConwayEra)
+resolveReference expected rendered rows = do
+    txIn <- planTxIn rendered
+    row@(_, txOut) <-
+        maybe
+            (Left $ BoardPlanRejected "board reference UTxO is unresolved")
+            Right
+            (find ((== txIn) . fst) rows)
+    case txOut ^. referenceScriptTxOutL of
+        SNothing -> Left (BoardPlanRejected "board reference UTxO has no script")
+        SJust script
+            | hashScript script == expected -> Right row
+            | otherwise -> Left (BoardPlanRejected "board reference script disagrees with the plan")
+
+requireMarkerValue ::
+    Coin ->
+    PolicyID ->
+    AssetName ->
+    (TxIn, TxOut ConwayEra) ->
+    Either BoardError ()
+requireMarkerValue expectedCoin policy assetName (_, txOut) =
+    case txOut ^. valueTxOutL of
+        MaryValue coin (MultiAsset assets)
+            | coin == expectedCoin
+                && assets == Map.singleton policy (Map.singleton assetName 1) ->
+                Right ()
+        _ ->
+            Left $
+                BoardPlanRejected
+                    "board input value does not exactly match the singleton marker and deposit plan"
+
+isPlainUtxo :: TxOut ConwayEra -> Bool
+isPlainUtxo txOut =
+    case (txOut ^. referenceScriptTxOutL, txOut ^. valueTxOutL) of
+        (SNothing, MaryValue _ (MultiAsset assets)) -> Map.null assets
+        _ -> False
+
+singletonMarkerValue :: Integer -> PolicyID -> AssetName -> MaryValue
+singletonMarkerValue lovelace policy asset =
+    MaryValue
+        (Coin lovelace)
+        (MultiAsset $ Map.singleton policy $ Map.singleton asset 1)
+
+rawPlanData :: String -> Value -> Either BoardError RawData
+rawPlanData label =
+    first (BoardPlanRejected . ((label <> ": ") <>))
+        . fmap RawData
+        . plutusDataFromJson
+
+planScriptHash :: String -> Text -> Either BoardError ScriptHash
+planScriptHash label encoded = do
+    bytes <- first BoardPlanRejected (decodeHexSized label 28 encoded)
+    maybe
+        (Left $ BoardPlanRejected $ label <> " is not a ledger hash")
+        (Right . ScriptHash)
+        (hashFromBytes bytes)
+
+planOwnerKeyHash :: Text -> Either BoardError (KeyHash Guard)
+planOwnerKeyHash encoded = do
+    bytes <- first BoardPlanRejected (decodeHexSized "board owner key hash" 28 encoded)
+    maybe
+        (Left $ BoardPlanRejected "board owner key hash is not a ledger hash")
+        (Right . KeyHash)
+        (hashFromBytes bytes)
+
+planAssetName :: String -> Text -> Either BoardError AssetName
+planAssetName label encoded = do
+    bytes <- planHex label encoded
+    if BS.length bytes <= 32
+        then Right (AssetName $ SBS.toShort bytes)
+        else Left (BoardPlanRejected $ label <> " exceeds 32 bytes")
+
+planTxIn :: Text -> Either BoardError TxIn
+planTxIn rendered =
+    case T.splitOn "#" rendered of
+        [encodedId, renderedIx] -> do
+            rawId <- planHex "reference transaction id" encodedId
+            unless (BS.length rawId == 32) $
+                Left (BoardPlanRejected "reference transaction id is not 32 bytes")
+            digest <-
+                maybe
+                    (Left $ BoardPlanRejected "reference transaction id is not a ledger hash")
+                    Right
+                    (hashFromBytes rawId)
+            txIx <-
+                maybe
+                    (Left $ BoardPlanRejected "reference transaction index is invalid")
+                    Right
+                    (readMaybe $ T.unpack renderedIx)
+            pure (TxIn (TxId $ unsafeMakeSafeHash digest) (TxIx txIx))
+        _ -> Left (BoardPlanRejected "reference must have txid#index form")
+
+planHex :: String -> Text -> Either BoardError ByteString
+planHex label encoded =
+    first
+        (const $ BoardPlanRejected $ label <> " is not hexadecimal")
+        (convertFromBase Base16 $ TE.encodeUtf8 encoded)
+
+planAddress :: String -> Text -> Either BoardError Addr
+planAddress label encoded = do
+    (_, dataPart) <-
+        first
+            (BoardPlanRejected . ((label <> " is not Bech32: ") <>) . show)
+            (Bech32.decodeLenient encoded)
+    bytes <-
+        maybe
+            (Left $ BoardPlanRejected $ label <> " data is invalid")
+            Right
+            (Bech32.dataPartToBytes dataPart)
+    address <-
+        maybe
+            (Left $ BoardPlanRejected $ label <> " is not a Shelley address")
+            Right
+            (decodeAddr bytes :: Maybe Addr)
+    case address of
+        Addr Testnet _ _ -> Right address
+        Addr Mainnet _ _ -> Left (BoardPlanRejected $ label <> " belongs to mainnet")
+        AddrBootstrap{} -> Left (BoardPlanRejected $ label <> " is a Byron address")
+
+validatedBoardInfo :: EndpointBoardManifest -> Either String EndpointBoardInfo
 validatedBoardInfo manifest = do
     unless
-        ( endpointBoardManifestSchemaVersion manifest
-            == endpointBoardManifestSchema
-        )
+        (endpointBoardManifestSchemaVersion manifest == endpointBoardManifestSchema)
         (Left "endpoint-board manifest schema is not frozen V1")
     unless
         (endpointBoardManifestNetwork manifest == NetworkInfo "preprod" 1)
@@ -722,8 +722,7 @@ paymentKeyHash address = do
     decoded <- decodeRefundAddress address
     case faPaymentCredential decoded of
         VerificationKeyCredential keyHash -> pure keyHash
-        ScriptCredential _ ->
-            Left "board ownership requires a Cardano payment verification key"
+        ScriptCredential _ -> Left "board ownership requires a Cardano payment verification key"
 
 endpointDatum :: BS.ByteString -> EndpointRecord -> Value
 endpointDatum owner record =
@@ -736,72 +735,6 @@ endpointDatum owner record =
             , B owner
             ]
 
-commonTransactionPrefix ::
-    BoardRunnerConfig ->
-    Text ->
-    Text ->
-    [String]
-commonTransactionPrefix _config funding collateral =
-    [ "conway"
-    , "transaction"
-    , "build"
-    , "--tx-in"
-    , T.unpack funding
-    , "--tx-in-collateral"
-    , T.unpack collateral
-    ]
-
-spendPrefix ::
-    BoardRunnerConfig ->
-    BoardFiles ->
-    Text ->
-    Text ->
-    Text ->
-    Text ->
-    [String]
-spendPrefix config files spent reference funding collateral =
-    [ "conway"
-    , "transaction"
-    , "build"
-    , "--tx-in"
-    , T.unpack spent
-    , "--spending-tx-in-reference"
-    , T.unpack reference
-    , "--spending-plutus-script-v3"
-    , "--spending-reference-tx-in-inline-datum-present"
-    , "--spending-reference-tx-in-redeemer-file"
-    , boardFilesSpendRedeemer files
-    ]
-        <> drop 3 (commonTransactionPrefix config funding collateral)
-
-mintReferenceArguments ::
-    Text ->
-    Text ->
-    BoardFiles ->
-    [String]
-mintReferenceArguments reference policy files =
-    [ "--mint-tx-in-reference"
-    , T.unpack reference
-    , "--mint-plutus-script-v3"
-    , "--mint-reference-tx-in-redeemer-file"
-    , boardFilesMintRedeemer files
-    , "--policy-id"
-    , T.unpack policy
-    ]
-
-transactionSuffix ::
-    BoardRunnerConfig ->
-    BoardFiles ->
-    [String]
-transactionSuffix config files =
-    [ "--testnet-magic"
-    , show (boardRunnerNetworkMagic config)
-    , "--socket-path"
-    , boardRunnerNodeSocket config
-    , "--out-file"
-    , boardFilesBody files
-    ]
-
 markerOutput :: Text -> Integer -> Text -> Text -> Text
 markerOutput address lovelace policy assetName =
     address
@@ -813,22 +746,25 @@ markerOutput address lovelace policy assetName =
         <> assetName
 
 renderReference :: Reference -> Text
-renderReference reference =
-    referenceTxId reference <> "#" <> T.pack (show $ referenceIndex reference)
+renderReference scriptReference =
+    referenceTxId scriptReference
+        <> "#"
+        <> T.pack (show $ referenceIndex scriptReference)
 
 boardEntryReference :: BoardEntry -> Text
 boardEntryReference entry =
     boardTxId entry <> "#" <> T.pack (show $ boardIndex entry)
 
-boardUtxoReference :: ChainAssetUtxo -> Text
-boardUtxoReference output =
-    chainAssetTxId output
-        <> "#"
-        <> T.pack (show $ chainAssetIndex output)
-
-assetId :: Text -> Text -> String
-assetId policy assetName =
-    T.unpack policy <> "." <> T.unpack assetName
-
 hexText :: BS.ByteString -> Text
 hexText = TE.decodeUtf8 . convertToBase Base16
+
+decodeHexSized :: String -> Int -> Text -> Either String ByteString
+decodeHexSized label expected encoded = do
+    bytes <-
+        either
+            (const $ Left $ label <> " is not hexadecimal")
+            Right
+            (convertFromBase Base16 $ TE.encodeUtf8 encoded)
+    unless (BS.length bytes == expected) $
+        Left (label <> " has the wrong byte length")
+    pure bytes

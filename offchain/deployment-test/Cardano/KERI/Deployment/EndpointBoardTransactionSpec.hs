@@ -35,6 +35,9 @@ import Cardano.KERI.Deployment.TransactionRuntime (
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+    TransactionScriptFailure (UnknownTxIn),
+ )
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as LedgerData
@@ -75,7 +78,7 @@ import Cardano.Ledger.Hashes (
     extractHash,
     unsafeMakeSafeHash,
  )
-import Cardano.Ledger.Keys (KeyRole (Guard))
+import Cardano.Ledger.Keys (KeyRole (Guard, Payment))
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
     MaryValue (..),
@@ -135,7 +138,7 @@ spec = describe "in-process endpoint-board transactions" $ do
         case [output | output <- outputs, output ^. addrTxOutL == markerAddr] of
             [marker] -> do
                 marker ^. coinTxOutL `shouldBe` Coin 2_000_000
-                marker ^. datumTxOutL `shouldSatisfy` (/= LedgerData.NoDatum)
+                inlineDatum marker `shouldBe` postDatum
             other -> fail ("expected one marker output, got " <> show (length other))
         redeemerData (ConwayMinting $ AsIx 0) redeemers
             `shouldBe` Just mintRedeemer
@@ -159,6 +162,9 @@ spec = describe "in-process endpoint-board transactions" $ do
         body ^. referenceInputsTxBodyL `shouldBe` Set.singleton boardReference
         body ^. mintTxBodyL `shouldBe` mempty
         body ^. reqSignerHashesTxBodyL `shouldBe` Set.singleton ownerKeyHash
+        case [output | output <- toList (body ^. outputsTxBodyL), output ^. addrTxOutL == markerAddr] of
+            [marker] -> inlineDatum marker `shouldBe` updateDatum
+            other -> fail ("expected one replacement marker output, got " <> show (length other))
         redeemerData spendPurpose redeemers `shouldBe` Just spendRedeemer
         assertTerminal tx txId order
 
@@ -192,10 +198,17 @@ spec = describe "in-process endpoint-board transactions" $ do
             `shouldBe` Just burnRedeemer
         assertTerminal tx txId order
 
-    it "fails closed on underfunding, evaluation rejection, and submission rejection" $ do
+    it "fails closed on stale value, underfunding, evaluation rejection, and submission rejection" $ do
         callsRef <- newIORef []
         signedRef <- newIORef Nothing
         baseRuntime <- standInRuntime callsRef signedRef
+        staleValue <-
+            runBoardUpdateTransaction
+                (boardConfig baseRuntime)
+                updatePlan{boardUpdateDepositLovelace = 2_000_001}
+                fundingInputs
+                boardInput
+        staleValue `shouldSatisfy` isPlanFailure
         underfunded <-
             runBoardPostTransaction
                 (boardConfig baseRuntime)
@@ -204,7 +217,16 @@ spec = describe "in-process endpoint-board transactions" $ do
         underfunded `shouldSatisfy` isFundingFailure
         evaluation <-
             runBoardPostTransaction
-                (boardConfig baseRuntime{trEvaluate = \_ -> pure (Map.singleton (ConwayMinting $ AsIx 0) (Left "board rejected"))})
+                ( boardConfig
+                    baseRuntime
+                        { trEvaluate = \_ ->
+                            pure
+                                ( Map.singleton
+                                    (ConwayMinting $ AsIx 0)
+                                    (Left $ UnknownTxIn $ stubTxIn 99)
+                                )
+                        }
+                )
                 postPlan
                 fundingInputs
         evaluation `shouldSatisfy` isEvaluationFailure
@@ -235,6 +257,10 @@ assertTerminal tx txId order = do
 isFundingFailure :: Either BoardError BoardResult -> Bool
 isFundingFailure (Left BoardFundingSelectionFailed{}) = True
 isFundingFailure _ = False
+
+isPlanFailure :: Either BoardError BoardResult -> Bool
+isPlanFailure (Left BoardPlanRejected{}) = True
+isPlanFailure _ = False
 
 isEvaluationFailure :: Either BoardError BoardResult -> Bool
 isEvaluationFailure (Left (BoardBuildFailed TransactionBuildEvaluationRejected{})) = True
@@ -359,8 +385,11 @@ ownerBytes = BS.replicate 28 0x44
 ownerKeyHash :: KeyHash Guard
 ownerKeyHash = KeyHash (fromJust $ hashFromBytes ownerBytes)
 
+ownerPaymentKeyHash :: KeyHash Payment
+ownerPaymentKeyHash = KeyHash (fromJust $ hashFromBytes ownerBytes)
+
 fundingAddr, changeAddr, refundAddr, markerAddr :: Addr
-fundingAddr = Addr Testnet (KeyHashObj ownerKeyHash) StakeRefNull
+fundingAddr = Addr Testnet (KeyHashObj ownerPaymentKeyHash) StakeRefNull
 changeAddr = testAddr 2
 refundAddr = testAddr 3
 markerAddr = Addr Testnet (ScriptHashObj boardScriptHash) StakeRefNull
@@ -425,7 +454,8 @@ standInRuntime callsRef signedRef =
                 recordCall callsRef "submit"
                 pure (Submitted disagreeingId)
             , trObserve = \txId -> do
-                fmap transactionId (readIORef signedRef) >>= (`shouldBe` Just txId)
+                signed <- readIORef signedRef
+                fmap transactionId signed `shouldBe` Just txId
                 recordCall callsRef "observe"
             }
 
@@ -449,3 +479,11 @@ redeemerData ::
     Maybe Data
 redeemerData purpose redeemers =
     (\(LedgerData.Data datum, _) -> datum) <$> Map.lookup purpose redeemers
+
+inlineDatum :: TxOut ConwayEra -> Data
+inlineDatum txOut =
+    case txOut ^. datumTxOutL of
+        LedgerData.Datum binaryDatum ->
+            let LedgerData.Data datum = LedgerData.binaryDataToData binaryDatum
+             in datum
+        other -> error ("expected inline datum, got " <> show other)

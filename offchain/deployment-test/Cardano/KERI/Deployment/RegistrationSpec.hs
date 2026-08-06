@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -757,7 +758,7 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
             Left (RegistrationBuildFailed (TransactionBuildChecksRejected checks)) ->
                 checks
                     `shouldSatisfy` any
-                        ( \c -> case c of
+                        ( \case
                             CustomFail
                                 ( RegistrationAggregateExUnitsExceeded
                                         (AggregateExUnitsExceeded declared limit)

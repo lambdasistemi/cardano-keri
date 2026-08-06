@@ -185,8 +185,8 @@ data RegisterConfig = RegisterConfig
     }
 
 -- | Domain-specific checks performed after the build converges.
-data RegistrationCheckError
-    = RegistrationAggregateExUnitsExceeded !AggregateExUnitsError
+newtype RegistrationCheckError
+    = RegistrationAggregateExUnitsExceeded AggregateExUnitsError
     deriving stock (Eq, Show)
 
 -- | Typed, phase-preserving failures of either registration transaction.

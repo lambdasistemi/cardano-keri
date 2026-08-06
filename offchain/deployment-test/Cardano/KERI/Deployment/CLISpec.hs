@@ -56,10 +56,10 @@ spec =
                     modifyIORef' calls (tag :) >> action
                 mkRuntime calls =
                     RegisterRuntime
-                        { registerReadKel = \path ->
-                            record calls "read-kel" (BS.readFile path)
-                        , registerReadManifest = \path ->
-                            record calls "read-manifest" (readManifest path)
+                        { registerReadKel =
+                            record calls "read-kel" . BS.readFile
+                        , registerReadManifest =
+                            record calls "read-manifest" . readManifest
                         , registerQueryAssets = \_ _ _ _ ->
                             record
                                 calls
@@ -74,17 +74,14 @@ spec =
                                         Nothing
                                     ]
                                 )
-                        , registerReadBoardManifest = \path ->
-                            record
-                                calls
-                                "read-board-manifest"
-                                (readEndpointBoardManifest path)
+                        , registerReadBoardManifest =
+                            record calls "read-board-manifest"
+                                . readEndpointBoardManifest
                         , registerQueryBoard = \_ _ _ _ ->
                             record calls "query-board-catalog" (pure [])
                         , registerWriteLine = \_ ->
                             record calls "warning" (pure ())
-                        , registerStop = \message ->
-                            record calls "stop" (fail message)
+                        , registerStop = record calls "stop" . fail
                         }
                 runtime = mkRuntime callsRef
                 settings =
@@ -113,7 +110,7 @@ spec =
                     displayException exception
                         `shouldContain` "registering pending #181 Slice 4 composition"
                 Right () -> fail "runRegisterWith did not fail closed"
-            reverse <$> readIORef callsRef
+            readIORef callsRef
                 >>= ( `shouldBe`
                         [ "read-kel"
                         , "read-manifest"
@@ -125,6 +122,7 @@ spec =
                         , "stop"
                         ]
                     )
+                    . reverse
             preflightCallsRef <- newIORef ([] :: [String])
             preflightResult <-
                 try
@@ -138,7 +136,7 @@ spec =
                     displayException exception
                         `shouldContain` "checkpoint already registered; refusing before premint"
                 Right () -> fail "runRegisterWith skipped registerPreflight"
-            reverse <$> readIORef preflightCallsRef
+            readIORef preflightCallsRef
                 >>= ( `shouldBe`
                         [ "read-kel"
                         , "read-manifest"
@@ -147,6 +145,7 @@ spec =
                         , "query-board-catalog"
                         ]
                     )
+                    . reverse
 
 requiredPath :: [FilePath] -> IO FilePath
 requiredPath [] = fail "cannot locate a required register preflight fixture"

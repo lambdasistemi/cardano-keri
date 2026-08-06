@@ -76,21 +76,36 @@ commit with an exact `Tasks:` trailer.
 
 ## Slice 2C — register migration and fail-closed old CLI
 
-- [ ] T181-S2C-1 RED: Registration tests freeze datum, mint, reference inputs,
+- [x] T181-S2C-1 RED: Registration tests freeze datum, mint, reference inputs,
       lifecycle withdrawal, fee/change, collateral, signing, tx-id,
       submission, and settlement
-- [ ] T181-S2C-2 RED: evaluation, bad-key, submission, and timeout failures
+- [x] T181-S2C-2 RED: evaluation, bad-key, submission, and timeout failures
       retain exact actionable detail and exercise the real operation path
-- [ ] T181-S2C-3 GREEN: migrate `Registration` completely from subprocess
+- [x] T181-S2C-3 GREEN: migrate `Registration` completely from subprocess
       query, build, sign, txid, and submit to the shared runtime
-- [ ] T181-S2C-4 Retire register `cardano-cli` fields and make the old
+- [x] T181-S2C-4 Retire register `cardano-cli` fields and make the old
       register command fail closed before funding/build/sign/submit pending
       Slice 4. (Publisher's half — `runDeploy`/`runBoardDeploy` — already
       moved to T181-S2B-3; ruled 2026-08-05.)
-- [ ] T181-S2C-5 Prove the combined source guard and restricted-`PATH` suite
+- [x] T181-S2C-5 Prove the combined source guard and restricted-`PATH` suite
       can fail, reject zero selection, and pass restored production
-- [ ] T181-S2C-6 Navigator verifies one commit with
-      `Tasks: T181-S2C-1,...,T181-S2C-6`
+- [x] T181-S2C-6 Verified via OWNER/fresh-auditor alternation (not a
+      navigator — this slice ran under the post-NOTE-006 contract), two
+      submissions plus the `slice2c-deposit-oracle` follow-on, final accepted
+      chain `efb2d30b→52db21a2→35627f47`
+- [x] T181-S2C-7 `slice2c-deposit-oracle` (carved 2026-08-05, epic-owner
+      ruling NOTE-008): the lifecycle certificate's deposit
+      (`SJust $ pparams ^. ppKeyDepositL`) is genuine production code, but
+      `RegistrationSpec.hs`'s proof of it cannot fail — `testPParams` never
+      sets `ppKeyDepositL`, so both the asserted and observed sides default
+      to the same `Coin 0`, and a mutant hardcoding the deposit to zero
+      passes the suite green. Fix the fixture to a real non-zero deposit
+      value consistent with this module's own stated design contract ("every
+      field this slice's assertions depend on is set to a real, non-zero,
+      realistic value"), and demonstrate — with a preserved log, not a
+      passing run — that a hardcoded-zero-deposit mutant now goes RED.
+      CONTRACT-CRITICAL (explicitly not MECHANICAL despite its size): the
+      slice's entire product is a proof.
 
 ## Slice 3 — advance, close, and endpoint-board migration
 
@@ -110,6 +125,18 @@ commit with an exact `Tasks:` trailer.
       passes restored
 - [ ] T181-S3-7 Focused and accumulated gates green; navigator verifies one
       commit with `Tasks: T181-S3-1,...,T181-S3-7`
+- [ ] T181-S3-8 Guard `TransactionRuntime/Fixtures.hs`'s `testPParams` key
+      deposit against silently going degenerate again (placed here 2026-08-06,
+      found by the desk verifying `slice2c-deposit-oracle`'s acceptance):
+      `RegistrationSpec.hs:604` derives its expectation from the same fixture
+      constant the production path reads, which is why T181-S2C-7's mutant
+      now dies — but the proof's whole discriminating power rests on that one
+      constant staying non-zero, and nothing guards it. Reset it to `Coin 0`
+      and both sides collapse together, silently, the same defect one level
+      further out. Remedy is open — assert the fixture's deposit is
+      non-zero, or derive it from a real `pparams` snapshot — but do not
+      widen this task beyond that guard; scope is the honest lever, per the
+      epic owner's own instruction placing this task.
 
 ## Slice 4 — #177 composition and live no-CLI journey
 

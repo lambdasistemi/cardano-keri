@@ -1,0 +1,26 @@
+$ hostname -f
+production
+$ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-07-29T12:20:08Z
+$ cd /code/cardano-keri-165-operator
+$ git rev-parse HEAD
+862eaa9109de06e65a0edec6f9b080ade6cfee36
+$ ./result/bin/ckeri board post --help
+$ grep -F 4000000
+  default: 4000000
+$ wc -c deploy/preprod/witness-1-oobi.cesr deploy/preprod/witness-2-oobi.cesr deploy/preprod/witness-3-oobi.cesr
+1239 deploy/preprod/witness-1-oobi.cesr
+1239 deploy/preprod/witness-2-oobi.cesr
+1239 deploy/preprod/witness-3-oobi.cesr
+3717 total
+$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-1-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
+board txid: f8321e3b2037b4528e9434d3ce9e1571de1fc6a6bb088ed30328734c85ab65ab deposit: 4 tADA
+$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-2-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
+board txid: 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9 deposit: 4 tADA
+$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-3-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
+board txid: c8c0672fafb09146c95597d4f013bd65013f07c4d6a0fb6200fafd636ffaacfe deposit: 4 tADA
+$ ./result/bin/ckeri board list --board-manifest deploy/preprod/board-manifest.json
+board records: 3
+BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B verified https https://witness-2.preprod.plutimus.com/ tx 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9#0 deposit 4000000
+BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx c8c0672fafb09146c95597d4f013bd65013f07c4d6a0fb6200fafd636ffaacfe#0 deposit 4000000
+BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx f8321e3b2037b4528e9434d3ce9e1571de1fc6a6bb088ed30328734c85ab65ab#0 deposit 4000000

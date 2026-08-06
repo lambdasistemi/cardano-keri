@@ -19,10 +19,8 @@ module Cardano.KERI.Deployment.Publisher (
     publishScripts,
     publishOne,
     awaitReference,
-    parseTransactionId,
 ) where
 
-import Cardano.Crypto.Hash (hashToBytes)
 import Cardano.KERI.Deployment.ChainIndex (ChainReference (..))
 import Cardano.KERI.Deployment.Manifest (Reference (..))
 import Cardano.KERI.Deployment.Script (
@@ -31,9 +29,10 @@ import Cardano.KERI.Deployment.Script (
     scriptHashText,
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
-    FundingPair (..),
     PayerSelectionError,
     TransactionRuntime (..),
+    fundingSpends,
+    renderTransactionId,
     runTransactionBuild,
     selectFundingPair,
  )
@@ -47,9 +46,8 @@ import Cardano.Ledger.Core (
     fromStrictMaybeL,
     mkBasicTxOut,
  )
-import Cardano.Ledger.Hashes (extractHash)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
-import Cardano.Ledger.TxIn (TxId, TxIn, unTxId)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Tx.Build (
     InterpretIO (..),
     TxBuild,
@@ -58,16 +56,11 @@ import Cardano.Tx.Build (
     spend,
  )
 import Control.Concurrent (threadDelay)
-import Data.Aeson (FromJSON (..), withObject, (.:))
-import Data.Aeson qualified as Aeson
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
-import Data.Char (isHexDigit)
 import Data.Functor.Const (Const (..), getConst)
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.Maybe (isNothing)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 
 {- | Settlement polling cadence in microseconds, matching the pre-migration
@@ -136,22 +129,25 @@ publishOne config artifact =
     case selectFundingPair isPlainUtxo required (publishInputUtxos config) of
         Left selectionError ->
             pure (Left (PublishFundingSelectionFailed selectionError))
-        Right FundingPair{fundingSpend = (spendInput, _)} -> do
+        Right funding -> do
             buildResult <-
                 runTransactionBuild
                     defaultBuildOptions
                     (publishRuntime config)
                     publishInterpret
-                    (publishInputUtxos config)
+                    (fundingSpends funding)
                     []
                     (publishFundingAddress config)
-                    (publishProgram spendInput (referenceTxOut config artifact))
+                    ( publishProgram
+                        (map fst $ fundingSpends funding)
+                        (referenceTxOut config artifact)
+                    )
             case buildResult of
                 Left buildError ->
                     pure (Left (PublishBuildFailed (T.pack (show buildError))))
                 Right txid -> do
                     let scriptHash = scriptHashText (artifactScriptHash artifact)
-                        settledTxId = renderTxId txid
+                        settledTxId = renderTransactionId txid
                     settlement <-
                         awaitReference
                             (publishQueryReferences config)
@@ -204,9 +200,9 @@ withReferenceScript script txOut =
 reference output; balancing produces the single change output. No
 collateral is declared for a script-free publish.
 -}
-publishProgram :: TxIn -> TxOut ConwayEra -> TxBuild PublishCtx () ()
-publishProgram spendInput refTxOut = do
-    _ <- spend spendInput
+publishProgram :: [TxIn] -> TxOut ConwayEra -> TxBuild PublishCtx () ()
+publishProgram spendInputs refTxOut = do
+    mapM_ spend spendInputs
     _ <- output refTxOut
     pure ()
 
@@ -256,39 +252,3 @@ awaitReference queryReferences pollMicros timeoutSeconds scriptHash txId = do
                                 )
                         else threadDelay pollMicros >> loop
     loop
-
-{- | Render a pure transaction id as the 64 lowercase hex characters the
-chain index and manifest plumbing expect.
--}
-renderTxId :: TxId -> Text
-renderTxId =
-    TE.decodeUtf8
-        . convertToBase Base16
-        . hashToBytes
-        . extractHash
-        . unTxId
-
-newtype TransactionIdOutput = TransactionIdOutput
-    { transactionIdOutput :: Text
-    }
-
-instance FromJSON TransactionIdOutput where
-    parseJSON = withObject "TransactionIdOutput" $ \o ->
-        TransactionIdOutput <$> o .: "txhash"
-
-{- | Parse a transaction id from either a JSON envelope or a bare 64-hex
-string, normalising to lowercase. Retained for the transaction paths that
-still render their ids as text.
--}
-parseTransactionId :: String -> Either String Text
-parseTransactionId rawOutput =
-    validate $
-        case Aeson.eitherDecodeStrict'
-            (TE.encodeUtf8 $ T.strip $ T.pack rawOutput) of
-            Right decoded -> transactionIdOutput decoded
-            Left _ -> T.strip (T.pack rawOutput)
-  where
-    validate txId
-        | T.length txId == 64 && T.all isHexDigit txId =
-            Right (T.toLower txId)
-        | otherwise = Left "expected 64 hexadecimal characters"

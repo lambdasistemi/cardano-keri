@@ -38,12 +38,13 @@ before the manifest was written.
 | `observer-enforcement` | withdrawal observer | `a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e` | `2c9c6b3407332d08df895ab0e9e2cf15f7691d9ce24685e4fe8e6e1abb59506d#0` |
 | `checkpoint-register` | validator and minting policy | `0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734` | `8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0` |
 
-The machine-readable facts are in `deploy/preprod/m1-manifest.json`. The exact
-`tee` capture from the source check through `deploy` and `manifest verify` is
-preserved byte-for-byte in `deploy/preprod/m1-acceptance.txt` and embedded in
-the release pull request. CI checks every captured hash and transaction
-reference against the manifest before independently repeating the live
-verification.
+The machine-readable facts are in `deploy/preprod/m1-manifest.json`. The
+original publication capture is preserved in
+`deploy/preprod/m1-acceptance.txt`. The current transaction-path acceptance
+capture, `deploy/preprod/m1-board-deploy-verify-acceptance.txt`, performs a
+verify-only pass: it compares all five manifest script hashes and references
+with live Koios results and confirms the endpoint-board reference and current
+catalog without publishing replacement scripts.
 
 ## Verify from a checkout
 
@@ -86,9 +87,9 @@ YAML file itself is selected with `--config-file` or
 deploy:
   network: preprod
   network-magic: 1
-  node-socket: /node/preprod/ipc/node.socket
+  node-socket: /code/cardano-preprod/ipc/node.socket
   funding-address: addr_test1...
-  signing-key-file: /run/secrets/payment.skey
+  signing-key-file: /home/operator/.secrets/cardano-keri-preprod/payment.skey
   source-repo: .
   out: deploy/preprod/m1-manifest.json
   timeout-seconds: 1200
@@ -112,6 +113,15 @@ Run `ckeri deploy --help` or `ckeri manifest verify --help` for the complete
 option, environment, and YAML documentation. The payment key is an
 operator-side secret; it is read only by `deploy` and never belongs in a
 configuration file committed to this repository.
+
+Every mutating command derives the payment address from the signing-key
+envelope and requires its payment credential to match the configured funding
+address. It enumerates candidate out-refs through Koios, resolves those exact
+inputs against the node socket, builds and signs with the Cardano API, submits
+through local transaction submission, then waits for the exact effect through
+Koios. No external transaction CLI is required. Fragmented funding is valid:
+the selector may aggregate several spend inputs while reserving a separate
+collateral input.
 
 ## Trust and availability boundary
 

@@ -79,7 +79,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError (..),
     TransactionRuntime (..),
     TransactionSigningError (..),
-    signWithCardanoCliKey,
+    signWithPaymentKey,
     transactionId,
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
@@ -465,7 +465,7 @@ standInRuntime callsRef signedRef =
             , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
             , trSign = \tx -> do
                 recordCall callsRef "sign"
-                let signedResult = signWithCardanoCliKey registrationTestEnvelope tx
+                let signedResult = signWithPaymentKey registrationTestEnvelope tx
                 modifyIORef'
                     signedRef
                     ( const $ case signedResult of
@@ -875,7 +875,7 @@ failureTaxonomySpec = describe "registration error taxonomy" $ do
                 baseRuntime
                     { trSign = \tx ->
                         recordCall callsRef "sign"
-                            >> pure (signWithCardanoCliKey trulyMalformedEnvelope tx)
+                            >> pure (signWithPaymentKey trulyMalformedEnvelope tx)
                     }
             config = mkConfig runtime (standInQueryAsset signedRef)
             registerInputs =

@@ -1,26 +1,21 @@
-$ hostname -f
-production
 $ date -u +%Y-%m-%dT%H:%M:%SZ
-2026-07-29T12:20:08Z
-$ cd /code/cardano-keri-165-operator
-$ git rev-parse HEAD
-862eaa9109de06e65a0edec6f9b080ade6cfee36
-$ ./result/bin/ckeri board post --help
-$ grep -F 4000000
-  default: 4000000
-$ wc -c deploy/preprod/witness-1-oobi.cesr deploy/preprod/witness-2-oobi.cesr deploy/preprod/witness-3-oobi.cesr
-1239 deploy/preprod/witness-1-oobi.cesr
-1239 deploy/preprod/witness-2-oobi.cesr
-1239 deploy/preprod/witness-3-oobi.cesr
-3717 total
-$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-1-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
-board txid: f8321e3b2037b4528e9434d3ce9e1571de1fc6a6bb088ed30328734c85ab65ab deposit: 4 tADA
-$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-2-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
-board txid: 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9 deposit: 4 tADA
-$ sudo ./result/bin/ckeri board post --endpoint-record deploy/preprod/witness-3-oobi.cesr --payer /home/paolino/secrets/cardano-keri-preprod/payment.skey --node-socket /node/preprod/ipc/node.socket --funding-address addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d --board-manifest deploy/preprod/board-manifest.json --timeout-seconds 1800
-board txid: c8c0672fafb09146c95597d4f013bd65013f07c4d6a0fb6200fafd636ffaacfe deposit: 4 tADA
-$ ./result/bin/ckeri board list --board-manifest deploy/preprod/board-manifest.json
+2026-08-06T16:06:19Z
+$ /tmp/.slice4-ckeri-multi/bin/ckeri --version
+ckeri 0.4.0
+$ /tmp/.slice4-ckeri-multi/bin/ckeri board list --board-manifest /code/cardano-keri-181-txpath/deploy/preprod/board-manifest.json
 board records: 3
 BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B verified https https://witness-2.preprod.plutimus.com/ tx 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9#0 deposit 4000000
-BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx c8c0672fafb09146c95597d4f013bd65013f07c4d6a0fb6200fafd636ffaacfe#0 deposit 4000000
-BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx f8321e3b2037b4528e9434d3ce9e1571de1fc6a6bb088ed30328734c85ab65ab#0 deposit 4000000
+BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx 5e705ac1f08aee4119a52fe890e040b6fb4f716603598ee3eaf0027201e4a526#0 deposit 4000000
+BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx a01062724b678b988d294f1a7d352ee13fa8fc7c682340d61f89911364e2a365#0 deposit 4000000
+$ curl --fail --silent --show-error --output /tmp/ckeri-181-slice4-final3/witness-1-oobi.cesr https://witness-1.preprod.plutimus.com/oobi/BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI/controller
+
+$ wc -c /tmp/ckeri-181-slice4-final3/witness-1-oobi.cesr
+1239 /tmp/ckeri-181-slice4-final3/witness-1-oobi.cesr
+$ /tmp/.slice4-ckeri-multi/bin/ckeri board post --endpoint-record /tmp/ckeri-181-slice4-final3/witness-1-oobi.cesr --network preprod --network-magic 1 --payer /home/paolino/.secrets/cardano-keri-preprod/payment.skey --node-socket /code/cardano-preprod/ipc/node.socket --funding-address addr_test1vzdqjmt98smx8my6f5uum0szghuy8ff2hep2e64a9w2pehgnv4mdx --change-address addr_test1vzdqjmt98smx8my6f5uum0szghuy8ff2hep2e64a9w2pehgnv4mdx --board-manifest /code/cardano-keri-181-txpath/deploy/preprod/board-manifest.json --timeout-seconds 600
+board txid: 21050c77383153f740734881e05c369ae989018b5ad6ddacc9bfcd8f72e7edd0 deposit: 4 tADA
+$ /tmp/.slice4-ckeri-multi/bin/ckeri board list --board-manifest /code/cardano-keri-181-txpath/deploy/preprod/board-manifest.json
+board records: 4
+BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B verified https https://witness-2.preprod.plutimus.com/ tx 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9#0 deposit 4000000
+BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx 21050c77383153f740734881e05c369ae989018b5ad6ddacc9bfcd8f72e7edd0#0 deposit 4000000
+BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx 5e705ac1f08aee4119a52fe890e040b6fb4f716603598ee3eaf0027201e4a526#0 deposit 4000000
+BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI verified https https://witness-1.preprod.plutimus.com/ tx a01062724b678b988d294f1a7d352ee13fa8fc7c682340d61f89911364e2a365#0 deposit 4000000

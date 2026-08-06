@@ -27,6 +27,7 @@ module Cardano.KERI.Deployment.TransactionRuntime (
     -- * Funding selection
     FundingPair (..),
     PayerSelectionError (..),
+    fundingSpends,
     selectFundingPair,
 
     -- * Runtime capability
@@ -50,13 +51,15 @@ module Cardano.KERI.Deployment.TransactionRuntime (
 
     -- * Pure transaction id
     transactionId,
+    renderTransactionId,
 
     -- * Signing
     TransactionSigningError (..),
     PureSignError (..),
-    signWithCardanoCliKey,
+    signWithPaymentKey,
 ) where
 
+import Cardano.Crypto.Hash (hashToBytes)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx)
@@ -68,8 +71,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose)
 import Cardano.Ledger.Core (PParams)
+import Cardano.Ledger.Hashes (extractHash)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits, pointWiseExUnits)
-import Cardano.Ledger.TxIn (TxId, TxIn)
+import Cardano.Ledger.TxIn (TxId, TxIn, unTxId)
 
 -- cardano-node-clients is new relative to pair base 8bc604e: this Slice 1
 -- runtime module deliberately introduces it for 'ConwayTx',
@@ -98,6 +102,7 @@ import Cardano.Tx.Sign.Core (
  )
 import Data.Aeson (Value)
 import Data.Bifunctor (first)
+import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS8
 import Data.Functor.Const (Const (..))
@@ -106,6 +111,8 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Ord (Down (..))
 import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text.Encoding qualified as TE
 
 -- ---------------------------------------------------------------------------
 -- Funding selection
@@ -113,9 +120,13 @@ import Data.Set qualified as Set
 -- | Distinct spending and collateral inputs selected from one indexed view.
 data FundingPair = FundingPair
     { fundingSpend :: !(TxIn, TxOut ConwayEra)
+    , fundingAdditionalSpends :: ![(TxIn, TxOut ConwayEra)]
     , fundingCollateral :: !(TxIn, TxOut ConwayEra)
     }
     deriving stock (Eq, Show)
+
+fundingSpends :: FundingPair -> [(TxIn, TxOut ConwayEra)]
+fundingSpends FundingPair{..} = fundingSpend : fundingAdditionalSpends
 
 -- | Actionable failures from deterministic payer selection.
 data PayerSelectionError
@@ -136,10 +147,11 @@ data PayerSelectionError
 indexed snapshot.
 
 Rows are deduplicated by 'TxIn', filtered by the operation-owned eligibility
-predicate, then ranked by descending lovelace and ascending 'TxIn'. The minimum
-applies to the spending input; collateral need only be the next distinct
-eligible row. Empty raw input remains distinguishable from a non-empty snapshot
-with no eligible value.
+predicate, then ranked by descending lovelace and ascending 'TxIn'. The
+smallest eligible row is reserved as collateral and the shortest descending
+prefix whose aggregate value reaches the minimum is selected for spending.
+Empty raw input remains distinguishable from a non-empty snapshot with no
+eligible value.
 -}
 selectFundingPair ::
     (TxOut ConwayEra -> Bool) ->
@@ -150,12 +162,24 @@ selectFundingPair _ _ [] = Left EmptyIndexedSnapshot
 selectFundingPair eligible required rows =
     case ranked of
         [] -> insufficient (Coin 0)
-        spendRow : remaining
+        [spendRow]
             | outputCoin spendRow < required -> insufficient (outputCoin spendRow)
-            | otherwise ->
-                case remaining of
-                    [] -> Left (MissingCollateral (fst spendRow))
-                    collateralRow : _ -> Right (FundingPair spendRow collateralRow)
+            | otherwise -> Left (MissingCollateral (fst spendRow))
+        _ -> case reserveCollateral ranked of
+            Nothing -> insufficient (Coin 0)
+            Just (candidates, collateralRow) ->
+                let available = sumCoins (map outputCoin candidates)
+                 in if available < required
+                        then insufficient available
+                        else case takeRequired required candidates of
+                            spendRow : additional ->
+                                Right
+                                    FundingPair
+                                        { fundingSpend = spendRow
+                                        , fundingAdditionalSpends = additional
+                                        , fundingCollateral = collateralRow
+                                        }
+                            [] -> insufficient (Coin 0)
   where
     ranked =
         sortBy compareRank eligibleRows
@@ -177,6 +201,36 @@ selectFundingPair eligible required rows =
                 }
 
     outputCoin (_, txOut) = getConst (coinTxOutL Const txOut)
+
+    sumCoins :: [Coin] -> Coin
+    sumCoins = foldr addCoin (Coin 0)
+
+    reserveCollateral = go []
+      where
+        go _ [] = Nothing
+        go spendingRows [collateralRow] =
+            Just (reverse spendingRows, collateralRow)
+        go spendingRows (row : remaining) =
+            go (row : spendingRows) remaining
+
+    addCoin :: Coin -> Coin -> Coin
+    addCoin (Coin left) (Coin right) = Coin (left + right)
+
+    takeRequired ::
+        Coin ->
+        [(TxIn, TxOut ConwayEra)] ->
+        [(TxIn, TxOut ConwayEra)]
+    takeRequired target = go (Coin 0)
+      where
+        go ::
+            Coin ->
+            [(TxIn, TxOut ConwayEra)] ->
+            [(TxIn, TxOut ConwayEra)]
+        go _ [] = []
+        go accumulated (row : remaining)
+            | addCoin accumulated (outputCoin row) >= target = [row]
+            | otherwise =
+                row : go (addCoin accumulated $ outputCoin row) remaining
 
     compareRank left right =
         compare
@@ -243,6 +297,15 @@ from subprocess output (FR-4).
 transactionId :: ConwayTx -> TxId
 transactionId = txIdTx
 
+-- | Render a ledger transaction id for indexer queries and operator output.
+renderTransactionId :: TxId -> Text
+renderTransactionId =
+    TE.decodeUtf8
+        . convertToBase Base16
+        . hashToBytes
+        . extractHash
+        . unTxId
+
 -- ---------------------------------------------------------------------------
 -- Signing
 
@@ -252,7 +315,7 @@ surface; carries the pinned pure-signing-core failure unchanged.
 newtype TransactionSigningError = TransactionSigningError PureSignError
     deriving stock (Eq, Show)
 
-{- | Sign a Conway transaction with a Cardano CLI-shaped
+{- | Sign a Conway transaction with a standard Cardano
 @PaymentSigningKeyShelley_ed25519@ key envelope, returning the transaction
 with one detached vkey witness attached.
 
@@ -263,9 +326,9 @@ it is reimplemented (FR-4). This crosses no @Vault@\/@Witness@\/
 @AttachWitness@ boundary: those gated, node-client-adjacent modules are not
 imported here.
 -}
-signWithCardanoCliKey ::
+signWithPaymentKey ::
     Value -> ConwayTx -> Either TransactionSigningError ConwayTx
-signWithCardanoCliKey keyEnvelope tx =
+signWithPaymentKey keyEnvelope tx =
     case decodePaymentSigningKey keyEnvelope of
         Left err -> Left (TransactionSigningError err)
         Right signKey ->
@@ -281,7 +344,7 @@ signing, submission, and settlement observation to one caller-supplied
 transaction evolution. The higher composition layer supplies the real
 'Cardano.Node.Client.Provider.queryProtocolParamsH',
 'Cardano.Node.Client.Provider.evaluateTxH',
-'signWithCardanoCliKey'-backed signing, and
+'signWithPaymentKey'-backed signing, and
 'Cardano.Node.Client.Submitter.submitTx' implementations.
 -}
 data TransactionRuntime m = TransactionRuntime

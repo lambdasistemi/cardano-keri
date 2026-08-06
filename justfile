@@ -207,6 +207,9 @@ cli-composition-path-check:
     #!/usr/bin/env bash
     set -euo pipefail
     restricted_path="$(dirname "$(command -v nix)")"
+    if [[ -n "${CKERI_RESTRICTED_PATH:-}" ]]; then
+        restricted_path="$CKERI_RESTRICTED_PATH"
+    fi
     echo "cli-composition-path-check: PATH=$restricted_path"
     if PATH="$restricted_path" command -v cardano-cli >/dev/null 2>&1; then
         echo "cli-composition-path-check: cardano-cli is reachable under the restricted PATH; the control is not meaningful" >&2
@@ -214,8 +217,8 @@ cli-composition-path-check:
     fi
     echo "cli-composition-path-check: cardano-cli absent from the restricted PATH (expected)"
     ./scripts/check-deploy-register-no-cli.sh
-    PATH="$restricted_path" nix build --quiet --no-link --no-write-lock-file path:./offchain#ckeri
-    PATH="$restricted_path" nix run --quiet --no-write-lock-file path:./offchain#ckeri -- --help >/dev/null
+    PATH="$restricted_path" nix build --quiet --no-link --no-write-lock-file ./offchain#ckeri
+    PATH="$restricted_path" nix run --quiet --no-write-lock-file ./offchain#ckeri -- --help >/dev/null
     echo "cli-composition-path-check: packaged ckeri evaluated and rendered help without cardano-cli"
 
 # #181 Slice 2: restricted-PATH runtime control (DIRECTION-002). Sets an

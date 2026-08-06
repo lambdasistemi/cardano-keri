@@ -74,8 +74,8 @@ Use a change address controlled by the payment key; it must differ from the
 refund target so the 1,007-tADA output is unambiguous:
 
 ```console
-$ export CKERI_PAYER=/run/secrets/payment.skey
-$ export CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket
+$ export CKERI_PAYER=/home/operator/.secrets/cardano-keri-preprod/payment.skey
+$ export CKERI_NODE_SOCKET=/code/cardano-preprod/ipc/node.socket
 $ export CKERI_FUNDING_ADDRESS=addr_test1funding...
 $ export CKERI_CHANGE_ADDRESS=addr_test1change...
 $ ckeri close \
@@ -109,35 +109,27 @@ optional bearer token with anonymous fallback and is never printed.
 An unrelated KLI identity cannot close the checkpoint. Normal operation
 rejects a non-controller signature locally. The explicit
 `--validator-test-non-controller` switch exists only for funded acceptance
-testing: it bypasses that local proof and sends the malformed evidence to a
-real `cardano-cli transaction build`, where the deployed Plutus V3 spending
-validator rejects it.
+testing: it bypasses that local proof and sends the malformed evidence through
+local transaction submission, where the deployed Plutus V3 spending validator
+rejects it.
 
 Do not use that switch in ordinary operation.
 
 ## Captured preprod result
 
-The raw `script(1)` plus `tee` artifact is
-`deploy/preprod/m1-close-acceptance.txt`. It records the complete
-KLI inception → register → ACTIVE status → close prepare → outsider
-validator rejection → controller close → closed status journey:
+The mechanical artifact is
+`deploy/preprod/m1-close-acceptance.txt`. It records the complete ACTIVE
+status → close prepare → controller sign → in-process close → closed status
+journey:
 
-- AID `EN2phEc8LNgyteri4s1aafP2yKuXM83K2qdLyOl9NgWD`;
-- premint transaction
-  `71a61bd14caee7c0b60158a3bb9d9251bae688faf8cd72552708994735fa21de`;
-- registration transaction
-  `89dba3d18e407a0a3a9cab0537c455a224039ac4ade2847ce9047c2c8a10f2c7`;
+- AID `EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P`;
+- predecessor advance
+  `f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a`;
+- exact 1,007-tADA refund to the configured payment-credential base address;
   and
 - close transaction
-  `f88bb6138da9153818bd543d9ebd548cb09ff221530e936766671f02d1d82392`.
+  `8bb6d5e61b1ffaf69d1a7c8f4ffe53182aa4963a4d5c360c6356bbe14439abd5`.
 
-The live run exposed two boundary conditions before the final clean capture:
-atomic signing-package files initially inherited mode 0600, and Koios briefly
-served a stale ACTIVE UTxO after already indexing a burn. Regression tests
-now pin signer-readable package modes and terminal-history precedence.
-
-CI checks the transcript and committed package byte-for-byte, rebuilds
-`ckeri`, compares live closed status, and re-queries the three blocks, latest
-`-1` asset event, both Close redeemers, exact spent checkpoint, and token-free
-1,007-tADA refund. The CI job passes optional `KOIOS_TOKEN` from repository
-secrets.
+The checker verifies chronology, package/signature digest agreement, exact
+refund amount and address, and terminal `NOT REGISTERED` status. With a live
+binary configured it also re-queries settlement through Koios.

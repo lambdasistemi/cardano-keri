@@ -22,7 +22,7 @@ import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHa
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError (..),
     TransactionRuntime (..),
-    signWithCardanoCliKey,
+    signWithPaymentKey,
     transactionId,
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
@@ -422,7 +422,7 @@ standInRuntime callsRef signedRef =
             , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
             , trSign = \tx -> do
                 recordCall callsRef "sign"
-                let result = signWithCardanoCliKey testEnvelope tx
+                let result = signWithPaymentKey testEnvelope tx
                 modifyIORef' signedRef (const $ either (const Nothing) Just result)
                 pure result
             , trSubmit = \tx -> do

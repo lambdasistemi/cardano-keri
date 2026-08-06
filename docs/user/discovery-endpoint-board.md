@@ -97,9 +97,10 @@ and paste CESR through a text editor:
 $ curl --fail --silent --show-error \
     --output witness-1-oobi.cesr \
     https://witness-1.preprod.plutimus.com/oobi/B.../controller
-$ export CKERI_PAYER=/run/secrets/payment.skey
-$ export CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket
+$ export CKERI_PAYER=/home/operator/.secrets/cardano-keri-preprod/payment.skey
+$ export CKERI_NODE_SOCKET=/code/cardano-preprod/ipc/node.socket
 $ export CKERI_FUNDING_ADDRESS=addr_test1...
+$ export CKERI_CHANGE_ADDRESS="$CKERI_FUNDING_ADDRESS"
 $ nix run --quiet ./offchain#ckeri -- board post \
     --network preprod \
     --network-magic 1 \
@@ -117,6 +118,12 @@ All configuration uses `opt-env-conf`: command options, environment variables,
 and YAML are equivalent. `optparse-applicative` is not used. Secrets are read
 from environment-selected files and are never placed in the manifest or
 printed.
+
+The payer key must derive the payment credential in the funding address.
+Board mutations enumerate exact candidate out-refs through Koios, resolve
+those inputs through N2C, construct and sign in process, and use local
+transaction submission. Funding may span several spend inputs; collateral is
+kept separate.
 
 ## Update
 
@@ -170,3 +177,16 @@ state ACTIVE ... witnesses 3 (toad 2) ... watchable 3/3
 Duplicates never increase the numerator. Witnessed registration refuses
 missing board entries by default; `--allow-unlisted-witnesses` is an explicit
 acknowledgement of reduced public watchability.
+
+## Captured preprod lifecycle
+
+The four `m1-board-*-acceptance.txt` files under `deploy/preprod/` form one
+ordered mechanical journey. It starts from the released three-record board,
+posts transaction
+`21050c77383153f740734881e05c369ae989018b5ad6ddacc9bfcd8f72e7edd0`,
+proves a stranger can fetch the 1,239-byte OOBI with HTTP 200, updates through
+`8d1885773e0e865a5d2e931f2564927a669e25bce16dd837c2f05d6ef7d8d556`,
+and retires through
+`bac4cbcb8dd4c27509a677791ebcdd6ae98a517c5fb03ecfd22130d3be34638c`.
+The final list is the original three records and the full 4-tADA deposit is
+refunded to the configured address.

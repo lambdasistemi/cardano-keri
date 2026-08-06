@@ -53,6 +53,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
+    fundingSpends,
     runTransactionBuild,
     selectFundingPair,
  )
@@ -239,7 +240,7 @@ runAdvanceTransaction config plan fundingInputs activeInput registerObserver =
                     options
                     frozenRuntime
                     advanceInterpret
-                    (fundingSpend advanceFunding : [advanceActiveInput])
+                    (fundingSpends advanceFunding <> [advanceActiveInput])
                     advanceReferences
                     (advanceFundingAddress config)
                     (advanceProgram pparams config registerObserver AdvanceInputs{..})
@@ -317,16 +318,12 @@ advanceProgram
     config
     registerObserver
     AdvanceInputs
-        { advanceFunding =
-            FundingPair
-                { fundingSpend = fundingRow
-                , fundingCollateral = collateralRow
-                }
+        { advanceFunding = funding
         , ..
         } = do
-        _ <- spend (fst fundingRow)
+        mapM_ (spend . fst) (fundingSpends funding)
         _ <- spendScript (fst advanceActiveInput) advanceSpendData
-        collateral (fst collateralRow)
+        collateral (fst $ fundingCollateral funding)
         _ <-
             payTo'
                 advanceCheckpointAddress

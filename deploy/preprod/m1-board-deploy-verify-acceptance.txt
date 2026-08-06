@@ -1,16 +1,27 @@
-$ hostname -f
-production
 $ date -u +%Y-%m-%dT%H:%M:%SZ
-2026-07-29T12:47:56Z
-$ cd /code/cardano-keri-165-operator
-$ git rev-parse HEAD
-6f47a9ff490d2e5bece81e51fb67fd613ae0d932
-$ ./result/bin/ckeri --version
-ckeri 0.0.0 
-$ stat --format=%a,%U,%G,%n deploy/preprod/board-manifest.json
-644,paolino,users,deploy/preprod/board-manifest.json
-$ sed -n 1p deploy/preprod/board-manifest.json
-{"blueprint":{"sha256":"896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c"},"board":{"address":"addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4","policyId":"54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c","programBytes":3158,"reference":{"index":0,"txId":"967b86211ab7c80876ae4b6bec0e478dd92a98f14d5c3d751a99ad01c04654d4"}},"network":{"magic":1,"name":"preprod"},"publishedAt":"2026-07-29T12:01:47Z","schema":"cardano-keri/m1-endpoint-board-manifest/v1","source":{"commit":"95b554fbdc9dee5b4437d3a8deeb882f114a0bf3","repository":"https://github.com/lambdasistemi/cardano-keri"}}$ ./result/bin/ckeri board list --board-manifest deploy/preprod/board-manifest.json
+2026-08-06T16:07:43Z
+$ /tmp/.slice4-ckeri-multi/bin/ckeri --version
+ckeri 0.4.0
+$ jq -r $'"deployment mode: verify-only (no reference publication)",\n   "source commit: " + .source.commit,\n   "blueprint sha256: " + .blueprint.sha256,\n   (.scripts[] | "expected reference " + .name + " " + .hash + " " + .reference.txId + "#" + (.reference.index|tostring))' /code/cardano-keri-181-txpath/deploy/preprod/m1-manifest.json
+deployment mode: verify-only (no reference publication)
+source commit: 50a582064ddfde15ebfa3649c6b6fea8d39fc697
+blueprint sha256: 14ee3f3d5d9617a5cdd13f885477d5ec132d0567e56ea118d1927c7528e587df
+expected reference hash-proof d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca 5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c#0
+expected reference observer-lifecycle 3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7 c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f#0
+expected reference observer-advance 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6 aaeb5ebe4e9783dc614b8a48634ef7fd9bb517cc0fdc3a4d701a26bd94679734#0
+expected reference observer-enforcement a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e 2c9c6b3407332d08df895ab0e9e2cf15f7691d9ce24685e4fe8e6e1abb59506d#0
+expected reference checkpoint-register 0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734 8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0
+$ curl --fail --silent --show-error --request POST https://preprod.koios.rest/api/v1/reference_script_utxos --header 'Content-Type: application/json' --data '{"_script_hashes":["d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca","3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7","50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6","a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e","0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"]}' | jq -r 'sort_by(.script_hash)[] | "live reference \(.script_hash) \(.tx_hash)#\(.tx_index)"'
+live reference 0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734 8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0
+live reference 3d18237dc14be14284d775a5766016c7c4c432dedce287011701c6c7 c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f#0
+live reference 50dbbef1c38646d29a1e333337fc5244fe2da3149bf9d5545e5b92c6 aaeb5ebe4e9783dc614b8a48634ef7fd9bb517cc0fdc3a4d701a26bd94679734#0
+live reference a35727cf3d64fe3573c9f15fe4ecf408049a8f136ac900d42cf3cc1e 2c9c6b3407332d08df895ab0e9e2cf15f7691d9ce24685e4fe8e6e1abb59506d#0
+live reference d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca 5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c#0
+$ jq -r $'"board source commit: " + .source.commit,\n   "board blueprint sha256: " + .blueprint.sha256,\n   "board reference: " + .board.policyId + " " + .board.reference.txId + "#" + (.board.reference.index|tostring)' /code/cardano-keri-181-txpath/deploy/preprod/board-manifest.json
+board source commit: 95b554fbdc9dee5b4437d3a8deeb882f114a0bf3
+board blueprint sha256: 896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+board reference: 54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c 967b86211ab7c80876ae4b6bec0e478dd92a98f14d5c3d751a99ad01c04654d4#0
+$ /tmp/.slice4-ckeri-multi/bin/ckeri board list --board-manifest /code/cardano-keri-181-txpath/deploy/preprod/board-manifest.json
 board records: 3
 BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B verified https https://witness-2.preprod.plutimus.com/ tx 0d130e108d6b3c1193c6fa6bf5f63e0474bef5b0c0be1ba95e2cf90c5410b1f9#0 deposit 4000000
 BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4 verified https https://witness-3.preprod.plutimus.com/ tx 5e705ac1f08aee4119a52fe890e040b6fb4f716603598ee3eaf0027201e4a526#0 deposit 4000000

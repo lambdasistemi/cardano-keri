@@ -82,6 +82,7 @@ library deployment
   hs-source-dirs:   deployment
   build-depends:
     , aeson
+    , async
     , base                           >=4.18 && <5
     , bech32
     , bytestring                     >=0.11 && <0.13
@@ -103,10 +104,10 @@ library deployment
     , memory                         >=0.18 && <0.19
     , microlens
     , opt-env-conf                   >=0.13 && <0.16
+    , ouroboros-network:api
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
-    , process
     , text
     , time
     , unix
@@ -123,7 +124,7 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
     Cardano.KERI.Deployment.KEL
-    Cardano.KERI.Deployment.LegacyCardanoCli
+    Cardano.KERI.Deployment.LiveRuntime
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
@@ -220,6 +221,8 @@ executable ckeri
     , base
     , cardano-keri:cli
     , opt-env-conf      >=0.13 && <0.16
+
+  ghc-options:      -threaded
 
 executable ckeri-query
   import:           warnings

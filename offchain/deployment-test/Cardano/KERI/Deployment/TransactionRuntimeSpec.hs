@@ -42,7 +42,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     runTransactionOperation,
     runTransactionOperationGeneric,
     selectFundingPair,
-    signWithCardanoCliKey,
+    signWithPaymentKey,
     transactionId,
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
@@ -222,9 +222,9 @@ unsignedFixtureTx :: ConwayTx
 unsignedFixtureTx = mkBasicTx mkBasicTxBody
 
 signingSpec :: Spec
-signingSpec = describe "signWithCardanoCliKey" $ do
+signingSpec = describe "signWithPaymentKey" $ do
     it "signs with a PaymentSigningKeyShelley_ed25519 envelope" $
-        case signWithCardanoCliKey goodEnvelope unsignedFixtureTx of
+        case signWithPaymentKey goodEnvelope unsignedFixtureTx of
             Right signed -> do
                 case Set.toList (signed ^. witsTxL . addrTxWitsL) of
                     [WitVKey vkey _] -> guardHash (hashKey vkey) `shouldBe` expectedKeyHash
@@ -241,7 +241,7 @@ signingSpec = describe "signWithCardanoCliKey" $ do
             Left err -> fail ("signing failed: " <> show err)
 
     it "rejects a malformed payment signing key envelope" $
-        case signWithCardanoCliKey trulyMalformedEnvelope unsignedFixtureTx of
+        case signWithPaymentKey trulyMalformedEnvelope unsignedFixtureTx of
             Left (TransactionSigningError (PureSignMalformedSigningKey message)) ->
                 -- C1: pin the discriminating substring, not a wildcard —
                 -- already proven at this exact commit by the upstream
@@ -250,7 +250,7 @@ signingSpec = describe "signWithCardanoCliKey" $ do
             other -> fail ("expected PureSignMalformedSigningKey, got " <> show other)
 
     it "rejects an unsupported payment signing key envelope type" $
-        case signWithCardanoCliKey unsupportedTypeEnvelope unsignedFixtureTx of
+        case signWithPaymentKey unsupportedTypeEnvelope unsignedFixtureTx of
             Left err ->
                 err
                     `shouldBe` TransactionSigningError
@@ -392,6 +392,18 @@ selectionSpec = describe "selectFundingPair" $ do
                     , greatestAvailableValue = Coin 3_000_000
                     }
 
+    it "combines deterministic payer inputs while reserving collateral" $ do
+        let low = fundingOutput 3 (Coin 2_000_000)
+            medium = fundingOutput 4 (Coin 4_000_000)
+            high = fundingOutput 5 (Coin 7_000_000)
+        selectFundingPair (const True) (Coin 10_000_000) [low, medium, high]
+            `shouldBe` Right
+                FundingPair
+                    { fundingSpend = high
+                    , fundingAdditionalSpends = [medium]
+                    , fundingCollateral = low
+                    }
+
     it "reports zero eligible value for a non-empty indexed snapshot" $ do
         let rows =
                 [ fundingOutput 3 (Coin 7_000_000)
@@ -419,6 +431,7 @@ selectionSpec = describe "selectFundingPair" $ do
                 Right
                     FundingPair
                         { fundingSpend = high
+                        , fundingAdditionalSpends = []
                         , fundingCollateral = low
                         }
         selectFundingPair (const True) (Coin 5_000_000) [low, high]
@@ -481,7 +494,7 @@ buildKernelSpec = describe "runTransactionBuild" $ do
             sign tx = do
                 recordCall callsRef "sign"
                 writeIORef signInputRef (Just tx)
-                pure (signWithCardanoCliKey goodEnvelope tx)
+                pure (signWithPaymentKey goodEnvelope tx)
             submit tx = do
                 recordCall callsRef "submit"
                 writeIORef submittedRef (Just tx)
@@ -575,7 +588,7 @@ buildKernelSpec = describe "runTransactionBuild" $ do
                 (\tx -> recordCall callsRef "evaluate" >> emptyBuildEvaluation tx)
                 ( \tx ->
                     recordCall callsRef "sign"
-                        >> pure (signWithCardanoCliKey trulyMalformedEnvelope tx)
+                        >> pure (signWithPaymentKey trulyMalformedEnvelope tx)
                 )
                 (\_ -> recordCall callsRef "submit" >> pure (Submitted (transactionId draftTx)))
                 (\_ -> recordCall callsRef "observe")
@@ -607,7 +620,7 @@ buildKernelSpec = describe "runTransactionBuild" $ do
                 (\tx -> recordCall callsRef "evaluate" >> emptyBuildEvaluation tx)
                 ( \tx ->
                     recordCall callsRef "sign"
-                        >> pure (signWithCardanoCliKey goodEnvelope tx)
+                        >> pure (signWithPaymentKey goodEnvelope tx)
                 )
                 (\_ -> recordCall callsRef "submit" >> pure (Rejected reason))
                 (\_ -> recordCall callsRef "observe")

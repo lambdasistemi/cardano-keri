@@ -49,7 +49,7 @@ import Cardano.KERI.Deployment.Advance (
  )
 import Cardano.KERI.Deployment.AdvanceTransaction qualified as AdvanceTx
 import Cardano.KERI.Deployment.ChainIndex (
-    ChainAssetUtxo,
+    ChainAssetUtxo (..),
     KoiosToken (..),
     matchesReference,
     queryAssetUtxos,
@@ -68,7 +68,7 @@ import Cardano.KERI.Deployment.Close (
  )
 import Cardano.KERI.Deployment.CloseTransaction qualified as CloseTx
 import Cardano.KERI.Deployment.EndpointBoard (
-    BoardEntry,
+    BoardEntry (..),
     EndpointRecord (..),
     missingBoardWitnesses,
     parseEndpointRecord,
@@ -79,7 +79,9 @@ import Cardano.KERI.Deployment.EndpointBoard (
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
+    mkEndpointBoardManifest,
     readEndpointBoardManifest,
+    writeEndpointBoardManifestAtomic,
  )
 import Cardano.KERI.Deployment.EndpointBoardTransaction qualified as BoardTx
 import Cardano.KERI.Deployment.KEL (
@@ -89,6 +91,19 @@ import Cardano.KERI.Deployment.KEL (
     parseIndexedSignatureLines,
     parseRotationExport,
  )
+import Cardano.KERI.Deployment.LiveRuntime (
+    LiveConfig (..),
+    LiveContext (..),
+    decodePaymentAddress,
+    indexedFundingUtxos,
+    resolveBoardReference,
+    resolveManifestReferences,
+    resolveOutput,
+    rewardAccountForScript,
+    rewardAccountRegistered,
+    transactionSettled,
+    withLiveContext,
+ )
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
     Reference (..),
@@ -96,24 +111,39 @@ import Cardano.KERI.Deployment.Manifest (
     SourceInfo (..),
     blueprintSha256,
     manifestValidationErrors,
+    mkManifest,
     readManifest,
+    writeManifestAtomic,
+ )
+import Cardano.KERI.Deployment.Publisher (
+    PublishConfig (..),
+    publishScripts,
  )
 import Cardano.KERI.Deployment.Registration (
     RegistrationPlan (..),
+    awaitAsset,
     mkRegistrationPlan,
+    premintOne,
+    registerOne,
  )
+import Cardano.KERI.Deployment.Registration qualified as Registration
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
+    deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
  )
+import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Control.Monad (forM_, unless, when)
 import Data.ByteString qualified as BS
+import Data.Char (isHexDigit)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import OptEnvConf qualified as Opt
-import System.Exit (ExitCode (..))
-import System.Process (readProcessWithExitCode)
+import System.Directory (doesDirectoryExist)
 
 data Instructions
     = Deploy DeploySettings
@@ -139,7 +169,6 @@ data DeploySettings = DeploySettings
     , deployNodeSocket :: FilePath
     , deployFundingAddress :: Text
     , deploySigningKeyFile :: FilePath
-    , deployCardanoCli :: FilePath
     , deploySourceRepo :: FilePath
     , deploySourceRepositoryUrl :: Text
     , deploySourceCommit :: Maybe Text
@@ -167,7 +196,6 @@ data RegisterSettings = RegisterSettings
     , registerPayer :: FilePath
     , registerNodeSocket :: FilePath
     , registerFundingAddress :: Text
-    , registerCardanoCli :: FilePath
     , registerManifest :: FilePath
     , registerBoardManifest :: FilePath
     , registerKoiosUrl :: Text
@@ -179,10 +207,9 @@ data RegisterSettings = RegisterSettings
     }
     deriving stock (Show, Eq)
 
-{- | Read-only effects used by the register preflight and its fail-closed
-composition boundary. Keeping them explicit makes the required execution
-order observable without granting tests a funding, signing, or submission
-capability.
+{- | Effects used by the register preflight and live transaction boundary.
+Keeping them explicit makes the required read-before-submit order observable
+without requiring unit tests to open a node connection.
 -}
 data RegisterRuntime = RegisterRuntime
     { registerReadKel :: FilePath -> IO BS.ByteString
@@ -203,7 +230,11 @@ data RegisterRuntime = RegisterRuntime
         Text ->
         IO [BoardEntry]
     , registerWriteLine :: String -> IO ()
-    , registerStop :: String -> IO ()
+    , registerSubmit ::
+        RegisterSettings ->
+        Manifest ->
+        RegistrationPlan ->
+        IO ()
     }
 
 data AdvanceSettings = AdvanceSettings
@@ -216,7 +247,6 @@ data AdvanceSettings = AdvanceSettings
     , advancePayer :: Maybe FilePath
     , advanceNodeSocket :: Maybe FilePath
     , advanceFundingAddress :: Maybe Text
-    , advanceCardanoCli :: FilePath
     , advanceManifest :: FilePath
     , advanceKoiosUrl :: Text
     , advanceKoiosToken :: Maybe KoiosToken
@@ -239,7 +269,6 @@ data CloseSettings = CloseSettings
     , closeNodeSocket :: Maybe FilePath
     , closeFundingAddress :: Maybe Text
     , closeChangeAddress :: Maybe Text
-    , closeCardanoCli :: FilePath
     , closeManifest :: FilePath
     , closeKoiosUrl :: Text
     , closeKoiosToken :: Maybe KoiosToken
@@ -262,7 +291,6 @@ data BoardTransactionSettings = BoardTransactionSettings
     , boardTransactionNodeSocket :: !FilePath
     , boardTransactionFundingAddress :: !Text
     , boardTransactionChangeAddress :: !(Maybe Text)
-    , boardTransactionCardanoCli :: !FilePath
     , boardTransactionManifest :: !FilePath
     , boardTransactionKoiosUrl :: !Text
     , boardTransactionKoiosToken :: !(Maybe KoiosToken)
@@ -386,15 +414,8 @@ deploySettingsParserWithOut defaultOut = do
             "signing-key-file"
             "CKERI_SIGNING_KEY_FILE"
             "signing-key-file"
-            "Cardano CLI payment signing-key file"
+            "Cardano payment signing-key envelope"
             Nothing
-    deployCardanoCli <-
-        stringSetting
-            "cardano-cli"
-            "CKERI_CARDANO_CLI"
-            "cardano-cli"
-            "cardano-cli executable"
-            (Just "cardano-cli")
     deploySourceRepo <-
         stringSetting
             "source-repo"
@@ -525,13 +546,6 @@ registerSettingsParser = do
             "funding-address"
             "Bech32 payment address funding registration"
             Nothing
-    registerCardanoCli <-
-        stringSetting
-            "cardano-cli"
-            "CKERI_CARDANO_CLI"
-            "cardano-cli"
-            "cardano-cli executable"
-            (Just "cardano-cli")
     registerManifest <-
         stringSetting
             "manifest"
@@ -658,13 +672,6 @@ advanceSettingsParser = do
                 "funding-address"
                 "Bech32 payment address funding the advance"
                 Nothing
-    advanceCardanoCli <-
-        stringSetting
-            "cardano-cli"
-            "CKERI_CARDANO_CLI"
-            "cardano-cli"
-            "cardano-cli executable"
-            (Just "cardano-cli")
     advanceManifest <-
         stringSetting
             "manifest"
@@ -801,13 +808,6 @@ closeSettingsParser = do
                 "change-address"
                 "Fee change address, distinct from the exact refund target"
                 Nothing
-    closeCardanoCli <-
-        stringSetting
-            "cardano-cli"
-            "CKERI_CARDANO_CLI"
-            "cardano-cli"
-            "cardano-cli executable"
-            (Just "cardano-cli")
     closeManifest <-
         stringSetting
             "manifest"
@@ -944,13 +944,6 @@ boardTransactionSettingsParser = do
                 "change-address"
                 "Fee change address (must differ from an identical retire target)"
                 Nothing
-    boardTransactionCardanoCli <-
-        stringSetting
-            "cardano-cli"
-            "CKERI_CARDANO_CLI"
-            "cardano-cli"
-            "cardano-cli executable"
-            (Just "cardano-cli")
     boardTransactionManifest <-
         stringSetting
             "board-manifest"
@@ -1155,17 +1148,33 @@ runBoardDeploy settings = do
         fail "reference-lovelace must be positive"
     when (deployTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
-    commit <-
-        maybe
-            (gitOutput (deploySourceRepo settings) ["rev-parse", "HEAD"])
-            pure
-            (deploySourceCommit settings)
+    blueprint <-
+        loadBlueprint (deployBlueprint settings) >>= either fail pure
+    artifact <- either fail pure (deriveBoardScript blueprint)
+    digest <- blueprintSha256 (deployBlueprint settings)
+    commit <- resolveSourceCommit settings
     verifySourceTree (deploySourceRepo settings) commit
-    -- #181 Slice 2B (T181-S2B-3, per the 2026-08-03 standing ruling): the
-    -- subprocess publish path is retired and the in-process
-    -- 'TransactionRuntime' composition lands in #181 Slice 4. Fail closed
-    -- before any funding/build/sign/submit attempt.
-    fail "endpoint-board deploy disabled: publishing pending #181 Slice 4 composition"
+    references <-
+        withLiveContext (deployLiveConfig settings) $ \context ->
+            publishArtifactsLive settings context [artifact]
+    reference <-
+        case references of
+            [("endpoint-board", settled)] -> pure settled
+            _ ->
+                fail
+                    "publisher did not return exactly the endpoint-board reference"
+    publishedAt <- publicationTimestamp
+    manifest <-
+        either fail pure $
+            mkEndpointBoardManifest
+                (deploySourceRepositoryUrl settings)
+                commit
+                digest
+                publishedAt
+                artifact
+                reference
+    writeEndpointBoardManifestAtomic (deployOut settings) manifest
+    putStrLn ("board manifest: " <> deployOut settings)
 
 runBoardList :: BoardListSettings -> IO ()
 runBoardList settings = do
@@ -1196,7 +1205,18 @@ runBoardPost settings = do
                 (boardTransactionFundingAddress transaction)
                 (boardPostDepositLovelace settings)
                 record
-    plan `seq` fail "posting board record pending #181 Slice 4 composition"
+    withBoardContext transaction manifest $ \context config -> do
+        funding <- indexedFundingUtxos context
+        result <-
+            BoardTx.runBoardPostTransaction config plan funding
+                >>= either (fail . show) pure
+        putStrLn $
+            "board txid: "
+                <> T.unpack
+                    (renderTransactionId $ BoardTx.boardResultTxId result)
+                <> " deposit: "
+                <> show (boardPostDepositLovelace settings `div` 1_000_000)
+                <> " tADA"
 
 runBoardUpdate :: BoardUpdateSettings -> IO ()
 runBoardUpdate settings = do
@@ -1219,7 +1239,20 @@ runBoardUpdate settings = do
                 (boardTransactionFundingAddress transaction)
                 entry
                 record
-    plan `seq` fail "updating board record pending #181 Slice 4 composition"
+    withBoardContext transaction manifest $ \context config -> do
+        funding <- indexedFundingUtxos context
+        boardInput <-
+            resolveOutput context (boardTxId entry) (boardIndex entry)
+        result <-
+            BoardTx.runBoardUpdateTransaction config plan funding boardInput
+                >>= either (fail . show) pure
+        putStrLn $
+            "board update txid: "
+                <> T.unpack
+                    (renderTransactionId $ BoardTx.boardResultTxId result)
+        putStrLn $
+            "replaced: "
+                <> T.unpack (BoardTx.boardUpdateSpentReference plan)
 
 runBoardRetire :: BoardRetireSettings -> IO ()
 runBoardRetire settings = do
@@ -1241,7 +1274,23 @@ runBoardRetire settings = do
                 (boardTransactionFundingAddress transaction)
                 (boardRetireTo settings)
                 entry
-    plan `seq` fail "retiring board record pending #181 Slice 4 composition"
+    withBoardContext transaction manifest $ \context config -> do
+        funding <- indexedFundingUtxos context
+        boardInput <-
+            resolveOutput context (boardTxId entry) (boardIndex entry)
+        result <-
+            BoardTx.runBoardRetireTransaction config plan funding boardInput
+                >>= either (fail . show) pure
+        putStrLn $
+            "board retire txid: "
+                <> T.unpack
+                    (renderTransactionId $ BoardTx.boardResultTxId result)
+        putStrLn $
+            "refunded: "
+                <> show
+                    (BoardTx.boardRetireRefundLovelace plan `div` 1_000_000)
+                <> " tADA to "
+                <> T.unpack (boardRetireTo settings)
 
 validateBoardTransactionSettings :: BoardTransactionSettings -> IO ()
 validateBoardTransactionSettings settings = do
@@ -1271,6 +1320,142 @@ queryBoardTransactionCatalog settings manifest =
             (boardTransactionKoiosToken settings)
             (endpointBoardPolicyId info)
             (endpointBoardAddress info)
+
+withBoardContext ::
+    BoardTransactionSettings ->
+    EndpointBoardManifest ->
+    (LiveContext -> BoardTx.BoardConfig -> IO a) ->
+    IO a
+withBoardContext settings manifest action =
+    withLiveContext (boardLiveConfig settings) $ \context -> do
+        references <- resolveBoardReference context manifest
+        changeAddress <-
+            either fail pure $
+                decodePaymentAddress $
+                    fromMaybe
+                        (boardTransactionFundingAddress settings)
+                        (boardTransactionChangeAddress settings)
+        action
+            context
+            BoardTx.BoardConfig
+                { BoardTx.boardRuntime = liveTransactionRuntime context
+                , BoardTx.boardReferenceUtxos = references
+                , BoardTx.boardFundingAddress = liveFundingAddress context
+                , BoardTx.boardChangeAddress = changeAddress
+                }
+
+deployLiveConfig :: DeploySettings -> LiveConfig
+deployLiveConfig settings =
+    LiveConfig
+        { liveNetworkMagic = deployNetworkMagic settings
+        , liveNodeSocket = deployNodeSocket settings
+        , liveSigningKeyFile = deploySigningKeyFile settings
+        , liveFundingAddressText = deployFundingAddress settings
+        , liveKoiosUrl = deployKoiosUrl settings
+        , liveKoiosToken = deployKoiosToken settings
+        , liveTimeoutSeconds = deployTimeoutSeconds settings
+        }
+
+registerLiveConfig :: RegisterSettings -> LiveConfig
+registerLiveConfig settings =
+    LiveConfig
+        { liveNetworkMagic = registerNetworkMagic settings
+        , liveNodeSocket = registerNodeSocket settings
+        , liveSigningKeyFile = registerPayer settings
+        , liveFundingAddressText = registerFundingAddress settings
+        , liveKoiosUrl = registerKoiosUrl settings
+        , liveKoiosToken = registerKoiosToken settings
+        , liveTimeoutSeconds = registerTimeoutSeconds settings
+        }
+
+advanceLiveConfig ::
+    AdvanceSettings ->
+    FilePath ->
+    FilePath ->
+    Text ->
+    LiveConfig
+advanceLiveConfig settings payer nodeSocket fundingAddress =
+    LiveConfig
+        { liveNetworkMagic = advanceNetworkMagic settings
+        , liveNodeSocket = nodeSocket
+        , liveSigningKeyFile = payer
+        , liveFundingAddressText = fundingAddress
+        , liveKoiosUrl = advanceKoiosUrl settings
+        , liveKoiosToken = advanceKoiosToken settings
+        , liveTimeoutSeconds = advanceTimeoutSeconds settings
+        }
+
+closeLiveConfig ::
+    CloseSettings ->
+    FilePath ->
+    FilePath ->
+    Text ->
+    LiveConfig
+closeLiveConfig settings payer nodeSocket fundingAddress =
+    LiveConfig
+        { liveNetworkMagic = closeNetworkMagic settings
+        , liveNodeSocket = nodeSocket
+        , liveSigningKeyFile = payer
+        , liveFundingAddressText = fundingAddress
+        , liveKoiosUrl = closeKoiosUrl settings
+        , liveKoiosToken = closeKoiosToken settings
+        , liveTimeoutSeconds = closeTimeoutSeconds settings
+        }
+
+boardLiveConfig :: BoardTransactionSettings -> LiveConfig
+boardLiveConfig settings =
+    LiveConfig
+        { liveNetworkMagic = boardTransactionNetworkMagic settings
+        , liveNodeSocket = boardTransactionNodeSocket settings
+        , liveSigningKeyFile = boardTransactionPayer settings
+        , liveFundingAddressText = boardTransactionFundingAddress settings
+        , liveKoiosUrl = boardTransactionKoiosUrl settings
+        , liveKoiosToken = boardTransactionKoiosToken settings
+        , liveTimeoutSeconds = boardTransactionTimeoutSeconds settings
+        }
+
+publishArtifactsLive ::
+    DeploySettings ->
+    LiveContext ->
+    [ScriptArtifact] ->
+    IO [(Text, Reference)]
+publishArtifactsLive settings context = traverse publishArtifact
+  where
+    publishArtifact artifact = do
+        funding <- indexedFundingUtxos context
+        published <-
+            publishScripts
+                PublishConfig
+                    { publishRuntime = liveTransactionRuntime context
+                    , publishInputUtxos = funding
+                    , publishFundingAddress = liveFundingAddress context
+                    , publishReferenceLovelace =
+                        deployReferenceLovelace settings
+                    , publishQueryReferences = \scriptHash ->
+                        queryReferenceScripts
+                            (deployKoiosUrl settings)
+                            (deployKoiosToken settings)
+                            [scriptHash]
+                    , publishTimeoutSeconds =
+                        deployTimeoutSeconds settings
+                    }
+                [artifact]
+        case published of
+            [reference] -> pure reference
+            _ -> fail "single-artifact publisher returned an impossible cardinality"
+
+resolveSourceCommit :: DeploySettings -> IO Text
+resolveSourceCommit settings =
+    case deploySourceCommit settings of
+        Nothing ->
+            fail
+                "--source-commit is required; production composition does not inspect Git through a subprocess"
+        Just commit -> pure (T.toLower commit)
+
+publicationTimestamp :: IO Text
+publicationTimestamp =
+    T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
+        <$> getCurrentTime
 
 registerPreflight ::
     Text ->
@@ -1303,9 +1488,7 @@ registerPreflight network networkMagic allowUnlisted allowExisting existingCount
 runRegister :: RegisterSettings -> IO ()
 runRegister = runRegisterWith productionRegisterRuntime
 
-{- | Execute every read-only registration preflight effect in order, then
-stop before the Slice 4 transaction composition boundary.
--}
+-- | Execute every read-only preflight effect in order, then submit live.
 runRegisterWith :: RegisterRuntime -> RegisterSettings -> IO ()
 runRegisterWith runtime settings = do
     when (registerTimeoutSeconds settings <= 0) $
@@ -1376,7 +1559,7 @@ runRegisterWith runtime settings = do
             "warning: sovereign repeat registration creates another fully \
             \funded checkpoint copy; the benign residual is intentional"
         )
-    registerStop runtime "registering pending #181 Slice 4 composition"
+    registerSubmit runtime settings manifest plan
 
 productionRegisterRuntime :: RegisterRuntime
 productionRegisterRuntime =
@@ -1387,8 +1570,82 @@ productionRegisterRuntime =
         , registerReadBoardManifest = readEndpointBoardManifest
         , registerQueryBoard = queryBoardCatalog
         , registerWriteLine = putStrLn
-        , registerStop = fail
+        , registerSubmit = submitRegistration
         }
+
+submitRegistration ::
+    RegisterSettings ->
+    Manifest ->
+    RegistrationPlan ->
+    IO ()
+submitRegistration settings manifest plan =
+    withLiveContext (registerLiveConfig settings) $ \context -> do
+        references <- resolveManifestReferences context manifest
+        lifecycleAccount <-
+            either fail pure $
+                rewardAccountForScript "observer-lifecycle" manifest
+        lifecycleRegistered <-
+            rewardAccountRegistered context lifecycleAccount
+        let config =
+                Registration.RegisterConfig
+                    { Registration.registerRuntime =
+                        liveTransactionRuntime context
+                    , Registration.registerReferenceUtxos = references
+                    , Registration.registerFundingAddress =
+                        liveFundingAddress context
+                    , Registration.registerLifecycleRewardAccount =
+                        lifecycleAccount
+                    , Registration.registerQueryAsset =
+                        queryAssetUtxos
+                            (registerKoiosUrl settings)
+                            (registerKoiosToken settings)
+                    , Registration.registerTimeoutSeconds =
+                        registerTimeoutSeconds settings
+                    , Registration.registerPollDelayMicros = 2_000_000
+                    }
+        premintFunding <- indexedFundingUtxos context
+        premintTxId <-
+            premintOne config plan premintFunding (not lifecycleRegistered)
+                >>= either (fail . show) pure
+        proof <-
+            awaitAsset
+                (Registration.registerQueryAsset config)
+                (Registration.registerPollDelayMicros config)
+                (Registration.registerTimeoutSeconds config)
+                (planProofPolicy plan)
+                (planProofName plan)
+                (renderTransactionId premintTxId)
+                (registerFundingAddress settings)
+                >>= either (fail . show) pure
+        proofInput <-
+            resolveOutput
+                context
+                (chainAssetTxId proof)
+                (chainAssetIndex proof)
+        registerFunding <- indexedFundingUtxos context
+        registerTxId <-
+            registerOne config plan registerFunding proofInput
+                >>= either (fail . show) pure
+        _ <-
+            awaitAsset
+                (Registration.registerQueryAsset config)
+                (Registration.registerPollDelayMicros config)
+                (Registration.registerTimeoutSeconds config)
+                (planCheckpointPolicy plan)
+                (planCheckpointName plan)
+                (renderTransactionId registerTxId)
+                (planCheckpointAddress plan)
+                >>= either (fail . show) pure
+        putStrLn $
+            "premint txid: "
+                <> T.unpack (renderTransactionId premintTxId)
+        putStrLn $
+            "register txid: "
+                <> T.unpack (renderTransactionId registerTxId)
+        putStrLn $
+            "escrow: "
+                <> show (registerEscrowLovelace settings `div` 1_000_000)
+                <> " tADA (min 2 + D 1000 + B 5)"
 
 runAdvance :: AdvanceSettings -> IO ()
 runAdvance settings = do
@@ -1469,11 +1726,59 @@ submitAdvance settings manifest active package signatureFile = do
     submittedPackage <-
         prepareSubmittedPackage settings active signatures package
     plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
-    payer `seq`
-        nodeSocket `seq`
-            fundingAddress `seq`
-                plan `seq`
-                    fail "advancing pending #181 Slice 4 composition"
+    withLiveContext
+        ( advanceLiveConfig
+            settings
+            payer
+            nodeSocket
+            fundingAddress
+        )
+        $ \context -> do
+            references <- resolveManifestReferences context manifest
+            observerAccount <-
+                either fail pure $
+                    rewardAccountForScript "observer-advance" manifest
+            observerRegistered <-
+                rewardAccountRegistered context observerAccount
+            activeInput <-
+                resolveOutput
+                    context
+                    (activeCheckpointTxId active)
+                    (activeCheckpointIndex active)
+            funding <- indexedFundingUtxos context
+            result <-
+                AdvanceTx.runAdvanceTransaction
+                    AdvanceTx.AdvanceConfig
+                        { AdvanceTx.advanceRuntime =
+                            liveTransactionRuntime context
+                        , AdvanceTx.advanceReferenceUtxos = references
+                        , AdvanceTx.advanceFundingAddress =
+                            liveFundingAddress context
+                        , AdvanceTx.advanceObserverRewardAccount =
+                            observerAccount
+                        }
+                    plan
+                    funding
+                    activeInput
+                    (not observerRegistered)
+                    >>= either (fail . show) pure
+            let txId = AdvanceTx.resultAdvanceTxId result
+            _ <-
+                AdvanceTx.awaitAdvance
+                    ( queryAssetUtxos
+                        (advanceKoiosUrl settings)
+                        (advanceKoiosToken settings)
+                    )
+                    2_000_000
+                    (advanceTimeoutSeconds settings)
+                    (AdvanceTx.planCheckpointPolicy plan)
+                    (AdvanceTx.planCheckpointAssetName plan)
+                    (renderTransactionId txId)
+                    (AdvanceTx.planCheckpointAddress plan)
+                    >>= either (fail . show) pure
+            putStrLn $
+                "advance txid: "
+                    <> T.unpack (renderTransactionId txId)
 
 prepareSubmittedPackage ::
     AdvanceSettings ->
@@ -1626,12 +1931,55 @@ submitClose settings manifest package signatureFile = do
                     pure
                     (attachCloseControllerSignatures signatures package)
     plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
-    payer `seq`
-        nodeSocket `seq`
-            fundingAddress `seq`
-                changeAddress `seq`
-                    plan `seq`
-                        fail "closing pending #181 Slice 4 composition"
+    let liveConfig =
+            closeLiveConfig
+                settings
+                payer
+                nodeSocket
+                fundingAddress
+    withLiveContext liveConfig $ \context -> do
+        references <- resolveManifestReferences context manifest
+        change <- either fail pure (decodePaymentAddress changeAddress)
+        active <-
+            resolveOutput
+                context
+                ( activeCheckpointTxId $
+                    closeActiveCheckpoint submittedPackage
+                )
+                ( activeCheckpointIndex $
+                    closeActiveCheckpoint submittedPackage
+                )
+        funding <- indexedFundingUtxos context
+        result <-
+            CloseTx.runCloseTransaction
+                CloseTx.CloseConfig
+                    { CloseTx.closeRuntime =
+                        liveTransactionRuntime context
+                    , CloseTx.closeReferenceUtxos = references
+                    , CloseTx.closeFundingAddress =
+                        liveFundingAddress context
+                    , CloseTx.closeChangeAddress = change
+                    }
+                plan
+                funding
+                active
+                >>= either (fail . show) pure
+        let txId = CloseTx.closeResultTxId result
+        _ <-
+            CloseTx.awaitClose
+                (transactionSettled liveConfig)
+                2_000_000
+                (closeTimeoutSeconds settings)
+                txId
+                >>= either (fail . show) pure
+        putStrLn $
+            "close txid: "
+                <> T.unpack (renderTransactionId txId)
+        putStrLn $
+            "refunded: "
+                <> show (closeRefundLovelace submittedPackage `div` 1_000_000)
+                <> " tADA to "
+                <> T.unpack (closeRefundAddress submittedPackage)
 
 requireCloseSetting :: String -> Maybe a -> IO a
 requireCloseSetting name =
@@ -1646,17 +1994,25 @@ runDeploy settings = do
         fail "reference-lovelace must be positive"
     when (deployTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
-    commit <-
-        maybe
-            (gitOutput (deploySourceRepo settings) ["rev-parse", "HEAD"])
-            pure
-            (deploySourceCommit settings)
+    artifacts <- loadArtifacts (deployBlueprint settings)
+    digest <- blueprintSha256 (deployBlueprint settings)
+    commit <- resolveSourceCommit settings
     verifySourceTree (deploySourceRepo settings) commit
-    -- #181 Slice 2B (T181-S2B-3, per the 2026-08-03 standing ruling): the
-    -- subprocess publish path is retired and the in-process
-    -- 'TransactionRuntime' composition lands in #181 Slice 4. Fail closed
-    -- before any funding/build/sign/submit attempt.
-    fail "deploy disabled: publishing pending #181 Slice 4 composition"
+    references <-
+        withLiveContext (deployLiveConfig settings) $ \context ->
+            publishArtifactsLive settings context artifacts
+    publishedAt <- publicationTimestamp
+    manifest <-
+        either fail pure $
+            mkManifest
+                (deploySourceRepositoryUrl settings)
+                commit
+                digest
+                publishedAt
+                artifacts
+                references
+    writeManifestAtomic (deployOut settings) manifest
+    putStrLn ("manifest: " <> deployOut settings)
 
 runVerify :: VerifySettings -> IO ()
 runVerify settings = do
@@ -1671,7 +2027,7 @@ runVerify settings = do
         (verifySourceRepo settings)
         (sourceCommit $ manifestSource manifest)
     putStrLn $
-        "source rebuild: OK commit="
+        "source identity: OK recorded commit="
             <> T.unpack (sourceCommit $ manifestSource manifest)
     forM_ (manifestScripts manifest) $ \script ->
         putStrLn $
@@ -1709,7 +2065,7 @@ runVerify settings = do
                 <> "#"
                 <> show
                     (referenceIndex $ scriptReference script)
-    putStrLn "manifest verify: OK — rebuilt from source; all hashes and on-chain references are live"
+    putStrLn "manifest verify: OK — blueprint rebuilt; all hashes and on-chain references are live"
 
 loadArtifacts :: FilePath -> IO [ScriptArtifact]
 loadArtifacts path = do
@@ -1718,47 +2074,9 @@ loadArtifacts path = do
 
 verifySourceTree :: FilePath -> Text -> IO ()
 verifySourceTree repository commit = do
-    _ <-
-        gitOutput
-            repository
-            ["cat-file", "-e", T.unpack commit <> "^{commit}"]
-    (exitCode, _, err) <-
-        readProcessWithExitCode
-            "git"
-            [ "-C"
-            , repository
-            , "diff"
-            , "--quiet"
-            , T.unpack commit
-            , "--"
-            , "onchain"
-            ]
-            ""
-    case exitCode of
-        ExitSuccess -> pure ()
-        ExitFailure 1 ->
-            fail $
-                "tracked onchain/ source differs from manifest commit "
-                    <> T.unpack commit
-        ExitFailure code ->
-            fail $
-                "git source comparison failed with exit "
-                    <> show code
-                    <> ": "
-                    <> err
-
-gitOutput :: FilePath -> [String] -> IO Text
-gitOutput repository arguments = do
-    (exitCode, output, err) <-
-        readProcessWithExitCode
-            "git"
-            ("-C" : repository : arguments)
-            ""
-    case exitCode of
-        ExitSuccess -> pure (T.strip $ T.pack output)
-        ExitFailure code ->
-            fail $
-                "git failed with exit "
-                    <> show code
-                    <> ": "
-                    <> err
+    unless
+        (T.length commit == 40 && T.all isHexDigit commit)
+        (fail "source commit must be exactly 40 hexadecimal characters")
+    sourcePresent <- doesDirectoryExist (repository <> "/onchain")
+    unless sourcePresent $
+        fail "source repository has no onchain/ directory"

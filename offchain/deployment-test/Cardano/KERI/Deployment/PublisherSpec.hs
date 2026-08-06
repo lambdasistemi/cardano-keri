@@ -38,7 +38,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     PayerSelectionError (..),
     TransactionRuntime (..),
     selectFundingPair,
-    signWithCardanoCliKey,
+    signWithPaymentKey,
     transactionId,
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
@@ -199,7 +199,7 @@ disagreeingId =
         (mkBasicTx (mkBasicTxBody & feeTxBodyL .~ Coin 999_999))
 
 {- | A stand-in runtime that signs with the pinned signer
-('signWithCardanoCliKey' over 'publisherTestEnvelope') and freezes the
+('signWithPaymentKey' over 'publisherTestEnvelope') and freezes the
 post-sign transaction, so the test can independently assert on the exact
 ledger evolution 'publishOne' built. The one-vkey-witness assertion lands
 on that post-sign value (A-001 Finding 3), mirroring
@@ -215,7 +215,7 @@ standInRuntime callsRef signedRef =
             , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
             , trSign = \tx -> do
                 recordCall callsRef "sign"
-                let signedResult = signWithCardanoCliKey publisherTestEnvelope tx
+                let signedResult = signWithPaymentKey publisherTestEnvelope tx
                 modifyIORef'
                     signedRef
                     ( const

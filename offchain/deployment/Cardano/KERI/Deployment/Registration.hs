@@ -60,6 +60,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
+    fundingSpends,
     runTransactionBuild,
     selectFundingPair,
  )
@@ -503,14 +504,14 @@ premintProgram
     pparams
     config
     registerLifecycle
-    FundingPair{fundingSpend = fundingRow, fundingCollateral = collateralRow}
+    funding
     references
     proofPolicy
     proofName
     proofRedeemer
     lifecycleRedeemer = do
-        _ <- spend (fst fundingRow)
-        collateral (fst collateralRow)
+        mapM_ (spend . fst) (fundingSpends funding)
+        collateral (fst $ fundingCollateral funding)
         _ <-
             output $
                 mkBasicTxOut
@@ -555,7 +556,7 @@ registerProgram ::
 registerProgram
     pparams
     config
-    FundingPair{fundingSpend = fundingRow, fundingCollateral = collateralRow}
+    funding
     references
     proofInput
     checkpointAddress
@@ -568,9 +569,9 @@ registerProgram
     proofRedeemer
     observerRedeemer
     checkpointDatum = do
-        _ <- spend (fst fundingRow)
+        mapM_ (spend . fst) (fundingSpends funding)
         _ <- spend (fst proofInput)
-        collateral (fst collateralRow)
+        collateral (fst $ fundingCollateral funding)
         _ <-
             payTo'
                 checkpointAddress
@@ -601,7 +602,7 @@ runRegistrationBuild ::
     IO (Either RegistrationError TxId)
 runRegistrationBuild
     config
-    FundingPair{fundingSpend = fundingRow, fundingCollateral = collateralRow}
+    funding
     extraInputs
     references
     mkProgram = do
@@ -610,14 +611,15 @@ runRegistrationBuild
         let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
             options =
                 defaultBuildOptions
-                    { boCollateralUtxos = CollateralUtxos [collateralRow]
+                    { boCollateralUtxos =
+                        CollateralUtxos [fundingCollateral funding]
                     }
         first RegistrationBuildFailed
             <$> runTransactionBuild
                 options
                 frozenRuntime
                 registerInterpret
-                (fundingRow : extraInputs)
+                (fundingSpends funding <> extraInputs)
                 references
                 (registerFundingAddress config)
                 (mkProgram pparams)

@@ -1,13 +1,11 @@
 {- |
 Module      : Cardano.KERI.Deployment.CLISpec
-Description : #181 Slice 2C register composition fail-closed proof
+Description : #181 register preflight-to-live composition proof
 Copyright   : (c) Paolo Veronelli, 2026
 License     : Apache-2.0
 
-The register command deliberately retains parsing, plan construction,
-read-only chain preflight, and warnings while Slice 4 owns the real runtime
-composition. This compiled-behaviour proof injects observable read/query/
-output capabilities and freezes their order before the fail-closed stop.
+This compiled-behaviour proof injects observable read/query/output/submission
+capabilities and freezes their order across the live composition boundary.
 -}
 module Cardano.KERI.Deployment.CLISpec (spec) where
 
@@ -37,7 +35,7 @@ import Test.Hspec (
 spec :: Spec
 spec =
     describe "runRegister composition boundary" $
-        it "fails closed before funding, build, sign, submit, or success until Slice 4 composition" $ do
+        it "submits only after every read-only preflight and warning" $ do
             kelPath <-
                 getDataFileName
                     "deployment-test/fixtures/kli-export-2-of-5.cesr"
@@ -81,7 +79,8 @@ spec =
                             record calls "query-board-catalog" (pure [])
                         , registerWriteLine = \_ ->
                             record calls "warning" (pure ())
-                        , registerStop = record calls "stop" . fail
+                        , registerSubmit = \_ _ _ ->
+                            record calls "submit" (pure ())
                         }
                 runtime = mkRuntime callsRef
                 settings =
@@ -92,7 +91,6 @@ spec =
                         , registerPayer = "unused-signing-key"
                         , registerNodeSocket = "unused-node-socket"
                         , registerFundingAddress = "unused-funding-address"
-                        , registerCardanoCli = "unused-cardano-cli"
                         , registerManifest = manifestPath
                         , registerBoardManifest = boardManifestPath
                         , registerKoiosUrl = "unused-koios"
@@ -102,14 +100,7 @@ spec =
                         , registerAllowExistingCheckpoint = True
                         , registerEscrowLovelace = 1_007_000_000
                         }
-            result <-
-                try (runRegisterWith runtime settings) ::
-                    IO (Either SomeException ())
-            case result of
-                Left exception ->
-                    displayException exception
-                        `shouldContain` "registering pending #181 Slice 4 composition"
-                Right () -> fail "runRegisterWith did not fail closed"
+            runRegisterWith runtime settings
             readIORef callsRef
                 >>= ( `shouldBe`
                         [ "read-kel"
@@ -119,7 +110,7 @@ spec =
                         , "query-board-catalog"
                         , "warning"
                         , "warning"
-                        , "stop"
+                        , "submit"
                         ]
                     )
                     . reverse

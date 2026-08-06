@@ -44,6 +44,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
+    fundingSpends,
     runTransactionBuild,
     selectFundingPair,
  )
@@ -203,7 +204,7 @@ runCloseTransaction config plan fundingInputs activeInput =
                     options
                     frozenRuntime
                     closeInterpret
-                    (fundingSpend funding : [activeInput])
+                    (fundingSpends funding <> [activeInput])
                     (closeReferences inputs)
                     (closeChangeAddress config)
                     (closeProgram pparams inputs)
@@ -268,7 +269,7 @@ closeProgram ::
     CloseInputs ->
     TxBuild CloseCtx CloseCheckError ()
 closeProgram pparams CloseInputs{closeFunding = FundingPair{..}, ..} = do
-    _ <- spend (fst fundingSpend)
+    mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst closeActiveInput) closeSpendData
     collateral (fst fundingCollateral)
     _ <-

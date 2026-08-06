@@ -63,6 +63,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
+    fundingSpends,
     runTransactionBuild,
     selectFundingPair,
  )
@@ -372,7 +373,7 @@ runBoardBuild config funding extraInputs references program = do
             options
             frozenRuntime
             boardInterpret
-            (fundingSpend funding : extraInputs)
+            (fundingSpends funding <> extraInputs)
             references
             (boardChangeAddress config)
             (program pparams)
@@ -511,7 +512,7 @@ postProgram ::
     PParams ConwayEra ->
     TxBuild BoardCtx BoardCheckError ()
 postProgram BoardPostInputs{postFunding = FundingPair{..}, ..} pparams = do
-    _ <- spend (fst fundingSpend)
+    mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     collateral (fst fundingCollateral)
     _ <- payTo' postAddress postValue postDatum
     mint postPolicy (Map.singleton postAsset 1) postMintData
@@ -523,7 +524,7 @@ updateProgram ::
     PParams ConwayEra ->
     TxBuild BoardCtx BoardCheckError ()
 updateProgram BoardUpdateInputs{updateFunding = FundingPair{..}, ..} pparams = do
-    _ <- spend (fst fundingSpend)
+    mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst updateInput) updateSpendData
     collateral (fst fundingCollateral)
     _ <- payTo' updateAddress updateValue updateDatumData
@@ -536,7 +537,7 @@ retireProgram ::
     PParams ConwayEra ->
     TxBuild BoardCtx BoardCheckError ()
 retireProgram BoardRetireInputs{retireFunding = FundingPair{..}, ..} pparams = do
-    _ <- spend (fst fundingSpend)
+    mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst retireInput) retireSpendData
     collateral (fst fundingCollateral)
     _ <- output $ mkBasicTxOut retireRefundAddr (MaryValue (Coin retireRefundCoin) $ MultiAsset mempty)

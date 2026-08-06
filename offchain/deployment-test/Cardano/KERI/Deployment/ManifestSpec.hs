@@ -16,7 +16,6 @@ import Cardano.KERI.Deployment.Manifest (
     manifestValidationErrors,
     mkManifest,
  )
-import Cardano.KERI.Deployment.Publisher (parseTransactionId)
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     deriveBoardScript,
@@ -27,7 +26,6 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString.Short qualified as SBS
 import Data.List (sort)
 import Data.Text (Text)
-import Data.Text qualified as T
 import System.Environment (getEnv)
 import System.IO.Temp (withSystemTempDirectory)
 import System.Posix.Files (
@@ -200,14 +198,6 @@ spec =
                     `shouldContain` "reference output index is negative"
                 unlines errors
                     `shouldContain` "script references are not unique"
-        describe "cardano-cli compatibility" $ do
-            it "accepts both legacy text and current JSON txid output" $ \_ -> do
-                parseTransactionId (T.unpack testTxId)
-                    `shouldBe` Right testTxId
-                parseTransactionId
-                    ("{\"txhash\":\"" <> T.unpack testTxId <> "\"}")
-                    `shouldBe` Right testTxId
-
 withArtifacts :: ([ScriptArtifact] -> IO ()) -> IO ()
 withArtifacts action = do
     path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"

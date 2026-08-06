@@ -156,3 +156,12 @@ registration documented above, including:
   `f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a`;
   and
 - the exact package digest and matching controller signature.
+
+That primary AID is 1-of-1. Its acceptance-only
+`--validator-test-under-signed` invocation is the successful immutable-M1
+compatibility override described above, not an under-signed negative control.
+The separate
+`deploy/preprod/m1-advance-historical-negative-acceptance.txt` capture uses a
+2-of-5 controller with three witnesses and threshold two. Its under-signed,
+under-witnessed, and stale attempts each reach the deployed Plutus evaluator
+and fail. The transcript checker requires all three failures independently.

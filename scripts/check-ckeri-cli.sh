@@ -8,6 +8,8 @@ trap 'rm -rf "$workspace"' EXIT
 outside="$workspace/outside-checkout"
 mkdir "$outside"
 
+"$worktree/scripts/check-ckeri-closure-no-cli.sh" "$ckeri"
+
 "$ckeri" --help | grep -q "deploy"
 "$ckeri" --help | grep -q "manifest"
 "$ckeri" --help | grep -q "register"

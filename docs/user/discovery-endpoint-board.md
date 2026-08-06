@@ -190,3 +190,11 @@ and retires through
 `bac4cbcb8dd4c27509a677791ebcdd6ae98a517c5fb03ecfd22130d3be34638c`.
 The final list is the original three records and the full 4-tADA deposit is
 refunded to the configured address.
+
+The refreshed stranger capture observes that temporary live record with the
+repaired local package. The independent clean-client property remains in
+`deploy/preprod/m1-board-clean-client-historical-acceptance.txt`: a fresh Nix
+host first proves the checkout absent, clones the public GitHub repository,
+runs `./offchain#ckeri -- board list`, and fetches the advertised OOBI with
+HTTP 200. The board checker requires both evidence seats rather than treating
+a local-path build as a clean client.

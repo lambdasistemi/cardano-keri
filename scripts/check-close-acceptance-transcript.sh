@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 
 transcript="${1:-deploy/preprod/m1-close-acceptance.txt}"
 advance_transcript="${2:-deploy/preprod/m1-advance-acceptance.txt}"
+historical_negative="${3:-deploy/preprod/m1-close-historical-negative-acceptance.txt}"
 refund_address='addr_test1qzdqjmt98smx8my6f5uum0szghuy8ff2hep2e64a9w2pehty436vwj3d2cslvu2a4aypkrqa4d6ujvldn8l6utg5yyqs4pqv6d'
 
 if grep -q $'\r' "$transcript" || grep -q $'\033' "$transcript"; then
@@ -48,13 +49,34 @@ test "$active_line" -lt "$prepare_line"
 test "$prepare_line" -lt "$close_line"
 test "$close_line" -lt "$closed_line"
 
+if grep -q $'\r' "$historical_negative" || grep -q $'\033' "$historical_negative"; then
+  echo "historical close negative capture must be plain text" >&2
+  exit 1
+fi
+grep -Eq '^[$] docker run .*--validator-test-non-controller$' "$historical_negative"
+grep -Fqx \
+  'warning: ACCEPTANCE-ONLY non-controller close package will be sent to real validator evaluation' \
+  "$historical_negative"
+outsider_line="$(grep -n -- '--validator-test-non-controller$' "$historical_negative" | tail -1 | cut -d: -f1)"
+failure_line="$(awk -v start="$outsider_line" \
+  'NR > start && /Error: The following scripts have execution failures:/ { print NR; exit }' \
+  "$historical_negative")"
+controller_line="$(grep -n -- 'controller-signatures[.]cesr$' "$historical_negative" | tail -1 | cut -d: -f1)"
+test -n "$failure_line"
+test "$outsider_line" -lt "$failure_line"
+test "$failure_line" -lt "$controller_line"
+
 if [[ -n "${CKERI_BIN:-}" ]]; then
   payload="$(jq -cn --arg tx "$close_txid" '{_tx_hashes: [$tx]}')"
-  tx_info="$(curl --fail --silent --show-error --request POST \
+  curl_args=(--fail --silent --show-error)
+  if [[ -n "${KOIOS_TOKEN:-}" ]]; then
+    curl_args+=(--header "Authorization: Bearer $KOIOS_TOKEN")
+  fi
+  tx_info="$(curl "${curl_args[@]}" --request POST \
     https://preprod.koios.rest/api/v1/tx_info \
     --header 'Content-Type: application/json' --data "$payload")"
   jq -e 'length == 1 and .[0].block_hash != null' <<<"$tx_info" >/dev/null
-  echo "M1 in-process close and exact refund are live: OK"
+  echo "M1 in-process close/refund is live and the independent non-controller control fails: OK"
 else
-  echo "M1 in-process close transcript is internally consistent: OK"
+  echo "M1 close happy-path and independent non-controller negative are internally consistent: OK"
 fi

@@ -8,6 +8,7 @@ post_transcript="${2:-deploy/preprod/m1-board-operator-post-acceptance.txt}"
 stranger_transcript="${3:-deploy/preprod/m1-board-stranger-acceptance.txt}"
 lifecycle_transcript="${4:-deploy/preprod/m1-board-operator-lifecycle-acceptance.txt}"
 manifest="${5:-deploy/preprod/board-manifest.json}"
+clean_client_transcript="${6:-deploy/preprod/m1-board-clean-client-historical-acceptance.txt}"
 refund_address='addr_test1qzdqjmt98smx8my6f5uum0szghuy8ff2hep2e64a9w2pehty436vwj3d2cslvu2a4aypkrqa4d6ujvldn8l6utg5yyqs4pqv6d'
 
 transcripts=(
@@ -33,6 +34,30 @@ for transcript in "${transcripts[@]}"; do
   total_bytes="$((total_bytes + $(wc -c <"$transcript")))"
 done
 test "$total_bytes" -lt 60000
+
+# Preserve the independent clean-client seat: a fresh Nix host cloned the
+# public repository and ran its packaged app. The current stranger transcript
+# observes the temporary record through the repaired local artifact; it is not
+# substituted for this clean-client property.
+if grep -q $'\r' "$clean_client_transcript" || grep -q $'\033' "$clean_client_transcript"; then
+  echo "historical board clean-client capture must be plain text" >&2
+  exit 1
+fi
+grep -Fqx '$ hostname -f' "$clean_client_transcript"
+grep -Fqx 'zur1-s-d-030.colo1.cf-systems.internal' "$clean_client_transcript"
+grep -Fqx '$ test '\''!'\'' -e /code/cardano-keri-165-stranger-final' "$clean_client_transcript"
+grep -Fqx \
+  '$ git clone --filter=blob:none --branch story/165-endpoint-board --single-branch https://github.com/lambdasistemi/cardano-keri /code/cardano-keri-165-stranger-final' \
+  "$clean_client_transcript"
+grep -Fqx \
+  '$ nix shell nixpkgs#nix -c nix run --accept-flake-config --quiet ./offchain#ckeri -- board list --board-manifest deploy/preprod/board-manifest.json' \
+  "$clean_client_transcript"
+grep -Fqx 'board records: 3' "$clean_client_transcript"
+grep -Fqx 'HTTP 200 bytes 1239' "$clean_client_transcript"
+if grep -Fq '/code/cardano-keri-181-txpath' "$clean_client_transcript"; then
+  echo "board clean-client proof unexpectedly references the local Slice 4 checkout" >&2
+  exit 1
+fi
 
 post_date="$(sed -n 's/^\(2026-[0-9T:Z-]*\)$/\1/p' "$post_transcript" | head -1)"
 stranger_date="$(sed -n 's/^\(2026-[0-9T:Z-]*\)$/\1/p' "$stranger_transcript" | head -1)"
@@ -137,11 +162,15 @@ if [[ -n "${CKERI_BIN:-}" ]]; then
       --arg retire "$retire_txid" \
       '{_tx_hashes: [$post, $update, $retire]}'
   )"
-  tx_info="$(curl --fail --silent --show-error --request POST \
+  curl_args=(--fail --silent --show-error)
+  if [[ -n "${KOIOS_TOKEN:-}" ]]; then
+    curl_args+=(--header "Authorization: Bearer $KOIOS_TOKEN")
+  fi
+  tx_info="$(curl "${curl_args[@]}" --request POST \
     https://preprod.koios.rest/api/v1/tx_info \
     --header 'Content-Type: application/json' --data "$payload")"
   jq -e 'length == 3 and all(.[]; .block_hash != null)' <<<"$tx_info" >/dev/null
-  echo 'M1 in-process board lifecycle and deploy verification are live: OK'
+  echo 'M1 in-process board lifecycle is live and the independent public-repo clean-client proof is preserved: OK'
 else
-  echo 'M1 in-process board transcripts are internally consistent: OK'
+  echo 'M1 board journey and independent public-repo clean-client proof are internally consistent: OK'
 fi

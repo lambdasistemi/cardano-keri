@@ -126,3 +126,10 @@ settled registration
 `6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2`,
 and the resulting live sequence-zero status for AID
 `EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P`.
+
+The independent
+`deploy/preprod/m1-register-historical-negative-acceptance.txt` capture keeps
+the deployed-boundary already-registered, ambiguous-checkpoint, and
+unlisted-witness failures. The checker requires those actual failures in
+addition to the newer primary journey; it never treats a successful repeat or
+an override as negative evidence.

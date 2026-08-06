@@ -46,6 +46,24 @@ verify-only pass: it compares all five manifest script hashes and references
 with live Koios results and confirms the endpoint-board reference and current
 catalog without publishing replacement scripts.
 
+### Acceptance evidence boundary
+
+The August 2026 transaction-path journey was captured through the packaged
+Nix runner before its closure was repaired. Although every transaction was
+built, witnessed, and submitted by the in-process Cardano API path, that
+runner's `runtimeInputs` still shipped `cardano-cli`. The settled transaction
+IDs therefore prove the in-process journey and its on-chain effects; they do
+not, by themselves, prove that the installed closure was free of the retired
+tool.
+
+The subsequent audit repair removed `cardano-cli` from the packaged runner and
+added `scripts/check-ckeri-closure-no-cli.sh`, which inspects the complete
+built closure. Acceptance includes both the clean-artifact result and a
+controlled build with the dependency reintroduced that makes the same check
+fail. The live journey and this closure-level, demonstrated-able-to-fail
+control are the combined proof for the installed transaction path. No primary
+journey transaction was resubmitted for that packaging repair.
+
 ## Verify from a checkout
 
 From the repository root at the manifest's source commit, build the

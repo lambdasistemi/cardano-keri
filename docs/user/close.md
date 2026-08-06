@@ -133,3 +133,9 @@ journey:
 The checker verifies chronology, package/signature digest agreement, exact
 refund amount and address, and terminal `NOT REGISTERED` status. With a live
 binary configured it also re-queries settlement through Koios.
+
+The controller happy path is intentionally separate from
+`deploy/preprod/m1-close-historical-negative-acceptance.txt`, where an
+unrelated KLI identity signs the close package and the deployed spending
+validator rejects it. The checker requires that failure before the later
+controller-signed close.

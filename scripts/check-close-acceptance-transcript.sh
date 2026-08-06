@@ -84,11 +84,7 @@ fi
 # Preserve the complete base assertion set against its own accepted capture
 # and signing package; the regenerated primary close remains checked above.
 check_historical_close_base_assertions() (
-  historical_source=deploy/preprod/m1-close-historical-negative-acceptance.txt
-  historical_workspace="$(mktemp)"
-  trap 'rm -f "$historical_workspace"' EXIT
-  sed '2s/$/ /' "$historical_source" >"$historical_workspace"
-  transcript="$historical_workspace"
+  transcript=deploy/preprod/m1-close-historical-negative-acceptance.txt
   package_dir=deploy/preprod/m1-close-package
   manifest=deploy/preprod/m1-manifest.json
   if test "$(tr -d '\000' <"$transcript" | wc -c)" -ne \
@@ -101,7 +97,7 @@ check_historical_close_base_assertions() (
 
   test "$(wc -c <"$transcript")" -lt 20000
   grep -Fqx "Library version: 1.3.5" "$transcript"
-  grep -Fqx "ckeri 0.0.0 " "$transcript"
+  grep -Fqx "ckeri 0.0.0" "$transcript"
   test "$(grep -c '^\$ ' "$transcript")" -eq 24
 
   mapfile -t identifiers < <(

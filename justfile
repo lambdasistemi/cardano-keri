@@ -199,6 +199,25 @@ board-path-check matcher="":
 deploy-register-no-cli-guard:
     ./scripts/check-deploy-register-no-cli.sh
 
+# #181 Slice 4: production CLI composition under a PATH containing Nix but no
+# cardano-cli. The source guard first proves its scanner against a deliberate
+# shell-out fixture; the packaged executable then evaluates and renders help in
+# the same restricted environment used by the earlier per-operation checks.
+cli-composition-path-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    restricted_path="$(dirname "$(command -v nix)")"
+    echo "cli-composition-path-check: PATH=$restricted_path"
+    if PATH="$restricted_path" command -v cardano-cli >/dev/null 2>&1; then
+        echo "cli-composition-path-check: cardano-cli is reachable under the restricted PATH; the control is not meaningful" >&2
+        exit 1
+    fi
+    echo "cli-composition-path-check: cardano-cli absent from the restricted PATH (expected)"
+    ./scripts/check-deploy-register-no-cli.sh
+    PATH="$restricted_path" nix build --quiet --no-link --no-write-lock-file path:./offchain#ckeri
+    PATH="$restricted_path" nix run --quiet --no-write-lock-file path:./offchain#ckeri -- --help >/dev/null
+    echo "cli-composition-path-check: packaged ckeri evaluated and rendered help without cardano-cli"
+
 # #181 Slice 2: restricted-PATH runtime control (DIRECTION-002). Sets an
 # explicit PATH for the process that runs the focused Publisher/
 # Registration/restricted-PATH suite, keeping only what nix/cabal need and

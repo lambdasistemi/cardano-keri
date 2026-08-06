@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# #181 Slices 2-3 — all migrated deployment transaction modules own no
-# subprocess/cardano-cli path or retired runner configuration. CLI parsing
-# remains intentionally unchanged until #181 Slice 4; only the live tails are
-# fenced there.
+# #181 Slices 2-4 — the complete deployment path, including live CLI
+# composition, owns no subprocess/cardano-cli path or retired runner
+# configuration.
 #
 # Proves itself able to fail before it is trusted to pass the real source:
 # a positive-control fixture deliberately contains a forbidden cardano-cli
@@ -16,6 +15,7 @@ registration="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Registratio
 advance="$repo_root/offchain/deployment/Cardano/KERI/Deployment/AdvanceTransaction.hs"
 close="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CloseTransaction.hs"
 board="$repo_root/offchain/deployment/Cardano/KERI/Deployment/EndpointBoardTransaction.hs"
+cli="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CLI.hs"
 
 subprocess_pattern='System\.Process|readProcessWithExitCode|callProcess|createProcess|cardano-cli'
 
@@ -26,9 +26,7 @@ fi
 echo "deploy-register-no-cli-guard: positive control OK (guard detects $fixture)"
 
 # This closes both the visible query and transaction-build-in-disguise paths.
-# CLI.hs legitimately keeps its option/settings surface until Slice 4, so it
-# is never scanned for this regex.
-modules=("$publisher" "$registration" "$advance" "$close" "$board")
+modules=("$publisher" "$registration" "$advance" "$close" "$board" "$cli")
 violations="$(grep -nE "$subprocess_pattern" "${modules[@]}" || true)"
 if [ -n "$violations" ]; then
   echo "deploy-register-no-cli-guard: a migrated transaction module still contains a subprocess path:" >&2
@@ -44,6 +42,11 @@ retired_fields=(
   AdvanceRunnerConfig
   CloseRunnerConfig
   BoardRunnerConfig
+  deployCardanoCli
+  registerCardanoCli
+  advanceCardanoCli
+  closeCardanoCli
+  boardTransactionCardanoCli
 )
 for field in "${retired_fields[@]}"; do
   survivors="$(grep -nF -- "$field" "${modules[@]}" || true)"
@@ -54,4 +57,9 @@ for field in "${retired_fields[@]}"; do
   fi
 done
 
-echo "deploy-register-no-cli-guard: OK — no subprocess path or retired runner surface in migrated modules"
+if grep -nF 'pending #181 Slice 4 composition' "$cli"; then
+  echo "deploy-register-no-cli-guard: a Slice 4 fail-closed tail survives" >&2
+  exit 1
+fi
+
+echo "deploy-register-no-cli-guard: OK — no subprocess path, retired runner surface, or Slice 4 stop in deployment composition"

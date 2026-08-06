@@ -72,6 +72,29 @@ mkdir "$outside"
 "$ckeri" status --help | grep -q "CKERI_BOARD_MANIFEST"
 "$ckeri" board post --help | grep -q "default: 4000000"
 
+reject_retired_cardano_cli_help() {
+  local command_label="$1"
+  shift
+  local help
+  help="$("$ckeri" "$@" --help)"
+  if grep -q -- '--cardano-cli\|CKERI_CARDANO_CLI' <<<"$help"; then
+    printf '%s help still exposes retired cardano-cli configuration\n' \
+      "$command_label" >&2
+    exit 1
+  fi
+}
+
+reject_retired_cardano_cli_help deploy deploy
+reject_retired_cardano_cli_help register register
+reject_retired_cardano_cli_help advance advance
+reject_retired_cardano_cli_help close close
+reject_retired_cardano_cli_help board-deploy board deploy
+reject_retired_cardano_cli_help board-post board post
+reject_retired_cardano_cli_help board-update board update
+reject_retired_cardano_cli_help board-retire board retire
+
+"$worktree/scripts/check-deploy-register-no-cli.sh"
+
 if rg -n \
   'Options\.Applicative|optparse-applicative' \
   offchain/cardano-keri.cabal \

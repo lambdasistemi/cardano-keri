@@ -3,325 +3,252 @@
 
 {- |
 Module      : Cardano.KERI.Deployment.Publisher
-Description : Publish applied scripts through cardano-cli and wait for settlement
+Description : Publish applied scripts through the in-process transaction runtime and wait for settlement
+
+#181 Slice 2B: the publisher no longer shells out to an external CLI for
+UTxO query, transaction build, signing, transaction-id derivation, or
+submission. It composes the shared in-process kernel
+('Cardano.KERI.Deployment.TransactionRuntime.runTransactionBuild') over a
+caller-supplied 'TransactionRuntime', then settles through an injected
+chain-query primitive ('awaitReference'). The reported reference id is the
+pure id of the signed transaction, never an echoed submitter value.
 -}
 module Cardano.KERI.Deployment.Publisher (
     PublishConfig (..),
+    PublishError (..),
     publishScripts,
-    parseTransactionId,
-    writeScriptEnvelope,
+    publishOne,
+    awaitReference,
 ) where
 
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainReference (..),
-    KoiosToken,
-    queryReferenceScripts,
- )
+import Cardano.KERI.Deployment.ChainIndex (ChainReference (..))
 import Cardano.KERI.Deployment.Manifest (Reference (..))
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
+    mkCageScript,
     scriptHashText,
  )
-import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, try)
-import Data.Aeson (
-    FromJSON (..),
-    Value,
-    eitherDecodeFileStrict',
-    object,
-    withObject,
-    (.:),
-    (.:?),
-    (.=),
+import Cardano.KERI.Deployment.TransactionRuntime (
+    PayerSelectionError,
+    TransactionRuntime (..),
+    fundingSpends,
+    renderTransactionId,
+    runTransactionBuild,
+    selectFundingPair,
  )
-import Data.Aeson qualified as Aeson
-import Data.Bits (shiftR)
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
-import Data.ByteString qualified as BS
-import Data.ByteString.Short qualified as SBS
-import Data.Char (isHexDigit)
-import Data.List (maximumBy)
-import Data.Map.Strict (Map)
-import Data.Map.Strict qualified as Map
+import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Api.Tx.Body (referenceScriptTxOutL)
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core (
+    Script,
+    TxOut,
+    fromStrictMaybeL,
+    mkBasicTxOut,
+ )
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Tx.Build (
+    InterpretIO (..),
+    TxBuild,
+    defaultBuildOptions,
+    output,
+    spend,
+ )
+import Control.Concurrent (threadDelay)
+import Data.Functor.Const (Const (..), getConst)
+import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.Maybe (isNothing)
-import Data.Ord (comparing)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
-import Data.Time.Clock (
-    UTCTime,
-    diffUTCTime,
-    getCurrentTime,
- )
-import System.Exit (ExitCode (..))
-import System.FilePath ((</>))
-import System.IO.Temp (withSystemTempDirectory)
-import System.Process (readProcessWithExitCode)
+import Data.Time.Clock (diffUTCTime, getCurrentTime)
 
+{- | Settlement polling cadence in microseconds, matching the pre-migration
+publisher's fixed wait between reference-script observations.
+-}
+publishSettlementPollMicros :: Int
+publishSettlementPollMicros = 5_000_000
+
+{- | In-process publish configuration. The caller supplies the transaction
+runtime capability, the indexed funding UTxOs, the funding/change address,
+the reference output value, the settlement query primitive, and the
+observation timeout.
+-}
 data PublishConfig = PublishConfig
-    { publishCardanoCli :: FilePath
-    , publishNetworkMagic :: Int
-    , publishNodeSocket :: FilePath
-    , publishFundingAddress :: Text
-    , publishSigningKeyFile :: FilePath
-    , publishReferenceLovelace :: Integer
-    , publishKoiosUrl :: Text
-    , publishKoiosToken :: Maybe KoiosToken
-    , publishTimeoutSeconds :: Int
+    { publishRuntime :: !(TransactionRuntime IO)
+    , publishInputUtxos :: ![(TxIn, TxOut ConwayEra)]
+    , publishFundingAddress :: !Addr
+    , publishReferenceLovelace :: !Integer
+    , publishQueryReferences :: !(Text -> IO [ChainReference])
+    , publishTimeoutSeconds :: !Int
     }
-    deriving stock (Show, Eq)
 
-data WalletUtxo = WalletUtxo
-    { walletLovelace :: Integer
-    , walletReferenceScript :: Maybe Value
-    }
+-- | Actionable failures of the in-process publish path.
+data PublishError
+    = -- | Deterministic payer selection rejected the indexed snapshot.
+      PublishFundingSelectionFailed !PayerSelectionError
+    | -- | The converged build/sign/submit kernel rejected the evolution.
+      PublishBuildFailed !Text
+    | -- | Settlement was not observed within the timeout.
+      TransactionObservationTimeout !Text !Text
     deriving stock (Show)
 
-newtype TransactionIdOutput = TransactionIdOutput
-    { transactionIdOutput :: Text
-    }
+{- | Publish every artifact in order, returning each settled reference.
 
-instance FromJSON WalletUtxo where
-    parseJSON = withObject "WalletUtxo" $ \o -> do
-        value <- o .: "value"
-        walletLovelace <- withObject "WalletValue" (.: "lovelace") value
-        walletReferenceScript <- o .:? "referenceScript"
-        pure WalletUtxo{..}
-
-instance FromJSON TransactionIdOutput where
-    parseJSON = withObject "TransactionIdOutput" $ \o ->
-        TransactionIdOutput <$> o .: "txhash"
-
+Fails the whole run on the first artifact that cannot be published.
+-}
 publishScripts ::
     PublishConfig ->
     [ScriptArtifact] ->
     IO [(Text, Reference)]
-publishScripts config artifacts =
-    withSystemTempDirectory "ckeri-deploy" $ \directory ->
-        traverse (publishOne config directory) artifacts
+publishScripts config = traverse publishOneOrFail
+  where
+    publishOneOrFail artifact = do
+        result <- publishOne config artifact
+        case result of
+            Left err ->
+                fail $
+                    "publish "
+                        <> T.unpack (artifactName artifact)
+                        <> ": "
+                        <> show err
+            Right pair -> pure pair
 
+{- | Publish one artifact as a reference script and wait for it to settle.
+
+Selects a deterministic funding input, converges a build\/sign\/submit
+evolution through the shared kernel, then observes settlement through the
+injected chain-query primitive. Returns the artifact name and the settled
+reference, or a typed 'PublishError'.
+-}
 publishOne ::
     PublishConfig ->
-    FilePath ->
     ScriptArtifact ->
-    IO (Text, Reference)
-publishOne config directory artifact = do
-    let name = T.unpack (artifactName artifact)
-        envelope = directory </> name <> ".plutus"
-        queryOutput = directory </> name <> "-wallet.json"
-        txBody = directory </> name <> ".body"
-        signedTx = directory </> name <> ".signed"
-        scriptHash = scriptHashText (artifactScriptHash artifact)
-    writeScriptEnvelope envelope artifact
-    txIn <- queryLargestPlainUtxo config queryOutput
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "build"
-            , "--tx-in"
-            , T.unpack txIn
-            , "--tx-out"
-            , T.unpack (publishFundingAddress config)
-                <> "+"
-                <> show (publishReferenceLovelace config)
-            , "--tx-out-reference-script-file"
-            , envelope
-            , "--change-address"
-            , T.unpack (publishFundingAddress config)
-            , "--testnet-magic"
-            , show (publishNetworkMagic config)
-            , "--socket-path"
-            , publishNodeSocket config
-            , "--out-file"
-            , txBody
-            ]
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "sign"
-            , "--tx-body-file"
-            , txBody
-            , "--signing-key-file"
-            , publishSigningKeyFile config
-            , "--testnet-magic"
-            , show (publishNetworkMagic config)
-            , "--out-file"
-            , signedTx
-            ]
-    txIdOutput <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "txid"
-            , "--tx-file"
-            , signedTx
-            ]
-    txId <-
-        either
-            (fail . (("cardano-cli returned an invalid transaction id for " <> name <> ": ") <>))
-            pure
-            (parseTransactionId txIdOutput)
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "submit"
-            , "--tx-file"
-            , signedTx
-            , "--testnet-magic"
-            , show (publishNetworkMagic config)
-            , "--socket-path"
-            , publishNodeSocket config
-            ]
-    reference <- waitForReference config scriptHash txId
-    putStrLn $
-        "deployed "
-            <> name
-            <> " hash="
-            <> T.unpack scriptHash
-            <> " reference="
-            <> T.unpack (referenceTxId reference)
-            <> "#"
-            <> show (referenceIndex reference)
-    pure (artifactName artifact, reference)
+    IO (Either PublishError (Text, Reference))
+publishOne config artifact =
+    case selectFundingPair isPlainUtxo required (publishInputUtxos config) of
+        Left selectionError ->
+            pure (Left (PublishFundingSelectionFailed selectionError))
+        Right funding -> do
+            buildResult <-
+                runTransactionBuild
+                    defaultBuildOptions
+                    (publishRuntime config)
+                    publishInterpret
+                    (fundingSpends funding)
+                    []
+                    (publishFundingAddress config)
+                    ( publishProgram
+                        (map fst $ fundingSpends funding)
+                        (referenceTxOut config artifact)
+                    )
+            case buildResult of
+                Left buildError ->
+                    pure (Left (PublishBuildFailed (T.pack (show buildError))))
+                Right txid -> do
+                    let scriptHash = scriptHashText (artifactScriptHash artifact)
+                        settledTxId = renderTransactionId txid
+                    settlement <-
+                        awaitReference
+                            (publishQueryReferences config)
+                            publishSettlementPollMicros
+                            (publishTimeoutSeconds config)
+                            scriptHash
+                            settledTxId
+                    pure $
+                        case settlement of
+                            Left observationError -> Left observationError
+                            Right reference ->
+                                Right (artifactName artifact, reference)
+  where
+    required = Coin (publishReferenceLovelace config)
 
-queryLargestPlainUtxo :: PublishConfig -> FilePath -> IO Text
-queryLargestPlainUtxo config output = do
-    _ <-
-        runCardanoCli
-            config
-            [ "query"
-            , "utxo"
-            , "--address"
-            , T.unpack (publishFundingAddress config)
-            , "--testnet-magic"
-            , show (publishNetworkMagic config)
-            , "--socket-path"
-            , publishNodeSocket config
-            , "--out-file"
-            , output
-            ]
-    wallet <-
-        eitherDecodeFileStrict' output
-            >>= either (fail . ("cannot decode funding UTxOs: " <>)) pure
-    let candidates =
-            [ (txIn, utxo)
-            | (txIn, utxo) <- Map.toList (wallet :: Map Text WalletUtxo)
-            , isNothing (walletReferenceScript utxo)
-            , walletLovelace utxo
-                > publishReferenceLovelace config + 2_000_000
-            ]
-    case candidates of
-        [] -> fail "no plain funding UTxO can cover the reference output and fee"
-        _ ->
-            pure . fst $
-                maximumBy (comparing $ walletLovelace . snd) candidates
+{- | A funding UTxO is eligible only when it carries no reference script.
+'referenceScriptTxOutL' focuses a 'StrictMaybe'; 'fromStrictMaybeL' adapts
+it to the plain 'Maybe' this check reasons about.
+-}
+isPlainUtxo :: TxOut ConwayEra -> Bool
+isPlainUtxo txOut =
+    isNothing
+        (getConst ((referenceScriptTxOutL . fromStrictMaybeL) Const txOut))
 
-runCardanoCli :: PublishConfig -> [String] -> IO String
-runCardanoCli config arguments = do
-    (exitCode, output, err) <-
-        readProcessWithExitCode (publishCardanoCli config) arguments ""
-    case exitCode of
-        ExitSuccess -> pure output
-        ExitFailure code ->
-            fail $
-                unlines
-                    [ "cardano-cli failed with exit " <> show code
-                    , "stderr: " <> err
-                    , "stdout: " <> output
-                    ]
+{- | The single reference-script output: the artifact at the funding address,
+carrying exactly the configured lovelace.
+-}
+referenceTxOut :: PublishConfig -> ScriptArtifact -> TxOut ConwayEra
+referenceTxOut config artifact =
+    withReferenceScript
+        (mkCageScript (artifactProgram artifact))
+        ( mkBasicTxOut
+            (publishFundingAddress config)
+            (MaryValue (Coin (publishReferenceLovelace config)) (MultiAsset mempty))
+        )
 
-waitForReference :: PublishConfig -> Text -> Text -> IO Reference
-waitForReference config scriptHash txId = do
+-- | Attach a reference script to a transaction output.
+withReferenceScript ::
+    Script ConwayEra ->
+    TxOut ConwayEra ->
+    TxOut ConwayEra
+withReferenceScript script txOut =
+    runIdentity
+        ( (referenceScriptTxOutL . fromStrictMaybeL)
+            (\_ -> Identity (Just script))
+            txOut
+        )
+
+{- | The publish program spends the selected funding input and emits the
+reference output; balancing produces the single change output. No
+collateral is declared for a script-free publish.
+-}
+publishProgram :: [TxIn] -> TxOut ConwayEra -> TxBuild PublishCtx () ()
+publishProgram spendInputs refTxOut = do
+    mapM_ spend spendInputs
+    _ <- output refTxOut
+    pure ()
+
+{- | No domain queries are issued during a publish; the interpreter is
+unreachable.
+-}
+data PublishCtx a
+
+publishInterpret :: InterpretIO PublishCtx
+publishInterpret = InterpretIO (\case {})
+
+{- | Poll the injected chain-query primitive until the exact (script hash,
+transaction id) pair is observed, or fail closed on timeout. The deadline is
+checked only after observing and rejecting a real answer, so the timeout is
+reached by iterating the loop, never by skipping the observation.
+-}
+awaitReference ::
+    (Text -> IO [ChainReference]) ->
+    Int ->
+    Int ->
+    Text ->
+    Text ->
+    IO (Either PublishError Reference)
+awaitReference queryReferences pollMicros timeoutSeconds scriptHash txId = do
     started <- getCurrentTime
-    go started
-  where
-    go started = do
-        result <-
-            try $
-                queryReferenceScripts
-                    (publishKoiosUrl config)
-                    (publishKoiosToken config)
-                    [scriptHash]
-        case result of
-            Right chainReferences ->
-                case [ Reference (chainTxId reference) (chainIndex reference)
-                     | reference <- chainReferences
-                     , chainScriptHash reference == scriptHash
-                     , chainTxId reference == txId
-                     ] of
-                    reference : _ -> pure reference
-                    [] -> retry started
-            Left (_ :: SomeException) -> retry started
-    retry :: UTCTime -> IO Reference
-    retry started = do
-        now <- getCurrentTime
-        if diffUTCTime now started
-            >= fromIntegral (publishTimeoutSeconds config)
-            then
-                fail $
-                    "timed out waiting for unspent reference "
-                        <> T.unpack txId
-                        <> " with script hash "
-                        <> T.unpack scriptHash
-            else threadDelay 5_000_000 >> go started
-
-writeScriptEnvelope :: FilePath -> ScriptArtifact -> IO ()
-writeScriptEnvelope path artifact =
-    Aeson.encodeFile path $
-        object
-            [ "type" .= ("PlutusScriptV3" :: Text)
-            , "description"
-                .= ("cardano-keri M1 " <> artifactName artifact)
-            , "cborHex"
-                .= hexText
-                    (cborByteString $ SBS.fromShort $ artifactProgram artifact)
-            ]
-
-cborByteString :: BS.ByteString -> BS.ByteString
-cborByteString bytes
-    | lengthBytes < 24 =
-        BS.cons (0x40 + fromIntegral lengthBytes) bytes
-    | lengthBytes <= 0xff =
-        BS.pack [0x58, fromIntegral lengthBytes] <> bytes
-    | lengthBytes <= 0xffff =
-        BS.pack
-            [ 0x59
-            , fromIntegral (lengthBytes `shiftR` 8)
-            , fromIntegral lengthBytes
-            ]
-            <> bytes
-    | lengthBytes <= 0xffff_ffff =
-        BS.pack
-            [ 0x5a
-            , fromIntegral (lengthBytes `shiftR` 24)
-            , fromIntegral (lengthBytes `shiftR` 16)
-            , fromIntegral (lengthBytes `shiftR` 8)
-            , fromIntegral lengthBytes
-            ]
-            <> bytes
-    | otherwise = error "cborByteString: script is too large"
-  where
-    lengthBytes = BS.length bytes
-
-hexText :: BS.ByteString -> Text
-hexText = TE.decodeUtf8 . convertToBase Base16
-
-parseTransactionId :: String -> Either String Text
-parseTransactionId output =
-    validate $
-        case Aeson.eitherDecodeStrict'
-            (TE.encodeUtf8 $ T.strip $ T.pack output) of
-            Right decoded -> transactionIdOutput decoded
-            Left _ -> T.strip (T.pack output)
-  where
-    validate txId
-        | T.length txId == 64 && T.all isHexDigit txId =
-            Right (T.toLower txId)
-        | otherwise = Left "expected 64 hexadecimal characters"
+    let loop = do
+            references <- queryReferences scriptHash
+            case [ reference
+                 | reference <- references
+                 , chainScriptHash reference == scriptHash
+                 , chainTxId reference == txId
+                 ] of
+                match : _ ->
+                    pure $
+                        Right (Reference (chainTxId match) (chainIndex match))
+                [] -> do
+                    now <- getCurrentTime
+                    if diffUTCTime now started
+                        >= fromIntegral timeoutSeconds
+                        then
+                            pure
+                                ( Left
+                                    ( TransactionObservationTimeout
+                                        scriptHash
+                                        txId
+                                    )
+                                )
+                        else threadDelay pollMicros >> loop
+    loop

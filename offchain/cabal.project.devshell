@@ -46,8 +46,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/lambdasistemi/cardano-tx-tools
-  tag: 7bfe95bf5ef3bfa846e62bcae94cf377b66ad0d0
-  --sha256: 139l4f43b3r6ybkihg2n6h1qxcijwbx1s5lni85api05480x7lxc
+  tag: 497326d40924520a97b2ab4b8777d9a65013c69d
+  --sha256: 01lx78rwk75xksdv4v3z3zkpivxdibcjp7xkrl8nny133p4c5diy
 
 -- ----------------------------------------------------------------------
 -- Transitive git deps of cardano-node-clients. Mirrored verbatim from

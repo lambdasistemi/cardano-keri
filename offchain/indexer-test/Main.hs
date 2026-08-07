@@ -7,6 +7,7 @@ import Cardano.KERI.Indexer.CodecsSpec qualified as CodecsSpec
 import Cardano.KERI.Indexer.FollowerSpec qualified as FollowerSpec
 import Cardano.KERI.Indexer.Query.ServerSpec qualified as QueryServerSpec
 import Cardano.KERI.Indexer.Query.SwaggerDriftSpec qualified as QuerySwaggerDriftSpec
+import Cardano.KERI.Indexer.Query.TxSpec qualified as QueryTxSpec
 import Cardano.KERI.Indexer.Query.TypesSpec qualified as QueryTypesSpec
 import Cardano.KERI.Indexer.ReadsSpec qualified as ReadsSpec
 import Cardano.KERI.Indexer.ResumeSpec qualified as ResumeSpec
@@ -22,6 +23,7 @@ main = hspec $ do
     FollowerSpec.spec
     QueryServerSpec.spec
     QuerySwaggerDriftSpec.spec
+    QueryTxSpec.spec
     QueryTypesSpec.spec
     ReadsSpec.spec
     ResumeSpec.spec

@@ -37,40 +37,15 @@ $ kli export --name org --alias org > rotation.cesr
 lineage, native sequence, old next-key commitments, KERI event signatures,
 witness delta, incoming witness set, and receipt threshold.
 
-## Why there is only one signing step
+## Authorization and the immutable M1 release
 
-There is one signing step: the native KERI `rot` event signatures produced by
-`kli rotate` above. `ckeri advance`'s on-chain validator (#219) verifies the
-rotated keys' signatures directly against the KERI event bytes exported in
-`rotation.cesr` — the same bytes `kli export` already produced, with no
-second, Cardano-domain signature required.
+Newer source implements permissionless advance using the native KERI `rot`
+event signatures. The immutable M1 preprod reference script predates that
+change: it still verifies the legacy Cardano-domain `AdvanceMessage`. This is
+release skew, not a different transaction-submission path. Never infer the
+deployed validator contract solely from a newer checkout.
 
-This has a consequence worth stating plainly: **anyone who holds the
-exported `rotation.cesr` — the public event plus its existing controller and
-witness signatures — can submit the advance transaction.** The controller
-does not need to be present or reachable at submission time, and a relayer,
-a witness, or any third party can settle the advance on the controller's
-behalf. The signatures were already produced once, by the controller, over
-data they control (the rotation itself); nothing about *who* submits the
-transaction or *which* Cardano UTxO happens to be live when it lands changes
-what was authorized. Anti-replay is enforced independently by the checkpoint's
-own sequence numbers, not by anything in the submitted signatures — see
-`specs/219-permissionless-advance/spec.md` for the full argument.
-
-**Provisional, pending #219 phase 2 (after #181):** the CLI still requires
-passing exactly one of `--signing-package DIR` or `--controller-signatures
-FILE` — that dispatch does not change in this slice. What changed is what the
-validator accepts *inside* that file: it no longer checks the Cardano-domain
-`AdvanceMessage` preimage, so `--controller-signatures` can now point at the
-KERI `rot` event signatures already present in `rotation.cesr`, unmodified —
-the separate Cardano-domain signing step (`scripts/kli-sign-advance.py`,
-signing the `AdvanceMessage` preimage) is no longer required to produce a
-file the validator accepts. The two-step `--signing-package` /
-`kli-sign-advance.py` procedure below still works and remains available, but
-is no longer the only way to get an accepted `--controller-signatures` file;
-both paths are scheduled for removal once #181's transaction-building rework
-lands and drops the `--signing-package`/`--controller-signatures` flags
-entirely:
+For this frozen release, prepare and sign that legacy package:
 
 ```console
 $ ckeri advance \
@@ -106,15 +81,14 @@ outref changes.
 All `ckeri` settings use `opt-env-conf`; options, environment variables, and
 YAML are equivalent. `optparse-applicative` is not used.
 
-The CLI still requires `--controller-signatures FILE` (or
-`--signing-package`, see above) — that flag is not going away in this slice.
-What is provisional is only what the *validator* checks inside that file: it
-no longer requires a Cardano-domain signature, so the file may now simply be
-the KERI `rot` event signatures from `rotation.cesr`.
+The CLI requires `--controller-signatures FILE` for submission (or
+`--signing-package DIR` to prepare the package). For the immutable M1 release,
+the file is produced by `scripts/kli-sign-advance.py` over
+`advance-message.cbor`.
 
 ```console
-$ export CKERI_PAYER=/run/secrets/payment.skey
-$ export CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket
+$ export CKERI_PAYER=/home/operator/.secrets/cardano-keri-preprod/payment.skey
+$ export CKERI_NODE_SOCKET=/code/cardano-preprod/ipc/node.socket
 $ export CKERI_FUNDING_ADDRESS=addr_test1...
 $ ckeri advance \
     --network preprod \
@@ -122,7 +96,8 @@ $ ckeri advance \
     --aid E... \
     --kel rotation.cesr \
     --manifest deploy/preprod/m1-manifest.json \
-    --controller-signatures controller-signatures.cesr
+    --controller-signatures controller-signatures.cesr \
+    --validator-test-under-signed
 advance txid: <settled-txid>
 $ ckeri status --aid E... --backend koios \
     --manifest deploy/preprod/m1-manifest.json \
@@ -132,6 +107,11 @@ state ACTIVE seq 1 native 1 keys 2-of-5 witnesses 3 (toad 2) bond intact tx <set
 
 Set `KOIOS_TOKEN` for authenticated Koios requests. It is optional, has an
 anonymous fallback, and is never printed.
+
+The `--validator-test-under-signed` spelling is acceptance-only. In this exact
+1-of-1 M1 compatibility journey it bypasses the newer local native-event rule;
+the immutable on-chain observer still evaluates and accepts the legacy
+signature. Do not generalize this escape hatch to a newer deployment.
 
 The first advance through a deployment also checks whether the
 `observer-advance` reward credential is registered. If absent, `ckeri`
@@ -143,13 +123,15 @@ The transaction spends the named ACTIVE checkpoint through the thin
 `checkpoint-register` arm and invokes the heavy predicate through a
 zero-lovelace `observer-advance` withdrawal. It recreates the complete state
 value at the same role address, mints nothing, and uses distinct plain funding
-and collateral inputs.
+and collateral inputs. Exact candidate out-refs come from Koios, are resolved
+through N2C, and the signed transaction is submitted through local transaction
+submission without a subprocess.
 
 ## Validator-boundary evidence
 
 The switches below deliberately bypass client-side completeness checks. They
-exist only for funded acceptance testing and still use a real
-`cardano-cli transaction build` against the deployed scripts:
+exist only for funded acceptance testing and still send the transaction to
+real deployed-script evaluation through the node:
 
 - `--validator-test-under-signed` sends one rotated-key signature;
 - `--validator-test-under-witnessed` sends one receipt where `toad` is two;
@@ -162,29 +144,24 @@ rejected locally.
 
 ## Captured preprod result
 
-The raw `script(1)` plus `tee` artifact is
+The mechanical artifact is
 `deploy/preprod/m1-advance-acceptance.txt`. It records the complete
-inception → register → rotate → prepare → sign → advance → status journey,
-including:
+rotate → prepare → legacy-sign → in-process advance → status journey for the
+registration documented above, including:
 
-- AID `EBLf6spqM8kXCvklb99ObwQUuDzNDOMEne_GFypp52vi`;
-- registration transaction
-  `f7edc5af3dd3e9777ac07bc8ac0eb771656cd239750361bd991f1b6371372c7e`;
-- one-time observer registration
-  `c37798c222ff680e44603e8dcd1c990ad6d1a040efdb2fc2a167e707d840ba25`;
+- AID `EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P`;
+- predecessor registration
+  `6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2`;
 - advance transaction
-  `ccf10efe3b90833374cf712fdbe2b246f88aadf34c170c9074d16754cdf5c6f2`;
+  `f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a`;
   and
-- real validator failures for under-signing, under-witnessing, and stale
-  replay.
+- the exact package digest and matching controller signature.
 
-The capture also preserves two boundary defects encountered during the run:
-an unprivileged container could not initially write the signature output, and
-the previously unregistered observer account caused the complete transaction
-to be rejected at submission. The subsequent captured segments show the
-permission correction, the one-time observer registration, and final
-settlement; none of those outputs were retyped or removed.
-
-CI byte-checks the committed signing package, re-queries all four settled
-transactions through Koios using optional `KOIOS_TOKEN`, and compares
-`ckeri status` with the final transcript line.
+That primary AID is 1-of-1. Its acceptance-only
+`--validator-test-under-signed` invocation is the successful immutable-M1
+compatibility override described above, not an under-signed negative control.
+The separate
+`deploy/preprod/m1-advance-historical-negative-acceptance.txt` capture uses a
+2-of-5 controller with three witnesses and threshold two. Its under-signed,
+under-witnessed, and stale attempts each reach the deployed Plutus evaluator
+and fail. The transcript checker requires all three failures independently.

@@ -109,16 +109,17 @@ Once running, a consumer reads the local store directly:
 ### Payer / funding UTxOs
 
 The relayer and the hunter do not only watch — they **act**, and building a
-transaction needs inputs for fees, collateral, and min-ADA. Today
-`Deployment.Publisher` sources those by shelling out to
-`cardano-cli query utxo` (`GetUTxOByAddress` over N2C) — the exact
-node round trip this library exists to eliminate, tolerable today only
-because the funding addresses are small. Funding addresses join the
-follower's interest set the same way the checkpoint address does — operators
-may configure more than one — and `payerUtxos` returns the raw
-`(TxIn, TxOut)` pairs a coin selector needs. Rewiring `Publisher` (or any
-transaction builder) off `cardano-cli` is a separate story; this library only
-provides the data and proves it readable.
+transaction needs inputs for fees, collateral, and min-ADA. Funding addresses
+join the follower's interest set the same way the checkpoint address does —
+operators may configure more than one — and `payerUtxos` returns the raw
+`(TxIn, TxOut)` pairs a coin selector needs.
+
+The packaged transaction commands use this model without a subprocess. They
+enumerate exact funding out-refs through Koios, resolve only those out-refs
+through N2C, aggregate enough value deterministically while reserving the
+smallest suitable input for collateral, build and sign in process, and submit
+through local transaction submission. The payment key must derive the payment
+credential in `--funding-address`; a mismatch fails before construction.
 
 ## What it deliberately does not do
 

@@ -3,6 +3,14 @@
 cardano-keri projects a rotating KERI identity into a stable Cardano
 checkpoint.
 
+!!! success "The transaction path does not require cardano-cli"
+    The packaged `ckeri` can deploy the reference scripts, register an
+    identity, advance a rotation, post/update/retire endpoint-board records,
+    and close a checkpoint on a machine with no `cardano-cli` installed at
+    all. Its runtime closure does not include `cardano-cli`; a closure check
+    enforces that boundary and has been demonstrated to fail when the retired
+    dependency is reintroduced.
+
 **KERI** is Key Event Receipt Infrastructure, the identity protocol used by
 the Global Legal Entity Identifier Foundation's verifiable LEI ecosystem. A
 KERI **AID** (Autonomic Identifier) keeps its identity while its controller

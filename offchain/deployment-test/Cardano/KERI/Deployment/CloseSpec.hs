@@ -1,371 +1,385 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Cardano.KERI.Deployment.CloseSpec
+Description : #181 Slice 3 in-process Close migration proof
+-}
 module Cardano.KERI.Deployment.CloseSpec (spec) where
 
-import Cardano.Crypto.DSIGN.Class (
-    SignKeyDSIGN,
-    VerKeyDSIGN,
-    deriveVerKeyDSIGN,
-    genKeyDSIGN,
-    rawSerialiseSigDSIGN,
-    rawSerialiseVerKeyDSIGN,
-    signDSIGN,
- )
-import Cardano.Crypto.DSIGN.Ed25519 (
-    Ed25519DSIGN,
- )
-import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Cardano.KERI.AID.Checkpoint.Close (
-    AddressCredential (..),
-    CloseEvidence (..),
-    FullAddress (..),
-    closeSpendRedeemerData,
- )
-import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatum (..),
-    CheckpointDatumV1 (..),
- )
-import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
-import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainAsset (..),
-    ChainAssetUtxo (..),
- )
-import Cardano.KERI.Deployment.CheckpointIndex (
-    ActiveCheckpoint (..),
-    checkpointAssetName,
-    resolveActiveCheckpoint,
- )
-import Cardano.KERI.Deployment.Close (
-    ClosePackage (..),
-    CloseSigningFiles (..),
-    attachCloseControllerSignatures,
-    closeSigningMetadata,
-    decodeRefundAddress,
-    mkClosePackage,
-    writeCloseSigningPackage,
+import Cardano.Crypto.Hash (
+    hashFromStringAsHex,
+    hashToBytes,
  )
 import Cardano.KERI.Deployment.CloseTransaction (
-    CloseFiles (..),
+    CloseConfig (..),
+    CloseError (..),
+    CloseObservationTimeout (..),
     ClosePlan (..),
-    CloseRunnerConfig (..),
-    closeBuildArguments,
-    mkClosePlan,
- )
-import Cardano.KERI.Deployment.KEL (
-    InceptionExport (..),
-    parseInceptionExport,
- )
-import Cardano.KERI.Deployment.Manifest (
-    BlueprintInfo (..),
-    CheckpointInfo (..),
-    DeploymentParameters (..),
-    Manifest (..),
-    NetworkInfo (..),
-    Reference (..),
-    ScriptEntry (..),
-    SourceInfo (..),
+    CloseResult (..),
+    awaitClose,
+    runCloseTransaction,
  )
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
-import Data.Aeson (eitherDecodeFileStrict')
-import Data.ByteArray.Encoding (
-    Base (Base16),
-    convertFromBase,
+import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
+import Cardano.KERI.Deployment.TransactionRuntime (
+    TransactionBuildError (..),
+    TransactionRuntime (..),
+    signWithPaymentKey,
+    transactionId,
  )
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+    TransactionScriptFailure (UnknownTxIn),
+ )
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.Scripts.Data qualified as LedgerData
+import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
+import Cardano.Ledger.Api.Tx.Body (
+    collateralInputsTxBodyL,
+    feeTxBodyL,
+    inputsTxBodyL,
+    mintTxBodyL,
+    mkBasicTxBody,
+    outputsTxBodyL,
+    referenceInputsTxBodyL,
+ )
+import Cardano.Ledger.Api.Tx.Out (
+    addrTxOutL,
+    coinTxOutL,
+    datumTxOutL,
+    referenceScriptTxOutL,
+ )
+import Cardano.Ledger.Api.Tx.Wits (addrTxWitsL, rdmrsTxWitsL)
+import Cardano.Ledger.BaseTypes (
+    Network (Testnet),
+    StrictMaybe (SJust),
+    TxIx (..),
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Core (Script, TxOut, mkBasicTx, mkBasicTxOut)
+import Cardano.Ledger.Credential (
+    Credential (..),
+    StakeReference (StakeRefNull),
+ )
+import Cardano.Ledger.Hashes (
+    KeyHash (..),
+    ScriptHash,
+    extractHash,
+    unsafeMakeSafeHash,
+ )
+import Cardano.Ledger.Mary.Value (
+    AssetName (..),
+    MaryValue (..),
+    MultiAsset (..),
+    PolicyID (..),
+ )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), unTxId)
+import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.Submitter (SubmitResult (..))
+import Codec.Binary.Bech32 qualified as Bech32
+import Data.Aeson (Value, object, (.=))
+import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
-import Data.Either (isLeft, isRight)
+import Data.ByteString.Short qualified as SBS
+import Data.Foldable (toList)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
+import Data.Set qualified as Set
+import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Paths_cardano_keri (getDataFileName)
+import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
-import System.IO.Temp (withSystemTempDirectory)
-import System.Posix.Files (
-    fileMode,
-    getFileStatus,
-    groupReadMode,
-    intersectFileModes,
-    otherReadMode,
- )
+import System.Directory (findExecutable)
 import Test.Hspec (
     Spec,
     describe,
     it,
     shouldBe,
     shouldContain,
-    shouldNotBe,
-    shouldNotContain,
     shouldSatisfy,
  )
 
 spec :: Spec
-spec =
-    describe "close signing package" $ do
-        it "decodes the complete preprod enterprise refund address" $ do
-            paymentHash <-
-                either
-                    (fail . show)
-                    pure
-                    ( convertFromBase Base16 $
-                        TE.encodeUtf8
-                            "8883cdb714313b7ac38246c1dd8d6fc3f804f153c1f1c4ca38561ba0"
-                    )
-            decodeRefundAddress refundAddress
-                `shouldBe` Right
-                    FullAddress
-                        { faPaymentCredential =
-                            VerificationKeyCredential paymentHash
-                        , faStakeCredential = Nothing
+spec = describe "in-process close transaction" $ do
+    it "freezes burn, spend, exact refund, references, collateral, signing, submission, tx-id, and settlement" $ do
+        findExecutable "cardano-cli" >>= (`shouldBe` Nothing)
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        result <-
+            runCloseTransaction
+                (closeConfig runtime)
+                syntheticPlan
+                fundingInputs
+                activeInput
+        case result of
+            Left err -> fail ("expected close success, got " <> show err)
+            Right CloseResult{closeResultTxId} -> do
+                signed <- readIORef signedRef
+                case signed of
+                    Nothing -> fail "trSign was never called"
+                    Just tx -> do
+                        let body = tx ^. bodyTxL
+                            outputs = toList (body ^. outputsTxBodyL)
+                            MultiAsset minted = body ^. mintTxBodyL
+                            Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+                            spendPurpose =
+                                ConwaySpending . AsIx . fromIntegral . fromJust $
+                                    Set.lookupIndex activeTxIn (body ^. inputsTxBodyL)
+                        body ^. inputsTxBodyL
+                            `shouldBe` Set.fromList [stubTxIn 1, activeTxIn]
+                        body ^. collateralInputsTxBodyL
+                            `shouldBe` Set.singleton (stubTxIn 2)
+                        body ^. referenceInputsTxBodyL
+                            `shouldBe` Set.singleton checkpointReference
+                        minted
+                            `shouldBe` Map.singleton
+                                (PolicyID checkpointScriptHash)
+                                (Map.singleton syntheticAssetName (-1))
+                        case [output | output <- outputs, output ^. addrTxOutL == refundAddr] of
+                            [refund] -> do
+                                refund ^. coinTxOutL `shouldBe` Coin 7_000_000
+                                refund ^. datumTxOutL `shouldBe` LedgerData.NoDatum
+                            other -> fail ("expected one exact refund output, got " <> show (length other))
+                        redeemerData spendPurpose redeemers
+                            `shouldBe` Just spendRedeemer
+                        redeemerData (ConwayMinting $ AsIx 0) redeemers
+                            `shouldBe` Just mintRedeemer
+                        body ^. feeTxBodyL `shouldSatisfy` (> Coin 0)
+                        length (tx ^. witsTxL . addrTxWitsL) `shouldBe` 1
+                        transactionId tx `shouldBe` closeResultTxId
+                        transactionId tx `shouldSatisfy` (/= disagreeingId)
+                order <- reverse <$> readIORef callsRef
+                take 1 order `shouldBe` ["query"]
+                order `shouldContain` ["evaluate"]
+                drop (length order - 3) order
+                    `shouldBe` ["sign", "submit", "observe"]
+
+    it "fails closed on stale value, underfunding, evaluation rejection, and submission rejection" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        baseRuntime <- standInRuntime callsRef signedRef
+        staleValue <-
+            runCloseTransaction
+                (closeConfig baseRuntime)
+                syntheticPlan{closePlanRefundLovelace = 7_000_001}
+                fundingInputs
+                activeInput
+        staleValue `shouldSatisfy` isPlanFailure
+        underfunded <-
+            runCloseTransaction
+                (closeConfig baseRuntime)
+                syntheticPlan
+                [(stubTxIn 1, plainTxOut 1_000_000), (stubTxIn 2, plainTxOut 500_000)]
+                activeInput
+        underfunded `shouldSatisfy` isFundingFailure
+        evaluation <-
+            runCloseTransaction
+                ( closeConfig
+                    baseRuntime
+                        { trEvaluate = \_ ->
+                            pure
+                                ( Map.singleton
+                                    (ConwayMinting $ AsIx 0)
+                                    (Left $ UnknownTxIn $ stubTxIn 99)
+                                )
                         }
-            decodeRefundAddress checkpointAddress `shouldSatisfy` isRight
-            decodeRefundAddress "stake_test1uqfu..." `shouldSatisfy` isLeft
-
-        it "binds the live ACTIVE outref and full refund target into binary CBOR" $ do
-            active <- sampleActive
-            package <-
-                either
-                    fail
-                    pure
-                    (mkClosePackage sampleManifest active refundAddress)
-            mkClosePackage sampleManifest active checkpointAddress
-                `shouldSatisfy` isLeft
-            closeAid package `shouldBe` activeCheckpointAid active
-            closeSpentReference package
-                `shouldBe` T.replicate 64 "1" <> "#2"
-            closeRefundAddress package `shouldBe` refundAddress
-            closeRefundLovelace package `shouldBe` 1_007_000_000
-            ceCtrlSigs (closeEvidence package) `shouldBe` []
-            T.length (closePackageSha256 package) `shouldBe` 64
-            BS.null (closeSigningPreimage package) `shouldBe` False
-
-            redirected <-
-                either
-                    fail
-                    pure
-                    (mkClosePackage sampleManifest active otherRefundAddress)
-            closeSigningPreimage redirected
-                `shouldNotBe` closeSigningPreimage package
-
-            withSystemTempDirectory "ckeri-close-package" $ \directory -> do
-                files <- writeCloseSigningPackage directory package
-                BS.readFile (closePreimageFile files)
-                    >>= (`shouldBe` closeSigningPreimage package)
-                eitherDecodeFileStrict' (closeMetadataFile files)
-                    >>= either fail pure
-                    >>= (`shouldBe` closeSigningMetadata package)
-                mapM_
-                    ( \output -> do
-                        mode <- fileMode <$> getFileStatus output
-                        mode `intersectFileModes` groupReadMode
-                            `shouldBe` groupReadMode
-                        mode `intersectFileModes` otherReadMode
-                            `shouldBe` otherReadMode
-                    )
-                    [closePreimageFile files, closeMetadataFile files]
-
-        it "accepts only signatures from the live current controller set" $ do
-            active <- sampleActive
-            package <-
-                either fail pure $
-                    mkClosePackage sampleManifest active refundAddress
-            let signature =
-                    rawSerialiseSigDSIGN $
-                        signDSIGN
-                            ()
-                            (closeSigningPreimage package)
-                            controllerSigningKey
-                outsider =
-                    rawSerialiseSigDSIGN $
-                        signDSIGN
-                            ()
-                            (closeSigningPreimage package)
-                            outsiderSigningKey
-            attachCloseControllerSignatures [(0, signature)] package
-                `shouldSatisfy` either (const False) (const True)
-            attachCloseControllerSignatures [(0, outsider)] package
-                `shouldSatisfy` isLeft
-
-        it "spends and burns the checkpoint while refunding the complete escrow" $ do
-            active <- sampleActive
-            unsigned <-
-                either fail pure $
-                    mkClosePackage sampleManifest active refundAddress
-            let signature =
-                    rawSerialiseSigDSIGN $
-                        signDSIGN
-                            ()
-                            (closeSigningPreimage unsigned)
-                            controllerSigningKey
-            package <-
-                either fail pure $
-                    attachCloseControllerSignatures [(0, signature)] unsigned
-            plan <- either fail pure (mkClosePlan sampleManifest package)
-            closePlanSpentReference plan
-                `shouldBe` T.replicate 64 "1" <> "#2"
-            closePlanCheckpointReference plan
-                `shouldBe` "8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1#0"
-            closePlanRefundOutput plan
-                `shouldBe` refundAddress <> "+1007000000"
-            closePlanSpendRedeemer plan
-                `shouldBe` plutusDataJson
-                    (closeSpendRedeemerData $ closeEvidence package)
-            closePlanMintRedeemer plan
-                `shouldBe` plutusDataJson
-                    ( Constr
-                        1
-                        [ Constr
-                            0
-                            [B (BS.replicate 32 0x11), I 2]
-                        ]
-                    )
-            let arguments =
-                    closeBuildArguments
-                        sampleCloseRunner
-                        plan
-                        sampleCloseFiles
-                        "funding#0"
-                        "collateral#1"
-            arguments
-                `shouldContain` [ "--tx-in"
-                                , T.unpack (closePlanSpentReference plan)
-                                , "--spending-tx-in-reference"
-                                , T.unpack (closePlanCheckpointReference plan)
-                                , "--spending-plutus-script-v3"
-                                , "--spending-reference-tx-in-inline-datum-present"
-                                , "--spending-reference-tx-in-redeemer-file"
-                                , closeFilesSpendRedeemer sampleCloseFiles
-                                ]
-            arguments
-                `shouldContain` [ "--mint"
-                                , "-1 "
-                                    <> T.unpack checkpointPolicy
-                                    <> "."
-                                    <> T.unpack (closePlanAssetName plan)
-                                , "--mint-tx-in-reference"
-                                , T.unpack (closePlanCheckpointReference plan)
-                                , "--mint-plutus-script-v3"
-                                , "--mint-reference-tx-in-redeemer-file"
-                                , closeFilesMintRedeemer sampleCloseFiles
-                                , "--policy-id"
-                                , T.unpack checkpointPolicy
-                                ]
-            arguments
-                `shouldContain` [ "--tx-out"
-                                , T.unpack (closePlanRefundOutput plan)
-                                , "--change-address"
-                                , T.unpack otherRefundAddress
-                                ]
-            arguments `shouldNotContain` ["--tx-out-inline-datum-file"]
-
-sampleActive :: IO ActiveCheckpoint
-sampleActive = do
-    path <-
-        getDataFileName "deployment-test/fixtures/kli-export-single.cesr"
-    bytes <- BS.readFile path
-    inception <- either fail pure (parseInceptionExport bytes)
-    assetName <-
-        either fail pure (checkpointAssetName $ inceptionAid inception)
-    let datum =
-            (inceptionDatum inception)
-                { cdCurKeys =
-                    [rawSerialiseVerKeyDSIGN $ deriveVerKey controllerSigningKey]
-                , cdCurThreshold = Unweighted 1
-                }
-        utxo =
-            ChainAssetUtxo
-                (T.replicate 64 "1")
-                2
-                checkpointAddress
-                1_007_000_000
-                [ChainAsset checkpointPolicy assetName 1]
-                (Just $ plutusDataJson $ asPlcData $ V1 datum)
-    either
-        fail
-        pure
-        ( resolveActiveCheckpoint
-            sampleManifest
-            (inceptionAid inception)
-            assetName
-            [utxo]
-        )
-
-deriveVerKey ::
-    SignKeyDSIGN Ed25519DSIGN ->
-    VerKeyDSIGN Ed25519DSIGN
-deriveVerKey = deriveVerKeyDSIGN
-
-controllerSigningKey :: SignKeyDSIGN Ed25519DSIGN
-controllerSigningKey = genKeyDSIGN $ mkSeedFromBytes $ BS.replicate 32 0x41
-
-outsiderSigningKey :: SignKeyDSIGN Ed25519DSIGN
-outsiderSigningKey = genKeyDSIGN $ mkSeedFromBytes $ BS.replicate 32 0x42
-
-checkpointAddress :: T.Text
-checkpointAddress =
-    "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822"
-
-refundAddress :: T.Text
-refundAddress =
-    "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
-
-otherRefundAddress :: T.Text
-otherRefundAddress =
-    "addr_test1vpchzut3w9chzut3w9chzut3w9chzut3w9chzut3w9chzugnd3d2k"
-
-sampleCloseRunner :: CloseRunnerConfig
-sampleCloseRunner =
-    CloseRunnerConfig
-        { closeRunnerCardanoCli = "cardano-cli"
-        , closeRunnerNetworkMagic = 1
-        , closeRunnerNodeSocket = "node.socket"
-        , closeRunnerFundingAddress = refundAddress
-        , closeRunnerChangeAddress = otherRefundAddress
-        , closeRunnerSigningKeyFile = "payment.skey"
-        , closeRunnerKoiosUrl = "https://preprod.koios.rest/api/v1"
-        , closeRunnerKoiosToken = Nothing
-        , closeRunnerTimeoutSeconds = 600
-        }
-
-sampleCloseFiles :: CloseFiles
-sampleCloseFiles =
-    CloseFiles
-        { closeFilesSpendRedeemer = "spend.json"
-        , closeFilesMintRedeemer = "mint.json"
-        , closeFilesBody = "close.body"
-        , closeFilesSigned = "close.signed"
-        }
-
-checkpointPolicy :: T.Text
-checkpointPolicy =
-    "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
-
-sampleManifest :: Manifest
-sampleManifest =
-    Manifest
-        { manifestSchemaVersion = "cardano-keri/m1-deployment-manifest/v1"
-        , manifestNetwork = NetworkInfo "preprod" 1
-        , manifestSource = SourceInfo "repository" "commit"
-        , manifestBlueprint = BlueprintInfo "digest"
-        , manifestParameters =
-            DeploymentParameters
-                0
-                0
-                1_000_000_000
-                5_000_000
-                10_000
-        , manifestCheckpoint =
-            CheckpointInfo checkpointAddress checkpointPolicy
-        , manifestPublishedAt = "2026-07-28T14:37:05Z"
-        , manifestScripts =
-            [ ScriptEntry
-                "checkpoint-register"
-                "checkpoint_register.checkpoint_register.mint"
-                "mint-spend"
-                checkpointPolicy
-                1
-                ( Reference
-                    "8a1a404f13b50ec0a266e1427f602916d830b62d757f3ac69976ccba0213c5d1"
-                    0
                 )
-            ]
+                syntheticPlan
+                fundingInputs
+                activeInput
+        evaluation `shouldSatisfy` isEvaluationFailure
+        submission <-
+            runCloseTransaction
+                (closeConfig baseRuntime{trSubmit = \_ -> pure (Rejected "close submit rejected")})
+                syntheticPlan
+                fundingInputs
+                activeInput
+        submission `shouldSatisfy` isSubmissionFailure
+
+    it "reports timeout only after polling the close settlement source" $ do
+        pollsRef <- newIORef (0 :: Int)
+        let query _ = modifyIORef' pollsRef (+ 1) >> pure False
+        result <- awaitClose query 1 0 disagreeingId
+        readIORef pollsRef >>= (`shouldSatisfy` (>= 1))
+        result `shouldBe` Left (CloseObservationTimeout disagreeingId)
+
+isFundingFailure :: Either CloseError CloseResult -> Bool
+isFundingFailure (Left CloseFundingSelectionFailed{}) = True
+isFundingFailure _ = False
+
+isPlanFailure :: Either CloseError CloseResult -> Bool
+isPlanFailure (Left ClosePlanRejected{}) = True
+isPlanFailure _ = False
+
+isEvaluationFailure :: Either CloseError CloseResult -> Bool
+isEvaluationFailure (Left (CloseBuildFailed TransactionBuildEvaluationRejected{})) = True
+isEvaluationFailure _ = False
+
+isSubmissionFailure :: Either CloseError CloseResult -> Bool
+isSubmissionFailure (Left (CloseBuildFailed TransactionBuildSubmissionRejected{})) = True
+isSubmissionFailure _ = False
+
+closeConfig :: TransactionRuntime IO -> CloseConfig
+closeConfig runtime =
+    CloseConfig
+        { closeRuntime = runtime
+        , closeReferenceUtxos = [(checkpointReference, referenceTxOut checkpointScript)]
+        , closeFundingAddress = fundingAddr
+        , closeChangeAddress = changeAddr
         }
+
+fundingInputs :: [(TxIn, TxOut ConwayEra)]
+fundingInputs =
+    [ (stubTxIn 1, plainTxOut 200_000_000)
+    , (stubTxIn 2, plainTxOut 50_000_000)
+    ]
+
+activeInput :: (TxIn, TxOut ConwayEra)
+activeInput =
+    ( activeTxIn
+    , mkBasicTxOut
+        checkpointAddr
+        ( MaryValue
+            (Coin 7_000_000)
+            ( MultiAsset $
+                Map.singleton
+                    (PolicyID checkpointScriptHash)
+                    (Map.singleton syntheticAssetName 1)
+            )
+        )
+    )
+
+activeTxIn, checkpointReference :: TxIn
+activeTxIn = stubTxIn 20
+checkpointReference = stubTxIn 21
+
+checkpointProgram :: SBS.ShortByteString
+checkpointProgram = SBS.toShort "slice3-close-checkpoint-script"
+
+checkpointScript :: Script ConwayEra
+checkpointScript = mkCageScript checkpointProgram
+
+checkpointScriptHash :: ScriptHash
+checkpointScriptHash = computeScriptHash checkpointProgram
+
+syntheticAssetName :: AssetName
+syntheticAssetName = AssetName (SBS.toShort $ BS.replicate 32 0x41)
+
+syntheticPlan :: ClosePlan
+syntheticPlan =
+    ClosePlan
+        { closePlanSpentReference = renderTxIn activeTxIn
+        , closePlanCheckpointReference = renderTxIn checkpointReference
+        , closePlanPolicy = scriptHashText checkpointScriptHash
+        , closePlanAssetName = hexText (BS.replicate 32 0x41)
+        , closePlanRefundAddress = renderAddr refundAddr
+        , closePlanRefundLovelace = 7_000_000
+        , closePlanRefundOutput = "retired-cardano-cli-rendering"
+        , closePlanSpendRedeemer = plutusDataJson spendRedeemer
+        , closePlanMintRedeemer = plutusDataJson mintRedeemer
+        }
+
+spendRedeemer, mintRedeemer :: Data
+spendRedeemer = Constr 1 [I 111]
+mintRedeemer = Constr 2 [I 222]
+
+fundingAddr, changeAddr, refundAddr, checkpointAddr :: Addr
+fundingAddr = testAddr 1
+changeAddr = testAddr 2
+refundAddr = testAddr 3
+checkpointAddr = Addr Testnet (ScriptHashObj checkpointScriptHash) StakeRefNull
+
+testAddr :: Int -> Addr
+testAddr n =
+    Addr
+        Testnet
+        (KeyHashObj $ KeyHash $ fromJust $ hashFromStringAsHex $ replicate 55 '0' <> show n)
+        StakeRefNull
+
+stubTxIn :: Int -> TxIn
+stubTxIn n =
+    TxIn
+        (TxId $ unsafeMakeSafeHash $ fromJust $ hashFromStringAsHex hex)
+        (TxIx 0)
+  where
+    hex = replicate 62 '0' <> hexByte n
+    hexByte k =
+        let digit i = "0123456789abcdef" !! i
+         in [digit (k `div` 16 `mod` 16), digit (k `mod` 16)]
+
+plainTxOut :: Integer -> TxOut ConwayEra
+plainTxOut amount =
+    mkBasicTxOut fundingAddr (MaryValue (Coin amount) $ MultiAsset mempty)
+
+referenceTxOut :: Script ConwayEra -> TxOut ConwayEra
+referenceTxOut script =
+    plainTxOut 20_000_000 & referenceScriptTxOutL .~ SJust script
+
+renderTxIn :: TxIn -> Text
+renderTxIn (TxIn txId (TxIx index)) = renderTxId txId <> "#" <> T.pack (show index)
+
+renderTxId :: TxId -> Text
+renderTxId = TE.decodeUtf8 . convertToBase Base16 . hashToBytes . extractHash . unTxId
+
+renderAddr :: Addr -> Text
+renderAddr address =
+    Bech32.encodeLenient
+        (either (error . show) id $ Bech32.humanReadablePartFromText "addr_test")
+        (Bech32.dataPartFromBytes $ serialiseAddr address)
+
+hexText :: BS.ByteString -> Text
+hexText = TE.decodeUtf8 . convertToBase Base16
+
+recordCall :: IORef [String] -> String -> IO ()
+recordCall ref tag = modifyIORef' ref (tag :)
+
+standInRuntime :: IORef [String] -> IORef (Maybe ConwayTx) -> IO (TransactionRuntime IO)
+standInRuntime callsRef signedRef =
+    pure
+        TransactionRuntime
+            { trQueryProtocolParams = recordCall callsRef "query" >> pure testPParams
+            , trEvaluate = \_ -> recordCall callsRef "evaluate" >> pure Map.empty
+            , trSign = \tx -> do
+                recordCall callsRef "sign"
+                let result = signWithPaymentKey testEnvelope tx
+                modifyIORef' signedRef (const $ either (const Nothing) Just result)
+                pure result
+            , trSubmit = \tx -> do
+                readIORef signedRef >>= (`shouldBe` Just tx)
+                recordCall callsRef "submit"
+                pure (Submitted disagreeingId)
+            , trObserve = \txId -> do
+                signed <- readIORef signedRef
+                fmap transactionId signed `shouldBe` Just txId
+                recordCall callsRef "observe"
+            }
+
+testEnvelope :: Value
+testEnvelope =
+    object
+        [ "type" .= ("PaymentSigningKeyShelley_ed25519" :: String)
+        , "description" .= ("Payment Signing Key" :: String)
+        , "cborHex"
+            .= ("582083c69e0facc37e938558a50b4335f0ca9855857bb5625f583a68464f54496bde" :: String)
+        ]
+
+disagreeingId :: TxId
+disagreeingId = transactionId (mkBasicTx $ mkBasicTxBody & feeTxBodyL .~ Coin 999_999)
+
+redeemerData ::
+    ConwayPlutusPurpose AsIx ConwayEra ->
+    Map.Map
+        (ConwayPlutusPurpose AsIx ConwayEra)
+        (LedgerData.Data ConwayEra, ExUnits) ->
+    Maybe Data
+redeemerData purpose redeemers =
+    (\(LedgerData.Data datum, _) -> datum) <$> Map.lookup purpose redeemers

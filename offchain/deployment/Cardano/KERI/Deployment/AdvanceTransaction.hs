@@ -3,17 +3,24 @@
 
 {- |
 Module      : Cardano.KERI.Deployment.AdvanceTransaction
-Description : Build and settle the V1 reference-script Advance transaction
+Description : Build and settle V1 Advance through the in-process runtime
+
+#181 Slice 3 replaces the external transaction runner with the shared
+'Cardano.KERI.Deployment.TransactionRuntime.runTransactionBuild' kernel.
+The caller supplies a coherent funding snapshot, resolved reference scripts,
+and the observer reward account; this module owns the ledger body and its
+operation-specific checks.
 -}
 module Cardano.KERI.Deployment.AdvanceTransaction (
     AdvancePlan (..),
-    AdvanceRunnerConfig (..),
-    AdvanceFiles (..),
+    AdvanceConfig (..),
+    AdvanceCheckError (..),
+    AdvanceError (..),
+    AdvanceObservationTimeout (..),
     AdvanceResult (..),
     mkAdvancePlan,
-    advanceBuildArguments,
-    observerRegistrationBuildArguments,
     runAdvanceTransaction,
+    awaitAdvance,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
@@ -28,8 +35,6 @@ import Cardano.KERI.Deployment.Advance (AdvancePackage (..))
 import Cardano.KERI.Deployment.ChainIndex (
     ChainAsset (..),
     ChainAssetUtxo (..),
-    KoiosToken,
-    queryAssetUtxos,
  )
 import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
 import Cardano.KERI.Deployment.Manifest (
@@ -37,54 +42,100 @@ import Cardano.KERI.Deployment.Manifest (
     Reference (..),
     ScriptEntry (..),
  )
-import Cardano.KERI.Deployment.Publisher (parseTransactionId)
 import Cardano.KERI.Deployment.Registration (
+    plutusDataFromJson,
     plutusDataJson,
-    renderCardanoCliFailure,
+ )
+import Cardano.KERI.Deployment.TransactionRuntime (
+    AggregateExUnitsError,
+    FundingPair (..),
+    PayerSelectionError,
+    TransactionBuildError,
+    TransactionRuntime (..),
+    checkAggregateExUnits,
+    fundingSpends,
+    runTransactionBuild,
+    selectFundingPair,
  )
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
+    Addr (..),
+    decodeAddr,
     serialiseAccountAddress,
  )
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Api.Tx.Out (referenceScriptTxOutL, valueTxOutL)
+import Cardano.Ledger.BaseTypes (
+    Network (Mainnet, Testnet),
+    StrictMaybe (SJust, SNothing),
+    TxIx (..),
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.TxCert (
+    ConwayDelegCert (ConwayRegCert),
+    ConwayTxCert (ConwayTxCertDeleg),
+ )
+import Cardano.Ledger.Core (
+    PParams,
+    TxOut,
+    hashScript,
+    ppKeyDepositL,
+ )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (
+    ScriptHash (..),
+    unsafeMakeSafeHash,
+ )
+import Cardano.Ledger.Mary.Value (
+    AssetName (..),
+    MaryValue (..),
+    MultiAsset (..),
+    PolicyID (..),
+ )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Tx.Balance (CollateralUtxos (..))
+import Cardano.Tx.Build (
+    BuildOptions (..),
+    CertWitness (ScriptCert),
+    Check (..),
+    InterpretIO (..),
+    TxBuild,
+    certify,
+    collateral,
+    defaultBuildOptions,
+    payTo',
+    reference,
+    spend,
+    spendScript,
+    valid,
+    withdrawScript,
+ )
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
 import Control.Monad (unless, when)
-import Data.Aeson (
-    FromJSON (..),
-    Value,
-    eitherDecodeFileStrict',
-    withObject,
-    (.:),
-    (.:?),
- )
-import Data.Aeson qualified as Aeson
-import Data.Aeson.Key qualified as Key
-import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson (Value)
+import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (
     Base (Base16),
     convertFromBase,
  )
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.List (sortOn)
-import Data.Map.Strict (Map)
+import Data.ByteString.Short qualified as SBS
+import Data.List (find)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (isNothing)
-import Data.Ord (Down (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
-import PlutusCore.Data (Data (I))
-import System.Exit (ExitCode (..))
-import System.FilePath ((</>))
-import System.IO.Temp (withSystemTempDirectory)
-import System.Process (readProcessWithExitCode)
+import Data.Time.Clock (diffUTCTime, getCurrentTime)
+import Lens.Micro ((^.))
+import PlutusCore.Data (Data (..))
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (ToData (..))
+import Text.Read (readMaybe)
 
 data AdvancePlan = AdvancePlan
     { planSpentReference :: !Text
@@ -101,79 +152,43 @@ data AdvancePlan = AdvancePlan
     }
     deriving stock (Show, Eq)
 
-data AdvanceRunnerConfig = AdvanceRunnerConfig
-    { runnerCardanoCli :: !FilePath
-    , runnerNetworkMagic :: !Int
-    , runnerNodeSocket :: !FilePath
-    , runnerFundingAddress :: !Text
-    , runnerSigningKeyFile :: !FilePath
-    , runnerKoiosUrl :: !Text
-    , runnerKoiosToken :: !(Maybe KoiosToken)
-    , runnerTimeoutSeconds :: !Int
+data AdvanceConfig = AdvanceConfig
+    { advanceRuntime :: !(TransactionRuntime IO)
+    , advanceReferenceUtxos :: ![(TxIn, TxOut ConwayEra)]
+    , advanceFundingAddress :: !Addr
+    , advanceObserverRewardAccount :: !AccountAddress
     }
-    deriving stock (Show, Eq)
 
-data AdvanceFiles = AdvanceFiles
-    { filesSpendRedeemer :: !FilePath
-    , filesObserverRedeemer :: !FilePath
-    , filesObserverCertificateRedeemer :: !FilePath
-    , filesObserverCertificate :: !FilePath
-    , filesObserverRegistrationBody :: !FilePath
-    , filesObserverRegistrationSigned :: !FilePath
-    , filesSuccessorDatum :: !FilePath
-    , filesBody :: !FilePath
-    , filesSigned :: !FilePath
-    }
-    deriving stock (Show, Eq)
+newtype AdvanceCheckError
+    = AdvanceAggregateExUnitsExceeded AggregateExUnitsError
+    deriving stock (Eq, Show)
+
+data AdvanceError
+    = AdvanceFundingSelectionFailed !PayerSelectionError
+    | AdvancePlanRejected !String
+    | AdvanceBuildFailed !(TransactionBuildError AdvanceCheckError)
+    deriving stock (Eq, Show)
+
+data AdvanceObservationTimeout
+    = AdvanceObservationTimeout !Text !Text !Text !Text
+    deriving stock (Eq, Show)
 
 data AdvanceResult = AdvanceResult
-    { resultObserverRegistrationTxId :: !(Maybe Text)
-    , resultAdvanceTxId :: !Text
+    { resultObserverRegistrationTxId :: !(Maybe TxId)
+    , resultAdvanceTxId :: !TxId
     }
-    deriving stock (Show, Eq)
+    deriving stock (Eq, Show)
 
-data WalletUtxo = WalletUtxo
-    { walletLovelace :: !Integer
-    , walletReferenceScript :: !(Maybe Value)
-    , walletAssetCount :: !Int
-    }
-    deriving stock (Show)
+newtype RawData = RawData Data
 
-newtype ProtocolParameters = ProtocolParameters
-    { protocolStakeAddressDeposit :: Integer
-    }
-
-instance FromJSON ProtocolParameters where
-    parseJSON = withObject "ProtocolParameters" $ \o ->
-        ProtocolParameters <$> o .: "stakeAddressDeposit"
-
-instance FromJSON WalletUtxo where
-    parseJSON = withObject "WalletUtxo" $ \o -> do
-        value <- o .: "value"
-        (walletLovelace, walletAssetCount) <-
-            withObject "WalletValue" parseWalletValue value
-        walletReferenceScript <- o .:? "referenceScript"
-        pure WalletUtxo{..}
-      where
-        parseWalletValue values = do
-            lovelace <- values .: "lovelace"
-            let assetCount =
-                    length
-                        [ ()
-                        | key <- KeyMap.keys values
-                        , Key.toText key /= "lovelace"
-                        ]
-            pure (lovelace, assetCount)
+instance ToData RawData where
+    toBuiltinData (RawData datum) = BuiltinData datum
 
 mkAdvancePlan :: Manifest -> AdvancePackage -> Either String AdvancePlan
 mkAdvancePlan manifest package = do
     checkpoint <- scriptNamed "checkpoint-register" manifest
     observer <- scriptNamed "observer-advance" manifest
-    policy <-
-        decodeHexSized
-            "checkpoint policy"
-            28
-            (scriptHash checkpoint)
+    policy <- decodeHexSized "checkpoint policy" 28 (scriptHash checkpoint)
     observerHash <-
         decodeHexSized
             "observer-advance script hash"
@@ -198,446 +213,316 @@ mkAdvancePlan manifest package = do
                     (scIndex spent)
                     (advanceEvidence package)
         planSuccessorDatum =
-            plutusDataJson $
-                asPlcData $
-                    V1 $
-                        advanceSuccessor package
+            plutusDataJson $ asPlcData $ V1 $ advanceSuccessor package
     pure AdvancePlan{..}
 
-advanceBuildArguments ::
-    AdvanceRunnerConfig ->
-    AdvancePlan ->
-    AdvanceFiles ->
-    Text ->
-    Text ->
-    [String]
-advanceBuildArguments config plan files funding collateral =
-    [ "conway"
-    , "transaction"
-    , "build"
-    , "--tx-in"
-    , T.unpack (planSpentReference plan)
-    , "--spending-tx-in-reference"
-    , T.unpack (planCheckpointReference plan)
-    , "--spending-plutus-script-v3"
-    , "--spending-reference-tx-in-inline-datum-present"
-    , "--spending-reference-tx-in-redeemer-file"
-    , filesSpendRedeemer files
-    , "--tx-in"
-    , T.unpack funding
-    , "--tx-in-collateral"
-    , T.unpack collateral
-    , "--tx-out"
-    , T.unpack (planStateOutput plan)
-    , "--tx-out-inline-datum-file"
-    , filesSuccessorDatum files
-    , "--change-address"
-    , T.unpack (runnerFundingAddress config)
-    , "--withdrawal"
-    , T.unpack (planAdvanceRewardAddress plan) <> "+0"
-    , "--withdrawal-tx-in-reference"
-    , T.unpack (planAdvanceReference plan)
-    , "--withdrawal-plutus-script-v3"
-    , "--withdrawal-reference-tx-in-redeemer-file"
-    , filesObserverRedeemer files
-    , "--testnet-magic"
-    , show (runnerNetworkMagic config)
-    , "--socket-path"
-    , runnerNodeSocket config
-    , "--out-file"
-    , filesBody files
-    ]
-
-observerRegistrationBuildArguments ::
-    AdvanceRunnerConfig ->
-    AdvancePlan ->
-    AdvanceFiles ->
-    Text ->
-    Text ->
-    [String]
-observerRegistrationBuildArguments config plan files funding collateral =
-    [ "conway"
-    , "transaction"
-    , "build"
-    , "--tx-in"
-    , T.unpack funding
-    , "--tx-in-collateral"
-    , T.unpack collateral
-    , "--change-address"
-    , T.unpack (runnerFundingAddress config)
-    , "--certificate-file"
-    , filesObserverCertificate files
-    , "--certificate-tx-in-reference"
-    , T.unpack (planAdvanceReference plan)
-    , "--certificate-plutus-script-v3"
-    , "--certificate-reference-tx-in-redeemer-file"
-    , filesObserverCertificateRedeemer files
-    , "--testnet-magic"
-    , show (runnerNetworkMagic config)
-    , "--socket-path"
-    , runnerNodeSocket config
-    , "--out-file"
-    , filesObserverRegistrationBody files
-    ]
-
 runAdvanceTransaction ::
-    AdvanceRunnerConfig ->
+    AdvanceConfig ->
     AdvancePlan ->
-    IO AdvanceResult
-runAdvanceTransaction config plan = do
-    when (runnerTimeoutSeconds config <= 0) $
-        fail "timeout-seconds must be positive"
-    withSystemTempDirectory "ckeri-advance" $ \directory -> do
-        let files = advanceFiles directory
-        writeAdvanceFiles files plan
-        resultObserverRegistrationTxId <-
-            ensureObserverRegistered config plan files directory
-        mapM_
-            (putStrLn . ("observer registration txid: " <>) . T.unpack)
-            resultObserverRegistrationTxId
-        wallet <- queryWallet config (directory </> "wallet.json")
-        (funding, collateral) <-
-            selectFundingPair 5_000_000 "checkpoint advance" wallet
-        _ <-
-            runCardanoCli
-                config
-                (advanceBuildArguments config plan files funding collateral)
-        txId <- signSubmit config (filesBody files) (filesSigned files)
-        _ <-
-            waitForAsset
-                config
-                (planCheckpointPolicy plan)
-                (planCheckpointAssetName plan)
-                txId
-                (planCheckpointAddress plan)
-        pure AdvanceResult{resultAdvanceTxId = txId, ..}
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Bool ->
+    IO (Either AdvanceError AdvanceResult)
+runAdvanceTransaction config plan fundingInputs activeInput registerObserver =
+    case advanceInputs config plan fundingInputs activeInput registerObserver of
+        Left err -> pure (Left err)
+        Right AdvanceInputs{..} -> do
+            let runtime = advanceRuntime config
+            pparams <- trQueryProtocolParams runtime
+            let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
+                options =
+                    defaultBuildOptions
+                        { boCollateralUtxos =
+                            CollateralUtxos [fundingCollateral advanceFunding]
+                        }
+            result <-
+                runTransactionBuild
+                    options
+                    frozenRuntime
+                    advanceInterpret
+                    (fundingSpends advanceFunding <> [advanceActiveInput])
+                    advanceReferences
+                    (advanceFundingAddress config)
+                    (advanceProgram pparams config registerObserver AdvanceInputs{..})
+            pure $
+                first AdvanceBuildFailed result >>= \txId ->
+                    Right
+                        AdvanceResult
+                            { resultObserverRegistrationTxId =
+                                if registerObserver then Just txId else Nothing
+                            , resultAdvanceTxId = txId
+                            }
 
-advanceFiles :: FilePath -> AdvanceFiles
-advanceFiles directory =
-    AdvanceFiles
-        { filesSpendRedeemer = directory </> "spend-redeemer.json"
-        , filesObserverRedeemer = directory </> "observer-redeemer.json"
-        , filesObserverCertificateRedeemer =
-            directory </> "observer-certificate-redeemer.json"
-        , filesObserverCertificate =
-            directory </> "observer-registration.cert"
-        , filesObserverRegistrationBody =
-            directory </> "observer-registration.body"
-        , filesObserverRegistrationSigned =
-            directory </> "observer-registration.signed"
-        , filesSuccessorDatum = directory </> "successor-datum.json"
-        , filesBody = directory </> "advance.body"
-        , filesSigned = directory </> "advance.signed"
-        }
+data AdvanceInputs = AdvanceInputs
+    { advanceFunding :: !FundingPair
+    , advanceActiveInput :: !(TxIn, TxOut ConwayEra)
+    , advanceReferences :: ![(TxIn, TxOut ConwayEra)]
+    , advanceCheckpointAddress :: !Addr
+    , advanceSpendData :: !RawData
+    , advanceObserverData :: !RawData
+    , advanceSuccessorData :: !RawData
+    }
 
-writeAdvanceFiles :: AdvanceFiles -> AdvancePlan -> IO ()
-writeAdvanceFiles files plan = do
-    Aeson.encodeFile (filesSpendRedeemer files) (planSpendRedeemer plan)
-    Aeson.encodeFile (filesObserverRedeemer files) (planObserverRedeemer plan)
-    Aeson.encodeFile
-        (filesObserverCertificateRedeemer files)
-        (plutusDataJson $ I 0)
-    Aeson.encodeFile (filesSuccessorDatum files) (planSuccessorDatum plan)
-
-ensureObserverRegistered ::
-    AdvanceRunnerConfig ->
+advanceInputs ::
+    AdvanceConfig ->
     AdvancePlan ->
-    AdvanceFiles ->
-    FilePath ->
-    IO (Maybe Text)
-ensureObserverRegistered config plan files directory = do
-    registered <-
-        observerRegistered
-            config
-            plan
-            (directory </> "observer-stake-address-info.json")
-    if registered
-        then pure Nothing
-        else do
-            writeObserverCertificate
-                config
-                plan
-                files
-                (directory </> "protocol-parameters.json")
-            wallet <-
-                queryWallet config (directory </> "wallet-observer-registration.json")
-            (funding, collateral) <-
-                selectFundingPair
-                    8_000_000
-                    "observer stake registration"
-                    wallet
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Bool ->
+    Either AdvanceError AdvanceInputs
+advanceInputs config plan fundingInputs activeInput registerObserver = do
+    spent <- planTxIn (planSpentReference plan)
+    unless (fst activeInput == spent) $
+        Left (AdvancePlanRejected "resolved active checkpoint disagrees with the plan")
+    checkpointHash <- planScriptHash "checkpoint policy" (planCheckpointPolicy plan)
+    observerHash <- observerScriptHash config plan
+    checkpointReference <-
+        resolveReference
+            "checkpoint reference script hash"
+            checkpointHash
+            (planCheckpointReference plan)
+            (advanceReferenceUtxos config)
+    observerReference <-
+        resolveReference
+            "advance observer reference script hash"
+            observerHash
+            (planAdvanceReference plan)
+            (advanceReferenceUtxos config)
+    assetName <- planAssetName "checkpoint asset name" (planCheckpointAssetName plan)
+    requireCheckpointAsset (PolicyID checkpointHash) assetName activeInput
+    advanceCheckpointAddress <- planAddress (planCheckpointAddress plan)
+    advanceSpendData <- rawPlanData "advance spend redeemer" (planSpendRedeemer plan)
+    advanceObserverData <- rawPlanData "advance observer redeemer" (planObserverRedeemer plan)
+    advanceSuccessorData <- rawPlanData "successor datum" (planSuccessorDatum plan)
+    advanceFunding <-
+        first AdvanceFundingSelectionFailed $
+            selectFundingPair
+                isPlainUtxo
+                (Coin $ if registerObserver then 8_000_000 else 5_000_000)
+                fundingInputs
+    pure
+        AdvanceInputs
+            { advanceActiveInput = activeInput
+            , advanceReferences = [checkpointReference, observerReference]
+            , ..
+            }
+
+advanceProgram ::
+    PParams ConwayEra ->
+    AdvanceConfig ->
+    Bool ->
+    AdvanceInputs ->
+    TxBuild AdvanceCtx AdvanceCheckError ()
+advanceProgram
+    pparams
+    config
+    registerObserver
+    AdvanceInputs
+        { advanceFunding = funding
+        , ..
+        } = do
+        mapM_ (spend . fst) (fundingSpends funding)
+        _ <- spendScript (fst advanceActiveInput) advanceSpendData
+        collateral (fst $ fundingCollateral funding)
+        _ <-
+            payTo'
+                advanceCheckpointAddress
+                (snd advanceActiveInput ^. valueTxOutL)
+                advanceSuccessorData
+        mapM_ (reference . fst) advanceReferences
+        when registerObserver $ do
+            let credential =
+                    case advanceObserverRewardAccount config of
+                        AccountAddress _ (AccountId value) -> value
             _ <-
-                runCardanoCli
-                    config
-                    ( observerRegistrationBuildArguments
-                        config
-                        plan
-                        files
-                        funding
-                        collateral
+                certify
+                    ( ConwayTxCertDeleg $
+                        ConwayRegCert credential (SJust $ pparams ^. ppKeyDepositL)
                     )
-            txId <-
-                signSubmit
-                    config
-                    (filesObserverRegistrationBody files)
-                    (filesObserverRegistrationSigned files)
-            waitForObserverRegistration config plan txId directory
-            pure (Just txId)
+                    (ScriptCert $ RawData $ I 0)
+            pure ()
+        withdrawScript
+            (advanceObserverRewardAccount config)
+            (Coin 0)
+            advanceObserverData
+        valid (advanceCheck pparams)
 
-observerRegistered ::
-    AdvanceRunnerConfig ->
-    AdvancePlan ->
-    FilePath ->
-    IO Bool
-observerRegistered config plan output = do
-    _ <-
-        runCardanoCli
-            config
-            [ "query"
-            , "stake-address-info"
-            , "--address"
-            , T.unpack (planAdvanceRewardAddress plan)
-            , "--testnet-magic"
-            , show (runnerNetworkMagic config)
-            , "--socket-path"
-            , runnerNodeSocket config
-            , "--out-file"
-            , output
-            ]
-    accounts <-
-        eitherDecodeFileStrict' output
-            >>= either
-                (fail . ("cannot decode advance observer stake address info: " <>))
-                pure
-    pure (not $ null (accounts :: [Value]))
+data AdvanceCtx a
 
-writeObserverCertificate ::
-    AdvanceRunnerConfig ->
-    AdvancePlan ->
-    AdvanceFiles ->
-    FilePath ->
-    IO ()
-writeObserverCertificate config plan files parametersFile = do
-    _ <-
-        runCardanoCli
-            config
-            [ "query"
-            , "protocol-parameters"
-            , "--testnet-magic"
-            , show (runnerNetworkMagic config)
-            , "--socket-path"
-            , runnerNodeSocket config
-            , "--out-file"
-            , parametersFile
-            ]
-    parameters <-
-        eitherDecodeFileStrict' parametersFile
-            >>= either
-                (fail . ("cannot decode protocol parameters: " <>))
-                pure
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "stake-address"
-            , "registration-certificate"
-            , "--stake-address"
-            , T.unpack (planAdvanceRewardAddress plan)
-            , "--key-reg-deposit-amt"
-            , show (protocolStakeAddressDeposit parameters)
-            , "--out-file"
-            , filesObserverCertificate files
-            ]
-    pure ()
+advanceInterpret :: InterpretIO AdvanceCtx
+advanceInterpret = InterpretIO (\case {})
 
-waitForObserverRegistration ::
-    AdvanceRunnerConfig ->
-    AdvancePlan ->
+advanceCheck :: PParams ConwayEra -> ConwayTx -> Check AdvanceCheckError
+advanceCheck pparams tx =
+    case checkAggregateExUnits pparams tx of
+        Pass -> Pass
+        LedgerFail failure -> LedgerFail failure
+        CustomFail failure ->
+            CustomFail (AdvanceAggregateExUnitsExceeded failure)
+
+awaitAdvance ::
+    (Text -> Text -> IO [ChainAssetUtxo]) ->
+    Int ->
+    Int ->
     Text ->
-    FilePath ->
-    IO ()
-waitForObserverRegistration config plan txId directory = do
+    Text ->
+    Text ->
+    Text ->
+    IO (Either AdvanceObservationTimeout ChainAssetUtxo)
+awaitAdvance queryAsset pollMicros timeoutSeconds policy asset txId address = do
     started <- getCurrentTime
-    go started
-  where
-    go started = do
-        result <-
-            ( try $
-                observerRegistered
-                    config
-                    plan
-                    (directory </> "observer-stake-address-info-settled.json")
-            ) ::
-                IO (Either SomeException Bool)
-        case result of
-            Right True -> pure ()
-            _ -> retry started
-    retry started = do
-        now <- getCurrentTime
-        if diffUTCTime now started
-            >= fromIntegral (runnerTimeoutSeconds config)
-            then
-                fail $
-                    "timed out waiting for advance observer registration \
-                    \transaction "
-                        <> T.unpack txId
-            else threadDelay 5_000_000 >> go started
+    let loop = do
+            queried <- try (queryAsset policy asset)
+            case queried of
+                Right outputs ->
+                    case filter matches outputs of
+                        output : _ -> pure (Right output)
+                        [] -> retry started
+                Left (_ :: SomeException) -> retry started
+        matches output =
+            chainAssetTxId output == txId
+                && chainAssetAddress output == address
+                && any matchesAsset (chainAssetList output)
+        matchesAsset chainAsset =
+            chainAssetPolicy chainAsset == policy
+                && chainAssetName chainAsset == asset
+                && chainAssetQuantity chainAsset == 1
+        retry startedAt = do
+            now <- getCurrentTime
+            if diffUTCTime now startedAt >= fromIntegral timeoutSeconds
+                then
+                    pure $
+                        Left (AdvanceObservationTimeout policy asset txId address)
+                else threadDelay pollMicros >> loop
+    loop
 
-queryWallet ::
-    AdvanceRunnerConfig ->
-    FilePath ->
-    IO (Map Text WalletUtxo)
-queryWallet config output = do
-    _ <-
-        runCardanoCli
-            config
-            [ "query"
-            , "utxo"
-            , "--address"
-            , T.unpack (runnerFundingAddress config)
-            , "--testnet-magic"
-            , show (runnerNetworkMagic config)
-            , "--socket-path"
-            , runnerNodeSocket config
-            , "--out-file"
-            , output
-            ]
-    eitherDecodeFileStrict' output
-        >>= either (fail . ("cannot decode funding UTxOs: " <>)) pure
+observerScriptHash ::
+    AdvanceConfig -> AdvancePlan -> Either AdvanceError ScriptHash
+observerScriptHash config plan = do
+    unless
+        (renderRewardAccount (advanceObserverRewardAccount config) == planAdvanceRewardAddress plan)
+        (Left $ AdvancePlanRejected "advance observer reward account disagrees with the plan")
+    case advanceObserverRewardAccount config of
+        AccountAddress _ (AccountId (ScriptHashObj hash)) -> Right hash
+        AccountAddress _ (AccountId KeyHashObj{}) ->
+            Left $ AdvancePlanRejected "advance observer reward account is not script-backed"
 
-selectFundingPair ::
-    Integer ->
+resolveReference ::
     String ->
-    Map Text WalletUtxo ->
-    IO (Text, Text)
-selectFundingPair minimumFunding label wallet =
-    case candidates of
-        (funding, fundingUtxo) : (collateral, _) : _
-            | walletLovelace fundingUtxo >= minimumFunding ->
-                pure (funding, collateral)
-            | otherwise ->
-                fail $
-                    label
-                        <> " needs a plain funding UTxO of at least "
-                        <> show minimumFunding
-                        <> " lovelace"
-        _ -> fail (label <> " needs two distinct plain funding UTxOs")
-  where
-    candidates =
-        sortOn
-            (Down . walletLovelace . snd)
-            [ (txIn, utxo)
-            | (txIn, utxo) <- Map.toList wallet
-            , isNothing (walletReferenceScript utxo)
-            , walletAssetCount utxo == 0
-            ]
+    ScriptHash ->
+    Text ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Either AdvanceError (TxIn, TxOut ConwayEra)
+resolveReference label expected rendered rows = do
+    txIn <- planTxIn rendered
+    row@(_, txOut) <-
+        maybe
+            (Left $ AdvancePlanRejected $ label <> " UTxO is unresolved")
+            Right
+            (find ((== txIn) . fst) rows)
+    case txOut ^. referenceScriptTxOutL of
+        SNothing -> Left $ AdvancePlanRejected $ label <> " UTxO has no script"
+        SJust script
+            | hashScript script == expected -> Right row
+            | otherwise -> Left $ AdvancePlanRejected $ label <> " disagrees with the plan"
 
-signSubmit ::
-    AdvanceRunnerConfig ->
-    FilePath ->
-    FilePath ->
-    IO Text
-signSubmit config body signed = do
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "sign"
-            , "--tx-body-file"
-            , body
-            , "--signing-key-file"
-            , runnerSigningKeyFile config
-            , "--testnet-magic"
-            , show (runnerNetworkMagic config)
-            , "--out-file"
-            , signed
-            ]
-    txIdOutput <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "txid"
-            , "--tx-file"
-            , signed
-            ]
-    txId <- either fail pure (parseTransactionId txIdOutput)
-    _ <-
-        runCardanoCli
-            config
-            [ "conway"
-            , "transaction"
-            , "submit"
-            , "--tx-file"
-            , signed
-            , "--testnet-magic"
-            , show (runnerNetworkMagic config)
-            , "--socket-path"
-            , runnerNodeSocket config
-            ]
-    pure txId
+requireCheckpointAsset ::
+    PolicyID ->
+    AssetName ->
+    (TxIn, TxOut ConwayEra) ->
+    Either AdvanceError ()
+requireCheckpointAsset policy assetName (_, txOut) =
+    case txOut ^. valueTxOutL of
+        MaryValue _ (MultiAsset assets)
+            | (Map.lookup policy assets >>= Map.lookup assetName) == Just 1 -> Right ()
+        _ -> Left $ AdvancePlanRejected "active checkpoint does not carry the planned singleton"
 
-runCardanoCli :: AdvanceRunnerConfig -> [String] -> IO String
-runCardanoCli config arguments = do
-    (exitCode, output, err) <-
-        readProcessWithExitCode (runnerCardanoCli config) arguments ""
-    case exitCode of
-        ExitSuccess -> pure output
-        ExitFailure code ->
-            fail (renderCardanoCliFailure code err output)
+isPlainUtxo :: TxOut ConwayEra -> Bool
+isPlainUtxo txOut =
+    case (txOut ^. referenceScriptTxOutL, txOut ^. valueTxOutL) of
+        (SNothing, MaryValue _ (MultiAsset assets)) -> Map.null assets
+        _ -> False
 
-waitForAsset ::
-    AdvanceRunnerConfig ->
-    Text ->
-    Text ->
-    Text ->
-    Text ->
-    IO Text
-waitForAsset config policyId assetName txId expectedAddress = do
-    started <- getCurrentTime
-    go started
-  where
-    go started = do
-        result <-
-            try $
-                queryAssetUtxos
-                    (runnerKoiosUrl config)
-                    (runnerKoiosToken config)
-                    policyId
-                    assetName
-        case result of
-            Right utxos ->
-                case filter matches utxos of
-                    [utxo] ->
-                        pure $
-                            chainAssetTxId utxo
-                                <> "#"
-                                <> T.pack (show $ chainAssetIndex utxo)
-                    _ -> retry started
-            Left (_ :: SomeException) -> retry started
-    matches utxo =
-        chainAssetTxId utxo == txId
-            && chainAssetAddress utxo == expectedAddress
-            && any isSingleton (chainAssetList utxo)
-    isSingleton asset =
-        chainAssetPolicy asset == policyId
-            && chainAssetName asset == assetName
-            && chainAssetQuantity asset == 1
-    retry :: UTCTime -> IO Text
-    retry started = do
-        now <- getCurrentTime
-        if diffUTCTime now started
-            >= fromIntegral (runnerTimeoutSeconds config)
-            then
-                fail $
-                    "timed out waiting for settled asset "
-                        <> T.unpack policyId
-                        <> "."
-                        <> T.unpack assetName
-                        <> " in transaction "
-                        <> T.unpack txId
-            else threadDelay 5_000_000 >> go started
+rawPlanData :: String -> Value -> Either AdvanceError RawData
+rawPlanData label =
+    first (AdvancePlanRejected . ((label <> ": ") <>))
+        . fmap RawData
+        . plutusDataFromJson
+
+planScriptHash :: String -> Text -> Either AdvanceError ScriptHash
+planScriptHash label encoded = do
+    bytes <- first AdvancePlanRejected (decodeHexSized label 28 encoded)
+    maybe
+        (Left $ AdvancePlanRejected $ label <> " is not a ledger hash")
+        (Right . ScriptHash)
+        (hashFromBytes bytes)
+
+planAssetName :: String -> Text -> Either AdvanceError AssetName
+planAssetName label encoded = do
+    bytes <- planHex label encoded
+    if BS.length bytes <= 32
+        then Right (AssetName $ SBS.toShort bytes)
+        else Left (AdvancePlanRejected $ label <> " exceeds 32 bytes")
+
+planTxIn :: Text -> Either AdvanceError TxIn
+planTxIn rendered =
+    case T.splitOn "#" rendered of
+        [encodedId, renderedIx] -> do
+            rawId <- planHex "reference transaction id" encodedId
+            unless (BS.length rawId == 32) $
+                Left $
+                    AdvancePlanRejected "reference transaction id is not 32 bytes"
+            digest <-
+                maybe
+                    (Left $ AdvancePlanRejected "reference transaction id is not a ledger hash")
+                    Right
+                    (hashFromBytes rawId)
+            txIx <-
+                maybe
+                    (Left $ AdvancePlanRejected "reference transaction index is invalid")
+                    Right
+                    (readMaybe $ T.unpack renderedIx)
+            pure (TxIn (TxId $ unsafeMakeSafeHash digest) (TxIx txIx))
+        _ -> Left (AdvancePlanRejected "reference must have txid#index form")
+
+planHex :: String -> Text -> Either AdvanceError ByteString
+planHex label encoded =
+    first
+        (const $ AdvancePlanRejected $ label <> " is not hexadecimal")
+        (convertFromBase Base16 $ TE.encodeUtf8 encoded)
+
+planAddress :: Text -> Either AdvanceError Addr
+planAddress encoded = do
+    (_, dataPart) <-
+        first
+            (AdvancePlanRejected . ("checkpoint address is not Bech32: " <>) . show)
+            (Bech32.decodeLenient encoded)
+    bytes <-
+        maybe
+            (Left $ AdvancePlanRejected "checkpoint address data is invalid")
+            Right
+            (Bech32.dataPartToBytes dataPart)
+    address <-
+        maybe
+            (Left $ AdvancePlanRejected "checkpoint address is not a Shelley address")
+            Right
+            (decodeAddr bytes :: Maybe Addr)
+    case address of
+        Addr Testnet _ _ -> Right address
+        Addr Mainnet _ _ -> Left (AdvancePlanRejected "checkpoint address belongs to mainnet")
+        AddrBootstrap{} -> Left (AdvancePlanRejected "checkpoint address is a Byron address")
+
+scriptNamed :: Text -> Manifest -> Either String ScriptEntry
+scriptNamed name manifest =
+    case filter ((== name) . scriptName) (manifestScripts manifest) of
+        [script] -> Right script
+        _ -> Left ("manifest script is not unique: " <> T.unpack name)
+
+renderReference :: Reference -> Text
+renderReference scriptReference =
+    referenceTxId scriptReference
+        <> "#"
+        <> T.pack (show $ referenceIndex scriptReference)
 
 renderStateOutput :: ActiveCheckpoint -> Text
 renderStateOutput active =
@@ -654,16 +539,6 @@ renderStateOutput active =
             <> "."
             <> chainAssetName asset
 
-scriptNamed :: Text -> Manifest -> Either String ScriptEntry
-scriptNamed name manifest =
-    case filter ((== name) . scriptName) (manifestScripts manifest) of
-        [script] -> Right script
-        _ -> Left ("manifest script is not unique: " <> T.unpack name)
-
-renderReference :: Reference -> Text
-renderReference reference =
-    referenceTxId reference <> "#" <> T.pack (show $ referenceIndex reference)
-
 decodeHexSized :: String -> Int -> Text -> Either String ByteString
 decodeHexSized label expected encoded = do
     bytes <-
@@ -677,22 +552,25 @@ decodeHexSized label expected encoded = do
 
 rewardAddress :: ByteString -> Either String Text
 rewardAddress raw = do
-    scriptHash <-
+    hash <-
         maybe
             (Left "observer-advance script hash is not a ledger hash")
             (Right . ScriptHash)
             (hashFromBytes raw)
-    hrp <-
-        either
-            (Left . show)
-            Right
-            (Bech32.humanReadablePartFromText "stake_test")
     pure $
-        Bech32.encodeLenient
-            hrp
-            ( Bech32.dataPartFromBytes $
-                serialiseAccountAddress $
-                    AccountAddress
-                        Testnet
-                        (AccountId $ ScriptHashObj scriptHash)
+        renderRewardAccount $
+            AccountAddress Testnet (AccountId $ ScriptHashObj hash)
+
+renderRewardAccount :: AccountAddress -> Text
+renderRewardAccount account@(AccountAddress network _) =
+    Bech32.encodeLenient
+        ( either
+            (error . show)
+            id
+            ( Bech32.humanReadablePartFromText $
+                case network of
+                    Testnet -> "stake_test"
+                    Mainnet -> "stake"
             )
+        )
+        (Bech32.dataPartFromBytes $ serialiseAccountAddress account)

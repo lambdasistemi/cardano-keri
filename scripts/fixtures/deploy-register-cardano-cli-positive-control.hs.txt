@@ -1,0 +1,17 @@
+-- Deliberate positive-control fixture for
+-- scripts/check-deploy-register-no-cli.sh.
+--
+-- Contains a forbidden subprocess/cardano-cli transaction path on purpose,
+-- so the guard can prove it is actually able to fail before it is trusted
+-- to scan the real Publisher/Registration/CLI sources. Named .hs.txt (not
+-- .hs) so the repo's `find . -name '*.hs'` formatter/hlint globs never pick
+-- it up: it is grepped only, never compiled or linted.
+module DeployRegisterCardanoCliPositiveControl (forbidden) where
+
+import System.Process (readProcessWithExitCode)
+
+forbidden :: IO (String, String, String)
+forbidden = do
+    (exitCode, out, err) <-
+        readProcessWithExitCode "cardano-cli" ["conway", "transaction", "build"] ""
+    pure (show exitCode, out, err)

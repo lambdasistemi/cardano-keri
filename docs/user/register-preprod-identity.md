@@ -56,12 +56,10 @@ $ kli incept \
 $ kli export --name org --alias org > org.cesr
 ```
 
-Story #165 will add the board command that discovers and health-probes
-witnesses before inception. Until then, `ckeri register` refuses a witnessed
-KEL by default. Pass `--allow-unlisted-witnesses` only after accepting that
-the witnesses have no live board-membership check and therefore reduced
-public watchability. Witness selection remains an off-chain controller
-policy; the validator does not impose a witness board.
+`ckeri register` checks declared witnesses against the released endpoint
+board. Pass `--allow-unlisted-witnesses` only after accepting reduced public
+watchability. Witness selection remains an off-chain controller policy; the
+validator does not impose a witness board.
 
 ## Register and inspect
 
@@ -74,8 +72,8 @@ the operational paths explicit:
 $ export CKERI_NETWORK=preprod
 $ export CKERI_NETWORK_MAGIC=1
 $ export CKERI_KEL="$PWD/stranger.cesr"
-$ export CKERI_PAYER=/run/secrets/payment.skey
-$ export CKERI_NODE_SOCKET=/node/preprod/ipc/node.socket
+$ export CKERI_PAYER=/home/operator/.secrets/cardano-keri-preprod/payment.skey
+$ export CKERI_NODE_SOCKET=/code/cardano-preprod/ipc/node.socket
 $ export CKERI_FUNDING_ADDRESS=addr_test1...
 $ export CKERI_MANIFEST="$PWD/deploy/preprod/m1-manifest.json"
 $ ckeri register
@@ -97,12 +95,20 @@ transaction, then burns it while minting the AID checkpoint token. `status`
 queries that exact token and fails closed unless the address, singleton
 quantity, inline V1 datum, AID, and 1,007 tADA escrow all agree.
 
+Before selecting inputs, `register` verifies that the payment key derives the
+payment credential in `CKERI_FUNDING_ADDRESS`. Candidate out-refs are
+enumerated through Koios and individually resolved through N2C. Several
+funding inputs may be aggregated; the smallest suitable input is kept
+separate for collateral. Construction, key witnessing, and local submission
+all happen inside `ckeri`.
+
 ## Failure and repeat semantics
 
-An ACTIVE output below 1,007 tADA is rejected by the deployed checkpoint
-validator during `cardano-cli transaction build`; this is not a client-side
-balance heuristic. The acceptance transcript records the real Plutus V3
-evaluation failure.
+An address with insufficient available value fails before submission with
+`RegistrationFundingSelectionFailed (InsufficientFundingValue ...)` (or
+`EmptyIndexedSnapshot` when it has no indexed UTxOs). The error names the
+required and greatest available values. The acceptance evidence asserts that
+this path prints no premint, register, or submission transaction ID.
 
 The ledger deliberately has no global AID-unicity rule. Every controller is
 free to register another fully funded checkpoint copy, including after a
@@ -112,10 +118,18 @@ default to prevent accidental duplicate escrows. The explicit
 the residual warning. Once two copies exist, `ckeri status` reports an
 ambiguous checkpoint set instead of pretending there is one canonical output.
 
-The unedited script(1)+tee capture is committed at
-`deploy/preprod/m1-register-acceptance.txt`. It contains fresh 1-of-1 and
-witnessed 2-of-5 KLI journeys, the underfunded validator rejection, the
-default duplicate and unlisted-witness refusals, the explicit repeat, and all
-six settled premint/register transaction IDs. CI checks the transcript shape,
-re-queries all six transactions, and compares the final witnessed status to
-the live chain.
+The mechanical capture is committed at
+`deploy/preprod/m1-register-acceptance.txt`. It records a fresh 1-of-1 KLI
+inception, a named underfunded failure with no submission, settled premint
+`167220b32479b2ae91eb4e754460b71bf51d44b331660ab31cf4e2264fb30b68`,
+settled registration
+`6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2`,
+and the resulting live sequence-zero status for AID
+`EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P`.
+
+The independent
+`deploy/preprod/m1-register-historical-negative-acceptance.txt` capture keeps
+the deployed-boundary already-registered, ambiguous-checkpoint, and
+unlisted-witness failures. The checker requires those actual failures in
+addition to the newer primary journey; it never treats a successful repeat or
+an override as negative evidence.

@@ -581,14 +581,13 @@
               '';
             };
             cardanoNode = inputs.cardano-node.packages.${system}.cardano-node;
-            cardanoCli = inputs.cardano-node.packages.${system}.cardano-cli;
             e2eExe = project.hsPkgs.cardano-keri.components.tests.e2e-tests;
             ckeriExe = project.hsPkgs.cardano-keri.components.exes.ckeri;
             deploymentTestsExe =
               project.hsPkgs.cardano-keri.components.tests.deployment-tests;
             ckeriRunner = pkgs.writeShellApplication {
               name = "ckeri";
-              runtimeInputs = [ ckeriExe cardanoCli pkgs.cacert pkgs.git ];
+              runtimeInputs = [ ckeriExe pkgs.cacert pkgs.git ];
               text = ''
                 export CKERI_BLUEPRINT="''${CKERI_BLUEPRINT:-${blueprint}}"
                 export SSL_CERT_FILE="''${SSL_CERT_FILE:-${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt}"

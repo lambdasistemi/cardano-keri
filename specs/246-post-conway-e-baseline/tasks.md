@@ -1,0 +1,80 @@
+# #246 tasks
+
+Task IDs are stable. A slice is complete only when every task in it is checked
+and the slice has been independently audited and accepted.
+
+## Slice A — compatibility audit and its two controls
+
+- [ ] T246-A1 — Executable RED proof for INV-A1..INV-A9, failing for the
+  intended missing behaviour rather than for setup, before any production
+  change.
+- [ ] T246-A2 — Compatibility audit surface that resolves every reference the
+  tracked bridge source makes into the three pinned upstream packages and
+  reports resolved count and the complete unresolved set (INV-A1, INV-A2).
+- [ ] T246-A3 — Positive resolution control demonstrating in the same run that
+  the resolver finds references that exist (INV-A2).
+- [ ] T246-A4 — Seeded retired-reference negative control that makes the audit
+  report the seeded name unresolved and exit non-zero (INV-A3).
+- [ ] T246-A5 — Pin identity bound from the locked inputs rather than
+  transcribed (INV-A4).
+- [ ] T246-A6 — Explicit reported answer on whether variant E and an era-based
+  variant selection are expressible at the pins (INV-A5, D-04).
+- [ ] T246-A7 — Three-outcome records on every checked item, with
+  `COULD-NOT-EVALUATE` naming its failed layer and forcing RED (INV-A6, D-01).
+- [ ] T246-A8 — Audit and both controls reached by the single flake-owned
+  command the gate runs (INV-A7).
+- [ ] T246-A9 — `offchain/flake.lock` brought into sync so evaluation from a
+  clean checkout leaves the working tree unmodified (INV-A8).
+- [ ] T246-A10 — Evidence that no bridge assertion, theorem, or existing check
+  was weakened and no tracked Lean source was rewritten by the audit (INV-A9).
+- [ ] T246-A11 — The audit's own records name the commit they are about, so a
+  source-compatibility result cannot be read against the wrong tree (R-09,
+  INV-A10).
+
+## Slice B — frozen post-#219 / post-Conway baseline identity
+
+Dispatched after Slice A is accepted; its invariants are versioned before
+dispatch.
+
+- [ ] T246-B1 — Baseline blueprint reproducible from source at the anchor
+  commit with the Aiken version the repository validates with (F-B1).
+- [ ] T246-B2 — Mechanical evidence of what a cold store does with the previous
+  baseline artifact, as a check that runs inside the gate (F-02).
+- [ ] T246-B3 — Manifest over all 23 titles and 8 distinct programs with every
+  field computed (F-B2, D-05).
+- [ ] T246-B4 — Variant E bound as the evaluation identity, with any
+  version-derived selection named separately (F-B3, D-04).
+- [ ] T246-B5 — Mutation of any single manifest input makes verification exit
+  non-zero and name which input moved.
+- [ ] T246-B6 — Historical C / pre-#219 material relabelled in place, neither
+  deleted nor reinterpreted.
+- [ ] T246-B7 — Identity-consistency check that goes RED when any element of
+  the triple is unnamed or when the elements describe different configurations,
+  applied to every record including verification receipts (R-09, D-08).
+- [ ] T246-B8 — That check demonstrated RED against the retained pre-slice
+  receipt before any clean baseline is accepted; the retained receipt is not
+  repaired, rewritten, or deleted (R-10).
+
+## Slice C — stranger-runnable bundle skeleton and downstream record schema
+
+Dispatched after Slice B is accepted; its invariants are versioned before
+dispatch.
+
+- [ ] T246-C1 — Bundle entry point depending on nothing outside a fresh
+  checkout and its declared pins (F-C1).
+- [ ] T246-C2 — Reproduction exercised against a genuinely fresh clone rather
+  than the issue worktree (R-05).
+- [ ] T246-C3 — Downstream claim schema enforcing the per-claim
+  falsifier-before-GREEN pair (D-06, F-C2).
+- [ ] T246-C4 — Advance family required to carry two distinctly purposed E
+  records, each stating its own purpose (D-06).
+- [ ] T246-C5 — Schema check reachable from the same runner the gate executes.
+- [ ] T246-C6 — Declared bundle inventory; tree enumeration may contribute
+  entries but does not define coverage (R-05a, D-07, F-C3).
+- [ ] T246-C7 — Completeness check that exits non-zero on a missing required
+  entry or a mode mismatch, executable bit included (R-05b, F-C4).
+- [ ] T246-C8 — Falsifier for the completeness check: one declared artifact
+  deliberately omitted, shown RED before the clean assembly is shown GREEN
+  (R-05c).
+- [ ] T246-C9 — The assembled bundle executed from a location with no access to
+  the issue worktree, as a run rather than a claim (R-05d).

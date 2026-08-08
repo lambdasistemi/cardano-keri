@@ -1,10 +1,10 @@
-Outcome: named security invariants are SMT-checked against the exact compiled Cardano-KERI UPLC, with reproducible evidence and explicit trust limits.
+Outcome: prove selected security properties about the exact compiled Plutus V3 UPLC that Cardano-KERI actually deploys — not about its Aiken source — and label honestly what each proof does and does not establish.
 
-State — Updated: 2026-08-02
-Legend: ✅ done · 🟡 active/next · ⏳ queued · ⛔ blocked · ❓ unknown
-🟡 #189 active: #192 PR #215 — S1 accepted/pushed → S2 real import/purpose/preparation active → tractability result → #193–#195
-                                      └→ ⏳ #190 compiled-contract theorem portfolio → independent acceptance
-parallel: ⏳ M8 root-gate lifecycle migration (non-blocking for #192)
-Release and claims of full formal verification are separate.
+Observable test: from a fresh checkout, the repository CI command demonstrates that the pinned Aiken build's production blueprint is completely reconciled, the selected P0 security properties execute against the exact compiled UPLC, source-level negative controls make the instrument fail, clean artifact hashes are restored, and the report distinguishes SMT-valid results without proof terms from kernel proofs, tests, unproved claims, and out-of-scope claims.
 
-Blaster supplies SMT-valid results without Lean proof reconstruction. Evidence is relative to the pinned extractor, UPLC preparation/semantics, ledger encodings, Blaster translation, Z3, fuel, Aiken compiler, and import boundary; it is not whole-system or compiler verification.
+Artifact: the verification ships as an additive, independently-runnable evidence bundle on the ckeri release line, hash-bound to the exact commit, Aiken toolchain and BuiltinSemanticsVariant it verifies. Milestone 1's close gates on its existence.
+
+Scope: the compiled on-chain programs and the evidence about them. Cryptographic primitives are assumed sound; the cage library's internal correctness, whole-system liveness, and deployed parameter hashes are explicitly out of scope. Production rollout and announcement are separate.
+
+Live state, refreshed daily and on every material transition:
+https://github.com/lambdasistemi/cardano-keri/wiki/M8-State

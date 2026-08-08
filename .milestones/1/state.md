@@ -55,7 +55,9 @@ gantt
     axisFormat %m-%d
     section Critical path
     181 tx path - MERGED                     :milestone, done, r1, 2026-08-07, 0d
-    240 Koios-free write path - NEXT         :milestone, active, r2, after r1, 0d
+    257 query algebra - IN FLIGHT            :milestone, active, r1a, after r1, 0d
+    259 flake-lock enforcement               :milestone, r1b, after r1a, 0d
+    240 Koios-free write path                :milestone, r2, after r1b, 0d
     253 endpoint-board OOBI binds no nonce   :milestone, crit, r3, after r2, 0d
     254 checkpoint-validator migration       :milestone, crit, r4, after r3, 0d
     preprod CUTOVER - moves every identity   :milestone, crit, r5, after r4, 0d
@@ -67,7 +69,7 @@ gantt
     formal verification evidence bundle      :milestone, crit, r10, after r8, 0d
 ```
 
-✅ #181 → 🟡 #240 → ⛔ #253 → ⛔ #254 → ⏳ CUTOVER → ⏳ #162 → ⏳ #163/#164 → ⏳ #166 → ⏳ #186
+✅ #181 → 🟡 #257 → ⏳ #259 → ⏳ #240 → ⛔ #253 → ⛔ #254 → ⏳ CUTOVER → ⏳ #162 → ⏳ #163/#164 → ⏳ #166 → ⏳ #186
 
 ## The two blockers filed 2026-08-05
 
@@ -84,8 +86,10 @@ Both are consumer-side stories of epic #171. The validator halves now have a **r
 |---|---|
 | validators #24, follower #175, runnable #188, query API #176, backends #177 | ✅ done |
 | permissionless advance #219 (PR #222) | ✅ merged 2026-08-04 |
-| in-process tx path #181 (PR #221) | ✅ MERGED 2026-08-07 at head `dd6b220f` — the full preprod write journey runs with NO cardano-cli installed, proven at package-closure level (reintroduction goes RED); #255 filed as follow-up |
-| Koios hot-path #240 | 🟡 next — write path moves to local tier only; machine scope requested 2026-08-07; seats a Codex ticket owner per standing rule |
+| in-process tx path #181 (PR #221) | ✅ MERGED 2026-08-07 at head `dd6b220f` — full preprod write journey with NO cardano-cli, proven at package-closure level. Bonus outcome: its kernel dissolved #241 entirely (historical-read design risk CLOSED AS OVERTAKEN, verified by #257 slice 0) |
+| chain-query layer #257 (PR #258) | 🟡 ACTIVE — free query algebra, providers as interpreters, MPFS-pattern atomic snapshots. Submission 2 under findings processing (no repair ceiling; depth outranks speed). NOTE: three commits are LOCAL-ONLY — the draft PR shows none of the work yet |
+| flake-lock enforcement #259 | ⏳ queued after #257 — the commissioned check that makes every clean-worktree claim self-supporting again |
+| Koios hot-path #240 | ⏳ queued after #259 — with #241 closed, #240 ALONE makes every write verb third-party-free; consumes #257's layer |
 | board hardening #253, validator migration #254 | ⛔ blocked — consumer halves in e171; validator halves placement ruled into the new onchain epic (awaiting scope) |
 | preprod cutover | ⏳ queued — desk-gated, executes through #254 |
 | relayer #162, hunters #163/#164, stranger audit #166, hardening #186 | ⏳ queued in that order |

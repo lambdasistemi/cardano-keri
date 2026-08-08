@@ -674,13 +674,16 @@ enforced:   by architecture direction (#257: local interpreter = derived;
             invariant measures providers against self-derived truth). Operator
             ruling 2026-08-07 at the desk.
 
-contract:   auditor-skill-pinning
+contract:   auditor-skill-pinning (CLOSURE FORM since 2026-08-08, A-021)
 parties:    every M1 auditor spawning brief ⟷ the commit-auditor skill text
             (llm-settings shared/skills/commit-auditor/SKILL.md)
-invariant:  the contract text an auditor obeys is a named, reproducible
-            revision: brief pins llm-settings rev + SKILL.md sha256; auditor
-            START echoes the sha256 it read; mismatch (including a dirty
-            working copy) = STOP, never audit against unpinned text
+invariant:  the contract CORPUS an auditor obeys is named and reproducible:
+            the brief pins the NAMED-DELEGATION CLOSURE (every skill file the
+            seat delegates to by name, each rev+sha256 — today: commit-auditor
+            + haskell); START echoes every hash read; mismatch on ANY member
+            (incl. dirty copy) = STOP. haskell dbb058b QUARANTINED: its
+            module-shadowing technique silently fails to load = manufactured
+            audit confidence
 enforced:   RULED 2026-08-07 (A-016b), mechanically checkable from brief+START
             pairs. Trigger: operative text sat UNCOMMITTED — committed as
             969ff86. PIN UPDATED SAME DAY (A-016c) to 02ab0d7 / sha256

@@ -639,9 +639,8 @@ observation (DATA-INV-240-05), never a 'ChainQueryF' operation.
 -}
 localTransactionSettled :: LocalQueryScope cf op -> TxId -> IO Bool
 localTransactionSettled scope txId =
-    runTransaction (localScopeRunner scope) $ do
-        rows <- scanAllTx
-        pure (any ((== wantedTxIdBytes) . Indexer.txInId . fst) rows)
+    runTransaction (localScopeRunner scope) $
+        any ((== wantedTxIdBytes) . Indexer.txInId . fst) <$> scanAllTx
   where
     wantedTxIdBytes = hashToBytes (extractHash (unTxId txId))
 

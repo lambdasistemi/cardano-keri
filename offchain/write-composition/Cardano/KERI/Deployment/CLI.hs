@@ -163,7 +163,7 @@ import Cardano.Ledger.Core (TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
-import Control.Monad (unless, when)
+import Control.Monad (unless, when, (>=>))
 import Data.ByteString qualified as BS
 import Data.Char (isHexDigit)
 import Data.List (find)
@@ -1553,9 +1553,9 @@ publishArtifactsLive scope settings context = traverse publishArtifact
                     , publishFundingAddress = liveFundingAddress context
                     , publishReferenceLovelace =
                         deployReferenceLovelace settings
-                    , publishQueryReferences = \scriptHash ->
-                        localReferenceObservation scope scriptHash
-                            >>= either (fail . show) pure
+                    , publishQueryReferences =
+                        localReferenceObservation scope
+                            >=> either (fail . show) pure
                     , publishTimeoutSeconds =
                         deployTimeoutSeconds settings
                     }

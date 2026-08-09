@@ -22,6 +22,7 @@ module Cardano.KERI.CLI.WriteCompositionBoundarySpec (spec) where
 
 import Data.Char (toLower)
 import Data.List (isInfixOf, isPrefixOf)
+import Data.Maybe (fromMaybe)
 import Test.Hspec
 
 -- | The single frozen source of truth for the component graph (@plan.md@).
@@ -80,8 +81,8 @@ stanzaDependencies header = do
     pure $ maybe [] dependencyTokens (fieldLines "build-depends:" =<< stanzaLines header ls)
 
 hasForbiddenDependency :: [String] -> Bool
-hasForbiddenDependency deps =
-    any (\dep -> any (`isInfixOf` map toLower dep) forbiddenSubstrings) deps
+hasForbiddenDependency =
+    any (\dep -> any (`isInfixOf` map toLower dep) forbiddenSubstrings)
 
 {- | @write-composition@'s stanza and its dependency tokens, or a named
 reason it cannot be found — never a partial/degenerate answer.
@@ -116,7 +117,7 @@ spec = describe "MOD-240-WRITE-COMPOSITION component boundary (INV-240-NOPROVIDE
         case stanzaLines "library write-composition" ls of
             Nothing -> expectationFailure "no `library write-composition` stanza in cardano-keri.cabal"
             Just body -> do
-                let exposed = maybe [] id (fieldLines "exposed-modules:" body)
+                let exposed = fromMaybe [] (fieldLines "exposed-modules:" body)
                 any ("Cardano.KERI.Deployment.CLI" `isInfixOf`) exposed
                     `shouldBe` True
 

@@ -1535,6 +1535,12 @@
           packages = {
             unit-tests = unit-tests-exe;
             indexer-tests = indexer-tests-exe;
+            # #240 N-045: focused packaged (not devshell) exercise of the
+            # register-preflight fixture repair, exposed the same way
+            # unit-tests/indexer-tests already are, so `nix run` builds
+            # and executes it against the real flake package environment
+            # without spending the full local-write-path-check command.
+            registration-migration-tests = registration-migration-tests-exe;
             ckeri-query = ckeri-query-exe;
             format = format-runner;
             format-check = format-check-runner;

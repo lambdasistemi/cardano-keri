@@ -18,8 +18,15 @@ build-type:    Simple
 
 -- Committed keripy oracle fixtures, read hermetically by the unit-tests
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
+-- #240 N-045: exact byte copies of root deploy/preprod/*.json, hermetic
+-- register-preflight fixtures for CLISpec's packaged run (the offchain
+-- flake's `${./.}` store source cannot contain its repository-parent
+-- deploy/ directory). Named explicitly, not folded into an unrelated
+-- wildcard.
 data-files:
   deployment-test/fixtures/*.cesr
+  deployment-test/fixtures/register-preflight-board-manifest.json
+  deployment-test/fixtures/register-preflight-m1-manifest.json
   docs/assets/swagger/query-api.json
   indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json

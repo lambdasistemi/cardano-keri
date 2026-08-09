@@ -41,7 +41,6 @@ import Control.Exception (SomeException, displayException, try)
 import Data.ByteString qualified as BS
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Paths_cardano_keri (getDataFileName)
-import System.Directory (doesFileExist)
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (
     Spec,
@@ -86,15 +85,11 @@ spec = do
                     getDataFileName
                         "deployment-test/fixtures/kli-export-2-of-5.cesr"
                 manifestPath <-
-                    requiredPath
-                        [ "../deploy/preprod/m1-manifest.json"
-                        , "deploy/preprod/m1-manifest.json"
-                        ]
+                    getDataFileName
+                        "deployment-test/fixtures/register-preflight-m1-manifest.json"
                 boardManifestPath <-
-                    requiredPath
-                        [ "../deploy/preprod/board-manifest.json"
-                        , "deploy/preprod/board-manifest.json"
-                        ]
+                    getDataFileName
+                        "deployment-test/fixtures/register-preflight-board-manifest.json"
                 callsRef <- newIORef ([] :: [String])
                 linesRef <- newIORef ([] :: [String])
                 let record calls tag action =
@@ -205,13 +200,6 @@ sampleSnapshot =
         , snapshotSource = SourceKoios
         , snapshotConsistency = LegacySequential
         }
-
-requiredPath :: [FilePath] -> IO FilePath
-requiredPath [] = fail "cannot locate a required register preflight fixture"
-requiredPath (candidate : rest) =
-    doesFileExist candidate >>= \case
-        True -> pure candidate
-        False -> requiredPath rest
 
 sampleActiveCheckpoint :: ActiveCheckpoint
 sampleActiveCheckpoint =

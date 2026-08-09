@@ -43,7 +43,7 @@ Acceptance:
   declaration.
 - **REQ-259-02:** Cover every justfile invocation that evaluates the primary
   offchain flake, including invocations reached by root `just ci`; the frozen
-  base census is 37 invocations, 9 guarded and 28 unguarded.
+  base census is 35 invocations, 9 guarded and 26 unguarded.
 - **REQ-259-03:** Cover direct primary-offchain-flake evaluation in
   `.github/workflows/ci.yml`; remote `nix shell` calls and the independent
   BLAKE3 spike flake are outside this offchain-lock population.

@@ -21,8 +21,9 @@ lock unchanged after all CI dependencies complete.
 - `deployPreprod` is already present in the committed lock after #257.
 - Primary offchain direct-input sweep: 17 declared and 17 root-lock entries;
   no other missing direct input found at planning time.
-- Justfile census: 37 primary-offchain invocations; 9 contain the no-write
-  flag and 28 do not.
+- Justfile census: 35 primary-offchain invocations; 9 contain the no-write
+  flag and 26 do not. The issue's 37 / 9 / 28 count predates the #257 merge;
+  three mechanical recounts at this frozen base agree on 35 / 9 / 26.
 - `onchain/` has no flake/lock pair, so it has no analogous declared/unlocked
   input gap. Auxiliary fixture and spike flakes are outside this ticket's
   primary-offchain contract.
@@ -108,7 +109,7 @@ Provider-reported token counts are unavailable for local files.
 | Artifact | Ceiling bytes / lines | Actual bytes / lines |
 |---|---:|---:|
 | `spec.md` | 6,000 / 140 | 4,104 / 89 |
-| `plan.md` | 6,000 / 150 | 4,793 / 115 |
+| `plan.md` | 6,000 / 150 | 4,900 / 116 |
 | `modules-model.md` | 4,000 / 100 | 1,899 / 48 |
 | `data-model.md` | 4,000 / 110 | 1,928 / 52 |
 | `functions-model.md` | 3,000 / 90 | 1,164 / 39 |

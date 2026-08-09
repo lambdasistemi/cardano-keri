@@ -1070,7 +1070,7 @@ runBoardPost settings = do
                 scope
                 (boardWriteBundleTx info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        (reference, funding) <- either (fail . show) pure (snapshotValue envelope)
+        let (reference, funding) = snapshotValue envelope
         withBoardContext scope transaction [reference] $ \_context config -> do
             result <-
                 BoardTx.runBoardPostTransaction config plan funding
@@ -1100,8 +1100,7 @@ runBoardUpdate settings = do
                 scope
                 (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        (reference, catalogWithOutputs, funding) <-
-            either (fail . show) pure (snapshotValue envelope)
+        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
         entry <-
             either fail pure $
                 BoardTx.selectBoardEntry
@@ -1144,8 +1143,7 @@ runBoardRetire settings = do
                 scope
                 (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        (reference, catalogWithOutputs, funding) <-
-            either (fail . show) pure (snapshotValue envelope)
+        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
         entry <-
             either fail pure $
                 BoardTx.selectBoardEntry
@@ -1233,8 +1231,7 @@ activeCheckpointLocal scope aid = do
     envelope <-
         runLocalSnapshotTx scope (localCurrentCheckpoint scope aid)
             >>= either (fail . show) pure
-    result <- either (fail . show) pure (snapshotValue envelope)
-    maybe (fail "checkpoint is not registered") pure result
+    maybe (fail "checkpoint is not registered") pure (snapshotValue envelope)
 
 {- | #240 (N-022\/N-025): one script hash resolved through the local
 reference-output algebra and converted straight to a ledger input,
@@ -1547,7 +1544,7 @@ publishArtifactsLive scope settings context = traverse publishArtifact
         envelope <-
             runLocalSnapshotTx scope (fundingOutputsTx (liveFundingAddressText (liveConfig context)))
                 >>= either (fail . show) pure
-        funding <- either (fail . show) pure (snapshotValue envelope)
+        let funding = snapshotValue envelope
         published <-
             publishScripts
                 PublishConfig
@@ -1740,7 +1737,9 @@ productionRegisterRuntime =
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
         , registerQuerySnapshot = \scope req ->
-            runRegistrationSnapshot (localInterpreter scope) req
+            runTransaction
+                (localScopeRunner scope)
+                (runRegistrationSnapshot (localInterpreter scope) req)
         , registerWriteLine = putStrLn
         , registerSubmit = submitRegistration
         }
@@ -1946,7 +1945,7 @@ submitAdvance scope settings manifest active package signatureFile = do
                 fundingAddress
             )
             >>= either (fail . show) pure
-    (references, activeInput, funding) <- either (fail . show) pure (snapshotValue envelope)
+    let (references, activeInput, funding) = snapshotValue envelope
     withLiveContext
         ( advanceLiveConfig
             settings
@@ -2153,8 +2152,8 @@ submitClose scope settings manifest package signatureFile = do
                 fundingAddress
             )
             >>= either (fail . show) pure
-    (references, active, funding) <- either (fail . show) pure (snapshotValue envelope)
-    let liveConfig =
+    let (references, active, funding) = snapshotValue envelope
+        liveConfig =
             closeLiveConfig
                 settings
                 payer

@@ -263,8 +263,8 @@ last, in this SAME 'Transaction', never a second runner invocation.
 localSnapshotTx ::
     Transaction IO cf Cols op (Either ChainQueryError a) ->
     Transaction IO cf Cols op (Either ChainQueryError (QuerySnapshot a))
-localSnapshotTx reads = do
-    outcome <- reads
+localSnapshotTx bundle = do
+    outcome <- bundle
     case outcome of
         Left err -> pure (Left err)
         Right value -> do
@@ -286,8 +286,8 @@ runLocalSnapshotTx ::
     LocalQueryScope cf op ->
     Transaction IO cf Cols op (Either ChainQueryError a) ->
     IO (Either ChainQueryError (QuerySnapshot a))
-runLocalSnapshotTx scope reads =
-    runTransaction (localScopeRunner scope) (localSnapshotTx reads)
+runLocalSnapshotTx scope bundle =
+    runTransaction (localScopeRunner scope) (localSnapshotTx bundle)
 
 {- | Find the exactly-one live checkpoint output whose decoded AID matches
 the requested text; more than one match fails closed (INV-257-PROVIDER).
@@ -620,17 +620,17 @@ success.
 -}
 localSettlementObserver :: LocalQueryScope cf op -> SettlementObserver IO
 localSettlementObserver scope =
-    SettlementObserver $ \policyHex assetNameHex ->
+    SettlementObserver $ \policyHex assetHex ->
         runTransaction (localScopeRunner scope) $ do
             rows <- scanAllTx
             pure $ case traverse toChainAssetUtxo rows of
                 Left _decodeFailure -> []
-                Right utxos -> filter (carriesAsset policyHex assetNameHex) utxos
+                Right utxos -> filter (carriesAsset policyHex assetHex) utxos
 
 carriesAsset :: Text -> Text -> ChainAssetUtxo -> Bool
-carriesAsset policyHex assetNameHex utxo =
+carriesAsset policyHex assetHex utxo =
     any
-        (\asset -> chainAssetPolicy asset == policyHex && chainAssetName asset == assetNameHex)
+        (\asset -> chainAssetPolicy asset == policyHex && chainAssetName asset == assetHex)
         (chainAssetList utxo)
 
 {- | RQ-240-06\/DAT-240-SETTLEMENT-PROBES: whether the follower currently

@@ -66,7 +66,7 @@ jobs:
       - name: Warm offchain store (derivations + dev shell)
         working-directory: offchain
         run: >-
-          nix build --quiet
+          nix build --quiet --no-write-lock-file
           .#checks.x86_64-linux.unit-tests
           .#packages.x86_64-linux.format
           .#packages.x86_64-linux.format-check
@@ -95,6 +95,25 @@ jobs:
           nixpkgs#gawk
           nixpkgs#jq
           --command bash scripts/check-blaster-identity-consistency.sh
+
+  flake-lock-guard:
+    name: Flake-lock guard (offchain)
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      # #259 INV-259-PARITY: required caller of both this job and `just ci`.
+      # Runs the same canonical executable as `just check-flake-lock-guard` —
+      # no copied classification logic.
+      - name: Enforce immutable offchain flake inputs
+        run: >-
+          nix shell
+          nixpkgs#bash
+          nixpkgs#coreutils
+          nixpkgs#gnugrep
+          nixpkgs#gnused
+          nixpkgs#gawk
+          nixpkgs#jq
+          --command bash scripts/check-flake-lock-guard.sh
 
   onchain:
     name: Onchain (Aiken)
@@ -125,7 +144,7 @@ jobs:
         working-directory: lean
         run: |
           set -o pipefail
-          nix shell ../offchain#lean --command lake build 2>&1 | tee build.log
+          nix shell --no-write-lock-file ../offchain#lean --command lake build 2>&1 | tee build.log
           ! grep -q "uses 'sorry'" build.log
       # Map completeness + name existence + Haskell-regenerated verdict-vector
       # drift (the script ends in `just check-lifecycle-trace-vectors`, which
@@ -161,20 +180,20 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Run unit tests
         working-directory: offchain
-        run: nix run --quiet .#unit-tests
+        run: nix run --quiet --no-write-lock-file .#unit-tests
       - name: Run deployment and manifest tests
         working-directory: offchain
-        run: nix run --quiet .#deployment-tests
+        run: nix run --quiet --no-write-lock-file .#deployment-tests
       - name: Check ckeri opt-env-conf surface and precedence
         run: |
-          nix build --quiet ./offchain#ckeri
+          nix build --quiet --no-write-lock-file ./offchain#ckeri
           ./scripts/check-ckeri-cli.sh ./result/bin/ckeri
       - name: Check formatting
         working-directory: offchain
-        run: nix run --quiet .#format-check
+        run: nix run --quiet --no-write-lock-file .#format-check
       - name: Lint
         working-directory: offchain
-        run: nix run --quiet .#hlint
+        run: nix run --quiet --no-write-lock-file .#hlint
 
   devshell:
     name: Dev shell
@@ -198,7 +217,7 @@ jobs:
       # cardano-node-clients `devnet` sublibrary (a real full build, not reduced).
       - name: Dev-shell cabal build
         working-directory: offchain
-        run: nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
+        run: nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
 
   e2e:
     name: E2E (withDevnet)
@@ -215,7 +234,7 @@ jobs:
       # production checkpoint validator and are rejected at the staging boundary.
       - name: withDevnet cage + checkpoint staging smoke
         working-directory: offchain
-        run: nix build --quiet -L .#checks.x86_64-linux.e2e
+        run: nix build --quiet --no-write-lock-file -L .#checks.x86_64-linux.e2e
 
   m1-manifest:
     name: M1 preprod deploy transcript + manifest
@@ -263,7 +282,7 @@ jobs:
         env:
           KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
         run: |
-          nix build --quiet ./offchain#ckeri
+          nix build --quiet --no-write-lock-file ./offchain#ckeri
           nix shell \
             nixpkgs#bash \
             nixpkgs#coreutils \
@@ -290,7 +309,7 @@ jobs:
         env:
           KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
         run: |
-          nix build --quiet ./offchain#ckeri
+          nix build --quiet --no-write-lock-file ./offchain#ckeri
           nix shell \
             nixpkgs#bash \
             nixpkgs#coreutils \
@@ -318,7 +337,7 @@ jobs:
         env:
           KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
         run: |
-          nix build --quiet ./offchain#ckeri
+          nix build --quiet --no-write-lock-file ./offchain#ckeri
           nix shell \
             nixpkgs#bash \
             nixpkgs#coreutils \
@@ -346,7 +365,7 @@ jobs:
         env:
           KOIOS_TOKEN: ${{ secrets.KOIOS_TOKEN }}
         run: |
-          nix build --quiet ./offchain#ckeri
+          nix build --quiet --no-write-lock-file ./offchain#ckeri
           nix shell \
             nixpkgs#bash \
             nixpkgs#coreutils \
@@ -374,11 +393,11 @@ jobs:
       # so a hand-edit of the artifact is caught without a devnet.
       - name: Verify committed sweep artifact
         working-directory: offchain
-        run: nix build --quiet -L .#checks.x86_64-linux.sweep-consistency
+        run: nix build --quiet --no-write-lock-file -L .#checks.x86_64-linux.sweep-consistency
       # Heavy reproducible verification: regenerate the artifact by submitting
       # one Modify per batch size through withDevnet, ASSERTING each expected
       # node outcome (N=1..4 settle; N>=5 reject at the specific Phase-1 limit).
       # A boundary/harness regression fails the run. Not in the routine gate.
       - name: Regenerate + assert #99 Modify batch sweep
         working-directory: offchain
-        run: nix run --quiet .#e2e-sweep
+        run: nix run --quiet --no-write-lock-file .#e2e-sweep

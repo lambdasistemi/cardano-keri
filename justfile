@@ -10,7 +10,7 @@ default:
 
 # Format Haskell/cabal/nix sources
 format-offchain:
-    cd offchain && nix run --quiet .#format
+    cd offchain && nix run --quiet --no-write-lock-file .#format
 
 # Check Haskell/cabal formatting without modifying files
 format-check-offchain:
@@ -18,7 +18,7 @@ format-check-offchain:
 
 # Run hlint over Haskell sources
 hlint:
-    cd offchain && nix run --quiet .#hlint
+    cd offchain && nix run --quiet --no-write-lock-file .#hlint
 
 # Run offchain unit tests (executes the binary)
 unit match="":
@@ -28,25 +28,25 @@ unit match="":
     if [[ '{{ match }}' != "" ]]; then
         args+=(--match "{{ match }}")
     fi
-    cd offchain && nix run --quiet .#unit-tests -- "${args[@]}"
+    cd offchain && nix run --quiet --no-write-lock-file .#unit-tests -- "${args[@]}"
 
 # Build the offchain library + tests
 build-offchain:
-    cd offchain && nix build --quiet .#checks.x86_64-linux.unit-tests
+    cd offchain && nix build --quiet --no-write-lock-file .#checks.x86_64-linux.unit-tests
 
 # Run the release-script derivation and manifest unit tests.
 deployment-unit:
-    cd offchain && nix run --quiet .#deployment-tests
+    cd offchain && nix run --quiet --no-write-lock-file .#deployment-tests
 
 # Run checkpoint indexer codec tests (executes the binary).
 indexer-unit:
-    cd offchain && nix run --quiet .#indexer-tests
+    cd offchain && nix run --quiet --no-write-lock-file .#indexer-tests
 
 # #177 Slice 1: run the focused cli-tests suite plus the packaged ckeri
 # status/backend --help surface and fork-retirement absence checks through
 # one strict-PATH app (node-free, deterministic).
 backend-check:
-    cd offchain && nix run --quiet .#backend-check
+    cd offchain && nix run --quiet --no-write-lock-file .#backend-check
 
 # #177 Slice 2: exercise the deterministic transcript validator and every
 # approved negative control. Live raw-file reconciliation remains an explicit
@@ -54,16 +54,16 @@ backend-check:
 backend-transcript-check:
     ./scripts/test-backend-status-transcripts.sh
     ./scripts/check-backend-status-transcripts.sh --transcript deploy/preprod/m1-backend-status-acceptance.txt
-    nix run --quiet path:./offchain#backend-transcript-check
-    nix build --quiet --no-link path:./offchain#checks.x86_64-linux.backend-transcript-check
+    nix run --quiet --no-write-lock-file path:./offchain#backend-transcript-check
+    nix build --quiet --no-write-lock-file --no-link path:./offchain#checks.x86_64-linux.backend-transcript-check
 
 # #181 Slice 1: coherent input/runtime seam focused tests — plural payer
 # addresses through one engine transaction (payerUtxosTx) and the
 # indexer-neutral TransactionRuntime call-order/fail-closed/signing proofs.
 transaction-path-check:
-    cd offchain && nix develop --quiet -c cabal test deployment-tests -O0 \
+    cd offchain && nix develop --quiet --no-write-lock-file -c cabal test deployment-tests -O0 \
         --test-options='--match "classifyEvaluation" --match "signWithCardanoCliKey" --match "runTransactionOperation"'
-    cd offchain && nix develop --quiet -c cabal test indexer-tests -O0 \
+    cd offchain && nix develop --quiet --no-write-lock-file -c cabal test indexer-tests -O0 \
         --test-options='--match "payerUtxosTx"'
 
 # #181 Slice 2A: focused shared build/sign kernel. The focused executable
@@ -243,7 +243,7 @@ deploy-register-path-check matcher="":
 # #176 Slice 1: run the query-endpoint contract suite (application-level
 # JSON/freshness/transaction-count/board-authenticity tests).
 query-endpoint-check:
-    cd offchain && nix run --quiet .#query-endpoint-check
+    cd offchain && nix run --quiet --no-write-lock-file .#query-endpoint-check
 
 # #176 Slice 1: static guard proving the query HTTP layer owns no mutable
 # derived state (FR-4), proven able to fail against its own positive-control
@@ -256,15 +256,15 @@ query-endpoint-cache-guard:
 # apps.<system>.query-algebra) so `nix flake check` actually executes the
 # preflight + focused proof suite, not just a manually-run justfile body.
 query-algebra-check:
-    cd offchain && nix run --quiet .#query-algebra
+    cd offchain && nix run --quiet --no-write-lock-file .#query-algebra
 
 # Audit exact production UPLC extraction and the complete pinned Blaster graph.
 blaster:
-    cd offchain && nix run --quiet .#blaster
+    cd offchain && nix run --quiet --no-write-lock-file .#blaster
 
 # Check the opt-env-conf CLI surface and option/environment/YAML precedence.
 check-ckeri-cli:
-    cd offchain && nix build --quiet .#ckeri
+    cd offchain && nix build --quiet --no-write-lock-file .#ckeri
     ./scripts/check-ckeri-cli.sh ./offchain/result/bin/ckeri
 
 # Check the raw M1 registration transcript and its settled transaction facts.
@@ -291,16 +291,16 @@ check-board-acceptance:
 # project + e2e-tests from local source. cabal.project.devshell drops the https
 # CHaP repository.
 devshell-offchain:
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
 
 # Run all live-boundary withDevnet smokes (Linux-only): the existing #99 cage
 # positive plus the #114 permissionless checkpoint lifecycle boundary.
 e2e:
-    cd offchain && nix build --quiet -L .#checks.x86_64-linux.e2e
+    cd offchain && nix build --quiet --no-write-lock-file -L .#checks.x86_64-linux.e2e
 
 # Run only the #136 register-small vertical.
 e2e-checkpoint:
-    cd offchain && nix run --quiet .#e2e
+    cd offchain && nix run --quiet --no-write-lock-file .#e2e
 
 # #175 live composition smoke: devnet up, post a real checkpoint
 # registration, follow it over a real N2C socket, read it back from the
@@ -318,7 +318,7 @@ ci-live:
             exit 1
             ;;
     esac
-    cd offchain && nix run --quiet .#follower-e2e
+    cd offchain && nix run --quiet --no-write-lock-file .#follower-e2e
 
 # --- checkpoint fixtures (#68) ---
 
@@ -328,7 +328,7 @@ ci-live:
 # the emitted module so it also satisfies `format-check-onchain`.
 gen-checkpoint-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-vectors -- ../onchain/lib/cardano_keri/checkpoint/vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-vectors -- ../onchain/lib/cardano_keri/checkpoint/vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/vectors.ak
 
 # Drift check: regenerate the fixtures and fail if the committed copy diverges
@@ -343,7 +343,7 @@ check-checkpoint-vectors: gen-checkpoint-vectors
 # then canonicalizes the emitted module.
 gen-enforcement-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-enforcement-vectors -- ../onchain/lib/cardano_keri/checkpoint/enforcement_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-enforcement-vectors -- ../onchain/lib/cardano_keri/checkpoint/enforcement_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/enforcement_vectors.ak
 
 # Drift check: regenerate the enforcement vectors and fail if the committed copy
@@ -359,7 +359,7 @@ check-enforcement-vectors: gen-enforcement-vectors
 # predicate verdict before emitting); `aiken fmt` then canonicalizes the module.
 gen-registration-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-registration-vectors -- ../onchain/lib/cardano_keri/checkpoint/registration_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-registration-vectors -- ../onchain/lib/cardano_keri/checkpoint/registration_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/registration_vectors.ak
 
 # Drift check: regenerate the registration vectors and fail if the committed
@@ -376,7 +376,7 @@ check-registration-vectors: gen-registration-vectors
 # the module.
 gen-advance-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-advance-vectors -- ../onchain/lib/cardano_keri/checkpoint/advance_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-advance-vectors -- ../onchain/lib/cardano_keri/checkpoint/advance_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/advance_vectors.ak
 
 # Drift check: regenerate the advance vectors and fail if the committed copy
@@ -387,7 +387,7 @@ check-advance-vectors: gen-advance-vectors
 # Generate #117 Close message/address/signature vectors from the Haskell model.
 gen-close-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-close-vectors -- ../onchain/lib/cardano_keri/checkpoint/close_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-close-vectors -- ../onchain/lib/cardano_keri/checkpoint/close_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/close_vectors.ak
 
 # Regenerate and reject any committed Haskell/Aiken Close vector drift.
@@ -399,7 +399,7 @@ check-close-vectors: gen-close-vectors
 # parameter verdicts, and raw deadline-boundary verdicts.
 gen-freeze-bond-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-freeze-bond-vectors -- ../onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-freeze-bond-vectors -- ../onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
 
 # Drift check: a fresh Haskell regenerate must reproduce the committed module.
@@ -410,7 +410,7 @@ check-freeze-bond-vectors: gen-freeze-bond-vectors
 # mirror. The generated Aiken module is never edited by hand.
 gen-lifecycle-trace-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-lifecycle-trace-vectors -- ../onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak'
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-lifecycle-trace-vectors -- ../onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak'
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
 
 # Drift check: Haskell is the sole source of theorem verdict fixtures.
@@ -532,5 +532,20 @@ ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
 ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
 
-# Full CI gate (mirrors .github/workflows/ci.yml)
-ci: ci-onchain ci-blake3 ci-offchain
+# #259: shared flake-lock guard — declared/locked reconciliation, justfile +
+# workflow invocation guarding, and caller parity (INV-259-PARITY: required
+# caller of both this recipe and .github/workflows/ci.yml).
+check-flake-lock-guard:
+    ./scripts/check-flake-lock-guard.sh
+
+# Full CI gate (mirrors .github/workflows/ci.yml). INV-259-ASSERT: asserts
+# offchain/flake.lock is byte-identical after every dependency below has run,
+# and fails with the diff if not — every direct invocation in the
+# dependencies above must therefore already carry --no-write-lock-file.
+# Calls the shared script's own --assert-lock-unchanged mode rather than
+# inlining the check, so its one property proof (in the script's own
+# --self-test) exercises the exact code this recipe runs, not a copy of it;
+# the guard's own INV-259-ASSERT caller-presence check requires this exact
+# invocation to remain in this recipe.
+ci: check-flake-lock-guard ci-onchain ci-blake3 ci-offchain
+    ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged

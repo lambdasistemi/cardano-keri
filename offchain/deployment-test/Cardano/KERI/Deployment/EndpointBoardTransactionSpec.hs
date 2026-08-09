@@ -25,6 +25,7 @@ import Cardano.KERI.Deployment.EndpointBoardTransaction (
     runBoardRetireTransaction,
     runBoardUpdateTransaction,
  )
+import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
@@ -124,6 +125,9 @@ spec = describe "in-process endpoint-board transactions" $ do
                 postPlan
                 fundingInputs
         BoardResult txId <- either (fail . show) pure result
+        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR is set; see
+        -- Cardano.KERI.Deployment.ParityOracle.Capture.
+        captureShape "board-post" (renderTxId txId) tx
         let body = tx ^. bodyTxL
             outputs = toList (body ^. outputsTxBodyL)
             MultiAsset minted = body ^. mintTxBodyL
@@ -152,6 +156,9 @@ spec = describe "in-process endpoint-board transactions" $ do
                 fundingInputs
                 boardInput
         BoardResult txId <- either (fail . show) pure result
+        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR is set; see
+        -- Cardano.KERI.Deployment.ParityOracle.Capture.
+        captureShape "board-update" (renderTxId txId) tx
         let body = tx ^. bodyTxL
             Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
             spendPurpose =
@@ -176,6 +183,9 @@ spec = describe "in-process endpoint-board transactions" $ do
                 fundingInputs
                 boardInput
         BoardResult txId <- either (fail . show) pure result
+        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR is set; see
+        -- Cardano.KERI.Deployment.ParityOracle.Capture.
+        captureShape "board-retire" (renderTxId txId) tx
         let body = tx ^. bodyTxL
             outputs = toList (body ^. outputsTxBodyL)
             MultiAsset minted = body ^. mintTxBodyL

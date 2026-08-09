@@ -7,6 +7,7 @@ import Cardano.KERI.CLI.Backend.EndpointSpec qualified as EndpointSpec
 import Cardano.KERI.CLI.Backend.KoiosSpec qualified as KoiosSpec
 import Cardano.KERI.CLI.Backend.LocalSpec qualified as LocalSpec
 import Cardano.KERI.CLI.ProductionSpec qualified as ProductionSpec
+import Cardano.KERI.CLI.WriteCompositionBoundarySpec qualified as WriteCompositionBoundarySpec
 import Test.Hspec (hspec)
 
 main :: IO ()
@@ -18,3 +19,4 @@ main = hspec $ do
     KoiosSpec.spec
     LocalSpec.spec
     ProductionSpec.spec
+    WriteCompositionBoundarySpec.spec

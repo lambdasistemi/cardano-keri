@@ -307,6 +307,20 @@
           # #257: the focused chain-query algebra proof suite.
           chain-query-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.chain-query-tests;
+          # #240 T240-S1-01/03/13: the five base-oracle capture suites plus
+          # the local write-path atomicity/reference/settlement proof.
+          publisher-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.publisher-migration-tests;
+          registration-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.registration-migration-tests;
+          advance-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.advance-migration-tests;
+          close-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.close-migration-tests;
+          board-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.board-migration-tests;
+          local-write-path-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.local-write-path-tests;
           # #177 Slice 1: the packaged `ckeri` executable itself, top-level
           # (unlike e2eWiring.ckeriRunner below) so `backend-check` can prove
           # its --help/status surface without depending on the Aiken
@@ -377,6 +391,89 @@
             ${indexer-tests-runner}/bin/indexer-tests
             touch $out
           '';
+          # #240 T240-S1-01/03: one flake-owned command running the five
+          # base-oracle capture suites (must all pass) alongside the local
+          # write-path atomicity/reference/settlement proof (must fail with
+          # EXACTLY its three named RED examples, never an unrelated
+          # failure) -- N-005/N-006/N-007/N-008. `nix run` inherits the
+          # caller's environment, so CKERI_PARITY_ORACLE_DIR set by the
+          # caller reaches Cardano.KERI.Deployment.ParityOracle.Capture
+          # unchanged; this app never sets it itself. Not wired as a
+          # `checks` entry: a sandboxed `nix flake check` run has no
+          # writable CKERI_PARITY_ORACLE_DIR and no reason to assert a
+          # fixed RED shape forever -- once T240-S1 lands GREEN this
+          # exact script becomes obsolete, unlike the permanent
+          # `local-write-path-check` T240-S1-13 will add.
+          local-write-path-oracle-runner = pkgs.writeShellApplication {
+            name = "local-write-path-oracle";
+            runtimeInputs = [
+              publisher-migration-tests-exe
+              registration-migration-tests-exe
+              advance-migration-tests-exe
+              close-migration-tests-exe
+              board-migration-tests-exe
+              local-write-path-tests-exe
+              pkgs.coreutils
+              pkgs.gnugrep
+            ];
+            text = ''
+              : "''${CKERI_PARITY_ORACLE_DIR:?CKERI_PARITY_ORACLE_DIR must be set}"
+              status=0
+
+              for suite in \
+                publisher-migration-tests \
+                registration-migration-tests \
+                advance-migration-tests \
+                close-migration-tests \
+                board-migration-tests; do
+                echo "=== $suite (must pass) ==="
+                "$suite" && ok=1 || ok=0
+                if [ "$ok" -ne 1 ]; then
+                  echo "FAIL: $suite was expected to pass (base-oracle capture)" >&2
+                  status=1
+                fi
+              done
+
+              echo "=== local-write-path-tests (expected RED) ==="
+              lwp_output="$(local-write-path-tests 2>&1)" && lwp_exit=0 || lwp_exit=$?
+              echo "$lwp_output"
+              if [ "$lwp_exit" -eq 0 ]; then
+                echo "FAIL: local-write-path-tests unexpectedly GREEN" >&2
+                status=1
+              else
+                missing=0
+                for marker in \
+                  "should derive the live reference output instead of reporting UnsupportedOperation" \
+                  "capSettlementObserver's probe should reflect a live matching asset output" \
+                  "capTransactionSettled should reflect a live tracked output of the exact tx id"; do
+                  if ! grep -qF "$marker" <<<"$lwp_output"; then
+                    echo "FAIL: expected RED example not found: $marker" >&2
+                    missing=1
+                  fi
+                done
+                if ! grep -qE ' 3 failures?$' <<<"$lwp_output"; then
+                  echo "FAIL: expected exactly 3 failures in local-write-path-tests" >&2
+                  missing=1
+                fi
+                if [ "$missing" -ne 0 ]; then
+                  status=1
+                fi
+              fi
+
+              echo "=== verifying 8 base-oracle capture files under $CKERI_PARITY_ORACLE_DIR ==="
+              for shape in premint register advance close publish board-post board-update board-retire; do
+                for ext in txid txbody.cbor.hex; do
+                  f="$CKERI_PARITY_ORACLE_DIR/$shape.$ext"
+                  if [ ! -s "$f" ]; then
+                    echo "FAIL: missing or empty capture file: $f" >&2
+                    status=1
+                  fi
+                done
+              done
+
+              exit "$status"
+            '';
+          };
           # #176 Slice 1: the same "run the compiled test binary" shape as
           # indexer-tests-check/-runner, distinctly named so the immutable
           # slice gate can invoke this slice's contract check by a stable
@@ -1364,6 +1461,11 @@
             backend-check = {
               type = "app";
               program = "${backend-check-runner}/bin/backend-check";
+            };
+            local-write-path-oracle = {
+              type = "app";
+              program =
+                "${local-write-path-oracle-runner}/bin/local-write-path-oracle";
             };
             backend-transcript-check = {
               type = "app";

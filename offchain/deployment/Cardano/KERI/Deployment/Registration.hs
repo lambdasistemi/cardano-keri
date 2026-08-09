@@ -7,21 +7,22 @@ Description : Build and settle V1 registration through the in-process runtime
 
 #181 Slice 2C replaces the external transaction command path with the shared
 'Cardano.KERI.Deployment.TransactionRuntime.runTransactionBuild' kernel. The
-premint and register phases consume caller-resolved funding and reference
-UTxOs, validate reference-script hashes against the immutable plan, build and
-sign in process, derive the signed transaction id purely, submit exactly that
-signed value, and observe settlement through the injected runtime.
+premint and register phases consume a caller-resolved 'RegistrationSnapshot'
+(#257: the algebra's fully resolved current-state read, A-001), validate
+reference-script hashes against the immutable plan, build and sign in
+process, derive the signed transaction id purely, submit exactly that signed
+value, and observe settlement through
+'Cardano.KERI.ChainQuery.Settlement.observeSettlement' (moved there
+unchanged as the former @awaitAsset@).
 -}
 module Cardano.KERI.Deployment.Registration (
     RegistrationPlan (..),
     RegisterConfig (..),
     RegistrationCheckError (..),
     RegistrationError (..),
-    AssetObservationTimeout (..),
     mkRegistrationPlan,
     premintOne,
     registerOne,
-    awaitAsset,
     plutusDataJson,
     plutusDataFromJson,
 ) where
@@ -40,10 +41,11 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
     registerObserverRedeemerData,
  )
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainAsset (..),
-    ChainAssetUtxo (..),
+import Cardano.KERI.ChainQuery (
+    RegistrationSnapshot (..),
+    SettlementObserver,
  )
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataFromJson, plutusDataJson)
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
@@ -123,11 +125,8 @@ import Cardano.Tx.Build (
     withdrawScript,
  )
 import Codec.Binary.Bech32 qualified as Bech32
-import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, try)
 import Control.Monad (unless, when)
-import Data.Aeson (Value, object, withObject, (.:), (.:?), (.=))
-import Data.Aeson.Types (Parser, parseEither)
+import Data.Aeson (Value)
 import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (
     Base (Base16),
@@ -142,7 +141,6 @@ import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Lens.Micro ((^.))
 import PlutusCore.Data (Data (..))
 import PlutusTx.Builtins.Internal (BuiltinData (..))
@@ -170,17 +168,18 @@ data RegistrationPlan = RegistrationPlan
     }
     deriving stock (Show, Eq)
 
-{- | Caller-owned capabilities and already-resolved ledger rows for one
-registration evolution. Reference outputs are deliberately supplied as full
-'TxOut's: their script bytes affect both fees and script-integrity language
-selection, so a mere @TxIn@ is not enough input to the build kernel.
+{- | Caller-owned capabilities for one registration evolution (#257: no
+query callback or concrete provider — RQ-257-07). Reference and payer rows
+arrive per build phase through the injected 'RegistrationSnapshot'
+(DATA-INV-257-04): reference outputs are the algebra's own ledger-ready
+'TxOut's, whose script bytes affect both fees and script-integrity language
+selection, so a mere @TxIn@ was never enough input to the build kernel.
 -}
 data RegisterConfig = RegisterConfig
     { registerRuntime :: !(TransactionRuntime IO)
-    , registerReferenceUtxos :: ![(TxIn, TxOut ConwayEra)]
     , registerFundingAddress :: !Addr
     , registerLifecycleRewardAccount :: !AccountAddress
-    , registerQueryAsset :: !(Text -> Text -> IO [ChainAssetUtxo])
+    , registerSettlementObserver :: !(SettlementObserver IO)
     , registerTimeoutSeconds :: !Int
     , registerPollDelayMicros :: !Int
     }
@@ -195,10 +194,6 @@ data RegistrationError
     = RegistrationFundingSelectionFailed !PayerSelectionError
     | RegistrationPlanRejected !String
     | RegistrationBuildFailed !(TransactionBuildError RegistrationCheckError)
-    deriving stock (Eq, Show)
-
--- | The exact asset identity that was not observed before the deadline.
-data AssetObservationTimeout = AssetObservationTimeout !Text !Text !Text !Text
     deriving stock (Eq, Show)
 
 -- | Preserve already-encoded Plutus data at the typed builder boundary.
@@ -295,11 +290,11 @@ snapshot used by balancing and the aggregate execution-unit check.
 premintOne ::
     RegisterConfig ->
     RegistrationPlan ->
-    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationSnapshot ->
     Bool ->
     IO (Either RegistrationError TxId)
-premintOne config plan inputs registerLifecycle =
-    case premintInputs config plan inputs registerLifecycle of
+premintOne config plan snapshot registerLifecycle =
+    case premintInputs config plan snapshot registerLifecycle of
         Left err -> pure (Left err)
         Right PremintInputs{..} ->
             runRegistrationBuild
@@ -328,11 +323,11 @@ carry exactly one token under the plan's proof asset identity.
 registerOne ::
     RegisterConfig ->
     RegistrationPlan ->
-    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationSnapshot ->
     (TxIn, TxOut ConwayEra) ->
     IO (Either RegistrationError TxId)
-registerOne config plan inputs proofInput =
-    case registerInputs config plan inputs proofInput of
+registerOne config plan snapshot proofInput =
+    case registerInputs config plan snapshot proofInput of
         Left err -> pure (Left err)
         Right RegisterInputs{..} ->
             runRegistrationBuild
@@ -385,10 +380,10 @@ data RegisterInputs = RegisterInputs
 premintInputs ::
     RegisterConfig ->
     RegistrationPlan ->
-    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationSnapshot ->
     Bool ->
     Either RegistrationError PremintInputs
-premintInputs config plan inputs registerLifecycle = do
+premintInputs config plan snapshot registerLifecycle = do
     proofHash <- planScriptHash "proof policy" (planProofPolicy plan)
     proofName <- planAssetName "proof asset name" (planProofName plan)
     proofReference <-
@@ -396,7 +391,7 @@ premintInputs config plan inputs registerLifecycle = do
             "proof reference script hash"
             proofHash
             (planProofReference plan)
-            (registerReferenceUtxos config)
+            (snapshotReferenceUtxos snapshot)
     lifecycleReferences <-
         if registerLifecycle
             then do
@@ -406,7 +401,7 @@ premintInputs config plan inputs registerLifecycle = do
                         "lifecycle reference script hash"
                         lifecycleHash
                         (planLifecycleReference plan)
-                        (registerReferenceUtxos config)
+                        (snapshotReferenceUtxos snapshot)
             else pure []
     proofRedeemer <- rawPlanData "premint redeemer" (planPremintRedeemer plan)
     lifecycleRedeemer <-
@@ -415,7 +410,7 @@ premintInputs config plan inputs registerLifecycle = do
             (planLifecycleCertificateRedeemer plan)
     fundingPair <-
         first RegistrationFundingSelectionFailed $
-            selectFundingPair isPlainUtxo (Coin 8_000_000) inputs
+            selectFundingPair isPlainUtxo (Coin 8_000_000) (snapshotPayerUtxos snapshot)
     pure
         PremintInputs
             { premintFunding = fundingPair
@@ -429,10 +424,10 @@ premintInputs config plan inputs registerLifecycle = do
 registerInputs ::
     RegisterConfig ->
     RegistrationPlan ->
-    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationSnapshot ->
     (TxIn, TxOut ConwayEra) ->
     Either RegistrationError RegisterInputs
-registerInputs config plan inputs proofInput = do
+registerInputs config plan snapshot proofInput = do
     proofHash <- planScriptHash "proof policy" (planProofPolicy plan)
     checkpointHash <-
         planScriptHash "checkpoint policy" (planCheckpointPolicy plan)
@@ -446,19 +441,19 @@ registerInputs config plan inputs proofInput = do
             "proof reference script hash"
             proofHash
             (planProofReference plan)
-            (registerReferenceUtxos config)
+            (snapshotReferenceUtxos snapshot)
     checkpointReference <-
         resolveReference
             "checkpoint reference script hash"
             checkpointHash
             (planCheckpointReference plan)
-            (registerReferenceUtxos config)
+            (snapshotReferenceUtxos snapshot)
     lifecycleReference <-
         resolveReference
             "lifecycle reference script hash"
             lifecycleHash
             (planLifecycleReference plan)
-            (registerReferenceUtxos config)
+            (snapshotReferenceUtxos snapshot)
     requireProofAsset (PolicyID proofHash) proofName proofInput
     checkpointRedeemer <-
         rawPlanData "checkpoint redeemer" (planCheckpointRedeemer plan)
@@ -472,7 +467,7 @@ registerInputs config plan inputs proofInput = do
             selectFundingPair
                 isPlainUtxo
                 (Coin $ planEscrowLovelace plan + 5_000_000)
-                inputs
+                (snapshotPayerUtxos snapshot)
     pure
         RegisterInputs
             { registerFunding = fundingPair
@@ -628,108 +623,6 @@ data RegisterCtx a
 
 registerInterpret :: InterpretIO RegisterCtx
 registerInterpret = InterpretIO (\case {})
-
-plutusDataJson :: Data -> Value
-plutusDataJson = \case
-    Constr constructor fields ->
-        object
-            [ "constructor" .= constructor
-            , "fields" .= map plutusDataJson fields
-            ]
-    Map pairs ->
-        object
-            [ "map"
-                .= [ object
-                        [ "k" .= plutusDataJson key
-                        , "v" .= plutusDataJson value
-                        ]
-                   | (key, value) <- pairs
-                   ]
-            ]
-    List values -> object ["list" .= map plutusDataJson values]
-    I value -> object ["int" .= value]
-    B bytes -> object ["bytes" .= hexText bytes]
-
-plutusDataFromJson :: Value -> Either String Data
-plutusDataFromJson = parseEither parsePlutusData
-
-parsePlutusData :: Value -> Parser Data
-parsePlutusData = withObject "detailed Plutus data" $ \o -> do
-    constructor <- o .:? "constructor"
-    fields <- o .:? "fields"
-    mapValues <- o .:? "map"
-    listValues <- o .:? "list"
-    integer <- o .:? "int"
-    bytes <- o .:? "bytes"
-    case ( constructor
-         , fields
-         , mapValues
-         , listValues
-         , integer
-         , bytes
-         ) of
-        (Just tag, Just values, Nothing, Nothing, Nothing, Nothing) ->
-            Constr tag <$> traverse parsePlutusData values
-        (Nothing, Nothing, Just pairs, Nothing, Nothing, Nothing) ->
-            Map <$> traverse parsePair pairs
-        (Nothing, Nothing, Nothing, Just values, Nothing, Nothing) ->
-            List <$> traverse parsePlutusData values
-        (Nothing, Nothing, Nothing, Nothing, Just value, Nothing) ->
-            pure (I value)
-        (Nothing, Nothing, Nothing, Nothing, Nothing, Just encoded) ->
-            B <$> parseHexBytes encoded
-        _ -> fail "detailed Plutus data has an invalid or ambiguous shape"
-  where
-    parsePair = withObject "Plutus map pair" $ \pair ->
-        (,)
-            <$> (pair .: "k" >>= parsePlutusData)
-            <*> (pair .: "v" >>= parsePlutusData)
-    parseHexBytes encoded =
-        either
-            (const $ fail "Plutus bytes are not hexadecimal")
-            pure
-            (convertFromBase Base16 $ TE.encodeUtf8 encoded)
-
-{- | Poll for one exact asset-bearing output. A zero-second timeout still
-performs one real query before returning the typed timeout.
--}
-awaitAsset ::
-    (Text -> Text -> IO [ChainAssetUtxo]) ->
-    Int ->
-    Int ->
-    Text ->
-    Text ->
-    Text ->
-    Text ->
-    IO (Either AssetObservationTimeout ChainAssetUtxo)
-awaitAsset queryAsset pollMicros timeoutSeconds policyId assetName txId address = do
-    started <- getCurrentTime
-    let loop = do
-            queried <- try (queryAsset policyId assetName)
-            case queried of
-                Right utxos ->
-                    case filter matches utxos of
-                        match : _ -> pure (Right match)
-                        [] -> retry started
-                Left (_ :: SomeException) -> retry started
-        matches utxo =
-            chainAssetTxId utxo == txId
-                && chainAssetAddress utxo == address
-                && any matchesAsset (chainAssetList utxo)
-        matchesAsset asset =
-            chainAssetPolicy asset == policyId
-                && chainAssetName asset == assetName
-                && chainAssetQuantity asset == 1
-        retry startedAt = do
-            now <- getCurrentTime
-            if diffUTCTime now startedAt >= fromIntegral timeoutSeconds
-                then
-                    pure
-                        ( Left
-                            (AssetObservationTimeout policyId assetName txId address)
-                        )
-                else threadDelay pollMicros >> loop
-    loop
 
 registrationCheck ::
     PParams ConwayEra ->

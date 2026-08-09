@@ -38,30 +38,31 @@ import Cardano.KERI.CLI.Backend (
     StatusView (..),
     WatchabilityFields (..),
  )
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
+    ActiveCheckpoint (..),
+    BoardEntry (..),
     ChainAsset (..),
-    ChainAssetHistory (..),
     ChainAssetUtxo (..),
+ )
+import Cardano.KERI.ChainQuery.Koios (
+    ChainAssetHistory (..),
     ChainMintingTransaction (..),
     ChainTip (..),
     ChainTransactionInfo (..),
     KoiosToken,
+    checkpointAssetName,
+    latestMintingTransaction,
     queryAddressUtxos,
     queryAssetHistory,
     queryAssetUtxos,
+    queryBoardCatalog,
     queryTip,
     queryTransactionInfo,
- )
-import Cardano.KERI.Deployment.CheckpointIndex (
-    ActiveCheckpoint (..),
-    checkpointAssetName,
-    latestMintingTransaction,
     resolveActiveCheckpoint,
  )
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataFromJson)
 import Cardano.KERI.Deployment.EndpointBoard (
-    BoardEntry (..),
     missingBoardWitnesses,
-    queryBoardCatalog,
     watchabilityGrade,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
@@ -72,7 +73,6 @@ import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
     Manifest (..),
  )
-import Cardano.KERI.Deployment.Registration (plutusDataFromJson)
 import Cardano.KERI.Indexer.Query.Types (qb64Witness)
 import Control.Exception (AsyncException, SomeException, fromException, tryJust)
 import Control.Monad (unless, when)
@@ -263,7 +263,7 @@ resolveKoiosTransactionFreshness ::
     Either BackendError Freshness
 resolveKoiosTransactionFreshness _ _ Nothing =
     Left (MalformedResponse "no observed Koios tip")
-resolveKoiosTransactionFreshness requestedTxIds txInfos (Just (ChainTip tipSlot)) = do
+resolveKoiosTransactionFreshness requestedTxIds txInfos (Just (ChainTip tipSlot _tipHash)) = do
     unless (tipSlot >= 0) $
         Left (MalformedResponse "observed Koios tip has a negative absolute slot")
     let expected = List.sort (List.nub requestedTxIds)

@@ -21,7 +21,7 @@ module Cardano.KERI.Deployment.Publisher (
     awaitReference,
 ) where
 
-import Cardano.KERI.Deployment.ChainIndex (ChainReference (..))
+import Cardano.KERI.ChainQuery (ChainAssetUtxo (..), ChainReference (..))
 import Cardano.KERI.Deployment.Manifest (Reference (..))
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
@@ -232,12 +232,16 @@ awaitReference queryReferences pollMicros timeoutSeconds scriptHash txId = do
             references <- queryReferences scriptHash
             case [ reference
                  | reference <- references
-                 , chainScriptHash reference == scriptHash
-                 , chainTxId reference == txId
+                 , chainReferenceScriptHash reference == scriptHash
+                 , chainAssetTxId (chainReferenceOutput reference) == txId
                  ] of
                 match : _ ->
                     pure $
-                        Right (Reference (chainTxId match) (chainIndex match))
+                        Right
+                            ( Reference
+                                (chainAssetTxId (chainReferenceOutput match))
+                                (chainAssetIndex (chainReferenceOutput match))
+                            )
                 [] -> do
                     now <- getCurrentTime
                     if diffUTCTime now started

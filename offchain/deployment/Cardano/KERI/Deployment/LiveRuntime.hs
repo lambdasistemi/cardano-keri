@@ -1,43 +1,37 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.LiveRuntime
-Description : Production Koios discovery plus N2C query/submission composition
+Description : N2C query/submission composition (#257: no Koios dependency)
 
-The public deployment commands enumerate payer outputs through the configured
-indexer, resolve only those exact inputs through LocalStateQuery, build and
-evaluate with the node's current protocol parameters, sign in process, submit
-through LocalTxSubmission, and wait for independent indexer settlement.
+The public deployment commands resolve caller-supplied candidate identities
+through LocalStateQuery, build and evaluate with the node's current protocol
+parameters, sign in process, and submit through LocalTxSubmission.
 
-No address-wide N2C query is used here.  That boundary is deliberate: an
-indexer snapshot selects the candidate identities while N2C supplies the full
-ledger outputs needed by balancing.
+No address-wide N2C query is used here. #257 (MOD-257-COMPOSITION) moved
+this module's former Koios-calling functions
+(@indexedFundingUtxos@\/@transactionSettled@\/@awaitTransaction@) to
+"Cardano.KERI.ChainQuery.Koios" and its callers to the chain-query algebra;
+'withLiveContext' now takes the transaction-observation capability as a
+parameter instead of constructing it from embedded Koios settings, so this
+component keeps no concrete-provider dependency (INV-257-BUILDER).
 -}
 module Cardano.KERI.Deployment.LiveRuntime (
     LiveConfig (..),
     LiveContext (..),
     withLiveContext,
-    indexedFundingUtxos,
     resolveManifestReferences,
     resolveBoardReference,
     resolveOutput,
+    resolveTxIns,
     decodePaymentAddress,
     rewardAccountForScript,
     rewardAccountRegistered,
-    transactionSettled,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (deriveVerKeyDSIGN)
 import Cardano.Crypto.Hash (hashFromBytes)
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainAssetUtxo (..),
-    ChainTransactionInfo (..),
-    KoiosToken,
-    queryAddressUtxos,
-    queryTransactionInfo,
- )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
@@ -49,7 +43,6 @@ import Cardano.KERI.Deployment.Manifest (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionRuntime (..),
-    renderTransactionId,
     signWithPaymentKey,
  )
 import Cardano.Ledger.Address (
@@ -85,9 +78,8 @@ import Cardano.Node.Client.Provider (Provider (..))
 import Cardano.Node.Client.Submitter (Submitter (..))
 import Cardano.Tx.Sign.Core (decodePaymentSigningKey)
 import Codec.Binary.Bech32 qualified as Bech32
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (Async, async, cancel, link)
-import Control.Exception (SomeException, bracket, throwIO, try)
+import Control.Exception (bracket, throwIO)
 import Control.Monad (unless, when)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
@@ -100,7 +92,6 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Data.Word (Word16)
 import Ouroboros.Network.Magic (NetworkMagic (..))
 
@@ -109,8 +100,6 @@ data LiveConfig = LiveConfig
     , liveNodeSocket :: !FilePath
     , liveSigningKeyFile :: !FilePath
     , liveFundingAddressText :: !Text
-    , liveKoiosUrl :: !Text
-    , liveKoiosToken :: !(Maybe KoiosToken)
     , liveTimeoutSeconds :: !Int
     }
     deriving stock (Show)
@@ -127,9 +116,14 @@ data LiveResources = LiveResources
     , resourceClient :: !(Async ())
     }
 
--- | Open one multiplexed LSQ/LocalTxSubmission connection for an operation.
-withLiveContext :: LiveConfig -> (LiveContext -> IO a) -> IO a
-withLiveContext config action = do
+{- | Open one multiplexed LSQ\/LocalTxSubmission connection for an
+operation. @observeTransaction@ is the post-submit settlement capability
+(#257 FUN-257-OBSERVE): the caller constructs it (e.g. from
+'Cardano.KERI.ChainQuery.Koios' at the composition layer) since this
+component owns no concrete-provider dependency.
+-}
+withLiveContext :: LiveConfig -> (TxId -> IO ()) -> (LiveContext -> IO a) -> IO a
+withLiveContext config observeTransaction action = do
     when (liveTimeoutSeconds config <= 0) $
         fail "timeout-seconds must be positive"
     fundingAddress <-
@@ -147,12 +141,12 @@ withLiveContext config action = do
         AddrBootstrap{} ->
             fail "funding address must be a Shelley testnet address"
     bracket
-        (openResources config fundingAddress keyEnvelope)
+        (openResources config fundingAddress keyEnvelope observeTransaction)
         (cancel . resourceClient)
         (action . resourceContext)
 
-openResources :: LiveConfig -> Addr -> Value -> IO LiveResources
-openResources config fundingAddress keyEnvelope = do
+openResources :: LiveConfig -> Addr -> Value -> (TxId -> IO ()) -> IO LiveResources
+openResources config fundingAddress keyEnvelope observeTransaction = do
     lsq <- newLSQChannel 16
     ltxs <- newLTxSChannel 16
     client <-
@@ -175,7 +169,7 @@ openResources config fundingAddress keyEnvelope = do
                 , trEvaluate = evaluateTx provider
                 , trSign = pure . signWithPaymentKey keyEnvelope
                 , trSubmit = submitTx submitter
-                , trObserve = awaitTransaction config
+                , trObserve = observeTransaction
                 }
         context =
             LiveContext
@@ -185,21 +179,6 @@ openResources config fundingAddress keyEnvelope = do
                 , liveConfig = config
                 }
     pure LiveResources{resourceContext = context, resourceClient = client}
-
--- | Enumerate through Koios, then resolve those exact identities through N2C.
-indexedFundingUtxos :: LiveContext -> IO [(TxIn, TxOut ConwayEra)]
-indexedFundingUtxos context = do
-    let config = liveConfig context
-        address = liveFundingAddressText config
-    indexed <-
-        queryAddressUtxos
-            (liveKoiosUrl config)
-            (liveKoiosToken config)
-            address
-    unless (all ((== address) . chainAssetAddress) indexed) $
-        fail "indexer returned a payer output at a different address"
-    txIns <- traverse indexedTxIn indexed
-    resolveTxIns context txIns
 
 resolveManifestReferences ::
     LiveContext ->
@@ -248,11 +227,6 @@ resolveTxIns context txIns = do
             "indexer/N2C snapshot mismatch; outputs are no longer unspent: "
                 <> show missing
     pure [(txIn, resolved Map.! txIn) | txIn <- txIns]
-
-indexedTxIn :: ChainAssetUtxo -> IO TxIn
-indexedTxIn output =
-    either fail pure $
-        mkTxIn (chainAssetTxId output) (chainAssetIndex output)
 
 referenceTxIn :: Reference -> IO TxIn
 referenceTxIn reference =
@@ -325,35 +299,3 @@ rewardAccountRegistered context account =
         <$> queryRewardAccounts
             (liveProvider context)
             (Set.singleton account)
-
-transactionSettled :: LiveConfig -> TxId -> IO Bool
-transactionSettled config txId = do
-    transactions <-
-        queryTransactionInfo
-            (liveKoiosUrl config)
-            (liveKoiosToken config)
-            [renderTransactionId txId]
-    pure $
-        any
-            ((== renderTransactionId txId) . txInfoTxHash)
-            transactions
-
-awaitTransaction :: LiveConfig -> TxId -> IO ()
-awaitTransaction config txId = do
-    started <- getCurrentTime
-    let loop = do
-            observed <- try (transactionSettled config txId)
-            case observed of
-                Right True -> pure ()
-                Right False -> retry started
-                Left (_ :: SomeException) -> retry started
-        retry startedAt = do
-            now <- getCurrentTime
-            if diffUTCTime now startedAt
-                >= fromIntegral (liveTimeoutSeconds config)
-                then
-                    fail $
-                        "transaction settlement timed out: "
-                            <> T.unpack (renderTransactionId txId)
-                else threadDelay 2_000_000 >> loop
-    loop

@@ -61,7 +61,7 @@ module Cardano.KERI.CLI.Backend (
 
 import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
-import Cardano.KERI.Deployment.ChainIndex (KoiosToken (..))
+import Cardano.KERI.ChainQuery.Koios (KoiosToken (..))
 import Cardano.KERI.Indexer.Config (decodeAddress)
 import Data.ByteString qualified as BS
 import Data.Text (Text)

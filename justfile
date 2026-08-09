@@ -251,6 +251,13 @@ query-endpoint-check:
 query-endpoint-cache-guard:
     ./scripts/check-query-endpoint-cache.sh
 
+# #257 lasting focused recipe: the provider-neutral chain-query algebra, its
+# #257: flake-owned check (offchain/flake.nix checks.<system>.query-algebra /
+# apps.<system>.query-algebra) so `nix flake check` actually executes the
+# preflight + focused proof suite, not just a manually-run justfile body.
+query-algebra-check:
+    cd offchain && nix run --quiet .#query-algebra
+
 # Audit exact production UPLC extraction and the complete pinned Blaster graph.
 blaster:
     cd offchain && nix run --quiet .#blaster
@@ -523,7 +530,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
 
 # Full CI gate (mirrors .github/workflows/ci.yml)
 ci: ci-onchain ci-blake3 ci-offchain

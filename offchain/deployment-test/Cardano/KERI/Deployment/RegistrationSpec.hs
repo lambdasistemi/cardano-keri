@@ -38,14 +38,21 @@ module Cardano.KERI.Deployment.RegistrationSpec (spec) where
 import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
+    ActiveCheckpoint (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
+    ColdOr (Cold),
+    RegistrationSnapshot (..),
+    SettlementError (..),
+    SettlementObservation (..),
+    SettlementObserver (..),
+    SettlementTarget (..),
+    SettlementTimeoutPolicy (..),
+    observeSettlement,
  )
-import Cardano.KERI.Deployment.CheckpointIndex (
-    ActiveCheckpoint (..),
-    resolveActiveCheckpoint,
- )
+import Cardano.KERI.ChainQuery.Koios (resolveActiveCheckpoint)
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
 import Cardano.KERI.Deployment.KEL (parseInceptionExport)
 import Cardano.KERI.Deployment.Manifest (
     BlueprintInfo (..),
@@ -58,14 +65,11 @@ import Cardano.KERI.Deployment.Manifest (
     SourceInfo (..),
  )
 import Cardano.KERI.Deployment.Registration (
-    AssetObservationTimeout (..),
     RegisterConfig (..),
     RegistrationCheckError (..),
     RegistrationError (..),
     RegistrationPlan (..),
-    awaitAsset,
     mkRegistrationPlan,
-    plutusDataJson,
     premintOne,
     registerOne,
  )
@@ -222,6 +226,7 @@ purePlanSpec =
                             1
                         ]
                         (Just $ planCheckpointDatum plan)
+                        Nothing
             resolveActiveCheckpoint
                 sampleManifest
                 (planAid plan)
@@ -496,7 +501,7 @@ registrationTestEnvelope =
                )
         ]
 
-{- | Answers 'awaitAsset'\'s injected query from the tx captured via
+{- | Answers 'observeSettlement'\'s injected probe from the tx captured via
 'trSign' -- the same source of truth the ledger-boundary assertions read,
 never a preselected answer independent of what was built.
 -}
@@ -514,18 +519,33 @@ standInQueryAsset signedRef policyId assetName = do
                 (planEscrowLovelace syntheticPlan)
                 [ChainAsset policyId assetName 1]
                 Nothing
+                Nothing
             ]
 
 mkConfig :: TransactionRuntime IO -> (Text -> Text -> IO [ChainAssetUtxo]) -> RegisterConfig
 mkConfig runtime queryAsset =
     RegisterConfig
         { registerRuntime = runtime
-        , registerReferenceUtxos = syntheticReferenceUtxos
         , registerFundingAddress = fundingAddr
         , registerLifecycleRewardAccount = lifecycleRewardAccount
-        , registerQueryAsset = queryAsset
+        , registerSettlementObserver = SettlementObserver queryAsset
         , registerTimeoutSeconds = 30
         , registerPollDelayMicros = 150_000
+        }
+
+{- | Compose one caller-resolved 'RegistrationSnapshot' from the reference
+and payer rows a fixture wants to inject (#257: 'premintOne'\/'registerOne'
+now consume the algebra's snapshot shape, never a raw funding-pair list).
+-}
+mkSnapshot ::
+    [(TxIn, TxOut ConwayEra)] -> [(TxIn, TxOut ConwayEra)] -> RegistrationSnapshot
+mkSnapshot references payers =
+    RegistrationSnapshot
+        { snapshotCurrentCheckpoint = Nothing
+        , snapshotBoardCatalog = []
+        , snapshotReferenceUtxos = references
+        , snapshotPayerUtxos = payers
+        , snapshotStoreWatermark = Cold
         }
 
 -- ---------------------------------------------------------------------------
@@ -551,18 +571,28 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 , (stubTxIn 2, plainTxOut 50_000_000)
                 ]
         premintTxId <-
-            premintOne config syntheticPlan premintInputs False
+            premintOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos premintInputs)
+                False
                 >>= either (fail . ("expected premint success, got " <>) . show) pure
         proofUtxoResult <-
-            awaitAsset
-                (registerQueryAsset config)
-                (registerPollDelayMicros config)
-                (registerTimeoutSeconds config)
-                (planProofPolicy syntheticPlan)
-                (planProofName syntheticPlan)
-                (renderTxId premintTxId)
-                (planCheckpointAddress syntheticPlan)
-        proofUtxo <- either (fail . ("expected proof utxo, got " <>) . show) pure proofUtxoResult
+            observeSettlement
+                (registerSettlementObserver config)
+                SettlementTarget
+                    { settlementPolicy = planProofPolicy syntheticPlan
+                    , settlementAssetName = planProofName syntheticPlan
+                    , settlementTxId = renderTxId premintTxId
+                    , settlementAddress = planCheckpointAddress syntheticPlan
+                    }
+                SettlementTimeoutPolicy
+                    { settlementTimeoutSeconds = registerTimeoutSeconds config
+                    , settlementPollDelayMicros = registerPollDelayMicros config
+                    }
+        proofUtxo <-
+            settlementObservedUtxo
+                <$> either (fail . ("expected proof utxo, got " <>) . show) pure proofUtxoResult
         chainAssetTxId proofUtxo `shouldBe` renderTxId premintTxId
         let registerInputs =
                 [ (stubTxIn 3, plainTxOut 200_000_000)
@@ -572,7 +602,12 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 ( TxIn premintTxId (TxIx $ fromIntegral $ chainAssetIndex proofUtxo)
                 , proofTxOut (chainAssetLovelace proofUtxo)
                 )
-        registerResult <- registerOne config syntheticPlan registerInputs proofIn
+        registerResult <-
+            registerOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
+                proofIn
         case registerResult of
             Left err -> fail ("expected register success, got " <> show err)
             Right _registerTxId -> pure ()
@@ -587,7 +622,12 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 [ (stubTxIn 1, plainTxOut 200_000_000)
                 , (stubTxIn 2, plainTxOut 50_000_000)
                 ]
-        result <- premintOne config syntheticPlan premintInputs True
+        result <-
+            premintOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos premintInputs)
+                True
         case result of
             Left err -> fail ("expected lifecycle premint success, got " <> show err)
             Right premintTxId -> do
@@ -644,7 +684,12 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 ]
             proofIn =
                 (stubTxIn 5, proofTxOut 5_000_000)
-        result <- registerOne config syntheticPlan registerInputs proofIn
+        result <-
+            registerOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
+                proofIn
         case result of
             Left err -> fail ("expected success, got " <> show err)
             Right registerTxId -> do
@@ -753,7 +798,12 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 ]
             proofIn = (stubTxIn 5, proofTxOut 5_000_000)
             maximum' = testPParams ^. ppMaxTxExUnitsL
-        result <- registerOne config syntheticPlan registerInputs proofIn
+        result <-
+            registerOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
+                proofIn
         case result of
             Left (RegistrationBuildFailed (TransactionBuildChecksRejected checks)) ->
                 checks
@@ -775,15 +825,17 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
         let mismatchedReferences =
                 (proofReferenceInput, referenceTxOut checkpointScript)
                     : drop 1 syntheticReferenceUtxos
-            config =
-                (mkConfig runtime (standInQueryAsset signedRef))
-                    { registerReferenceUtxos = mismatchedReferences
-                    }
+            config = mkConfig runtime (standInQueryAsset signedRef)
             premintInputs =
                 [ (stubTxIn 1, plainTxOut 200_000_000)
                 , (stubTxIn 2, plainTxOut 50_000_000)
                 ]
-        result <- premintOne config syntheticPlan premintInputs False
+        result <-
+            premintOne
+                config
+                syntheticPlan
+                (mkSnapshot mismatchedReferences premintInputs)
+                False
         case result of
             Left (RegistrationPlanRejected detail) ->
                 detail `shouldContain` "proof reference script hash"
@@ -835,7 +887,7 @@ failureTaxonomySpec = describe "registration error taxonomy" $ do
             registerOne
                 config
                 syntheticPlan
-                registerInputs
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
                 (stubTxIn 5, proofTxOut 5_000_000)
         case result of
             Left (RegistrationBuildFailed (TransactionBuildEvaluationRejected _ detail)) ->
@@ -860,7 +912,12 @@ failureTaxonomySpec = describe "registration error taxonomy" $ do
                 , (stubTxIn 4, plainTxOut 50_000_000)
                 ]
             proofIn = (stubTxIn 5, proofTxOut 5_000_000)
-        result <- registerOne config syntheticPlan registerInputs proofIn
+        result <-
+            registerOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
+                proofIn
         result
             `shouldBe` Left
                 ( RegistrationBuildFailed
@@ -886,7 +943,7 @@ failureTaxonomySpec = describe "registration error taxonomy" $ do
             registerOne
                 config
                 syntheticPlan
-                registerInputs
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
                 (stubTxIn 5, proofTxOut 5_000_000)
         case result of
             Left
@@ -899,34 +956,32 @@ trulyMalformedEnvelope :: Value
 trulyMalformedEnvelope = object ["cborHex" .= ("00" :: String)]
 
 -- ---------------------------------------------------------------------------
--- awaitAsset: exact-identity settlement matching behind an injected
--- chain-query primitive, mirroring Publisher's awaitReferenceSpec discipline.
+-- observeSettlement (moved to chain-query, #257): exact-identity settlement
+-- matching behind an injected probe, mirroring Publisher's awaitReferenceSpec
+-- discipline. Registration-side regression coverage; the algebra-level proof
+-- lives in chain-query-tests' SettlementSpec.
 
 awaitAssetSpec :: Spec
-awaitAssetSpec = describe "awaitAsset" $ do
+awaitAssetSpec = describe "observeSettlement (registration)" $ do
     it "reports observation timeout for registration, having actually polled" $ do
         pollsRef <- newIORef (0 :: Int)
         let neverMatches _policyId _assetName = do
                 modifyIORef' pollsRef (+ 1)
                 pure []
         result <-
-            awaitAsset
-                neverMatches
-                100_000
-                0
-                "deadbeefpolicy"
-                "cafef00dasset"
-                "expectedtx"
-                "expectedaddr"
+            observeSettlement
+                (SettlementObserver neverMatches)
+                (SettlementTarget "deadbeefpolicy" "cafef00dasset" "expectedtx" "expectedaddr")
+                (SettlementTimeoutPolicy 0 100_000)
         polls <- readIORef pollsRef
         polls `shouldSatisfy` (>= 1)
         case result of
-            Left (AssetObservationTimeout policyId assetName txId address) -> do
-                policyId `shouldBe` "deadbeefpolicy"
-                assetName `shouldBe` "cafef00dasset"
-                txId `shouldBe` "expectedtx"
-                address `shouldBe` "expectedaddr"
-            other -> fail ("expected AssetObservationTimeout, got " <> show other)
+            Left (SettlementTimeout target) -> do
+                settlementPolicy target `shouldBe` "deadbeefpolicy"
+                settlementAssetName target `shouldBe` "cafef00dasset"
+                settlementTxId target `shouldBe` "expectedtx"
+                settlementAddress target `shouldBe` "expectedaddr"
+            other -> fail ("expected SettlementTimeout, got " <> show other)
 
     it "reports registration observation timeout reached through the loop, not around it" $ do
         pollsRef <- newIORef (0 :: Int)
@@ -934,23 +989,19 @@ awaitAssetSpec = describe "awaitAsset" $ do
                 modifyIORef' pollsRef (+ 1)
                 pure []
         result <-
-            awaitAsset
-                neverMatches
-                150_000
-                1
-                "deadbeefpolicy"
-                "cafef00dasset"
-                "expectedtx"
-                "expectedaddr"
+            observeSettlement
+                (SettlementObserver neverMatches)
+                (SettlementTarget "deadbeefpolicy" "cafef00dasset" "expectedtx" "expectedaddr")
+                (SettlementTimeoutPolicy 1 150_000)
         polls <- readIORef pollsRef
         polls `shouldSatisfy` (>= 2)
         case result of
-            Left (AssetObservationTimeout policyId assetName txId address) -> do
-                policyId `shouldBe` "deadbeefpolicy"
-                assetName `shouldBe` "cafef00dasset"
-                txId `shouldBe` "expectedtx"
-                address `shouldBe` "expectedaddr"
-            other -> fail ("expected AssetObservationTimeout, got " <> show other)
+            Left (SettlementTimeout target) -> do
+                settlementPolicy target `shouldBe` "deadbeefpolicy"
+                settlementAssetName target `shouldBe` "cafef00dasset"
+                settlementTxId target `shouldBe` "expectedtx"
+                settlementAddress target `shouldBe` "expectedaddr"
+            other -> fail ("expected SettlementTimeout, got " <> show other)
 
     it "matches the exact policy, asset name, transaction id, and address once the chain reports it" $ do
         -- Decoys individually differ in each identity field, so the match
@@ -959,23 +1010,20 @@ awaitAssetSpec = describe "awaitAsset" $ do
             expectedTxId = "matchingtx"
             candidates _policyId _assetName =
                 pure
-                    [ ChainAssetUtxo expectedTxId 0 "wrongaddr" 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing
-                    , ChainAssetUtxo expectedTxId 1 expectedAddr 5_000_000 [ChainAsset "other-policy" "cafef00dasset" 1] Nothing
-                    , ChainAssetUtxo expectedTxId 2 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "other-asset" 1] Nothing
-                    , ChainAssetUtxo "wrongtx" 3 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing
-                    , ChainAssetUtxo expectedTxId 4 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing
+                    [ ChainAssetUtxo expectedTxId 0 "wrongaddr" 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing Nothing
+                    , ChainAssetUtxo expectedTxId 1 expectedAddr 5_000_000 [ChainAsset "other-policy" "cafef00dasset" 1] Nothing Nothing
+                    , ChainAssetUtxo expectedTxId 2 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "other-asset" 1] Nothing Nothing
+                    , ChainAssetUtxo "wrongtx" 3 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing Nothing
+                    , ChainAssetUtxo expectedTxId 4 expectedAddr 5_000_000 [ChainAsset "deadbeefpolicy" "cafef00dasset" 1] Nothing Nothing
                     ]
         result <-
-            awaitAsset
-                candidates
-                5_000_000
-                30
-                "deadbeefpolicy"
-                "cafef00dasset"
-                expectedTxId
-                expectedAddr
+            observeSettlement
+                (SettlementObserver candidates)
+                (SettlementTarget "deadbeefpolicy" "cafef00dasset" expectedTxId expectedAddr)
+                (SettlementTimeoutPolicy 30 5_000_000)
         case result of
-            Right utxo -> do
+            Right observation -> do
+                let utxo = settlementObservedUtxo observation
                 chainAssetTxId utxo `shouldBe` "matchingtx"
                 chainAssetIndex utxo `shouldBe` 4
             Left err -> fail ("expected a match, got " <> show err)

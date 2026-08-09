@@ -11,7 +11,6 @@ module Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     parseEndpointRecord,
     parseWitnessKey,
-    queryBoardCatalog,
     resolveBoardCatalog,
     renderBoardCatalog,
     watchabilityGrade,
@@ -25,13 +24,12 @@ import Cardano.KERI.AID.CESR (
     parsePrimitive,
  )
 import Cardano.KERI.AID.Ed25519 (verifyEd25519)
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
+    BoardEntry (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
-    KoiosToken,
-    queryAddressUtxos,
  )
-import Cardano.KERI.Deployment.Registration (plutusDataFromJson)
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataFromJson)
 import Control.Monad (unless, when)
 import Data.Aeson (
     FromJSON (..),
@@ -65,18 +63,6 @@ data EndpointRecord = EndpointRecord
     , endpointAid :: !Text
     , endpointScheme :: !Text
     , endpointUrl :: !Text
-    }
-    deriving stock (Show, Eq)
-
-data BoardEntry = BoardEntry
-    { boardWitnessKey :: !ByteString
-    , boardAid :: !Text
-    , boardScheme :: !Text
-    , boardUrl :: !Text
-    , boardTxId :: !Text
-    , boardIndex :: !Int
-    , boardLovelace :: !Integer
-    , boardOwnerKeyHash :: !ByteString
     }
     deriving stock (Show, Eq)
 
@@ -145,17 +131,6 @@ parseEndpointRecord stream = do
 -- | Decode one witness's KERI B-code to its raw 32-byte Ed25519 key.
 parseWitnessKey :: Text -> Either String ByteString
 parseWitnessKey = decodeWitnessKey "witness identifier" . TE.encodeUtf8
-
--- | Query and verify the exact current board set.
-queryBoardCatalog ::
-    Text ->
-    Maybe KoiosToken ->
-    Text ->
-    Text ->
-    IO [BoardEntry]
-queryBoardCatalog baseUrl token policy markerAddress = do
-    outputs <- queryAddressUtxos baseUrl token markerAddress
-    either fail pure (resolveBoardCatalog policy markerAddress outputs)
 
 resolveBoardCatalog ::
     Text ->

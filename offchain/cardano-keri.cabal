@@ -75,6 +75,48 @@ library
     Cardano.KERI.AID.E2E.MpfProof
     Cardano.KERI.AID.E2E.MpfTrie
 
+-- #257: provider-neutral chain-query algebra. Owns the minimal free query
+-- program, locators, promoted shared result types, watermark, and errors.
+-- No HTTP, RocksDB, node runtime, URL, token, or executable-setting
+-- responsibility (MOD-257-QUERY). See specs/257-query-algebra/plan.md.
+library chain-query
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   query
+  build-depends:
+    , aeson
+    , base                   >=4.18 && <5
+    , bech32
+    , bytestring             >=0.11 && <0.13
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , containers
+    , memory                 >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , text
+    , time
+    , transformers
+
+  exposed-modules:
+    Cardano.KERI.ChainQuery
+    Cardano.KERI.ChainQuery.Interpreter
+    Cardano.KERI.ChainQuery.LedgerOutput
+    Cardano.KERI.ChainQuery.PlutusJson
+    Cardano.KERI.ChainQuery.Program
+    Cardano.KERI.ChainQuery.Registration
+    Cardano.KERI.ChainQuery.Settlement
+    Cardano.KERI.ChainQuery.Types
+
+-- #257: provider-neutral builder component. Depends only on chain-query for
+-- resolved domain values (EDGE-257-01); no Koios, RocksDB, node runtime, or
+-- HTTP client dependency (INV-257-BUILDER, RQ-257-10).
 library deployment
   import:           warnings
   visibility:       public
@@ -88,6 +130,7 @@ library deployment
     , bytestring                     >=0.11 && <0.13
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
     , cardano-ledger-alonzo
     , cardano-ledger-api
     , cardano-ledger-conway
@@ -100,10 +143,8 @@ library deployment
     , crypton
     , directory
     , filepath
-    , http-conduit
     , memory                         >=0.18 && <0.19
     , microlens
-    , opt-env-conf                   >=0.13 && <0.16
     , ouroboros-network:api
     , plutus-core
     , plutus-ledger-api
@@ -115,9 +156,6 @@ library deployment
   exposed-modules:
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
-    Cardano.KERI.Deployment.ChainIndex
-    Cardano.KERI.Deployment.CheckpointIndex
-    Cardano.KERI.Deployment.CLI
     Cardano.KERI.Deployment.Close
     Cardano.KERI.Deployment.CloseTransaction
     Cardano.KERI.Deployment.EndpointBoard
@@ -145,6 +183,7 @@ library indexer
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-ledger-api
     , cardano-ledger-binary
@@ -153,6 +192,7 @@ library indexer
     , cardano-ledger-mary
     , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
+    , chain-follower
     , containers
     , contra-tracer
     , http-types
@@ -169,6 +209,7 @@ library indexer
   exposed-modules:
     Cardano.KERI.Indexer.App
     Cardano.KERI.Indexer.Board
+    Cardano.KERI.Indexer.ChainQuery
     Cardano.KERI.Indexer.Codecs
     Cardano.KERI.Indexer.Config
     Cardano.KERI.Indexer.Follower
@@ -180,10 +221,38 @@ library indexer
   other-modules:    Paths_cardano_keri
   autogen-modules:  Paths_cardano_keri
 
+-- #257: the concrete Koios interpreter (MOD-257-KOIOS). Owns the legacy
+-- Koios HTTP client, endpoint response decoding, configuration, operation
+-- translation, and the explicit sequential/non-atomic consistency claim.
+-- Depends downstream on chain-query and (for neutral decoders only, never
+-- builder callbacks) on deployment; never on indexer.
+library chain-query-koios
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   query-koios
+  build-depends:
+    , aeson
+    , base                      >=4.18 && <5
+    , bytestring                >=0.11 && <0.13
+    , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:deployment
+    , http-conduit
+    , memory                    >=0.18 && <0.19
+    , plutus-core
+    , text
+
+  exposed-modules:  Cardano.KERI.ChainQuery.Koios
+
 -- #177 Slice 1: the production `ckeri status` backend seam. Depends on both
 -- `deployment` (Koios/manifest/endpoint-board reuse) and `indexer` (the local
 -- transactional query engine) — acyclic since neither of those depends back
 -- on this library. See specs/177-backends/plan.md.
+-- #257 MOD-257-COMPOSITION: the downstream CLI component owns provider
+-- construction/selection and registration orchestration. Legacy modules
+-- that construct Koios/live-runtime values (Cardano.KERI.Deployment.CLI)
+-- live here even though their public module name stays stable.
 library cli
   import:           warnings
   visibility:       public
@@ -193,15 +262,23 @@ library cli
     , aeson
     , base
     , bytestring
+    , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-ledger-conway
+    , cardano-ledger-core
     , cardano-node-clients:utxo-indexer-lib
+    , directory
     , http-conduit
+    , memory                                   >=0.18 && <0.19
     , opt-env-conf                             >=0.13 && <0.16
     , rocksdb-kv-transactions:kv-transactions
     , stm
     , text
+    , time
 
   exposed-modules:
     Cardano.KERI.CLI
@@ -209,6 +286,7 @@ library cli
     Cardano.KERI.CLI.Backend.Endpoint
     Cardano.KERI.CLI.Backend.Koios
     Cardano.KERI.CLI.Backend.Local
+    Cardano.KERI.Deployment.CLI
 
 executable ckeri
   import:           warnings
@@ -264,6 +342,9 @@ test-suite deployment-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
+    , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-ledger-alonzo
     , cardano-ledger-api
@@ -274,9 +355,9 @@ test-suite deployment-tests
     , cardano-tx-tools:tx-build
     , containers
     , directory
-    , hspec                      >=2.11 && <2.12
+    , hspec                           >=2.11 && <2.12
     , http-conduit
-    , memory                     >=0.18 && <0.19
+    , memory                          >=0.18 && <0.19
     , microlens
     , plutus-core
     , temporary
@@ -340,6 +421,7 @@ test-suite publisher-migration-tests
     , base
     , bytestring
     , cardano-crypto-class
+    , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-ledger-api
     , cardano-ledger-conway
@@ -349,9 +431,9 @@ test-suite publisher-migration-tests
     , containers
     , directory
     , filepath
-    , hspec                    >=2.11 && <2.12
-    , hspec-core               >=2.11 && <2.12
-    , memory                   >=0.18 && <0.19
+    , hspec                     >=2.11 && <2.12
+    , hspec-core                >=2.11 && <2.12
+    , memory                    >=0.18 && <0.19
     , microlens
     , process
     , text
@@ -380,6 +462,9 @@ test-suite registration-migration-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
+    , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-ledger-alonzo
     , cardano-ledger-api
@@ -391,9 +476,9 @@ test-suite registration-migration-tests
     , containers
     , directory
     , filepath
-    , hspec                      >=2.11 && <2.12
-    , hspec-core                 >=2.11 && <2.12
-    , memory                     >=0.18 && <0.19
+    , hspec                           >=2.11 && <2.12
+    , hspec-core                      >=2.11 && <2.12
+    , memory                          >=0.18 && <0.19
     , microlens
     , plutus-core
     , process
@@ -604,6 +689,8 @@ test-suite cli-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
     , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-keri:indexer
@@ -629,6 +716,47 @@ test-suite cli-tests
     , warp
 
   ghc-options:      -threaded -with-rtsopts=-N
+
+test-suite chain-query-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   query-test
+  main-is:          Main.hs
+  other-modules:
+    Cardano.KERI.ChainQuery.InterpreterSpec
+    Cardano.KERI.ChainQuery.Koios.DecodeSpec
+    Cardano.KERI.ChainQuery.ProgramSpec
+    Cardano.KERI.ChainQuery.RegistrationWiringSpec
+    Cardano.KERI.ChainQuery.SettlementSpec
+    Cardano.KERI.Indexer.ChainQuerySpec
+
+  build-depends:
+    , aeson
+    , async
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
+    , cardano-keri:indexer
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:utxo-indexer-lib
+    , hspec                                    >=2.11 && <2.12
+    , hspec-core                               >=2.11 && <2.12
+    , memory                                   >=0.18 && <0.19
+    , microlens
+    , rocksdb-kv-transactions:kv-transactions
+    , stm
+    , text
+    , time
 
 test-suite unit-tests
   import:           warnings

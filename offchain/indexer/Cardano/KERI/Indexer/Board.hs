@@ -22,19 +22,19 @@ module Cardano.KERI.Indexer.Board (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
+    BoardEntry,
     ChainAsset (..),
     ChainAssetUtxo (..),
  )
+import Cardano.KERI.ChainQuery.PlutusJson (
+    plutusDataJson,
+ )
 import Cardano.KERI.Deployment.EndpointBoard (
-    BoardEntry,
     resolveBoardCatalog,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     frozenEndpointBoardPolicyId,
- )
-import Cardano.KERI.Deployment.Registration (
-    plutusDataJson,
  )
 import Cardano.Ledger.Api.Scripts.Data (
     Data (..),
@@ -127,6 +127,7 @@ toChainAssetUtxo addressHex (TxIn{txInId, txInIx}, Indexer.TxOut rawTxOut) = do
             , chainAssetLovelace = lovelace
             , chainAssetList = assets
             , chainAssetInlineDatum = inlineDatum
+            , chainAssetReferenceScript = Nothing
             }
 
 policyIdHex :: PolicyID -> Text

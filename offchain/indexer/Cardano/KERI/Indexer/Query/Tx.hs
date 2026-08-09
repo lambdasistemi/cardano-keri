@@ -19,6 +19,7 @@ module Cardano.KERI.Indexer.Query.Tx (
     scanAddressTx,
     payerUtxosTxAcrossAddresses,
     watermarkTx,
+    watermarkPointTx,
     checkpointTx,
     listCheckpointsTx,
     payerUtxosTx,
@@ -38,10 +39,12 @@ import Cardano.Node.Client.UTxOIndexer.Follower (Readiness)
 import Cardano.Node.Client.UTxOIndexer.Types (
     AddrKey (..),
     Address,
+    BlockHash,
     SlotNo,
     TxIn (..),
     TxOut,
  )
+import ChainFollower.Rollbacks.Types (RollbackPoint (..))
 import Control.Concurrent.STM (STM)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -98,6 +101,20 @@ store with no rollback-log entries yet.
 -}
 watermarkTx :: Transaction IO cf Cols op (Maybe SlotNo)
 watermarkTx = fmap entryKey <$> iterating RollbackCol lastEntry
+
+{- | #257 T257-S2-02: the store's watermark as a slot\/block-hash /pair/
+from the same 'RollbackCol' entry — 'rpMeta' already carries the block
+hash for every following row (see
+'Cardano.Node.Client.UTxOIndexer.Columns' Haddock); a restoration
+sentinel's @rpMeta = Nothing@ is treated the same as no entry at all
+(explicit cold store, DATA-INV-257-02).
+-}
+watermarkPointTx :: Transaction IO cf Cols op (Maybe (SlotNo, BlockHash))
+watermarkPointTx = do
+    entry <- iterating RollbackCol lastEntry
+    pure $
+        entry >>= \Entry{entryKey, entryValue} ->
+            (,) entryKey <$> rpMeta entryValue
 
 {- | The composed checkpoint read: matching live checkpoints for the exact
 AID (decode failures on unrelated outputs at the same address are dropped,

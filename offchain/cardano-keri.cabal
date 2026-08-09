@@ -371,6 +371,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
@@ -389,6 +390,7 @@ test-suite deployment-tests
     , cardano-keri:write-composition
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -396,6 +398,7 @@ test-suite deployment-tests
     , cardano-tx-tools:tx-build
     , containers
     , directory
+    , filepath
     , hspec                           >=2.11 && <2.12
     , http-conduit
     , memory                          >=0.18 && <0.19

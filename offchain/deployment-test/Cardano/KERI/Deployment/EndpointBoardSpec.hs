@@ -7,11 +7,12 @@ Description : Genuine witness OOBI parsing and fail-closed board catalog tests
 module Cardano.KERI.Deployment.EndpointBoardSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
-import Cardano.KERI.Deployment.CLI (registerPreflight)
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
     ChainAsset (..),
     ChainAssetUtxo (..),
  )
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
+import Cardano.KERI.Deployment.CLI (registerPreflight)
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     EndpointRecord (..),
@@ -25,7 +26,6 @@ import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     parseInceptionExport,
  )
-import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Control.Monad (forM_)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
@@ -266,6 +266,7 @@ validUtxo record =
                         , B (endpointSignature record)
                         , B owner
                         ]
+        , chainAssetReferenceScript = Nothing
         }
 
 onlyMarker :: EndpointRecord -> ChainAsset

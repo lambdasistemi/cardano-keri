@@ -365,6 +365,18 @@
         "type": "github"
       }
     },
+    "deployPreprod": {
+      "flake": false,
+      "locked": {
+        "path": "../deploy/preprod",
+        "type": "path"
+      },
+      "original": {
+        "path": "../deploy/preprod",
+        "type": "path"
+      },
+      "parent": []
+    },
     "docsSwagger": {
       "flake": false,
       "locked": {
@@ -1852,6 +1864,7 @@
         "cardano-node": "cardano-node",
         "cardano-node-clients": "cardano-node-clients",
         "cardanoLedgerApiBlaster": "cardanoLedgerApiBlaster",
+        "deployPreprod": "deployPreprod",
         "docsSwagger": "docsSwagger",
         "flake-parts": "flake-parts",
         "haskellNix": "haskellNix_2",

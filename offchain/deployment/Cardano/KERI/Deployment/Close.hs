@@ -27,8 +27,7 @@ import Cardano.KERI.AID.Checkpoint.Close (
     reconstructCloseMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (canonicalCbor)
-import Cardano.KERI.Deployment.ChainIndex (ChainAsset (..))
-import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
+import Cardano.KERI.ChainQuery (ActiveCheckpoint (..), ChainAsset (..))
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
     DeploymentParameters (..),

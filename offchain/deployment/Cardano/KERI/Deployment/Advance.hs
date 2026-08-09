@@ -28,7 +28,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
  )
-import Cardano.KERI.Deployment.CheckpointIndex (
+import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
  )
 import Cardano.KERI.Deployment.KEL (

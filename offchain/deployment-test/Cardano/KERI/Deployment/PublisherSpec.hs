@@ -22,7 +22,7 @@ independent of the frozen, devalued e2e FOD.
 module Cardano.KERI.Deployment.PublisherSpec (spec) where
 
 import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
-import Cardano.KERI.Deployment.ChainIndex (ChainReference (..))
+import Cardano.KERI.ChainQuery (ChainAssetUtxo (..), ChainReference (..))
 import Cardano.KERI.Deployment.Manifest (Reference (..))
 import Cardano.KERI.Deployment.Publisher (
     PublishConfig (..),
@@ -242,7 +242,11 @@ standInQueryReferences signedRef scriptHash = do
     signed <- readIORef signedRef
     pure $ case signed of
         Nothing -> []
-        Just tx -> [ChainReference scriptHash (renderTxId (transactionId tx)) 0]
+        Just tx ->
+            [ ChainReference
+                scriptHash
+                (ChainAssetUtxo (renderTxId (transactionId tx)) 0 "" 0 [] Nothing Nothing)
+            ]
 
 publishOneSpec :: Spec
 publishOneSpec = describe "publishOne" $ do
@@ -391,9 +395,9 @@ awaitReferenceSpec = describe "awaitReference" $ do
         -- in script hash, another only in transaction id, so the match
         -- proves the conjunction of both, not either half alone.
         let candidates =
-                [ ChainReference "other-script" "cafef00d" 0
-                , ChainReference "deadbeef" "wrong-tx-id" 1
-                , ChainReference "deadbeef" "cafef00d" 3
+                [ ChainReference "other-script" (ChainAssetUtxo "cafef00d" 0 "" 0 [] Nothing Nothing)
+                , ChainReference "deadbeef" (ChainAssetUtxo "wrong-tx-id" 1 "" 0 [] Nothing Nothing)
+                , ChainReference "deadbeef" (ChainAssetUtxo "cafef00d" 3 "" 0 [] Nothing Nothing)
                 ]
         result <- awaitReference (\_ -> pure candidates) 5_000_000 30 "deadbeef" "cafef00d"
         case result of

@@ -25,7 +25,7 @@ module Cardano.KERI.Deployment.CloseTransaction (
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Close (closeSpendRedeemerData)
 import Cardano.KERI.AID.Checkpoint.Wire (closeBurnRedeemerData)
-import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
+import Cardano.KERI.ChainQuery (ActiveCheckpoint (..))
 import Cardano.KERI.Deployment.Close (ClosePackage (..))
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),

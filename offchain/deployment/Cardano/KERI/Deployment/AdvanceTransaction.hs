@@ -31,12 +31,12 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
     asPlcData,
  )
-import Cardano.KERI.Deployment.Advance (AdvancePackage (..))
-import Cardano.KERI.Deployment.ChainIndex (
+import Cardano.KERI.ChainQuery (
+    ActiveCheckpoint (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
  )
-import Cardano.KERI.Deployment.CheckpointIndex (ActiveCheckpoint (..))
+import Cardano.KERI.Deployment.Advance (AdvancePackage (..))
 import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
     Reference (..),

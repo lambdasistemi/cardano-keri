@@ -18,7 +18,7 @@ import Cardano.KERI.CLI.Backend (
     runBackendListCheckpoints,
     runBackendPayerUtxos,
  )
-import Cardano.KERI.Deployment.ChainIndex (KoiosToken)
+import Cardano.KERI.ChainQuery.Koios (KoiosToken)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Text (Text)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)

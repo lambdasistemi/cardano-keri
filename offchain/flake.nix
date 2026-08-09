@@ -92,10 +92,9 @@
       "github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46";
   };
 
-  outputs =
-    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, bundlers
-      , leanBlaster, lean4Nix, leanNixpkgs, plutusCoreBlaster
-      , cardanoLedgerApiBlaster, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP
+    , bundlers, leanBlaster, lean4Nix, leanNixpkgs, plutusCoreBlaster
+    , cardanoLedgerApiBlaster, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-darwin" ];
       perSystem = { system, ... }:
@@ -135,8 +134,7 @@
             src = ./blaster;
             filter = path: type:
               let baseName = builtins.baseNameOf (toString path);
-              in pkgs.lib.cleanSourceFilter path type
-              && baseName != ".lake"
+              in pkgs.lib.cleanSourceFilter path type && baseName != ".lake"
               && !(pkgs.lib.hasPrefix "result" baseName);
           };
           # #219 A4: the repo-pinned aiken (v1.1.23) — see the `aikenNixpkgs`
@@ -306,6 +304,9 @@
             project.hsPkgs.cardano-keri.components.tests.unit-tests;
           indexer-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.indexer-tests;
+          # #257: the focused chain-query algebra proof suite.
+          chain-query-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.chain-query-tests;
           # #177 Slice 1: the packaged `ckeri` executable itself, top-level
           # (unlike e2eWiring.ckeriRunner below) so `backend-check` can prove
           # its --help/status surface without depending on the Aiken
@@ -418,7 +419,8 @@
           # is `just backend-check`'s focused command.
           backend-check-runner = pkgs.writeShellApplication {
             name = "backend-check";
-            runtimeInputs = [ ckeri-exe cli-tests-exe pkgs.bash pkgs.coreutils pkgs.gnugrep ];
+            runtimeInputs =
+              [ ckeri-exe cli-tests-exe pkgs.bash pkgs.coreutils pkgs.gnugrep ];
             text = ''
               cli-tests
 
@@ -448,19 +450,171 @@
             touch $out
           '';
 
+          # #257: Cabal component boundary, both interpreter semantics,
+          # one-run local execution, concurrent block application, and
+          # registration wiring. A named preflight reports the exact missing
+          # #257 module/migration before the packaged proof suite runs, so an
+          # absent implementation surfaces as an intended missing-contract
+          # verdict rather than an unrelated build/setup failure. NOTE-008:
+          # this must be a flake-owned runCommand-invokes-app check, not a
+          # manually-run justfile body, so `nix flake check` actually
+          # exercises it.
+          query-algebra-runner = pkgs.writeShellApplication {
+            name = "query-algebra";
+            runtimeInputs =
+              [ chain-query-tests-exe pkgs.ripgrep pkgs.coreutils ];
+            text = ''
+              cd ${./.}
+
+              fail() {
+                  echo "query-algebra: $1" >&2
+                  exit 1
+              }
+
+              # MOD-257-QUERY: the provider-neutral algebra (T257-S1-01).
+              if [[ ! -f query/Cardano/KERI/ChainQuery.hs ]]; then
+                  fail "chain-query algebra module absent (T257-S1-01): operation surface, interpreter values, settlement, and registration program are not yet implemented"
+              fi
+
+              # MOD-257-KOIOS: the concrete Koios interpreter (T257-S1-03).
+              if [[ ! -f query-koios/Cardano/KERI/ChainQuery/Koios.hs ]]; then
+                  fail "chain-query-koios interpreter module absent (T257-S1-03): Koios operation translation and sequential consistency are not yet implemented"
+              fi
+
+              # MOD-257-LOCAL: the indexer's whole-program local interpreter (T257-S2-01..04).
+              if [[ ! -f indexer/Cardano/KERI/Indexer/ChainQuery.hs ]]; then
+                  fail "local chain-query interpreter module absent (T257-S2-01): one-run translation, watermark, and concurrent-block-application coverage are not yet implemented"
+              fi
+
+              # INV-257-BUILDER / RQ-257-10: no builder module names a concrete provider.
+              # This check is meaningful now, not only after migration: it is the exact
+              # regression a reintroduced forbidden import must trip.
+              builder_modules=(
+                  Cardano/KERI/Deployment/AdvanceTransaction.hs
+                  Cardano/KERI/Deployment/CloseTransaction.hs
+                  Cardano/KERI/Deployment/EndpointBoardTransaction.hs
+                  Cardano/KERI/Deployment/Publisher.hs
+                  Cardano/KERI/Deployment/Registration.hs
+              )
+              builder_paths=("''${builder_modules[@]/#/deployment/}")
+              if rg -n 'Cardano\.KERI\.(Deployment\.ChainIndex|ChainQuery\.(Koios|Local)|Indexer\.Query)' "''${builder_paths[@]}"; then
+                  fail "a transaction builder still imports a concrete query provider (INV-257-BUILDER, T257-S1-03/04 not yet complete)"
+              fi
+
+              # MOD-257-QUERY must own no HTTP/store-handle/provider-configuration
+              # responsibility (mechanical boundary check, modules-model.md).
+              if [[ -d query ]] && rg -n 'Network\.HTTP|Database\.KV|rocksdb' query --glob '*.hs' -g '!*Spec.hs'; then
+                  fail "chain-query owns an HTTP client or store-handle dependency (modules-model mechanical boundary check)"
+              fi
+
+              # RQ-257-08 / T257-S3-02: registration no longer threads a bare query
+              # callback; it selects one interpreter through the algebra.
+              if rg -q 'registerQueryAsset' deployment/Cardano/KERI/Deployment/Registration.hs; then
+                  fail "registration still threads a bare query callback (registerQueryAsset); registration wiring (T257-S3-02) not yet complete"
+              fi
+
+              # DATA-INV-257-01 P2 (NOTE-025/027, A-003): 'ChainQueryInterpreter'
+              # must be opaque to an EXTERNAL client. A source scan cannot prove
+              # that -- submission 7 shipped one and the leak survived -- so
+              # compile a real external client against the candidate's own
+              # Interpreter.hs and require it to FAIL by name, then prove that
+              # restoring ONLY the export makes that same fixture compile. The
+              # dev-shell ghc already carries chain-query's dependency closure,
+              # so the fixture compiles the library from source and needs no
+              # installed package.
+              boundary=$(mktemp -d)
+              # One module per route, because ghc reports only the first
+              # offending binding per module: compiling them together would
+              # prove one route and silently skip five.
+              routes=(
+                "construction:built = ChainQueryInterpreter u u u u u (u u) u u where u = undefined"
+                "update:updated i = i { interpretPayerUtxos = undefined }"
+                "explicit-field:field ChainQueryInterpreter{interpretPayerUtxos = op} = op"
+                "puns:puns ChainQueryInterpreter{interpretReferenceScripts} = interpretReferenceScripts"
+                "positional:positional (ChainQueryInterpreter _ _ _ _ op _ _ _) = op"
+                "extract-and-invoke:invoked i = (case i of ChainQueryInterpreter{interpretPayerUtxos = op} -> op) []"
+              )
+              writeRoute() {
+                  printf '%s\n' "{-# LANGUAGE NamedFieldPuns #-}" "module Opaque where" \
+                      "import Cardano.KERI.ChainQuery.Interpreter" "$1" > "$boundary/Opaque.hs"
+              }
+              cat > "$boundary/OpaqueAll.hs" <<'BOUNDARY'
+              {-# LANGUAGE NamedFieldPuns #-}
+              module OpaqueAll where
+              import Cardano.KERI.ChainQuery.Interpreter
+              built = ChainQueryInterpreter u u u u u (u u) u u where u = undefined
+              updated i = i { interpretPayerUtxos = undefined }
+              field ChainQueryInterpreter{interpretPayerUtxos = op} = op
+              puns ChainQueryInterpreter{interpretReferenceScripts} = interpretReferenceScripts
+              positional (ChainQueryInterpreter _ _ _ _ op _ _ _) = op
+              invoked i = field i []
+              BOUNDARY
+              ghcbin=${project.shell.ghc}/bin/ghc
+              ghcx=(-XGHC2021 -XDerivingStrategies -XDuplicateRecordFields -XLambdaCase -XOverloadedStrings -XRecordWildCards -XStrictData)
+
+              # Negative control, per route: each must FAIL, and each diagnostic
+              # must name the constructor or field as out of scope. A non-zero
+              # exit alone is vacuous -- any unrelated breakage produces one.
+              for entry in "''${routes[@]}"; do
+                  name="''${entry%%:*}"
+                  writeRoute "''${entry#*:}"
+                  if "$ghcbin" "''${ghcx[@]}" -fno-code -i"$boundary:query:lib" \
+                      "$boundary/Opaque.hs" > "$boundary/$name.txt" 2>&1; then
+                      fail "external client route '$name' compiled: the raw ChainQueryInterpreter surface is OPEN (DATA-INV-257-01 P2)"
+                  fi
+                  if ! rg -q "ot in scope: (data constructor|record field)? ?.(ChainQueryInterpreter|interpretPayerUtxos|interpretReferenceScripts)|Illegal term-level use of the type constructor .ChainQueryInterpreter" "$boundary/$name.txt"; then
+                      cat "$boundary/$name.txt" >&2
+                      fail "route '$name' failed to compile, but not because the constructor/field is out of scope -- non-zero exit alone is vacuous (DATA-INV-257-01 P2)"
+                  fi
+                  echo "query-algebra: route '$name' rejected by name"
+              done
+              cp "$boundary/OpaqueAll.hs" "$boundary/Opaque.hs"
+
+              # Positive control: restoring ONLY the export must make that same
+              # fixture compile, which is what distinguishes observed opacity
+              # from ambient breakage.
+              mutant=$(mktemp -d)
+              mkdir -p "$mutant/Cardano/KERI/ChainQuery"
+              src=query/Cardano/KERI/ChainQuery/Interpreter.hs
+              mut="$mutant/Cardano/KERI/ChainQuery/Interpreter.hs"
+              sed 's|^    ChainQueryInterpreter,$|    ChainQueryInterpreter (..),|' "$src" > "$mut"
+              diff "$src" "$mut" > "$boundary/mutation.diff" || true
+              if [ "$(rg -c '^[<>]' "$boundary/mutation.diff" || true)" != "2" ] \
+                  || ! rg -q '^>     ChainQueryInterpreter \(\.\.\),$' "$boundary/mutation.diff"; then
+                  cat "$boundary/mutation.diff" >&2
+                  fail "the positive control must be exactly export restoration and nothing else"
+              fi
+              if ! "$ghcbin" "''${ghcx[@]}" -fno-code -fmax-errors=0 -i"$mutant:query:lib:$boundary" \
+                  "$boundary/Opaque.hs" > "$boundary/mutant.txt" 2>&1; then
+                  cat "$boundary/mutant.txt" >&2
+                  fail "restoring the export did not make the fixture compile, so the negative control is not observing the export boundary (DATA-INV-257-01 P2)"
+              fi
+              rm -rf "$mutant"
+              echo "query-algebra: ChainQueryInterpreter is opaque to an external client; restoring only its export makes the same fixture compile"
+
+              echo "query-algebra: all #257 modules present; running committed proofs"
+              chain-query-tests
+            '';
+          };
+          query-algebra-check = pkgs.runCommand "query-algebra-check" {
+            nativeBuildInputs = [ pkgs.glibcLocales ];
+            LANG = "C.UTF-8";
+            LC_ALL = "C.UTF-8";
+          } ''
+            ${pkgs.lib.getExe query-algebra-runner}
+            touch $out
+          '';
+
           # #177 Slice 2: the strict-PATH app and sandboxed check execute the
           # same canonical in-flake validator and negative-control self-test.
           backend-transcript-check-runner = pkgs.writeShellApplication {
             name = "backend-transcript-check";
-            runtimeInputs = [
-              pkgs.bash
-              pkgs.coreutils
-              pkgs.gawk
-              pkgs.gnugrep
-              pkgs.gnused
-            ];
+            runtimeInputs =
+              [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.gnused ];
             text = ''
-              export BACKEND_TRANSCRIPT_VALIDATOR=${./scripts/check-backend-status-transcripts.sh}
+              export BACKEND_TRANSCRIPT_VALIDATOR=${
+                ./scripts/check-backend-status-transcripts.sh
+              }
               bash ${./scripts/test-backend-status-transcripts.sh}
               bash ${./scripts/check-backend-status-transcripts.sh} \
                 --transcript ${./evidence/m1-backend-status-acceptance.txt}
@@ -818,7 +972,8 @@
                 # SHA-bound blueprint's output.
                 overrideBuildModAttrs = _final: prev:
                   {
-                    buildInputs = (prev.buildInputs or [ ]) ++ [ leanNixPkgs.z3 ];
+                    buildInputs = (prev.buildInputs or [ ])
+                      ++ [ leanNixPkgs.z3 ];
                   } // pkgs.lib.optionalAttrs (prev.name == s2EvidenceModule) {
                     buildCommand = ''
                       mkdir -p nix-generated
@@ -834,14 +989,38 @@
               # parameter counts. This list is the selection key set; the
               # blueprint remains the only source of program bytes.
               s2Programs = [
-                { title = "checkpoint.checkpoint.spend"; params = 6; }
-                { title = "hash_proof.hash_proof.mint"; params = 0; }
-                { title = "checkpoint_observer.observer_lifecycle.withdraw"; params = 3; }
-                { title = "checkpoint_observer.observer_lifecycle.publish"; params = 3; }
-                { title = "checkpoint_observer.observer_advance.withdraw"; params = 1; }
-                { title = "checkpoint_observer.observer_advance.publish"; params = 1; }
-                { title = "checkpoint_observer.observer_enforcement.withdraw"; params = 1; }
-                { title = "checkpoint_observer.observer_enforcement.publish"; params = 1; }
+                {
+                  title = "checkpoint.checkpoint.spend";
+                  params = 6;
+                }
+                {
+                  title = "hash_proof.hash_proof.mint";
+                  params = 0;
+                }
+                {
+                  title = "checkpoint_observer.observer_lifecycle.withdraw";
+                  params = 3;
+                }
+                {
+                  title = "checkpoint_observer.observer_lifecycle.publish";
+                  params = 3;
+                }
+                {
+                  title = "checkpoint_observer.observer_advance.withdraw";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_advance.publish";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_enforcement.withdraw";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_enforcement.publish";
+                  params = 1;
+                }
               ];
 
               # The eight exact single-CBOR-hex programs plus a
@@ -923,12 +1102,8 @@
 
               auditRunner = pkgs.writeShellApplication {
                 name = "blaster-audit";
-                runtimeInputs = [
-                  pkgs.coreutils
-                  pkgs.diffutils
-                  pkgs.gnugrep
-                  pkgs.jq
-                ];
+                runtimeInputs =
+                  [ pkgs.coreutils pkgs.diffutils pkgs.gnugrep pkgs.jq ];
                 text = ''
                   if (( $# != 0 )); then
                     echo "blaster-audit: accepts no blueprint path or arguments" >&2
@@ -1069,11 +1244,12 @@
           # Linux release artifacts (AppImage, DEB, RPM) via NixOS/bundlers.
           # Release artifacts use the bare Cabal version; dev artifacts append
           # -<shortRev> so PR/manual runs never collide with tag publications.
-          cabalVersion = pkgs.lib.fileContents (
-            pkgs.runCommand "cabal-version" { } ''
-              sed -n 's/^version:[[:space:]]*//p' ${./cardano-keri.cabal} | head -1 | tr -d '[:space:]' > $out
-            ''
-          );
+          cabalVersion = pkgs.lib.fileContents
+            (pkgs.runCommand "cabal-version" { } ''
+              sed -n 's/^version:[[:space:]]*//p' ${
+                ./cardano-keri.cabal
+              } | head -1 | tr -d '[:space:]' > $out
+            '');
           linuxArtifacts =
             if system == "x86_64-linux" && e2eWiring ? ckeriRunner then
               import ./nix/linux-release.nix {
@@ -1120,27 +1296,31 @@
             ckeri-appimage = linuxArtifacts.appimage;
             ckeri-deb = linuxArtifacts.deb;
             ckeri-rpm = linuxArtifacts.rpm;
-            linux-release-artifacts = pkgs.runCommand "ckeri-linux-release-artifacts"
-              { inherit (linuxArtifacts) appimage deb rpm; version = cabalVersion; } ''
-              mkdir -p $out
-              cp "$appimage" "$out/ckeri-$version-x86_64.AppImage"
-              cp "$deb"/* $out/ 2>/dev/null || true
-              cp "$rpm"/* $out/ 2>/dev/null || true
-            '';
+            linux-release-artifacts =
+              pkgs.runCommand "ckeri-linux-release-artifacts" {
+                inherit (linuxArtifacts) appimage deb rpm;
+                version = cabalVersion;
+              } ''
+                mkdir -p $out
+                cp "$appimage" "$out/ckeri-$version-x86_64.AppImage"
+                cp "$deb"/* $out/ 2>/dev/null || true
+                cp "$rpm"/* $out/ 2>/dev/null || true
+              '';
           } // pkgs.lib.optionalAttrs (linuxDevArtifacts ? appimage) {
             ckeri-dev-appimage = linuxDevArtifacts.appimage;
             ckeri-dev-deb = linuxDevArtifacts.deb;
             ckeri-dev-rpm = linuxDevArtifacts.rpm;
-            linux-dev-release-artifacts = pkgs.runCommand "ckeri-linux-dev-release-artifacts"
-              { inherit (linuxDevArtifacts) appimage deb rpm;
+            linux-dev-release-artifacts =
+              pkgs.runCommand "ckeri-linux-dev-release-artifacts" {
+                inherit (linuxDevArtifacts) appimage deb rpm;
                 version = cabalVersion;
                 shortRev = self.shortRev or "dirty";
               } ''
-              mkdir -p $out
-              cp "$appimage" "$out/ckeri-$version-$shortRev-x86_64.AppImage"
-              cp "$deb"/* $out/ 2>/dev/null || true
-              cp "$rpm"/* $out/ 2>/dev/null || true
-            '';
+                mkdir -p $out
+                cp "$appimage" "$out/ckeri-$version-$shortRev-x86_64.AppImage"
+                cp "$deb"/* $out/ 2>/dev/null || true
+                cp "$rpm"/* $out/ 2>/dev/null || true
+              '';
           };
           checks = {
             unit-tests = unit-tests-check;
@@ -1148,6 +1328,7 @@
             backend-check = backend-check-check;
             backend-transcript-check = backend-transcript-check-check;
             query-endpoint = query-endpoint-check;
+            query-algebra = query-algebra-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
@@ -1193,6 +1374,10 @@
               type = "app";
               program = "${query-endpoint-runner}/bin/query-endpoint-check";
             };
+            query-algebra = {
+              type = "app";
+              program = "${query-algebra-runner}/bin/query-algebra";
+            };
           } // pkgs.lib.optionalAttrs (e2eWiring ? runner) {
             ckeri = {
               type = "app";
@@ -1223,11 +1408,13 @@
           } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
             linux-artifact-smoke = {
               type = "app";
-              program = "${pkgs.writeShellApplication {
-                name = "linux-artifact-smoke";
-                runtimeInputs = [ pkgs.cpio pkgs.rpm pkgs.dpkg ];
-                text = builtins.readFile ./nix/linux-artifact-smoke.sh;
-              }}/bin/linux-artifact-smoke";
+              program = "${
+                  pkgs.writeShellApplication {
+                    name = "linux-artifact-smoke";
+                    runtimeInputs = [ pkgs.cpio pkgs.rpm pkgs.dpkg ];
+                    text = builtins.readFile ./nix/linux-artifact-smoke.sh;
+                  }
+                }/bin/linux-artifact-smoke";
             };
           };
           devShells.default = project.shell;

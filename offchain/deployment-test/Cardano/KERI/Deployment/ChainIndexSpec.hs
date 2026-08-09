@@ -3,8 +3,8 @@
 
 module Cardano.KERI.Deployment.ChainIndexSpec (spec) where
 
-import Cardano.KERI.Deployment.ChainIndex (
-    ChainAsset (..),
+import Cardano.KERI.ChainQuery (ChainAsset (..))
+import Cardano.KERI.ChainQuery.Koios (
     ChainAssetHistory (..),
     ChainMintingTransaction (..),
     ChainScriptRedeemer (..),
@@ -13,9 +13,9 @@ import Cardano.KERI.Deployment.ChainIndex (
     ChainTransactionUtxos (..),
     KoiosToken (..),
     authorizeKoiosRequest,
+    resolveClosedCheckpoint,
  )
-import Cardano.KERI.Deployment.CheckpointIndex (resolveClosedCheckpoint)
-import Cardano.KERI.Deployment.Registration (plutusDataJson)
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
 import Data.ByteString qualified as BS
 import Data.Text qualified as T
 import Network.HTTP.Simple (getRequestHeader, parseRequest)

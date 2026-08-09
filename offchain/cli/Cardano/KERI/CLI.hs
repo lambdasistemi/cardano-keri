@@ -48,29 +48,37 @@ import Cardano.KERI.CLI.Backend.Koios (mkKoiosBackend)
 import Cardano.KERI.CLI.Backend.Local (openLocalBackend)
 import Cardano.KERI.Deployment.CLI (
     AdvanceSettings,
-    BoardInstructions,
+    BoardInstructions (..),
     CloseSettings,
     DeploySettings,
     RegisterSettings,
-    VerifySettings,
     advanceSettingsParser,
-    boardInstructionsParser,
+    boardPostSettingsParser,
+    boardRetireSettingsParser,
+    boardUpdateSettingsParser,
     closeSettingsParser,
     deploySettingsParser,
+    deploySettingsParserWithOut,
     registerSettingsParser,
     runAdvance,
     runBoard,
     runClose,
     runDeploy,
     runRegister,
-    runVerify,
-    verifySettingsParser,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardManifest,
     readEndpointBoardManifest,
  )
 import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
+import Cardano.KERI.Deployment.Verify (
+    BoardListSettings,
+    VerifySettings,
+    boardListSettingsParser,
+    runBoardList,
+    runVerify,
+    verifySettingsParser,
+ )
 import Control.Exception (IOException, try)
 import Data.Text qualified as T
 import OptEnvConf qualified as Opt
@@ -87,7 +95,55 @@ data Instructions
     | List !ListSettings
     | Checkpoint !CheckpointSettings
     | Payer !PayerSettings
-    | Board !BoardInstructions
+    | Board !BoardCommand
+
+{- | #240: this repository's own combined board command sum -- the write
+four ("Cardano.KERI.Deployment.CLI") and the read-only \"list\"
+("Cardano.KERI.Deployment.Verify") were one type before this ticket
+(EDGE-240-04 now forbids that: 'BoardListSettings' carries a Koios token,
+so write-composition cannot type it, let alone dispatch it). Composed here,
+exactly as the top-level 'Instructions'\/'Opt.HasParser' block just above
+already composes the top-level command list from several modules' leaf
+parsers/runners -- this is the same composition, one level deeper, not a
+new mechanism.
+-}
+data BoardCommand
+    = BoardWrite !BoardInstructions
+    | BoardList !BoardListSettings
+
+runBoardCommand :: BoardCommand -> IO ()
+runBoardCommand = \case
+    BoardWrite instructions -> runBoard instructions
+    BoardList settings -> runBoardList settings
+
+boardCommandParser :: Opt.Parser BoardCommand
+boardCommandParser =
+    Opt.commands
+        [ Opt.command
+            "deploy"
+            "Publish the frozen endpoint-board reference script"
+            ( BoardWrite . BoardDeploy
+                <$> Opt.subConfig
+                    "deploy"
+                    (deploySettingsParserWithOut "deploy/preprod/board-manifest.json")
+            )
+        , Opt.command
+            "list"
+            "List the exact verified current endpoint catalog"
+            (BoardList <$> Opt.subConfig "list" boardListSettingsParser)
+        , Opt.command
+            "post"
+            "Post one witness-signed endpoint record"
+            (BoardWrite . BoardPost <$> Opt.subConfig "post" boardPostSettingsParser)
+        , Opt.command
+            "update"
+            "Spend and recreate one owned endpoint record"
+            (BoardWrite . BoardUpdate <$> Opt.subConfig "update" boardUpdateSettingsParser)
+        , Opt.command
+            "retire"
+            "Burn one owned marker and refund its complete deposit"
+            (BoardWrite . BoardRetire <$> Opt.subConfig "retire" boardRetireSettingsParser)
+        ]
 
 instance Opt.HasParser Instructions where
     settingsParser =
@@ -150,7 +206,7 @@ instance Opt.HasParser Instructions where
                 , Opt.command
                     "board"
                     "Operate the current on-chain endpoint catalog"
-                    (Board <$> Opt.subConfig "board" boardInstructionsParser)
+                    (Board <$> Opt.subConfig "board" boardCommandParser)
                 ]
 
 runInstructions :: Instructions -> IO ()
@@ -164,7 +220,7 @@ runInstructions = \case
     List settings -> runBackendListCLI settings
     Checkpoint settings -> runBackendCheckpointCLI settings
     Payer settings -> runBackendPayerCLI settings
-    Board instructions -> runBoard instructions
+    Board command -> runBoardCommand command
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
 error. Checkpoint\/board manifest loading is deferred into the local\/Koios

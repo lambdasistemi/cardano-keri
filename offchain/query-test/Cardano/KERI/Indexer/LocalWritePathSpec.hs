@@ -4,39 +4,32 @@
 
 {- |
 Module      : Cardano.KERI.Indexer.LocalWritePathSpec
-Description : RED T240-S1-03 -- local write-path atomicity, reference derivation, settlement
+Description : T240-S1-03/06/07 -- local write-path atomicity, reference derivation, settlement
 
 Proves T240-S1-03's three blocking properties (RQ-240-03\/04\/05\/06) through
 one test-local typed adapter, 'LocalCapabilities', rather than importing
-not-yet-implemented "Cardano.KERI.Indexer.ChainQuery" symbols directly
-(N-007\/N-008): a missing exported symbol would make this WHOLE suite fail to
-compile, which would also silently stop the base-oracle capture suites in
-the same combined proof run from ever executing -- the wrong-reason failure
-this design exists to rule out.
+"Cardano.KERI.Indexer.ChainQuery" symbols directly into every assertion
+(N-007\/N-008): while any of the four capabilities were not yet implemented,
+a missing exported symbol would have made this WHOLE suite fail to compile,
+silently stopping the base-oracle capture suites in the same combined proof
+run from ever executing.
 
-'redCapabilities' is this file's OWN RED instance of that adapter:
-
-- 'capAtomicQuery' and 'capReferenceScripts' delegate to the REAL, already
-  compiling local interface ('runLocalChainQuery', 'localInterpreter'\/
-  'referenceScripts'\/'runChainQuery') exactly as it stands today. Atomicity
-  already holds (T257-S2-03); reference derivation does not yet
-  (DATA-INV-240-01's gap: 'localInterpreter''s 'referenceScripts' field
-  unconditionally answers 'UnsupportedOperation', regardless of what the
-  store holds).
-- 'capSettlementObserver' and 'capTransactionSettled' have no existing
-  counterpart at all (RQ-240-06). Their RED bodies are explicit, closed,
-  test-local stand-ins -- \"no match, ever\" \/ \"never settled\" -- not a
-  guess at future behaviour, just the honest current absence made
-  observable. Every property below is proved against a NON-degenerate
-  fixture (a live matching output really is in the store), so the closed
-  stand-in is what makes each assertion fail today.
-
-After implementation, GREEN is reached by eta-expanding 'redCapabilities'
-into the real exported functions (@capSettlementObserver = localSettlementObserver@,
-@capTransactionSettled = localTransactionSettled@, and 'capReferenceScripts'
-routed through the new 'localReferenceScriptsTx' instead of the legacy
-'UnsupportedOperation' path) -- the property bodies and fixtures below do not
-change.
+GREEN state (post T240-S1-06\/07): 'redCapabilities' is now every field
+eta-expanded straight to the real exported "Cardano.KERI.Indexer.ChainQuery"
+function -- 'runLocalChainQuery', 'localReferenceScriptsTx' (via the small
+'IO'-bracketing wrapper 'localReferenceScriptsTxViaHandle'),
+'localSettlementObserver', 'localTransactionSettled'. Retained under its
+original name for continuity with the frozen RED-COMMIT (@1126a58@) and this
+file's own 'it'\/'describe' text, which still names each invariant as "RED
+against ..." to describe what the property PROVES, not this adapter's
+current state. Every property body and every fixture below is
+byte-for-byte identical to the RED bundle: only the four field bodies inside
+'redCapabilities' changed, exactly the "same adapter constructed solely by
+eta-expanding the real exported local functions" N-008 specified. Before
+implementation this suite reported build 8's evidence (5 base-oracle
+suites GREEN, this suite's atomicity example GREEN, its other three
+examples RED for exactly their named reasons); now every example proves
+the real local capability.
 
 Reuses the exact proven in-memory harness and helper shapes from
 "Cardano.KERI.Indexer.ChainQuerySpec" ('withInMemoryIndexerRunner',
@@ -49,8 +42,7 @@ new shared test-only export.
 module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes)
-import Cardano.KERI.ChainQuery.Interpreter (runChainQuery)
-import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos, referenceScripts)
+import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
     ChainQueryError,
@@ -58,7 +50,14 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySnapshot (..),
  )
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
-import Cardano.KERI.Indexer.ChainQuery (localInterpreter, runLocalChainQuery)
+import Cardano.KERI.Indexer.ChainQuery (
+    LocalQueryScope (..),
+    localReferenceScriptsTx,
+    localSettlementObserver,
+    localTransactionSettled,
+    queryHandleLocalScope,
+    runLocalChainQuery,
+ )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Body (referenceScriptTxOutL)
@@ -105,44 +104,50 @@ share this exact shape; only field BODIES differ.
 data LocalCapabilities cf op = LocalCapabilities
     { capAtomicQuery ::
         forall a.
-        QueryHandle cf op ->
+        LocalQueryScope cf op ->
         ChainQuery a ->
         IO (Either ChainQueryError (QuerySnapshot a))
     -- ^ RQ-240-03\/04: one program, one store transaction, one watermark.
     , capReferenceScripts ::
-        QueryHandle cf op -> [Text] -> IO (Either ChainQueryError [ChainReference])
+        LocalQueryScope cf op -> [Text] -> IO (Either ChainQueryError [ChainReference])
     -- ^ RQ-240-05\/DATA-INV-240-01: derived reference resolution.
-    , capSettlementObserver :: QueryHandle cf op -> SettlementObserver IO
+    , capSettlementObserver :: LocalQueryScope cf op -> SettlementObserver IO
     -- ^ RQ-240-06: follower-backed asset settlement probe.
-    , capTransactionSettled :: QueryHandle cf op -> TxId -> IO Bool
+    , capTransactionSettled :: LocalQueryScope cf op -> TxId -> IO Bool
     -- ^ RQ-240-06: follower-backed exact-transaction settlement probe.
     }
 
-{- | This file's RED instance. 'capAtomicQuery'\/'capReferenceScripts'
-delegate to the real, already-compiling local interface exactly as it
-stands today (one already correct, one not yet). 'capSettlementObserver'\/
-'capTransactionSettled' have no existing counterpart, so their bodies are
-explicit closed stand-ins -- never a guess, just today's honest absence.
+{- | GREEN (T240-S1-06/07): every field is now the real exported
+"Cardano.KERI.Indexer.ChainQuery" function, eta-expanded -- the property
+bodies and fixtures below are byte-for-byte unchanged from RED, exactly the
+"same adapter constructed solely by eta-expanding the real exported local
+functions" N-008 specified. 'redCapabilities' keeps its RED name in this
+committed history for continuity with the frozen RED-COMMIT and the
+'it'\/'describe' text (still worded "RED against ..." to name the invariant
+each property proves, not this adapter's current state); its own three
+"closed test-local stand-in" field bodies from before implementation are
+gone.
 -}
 redCapabilities :: LocalCapabilities cf op
 redCapabilities =
     LocalCapabilities
         { capAtomicQuery = runLocalChainQuery
-        , capReferenceScripts = \handle hashes ->
-            -- 'referenceScripts' itself already answers 'Either
-            -- ChainQueryError [ChainReference]' (DATA-INV-240-01's own inner
-            -- candidate-resolution layer); 'runChainQuery' adds the outer
-            -- OPERATION-failure 'Either'. Flatten to the one 'Either' this
-            -- adapter's field promises -- a real operation failure and a
-            -- real resolution failure are both "this call did not
-            -- succeed" from this adapter's caller's point of view.
-            either Left id
-                <$> runTransaction
-                    (qhRunner handle)
-                    (runChainQuery (localInterpreter handle) (referenceScripts hashes))
-        , capSettlementObserver = \_handle -> SettlementObserver (\_policy _assetName -> pure [])
-        , capTransactionSettled = \_handle _txId -> pure False
+        , capReferenceScripts = localReferenceScriptsTxViaHandle
+        , capSettlementObserver = localSettlementObserver
+        , capTransactionSettled = localTransactionSettled
         }
+
+{- | 'Cardano.KERI.Indexer.ChainQuery.localReferenceScriptsTx' is a plain
+'Transaction', not an 'IO' action (it has no scope to open a runner
+from -- #240's write path always already holds one open, mid-snapshot).
+This adapter field promises 'IO' directly, matching 'capTransactionSettled'\/
+'capSettlementObserver''s own shape, so this is the one-line bracket every
+other IO-shaped local capability already gets for free.
+-}
+localReferenceScriptsTxViaHandle ::
+    LocalQueryScope cf op -> [Text] -> IO (Either ChainQueryError [ChainReference])
+localReferenceScriptsTxViaHandle scope hashes =
+    runTransaction (localScopeRunner scope) (localReferenceScriptsTx hashes)
 
 spec :: Spec
 spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (#240 S240-1)" $ do
@@ -151,7 +156,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
             withInMemoryIndexerRunner $ \handle runner -> do
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x10) addrA]
                 counter <- newIORef (0 :: Int)
-                let scope = testQueryHandle (countingRunner counter runner)
+                let scope = queryHandleLocalScope (testQueryHandle (countingRunner counter runner))
                 result <- capAtomicQuery redCapabilities scope (payerUtxos [addrText addrA])
                 count <- readIORef counter
                 count `shouldBe` 1
@@ -165,7 +170,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
         it "should derive the live reference output instead of reporting UnsupportedOperation" $
             withInMemoryIndexerRunner $ \handle runner -> do
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [referenceCreateAt (sampleTxIn 0x20) scriptA addrA]
-                result <- capReferenceScripts redCapabilities (testQueryHandle runner) [hashA]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashA]
                 case result of
                     Right [ref] -> chainReferenceScriptHash ref `shouldBe` hashA
                     Right other -> expectationFailure ("expected exactly one resolved reference, got " <> show (length other))
@@ -177,7 +182,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
             withInMemoryIndexerRunner $ \handle runner -> do
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [assetCreateAt (sampleTxIn 0x40) addrA]
-                let observer = capSettlementObserver redCapabilities (testQueryHandle runner)
+                let observer = capSettlementObserver redCapabilities (queryHandleLocalScope (testQueryHandle runner))
                 matches <- probeSettlement observer policyHexA assetNameHexA
                 case matches of
                     [_one] -> pure ()
@@ -186,7 +191,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
         it "capTransactionSettled should reflect a live tracked output of the exact tx id, not the closed False stand-in" $
             withInMemoryIndexerRunner $ \handle runner -> do
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate targetTxIn addrA]
-                settled <- capTransactionSettled redCapabilities (testQueryHandle runner) targetTxId
+                settled <- capTransactionSettled redCapabilities (queryHandleLocalScope (testQueryHandle runner)) targetTxId
                 settled `shouldBe` True
   where
     targetTxIn = sampleTxIn 0x30

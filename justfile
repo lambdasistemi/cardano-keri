@@ -258,6 +258,17 @@ query-endpoint-cache-guard:
 query-algebra-check:
     cd offchain && nix run --quiet --no-write-lock-file .#query-algebra
 
+# #240 T240-S1-13 lasting focused recipe: the permanent provider-free
+# local-write-path family gate (five base-oracle capture suites plus the
+# local write-path atomicity/reference-derivation/settlement proof, all
+# GREEN, non-zero example counts). Flake-owned check
+# (offchain/flake.nix checks.<system>.local-write-path-check /
+# apps.<system>.local-write-path-check) so `nix flake check` actually
+# executes it. This is the exact recipe name gate.sh's own preflight
+# (S240-1) requires `just --list` to contain.
+local-write-path-check:
+    cd offchain && nix run --quiet --no-write-lock-file .#local-write-path-check
+
 # Audit exact production UPLC extraction and the complete pinned Blaster graph.
 blaster:
     cd offchain && nix run --quiet --no-write-lock-file .#blaster
@@ -530,7 +541,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required

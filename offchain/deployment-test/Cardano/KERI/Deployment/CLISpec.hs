@@ -42,6 +42,7 @@ import Data.ByteString qualified as BS
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Paths_cardano_keri (getDataFileName)
 import System.Directory (doesFileExist)
+import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (
     Spec,
     describe,
@@ -71,110 +72,118 @@ spec = do
                 `shouldBe` "registration snapshot: source=SourceKoios consistency=LegacySequential watermark=cold"
 
     describe "runRegister composition boundary" $
-        it "submits only after every read-only preflight and warning" $ do
-            kelPath <-
-                getDataFileName
-                    "deployment-test/fixtures/kli-export-2-of-5.cesr"
-            manifestPath <-
-                requiredPath
-                    [ "../deploy/preprod/m1-manifest.json"
-                    , "deploy/preprod/m1-manifest.json"
-                    ]
-            boardManifestPath <-
-                requiredPath
-                    [ "../deploy/preprod/board-manifest.json"
-                    , "deploy/preprod/board-manifest.json"
-                    ]
-            callsRef <- newIORef ([] :: [String])
-            linesRef <- newIORef ([] :: [String])
-            let record calls tag action =
-                    modifyIORef' calls (tag :) >> action
-                mkRuntime calls =
-                    RegisterRuntime
-                        { registerReadKel =
-                            record calls "read-kel" . BS.readFile
-                        , registerReadManifest =
-                            record calls "read-manifest" . readManifest
-                        , registerReadBoardManifest =
-                            record calls "read-board-manifest"
-                                . readEndpointBoardManifest
-                        , registerQuerySnapshot = \_ _ _ ->
-                            record
-                                calls
-                                "query-snapshot"
-                                (pure (Right sampleSnapshot))
-                        , registerWriteLine = \line ->
-                            modifyIORef' linesRef (line :)
-                                >> record calls "warning" (pure ())
-                        , registerSubmit = \_ _ _ ->
-                            record calls "submit" (pure ())
-                        }
-                runtime = mkRuntime callsRef
-                settings =
-                    RegisterSettings
-                        { registerNetwork = "preprod"
-                        , registerNetworkMagic = 1
-                        , registerKel = kelPath
-                        , registerPayer = "unused-signing-key"
-                        , registerNodeSocket = "unused-node-socket"
-                        , registerFundingAddress = "unused-funding-address"
-                        , registerManifest = manifestPath
-                        , registerBoardManifest = boardManifestPath
-                        , registerKoiosUrl = "unused-koios"
-                        , registerKoiosToken = Nothing
-                        , registerTimeoutSeconds = 30
-                        , registerAllowUnlistedWitnesses = True
-                        , registerAllowExistingCheckpoint = True
-                        , registerEscrowLovelace = 1_007_000_000
-                        }
-            runRegisterWith runtime settings
-            readIORef callsRef
-                >>= ( `shouldBe`
-                        [ "read-kel"
-                        , "read-manifest"
-                        , "read-board-manifest"
-                        , "query-snapshot"
-                        , -- diagnostic print of the snapshot's real
-                          -- source/consistency/watermark (NOTE-012)
-                          "warning"
-                        , "warning" -- missing witnesses
-                        , "warning" -- existing checkpoint
-                        , "submit"
+        -- #240: 'runRegisterWith' now brackets one real
+        -- 'Cardano.KERI.Indexer.ChainQuery.withLocalQueryScope' store runner
+        -- for the whole flow, even though 'registerQuerySnapshot'/
+        -- 'registerSubmit' below are fully mocked and never touch the
+        -- 'scope' they receive (both discard it). A fresh, empty temp
+        -- directory is a genuine local store ('withRocksDBIndexerRunner'
+        -- opens with @createIfMissing = True@) -- this is a real store
+        -- bracket, not a stub.
+        it "submits only after every read-only preflight and warning" $
+            withSystemTempDirectory "ckeri-register-store" $ \storePath -> do
+                kelPath <-
+                    getDataFileName
+                        "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                manifestPath <-
+                    requiredPath
+                        [ "../deploy/preprod/m1-manifest.json"
+                        , "deploy/preprod/m1-manifest.json"
                         ]
-                    )
-                    . reverse
-            -- NOTE-018 item 2: prove the real production diagnostic-print
-            -- call site emits the real renderer's exact output over the
-            -- real (non-degenerate, distinguishable) envelope, not merely
-            -- that some string was printed at the right position.
-            capturedLines <- reverse <$> readIORef linesRef
-            case capturedLines of
-                (firstDiagnosticLine : _) ->
-                    firstDiagnosticLine `shouldBe` renderQuerySnapshotDiagnostic sampleSnapshot
-                [] -> fail "runRegisterWith never printed the query-snapshot diagnostic"
-            preflightCallsRef <- newIORef ([] :: [String])
-            preflightResult <-
-                try
-                    ( runRegisterWith
-                        (mkRuntime preflightCallsRef)
-                        settings{registerAllowExistingCheckpoint = False}
-                    ) ::
-                    IO (Either SomeException ())
-            case preflightResult of
-                Left exception ->
-                    displayException exception
-                        `shouldContain` "checkpoint already registered; refusing before premint"
-                Right () -> fail "runRegisterWith skipped registerPreflight"
-            readIORef preflightCallsRef
-                >>= ( `shouldBe`
-                        [ "read-kel"
-                        , "read-manifest"
-                        , "read-board-manifest"
-                        , "query-snapshot"
-                        , "warning" -- diagnostic print, before the preflight rejection
+                boardManifestPath <-
+                    requiredPath
+                        [ "../deploy/preprod/board-manifest.json"
+                        , "deploy/preprod/board-manifest.json"
                         ]
-                    )
-                    . reverse
+                callsRef <- newIORef ([] :: [String])
+                linesRef <- newIORef ([] :: [String])
+                let record calls tag action =
+                        modifyIORef' calls (tag :) >> action
+                    mkRuntime calls =
+                        RegisterRuntime
+                            { registerReadKel =
+                                record calls "read-kel" . BS.readFile
+                            , registerReadManifest =
+                                record calls "read-manifest" . readManifest
+                            , registerReadBoardManifest =
+                                record calls "read-board-manifest"
+                                    . readEndpointBoardManifest
+                            , registerQuerySnapshot = \_ _ ->
+                                record
+                                    calls
+                                    "query-snapshot"
+                                    (pure (Right sampleSnapshot))
+                            , registerWriteLine = \line ->
+                                modifyIORef' linesRef (line :)
+                                    >> record calls "warning" (pure ())
+                            , registerSubmit = \_ _ _ _ ->
+                                record calls "submit" (pure ())
+                            }
+                    runtime = mkRuntime callsRef
+                    settings =
+                        RegisterSettings
+                            { registerNetwork = "preprod"
+                            , registerNetworkMagic = 1
+                            , registerKel = kelPath
+                            , registerPayer = "unused-signing-key"
+                            , registerNodeSocket = "unused-node-socket"
+                            , registerFundingAddress = "unused-funding-address"
+                            , registerManifest = manifestPath
+                            , registerBoardManifest = boardManifestPath
+                            , registerStorePath = storePath
+                            , registerTimeoutSeconds = 30
+                            , registerAllowUnlistedWitnesses = True
+                            , registerAllowExistingCheckpoint = True
+                            , registerEscrowLovelace = 1_007_000_000
+                            }
+                runRegisterWith runtime settings
+                readIORef callsRef
+                    >>= ( `shouldBe`
+                            [ "read-kel"
+                            , "read-manifest"
+                            , "read-board-manifest"
+                            , "query-snapshot"
+                            , -- diagnostic print of the snapshot's real
+                              -- source/consistency/watermark (NOTE-012)
+                              "warning"
+                            , "warning" -- missing witnesses
+                            , "warning" -- existing checkpoint
+                            , "submit"
+                            ]
+                        )
+                        . reverse
+                -- NOTE-018 item 2: prove the real production diagnostic-print
+                -- call site emits the real renderer's exact output over the
+                -- real (non-degenerate, distinguishable) envelope, not merely
+                -- that some string was printed at the right position.
+                capturedLines <- reverse <$> readIORef linesRef
+                case capturedLines of
+                    (firstDiagnosticLine : _) ->
+                        firstDiagnosticLine `shouldBe` renderQuerySnapshotDiagnostic sampleSnapshot
+                    [] -> fail "runRegisterWith never printed the query-snapshot diagnostic"
+                preflightCallsRef <- newIORef ([] :: [String])
+                preflightResult <-
+                    try
+                        ( runRegisterWith
+                            (mkRuntime preflightCallsRef)
+                            settings{registerAllowExistingCheckpoint = False}
+                        ) ::
+                        IO (Either SomeException ())
+                case preflightResult of
+                    Left exception ->
+                        displayException exception
+                            `shouldContain` "checkpoint already registered; refusing before premint"
+                    Right () -> fail "runRegisterWith skipped registerPreflight"
+                readIORef preflightCallsRef
+                    >>= ( `shouldBe`
+                            [ "read-kel"
+                            , "read-manifest"
+                            , "read-board-manifest"
+                            , "query-snapshot"
+                            , "warning" -- diagnostic print, before the preflight rejection
+                            ]
+                        )
+                        . reverse
 
 {- | Non-degenerate: a populated (not 'Cold') watermark with a distinguishable
 slot/hash pair, and a distinguishable source\/consistency pair -- so a

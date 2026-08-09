@@ -70,7 +70,7 @@ import Cardano.KERI.ChainQuery (
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
-    QuerySnapshot,
+    QuerySnapshot (..),
     QuerySource (SourceLocal),
     SettlementObserver (..),
     SnapshotConsistency (AtomicLocal),

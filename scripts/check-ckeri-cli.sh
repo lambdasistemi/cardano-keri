@@ -18,8 +18,6 @@ mkdir "$outside"
 "$ckeri" --help | grep -q "status"
 "$ckeri" deploy --help | grep -q -- "--node-socket"
 "$ckeri" deploy --help | grep -q "CKERI_NODE_SOCKET"
-"$ckeri" deploy --help | grep -q -- "--koios-token"
-"$ckeri" deploy --help | grep -q "KOIOS_TOKEN"
 "$ckeri" manifest verify --help | grep -q -- "--manifest"
 "$ckeri" manifest verify --help | grep -q "CKERI_MANIFEST"
 "$ckeri" manifest verify --help | grep -q -- "--koios-token"
@@ -32,8 +30,6 @@ mkdir "$outside"
 "$ckeri" register --help | grep -q "CKERI_ALLOW_UNLISTED_WITNESSES"
 "$ckeri" register --help | grep -q "allow-existing-checkpoint"
 "$ckeri" register --help | grep -q "CKERI_ALLOW_EXISTING_CHECKPOINT"
-"$ckeri" register --help | grep -q -- "--koios-token"
-"$ckeri" register --help | grep -q "KOIOS_TOKEN"
 "$ckeri" register --help | grep -q -- "--board-manifest"
 "$ckeri" register --help | grep -q "CKERI_BOARD_MANIFEST"
 "$ckeri" advance --help | grep -q -- "--aid"
@@ -46,8 +42,6 @@ mkdir "$outside"
 "$ckeri" advance --help | grep -q "CKERI_CONTROLLER_SIGNATURES"
 "$ckeri" advance --help | grep -q -- "--payer"
 "$ckeri" advance --help | grep -q "CKERI_PAYER"
-"$ckeri" advance --help | grep -q -- "--koios-token"
-"$ckeri" advance --help | grep -q "KOIOS_TOKEN"
 "$ckeri" advance --help | grep -q "validator-test-under-signed"
 "$ckeri" advance --help | grep -q "validator-test-under-witnessed"
 "$ckeri" advance --help | grep -q "validator-test-stale"
@@ -63,8 +57,6 @@ mkdir "$outside"
 "$ckeri" close --help | grep -q "CKERI_CONTROLLER_SIGNATURES"
 "$ckeri" close --help | grep -q -- "--change-address"
 "$ckeri" close --help | grep -q "CKERI_CHANGE_ADDRESS"
-"$ckeri" close --help | grep -q -- "--koios-token"
-"$ckeri" close --help | grep -q "KOIOS_TOKEN"
 "$ckeri" close --help | grep -q "validator-test-non-controller"
 "$ckeri" status --help | grep -q "AID"
 "$ckeri" status --help | grep -q "CKERI_AID"
@@ -94,6 +86,32 @@ reject_retired_cardano_cli_help board-deploy board deploy
 reject_retired_cardano_cli_help board-post board post
 reject_retired_cardano_cli_help board-update board update
 reject_retired_cardano_cli_help board-retire board retire
+
+# #240 (INV-240-NOPROVIDER): every migrated write command's help surface
+# must omit provider (Koios) configuration -- the read-only commands
+# (manifest verify, status) keep their own --koios-token/KOIOS_TOKEN
+# assertions above as the positive control proving this detection method
+# can find a real Koios surface when one is actually present.
+reject_write_koios_help() {
+  local command_label="$1"
+  shift
+  local help
+  help="$("$ckeri" "$@" --help)"
+  if grep -q -- '--koios-token\|KOIOS_TOKEN' <<<"$help"; then
+    printf '%s help still exposes provider (Koios) configuration (#240 INV-240-NOPROVIDER)\n' \
+      "$command_label" >&2
+    exit 1
+  fi
+}
+
+reject_write_koios_help deploy deploy
+reject_write_koios_help register register
+reject_write_koios_help advance advance
+reject_write_koios_help close close
+reject_write_koios_help board-deploy board deploy
+reject_write_koios_help board-post board post
+reject_write_koios_help board-update board update
+reject_write_koios_help board-retire board retire
 
 "$worktree/scripts/check-deploy-register-no-cli.sh"
 

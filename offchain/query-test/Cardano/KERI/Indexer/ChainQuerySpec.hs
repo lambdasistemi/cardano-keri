@@ -21,8 +21,6 @@ import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.ChainQuery.Interpreter (
     ChainQueryInterpreter,
     chainQueryInterpreter,
-    interpreterConsistency,
-    interpreterSource,
     runChainQuery,
  )
 import Cardano.KERI.ChainQuery.Program (boardCatalog, currentCheckpoint, payerUtxos, referenceScripts, storeWatermark)
@@ -36,7 +34,7 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
-import Cardano.KERI.Indexer.ChainQuery (localInterpreter, queryHandleLocalScope, runLocalQuery)
+import Cardano.KERI.Indexer.ChainQuery (queryHandleLocalScope, runLocalQuery)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..), payerUtxosTxAcrossAddresses, watermarkTx)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
@@ -61,7 +59,6 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.Async (async, wait)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Concurrent.STM (STM)
-import Control.Monad (join)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
@@ -186,11 +183,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             withInMemoryIndexerRunner $ \_handle runner -> do
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery
-                            (localInterpreter qHandle)
-                            (currentCheckpoint (CheckpointLocator "" "") validAidText)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (currentCheckpoint (CheckpointLocator "" "") validAidText)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects a checkpoint locator that disagrees with the store's own configuration, rather than silently answering for it" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -201,19 +195,15 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                 -- earlier and left this branch untested.
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery
-                            (localInterpreter qHandle)
-                            (currentCheckpoint mismatchingCheckpointLocator validAidText)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (currentCheckpoint mismatchingCheckpointLocator validAidText)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects an empty board locator" $
             withInMemoryIndexerRunner $ \_handle runner -> do
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery (localInterpreter qHandle) (boardCatalog (BoardLocator "" ""))
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (boardCatalog (BoardLocator "" ""))
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects a board locator whose address disagrees with the store's own board address, rather than silently answering for it" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -221,9 +211,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                 -- case above: only the store-identity branch can reject it.
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery (localInterpreter qHandle) (boardCatalog mismatchingBoardLocator)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (boardCatalog mismatchingBoardLocator)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "structurally rejects a malformed current-checkpoint AID before ever invoking the interpreter, with an otherwise-valid locator (NOTE-020)" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -290,13 +279,24 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                     Right inner -> inner `shouldSatisfy` isLeftInvalidLocator
                     Left err -> fail ("expected a pure structural rejection, got an interpreter-level error " <> show err)
 
-    describe "the actual production localInterpreter reports its own real provenance (not a fake stand-in), DATA-INV-257-03" $
+    describe "the actual production local acquisition reports its own real provenance (not a fake stand-in), DATA-INV-257-03" $
         it "reports SourceLocal and AtomicLocal, never LegacySequential (INV-257-CONSISTENCY)" $
+            -- A-262-03: observed on a real acquisition's own snapshot rather
+            -- than on a constructed interpreter value. The local interpreter
+            -- is no longer public -- exporting a transaction-backed
+            -- interpreter alongside a public store runner would let any
+            -- caller rebuild the retired bypass -- and a snapshot is the
+            -- stronger observation anyway: it is the provenance a consumer
+            -- actually receives.
             withInMemoryIndexerRunner $ \_handle runner -> do
-                let interpreter = localInterpreter (queryHandleLocalScope (testQueryHandle runner))
-                interpreterSource interpreter `shouldBe` SourceLocal
-                interpreterConsistency interpreter `shouldBe` AtomicLocal
-                interpreterConsistency interpreter `shouldNotBe` LegacySequential
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
+                result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
+                case result of
+                    Right snapshot -> do
+                        snapshotSource snapshot `shouldBe` SourceLocal
+                        snapshotConsistency snapshot `shouldBe` AtomicLocal
+                        snapshotConsistency snapshot `shouldNotBe` LegacySequential
+                    Left err -> fail ("expected a snapshot, got " <> show err)
   where
     expectedRowCount watermark
         | watermarkSlot watermark >= 20 = 2 :: Int

@@ -43,22 +43,24 @@ authority: #262 added the two operation families whose absence forced the
 seven direct 'Transaction' bundles (an exact output by @(txid,index)@, and
 board entries paired with their own outputs), so the raw readers below are
 private implementation details with no caller outside this module.
-'runLocalQuery' and 'runLocalInterpreter' are the whole exported acquisition
-boundary, and 'runLocalQuery' is what a build phase uses.
+'runLocalQuery' and 'runLocalRegistrationSnapshot' are the whole exported
+acquisition surface: two guarded, named runners, each of which refuses an
+eagerly rejected locator before opening any store transaction. Interpreter
+construction and the transaction bracket are PRIVATE.
 
-A-262-02: this module also exported a generic local runner accepting any
-@'ChainQuery' a@. It opened a store transaction before it could discover
-that the program had already rejected its own locator, so an input refused
-before any operation existed still cost a transaction. It is DELETED rather
-than documented as dangerous — a public API carrying the defect, guarded
-only by what today's caller passes it, is avoided rather than prevented, and
-this ticket exists to replace convention with boundaries. Its absence from
-the whole compiled surface is an executing property.
+That shape is the outcome of three audits finding the same defect at three
+different names. A generic runner accepting any @'ChainQuery' a@ (A-262-02),
+a higher-order runner taking an interpreter callback, and the interpreter
+constructor itself (A-262-03) each let a caller spend a store transaction on
+a program that had already refused its own input. None could be repaired in
+place, and documenting them as dangerous only proved the defect avoided
+rather than prevented. A property derived over the whole public export
+surface now decides what may live here, so adding a fourth such export fails
+a test rather than waiting for a fourth audit.
 -}
 module Cardano.KERI.Indexer.ChainQuery (
-    localInterpreter,
-    runLocalInterpreter,
     runLocalQuery,
+    runLocalRegistrationSnapshot,
     localSettlementObserver,
     localReferenceObservation,
     localTransactionSettled,
@@ -95,6 +97,12 @@ import Cardano.KERI.ChainQuery (
 import Cardano.KERI.ChainQuery.LedgerOutput (chainAssetUtxoToLedgerOutput)
 import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
 import Cardano.KERI.ChainQuery.Program (ChainQuery, eagerRejection)
+import Cardano.KERI.ChainQuery.Registration (
+    RegistrationQueryRequest,
+    RegistrationSnapshot,
+    registrationSnapshotProgram,
+    runRegistrationSnapshot,
+ )
 import Cardano.KERI.Deployment.EndpointBoardManifest (frozenEndpointBoardPolicyId)
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
 import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..), decodeCheckpointOutput)
@@ -167,7 +175,17 @@ queryHandleLocalScope handle =
         , localScopeBoardIdentity = Just (qhBoardAddress handle)
         }
 
--- | Translate the whole algebra to one store 'Transaction' per operation.
+{- | PRIVATE (A-262-03). Translate the whole algebra to one store
+'Transaction' per operation.
+
+This returns an interpreter ALREADY BOUND to the store, and the store
+package's own runner is public while 'LocalQueryScope' hands out the scope's
+runner — so a caller holding this could write @runTransaction
+(localScopeRunner scope) (runChainQuery (localInterpreter scope)
+rejectedProgram)@ and open a transaction for a locator already refused.
+Withdrawing the wrapper around it while leaving this public would have been
+the per-name repair a third audit had already overruled.
+-}
 localInterpreter :: LocalQueryScope cf op -> ChainQueryInterpreter (Transaction IO cf Cols op)
 localInterpreter scope =
     chainQueryInterpreter
@@ -244,22 +262,20 @@ withValidBoardLocator ::
 withValidBoardLocator scope locator action =
     either (pure . Left) (const action) (boardLocatorOk scope locator)
 
-{- | #262 (RQ-262-05\/MOD-262-LOCAL): the whole exported acquisition boundary,
-alongside 'runLocalQuery'. Hand this the way you want a program run --
-'Cardano.KERI.ChainQuery.Interpreter.runChainQuery',
-'Cardano.KERI.ChainQuery.Interpreter.runChainQueryResultSnapshot', or
-'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot', each of which
-composes its own watermark differently -- and it supplies the local
-interpreter and spends exactly one 'RunTransaction' invocation on it.
+{- | PRIVATE (A-262-03). The one place this module opens a store transaction
+around an interpreter.
 
-The rank-2 callback is what makes this the boundary rather than a
-convenience. Its argument is polymorphic in the effect, so a caller can
-compose 'Cardano.KERI.ChainQuery.Program.ChainQuery' operations and nothing
-else: the store 'Transaction' this interpreter actually runs in is not a type
-the callback can name, and no raw reader is reachable through it. That is
-what replaced the raw snapshot runner \#240 exported to write composition,
-and it is why the seven direct bundles could be withdrawn without leaving a
-second acquisition route behind.
+It was public, and its rank-2 callback was offered as the reason that was
+safe: the argument is polymorphic in the effect, so a caller can compose
+'Cardano.KERI.ChainQuery.Program.ChainQuery' operations and nothing else, and
+the store 'Transaction' is not a type the callback can name. Both true,
+neither the point — the transaction is opened BEFORE the callback runs, so
+@\\interpreter -> runChainQuery interpreter alreadyRejectedProgram@ spent one
+on a locator already refused.
+
+Unexported rather than deleted because every guarded entry point below needs
+exactly this, once, behind its own rejection check. A derived property over
+the public surface keeps it here: re-exporting it fails that property.
 -}
 runLocalInterpreter ::
     LocalQueryScope cf op ->
@@ -308,6 +324,37 @@ runLocalQuery scope program =
     case eagerRejection program of
         Just err -> pure (Left err)
         Nothing -> runLocalInterpreter scope (`runChainQueryResultSnapshot` program)
+
+{- | A-262-03: registration's own guarded local entry point.
+
+The register verb cannot use 'runLocalQuery'. Its program carries its own
+watermark, read once and last inside its own failure channel
+(NOTE-021\/A-006), so a runner composing a watermark of its own would append
+a second, redundant read — the thing
+'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot' exists to
+avoid. It therefore needs the interpreter directly, which used to mean
+calling the public generic runner: exactly the capability that had to go.
+
+So the guard lives here instead. The request's program is built and asked
+whether it already rejected; only a program that survived that question is
+given a store transaction. A caller handing this an invalid checkpoint
+locator gets 'InvalidLocator' having opened none.
+
+CORRECTION-014, precisely: the successful branch builds
+'registrationSnapshotProgram' twice — once for this guard and once inside
+'runRegistrationSnapshot'. Construction is pure, so the only invariant that
+matters is unaffected: the rejection is decided before any store transaction
+opens. This comment does not claim single construction, because production
+does not do that.
+-}
+runLocalRegistrationSnapshot ::
+    LocalQueryScope cf op ->
+    RegistrationQueryRequest ->
+    IO (Either ChainQueryError (QuerySnapshot RegistrationSnapshot))
+runLocalRegistrationSnapshot scope request =
+    case eagerRejection (registrationSnapshotProgram request) of
+        Just err -> pure (Left err)
+        Nothing -> runLocalInterpreter scope (`runRegistrationSnapshot` request)
 
 localWatermark :: Transaction IO cf Cols op (Either ChainQueryError (ColdOr ChainWatermark))
 localWatermark = do

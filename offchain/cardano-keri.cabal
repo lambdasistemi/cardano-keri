@@ -826,6 +826,7 @@ test-suite local-write-path-tests
   main-is:          local-write-path/LocalWritePathMain.hs
   other-modules:
     Cardano.KERI.Indexer.LocalWritePathSpec
+    Cardano.KERI.Indexer.PublicSurfaceSpec
     Paths_cardano_keri
 
   build-depends:
@@ -833,9 +834,11 @@ test-suite local-write-path-tests
     , base
     , bech32
     , bytestring
+    , Cabal-syntax
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
+    , cardano-keri:chain-query-koios
     , cardano-keri:deployment
     , cardano-keri:indexer
     , cardano-keri:write-composition

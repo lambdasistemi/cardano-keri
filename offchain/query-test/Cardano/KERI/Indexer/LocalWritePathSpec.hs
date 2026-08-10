@@ -61,7 +61,6 @@ import Cardano.KERI.ChainQuery.Program (
     payerUtxos,
     referenceScripts,
  )
-import Cardano.KERI.ChainQuery.Registration (runRegistrationSnapshot)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
     ActiveCheckpoint (..),
@@ -134,8 +133,8 @@ import Cardano.KERI.Indexer.ChainQuery (
     localSettlementObserver,
     localTransactionSettled,
     queryHandleLocalScope,
-    runLocalInterpreter,
     runLocalQuery,
+    runLocalRegistrationSnapshot,
  )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..), decodeAddr, serialiseAddr)
@@ -1786,7 +1785,7 @@ entrypointAdvanceSpentDatum rotation =
 
 {- | The real registration effects, with ONLY the live submission boundary
 replaced. 'registerQuerySnapshot' is the production body verbatim -- the
-same 'runRegistrationSnapshot' over the same 'localInterpreter' on the
+same guarded 'runLocalRegistrationSnapshot' on the
 scope's own runner -- because the acquisition it performs IS the thing this
 property observes; substituting a stand-in there would prove nothing.
 'registerSubmit' is registration's builder boundary: it is reached only
@@ -1798,8 +1797,7 @@ entrypointBoundaryRegisterRuntime probe =
         { registerReadKel = BS.readFile
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
-        , registerQuerySnapshot = \scope request ->
-            runLocalInterpreter scope (`runRegistrationSnapshot` request)
+        , registerQuerySnapshot = runLocalRegistrationSnapshot
         , registerWriteLine = \_line -> pure ()
         , registerSubmit = \_scope _settings _manifest _plan -> do
             markBoundary probe

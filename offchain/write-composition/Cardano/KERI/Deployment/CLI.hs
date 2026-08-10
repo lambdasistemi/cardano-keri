@@ -91,7 +91,6 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
 import Cardano.KERI.ChainQuery.Registration (
     RegistrationQueryRequest (..),
     RegistrationSnapshot (..),
-    runRegistrationSnapshot,
  )
 import Cardano.KERI.Deployment.Advance (
     AdvancePackage (..),
@@ -174,8 +173,8 @@ import Cardano.KERI.Indexer.ChainQuery (
     localReferenceObservation,
     localSettlementObserver,
     localTransactionSettled,
-    runLocalInterpreter,
     runLocalQuery,
+    runLocalRegistrationSnapshot,
     withLocalQueryScope,
  )
 import Cardano.KERI.Indexer.Config (decodeAddress)
@@ -1938,19 +1937,19 @@ productionRegisterRuntime =
         { registerReadKel = BS.readFile
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
-        , registerQuerySnapshot = \scope req ->
-            runLocalInterpreter scope (`runRegistrationSnapshot` req)
+        , registerQuerySnapshot = runLocalRegistrationSnapshot
         , registerWriteLine = putStrLn
         , registerSubmit = submitRegistration
         }
 
 {- | #240 (RQ-240-03\/04\/06): each build phase's current-state inputs flow
 through the SAME already-open local 'scope' (via
-'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot' over
-'Cardano.KERI.Indexer.ChainQuery.runLocalInterpreter', which is \#262's
-exported acquisition boundary -- registration was always an algebra program,
-so the only thing that changed here is that the store runner it spends is no
-longer this module's to reach) rather than a fresh Koios interpreter per
+'Cardano.KERI.Indexer.ChainQuery.runLocalRegistrationSnapshot', registration's
+own guarded named entry point — it cannot use the general one because its
+program carries its own watermark, read once and last, and a runner composing
+a second would append a redundant read; A-262-03 moved the rejection guard
+into that entry point when the higher-order runner this module used to call
+left the public surface) rather than a fresh Koios interpreter per
 call, and settlement is
 'Cardano.KERI.Indexer.ChainQuery.localSettlementObserver' \@scope\@ -- a
 fresh store observation per poll on that SAME runner, never a fresh RocksDB
@@ -2005,9 +2004,7 @@ submitRegistration scope settings manifest plan =
                         }
                 fetchSnapshot referenceHashes = do
                     envelope <-
-                        runLocalInterpreter
-                            scope
-                            (`runRegistrationSnapshot` snapshotRequest referenceHashes)
+                        runLocalRegistrationSnapshot scope (snapshotRequest referenceHashes)
                             >>= either (fail . show) pure
                     putStrLn (renderQuerySnapshotDiagnostic envelope)
                     pure (snapshotValue envelope)

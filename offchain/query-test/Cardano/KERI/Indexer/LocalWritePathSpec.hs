@@ -44,15 +44,17 @@ module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
-import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
-import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos)
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
+import Cardano.KERI.ChainQuery.Program (ChainQuery, currentCheckpoint, payerUtxos)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
+    ActiveCheckpoint (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
     ChainQueryError (..),
     ChainReference (..),
     ChainReferenceScript (..),
+    CheckpointLocator (..),
     QuerySnapshot (..),
  )
 import Cardano.KERI.Deployment.CLI (
@@ -386,6 +388,98 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                     case result of
                         Right refs -> refs `shouldNotBe` [parityExpectedReference]
                         Left err -> expectationFailure ("expected the perturbed reference to still decode, got " <> show err)
+
+            it
+                "capAtomicQuery's currentCheckpoint decode of the shared checkpoint fixture (nested Weighted-threshold datum) is byte-identical to the real koiosInterpreter's inline-datum-JSON decode of the same fixture"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [UtxoCreate parityCheckpointTxIn addrA (parityCheckpointOutput parityCheckpointDatum)]
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    case result of
+                        Right snapshot -> case snapshotValue snapshot of
+                            Right (Just checkpoint) -> checkpoint `shouldBe` parityExpectedCheckpoint
+                            Right Nothing -> expectationFailure "expected the acquired checkpoint, got Nothing"
+                            Left err -> expectationFailure ("expected the acquired checkpoint, got " <> show err)
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+
+            it
+                "rejects a one-side acquired-value perturbation -- a changed local Weight numerator (inside the nested Weighted threshold) no longer matches the frozen base-provider value (permanent falsifier, family-specific field)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [UtxoCreate parityCheckpointTxIn addrA (parityCheckpointOutput perturbedParityCheckpointDatum)]
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    case result of
+                        Right snapshot -> case snapshotValue snapshot of
+                            Right (Just checkpoint) -> checkpoint `shouldNotBe` parityExpectedCheckpoint
+                            Right Nothing -> expectationFailure "expected the perturbed checkpoint to still decode, got Nothing"
+                            Left err -> expectationFailure ("expected the perturbed checkpoint to still decode, got " <> show err)
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+
+            it "fails closed the same way on absence: no live checkpoint output for this AID at all (currentCheckpoint, both acquisition paths report no error)" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) []
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    case result of
+                        Right snapshot -> snapshotValue snapshot `shouldBe` Right Nothing
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+
+            it
+                "fails closed the same way on ambiguity: two live checkpoint outputs for the same AID -- byte-identical AmbiguousCurrentState text on both acquisition paths (confirmed by direct comparison, not assumed)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [ UtxoCreate parityCheckpointTxIn addrA (parityCheckpointOutput parityCheckpointDatum)
+                        , UtxoCreate (Indexer.TxIn (BS.replicate 32 0x75) 0) addrA (parityCheckpointOutput parityCheckpointDatum)
+                        ]
+                    -- Unlike absence (a genuine Right Nothing, no short-circuit),
+                    -- an interpreter-level AmbiguousCurrentState short-circuits
+                    -- the whole free-algebra computation and surfaces at
+                    -- capAtomicQuery's own outer Either, never nested inside
+                    -- snapshotValue -- confirmed by this example itself, not
+                    -- assumed.
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    result `shouldBe` Left (AmbiguousCurrentState "more than one live checkpoint output for this AID")
+
+            it
+                "diverges from the provider on a malformed datum -- confirmed, not assumed: the base path surfaces a named DecodingFailure for its single malformed row, while the local path's list-comprehension filter (Right record <- [decodeCheckpointOutput ...]) silently excludes an undecodable row from the match set, reporting absence rather than an error (a pre-existing #257 local-interpreter behavior, out of this repair's fence to change; recorded, not treated as a defect)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [UtxoCreate parityCheckpointTxIn addrA malformedTxOut]
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    case result of
+                        Right snapshot -> snapshotValue snapshot `shouldBe` Right Nothing
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
 
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
@@ -1161,6 +1255,144 @@ perturbedParityReferenceScript = mkCageScript perturbedParityReferenceScriptByte
 
 perturbedParityReferenceHash :: Text
 perturbedParityReferenceHash = scriptHashText (computeScriptHash perturbedParityReferenceScriptBytes)
+
+{- | A-015\/N-075 continuation (the dangerous one, INV-240-PARITY):
+'currentCheckpoint' acquisition parity. The datum uses a __'Weighted'__
+threshold, not 'Unweighted' -- the only shape exercising the 3-level
+nested @Constr\/List\/Constr\/[I,I]@ structure where a JSON-detailed-Data
+(provider) versus CBOR-native-Data (local) divergence would plausibly
+hide (an 'Unweighted' threshold is a single flat @Constr 0 [I m]@ and
+would pass even if the two 'Data' codecs disagreed about nested
+@Constr@\/@List@ handling entirely).
+
+Fixture reuses 'testQueryHandle''s own checkpoint identity
+('unusedCheckpointPolicy', 'addrA') so 'capAtomicQuery' via
+'queryHandleLocalScope' finds it without a bespoke scope. Carries exactly
+ONE asset (its own checkpoint NFT) -- every real checkpoint output in
+this system does; this is not merely convenient, it deliberately avoids a
+provider-order-vs-local-key-sorted-order ordering question that does not
+arise in genuine checkpoint data. If any later slice makes a checkpoint
+output carry more than one asset, THAT comparison would need to answer
+an ordering question this one does not (a note for whoever cuts that
+slice, per A-016).
+-}
+parityCheckpointDatum :: CheckpointDatumV1
+parityCheckpointDatum =
+    CheckpointDatumV1
+        { cdCesrAid = BS.replicate 32 0x71
+        , cdCurKeys = [BS.replicate 32 0x11, BS.replicate 32 0x12]
+        , cdCurThreshold = Weighted [[Weight 1 2, Weight 1 2]]
+        , cdNextKeys = [BS.replicate 32 0x22]
+        , cdNextThreshold = Unweighted 1
+        , cdWitnesses = []
+        , cdToad = 0
+        , cdSeq = 0
+        , cdNativeSn = 0
+        }
+
+{- | 'qb64Aid' of 'parityCheckpointDatum''s own @cdCesrAid@
+(@BS.replicate 32 0x71@) -- both 'activeCheckpointAid' (requested,
+echoed unchanged on both sides) and the datum's own recorded AID must
+decode to this same identity for the acquisition to resolve at all.
+-}
+parityCheckpointAid :: Text
+parityCheckpointAid = "EHFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFx"
+
+parityCheckpointLocator :: CheckpointLocator
+parityCheckpointLocator =
+    CheckpointLocator
+        { checkpointLocatorPolicyId = "41414141414141414141414141414141414141414141414141414141"
+        , checkpointLocatorAddress = addrText addrA
+        }
+
+parityCheckpointTxIn :: Indexer.TxIn
+parityCheckpointTxIn = Indexer.TxIn (BS.replicate 32 0x44) 0
+
+{- | One live checkpoint output at 'addrA' carrying @datum@'s inline
+Plutus datum and exactly the one checkpoint NFT under
+'unusedCheckpointPolicy', named for @datum@'s own AID.
+-}
+parityCheckpointOutput :: CheckpointDatumV1 -> Indexer.TxOut
+parityCheckpointOutput datum =
+    Indexer.TxOut $
+        serialize'
+            (eraProtVerLow @ConwayEra)
+            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
+  where
+    Indexer.Address addrABytes = addrA
+    keyHash = fromJust (hashFromBytes addrABytes)
+    assetName = AssetName (SBS.toShort (deriveAidAssetName (cdCesrAid datum)))
+    baseTxOut :: TxOut ConwayEra
+    baseTxOut =
+        mkBasicTxOut
+            (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
+            ( MaryValue
+                (Coin 5_000_000)
+                (MultiAsset (Map.singleton unusedCheckpointPolicy (Map.singleton assetName 1)))
+            )
+    inlineDatum :: PLC.Data -> Datum ConwayEra
+    inlineDatum plutus = Datum (dataToBinaryData (Data plutus))
+    plutusData :: (ToData a) => a -> PLC.Data
+    plutusData value =
+        let BuiltinData plutus = toBuiltinData value
+         in plutus
+
+{- | The permanent falsifier's negative fixture: 'parityCheckpointDatum'
+with ONE 'Weight' numerator changed to another legal, canonically-reduced
+weight (@1\/2 -> 1\/3@, still satisfies @canonicalWeight@: den > 0,
+0 <= num <= den, gcd num den == 1) -- a well-formed-but-different value
+inside the exact nested path identified above, never a decode rejection.
+-}
+perturbedParityCheckpointDatum :: CheckpointDatumV1
+perturbedParityCheckpointDatum =
+    parityCheckpointDatum{cdCurThreshold = Weighted [[Weight 1 3, Weight 1 2]]}
+
+{- | The exact value produced by running the REAL, unmodified frozen-base
+(@5bf84982f837c0f5bdd16fd244ae31b31224d147@) 'Cardano.KERI.ChainQuery.Koios.koiosInterpreter'
+against a real Warp loopback server serving 'parityCheckpointOutput'
+'parityCheckpointDatum' as Koios @\/asset_utxos@ JSON (inline datum
+rendered by the real, shared @plutusDataJson@ codec, never hand-written)
+-- captured once via a proof-only executable in a detached worktree
+(never committed; N-075\/evidence\/a013-finding3), reproduced here
+verbatim as this property's frozen comparison target.
+
+Two request-echo fields, not independently derived on either side:
+'activeCheckpointAid' is the REQUESTED @aid@ text, and
+'activeCheckpointAssetName' is the REQUESTED-derived asset-name hex
+(@checkpointAssetName aid@ on the base side; independently RE-derived
+from the stored output and cross-checked on the local side -- both equal
+the same value for a well-formed fixture, but by a different route,
+confirmed by direct source reading, not assumed).
+
+One field is a genuine, confirmed asymmetry, not a coincidence:
+'activeCheckpointAddress' is the PROVIDER's own reported row address on
+the base side (checked equal to the locator, per
+'resolveActiveCheckpointOne'), but on the LOCAL side it is
+@renderIndexerAddress addr@ -- the QUERY SCOPE's own configured address,
+never read off the stored @ledgerTxOut@ at all (confirmed by direct
+source reading of 'decodeActiveCheckpoint'). The local side therefore
+structurally relies on @scanAddressTx@ returning only rows at its
+requested address; recorded under the advisory INV-240-SWEEP row per
+A-016, not treated as a blocker.
+-}
+parityExpectedCheckpoint :: ActiveCheckpoint
+parityExpectedCheckpoint =
+    ActiveCheckpoint
+        { activeCheckpointAid = "EHFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFx"
+        , activeCheckpointAssetName = "50100c04b8b91223e65ecb9b4af5dae97ca65576fa7970dae91adc759711c230"
+        , activeCheckpointTxId = T.replicate 64 "4"
+        , activeCheckpointIndex = 0
+        , activeCheckpointAddress = "addr_test15xs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6zp6kz48"
+        , activeCheckpointLovelace = 5_000_000
+        , activeCheckpointAssets =
+            [ ChainAsset
+                { chainAssetPolicy = "41414141414141414141414141414141414141414141414141414141"
+                , chainAssetName = "50100c04b8b91223e65ecb9b4af5dae97ca65576fa7970dae91adc759711c230"
+                , chainAssetQuantity = 1
+                }
+            ]
+        , activeCheckpointDatum = parityCheckpointDatum
+        }
 
 -- | One live output at @addr@ carrying @script@ as its reference script.
 referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp

@@ -206,6 +206,58 @@ Also lands the lock-sync fix (F-03): the audit binds pin identity from the
 locked inputs, so a lock that mutates on evaluation undermines the audit's own
 premise.
 
+### Slice A2 — collector closure over the source language
+
+Authorized re-cut inside #246 (ruling A-001, basis A-e190-017), not a new
+ticket and not a third campaign on the closed Slice-A boundary. Its boundary is
+stated here **before** its campaign starts, which is the whole point of cutting
+it: Slice A's boundary was drawn before anyone understood the problem, and six
+failure shapes arrived one at a time inside it.
+
+**Target: `INV-A1.v1`** — the universal claim, preserved rather than narrowed.
+Slice A closing does **not** kill or residualise it; it moves here intact.
+
+Boundary:
+
+- collector closure over the tracked source language, explicitly **including
+  syntax whose source spelling omits an upstream namespace** — Lean's
+  leading-dot constructor notation is the known instance, and it is an instance,
+  not the definition;
+- every explicit cross-package reference is either **collected** or the run
+  reports `COULD-NOT-EVALUATE`/RED. There is no third outcome and no silent
+  omission;
+- closure is decided **by the pins**, not by the collector's own token pattern.
+  A collector that defines its own coverage cannot be short of it;
+- the named killing mutant seeds an unrecognised or previously-omitted construct
+  **of a class the collector does not already name** into tracked scope, and
+  makes the real run RED — not merely produce a smaller count.
+
+Also carried by this slice, because Slice A cannot close without them:
+
+- the honest bounded publication required by `INV-A1.v2` — `collected`, `total`,
+  coverage classes, collecting instrument, measurement window, remeasured
+  against the candidate and never transcribed. The provisional ≈68 of ≈99
+  observation is an *input to the question*, not a value to hard-code;
+- the relabelling of the tautological agreement assertion (see below).
+
+`INV-246-RESOLUTION-CLOSURE-BINDING` and `INV-246-PINNED-MODULE-GRAPH` are
+`BLOCKING` and `OPEN` here. Neither may disappear, and each ends only `KILLED`
+by its named demonstrated mutant or `BLOCKED` naming the exact blocking fact.
+
+### The agreement assertion is not a measurement
+
+Gate A-v6 asserts `disagreements=0` over a comparison whose two sides are the
+same predicate, so it cannot fail. That is **not** a weakness in the oracle —
+satisfying an invariant by construction is stronger than measuring it, and the
+by-construction identity is exactly what this mandate demanded. It is a
+labelling defect, and mine: I wrote an assertion that cannot fail and labelled
+it a measurement.
+
+Before Slice A closes, the record either states the identity —
+`agreement=by-construction` with the predicate named — or uses a genuinely
+discriminating second predicate. The `declaration-membership` mode already is
+one. A non-falsifiable assertion may not ship labelled as a measurement.
+
 ### Slice B — frozen post-#219 / post-Conway baseline identity
 
 Re-anchors the baseline artifact so it is reproducible rather than
@@ -237,7 +289,8 @@ rows are `BLOCKING`.
 
 | ID | Severity | Must hold | Observable failure |
 |---|---|---|---|
-| INV-A1 | BLOCKING | Every reference the tracked bridge source makes into the three pinned upstream packages resolves **under the namespace the reference actually names**, decided by an oracle that **cannot disagree with the Lean elaborator that builds those pinned sources**; the complete unresolved set is reported. A textual approximation of Lean name resolution does not satisfy this, however carefully written. | An unresolved reference exists and the run still exits 0; the report omits one; or a reference the elaborator rejects is reported resolved (or one it accepts reported unresolved). |
+| INV-A1.v1 | BLOCKING | **Slice A2 target — universal.** Every explicit cross-package reference the tracked bridge source makes is *collected or fails closed*, and every collected reference is decided by the pinned Lean elaborator-compatible oracle. | A reference the source makes is neither collected nor reported `COULD-NOT-EVALUATE`; or a collected reference is decided by anything other than that oracle. |
+| INV-A1.v2 | BLOCKING | **Slice A closing claim — bounded, and it must say what it is bounded to.** Every reference in the *collected* population resolves under the namespace it actually names, decided by an oracle that cannot disagree with the pinned Lean elaborator, in both directions; the complete unresolved set is reported. The record publishes `collected`, `total`, the coverage classes, the collecting instrument and the measurement window. A bare `unresolved=0` is forbidden, and the counts are remeasured against the candidate, never transcribed. | A resolution verdict disagrees with the elaborator either way; or the record publishes a verdict without its coverage, instrument and window. |
 | INV-A2 | BLOCKING | The resolver is shown, in the same run, to find references that are present: a reported resolved count greater than zero that corresponds to references actually made by the tracked source. | The run reports zero resolved, or reports a count no source reference accounts for. |
 | INV-A3 | BLOCKING | A deliberately seeded reference to a name absent at the pins is reported unresolved and makes the audit exit non-zero. | The seeded reference is reported resolved, is silently skipped, or the audit still exits 0. |
 | INV-A4 | BLOCKING | Pin identity is taken from the locked inputs rather than transcribed, so a pin that moves without the audit noticing is impossible. | A changed pin leaves the audit's reported identity unchanged. |

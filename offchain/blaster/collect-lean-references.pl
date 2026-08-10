@@ -5,7 +5,8 @@ use File::Spec;
 
 @ARGV >= 2 or die "usage: collect-lean-references.pl SOURCE_ROOT FILE...\n";
 my $root = File::Spec->rel2abs(shift @ARGV);
-my %seen;
+my %seen_kind;
+my %seen_provenance;
 my $identifier = qr/[A-Za-z][A-Za-z0-9_']*[!?]?/;
 
 sub reject_unrecognised_constructs {
@@ -43,15 +44,20 @@ sub package_for {
 }
 
 sub emit {
-    my ($path, $reference, $kind) = @_;
+    my ($path, $reference, $kind, $provenance) = @_;
+    $provenance //= 'copied';
     my $package = package_for($reference) or return;
     my $relative = File::Spec->abs2rel(File::Spec->rel2abs($path), $root);
     $relative =~ s{\\}{/}g;
     my $source_path = "offchain/blaster/$relative";
     my $key = join "\t", $source_path, $package, $reference;
     my %priority = (name => 1, namespace => 2, module => 3);
-    $seen{$key} = $kind
-        if !exists $seen{$key} || $priority{$kind} > $priority{$seen{$key}};
+    if (!exists $seen_kind{$key} || $priority{$kind} > $priority{$seen_kind{$key}}) {
+        $seen_kind{$key} = $kind;
+    }
+    $seen_provenance{$key} = 'synthesised'
+        if $provenance eq 'synthesised';
+    $seen_provenance{$key} //= 'copied';
 }
 
 sub without_comments {
@@ -128,10 +134,11 @@ for my $path (@ARGV) {
     while ($code =~ /(?<![A-Za-z0-9_'])\.(defaultFunSemanticsVariant[A-Z])\b/g) {
         emit(
             $path,
-            "PlutusCore.Default.BuiltinSemanticsVariant.$1",
-            'name'
+            "PlutusCore.Default.Internal.BuiltinSemanticsVariant.$1",
+            'name',
+            'synthesised'
         );
     }
 }
 
-print "$_\t$seen{$_}\n" for sort keys %seen;
+print "$_\t$seen_kind{$_}\t$seen_provenance{$_}\n" for sort keys %seen_kind;

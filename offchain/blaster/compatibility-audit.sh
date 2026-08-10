@@ -29,8 +29,8 @@ collect() {
 emit_records() {
   local scope="$1" records="$2" mode="${3:-elaborator}"
   local resolved_records="$work/resolved-$scope.tsv"
-  local source package reference kind resolution
-  local resolved=0 unresolved=0
+  local source package reference kind resolution provenance elaborator_resolution
+  local resolved=0 unresolved=0 compared=0 disagreements=0
   local -a oracle_args=("$records")
   if [[ $mode == declaration-membership ]]; then
     oracle_args=(--declaration-membership "$records")
@@ -39,23 +39,41 @@ emit_records() {
     printf 'AUDIT-RESOLUTION scope=%s outcome=COULD-NOT-EVALUATE layer=lean-environment\n' "$scope"
     return 2
   fi
-  while IFS=$'\t' read -r source package reference kind resolution; do
+  while IFS=$'\t' read -r source package reference kind resolution provenance elaborator_resolution; do
     [[ -n $source ]] || continue
-    if [[ $resolution == true ]]; then
-      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s reference=%s resolved=true outcome=ESTABLISHED\n' \
-        "$scope" "$source" "$package" "$reference"
-      ((resolved += 1))
-    elif [[ $resolution == false ]]; then
-      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s reference=%s resolved=false outcome=REFUTED\n' \
-        "$scope" "$source" "$package" "$reference"
-      ((unresolved += 1))
-    else
-      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s reference=%s resolved=false outcome=COULD-NOT-EVALUATE layer=lean-environment\n' \
+    if [[ $provenance != copied && $provenance != synthesised ]]; then
+      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=unknown reference=%s resolved=false outcome=COULD-NOT-EVALUATE layer=reference-provenance\n' \
         "$scope" "$source" "$package" "$reference"
       return 2
     fi
+    if [[ $kind == name ]]; then
+      if [[ $elaborator_resolution != true && $elaborator_resolution != false ]]; then
+        printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=false outcome=COULD-NOT-EVALUATE layer=elaborator-comparison\n' \
+          "$scope" "$source" "$package" "$provenance" "$reference"
+        return 2
+      fi
+      ((compared += 1))
+      if [[ $resolution != "$elaborator_resolution" ]]; then
+        ((disagreements += 1))
+        printf 'AUDIT-DISAGREEMENT scope=%s source_path=%s reference=%s oracle=%s elaborator=%s outcome=REFUTED\n' \
+          "$scope" "$source" "$reference" "$resolution" "$elaborator_resolution"
+      fi
+    fi
+    if [[ $resolution == true ]]; then
+      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=true outcome=ESTABLISHED\n' \
+        "$scope" "$source" "$package" "$provenance" "$reference"
+      ((resolved += 1))
+    elif [[ $resolution == false ]]; then
+      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=false outcome=REFUTED\n' \
+        "$scope" "$source" "$package" "$provenance" "$reference"
+      ((unresolved += 1))
+    else
+      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=false outcome=COULD-NOT-EVALUATE layer=lean-environment\n' \
+        "$scope" "$source" "$package" "$provenance" "$reference"
+      return 2
+    fi
   done <"$resolved_records"
-  printf '%s\t%s\n' "$resolved" "$unresolved"
+  printf '%s\t%s\t%s\t%s\n' "$resolved" "$unresolved" "$compared" "$disagreements"
 }
 
 run_scope() {
@@ -63,8 +81,9 @@ run_scope() {
   if ! emit_records "$scope" "$records" "$mode" >"$output"; then
     return 2
   fi
-  read -r scope_resolved scope_unresolved < <(tail -n 1 "$output")
-  (( scope_unresolved == 0 && scope_resolved > 0 ))
+  read -r scope_resolved scope_unresolved scope_compared scope_disagreements \
+    < <(tail -n 1 "$output")
+  (( scope_unresolved == 0 && scope_resolved > 0 && scope_disagreements == 0 ))
 }
 
 work="$(mktemp -d)"
@@ -117,10 +136,14 @@ if (( tracked_rc == 2 )); then
 fi
 tracked_resolved="$scope_resolved"
 tracked_unresolved="$scope_unresolved"
+tracked_compared="$scope_compared"
+tracked_disagreements="$scope_disagreements"
 sed '$d' "$work/tracked.out"
 printf 'AUDIT-RESOLVED count=%s\n' "$tracked_resolved"
 printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
   "$tracked_resolved" "$tracked_unresolved" "$((tracked_resolved + tracked_unresolved))" "$AUDIT_COMMIT"
+printf 'AUDIT-MEASUREMENT metric=oracle-agreement rows_compared=%s disagreements=%s denominator=%s instrument=Lean.resolveGlobalConst window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+  "$tracked_compared" "$tracked_disagreements" "$tracked_compared" "$AUDIT_COMMIT"
 if (( tracked_rc == 0 )); then
   printf 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0\n'
 else
@@ -234,6 +257,70 @@ else
   selftests_pass=false
 fi
 
+run_negative_producer_selftest() {
+  local leg="$1" records="$2" reference="$3" provenance="$4" instrument="$5"
+  local selftest_rc=0
+  run_scope "selftest-$leg" "$records" "$work/selftest-$leg.out" \
+    || selftest_rc=$?
+  if (( selftest_rc > 0 && scope_unresolved == 1 \
+      && scope_compared > 0 && scope_disagreements == 0 )) \
+      && grep -Fq "provenance=$provenance reference=$reference resolved=false outcome=REFUTED" \
+        "$work/selftest-$leg.out"; then
+    printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=REFUTED\n' "$leg" "$selftest_rc"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=%s value=%s instrument=%s window=commit:%s:seed:%s outcome=ESTABLISHED\n' \
+      "$leg" "$selftest_rc" "$instrument" "$AUDIT_COMMIT" "$leg"
+  else
+    printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=COULD-NOT-EVALUATE layer=selftest-shape\n' \
+      "$leg" "$selftest_rc"
+    selftests_pass=false
+  fi
+}
+
+# Shape 5 from auditor-A2-s1: a resolvable declaration followed by an absent
+# field must be rejected.  Keep only the real tracked module graph, then mutate
+# the producer input with one name row so the oracle, not a fixture validator,
+# must kill the defect.
+awk -F $'\t' '$4 == "module"' "$work/tracked.tsv" >"$work/prefix-field.tsv"
+prefix_field_name='PlutusCore.Data.Data.retiredConstructorName'
+printf 'offchain/blaster/CompatibilityPrefixFieldReference.lean\tplutusCoreBlaster\t%s\tname\tcopied\n' \
+  "$prefix_field_name" >>"$work/prefix-field.tsv"
+run_negative_producer_selftest prefix-field "$work/prefix-field.tsv" \
+  "$prefix_field_name" copied compatibility-audit/run_scope
+
+# Pair the required constructor probe with a same-shape absent twin.  A
+# prefix-only resolver answers true for both; exact constant resolution makes
+# the twin go RED while the real subject remains established above.
+awk -F $'\t' '$4 == "module"' "$work/tracked.tsv" >"$work/probe-twin.tsv"
+probe_twin_name='PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantZ'
+printf 'offchain/blaster/CompatibilityProbeTwinReference.lean\tplutusCoreBlaster\t%s\tname\tcopied\n' \
+  "$probe_twin_name" >>"$work/probe-twin.tsv"
+run_negative_producer_selftest probe-twin "$work/probe-twin.tsv" \
+  "$probe_twin_name" copied compatibility-audit/run_scope
+
+# Mutate the actual leading-dot source construct, prove the edit applied once,
+# then run collector and oracle together.  This binds the sole synthesising
+# rule to the pinned environment and prevents a fabricated denominator row.
+synth_mutant="$work/CompatibilitySynthesisedReference.lean"
+cp "$AUDIT_SOURCE_ROOT/KeriBlaster/S2Cek.lean" "$synth_mutant"
+synth_before="$(grep -Fc '| .Program _ _ => .defaultFunSemanticsVariantC' \
+  "$synth_mutant" || true)"
+perl -0pi -e 's/(\| \.Program _ _ => )\.defaultFunSemanticsVariantC/$1.defaultFunSemanticsVariantZ/' \
+  "$synth_mutant"
+synth_after_old="$(grep -Fc '| .Program _ _ => .defaultFunSemanticsVariantC' \
+  "$synth_mutant" || true)"
+synth_after_new="$(grep -Fc '| .Program _ _ => .defaultFunSemanticsVariantZ' \
+  "$synth_mutant" || true)"
+if [[ $synth_before == 1 && $synth_after_old == 0 && $synth_after_new == 1 ]]; then
+  collect "$synth_mutant" >"$work/synthesised-reference.tsv"
+  synthesised_twin='PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantZ'
+  run_negative_producer_selftest synthesised-reference \
+    "$work/synthesised-reference.tsv" "$synthesised_twin" synthesised \
+    compatibility-audit/collector-mutation
+else
+  printf '%s\n' 'AUDIT-SELFTEST leg=synthesised-reference rc=0 outcome=COULD-NOT-EVALUATE layer=mutation-application'
+  selftests_pass=false
+fi
+
 collector_narrowing_rc=0
 if collect "$AUDIT_UNRECOGNISED_SEED" >"$work/collector-narrowing.tsv" \
     2>"$work/collector-narrowing.err"; then
@@ -254,15 +341,18 @@ else
   selftests_pass=false
 fi
 
-if (( tracked_unresolved == 0 && tracked_resolved > 0 )) \
+if (( tracked_unresolved == 0 && tracked_resolved > 0 \
+      && tracked_compared > 0 && tracked_disagreements == 0 )) \
     && [[ $export_alias_pass == true ]] \
     && grep -Eq 'reference=PlutusCore\.ByteStringInternal\.appendByteString resolved=false outcome=REFUTED$' \
     "$work/selftest-nested-namespace.out" \
     && grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' \
       "$work/selftest-nested-namespace.out"; then
-  printf '%s\n' 'AUDIT-ORACLE agreement=elaborator both_directions=true outcome=ESTABLISHED'
+  printf 'AUDIT-ORACLE agreement=elaborator both_directions=true rows_compared=%s disagreements=0 outcome=ESTABLISHED\n' \
+    "$tracked_compared"
 else
-  printf '%s\n' 'AUDIT-ORACLE agreement=elaborator both_directions=false outcome=COULD-NOT-EVALUATE layer=oracle-agreement'
+  printf 'AUDIT-ORACLE agreement=elaborator both_directions=false rows_compared=%s disagreements=%s outcome=COULD-NOT-EVALUATE layer=oracle-agreement\n' \
+    "$tracked_compared" "$tracked_disagreements"
   selftests_pass=false
 fi
 
@@ -294,7 +384,8 @@ else
   fi
 fi
 
-if (( tracked_unresolved == 0 && tracked_resolved > 0 )) \
+if (( tracked_unresolved == 0 && tracked_resolved > 0 \
+      && tracked_compared > 0 && tracked_disagreements == 0 )) \
   && [[ $positive_control == true && $retired_control == true \
      && $selftests_pass == true && $variant_evaluated == true ]]; then
   echo 'AUDIT-VERDICT PASS'

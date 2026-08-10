@@ -48,7 +48,8 @@ import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
-    ChainQueryError,
+    ChainAssetUtxo (..),
+    ChainQueryError (..),
     ChainReference (..),
     QuerySnapshot (..),
  )
@@ -219,7 +220,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         Left err -> fail ("expected a resolved payer list, got " <> show err)
                     Left err -> fail ("expected a snapshot, got " <> show err)
 
-    describe "RQ-240-05 -- derived reference resolution (DATA-INV-240-01), RED against the existing local interpreter" $
+    describe "RQ-240-05 -- derived reference resolution (DATA-INV-240-01), RED against the existing local interpreter" $ do
         it "should derive the live reference output instead of reporting UnsupportedOperation" $
             withInMemoryIndexerRunner $ \handle runner -> do
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [referenceCreateAt (sampleTxIn 0x20) scriptA addrA]
@@ -230,6 +231,97 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                     Left err ->
                         expectationFailure
                             ("RED: the local interpreter does not yet derive references from live stored outputs: " <> show err)
+
+        it
+            "resolves a multi-hash request in the caller's own (non-sorted) order, with the exact full output identity, not just the hash (DATA-INV-240-01)"
+            $ withInMemoryIndexerRunner
+            $ \handle runner -> do
+                applyAtSlot
+                    handle
+                    (Indexer.SlotNo 10)
+                    (blockHash 0x01)
+                    [ referenceCreateAt (sampleTxIn 0x20) scriptA addrA
+                    , referenceCreateAt (sampleTxIn 0x22) scriptB addrB
+                    ]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashB, hashA]
+                case result of
+                    Right [refB, refA] -> do
+                        -- caller-order preserved (requested [hashB, hashA], not sorted)
+                        chainReferenceScriptHash refB `shouldBe` hashB
+                        chainReferenceScriptHash refA `shouldBe` hashA
+                        -- full output identity, not merely the hash field
+                        chainAssetTxId (chainReferenceOutput refB) `shouldBe` sampleTxIdHex 0x22
+                        chainAssetIndex (chainReferenceOutput refB) `shouldBe` 0
+                        chainAssetAddress (chainReferenceOutput refB) `shouldBe` referenceOutputAddressText addrB
+                        chainAssetLovelace (chainReferenceOutput refB) `shouldBe` 100_000_000
+                        chainAssetTxId (chainReferenceOutput refA) `shouldBe` sampleTxIdHex 0x20
+                        chainAssetIndex (chainReferenceOutput refA) `shouldBe` 0
+                        chainAssetAddress (chainReferenceOutput refA) `shouldBe` referenceOutputAddressText addrA
+                    Right other -> expectationFailure ("expected exactly the 2 requested references in order, got " <> show (length other))
+                    Left err -> expectationFailure ("expected both references to resolve, got " <> show err)
+
+        it "fails closed on a wholly absent hash -- no live output carries any reference script at all (DATA-INV-240-01)" $
+            withInMemoryIndexerRunner $ \handle runner -> do
+                applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x23) addrA]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashA]
+                case result of
+                    Left (DecodingFailure _) -> pure ()
+                    other -> expectationFailure ("expected a named DecodingFailure for the absent hash, got " <> show other)
+
+        it "fails closed on a hash that mismatches every live reference, even when other references exist (DATA-INV-240-01)" $
+            withInMemoryIndexerRunner $ \handle runner -> do
+                applyAtSlot
+                    handle
+                    (Indexer.SlotNo 10)
+                    (blockHash 0x01)
+                    [ referenceCreateAt (sampleTxIn 0x20) scriptA addrA
+                    , referenceCreateAt (sampleTxIn 0x22) scriptB addrB
+                    ]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashC]
+                case result of
+                    Left (DecodingFailure _) -> pure ()
+                    other -> expectationFailure ("expected a named DecodingFailure for the mismatched hash, got " <> show other)
+
+        it "fails closed on duplicate live reference rows for the same hash, never picks one arbitrarily (DATA-INV-240-01)" $
+            withInMemoryIndexerRunner $ \handle runner -> do
+                applyAtSlot
+                    handle
+                    (Indexer.SlotNo 10)
+                    (blockHash 0x01)
+                    [ referenceCreateAt (sampleTxIn 0x20) scriptA addrA
+                    , referenceCreateAt (sampleTxIn 0x24) scriptA addrB
+                    ]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashA]
+                case result of
+                    Left (AmbiguousCurrentState _) -> pure ()
+                    other -> expectationFailure ("expected a named AmbiguousCurrentState for the duplicate rows, got " <> show other)
+
+        it
+            "fails closed on a malformed stored row even when the requested hash does not involve it -- no row is silently skipped (DATA-INV-240-01)"
+            $ withInMemoryIndexerRunner
+            $ \handle runner -> do
+                applyAtSlot
+                    handle
+                    (Indexer.SlotNo 10)
+                    (blockHash 0x01)
+                    [ referenceCreateAt (sampleTxIn 0x20) scriptA addrA
+                    , UtxoCreate (sampleTxIn 0x25) addrB malformedTxOut
+                    ]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashA]
+                case result of
+                    Left (DecodingFailure _) -> pure ()
+                    other -> expectationFailure ("expected a named DecodingFailure from the malformed row, got " <> show other)
+
+        it "fails closed on a mixed good/bad request -- never a partial list, all-or-nothing (DATA-INV-240-01)" $
+            withInMemoryIndexerRunner $ \handle runner -> do
+                applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [referenceCreateAt (sampleTxIn 0x20) scriptA addrA]
+                result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [hashA, hashC]
+                case result of
+                    Left (DecodingFailure _) -> pure ()
+                    Right partial ->
+                        expectationFailure
+                            ("expected the whole mixed request to fail closed, got a partial result of length " <> show (length partial))
+                    other -> expectationFailure ("expected a named DecodingFailure, got " <> show other)
 
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
@@ -875,6 +967,20 @@ referenceOutput script (Indexer.Address bytes) =
         runIdentity $
             (referenceScriptTxOutL . fromStrictMaybeL) (\_ -> Identity (Just script)) plain
 
+{- | Finding-2 full-output-identity assertions: the exact
+'chainAssetAddress' text 'toChainAssetUtxo' reports for a
+'referenceOutput'\/'payerOutput'-style fixture -- re-derives the SAME
+ledger address ('referenceOutput''s own key-hash-credentialled 'Addr',
+never a bare bech32 encoding of the indexer address bytes) and renders it
+the identical way (@serialiseAddr@ then bech32), so this is the row's own
+recorded address, not a coincidentally-matching guess.
+-}
+referenceOutputAddressText :: Indexer.Address -> Text
+referenceOutputAddressText (Indexer.Address bytes) =
+    addrText (Indexer.Address (serialiseAddr (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)))
+  where
+    keyHash = fromJust (hashFromBytes bytes)
+
 {- | One live output at @addr@ carrying exactly one unit of a fixed
 (policy, asset name) native asset -- 'policyHexA'\/'assetNameHexA'.
 -}
@@ -916,11 +1022,48 @@ scriptA = mkCageScript scriptABytes
 hashA :: Text
 hashA = scriptHashText (computeScriptHash scriptABytes)
 
+{- | Finding-2 (DATA-INV-240-01) reference-edge coverage: a SECOND
+distinct live reference, at a distinct hash and address, so a multi-hash
+request has genuinely distinct rows to preserve caller-order over --
+never a repeat of 'scriptA'\/'hashA'\/'addrA' under another name.
+-}
+scriptBBytes :: SBS.ShortByteString
+scriptBBytes = SBS.toShort "s240-red-synthetic-script-b"
+
+scriptB :: Script ConwayEra
+scriptB = mkCageScript scriptBBytes
+
+hashB :: Text
+hashB = scriptHashText (computeScriptHash scriptBBytes)
+
+{- | A THIRD hash that is never seeded by any fixture -- the absence\/
+mismatch controls' requested hash.
+-}
+hashC :: Text
+hashC = scriptHashText (computeScriptHash (SBS.toShort "s240-red-synthetic-script-c-never-seeded"))
+
+{- | A stored row whose raw bytes are not a decodable ledger 'TxOut' at
+all -- 'toChainAssetUtxo' (every reference-resolution row's own first
+decode step) must fail on it, regardless of which hash was requested.
+-}
+malformedTxOut :: Indexer.TxOut
+malformedTxOut = Indexer.TxOut "not a valid ledger TxOut CBOR encoding"
+
 sampleTxIn :: Word8 -> Indexer.TxIn
 sampleTxIn byte = Indexer.TxIn (BS.replicate 32 byte) 0
 
+{- | The exact hex text 'chainAssetTxId' renders for 'sampleTxIn' 's own
+identity byte, independent of any 'Cardano.KERI.Indexer.ChainQuery'
+internals -- so the full-output-identity assertion is not circular.
+-}
+sampleTxIdHex :: Word8 -> Text
+sampleTxIdHex byte = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 byte))
+
 addrA :: Indexer.Address
 addrA = Indexer.Address (BS.replicate 28 0xA1)
+
+addrB :: Indexer.Address
+addrB = Indexer.Address (BS.replicate 28 0xB2)
 
 addrText :: Indexer.Address -> Text
 addrText (Indexer.Address bytes) =

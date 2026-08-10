@@ -828,6 +828,24 @@
                   };
               };
 
+              # The compatibility oracle is a Lean executable over the same
+              # dependency values as the tracked bridge package.  It loads
+              # those packages with Lean.importModules and asks Lean's own
+              # global-name resolver; no source-text declaration index sits
+              # between the elaborator and the audit verdict.
+              compatibilityOraclePackage = leanPkgs.buildLeanPackage {
+                name = "CompatibilityOracle";
+                roots = [ "CompatibilityOracle" ];
+                executableName = "compatibility-oracle";
+                src = cleanBlasterSource;
+                deps = [
+                  leanBlasterPackage
+                  plutusCoreBlasterPackage
+                  cardanoLedgerApiBlasterPackage
+                ];
+              };
+              compatibilityOracle = compatibilityOraclePackage.executable;
+
               # The Lean module that carries the eight production imports.
               s2EvidenceModule = "KeriBlaster.S2Evidence";
 
@@ -1023,6 +1041,8 @@
               compatibilityAuditRunner = pkgs.writeShellApplication {
                 name = "blaster-compatibility-audit";
                 runtimeInputs = [
+                  compatibilityOracle
+                  leanPkgs.lean-all
                   pkgs.bash
                   pkgs.coreutils
                   pkgs.findutils
@@ -1032,13 +1052,14 @@
                 text = ''
                   export AUDIT_COMMIT=${sourceIdentity}
                   export AUDIT_COLLECTOR=${./blaster/collect-lean-references.pl}
-                  export AUDIT_INDEXER=${./blaster/index-lean-declarations.pl}
+                  export AUDIT_ORACLE=${compatibilityOracle}/bin/compatibility-oracle
+                  export LEAN_PATH=${keriBlasterPackage.modRoot}
                   export AUDIT_SOURCE_ROOT=${cleanBlasterSource}
                   export AUDIT_SEED=${cleanBlasterSource}/CompatibilityRetiredReference.lean
                   export AUDIT_NAMESPACE_SEED=${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean
-                  export AUDIT_LEAN_BLASTER_ROOT=${leanBlaster}
+                  export AUDIT_NESTED_NAMESPACE_SEED=${cleanBlasterSource}/CompatibilityNestedNamespaceReference.lean
+                  export AUDIT_UNRECOGNISED_SEED=${cleanBlasterSource}/CompatibilityUnrecognisedReference.lean
                   export AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster}
-                  export AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster}
                   export AUDIT_LEAN_BLASTER_REV=${leanBlaster.rev}
                   export AUDIT_PLUTUS_CORE_REV=${plutusCoreBlaster.rev}
                   export AUDIT_LEDGER_API_REV=${cardanoLedgerApiBlaster.rev}
@@ -1070,7 +1091,9 @@
                     ${cleanBlasterSource} \
                     ${cleanBlasterSource}/CompatibilityRetiredReference.lean \
                     ${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean \
-                    40e23e6c2c1d966bc2290adb338c7ea7b365cc10 \
+                    ${cleanBlasterSource}/CompatibilityNestedNamespaceReference.lean \
+                    ${cleanBlasterSource}/CompatibilityUnrecognisedReference.lean \
+                    137704294061cc3ed597167b15a586906ba23aba \
                     ${sourceIdentity}
 
                   # The S2 evidence oracle and its falsification controls run

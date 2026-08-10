@@ -1463,7 +1463,7 @@ manifestAndActiveBundleTx manifest activeTxId activeIndex fundingAddress = do
                     fundingResult <- fundingOutputsTx fundingAddress
                     pure ((,,) refs activeOut <$> fundingResult)
 
-{- | A-013 repair (INV-240-LOCALTIER\/INV-240-SNAPSHOT, T240-S1-14 audit
+{- | A-013 repair (INV-240-SNAPSHOT, T240-S1-14 audit
 finding 1): advance\/close's whole submit-phase acquisition, as ONE
 composed 'Transaction' -- the current checkpoint lookup that used to run
 through its own standalone 'activeCheckpointLocal' call is now the FIRST
@@ -2037,7 +2037,10 @@ acquisition -- current checkpoint, manifest references, the active
 checkpoint's own ledger output, and funding -- now runs as ONE
 'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
 'activeCheckpointLocal' call followed by a second, separately-run
-acquisition (INV-240-LOCALTIER\/INV-240-SNAPSHOT). The live bracket is a
+acquisition (INV-240-SNAPSHOT). This composition is NOT
+affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
+bundle is one of the seven direct 'Transaction' compositions that
+intentionally remain. The live bracket is a
 'LiveOpener' parameter, matching 'runAdvanceWith''s own seam, so a test can
 observe the local acquisition completed (and how many times) without
 dialing a real node.
@@ -2243,7 +2246,10 @@ acquisition -- current checkpoint, manifest references, the active
 checkpoint's own ledger output, and funding -- now runs as ONE
 'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
 'activeCheckpointLocal' call followed by a second, separately-run
-acquisition (INV-240-LOCALTIER\/INV-240-SNAPSHOT). The live bracket is a
+acquisition (INV-240-SNAPSHOT). This composition is NOT
+affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
+bundle is one of the seven direct 'Transaction' compositions that
+intentionally remain. The live bracket is a
 'LiveOpener' parameter, matching 'submitAdvance''s own seam.
 -}
 submitClose ::

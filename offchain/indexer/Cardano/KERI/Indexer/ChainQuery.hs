@@ -23,7 +23,7 @@ not every interpreter, must answer every operation"), never forbade a
 later interpreter from actually answering it, and #240 requires the
 existing provider-neutral 'Cardano.KERI.ChainQuery.Program.referenceScripts'
 operation to run through the selected LOCAL interpreter like every other
-operation (INV-240-LOCALTIER) -- so
+operation -- so
 "Cardano.KERI.ChainQuery.Registration".'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot'
 and every other existing #257 caller of a selected interpreter keep working
 completely unchanged; only the interpreter selected at the write-composition
@@ -35,6 +35,15 @@ live at any funding address, not a fixed one (DATA-INV-240-01).
 are #240's follower-backed temporal probes (RQ-240-06): fresh per-call
 store observations, never 'ChainQueryF' operations and never a snapshot
 claim (DATA-INV-240-05).
+
+Note what this module does NOT establish:
+@INV-240-LOCALTIER@ is @OPEN — DEFERRED to #262@.
+That invariant -- every write-path read routed through the free algebra,
+with no direct 'Transaction' composition left -- is not proved here. Seven
+direct 'Transaction' bundles remain by design, because the shapes they carry
+(a full checkpoint 'TxOut', board-entry\/full-output pairs) are not
+representable in the #257 algebra. Nothing in this module, and nothing in
+the #240 proofs, should be read as algebra-only routing.
 -}
 module Cardano.KERI.Indexer.ChainQuery (
     localInterpreter,
@@ -78,6 +87,7 @@ import Cardano.KERI.ChainQuery (
     runChainQuerySnapshot,
     validPayerAddresses,
  )
+import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
 import Cardano.KERI.ChainQuery.Program (ChainQuery)
 import Cardano.KERI.Deployment.EndpointBoardManifest (frozenEndpointBoardPolicyId)
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
@@ -90,7 +100,13 @@ import Cardano.KERI.Indexer.Query.Tx (
     watermarkPointTx,
  )
 import Cardano.Ledger.Address (serialiseAddr)
-import Cardano.Ledger.Api.Tx.Out (addrTxOutL, referenceScriptTxOutL, valueTxOutL)
+import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData)
+import Cardano.Ledger.Api.Tx.Out (
+    addrTxOutL,
+    datumTxOutL,
+    referenceScriptTxOutL,
+    valueTxOutL,
+ )
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary (DecoderError, decodeFull)
 import Cardano.Ledger.Coin (Coin (..))
@@ -553,6 +569,12 @@ toChainAssetUtxo (txIn, Indexer.TxOut rawTxOut) = do
             ]
         address = renderIndexerAddress (Indexer.Address (serialiseAddr (ledgerTxOut ^. addrTxOutL)))
         referenceScript = encodeReferenceScript <$> ledgerTxOut ^. (referenceScriptTxOutL . fromStrictMaybeL)
+        inlineDatum = case ledgerTxOut ^. datumTxOutL of
+            Datum binaryDatum ->
+                let Data plutusDatum = binaryDataToData binaryDatum
+                 in Just (plutusDataJson plutusDatum)
+            NoDatum -> Nothing
+            DatumHash _ -> Nothing
     pure
         ChainAssetUtxo
             { chainAssetTxId = hexBytes (Indexer.txInId txIn)
@@ -560,7 +582,7 @@ toChainAssetUtxo (txIn, Indexer.TxOut rawTxOut) = do
             , chainAssetAddress = address
             , chainAssetLovelace = lovelace
             , chainAssetList = assets
-            , chainAssetInlineDatum = Nothing
+            , chainAssetInlineDatum = inlineDatum
             , chainAssetReferenceScript = referenceScript
             }
 

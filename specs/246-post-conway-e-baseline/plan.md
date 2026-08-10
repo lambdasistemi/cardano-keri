@@ -1,7 +1,12 @@
 # #246 plan
 
-Base: `fe535810d7bb7a343b0cb30c950c43ea356105e7`. Branch
-`feat/246-post-conway-e-baseline`.
+Anchor: `main` `9d4eb9577464b81d2edc3dd64d71f61d62d791a4` (rebased 2026-08-05
+onto #234's Stage D closeout; the original anchor was `fe535810…`, which the
+findings below were measured at). Branch `feat/246-post-conway-e-baseline`.
+
+**Mandate version 2.** Version 1's Slice A campaign was closed after two
+findings verdicts, both of the same class. See "Why this mandate was rewritten"
+below before reading the invariants.
 
 ## Findings that constrain this plan
 
@@ -73,6 +78,103 @@ consistency check (R-09/R-10, T246-B7/B8). A checker validated only against an
 invented broken input would not have been shown to catch the case that actually
 happened here.
 
+## Why this mandate was rewritten
+
+Version 1's Slice A ran a full commit-owner campaign — RED bundle, candidate,
+audit, one authorized repair, second audit — and was closed on a second findings
+verdict. Both blocking findings were **one class**:
+
+> **Root cause: the mandate permitted a resolver that approximates Lean's name
+> resolution textually, and both campaigns built one.** Submission 1 matched a
+> reference's final `.`-separated token across a whole package, so a symbol that
+> had *moved namespace* resolved. Submission 2's indexer *reset* the namespace
+> stack where Lean 4 *appends*, fabricating 108 entries under names that do not
+> exist while the real names went missing.
+
+Version 1's own strategy prose already required a resolver "that cannot
+disagree with the compiler that will later build them". The `INV-A1` row did
+not carry that; it said only "resolved against those exact pins". Two competent
+campaigns satisfied the row while violating the strategy — which is what an
+under-specified observable buys. The defect was mine, not either implementer's.
+
+**This is a fresh owner campaign on a revised mandate, not a third submission.**
+The two-submission cap applied to the campaign that closed; a revised
+architecture or contract is explicitly a new campaign with a fresh owner
+context. Recording it here so nobody reads the next dispatch as cap evasion:
+the mandate changed first, and the change is the reason.
+
+What survives from version 1, as read-only starting substance rather than
+discards: the RED bundle `25a3d9e8`, the namespace-aware repair `db1899a1`, the
+two in-process self-test legs, and three reviewer-contributed seed controls
+(two already permanent gate legs, one queued for A-v4).
+
+## Campaign contract
+
+Binding on every Slice A/B/C campaign under this mandate.
+
+**Ledger.** `/tmp/ms-keri-8/e190/t246/campaign-ledger.md`, one row per declared
+invariant, carried forward across submissions by successive auditors. A fresh
+auditor inherits the ledger; it does not restart a campaign that is already
+partly terminal.
+
+**Row states.** `OPEN`, or terminal `KILLED` / `RESIDUAL` / `BLOCKED`.
+`KILLED` requires a **named mutant demonstrated to kill the row** — a proof
+merely observed to pass leaves the row `OPEN`. `RESIDUAL` requires severity
+`ADVISORY`, a named owner, a follow-up ID, and one line of honest limit.
+
+**Severity** is fixed at spec time in the invariant table above and is never
+argued at audit time. **A `BLOCKING` row may terminate only as `KILLED` or
+`BLOCKED` — never `RESIDUAL`.** No budget and no fatigue converts a blocking
+row into an accepted survivor.
+
+**Termination** at the first of: **set-point** (every row terminal);
+**tail-stop** (a round with no finding on a row not already in the ledger and
+none at `BLOCKING` — recorded `stopped=TAIL`, never "clean"), which **cannot**
+close over an `OPEN` `BLOCKING` row; or **budget**, which with any `OPEN`
+`BLOCKING` row does not close the campaign but raises
+`MUTATION-CAMPAIGN-OVERRUN` to this ticket owner for an epic-altitude decision.
+
+Nobody writes "no survivors", "fully mutated", or "exhaustive". Equivalent
+mutants make those claims unavailable to everyone.
+
+**Build budget.** `builds_spent=0`, `builds_budget=3` for this ticket. Every
+auditor packet carries both fields. Reading, typechecking, language-server
+queries and interpreted instrument runs are **unmetered**; only a compiling
+audit spends. Before a build that would exceed the budget, stop and ask.
+
+*Bill, stated in advance so it is not discovered at exhaustion:* nine
+`BLOCKING` rows each need one killing mutant, inside three building audits.
+Mutants run against a warm tree, so this is expected to fit — but if it does
+not, the correct outcome is `MUTATION-CAMPAIGN-OVERRUN` and an escalation, not
+a quiet `RESIDUAL`.
+
+**Reliance declaration.** Before its RED bundle, the commit owner declares what
+its change *relies on* in code it did not write, in registry shape:
+`INV-246-<NAME>`, the observable truth, severity, and `enforced:` the exact
+executable check, `PARTIAL` with its honest limit, or **`NONE`**. `enforced:
+NONE` is a complete, legal, cheap outcome — naming an unguarded assumption is
+the deliverable, not a failure to do more. This ticket owner ratifies each row
+into the invariant set, discards it, or promotes a `NONE` row into its own
+work; unratified rows bind nobody and enter no audit campaign. A reliance that
+proves *false* is a defect, not a declaration: the owner stops with
+`CONTRACT-CHALLENGE` rather than building on it.
+
+**Findings become properties.** An auditor establishes that a proof cannot
+fail; the commit owner ships the permanent property that makes it fail from
+then on, closing the **class** the finding names rather than the reported
+instance. The auditor's frozen instrument travels with the finding as
+read-only, sha256-bound seed evidence.
+
+**Every measured quantity carries its instrument and its measurement window.**
+A number without the thing that produced it and the interval it covers is not a
+measurement, and must not be recorded as one. A percentage without its reset
+window is the standing example: "16% used" is unreadable, "16% used, resets
+21:31 on 15 Aug, read twice identically at 12:35Z" is a measurement. This binds
+every record this ticket emits — resolution counts, durations, build spend,
+free space, coverage figures — and every receipt an auditor or owner hands up.
+Where the instrument cannot state its window, the quantity is
+`COULD-NOT-EVALUATE`, not a smaller number.
+
 ## Strategy
 
 Three bisect-safe slices, in dependency order. Each ends at a commit that
@@ -121,18 +223,30 @@ labelled Advance records.
 
 ## Slice A invariants
 
-| ID | Must hold | Observable failure |
-|---|---|---|
-| INV-A1 | Every reference the tracked bridge source makes into the three pinned upstream packages is resolved against those exact pins, and the complete unresolved set is reported. | An unresolved reference exists and the run still exits 0, or the report omits one. |
-| INV-A2 | The resolver is shown, in the same run, to find references that are present: a reported resolved count greater than zero that corresponds to references actually made by the tracked source. | The run reports zero resolved, or reports a count no source reference accounts for. |
-| INV-A3 | A deliberately seeded reference to a name absent at the pins is reported unresolved and makes the audit exit non-zero. | The seeded reference is reported resolved, is silently skipped, or the audit still exits 0. |
-| INV-A4 | Pin identity is taken from the locked inputs rather than transcribed, so a pin that moves without the audit noticing is impossible. | A changed pin leaves the audit's reported identity unchanged. |
-| INV-A5 | The audit reports whether variant E and an era-based variant selection are expressible at the pins, as an explicit outcome. | The question is unanswered, answered by inference, or silently defaulted to the version-derived variant. |
-| INV-A6 | Every checked item carries `ESTABLISHED`, `REFUTED`, or `COULD-NOT-EVALUATE`; the third is RED and names the layer that failed. | Any item reports a bare pass/fail, an empty result, or a skipped item counted as clean. |
-| INV-A7 | Both controls are reached by the single flake-owned command the gate runs. | A control is reachable only by a hand-typed command, or the gate passes with a control removed. |
-| INV-A8 | Evaluating the offchain flake from a clean checkout leaves the tracked lock unmodified. | Evaluation dirties the working tree. |
-| INV-A9 | The audit changes no bridge semantics: no assertion, theorem, or existing check is weakened, and the audit does not write tracked sources. | Any tracked Lean assertion changes, or the audit mutates tracked files. |
-| INV-A10 | The audit's own records name the commit they describe, so a source-compatibility result cannot be read against the wrong tree. | The report is silent about which tree it audited. |
+Severity is fixed **here, at spec time**, and is never argued at audit time.
+`BLOCKING` when the value the invariant constrains reaches chain state, money,
+or a signature; `ADVISORY` otherwise; undeclared is `BLOCKING`.
+
+Slice A builds an *instrument*, so the test is one step removed and must be
+applied honestly rather than deflated: this audit's verdict is the compatibility
+premise that #247–#250 will cite for claims about validators governing
+registration bonds, freeze bonds, conviction forfeiture and endpoint deposits.
+A false `ESTABLISHED` here does not itself move a coin; it licenses a theorem
+record that speaks about the code which does. That is why nine of these ten
+rows are `BLOCKING`.
+
+| ID | Severity | Must hold | Observable failure |
+|---|---|---|---|
+| INV-A1 | BLOCKING | Every reference the tracked bridge source makes into the three pinned upstream packages resolves **under the namespace the reference actually names**, decided by an oracle that **cannot disagree with the Lean elaborator that builds those pinned sources**; the complete unresolved set is reported. A textual approximation of Lean name resolution does not satisfy this, however carefully written. | An unresolved reference exists and the run still exits 0; the report omits one; or a reference the elaborator rejects is reported resolved (or one it accepts reported unresolved). |
+| INV-A2 | BLOCKING | The resolver is shown, in the same run, to find references that are present: a reported resolved count greater than zero that corresponds to references actually made by the tracked source. | The run reports zero resolved, or reports a count no source reference accounts for. |
+| INV-A3 | BLOCKING | A deliberately seeded reference to a name absent at the pins is reported unresolved and makes the audit exit non-zero. | The seeded reference is reported resolved, is silently skipped, or the audit still exits 0. |
+| INV-A4 | BLOCKING | Pin identity is taken from the locked inputs rather than transcribed, so a pin that moves without the audit noticing is impossible. | A changed pin leaves the audit's reported identity unchanged. |
+| INV-A5 | BLOCKING | The audit reports whether variant E and an era-based variant selection are expressible at the pins, as an explicit outcome. | The question is unanswered, answered by inference, or silently defaulted to the version-derived variant. |
+| INV-A6 | BLOCKING | Every checked item carries `ESTABLISHED`, `REFUTED`, or `COULD-NOT-EVALUATE`; the third is RED and names the layer that failed. | Any item reports a bare pass/fail, an empty result, or a skipped item counted as clean. |
+| INV-A7 | BLOCKING | Both controls are reached by the single flake-owned command the gate runs. | A control is reachable only by a hand-typed command, or the gate passes with a control removed. |
+| INV-A8 | ADVISORY | Evaluating the offchain flake from a clean checkout leaves the tracked lock unmodified. | Evaluation dirties the working tree. |
+| INV-A9 | BLOCKING | The audit changes no bridge semantics: no assertion, theorem, or existing check is weakened, and the audit does not write tracked sources. | Any tracked Lean assertion changes, or the audit mutates tracked files. |
+| INV-A10 | BLOCKING | The audit's own records name the commit they describe, so a source-compatibility result cannot be read against the wrong tree. | The report is silent about which tree it audited. |
 
 Slices B and C carry their own invariant sets, versioned before their
 dispatch, not pre-committed here.

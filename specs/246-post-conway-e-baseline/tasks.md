@@ -30,6 +30,13 @@ and the slice has been independently audited and accepted.
 - [ ] T246-A11 — The audit's own records name the commit they are about, so a
   source-compatibility result cannot be read against the wrong tree (R-09,
   INV-A10).
+- [ ] T246-A12 — Resolution decided by an oracle derived from Lean's own
+  environment for the pinned packages, agreeing with the elaborator in both
+  directions; a textual approximation does not satisfy it (INV-A1, F-A1).
+- [ ] T246-A13 — Reliance declaration filed before the RED bundle, in registry
+  shape, with `enforced: NONE` available as a complete outcome.
+- [ ] T246-A14 — Every quantity the audit reports carries its instrument and
+  its measurement window (R-12, D-09).
 
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 
@@ -78,3 +85,11 @@ dispatch.
   (R-05c).
 - [ ] T246-C9 — The assembled bundle executed from a location with no access to
   the issue worktree, as a run rather than a claim (R-05d).
+- [ ] T246-C10 — Every completeness result publishes `declared` beside
+  `missing`, and every other aggregate publishes its denominator (R-11, D-07).
+- [ ] T246-C11 — An absent, unreadable or unexpectedly empty inventory yields
+  `MEASUREMENT-FAILED`/CNE/RED rather than a zero (R-11, D-01).
+- [ ] T246-C12 — **Both** branches falsified before the clean assembly is
+  accepted: a deliberately omitted declared artifact goes RED (T246-C8) **and**
+  an empty or unreadable inventory goes RED. Falsifying only the interesting
+  branch is how the two states stay indistinguishable (R-05c, R-11).

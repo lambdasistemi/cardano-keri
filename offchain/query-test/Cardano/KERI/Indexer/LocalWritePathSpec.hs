@@ -52,6 +52,7 @@ import Cardano.KERI.ChainQuery.Types (
     ChainAssetUtxo (..),
     ChainQueryError (..),
     ChainReference (..),
+    ChainReferenceScript (..),
     QuerySnapshot (..),
  )
 import Cardano.KERI.Deployment.CLI (
@@ -357,6 +358,34 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                                     `shouldNotBe` [parityExpectedUtxo]
                             Left err -> expectationFailure ("expected the perturbed payer utxo to still decode, got " <> show err)
                         Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+
+            it
+                "capReferenceScripts's decode of the shared reference fixture is byte-identical to the real koiosInterpreter's two-endpoint (/reference_script_utxos then /utxo_info) decode of the same fixture"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [referenceCreateAt parityReferenceTxIn parityReferenceScript parityReferenceAddr]
+                    result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [parityReferenceHash]
+                    case result of
+                        Right refs -> refs `shouldBe` [parityExpectedReference]
+                        Left err -> expectationFailure ("expected the acquired reference, got " <> show err)
+
+            it
+                "rejects a one-side acquired-value perturbation -- a changed local reference-script BYTES value no longer matches the frozen base-provider value (permanent falsifier, family-specific field)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [referenceCreateAt parityReferenceTxIn perturbedParityReferenceScript parityReferenceAddr]
+                    result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [perturbedParityReferenceHash]
+                    case result of
+                        Right refs -> refs `shouldNotBe` [parityExpectedReference]
+                        Left err -> expectationFailure ("expected the perturbed reference to still decode, got " <> show err)
 
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
@@ -1067,6 +1096,71 @@ parityExpectedUtxo =
         , chainAssetInlineDatum = Nothing
         , chainAssetReferenceScript = Nothing
         }
+
+{- | A-015\/N-073 continuation: the SAME reference-script output the
+frozen-base worktree's proof-only 'koiosInterpreter' capture served over
+its real two-endpoint chain (@\/reference_script_utxos@ then
+@\/utxo_info@) as Koios JSON -- same script identity, tx identity,
+address, and lovelace. 'parityExpectedReference' is the exact
+'ChainReference' the real, unmodified base interpreter decoded from it
+(matches @evidence\/a013-finding3\/reference-scripts-capture-output.log@'s
+@Happy@ mode verbatim).
+-}
+parityReferenceScriptBytes :: SBS.ShortByteString
+parityReferenceScriptBytes = SBS.toShort "s240-a015-refscript"
+
+parityReferenceScript :: Script ConwayEra
+parityReferenceScript = mkCageScript parityReferenceScriptBytes
+
+parityReferenceHash :: Text
+parityReferenceHash = scriptHashText (computeScriptHash parityReferenceScriptBytes)
+
+parityReferenceTxIn :: Indexer.TxIn
+parityReferenceTxIn = Indexer.TxIn (BS.replicate 32 0x55) 0
+
+parityReferenceAddr :: Indexer.Address
+parityReferenceAddr = Indexer.Address (BS.replicate 28 0x99)
+
+parityExpectedReference :: ChainReference
+parityExpectedReference =
+    ChainReference
+        { chainReferenceScriptHash = "2411a1b88f1c639d7eedead150ee18d3701ddbb5aef3691cd579c588"
+        , chainReferenceOutput =
+            ChainAssetUtxo
+                { chainAssetTxId = T.replicate 64 "5"
+                , chainAssetIndex = 0
+                , chainAssetAddress = "addr_test1vzvenxvenxvenxvenxvenxvenxvenxvenxvenxvenxvenxgkl7z82"
+                , chainAssetLovelace = 100_000_000
+                , chainAssetList = []
+                , chainAssetInlineDatum = Nothing
+                , chainAssetReferenceScript =
+                    Just
+                        ChainReferenceScript
+                            { chainReferenceScriptHashField = "2411a1b88f1c639d7eedead150ee18d3701ddbb5aef3691cd579c588"
+                            , chainReferenceScriptType = "PlutusV3"
+                            , chainReferenceScriptBytes = "733234302d613031352d726566736372697074"
+                            }
+                }
+        }
+
+{- | The permanent falsifier's negative fixture: DIFFERENT reference-script
+bytes -- the family-specific field this continuation adds over
+'payerUtxos'. The script hash is cryptographically bound to its bytes
+(@hashScript@), so a real, honest bytes perturbation on the local side
+necessarily changes the resolved hash too (the local path cannot
+misreport hash independent of content the way an untrusted JSON payload
+technically could) -- this falsifier therefore requests the PERTURBED
+script's own (different) hash and asserts the result still fails to equal
+the frozen value, catching either field, both real and both meaningful.
+-}
+perturbedParityReferenceScriptBytes :: SBS.ShortByteString
+perturbedParityReferenceScriptBytes = SBS.toShort "s240-a015-refscript-PERTURBED"
+
+perturbedParityReferenceScript :: Script ConwayEra
+perturbedParityReferenceScript = mkCageScript perturbedParityReferenceScriptBytes
+
+perturbedParityReferenceHash :: Text
+perturbedParityReferenceHash = scriptHashText (computeScriptHash perturbedParityReferenceScriptBytes)
 
 -- | One live output at @addr@ carrying @script@ as its reference script.
 referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp

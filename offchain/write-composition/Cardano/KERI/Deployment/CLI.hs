@@ -13,6 +13,7 @@ module Cardano.KERI.Deployment.CLI (
     AdvanceSettings (..),
     CloseSettings (..),
     BoardInstructions (..),
+    BoardTransactionSettings (..),
     BoardPostSettings (..),
     BoardUpdateSettings (..),
     BoardRetireSettings (..),

@@ -830,6 +830,7 @@ test-suite local-write-path-tests
     Paths_cardano_keri
 
   build-depends:
+    , aeson
     , base
     , bech32
     , bytestring
@@ -847,6 +848,7 @@ test-suite local-write-path-tests
     , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
     , containers
+    , directory
     , filepath
     , hspec                                    >=2.11 && <2.12
     , memory                                   >=0.18 && <0.19

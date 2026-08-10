@@ -54,18 +54,36 @@ import Cardano.KERI.ChainQuery.Types (
  )
 import Cardano.KERI.Deployment.CLI (
     AdvanceSettings (..),
+    BoardPostSettings (..),
+    BoardRetireSettings (..),
+    BoardTransactionSettings (..),
+    BoardUpdateSettings (..),
     CloseSettings (..),
+    DeploySettings (..),
     LiveOpener,
     LocalOpener,
     runAdvanceWith,
+    runBoardDeployWith,
+    runBoardPostWith,
+    runBoardRetireWith,
+    runBoardUpdateWith,
     runCloseWith,
  )
+import Cardano.KERI.Deployment.EndpointBoardManifest (
+    EndpointBoardInfo (..),
+    EndpointBoardManifest (..),
+    frozenEndpointBoardAddress,
+    frozenEndpointBoardPolicyId,
+    writeEndpointBoardManifestAtomic,
+ )
+import Cardano.KERI.Deployment.LiveRuntime (LiveContext (..))
 import Cardano.KERI.Deployment.Manifest (
     BlueprintInfo (..),
     CheckpointInfo (..),
     DeploymentParameters (..),
     Manifest (..),
     NetworkInfo (..),
+    Reference (..),
     SourceInfo (..),
     writeManifestAtomic,
  )
@@ -104,9 +122,11 @@ import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.STM (STM)
 import Control.Exception (Exception, SomeException, throwIO, try)
+import Data.Aeson (encode, object, (.=))
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Function ((&))
 import Data.Functor.Identity (Identity (..), runIdentity)
@@ -125,6 +145,7 @@ import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data qualified as PLC
 import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.IsData.Class (ToData (..))
+import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
@@ -313,6 +334,99 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                                     }
                         _ <-
                             try (runCloseWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
+
+            it "runBoardDeployWith's phase invokes the local runner exactly once (one artifact, one funding acquisition)" $
+                withInMemoryIndexerRunner $ \_handle runner -> do
+                    counter <- newIORef (0 :: Int)
+                    withSystemTempDirectory "ckeri-board-deploy-entrypoint" $ \dir -> do
+                        let blueprintPath = dir </> "blueprint.json"
+                            sourceRepo = dir </> "source-repo"
+                            outPath = dir </> "board-manifest.json"
+                        createDirectoryIfMissing True (sourceRepo </> "onchain")
+                        BSL.writeFile blueprintPath entrypointBoardBlueprintJson
+                        let settings =
+                                DeploySettings
+                                    { deployNetwork = "preprod"
+                                    , deployNetworkMagic = 1
+                                    , deployBlueprint = blueprintPath
+                                    , deployNodeSocket = "unused-node-socket"
+                                    , deployFundingAddress = "unused-funding-address"
+                                    , deploySigningKeyFile = "unused-signing-key"
+                                    , deploySourceRepo = sourceRepo
+                                    , deploySourceRepositoryUrl = "unused-repo-url"
+                                    , deploySourceCommit = Just (T.replicate 40 "a")
+                                    , deployOut = outPath
+                                    , deployReferenceLovelace = 5_000_000
+                                    , deployStorePath = "unused-store-path"
+                                    , deployTimeoutSeconds = 30
+                                    }
+                        _ <-
+                            try
+                                ( runBoardDeployWith
+                                    (entrypointCountingLocalOpener counter runner)
+                                    entrypointLazyStubLiveOpener
+                                    settings
+                                ) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
+
+            it "runBoardPostWith's phase invokes the local runner exactly once" $
+                withInMemoryIndexerRunner $ \_handle runner -> do
+                    counter <- newIORef (0 :: Int)
+                    endpointRecordPath <- getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    withSystemTempDirectory "ckeri-board-post-entrypoint" $ \dir -> do
+                        let manifestPath = dir </> "board-manifest.json"
+                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+                        let settings =
+                                BoardPostSettings
+                                    { boardPostEndpointRecord = endpointRecordPath
+                                    , boardPostDepositLovelace = 2_000_000
+                                    , boardPostTransaction = entrypointBoardTransactionSettings manifestPath
+                                    }
+                        _ <-
+                            try (runBoardPostWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
+
+            it "runBoardUpdateWith's phase invokes the local runner exactly once" $
+                withInMemoryIndexerRunner $ \_handle runner -> do
+                    counter <- newIORef (0 :: Int)
+                    endpointRecordPath <- getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    withSystemTempDirectory "ckeri-board-update-entrypoint" $ \dir -> do
+                        let manifestPath = dir </> "board-manifest.json"
+                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+                        let settings =
+                                BoardUpdateSettings
+                                    { boardUpdateEndpointRecord = endpointRecordPath
+                                    , boardUpdateOutReference = Nothing
+                                    , boardUpdateTransaction = entrypointBoardTransactionSettings manifestPath
+                                    }
+                        _ <-
+                            try (runBoardUpdateWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
+
+            it "runBoardRetireWith's phase invokes the local runner exactly once" $
+                withInMemoryIndexerRunner $ \_handle runner -> do
+                    counter <- newIORef (0 :: Int)
+                    withSystemTempDirectory "ckeri-board-retire-entrypoint" $ \dir -> do
+                        let manifestPath = dir </> "board-manifest.json"
+                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+                        let settings =
+                                BoardRetireSettings
+                                    { boardRetireWitness = entrypointWitnessKeyText
+                                    , boardRetireOutReference = Nothing
+                                    , boardRetireTo = "unused-refund-address"
+                                    , boardRetireTransaction = entrypointBoardTransactionSettings manifestPath
+                                    }
+                        _ <-
+                            try (runBoardRetireWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
                                 IO (Either SomeException ())
                         count <- readIORef counter
                         count `shouldBe` 1
@@ -578,6 +692,115 @@ submission" from "acquisition never ran" without live node infrastructure.
 -}
 entrypointStubLiveOpener :: LiveOpener
 entrypointStubLiveOpener _config _observeTransaction _action = throwIO ReachedLiveBracket
+
+{- | A real 'LiveOpener' for the two write verbs (board-deploy\/deploy) whose
+LOCAL acquisition runs INSIDE the live bracket's own callback
+('Cardano.KERI.Deployment.CLI.publishArtifactsLive' needs the live
+funding address text, which only 'LiveConfig' -- not a real node
+connection -- supplies): reaches the real callback with a 'LiveContext'
+carrying the REAL 'LiveConfig' but bottom ('error') in every other field.
+This is safe specifically because the one acquisition this property
+observes only forces 'liveConfig'; forcing any other field (submitting a
+real transaction) happens strictly after, exactly like the clean
+downstream failures 'entrypointStubLiveOpener''s sibling examples above
+already accept as equally valid evidence.
+-}
+entrypointLazyStubLiveOpener :: LiveOpener
+entrypointLazyStubLiveOpener config _observeTransaction action =
+    action
+        LiveContext
+            { liveTransactionRuntime = error "LocalWritePathSpec: liveTransactionRuntime not exercised by this property"
+            , liveProvider = error "LocalWritePathSpec: liveProvider not exercised by this property"
+            , liveFundingAddress = error "LocalWritePathSpec: liveFundingAddress not exercised by this property"
+            , liveConfig = config
+            }
+
+{- | The frozen OOBI fixture's own witness key ("Cardano.KERI.Deployment.
+EndpointBoardSpec" already proves @witness-1-oobi.cesr@ parses via
+'parseEndpointRecord'; this is that same stream's own inception @i@\/@k@
+key, reused as the board-retire witness parameter).
+-}
+entrypointWitnessKeyText :: Text
+entrypointWitnessKeyText = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+
+{- | A board manifest carrying the SAME 'frozenEndpointBoardPolicyId'\/
+'frozenEndpointBoardAddress' every real manifest must (every board plan
+builder checks the manifest's own board identity against these frozen
+constants BEFORE this property's acquisition step is ever reached -- an
+arbitrary identity fails closed there, at count 0, before proving
+anything), with a reference locator that resolves to no live output --
+'boardReferenceOutputTx' (every board verb's first acquisition step)
+fails closed shortly after this property's one observed acquisition (no
+reference row is seeded), exactly matching 'entrypointManifest''s "clean
+failure after one acquisition is equally valid evidence" contract above.
+-}
+entrypointBoardManifest :: EndpointBoardManifest
+entrypointBoardManifest =
+    EndpointBoardManifest
+        { endpointBoardManifestSchemaVersion = "cardano-keri/m1-endpoint-board-manifest/v1"
+        , endpointBoardManifestNetwork = NetworkInfo{networkName = "preprod", networkMagic = 1}
+        , endpointBoardManifestSource = SourceInfo{sourceRepository = "unused", sourceCommit = T.replicate 40 "0"}
+        , endpointBoardManifestBlueprint = BlueprintInfo{blueprintDigestSha256 = T.replicate 64 "0"}
+        , endpointBoardManifestInfo =
+            EndpointBoardInfo
+                { endpointBoardPolicyId = frozenEndpointBoardPolicyId
+                , endpointBoardAddress = frozenEndpointBoardAddress
+                , endpointBoardProgramBytes = 1
+                , endpointBoardReference = Reference{referenceTxId = T.replicate 64 "0", referenceIndex = 0}
+                }
+        , endpointBoardManifestPublishedAt = "2026-01-01T00:00:00Z"
+        }
+
+{- | A well-formed, payment-key-credentialled (never script-credentialled)
+testnet address -- 'BoardTx.mkBoardPostPlan' requires "board ownership"
+(a Cardano payment verification key) BEFORE this property's acquisition
+step is ever reached (board-post's plan is built before the local scope
+opens, unlike update\/retire's), so 'entrypointCheckpointAddressText' (a
+script address) or an arbitrary non-Bech32 placeholder both fail closed
+at count 0, before proving anything.
+-}
+entrypointFundingAddressText :: Text
+entrypointFundingAddressText =
+    Bech32.encodeLenient addrTestHrp (Bech32.dataPartFromBytes (serialiseAddr fundingLedgerAddress))
+  where
+    fundingLedgerAddress =
+        Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull
+    keyHash = fromJust (hashFromBytes (BS.replicate 28 0x53))
+
+entrypointBoardTransactionSettings :: FilePath -> BoardTransactionSettings
+entrypointBoardTransactionSettings manifestPath =
+    BoardTransactionSettings
+        { boardTransactionNetwork = "preprod"
+        , boardTransactionNetworkMagic = 1
+        , boardTransactionPayer = "unused-payer"
+        , boardTransactionNodeSocket = "unused-node-socket"
+        , boardTransactionFundingAddress = entrypointFundingAddressText
+        , boardTransactionChangeAddress = Nothing
+        , boardTransactionManifest = manifestPath
+        , boardTransactionStorePath = "unused-store-path"
+        , boardTransactionTimeoutSeconds = 30
+        }
+
+{- | A blueprint JSON with exactly the one validator
+'Cardano.KERI.Deployment.Script.deriveBoardScript' requires
+(@endpoint_board.endpoint_board.mint@). Unlike the five-validator
+'Cardano.KERI.Deployment.Script.deriveV1Scripts' path (which APPLIES
+parameters through 'PlutusLedgerApi.V3.uncheckedDeserialiseUPLC', needing
+genuinely valid compiled UPLC), 'deriveBoardScript' only extracts and
+hashes the raw bytes -- an arbitrary even-length hex string decodes fine.
+-}
+entrypointBoardBlueprintJson :: BSL.ByteString
+entrypointBoardBlueprintJson =
+    encode $
+        object
+            [ "validators"
+                .= [ object
+                        [ "title" .= ("endpoint_board.endpoint_board.mint" :: Text)
+                        , "hash" .= ("00" :: Text)
+                        , "compiledCode" .= ("deadbeef" :: Text)
+                        ]
+                   ]
+            ]
 
 -- ---------------------------------------------------------------------------
 -- Helpers -- per-spec copies of Cardano.KERI.Indexer.ChainQuerySpec's proven

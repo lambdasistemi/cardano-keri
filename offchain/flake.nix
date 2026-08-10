@@ -307,6 +307,20 @@
           # #257: the focused chain-query algebra proof suite.
           chain-query-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.chain-query-tests;
+          # #240 T240-S1-01/03/13: the five base-oracle capture suites plus
+          # the local write-path atomicity/reference/settlement proof.
+          publisher-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.publisher-migration-tests;
+          registration-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.registration-migration-tests;
+          advance-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.advance-migration-tests;
+          close-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.close-migration-tests;
+          board-migration-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.board-migration-tests;
+          local-write-path-tests-exe =
+            project.hsPkgs.cardano-keri.components.tests.local-write-path-tests;
           # #177 Slice 1: the packaged `ckeri` executable itself, top-level
           # (unlike e2eWiring.ckeriRunner below) so `backend-check` can prove
           # its --help/status surface without depending on the Aiken
@@ -377,6 +391,278 @@
             ${indexer-tests-runner}/bin/indexer-tests
             touch $out
           '';
+          # #240 T240-S1-01/03: one flake-owned command running the five
+          # base-oracle capture suites (must all pass) alongside the local
+          # write-path atomicity/reference/settlement proof (must fail with
+          # EXACTLY its three named RED examples, never an unrelated
+          # failure) -- N-005/N-006/N-007/N-008. `nix run` inherits the
+          # caller's environment, so CKERI_PARITY_ORACLE_DIR set by the
+          # caller reaches Cardano.KERI.Deployment.ParityOracle.Capture
+          # unchanged; this app never sets it itself. Not wired as a
+          # `checks` entry: a sandboxed `nix flake check` run has no
+          # writable CKERI_PARITY_ORACLE_DIR and no reason to assert a
+          # fixed RED shape forever -- once T240-S1 lands GREEN this
+          # exact script becomes obsolete, unlike the permanent
+          # `local-write-path-check` T240-S1-13 will add.
+          local-write-path-oracle-runner = pkgs.writeShellApplication {
+            name = "local-write-path-oracle";
+            runtimeInputs = [
+              publisher-migration-tests-exe
+              registration-migration-tests-exe
+              advance-migration-tests-exe
+              close-migration-tests-exe
+              board-migration-tests-exe
+              local-write-path-tests-exe
+              pkgs.coreutils
+              pkgs.gnugrep
+            ];
+            text = ''
+              : "''${CKERI_PARITY_ORACLE_DIR:?CKERI_PARITY_ORACLE_DIR must be set}"
+              status=0
+
+              for suite in \
+                publisher-migration-tests \
+                registration-migration-tests \
+                advance-migration-tests \
+                close-migration-tests \
+                board-migration-tests; do
+                echo "=== $suite (must pass) ==="
+                "$suite" && ok=1 || ok=0
+                if [ "$ok" -ne 1 ]; then
+                  echo "FAIL: $suite was expected to pass (base-oracle capture)" >&2
+                  status=1
+                fi
+              done
+
+              echo "=== local-write-path-tests (expected RED) ==="
+              lwp_output="$(local-write-path-tests 2>&1)" && lwp_exit=0 || lwp_exit=$?
+              echo "$lwp_output"
+              if [ "$lwp_exit" -eq 0 ]; then
+                echo "FAIL: local-write-path-tests unexpectedly GREEN" >&2
+                status=1
+              else
+                missing=0
+                for marker in \
+                  "should derive the live reference output instead of reporting UnsupportedOperation" \
+                  "capSettlementObserver's probe should reflect a live matching asset output" \
+                  "capTransactionSettled should reflect a live tracked output of the exact tx id"; do
+                  if ! grep -qF "$marker" <<<"$lwp_output"; then
+                    echo "FAIL: expected RED example not found: $marker" >&2
+                    missing=1
+                  fi
+                done
+                if ! grep -qE ' 3 failures?$' <<<"$lwp_output"; then
+                  echo "FAIL: expected exactly 3 failures in local-write-path-tests" >&2
+                  missing=1
+                fi
+                if [ "$missing" -ne 0 ]; then
+                  status=1
+                fi
+              fi
+
+              echo "=== verifying 8 base-oracle capture files under $CKERI_PARITY_ORACLE_DIR ==="
+              for shape in premint register advance close publish board-post board-update board-retire; do
+                for ext in txid txbody.cbor.hex; do
+                  f="$CKERI_PARITY_ORACLE_DIR/$shape.$ext"
+                  if [ ! -s "$f" ]; then
+                    echo "FAIL: missing or empty capture file: $f" >&2
+                    status=1
+                  fi
+                done
+              done
+
+              exit "$status"
+            '';
+          };
+          # #240 T240-S1-13: the permanent local-write-path family gate.
+          # Runs the same six suites 'local-write-path-oracle' proved RED
+          # against at build 8 (evidence/build8), this time requiring every
+          # one GREEN with a non-zero example count -- positive proof; an
+          # empty, skipped, timed-out, or unclassifiable population fails
+          # closed, never a silent pass (INV-240-SWEEP/the #240 mandate).
+          # Unlike 'local-write-path-oracle' (a disposable, mutation-only,
+          # fixed-RED-shape proof retired once this candidate compiles and
+          # never wired into `checks`), this is the permanent gate
+          # `just ci-offchain`/`./gate.sh` runs every time -- the root
+          # `local-write-path-check` recipe gate.sh's own preflight looks
+          # for by name.
+          # A-002 ruling 2 / NOTE-018 item 2: `local-write-path-tests` proves
+          # `runDeployWith`'s complete non-degenerate entrypoint property, and
+          # that entrypoint begins at `loadArtifacts` -> `deriveV1Scripts`,
+          # which APPLIES parameters through `uncheckedDeserialiseUPLC` and so
+          # needs the real compiled blueprint -- an arbitrary hex string (which
+          # suffices for `deriveBoardScript`) cannot reach it. The suite is
+          # therefore given the SAME real `KERI_CHECKPOINT_BLUEPRINT` the
+          # deployment-tests runner already receives, in both the permanent
+          # gate runner below and the development shell, so the gate command
+          # and the focused `nix develop -c cabal run local-write-path-tests`
+          # command observe the identical binding rather than one passing where
+          # the other fails. Empty when the blueprint is unavailable for this
+          # system; the runner fails closed on that rather than running a
+          # silently reduced suite.
+          keriBlueprintPath =
+            if (e2eWiring ? blueprint) then "${e2eWiring.blueprint}" else "";
+
+          local-write-path-check-runner = pkgs.writeShellApplication {
+            name = "local-write-path-check";
+            runtimeInputs = [
+              publisher-migration-tests-exe
+              registration-migration-tests-exe
+              advance-migration-tests-exe
+              close-migration-tests-exe
+              board-migration-tests-exe
+              local-write-path-tests-exe
+              cli-tests-exe
+              ckeri-exe
+              pkgs.coreutils
+              pkgs.gnugrep
+            ];
+            text = ''
+              # N-031: enter the pinned flake source so both a plain
+              # `nix run` (already invoked with CWD=offchain by the root
+              # `local-write-path-check` recipe) and the sandboxed
+              # `checks.local-write-path-check` build (which starts in an
+              # empty build directory) read the SAME `cardano-keri.cabal`
+              # `Cardano.KERI.CLI.WriteCompositionBoundarySpec` needs --
+              # never an ambient/caller directory.
+              cd ${./.}
+
+              # A-002 ruling 2: exact binding, fail closed. An unset or empty
+              # blueprint would make `runDeployWith`'s entrypoint example fail
+              # for a harness reason rather than a candidate reason, which is
+              # precisely the degeneracy T240-S1-14 finding 2 reported.
+              export KERI_CHECKPOINT_BLUEPRINT="${keriBlueprintPath}"
+              if [ ! -s "$KERI_CHECKPOINT_BLUEPRINT" ]; then
+                echo "FAIL: KERI_CHECKPOINT_BLUEPRINT is unset or empty; runDeployWith's complete entrypoint property cannot run" >&2
+                exit 1
+              fi
+
+              status=0
+
+              # N-031 item 1: `cli-tests` (not just the five migration
+              # suites) is the compiled boundary instrument -- it is the
+              # test-suite carrying `WriteCompositionBoundarySpec`, whose
+              # positive control and `write-composition` Cabal-dependency
+              # census make a reintroduced provider dependency/import/call
+              # falsifiable (INV-240-FALSIFIABLE). Omitting it here would
+              # mean the permanent gate never re-proves that boundary.
+              for suite in \
+                publisher-migration-tests \
+                registration-migration-tests \
+                advance-migration-tests \
+                close-migration-tests \
+                board-migration-tests \
+                local-write-path-tests \
+                cli-tests; do
+                echo "=== $suite ==="
+                output="$("$suite" 2>&1)" && exit_code=0 || exit_code=$?
+                echo "$output"
+                if [ "$exit_code" -ne 0 ]; then
+                  echo "FAIL: $suite exited $exit_code" >&2
+                  status=1
+                  continue
+                fi
+                if ! grep -qE '^[1-9][0-9]* examples?, 0 failures\b' <<<"$output"; then
+                  echo "FAIL: $suite did not report a non-zero, all-passing example count (fail closed on empty/skipped/unclassifiable)" >&2
+                  status=1
+                fi
+              done
+
+              # N-031 item 3: name/count the write component and every
+              # covered write shape explicitly, rather than trusting the
+              # six family Hspec totals alone as the census -- a suite
+              # could pass zero-relevant examples and still report
+              # "N examples, 0 failures" if every write-shape assertion
+              # were silently dropped from it.
+              echo "=== write-composition component/verb census (T240-S1-13) ==="
+              if ! grep -qE '^library write-composition$' cardano-keri.cabal; then
+                echo "FAIL: no \`library write-composition\` stanza in cardano-keri.cabal (component census is zero)" >&2
+                status=1
+              fi
+              cli_file=write-composition/Cardano/KERI/Deployment/CLI.hs
+              if [ ! -s "$cli_file" ]; then
+                echo "FAIL: $cli_file missing or empty (write verb census cannot be non-zero)" >&2
+                status=1
+              else
+                for verb in \
+                  runDeploy runRegister runAdvance runClose \
+                  runBoardDeploy runBoardPost runBoardUpdate runBoardRetire; do
+                  count=0
+                  count="$(grep -cE "^$verb ::" "$cli_file" || true)"
+                  echo "verb census: $verb=$count"
+                  if [ "$count" -eq 0 ]; then
+                    echo "FAIL: write verb $verb has zero occurrences in $cli_file (fail closed)" >&2
+                    status=1
+                  fi
+                done
+              fi
+
+              # N-034 (T240-S1-02/05, MOD-240-FOCUSED-GATE): a source-level
+              # verb-name grep is not behavioral coverage. Execute the
+              # REAL packaged `ckeri` binary's real opt-env-conf parser for
+              # every one of the eight write leaves and require the local
+              # `--store`/`CKERI_STORE` surface present and every Koios
+              # flag/env absent. Two read-only positive controls
+              # (`manifest verify`, `board list`) prove the detection
+              # method is live -- both are EXPECTED to still expose the
+              # Koios surface (EDGE-240-04); if they didn't, an absence
+              # elsewhere would prove nothing.
+              write_help_check() {
+                label=$1
+                shift
+                help="$(ckeri "$@" --help 2>&1)"
+                ok=1
+                grep -q -- "--store" <<<"$help" || ok=0
+                grep -q "CKERI_STORE" <<<"$help" || ok=0
+                grep -q -- "--koios-url" <<<"$help" && ok=0
+                grep -q -- "--koios-token" <<<"$help" && ok=0
+                grep -q "CKERI_KOIOS_URL" <<<"$help" && ok=0
+                grep -q "KOIOS_TOKEN" <<<"$help" && ok=0
+                echo "write help census: $label=$ok"
+                if [ "$ok" -ne 1 ]; then
+                  echo "FAIL: '$*' --help does not match the provider-free write contract (--store/CKERI_STORE present, every Koios flag/env absent)" >&2
+                  echo "$help" >&2
+                  status=1
+                fi
+              }
+              echo "=== packaged write-surface help census (T240-S1-02/05) ==="
+              write_help_check deploy deploy
+              write_help_check register register
+              write_help_check advance advance
+              write_help_check close close
+              write_help_check board-deploy board deploy
+              write_help_check board-post board post
+              write_help_check board-update board update
+              write_help_check board-retire board retire
+
+              echo "=== positive control: read-only surfaces retain Koios (EDGE-240-04) ==="
+              positive_control() {
+                label=$1
+                shift
+                help="$(ckeri "$@" --help 2>&1)"
+                ok=1
+                grep -q -- "--koios-url" <<<"$help" || ok=0
+                grep -q "CKERI_KOIOS_URL" <<<"$help" || ok=0
+                grep -q -- "--koios-token" <<<"$help" || ok=0
+                grep -q "KOIOS_TOKEN" <<<"$help" || ok=0
+                echo "write help census: positive-control-$label=$ok"
+                if [ "$ok" -ne 1 ]; then
+                  echo "FAIL: '$*' --help lost its Koios surface -- the detection method above cannot prove an absence meaningfully if it can't prove a known presence" >&2
+                  echo "$help" >&2
+                  status=1
+                fi
+              }
+              positive_control manifest-verify manifest verify
+              positive_control board-list board list
+
+              exit "$status"
+            '';
+          };
+          local-write-path-check-check =
+            pkgs.runCommand "local-write-path-check-check" { } ''
+              ${local-write-path-check-runner}/bin/local-write-path-check
+              touch $out
+            '';
           # #176 Slice 1: the same "run the compiled test binary" shape as
           # indexer-tests-check/-runner, distinctly named so the immutable
           # slice gate can invoke this slice's contract check by a stable
@@ -1276,6 +1562,12 @@
           packages = {
             unit-tests = unit-tests-exe;
             indexer-tests = indexer-tests-exe;
+            # #240 N-045: focused packaged (not devshell) exercise of the
+            # register-preflight fixture repair, exposed the same way
+            # unit-tests/indexer-tests already are, so `nix run` builds
+            # and executes it against the real flake package environment
+            # without spending the full local-write-path-check command.
+            registration-migration-tests = registration-migration-tests-exe;
             ckeri-query = ckeri-query-exe;
             format = format-runner;
             format-check = format-check-runner;
@@ -1329,6 +1621,18 @@
             backend-transcript-check = backend-transcript-check-check;
             query-endpoint = query-endpoint-check;
             query-algebra = query-algebra-check;
+          }
+          # A-002 ruling 2: this check now requires the real compiled
+          # blueprint (see `keriBlueprintPath`), which is Linux-only for the
+          # same reason `blasterWiring` is -- the sole production blueprint is
+          # Linux-only. Guarded with the flake's own established idiom so
+          # `nix flake check` still evaluates and passes on aarch64-darwin.
+          # The `local-write-path-check` APP stays unconditional, because
+          # `gate.sh`'s preflight and `just ci-offchain` reach it by name; on a
+          # system without the blueprint it now fails closed with a named
+          # message instead of running a silently reduced suite.
+          // pkgs.lib.optionalAttrs (e2eWiring ? blueprint) {
+            local-write-path-check = local-write-path-check-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
             e2e = e2eWiring.check;
@@ -1364,6 +1668,16 @@
             backend-check = {
               type = "app";
               program = "${backend-check-runner}/bin/backend-check";
+            };
+            local-write-path-oracle = {
+              type = "app";
+              program =
+                "${local-write-path-oracle-runner}/bin/local-write-path-oracle";
+            };
+            local-write-path-check = {
+              type = "app";
+              program =
+                "${local-write-path-check-runner}/bin/local-write-path-check";
             };
             backend-transcript-check = {
               type = "app";
@@ -1417,7 +1731,17 @@
                 }/bin/linux-artifact-smoke";
             };
           };
-          devShells.default = project.shell;
+          # A-002 ruling 2: the focused proof command for this slice is
+          # `nix develop -c cabal run local-write-path-tests`, and
+          # `nix develop -c` does NOT run `shellHook` -- setting the binding
+          # there would leave the focused command without the blueprint while
+          # the gate runner had it, so the same fixture would pass under one
+          # command and fail under the other. It is therefore a real derivation
+          # environment attribute, which `-c` does honour.
+          devShells.default =
+            project.shell.overrideAttrs (_previous: {
+              KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
+            });
         };
     };
 }

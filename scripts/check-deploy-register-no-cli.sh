@@ -15,7 +15,9 @@ registration="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Registratio
 advance="$repo_root/offchain/deployment/Cardano/KERI/Deployment/AdvanceTransaction.hs"
 close="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CloseTransaction.hs"
 board="$repo_root/offchain/deployment/Cardano/KERI/Deployment/EndpointBoardTransaction.hs"
-cli="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CLI.hs"
+# #240: the write command module moved out of offchain/deployment/ into
+# the provider-free write-composition component.
+cli="$repo_root/offchain/write-composition/Cardano/KERI/Deployment/CLI.hs"
 
 subprocess_pattern='System\.Process|readProcessWithExitCode|callProcess|createProcess|cardano-cli'
 
@@ -27,6 +29,18 @@ echo "deploy-register-no-cli-guard: positive control OK (guard detects $fixture)
 
 # This closes both the visible query and transaction-build-in-disguise paths.
 modules=("$publisher" "$registration" "$advance" "$close" "$board" "$cli")
+
+# Fail closed before any absence result is credited: a grep miss caused by
+# a moved/renamed/deleted target must never be read as "no violation
+# found" (grep's own missing-file exit status would otherwise be masked
+# by the `|| true` guards below, exactly as it silently was here once).
+for target in "${modules[@]}"; do
+  if [ ! -f "$target" ]; then
+    echo "deploy-register-no-cli-guard: declared module target is absent or not a regular file: $target" >&2
+    exit 1
+  fi
+done
+
 violations="$(grep -nE "$subprocess_pattern" "${modules[@]}" || true)"
 if [ -n "$violations" ]; then
   echo "deploy-register-no-cli-guard: a migrated transaction module still contains a subprocess path:" >&2

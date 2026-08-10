@@ -32,19 +32,16 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs =
-    { nixpkgs, uv2nix, pyproject-nix, pyproject-build-systems, flake-utils, ... }:
+  outputs = { nixpkgs, uv2nix, pyproject-nix, pyproject-build-systems
+    , flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
         python = pkgs.python312;
 
-        workspace =
-          uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
+        workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
 
-        overlay = workspace.mkPyprojectOverlay {
-          sourcePreference = "wheel";
-        };
+        overlay = workspace.mkPyprojectOverlay { sourcePreference = "wheel"; };
 
         # hio, keri, and pysodium are the only sdist-only deps in the lock (all
         # others resolve to wheels under sourcePreference = "wheel"). They are
@@ -52,26 +49,27 @@
         # fails them with "No module named 'setuptools'". Inject the backend.
         sdistOnly = [ "hio" "keri" "pysodium" ];
         buildFixups = final: prev:
-          builtins.listToAttrs (map
-            (name: {
-              inherit name;
-              value = prev.${name}.overrideAttrs (old: {
-                nativeBuildInputs = (old.nativeBuildInputs or [ ])
-                  ++ final.resolveBuildSystem { setuptools = [ ]; wheel = [ ]; };
-              });
-            })
-            sdistOnly);
+          builtins.listToAttrs (map (name: {
+            inherit name;
+            value = prev.${name}.overrideAttrs (old: {
+              nativeBuildInputs = (old.nativeBuildInputs or [ ])
+                ++ final.resolveBuildSystem {
+                  setuptools = [ ];
+                  wheel = [ ];
+                };
+            });
+          }) sdistOnly);
 
-        pythonSet =
-          (pkgs.callPackage pyproject-nix.build.packages { inherit python; })
-          .overrideScope (pkgs.lib.composeManyExtensions [
-            pyproject-build-systems.overlays.default
-            overlay
-            buildFixups
-          ]);
+        pythonSet = (pkgs.callPackage pyproject-nix.build.packages {
+          inherit python;
+        }).overrideScope (pkgs.lib.composeManyExtensions [
+          pyproject-build-systems.overlays.default
+          overlay
+          buildFixups
+        ]);
 
-        venv = pythonSet.mkVirtualEnv "keri-fixtures-env"
-          workspace.deps.default;
+        venv =
+          pythonSet.mkVirtualEnv "keri-fixtures-env" workspace.deps.default;
 
         sodiumLib = "${pkgs.libsodium}/lib/libsodium.so";
 
@@ -83,8 +81,7 @@
             exec python ${./gen_fixtures.py}
           '';
         };
-      in
-      {
+      in {
         devShells.default = pkgs.mkShell {
           packages = [ venv pkgs.libsodium ];
           env.SODIUM_LIB = sodiumLib;
@@ -97,6 +94,9 @@
           type = "app";
           program = "${genScript}/bin/gen-fixtures";
         };
-        apps.default = { type = "app"; program = "${genScript}/bin/gen-fixtures"; };
+        apps.default = {
+          type = "app";
+          program = "${genScript}/bin/gen-fixtures";
+        };
       });
 }

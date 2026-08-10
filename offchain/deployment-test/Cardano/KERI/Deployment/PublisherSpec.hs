@@ -24,6 +24,7 @@ module Cardano.KERI.Deployment.PublisherSpec (spec) where
 import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
 import Cardano.KERI.ChainQuery (ChainAssetUtxo (..), ChainReference (..))
 import Cardano.KERI.Deployment.Manifest (Reference (..))
+import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Publisher (
     PublishConfig (..),
     PublishError (..),
@@ -311,6 +312,9 @@ publishOneSpec = describe "publishOne" $ do
                 case signed of
                     Nothing -> fail "trSign was never called: no tx was built"
                     Just tx -> do
+                        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR
+                        -- is set; see Cardano.KERI.Deployment.ParityOracle.Capture.
+                        captureShape "publish" (renderTxId (transactionId tx)) tx
                         let body = tx ^. bodyTxL
                             outputs = toList (body ^. outputsTxBodyL)
                         -- reference output: exactly one output carries the

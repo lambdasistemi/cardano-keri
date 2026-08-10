@@ -1,44 +1,64 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.CLI
 Description : opt-env-conf command surface and execution for ckeri
 -}
 module Cardano.KERI.Deployment.CLI (
-    Instructions (..),
     DeploySettings (..),
-    VerifySettings (..),
     RegisterSettings (..),
     RegisterRuntime (..),
     AdvanceSettings (..),
     CloseSettings (..),
     BoardInstructions (..),
-    BoardListSettings (..),
+    BoardTransactionSettings (..),
     BoardPostSettings (..),
     BoardUpdateSettings (..),
     BoardRetireSettings (..),
     registerPreflight,
     renderQuerySnapshotDiagnostic,
-    runInstructions,
 
-    -- * Reused by "Cardano.KERI.CLI" to compose the top-level command list
+    -- * Reused by "Cardano.KERI.CLI" to compose the top-level and board
+
+    -- command trees (#240: "Cardano.KERI.CLI" also composes
+    -- "Cardano.KERI.Deployment.Verify"'s read-only leaves alongside these;
+    -- this module has no edge to that provider-owning module, EDGE-240-04).
     deploySettingsParser,
-    verifySettingsParser,
+    deploySettingsParserWithOut,
     registerSettingsParser,
     advanceSettingsParser,
     closeSettingsParser,
-    boardInstructionsParser,
+    boardPostSettingsParser,
+    boardUpdateSettingsParser,
+    boardRetireSettingsParser,
     runDeploy,
-    runVerify,
+    runDeployWith,
     runRegister,
     runRegisterWith,
     runAdvance,
+    runAdvanceWith,
     runClose,
+    runCloseWith,
     runBoard,
+    runBoardDeploy,
+    runBoardDeployWith,
+    runBoardPost,
+    runBoardPostWith,
+    runBoardUpdate,
+    runBoardUpdateWith,
+    runBoardRetire,
+    runBoardRetireWith,
+
+    -- * A-013 repair: the swappable local\/live brackets (T240-S1-14 audit
+
+    -- finding 1), reused by "Cardano.KERI.Indexer.LocalWritePathSpec"'s
+    -- production-entrypoint proof.
+    LocalOpener,
+    LiveOpener,
 ) where
 
-import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Close (CloseEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
@@ -46,7 +66,7 @@ import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
     BoardLocator (..),
     ChainAssetUtxo (..),
-    ChainQueryError,
+    ChainQueryError (..),
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
@@ -57,18 +77,9 @@ import Cardano.KERI.ChainQuery (
     SettlementTimeoutPolicy (..),
     observeSettlement,
  )
-import Cardano.KERI.ChainQuery.Koios (
-    KoiosToken (..),
-    koiosInterpreter,
-    koiosReferenceScripts,
-    matchesReference,
-    queryActiveCheckpoint,
-    queryAddressUtxos,
-    queryAssetUtxos,
-    queryBoardCatalog,
-    queryReferenceScripts,
-    queryTransactionInfo,
-    txInfoTxHash,
+import Cardano.KERI.ChainQuery.LedgerOutput (
+    chainAssetUtxoToLedgerOutput,
+    chainReferenceToLedgerOutput,
  )
 import Cardano.KERI.ChainQuery.Registration (
     RegistrationQueryRequest (..),
@@ -97,7 +108,6 @@ import Cardano.KERI.Deployment.EndpointBoard (
     missingBoardWitnesses,
     parseEndpointRecord,
     parseWitnessKey,
-    renderBoardCatalog,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
@@ -118,21 +128,16 @@ import Cardano.KERI.Deployment.LiveRuntime (
     LiveConfig (..),
     LiveContext (..),
     decodePaymentAddress,
-    resolveBoardReference,
-    resolveManifestReferences,
-    resolveOutput,
-    resolveTxIns,
     rewardAccountForScript,
     rewardAccountRegistered,
     withLiveContext,
  )
 import Cardano.KERI.Deployment.Manifest (
+    CheckpointInfo (..),
     Manifest (..),
     Reference (..),
     ScriptEntry (..),
-    SourceInfo (..),
     blueprintSha256,
-    manifestValidationErrors,
     mkManifest,
     readManifest,
     writeManifestAtomic,
@@ -155,41 +160,78 @@ import Cardano.KERI.Deployment.Script (
     loadBlueprint,
  )
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
+import Cardano.KERI.Indexer.App (decodePolicyId)
+import Cardano.KERI.Indexer.ChainQuery (
+    LocalQueryScope (..),
+    LocalSettings (..),
+    localBoardCatalogWithOutputs,
+    localCurrentCheckpoint,
+    localInterpreter,
+    localOutputAtTx,
+    localPayerUtxos,
+    localReferenceObservation,
+    localReferenceScriptsTx,
+    localSettlementObserver,
+    localTransactionSettled,
+    runLocalSnapshotTx,
+    withLocalQueryScope,
+ )
+import Cardano.KERI.Indexer.Config (decodeAddress)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (TxOut)
-import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
-import Control.Monad (forM_, unless, when)
-import Data.Bifunctor (first)
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
+import Control.Monad (unless, when, (>=>))
 import Data.ByteString qualified as BS
 import Data.Char (isHexDigit)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
-import Data.Word (Word16)
+import Database.KV.Transaction (Transaction, runTransaction)
 import OptEnvConf qualified as Opt
 import System.Directory (doesDirectoryExist)
 
-data Instructions
-    = Deploy DeploySettings
-    | ManifestVerify VerifySettings
-    | Register RegisterSettings
-    | Advance AdvanceSettings
-    | Close CloseSettings
-    | Board BoardInstructions
-    deriving stock (Show, Eq)
+{- | A-013 repair (T240-S1-14 audit finding 1): the local-store bracket
+every write verb's @run*With@ entrypoint takes as a swappable parameter,
+matching 'Cardano.KERI.Indexer.ChainQuery.withLocalQueryScope''s own type
+exactly -- production passes 'withLocalQueryScope' itself
+(@run* = run*With withLocalQueryScope withLiveContext@, the same shape
+'runRegister'\/'runRegisterWith' already established); a compiled test
+passes an in-memory, counting-runner substitute instead, so it can observe
+how many times the REAL production entrypoint's underlying transaction
+runner fires -- not a helper the entrypoint merely happens to also call,
+which cannot detect a bypass, a raw second acquisition, or a dropped call.
+-}
+type LocalOpener =
+    forall a. LocalSettings -> (forall cf op. LocalQueryScope cf op -> IO a) -> IO a
 
+{- | A-013 repair: the live-node bracket every submitting write verb's
+@run*With@ entrypoint takes as a swappable parameter, matching
+'Cardano.KERI.Deployment.LiveRuntime.withLiveContext''s own type exactly --
+production passes 'withLiveContext' itself; a compiled test passes a stub
+that never dials a socket, reaches its own callback with a minimal
+'LiveContext', and lets the test observe that the LOCAL acquisition (which
+runs strictly before this bracket opens) already completed, and how many
+times.
+-}
+type LiveOpener =
+    forall a. LiveConfig -> (TxId -> IO ()) -> (LiveContext -> IO a) -> IO a
+
+{- | #240: no 'ManifestVerify'\/'BoardList' constructor here (moved to
+"Cardano.KERI.Deployment.Verify", the provider-owning module) -- every
+constructor left is a write verb. "Cardano.KERI.CLI" composes this with
+'Cardano.KERI.Deployment.Verify.runVerify' itself; this module never
+imports that module (EDGE-240-04: no write-composition -> provider-owning
+edge).
+-}
 data BoardInstructions
     = BoardDeploy DeploySettings
-    | BoardList BoardListSettings
     | BoardPost BoardPostSettings
     | BoardUpdate BoardUpdateSettings
     | BoardRetire BoardRetireSettings
@@ -207,18 +249,8 @@ data DeploySettings = DeploySettings
     , deploySourceCommit :: Maybe Text
     , deployOut :: FilePath
     , deployReferenceLovelace :: Integer
-    , deployKoiosUrl :: Text
-    , deployKoiosToken :: Maybe KoiosToken
+    , deployStorePath :: FilePath
     , deployTimeoutSeconds :: Int
-    }
-    deriving stock (Show, Eq)
-
-data VerifySettings = VerifySettings
-    { verifyManifest :: FilePath
-    , verifyBlueprint :: FilePath
-    , verifySourceRepo :: FilePath
-    , verifyKoiosUrl :: Text
-    , verifyKoiosToken :: Maybe KoiosToken
     }
     deriving stock (Show, Eq)
 
@@ -231,8 +263,7 @@ data RegisterSettings = RegisterSettings
     , registerFundingAddress :: Text
     , registerManifest :: FilePath
     , registerBoardManifest :: FilePath
-    , registerKoiosUrl :: Text
-    , registerKoiosToken :: Maybe KoiosToken
+    , registerStorePath :: FilePath
     , registerTimeoutSeconds :: Int
     , registerAllowUnlistedWitnesses :: Bool
     , registerAllowExistingCheckpoint :: Bool
@@ -248,6 +279,16 @@ NOTE-012 repair: preflight's existing-checkpoint and board-catalog reads no
 longer thread bare query callbacks (INV-257-BUILDER); 'registerQuerySnapshot'
 is the one named registration snapshot, executed by the chosen real
 interpreter, that supplies both.
+
+#240 (RQ-240-03\/04): 'registerQuerySnapshot'\/'registerSubmit' both take an
+already-open 'LocalQueryScope' rather than provider settings -- 'runRegisterWith'
+brackets exactly one 'Cardano.KERI.Indexer.ChainQuery.withLocalQueryScope'
+runner for the whole register flow (N-017: one bracket per write action,
+never a fresh one per query\/poll) and both fields run against that SAME
+runner. The 'forall' makes DATA-INV-240-03 ("a local query scope cannot
+outlive its store bracket") a type, not a convention: no concrete @cf@\/@op@
+can be named outside 'withLocalQueryScope''s own callback, so a
+'RegisterRuntime' cannot smuggle a handle out of its bracket.
 -}
 data RegisterRuntime = RegisterRuntime
     { registerReadKel :: FilePath -> IO BS.ByteString
@@ -256,12 +297,14 @@ data RegisterRuntime = RegisterRuntime
         FilePath ->
         IO (Either String EndpointBoardManifest)
     , registerQuerySnapshot ::
-        Text ->
-        Maybe KoiosToken ->
+        forall cf op.
+        LocalQueryScope cf op ->
         RegistrationQueryRequest ->
         IO (Either ChainQueryError (QuerySnapshot RegistrationSnapshot))
     , registerWriteLine :: String -> IO ()
     , registerSubmit ::
+        forall cf op.
+        LocalQueryScope cf op ->
         RegisterSettings ->
         Manifest ->
         RegistrationPlan ->
@@ -279,8 +322,7 @@ data AdvanceSettings = AdvanceSettings
     , advanceNodeSocket :: Maybe FilePath
     , advanceFundingAddress :: Maybe Text
     , advanceManifest :: FilePath
-    , advanceKoiosUrl :: Text
-    , advanceKoiosToken :: Maybe KoiosToken
+    , advanceStorePath :: FilePath
     , advanceTimeoutSeconds :: Int
     , advanceValidatorTestUnderSigned :: Bool
     , advanceValidatorTestUnderWitnessed :: Bool
@@ -301,17 +343,9 @@ data CloseSettings = CloseSettings
     , closeFundingAddress :: Maybe Text
     , closeChangeAddress :: Maybe Text
     , closeManifest :: FilePath
-    , closeKoiosUrl :: Text
-    , closeKoiosToken :: Maybe KoiosToken
+    , closeStorePath :: FilePath
     , closeTimeoutSeconds :: Int
     , closeValidatorTestNonController :: Bool
-    }
-    deriving stock (Show, Eq)
-
-data BoardListSettings = BoardListSettings
-    { boardListManifest :: !FilePath
-    , boardListKoiosUrl :: !Text
-    , boardListKoiosToken :: !(Maybe KoiosToken)
     }
     deriving stock (Show, Eq)
 
@@ -323,8 +357,7 @@ data BoardTransactionSettings = BoardTransactionSettings
     , boardTransactionFundingAddress :: !Text
     , boardTransactionChangeAddress :: !(Maybe Text)
     , boardTransactionManifest :: !FilePath
-    , boardTransactionKoiosUrl :: !Text
-    , boardTransactionKoiosToken :: !(Maybe KoiosToken)
+    , boardTransactionStorePath :: !FilePath
     , boardTransactionTimeoutSeconds :: !Int
     }
     deriving stock (Show, Eq)
@@ -350,54 +383,6 @@ data BoardRetireSettings = BoardRetireSettings
     , boardRetireTransaction :: !BoardTransactionSettings
     }
     deriving stock (Show, Eq)
-
-instance Opt.HasParser Instructions where
-    settingsParser =
-        Opt.withYamlConfig
-            ( Opt.optional $
-                Opt.filePathSetting
-                    [ Opt.option
-                    , Opt.long "config-file"
-                    , Opt.env "CKERI_CONFIG_FILE"
-                    , Opt.help "Path to the ckeri YAML configuration file"
-                    ]
-            )
-            $ Opt.commands
-                [ Opt.command
-                    "deploy"
-                    "Publish the M1 V1 reference scripts"
-                    (Deploy <$> Opt.subConfig "deploy" deploySettingsParser)
-                , Opt.command
-                    "manifest"
-                    "Operate on a release manifest"
-                    ( Opt.commands
-                        [ Opt.command
-                            "verify"
-                            "Rebuild and verify source, hashes, and live references"
-                            ( ManifestVerify
-                                <$> Opt.subConfig
-                                    "manifest"
-                                    (Opt.subConfig "verify" verifySettingsParser)
-                            )
-                        ]
-                    )
-                , Opt.command
-                    "register"
-                    "Register a kli inception KEL on preprod"
-                    (Register <$> Opt.subConfig "register" registerSettingsParser)
-                , Opt.command
-                    "advance"
-                    "Advance a live checkpoint from a witnessed kli rotation"
-                    (Advance <$> Opt.subConfig "advance" advanceSettingsParser)
-                , Opt.command
-                    "close"
-                    "Close a live checkpoint and refund its complete escrow"
-                    (Close <$> Opt.subConfig "close" closeSettingsParser)
-                , Opt.command
-                    "board"
-                    "Operate the current on-chain endpoint catalog"
-                    (Board <$> Opt.subConfig "board" boardInstructionsParser)
-                ]
 
 deploySettingsParser :: Opt.Parser DeploySettings
 deploySettingsParser =
@@ -483,14 +468,13 @@ deploySettingsParserWithOut defaultOut = do
             "reference-lovelace"
             "Lovelace held in each reference-script output"
             (Just 100_000_000)
-    deployKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    deployKoiosToken <- optionalKoiosTokenParser
+    deployStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
     deployTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -499,39 +483,6 @@ deploySettingsParserWithOut defaultOut = do
             "Settlement timeout per script"
             (Just 600)
     pure DeploySettings{..}
-
-verifySettingsParser :: Opt.Parser VerifySettings
-verifySettingsParser = do
-    verifyManifest <-
-        stringSetting
-            "manifest"
-            "CKERI_MANIFEST"
-            "manifest"
-            "Release manifest to verify"
-            (Just "deploy/preprod/m1-manifest.json")
-    verifyBlueprint <-
-        stringSetting
-            "blueprint"
-            "CKERI_BLUEPRINT"
-            "blueprint"
-            "Immutable Aiken plutus.json"
-            Nothing
-    verifySourceRepo <-
-        stringSetting
-            "source-repo"
-            "CKERI_SOURCE_REPO"
-            "source-repo"
-            "Checkout used for source provenance"
-            (Just ".")
-    verifyKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    verifyKoiosToken <- optionalKoiosTokenParser
-    pure VerifySettings{..}
 
 registerSettingsParser :: Opt.Parser RegisterSettings
 registerSettingsParser = do
@@ -591,14 +542,13 @@ registerSettingsParser = do
             "board-manifest"
             "Endpoint-board preprod deployment manifest"
             (Just "deploy/preprod/board-manifest.json")
-    registerKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    registerKoiosToken <- optionalKoiosTokenParser
+    registerStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
     registerTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -710,14 +660,13 @@ advanceSettingsParser = do
             "manifest"
             "V1 preprod deployment manifest"
             (Just "deploy/preprod/m1-manifest.json")
-    advanceKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    advanceKoiosToken <- optionalKoiosTokenParser
+    advanceStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
     advanceTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -846,14 +795,13 @@ closeSettingsParser = do
             "manifest"
             "V1 preprod deployment manifest"
             (Just "deploy/preprod/m1-manifest.json")
-    closeKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    closeKoiosToken <- optionalKoiosTokenParser
+    closeStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
     closeTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -872,64 +820,14 @@ closeSettingsParser = do
             ]
     pure CloseSettings{..}
 
-boardInstructionsParser :: Opt.Parser BoardInstructions
-boardInstructionsParser =
-    Opt.commands
-        [ Opt.command
-            "deploy"
-            "Publish the frozen endpoint-board reference script"
-            ( BoardDeploy
-                <$> Opt.subConfig
-                    "deploy"
-                    ( deploySettingsParserWithOut
-                        "deploy/preprod/board-manifest.json"
-                    )
-            )
-        , Opt.command
-            "list"
-            "List the exact verified current endpoint catalog"
-            ( BoardList
-                <$> Opt.subConfig "list" boardListSettingsParser
-            )
-        , Opt.command
-            "post"
-            "Post one witness-signed endpoint record"
-            ( BoardPost
-                <$> Opt.subConfig "post" boardPostSettingsParser
-            )
-        , Opt.command
-            "update"
-            "Spend and recreate one owned endpoint record"
-            ( BoardUpdate
-                <$> Opt.subConfig "update" boardUpdateSettingsParser
-            )
-        , Opt.command
-            "retire"
-            "Burn one owned marker and refund its complete deposit"
-            ( BoardRetire
-                <$> Opt.subConfig "retire" boardRetireSettingsParser
-            )
-        ]
-
-boardListSettingsParser :: Opt.Parser BoardListSettings
-boardListSettingsParser = do
-    boardListManifest <-
-        stringSetting
-            "board-manifest"
-            "CKERI_BOARD_MANIFEST"
-            "board-manifest"
-            "Endpoint-board preprod deployment manifest"
-            (Just "deploy/preprod/board-manifest.json")
-    boardListKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    boardListKoiosToken <- optionalKoiosTokenParser
-    pure BoardListSettings{..}
-
+{- | #240: this module builds no combined \"board\" command parser of its
+own any more -- "Cardano.KERI.CLI" composes the four write leaves below
+('deploySettingsParserWithOut', 'boardPostSettingsParser',
+'boardUpdateSettingsParser', 'boardRetireSettingsParser') together with
+"Cardano.KERI.Deployment.Verify"'s read-only \"list\" leaf under the one
+installed @board@ command tree, so no provider edge is needed here
+(EDGE-240-04).
+-}
 boardTransactionSettingsParser :: Opt.Parser BoardTransactionSettings
 boardTransactionSettingsParser = do
     boardTransactionNetwork <-
@@ -982,14 +880,13 @@ boardTransactionSettingsParser = do
             "board-manifest"
             "Endpoint-board preprod deployment manifest"
             (Just "deploy/preprod/board-manifest.json")
-    boardTransactionKoiosUrl <-
-        textSetting
-            "koios-url"
-            "CKERI_KOIOS_URL"
-            "koios-url"
-            "Koios API base URL"
-            (Just "https://preprod.koios.rest/api/v1")
-    boardTransactionKoiosToken <- optionalKoiosTokenParser
+    boardTransactionStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
     boardTransactionTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -1064,17 +961,6 @@ boardRetireSettingsParser = do
             Nothing
     boardRetireTransaction <- boardTransactionSettingsParser
     pure BoardRetireSettings{..}
-
-optionalKoiosTokenParser :: Opt.Parser (Maybe KoiosToken)
-optionalKoiosTokenParser =
-    Opt.optional $
-        KoiosToken
-            <$> textSetting
-                "koios-token"
-                "KOIOS_TOKEN"
-                "koios-token"
-                "Optional Koios bearer token"
-                Nothing
 
 stringSetting ::
     String ->
@@ -1153,25 +1039,23 @@ withMaybeDefault :: (Show a) => Maybe a -> Opt.Parser a -> Opt.Parser a
 withMaybeDefault defaultValue parser =
     maybe parser (`Opt.withDefault` parser) defaultValue
 
-runInstructions :: Instructions -> IO ()
-runInstructions = \case
-    Deploy settings -> runDeploy settings
-    ManifestVerify settings -> runVerify settings
-    Register settings -> runRegister settings
-    Advance settings -> runAdvance settings
-    Close settings -> runClose settings
-    Board instructions -> runBoard instructions
-
+{- | #240: no 'ManifestVerify'\/'BoardList' case -- both moved to
+"Cardano.KERI.Deployment.Verify"; "Cardano.KERI.CLI" dispatches them
+directly, never through this function.
+-}
 runBoard :: BoardInstructions -> IO ()
 runBoard = \case
     BoardDeploy settings -> runBoardDeploy settings
-    BoardList settings -> runBoardList settings
     BoardPost settings -> runBoardPost settings
     BoardUpdate settings -> runBoardUpdate settings
     BoardRetire settings -> runBoardRetire settings
 
 runBoardDeploy :: DeploySettings -> IO ()
-runBoardDeploy settings = do
+runBoardDeploy = runBoardDeployWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardDeployWith :: LocalOpener -> LiveOpener -> DeploySettings -> IO ()
+runBoardDeployWith openLocalScope openLiveContext settings = do
     unless
         (deployNetwork settings == "preprod" && deployNetworkMagic settings == 1)
         (fail "M1 endpoint-board deployment supports only preprod network magic 1")
@@ -1185,12 +1069,14 @@ runBoardDeploy settings = do
     digest <- blueprintSha256 (deployBlueprint settings)
     commit <- resolveSourceCommit settings
     verifySourceTree (deploySourceRepo settings) commit
+    let localSettings = deployLocalSettingsFor (deployStorePath settings)
     references <-
-        withLiveContext
-            (deployLiveConfig settings)
-            (awaitTransaction (deployKoiosUrl settings) (deployKoiosToken settings) (deployTimeoutSeconds settings))
-            $ \context ->
-                publishArtifactsLive settings context [artifact]
+        openLocalScope localSettings $ \scope ->
+            openLiveContext
+                (deployLiveConfig settings)
+                (awaitLocalTransaction scope (deployTimeoutSeconds settings))
+                $ \context ->
+                    publishArtifactsLive scope settings context [artifact]
     reference <-
         case references of
             [("endpoint-board", settled)] -> pure settled
@@ -1210,23 +1096,12 @@ runBoardDeploy settings = do
     writeEndpointBoardManifestAtomic (deployOut settings) manifest
     putStrLn ("board manifest: " <> deployOut settings)
 
-runBoardList :: BoardListSettings -> IO ()
-runBoardList settings = do
-    manifest <-
-        readEndpointBoardManifest (boardListManifest settings)
-            >>= either fail pure
-    let info = endpointBoardManifestInfo manifest
-    entries <-
-        queryBoardCatalog
-            (boardListKoiosUrl settings)
-            (boardListKoiosToken settings)
-            (endpointBoardPolicyId info)
-            (endpointBoardAddress info)
-    putStrLn ("board records: " <> show (length entries))
-    putStr (T.unpack $ renderBoardCatalog entries)
-
 runBoardPost :: BoardPostSettings -> IO ()
-runBoardPost settings = do
+runBoardPost = runBoardPostWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardPostWith :: LocalOpener -> LiveOpener -> BoardPostSettings -> IO ()
+runBoardPostWith openLocalScope openLiveContext settings = do
     let transaction = boardPostTransaction settings
     validateBoardTransactionSettings transaction
     endpointBytes <- BS.readFile (boardPostEndpointRecord settings)
@@ -1239,92 +1114,126 @@ runBoardPost settings = do
                 (boardTransactionFundingAddress transaction)
                 (boardPostDepositLovelace settings)
                 record
-    withBoardContext transaction manifest $ \context config -> do
-        funding <- indexedFundingUtxos (boardTransactionKoiosUrl transaction) (boardTransactionKoiosToken transaction) context
-        result <-
-            BoardTx.runBoardPostTransaction config plan funding
+    let info = endpointBoardManifestInfo manifest
+    localSettings <-
+        either fail pure $
+            boardLocalSettingsFor (boardTransactionStorePath transaction) info
+    openLocalScope localSettings $ \scope -> do
+        envelope <-
+            runLocalSnapshotTx
+                scope
+                (boardWriteBundleTx info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        putStrLn $
-            "board txid: "
-                <> T.unpack
-                    (renderTransactionId $ BoardTx.boardResultTxId result)
-                <> " deposit: "
-                <> show (boardPostDepositLovelace settings `div` 1_000_000)
-                <> " tADA"
+        let (reference, funding) = snapshotValue envelope
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
+            result <-
+                BoardTx.runBoardPostTransaction config plan funding
+                    >>= either (fail . show) pure
+            putStrLn $
+                "board txid: "
+                    <> T.unpack
+                        (renderTransactionId $ BoardTx.boardResultTxId result)
+                    <> " deposit: "
+                    <> show (boardPostDepositLovelace settings `div` 1_000_000)
+                    <> " tADA"
 
 runBoardUpdate :: BoardUpdateSettings -> IO ()
-runBoardUpdate settings = do
+runBoardUpdate = runBoardUpdateWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardUpdateWith :: LocalOpener -> LiveOpener -> BoardUpdateSettings -> IO ()
+runBoardUpdateWith openLocalScope openLiveContext settings = do
     let transaction = boardUpdateTransaction settings
     validateBoardTransactionSettings transaction
     endpointBytes <- BS.readFile (boardUpdateEndpointRecord settings)
     record <- either fail pure (parseEndpointRecord endpointBytes)
     manifest <- readBoardTransactionManifest transaction
-    entries <- queryBoardTransactionCatalog transaction manifest
-    entry <-
+    let info = endpointBoardManifestInfo manifest
+    localSettings <-
         either fail pure $
-            BoardTx.selectBoardEntry
-                (boardUpdateOutReference settings)
-                (endpointWitnessKey record)
-                entries
-    plan <-
-        either fail pure $
-            BoardTx.mkBoardUpdatePlan
-                manifest
-                (boardTransactionFundingAddress transaction)
-                entry
-                record
-    withBoardContext transaction manifest $ \context config -> do
-        funding <- indexedFundingUtxos (boardTransactionKoiosUrl transaction) (boardTransactionKoiosToken transaction) context
-        boardInput <-
-            resolveOutput context (boardTxId entry) (boardIndex entry)
-        result <-
-            BoardTx.runBoardUpdateTransaction config plan funding boardInput
+            boardLocalSettingsFor (boardTransactionStorePath transaction) info
+    openLocalScope localSettings $ \scope -> do
+        envelope <-
+            runLocalSnapshotTx
+                scope
+                (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        putStrLn $
-            "board update txid: "
-                <> T.unpack
-                    (renderTransactionId $ BoardTx.boardResultTxId result)
-        putStrLn $
-            "replaced: "
-                <> T.unpack (BoardTx.boardUpdateSpentReference plan)
+        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
+        entry <-
+            either fail pure $
+                BoardTx.selectBoardEntry
+                    (boardUpdateOutReference settings)
+                    (endpointWitnessKey record)
+                    (map fst catalogWithOutputs)
+        boardInput <- either fail pure (pairedBoardOutput entry catalogWithOutputs)
+        plan <-
+            either fail pure $
+                BoardTx.mkBoardUpdatePlan
+                    manifest
+                    (boardTransactionFundingAddress transaction)
+                    entry
+                    record
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
+            result <-
+                BoardTx.runBoardUpdateTransaction config plan funding boardInput
+                    >>= either (fail . show) pure
+            putStrLn $
+                "board update txid: "
+                    <> T.unpack
+                        (renderTransactionId $ BoardTx.boardResultTxId result)
+            putStrLn $
+                "replaced: "
+                    <> T.unpack (BoardTx.boardUpdateSpentReference plan)
 
 runBoardRetire :: BoardRetireSettings -> IO ()
-runBoardRetire settings = do
+runBoardRetire = runBoardRetireWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardRetireWith :: LocalOpener -> LiveOpener -> BoardRetireSettings -> IO ()
+runBoardRetireWith openLocalScope openLiveContext settings = do
     let transaction = boardRetireTransaction settings
     validateBoardTransactionSettings transaction
     witness <- either fail pure (parseWitnessKey $ boardRetireWitness settings)
     manifest <- readBoardTransactionManifest transaction
-    entries <- queryBoardTransactionCatalog transaction manifest
-    entry <-
+    let info = endpointBoardManifestInfo manifest
+    localSettings <-
         either fail pure $
-            BoardTx.selectBoardEntry
-                (boardRetireOutReference settings)
-                witness
-                entries
-    plan <-
-        either fail pure $
-            BoardTx.mkBoardRetirePlan
-                manifest
-                (boardTransactionFundingAddress transaction)
-                (boardRetireTo settings)
-                entry
-    withBoardContext transaction manifest $ \context config -> do
-        funding <- indexedFundingUtxos (boardTransactionKoiosUrl transaction) (boardTransactionKoiosToken transaction) context
-        boardInput <-
-            resolveOutput context (boardTxId entry) (boardIndex entry)
-        result <-
-            BoardTx.runBoardRetireTransaction config plan funding boardInput
+            boardLocalSettingsFor (boardTransactionStorePath transaction) info
+    openLocalScope localSettings $ \scope -> do
+        envelope <-
+            runLocalSnapshotTx
+                scope
+                (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
-        putStrLn $
-            "board retire txid: "
-                <> T.unpack
-                    (renderTransactionId $ BoardTx.boardResultTxId result)
-        putStrLn $
-            "refunded: "
-                <> show
-                    (BoardTx.boardRetireRefundLovelace plan `div` 1_000_000)
-                <> " tADA to "
-                <> T.unpack (boardRetireTo settings)
+        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
+        entry <-
+            either fail pure $
+                BoardTx.selectBoardEntry
+                    (boardRetireOutReference settings)
+                    witness
+                    (map fst catalogWithOutputs)
+        boardInput <- either fail pure (pairedBoardOutput entry catalogWithOutputs)
+        plan <-
+            either fail pure $
+                BoardTx.mkBoardRetirePlan
+                    manifest
+                    (boardTransactionFundingAddress transaction)
+                    (boardRetireTo settings)
+                    entry
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
+            result <-
+                BoardTx.runBoardRetireTransaction config plan funding boardInput
+                    >>= either (fail . show) pure
+            putStrLn $
+                "board retire txid: "
+                    <> T.unpack
+                        (renderTransactionId $ BoardTx.boardResultTxId result)
+            putStrLn $
+                "refunded: "
+                    <> show
+                        (BoardTx.boardRetireRefundLovelace plan `div` 1_000_000)
+                    <> " tADA to "
+                    <> T.unpack (boardRetireTo settings)
 
 validateBoardTransactionSettings :: BoardTransactionSettings -> IO ()
 validateBoardTransactionSettings settings = do
@@ -1343,29 +1252,22 @@ readBoardTransactionManifest settings =
     readEndpointBoardManifest (boardTransactionManifest settings)
         >>= either fail pure
 
-queryBoardTransactionCatalog ::
-    BoardTransactionSettings ->
-    EndpointBoardManifest ->
-    IO [BoardEntry]
-queryBoardTransactionCatalog settings manifest =
-    let info = endpointBoardManifestInfo manifest
-     in queryBoardCatalog
-            (boardTransactionKoiosUrl settings)
-            (boardTransactionKoiosToken settings)
-            (endpointBoardPolicyId info)
-            (endpointBoardAddress info)
-
+{- | #240 (N-022): the 'LiveContext' bracket and 'BoardTx.BoardConfig'
+build only -- 'references' arrives already resolved by the phase's own
+combined local snapshot (never N2C\/'resolveBoardReference' here).
+-}
 withBoardContext ::
+    LiveOpener ->
+    LocalQueryScope cf op ->
     BoardTransactionSettings ->
-    EndpointBoardManifest ->
+    [(TxIn, TxOut ConwayEra)] ->
     (LiveContext -> BoardTx.BoardConfig -> IO a) ->
     IO a
-withBoardContext settings manifest action =
-    withLiveContext
+withBoardContext openLiveContext scope settings references action =
+    openLiveContext
         (boardLiveConfig settings)
-        (awaitTransaction (boardTransactionKoiosUrl settings) (boardTransactionKoiosToken settings) (boardTransactionTimeoutSeconds settings))
+        (awaitLocalTransaction scope (boardTransactionTimeoutSeconds settings))
         $ \context -> do
-            references <- resolveBoardReference context manifest
             changeAddress <-
                 either fail pure $
                     decodePaymentAddress $
@@ -1381,43 +1283,285 @@ withBoardContext settings manifest action =
                     , BoardTx.boardChangeAddress = changeAddress
                     }
 
-{- | Enumerate through Koios, then resolve those exact identities through
-N2C (#257 MOD-257-COMPOSITION: relocated unchanged from the former
-@Cardano.KERI.Deployment.LiveRuntime.indexedFundingUtxos@, which could not
-stay in @deployment@ once it lost its Koios dependency — this composition
-root is where Koios and N2C are both available). Used by every write verb
-except registration (#240 will migrate the rest later).
+{- | #240 (RQ-240-08\/T240-S1-09): the exact-AID checkpoint lookup, run
+against the local 'scope' instead of Koios -- relocated from the former
+Koios @queryActiveCheckpoint@. Its own single-purpose 'runLocalSnapshotTx'
+call: at the point this runs (before a write action even knows whether it
+will submit), there is nothing else to compose it with.
 -}
-indexedFundingUtxos :: Text -> Maybe KoiosToken -> LiveContext -> IO [(TxIn, TxOut ConwayEra)]
-indexedFundingUtxos koiosUrl koiosToken context = do
-    let address = liveFundingAddressText (liveConfig context)
-    indexed <- queryAddressUtxos koiosUrl koiosToken address
-    unless (all ((== address) . chainAssetAddress) indexed) $
-        fail "indexer returned a payer output at a different address"
-    txIns <- traverse indexedTxIn indexed
-    resolveTxIns context txIns
+activeCheckpointLocal :: LocalQueryScope cf op -> Text -> IO ActiveCheckpoint
+activeCheckpointLocal scope aid = do
+    envelope <-
+        runLocalSnapshotTx scope (localCurrentCheckpoint scope aid)
+            >>= either (fail . show) pure
+    maybe (fail "checkpoint is not registered") pure (snapshotValue envelope)
+
+{- | #240 (N-022\/N-025): one script hash resolved through the local
+reference-output algebra and converted straight to a ledger input,
+preserving the real inline datum -- never N2C.
+-}
+referenceOutputsTx ::
+    [Text] -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+referenceOutputsTx hashes = do
+    result <- localReferenceScriptsTx hashes
+    pure (result >>= traverse chainReferenceToLedgerOutput)
+
+{- | #240 (N-022): every M1 V1 manifest script, hash-resolved, in the
+manifest's own stable order.
+-}
+manifestReferencesTx ::
+    Manifest -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+manifestReferencesTx manifest = referenceOutputsTx (map scriptHash (manifestScripts manifest))
+
+{- | #240 (N-025): the endpoint-board's own reference script,
+hash-resolved exactly like a manifest script ('endpointBoardPolicyId' IS
+the board artifact's deployed script hash, set from @artifactScriptHash@
+by 'mkEndpointBoardManifest' and cross-validated by
+'endpointBoardManifestValidationErrors' -- not a distinct minting-policy
+concept, despite the field name). The resolved output's own identity is
+additionally checked against the manifest's recorded 'endpointBoardReference'
+locator, defense in depth against a stale\/mismatched manifest.
+-}
+boardReferenceOutputTx ::
+    EndpointBoardInfo -> Transaction IO cf Cols op (Either ChainQueryError (TxIn, TxOut ConwayEra))
+boardReferenceOutputTx info = do
+    result <- referenceOutputsTx [endpointBoardPolicyId info]
+    pure $ do
+        outputs <- result
+        case outputs of
+            [output@(TxIn txId (TxIx index), _)]
+                | renderTransactionId txId == referenceTxId reference
+                    && fromIntegral index == referenceIndex reference ->
+                    Right output
+                | otherwise ->
+                    Left
+                        ( DecodingFailure
+                            "board reference output does not match the manifest's recorded locator"
+                        )
+            _ ->
+                Left
+                    ( AmbiguousCurrentState
+                        "board reference script hash did not resolve to exactly one output"
+                    )
   where
-    indexedTxIn output =
-        either fail pure $
-            mkLiveTxIn (chainAssetTxId output) (chainAssetIndex output)
+    reference = endpointBoardReference info
 
-{- | Relocated unchanged from the former
-@Cardano.KERI.Deployment.LiveRuntime.transactionSettled@.
+{- | #240 (RQ-240-03\/DATA-INV-240-01, N-021\/N-022): enumerate the funding
+address through the local reference algebra and convert every returned row
+directly with 'chainAssetUtxoToLedgerOutput' -- the local snapshot already
+carries the complete follower-held output, so payer selection and values
+both come from that SAME snapshot; N2C\/'LiveContext' never substitutes for
+a stored row (relocated from the former Koios @indexedFundingUtxos@,
+provider dependency dropped; #257 MOD-257-COMPOSITION's N2C half is gone
+with it).
 -}
-transactionSettled :: Text -> Maybe KoiosToken -> TxId -> IO Bool
-transactionSettled koiosUrl koiosToken txId = do
-    transactions <- queryTransactionInfo koiosUrl koiosToken [renderTransactionId txId]
-    pure $ any ((== renderTransactionId txId) . txInfoTxHash) transactions
+fundingOutputsTx ::
+    Text -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+fundingOutputsTx address = do
+    result <- localPayerUtxos [address]
+    pure $ do
+        indexed <- result
+        unless (all ((== address) . chainAssetAddress) indexed) $
+            Left (DecodingFailure "indexer returned a payer output at a different address")
+        traverse chainAssetUtxoToLedgerOutput indexed
 
-{- | Relocated unchanged from the former
-@Cardano.KERI.Deployment.LiveRuntime.awaitTransaction@; constructs
-'withLiveContext''s observation capability.
+{- | #240 (N-022\/N-023): find the paired ledger output
+'localBoardCatalogWithOutputs' already decoded for one PURE-selected
+'BoardEntry' -- never a second store transaction just to spend the entry
+'BoardTx.selectBoardEntry' picked.
 -}
-awaitTransaction :: Text -> Maybe KoiosToken -> Int -> TxId -> IO ()
-awaitTransaction koiosUrl koiosToken timeoutSeconds txId = do
+pairedBoardOutput ::
+    BoardEntry -> [(BoardEntry, (TxIn, TxOut ConwayEra))] -> Either String (TxIn, TxOut ConwayEra)
+pairedBoardOutput entry catalogWithOutputs =
+    maybe
+        (Left "board catalog entry has no matching decoded output")
+        (Right . snd)
+        (find ((== entry) . fst) catalogWithOutputs)
+
+{- | #240 (N-022): board post's whole phase bundle -- the board's own
+reference output plus funding, composed together (post never reads the
+catalog: it creates a NEW entry, it does not select an existing one).
+-}
+boardWriteBundleTx ::
+    EndpointBoardInfo ->
+    Text ->
+    Transaction IO cf Cols op (Either ChainQueryError ((TxIn, TxOut ConwayEra), [(TxIn, TxOut ConwayEra)]))
+boardWriteBundleTx info fundingAddress = do
+    refResult <- boardReferenceOutputTx info
+    case refResult of
+        Left err -> pure (Left err)
+        Right ref -> do
+            fundingResult <- fundingOutputsTx fundingAddress
+            pure ((,) ref <$> fundingResult)
+
+{- | #240 (N-022): board update\/retire's whole phase bundle -- the
+board's own reference output, the complete catalog paired with each
+entry's own decoded output ('localBoardCatalogWithOutputs', so selecting
+one entry afterward never needs a second store transaction), and funding,
+composed together.
+-}
+boardCatalogBundleTx ::
+    LocalQueryScope cf op ->
+    EndpointBoardInfo ->
+    Text ->
+    Transaction
+        IO
+        cf
+        Cols
+        op
+        ( Either
+            ChainQueryError
+            ( (TxIn, TxOut ConwayEra)
+            , [(BoardEntry, (TxIn, TxOut ConwayEra))]
+            , [(TxIn, TxOut ConwayEra)]
+            )
+        )
+boardCatalogBundleTx scope info fundingAddress = do
+    refResult <- boardReferenceOutputTx info
+    case refResult of
+        Left err -> pure (Left err)
+        Right ref -> do
+            catalogResult <- localBoardCatalogWithOutputs scope
+            case catalogResult of
+                Left err -> pure (Left err)
+                Right catalog -> do
+                    fundingResult <- fundingOutputsTx fundingAddress
+                    pure ((,,) ref catalog <$> fundingResult)
+
+{- | #240 (N-022): advance\/close's shared submit-phase bundle -- every
+manifest reference script, the exact active-checkpoint output being spent
+(by the caller-supplied @(txid,index)@ identity, re-read fresh so the real
+ledger 'TxOut'\/datum is used, never the 'ActiveCheckpoint' summary), and
+funding, composed together. A-013 repair: this identity now always arrives
+from 'activeCheckpointSubmitBundleTx', composed inside the SAME
+'Transaction' as the checkpoint lookup that derived it -- never a second,
+separately-run acquisition (INV-240-SNAPSHOT).
+-}
+manifestAndActiveBundleTx ::
+    Manifest ->
+    Text ->
+    Int ->
+    Text ->
+    Transaction
+        IO
+        cf
+        Cols
+        op
+        ( Either
+            ChainQueryError
+            ([(TxIn, TxOut ConwayEra)], (TxIn, TxOut ConwayEra), [(TxIn, TxOut ConwayEra)])
+        )
+manifestAndActiveBundleTx manifest activeTxId activeIndex fundingAddress = do
+    refsResult <- manifestReferencesTx manifest
+    case refsResult of
+        Left err -> pure (Left err)
+        Right refs -> do
+            activeResult <- localOutputAtTx activeTxId activeIndex
+            case activeResult of
+                Left err -> pure (Left err)
+                Right activeOut -> do
+                    fundingResult <- fundingOutputsTx fundingAddress
+                    pure ((,,) refs activeOut <$> fundingResult)
+
+{- | A-013 repair (INV-240-SNAPSHOT, T240-S1-14 audit
+finding 1): advance\/close's whole submit-phase acquisition, as ONE
+composed 'Transaction' -- the current checkpoint lookup that used to run
+through its own standalone 'activeCheckpointLocal' call is now the FIRST
+step of this SAME transaction, immediately followed by
+'manifestAndActiveBundleTx' using the identity it just found. A write
+verb that decides to submit therefore invokes the store transaction
+runner exactly once for its whole build phase, never a split
+acquisition; the (still legitimate, still single-acquisition-on-its-own)
+signing-package-only path keeps calling 'activeCheckpointLocal' directly,
+since no second read ever follows it there.
+-}
+data ActiveCheckpointSubmitBundle
+    = ActiveCheckpointNotRegistered
+    | ActiveCheckpointSubmitBundle
+        !ActiveCheckpoint
+        ![(TxIn, TxOut ConwayEra)]
+        !(TxIn, TxOut ConwayEra)
+        ![(TxIn, TxOut ConwayEra)]
+
+activeCheckpointSubmitBundleTx ::
+    LocalQueryScope cf op ->
+    Manifest ->
+    Text ->
+    Text ->
+    Transaction IO cf Cols op (Either ChainQueryError ActiveCheckpointSubmitBundle)
+activeCheckpointSubmitBundleTx scope manifest aid fundingAddress = do
+    activeResult <- localCurrentCheckpoint scope aid
+    case activeResult of
+        Left err -> pure (Left err)
+        Right Nothing -> pure (Right ActiveCheckpointNotRegistered)
+        Right (Just active) -> do
+            bundleResult <-
+                manifestAndActiveBundleTx
+                    manifest
+                    (activeCheckpointTxId active)
+                    (activeCheckpointIndex active)
+                    fundingAddress
+            pure $
+                (\(refs, activeOut, funding) -> ActiveCheckpointSubmitBundle active refs activeOut funding)
+                    <$> bundleResult
+
+{- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): every board write verb
+dispatches neither 'currentCheckpoint' nor 'liveCheckpoints' -- the
+checkpoint identity is genuinely 'Nothing', never a fabricated value. The
+board address is real and validated ('Just').
+-}
+boardLocalSettingsFor :: FilePath -> EndpointBoardInfo -> Either String LocalSettings
+boardLocalSettingsFor storePath info = do
+    boardAddr <- decodeAddress (endpointBoardAddress info)
+    pure
+        LocalSettings
+            { localStorePath = storePath
+            , localCheckpointIdentity = Nothing
+            , localBoardIdentity = Just boardAddr
+            }
+
+{- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): 'deploy'\/'board deploy'
+dispatch neither 'currentCheckpoint'\/'liveCheckpoints' nor 'boardCatalog'
+(there is no manifest yet to source either identity from -- deploy
+PRODUCES the manifest) -- both identities are genuinely 'Nothing', never a
+fabricated value.
+-}
+deployLocalSettingsFor :: FilePath -> LocalSettings
+deployLocalSettingsFor storePath =
+    LocalSettings
+        { localStorePath = storePath
+        , localCheckpointIdentity = Nothing
+        , localBoardIdentity = Nothing
+        }
+
+{- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): 'advance'\/'close' both
+operate on an existing manifest's own real checkpoint identity ('Just',
+validated); neither dispatches 'boardCatalog' or a board write, so the
+board identity is genuinely 'Nothing', never a fabricated value.
+-}
+manifestLocalSettingsFor :: FilePath -> Manifest -> Either String LocalSettings
+manifestLocalSettingsFor storePath manifest = do
+    let checkpoint = manifestCheckpoint manifest
+    checkpointAddr <- decodeAddress (checkpointAddressBech32 checkpoint)
+    checkpointPolicy <- decodePolicyId (checkpointPolicyId checkpoint)
+    pure
+        LocalSettings
+            { localStorePath = storePath
+            , localCheckpointIdentity = Just (checkpointPolicy, checkpointAddr)
+            , localBoardIdentity = Nothing
+            }
+
+{- | #240 (RQ-240-06): constructs 'withLiveContext''s observation
+capability from the SAME already-open local 'scope'
+('Cardano.KERI.Indexer.ChainQuery.localTransactionSettled', a fresh
+temporal probe on the held-open runner, N-017), never a fresh store
+bracket per poll.
+-}
+awaitLocalTransaction :: LocalQueryScope cf op -> Int -> TxId -> IO ()
+awaitLocalTransaction scope timeoutSeconds txId = do
     started <- getCurrentTime
     let loop = do
-            observed <- try (transactionSettled koiosUrl koiosToken txId)
+            observed <- try (localTransactionSettled scope txId)
             case observed of
                 Right True -> pure ()
                 Right False -> retry started
@@ -1428,20 +1572,6 @@ awaitTransaction koiosUrl koiosToken timeoutSeconds txId = do
                 then fail $ "transaction settlement timed out: " <> T.unpack (renderTransactionId txId)
                 else threadDelay 2_000_000 >> loop
     loop
-
-mkLiveTxIn :: Text -> Int -> Either String TxIn
-mkLiveTxIn encodedId index = do
-    when (index < 0 || index > fromIntegral (maxBound :: Word16)) $
-        Left "transaction output index is outside the ledger range"
-    bytes <-
-        first
-            (const "transaction id is not hexadecimal")
-            (convertFromBase Base16 $ TE.encodeUtf8 encodedId)
-    unless (BS.length bytes == 32) $
-        Left "transaction id is not 32 bytes"
-    digest <-
-        maybe (Left "transaction id is not a ledger hash") Right (hashFromBytes bytes)
-    pure (TxIn (TxId $ unsafeMakeSafeHash digest) (TxIx $ fromIntegral index))
 
 deployLiveConfig :: DeploySettings -> LiveConfig
 deployLiveConfig settings =
@@ -1503,15 +1633,27 @@ boardLiveConfig settings =
         , liveTimeoutSeconds = boardTransactionTimeoutSeconds settings
         }
 
+{- | #240 (N-022\/N-023): each artifact's funding is its own phase snapshot
+-- publishing artifact N changes the payer's live UTxOs before artifact
+N+1's funding can be read, a genuine causal separation (like
+'runRegisterWith''s premint\/register split), never a needless sequence of
+otherwise-simultaneous reads. 'publishQueryReferences' stays a fresh
+per-poll local settlement probe ('localReferenceObservation'), exactly
+like every other post-submit temporal observation in this module.
+-}
 publishArtifactsLive ::
+    LocalQueryScope cf op ->
     DeploySettings ->
     LiveContext ->
     [ScriptArtifact] ->
     IO [(Text, Reference)]
-publishArtifactsLive settings context = traverse publishArtifact
+publishArtifactsLive scope settings context = traverse publishArtifact
   where
     publishArtifact artifact = do
-        funding <- indexedFundingUtxos (deployKoiosUrl settings) (deployKoiosToken settings) context
+        envelope <-
+            runLocalSnapshotTx scope (fundingOutputsTx (liveFundingAddressText (liveConfig context)))
+                >>= either (fail . show) pure
+        let funding = snapshotValue envelope
         published <-
             publishScripts
                 PublishConfig
@@ -1520,12 +1662,9 @@ publishArtifactsLive settings context = traverse publishArtifact
                     , publishFundingAddress = liveFundingAddress context
                     , publishReferenceLovelace =
                         deployReferenceLovelace settings
-                    , publishQueryReferences = \scriptHash ->
-                        koiosReferenceScripts
-                            (deployKoiosUrl settings)
-                            (deployKoiosToken settings)
-                            [scriptHash]
-                            >>= either (fail . show) pure
+                    , publishQueryReferences =
+                        localReferenceObservation scope
+                            >=> either (fail . show) pure
                     , publishTimeoutSeconds =
                         deployTimeoutSeconds settings
                     }
@@ -1576,7 +1715,7 @@ registerPreflight network networkMagic allowUnlisted allowExisting existingCount
                    \--allow-unlisted-witnesses to acknowledge reduced watchability"
 
 runRegister :: RegisterSettings -> IO ()
-runRegister = runRegisterWith productionRegisterRuntime
+runRegister = runRegisterWith withLocalQueryScope productionRegisterRuntime
 
 {- | Render a snapshot envelope's provenance (INV-257-CONSISTENCY,
 DATA-INV-257-03): every registration read prints its real, non-degenerate
@@ -1597,9 +1736,16 @@ renderQuerySnapshotDiagnostic envelope =
                     <> " hash="
                     <> T.unpack (watermarkBlockHash watermark)
 
--- | Execute every read-only preflight effect in order, then submit live.
-runRegisterWith :: RegisterRuntime -> RegisterSettings -> IO ()
-runRegisterWith runtime settings = do
+{- | Execute every read-only preflight effect, then submit live -- all
+inside ONE 'Cardano.KERI.Indexer.ChainQuery.withLocalQueryScope' bracket
+(N-017: one bracket per write action). Manifest/board-manifest identity is
+decoded once, before the bracket opens, into the fixed
+'Cardano.KERI.Indexer.ChainQuery.LocalSettings' the whole flow shares;
+the board identity (N-026) is genuinely 'Nothing', never a fabricated
+value, when no witness requires a real board read.
+-}
+runRegisterWith :: LocalOpener -> RegisterRuntime -> RegisterSettings -> IO ()
+runRegisterWith openLocalScope runtime settings = do
     when (registerTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
     kel <- registerReadKel runtime (registerKel settings)
@@ -1629,57 +1775,69 @@ runRegisterWith runtime settings = do
                             { boardLocatorPolicyId = endpointBoardPolicyId boardInfo
                             , boardLocatorAddress = endpointBoardAddress boardInfo
                             }
-    envelope <-
-        registerQuerySnapshot
-            runtime
-            (registerKoiosUrl settings)
-            (registerKoiosToken settings)
-            RegistrationQueryRequest
-                { registrationQueryCheckpointLocator =
-                    CheckpointLocator (planCheckpointPolicy plan) (planCheckpointAddress plan)
-                , registrationQueryAid = planAid plan
-                , registrationQueryBoardLocator = boardLocator
-                , registrationQueryReferenceHashes = []
-                , registrationQueryPayerAddresses = []
+    checkpointAddr <- either fail pure (decodeAddress (planCheckpointAddress plan))
+    checkpointPolicy <- either fail pure (decodePolicyId (planCheckpointPolicy plan))
+    boardIdentity <-
+        case boardLocator of
+            Nothing -> pure Nothing
+            Just locator -> Just <$> either fail pure (decodeAddress (boardLocatorAddress locator))
+    let localSettings =
+            LocalSettings
+                { localStorePath = registerStorePath settings
+                , localCheckpointIdentity = Just (checkpointPolicy, checkpointAddr)
+                , localBoardIdentity = boardIdentity
                 }
-            >>= either (fail . show) pure
-    registerWriteLine runtime (renderQuerySnapshotDiagnostic envelope)
-    let snapshot = snapshotValue envelope
-        existing = maybe (0 :: Int) (const 1) (snapshotCurrentCheckpoint snapshot)
-        catalog = snapshotBoardCatalog snapshot
-    either
-        fail
-        pure
-        ( registerPreflight
-            (registerNetwork settings)
-            (registerNetworkMagic settings)
-            (registerAllowUnlistedWitnesses settings)
-            (registerAllowExistingCheckpoint settings)
-            existing
-            catalog
-            inception
-        )
-    let missing = missingBoardWitnesses witnesses catalog
-    when
-        ( registerAllowUnlistedWitnesses settings
-            && not (null missing)
-        )
-        ( registerWriteLine runtime $
-            "warning: "
-                <> show (length missing)
-                <> "/"
-                <> show (length witnesses)
-                <> " declared witnesses are absent from the verified board; \
-                   \accepting reduced public watchability"
-        )
-    when
-        (registerAllowExistingCheckpoint settings && existing > 0)
-        ( registerWriteLine
-            runtime
-            "warning: sovereign repeat registration creates another fully \
-            \funded checkpoint copy; the benign residual is intentional"
-        )
-    registerSubmit runtime settings manifest plan
+    openLocalScope localSettings $ \scope -> do
+        envelope <-
+            registerQuerySnapshot
+                runtime
+                scope
+                RegistrationQueryRequest
+                    { registrationQueryCheckpointLocator =
+                        CheckpointLocator (planCheckpointPolicy plan) (planCheckpointAddress plan)
+                    , registrationQueryAid = planAid plan
+                    , registrationQueryBoardLocator = boardLocator
+                    , registrationQueryReferenceHashes = []
+                    , registrationQueryPayerAddresses = []
+                    }
+                >>= either (fail . show) pure
+        registerWriteLine runtime (renderQuerySnapshotDiagnostic envelope)
+        let snapshot = snapshotValue envelope
+            existing = maybe (0 :: Int) (const 1) (snapshotCurrentCheckpoint snapshot)
+            catalog = snapshotBoardCatalog snapshot
+        either
+            fail
+            pure
+            ( registerPreflight
+                (registerNetwork settings)
+                (registerNetworkMagic settings)
+                (registerAllowUnlistedWitnesses settings)
+                (registerAllowExistingCheckpoint settings)
+                existing
+                catalog
+                inception
+            )
+        let missing = missingBoardWitnesses witnesses catalog
+        when
+            ( registerAllowUnlistedWitnesses settings
+                && not (null missing)
+            )
+            ( registerWriteLine runtime $
+                "warning: "
+                    <> show (length missing)
+                    <> "/"
+                    <> show (length witnesses)
+                    <> " declared witnesses are absent from the verified board; \
+                       \accepting reduced public watchability"
+            )
+        when
+            (registerAllowExistingCheckpoint settings && existing > 0)
+            ( registerWriteLine
+                runtime
+                "warning: sovereign repeat registration creates another fully \
+                \funded checkpoint copy; the benign residual is intentional"
+            )
+        registerSubmit runtime scope settings manifest plan
 
 productionRegisterRuntime :: RegisterRuntime
 productionRegisterRuntime =
@@ -1687,26 +1845,37 @@ productionRegisterRuntime =
         { registerReadKel = BS.readFile
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
-        , registerQuerySnapshot = \url token req ->
-            runRegistrationSnapshot (koiosInterpreter url token) req
+        , registerQuerySnapshot = \scope req ->
+            runTransaction
+                (localScopeRunner scope)
+                (runRegistrationSnapshot (localInterpreter scope) req)
         , registerWriteLine = putStrLn
         , registerSubmit = submitRegistration
         }
 
-{- | #257 (RQ-257-08): each build phase's current-state inputs flow through
-one selected 'koiosInterpreter' program (the production default, preserved
-unchanged) rather than a bare query callback. Settlement stays the separate
-temporal capability ('registerSettlementObserver'\/'observeSettlement').
+{- | #240 (RQ-240-03\/04\/06): each build phase's current-state inputs flow
+through the SAME already-open local 'scope' (via
+'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot'
+\@'localInterpreter' scope\@, unchanged from #257 otherwise) rather than a
+fresh Koios interpreter per call, and settlement is
+'Cardano.KERI.Indexer.ChainQuery.localSettlementObserver' \@scope\@ -- a
+fresh 'runTransaction' per poll on that SAME runner, never a fresh RocksDB
+bracket (N-017). The premint proof's settled output is converted directly
+from the settlement observation's own already-decoded 'ChainAssetUtxo'
+('chainAssetUtxoToLedgerOutput', pure) instead of a second store\/N2C
+lookup -- the local settlement probe already decoded everything the
+builder needs.
 -}
 submitRegistration ::
+    LocalQueryScope cf op ->
     RegisterSettings ->
     Manifest ->
     RegistrationPlan ->
     IO ()
-submitRegistration settings manifest plan =
+submitRegistration scope settings manifest plan =
     withLiveContext
         (registerLiveConfig settings)
-        (awaitTransaction (registerKoiosUrl settings) (registerKoiosToken settings) (registerTimeoutSeconds settings))
+        (awaitLocalTransaction scope (registerTimeoutSeconds settings))
         $ \context -> do
             lifecycleHash <-
                 either fail pure $
@@ -1726,12 +1895,12 @@ submitRegistration settings manifest plan =
                         , Registration.registerLifecycleRewardAccount =
                             lifecycleAccount
                         , Registration.registerSettlementObserver =
-                            SettlementObserver (queryAssetUtxos (registerKoiosUrl settings) (registerKoiosToken settings))
+                            localSettlementObserver scope
                         , Registration.registerTimeoutSeconds =
                             registerTimeoutSeconds settings
                         , Registration.registerPollDelayMicros = 2_000_000
                         }
-                interpreter = koiosInterpreter (registerKoiosUrl settings) (registerKoiosToken settings)
+                interpreter = localInterpreter scope
                 snapshotRequest referenceHashes =
                     RegistrationQueryRequest
                         { registrationQueryCheckpointLocator =
@@ -1743,7 +1912,9 @@ submitRegistration settings manifest plan =
                         }
                 fetchSnapshot referenceHashes = do
                     envelope <-
-                        runRegistrationSnapshot interpreter (snapshotRequest referenceHashes)
+                        runTransaction
+                            (localScopeRunner scope)
+                            (runRegistrationSnapshot interpreter (snapshotRequest referenceHashes))
                             >>= either (fail . show) pure
                     putStrLn (renderQuerySnapshotDiagnostic envelope)
                     pure (snapshotValue envelope)
@@ -1769,10 +1940,8 @@ submitRegistration settings manifest plan =
                         , settlementAddress = registerFundingAddress settings
                         }
             proofInput <-
-                resolveOutput
-                    context
-                    (chainAssetTxId (settlementObservedUtxo proof))
-                    (chainAssetIndex (settlementObservedUtxo proof))
+                either (fail . show) pure $
+                    chainAssetUtxoToLedgerOutput (settlementObservedUtxo proof)
             registerSnapshot <-
                 fetchSnapshot [planProofPolicy plan, planCheckpointPolicy plan, lifecycleHash]
             registerTxId <-
@@ -1798,7 +1967,16 @@ submitRegistration settings manifest plan =
                     <> " tADA (min 2 + D 1000 + B 5)"
 
 runAdvance :: AdvanceSettings -> IO ()
-runAdvance settings = do
+runAdvance = runAdvanceWith withLocalQueryScope withLiveContext
+
+{- | A-013 repair (T240-S1-14 audit finding 1): 'runAdvance' is now a
+zero-behavior-change alias of this, with the local\/live brackets
+parameterized (mirrors 'runRegister'\/'runRegisterWith'). A compiled test
+calls this directly with a counting 'LocalOpener' and a stub 'LiveOpener'
+to observe the real production entrypoint's acquisition wiring.
+-}
+runAdvanceWith :: LocalOpener -> LiveOpener -> AdvanceSettings -> IO ()
+runAdvanceWith openLocalScope openLiveContext settings = do
     unless
         (advanceNetwork settings == "preprod" && advanceNetworkMagic settings == 1)
         (fail "M1 V1 advance supports only preprod network magic 1")
@@ -1825,45 +2003,57 @@ runAdvance settings = do
         fail "configured AID does not match the kli rotation export"
     manifest <-
         readManifest (advanceManifest settings) >>= either fail pure
-    active <-
-        queryActiveCheckpoint
-            (advanceKoiosUrl settings)
-            (advanceKoiosToken settings)
-            manifest
-            (advanceConfiguredAid settings)
-    package <-
-        either fail pure (mkAdvancePackage manifest active rotation)
-    case ( advanceSigningPackage settings
-         , advanceControllerSignatures settings
-         ) of
-        (Just directory, Nothing) -> do
-            when (negativeCount /= 0) $
-                fail "validator-test modes apply only when submitting"
-            files <- writeAdvanceSigningPackage directory package
-            putStrLn $
-                "signing package: "
-                    <> advancePreimageFile files
-            putStrLn $
-                "preimage sha256: "
-                    <> T.unpack (advancePackageSha256 package)
-            putStrLn $
-                "spent checkpoint: "
-                    <> T.unpack (advanceSpentReference package)
-        (Nothing, Just signatureFile) ->
-            submitAdvance settings manifest active package signatureFile
-        _ ->
-            fail
-                "choose exactly one of --signing-package DIR or \
-                \--controller-signatures FILE"
+    localSettings <-
+        either fail pure (manifestLocalSettingsFor (advanceStorePath settings) manifest)
+    openLocalScope localSettings $ \scope ->
+        case ( advanceSigningPackage settings
+             , advanceControllerSignatures settings
+             ) of
+            (Just directory, Nothing) -> do
+                when (negativeCount /= 0) $
+                    fail "validator-test modes apply only when submitting"
+                active <- activeCheckpointLocal scope (advanceConfiguredAid settings)
+                package <-
+                    either fail pure (mkAdvancePackage manifest active rotation)
+                files <- writeAdvanceSigningPackage directory package
+                putStrLn $
+                    "signing package: "
+                        <> advancePreimageFile files
+                putStrLn $
+                    "preimage sha256: "
+                        <> T.unpack (advancePackageSha256 package)
+                putStrLn $
+                    "spent checkpoint: "
+                        <> T.unpack (advanceSpentReference package)
+            (Nothing, Just signatureFile) ->
+                submitAdvance openLiveContext scope settings manifest rotation signatureFile
+            _ ->
+                fail
+                    "choose exactly one of --signing-package DIR or \
+                    \--controller-signatures FILE"
 
+{- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
+acquisition -- current checkpoint, manifest references, the active
+checkpoint's own ledger output, and funding -- now runs as ONE
+'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
+'activeCheckpointLocal' call followed by a second, separately-run
+acquisition (INV-240-SNAPSHOT). This composition is NOT
+affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
+bundle is one of the seven direct 'Transaction' compositions that
+intentionally remain. The live bracket is a
+'LiveOpener' parameter, matching 'runAdvanceWith''s own seam, so a test can
+observe the local acquisition completed (and how many times) without
+dialing a real node.
+-}
 submitAdvance ::
+    LiveOpener ->
+    LocalQueryScope cf op ->
     AdvanceSettings ->
     Manifest ->
-    ActiveCheckpoint ->
-    AdvancePackage ->
+    RotationExport ->
     FilePath ->
     IO ()
-submitAdvance settings manifest active package signatureFile = do
+submitAdvance openLiveContext scope settings manifest rotation signatureFile = do
     payer <-
         requireAdvanceSetting "--payer" (advancePayer settings)
     nodeSocket <-
@@ -1873,30 +2063,39 @@ submitAdvance settings manifest active package signatureFile = do
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
+    envelope <-
+        runLocalSnapshotTx
+            scope
+            ( activeCheckpointSubmitBundleTx
+                scope
+                manifest
+                (advanceConfiguredAid settings)
+                fundingAddress
+            )
+            >>= either (fail . show) pure
+    (active, references, activeInput, funding) <-
+        case snapshotValue envelope of
+            ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+            ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                pure (active, refs, activeInput, funding)
+    package <- either fail pure (mkAdvancePackage manifest active rotation)
     submittedPackage <-
         prepareSubmittedPackage settings active signatures package
     plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
-    withLiveContext
+    openLiveContext
         ( advanceLiveConfig
             settings
             payer
             nodeSocket
             fundingAddress
         )
-        (awaitTransaction (advanceKoiosUrl settings) (advanceKoiosToken settings) (advanceTimeoutSeconds settings))
+        (awaitLocalTransaction scope (advanceTimeoutSeconds settings))
         $ \context -> do
-            references <- resolveManifestReferences context manifest
             observerAccount <-
                 either fail pure $
                     rewardAccountForScript "observer-advance" manifest
             observerRegistered <-
                 rewardAccountRegistered context observerAccount
-            activeInput <-
-                resolveOutput
-                    context
-                    (activeCheckpointTxId active)
-                    (activeCheckpointIndex active)
-            funding <- indexedFundingUtxos (advanceKoiosUrl settings) (advanceKoiosToken settings) context
             result <-
                 AdvanceTx.runAdvanceTransaction
                     AdvanceTx.AdvanceConfig
@@ -1916,10 +2115,7 @@ submitAdvance settings manifest active package signatureFile = do
             let txId = AdvanceTx.resultAdvanceTxId result
             _ <-
                 AdvanceTx.awaitAdvance
-                    ( queryAssetUtxos
-                        (advanceKoiosUrl settings)
-                        (advanceKoiosToken settings)
-                    )
+                    (probeSettlement (localSettlementObserver scope))
                     2_000_000
                     (advanceTimeoutSeconds settings)
                     (AdvanceTx.planCheckpointPolicy plan)
@@ -1992,7 +2188,11 @@ requireAdvanceSetting name =
     maybe (fail $ name <> " is required when submitting an advance") pure
 
 runClose :: CloseSettings -> IO ()
-runClose settings = do
+runClose = runCloseWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runCloseWith :: LocalOpener -> LiveOpener -> CloseSettings -> IO ()
+runCloseWith openLocalScope openLiveContext settings = do
     unless
         (closeNetwork settings == "preprod" && closeNetworkMagic settings == 1)
         (fail "M1 V1 close supports only preprod network magic 1")
@@ -2009,47 +2209,57 @@ runClose settings = do
         fail "configured AID does not match the kli inception export"
     manifest <-
         readManifest (closeManifest settings) >>= either fail pure
-    active <-
-        queryActiveCheckpoint
-            (closeKoiosUrl settings)
-            (closeKoiosToken settings)
-            manifest
-            (closeConfiguredAid settings)
-    package <-
-        either fail pure (mkClosePackage manifest active $ closeTo settings)
-    case (closeSigningPackage settings, closeControllerSignatures settings) of
-        (Just directory, Nothing) -> do
-            when (closeValidatorTestNonController settings) $
-                fail "validator-test mode applies only when submitting"
-            files <- writeCloseSigningPackage directory package
-            putStrLn $
-                "signing package: "
-                    <> closePreimageFile files
-            putStrLn $
-                "preimage sha256: "
-                    <> T.unpack (closePackageSha256 package)
-            putStrLn $
-                "spent checkpoint: "
-                    <> T.unpack (closeSpentReference package)
-            putStrLn $
-                "refund: "
-                    <> show (closeRefundLovelace package `div` 1_000_000)
-                    <> " tADA to "
-                    <> T.unpack (closeRefundAddress package)
-        (Nothing, Just signatureFile) ->
-            submitClose settings manifest package signatureFile
-        _ ->
-            fail
-                "choose exactly one of --signing-package DIR or \
-                \--controller-signatures FILE"
+    localSettings <-
+        either fail pure (manifestLocalSettingsFor (closeStorePath settings) manifest)
+    openLocalScope localSettings $ \scope ->
+        case (closeSigningPackage settings, closeControllerSignatures settings) of
+            (Just directory, Nothing) -> do
+                when (closeValidatorTestNonController settings) $
+                    fail "validator-test mode applies only when submitting"
+                active <- activeCheckpointLocal scope (closeConfiguredAid settings)
+                package <-
+                    either fail pure (mkClosePackage manifest active $ closeTo settings)
+                files <- writeCloseSigningPackage directory package
+                putStrLn $
+                    "signing package: "
+                        <> closePreimageFile files
+                putStrLn $
+                    "preimage sha256: "
+                        <> T.unpack (closePackageSha256 package)
+                putStrLn $
+                    "spent checkpoint: "
+                        <> T.unpack (closeSpentReference package)
+                putStrLn $
+                    "refund: "
+                        <> show (closeRefundLovelace package `div` 1_000_000)
+                        <> " tADA to "
+                        <> T.unpack (closeRefundAddress package)
+            (Nothing, Just signatureFile) ->
+                submitClose openLiveContext scope settings manifest signatureFile
+            _ ->
+                fail
+                    "choose exactly one of --signing-package DIR or \
+                    \--controller-signatures FILE"
 
+{- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
+acquisition -- current checkpoint, manifest references, the active
+checkpoint's own ledger output, and funding -- now runs as ONE
+'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
+'activeCheckpointLocal' call followed by a second, separately-run
+acquisition (INV-240-SNAPSHOT). This composition is NOT
+affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
+bundle is one of the seven direct 'Transaction' compositions that
+intentionally remain. The live bracket is a
+'LiveOpener' parameter, matching 'submitAdvance''s own seam.
+-}
 submitClose ::
+    LiveOpener ->
+    LocalQueryScope cf op ->
     CloseSettings ->
     Manifest ->
-    ClosePackage ->
     FilePath ->
     IO ()
-submitClose settings manifest package signatureFile = do
+submitClose openLiveContext scope settings manifest signatureFile = do
     payer <- requireCloseSetting "--payer" (closePayer settings)
     nodeSocket <-
         requireCloseSetting "--node-socket" (closeNodeSocket settings)
@@ -2062,6 +2272,22 @@ submitClose settings manifest package signatureFile = do
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
+    envelope <-
+        runLocalSnapshotTx
+            scope
+            ( activeCheckpointSubmitBundleTx
+                scope
+                manifest
+                (closeConfiguredAid settings)
+                fundingAddress
+            )
+            >>= either (fail . show) pure
+    (active, references, activeInput, funding) <-
+        case snapshotValue envelope of
+            ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+            ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                pure (active, refs, activeInput, funding)
+    package <- either fail pure (mkClosePackage manifest active $ closeTo settings)
     submittedPackage <-
         if closeValidatorTestNonController settings
             then do
@@ -2082,28 +2308,17 @@ submitClose settings manifest package signatureFile = do
                     pure
                     (attachCloseControllerSignatures signatures package)
     plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
+    change <- either fail pure (decodePaymentAddress changeAddress)
     let liveConfig =
             closeLiveConfig
                 settings
                 payer
                 nodeSocket
                 fundingAddress
-    withLiveContext
+    openLiveContext
         liveConfig
-        (awaitTransaction (closeKoiosUrl settings) (closeKoiosToken settings) (closeTimeoutSeconds settings))
+        (awaitLocalTransaction scope (closeTimeoutSeconds settings))
         $ \context -> do
-            references <- resolveManifestReferences context manifest
-            change <- either fail pure (decodePaymentAddress changeAddress)
-            active <-
-                resolveOutput
-                    context
-                    ( activeCheckpointTxId $
-                        closeActiveCheckpoint submittedPackage
-                    )
-                    ( activeCheckpointIndex $
-                        closeActiveCheckpoint submittedPackage
-                    )
-            funding <- indexedFundingUtxos (closeKoiosUrl settings) (closeKoiosToken settings) context
             result <-
                 CloseTx.runCloseTransaction
                     CloseTx.CloseConfig
@@ -2116,12 +2331,12 @@ submitClose settings manifest package signatureFile = do
                         }
                     plan
                     funding
-                    active
+                    activeInput
                     >>= either (fail . show) pure
             let txId = CloseTx.closeResultTxId result
             _ <-
                 CloseTx.awaitClose
-                    (transactionSettled (closeKoiosUrl settings) (closeKoiosToken settings))
+                    (localTransactionSettled scope)
                     2_000_000
                     (closeTimeoutSeconds settings)
                     txId
@@ -2140,7 +2355,11 @@ requireCloseSetting name =
     maybe (fail $ name <> " is required when submitting a close") pure
 
 runDeploy :: DeploySettings -> IO ()
-runDeploy settings = do
+runDeploy = runDeployWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runDeployWith :: LocalOpener -> LiveOpener -> DeploySettings -> IO ()
+runDeployWith openLocalScope openLiveContext settings = do
     unless
         (deployNetwork settings == "preprod" && deployNetworkMagic settings == 1)
         (fail "M1 V1 deployment supports only preprod network magic 1")
@@ -2152,12 +2371,14 @@ runDeploy settings = do
     digest <- blueprintSha256 (deployBlueprint settings)
     commit <- resolveSourceCommit settings
     verifySourceTree (deploySourceRepo settings) commit
+    let localSettings = deployLocalSettingsFor (deployStorePath settings)
     references <-
-        withLiveContext
-            (deployLiveConfig settings)
-            (awaitTransaction (deployKoiosUrl settings) (deployKoiosToken settings) (deployTimeoutSeconds settings))
-            $ \context ->
-                publishArtifactsLive settings context artifacts
+        openLocalScope localSettings $ \scope ->
+            openLiveContext
+                (deployLiveConfig settings)
+                (awaitLocalTransaction scope (deployTimeoutSeconds settings))
+                $ \context ->
+                    publishArtifactsLive scope settings context artifacts
     publishedAt <- publicationTimestamp
     manifest <-
         either fail pure $
@@ -2170,59 +2391,6 @@ runDeploy settings = do
                 references
     writeManifestAtomic (deployOut settings) manifest
     putStrLn ("manifest: " <> deployOut settings)
-
-runVerify :: VerifySettings -> IO ()
-runVerify settings = do
-    manifest <-
-        readManifest (verifyManifest settings) >>= either fail pure
-    artifacts <- loadArtifacts (verifyBlueprint settings)
-    digest <- blueprintSha256 (verifyBlueprint settings)
-    let errors = manifestValidationErrors digest artifacts manifest
-    unless (null errors) $
-        fail ("manifest rebuild failed:\n" <> unlines errors)
-    verifySourceTree
-        (verifySourceRepo settings)
-        (sourceCommit $ manifestSource manifest)
-    putStrLn $
-        "source identity: OK recorded commit="
-            <> T.unpack (sourceCommit $ manifestSource manifest)
-    forM_ (manifestScripts manifest) $ \script ->
-        putStrLn $
-            "hash "
-                <> T.unpack (scriptName script)
-                <> ": OK "
-                <> T.unpack (scriptHash script)
-    chainReferences <-
-        queryReferenceScripts
-            (verifyKoiosUrl settings)
-            (verifyKoiosToken settings)
-            (map scriptHash $ manifestScripts manifest)
-    forM_ (manifestScripts manifest) $ \script -> do
-        unless
-            ( any
-                (matchesReference (scriptHash script) (scriptReference script))
-                chainReferences
-            )
-            ( fail $
-                "on-chain reference is absent or spent for "
-                    <> T.unpack (scriptName script)
-                    <> ": "
-                    <> T.unpack
-                        (referenceTxId $ scriptReference script)
-                    <> "#"
-                    <> show
-                        (referenceIndex $ scriptReference script)
-            )
-        putStrLn $
-            "on-chain "
-                <> T.unpack (scriptName script)
-                <> ": OK "
-                <> T.unpack
-                    (referenceTxId $ scriptReference script)
-                <> "#"
-                <> show
-                    (referenceIndex $ scriptReference script)
-    putStrLn "manifest verify: OK — blueprint rebuilt; all hashes and on-chain references are live"
 
 loadArtifacts :: FilePath -> IO [ScriptArtifact]
 loadArtifacts path = do

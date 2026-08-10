@@ -17,6 +17,7 @@ surface, not a copy of anything this package could import.
 module Cardano.KERI.Indexer.Query.Tx (
     QueryHandle (..),
     scanAddressTx,
+    scanAllTx,
     payerUtxosTxAcrossAddresses,
     watermarkTx,
     watermarkPointTx,
@@ -38,7 +39,7 @@ import Cardano.Node.Client.UTxOIndexer.Columns (Cols (..))
 import Cardano.Node.Client.UTxOIndexer.Follower (Readiness)
 import Cardano.Node.Client.UTxOIndexer.Types (
     AddrKey (..),
-    Address,
+    Address (..),
     BlockHash,
     SlotNo,
     TxIn (..),
@@ -80,6 +81,23 @@ scanAddressTx addr = iterating AddressIndex (seekKey seekTo >>= go [])
         | addrKeyAddress key == addr =
             nextEntry >>= go ((addrKeyTxIn key, value) : acc)
         | otherwise = pure (reverse acc)
+
+{- | Every indexed @(TxIn, TxOut)@ currently live anywhere in the store,
+across every address, in ascending @AddrKey@ order (T240-S1-06:
+'Cardano.KERI.Indexer.ChainQuery.localReferenceScriptsTx' derives reference
+outputs from live stored rows with no address to scope the search by, unlike
+every other composed read in this module). The same cursor walk as
+'scanAddressTx', without its per-address stop condition: seeks to the lowest
+possible @AddrKey@ (an all-zero 28-byte address paired with the lowest
+possible 'TxIn'), then walks every entry in the column to the end.
+-}
+scanAllTx :: Transaction IO cf Cols op [(TxIn, TxOut)]
+scanAllTx = iterating AddressIndex (seekKey seekTo >>= go [])
+  where
+    seekTo = AddrKey (Address (BS.replicate 28 0)) (TxIn (BS.replicate 32 0) 0)
+    go acc Nothing = pure (reverse acc)
+    go acc (Just Entry{entryKey = key, entryValue = value}) =
+        nextEntry >>= go ((addrKeyTxIn key, value) : acc)
 
 {- | Every live UTxO across several payer addresses, gathered in exactly one
 engine transaction by composing 'scanAddressTx' per deduplicated address.

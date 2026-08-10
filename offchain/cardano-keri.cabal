@@ -18,8 +18,15 @@ build-type:    Simple
 
 -- Committed keripy oracle fixtures, read hermetically by the unit-tests
 -- Keri68OracleSpec via Paths_cardano_keri (getDataFileName).
+-- #240 N-045: exact byte copies of root deploy/preprod/*.json, hermetic
+-- register-preflight fixtures for CLISpec's packaged run (the offchain
+-- flake's `${./.}` store source cannot contain its repository-parent
+-- deploy/ directory). Named explicitly, not folded into an unrelated
+-- wildcard.
 data-files:
   deployment-test/fixtures/*.cesr
+  deployment-test/fixtures/register-preflight-board-manifest.json
+  deployment-test/fixtures/register-preflight-m1-manifest.json
   docs/assets/swagger/query-api.json
   indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
@@ -245,14 +252,51 @@ library chain-query-koios
 
   exposed-modules:  Cardano.KERI.ChainQuery.Koios
 
+-- #240 (MOD-240-WRITE-COMPOSITION): the provider-free write-composition
+-- boundary. Owns every transaction-building write command (deploy/register/
+-- advance/close/endpoint-board deploy-post-update-retire); obtains chain
+-- state and observes settlement only through the local follower/indexer
+-- tier ("indexer"), never "chain-query-koios"/http-conduit
+-- (INV-240-NOPROVIDER). "cli" depends on this component, never the reverse
+-- (EDGE-240-02) -- read-only manifest verification and endpoint-board
+-- listing stay in "cli" via "Cardano.KERI.Deployment.Verify" instead
+-- (EDGE-240-04). Formerly `Cardano.KERI.Deployment.CLI` living inside `cli`
+-- (#257 MOD-257-COMPOSITION); relocated here so the component graph itself,
+-- not a source convention, enforces the boundary (plan.md "Dependency
+-- direction").
+library write-composition
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   write-composition
+  build-depends:
+    , base                                     >=4.18 && <5
+    , bytestring                               >=0.11 && <0.13
+    , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-node-clients:utxo-indexer-lib
+    , directory
+    , opt-env-conf                             >=0.13 && <0.16
+    , rocksdb-kv-transactions:kv-transactions
+    , text
+    , time
+
+  exposed-modules:  Cardano.KERI.Deployment.CLI
+
 -- #177 Slice 1: the production `ckeri status` backend seam. Depends on both
 -- `deployment` (Koios/manifest/endpoint-board reuse) and `indexer` (the local
 -- transactional query engine) — acyclic since neither of those depends back
 -- on this library. See specs/177-backends/plan.md.
 -- #257 MOD-257-COMPOSITION: the downstream CLI component owns provider
--- construction/selection and registration orchestration. Legacy modules
--- that construct Koios/live-runtime values (Cardano.KERI.Deployment.CLI)
--- live here even though their public module name stays stable.
+-- construction/selection and registration orchestration.
+-- #240: the write-command surface itself (formerly
+-- Cardano.KERI.Deployment.CLI) now lives in "write-composition"
+-- (EDGE-240-02); this component only composes it with its own read-only
+-- backend seam and "Cardano.KERI.Deployment.Verify" (EDGE-240-04).
 library cli
   import:           warnings
   visibility:       public
@@ -262,23 +306,19 @@ library cli
     , aeson
     , base
     , bytestring
-    , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
     , cardano-keri:deployment
     , cardano-keri:indexer
-    , cardano-ledger-conway
-    , cardano-ledger-core
+    , cardano-keri:write-composition
     , cardano-node-clients:utxo-indexer-lib
     , directory
     , http-conduit
-    , memory                                   >=0.18 && <0.19
     , opt-env-conf                             >=0.13 && <0.16
     , rocksdb-kv-transactions:kv-transactions
     , stm
     , text
-    , time
 
   exposed-modules:
     Cardano.KERI.CLI
@@ -286,7 +326,7 @@ library cli
     Cardano.KERI.CLI.Backend.Endpoint
     Cardano.KERI.CLI.Backend.Koios
     Cardano.KERI.CLI.Backend.Local
-    Cardano.KERI.Deployment.CLI
+    Cardano.KERI.Deployment.Verify
 
 executable ckeri
   import:           warnings
@@ -330,6 +370,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
@@ -344,10 +385,11 @@ test-suite deployment-tests
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
-    , cardano-keri:cli
     , cardano-keri:deployment
+    , cardano-keri:write-composition
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -355,6 +397,7 @@ test-suite deployment-tests
     , cardano-tx-tools:tx-build
     , containers
     , directory
+    , filepath
     , hspec                           >=2.11 && <2.12
     , http-conduit
     , memory                          >=0.18 && <0.19
@@ -412,6 +455,7 @@ test-suite publisher-migration-tests
   hs-source-dirs:   deployment-test
   main-is:          publisher-migration/PublisherMigrationMain.hs
   other-modules:
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.PublisherSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
@@ -424,6 +468,7 @@ test-suite publisher-migration-tests
     , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -450,6 +495,7 @@ test-suite registration-migration-tests
   main-is:          registration-migration/RegistrationMigrationMain.hs
   other-modules:
     Cardano.KERI.Deployment.CLISpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
@@ -464,10 +510,12 @@ test-suite registration-migration-tests
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
-    , cardano-keri:cli
     , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-keri:write-composition
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -482,6 +530,7 @@ test-suite registration-migration-tests
     , microlens
     , plutus-core
     , process
+    , temporary
     , text
 
   autogen-modules:  Paths_cardano_keri
@@ -497,6 +546,7 @@ test-suite advance-migration-tests
   main-is:          advance-migration/AdvanceMigrationMain.hs
   other-modules:
     Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
     Paths_cardano_keri
@@ -510,6 +560,7 @@ test-suite advance-migration-tests
     , cardano-keri:deployment
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -536,6 +587,7 @@ test-suite close-migration-tests
   main-is:          close-migration/CloseMigrationMain.hs
   other-modules:
     Cardano.KERI.Deployment.CloseSpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
     Paths_cardano_keri
@@ -549,6 +601,7 @@ test-suite close-migration-tests
     , cardano-keri:deployment
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -575,6 +628,7 @@ test-suite board-migration-tests
   main-is:          board-migration/BoardMigrationMain.hs
   other-modules:
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
+    Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
     Paths_cardano_keri
@@ -588,6 +642,7 @@ test-suite board-migration-tests
     , cardano-keri:deployment
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
@@ -682,11 +737,13 @@ test-suite cli-tests
     Cardano.KERI.CLI.Backend.KoiosSpec
     Cardano.KERI.CLI.Backend.LocalSpec
     Cardano.KERI.CLI.ProductionSpec
+    Cardano.KERI.CLI.WriteCompositionBoundarySpec
 
   build-depends:
     , aeson
     , base
     , bytestring
+    , Cabal-syntax
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
@@ -757,6 +814,56 @@ test-suite chain-query-tests
     , stm
     , text
     , time
+
+-- #240 T240-S1-03: atomicity + reference-derivation RED, entirely through
+-- EXISTING compiled interfaces (localInterpreter/runChainQuery/
+-- referenceScripts) so it compiles and runs unconditionally alongside the
+-- base-oracle capture suites (N-007). Isolated from local-settlement-tests
+-- below so neither suite's outcome can affect the other's compile step.
+test-suite local-write-path-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  default-language: GHC2021
+  hs-source-dirs:   query-test
+  main-is:          local-write-path/LocalWritePathMain.hs
+  other-modules:
+    Cardano.KERI.Indexer.LocalWritePathSpec
+    Paths_cardano_keri
+
+  build-depends:
+    , aeson
+    , base
+    , bech32
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:chain-query
+    , cardano-keri:deployment
+    , cardano-keri:indexer
+    , cardano-keri:write-composition
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-node-clients
+    , cardano-node-clients:utxo-indexer-lib
+    , containers
+    , directory
+    , filepath
+    , hspec                                    >=2.11 && <2.12
+    , memory                                   >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , plutus-tx
+    , QuickCheck
+    , rocksdb-kv-transactions:kv-transactions
+    , stm
+    , temporary
+    , text
+    , time
+
+  autogen-modules:  Paths_cardano_keri
 
 test-suite unit-tests
   import:           warnings

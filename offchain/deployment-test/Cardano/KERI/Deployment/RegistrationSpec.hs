@@ -64,6 +64,7 @@ import Cardano.KERI.Deployment.Manifest (
     ScriptEntry (..),
     SourceInfo (..),
  )
+import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (
     RegisterConfig (..),
     RegistrationCheckError (..),
@@ -635,6 +636,9 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 case signed of
                     Nothing -> fail "trSign was never called: no premint tx was built"
                     Just tx -> do
+                        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR
+                        -- is set; see Cardano.KERI.Deployment.ParityOracle.Capture.
+                        captureShape "premint" (renderTxId (transactionId tx)) tx
                         let body = tx ^. bodyTxL
                             MultiAsset minted = body ^. mintTxBodyL
                             Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
@@ -698,6 +702,9 @@ registrationLedgerBoundarySpec = describe "premintOne/registerOne" $ do
                 case signed of
                     Nothing -> fail "trSign was never called: no tx was built"
                     Just tx -> do
+                        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR
+                        -- is set; see Cardano.KERI.Deployment.ParityOracle.Capture.
+                        captureShape "register" (renderTxId (transactionId tx)) tx
                         let body = tx ^. bodyTxL
                             outputs = toList (body ^. outputsTxBodyL)
                             MultiAsset minted = body ^. mintTxBodyL

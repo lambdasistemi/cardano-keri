@@ -17,6 +17,7 @@ import Cardano.KERI.Deployment.AdvanceTransaction (
     awaitAdvance,
     runAdvanceTransaction,
  )
+import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
@@ -144,6 +145,9 @@ spec = describe "in-process advance transaction" $ do
                 case signed of
                     Nothing -> fail "trSign was never called"
                     Just tx -> do
+                        -- T240-S1-01: no-op unless CKERI_PARITY_ORACLE_DIR
+                        -- is set; see Cardano.KERI.Deployment.ParityOracle.Capture.
+                        captureShape "advance" (renderTxId (transactionId tx)) tx
                         let body = tx ^. bodyTxL
                             outputs = toList (body ^. outputsTxBodyL)
                             Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL

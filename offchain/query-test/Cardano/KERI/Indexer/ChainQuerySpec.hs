@@ -36,7 +36,7 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
-import Cardano.KERI.Indexer.ChainQuery (localInterpreter, runLocalChainQuery)
+import Cardano.KERI.Indexer.ChainQuery (localInterpreter, queryHandleLocalScope, runLocalChainQuery)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..), payerUtxosTxAcrossAddresses, watermarkTx)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
@@ -80,7 +80,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
         withInMemoryIndexerRunner $ \handle runner -> do
             applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x10) addrA]
             counter <- newIORef (0 :: Int)
-            let qHandle = testQueryHandle (countingRunner counter runner)
+            let qHandle = queryHandleLocalScope (testQueryHandle (countingRunner counter runner))
             result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
             count <- readIORef counter
             count `shouldBe` 1
@@ -116,7 +116,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
     it "a whole one-shot program never produces that incoherent pair (INV-257-ATOMIC restored)" $
         withInMemoryIndexerRunner $ \handle runner -> do
             applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x10) addrA]
-            let qHandle = testQueryHandle runner
+            let qHandle = queryHandleLocalScope (testQueryHandle runner)
             advanced <- newEmptyMVar
             -- The concurrent writer races against the reader with no
             -- handshake at all: it starts immediately and may run before,
@@ -167,7 +167,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             -- not have -- reproducing T257-S2-04's incoherent pair against
             -- the real production entrypoint, not a bespoke bypass.
             wrapped <- syncingRunner advanceSignal advanced runner
-            let qHandle = testQueryHandle wrapped
+            let qHandle = queryHandleLocalScope (testQueryHandle wrapped)
             result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
             wait writer
             case result of
@@ -188,7 +188,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
         -- Program.hs's eagerly validating smart constructors.
         it "rejects an empty checkpoint locator" $
             withInMemoryIndexerRunner $ \_handle runner -> do
-                let qHandle = testQueryHandle runner
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
                     runTransaction runner $
                         runChainQuery
@@ -203,7 +203,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                 -- interpreter is what must reject it. The pre-A-006 version of
                 -- this test used non-canonical strings, which are rejected
                 -- earlier and left this branch untested.
-                let qHandle = testQueryHandle runner
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
                     runTransaction runner $
                         runChainQuery
@@ -213,7 +213,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
 
         it "rejects an empty board locator" $
             withInMemoryIndexerRunner $ \_handle runner -> do
-                let qHandle = testQueryHandle runner
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
                     runTransaction runner $
                         runChainQuery (localInterpreter qHandle) (boardCatalog (BoardLocator "" ""))
@@ -223,7 +223,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             withInMemoryIndexerRunner $ \_handle runner -> do
                 -- Canonical in shape for the same reason as the checkpoint
                 -- case above: only the store-identity branch can reject it.
-                let qHandle = testQueryHandle runner
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
                     runTransaction runner $
                         runChainQuery (localInterpreter qHandle) (boardCatalog mismatchingBoardLocator)
@@ -297,7 +297,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
     describe "the actual production localInterpreter reports its own real provenance (not a fake stand-in), DATA-INV-257-03" $
         it "reports SourceLocal and AtomicLocal, never LegacySequential (INV-257-CONSISTENCY)" $
             withInMemoryIndexerRunner $ \_handle runner -> do
-                let interpreter = localInterpreter (testQueryHandle runner)
+                let interpreter = localInterpreter (queryHandleLocalScope (testQueryHandle runner))
                 interpreterSource interpreter `shouldBe` SourceLocal
                 interpreterConsistency interpreter `shouldBe` AtomicLocal
                 interpreterConsistency interpreter `shouldNotBe` LegacySequential

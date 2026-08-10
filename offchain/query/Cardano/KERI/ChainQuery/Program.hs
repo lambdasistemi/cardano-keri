@@ -224,10 +224,10 @@ rejects reduces to that same @'Pure' ('Left' err)@ — the continuation is
 never built, so nothing downstream of the rejection exists either. This
 function is the one place that FACT is readable, and it exists because
 knowing it structurally was not enough: a runner that appends its own
-operation to every program — as
-'Cardano.KERI.ChainQuery.Interpreter.runChainQuerySnapshot' appends the
-watermark — dispatches that operation for a rejected program too, and the
-rejection then reaches its caller having caused an effect after all.
+operation to every program — as the snapshot runner \#262 A-262-02 deleted
+appended the watermark — dispatches that operation for a rejected program
+too, and the rejection then reaches its caller having caused an effect after
+all.
 
 Deliberately specialised to a program whose result carries
 'ChainQueryError'. A rejection is only observable where there is a channel

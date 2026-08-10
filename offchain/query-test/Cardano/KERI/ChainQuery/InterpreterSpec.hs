@@ -22,7 +22,6 @@ import Cardano.KERI.ChainQuery.Interpreter (
     chainQueryInterpreter,
     runChainQuery,
     runChainQueryResultSnapshot,
-    runChainQuerySnapshot,
  )
 import Cardano.KERI.ChainQuery.Program (
     ChainQuery,
@@ -68,7 +67,7 @@ spec :: Spec
 spec = describe "Cardano.KERI.ChainQuery.Interpreter" $ do
     it "attaches AtomicLocal consistency and a populated watermark for the local interpreter shape" $ do
         result <-
-            runChainQuerySnapshot
+            runChainQueryResultSnapshot
                 (fakeInterpreter SourceLocal AtomicLocal (Populated testWatermark))
                 (currentCheckpoint testLocator testAid)
         case result of
@@ -80,7 +79,7 @@ spec = describe "Cardano.KERI.ChainQuery.Interpreter" $ do
 
     it "attaches LegacySequential consistency for the Koios interpreter shape (RQ-257-05)" $ do
         result <-
-            runChainQuerySnapshot
+            runChainQueryResultSnapshot
                 (fakeInterpreter SourceKoios LegacySequential (Populated testWatermark))
                 (currentCheckpoint testLocator testAid)
         case result of
@@ -89,7 +88,7 @@ spec = describe "Cardano.KERI.ChainQuery.Interpreter" $ do
 
     it "never renders a LegacySequential snapshot as AtomicLocal (INV-257-CONSISTENCY)" $ do
         result <-
-            runChainQuerySnapshot
+            runChainQueryResultSnapshot
                 (fakeInterpreter SourceKoios LegacySequential (Populated testWatermark))
                 (currentCheckpoint testLocator testAid)
         case result of
@@ -98,7 +97,7 @@ spec = describe "Cardano.KERI.ChainQuery.Interpreter" $ do
 
     it "reports the explicit cold-store case rather than a populated watermark" $ do
         result <-
-            runChainQuerySnapshot
+            runChainQueryResultSnapshot
                 (fakeInterpreter SourceLocal AtomicLocal Cold)
                 (currentCheckpoint testLocator testAid)
         case result of
@@ -119,7 +118,7 @@ spec = describe "Cardano.KERI.ChainQuery.Interpreter" $ do
                     (pure (Right Cold))
                     SourceKoios
                     LegacySequential
-        result <- runChainQuerySnapshot ambiguousInterpreter (currentCheckpoint testLocator testAid)
+        result <- runChainQueryResultSnapshot ambiguousInterpreter (currentCheckpoint testLocator testAid)
         case result of
             Left (AmbiguousCurrentState _) -> pure ()
             other -> fail ("expected AmbiguousCurrentState, got " <> show other)
@@ -145,17 +144,25 @@ The instrument is the fresh auditor's own frozen two-layer shape
 call-logging interpreter, proved able to observe a known effect BEFORE any
 absence it reports is believed, then run against every rejectable family.
 
-Three things make the zero non-vacuous, and all three are executed here:
+Two things make the zero non-vacuous, and both are executed here:
 
   * the detector is shown observing a real watermark effect before any
     absence it reports is believed;
   * a VALID program through the same runner is required to log a non-empty
     call list -- otherwise "logged nothing" would also be true of a runner
-    that does nothing at all;
-  * the unconditional-watermark runner is asserted to STILL read the
-    watermark after an eager rejection, so the reason it is excluded from
-    the write path stays a tested fact rather than a comment, and the
-    detector is proved able to go the other way.
+    that does nothing at all.
+
+A-262-02: this file previously carried a third row asserting that the
+generic runner STILL read the watermark after an eager rejection, offered as
+the documented reason the write path avoided it. The second fresh audit was
+right to reject that. A test that positively asserts the violating behaviour
+ships the defect as intended behaviour -- the manufactured-confidence shape
+this milestone keeps finding -- and "today's caller does not pass it that
+program" is avoidance, not prevention. The runner is deleted instead, and
+its absence from the whole compiled surface is proved in
+"Cardano.KERI.Indexer.LocalWritePathSpec". What remains here is the claim
+that now holds for every public snapshot runner that exists, because only
+one does.
 -}
 eagerRejectionThroughProductionRunners :: Spec
 eagerRejectionThroughProductionRunners =
@@ -194,13 +201,19 @@ eagerRejectionThroughProductionRunners =
                             expectationFailure
                                 ("expected a named InvalidLocator, got " <> show other)
 
-            it "the unconditional-watermark runner still reads the watermark after an eager rejection, which is exactly why the write path must not name it" $ do
+            it "there is no second public snapshot runner left to check: the one that exists satisfies this property (A-262-02)" $ do
                 calls <- newIORef []
-                _ <-
-                    runChainQuerySnapshot
+                outcome <-
+                    runProductionSnapshot
+                        productionRunners
                         (loggingInterpreter calls)
                         (outputAt invalidOutputLocator)
-                readIORef calls `shouldReturnList` ["storeWatermark"]
+                readIORef calls `shouldReturnList` []
+                case outcome of
+                    Left (InvalidLocator _) -> pure ()
+                    other ->
+                        expectationFailure
+                            ("expected a named InvalidLocator, got " <> show other)
 
 {- | Every smart constructor that can reject a concrete argument eagerly,
 each paired with an argument it must reject. Enumerated rather than sampled:

@@ -36,7 +36,7 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
-import Cardano.KERI.Indexer.ChainQuery (localInterpreter, queryHandleLocalScope, runLocalChainQuery)
+import Cardano.KERI.Indexer.ChainQuery (localInterpreter, queryHandleLocalScope, runLocalQuery)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..), payerUtxosTxAcrossAddresses, watermarkTx)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
@@ -81,13 +81,11 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x10) addrA]
             counter <- newIORef (0 :: Int)
             let qHandle = queryHandleLocalScope (testQueryHandle (countingRunner counter runner))
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             count <- readIORef counter
             count `shouldBe` 1
             case result of
-                Right snapshot -> case snapshotValue snapshot of
-                    Right utxos -> length utxos `shouldBe` 1
-                    Left err -> fail ("expected a resolved payer list, got " <> show err)
+                Right snapshot -> length (snapshotValue snapshot) `shouldBe` 1
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     it "the concurrent property is observed failing under an intentional split-run mutation (T257-S2-05)" $
@@ -126,25 +124,24 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             writer <- async $ do
                 applyAtSlot handle (Indexer.SlotNo 20) (blockHash 0x02) [payerCreate (sampleTxIn 0x11) addrA]
                 putMVar advanced ()
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             takeMVar advanced
             wait writer
             case result of
-                Right snapshot -> case (snapshotWatermark snapshot, snapshotValue snapshot) of
-                    (Populated watermark, Right utxos) -> do
+                Right snapshot -> case snapshotWatermark snapshot of
+                    Populated watermark -> do
                         -- Coherent by construction: either the watermark is
                         -- still slot 10 and exactly one row is visible, or
                         -- the watermark has advanced to slot 20 and exactly
                         -- two rows are visible — never one row with slot 20,
                         -- and never two rows with slot 10.
-                        expectedRowCount watermark `shouldBe` length utxos
+                        expectedRowCount watermark `shouldBe` length (snapshotValue snapshot)
                         -- DATA-INV-257-02: the watermark's block hash must be
                         -- the EXACT hash of its own bound slot, not just a
                         -- row-count-consistent slot number — a constant or
                         -- swapped hash must fail this.
                         watermarkBlockHash watermark `shouldBe` expectedBlockHash watermark
-                    (Cold, _) -> fail "expected a populated watermark"
-                    (_, Left err) -> fail ("expected a resolved payer list, got " <> show err)
+                    Cold -> fail "expected a populated watermark"
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     it "the named coherence property fails under a production-path split-transaction mutation, then passes restored (T257-S2-04, frozen production-path proof)" $
@@ -159,7 +156,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             -- 'syncingRunner' releases the concurrent writer exactly after
             -- its FIRST wrapped transaction call and forces any SECOND call
             -- to wait for the writer's commit. A correct single-transaction
-            -- 'runLocalChainQuery' makes exactly one call, so the release
+            -- 'runLocalQuery' makes exactly one call, so the release
             -- happens only after its (already-computed) coherent result --
             -- deterministically slot 10\/one row every time. A
             -- split-transaction defect's second call is forced to observe
@@ -168,15 +165,14 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             -- the real production entrypoint, not a bespoke bypass.
             wrapped <- syncingRunner advanceSignal advanced runner
             let qHandle = queryHandleLocalScope (testQueryHandle wrapped)
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             wait writer
             case result of
-                Right snapshot -> case (snapshotWatermark snapshot, snapshotValue snapshot) of
-                    (Populated watermark, Right utxos) -> do
-                        expectedRowCount watermark `shouldBe` length utxos
+                Right snapshot -> case snapshotWatermark snapshot of
+                    Populated watermark -> do
+                        expectedRowCount watermark `shouldBe` length (snapshotValue snapshot)
                         watermarkBlockHash watermark `shouldBe` expectedBlockHash watermark
-                    (Cold, _) -> fail "expected a populated watermark"
-                    (_, Left err) -> fail ("expected a resolved payer list, got " <> show err)
+                    Cold -> fail "expected a populated watermark"
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     describe "local interpreter locator validation fails closed before any store effect (DATA-INV-257-01)" $ do

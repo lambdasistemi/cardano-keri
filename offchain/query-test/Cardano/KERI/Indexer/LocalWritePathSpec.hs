@@ -16,7 +16,7 @@ run from ever executing.
 
 GREEN state (post T240-S1-06\/07): 'redCapabilities' is now every field
 eta-expanded straight to the real exported "Cardano.KERI.Indexer.ChainQuery"
-function -- 'runLocalChainQuery', 'localReferenceScriptsTx' (via the small
+function -- 'runLocalQuery', 'localReferenceScriptsTx' (via the small
 'IO'-bracketing wrapper 'localReferenceScriptsTxViaHandle'),
 'localSettlementObserver', 'localTransactionSettled'. Retained under its
 original name for continuity with the frozen RED-COMMIT (@1126a58@) and this
@@ -134,7 +134,6 @@ import Cardano.KERI.Indexer.ChainQuery (
     localSettlementObserver,
     localTransactionSettled,
     queryHandleLocalScope,
-    runLocalChainQuery,
     runLocalInterpreter,
     runLocalQuery,
  )
@@ -176,7 +175,7 @@ import Data.Function ((&))
 import Data.Functor (void)
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
-import Data.List (find)
+import Data.List (find, isSuffixOf)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Text (Text)
@@ -184,6 +183,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime (..))
+import Data.Traversable (for)
 import Data.Word (Word8)
 import Database.KV.Transaction (RunTransaction (..))
 import Lens.Micro ((.~), (^.))
@@ -191,7 +191,7 @@ import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data qualified as PLC
 import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.IsData.Class (ToData (..))
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, listDirectory)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
@@ -217,9 +217,16 @@ data LocalCapabilities cf op = LocalCapabilities
     { capAtomicQuery ::
         forall a.
         LocalQueryScope cf op ->
-        ChainQuery a ->
+        ChainQuery (Either ChainQueryError a) ->
         IO (Either ChainQueryError (QuerySnapshot a))
-    -- ^ RQ-240-03\/04: one program, one store transaction, one watermark.
+    {- ^ RQ-240-03\/04: one program, one store transaction, one watermark.
+
+    A-262-02: the program argument now states its own failure channel,
+    because the runner that accepted any @'ChainQuery' a@ is deleted. Every
+    program this field is ever handed already had that shape -- each is
+    built from a validating smart constructor -- so nothing was lifted and
+    no property lost coverage; the change is that the type now says so.
+    -}
     , capReferenceScripts ::
         LocalQueryScope cf op -> [Text] -> IO (Either ChainQueryError [ChainReference])
     -- ^ RQ-240-05\/DATA-INV-240-01: derived reference resolution.
@@ -277,13 +284,21 @@ above therefore now proves the algebra route rather than a reader that no
 longer has a production caller -- and it proves it against the same
 fixtures, so a regression in either the reader or its wiring is still
 caught.
+
+A-262-02: 'capAtomicQuery' moved to 'runLocalQuery' in the same commit that
+deleted the generic local runner. That is not a mechanical substitution --
+it is what keeps this adapter pointed at the route production uses, which is
+the only reason the \#240 atomicity properties below still mean anything.
+Its program argument now states its own failure channel, so
+'snapshotValue' hands back the resolved value directly and each property
+reads one 'Either' instead of two.
 -}
 redCapabilities :: LocalCapabilities cf op
 redCapabilities =
     LocalCapabilities
-        { capAtomicQuery = runLocalChainQuery
+        { capAtomicQuery = runLocalQuery
         , capReferenceScripts = \scope hashes ->
-            acquired <$> runLocalChainQuery scope (referenceScripts hashes)
+            fmap snapshotValue <$> runLocalQuery scope (referenceScripts hashes)
         , capSettlementObserver = localSettlementObserver
         , capTransactionSettled = localTransactionSettled
         , capOutputAt = \scope txIdHex index ->
@@ -300,18 +315,6 @@ redCapabilities =
                 )
         }
 
-{- | Flatten an acquisition's two 'Either' layers into the one a caller acts
-on: the OPERATION result (a store error, an ambiguous row, a rejected
-locator) and the program's own resolved value. Keeping both distinct in the
-production path matters; for a property asserting what was acquired, either
-one failing is the same failure, and collapsing them here is what lets the
-adapter fields keep the shape the RED bundle froze.
--}
-acquired ::
-    Either ChainQueryError (QuerySnapshot (Either ChainQueryError a)) ->
-    Either ChainQueryError a
-acquired outcome = outcome >>= snapshotValue
-
 spec :: Spec
 spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (#240 S240-1)" $ do
     describe "RQ-240-03/04 -- atomic local runner, one transaction per program" $
@@ -324,10 +327,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                 count <- readIORef counter
                 count `shouldBe` 1
                 case result of
-                    Right snapshot -> case snapshotValue snapshot of
-                        Right utxos -> length utxos `shouldBe` 1
-                        Left err -> fail ("expected a resolved payer list, got " <> show err)
-                    Left err -> fail ("expected a snapshot, got " <> show err)
+                    Right snapshot -> length (snapshotValue snapshot) `shouldBe` 1
+                    Left err -> fail ("expected a resolved payer list, got " <> show err)
 
     describe "RQ-240-05 -- derived reference resolution (DATA-INV-240-01), RED against the existing local interpreter" $ do
         it "should derive the live reference output instead of reporting UnsupportedOperation" $
@@ -443,10 +444,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                     applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [parityCreate parityTxIn parityAddr]
                     result <- capAtomicQuery redCapabilities (queryHandleLocalScope (testQueryHandle runner)) (payerUtxos [addrText parityAddr])
                     case result of
-                        Right snapshot -> case snapshotValue snapshot of
-                            Right utxos -> utxos `shouldBe` [parityExpectedUtxo]
-                            Left err -> expectationFailure ("expected the acquired payer utxo, got " <> show err)
-                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+                        Right snapshot -> snapshotValue snapshot `shouldBe` [parityExpectedUtxo]
+                        Left err -> expectationFailure ("expected the acquired payer utxo, got " <> show err)
 
             it
                 "rejects a one-side acquired-value perturbation -- a changed local lovelace no longer matches the frozen base-provider value (permanent falsifier)"
@@ -459,12 +458,10 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         [UtxoCreate parityTxIn parityAddr (perturbedParityOutput parityAddr)]
                     result <- capAtomicQuery redCapabilities (queryHandleLocalScope (testQueryHandle runner)) (payerUtxos [addrText parityAddr])
                     case result of
-                        Right snapshot -> case snapshotValue snapshot of
-                            Right utxos ->
-                                utxos
-                                    `shouldNotBe` [parityExpectedUtxo]
-                            Left err -> expectationFailure ("expected the perturbed payer utxo to still decode, got " <> show err)
-                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+                        Right snapshot ->
+                            snapshotValue snapshot
+                                `shouldNotBe` [parityExpectedUtxo]
+                        Left err -> expectationFailure ("expected the perturbed payer utxo to still decode, got " <> show err)
 
             it
                 "capReferenceScripts's decode of the shared reference fixture is byte-identical to the real koiosInterpreter's two-endpoint (/reference_script_utxos then /utxo_info) decode of the same fixture"
@@ -580,10 +577,9 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                             (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
                     case result of
                         Right snapshot -> case snapshotValue snapshot of
-                            Right (Just checkpoint) -> checkpoint `shouldBe` parityExpectedCheckpoint
-                            Right Nothing -> expectationFailure "expected the acquired checkpoint, got Nothing"
-                            Left err -> expectationFailure ("expected the acquired checkpoint, got " <> show err)
-                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+                            Just checkpoint -> checkpoint `shouldBe` parityExpectedCheckpoint
+                            Nothing -> expectationFailure "expected the acquired checkpoint, got Nothing"
+                        Left err -> expectationFailure ("expected the acquired checkpoint, got " <> show err)
 
             it
                 "rejects a one-side acquired-value perturbation -- a changed local Weight numerator (inside the nested Weighted threshold) no longer matches the frozen base-provider value (permanent falsifier, family-specific field)"
@@ -601,10 +597,9 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                             (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
                     case result of
                         Right snapshot -> case snapshotValue snapshot of
-                            Right (Just checkpoint) -> checkpoint `shouldNotBe` parityExpectedCheckpoint
-                            Right Nothing -> expectationFailure "expected the perturbed checkpoint to still decode, got Nothing"
-                            Left err -> expectationFailure ("expected the perturbed checkpoint to still decode, got " <> show err)
-                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+                            Just checkpoint -> checkpoint `shouldNotBe` parityExpectedCheckpoint
+                            Nothing -> expectationFailure "expected the perturbed checkpoint to still decode, got Nothing"
+                        Left err -> expectationFailure ("expected the perturbed checkpoint to still decode, got " <> show err)
 
             it "fails closed the same way on absence: no live checkpoint output for this AID at all (currentCheckpoint, both acquisition paths report no error)" $
                 withInMemoryIndexerRunner $ \handle runner -> do
@@ -615,7 +610,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                             (queryHandleLocalScope (testQueryHandle runner))
                             (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
                     case result of
-                        Right snapshot -> snapshotValue snapshot `shouldBe` Right Nothing
+                        Right snapshot -> snapshotValue snapshot `shouldBe` Nothing
                         Left err -> expectationFailure ("expected a snapshot, got " <> show err)
 
             it
@@ -2798,26 +2793,16 @@ writeCompositionRouteBoundary =
                 directAcquisitionViolations (T.lines (TE.decodeUtf8 contents))
                     `shouldBe` []
 
-            it "the detector flags every unconditional-watermark runner it carries, and ignores unrelated text (self-test)" $ do
-                for_ unconditionalWatermarkRunners $ \marker -> do
-                    let seeded = "    envelope <- " <> marker <> " scope program"
-                    unconditionalRunnerViolations [seeded] `shouldBe` [seeded]
-                unconditionalRunnerViolations ["an ordinary line naming no runner"]
-                    `shouldBe` []
-
-            it "the shipped write-composition module names no unconditional-watermark runner (A-262-01)" $ do
-                contents <- BS.readFile writeCompositionSourcePath
-                unconditionalRunnerViolations (T.lines (TE.decodeUtf8 contents))
-                    `shouldBe` []
-
             it "the export-list parser finds the interpreter module's real exports (self-test)" $ do
                 exports <- moduleExportList localInterpreterSourcePath
                 exports `shouldNotBe` []
-                ("runLocalChainQuery" `elem` exports) `shouldBe` True
+                ("runLocalQuery" `elem` exports) `shouldBe` True
 
             it "the shipped interpreter module exports no raw build-acquisition function" $ do
                 exports <- moduleExportList localInterpreterSourcePath
                 filter (`elem` withdrawnLocalExports) exports `shouldBe` []
+
+            unsafeRunnerApiIsAbsent
 
 writeCompositionSourcePath :: FilePath
 writeCompositionSourcePath = "write-composition/Cardano/KERI/Deployment/CLI.hs"
@@ -2855,26 +2840,107 @@ directAcquisitionViolations :: [Text] -> [Text]
 directAcquisitionViolations =
     filter (\line -> any (`T.isInfixOf` line) directAcquisitionMarkers)
 
-{- | A-262-01: the snapshot runners that append a watermark read to EVERY
-program, including one that rejected its own argument before building an
-operation.
+{- | A-262-02 (NOTE-003, A-001 ruling 1): the two snapshot runners that
+appended a watermark read to EVERY program, including one that rejected its
+own argument before building an operation.
 
-They are not defects -- for a program with no failure channel the watermark
-is exactly what @DAT-257-RESULT@ promises, and \#257's own proofs pin that
-behaviour. They are simply ineligible for a build phase, whose programs can
-always reject: routing one through them opens a store transaction for an
-input that was already refused. That distinction lives in a name rather than
-in someone's memory, and this row is what keeps it there.
+Submission 2 kept them, documented them as dangerous, and forbade write
+composition from naming them. The fresh audit was right to reject that: a
+public API that still has the defect, guarded only by what today's caller
+chooses to pass it, is avoided rather than prevented -- and this ticket
+exists to replace convention with boundaries. They are now DELETED, and the
+epic owner authorized the resulting change to \#257's public surface
+(A-001).
+
+The names are assembled from fragments for the same reason
+'localtierInvariantName' is: this module is one of the files the scan below
+reads, so spelling them whole here would make the property flag its own
+source and the absence it exists to prove could never be reached.
 -}
-unconditionalWatermarkRunners :: [Text]
-unconditionalWatermarkRunners =
-    [ "runChainQuerySnapshot"
-    , "runLocalChainQuery"
+retiredUnsafeRunners :: [Text]
+retiredUnsafeRunners =
+    [ "runChainQuery" <> "Snapshot"
+    , "runLocal" <> "ChainQuery"
     ]
 
-unconditionalRunnerViolations :: [Text] -> [Text]
-unconditionalRunnerViolations =
-    filter (\line -> any (`T.isInfixOf` line) unconditionalWatermarkRunners)
+{- | A name no shipped source contains, for the control that proves the
+scanner can report a genuine absence.
+
+Assembled from fragments for the same reason the retired names are, and the
+first version of this control did NOT do that -- it searched for a literal
+that its own source then contained, so the scanner found itself and the
+control failed. That is the identical self-reference trap the invariant-name
+scan documents, met a second time; keeping the fix beside both is cheaper
+than meeting it a third.
+-}
+absentSentinel :: Text
+absentSentinel = "aNameNoShipped" <> "SourceContains"
+
+{- | A-262-02: the retired runners are absent from EVERY shipped Haskell
+source, so no caller -- production, test, or future -- can import or call
+one. This is the whole difference between the submission-2 repair and this
+one.
+
+A per-call-site scan rots: it can only forbid the callers that exist when it
+is written, and a new module is a new hole. An absence over the whole
+compiled surface cannot: the name a reintroduced caller would need does not
+exist, and if it comes back this row fails wherever it comes back.
+
+The scan reads every @.hs@ file under the component tree, production and
+proof alike -- deliberately not a curated list, because a curated list is
+exactly the narrowing A-001 forbids.
+-}
+unsafeRunnerApiIsAbsent :: Spec
+unsafeRunnerApiIsAbsent =
+    describe
+        "#262 A-262-02 -- the retired unsafe snapshot runners are absent from \
+        \every shipped source, so no caller can name one"
+        $ do
+            it "self-test: the scanner sees a name that IS present, so an absence is not vacuous" $ do
+                sources <- shippedHaskellSources
+                length sources `shouldNotBe` 0
+                hits <- sourcesMentioning sources ["runChainQueryResultSnapshot"]
+                hits `shouldNotBe` []
+
+            it "self-test: the scanner reports a name that is genuinely absent" $ do
+                sources <- shippedHaskellSources
+                hits <- sourcesMentioning sources [absentSentinel]
+                hits `shouldBe` []
+
+            it "no shipped source mentions a retired unsafe runner, in code or in prose" $ do
+                sources <- shippedHaskellSources
+                hits <- sourcesMentioning sources retiredUnsafeRunners
+                hits `shouldBe` []
+
+{- | Every Haskell source the components and their suites are built from.
+Walks the tree rather than naming files, and skips only build output.
+-}
+shippedHaskellSources :: IO [FilePath]
+shippedHaskellSources = go "."
+  where
+    go directory = do
+        entries <- listDirectory directory
+        fmap concat . for entries $ \entry -> do
+            let path = directory </> entry
+            isDirectory <- doesDirectoryExist path
+            if isDirectory
+                then if entry `elem` skipped then pure [] else go path
+                else pure [path | ".hs" `isSuffixOf` entry]
+    skipped = ["dist-newstyle", ".git", "result"]
+
+{- | Every @path:line@ in @sources@ mentioning any of @needles@. Returns the
+locations rather than a bare count so a failure names where the retired
+runner came back.
+-}
+sourcesMentioning :: [FilePath] -> [Text] -> IO [String]
+sourcesMentioning sources needles =
+    fmap concat . for sources $ \path -> do
+        contents <- TE.decodeUtf8 <$> BS.readFile path
+        pure
+            [ path <> ":" <> show lineNumber
+            | (lineNumber, line) <- zip [1 :: Int ..] (T.lines contents)
+            , any (`T.isInfixOf` line) needles
+            ]
 
 {- | The raw build-acquisition functions that must not be exported once every
 caller has migrated (RQ-262-05, T262-S1-10). They remain DEFINED -- the local
@@ -3493,19 +3559,20 @@ parityBoardLocator =
         , boardLocatorAddress = addrText addrA
         }
 
-{- | Collapse either acquisition shape to "did this acquisition fail, and
-with which named error" -- an interpreter-level failure short-circuits the
-whole free-algebra computation and surfaces at 'capAtomicQuery''s OUTER
-'Either', while an operation-level failure surfaces nested inside
-'snapshotValue'; a family matrix that inspected only one of the two would
-silently pass whenever the error arrived by the other route.
+{- | Collapse an acquisition to "did this fail, and with which named error".
+
+A-262-02: this used to unwrap TWO 'Either' layers, because the runner of the
+day appended its own operation to the program and so reported an
+interpreter-level failure outside the program's own result. The result-aware
+runner flattens both layers itself -- a failure never carries a watermark it
+never fetched -- so there is one layer to inspect and the family matrix
+below cannot pass by looking at the wrong one.
 -}
 flattenAcquisition ::
-    Either ChainQueryError (QuerySnapshot (Either ChainQueryError a)) ->
+    Either ChainQueryError (QuerySnapshot a) ->
     Either ChainQueryError ()
 flattenAcquisition outcome = do
-    snapshot <- outcome
-    _ <- snapshotValue snapshot
+    _snapshot <- outcome
     pure ()
 
 {- | One acquisition family, one malformed class, one required fail-closed

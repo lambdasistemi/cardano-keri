@@ -150,9 +150,11 @@ registrationSnapshotProgram req = runExceptT $ do
 {- | The one named registration snapshot for a phase (NOTE-012\/NOTE-021
 repair, INV-257-BUILDER\/DATA-INV-257-03\/04): runs
 'registrationSnapshotProgram' through the supplied interpreter's bare
-'runChainQuery' (never the generic 'Cardano.KERI.ChainQuery.Interpreter.runChainQuerySnapshot',
-whose own unconditional watermark composition would append a second,
-redundant read after this program's structural rejection or success) and
+'runChainQuery' (never a snapshot runner that composes its own watermark,
+which would append a second, redundant read after this program's structural
+rejection or success -- \#262 A-262-02 deleted the runner that did so
+unconditionally, and this program has carried its own watermark since
+NOTE-021 for exactly that reason) and
 builds the one envelope from the program's own carried watermark plus the
 interpreter's fixed source\/consistency. Flattens the program's own inner
 candidate-resolution 'Either' into the outer result, so a caller unwraps

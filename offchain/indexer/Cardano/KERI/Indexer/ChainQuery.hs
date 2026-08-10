@@ -9,7 +9,7 @@ Translates a whole 'Cardano.KERI.ChainQuery.Program.ChainQuery' program to
 the existing composable reads in "Cardano.KERI.Indexer.Query.Tx", reads the
 matching rollback slot\/hash for the watermark, and invokes the existing
 'Database.KV.Transaction.RunTransaction' exactly once
-('runLocalChainQuery', T257-S2-03). Every field of 'localInterpreter'
+('runLocalQuery', T257-S2-03). Every field of 'localInterpreter'
 answers inside the caller-supplied 'Transaction' — composing them via
 ordinary 'Monad' sequencing (as
 'Cardano.KERI.ChainQuery.Interpreter.runChainQuery' already does) keeps a
@@ -43,14 +43,20 @@ authority: #262 added the two operation families whose absence forced the
 seven direct 'Transaction' bundles (an exact output by @(txid,index)@, and
 board entries paired with their own outputs), so the raw readers below are
 private implementation details with no caller outside this module.
-'runLocalQuery', 'runLocalInterpreter' and 'runLocalChainQuery' are the whole
-exported acquisition boundary, and 'runLocalQuery' is the one a write build
-phase uses (A-262-01: it is the only one that opens no store transaction for
-an eagerly rejected locator).
+'runLocalQuery' and 'runLocalInterpreter' are the whole exported acquisition
+boundary, and 'runLocalQuery' is what a build phase uses.
+
+A-262-02: this module also exported a generic local runner accepting any
+@'ChainQuery' a@. It opened a store transaction before it could discover
+that the program had already rejected its own locator, so an input refused
+before any operation existed still cost a transaction. It is DELETED rather
+than documented as dangerous — a public API carrying the defect, guarded
+only by what today's caller passes it, is avoided rather than prevented, and
+this ticket exists to replace convention with boundaries. Its absence from
+the whole compiled surface is an executing property.
 -}
 module Cardano.KERI.Indexer.ChainQuery (
     localInterpreter,
-    runLocalChainQuery,
     runLocalInterpreter,
     runLocalQuery,
     localSettlementObserver,
@@ -84,7 +90,6 @@ import Cardano.KERI.ChainQuery (
     SnapshotConsistency (AtomicLocal),
     chainQueryInterpreter,
     runChainQueryResultSnapshot,
-    runChainQuerySnapshot,
     validPayerAddresses,
  )
 import Cardano.KERI.ChainQuery.LedgerOutput (chainAssetUtxoToLedgerOutput)
@@ -148,7 +153,7 @@ data LocalQueryScope cf op = LocalQueryScope
 
 {- | #240 (N-027): the one narrow bridge from a fully-populated read
 'QueryHandle' (owned by "Cardano.KERI.CLI.Backend.Local"'s \#177 read path,
-and by pre-#240 specs exercising 'localInterpreter'\/'runLocalChainQuery'
+and by pre-#240 specs exercising 'localInterpreter'\/'runLocalQuery'
 directly) to a write-scope 'LocalQueryScope' -- both identities wrapped
 'Just' from the handle's own real, always-populated fields, since a read
 command always has both. No #240 write verb ever calls this;
@@ -239,29 +244,10 @@ withValidBoardLocator ::
 withValidBoardLocator scope locator action =
     either (pure . Left) (const action) (boardLocatorOk scope locator)
 
-{- | Run a whole program through exactly one 'RunTransaction' invocation
-(T257-S2-03). DATA-INV-257-01's canonical-shape\/emptiness validation now
-happens STRUCTURALLY, inside
-'Cardano.KERI.ChainQuery.Program.currentCheckpoint'\/'boardCatalog'\/
-'payerUtxos'\/'referenceScripts' themselves, the moment each operation is
-built from a concrete argument -- so an invalid operation never becomes a
-'Cardano.KERI.ChainQuery.Program.ChainQueryF' node in the first place and
-this interpreter's own field is never invoked for it, regardless of
-whether the caller derived the argument from a literal or a real earlier
-operation's result (no finite placeholder enumeration needed, NOTE-020).
-The watermark is always attached inside the very same composed
-'Transaction' as the caller's program via
-'Cardano.KERI.ChainQuery.Interpreter.runChainQuerySnapshot'.
--}
-runLocalChainQuery ::
-    LocalQueryScope cf op -> ChainQuery a -> IO (Either ChainQueryError (QuerySnapshot a))
-runLocalChainQuery scope program =
-    runLocalInterpreter scope (`runChainQuerySnapshot` program)
-
 {- | #262 (RQ-262-05\/MOD-262-LOCAL): the whole exported acquisition boundary,
-alongside 'runLocalChainQuery'. Hand this the way you want a program run --
+alongside 'runLocalQuery'. Hand this the way you want a program run --
 'Cardano.KERI.ChainQuery.Interpreter.runChainQuery',
-'runChainQuerySnapshot', or
+'Cardano.KERI.ChainQuery.Interpreter.runChainQueryResultSnapshot', or
 'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot', each of which
 composes its own watermark differently -- and it supplies the local
 interpreter and spends exactly one 'RunTransaction' invocation on it.
@@ -286,10 +272,23 @@ runLocalInterpreter ::
 runLocalInterpreter scope run =
     runTransaction (localScopeRunner scope) (run (localInterpreter scope))
 
-{- | A-262-01 (RQ-262-03\/DATA-INV-262-01): the write path's own runner. Runs
-one build phase's composed program against the local interpreter and answers
-the resolved value, spending exactly one 'RunTransaction' invocation — or,
-for a program that rejected its argument eagerly, none at all.
+{- | A-262-01 (RQ-262-03\/DATA-INV-262-01): the write path's own runner, and
+since A-262-02 the ONLY local snapshot runner. Runs one build phase's
+composed program through exactly one 'RunTransaction' invocation
+(T257-S2-03) — or, for a program that rejected its argument eagerly, none at
+all.
+
+DATA-INV-257-01's canonical-shape\/emptiness validation happens STRUCTURALLY,
+inside 'Cardano.KERI.ChainQuery.Program.currentCheckpoint'\/'boardCatalog'\/
+'payerUtxos'\/'referenceScripts' themselves, the moment each operation is
+built from a concrete argument -- so an invalid operation never becomes a
+'Cardano.KERI.ChainQuery.Program.ChainQueryF' node in the first place and
+this interpreter's own field is never invoked for it, regardless of whether
+the caller derived the argument from a literal or a real earlier operation's
+result (no finite placeholder enumeration needed, NOTE-020). The watermark is
+attached inside the very same composed 'Transaction' as the caller's program
+via 'Cardano.KERI.ChainQuery.Interpreter.runChainQueryResultSnapshot', which
+reads it last and only for a program that resolved.
 
 The short-circuit is repeated here rather than left to
 'Cardano.KERI.ChainQuery.Interpreter.runChainQueryResultSnapshot' because
@@ -330,7 +329,7 @@ other raw readers inside one caller-run 'Transaction', because the free
 algebra of the day could answer only one operation per dispatch and had no
 way to express the other reads that phase needed. \#262 removed that reason:
 the algebra now carries every build-phase read, its 'Monad' instance joins
-them, and 'runLocalChainQuery' runs the whole composed program in the one
+them, and 'runLocalQuery' runs the whole composed program in the one
 'RunTransaction' invocation the snapshot contract requires. This is private
 again, as it always should have been.
 -}

@@ -91,11 +91,11 @@ import Cardano.KERI.Indexer.Query.Tx (
  )
 import Cardano.Ledger.Address (serialiseAddr)
 import Cardano.Ledger.Api.Tx.Out (addrTxOutL, referenceScriptTxOutL, valueTxOutL)
+import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary (DecoderError, decodeFull)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (Script, TxOut, eraProtVerLow, fromStrictMaybeL, hashScript)
-import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Hashes (ScriptHash (..), extractHash, originalBytes, unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -279,9 +279,10 @@ localSnapshotTx bundle = do
                         , snapshotWatermark = watermark
                         }
 
--- | The one runner invocation a direct-composition phase needs: run its
--- composed bundle 'Transaction' and 'localSnapshotTx' together, exactly
--- once, matching 'runLocalChainQuery''s own shape\/contract.
+{- | The one runner invocation a direct-composition phase needs: run its
+composed bundle 'Transaction' and 'localSnapshotTx' together, exactly
+once, matching 'runLocalChainQuery''s own shape\/contract.
+-}
 runLocalSnapshotTx ::
     LocalQueryScope cf op ->
     Transaction IO cf Cols op (Either ChainQueryError a) ->

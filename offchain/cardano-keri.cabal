@@ -270,8 +270,8 @@ library write-composition
   default-language: GHC2021
   hs-source-dirs:   write-composition
   build-depends:
-    , base                                       >=4.18 && <5
-    , bytestring                                 >=0.11 && <0.13
+    , base                                     >=4.18 && <5
+    , bytestring                               >=0.11 && <0.13
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:deployment
@@ -280,13 +280,12 @@ library write-composition
     , cardano-ledger-core
     , cardano-node-clients:utxo-indexer-lib
     , directory
-    , opt-env-conf                               >=0.13 && <0.16
+    , opt-env-conf                             >=0.13 && <0.16
     , rocksdb-kv-transactions:kv-transactions
     , text
     , time
 
-  exposed-modules:
-    Cardano.KERI.Deployment.CLI
+  exposed-modules:  Cardano.KERI.Deployment.CLI
 
 -- #177 Slice 1: the production `ckeri status` backend seam. Depends on both
 -- `deployment` (Koios/manifest/endpoint-board reuse) and `indexer` (the local
@@ -743,6 +742,7 @@ test-suite cli-tests
     , aeson
     , base
     , bytestring
+    , Cabal-syntax
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query

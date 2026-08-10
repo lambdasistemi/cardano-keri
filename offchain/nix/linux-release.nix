@@ -29,20 +29,18 @@ let
 
   # For dev artifacts, embed <version>-<shortRev> in the store-path name so
   # the output file and the DEB/RPM package version carry the dev suffix.
-  devExe =
-    if shortRev != null then
-      exePackage.overrideAttrs (old: {
-        name = "ckeri-${version}-${shortRev}";
-        meta = (old.meta or { }) // {
-          mainProgram = old.meta.mainProgram or "ckeri";
-        };
-      })
-    else
-      exe;
+  devExe = if shortRev != null then
+    exePackage.overrideAttrs (old: {
+      name = "ckeri-${version}-${shortRev}";
+      meta = (old.meta or { }) // {
+        mainProgram = old.meta.mainProgram or "ckeri";
+      };
+    })
+  else
+    exe;
 
   target = if shortRev != null then devExe else exe;
-in
-{
+in {
   appimage = bundlers.toAppImage target;
   deb = bundlers.toDEB target;
   rpm = bundlers.toRPM target;

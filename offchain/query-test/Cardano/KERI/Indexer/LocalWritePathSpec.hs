@@ -270,8 +270,9 @@ referenceOutput script (Indexer.Address bytes) =
         runIdentity $
             (referenceScriptTxOutL . fromStrictMaybeL) (\_ -> Identity (Just script)) plain
 
--- | One live output at @addr@ carrying exactly one unit of a fixed
--- (policy, asset name) native asset -- 'policyHexA'\/'assetNameHexA'.
+{- | One live output at @addr@ carrying exactly one unit of a fixed
+(policy, asset name) native asset -- 'policyHexA'\/'assetNameHexA'.
+-}
 assetCreateAt :: Indexer.TxIn -> Indexer.Address -> UtxoOp
 assetCreateAt txIn addr = UtxoCreate txIn addr (assetOutput addr)
 

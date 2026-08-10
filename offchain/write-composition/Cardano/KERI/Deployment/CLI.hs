@@ -20,6 +20,7 @@ module Cardano.KERI.Deployment.CLI (
     renderQuerySnapshotDiagnostic,
 
     -- * Reused by "Cardano.KERI.CLI" to compose the top-level and board
+
     -- command trees (#240: "Cardano.KERI.CLI" also composes
     -- "Cardano.KERI.Deployment.Verify"'s read-only leaves alongside these;
     -- this module has no edge to that provider-owning module, EDGE-240-04).
@@ -97,23 +98,6 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     writeEndpointBoardManifestAtomic,
  )
 import Cardano.KERI.Deployment.EndpointBoardTransaction qualified as BoardTx
-import Cardano.KERI.Indexer.ChainQuery (
-    LocalQueryScope (..),
-    LocalSettings (..),
-    localBoardCatalogWithOutputs,
-    localCurrentCheckpoint,
-    localInterpreter,
-    localOutputAtTx,
-    localPayerUtxos,
-    localReferenceObservation,
-    localReferenceScriptsTx,
-    localSettlementObserver,
-    localTransactionSettled,
-    runLocalSnapshotTx,
-    withLocalQueryScope,
- )
-import Cardano.KERI.Indexer.App (decodePolicyId)
-import Cardano.KERI.Indexer.Config (decodeAddress)
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
@@ -157,10 +141,28 @@ import Cardano.KERI.Deployment.Script (
     loadBlueprint,
  )
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
+import Cardano.KERI.Indexer.App (decodePolicyId)
+import Cardano.KERI.Indexer.ChainQuery (
+    LocalQueryScope (..),
+    LocalSettings (..),
+    localBoardCatalogWithOutputs,
+    localCurrentCheckpoint,
+    localInterpreter,
+    localOutputAtTx,
+    localPayerUtxos,
+    localReferenceObservation,
+    localReferenceScriptsTx,
+    localSettlementObserver,
+    localTransactionSettled,
+    runLocalSnapshotTx,
+    withLocalQueryScope,
+ )
+import Cardano.KERI.Indexer.Config (decodeAddress)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
 import Control.Monad (unless, when, (>=>))
@@ -172,7 +174,6 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
-import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Database.KV.Transaction (Transaction, runTransaction)
 import OptEnvConf qualified as Opt
 import System.Directory (doesDirectoryExist)
@@ -337,7 +338,6 @@ data BoardRetireSettings = BoardRetireSettings
     , boardRetireTransaction :: !BoardTransactionSettings
     }
     deriving stock (Show, Eq)
-
 
 deploySettingsParser :: Opt.Parser DeploySettings
 deploySettingsParser =
@@ -994,9 +994,10 @@ withMaybeDefault :: (Show a) => Maybe a -> Opt.Parser a -> Opt.Parser a
 withMaybeDefault defaultValue parser =
     maybe parser (`Opt.withDefault` parser) defaultValue
 
--- | #240: no 'ManifestVerify'\/'BoardList' case -- both moved to
--- "Cardano.KERI.Deployment.Verify"; "Cardano.KERI.CLI" dispatches them
--- directly, never through this function.
+{- | #240: no 'ManifestVerify'\/'BoardList' case -- both moved to
+"Cardano.KERI.Deployment.Verify"; "Cardano.KERI.CLI" dispatches them
+directly, never through this function.
+-}
 runBoard :: BoardInstructions -> IO ()
 runBoard = \case
     BoardDeploy settings -> runBoardDeploy settings
@@ -1243,8 +1244,9 @@ referenceOutputsTx hashes = do
     result <- localReferenceScriptsTx hashes
     pure (result >>= traverse chainReferenceToLedgerOutput)
 
--- | #240 (N-022): every M1 V1 manifest script, hash-resolved, in the
--- manifest's own stable order.
+{- | #240 (N-022): every M1 V1 manifest script, hash-resolved, in the
+manifest's own stable order.
+-}
 manifestReferencesTx ::
     Manifest -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
 manifestReferencesTx manifest = referenceOutputsTx (map scriptHash (manifestScripts manifest))

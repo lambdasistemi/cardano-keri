@@ -10,6 +10,12 @@ that asserts anything. `COULD-NOT-EVALUATE` additionally carries the name of
 the layer that failed. It is RED. It is never elided, aggregated away, or
 rendered as a pass, a skip, or "no counterexample found".
 
+`COULD-NOT-EVALUATE` has two named causes that must not be collapsed:
+the assertion ran and could not settle, or the **measurement itself could not
+be established** — `MEASUREMENT-FAILED`. An inventory that is absent,
+unreadable, or unexpectedly empty is the second, and is never reported as a
+zero: a genuine zero and a failed measurement must not produce the same green.
+
 ## D-02 reference resolution record
 
 Per reference the tracked bridge source makes into a pinned upstream package:
@@ -76,6 +82,18 @@ means uncovered by default.
 | `origin` | where the artifact comes from — tracked source, generated output, or an untracked deliverable declared by hand | an untracked origin is legal and must be declarable |
 | `mode` | required file mode, executable bit included | asserted on the assembled bundle, not only on the source |
 | `required` | whether absence is RED | absence of a required entry is RED; there is no warning level |
+| `declared` | how many inventory entries were examined | established before any missing count is reported; absent, unreadable or unexpectedly empty ⇒ `MEASUREMENT-FAILED` |
+| `missing` | how many required entries were absent from the assembly | read only against `declared`; never published alone |
+
+## D-09 measurement provenance (every record that carries a number)
+
+| field | meaning | validation |
+|---|---|---|
+| `instrument` | what produced the quantity | named; a quantity with no instrument is not a measurement |
+| `window` | the interval the quantity covers | named; for a rate or percentage this includes its reset time |
+
+A quantity whose window cannot be stated is `COULD-NOT-EVALUATE`, never a
+smaller number reported as if it were complete.
 
 ## D-08 identity consistency (applies to every record, receipts included)
 

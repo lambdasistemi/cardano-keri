@@ -48,6 +48,7 @@ import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
+    ChainAsset (..),
     ChainAssetUtxo (..),
     ChainQueryError (..),
     ChainReference (..),
@@ -149,7 +150,7 @@ import PlutusTx.IsData.Class (ToData (..))
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
+import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
 
 {- | Every local write-path capability T240-S1-03 owns, as one test-local
 adapter. Both RED ('redCapabilities') and the eventual GREEN construction
@@ -322,6 +323,40 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         expectationFailure
                             ("expected the whole mixed request to fail closed, got a partial result of length " <> show (length partial))
                     other -> expectationFailure ("expected a named DecodingFailure, got " <> show other)
+
+    describe
+        "A-013 finding 3: candidate local-interpreter acquisition matches the real \
+        \frozen-base provider's acquisition, byte for byte (INV-240-PARITY)"
+        $ do
+            it
+                "capAtomicQuery's payerUtxos decode of the shared fixture is byte-identical to the real koiosInterpreter's decode of the same fixture"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [parityCreate parityTxIn parityAddr]
+                    result <- capAtomicQuery redCapabilities (queryHandleLocalScope (testQueryHandle runner)) (payerUtxos [addrText parityAddr])
+                    case result of
+                        Right snapshot -> case snapshotValue snapshot of
+                            Right utxos -> utxos `shouldBe` [parityExpectedUtxo]
+                            Left err -> expectationFailure ("expected the acquired payer utxo, got " <> show err)
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+
+            it
+                "rejects a one-side acquired-value perturbation -- a changed local lovelace no longer matches the frozen base-provider value (permanent falsifier)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [UtxoCreate parityTxIn parityAddr (perturbedParityOutput parityAddr)]
+                    result <- capAtomicQuery redCapabilities (queryHandleLocalScope (testQueryHandle runner)) (payerUtxos [addrText parityAddr])
+                    case result of
+                        Right snapshot -> case snapshotValue snapshot of
+                            Right utxos ->
+                                utxos
+                                    `shouldNotBe` [parityExpectedUtxo]
+                            Left err -> expectationFailure ("expected the perturbed payer utxo to still decode, got " <> show err)
+                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
 
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
@@ -947,6 +982,91 @@ payerOutput (Indexer.Address bytes) =
         mkBasicTxOut
             (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
             (MaryValue (Coin 5_000_000) (MultiAsset mempty))
+
+{- | A-013 finding 3 (INV-240-PARITY) fixture: the SAME payer output the
+frozen-base worktree's proof-only 'koiosInterpreter' capture serves (as
+Koios JSON, over a real Warp loopback server) -- same tx identity, address,
+lovelace, and one native asset. 'parityExpectedUtxo' is the exact
+'ChainAssetUtxo' the real, unmodified base interpreter decoded from it.
+-}
+parityCreate :: Indexer.TxIn -> Indexer.Address -> UtxoOp
+parityCreate txIn addr = UtxoCreate txIn addr (parityOutput addr)
+
+parityOutput :: Indexer.Address -> Indexer.TxOut
+parityOutput (Indexer.Address bytes) =
+    Indexer.TxOut $ serialize' (eraProtVerLow @ConwayEra) txOut
+  where
+    keyHash = fromJust (hashFromBytes bytes)
+    txOut :: TxOut ConwayEra
+    txOut =
+        mkBasicTxOut
+            (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
+            ( MaryValue
+                (Coin 5_000_000)
+                (MultiAsset (Map.singleton parityAssetPolicy (Map.singleton parityAssetName 1)))
+            )
+
+parityTxIn :: Indexer.TxIn
+parityTxIn = Indexer.TxIn (BS.replicate 32 0x66) 0
+
+parityAddr :: Indexer.Address
+parityAddr = Indexer.Address (BS.replicate 28 0x77)
+
+parityAssetPolicy :: PolicyID
+parityAssetPolicy =
+    PolicyID $
+        ScriptHash $
+            case hashFromBytes (BS.replicate 28 0x88) of
+                Just h -> h
+                Nothing -> error "LocalWritePathSpec: invalid parity asset policy id width"
+
+parityAssetName :: AssetName
+parityAssetName = AssetName (SBS.toShort (BS.pack [0x11, 0x22]))
+
+{- | The permanent falsifier's negative fixture: 'parityOutput' with a
+DIFFERENT lovelace value (one side's acquired value perturbed) -- the
+decoded 'ChainAssetUtxo' must no longer equal 'parityExpectedUtxo'.
+-}
+perturbedParityOutput :: Indexer.Address -> Indexer.TxOut
+perturbedParityOutput (Indexer.Address bytes) =
+    Indexer.TxOut $ serialize' (eraProtVerLow @ConwayEra) txOut
+  where
+    keyHash = fromJust (hashFromBytes bytes)
+    txOut :: TxOut ConwayEra
+    txOut =
+        mkBasicTxOut
+            (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
+            ( MaryValue
+                (Coin 4_999_999)
+                (MultiAsset (Map.singleton parityAssetPolicy (Map.singleton parityAssetName 1)))
+            )
+
+{- | The exact value produced by running the REAL, unmodified frozen-base
+(@5bf84982f837c0f5bdd16fd244ae31b31224d147@) 'Cardano.KERI.ChainQuery.Koios.koiosInterpreter'
+against a real Warp loopback server serving 'parityCreate''s fixture as
+Koios JSON -- captured once via a proof-only executable in a detached
+worktree (never committed; N-071/evidence/a013-finding3), reproduced here
+verbatim as this property's frozen comparison target. A change to either
+side's acquisition/decode logic that stops producing this exact value is
+exactly the drift INV-240-PARITY exists to catch.
+-}
+parityExpectedUtxo :: ChainAssetUtxo
+parityExpectedUtxo =
+    ChainAssetUtxo
+        { chainAssetTxId = T.replicate 64 "6"
+        , chainAssetIndex = 0
+        , chainAssetAddress = "addr_test1vpmhwamhwamhwamhwamhwamhwamhwamhwamhwamhwamhwacunv2nq"
+        , chainAssetLovelace = 5_000_000
+        , chainAssetList =
+            [ ChainAsset
+                { chainAssetPolicy = T.replicate 56 "8"
+                , chainAssetName = "1122"
+                , chainAssetQuantity = 1
+                }
+            ]
+        , chainAssetInlineDatum = Nothing
+        , chainAssetReferenceScript = Nothing
+        }
 
 -- | One live output at @addr@ carrying @script@ as its reference script.
 referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp

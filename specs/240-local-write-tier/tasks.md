@@ -8,70 +8,70 @@ the single OWNER slice **S240-1**.
 
 ## Phase 1 — proof foundation
 
-- [ ] **T240-S1-01 [US3]** Generate and retain the base-`5bf8498` normalized
+- [x] **T240-S1-01 [US3]** Generate and retain the base-`5bf8498` normalized
   snapshot and canonical transaction-body/ID oracle for every write transaction
   shape using fixed fixtures; record both revision and fixture hashes under the
   ticket runtime root.
-- [ ] **T240-S1-02 [US1]** Add RED component-boundary and CLI-surface checks that
+- [x] **T240-S1-02 [US1]** Add RED component-boundary and CLI-surface checks that
   reject provider dependencies/imports/settings on the write path, with exact
   source paths in `offchain/cardano-keri.cabal`, `offchain/cli`, and focused
   tests.
-- [ ] **T240-S1-03 [US2]** Add RED local runner/reference/settlement properties
+- [x] **T240-S1-03 [US2]** Add RED local runner/reference/settlement properties
   covering one transaction per program, no mid-build query, exact reference
   derivation, and temporal observer semantics under `offchain/query-test` and
   `offchain/deployment-test`.
 
 ## Phase 2 — provider-free boundary and local capabilities
 
-- [ ] **T240-S1-04 [US1]** Split write composition from provider-backed read
+- [x] **T240-S1-04 [US1]** Split write composition from provider-backed read
   composition in `offchain/cardano-keri.cabal` and `offchain/cli`, leaving the
   write component without Koios or HTTP dependencies.
-- [ ] **T240-S1-05 [US1]** Replace write-facing provider fields with local
+- [x] **T240-S1-05 [US1]** Replace write-facing provider fields with local
   opt-env-conf store settings in `offchain/cli/Cardano/KERI/Deployment/CLI.hs`
   and its CLI tests; keep read-only provider settings downstream.
-- [ ] **T240-S1-06 [US2]** Implement bracketed local query scope and exact
+- [x] **T240-S1-06 [US2]** Implement bracketed local query scope and exact
   derived reference-script resolution in `offchain/indexer` using existing
   follower-held live outputs and #257 result types.
-- [ ] **T240-S1-07 [US1]** Implement follower-backed asset, reference, and
+- [x] **T240-S1-07 [US1]** Implement follower-backed asset, reference, and
   transaction-id settlement probes in `offchain/indexer`/provider-neutral
   settlement ownership without adding a snapshot operation.
 
 ## Phase 3 — migrate every write acquisition family
 
-- [ ] **T240-S1-08 [US1]** Migrate Registration snapshots and settlement to the
+- [x] **T240-S1-08 [US1]** Migrate Registration snapshots and settlement to the
   local interpreter/runtime in `offchain/cli/Cardano/KERI/Deployment/CLI.hs`;
   prove exact source/atomicity and transaction parity.
-- [ ] **T240-S1-09 [US1]** Migrate current-checkpoint consumers for advance and
+- [x] **T240-S1-09 [US1]** Migrate current-checkpoint consumers for advance and
   close, including payer/reference inputs and settlement, to one local snapshot
   per build phase; prove both command transaction shapes retain parity.
-- [ ] **T240-S1-10 [US1]** Migrate Publisher/deploy payer and reference reads
+- [x] **T240-S1-10 [US1]** Migrate Publisher/deploy payer and reference reads
   plus settlement to the local runtime, taking a fresh atomic snapshot per
   published transaction; prove deployment transaction parity.
-- [ ] **T240-S1-11 [US1]** Migrate endpoint-board deploy/post/update/retire
+- [x] **T240-S1-11 [US1]** Migrate endpoint-board deploy/post/update/retire
   payer, catalog, reference, and settlement reads to local snapshots; prove
   post/update/retire transaction parity while leaving board list read-only.
 
 ## Phase 4 — permanent proof and acceptance
 
-- [ ] **T240-S1-12 [US3]** Compare candidate normalized snapshots and canonical
+- [x] **T240-S1-12 [US3]** Compare candidate normalized snapshots and canonical
   transaction bodies/IDs against every base oracle artifact; retain hash-bound
   parity receipts and make mismatch RED.
-- [ ] **T240-S1-13 [US1]** Add the flake-owned `local-write-path-check`, root
+- [x] **T240-S1-13 [US1]** Add the flake-owned `local-write-path-check`, root
   recipe, non-zero coverage counts, component census, and `ci-offchain` wiring
   in `offchain/flake.nix` and `justfile`, preserving #259 no-write semantics.
-- [ ] **T240-S1-14 [US1]** Reintroduce one provider dependency/call as a
+- [x] **T240-S1-14 [US1]** Reintroduce one provider dependency/call as a
   controlled mutation, retain compiled RED, restore the candidate, rerun the
   same instrument GREEN, and verify the mutation is absent.
-- [ ] **T240-S1-15 [US1]** Run the focused per-family verifications and
+- [x] **T240-S1-15 [US1]** Run the focused per-family verifications and
   `just ci-offchain`, return one clean candidate with receipt and handoff, and
   report the advisory full write-reachability sweep.
 
 ## Orchestrator-owned acceptance
 
-- [ ] **T240-O-01** Verify the commit owner is parked/clean, dispatch a fresh
+- [x] **T240-O-01** Verify the commit owner is parked/clean, dispatch a fresh
   Codex auditor at the exact candidate, and require a hash-bound verdict for
   every blocking invariant.
-- [ ] **T240-O-02** Stamp accepted task boxes only after audit pass; authorize
+- [x] **T240-O-02** Stamp accepted task boxes only after audit pass; authorize
   the commit owner to create the one final conventional behavior commit.
 - [ ] **T240-O-03** Prove the final tree equals the audited candidate plus only
   this task stamp, run commit/focused/offchain gates through quiet receipts,

@@ -47,6 +47,7 @@ import Cardano.KERI.AID.CESR (qb64Verkey)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
+import Cardano.KERI.ChainQuery.LedgerOutput (chainReferenceToLedgerOutput)
 import Cardano.KERI.ChainQuery.Program (
     ChainQuery,
     boardCatalog,
@@ -131,7 +132,7 @@ import Cardano.KERI.Indexer.ChainQuery (
  )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..), decodeAddr, serialiseAddr)
-import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
+import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData, dataToBinaryData)
 import Cardano.Ledger.Api.Tx.Body (referenceScriptTxOutL)
 import Cardano.Ledger.Api.Tx.Out (datumTxOutL, mkBasicTxOut)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
@@ -156,7 +157,7 @@ import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.STM (STM)
 import Control.Exception (Exception, SomeException, throwIO, try)
-import Data.Aeson (encode, object, (.=))
+import Data.Aeson (Value, encode, object, (.=))
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -176,7 +177,7 @@ import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime (..))
 import Data.Word (Word8)
 import Database.KV.Transaction (RunTransaction (..))
-import Lens.Micro ((.~))
+import Lens.Micro ((.~), (^.))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data qualified as PLC
 import PlutusTx.Builtins.Internal (BuiltinData (..))
@@ -186,6 +187,18 @@ import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (
+    Gen,
+    Property,
+    arbitraryBoundedIntegral,
+    arbitrarySizedIntegral,
+    chooseInt,
+    forAll,
+    ioProperty,
+    oneof,
+    vectorOf,
+ )
 
 {- | Every local write-path capability T240-S1-03 owns, as one test-local
 adapter. Both RED ('redCapabilities') and the eventual GREEN construction
@@ -401,11 +414,85 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         handle
                         (Indexer.SlotNo 10)
                         (blockHash 0x01)
-                        [referenceCreateAt parityReferenceTxIn parityReferenceScript parityReferenceAddr]
+                        [referenceCreateAtWithoutDatum parityReferenceTxIn parityReferenceScript parityReferenceAddr]
                     result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [parityReferenceHash]
                     case result of
                         Right refs -> refs `shouldBe` [parityExpectedReference]
                         Left err -> expectationFailure ("expected the acquired reference, got " <> show err)
+
+            it
+                "preserves a datum-bearing reference output's COMPLETE value: the acquired inline datum equals the frozen base-provider result, in the schema both interpreters share (A-018 finding 1, DATA-INV-240-01 + INV-240-PARITY)"
+                $ withInMemoryIndexerRunner
+                $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [ UtxoCreate
+                            parityReferenceTxIn
+                            parityReferenceAddr
+                            ( referenceOutput
+                                parityReferenceScript
+                                (Just referenceFixtureDatum)
+                                parityReferenceAddr
+                            )
+                        ]
+                    result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [parityReferenceHash]
+                    case result of
+                        Right refs -> refs `shouldBe` [parityExpectedReferenceWithDatum]
+                        Left err -> expectationFailure ("expected the acquired datum-bearing reference, got " <> show err)
+
+            it
+                "rejects a one-side acquired-value perturbation -- two outputs differing ONLY in a datum leaf nested two levels deep acquire to different values, and differ in nothing else (MANDATORY falsifier, A-018 finding 1)"
+                $ do
+                    let acquire datum =
+                            withInMemoryIndexerRunner $ \handle runner -> do
+                                applyAtSlot
+                                    handle
+                                    (Indexer.SlotNo 10)
+                                    (blockHash 0x01)
+                                    [ UtxoCreate
+                                        parityReferenceTxIn
+                                        parityReferenceAddr
+                                        (referenceOutput parityReferenceScript (Just datum) parityReferenceAddr)
+                                    ]
+                                capReferenceScripts
+                                    redCapabilities
+                                    (queryHandleLocalScope (testQueryHandle runner))
+                                    [parityReferenceHash]
+                    honest <- acquire referenceFixtureDatum
+                    perturbed <- acquire perturbedReferenceFixtureDatum
+                    case (honest, perturbed) of
+                        (Right [honestRef], Right [perturbedRef]) -> do
+                            -- Both sides are ACQUIRED, so this control is genuinely
+                            -- able to fail: a decoder that discards inline datums
+                            -- returns the identical value for both stored outputs
+                            -- and every assertion below goes red at once. Comparing
+                            -- the perturbed acquisition against a pinned literal
+                            -- could not do that -- it would differ either way.
+                            perturbedRef `shouldNotBe` honestRef
+                            chainAssetInlineDatum (chainReferenceOutput perturbedRef)
+                                `shouldNotBe` chainAssetInlineDatum (chainReferenceOutput honestRef)
+                            -- and the perturbation is confined to the datum
+                            chainReferenceScriptHash perturbedRef
+                                `shouldBe` chainReferenceScriptHash honestRef
+                            chainAssetTxId (chainReferenceOutput perturbedRef)
+                                `shouldBe` chainAssetTxId (chainReferenceOutput honestRef)
+                            chainAssetAddress (chainReferenceOutput perturbedRef)
+                                `shouldBe` chainAssetAddress (chainReferenceOutput honestRef)
+                            chainAssetLovelace (chainReferenceOutput perturbedRef)
+                                `shouldBe` chainAssetLovelace (chainReferenceOutput honestRef)
+                            chainAssetReferenceScript (chainReferenceOutput perturbedRef)
+                                `shouldBe` chainAssetReferenceScript (chainReferenceOutput honestRef)
+                            -- and only the honest one matches the frozen value
+                            honestRef `shouldBe` parityExpectedReferenceWithDatum
+                        other ->
+                            expectationFailure
+                                ("expected exactly one resolved reference on each side, got " <> show other)
+
+            prop
+                "for ANY legal Plutus datum, the acquired reference output round-trips back to exactly the seeded datum through the real builder conversion (A-018 finding 1, the whole property class)"
+                referenceDatumRoundTripsToTheSeededValue
 
             it
                 "rejects a one-side acquired-value perturbation -- a changed local reference-script BYTES value no longer matches the frozen base-provider value (permanent falsifier, family-specific field)"
@@ -415,7 +502,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         handle
                         (Indexer.SlotNo 10)
                         (blockHash 0x01)
-                        [referenceCreateAt parityReferenceTxIn perturbedParityReferenceScript parityReferenceAddr]
+                        [referenceCreateAtWithoutDatum parityReferenceTxIn perturbedParityReferenceScript parityReferenceAddr]
                     result <- capReferenceScripts redCapabilities (queryHandleLocalScope (testQueryHandle runner)) [perturbedParityReferenceHash]
                     case result of
                         Right refs -> refs `shouldNotBe` [parityExpectedReference]
@@ -544,6 +631,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                                             <> show other
                                         )
 
+    deferredLocaltierClaims
+
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
             withInMemoryIndexerRunner $ \handle runner -> do
@@ -564,7 +653,9 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
         "A-017 ruling 4b / A-002 ruling 1: every production write-verb entrypoint \
         \completes its WHOLE local read set in exactly one store transaction, and \
         \reaching that point genuinely depends on the complete read set \
-        \(T240-S1-14 audit findings 1 and 2, INV-240-LOCALTIER/INV-240-SNAPSHOT)"
+        \(T240-S1-14 audit findings 1 and 2, INV-240-SNAPSHOT). This proves \
+        \acquisition COUNT and read-set completeness only; it says nothing \
+        \about which reads route through the free algebra"
         $ do
             it
                 "runAdvanceWith's submit path reaches its builder boundary having acquired exactly once"
@@ -2129,6 +2220,228 @@ parityExpectedReference =
                 }
         }
 
+{- | A-018 finding 2, as a PERMANENTLY EXECUTING property rather than a
+one-off correction: the deferred local-tier invariant is @OPEN — DEFERRED to
+\#262@, seven direct 'Transaction' compositions intentionally remain, and no
+shipped occurrence of its name may read as an established invariant. The
+audit found five occurrences claiming otherwise, one of which this suite
+printed at runtime through its own describe text.
+
+The detector proves itself in both directions before it is trusted, exactly
+as the auditor's frozen instrument does: it must flag the known false claim,
+must accept the explicit deferral, and must NOT flag text that never names
+the invariant. A detector that flagged everything would be as useless as one
+that flagged nothing, and would make the per-file rows below vacuous.
+
+A file with no occurrence passes, and that is the intended steady state --
+the rows exist to catch a future edit that reintroduces a bare claim, which
+is exactly how the flagged describe text arrived.
+-}
+deferredLocaltierClaims :: Spec
+deferredLocaltierClaims =
+    describe
+        "every shipped occurrence of the deferred local-tier invariant states \
+        \OPEN -- DEFERRED to #262, and no proof text implies algebra-only \
+        \routing (A-018 finding 2)"
+        $ do
+            it "the detector flags the known false claim, accepts the explicit deferral, and ignores unrelated text (self-test)" $ do
+                let falseClaim =
+                        "acquisition complete (" <> localtierInvariantName <> "/INV-240-SNAPSHOT)"
+                    honestClaim = localtierInvariantName <> " is OPEN -- DEFERRED to #262"
+                localtierClaimViolations [falseClaim] `shouldBe` [falseClaim]
+                localtierClaimViolations [honestClaim] `shouldBe` []
+                localtierClaimViolations ["an ordinary line naming no invariant"]
+                    `shouldBe` []
+
+            for_ shippedLocaltierSources $ \path ->
+                it ("every deferred-invariant occurrence in " <> path <> " carries the #262 deferral") $ do
+                    contents <- BS.readFile path
+                    localtierClaimViolations (T.lines (TE.decodeUtf8 contents))
+                        `shouldBe` []
+
+{- | The shipped sources this campaign touches that may name the invariant.
+Paths are relative to @offchain@, the working directory both the focused
+@cabal run@ command and the packaged @local-write-path-check@ runner execute
+from.
+-}
+shippedLocaltierSources :: [FilePath]
+shippedLocaltierSources =
+    [ "indexer/Cardano/KERI/Indexer/ChainQuery.hs"
+    , "write-composition/Cardano/KERI/Deployment/CLI.hs"
+    , "query-test/Cardano/KERI/Indexer/LocalWritePathSpec.hs"
+    ]
+
+{- | Spelled in two pieces on purpose. This module is one of the files the
+property scans, so writing the name whole here would make the detector flag
+its own source and the scan could never reach the steady state it exists to
+protect. Every prose mention in this module is phrased around the name for
+the same reason.
+-}
+localtierInvariantName :: Text
+localtierInvariantName = "INV-240-" <> "LOCALTIER"
+
+-- | Every line naming the invariant without stating its deferral.
+localtierClaimViolations :: [Text] -> [Text]
+localtierClaimViolations =
+    filter $ \line ->
+        localtierInvariantName `T.isInfixOf` line
+            && not ("DEFERRED" `T.isInfixOf` line && "#262" `T.isInfixOf` line)
+
+{- | A-018 finding 1, the property class rather than one more fixture: for
+ANY legal inline datum, acquiring the reference output and converting it the
+way production actually converts it -- 'chainReferenceToLedgerOutput', the
+same function every write verb's @referenceOutputsTx@ calls, whose
+'Cardano.KERI.ChainQuery.LedgerOutput.attachDatum' rebuilds the datum from
+@chainAssetInlineDatum@ -- must yield back exactly the datum that was
+stored.
+
+This crosses the seam the finding is about. A lossy acquisition cannot pass
+it for any datum at all: with @chainAssetInlineDatum = Nothing@ the rebuilt
+output carries 'NoDatum' and the property fails on the first generated
+value. It is also not vacuous in the other direction -- the generator emits
+nested constructors, maps, lists, negative integers, and empty and
+non-empty byte strings, so a decoder that flattened or truncated nesting
+would be caught too.
+-}
+referenceDatumRoundTripsToTheSeededValue :: Property
+referenceDatumRoundTripsToTheSeededValue =
+    forAll genPlutusData $ \datum -> ioProperty $
+        withInMemoryIndexerRunner $ \handle runner -> do
+            applyAtSlot
+                handle
+                (Indexer.SlotNo 10)
+                (blockHash 0x01)
+                [ UtxoCreate
+                    parityReferenceTxIn
+                    parityReferenceAddr
+                    (referenceOutput parityReferenceScript (Just datum) parityReferenceAddr)
+                ]
+            result <-
+                capReferenceScripts
+                    redCapabilities
+                    (queryHandleLocalScope (testQueryHandle runner))
+                    [parityReferenceHash]
+            case result of
+                Left err ->
+                    expectationFailure
+                        ("expected the datum-bearing reference to resolve, got " <> show err)
+                Right [reference] ->
+                    case chainReferenceToLedgerOutput reference of
+                        Left err ->
+                            expectationFailure
+                                ("expected the acquired reference to convert to a builder input, got " <> show err)
+                        Right (_txIn, ledgerTxOut) ->
+                            rebuiltDatum ledgerTxOut `shouldBe` Just datum
+                Right other ->
+                    expectationFailure
+                        ("expected exactly one resolved reference, got " <> show (length other))
+  where
+    rebuiltDatum :: TxOut ConwayEra -> Maybe PLC.Data
+    rebuiltDatum ledgerTxOut =
+        case ledgerTxOut ^. datumTxOutL of
+            Datum binaryDatum ->
+                let Data plutus = binaryDataToData binaryDatum
+                 in Just plutus
+            NoDatum -> Nothing
+            DatumHash _ -> Nothing
+
+{- | Explicit generator (no 'Arbitrary' instance, per this codebase's
+convention): every 'PLC.Data' arm, bounded in depth so the fixture stays a
+legal inline datum rather than an unbounded tree.
+-}
+genPlutusData :: Gen PLC.Data
+genPlutusData = go (3 :: Int)
+  where
+    go depth
+        | depth <= 0 = oneof [leafInteger, leafBytes]
+        | otherwise =
+            oneof
+                [ leafInteger
+                , leafBytes
+                , PLC.Constr <$> genConstructorTag <*> listOf' (go (depth - 1))
+                , PLC.List <$> listOf' (go (depth - 1))
+                , PLC.Map <$> listOf' ((,) <$> go (depth - 1) <*> go (depth - 1))
+                ]
+    leafInteger = PLC.I <$> arbitrarySizedIntegral
+    leafBytes = PLC.B . BS.pack <$> listOf' arbitraryBoundedIntegral
+    genConstructorTag = fromIntegral <$> chooseInt (0, 5)
+    -- bounded width as well as depth: an unbounded list at depth 3 makes a
+    -- single example seconds long for no additional coverage.
+    listOf' generator = chooseInt (0, 3) >>= \n -> vectorOf n generator
+
+{- | A-018 finding 1 (DATA-INV-240-01 + the reference half of
+INV-240-PARITY): the SAME captured reference output, now carrying an inline
+datum. Its expected @chainAssetInlineDatum@ below is pinned as an
+INDEPENDENT literal in the detailed JSON schema, never as
+@plutusDataJson referenceFixtureDatum@ -- deriving both sides from one
+expression is exactly how a comparison passes unconditionally in the case it
+exists to catch.
+
+The schema this literal is written in is not guesswork: it is the one
+"Cardano.KERI.ChainQuery.PlutusJson" documents as "the detailed JSON shape
+Koios's @inline_datum@ and this package's own manifests share", which the
+frozen base provider reads verbatim out of @inline_datum.value@
+('parseExtendedChainAssetUtxo') and which
+'Cardano.KERI.ChainQuery.LedgerOutput.attachDatum' feeds back through
+'plutusDataFromJson' when it rebuilds a builder input. The
+'referenceDatumRoundTripsToTheSeededValue' property below closes the same
+class over generated data through that real conversion, so this literal
+pins the shape while the property pins the behaviour.
+-}
+parityExpectedReferenceDatum :: Value
+parityExpectedReferenceDatum =
+    object
+        [ "constructor" .= (1 :: Integer)
+        , "fields"
+            .= [ object ["bytes" .= ("733234302d7265666572656e63652d646174756d" :: Text)]
+               , object ["int" .= (-9 :: Integer)]
+               , object
+                    [ "list"
+                        .= [ object ["int" .= (0 :: Integer)]
+                           , object ["bytes" .= ("0102" :: Text)]
+                           , object ["constructor" .= (0 :: Integer), "fields" .= ([] :: [Value])]
+                           ]
+                    ]
+               , object
+                    [ "map"
+                        .= [ object
+                                [ "k" .= object ["bytes" .= ("6b" :: Text)]
+                                , "v" .= object ["list" .= [object ["int" .= (7 :: Integer)]]]
+                                ]
+                           ]
+                    ]
+               ]
+        ]
+
+{- | 'parityExpectedReference' with the datum dimension filled in -- the
+comparison target for the datum-bearing row.
+-}
+parityExpectedReferenceWithDatum :: ChainReference
+parityExpectedReferenceWithDatum =
+    parityExpectedReference
+        { chainReferenceOutput =
+            (chainReferenceOutput parityExpectedReference)
+                { chainAssetInlineDatum = Just parityExpectedReferenceDatum
+                }
+        }
+
+{- | The MANDATORY one-sided datum perturbation (A-018 finding 1): the same
+script, tx identity, address and lovelace, differing ONLY in the inline
+datum. Before the repair this fixture was indistinguishable from
+'referenceFixtureDatum' -- both decoded to 'Nothing' -- so this example is
+the one that proves the datum dimension is now observed at all.
+-}
+perturbedReferenceFixtureDatum :: PLC.Data
+perturbedReferenceFixtureDatum =
+    PLC.Constr
+        1
+        [ PLC.B "s240-reference-datum"
+        , PLC.I (-9)
+        , PLC.List [PLC.I 0, PLC.B "\x01\x02", PLC.Constr 0 []]
+        , -- the single perturbed leaf: 7 becomes 8, nested two levels deep
+          PLC.Map [(PLC.B "k", PLC.List [PLC.I 8])]
+        ]
+
 {- | The permanent falsifier's negative fixture: DIFFERENT reference-script
 bytes -- the family-specific field this continuation adds over
 'payerUtxos'. The script hash is cryptographically bound to its bytes
@@ -2443,12 +2756,33 @@ malformedFamilies =
         }
     ]
 
--- | One live output at @addr@ carrying @script@ as its reference script.
-referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp
-referenceCreateAt txIn script addr = UtxoCreate txIn addr (referenceOutput script addr)
+{- | One live output at @addr@ carrying @script@ as its reference script AND
+the shared non-degenerate inline datum.
 
-referenceOutput :: Script ConwayEra -> Indexer.Address -> Indexer.TxOut
-referenceOutput script (Indexer.Address bytes) =
+A-018 finding 1: every reference fixture used to be datum-free, and the
+production decoder hard-coded @chainAssetInlineDatum = Nothing@, so the two
+sides agreed vacuously in exactly the dimension the decoder discarded. The
+default is now datum-BEARING, so the whole reference family -- ordering,
+absence, duplicates, hash mismatch, malformed rows, mixed requests, and
+every entrypoint's manifest reference seed -- carries a datum that a lossy
+decoder would drop.
+-}
+referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp
+referenceCreateAt txIn script addr =
+    UtxoCreate txIn addr (referenceOutput script (Just referenceFixtureDatum) addr)
+
+{- | The datum-FREE shape, kept for the frozen-base parity row that was
+captured against a datum-free output ('parityExpectedReference'). Changing
+that row's fixture would invalidate a capture this seat cannot re-run.
+-}
+referenceCreateAtWithoutDatum ::
+    Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp
+referenceCreateAtWithoutDatum txIn script addr =
+    UtxoCreate txIn addr (referenceOutput script Nothing addr)
+
+referenceOutput ::
+    Script ConwayEra -> Maybe PLC.Data -> Indexer.Address -> Indexer.TxOut
+referenceOutput script datum (Indexer.Address bytes) =
     Indexer.TxOut $ serialize' (eraProtVerLow @ConwayEra) txOut
   where
     keyHash = fromJust (hashFromBytes bytes)
@@ -2457,10 +2791,31 @@ referenceOutput script (Indexer.Address bytes) =
         mkBasicTxOut
             (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
             (MaryValue (Coin 100_000_000) (MultiAsset mempty))
-    txOut :: TxOut ConwayEra
-    txOut =
+    withScript :: TxOut ConwayEra
+    withScript =
         runIdentity $
             (referenceScriptTxOutL . fromStrictMaybeL) (\_ -> Identity (Just script)) plain
+    txOut :: TxOut ConwayEra
+    txOut =
+        case datum of
+            Nothing -> withScript
+            Just plutus -> withScript & datumTxOutL .~ inlineDatumOf plutus
+
+{- | The shared reference-fixture datum: a nested value exercising every
+'PLC.Data' arm a legal inline datum can carry -- a constructor wrapping
+bytes, an integer, a list, and a map whose own key and value are themselves
+compound. A single flat @Constr 0 []@ would be preserved by several lossy
+decoders that mangle nesting.
+-}
+referenceFixtureDatum :: PLC.Data
+referenceFixtureDatum =
+    PLC.Constr
+        1
+        [ PLC.B "s240-reference-datum"
+        , PLC.I (-9)
+        , PLC.List [PLC.I 0, PLC.B "\x01\x02", PLC.Constr 0 []]
+        , PLC.Map [(PLC.B "k", PLC.List [PLC.I 7])]
+        ]
 
 {- | Finding-2 full-output-identity assertions: the exact
 'chainAssetAddress' text 'toChainAssetUtxo' reports for a

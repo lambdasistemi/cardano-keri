@@ -856,6 +856,7 @@ test-suite local-write-path-tests
     , microlens
     , plutus-core
     , plutus-tx
+    , QuickCheck
     , rocksdb-kv-transactions:kv-transactions
     , stm
     , temporary

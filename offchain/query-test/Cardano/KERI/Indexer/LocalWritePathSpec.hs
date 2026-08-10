@@ -164,6 +164,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (for_)
 import Data.Function ((&))
+import Data.Functor (void)
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
 import Data.Map.Strict qualified as Map
@@ -1164,20 +1165,20 @@ publish path must reach its builder before it ever needs a node.
 boundaryProvider :: BoundaryProbe -> Provider IO
 boundaryProvider probe =
     Provider
-        { withAcquired = \_action -> stop
-        , queryUTxOs = \_addr -> stop
-        , queryUTxOByTxIn = \_txIns -> stop
+        { withAcquired = const stop
+        , queryUTxOs = const stop
+        , queryUTxOByTxIn = const stop
         , queryProtocolParams = stop
         , queryLedgerSnapshot = stop
-        , queryStakeRewards = \_credentials -> stop
-        , queryRewardAccounts = \_accounts -> stop
-        , queryVoteDelegatees = \_credentials -> stop
+        , queryStakeRewards = const stop
+        , queryRewardAccounts = const stop
+        , queryVoteDelegatees = const stop
         , queryTreasury = stop
         , queryGovernanceState = stop
-        , evaluateTx = \_tx -> stop
-        , posixMsToSlot = \_millis -> stop
-        , posixMsCeilSlot = \_millis -> stop
-        , queryUpperBoundSlot = \_choice -> stop
+        , evaluateTx = const stop
+        , posixMsToSlot = const stop
+        , posixMsCeilSlot = const stop
+        , queryUpperBoundSlot = const stop
         }
   where
     stop :: IO a
@@ -1192,10 +1193,10 @@ boundaryRuntime :: BoundaryProbe -> TransactionRuntime IO
 boundaryRuntime probe =
     TransactionRuntime
         { trQueryProtocolParams = stop
-        , trEvaluate = \_tx -> stop
-        , trSign = \_tx -> stop
-        , trSubmit = \_tx -> stop
-        , trObserve = \_txId -> stop
+        , trEvaluate = const stop
+        , trSign = const stop
+        , trSubmit = const stop
+        , trObserve = const stop
         }
   where
     stop :: IO a
@@ -2438,7 +2439,7 @@ malformedFamilies =
             , UtxoCreate (sampleTxIn 0x28) addrB malformedTxOut
             ]
         , malformedFamilyAcquire = \scope ->
-            fmap (const ()) <$> capReferenceScripts redCapabilities scope [hashA]
+            void <$> capReferenceScripts redCapabilities scope [hashA]
         }
     ]
 

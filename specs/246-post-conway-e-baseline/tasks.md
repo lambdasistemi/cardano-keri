@@ -38,6 +38,43 @@ and the slice has been independently audited and accepted.
 - [ ] T246-A14 — Every quantity the audit reports carries its instrument and
   its measurement window (R-12, D-09).
 
+## Slice A2 — collector closure over the source language
+
+Authorized re-cut inside #246 (A-001). Carries `INV-A1.v1` intact.
+
+- [ ] T246-A2-1 — Collector closure over the tracked source language, including
+  syntax whose source spelling omits an upstream namespace; closure decided by
+  the pins, not by the collector's own token pattern (`INV-A1.v1`).
+- [ ] T246-A2-2 — Every explicit cross-package reference is collected or the run
+  reports `COULD-NOT-EVALUATE`/RED. No silent omission, no third outcome.
+- [ ] T246-A2-3 — Named killing mutant seeding an unrecognised or
+  previously-omitted construct **of a class the collector does not already
+  name** into tracked scope, making the real run RED rather than smaller.
+- [ ] T246-A2-4 — Honest bounded publication for `INV-A1.v2`: `collected`,
+  `total`, coverage classes, collecting instrument, measurement window —
+  remeasured against the candidate, never transcribed, and never a bare
+  `unresolved=0`.
+- [ ] T246-A2-5 — The agreement record either states `agreement=by-construction`
+  with its predicate named, or uses a genuinely discriminating second predicate.
+  No non-falsifiable assertion ships labelled as a measurement.
+- [ ] T246-A2-6 — `INV-246-RESOLUTION-CLOSURE-BINDING` killed: the audit record
+  names the store path the oracle resolved against, and it is the tracked
+  package's own build root.
+- [ ] T246-A2-7 — `INV-246-PINNED-MODULE-GRAPH` killed by a named mutant, not
+  only structurally verified.
+
+## Carried follow-ups
+
+Filed inside #246 with named owners. These exist so an `ADVISORY` row can
+terminate `RESIDUAL` against a real ID rather than an invented one; no new
+ticket is authorized.
+
+- [ ] T246-F1 — Seed an actual `offchain/flake.lock` rewrite and require the run
+  RED. Owner: the Slice A2 commit owner. **Honest limit of what ships without
+  it:** `INV-246-A8`'s present mutant compares two literal strings, so what is
+  established is the *observation* that the lock did not change, not a
+  demonstration that a change would be caught.
+
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 
 Dispatched after Slice A is accepted; its invariants are versioned before

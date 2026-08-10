@@ -41,13 +41,33 @@ new shared test-only export.
 -}
 module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 
-import Cardano.Crypto.Hash.Class (hashFromBytes)
+import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.ChainQuery.Program (ChainQuery, payerUtxos)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
     ChainQueryError,
     ChainReference (..),
     QuerySnapshot (..),
+ )
+import Cardano.KERI.Deployment.CLI (
+    AdvanceSettings (..),
+    CloseSettings (..),
+    LiveOpener,
+    LocalOpener,
+    runAdvanceWith,
+    runCloseWith,
+ )
+import Cardano.KERI.Deployment.Manifest (
+    BlueprintInfo (..),
+    CheckpointInfo (..),
+    DeploymentParameters (..),
+    Manifest (..),
+    NetworkInfo (..),
+    SourceInfo (..),
+    writeManifestAtomic,
  )
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Indexer.ChainQuery (
@@ -59,15 +79,16 @@ import Cardano.KERI.Indexer.ChainQuery (
     runLocalChainQuery,
  )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Api.Tx.Body (referenceScriptTxOutL)
-import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
+import Cardano.Ledger.Api.Tx.Out (datumTxOutL, mkBasicTxOut)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (Script, TxOut, eraProtVerLow, fromStrictMaybeL)
-import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeReference (StakeRefNull))
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (StakeRefNull))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.TxIn (TxId (..))
@@ -82,19 +103,30 @@ import Cardano.Node.Client.UTxOIndexer.Indexer (
 import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.STM (STM)
+import Control.Exception (Exception, SomeException, throwIO, try)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
+import Data.Function ((&))
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime (..))
 import Data.Word (Word8)
 import Database.KV.Transaction (RunTransaction (..))
+import Lens.Micro ((.~))
+import Paths_cardano_keri (getDataFileName)
+import PlutusCore.Data qualified as PLC
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (ToData (..))
+import System.FilePath ((</>))
+import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
 
 {- | Every local write-path capability T240-S1-03 owns, as one test-local
@@ -193,9 +225,359 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                 applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate targetTxIn addrA]
                 settled <- capTransactionSettled redCapabilities (queryHandleLocalScope (testQueryHandle runner)) targetTxId
                 settled `shouldBe` True
+
+    describe
+        "A-013 repair: production write-verb entrypoints acquire through exactly \
+        \one local-store transaction, never a split acquisition (T240-S1-14 audit \
+        \finding 1, INV-240-LOCALTIER/INV-240-SNAPSHOT)"
+        $ do
+            it "runAdvanceWith's submit path invokes the local runner exactly once" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [ UtxoCreate
+                            (sampleTxIn 0x50)
+                            entrypointCheckpointAddress
+                            (entrypointCheckpointOutput rotationFixtureAidBytes)
+                        ]
+                    counter <- newIORef (0 :: Int)
+                    kelPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                    sigToken <- entrypointSignatureToken "kli-export-2-of-5-rotation.cesr"
+                    withSystemTempDirectory "ckeri-advance-entrypoint" $ \dir -> do
+                        let manifestPath = dir </> "manifest.json"
+                            sigPath = dir </> "controller-signatures.txt"
+                        writeManifestAtomic manifestPath entrypointManifest
+                        BS.writeFile sigPath (sigToken <> "\n")
+                        let settings =
+                                AdvanceSettings
+                                    { advanceNetwork = "preprod"
+                                    , advanceNetworkMagic = 1
+                                    , advanceConfiguredAid = rotationFixtureAidText
+                                    , advanceKel = kelPath
+                                    , advanceSigningPackage = Nothing
+                                    , advanceControllerSignatures = Just sigPath
+                                    , advancePayer = Just "unused-payer"
+                                    , advanceNodeSocket = Just "unused-node-socket"
+                                    , advanceFundingAddress = Just "unused-funding-address"
+                                    , advanceManifest = manifestPath
+                                    , advanceStorePath = "unused-store-path"
+                                    , advanceTimeoutSeconds = 30
+                                    , advanceValidatorTestUnderSigned = False
+                                    , advanceValidatorTestUnderWitnessed = False
+                                    , advanceValidatorTestStale = False
+                                    }
+                        _ <-
+                            try (runAdvanceWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
+
+            it "runCloseWith's submit path invokes the local runner exactly once" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot
+                        handle
+                        (Indexer.SlotNo 10)
+                        (blockHash 0x01)
+                        [ UtxoCreate
+                            (sampleTxIn 0x51)
+                            entrypointCheckpointAddress
+                            (entrypointCheckpointOutput inceptionFixtureAidBytes)
+                        ]
+                    counter <- newIORef (0 :: Int)
+                    kelPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                    sigToken <- entrypointSignatureToken "kli-export-2-of-5-rotation.cesr"
+                    withSystemTempDirectory "ckeri-close-entrypoint" $ \dir -> do
+                        let manifestPath = dir </> "manifest.json"
+                            sigPath = dir </> "controller-signatures.txt"
+                        writeManifestAtomic manifestPath entrypointManifest
+                        BS.writeFile sigPath (sigToken <> "\n")
+                        let settings =
+                                CloseSettings
+                                    { closeNetwork = "preprod"
+                                    , closeNetworkMagic = 1
+                                    , closeConfiguredAid = inceptionFixtureAidText
+                                    , closeKel = kelPath
+                                    , closeTo = "unused-refund-address"
+                                    , closeSigningPackage = Nothing
+                                    , closeControllerSignatures = Just sigPath
+                                    , closePayer = Just "unused-payer"
+                                    , closeNodeSocket = Just "unused-node-socket"
+                                    , closeFundingAddress = Just "unused-funding-address"
+                                    , closeChangeAddress = Just "unused-change-address"
+                                    , closeManifest = manifestPath
+                                    , closeStorePath = "unused-store-path"
+                                    , closeTimeoutSeconds = 30
+                                    , closeValidatorTestNonController = False
+                                    }
+                        _ <-
+                            try (runCloseWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
+                                IO (Either SomeException ())
+                        count <- readIORef counter
+                        count `shouldBe` 1
   where
     targetTxIn = sampleTxIn 0x30
     targetTxId = TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0x30))))
+
+-- ---------------------------------------------------------------------------
+-- A-013 repair helpers (T240-S1-14 audit finding 1): builds a REAL
+-- 'LocalOpener' from a counting in-memory runner and calls the real,
+-- unmodified production 'runAdvanceWith'\/'runCloseWith' entrypoints --
+-- never a re-implementation or a helper the entrypoint merely happens to
+-- also call -- so a production regression that stops calling the composed
+-- acquisition, calls a raw runner beside it, or invokes it twice changes
+-- what these examples observe. The live bracket is stubbed (throws a named
+-- sentinel rather than dialing a socket); every fixture below reuses the
+-- ALREADY-SIGNED\/self-addressed KEL exports "Cardano.KERI.Deployment.KELSpec"
+-- proves parseable, decoded once (via 'Cardano.KERI.AID.CESR.parsePrimitive')
+-- to the exact raw AID bytes each stream's own inception event carries, so
+-- 'advanceConfiguredAid'\/'closeConfiguredAid' genuinely match what
+-- 'parseRotationExport'\/'parseInceptionExport' return -- never a
+-- fabricated AID. The manifest carries no script entries, so
+-- 'mkAdvancePackage'\/'mkClosePackage' fail closed shortly AFTER the one
+-- acquisition this property observes (T280-S1-14's own audited property is
+-- acquisition COUNT, not full submission success); reaching that clean
+-- failure, or the live-bracket sentinel, is equally valid evidence that
+-- the local acquisition ran to completion exactly once.
+
+{- | The frozen inception fixture's own AID ("Cardano.KERI.Deployment.KELSpec"
+proves it parses; confirmed once via 'Cardano.KERI.AID.CESR.parsePrimitive'
+and pinned here as literal bytes, matching 'inceptionFixtureAidText').
+-}
+inceptionFixtureAidText :: Text
+inceptionFixtureAidText = "EN_OgA7LhFnVEX0jwoE9tSoh7-MfWx3TKzAVSIsrLiHW"
+
+inceptionFixtureAidBytes :: ByteString
+inceptionFixtureAidBytes =
+    BS.pack
+        [ 223
+        , 206
+        , 128
+        , 14
+        , 203
+        , 132
+        , 89
+        , 213
+        , 17
+        , 125
+        , 35
+        , 194
+        , 129
+        , 61
+        , 181
+        , 42
+        , 33
+        , 239
+        , 227
+        , 31
+        , 91
+        , 29
+        , 211
+        , 43
+        , 48
+        , 21
+        , 72
+        , 139
+        , 43
+        , 46
+        , 33
+        , 214
+        ]
+
+{- | The frozen rotation fixture's own AID, decoded the same way (see
+'inceptionFixtureAidText').
+-}
+rotationFixtureAidText :: Text
+rotationFixtureAidText = "EDujsIfURabzXyyBulukdlPkG_BX9d4px6VEQFMd33zT"
+
+rotationFixtureAidBytes :: ByteString
+rotationFixtureAidBytes =
+    BS.pack
+        [ 59
+        , 163
+        , 176
+        , 135
+        , 212
+        , 69
+        , 166
+        , 243
+        , 95
+        , 44
+        , 129
+        , 186
+        , 91
+        , 164
+        , 118
+        , 83
+        , 228
+        , 27
+        , 240
+        , 87
+        , 245
+        , 222
+        , 41
+        , 199
+        , 165
+        , 68
+        , 64
+        , 83
+        , 29
+        , 223
+        , 124
+        , 211
+        ]
+
+{- | Extract one real 88-character indexed-CESR controller-signature token
+from a KEL export fixture -- the exact technique
+"Cardano.KERI.Deployment.KELSpec"'s own "decodes bare indexed CESR
+controller-signature lines" example already proves against this same
+fixture family (searching for the @-AAFA@ count-code marker). Format-valid
+so 'parseIndexedSignatureLines' accepts it; not asserted cryptographically
+valid against this test's synthetic checkpoint (unnecessary -- the
+acquisition this property observes completes, successfully or not, before
+signature verification is ever reached).
+-}
+entrypointSignatureToken :: FilePath -> IO ByteString
+entrypointSignatureToken fixtureName = do
+    path <- getDataFileName ("deployment-test/fixtures/" <> fixtureName)
+    bytes <- BS.readFile path
+    let afterCounter = BS.drop 4 (snd (BS.breakSubstring "-AAFA" bytes))
+    pure (BS.take 88 afterCounter)
+
+{- | A fixed, provider-neutral checkpoint identity for this property's
+fixtures (mirrors "Cardano.KERI.CLI.Backend.EndpointSpec"'s own proven
+checkpoint-fixture pattern).
+-}
+entrypointCheckpointPolicy :: PolicyID
+entrypointCheckpointPolicy =
+    PolicyID $
+        ScriptHash $
+            case hashFromBytes (BS.replicate 28 0x51) of
+                Just h -> h
+                Nothing -> error "LocalWritePathSpec: invalid entrypoint checkpoint policy id width"
+
+entrypointCheckpointLedgerAddress :: Addr
+entrypointCheckpointLedgerAddress =
+    let PolicyID policyScriptHash = entrypointCheckpointPolicy
+     in Addr Testnet (ScriptHashObj policyScriptHash) StakeRefNull
+
+entrypointCheckpointAddress :: Indexer.Address
+entrypointCheckpointAddress = Indexer.Address (serialiseAddr entrypointCheckpointLedgerAddress)
+
+entrypointCheckpointAddressText :: Text
+entrypointCheckpointAddressText =
+    let Indexer.Address bytes = entrypointCheckpointAddress
+     in Bech32.encodeLenient addrTestHrp (Bech32.dataPartFromBytes bytes)
+
+entrypointCheckpointPolicyText :: Text
+entrypointCheckpointPolicyText =
+    let PolicyID (ScriptHash h) = entrypointCheckpointPolicy
+     in TE.decodeUtf8 (convertToBase Base16 (hashToBytes h))
+
+{- | One live checkpoint output at 'entrypointCheckpointAddress', carrying
+@aid@ as its decoded CESR AID -- reused for both the advance (rotation
+fixture AID) and close (inception fixture AID) examples.
+-}
+entrypointCheckpointOutput :: ByteString -> Indexer.TxOut
+entrypointCheckpointOutput aid =
+    Indexer.TxOut $
+        serialize'
+            (eraProtVerLow @ConwayEra)
+            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
+  where
+    datum =
+        CheckpointDatumV1
+            { cdCesrAid = aid
+            , cdCurKeys = [BS.replicate 32 0x11]
+            , cdCurThreshold = Unweighted 1
+            , cdNextKeys = [BS.replicate 32 0x22]
+            , cdNextThreshold = Unweighted 1
+            , cdWitnesses = []
+            , cdToad = 0
+            , cdSeq = 0
+            , cdNativeSn = 0
+            }
+    baseTxOut :: TxOut ConwayEra
+    baseTxOut =
+        mkBasicTxOut
+            entrypointCheckpointLedgerAddress
+            ( MaryValue
+                (Coin 5_000_000)
+                ( MultiAsset $
+                    Map.singleton
+                        entrypointCheckpointPolicy
+                        (Map.singleton (AssetName . SBS.toShort $ deriveAidAssetName aid) 1)
+                )
+            )
+    inlineDatum :: PLC.Data -> Datum ConwayEra
+    inlineDatum plutus = Datum (dataToBinaryData (Data plutus))
+    plutusData :: (ToData a) => a -> PLC.Data
+    plutusData value =
+        let BuiltinData plutus = toBuiltinData value
+         in plutus
+
+{- | A manifest with the frozen checkpoint identity above and NO script
+entries -- 'mkAdvancePackage'\/'mkClosePackage' fail closed on a missing
+@checkpoint-register@ script shortly after this property's one observed
+acquisition (see the module Haddock above); no reference-script resolution
+is exercised by this property (that is 'DATA-INV-240-01', proven
+separately above).
+-}
+entrypointManifest :: Manifest
+entrypointManifest =
+    Manifest
+        { manifestSchemaVersion = "cardano-keri/m1-deployment-manifest/v1"
+        , manifestNetwork = NetworkInfo{networkName = "preprod", networkMagic = 1}
+        , manifestSource = SourceInfo{sourceRepository = "unused", sourceCommit = T.replicate 40 "0"}
+        , manifestBlueprint = BlueprintInfo{blueprintDigestSha256 = T.replicate 64 "0"}
+        , manifestParameters =
+            DeploymentParameters
+                { parameterCheckpointVersion = 0
+                , parameterNetworkDiscriminator = 0
+                , parameterRegistrationBond = 1_000_000_000
+                , parameterFreezeBond = 5_000_000
+                , parameterFreezeWindow = 10_000
+                }
+        , manifestCheckpoint =
+            CheckpointInfo
+                { checkpointAddressBech32 = entrypointCheckpointAddressText
+                , checkpointPolicyId = entrypointCheckpointPolicyText
+                }
+        , manifestPublishedAt = "2026-01-01T00:00:00Z"
+        , manifestScripts = []
+        }
+
+{- | A real 'LocalOpener' (never a re-implementation of one): ignores the
+'LocalSettings' argument (this test's scope is the in-memory fixture, not
+a real store path) and hands the callback a 'LocalQueryScope' whose runner
+is wrapped in 'countingRunner', so every store-transaction invocation the
+production entrypoint's acquisition performs is counted.
+-}
+entrypointCountingLocalOpener :: IORef Int -> RunTransaction IO cf Cols op -> LocalOpener
+entrypointCountingLocalOpener counter runner _localSettings action =
+    action
+        LocalQueryScope
+            { localScopeRunner = countingRunner counter runner
+            , localScopeCheckpointIdentity = Just (entrypointCheckpointPolicy, entrypointCheckpointAddress)
+            , localScopeBoardIdentity = Nothing
+            }
+
+{- | Marks that a production entrypoint reached the live-node bracket
+(i.e. its local acquisition already completed).
+-}
+data ReachedLiveBracket = ReachedLiveBracket
+    deriving stock (Show, Eq)
+
+instance Exception ReachedLiveBracket
+
+{- | A real 'LiveOpener' that never dials a socket: throws
+'ReachedLiveBracket' the moment production code tries to open the live
+bracket, so a test can distinguish "acquisition ran, then reached
+submission" from "acquisition never ran" without live node infrastructure.
+-}
+entrypointStubLiveOpener :: LiveOpener
+entrypointStubLiveOpener _config _observeTransaction _action = throwIO ReachedLiveBracket
 
 -- ---------------------------------------------------------------------------
 -- Helpers -- per-spec copies of Cardano.KERI.Indexer.ChainQuerySpec's proven

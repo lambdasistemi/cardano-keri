@@ -51,6 +51,7 @@ module Cardano.KERI.Deployment.CLI (
     runBoardRetireWith,
 
     -- * A-013 repair: the swappable local\/live brackets (T240-S1-14 audit
+
     -- finding 1), reused by "Cardano.KERI.Indexer.LocalWritePathSpec"'s
     -- production-entrypoint proof.
     LocalOpener,

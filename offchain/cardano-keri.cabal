@@ -825,15 +825,20 @@ test-suite local-write-path-tests
   default-language: GHC2021
   hs-source-dirs:   query-test
   main-is:          local-write-path/LocalWritePathMain.hs
-  other-modules:    Cardano.KERI.Indexer.LocalWritePathSpec
+  other-modules:
+    Cardano.KERI.Indexer.LocalWritePathSpec
+    Paths_cardano_keri
+
   build-depends:
     , base
     , bech32
     , bytestring
     , cardano-crypto-class
+    , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-keri:write-composition
     , cardano-ledger-api
     , cardano-ledger-binary
     , cardano-ledger-conway
@@ -842,12 +847,19 @@ test-suite local-write-path-tests
     , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
     , containers
+    , filepath
     , hspec                                    >=2.11 && <2.12
     , memory                                   >=0.18 && <0.19
+    , microlens
+    , plutus-core
+    , plutus-tx
     , rocksdb-kv-transactions:kv-transactions
     , stm
+    , temporary
     , text
     , time
+
+  autogen-modules:  Paths_cardano_keri
 
 test-suite unit-tests
   import:           warnings

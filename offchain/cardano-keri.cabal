@@ -386,6 +386,7 @@ test-suite deployment-tests
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
     , cardano-keri:deployment
+    , cardano-keri:indexer
     , cardano-keri:write-composition
     , cardano-ledger-alonzo
     , cardano-ledger-api

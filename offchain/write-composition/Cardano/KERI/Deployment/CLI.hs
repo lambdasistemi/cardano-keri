@@ -1715,7 +1715,7 @@ registerPreflight network networkMagic allowUnlisted allowExisting existingCount
                    \--allow-unlisted-witnesses to acknowledge reduced watchability"
 
 runRegister :: RegisterSettings -> IO ()
-runRegister = runRegisterWith productionRegisterRuntime
+runRegister = runRegisterWith withLocalQueryScope productionRegisterRuntime
 
 {- | Render a snapshot envelope's provenance (INV-257-CONSISTENCY,
 DATA-INV-257-03): every registration read prints its real, non-degenerate
@@ -1744,8 +1744,8 @@ decoded once, before the bracket opens, into the fixed
 the board identity (N-026) is genuinely 'Nothing', never a fabricated
 value, when no witness requires a real board read.
 -}
-runRegisterWith :: RegisterRuntime -> RegisterSettings -> IO ()
-runRegisterWith runtime settings = do
+runRegisterWith :: LocalOpener -> RegisterRuntime -> RegisterSettings -> IO ()
+runRegisterWith openLocalScope runtime settings = do
     when (registerTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
     kel <- registerReadKel runtime (registerKel settings)
@@ -1787,7 +1787,7 @@ runRegisterWith runtime settings = do
                 , localCheckpointIdentity = Just (checkpointPolicy, checkpointAddr)
                 , localBoardIdentity = boardIdentity
                 }
-    withLocalQueryScope localSettings $ \scope -> do
+    openLocalScope localSettings $ \scope -> do
         envelope <-
             registerQuerySnapshot
                 runtime

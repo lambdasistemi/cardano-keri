@@ -486,6 +486,23 @@
           # `just ci-offchain`/`./gate.sh` runs every time -- the root
           # `local-write-path-check` recipe gate.sh's own preflight looks
           # for by name.
+          # A-002 ruling 2 / NOTE-018 item 2: `local-write-path-tests` proves
+          # `runDeployWith`'s complete non-degenerate entrypoint property, and
+          # that entrypoint begins at `loadArtifacts` -> `deriveV1Scripts`,
+          # which APPLIES parameters through `uncheckedDeserialiseUPLC` and so
+          # needs the real compiled blueprint -- an arbitrary hex string (which
+          # suffices for `deriveBoardScript`) cannot reach it. The suite is
+          # therefore given the SAME real `KERI_CHECKPOINT_BLUEPRINT` the
+          # deployment-tests runner already receives, in both the permanent
+          # gate runner below and the development shell, so the gate command
+          # and the focused `nix develop -c cabal run local-write-path-tests`
+          # command observe the identical binding rather than one passing where
+          # the other fails. Empty when the blueprint is unavailable for this
+          # system; the runner fails closed on that rather than running a
+          # silently reduced suite.
+          keriBlueprintPath =
+            if (e2eWiring ? blueprint) then "${e2eWiring.blueprint}" else "";
+
           local-write-path-check-runner = pkgs.writeShellApplication {
             name = "local-write-path-check";
             runtimeInputs = [
@@ -509,6 +526,16 @@
               # `Cardano.KERI.CLI.WriteCompositionBoundarySpec` needs --
               # never an ambient/caller directory.
               cd ${./.}
+
+              # A-002 ruling 2: exact binding, fail closed. An unset or empty
+              # blueprint would make `runDeployWith`'s entrypoint example fail
+              # for a harness reason rather than a candidate reason, which is
+              # precisely the degeneracy T240-S1-14 finding 2 reported.
+              export KERI_CHECKPOINT_BLUEPRINT="${keriBlueprintPath}"
+              if [ ! -s "$KERI_CHECKPOINT_BLUEPRINT" ]; then
+                echo "FAIL: KERI_CHECKPOINT_BLUEPRINT is unset or empty; runDeployWith's complete entrypoint property cannot run" >&2
+                exit 1
+              fi
 
               status=0
 
@@ -1594,6 +1621,17 @@
             backend-transcript-check = backend-transcript-check-check;
             query-endpoint = query-endpoint-check;
             query-algebra = query-algebra-check;
+          }
+          # A-002 ruling 2: this check now requires the real compiled
+          # blueprint (see `keriBlueprintPath`), which is Linux-only for the
+          # same reason `blasterWiring` is -- the sole production blueprint is
+          # Linux-only. Guarded with the flake's own established idiom so
+          # `nix flake check` still evaluates and passes on aarch64-darwin.
+          # The `local-write-path-check` APP stays unconditional, because
+          # `gate.sh`'s preflight and `just ci-offchain` reach it by name; on a
+          # system without the blueprint it now fails closed with a named
+          # message instead of running a silently reduced suite.
+          // pkgs.lib.optionalAttrs (e2eWiring ? blueprint) {
             local-write-path-check = local-write-path-check-check;
           } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
             deployment-tests = e2eWiring.deploymentTestsCheck;
@@ -1693,7 +1731,17 @@
                 }/bin/linux-artifact-smoke";
             };
           };
-          devShells.default = project.shell;
+          # A-002 ruling 2: the focused proof command for this slice is
+          # `nix develop -c cabal run local-write-path-tests`, and
+          # `nix develop -c` does NOT run `shellHook` -- setting the binding
+          # there would leave the focused command without the blueprint while
+          # the gate runner had it, so the same fixture would pass under one
+          # command and fail under the other. It is therefore a real derivation
+          # environment attribute, which `-c` does honour.
+          devShells.default =
+            project.shell.overrideAttrs (_previous: {
+              KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
+            });
         };
     };
 }

@@ -37,6 +37,7 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     readEndpointBoardManifest,
  )
 import Cardano.KERI.Deployment.Manifest (readManifest)
+import Cardano.KERI.Indexer.ChainQuery (withLocalQueryScope)
 import Control.Exception (SomeException, displayException, try)
 import Data.ByteString qualified as BS
 import Data.IORef (modifyIORef', newIORef, readIORef)
@@ -131,7 +132,7 @@ spec = do
                             , registerAllowExistingCheckpoint = True
                             , registerEscrowLovelace = 1_007_000_000
                             }
-                runRegisterWith runtime settings
+                runRegisterWith withLocalQueryScope runtime settings
                 readIORef callsRef
                     >>= ( `shouldBe`
                             [ "read-kel"
@@ -160,6 +161,7 @@ spec = do
                 preflightResult <-
                     try
                         ( runRegisterWith
+                            withLocalQueryScope
                             (mkRuntime preflightCallsRef)
                             settings{registerAllowExistingCheckpoint = False}
                         ) ::

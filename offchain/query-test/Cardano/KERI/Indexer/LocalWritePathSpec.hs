@@ -42,13 +42,23 @@ new shared test-only export.
 module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
+import Cardano.KERI.AID.CESR (qb64Verkey)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
-import Cardano.KERI.ChainQuery.Program (ChainQuery, currentCheckpoint, payerUtxos)
+import Cardano.KERI.ChainQuery.Program (
+    ChainQuery,
+    boardCatalog,
+    currentCheckpoint,
+    liveCheckpoints,
+    payerUtxos,
+ )
+import Cardano.KERI.ChainQuery.Registration (runRegistrationSnapshot)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
 import Cardano.KERI.ChainQuery.Types (
     ActiveCheckpoint (..),
+    BoardLocator (..),
     ChainAsset (..),
     ChainAssetUtxo (..),
     ChainQueryError (..),
@@ -67,19 +77,32 @@ import Cardano.KERI.Deployment.CLI (
     DeploySettings (..),
     LiveOpener,
     LocalOpener,
+    RegisterRuntime (..),
+    RegisterSettings (..),
     runAdvanceWith,
     runBoardDeployWith,
     runBoardPostWith,
     runBoardRetireWith,
     runBoardUpdateWith,
     runCloseWith,
+    runDeployWith,
+    runRegisterWith,
+ )
+import Cardano.KERI.Deployment.EndpointBoard (
+    EndpointRecord (..),
+    parseEndpointRecord,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
     frozenEndpointBoardAddress,
     frozenEndpointBoardPolicyId,
+    readEndpointBoardManifest,
     writeEndpointBoardManifestAtomic,
+ )
+import Cardano.KERI.Deployment.KEL (
+    RotationExport (..),
+    parseRotationExport,
  )
 import Cardano.KERI.Deployment.LiveRuntime (LiveContext (..))
 import Cardano.KERI.Deployment.Manifest (
@@ -89,12 +112,17 @@ import Cardano.KERI.Deployment.Manifest (
     Manifest (..),
     NetworkInfo (..),
     Reference (..),
+    ScriptEntry (..),
     SourceInfo (..),
+    readManifest,
     writeManifestAtomic,
  )
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
+import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
 import Cardano.KERI.Indexer.ChainQuery (
     LocalQueryScope (..),
+    LocalSettings (..),
+    localInterpreter,
     localReferenceScriptsTx,
     localSettlementObserver,
     localTransactionSettled,
@@ -102,7 +130,7 @@ import Cardano.KERI.Indexer.ChainQuery (
     runLocalChainQuery,
  )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
-import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Address (Addr (..), decodeAddr, serialiseAddr)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Api.Tx.Body (referenceScriptTxOutL)
 import Cardano.Ledger.Api.Tx.Out (datumTxOutL, mkBasicTxOut)
@@ -116,6 +144,7 @@ import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Node.Client.N2C.Reconnect (UpstreamStatus (UpstreamConnected))
+import Cardano.Node.Client.Provider (Provider (..))
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Follower (Readiness (..))
 import Cardano.Node.Client.UTxOIndexer.Indexer (
@@ -128,14 +157,15 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.STM (STM)
 import Control.Exception (Exception, SomeException, throwIO, try)
 import Data.Aeson (encode, object, (.=))
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
+import Data.Foldable (for_)
 import Data.Function ((&))
 import Data.Functor.Identity (Identity (..), runIdentity)
-import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Text (Text)
@@ -151,6 +181,7 @@ import PlutusCore.Data qualified as PLC
 import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.IsData.Class (ToData (..))
 import System.Directory (createDirectoryIfMissing)
+import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
@@ -464,22 +495,53 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                     result `shouldBe` Left (AmbiguousCurrentState "more than one live checkpoint output for this AID")
 
             it
-                "diverges from the provider on a malformed datum -- confirmed, not assumed: the base path surfaces a named DecodingFailure for its single malformed row, while the local path's list-comprehension filter (Right record <- [decodeCheckpointOutput ...]) silently excludes an undecodable row from the match set, reporting absence rather than an error (a pre-existing #257 local-interpreter behavior, out of this repair's fence to change; recorded, not treated as a defect)"
+                "fails closed the same way on a schema-malformed datum: the frozen base answers Left (DecodingFailure \"checkpoint inline datum is not the frozen V1 schema\") for its single malformed row, so the local path must report a DecodingFailure too -- never the Right Nothing its list-comprehension filter used to produce (A-013 finding 3 / NOTE-014 rule 3; the superseded example asserted the divergence instead of rejecting it)"
                 $ withInMemoryIndexerRunner
                 $ \handle runner -> do
                     applyAtSlot
                         handle
                         (Indexer.SlotNo 10)
                         (blockHash 0x01)
-                        [UtxoCreate parityCheckpointTxIn addrA malformedTxOut]
+                        [UtxoCreate parityCheckpointTxIn addrA schemaMalformedCheckpointOutput]
                     result <-
                         capAtomicQuery
                             redCapabilities
                             (queryHandleLocalScope (testQueryHandle runner))
                             (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
-                    case result of
-                        Right snapshot -> snapshotValue snapshot `shouldBe` Right Nothing
-                        Left err -> expectationFailure ("expected a snapshot, got " <> show err)
+                    case flattenAcquisition result of
+                        Left (DecodingFailure _) -> pure ()
+                        other ->
+                            expectationFailure
+                                ( "expected the local path to fail closed with a DecodingFailure, matching the frozen \
+                                  \base's MalformedSchema mode, got "
+                                    <> show other
+                                )
+
+            describe
+                "every acquisition family fails closed on malformed storage, in both malformed \
+                \classes -- the module-wide property, not two coincidental point fixes (A-017 \
+                \ruling 4a/5)"
+                $ for_ malformedFamilies
+                $ \family ->
+                    it (malformedFamilyName family) $
+                        withInMemoryIndexerRunner $ \handle runner -> do
+                            applyAtSlot
+                                handle
+                                (Indexer.SlotNo 10)
+                                (blockHash 0x01)
+                                (malformedFamilySeed family)
+                            result <-
+                                malformedFamilyAcquire
+                                    family
+                                    (queryHandleLocalScope (testQueryHandle runner))
+                            case result of
+                                Left (DecodingFailure _) -> pure ()
+                                other ->
+                                    expectationFailure
+                                        ( "expected this acquisition family to fail closed with a named \
+                                          \DecodingFailure on a malformed stored row, got "
+                                            <> show other
+                                        )
 
     describe "RQ-240-06 -- follower-backed temporal settlement, RED against the closed test-local stand-in" $ do
         it "capSettlementObserver's probe should reflect a live matching asset output, not a closed empty stand-in" $
@@ -498,188 +560,159 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                 settled `shouldBe` True
 
     describe
-        "A-013 repair: production write-verb entrypoints acquire through exactly \
-        \one local-store transaction, never a split acquisition (T240-S1-14 audit \
-        \finding 1, INV-240-LOCALTIER/INV-240-SNAPSHOT)"
+        "A-017 ruling 4b / A-002 ruling 1: every production write-verb entrypoint \
+        \completes its WHOLE local read set in exactly one store transaction, and \
+        \reaching that point genuinely depends on the complete read set \
+        \(T240-S1-14 audit findings 1 and 2, INV-240-LOCALTIER/INV-240-SNAPSHOT)"
         $ do
-            it "runAdvanceWith's submit path invokes the local runner exactly once" $
-                withInMemoryIndexerRunner $ \handle runner -> do
-                    applyAtSlot
-                        handle
-                        (Indexer.SlotNo 10)
-                        (blockHash 0x01)
-                        [ UtxoCreate
-                            (sampleTxIn 0x50)
-                            entrypointCheckpointAddress
-                            (entrypointCheckpointOutput rotationFixtureAidBytes)
-                        ]
-                    counter <- newIORef (0 :: Int)
-                    kelPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
-                    sigToken <- entrypointSignatureToken "kli-export-2-of-5-rotation.cesr"
-                    withSystemTempDirectory "ckeri-advance-entrypoint" $ \dir -> do
-                        let manifestPath = dir </> "manifest.json"
-                            sigPath = dir </> "controller-signatures.txt"
-                        writeManifestAtomic manifestPath entrypointManifest
-                        BS.writeFile sigPath (sigToken <> "\n")
-                        let settings =
-                                AdvanceSettings
-                                    { advanceNetwork = "preprod"
-                                    , advanceNetworkMagic = 1
-                                    , advanceConfiguredAid = rotationFixtureAidText
-                                    , advanceKel = kelPath
-                                    , advanceSigningPackage = Nothing
-                                    , advanceControllerSignatures = Just sigPath
-                                    , advancePayer = Just "unused-payer"
-                                    , advanceNodeSocket = Just "unused-node-socket"
-                                    , advanceFundingAddress = Just "unused-funding-address"
-                                    , advanceManifest = manifestPath
-                                    , advanceStorePath = "unused-store-path"
-                                    , advanceTimeoutSeconds = 30
-                                    , advanceValidatorTestUnderSigned = False
-                                    , advanceValidatorTestUnderWitnessed = False
-                                    , advanceValidatorTestStale = False
-                                    }
-                        _ <-
-                            try (runAdvanceWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runAdvanceWith's submit path reaches its builder boundary having acquired exactly once"
+                $ do
+                    rotation <- entrypointRotationExport
+                    kelPath <-
+                        getDataFileName
+                            "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 2 "kli-export-2-of-5-rotation.cesr"
+                    -- the spent state this fixture seeds is derived from the
+                    -- export, so the pinned AID bytes must still be the
+                    -- export's own: a drifted fixture is caught here, not by a
+                    -- confusing failure deep inside advanceEqualities.
+                    cdCesrAid (rotationDatum rotation) `shouldBe` rotationFixtureAidBytes
+                    withBoundaryProbe
+                        (entrypointAdvanceSeed rotation Nothing)
+                        (entrypointAdvance kelPath signatures)
+                        expectCompletePhase
 
-            it "runCloseWith's submit path invokes the local runner exactly once" $
-                withInMemoryIndexerRunner $ \handle runner -> do
-                    applyAtSlot
-                        handle
-                        (Indexer.SlotNo 10)
-                        (blockHash 0x01)
-                        [ UtxoCreate
-                            (sampleTxIn 0x51)
-                            entrypointCheckpointAddress
-                            (entrypointCheckpointOutput inceptionFixtureAidBytes)
-                        ]
-                    counter <- newIORef (0 :: Int)
-                    kelPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
-                    sigToken <- entrypointSignatureToken "kli-export-2-of-5-rotation.cesr"
-                    withSystemTempDirectory "ckeri-close-entrypoint" $ \dir -> do
-                        let manifestPath = dir </> "manifest.json"
-                            sigPath = dir </> "controller-signatures.txt"
-                        writeManifestAtomic manifestPath entrypointManifest
-                        BS.writeFile sigPath (sigToken <> "\n")
-                        let settings =
-                                CloseSettings
-                                    { closeNetwork = "preprod"
-                                    , closeNetworkMagic = 1
-                                    , closeConfiguredAid = inceptionFixtureAidText
-                                    , closeKel = kelPath
-                                    , closeTo = "unused-refund-address"
-                                    , closeSigningPackage = Nothing
-                                    , closeControllerSignatures = Just sigPath
-                                    , closePayer = Just "unused-payer"
-                                    , closeNodeSocket = Just "unused-node-socket"
-                                    , closeFundingAddress = Just "unused-funding-address"
-                                    , closeChangeAddress = Just "unused-change-address"
-                                    , closeManifest = manifestPath
-                                    , closeStorePath = "unused-store-path"
-                                    , closeTimeoutSeconds = 30
-                                    , closeValidatorTestNonController = False
-                                    }
-                        _ <-
-                            try (runCloseWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runAdvanceWith does NOT reach its builder boundary when one manifest reference output is withheld"
+                $ do
+                    rotation <- entrypointRotationExport
+                    kelPath <-
+                        getDataFileName
+                            "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 2 "kli-export-2-of-5-rotation.cesr"
+                    withBoundaryProbe
+                        (entrypointAdvanceSeed rotation (Just "checkpoint-register"))
+                        (entrypointAdvance kelPath signatures)
+                        expectIncompletePhase
 
-            it "runBoardDeployWith's phase invokes the local runner exactly once (one artifact, one funding acquisition)" $
-                withInMemoryIndexerRunner $ \_handle runner -> do
-                    counter <- newIORef (0 :: Int)
-                    withSystemTempDirectory "ckeri-board-deploy-entrypoint" $ \dir -> do
-                        let blueprintPath = dir </> "blueprint.json"
-                            sourceRepo = dir </> "source-repo"
-                            outPath = dir </> "board-manifest.json"
-                        createDirectoryIfMissing True (sourceRepo </> "onchain")
-                        BSL.writeFile blueprintPath entrypointBoardBlueprintJson
-                        let settings =
-                                DeploySettings
-                                    { deployNetwork = "preprod"
-                                    , deployNetworkMagic = 1
-                                    , deployBlueprint = blueprintPath
-                                    , deployNodeSocket = "unused-node-socket"
-                                    , deployFundingAddress = "unused-funding-address"
-                                    , deploySigningKeyFile = "unused-signing-key"
-                                    , deploySourceRepo = sourceRepo
-                                    , deploySourceRepositoryUrl = "unused-repo-url"
-                                    , deploySourceCommit = Just (T.replicate 40 "a")
-                                    , deployOut = outPath
-                                    , deployReferenceLovelace = 5_000_000
-                                    , deployStorePath = "unused-store-path"
-                                    , deployTimeoutSeconds = 30
-                                    }
-                        _ <-
-                            try
-                                ( runBoardDeployWith
-                                    (entrypointCountingLocalOpener counter runner)
-                                    entrypointLazyStubLiveOpener
-                                    settings
-                                ) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runCloseWith's submit path reaches its builder boundary having acquired exactly once"
+                $ do
+                    kelPath <-
+                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 1 "kli-export-2-of-5-rotation.cesr"
+                    withBoundaryProbe
+                        (entrypointCloseSeed True)
+                        (entrypointClose kelPath signatures)
+                        expectCompletePhase
 
-            it "runBoardPostWith's phase invokes the local runner exactly once" $
-                withInMemoryIndexerRunner $ \_handle runner -> do
-                    counter <- newIORef (0 :: Int)
-                    endpointRecordPath <- getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
-                    withSystemTempDirectory "ckeri-board-post-entrypoint" $ \dir -> do
-                        let manifestPath = dir </> "board-manifest.json"
-                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
-                        let settings =
-                                BoardPostSettings
-                                    { boardPostEndpointRecord = endpointRecordPath
-                                    , boardPostDepositLovelace = 2_000_000
-                                    , boardPostTransaction = entrypointBoardTransactionSettings manifestPath
-                                    }
-                        _ <-
-                            try (runBoardPostWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runCloseWith does NOT reach its builder boundary when the live checkpoint output is withheld"
+                $ do
+                    kelPath <-
+                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 1 "kli-export-2-of-5-rotation.cesr"
+                    withBoundaryProbe
+                        (entrypointCloseSeed False)
+                        (entrypointClose kelPath signatures)
+                        expectIncompletePhase
 
-            it "runBoardUpdateWith's phase invokes the local runner exactly once" $
-                withInMemoryIndexerRunner $ \_handle runner -> do
-                    counter <- newIORef (0 :: Int)
-                    endpointRecordPath <- getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
-                    withSystemTempDirectory "ckeri-board-update-entrypoint" $ \dir -> do
-                        let manifestPath = dir </> "board-manifest.json"
-                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
-                        let settings =
-                                BoardUpdateSettings
-                                    { boardUpdateEndpointRecord = endpointRecordPath
-                                    , boardUpdateOutReference = Nothing
-                                    , boardUpdateTransaction = entrypointBoardTransactionSettings manifestPath
-                                    }
-                        _ <-
-                            try (runBoardUpdateWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runRegisterWith's preflight reaches its submission boundary having acquired exactly once"
+                $ do
+                    kelPath <-
+                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                    records <- entrypointWitnessRecords
+                    withBoundaryProbe
+                        (entrypointBoardCatalogSeedWithout Nothing records)
+                        (entrypointRegister kelPath)
+                        expectCompletePhase
 
-            it "runBoardRetireWith's phase invokes the local runner exactly once" $
-                withInMemoryIndexerRunner $ \_handle runner -> do
-                    counter <- newIORef (0 :: Int)
-                    withSystemTempDirectory "ckeri-board-retire-entrypoint" $ \dir -> do
-                        let manifestPath = dir </> "board-manifest.json"
-                        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
-                        let settings =
-                                BoardRetireSettings
-                                    { boardRetireWitness = entrypointWitnessKeyText
-                                    , boardRetireOutReference = Nothing
-                                    , boardRetireTo = "unused-refund-address"
-                                    , boardRetireTransaction = entrypointBoardTransactionSettings manifestPath
-                                    }
-                        _ <-
-                            try (runBoardRetireWith (entrypointCountingLocalOpener counter runner) entrypointStubLiveOpener settings) ::
-                                IO (Either SomeException ())
-                        count <- readIORef counter
-                        count `shouldBe` 1
+            it
+                "runRegisterWith does NOT reach its submission boundary when one declared witness's board record is withheld"
+                $ do
+                    kelPath <-
+                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+                    records <- entrypointWitnessRecords
+                    withBoundaryProbe
+                        (entrypointBoardCatalogSeedWithout (Just 0) records)
+                        (entrypointRegister kelPath)
+                        expectIncompletePhase
+
+            it
+                "runDeployWith's publish phase reaches its builder boundary having acquired exactly once"
+                $ do
+                    blueprintPath <- entrypointBlueprintPath
+                    withBoundaryProbe
+                        entrypointFundingSeed
+                        (entrypointDeploy blueprintPath)
+                        expectCompletePhase
+
+            it
+                "runDeployWith does NOT reach its builder boundary when one funding row is withheld"
+                $ do
+                    blueprintPath <- entrypointBlueprintPath
+                    withBoundaryProbe
+                        (entrypointFundingSeedWithout (Just 1))
+                        (entrypointDeploy blueprintPath)
+                        expectIncompletePhase
+
+            it
+                "runBoardDeployWith's publish phase reaches its builder boundary having acquired exactly once"
+                $ withBoundaryProbe
+                    entrypointFundingSeed
+                    entrypointBoardDeploy
+                    expectCompletePhase
+
+            it
+                "runBoardDeployWith does NOT reach its builder boundary when one funding row is withheld"
+                $ withBoundaryProbe
+                    (entrypointFundingSeedWithout (Just 1))
+                    entrypointBoardDeploy
+                    expectIncompletePhase
+
+            -- RESIDUAL, #263 (A-003 / Q-003 Option A). These three verbs have
+            -- no complete-read-set reading available in this repository: their
+            -- first acquisition step resolves the frozen board policy as a live
+            -- reference-script hash, and nothing here hashes to it. Each verb
+            -- below therefore proves the strongest reachable statement, and
+            -- 'expectFrozenBoardReferenceUnresolvable' is written so that these
+            -- examples go red as soon as #263 lands.
+            it
+                "runBoardPostWith opens its scope and fails closed inside its one acquisition -- the frozen board policy resolves to no live reference script (residual, #263)"
+                $ do
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    withBoundaryProbe
+                        entrypointFundingSeed
+                        (entrypointBoardPost recordPath)
+                        expectFrozenBoardReferenceUnresolvable
+
+            it
+                "runBoardUpdateWith opens its scope and fails closed inside its one acquisition even with a complete authenticated catalog -- the frozen board policy resolves to no live reference script (residual, #263)"
+                $ do
+                    records <- entrypointWitnessRecords
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    withBoundaryProbe
+                        (entrypointBoardCatalogSeedWithout Nothing records <> entrypointFundingSeed)
+                        (entrypointBoardUpdate recordPath)
+                        expectFrozenBoardReferenceUnresolvable
+
+            it
+                "runBoardRetireWith opens its scope and fails closed inside its one acquisition even with a complete authenticated catalog -- the frozen board policy resolves to no live reference script (residual, #263)"
+                $ do
+                    records <- entrypointWitnessRecords
+                    witness <- entrypointFirstWitnessIdentifier records
+                    withBoundaryProbe
+                        (entrypointBoardCatalogSeedWithout Nothing records <> entrypointFundingSeed)
+                        (entrypointBoardRetire witness)
+                        expectFrozenBoardReferenceUnresolvable
   where
     targetTxIn = sampleTxIn 0x30
     targetTxId = TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0x30))))
@@ -792,34 +825,133 @@ rotationFixtureAidBytes =
         , 211
         ]
 
-{- | Extract one real 88-character indexed-CESR controller-signature token
-from a KEL export fixture -- the exact technique
+{- | The first @count@ real 88-character indexed-CESR controller-signature
+tokens from a KEL export fixture -- the exact technique
 "Cardano.KERI.Deployment.KELSpec"'s own "decodes bare indexed CESR
 controller-signature lines" example already proves against this same
-fixture family (searching for the @-AAFA@ count-code marker). Format-valid
-so 'parseIndexedSignatureLines' accepts it; not asserted cryptographically
-valid against this test's synthetic checkpoint (unnecessary -- the
-acquisition this property observes completes, successfully or not, before
-signature verification is ever reached).
+fixture family (searching for the @-AAFA@ count-code marker), generalised
+from one token to @count@ because they are laid out back to back at a fixed
+88-byte stride and the frozen rotation export's own successor threshold is
+__2-of-5__: one token satisfies neither eq6(a) nor eq6(b), so the advance
+fixture could not reach its builder boundary with a single signature.
+
+These are the export's OWN event signatures over its OWN @rot@ event bytes,
+by its OWN revealed successor keys, so 'advancePredicate' verifies them for
+real -- no private key, and no weakened threshold, is involved anywhere.
+The search deliberately starts AFTER the @rot@ message begins: the export's
+FIRST @-AAF@ group belongs to the __inception__ event and its signatures are
+by the inception's key list, which is not @new.cur_keys@ -- taking those
+(as the single-token form did, since it never asserted cryptographic
+validity) yields @Eq6CurrentQuorumUnsatisfied@, observed before this
+correction.
 -}
-entrypointSignatureToken :: FilePath -> IO ByteString
-entrypointSignatureToken fixtureName = do
+entrypointSignatureTokens :: Int -> FilePath -> IO ByteString
+entrypointSignatureTokens count fixtureName = do
     path <- getDataFileName ("deployment-test/fixtures/" <> fixtureName)
     bytes <- BS.readFile path
-    let afterCounter = BS.drop 4 (snd (BS.breakSubstring "-AAFA" bytes))
-    pure (BS.take 88 afterCounter)
+    let afterRotation = snd (BS.breakSubstring "\"t\":\"rot\"" bytes)
+        afterCounter = BS.drop 4 (snd (BS.breakSubstring "-AAFA" afterRotation))
+        token index = BS.take 88 (BS.drop (88 * index) afterCounter)
+    pure (BS.concat [token index <> "\n" | index <- [0 .. count - 1]])
 
 {- | A fixed, provider-neutral checkpoint identity for this property's
 fixtures (mirrors "Cardano.KERI.CLI.Backend.EndpointSpec"'s own proven
 checkpoint-fixture pattern).
 -}
+
+{- | The two manifest scripts advance\/close actually require:
+'mkAdvancePackage'\/'mkAdvancePlan' resolve @checkpoint-register@ and
+@observer-advance@ by name and additionally require the manifest's checkpoint
+policy to EQUAL the former's script hash. Real script bytes, so the manifest
+entry, the checkpoint policy, and the seeded reference output all derive from
+ONE source rather than three independently-pinned constants that can drift
+apart while every individual assertion still passes.
+-}
+entrypointCheckpointScriptBytes :: SBS.ShortByteString
+entrypointCheckpointScriptBytes = SBS.toShort "s240-entrypoint-checkpoint-register"
+
+entrypointObserverScriptBytes :: SBS.ShortByteString
+entrypointObserverScriptBytes = SBS.toShort "s240-entrypoint-observer-advance"
+
+{- | The two further manifest scripts registration's own plan builder
+requires ('Cardano.KERI.Deployment.Registration.mkRegistrationPlan' resolves
+@hash-proof@ and @observer-lifecycle@ by name, additionally deriving a
+reward address from the latter's 28-byte hash). They live in the SAME
+manifest as advance\/close's two, so 'manifestReferencesTx' -- which
+resolves EVERY manifest entry and fails closed on any that is absent --
+makes the advance\/close read set four reference outputs wide rather than
+two, and one shared manifest cannot drift from the four seeded rows.
+-}
+entrypointProofScriptBytes :: SBS.ShortByteString
+entrypointProofScriptBytes = SBS.toShort "s240-entrypoint-hash-proof"
+
+entrypointLifecycleScriptBytes :: SBS.ShortByteString
+entrypointLifecycleScriptBytes = SBS.toShort "s240-entrypoint-observer-lifecycle"
+
 entrypointCheckpointPolicy :: PolicyID
-entrypointCheckpointPolicy =
-    PolicyID $
-        ScriptHash $
-            case hashFromBytes (BS.replicate 28 0x51) of
-                Just h -> h
-                Nothing -> error "LocalWritePathSpec: invalid entrypoint checkpoint policy id width"
+entrypointCheckpointPolicy = PolicyID (computeScriptHash entrypointCheckpointScriptBytes)
+
+{- | Both manifest script entries, each pointing at the reference output the
+fixture seeds for it. 'manifestReferencesTx' resolves every entry's hash
+inside the acquisition and fails closed on any that is absent, so these two
+entries are exactly what makes the advance\/close read set complete rather
+than trivially satisfiable.
+-}
+entrypointManifestScripts :: [ScriptEntry]
+entrypointManifestScripts =
+    [ ScriptEntry
+        { scriptName = "checkpoint-register"
+        , scriptBlueprintTitle = "checkpoint.checkpoint.spend"
+        , scriptRole = "spend"
+        , scriptHash = scriptHashText (computeScriptHash entrypointCheckpointScriptBytes)
+        , scriptProgramBytes = SBS.length entrypointCheckpointScriptBytes
+        , scriptReference = Reference{referenceTxId = sampleTxIdHex 0x60, referenceIndex = 0}
+        }
+    , ScriptEntry
+        { scriptName = "observer-advance"
+        , scriptBlueprintTitle = "observer_advance.observer_advance.publish"
+        , scriptRole = "publish"
+        , scriptHash = scriptHashText (computeScriptHash entrypointObserverScriptBytes)
+        , scriptProgramBytes = SBS.length entrypointObserverScriptBytes
+        , scriptReference = Reference{referenceTxId = sampleTxIdHex 0x61, referenceIndex = 0}
+        }
+    , ScriptEntry
+        { scriptName = "hash-proof"
+        , scriptBlueprintTitle = "hash_proof.hash_proof.mint"
+        , scriptRole = "mint"
+        , scriptHash = scriptHashText (computeScriptHash entrypointProofScriptBytes)
+        , scriptProgramBytes = SBS.length entrypointProofScriptBytes
+        , scriptReference = Reference{referenceTxId = sampleTxIdHex 0x64, referenceIndex = 0}
+        }
+    , ScriptEntry
+        { scriptName = "observer-lifecycle"
+        , scriptBlueprintTitle = "observer_lifecycle.observer_lifecycle.publish"
+        , scriptRole = "publish"
+        , scriptHash = scriptHashText (computeScriptHash entrypointLifecycleScriptBytes)
+        , scriptProgramBytes = SBS.length entrypointLifecycleScriptBytes
+        , scriptReference = Reference{referenceTxId = sampleTxIdHex 0x65, referenceIndex = 0}
+        }
+    ]
+
+{- | The seeded reference outputs answering 'entrypointManifestScripts', one
+per entry. @withheld@ names the ONE entry a negative control removes;
+'Nothing' seeds the complete set.
+-}
+entrypointReferenceSeedWithout :: Maybe Text -> [UtxoOp]
+entrypointReferenceSeedWithout withheld =
+    [ referenceCreateAt txIn (mkCageScript bytes) addr
+    | (name, txIn, bytes, addr) <-
+        [ ("checkpoint-register", sampleTxIn 0x60, entrypointCheckpointScriptBytes, addrA)
+        , ("observer-advance", sampleTxIn 0x61, entrypointObserverScriptBytes, addrB)
+        , ("hash-proof", sampleTxIn 0x64, entrypointProofScriptBytes, addrA)
+        , ("observer-lifecycle", sampleTxIn 0x65, entrypointLifecycleScriptBytes, addrB)
+        ]
+    , Just name /= withheld
+    ]
+
+-- | The complete seeded reference outputs answering 'entrypointManifestScripts'.
+entrypointReferenceSeed :: [UtxoOp]
+entrypointReferenceSeed = entrypointReferenceSeedWithout Nothing
 
 entrypointCheckpointLedgerAddress :: Addr
 entrypointCheckpointLedgerAddress =
@@ -845,12 +977,7 @@ fixture AID) and close (inception fixture AID) examples.
 -}
 entrypointCheckpointOutput :: ByteString -> Indexer.TxOut
 entrypointCheckpointOutput aid =
-    Indexer.TxOut $
-        serialize'
-            (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
-  where
-    datum =
+    entrypointCheckpointOutputFor
         CheckpointDatumV1
             { cdCesrAid = aid
             , cdCurKeys = [BS.replicate 32 0x11]
@@ -862,6 +989,21 @@ entrypointCheckpointOutput aid =
             , cdSeq = 0
             , cdNativeSn = 0
             }
+
+{- | One live checkpoint output at 'entrypointCheckpointAddress' carrying an
+arbitrary V1 @datum@ inline, with the singleton checkpoint token that
+datum's own AID derives -- so the seeded row, the asset
+'Cardano.KERI.Deployment.Advance.mkAdvancePackage' re-derives as
+@scAidAssetName@, and the datum @advanceEqualities@ reads as the SPENT
+state all come from one value and cannot drift apart.
+-}
+entrypointCheckpointOutputFor :: CheckpointDatumV1 -> Indexer.TxOut
+entrypointCheckpointOutputFor datum =
+    Indexer.TxOut $
+        serialize'
+            (eraProtVerLow @ConwayEra)
+            (baseTxOut & datumTxOutL .~ inlineDatumOf (plutusData (V1 datum)))
+  where
     baseTxOut :: TxOut ConwayEra
     baseTxOut =
         mkBasicTxOut
@@ -871,22 +1013,28 @@ entrypointCheckpointOutput aid =
                 ( MultiAsset $
                     Map.singleton
                         entrypointCheckpointPolicy
-                        (Map.singleton (AssetName . SBS.toShort $ deriveAidAssetName aid) 1)
+                        ( Map.singleton
+                            (AssetName . SBS.toShort . deriveAidAssetName $ cdCesrAid datum)
+                            1
+                        )
                 )
             )
-    inlineDatum :: PLC.Data -> Datum ConwayEra
-    inlineDatum plutus = Datum (dataToBinaryData (Data plutus))
     plutusData :: (ToData a) => a -> PLC.Data
     plutusData value =
         let BuiltinData plutus = toBuiltinData value
          in plutus
 
-{- | A manifest with the frozen checkpoint identity above and NO script
-entries -- 'mkAdvancePackage'\/'mkClosePackage' fail closed on a missing
-@checkpoint-register@ script shortly after this property's one observed
-acquisition (see the module Haddock above); no reference-script resolution
-is exercised by this property (that is 'DATA-INV-240-01', proven
-separately above).
+-- | One inline datum, shared by every fixture below that seeds one.
+inlineDatumOf :: PLC.Data -> Datum ConwayEra
+inlineDatumOf plutus = Datum (dataToBinaryData (Data plutus))
+
+{- | The one manifest every non-board entrypoint fixture below shares: the
+frozen checkpoint identity above plus all four 'entrypointManifestScripts'
+entries, each answered by its own seeded reference output. Because
+'manifestReferencesTx' resolves EVERY entry and fails closed on any that is
+absent, this manifest is what makes advance\/close's read set genuinely
+four references wide, and registration's plan builder ('hash-proof',
+'observer-lifecycle') buildable, from one source.
 -}
 entrypointManifest :: Manifest
 entrypointManifest =
@@ -909,80 +1057,257 @@ entrypointManifest =
                 , checkpointPolicyId = entrypointCheckpointPolicyText
                 }
         , manifestPublishedAt = "2026-01-01T00:00:00Z"
-        , manifestScripts = []
+        , manifestScripts = entrypointManifestScripts
         }
 
-{- | A real 'LocalOpener' (never a re-implementation of one): ignores the
-'LocalSettings' argument (this test's scope is the in-memory fixture, not
-a real store path) and hands the callback a 'LocalQueryScope' whose runner
-is wrapped in 'countingRunner', so every store-transaction invocation the
-production entrypoint's acquisition performs is counted.
--}
-entrypointCountingLocalOpener :: IORef Int -> RunTransaction IO cf Cols op -> LocalOpener
-entrypointCountingLocalOpener counter runner _localSettings action =
-    action
-        LocalQueryScope
-            { localScopeRunner = countingRunner counter runner
-            , localScopeCheckpointIdentity = Just (entrypointCheckpointPolicy, entrypointCheckpointAddress)
-            , localScopeBoardIdentity = Nothing
-            }
+-- ---------------------------------------------------------------------------
+-- A-017 ruling 4b / A-002 ruling 1: the eight-entrypoint SNAPSHOT harness.
+--
+-- The six superseded examples asserted only `count == 1` around a
+-- `try ... :: IO (Either SomeException ())`. Every one of their fixtures used
+-- placeholder inputs ("unused-payer", "unused-funding-address", a manifest
+-- with no scripts, a board reference locator resolving to nothing), so the
+-- entrypoint threw BEFORE its read set completed and the example still
+-- passed. Two things follow, and this harness exists to make both impossible:
+--
+--   * a passing example must be distinguishable from an early failure. The
+--     builder boundary is observed explicitly, and reaching it entails that
+--     every read in the phase resolved -- each acquisition step fails closed
+--     (`fail . show`) before the boundary, so the boundary is unreachable on
+--     an incomplete read set.
+--   * the boundary signal must be shown able to FAIL. Every verb therefore
+--     carries a negative control that withholds exactly one required row and
+--     requires the boundary NOT to be reached. Without it, "boundary reached"
+--     is a green nobody has ever seen go red.
 
-{- | Marks that a production entrypoint reached the live-node bracket
-(i.e. its local acquisition already completed).
+{- | Marks that a production entrypoint reached the point where acquired
+values are handed to the transaction builder, and carries the acquisition
+count observed AT that moment -- so "one acquisition for the whole phase"
+and "no acquisition after the boundary" are two separate, separately
+falsifiable readings rather than one number read at the end.
 -}
-data ReachedLiveBracket = ReachedLiveBracket
+data BoundaryProbe = BoundaryProbe
+    { probeAcquisitions :: IORef Int
+    , probeAtBoundary :: IORef (Maybe Int)
+    }
+
+newBoundaryProbe :: IO BoundaryProbe
+newBoundaryProbe = BoundaryProbe <$> newIORef 0 <*> newIORef Nothing
+
+markBoundary :: BoundaryProbe -> IO ()
+markBoundary probe =
+    readIORef (probeAcquisitions probe)
+        >>= writeIORef (probeAtBoundary probe) . Just
+
+{- | Thrown the instant a production entrypoint reaches its builder
+boundary. The live bracket is NOT universally that boundary: for the two
+publish verbs it opens BEFORE the acquisition, so using it as one would
+prove nothing -- 'publishBoundaryLiveOpener' exists for exactly that case.
+-}
+data ReachedBuilderBoundary = ReachedBuilderBoundary
     deriving stock (Show, Eq)
 
-instance Exception ReachedLiveBracket
+instance Exception ReachedBuilderBoundary
 
-{- | A real 'LiveOpener' that never dials a socket: throws
-'ReachedLiveBracket' the moment production code tries to open the live
-bracket, so a test can distinguish "acquisition ran, then reached
-submission" from "acquisition never ran" without live node infrastructure.
+{- | The real 'LocalOpener' every entrypoint under test receives. Unlike
+'entrypointCountingLocalOpener' it honours the 'LocalSettings' the
+production entrypoint computed -- the board verbs' acquisition calls
+'localBoardCatalogWithOutputs', which fails closed on a 'Nothing' board
+identity, so hard-coding 'Nothing' would stop those phases inside the
+acquisition and re-create the degeneracy this harness removes.
 -}
-entrypointStubLiveOpener :: LiveOpener
-entrypointStubLiveOpener _config _observeTransaction _action = throwIO ReachedLiveBracket
+boundaryLocalOpener :: BoundaryProbe -> RunTransaction IO cf Cols op -> LocalOpener
+boundaryLocalOpener probe runner settings action =
+    action
+        LocalQueryScope
+            { localScopeRunner = countingRunner (probeAcquisitions probe) runner
+            , localScopeCheckpointIdentity = localCheckpointIdentity settings
+            , localScopeBoardIdentity = localBoardIdentity settings
+            }
 
-{- | A real 'LiveOpener' for the two write verbs (board-deploy\/deploy) whose
-LOCAL acquisition runs INSIDE the live bracket's own callback
-('Cardano.KERI.Deployment.CLI.publishArtifactsLive' needs the live
-funding address text, which only 'LiveConfig' -- not a real node
-connection -- supplies): reaches the real callback with a 'LiveContext'
-carrying the REAL 'LiveConfig' but bottom ('error') in every other field.
-This is safe specifically because the one acquisition this property
-observes only forces 'liveConfig'; forcing any other field (submitting a
-real transaction) happens strictly after, exactly like the clean
-downstream failures 'entrypointStubLiveOpener''s sibling examples above
-already accept as equally valid evidence.
+{- | The builder boundary for the six verbs that acquire BEFORE opening the
+live bracket (advance, close, register, board post\/update\/retire): the
+bracket itself. Records the count first, then throws, so the acquisition
+total is captured at the boundary rather than after unwinding.
 -}
-entrypointLazyStubLiveOpener :: LiveOpener
-entrypointLazyStubLiveOpener config _observeTransaction action =
+boundaryLiveOpener :: BoundaryProbe -> LiveOpener
+boundaryLiveOpener probe _config _observeTransaction _action = do
+    markBoundary probe
+    throwIO ReachedBuilderBoundary
+
+{- | The builder boundary for the two publish verbs (@runDeployWith@,
+@runBoardDeployWith@), whose local acquisition runs INSIDE the live
+bracket's own callback ('publishArtifactsLive' needs the live funding
+address, which only 'LiveConfig' supplies). Their boundary is the first
+'TransactionRuntime' operation 'publishScripts' performs, so the bracket is
+entered for real and the stand-in runtime marks the boundary.
+-}
+publishBoundaryLiveOpener :: BoundaryProbe -> Addr -> LiveOpener
+publishBoundaryLiveOpener probe fundingAddress config _observeTransaction action =
     action
         LiveContext
-            { liveTransactionRuntime = error "LocalWritePathSpec: liveTransactionRuntime not exercised by this property"
-            , liveProvider = error "LocalWritePathSpec: liveProvider not exercised by this property"
-            , liveFundingAddress = error "LocalWritePathSpec: liveFundingAddress not exercised by this property"
+            { liveTransactionRuntime = boundaryRuntime probe
+            , liveProvider = boundaryProvider probe
+            , liveFundingAddress = fundingAddress
             , liveConfig = config
             }
 
-{- | The frozen OOBI fixture's own witness key ("Cardano.KERI.Deployment.
-EndpointBoardSpec" already proves @witness-1-oobi.cesr@ parses via
-'parseEndpointRecord'; this is that same stream's own inception @i@\/@k@
-key, reused as the board-retire witness parameter).
+{- | A stand-in N2C 'Provider' whose every query marks the builder boundary
+and stops. 'LiveContext''s provider field is STRICT, so an @error@ thunk
+there is forced the moment the context is constructed -- before the local
+acquisition this property observes has even run, which would make the
+publish verbs unprovable for a reason that has nothing to do with them.
+Every field is a function or an action, so the record itself is a perfectly
+ordinary value; only USING it stops, which is the honest reading: the
+publish path must reach its builder before it ever needs a node.
 -}
-entrypointWitnessKeyText :: Text
-entrypointWitnessKeyText = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+boundaryProvider :: BoundaryProbe -> Provider IO
+boundaryProvider probe =
+    Provider
+        { withAcquired = \_action -> stop
+        , queryUTxOs = \_addr -> stop
+        , queryUTxOByTxIn = \_txIns -> stop
+        , queryProtocolParams = stop
+        , queryLedgerSnapshot = stop
+        , queryStakeRewards = \_credentials -> stop
+        , queryRewardAccounts = \_accounts -> stop
+        , queryVoteDelegatees = \_credentials -> stop
+        , queryTreasury = stop
+        , queryGovernanceState = stop
+        , evaluateTx = \_tx -> stop
+        , posixMsToSlot = \_millis -> stop
+        , posixMsCeilSlot = \_millis -> stop
+        , queryUpperBoundSlot = \_choice -> stop
+        }
+  where
+    stop :: IO a
+    stop = markBoundary probe >> throwIO ReachedBuilderBoundary
+
+{- | A stand-in 'TransactionRuntime' whose every operation marks the builder
+boundary and stops. Any of the five is a genuine "the builder was handed the
+acquired values" signal; which one fires first is an implementation detail of
+'publishScripts' this property deliberately does not pin.
+-}
+boundaryRuntime :: BoundaryProbe -> TransactionRuntime IO
+boundaryRuntime probe =
+    TransactionRuntime
+        { trQueryProtocolParams = stop
+        , trEvaluate = \_tx -> stop
+        , trSign = \_tx -> stop
+        , trSubmit = \_tx -> stop
+        , trObserve = \_txId -> stop
+        }
+  where
+    stop :: IO a
+    stop = markBoundary probe >> throwIO ReachedBuilderBoundary
+
+{- | The positive reading, shared by all eight entrypoints: the phase reached
+its builder boundary, having performed EXACTLY one local store transaction,
+and performed none afterwards.
+
+@reachedBoundary@ being 'Just' is the non-degeneracy proof: every acquisition
+step in every one of these phases fails closed before the boundary, so a
+placeholder-shaped fixture -- the exact defect being repaired -- cannot
+produce it.
+-}
+expectCompletePhase :: BoundaryProbe -> Either SomeException () -> IO ()
+expectCompletePhase probe outcome = do
+    atBoundary <- readIORef (probeAtBoundary probe)
+    total <- readIORef (probeAcquisitions probe)
+    case atBoundary of
+        Nothing ->
+            expectationFailure
+                ( "the entrypoint never reached its builder boundary, so its read set did not \
+                  \complete; outcome was "
+                    <> show outcome
+                )
+        Just observed -> do
+            -- exactly one local transaction for the whole build phase
+            observed `shouldBe` 1
+            -- and no acquisition after the boundary
+            total `shouldBe` observed
+
+{- | The negative control, shared by all eight: with one required row
+withheld, the phase must NOT reach its builder boundary. This is what makes
+'expectCompletePhase' a check that has been seen to fail, rather than a
+green that happens to be true.
+-}
+expectIncompletePhase :: BoundaryProbe -> Either SomeException () -> IO ()
+expectIncompletePhase probe outcome = do
+    atBoundary <- readIORef (probeAtBoundary probe)
+    case atBoundary of
+        Nothing -> pure ()
+        Just observed ->
+            expectationFailure
+                ( "the entrypoint reached its builder boundary at acquisition "
+                    <> show observed
+                    <> " despite a required row being withheld, so reaching the boundary does not \
+                       \depend on the complete read set; outcome was "
+                    <> show outcome
+                )
+
+{- | The RESIDUAL reading for board post\/update\/retire, authorized by A-003
+(the Q-003 ruling, Option A) and owned by __#263__: the frozen board policy
+'frozenEndpointBoardPolicyId' (@54494f8a…@, the DEPLOYED board's script hash)
+has no script preimage anywhere in this repository -- the repository's own
+blueprint derives @398a358a…@ -- so no local fixture can seed the live
+reference output these three verbs resolve first. What IS reachable, and what
+this reading asserts, is that the verb genuinely opens its local scope, runs
+its ONE acquisition, and that acquisition fails closed inside
+'boardReferenceOutputTx' naming exactly that frozen policy.
+
+This is a real executing assertion, never a pending, disabled, or
+exception-swallowing example, and it is deliberately three checks:
+
+  * the builder boundary was NOT reached -- the phase stopped where claimed;
+  * exactly ONE acquisition ran. Without this, a fixture that failed before
+    the local scope even opened (a rejected manifest, an undecodable address)
+    would report the same absent boundary and would prove nothing whatever
+    about acquisition;
+  * the failure names the frozen policy hash itself, so this example goes RED
+    the moment #263 makes that hash resolvable -- which is exactly when this
+    residual should be replaced by the complete eight-verb reading.
+
+The @consumerErrors@ equality in
+"Cardano.KERI.Deployment.EndpointBoardManifest" is deliberately NOT weakened,
+parameterized away, or bypassed here: it is the live fail-closed property
+binding every consumer to the deployed board. #263 owns the reproducibility
+repair and the missing gate assertion that the repository blueprint-derived
+board script equals 'frozenEndpointBoardPolicyId'.
+-}
+expectFrozenBoardReferenceUnresolvable ::
+    BoundaryProbe -> Either SomeException () -> IO ()
+expectFrozenBoardReferenceUnresolvable probe outcome = do
+    atBoundary <- readIORef (probeAtBoundary probe)
+    total <- readIORef (probeAcquisitions probe)
+    atBoundary `shouldBe` Nothing
+    total `shouldBe` 1
+    case outcome of
+        Left err
+            | frozenReferenceFailure `T.isInfixOf` T.pack (show err) -> pure ()
+        _ ->
+            expectationFailure
+                ( "expected the phase to fail closed inside boardReferenceOutputTx, \
+                  \naming the frozen board policy that resolves to no live reference \
+                  \script (#263), got "
+                    <> show outcome
+                )
+  where
+    frozenReferenceFailure =
+        "no live output carries the requested reference script hash: "
+            <> frozenEndpointBoardPolicyId
 
 {- | A board manifest carrying the SAME 'frozenEndpointBoardPolicyId'\/
 'frozenEndpointBoardAddress' every real manifest must (every board plan
 builder checks the manifest's own board identity against these frozen
-constants BEFORE this property's acquisition step is ever reached -- an
-arbitrary identity fails closed there, at count 0, before proving
-anything), with a reference locator that resolves to no live output --
-'boardReferenceOutputTx' (every board verb's first acquisition step)
-fails closed shortly after this property's one observed acquisition (no
-reference row is seeded), exactly matching 'entrypointManifest''s "clean
-failure after one acquisition is equally valid evidence" contract above.
+constants BEFORE the acquisition step is ever reached -- an arbitrary
+identity fails closed there, at count 0, before proving anything), and a
+well-formed reference locator. No live row answers that locator, and under
+A-003 none can: 'boardReferenceOutputTx' -- every board verb's first
+acquisition step -- resolves the frozen policy as a reference-script hash
+first, and nothing in this repository hashes to it (#263). The locator is
+still a real, schema-valid value because @consumerErrors@ validates its
+shape before the manifest is accepted at all.
 -}
 entrypointBoardManifest :: EndpointBoardManifest
 entrypointBoardManifest =
@@ -996,7 +1321,8 @@ entrypointBoardManifest =
                 { endpointBoardPolicyId = frozenEndpointBoardPolicyId
                 , endpointBoardAddress = frozenEndpointBoardAddress
                 , endpointBoardProgramBytes = 1
-                , endpointBoardReference = Reference{referenceTxId = T.replicate 64 "0", referenceIndex = 0}
+                , endpointBoardReference =
+                    Reference{referenceTxId = sampleTxIdHex 0x63, referenceIndex = 0}
                 }
         , endpointBoardManifestPublishedAt = "2026-01-01T00:00:00Z"
         }
@@ -1009,13 +1335,60 @@ opens, unlike update\/retire's), so 'entrypointCheckpointAddressText' (a
 script address) or an arbitrary non-Bech32 placeholder both fail closed
 at count 0, before proving anything.
 -}
+entrypointFundingLedgerAddress :: Addr
+entrypointFundingLedgerAddress =
+    Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull
+  where
+    keyHash = fromJust (hashFromBytes (BS.replicate 28 0x53))
+
 entrypointFundingAddressText :: Text
 entrypointFundingAddressText =
-    Bech32.encodeLenient addrTestHrp (Bech32.dataPartFromBytes (serialiseAddr fundingLedgerAddress))
+    Bech32.encodeLenient
+        addrTestHrp
+        (Bech32.dataPartFromBytes (serialiseAddr entrypointFundingLedgerAddress))
+
+{- | The SAME address as stored-row bytes. 'fundingOutputsTx' re-derives each
+returned row's address from its own ledger @TxOut@ and rejects any that does
+not equal the requested text, so the seeded row, the requested selector, and
+the manifest's funding address must all be this one value.
+-}
+entrypointFundingIndexerAddress :: Indexer.Address
+entrypointFundingIndexerAddress =
+    Indexer.Address (serialiseAddr entrypointFundingLedgerAddress)
+
+{- | A live output at an EXACT ledger address. 'payerOutput' cannot serve
+here: it derives a key-hash address from 28 raw indexer bytes, while a real
+funding row is stored under a 29-byte serialised address.
+-}
+outputAtLedgerAddress :: Addr -> Integer -> Indexer.TxOut
+outputAtLedgerAddress addr lovelace =
+    Indexer.TxOut $ serialize' (eraProtVerLow @ConwayEra) txOut
   where
-    fundingLedgerAddress =
-        Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull
-    keyHash = fromJust (hashFromBytes (BS.replicate 28 0x53))
+    txOut :: TxOut ConwayEra
+    txOut = mkBasicTxOut addr (MaryValue (Coin lovelace) (MultiAsset mempty))
+
+{- | The funding rows every submitting verb's acquisition must resolve.
+
+TWO rows, not one, and both are genuinely required: the publish path's
+@selectFundingPair@ reserves a SEPARATE collateral input, so a single row
+fails closed with @PublishFundingSelectionFailed MissingCollateral@ before
+any transaction-runtime operation -- which is exactly what makes
+'entrypointFundingSeedWithout' a one-row negative control rather than an
+all-or-nothing one.
+-}
+entrypointFundingSeedWithout :: Maybe Int -> [UtxoOp]
+entrypointFundingSeedWithout withheld =
+    [ UtxoCreate
+        (sampleTxIn marker)
+        entrypointFundingIndexerAddress
+        (outputAtLedgerAddress entrypointFundingLedgerAddress 100_000_000)
+    | (index, marker) <- zip [0 :: Int ..] [0x62, 0x66]
+    , Just index /= withheld
+    ]
+
+-- | The complete funding read set.
+entrypointFundingSeed :: [UtxoOp]
+entrypointFundingSeed = entrypointFundingSeedWithout Nothing
 
 entrypointBoardTransactionSettings :: FilePath -> BoardTransactionSettings
 entrypointBoardTransactionSettings manifestPath =
@@ -1051,6 +1424,524 @@ entrypointBoardBlueprintJson =
                         ]
                    ]
             ]
+
+-- ---------------------------------------------------------------------------
+-- The complete read sets: the real board artifact, the authenticated board
+-- catalog, and the KEL-derived spent checkpoint state.
+--
+-- Every value below exists so that ONE production entrypoint's acquisition
+-- can run to completion against real fixtures. Nothing here weakens a
+-- production check: the board script is the real compiled artifact, the
+-- catalog rows carry genuinely signed witness endpoint events, and the
+-- advance fixture's spent state is derived from the frozen rotation export
+-- itself rather than pinned beside it.
+
+{- | The blueprint binding the flake sets for BOTH the permanent
+@local-write-path-check@ runner and the development shell (A-002 ruling 2),
+so the gate command and the focused
+@nix develop -c cabal run local-write-path-tests@ command observe the same
+value. Fails closed: an unset or empty binding would make the deploy
+fixtures fail for a harness reason rather than a candidate reason, which is
+exactly the degeneracy this repair exists to remove.
+-}
+entrypointBlueprintPath :: IO FilePath
+entrypointBlueprintPath = do
+    value <- lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
+    case value of
+        Just path | not (null path) -> pure path
+        _ ->
+            fail
+                "KERI_CHECKPOINT_BLUEPRINT is unset or empty; the complete \
+                \deploy/board entrypoint fixtures cannot run"
+
+{- | 'frozenEndpointBoardPolicyId' as its raw 28-byte script hash.
+
+A-003 (Q-003, Option A): there is deliberately NO fixture deriving the board
+script from the repository blueprint. It was measured to hash to
+@398a358a…@, not to this frozen @54494f8a…@, so it could never seed the
+reference output the board write verbs resolve. Reconstructing the deployed
+artifact is #263's work, not this slice's; see
+'expectFrozenBoardReferenceUnresolvable'.
+-}
+entrypointBoardScriptHash :: ScriptHash
+entrypointBoardScriptHash =
+    case convertFromBase Base16 (TE.encodeUtf8 frozenEndpointBoardPolicyId) of
+        Right bytes
+            | Just hash <- hashFromBytes bytes -> ScriptHash hash
+        _ ->
+            error
+                "LocalWritePathSpec: frozenEndpointBoardPolicyId is not a 28-byte hash"
+
+entrypointBoardPolicy :: PolicyID
+entrypointBoardPolicy = PolicyID entrypointBoardScriptHash
+
+{- | The frozen board address as the indexer stores it, decoded from
+'frozenEndpointBoardAddress' by the SAME Bech32 route
+'Cardano.KERI.Indexer.Config.decodeAddress' uses. Deriving the seeded row's
+address bytes this way (rather than rebuilding an 'Addr' from the policy
+hash and re-serialising it) is what guarantees the seeded row lies at
+exactly the address the board verbs' own scope scans.
+-}
+entrypointBoardAddressBytes :: ByteString
+entrypointBoardAddressBytes =
+    case Bech32.decodeLenient frozenEndpointBoardAddress of
+        Right (_hrp, dataPart)
+            | Just bytes <- Bech32.dataPartToBytes dataPart -> bytes
+        _ ->
+            error "LocalWritePathSpec: frozenEndpointBoardAddress is not Bech32"
+
+entrypointBoardIndexerAddress :: Indexer.Address
+entrypointBoardIndexerAddress = Indexer.Address entrypointBoardAddressBytes
+
+entrypointBoardLedgerAddress :: Addr
+entrypointBoardLedgerAddress =
+    case decodeAddr entrypointBoardAddressBytes :: Maybe Addr of
+        Just addr -> addr
+        Nothing ->
+            error
+                "LocalWritePathSpec: frozenEndpointBoardAddress is not a ledger address"
+
+{- | The 28-byte payment key hash 'entrypointFundingLedgerAddress' carries.
+'BoardTx.mkBoardUpdatePlan'\/'mkBoardRetirePlan' both require the funding
+address's payment key to EQUAL the selected catalog row's own owner field,
+so the seeded datum's owner and the funding address must be one value, not
+two that happen to agree.
+-}
+entrypointOwnerKeyHash :: ByteString
+entrypointOwnerKeyHash = BS.replicate 28 0x53
+
+{- | One AUTHENTICATED board catalog row for @record@: the frozen board
+marker asset (policy 'frozenEndpointBoardPolicyId', asset name the witness's
+own 32-byte key, quantity 1) at the frozen board address, with the inline
+datum shape 'Cardano.KERI.Deployment.EndpointBoardTransaction.endpointDatum'
+itself writes. 'resolveBoardCatalog' re-verifies the datum's signature over
+its own event bytes and re-derives the SAID, so a fabricated row cannot
+enter the catalog -- the witness OOBI fixtures supply real signed events.
+-}
+entrypointBoardCatalogSeed :: Word8 -> EndpointRecord -> UtxoOp
+entrypointBoardCatalogSeed marker record =
+    UtxoCreate
+        (sampleTxIn marker)
+        entrypointBoardIndexerAddress
+        (Indexer.TxOut (serialize' (eraProtVerLow @ConwayEra) txOut))
+  where
+    txOut :: TxOut ConwayEra
+    txOut = baseTxOut & datumTxOutL .~ inlineDatumOf datum
+    baseTxOut :: TxOut ConwayEra
+    baseTxOut =
+        mkBasicTxOut
+            entrypointBoardLedgerAddress
+            ( MaryValue
+                (Coin 2_000_000)
+                ( MultiAsset $
+                    Map.singleton
+                        entrypointBoardPolicy
+                        ( Map.singleton
+                            (AssetName . SBS.toShort $ endpointWitnessKey record)
+                            1
+                        )
+                )
+            )
+    datum =
+        PLC.Constr
+            0
+            [ PLC.B (endpointWitnessKey record)
+            , PLC.B (endpointEventBytes record)
+            , PLC.B (endpointSignature record)
+            , PLC.B entrypointOwnerKeyHash
+            ]
+
+{- | The three frozen witness OOBI fixtures, parsed by the real
+'parseEndpointRecord' ("Cardano.KERI.Deployment.EndpointBoardSpec" already
+proves they parse). Their witness keys are exactly the three @b@ entries the
+frozen inception export declares, so a catalog seeded from all three is what
+lets registration's watchability preflight pass WITHOUT
+@--allow-unlisted-witnesses@ -- and withholding one is what makes it fail.
+-}
+entrypointWitnessRecords :: IO [EndpointRecord]
+entrypointWitnessRecords =
+    traverse
+        readRecord
+        [ "witness-1-oobi.cesr"
+        , "witness-2-oobi.cesr"
+        , "witness-3-oobi.cesr"
+        ]
+  where
+    readRecord name = do
+        path <- getDataFileName ("deployment-test/fixtures/" <> name)
+        bytes <- BS.readFile path
+        either fail pure (parseEndpointRecord bytes)
+
+{- | The qb64 witness identifier the FIRST seeded catalog row carries, taken
+from that row's own parsed record rather than pinned beside it:
+'validateEndpointEvent' requires the endpoint event's @eid@ to equal the
+marker asset's witness key, so this is by construction the identifier
+@BoardTx.selectBoardEntry@ must match when board retire is asked to retire
+that row.
+-}
+entrypointFirstWitnessIdentifier :: [EndpointRecord] -> IO Text
+entrypointFirstWitnessIdentifier records =
+    case records of
+        record : _ -> pure (endpointAid record)
+        [] -> fail "LocalWritePathSpec: no witness OOBI fixture was parsed"
+
+{- | The complete authenticated catalog, or the same catalog minus exactly
+one row -- the single knob every board\/registration negative control turns.
+-}
+entrypointBoardCatalogSeedWithout :: Maybe Int -> [EndpointRecord] -> [UtxoOp]
+entrypointBoardCatalogSeedWithout withheld records =
+    [ entrypointBoardCatalogSeed (0x70 + fromIntegral index) record
+    | (index, record) <- zip [0 :: Int ..] records
+    , Just index /= withheld
+    ]
+
+{- | The SPENT checkpoint state that makes the frozen rotation export's own
+successor datum a valid advance -- derived from that export, never pinned
+beside it, so the fixture cannot drift away from the bytes
+'advancePredicate' actually reads:
+
+  * eq2: the spent AID is the successor's own AID, and
+    'entrypointCheckpointOutputFor' derives the marker asset from it, so
+    @scAidAssetName@ matches by construction;
+  * eq5: one sequence step back, and one native sequence step back;
+  * eq6(a): the two attached signatures are the export's own, over its own
+    event bytes, by two of its own revealed successor keys;
+  * eq6(b): the committed @next_keys@ ARE
+    @map (blake3Hash . qb64Verkey)@ of the successor's current keys, in the
+    same order, under the successor's own threshold -- so exactly the
+    positions that satisfy eq6(a) satisfy the pre-rotation gate too;
+  * eq7: @wit_cut@\/@wit_add@ are both empty in this export, so the derived
+    incoming set is the spent witness set, which is the successor's.
+-}
+entrypointAdvanceSpentDatum :: RotationExport -> CheckpointDatumV1
+entrypointAdvanceSpentDatum rotation =
+    CheckpointDatumV1
+        { cdCesrAid = cdCesrAid successor
+        , cdCurKeys = [BS.replicate 32 0x11]
+        , cdCurThreshold = Unweighted 1
+        , cdNextKeys = map (blake3Hash . qb64Verkey) (cdCurKeys successor)
+        , cdNextThreshold = cdCurThreshold successor
+        , cdWitnesses = cdWitnesses successor
+        , cdToad = cdToad successor
+        , cdSeq = cdSeq successor - 1
+        , cdNativeSn = cdNativeSn successor - 1
+        }
+  where
+    successor = rotationDatum rotation
+
+{- | The real registration effects, with ONLY the live submission boundary
+replaced. 'registerQuerySnapshot' is the production body verbatim -- the
+same 'runRegistrationSnapshot' over the same 'localInterpreter' on the
+scope's own runner -- because the acquisition it performs IS the thing this
+property observes; substituting a stand-in there would prove nothing.
+'registerSubmit' is registration's builder boundary: it is reached only
+after the snapshot resolved AND 'registerPreflight' accepted it.
+-}
+entrypointBoundaryRegisterRuntime :: BoundaryProbe -> RegisterRuntime
+entrypointBoundaryRegisterRuntime probe =
+    RegisterRuntime
+        { registerReadKel = BS.readFile
+        , registerReadManifest = readManifest
+        , registerReadBoardManifest = readEndpointBoardManifest
+        , registerQuerySnapshot = \scope request ->
+            runTransaction
+                (localScopeRunner scope)
+                (runRegistrationSnapshot (localInterpreter scope) request)
+        , registerWriteLine = \_line -> pure ()
+        , registerSubmit = \_scope _settings _manifest _plan -> do
+            markBoundary probe
+            throwIO ReachedBuilderBoundary
+        }
+
+{- | Run one production entrypoint against a fresh probe and a complete (or
+deliberately incomplete) seeded read set, and hand the caller both the probe
+and the entrypoint's own outcome. Every one of the sixteen examples below is
+this shape, so a verb's positive case and its negative control differ in
+exactly one thing: which rows were seeded.
+-}
+withBoundaryProbe ::
+    [UtxoOp] ->
+    (forall cf op. BoundaryProbe -> RunTransaction IO cf Cols op -> IO ()) ->
+    (BoundaryProbe -> Either SomeException () -> IO ()) ->
+    IO ()
+withBoundaryProbe seed entrypoint expectation =
+    withInMemoryIndexerRunner $ \handle runner -> do
+        applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) seed
+        probe <- newBoundaryProbe
+        outcome <-
+            try (entrypoint probe runner) :: IO (Either SomeException ())
+        expectation probe outcome
+
+-- ---------------------------------------------------------------------------
+-- The eight production entrypoints, each driven through the boundary
+-- harness, and each verb's complete seeded read set.
+--
+-- Every runner below calls the REAL exported production entrypoint with the
+-- real settings a real invocation would carry; only the two brackets (local
+-- scope, live node) are the harness's, and both are real 'LocalOpener'/
+-- 'LiveOpener' values, never re-implementations of the entrypoint's body.
+
+-- | The frozen rotation export, parsed once per example by the real parser.
+entrypointRotationExport :: IO RotationExport
+entrypointRotationExport = do
+    path <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+    bytes <- BS.readFile path
+    either fail pure (parseRotationExport bytes)
+
+{- | Advance's complete read set: the spent checkpoint output the rotation
+export advances, every manifest reference output, and the funding row.
+@withheldReference@ names the ONE manifest reference a negative control
+removes.
+-}
+entrypointAdvanceSeed :: RotationExport -> Maybe Text -> [UtxoOp]
+entrypointAdvanceSeed rotation withheldReference =
+    UtxoCreate
+        (sampleTxIn 0x50)
+        entrypointCheckpointAddress
+        (entrypointCheckpointOutputFor (entrypointAdvanceSpentDatum rotation))
+        : entrypointReferenceSeedWithout withheldReference
+            <> entrypointFundingSeed
+
+entrypointAdvance ::
+    FilePath ->
+    ByteString ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointAdvance kelPath signatures probe runner =
+    withSystemTempDirectory "ckeri-advance-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "manifest.json"
+            sigPath = dir </> "controller-signatures.txt"
+        writeManifestAtomic manifestPath entrypointManifest
+        BS.writeFile sigPath signatures
+        runAdvanceWith
+            (boundaryLocalOpener probe runner)
+            (boundaryLiveOpener probe)
+            AdvanceSettings
+                { advanceNetwork = "preprod"
+                , advanceNetworkMagic = 1
+                , advanceConfiguredAid = rotationFixtureAidText
+                , advanceKel = kelPath
+                , advanceSigningPackage = Nothing
+                , advanceControllerSignatures = Just sigPath
+                , advancePayer = Just "unused-payer"
+                , advanceNodeSocket = Just "unused-node-socket"
+                , advanceFundingAddress = Just entrypointFundingAddressText
+                , advanceManifest = manifestPath
+                , advanceStorePath = "unused-store-path"
+                , advanceTimeoutSeconds = 30
+                , advanceValidatorTestUnderSigned = False
+                , advanceValidatorTestUnderWitnessed = False
+                , advanceValidatorTestStale = False
+                }
+
+{- | Close's complete read set: the live checkpoint output for the inception
+export's own AID, every manifest reference output, and the funding row.
+@withCheckpoint@ is the ONE row a negative control withholds.
+-}
+entrypointCloseSeed :: Bool -> [UtxoOp]
+entrypointCloseSeed withCheckpoint =
+    [ UtxoCreate
+        (sampleTxIn 0x51)
+        entrypointCheckpointAddress
+        (entrypointCheckpointOutput inceptionFixtureAidBytes)
+    | withCheckpoint
+    ]
+        <> entrypointReferenceSeed
+        <> entrypointFundingSeed
+
+{- | Close runs in its production @--validator-test-non-controller@ mode.
+Close's controller evidence is Ed25519 over a preimage this fixture's own
+synthetic spent datum determines, and no private key for that datum's
+current keys exists anywhere -- the alternative would be to weaken the
+spent datum's threshold to @Unweighted 0@, i.e. to fabricate a checkpoint
+that anyone could close. The validator-test mode is a real production path
+that skips only 'closePredicate'; it changes NOTHING about the read set
+this property observes, which is complete before that check is reached.
+-}
+entrypointClose ::
+    FilePath ->
+    ByteString ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointClose kelPath signatures probe runner =
+    withSystemTempDirectory "ckeri-close-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "manifest.json"
+            sigPath = dir </> "controller-signatures.txt"
+        writeManifestAtomic manifestPath entrypointManifest
+        BS.writeFile sigPath signatures
+        runCloseWith
+            (boundaryLocalOpener probe runner)
+            (boundaryLiveOpener probe)
+            CloseSettings
+                { closeNetwork = "preprod"
+                , closeNetworkMagic = 1
+                , closeConfiguredAid = inceptionFixtureAidText
+                , closeKel = kelPath
+                , closeTo = entrypointFundingAddressText
+                , closeSigningPackage = Nothing
+                , closeControllerSignatures = Just sigPath
+                , closePayer = Just "unused-payer"
+                , closeNodeSocket = Just "unused-node-socket"
+                , closeFundingAddress = Just entrypointFundingAddressText
+                , closeChangeAddress = Just entrypointFundingAddressText
+                , closeManifest = manifestPath
+                , closeStorePath = "unused-store-path"
+                , closeTimeoutSeconds = 30
+                , closeValidatorTestNonController = True
+                }
+
+{- | Registration's read set is the authenticated board catalog (no
+checkpoint may exist yet, and no reference hash is requested), so a catalog
+missing one declared witness is exactly one withheld required row: the
+production watchability preflight rejects it before the submission boundary.
+-}
+entrypointRegister ::
+    FilePath ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointRegister kelPath probe runner =
+    withSystemTempDirectory "ckeri-register-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "manifest.json"
+            boardManifestPath = dir </> "board-manifest.json"
+        writeManifestAtomic manifestPath entrypointManifest
+        writeEndpointBoardManifestAtomic boardManifestPath entrypointBoardManifest
+        runRegisterWith
+            (boundaryLocalOpener probe runner)
+            (entrypointBoundaryRegisterRuntime probe)
+            RegisterSettings
+                { registerNetwork = "preprod"
+                , registerNetworkMagic = 1
+                , registerKel = kelPath
+                , registerPayer = "unused-payer"
+                , registerNodeSocket = "unused-node-socket"
+                , registerFundingAddress = entrypointFundingAddressText
+                , registerManifest = manifestPath
+                , registerBoardManifest = boardManifestPath
+                , registerStorePath = "unused-store-path"
+                , registerTimeoutSeconds = 30
+                , registerAllowUnlistedWitnesses = False
+                , registerAllowExistingCheckpoint = False
+                , registerEscrowLovelace = 1_007_000_000
+                }
+
+{- | 'runDeployWith' begins at @loadArtifacts@ -> @deriveV1Scripts@, which
+APPLIES parameters through @uncheckedDeserialiseUPLC@ and therefore needs
+the REAL compiled blueprint (A-002 ruling 2) -- the arbitrary-hex shortcut
+'entrypointBoardBlueprintJson' takes for 'deriveBoardScript' cannot reach
+it. Its local acquisition runs INSIDE the live bracket, so the boundary is
+'publishBoundaryLiveOpener''s stand-in runtime; @selectFundingPair@ fails
+closed BEFORE the first runtime operation, which is what makes the funding
+row a genuinely required part of this phase's read set.
+-}
+entrypointDeploy ::
+    FilePath ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointDeploy blueprintPath probe runner =
+    withSystemTempDirectory "ckeri-deploy-entrypoint" $ \dir -> do
+        let sourceRepo = dir </> "source-repo"
+        createDirectoryIfMissing True (sourceRepo </> "onchain")
+        runDeployWith
+            (boundaryLocalOpener probe runner)
+            (publishBoundaryLiveOpener probe entrypointFundingLedgerAddress)
+            (entrypointDeploySettings blueprintPath sourceRepo (dir </> "manifest.json"))
+
+entrypointBoardDeploy ::
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointBoardDeploy probe runner =
+    withSystemTempDirectory "ckeri-board-deploy-entrypoint" $ \dir -> do
+        let blueprintPath = dir </> "blueprint.json"
+            sourceRepo = dir </> "source-repo"
+        createDirectoryIfMissing True (sourceRepo </> "onchain")
+        BSL.writeFile blueprintPath entrypointBoardBlueprintJson
+        runBoardDeployWith
+            (boundaryLocalOpener probe runner)
+            (publishBoundaryLiveOpener probe entrypointFundingLedgerAddress)
+            ( entrypointDeploySettings
+                blueprintPath
+                sourceRepo
+                (dir </> "board-manifest.json")
+            )
+
+-- | The settings both publish verbs share.
+entrypointDeploySettings :: FilePath -> FilePath -> FilePath -> DeploySettings
+entrypointDeploySettings blueprintPath sourceRepo outPath =
+    DeploySettings
+        { deployNetwork = "preprod"
+        , deployNetworkMagic = 1
+        , deployBlueprint = blueprintPath
+        , deployNodeSocket = "unused-node-socket"
+        , deployFundingAddress = entrypointFundingAddressText
+        , deploySigningKeyFile = "unused-signing-key"
+        , deploySourceRepo = sourceRepo
+        , deploySourceRepositoryUrl = "unused-repo-url"
+        , deploySourceCommit = Just (T.replicate 40 "a")
+        , deployOut = outPath
+        , deployReferenceLovelace = 5_000_000
+        , deployStorePath = "unused-store-path"
+        , deployTimeoutSeconds = 30
+        }
+
+entrypointBoardPost ::
+    FilePath ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointBoardPost endpointRecordPath probe runner =
+    withSystemTempDirectory "ckeri-board-post-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "board-manifest.json"
+        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+        runBoardPostWith
+            (boundaryLocalOpener probe runner)
+            (boundaryLiveOpener probe)
+            BoardPostSettings
+                { boardPostEndpointRecord = endpointRecordPath
+                , boardPostDepositLovelace = 2_000_000
+                , boardPostTransaction = entrypointBoardTransactionSettings manifestPath
+                }
+
+entrypointBoardUpdate ::
+    FilePath ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointBoardUpdate endpointRecordPath probe runner =
+    withSystemTempDirectory "ckeri-board-update-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "board-manifest.json"
+        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+        runBoardUpdateWith
+            (boundaryLocalOpener probe runner)
+            (boundaryLiveOpener probe)
+            BoardUpdateSettings
+                { boardUpdateEndpointRecord = endpointRecordPath
+                , boardUpdateOutReference = Nothing
+                , boardUpdateTransaction = entrypointBoardTransactionSettings manifestPath
+                }
+
+entrypointBoardRetire ::
+    Text ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointBoardRetire witness probe runner =
+    withSystemTempDirectory "ckeri-board-retire-entrypoint" $ \dir -> do
+        let manifestPath = dir </> "board-manifest.json"
+        writeEndpointBoardManifestAtomic manifestPath entrypointBoardManifest
+        runBoardRetireWith
+            (boundaryLocalOpener probe runner)
+            (boundaryLiveOpener probe)
+            BoardRetireSettings
+                { boardRetireWitness = witness
+                , boardRetireOutReference = Nothing
+                , boardRetireTo = entrypointFundingAddressText
+                , boardRetireTransaction = entrypointBoardTransactionSettings manifestPath
+                }
 
 -- ---------------------------------------------------------------------------
 -- Helpers -- per-spec copies of Cardano.KERI.Indexer.ChainQuerySpec's proven
@@ -1393,6 +2284,163 @@ parityExpectedCheckpoint =
             ]
         , activeCheckpointDatum = parityCheckpointDatum
         }
+
+{- | A checkpoint output that is well-formed at every level EXCEPT its
+inline datum's schema: valid ledger 'TxOut' CBOR, at 'addrA', carrying the
+one checkpoint NFT under 'unusedCheckpointPolicy', but whose inline datum
+is @Constr 1 []@ -- valid 'PLC.Data', not the frozen V1 checkpoint schema.
+
+This is the EXACT malformed shape the frozen base's own capture used
+(@{"constructor":1,"fields":[]}@, see
+@evidence\/a013-finding3\/A013AcquisitionCapture-currentCheckpoint.hs@'s
+@malformedDatumJson@), so the two sides are compared on the same malformed
+class rather than on two different ones. It is deliberately distinct from
+'malformedTxOut', which is not a decodable ledger 'TxOut' at all: the two
+fail at DIFFERENT decode steps, and a repair that closes only one of them
+leaves the other open.
+-}
+schemaMalformedCheckpointOutput :: Indexer.TxOut
+schemaMalformedCheckpointOutput =
+    Indexer.TxOut $
+        serialize'
+            (eraProtVerLow @ConwayEra)
+            (baseTxOut & datumTxOutL .~ Datum (dataToBinaryData (Data (PLC.Constr 1 []))))
+  where
+    Indexer.Address addrABytes = addrA
+    keyHash = fromJust (hashFromBytes addrABytes)
+    assetName = AssetName (SBS.toShort (deriveAidAssetName (cdCesrAid parityCheckpointDatum)))
+    baseTxOut :: TxOut ConwayEra
+    baseTxOut =
+        mkBasicTxOut
+            (Addr Testnet (KeyHashObj (KeyHash keyHash)) StakeRefNull)
+            ( MaryValue
+                (Coin 5_000_000)
+                (MultiAsset (Map.singleton unusedCheckpointPolicy (Map.singleton assetName 1)))
+            )
+
+{- | The board locator matching 'testQueryHandle''s own board identity
+('addrA') and the frozen board policy every real manifest carries, so the
+@boardCatalog@ family is genuinely reachable in this harness rather than
+failing at 'boardLocatorOk' before any store read.
+-}
+parityBoardLocator :: BoardLocator
+parityBoardLocator =
+    BoardLocator
+        { boardLocatorPolicyId = frozenEndpointBoardPolicyId
+        , boardLocatorAddress = addrText addrA
+        }
+
+{- | Collapse either acquisition shape to "did this acquisition fail, and
+with which named error" -- an interpreter-level failure short-circuits the
+whole free-algebra computation and surfaces at 'capAtomicQuery''s OUTER
+'Either', while an operation-level failure surfaces nested inside
+'snapshotValue'; a family matrix that inspected only one of the two would
+silently pass whenever the error arrived by the other route.
+-}
+flattenAcquisition ::
+    Either ChainQueryError (QuerySnapshot (Either ChainQueryError a)) ->
+    Either ChainQueryError ()
+flattenAcquisition outcome = do
+    snapshot <- outcome
+    _ <- snapshotValue snapshot
+    pure ()
+
+{- | One acquisition family, one malformed class, one required fail-closed
+answer (INV-240-PARITY, A-017 ruling 4a).
+
+The matrix is the module-wide property the ruling asked for rather than a
+pair of point fixes: every family whose acquisition DECODES a stored output
+appears here, in every malformed class that family can meet. Adding a sixth
+decoding family without adding its row leaves a visibly incomplete table,
+which is the point -- the fail-open shape must be hard to write by accident.
+
+@storeWatermark@ is deliberately absent and this is its answer: it reads the
+follower's own slot\/hash point and decodes no stored output, so it has no
+malformed class to fail closed on. Every other family in
+"Cardano.KERI.ChainQuery.Program" is covered.
+
+Three families ('payerUtxos', 'referenceScripts', 'boardCatalog') already
+fail closed by using 'traverse'; two ('currentCheckpoint',
+'liveCheckpoints') used a @Right record <- [...]@ list-comprehension filter,
+which silently drops an undecodable row and reports absence. Those two are
+what this matrix turns red before the repair.
+-}
+data MalformedFamily = MalformedFamily
+    { malformedFamilyName :: String
+    , malformedFamilySeed :: [UtxoOp]
+    , malformedFamilyAcquire ::
+        forall cf op. LocalQueryScope cf op -> IO (Either ChainQueryError ())
+    }
+
+malformedFamilies :: [MalformedFamily]
+malformedFamilies =
+    [ MalformedFamily
+        { malformedFamilyName =
+            "currentCheckpoint fails closed on a schema-malformed inline datum"
+        , malformedFamilySeed =
+            [UtxoCreate parityCheckpointTxIn addrA schemaMalformedCheckpointOutput]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery
+                    redCapabilities
+                    scope
+                    (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "currentCheckpoint fails closed on an undecodable stored TxOut"
+        , malformedFamilySeed = [UtxoCreate parityCheckpointTxIn addrA malformedTxOut]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery
+                    redCapabilities
+                    scope
+                    (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "liveCheckpoints fails closed on a schema-malformed inline datum"
+        , malformedFamilySeed =
+            [UtxoCreate parityCheckpointTxIn addrA schemaMalformedCheckpointOutput]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery redCapabilities scope (liveCheckpoints parityCheckpointLocator)
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "liveCheckpoints fails closed on an undecodable stored TxOut"
+        , malformedFamilySeed = [UtxoCreate parityCheckpointTxIn addrA malformedTxOut]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery redCapabilities scope (liveCheckpoints parityCheckpointLocator)
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "payerUtxos fails closed on an undecodable stored TxOut"
+        , malformedFamilySeed = [UtxoCreate (sampleTxIn 0x26) addrA malformedTxOut]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery redCapabilities scope (payerUtxos [addrText addrA])
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "boardCatalog fails closed on an undecodable stored TxOut"
+        , malformedFamilySeed = [UtxoCreate (sampleTxIn 0x27) addrA malformedTxOut]
+        , malformedFamilyAcquire = \scope ->
+            flattenAcquisition
+                <$> capAtomicQuery redCapabilities scope (boardCatalog parityBoardLocator)
+        }
+    , MalformedFamily
+        { malformedFamilyName =
+            "referenceScripts fails closed on an undecodable stored TxOut it was not asked about"
+        , malformedFamilySeed =
+            [ referenceCreateAt (sampleTxIn 0x20) scriptA addrA
+            , UtxoCreate (sampleTxIn 0x28) addrB malformedTxOut
+            ]
+        , malformedFamilyAcquire = \scope ->
+            fmap (const ()) <$> capReferenceScripts redCapabilities scope [hashA]
+        }
+    ]
 
 -- | One live output at @addr@ carrying @script@ as its reference script.
 referenceCreateAt :: Indexer.TxIn -> Script ConwayEra -> Indexer.Address -> UtxoOp

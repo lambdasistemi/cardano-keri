@@ -28,14 +28,17 @@ module Cardano.KERI.ChainQuery.Types (
     -- * Locators
     CheckpointLocator (..),
     BoardLocator (..),
+    OutputLocator (..),
 
     -- * Provider-neutral canonical-shape validation (DATA-INV-257-01, NOTE-020)
     validCheckpointLocator,
     validBoardLocator,
+    validOutputLocator,
     validPayerAddresses,
     validReferenceHashes,
     validAid,
     isCanonicalScriptHashHex,
+    isCanonicalTransactionIdHex,
     isCanonicalBech32Address,
 
     -- * Promoted domain values
@@ -66,12 +69,13 @@ import Data.Aeson.Types (Parser)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.Char (isDigit)
 import Data.Foldable (traverse_)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Word (Word64)
+import Data.Word (Word16, Word64)
 import Text.Read (readMaybe)
 
 {- | Named failure of a 'Cardano.KERI.ChainQuery.Program.ChainQuery'
@@ -164,6 +168,20 @@ data BoardLocator = BoardLocator
     }
     deriving stock (Show, Eq)
 
+{- | #262 DAT-262-OUTPUT-LOCATOR: one live output's exact identity. Carries
+nothing but that identity -- no address to scope a search by, no provider
+setting, no effect handle -- because an output reference is the whole
+selector: the row either exists at this @(txid,index)@ or the operation
+fails closed.
+-}
+data OutputLocator = OutputLocator
+    { outputLocatorTxId :: !Text
+    -- ^ Canonical lowercase 32-byte transaction-id hex.
+    , outputLocatorIndex :: !Int
+    -- ^ A ledger-valid, non-negative output index.
+    }
+    deriving stock (Show, Eq)
+
 {- | DATA-INV-257-01 (NOTE-020): the ONE provider-neutral canonical-shape
 check every 'Cardano.KERI.ChainQuery.Program.ChainQuery' smart constructor
 runs EAGERLY, the moment an operation is built from a concrete argument --
@@ -191,6 +209,59 @@ validBoardLocator locator
     | not (isCanonicalBech32Address (boardLocatorAddress locator)) =
         Left (InvalidLocator "board locator address is not a canonical bech32 address")
     | otherwise = Right ()
+
+{- | #262 DATA-INV-262-01: the exact-output locator's own canonical-shape
+check, run EAGERLY by
+'Cardano.KERI.ChainQuery.Program.outputAt' the moment the operation is built
+from a concrete argument -- literal or derived from an earlier operation's
+result -- so an invalid identity never becomes an operation node and no
+interpreter is ever given the chance to answer it.
+
+Lower case is required, not merely accepted. Hex decoding is case
+insensitive, so a check written only as "decodes to 32 bytes" would admit an
+upper-case identity that no interpreter's own lower-case rendering of a
+stored row can ever equal: the operation would be dispatched, scan the whole
+store, and report a perfectly ordinary absence for a row that is present.
+That is a locator error wearing an absence's clothes, and it fails here
+instead.
+-}
+validOutputLocator :: OutputLocator -> Either ChainQueryError ()
+validOutputLocator locator
+    | T.null (outputLocatorTxId locator) =
+        Left (InvalidLocator "output locator transaction id must be non-empty")
+    | not (isCanonicalTransactionIdHex (outputLocatorTxId locator)) =
+        Left
+            ( InvalidLocator
+                "output locator transaction id is not canonical lowercase 32-byte hex"
+            )
+    | outputLocatorIndex locator < 0 =
+        Left (InvalidLocator "output locator index must not be negative")
+    | outputLocatorIndex locator > maxLedgerOutputIndex =
+        Left (InvalidLocator "output locator index is outside the ledger range")
+    | otherwise = Right ()
+
+{- | The largest output index a Conway transaction can carry
+('Cardano.Ledger.BaseTypes.TxIx' is a 'Data.Word.Word16'). Named here, in the
+provider-neutral layer, because both interpreters and every program must
+agree on it -- and because
+'Cardano.KERI.ChainQuery.LedgerOutput.chainAssetUtxoToLedgerOutput' would
+otherwise be the first place a too-large index was noticed, long after the
+operation had run.
+-}
+maxLedgerOutputIndex :: Int
+maxLedgerOutputIndex = fromIntegral (maxBound :: Word16)
+
+{- | A lowercase hex string that decodes to exactly a 32-byte transaction id.
+Performs no effect.
+-}
+isCanonicalTransactionIdHex :: Text -> Bool
+isCanonicalTransactionIdHex hexRepresentation =
+    T.all isLowerHexDigit hexRepresentation
+        && case convertFromBase Base16 (TE.encodeUtf8 hexRepresentation) of
+            Right bytes -> BS.length (bytes :: BS.ByteString) == 32
+            Left (_ :: String) -> False
+  where
+    isLowerHexDigit c = isDigit c || (c >= 'a' && c <= 'f')
 
 {- | NOTE-020 mandate ruling: an empty payer-address SELECTOR is invalid
 (DAT-257-OP requires a non-empty set of ledger addresses) -- distinct from

@@ -270,18 +270,16 @@ library write-composition
   default-language: GHC2021
   hs-source-dirs:   write-composition
   build-depends:
-    , base                                     >=4.18 && <5
-    , bytestring                               >=0.11 && <0.13
+    , base                      >=4.18 && <5
+    , bytestring                >=0.11 && <0.13
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-keri:indexer
     , cardano-ledger-conway
     , cardano-ledger-core
-    , cardano-node-clients:utxo-indexer-lib
     , directory
-    , opt-env-conf                             >=0.13 && <0.16
-    , rocksdb-kv-transactions:kv-transactions
+    , opt-env-conf              >=0.13 && <0.16
     , text
     , time
 

@@ -66,16 +66,23 @@ import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
     BoardLocator (..),
     ChainAssetUtxo (..),
+    ChainQuery,
     ChainQueryError (..),
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
+    OutputLocator (..),
     QuerySnapshot (..),
     SettlementObservation (..),
     SettlementObserver (..),
     SettlementTarget (..),
     SettlementTimeoutPolicy (..),
+    boardCatalogWithOutputs,
+    currentCheckpoint,
     observeSettlement,
+    outputAt,
+    payerUtxos,
+    referenceScripts,
  )
 import Cardano.KERI.ChainQuery.LedgerOutput (
     chainAssetUtxoToLedgerOutput,
@@ -162,18 +169,13 @@ import Cardano.KERI.Deployment.Script (
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.KERI.Indexer.App (decodePolicyId)
 import Cardano.KERI.Indexer.ChainQuery (
-    LocalQueryScope (..),
+    LocalQueryScope,
     LocalSettings (..),
-    localBoardCatalogWithOutputs,
-    localCurrentCheckpoint,
-    localInterpreter,
-    localOutputAtTx,
-    localPayerUtxos,
     localReferenceObservation,
-    localReferenceScriptsTx,
     localSettlementObserver,
     localTransactionSettled,
-    runLocalSnapshotTx,
+    runLocalInterpreter,
+    runLocalQuery,
     withLocalQueryScope,
  )
 import Cardano.KERI.Indexer.Config (decodeAddress)
@@ -181,7 +183,6 @@ import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
 import Control.Monad (unless, when, (>=>))
@@ -193,7 +194,6 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
-import Database.KV.Transaction (Transaction, runTransaction)
 import OptEnvConf qualified as Opt
 import System.Directory (doesDirectoryExist)
 
@@ -1119,12 +1119,8 @@ runBoardPostWith openLocalScope openLiveContext settings = do
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
     openLocalScope localSettings $ \scope -> do
-        envelope <-
-            runLocalSnapshotTx
-                scope
-                (boardWriteBundleTx info (boardTransactionFundingAddress transaction))
-                >>= either (fail . show) pure
-        let (reference, funding) = snapshotValue envelope
+        (reference, funding) <-
+            acquire scope (boardWriteProgram info (boardTransactionFundingAddress transaction))
         withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
             result <-
                 BoardTx.runBoardPostTransaction config plan funding
@@ -1153,12 +1149,8 @@ runBoardUpdateWith openLocalScope openLiveContext settings = do
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
     openLocalScope localSettings $ \scope -> do
-        envelope <-
-            runLocalSnapshotTx
-                scope
-                (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
-                >>= either (fail . show) pure
-        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
+        (reference, catalogWithOutputs, funding) <-
+            acquire scope (boardCatalogProgram info (boardTransactionFundingAddress transaction))
         entry <-
             either fail pure $
                 BoardTx.selectBoardEntry
@@ -1200,12 +1192,8 @@ runBoardRetireWith openLocalScope openLiveContext settings = do
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
     openLocalScope localSettings $ \scope -> do
-        envelope <-
-            runLocalSnapshotTx
-                scope
-                (boardCatalogBundleTx scope info (boardTransactionFundingAddress transaction))
-                >>= either (fail . show) pure
-        let (reference, catalogWithOutputs, funding) = snapshotValue envelope
+        (reference, catalogWithOutputs, funding) <-
+            acquire scope (boardCatalogProgram info (boardTransactionFundingAddress transaction))
         entry <-
             either fail pure $
                 BoardTx.selectBoardEntry
@@ -1283,35 +1271,97 @@ withBoardContext openLiveContext scope settings references action =
                     , BoardTx.boardChangeAddress = changeAddress
                     }
 
-{- | #240 (RQ-240-08\/T240-S1-09): the exact-AID checkpoint lookup, run
-against the local 'scope' instead of Koios -- relocated from the former
-Koios @queryActiveCheckpoint@. Its own single-purpose 'runLocalSnapshotTx'
-call: at the point this runs (before a write action even knows whether it
-will submit), there is nothing else to compose it with.
--}
-activeCheckpointLocal :: LocalQueryScope cf op -> Text -> IO ActiveCheckpoint
-activeCheckpointLocal scope aid = do
-    envelope <-
-        runLocalSnapshotTx scope (localCurrentCheckpoint scope aid)
-            >>= either (fail . show) pure
-    maybe (fail "checkpoint is not registered") pure (snapshotValue envelope)
+{- | #262 (FUN-262-CHECKPOINT-PROGRAM): the exact-AID checkpoint lookup as a
+one-operation 'ChainQuery' program.
 
-{- | #240 (N-022\/N-025): one script hash resolved through the local
-reference-output algebra and converted straight to a ledger input,
-preserving the real inline datum -- never N2C.
+The 'Maybe' is deliberate and is NOT an error channel in disguise: an AID
+with no live checkpoint is a legitimate observation ("not registered"), which
+the caller renders as its own message. Contrast
+'Cardano.KERI.ChainQuery.Program.outputAt', whose caller is always about to
+spend the row it names and for which absence therefore IS an error
+(RQ-262-01).
 -}
-referenceOutputsTx ::
-    [Text] -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
-referenceOutputsTx hashes = do
-    result <- localReferenceScriptsTx hashes
-    pure (result >>= traverse chainReferenceToLedgerOutput)
+activeCheckpointProgram ::
+    CheckpointLocator ->
+    Text ->
+    ChainQuery (Either ChainQueryError (Maybe ActiveCheckpoint))
+activeCheckpointProgram = currentCheckpoint
+
+{- | #262: run the checkpoint lookup through the local interpreter and
+require a registered checkpoint. At the point this runs -- before a write
+action even knows whether it will submit -- there is nothing else to compose
+it with, so it is one program and one acquisition on its own.
+-}
+activeCheckpointLocal ::
+    LocalQueryScope cf op -> CheckpointLocator -> Text -> IO ActiveCheckpoint
+activeCheckpointLocal scope locator aid = do
+    active <- acquire scope (activeCheckpointProgram locator aid)
+    maybe (fail "checkpoint is not registered") pure active
+
+{- | #262 (RQ-262-04): run one build phase's whole composed program through
+the local interpreter, exactly once, and hand back the resolved value.
+
+Every way the phase can fail -- a rejected locator, an operation failure, or
+a returned candidate that will not reconstruct into a builder input --
+arrives as one 'ChainQueryError' and stops the command. None of them is
+recoverable at this layer: a write verb that cannot read the state it is
+about to spend must not build a transaction, so none becomes a default
+value.
+
+A-262-01: this runs through
+'Cardano.KERI.Indexer.ChainQuery.runLocalQuery', never a generic snapshot
+runner, and the difference is the whole audit finding. A generic runner
+appends a watermark read to EVERY program, so a locator rejected before any
+operation node existed still opened a store transaction and dispatched a
+handler -- eager validation that touches the store is not eager validation.
+An executing source property forbids this module from naming the generic
+runners, so the choice cannot quietly revert.
+-}
+acquire ::
+    LocalQueryScope cf op -> ChainQuery (Either ChainQueryError a) -> IO a
+acquire scope program = do
+    envelope <- runLocalQuery scope program >>= either (fail . show) pure
+    pure (snapshotValue envelope)
+
+{- | Sequence two acquisition steps inside ONE program, so a failure in the
+first is never followed by the second.
+
+This is 'Control.Monad.Trans.Except.ExceptT''s bind, written out once rather
+than taken as a dependency this component does not otherwise need. It is what
+makes every program below short-circuiting: an unresolvable reference script
+stops the phase before the payer read is dispatched, exactly as
+'Cardano.KERI.ChainQuery.Registration.registrationSnapshotProgram' already
+establishes for the register verb.
+-}
+andThen ::
+    ChainQuery (Either ChainQueryError a) ->
+    (a -> ChainQuery (Either ChainQueryError b)) ->
+    ChainQuery (Either ChainQueryError b)
+andThen step continue = do
+    outcome <- step
+    case outcome of
+        Left err -> pure (Left err)
+        Right value -> continue value
+
+{- | #262 (N-022\/N-025 unchanged in substance): script hashes resolved
+through the provider-neutral reference-output operation and converted
+straight to ledger inputs, preserving the real inline datum -- never N2C.
+Conversion happens INSIDE the program, so a candidate that will not
+reconstruct rejects before any later operation runs.
+-}
+referenceOutputsProgram ::
+    [Text] -> ChainQuery (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+referenceOutputsProgram hashes =
+    referenceScripts hashes
+        `andThen` (pure . traverse chainReferenceToLedgerOutput)
 
 {- | #240 (N-022): every M1 V1 manifest script, hash-resolved, in the
 manifest's own stable order.
 -}
-manifestReferencesTx ::
-    Manifest -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
-manifestReferencesTx manifest = referenceOutputsTx (map scriptHash (manifestScripts manifest))
+manifestReferencesProgram ::
+    Manifest -> ChainQuery (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+manifestReferencesProgram manifest =
+    referenceOutputsProgram (map scriptHash (manifestScripts manifest))
 
 {- | #240 (N-025): the endpoint-board's own reference script,
 hash-resolved exactly like a manifest script ('endpointBoardPolicyId' IS
@@ -1322,12 +1372,12 @@ concept, despite the field name). The resolved output's own identity is
 additionally checked against the manifest's recorded 'endpointBoardReference'
 locator, defense in depth against a stale\/mismatched manifest.
 -}
-boardReferenceOutputTx ::
-    EndpointBoardInfo -> Transaction IO cf Cols op (Either ChainQueryError (TxIn, TxOut ConwayEra))
-boardReferenceOutputTx info = do
-    result <- referenceOutputsTx [endpointBoardPolicyId info]
-    pure $ do
-        outputs <- result
+boardReferenceOutputProgram ::
+    EndpointBoardInfo -> ChainQuery (Either ChainQueryError (TxIn, TxOut ConwayEra))
+boardReferenceOutputProgram info =
+    referenceOutputsProgram [endpointBoardPolicyId info] `andThen` (pure . checkLocator)
+  where
+    checkLocator outputs =
         case outputs of
             [output@(TxIn txId (TxIx index), _)]
                 | renderTransactionId txId == referenceTxId reference
@@ -1343,7 +1393,6 @@ boardReferenceOutputTx info = do
                     ( AmbiguousCurrentState
                         "board reference script hash did not resolve to exactly one output"
                     )
-  where
     reference = endpointBoardReference info
 
 {- | #240 (RQ-240-03\/DATA-INV-240-01, N-021\/N-022): enumerate the funding
@@ -1355,125 +1404,141 @@ a stored row (relocated from the former Koios @indexedFundingUtxos@,
 provider dependency dropped; #257 MOD-257-COMPOSITION's N2C half is gone
 with it).
 -}
-fundingOutputsTx ::
-    Text -> Transaction IO cf Cols op (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
-fundingOutputsTx address = do
-    result <- localPayerUtxos [address]
-    pure $ do
-        indexed <- result
+fundingOutputsProgram ::
+    Text -> ChainQuery (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+fundingOutputsProgram address =
+    payerUtxos [address] `andThen` (pure . convertFunding)
+  where
+    convertFunding indexed = do
         unless (all ((== address) . chainAssetAddress) indexed) $
             Left (DecodingFailure "indexer returned a payer output at a different address")
         traverse chainAssetUtxoToLedgerOutput indexed
 
-{- | #240 (N-022\/N-023): find the paired ledger output
-'localBoardCatalogWithOutputs' already decoded for one PURE-selected
-'BoardEntry' -- never a second store transaction just to spend the entry
-'BoardTx.selectBoardEntry' picked.
+{- | #262 (FUN-262-PUBLISH-PROGRAM): the publish phase's whole read set. One
+address, one operation -- named as its own program because a publish phase's
+acquisition IS its funding, and naming it keeps every build phase in this
+module a program rather than leaving one caller reaching for an operation
+directly.
+-}
+publishProgram :: Text -> ChainQuery (Either ChainQueryError [(TxIn, TxOut ConwayEra)])
+publishProgram = fundingOutputsProgram
+
+{- | #262: find the paired output the board\/output operation already
+resolved for one PURE-selected 'BoardEntry', and reconstruct it -- never a
+second acquisition just to spend the entry 'BoardTx.selectBoardEntry'
+picked.
 -}
 pairedBoardOutput ::
-    BoardEntry -> [(BoardEntry, (TxIn, TxOut ConwayEra))] -> Either String (TxIn, TxOut ConwayEra)
+    BoardEntry -> [(BoardEntry, ChainAssetUtxo)] -> Either String (TxIn, TxOut ConwayEra)
 pairedBoardOutput entry catalogWithOutputs =
-    maybe
-        (Left "board catalog entry has no matching decoded output")
-        (Right . snd)
-        (find ((== entry) . fst) catalogWithOutputs)
+    case find ((== entry) . fst) catalogWithOutputs of
+        Nothing -> Left "board catalog entry has no matching acquired output"
+        Just (_entry, utxo) ->
+            either (Left . show) Right (chainAssetUtxoToLedgerOutput utxo)
 
-{- | #240 (N-022): board post's whole phase bundle -- the board's own
-reference output plus funding, composed together (post never reads the
-catalog: it creates a NEW entry, it does not select an existing one).
+{- | #262 (FUN-262-BOARD-WRITE-PROGRAM): board post's whole phase read set as
+one program -- the board's own reference output plus funding (post never
+reads the catalog: it creates a NEW entry, it does not select an existing
+one).
 -}
-boardWriteBundleTx ::
+boardWriteProgram ::
     EndpointBoardInfo ->
     Text ->
-    Transaction IO cf Cols op (Either ChainQueryError ((TxIn, TxOut ConwayEra), [(TxIn, TxOut ConwayEra)]))
-boardWriteBundleTx info fundingAddress = do
-    refResult <- boardReferenceOutputTx info
-    case refResult of
-        Left err -> pure (Left err)
-        Right ref -> do
-            fundingResult <- fundingOutputsTx fundingAddress
-            pure ((,) ref <$> fundingResult)
+    ChainQuery
+        (Either ChainQueryError ((TxIn, TxOut ConwayEra), [(TxIn, TxOut ConwayEra)]))
+boardWriteProgram info fundingAddress =
+    boardReferenceOutputProgram info
+        `andThen` \ref -> fmap ((,) ref <$>) (fundingOutputsProgram fundingAddress)
 
-{- | #240 (N-022): board update\/retire's whole phase bundle -- the
-board's own reference output, the complete catalog paired with each
-entry's own decoded output ('localBoardCatalogWithOutputs', so selecting
-one entry afterward never needs a second store transaction), and funding,
-composed together.
+{- | #262 (FUN-262-BOARD-CATALOG-PROGRAM): board update\/retire's whole phase
+read set as one program -- the board's own reference output, the complete
+catalog paired with each entry's own acquired output, and funding.
+
+The catalog and the outputs arrive from ONE operation
+('Cardano.KERI.ChainQuery.Program.boardCatalogWithOutputs'), so selecting an
+entry afterward is pure and needs no second acquisition. \#240 achieved the
+same thing by composing two raw store reads by hand; the difference is that
+the identity agreement between an entry and its output is now the
+operation's guarantee rather than this module's.
 -}
-boardCatalogBundleTx ::
-    LocalQueryScope cf op ->
+boardCatalogProgram ::
     EndpointBoardInfo ->
     Text ->
-    Transaction
-        IO
-        cf
-        Cols
-        op
+    ChainQuery
         ( Either
             ChainQueryError
             ( (TxIn, TxOut ConwayEra)
-            , [(BoardEntry, (TxIn, TxOut ConwayEra))]
+            , [(BoardEntry, ChainAssetUtxo)]
             , [(TxIn, TxOut ConwayEra)]
             )
         )
-boardCatalogBundleTx scope info fundingAddress = do
-    refResult <- boardReferenceOutputTx info
-    case refResult of
-        Left err -> pure (Left err)
-        Right ref -> do
-            catalogResult <- localBoardCatalogWithOutputs scope
-            case catalogResult of
-                Left err -> pure (Left err)
-                Right catalog -> do
-                    fundingResult <- fundingOutputsTx fundingAddress
-                    pure ((,,) ref catalog <$> fundingResult)
+boardCatalogProgram info fundingAddress =
+    boardReferenceOutputProgram info
+        `andThen` \ref ->
+            boardCatalogWithOutputs (boardLocatorFor info)
+                `andThen` \catalog ->
+                    fmap ((,,) ref catalog <$>) (fundingOutputsProgram fundingAddress)
 
-{- | #240 (N-022): advance\/close's shared submit-phase bundle -- every
-manifest reference script, the exact active-checkpoint output being spent
-(by the caller-supplied @(txid,index)@ identity, re-read fresh so the real
-ledger 'TxOut'\/datum is used, never the 'ActiveCheckpoint' summary), and
-funding, composed together. A-013 repair: this identity now always arrives
-from 'activeCheckpointSubmitBundleTx', composed inside the SAME
-'Transaction' as the checkpoint lookup that derived it -- never a second,
-separately-run acquisition (INV-240-SNAPSHOT).
+{- | The board locator every board write verb resolves against: the
+manifest's own board identity.
+
+Safe to take from the manifest rather than from the frozen constants because
+'readEndpointBoardManifest' rejects a manifest whose board policy or address
+differs from them (@consumerErrors@) before any verb reaches this point --
+declared as REL-262-BOARD-FROZEN-IDENTITY. The local interpreter re-checks
+the policy against the frozen value anyway, so a manifest that somehow
+carried another identity fails closed rather than reading someone else's
+board.
 -}
-manifestAndActiveBundleTx ::
+boardLocatorFor :: EndpointBoardInfo -> BoardLocator
+boardLocatorFor info =
+    BoardLocator
+        { boardLocatorPolicyId = endpointBoardPolicyId info
+        , boardLocatorAddress = endpointBoardAddress info
+        }
+
+{- | #262: advance\/close's shared submit-phase reads -- every manifest
+reference script, the exact active-checkpoint output being spent (by the
+@(txid,index)@ identity the checkpoint lookup just returned, re-read as a
+real spendable row rather than reconstructed from the 'ActiveCheckpoint'
+summary), and funding.
+-}
+manifestAndActiveProgram ::
     Manifest ->
+    OutputLocator ->
     Text ->
-    Int ->
-    Text ->
-    Transaction
-        IO
-        cf
-        Cols
-        op
+    ChainQuery
         ( Either
             ChainQueryError
             ([(TxIn, TxOut ConwayEra)], (TxIn, TxOut ConwayEra), [(TxIn, TxOut ConwayEra)])
         )
-manifestAndActiveBundleTx manifest activeTxId activeIndex fundingAddress = do
-    refsResult <- manifestReferencesTx manifest
-    case refsResult of
-        Left err -> pure (Left err)
-        Right refs -> do
-            activeResult <- localOutputAtTx activeTxId activeIndex
-            case activeResult of
-                Left err -> pure (Left err)
-                Right activeOut -> do
-                    fundingResult <- fundingOutputsTx fundingAddress
-                    pure ((,,) refs activeOut <$> fundingResult)
+manifestAndActiveProgram manifest activeLocator fundingAddress =
+    manifestReferencesProgram manifest
+        `andThen` \refs ->
+            outputAt activeLocator
+                `andThen` \activeUtxo ->
+                    pure (chainAssetUtxoToLedgerOutput activeUtxo)
+                        `andThen` \activeOut ->
+                            fmap
+                                ((,,) refs activeOut <$>)
+                                (fundingOutputsProgram fundingAddress)
 
-{- | A-013 repair (INV-240-SNAPSHOT, T240-S1-14 audit
-finding 1): advance\/close's whole submit-phase acquisition, as ONE
-composed 'Transaction' -- the current checkpoint lookup that used to run
-through its own standalone 'activeCheckpointLocal' call is now the FIRST
-step of this SAME transaction, immediately followed by
-'manifestAndActiveBundleTx' using the identity it just found. A write
-verb that decides to submit therefore invokes the store transaction
-runner exactly once for its whole build phase, never a split
-acquisition; the (still legitimate, still single-acquisition-on-its-own)
-signing-package-only path keeps calling 'activeCheckpointLocal' directly,
-since no second read ever follows it there.
+{- | #262 (FUN-262-SUBMIT-PROGRAM, INV-240-SNAPSHOT): advance\/close's whole
+submit-phase acquisition as ONE monadic 'ChainQuery' program.
+
+This is the shape \#240 said the algebra could not express, and the reason it
+gave -- that a later read's argument is DERIVED from an earlier read's
+result -- was never a limitation of a free monad at all: the checkpoint
+lookup runs first, its 'ActiveCheckpoint' names the exact output the phase
+must spend, and 'outputAt' resolves that identity later in the same program.
+'Cardano.KERI.Indexer.ChainQuery.runLocalQuery' runs the whole thing in one
+store-runner invocation, so the derived locator and the row it resolves come
+from a single store observation (DATA-INV-262-04).
+
+The 'ActiveCheckpointNotRegistered' arm is a legitimate observation, not an
+error: an unregistered AID short-circuits the phase without dispatching the
+reference, output, or funding reads, and the caller renders it as its own
+message.
 -}
 data ActiveCheckpointSubmitBundle
     = ActiveCheckpointNotRegistered
@@ -1483,27 +1548,57 @@ data ActiveCheckpointSubmitBundle
         !(TxIn, TxOut ConwayEra)
         ![(TxIn, TxOut ConwayEra)]
 
-activeCheckpointSubmitBundleTx ::
-    LocalQueryScope cf op ->
+activeCheckpointSubmitProgram ::
+    CheckpointLocator ->
     Manifest ->
     Text ->
     Text ->
-    Transaction IO cf Cols op (Either ChainQueryError ActiveCheckpointSubmitBundle)
-activeCheckpointSubmitBundleTx scope manifest aid fundingAddress = do
-    activeResult <- localCurrentCheckpoint scope aid
-    case activeResult of
-        Left err -> pure (Left err)
-        Right Nothing -> pure (Right ActiveCheckpointNotRegistered)
-        Right (Just active) -> do
-            bundleResult <-
-                manifestAndActiveBundleTx
+    ChainQuery (Either ChainQueryError ActiveCheckpointSubmitBundle)
+activeCheckpointSubmitProgram locator manifest aid fundingAddress =
+    activeCheckpointProgram locator aid `andThen` \case
+        Nothing -> pure (Right ActiveCheckpointNotRegistered)
+        Just active ->
+            fmap
+                (fmap (submitBundle active))
+                ( manifestAndActiveProgram
                     manifest
-                    (activeCheckpointTxId active)
-                    (activeCheckpointIndex active)
+                    (spentCheckpointLocator active)
                     fundingAddress
-            pure $
-                (\(refs, activeOut, funding) -> ActiveCheckpointSubmitBundle active refs activeOut funding)
-                    <$> bundleResult
+                )
+  where
+    submitBundle active (refs, activeOut, funding) =
+        ActiveCheckpointSubmitBundle active refs activeOut funding
+
+{- | The exact output identity a submitting verb must spend, derived from the
+authenticated checkpoint summary it just acquired.
+
+DAT-262-CHECKPOINT-OUTPUT: 'ActiveCheckpoint' deliberately stays a summary --
+it carries a decoded datum and an identity, not a spendable row -- so the row
+itself is resolved by its own operation rather than reconstructed from the
+summary's fields. That is what keeps the builder input the output that is
+actually on chain.
+-}
+spentCheckpointLocator :: ActiveCheckpoint -> OutputLocator
+spentCheckpointLocator active =
+    OutputLocator
+        { outputLocatorTxId = activeCheckpointTxId active
+        , outputLocatorIndex = activeCheckpointIndex active
+        }
+
+{- | The checkpoint locator advance\/close resolve against: the manifest's own
+checkpoint identity, which is also what
+'manifestLocalSettingsFor' gives the local scope, so the interpreter's
+identity check compares a value against itself sourced once
+(REL-262-ADDR-ROUNDTRIP).
+-}
+manifestCheckpointLocator :: Manifest -> CheckpointLocator
+manifestCheckpointLocator manifest =
+    CheckpointLocator
+        { checkpointLocatorPolicyId = checkpointPolicyId checkpoint
+        , checkpointLocatorAddress = checkpointAddressBech32 checkpoint
+        }
+  where
+    checkpoint = manifestCheckpoint manifest
 
 {- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): every board write verb
 dispatches neither 'currentCheckpoint' nor 'liveCheckpoints' -- the
@@ -1650,10 +1745,8 @@ publishArtifactsLive ::
 publishArtifactsLive scope settings context = traverse publishArtifact
   where
     publishArtifact artifact = do
-        envelope <-
-            runLocalSnapshotTx scope (fundingOutputsTx (liveFundingAddressText (liveConfig context)))
-                >>= either (fail . show) pure
-        let funding = snapshotValue envelope
+        funding <-
+            acquire scope (publishProgram (liveFundingAddressText (liveConfig context)))
         published <-
             publishScripts
                 PublishConfig
@@ -1846,20 +1939,21 @@ productionRegisterRuntime =
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
         , registerQuerySnapshot = \scope req ->
-            runTransaction
-                (localScopeRunner scope)
-                (runRegistrationSnapshot (localInterpreter scope) req)
+            runLocalInterpreter scope (`runRegistrationSnapshot` req)
         , registerWriteLine = putStrLn
         , registerSubmit = submitRegistration
         }
 
 {- | #240 (RQ-240-03\/04\/06): each build phase's current-state inputs flow
 through the SAME already-open local 'scope' (via
-'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot'
-\@'localInterpreter' scope\@, unchanged from #257 otherwise) rather than a
-fresh Koios interpreter per call, and settlement is
+'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot' over
+'Cardano.KERI.Indexer.ChainQuery.runLocalInterpreter', which is \#262's
+exported acquisition boundary -- registration was always an algebra program,
+so the only thing that changed here is that the store runner it spends is no
+longer this module's to reach) rather than a fresh Koios interpreter per
+call, and settlement is
 'Cardano.KERI.Indexer.ChainQuery.localSettlementObserver' \@scope\@ -- a
-fresh 'runTransaction' per poll on that SAME runner, never a fresh RocksDB
+fresh store observation per poll on that SAME runner, never a fresh RocksDB
 bracket (N-017). The premint proof's settled output is converted directly
 from the settlement observation's own already-decoded 'ChainAssetUtxo'
 ('chainAssetUtxoToLedgerOutput', pure) instead of a second store\/N2C
@@ -1900,7 +1994,6 @@ submitRegistration scope settings manifest plan =
                             registerTimeoutSeconds settings
                         , Registration.registerPollDelayMicros = 2_000_000
                         }
-                interpreter = localInterpreter scope
                 snapshotRequest referenceHashes =
                     RegistrationQueryRequest
                         { registrationQueryCheckpointLocator =
@@ -1912,9 +2005,9 @@ submitRegistration scope settings manifest plan =
                         }
                 fetchSnapshot referenceHashes = do
                     envelope <-
-                        runTransaction
-                            (localScopeRunner scope)
-                            (runRegistrationSnapshot interpreter (snapshotRequest referenceHashes))
+                        runLocalInterpreter
+                            scope
+                            (`runRegistrationSnapshot` snapshotRequest referenceHashes)
                             >>= either (fail . show) pure
                     putStrLn (renderQuerySnapshotDiagnostic envelope)
                     pure (snapshotValue envelope)
@@ -2012,7 +2105,11 @@ runAdvanceWith openLocalScope openLiveContext settings = do
             (Just directory, Nothing) -> do
                 when (negativeCount /= 0) $
                     fail "validator-test modes apply only when submitting"
-                active <- activeCheckpointLocal scope (advanceConfiguredAid settings)
+                active <-
+                    activeCheckpointLocal
+                        scope
+                        (manifestCheckpointLocator manifest)
+                        (advanceConfiguredAid settings)
                 package <-
                     either fail pure (mkAdvancePackage manifest active rotation)
                 files <- writeAdvanceSigningPackage directory package
@@ -2034,16 +2131,19 @@ runAdvanceWith openLocalScope openLiveContext settings = do
 
 {- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
 acquisition -- current checkpoint, manifest references, the active
-checkpoint's own ledger output, and funding -- now runs as ONE
-'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
-'activeCheckpointLocal' call followed by a second, separately-run
-acquisition (INV-240-SNAPSHOT). This composition is NOT
-affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
-bundle is one of the seven direct 'Transaction' compositions that
-intentionally remain. The live bracket is a
-'LiveOpener' parameter, matching 'runAdvanceWith''s own seam, so a test can
-observe the local acquisition completed (and how many times) without
-dialing a real node.
+checkpoint's own output, and funding -- runs as ONE composed acquisition,
+never a standalone 'activeCheckpointLocal' call followed by a second,
+separately-run one (INV-240-SNAPSHOT).
+
+\#262: that composition is now 'activeCheckpointSubmitProgram', a
+'Cardano.KERI.ChainQuery.Program.ChainQuery' program interpreted locally.
+INV-240-LOCALTIER is MET by #262 -- this was one of the seven direct store
+bundles, and it is the last shape anyone claimed the algebra could not
+express.
+
+The live bracket is a 'LiveOpener' parameter, matching 'runAdvanceWith''s own
+seam, so a test can observe the local acquisition completed (and how many
+times) without dialing a real node.
 -}
 submitAdvance ::
     LiveOpener ->
@@ -2063,18 +2163,17 @@ submitAdvance openLiveContext scope settings manifest rotation signatureFile = d
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
-    envelope <-
-        runLocalSnapshotTx
+    bundle <-
+        acquire
             scope
-            ( activeCheckpointSubmitBundleTx
-                scope
+            ( activeCheckpointSubmitProgram
+                (manifestCheckpointLocator manifest)
                 manifest
                 (advanceConfiguredAid settings)
                 fundingAddress
             )
-            >>= either (fail . show) pure
     (active, references, activeInput, funding) <-
-        case snapshotValue envelope of
+        case bundle of
             ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
             ActiveCheckpointSubmitBundle active refs activeInput funding ->
                 pure (active, refs, activeInput, funding)
@@ -2216,7 +2315,11 @@ runCloseWith openLocalScope openLiveContext settings = do
             (Just directory, Nothing) -> do
                 when (closeValidatorTestNonController settings) $
                     fail "validator-test mode applies only when submitting"
-                active <- activeCheckpointLocal scope (closeConfiguredAid settings)
+                active <-
+                    activeCheckpointLocal
+                        scope
+                        (manifestCheckpointLocator manifest)
+                        (closeConfiguredAid settings)
                 package <-
                     either fail pure (mkClosePackage manifest active $ closeTo settings)
                 files <- writeCloseSigningPackage directory package
@@ -2243,14 +2346,14 @@ runCloseWith openLocalScope openLiveContext settings = do
 
 {- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
 acquisition -- current checkpoint, manifest references, the active
-checkpoint's own ledger output, and funding -- now runs as ONE
-'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
-'activeCheckpointLocal' call followed by a second, separately-run
-acquisition (INV-240-SNAPSHOT). This composition is NOT
-affected by INV-240-LOCALTIER, which is OPEN -- DEFERRED to #262: this
-bundle is one of the seven direct 'Transaction' compositions that
-intentionally remain. The live bracket is a
-'LiveOpener' parameter, matching 'submitAdvance''s own seam.
+checkpoint's own output, and funding -- runs as ONE composed acquisition,
+never a standalone 'activeCheckpointLocal' call followed by a second,
+separately-run one (INV-240-SNAPSHOT).
+
+\#262: that composition is now 'activeCheckpointSubmitProgram', a
+'Cardano.KERI.ChainQuery.Program.ChainQuery' program interpreted locally, and
+INV-240-LOCALTIER is MET by #262. The live bracket is a 'LiveOpener'
+parameter, matching 'submitAdvance''s own seam.
 -}
 submitClose ::
     LiveOpener ->
@@ -2272,18 +2375,17 @@ submitClose openLiveContext scope settings manifest signatureFile = do
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
-    envelope <-
-        runLocalSnapshotTx
+    bundle <-
+        acquire
             scope
-            ( activeCheckpointSubmitBundleTx
-                scope
+            ( activeCheckpointSubmitProgram
+                (manifestCheckpointLocator manifest)
                 manifest
                 (closeConfiguredAid settings)
                 fundingAddress
             )
-            >>= either (fail . show) pure
     (active, references, activeInput, funding) <-
-        case snapshotValue envelope of
+        case bundle of
             ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
             ActiveCheckpointSubmitBundle active refs activeInput funding ->
                 pure (active, refs, activeInput, funding)

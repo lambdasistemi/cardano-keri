@@ -36,35 +36,33 @@ are #240's follower-backed temporal probes (RQ-240-06): fresh per-call
 store observations, never 'ChainQueryF' operations and never a snapshot
 claim (DATA-INV-240-05).
 
-Note what this module does NOT establish:
-@INV-240-LOCALTIER@ is @OPEN — DEFERRED to #262@.
-That invariant -- every write-path read routed through the free algebra,
-with no direct 'Transaction' composition left -- is not proved here. Seven
-direct 'Transaction' bundles remain by design, because the shapes they carry
-(a full checkpoint 'TxOut', board-entry\/full-output pairs) are not
-representable in the #257 algebra. Nothing in this module, and nothing in
-the #240 proofs, should be read as algebra-only routing.
+@INV-240-LOCALTIER@ is MET by #262. Every write build-phase read now reaches
+this module as a 'Cardano.KERI.ChainQuery.Program.ChainQuery' operation
+answered by 'localInterpreter', and this interpreter is the sole acquisition
+authority: #262 added the two operation families whose absence forced the
+seven direct 'Transaction' bundles (an exact output by @(txid,index)@, and
+board entries paired with their own outputs), so the raw readers below are
+private implementation details with no caller outside this module.
+'runLocalQuery', 'runLocalInterpreter' and 'runLocalChainQuery' are the whole
+exported acquisition boundary, and 'runLocalQuery' is the one a write build
+phase uses (A-262-01: it is the only one that opens no store transaction for
+an eagerly rejected locator).
 -}
 module Cardano.KERI.Indexer.ChainQuery (
     localInterpreter,
     runLocalChainQuery,
-    localReferenceScriptsTx,
+    runLocalInterpreter,
+    runLocalQuery,
     localSettlementObserver,
     localReferenceObservation,
     localTransactionSettled,
-    localOutputAtTx,
-    localCurrentCheckpoint,
-    localBoardCatalog,
-    localBoardCatalogWithOutputs,
-    localPayerUtxos,
-    runLocalSnapshotTx,
     LocalQueryScope (..),
     queryHandleLocalScope,
     LocalSettings (..),
     withLocalQueryScope,
 ) where
 
-import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Aid)
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
@@ -79,16 +77,19 @@ import Cardano.KERI.ChainQuery (
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
+    OutputLocator (..),
     QuerySnapshot (..),
     QuerySource (SourceLocal),
     SettlementObserver (..),
     SnapshotConsistency (AtomicLocal),
     chainQueryInterpreter,
+    runChainQueryResultSnapshot,
     runChainQuerySnapshot,
     validPayerAddresses,
  )
+import Cardano.KERI.ChainQuery.LedgerOutput (chainAssetUtxoToLedgerOutput)
 import Cardano.KERI.ChainQuery.PlutusJson (plutusDataJson)
-import Cardano.KERI.ChainQuery.Program (ChainQuery)
+import Cardano.KERI.ChainQuery.Program (ChainQuery, eagerRejection)
 import Cardano.KERI.Deployment.EndpointBoardManifest (frozenEndpointBoardPolicyId)
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
 import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..), decodeCheckpointOutput)
@@ -107,14 +108,13 @@ import Cardano.Ledger.Api.Tx.Out (
     referenceScriptTxOutL,
     valueTxOutL,
  )
-import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary (DecoderError, decodeFull)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (Script, TxOut, eraProtVerLow, fromStrictMaybeL, hashScript)
-import Cardano.Ledger.Hashes (ScriptHash (..), extractHash, originalBytes, unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (ScriptHash (..), extractHash, originalBytes)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withRocksDBIndexerRunner)
 import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
@@ -172,7 +172,11 @@ localInterpreter scope =
         (\locator -> withValidCheckpointLocator scope locator (localLiveCheckpoints scope))
         localReferenceScriptsTx
         (\locator -> withValidBoardLocator scope locator (localBoardCatalog scope))
+        ( \locator ->
+            withValidBoardLocator scope locator (localBoardCatalogWithOutputs scope)
+        )
         localPayerUtxos
+        localOutputAt
         localWatermark
         SourceLocal
         AtomicLocal
@@ -252,7 +256,59 @@ The watermark is always attached inside the very same composed
 runLocalChainQuery ::
     LocalQueryScope cf op -> ChainQuery a -> IO (Either ChainQueryError (QuerySnapshot a))
 runLocalChainQuery scope program =
-    runTransaction (localScopeRunner scope) (runChainQuerySnapshot (localInterpreter scope) program)
+    runLocalInterpreter scope (`runChainQuerySnapshot` program)
+
+{- | #262 (RQ-262-05\/MOD-262-LOCAL): the whole exported acquisition boundary,
+alongside 'runLocalChainQuery'. Hand this the way you want a program run --
+'Cardano.KERI.ChainQuery.Interpreter.runChainQuery',
+'runChainQuerySnapshot', or
+'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot', each of which
+composes its own watermark differently -- and it supplies the local
+interpreter and spends exactly one 'RunTransaction' invocation on it.
+
+The rank-2 callback is what makes this the boundary rather than a
+convenience. Its argument is polymorphic in the effect, so a caller can
+compose 'Cardano.KERI.ChainQuery.Program.ChainQuery' operations and nothing
+else: the store 'Transaction' this interpreter actually runs in is not a type
+the callback can name, and no raw reader is reachable through it. That is
+what replaced the raw snapshot runner \#240 exported to write composition,
+and it is why the seven direct bundles could be withdrawn without leaving a
+second acquisition route behind.
+-}
+runLocalInterpreter ::
+    LocalQueryScope cf op ->
+    ( forall effect.
+      (Monad effect) =>
+      ChainQueryInterpreter effect ->
+      effect result
+    ) ->
+    IO result
+runLocalInterpreter scope run =
+    runTransaction (localScopeRunner scope) (run (localInterpreter scope))
+
+{- | A-262-01 (RQ-262-03\/DATA-INV-262-01): the write path's own runner. Runs
+one build phase's composed program against the local interpreter and answers
+the resolved value, spending exactly one 'RunTransaction' invocation — or,
+for a program that rejected its argument eagerly, none at all.
+
+The short-circuit is repeated here rather than left to
+'Cardano.KERI.ChainQuery.Interpreter.runChainQueryResultSnapshot' because
+the two guard DIFFERENT effects at different layers, and only one of them is
+visible from the query layer. That runner can stop an interpreter HANDLER
+from being invoked; it cannot stop this module from opening a store
+transaction to hand it an interpreter in the first place, because
+'runLocalInterpreter' takes a rank-2 callback and cannot see the program.
+"Zero handlers" and "zero store transactions" are therefore two claims, and
+this is where the second one is either true or false.
+-}
+runLocalQuery ::
+    LocalQueryScope cf op ->
+    ChainQuery (Either ChainQueryError a) ->
+    IO (Either ChainQueryError (QuerySnapshot a))
+runLocalQuery scope program =
+    case eagerRejection program of
+        Just err -> pure (Left err)
+        Nothing -> runLocalInterpreter scope (`runChainQueryResultSnapshot` program)
 
 localWatermark :: Transaction IO cf Cols op (Either ChainQueryError (ColdOr ChainWatermark))
 localWatermark = do
@@ -266,57 +322,17 @@ localWatermark = do
                     , watermarkBlockHash = hexBytes (Indexer.unBlockHash blockHash)
                     }
 
-{- | #240 (N-023\/N-024\/RQ-240-04\/DAT-240-BUILD-SNAPSHOT): wrap a
-caller-composed bundle of direct local reads (several of
-'localCurrentCheckpoint'\/'localBoardCatalog'\/'localReferenceScriptsTx'\/
-'localPayerUtxos'\/'localOutputAtTx', sequenced with ordinary 'Transaction'
-'Monad' bind so an earlier failure short-circuits a later dependent read)
-in the SAME 'QuerySnapshot' envelope 'runChainQuerySnapshot' attaches to a
-free-algebra program. A bundle failure short-circuits: the watermark is
-never read on that path. On success the watermark is read exactly once,
-last, in this SAME 'Transaction', never a second runner invocation.
--}
-localSnapshotTx ::
-    Transaction IO cf Cols op (Either ChainQueryError a) ->
-    Transaction IO cf Cols op (Either ChainQueryError (QuerySnapshot a))
-localSnapshotTx bundle = do
-    outcome <- bundle
-    case outcome of
-        Left err -> pure (Left err)
-        Right value -> do
-            watermarkResult <- localWatermark
-            pure $ do
-                watermark <- watermarkResult
-                pure
-                    QuerySnapshot
-                        { snapshotValue = value
-                        , snapshotSource = SourceLocal
-                        , snapshotConsistency = AtomicLocal
-                        , snapshotWatermark = watermark
-                        }
-
-{- | The one runner invocation a direct-composition phase needs: run its
-composed bundle 'Transaction' and 'localSnapshotTx' together, exactly
-once, matching 'runLocalChainQuery''s own shape\/contract.
--}
-runLocalSnapshotTx ::
-    LocalQueryScope cf op ->
-    Transaction IO cf Cols op (Either ChainQueryError a) ->
-    IO (Either ChainQueryError (QuerySnapshot a))
-runLocalSnapshotTx scope bundle =
-    runTransaction (localScopeRunner scope) (localSnapshotTx bundle)
-
 {- | Find the exactly-one live checkpoint output whose decoded AID matches
 the requested text; more than one match fails closed (INV-257-PROVIDER).
-#240 (N-022\/N-023): also exported directly so a write-composition phase
-can compose it, 'localReferenceScriptsTx', 'localOutputAtTx', and
-'localPayerUtxos' together inside ONE caller-run 'Transaction'
-(INV-240-SNAPSHOT) -- 'localInterpreter''s free algebra answers one
-operation per dispatch and cannot join several into one; 'localSnapshotTx'
-still wraps the composed result in the SAME 'QuerySnapshot' envelope
-(watermark read last, in that same transaction; 'SourceLocal'\/'AtomicLocal')
-every free-algebra read carries, so no direct-composition phase bypasses
-the snapshot contract (RQ-240-04\/DAT-240-BUILD-SNAPSHOT).
+
+\#240 exported this so a write-composition phase could compose it with the
+other raw readers inside one caller-run 'Transaction', because the free
+algebra of the day could answer only one operation per dispatch and had no
+way to express the other reads that phase needed. \#262 removed that reason:
+the algebra now carries every build-phase read, its 'Monad' instance joins
+them, and 'runLocalChainQuery' runs the whole composed program in the one
+'RunTransaction' invocation the snapshot contract requires. This is private
+again, as it always should have been.
 -}
 localCurrentCheckpoint ::
     LocalQueryScope cf op -> Text -> Transaction IO cf Cols op (Either ChainQueryError (Maybe ActiveCheckpoint))
@@ -405,10 +421,7 @@ decodeActiveCheckpoint policy addr aidText (txIn, indexerTxOut@(Indexer.TxOut ra
     record <-
         first (DecodingFailure . T.pack . show) $
             decodeCheckpointOutput policy txIn addr indexerTxOut
-    ledgerTxOut <-
-        first
-            (DecodingFailure . T.pack . show)
-            (decodeFull (eraProtVerLow @ConwayEra) (BSL.fromStrict rawTxOut) :: Either DecoderError (TxOut ConwayEra))
+    ledgerTxOut <- decodeConwayTxOut rawTxOut
     let MaryValue (Coin lovelace) (MultiAsset policies) = ledgerTxOut ^. valueTxOutL
         assets =
             [ ChainAsset
@@ -476,20 +489,28 @@ localBoardCatalog scope =
                 first (DecodingFailure . T.pack) $
                     indexedBoardCatalog addr entries
 
-{- | #240 (N-022): each authenticated board entry paired with its own FULL
-ledger-decoded output (preserving the real inline datum, unlike
-'BoardEntry'\/'ChainAssetUtxo', which only carry a JSON summary via
-"Cardano.KERI.Indexer.Board" -- see 'localOutputAtTx''s own Haddock for why
-that summary cannot supply a builder input). A second address scan against
-the SAME open store 'Transaction' (same snapshot, INV-240-SNAPSHOT is a
-per-bracket, not per-scan, guarantee), so a write verb that selects one
-entry (e.g. board update\/retire) and then spends it never needs a second
-store transaction -- the exact output was already decoded here, just
-re-filtered in pure code after selection.
+{- | #262 (FUN-262-LOCAL-BOARD-OUTPUTS, RQ-262-02): each authenticated board
+entry paired with the complete PROVIDER-NEUTRAL output of its own row, as one
+all-or-nothing observation.
+
+\#240's version of this answered ledger @(TxIn, TxOut ConwayEra)@ pairs,
+which is why it could never be an algebra operation: a raw ledger output is
+not something a Koios interpreter could ever produce, so putting it in the
+cross-provider vocabulary would have made the algebra local-only in all but
+name. Answering 'ChainAssetUtxo' -- the ONE neutral spendable shape
+(PROMOTE-262-01) -- is what let this become an operation, and the ledger
+reconstruction moved to
+'Cardano.KERI.ChainQuery.LedgerOutput.chainAssetUtxoToLedgerOutput', which is
+pure and runs after interpretation.
+
+A second address scan against the SAME open store 'Transaction' (same
+snapshot: INV-240-SNAPSHOT is a per-bracket, not per-scan, guarantee), so a
+write verb that selects one entry and then spends it never needs a second
+store transaction.
 -}
 localBoardCatalogWithOutputs ::
     LocalQueryScope cf op ->
-    Transaction IO cf Cols op (Either ChainQueryError [(BoardEntry, (TxIn, TxOut ConwayEra))])
+    Transaction IO cf Cols op (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])
 localBoardCatalogWithOutputs scope =
     case localScopeBoardIdentity scope of
         Nothing -> pure (Left (InvalidLocator "this write command has no board identity configured"))
@@ -504,16 +525,10 @@ localBoardCatalogWithOutputs scope =
 pairEntryWithOutput ::
     [(Indexer.TxIn, Indexer.TxOut)] ->
     BoardEntry ->
-    Either ChainQueryError (BoardEntry, (TxIn, TxOut ConwayEra))
+    Either ChainQueryError (BoardEntry, ChainAssetUtxo)
 pairEntryWithOutput rows entry =
     case [row | row@(indexerTxIn, _) <- rows, matchesEntry indexerTxIn] of
-        [(indexerTxIn, Indexer.TxOut raw)] -> do
-            ledgerTxIn <- decodeLedgerTxIn indexerTxIn
-            ledgerTxOut <-
-                first
-                    (DecodingFailure . T.pack . show)
-                    (decodeFull (eraProtVerLow @ConwayEra) (BSL.fromStrict raw) :: Either DecoderError (TxOut ConwayEra))
-            pure (entry, (ledgerTxIn, ledgerTxOut))
+        [row] -> (,) entry <$> spendableOutput row
         [] -> Left (DecodingFailure ("board catalog entry has no matching stored row: " <> boardTxId entry))
         _ -> Left (AmbiguousCurrentState ("more than one stored row matches one board catalog entry: " <> boardTxId entry))
   where
@@ -553,10 +568,7 @@ reuses this same decode to derive reference outputs from live stored rows
 -}
 toChainAssetUtxo :: (Indexer.TxIn, Indexer.TxOut) -> Either ChainQueryError ChainAssetUtxo
 toChainAssetUtxo (txIn, Indexer.TxOut rawTxOut) = do
-    ledgerTxOut <-
-        first
-            (DecodingFailure . T.pack . show)
-            (decodeFull (eraProtVerLow @ConwayEra) (BSL.fromStrict rawTxOut) :: Either DecoderError (TxOut ConwayEra))
+    ledgerTxOut <- decodeConwayTxOut rawTxOut
     let MaryValue (Coin lovelace) (MultiAsset policies) = ledgerTxOut ^. valueTxOutL
         assets =
             [ ChainAsset
@@ -701,44 +713,110 @@ localTransactionSettled scope txId =
   where
     wantedTxIdBytes = hashToBytes (extractHash (unTxId txId))
 
-{- | #240 (N-022): exact local output lookup by @(txid,index)@, decoding
-the FULL ledger 'TxOut' directly off the live stored row -- unlike
-'toChainAssetUtxo' (a query DTO that always answers
-@chainAssetInlineDatum = Nothing@), this preserves the real on-chain inline
-datum a transaction builder spending a board record or checkpoint output
-needs. A plain composable 'Transaction' (like 'localReferenceScriptsTx'),
-so callers can run it inside the SAME store transaction as every other
-input a write phase needs (INV-240-SNAPSHOT: acquired together, never a
-separate bracket per input). Fails closed on absence or an impossible
-duplicate, never falls back to N2C.
+{- | #262 (FUN-262-LOCAL-OUTPUT, RQ-262-01): exact local output lookup by
+@(txid,index)@, answered as the provider-neutral spendable shape. Fails
+closed on absence, on an impossible duplicate, and -- see 'spendableOutput'
+-- on a row the neutral shape cannot faithfully carry. Never falls back to
+N2C.
+
+The locator's canonical shape is already guaranteed structurally, before this
+operation's node can exist ('Cardano.KERI.ChainQuery.Program.outputAt',
+DATA-INV-262-01), so this function performs no shape validation of its own
+and the search below can compare against the store's own lower-case
+rendering without further qualification.
 -}
-localOutputAtTx :: Text -> Int -> Transaction IO cf Cols op (Either ChainQueryError (TxIn, TxOut ConwayEra))
-localOutputAtTx wantedTxIdHex wantedIndex = do
+localOutputAt ::
+    OutputLocator -> Transaction IO cf Cols op (Either ChainQueryError ChainAssetUtxo)
+localOutputAt locator = do
     rows <- scanAllTx
     pure $
         case [row | row@(indexerTxIn, _) <- rows, matchesLocator indexerTxIn] of
-            [(indexerTxIn, Indexer.TxOut raw)] -> do
-                ledgerTxIn <- decodeLedgerTxIn indexerTxIn
-                ledgerTxOut <-
-                    first
-                        (DecodingFailure . T.pack . show)
-                        (decodeFull (eraProtVerLow @ConwayEra) (BSL.fromStrict raw) :: Either DecoderError (TxOut ConwayEra))
-                pure (ledgerTxIn, ledgerTxOut)
+            [row] -> spendableOutput row
             [] -> Left (DecodingFailure ("no live output at the requested reference: " <> locatorText))
             _ -> Left (AmbiguousCurrentState ("more than one live output at the requested reference: " <> locatorText))
   where
     matchesLocator indexerTxIn =
-        hexBytes (Indexer.txInId indexerTxIn) == wantedTxIdHex
-            && fromIntegral (Indexer.txInIx indexerTxIn) == wantedIndex
-    locatorText = wantedTxIdHex <> "#" <> T.pack (show wantedIndex)
+        hexBytes (Indexer.txInId indexerTxIn) == outputLocatorTxId locator
+            && fromIntegral (Indexer.txInIx indexerTxIn) == outputLocatorIndex locator
+    locatorText =
+        outputLocatorTxId locator <> "#" <> T.pack (show (outputLocatorIndex locator))
 
--- | The ledger 'TxIn' a stored row's own identity decodes to.
-decodeLedgerTxIn :: Indexer.TxIn -> Either ChainQueryError TxIn
-decodeLedgerTxIn indexerTxIn =
-    case hashFromBytes (Indexer.txInId indexerTxIn) of
-        Nothing -> Left (DecodingFailure "stored transaction id is not a ledger hash")
-        Just digest ->
-            Right (TxIn (TxId (unsafeMakeSafeHash digest)) (TxIx (fromIntegral (Indexer.txInIx indexerTxIn))))
+{- | #262 (DATA-INV-262-02): decode one stored row into the neutral spendable
+shape AND establish, for that row, that the shape actually carries it.
+
+This exists because \#262 moved two families of output onto a route \#240 did
+not use for them. \#240 handed a builder the checkpoint output it was about
+to spend, and each board record it was about to spend, as a ledger 'TxOut'
+decoded straight from the stored bytes. Those outputs now travel as
+'ChainAssetUtxo' and are rebuilt by
+'Cardano.KERI.ChainQuery.LedgerOutput.chainAssetUtxoToLedgerOutput'. A field
+the neutral shape cannot represent would therefore no longer be a wrong READ
+-- it would be a wrong TRANSACTION, built against an output that silently
+lost part of itself on the way.
+
+So the row proves the round trip before it is returned: address, value,
+inline datum, and reference script are compared against the output actually
+stored, and any difference is a named failure rather than a reduced answer.
+A datum HASH is rejected by name, because it is the one difference a
+comparison of rebuilt-versus-stored could otherwise MISS -- both sides read
+as "no inline datum" and agree.
+
+Scope, stated plainly: this guards the two families \#262 adds. The payer and
+reference-script routes \#240 already shipped keep their existing conversion
+untouched, so this slice changes no value they produce.
+-}
+spendableOutput :: (Indexer.TxIn, Indexer.TxOut) -> Either ChainQueryError ChainAssetUtxo
+spendableOutput row@(_, Indexer.TxOut rawTxOut) = do
+    stored <- decodeConwayTxOut rawTxOut
+    utxo <- toChainAssetUtxo row
+    (_txIn, rebuilt) <- chainAssetUtxoToLedgerOutput utxo
+    preserved "address" (rebuilt ^. addrTxOutL) (stored ^. addrTxOutL)
+    preserved "value" (rebuilt ^. valueTxOutL) (stored ^. valueTxOutL)
+    preserved
+        "reference script"
+        (rebuilt ^. (referenceScriptTxOutL . fromStrictMaybeL))
+        (stored ^. (referenceScriptTxOutL . fromStrictMaybeL))
+    datumPreserved stored rebuilt
+    pure utxo
+  where
+    preserved :: (Eq a) => Text -> a -> a -> Either ChainQueryError ()
+    preserved field rebuilt stored
+        | rebuilt == stored = Right ()
+        | otherwise =
+            Left
+                ( DecodingFailure
+                    ( "the provider-neutral output shape cannot carry this row's "
+                        <> field
+                        <> "; it would reach a transaction builder changed"
+                    )
+                )
+
+datumPreserved :: TxOut ConwayEra -> TxOut ConwayEra -> Either ChainQueryError ()
+datumPreserved stored rebuilt =
+    case (stored ^. datumTxOutL, rebuilt ^. datumTxOutL) of
+        (NoDatum, NoDatum) -> Right ()
+        (Datum storedDatum, Datum rebuiltDatum)
+            | plutusOf storedDatum == plutusOf rebuiltDatum -> Right ()
+        (DatumHash _, _) ->
+            Left
+                ( DecodingFailure
+                    "this row carries a datum hash, which the provider-neutral output \
+                    \shape cannot carry; it would reach a transaction builder with no datum"
+                )
+        _ ->
+            Left
+                ( DecodingFailure
+                    "the provider-neutral output shape cannot carry this row's inline \
+                    \datum; it would reach a transaction builder changed"
+                )
+  where
+    plutusOf binaryDatum = let Data plutus = binaryDataToData binaryDatum in plutus
+
+decodeConwayTxOut :: ByteString -> Either ChainQueryError (TxOut ConwayEra)
+decodeConwayTxOut rawTxOut =
+    first
+        (DecodingFailure . T.pack . show)
+        (decodeFull (eraProtVerLow @ConwayEra) (BSL.fromStrict rawTxOut) :: Either DecoderError (TxOut ConwayEra))
 
 {- | DAT-240-LOCAL-SETTINGS: write local-store configuration. Contains no
 provider URL, token, endpoint, or provider selector (RQ-240-07\/

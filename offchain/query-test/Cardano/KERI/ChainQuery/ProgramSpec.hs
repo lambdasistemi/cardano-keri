@@ -1,3 +1,5 @@
+{-# LANGUAGE NumericUnderscores #-}
+
 {- |
 Module      : Cardano.KERI.ChainQuery.ProgramSpec
 Description : #257 RED — operation surface and free-monad composition
@@ -16,8 +18,10 @@ import Cardano.KERI.ChainQuery.Interpreter (
  )
 import Cardano.KERI.ChainQuery.Program (
     boardCatalog,
+    boardCatalogWithOutputs,
     currentCheckpoint,
     liveCheckpoints,
+    outputAt,
     payerUtxos,
     referenceScripts,
     storeWatermark,
@@ -25,15 +29,17 @@ import Cardano.KERI.ChainQuery.Program (
 import Cardano.KERI.ChainQuery.Types (
     BoardEntry,
     BoardLocator (..),
-    ChainAssetUtxo,
+    ChainAssetUtxo (..),
     ChainQueryError (..),
     ChainReference,
     CheckpointLocator (..),
     ColdOr (Cold),
+    OutputLocator (..),
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal),
  )
 import Codec.Binary.Bech32 qualified as Bech32
+import Control.Monad (join)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
@@ -46,6 +52,7 @@ import Test.Hspec (
     describe,
     it,
     shouldBe,
+    shouldNotBe,
  )
 
 spec :: Spec
@@ -152,11 +159,14 @@ invalidExactLocators =
     , ("an upper-case transaction id", T.toUpper validTxIdHex, 0)
     , ("an empty transaction id", "", 0)
     , ("a negative output index", validTxIdHex, -1)
-    , ("an output index outside the ledger range", validTxIdHex, 65536)
+    , ("an output index outside the ledger range", validTxIdHex, 65_536)
     ]
 
 rejectsWithoutDispatch :: (String, Text, Int) -> IO ()
 rejectsWithoutDispatch (label, txIdHex, index) = do
+    -- fixture control: the upper-case row can only test anything if
+    -- upper-casing actually CHANGES the id.
+    T.toUpper validTxIdHex `shouldNotBe` validTxIdHex
     callLog <- newIORef []
     result <-
         capExactOutput
@@ -233,18 +243,36 @@ data AlgebraCapabilities = AlgebraCapabilities
 redAlgebraCapabilities :: AlgebraCapabilities
 redAlgebraCapabilities =
     AlgebraCapabilities
-        { capExactOutput = \_interpreter _txIdHex _index -> pure (Left notInTheAlgebraYet)
-        , capBoardOutputs = \_interpreter _policyId _address -> pure (Left notInTheAlgebraYet)
+        { capExactOutput = \interpreter txIdHex index ->
+            acquired
+                <$> runChainQuery
+                    interpreter
+                    (outputAt OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index})
+        , capBoardOutputs = \interpreter policyId address ->
+            acquired
+                <$> runChainQuery
+                    interpreter
+                    ( boardCatalogWithOutputs
+                        BoardLocator{boardLocatorPolicyId = policyId, boardLocatorAddress = address}
+                    )
         }
 
-notInTheAlgebraYet :: ChainQueryError
-notInTheAlgebraYet =
-    UnsupportedOperation
-        "the provider-neutral algebra has no exact-output or board/output operation yet"
+{- | Flatten the eager-rejection layer into the interpreter-result layer. An
+invalid locator produces the OUTER 'Left' without an operation ever existing;
+an interpreter failure produces the inner one. For these examples both are
+"the operation did not resolve", and the call log -- not this value -- is
+what distinguishes them.
+-}
+acquired :: Either ChainQueryError (Either ChainQueryError a) -> Either ChainQueryError a
+acquired = join
 
--- | A canonical lower-case 32-byte transaction id.
+{- | A canonical lower-case 32-byte transaction id, containing hex LETTERS on
+purpose: 'invalidExactLocators' upper-cases it, and an all-digit id would
+upper-case to itself, making that row assert nothing while reporting a pass.
+'rejectsWithoutDispatch' asserts the difference before using it.
+-}
 validTxIdHex :: Text
-validTxIdHex = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 0x91))
+validTxIdHex = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 0xAB))
 
 {- | A well-formed 44-character KERI E-code identifier, and genuinely
 canonical hex\/bech32 locator\/address\/hash fixtures -- so every operation
@@ -296,10 +324,30 @@ loggingInterpreterWith callLog referenceScriptsOp =
         (\_ -> loggedCall callLog "liveCheckpoints" (pure []))
         referenceScriptsOp
         (\_ -> loggedCall callLog "boardCatalog" (pure []))
+        (\_ -> loggedCall callLog "boardCatalogWithOutputs" (pure []))
         (\_ -> loggedCall callLog "payerUtxos" (pure []))
+        (\_ -> loggedCall callLog "outputAt" (pure sampleOutput))
         (loggedCall callLog "storeWatermark" (pure Cold))
         SourceLocal
         AtomicLocal
+
+{- | The one output this file's logging double answers 'outputAt' with. Its
+VALUE is irrelevant here -- every #262 example in this module asserts which
+operations were DISPATCHED, not what they returned -- but it must be a real
+'ChainAssetUtxo' rather than an error, so that "the operation ran" and "the
+operation failed" stay distinguishable in the call log.
+-}
+sampleOutput :: ChainAssetUtxo
+sampleOutput =
+    ChainAssetUtxo
+        { chainAssetTxId = validTxIdHex
+        , chainAssetIndex = 3
+        , chainAssetAddress = canonicalAddress 0x06
+        , chainAssetLovelace = 5_000_000
+        , chainAssetList = []
+        , chainAssetInlineDatum = Nothing
+        , chainAssetReferenceScript = Nothing
+        }
 
 loggingInterpreter :: IORef [String] -> ChainQueryInterpreter IO
 loggingInterpreter callLog =

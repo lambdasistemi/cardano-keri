@@ -330,7 +330,9 @@ poisonExceptWatermark watermark =
         (\_ -> error "poison: live-checkpoints must never be reached")
         (\_ -> error "poison: reference-scripts must never be reached")
         (\_ -> error "poison: board-catalog must never be reached")
+        (\_ -> error "poison: board-catalog-with-outputs must never be reached")
         (\_ -> error "poison: payer-utxos must never be reached")
+        (\_ -> error "poison: output-at must never be reached")
         (pure (Right watermark))
         SourceLocal
         AtomicLocal

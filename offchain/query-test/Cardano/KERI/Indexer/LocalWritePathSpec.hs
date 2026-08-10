@@ -54,9 +54,12 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
 import Cardano.KERI.ChainQuery.Program (
     ChainQuery,
     boardCatalog,
+    boardCatalogWithOutputs,
     currentCheckpoint,
     liveCheckpoints,
+    outputAt,
     payerUtxos,
+    referenceScripts,
  )
 import Cardano.KERI.ChainQuery.Registration (runRegistrationSnapshot)
 import Cardano.KERI.ChainQuery.Settlement (SettlementObserver (..))
@@ -70,6 +73,7 @@ import Cardano.KERI.ChainQuery.Types (
     ChainReference (..),
     ChainReferenceScript (..),
     CheckpointLocator (..),
+    OutputLocator (..),
     QuerySnapshot (..),
  )
 import Cardano.KERI.Deployment.CLI (
@@ -127,12 +131,12 @@ import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
 import Cardano.KERI.Indexer.ChainQuery (
     LocalQueryScope (..),
     LocalSettings (..),
-    localInterpreter,
-    localReferenceScriptsTx,
     localSettlementObserver,
     localTransactionSettled,
     queryHandleLocalScope,
     runLocalChainQuery,
+    runLocalInterpreter,
+    runLocalQuery,
  )
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..), decodeAddr, serialiseAddr)
@@ -259,44 +263,54 @@ each property proves, not this adapter's current state); its own three
 "closed test-local stand-in" field bodies from before implementation are
 gone.
 
-\#262 RED: 'capOutputAt' and 'capBoardCatalogWithOutputs' arrive in exactly
-the state \#240's four fields started in -- a closed test-local stand-in that
-answers every call 'UnsupportedOperation', so every \#262 property below
-fails for the one intended reason (the algebra cannot yet resolve an exact
-output or a board\/output pair) rather than for a compilation or fixture
-reason. Implementation replaces these two BODIES only.
+\#262 GREEN: 'capOutputAt' and 'capBoardCatalogWithOutputs' are now the real
+operations, run through the real local interpreter -- their RED stand-ins
+are gone and no property body changed, exactly as their type-stable shape
+was designed to allow.
+
+'capReferenceScripts' changed route in the same commit. \#240 bracketed the
+raw @localReferenceScriptsTx@ reader directly, because write composition
+called that reader directly; \#262 withdrew it, so this capability now goes
+through the 'Cardano.KERI.ChainQuery.Program.referenceScripts' OPERATION,
+which is the route production takes. Every reference-derivation property
+above therefore now proves the algebra route rather than a reader that no
+longer has a production caller -- and it proves it against the same
+fixtures, so a regression in either the reader or its wiring is still
+caught.
 -}
 redCapabilities :: LocalCapabilities cf op
 redCapabilities =
     LocalCapabilities
         { capAtomicQuery = runLocalChainQuery
-        , capReferenceScripts = localReferenceScriptsTxViaHandle
+        , capReferenceScripts = \scope hashes ->
+            acquired <$> runLocalChainQuery scope (referenceScripts hashes)
         , capSettlementObserver = localSettlementObserver
         , capTransactionSettled = localTransactionSettled
-        , capOutputAt = \_scope _txId _index -> pure (Left notInTheAlgebraYet)
-        , capBoardCatalogWithOutputs =
-            \_scope _policyId _address -> pure (Left notInTheAlgebraYet)
+        , capOutputAt = \scope txIdHex index ->
+            runWritePathQuery
+                writePathRunner
+                scope
+                (outputAt (OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index}))
+        , capBoardCatalogWithOutputs = \scope policyId address ->
+            runWritePathQuery
+                writePathRunner
+                scope
+                ( boardCatalogWithOutputs
+                    BoardLocator{boardLocatorPolicyId = policyId, boardLocatorAddress = address}
+                )
         }
 
-{- | The \#262 RED stand-in answer. Named once so both fields report the same
-reason and no property can pass by coincidentally matching it.
+{- | Flatten an acquisition's two 'Either' layers into the one a caller acts
+on: the OPERATION result (a store error, an ambiguous row, a rejected
+locator) and the program's own resolved value. Keeping both distinct in the
+production path matters; for a property asserting what was acquired, either
+one failing is the same failure, and collapsing them here is what lets the
+adapter fields keep the shape the RED bundle froze.
 -}
-notInTheAlgebraYet :: ChainQueryError
-notInTheAlgebraYet =
-    UnsupportedOperation
-        "the provider-neutral algebra has no exact-output or board/output operation yet"
-
-{- | 'Cardano.KERI.Indexer.ChainQuery.localReferenceScriptsTx' is a plain
-'Transaction', not an 'IO' action (it has no scope to open a runner
-from -- #240's write path always already holds one open, mid-snapshot).
-This adapter field promises 'IO' directly, matching 'capTransactionSettled'\/
-'capSettlementObserver''s own shape, so this is the one-line bracket every
-other IO-shaped local capability already gets for free.
--}
-localReferenceScriptsTxViaHandle ::
-    LocalQueryScope cf op -> [Text] -> IO (Either ChainQueryError [ChainReference])
-localReferenceScriptsTxViaHandle scope hashes =
-    runTransaction (localScopeRunner scope) (localReferenceScriptsTx hashes)
+acquired ::
+    Either ChainQueryError (QuerySnapshot (Either ChainQueryError a)) ->
+    Either ChainQueryError a
+acquired outcome = outcome >>= snapshotValue
 
 spec :: Spec
 spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (#240 S240-1)" $ do
@@ -682,6 +696,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
     boardOutputAcquisition
 
     writeCompositionRouteBoundary
+
+    eagerRejectionOpensNoStoreTransaction
 
     localtierClosureClaims
 
@@ -1788,9 +1804,7 @@ entrypointBoundaryRegisterRuntime probe =
         , registerReadManifest = readManifest
         , registerReadBoardManifest = readEndpointBoardManifest
         , registerQuerySnapshot = \scope request ->
-            runTransaction
-                (localScopeRunner scope)
-                (runRegistrationSnapshot (localInterpreter scope) request)
+            runLocalInterpreter scope (`runRegistrationSnapshot` request)
         , registerWriteLine = \_line -> pure ()
         , registerSubmit = \_scope _settings _manifest _plan -> do
             markBoundary probe
@@ -2296,15 +2310,22 @@ exactOutputIndex :: Int
 exactOutputIndex = 3
 
 exactOutputTxIn :: Indexer.TxIn
-exactOutputTxIn = Indexer.TxIn (BS.replicate 32 0x91) (fromIntegral exactOutputIndex)
+exactOutputTxIn = Indexer.TxIn (BS.replicate 32 0xAB) (fromIntegral exactOutputIndex)
 
+{- | Deliberately a transaction id containing hex LETTERS. The malformed-
+locator table below upper-cases this value, and an all-digit id would
+upper-case to itself: the case row would assert nothing while reporting a
+pass. Observed for real -- the first version of this fixture used @0x91@ and
+the upper-case row was silently degenerate. 'malformedExactLocators' now
+carries a fixture control that fails if that ever comes back.
+-}
 exactOutputTxIdHex :: Text
-exactOutputTxIdHex = sampleTxIdHex 0x91
+exactOutputTxIdHex = sampleTxIdHex 0xAB
 
 exactOutputLedgerTxIn :: TxIn
 exactOutputLedgerTxIn =
     TxIn
-        (TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0x91)))))
+        (TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0xAB)))))
         (TxIx (fromIntegral exactOutputIndex))
 
 {- | A nested inline datum with a byte string, a negative integer, a list and
@@ -2569,6 +2590,11 @@ exactOutputAcquisition =
             it "rejects a malformed locator through the local route instead of scanning for it (RQ-262-03)" $
                 withInMemoryIndexerRunner $ \handle runner -> do
                     applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [exactOutputRow]
+                    -- fixture control: the upper-case row below can only test
+                    -- anything if upper-casing actually CHANGES the id. An
+                    -- all-digit fixture upper-cases to itself and the row
+                    -- passes while asserting nothing.
+                    T.toUpper exactOutputTxIdHex `shouldNotBe` exactOutputTxIdHex
                     for_ malformedExactLocators $ \(label, txIdHex, index) -> do
                         result <- capOutputAt redCapabilities (bareScope runner) txIdHex index
                         case result of
@@ -2772,6 +2798,18 @@ writeCompositionRouteBoundary =
                 directAcquisitionViolations (T.lines (TE.decodeUtf8 contents))
                     `shouldBe` []
 
+            it "the detector flags every unconditional-watermark runner it carries, and ignores unrelated text (self-test)" $ do
+                for_ unconditionalWatermarkRunners $ \marker -> do
+                    let seeded = "    envelope <- " <> marker <> " scope program"
+                    unconditionalRunnerViolations [seeded] `shouldBe` [seeded]
+                unconditionalRunnerViolations ["an ordinary line naming no runner"]
+                    `shouldBe` []
+
+            it "the shipped write-composition module names no unconditional-watermark runner (A-262-01)" $ do
+                contents <- BS.readFile writeCompositionSourcePath
+                unconditionalRunnerViolations (T.lines (TE.decodeUtf8 contents))
+                    `shouldBe` []
+
             it "the export-list parser finds the interpreter module's real exports (self-test)" $ do
                 exports <- moduleExportList localInterpreterSourcePath
                 exports `shouldNotBe` []
@@ -2817,6 +2855,27 @@ directAcquisitionViolations :: [Text] -> [Text]
 directAcquisitionViolations =
     filter (\line -> any (`T.isInfixOf` line) directAcquisitionMarkers)
 
+{- | A-262-01: the snapshot runners that append a watermark read to EVERY
+program, including one that rejected its own argument before building an
+operation.
+
+They are not defects -- for a program with no failure channel the watermark
+is exactly what @DAT-257-RESULT@ promises, and \#257's own proofs pin that
+behaviour. They are simply ineligible for a build phase, whose programs can
+always reject: routing one through them opens a store transaction for an
+input that was already refused. That distinction lives in a name rather than
+in someone's memory, and this row is what keeps it there.
+-}
+unconditionalWatermarkRunners :: [Text]
+unconditionalWatermarkRunners =
+    [ "runChainQuerySnapshot"
+    , "runLocalChainQuery"
+    ]
+
+unconditionalRunnerViolations :: [Text] -> [Text]
+unconditionalRunnerViolations =
+    filter (\line -> any (`T.isInfixOf` line) unconditionalWatermarkRunners)
+
 {- | The raw build-acquisition functions that must not be exported once every
 caller has migrated (RQ-262-05, T262-S1-10). They remain DEFINED -- the local
 interpreter needs them -- but as private implementation details.
@@ -2857,6 +2916,125 @@ moduleExportList path = do
             . filter (not . ("--" `T.isPrefixOf`))
             . map T.strip
             . T.lines
+
+{- | A-262-01 (RQ-262-03\/DATA-INV-262-01), the store-runner half: an eagerly
+rejected locator opens NO store transaction at all through the write path's
+own runner.
+
+The companion property in "Cardano.KERI.ChainQuery.InterpreterSpec" proves
+zero interpreter handlers, including the watermark handler. That is the
+query layer, and it is not enough on its own: a runner can invoke zero
+handlers and still have entered @RunTransaction@ to find that out. This is
+the layer where "no store effect" is either true or false, and the counting
+runner is the only instrument that can see it.
+
+The count is proved non-vacuous in the same example set: a VALID locator
+through the SAME runner must count exactly one. Without that row, "counted
+zero" would also be true of a runner that never ran anything.
+-}
+eagerRejectionOpensNoStoreTransaction :: Spec
+eagerRejectionOpensNoStoreTransaction =
+    describe
+        "#262 RQ-262-03/DATA-INV-262-01 -- an eagerly rejected locator opens no \
+        \store transaction through the write path's runner (A-262-01)"
+        $ do
+            it "self-test: a VALID locator through the same runner opens exactly one, so a zero is not vacuous" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [exactOutputRow]
+                    counter <- newIORef (0 :: Int)
+                    let scope = bareScope (countingRunner counter runner)
+                    outcome <-
+                        runWritePathQuery
+                            writePathRunner
+                            scope
+                            (outputAt (exactLocator exactOutputTxIdHex exactOutputIndex))
+                    readIORef counter `shouldReturnCount` 1
+                    case outcome of
+                        Right _ -> pure ()
+                        Left err ->
+                            expectationFailure
+                                ("expected the valid locator to resolve, got " <> show err)
+
+            for_ rejectableLocalFamilies $ \(label, program) ->
+                it (label <> ": zero store transactions, InvalidLocator") $
+                    withInMemoryIndexerRunner $ \handle runner -> do
+                        applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [exactOutputRow]
+                        counter <- newIORef (0 :: Int)
+                        let scope = boardOnlyScope (countingRunner counter runner)
+                        outcome <- runWritePathQuery writePathRunner scope program
+                        readIORef counter `shouldReturnCount` 0
+                        case outcome of
+                            Left (InvalidLocator _) -> pure ()
+                            other ->
+                                expectationFailure
+                                    ("expected a named InvalidLocator, got " <> show other)
+
+{- | Every family a write verb can build from a concrete locator, each with
+an argument it must reject. Enumerated, not sampled: an omitted family is
+one whose production runner nobody counts.
+-}
+rejectableLocalFamilies :: [(String, ChainQuery (Either ChainQueryError ()))]
+rejectableLocalFamilies =
+    [ ("outputAt", erased (outputAt badOutputLocator))
+    , ("boardCatalogWithOutputs", erased (boardCatalogWithOutputs badBoardLocator))
+    , ("boardCatalog", erased (boardCatalog badBoardLocator))
+    , ("currentCheckpoint", erased (currentCheckpoint badCheckpointLocator parityCheckpointAid))
+    , ("liveCheckpoints", erased (liveCheckpoints badCheckpointLocator))
+    , ("payerUtxos", erased (payerUtxos ["not-an-address"]))
+    , ("referenceScripts", erased (referenceScripts ["not-canonical-hex"]))
+    ]
+
+erased :: ChainQuery (Either ChainQueryError a) -> ChainQuery (Either ChainQueryError ())
+erased = fmap void
+
+exactLocator :: Text -> Int -> OutputLocator
+exactLocator txIdHex index =
+    OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index}
+
+badOutputLocator :: OutputLocator
+badOutputLocator = exactLocator (T.replicate 64 "A") 0
+
+badBoardLocator :: BoardLocator
+badBoardLocator =
+    BoardLocator{boardLocatorPolicyId = "not-a-policy-id", boardLocatorAddress = "not-an-address"}
+
+badCheckpointLocator :: CheckpointLocator
+badCheckpointLocator =
+    CheckpointLocator
+        { checkpointLocatorPolicyId = "not-a-policy-id"
+        , checkpointLocatorAddress = "not-an-address"
+        }
+
+{- | The write path's own snapshot runner, behind one named field, so this
+property is aimed at whatever production actually calls. The shipped
+source-boundary property separately forbids write composition from naming
+any other runner, which is what keeps this binding honest rather than
+merely intended.
+-}
+newtype WritePathRunner = WritePathRunner
+    { runWritePathQuery ::
+        forall cf op a.
+        LocalQueryScope cf op ->
+        ChainQuery (Either ChainQueryError a) ->
+        IO (Either ChainQueryError a)
+    }
+
+writePathRunner :: WritePathRunner
+writePathRunner = WritePathRunner{runWritePathQuery = repairedWritePathQuery}
+
+{- | The repaired write-path route: exactly what
+@Cardano.KERI.Deployment.CLI.acquire@ calls, with only the final
+@fail . show@ replaced by returning the error so a property can inspect it.
+-}
+repairedWritePathQuery ::
+    LocalQueryScope cf op ->
+    ChainQuery (Either ChainQueryError a) ->
+    IO (Either ChainQueryError a)
+repairedWritePathQuery scope program =
+    fmap snapshotValue <$> runLocalQuery scope program
+
+shouldReturnCount :: IO Int -> Int -> IO ()
+shouldReturnCount action expected = action >>= (`shouldBe` expected)
 
 {- | \#262 RQ-262-07\/INV-262-DISPOSITION, the same permanently executing
 property A-018 finding 2 established for \#240, turned around: the local-tier

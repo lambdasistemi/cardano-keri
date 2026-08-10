@@ -37,7 +37,14 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
     chainAssetUtxoToLedgerOutput,
     chainReferenceToLedgerOutput,
  )
-import Cardano.KERI.ChainQuery.Program (boardCatalog, payerUtxos, referenceScripts, storeWatermark)
+import Cardano.KERI.ChainQuery.Program (
+    boardCatalog,
+    boardCatalogWithOutputs,
+    outputAt,
+    payerUtxos,
+    referenceScripts,
+    storeWatermark,
+ )
 import Cardano.KERI.ChainQuery.Types (
     BoardEntry,
     BoardLocator (..),
@@ -48,6 +55,7 @@ import Cardano.KERI.ChainQuery.Types (
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
+    OutputLocator (..),
     QuerySource (SourceKoios),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
@@ -317,14 +325,23 @@ data KoiosCapabilities = KoiosCapabilities
 redKoiosCapabilities :: KoiosCapabilities
 redKoiosCapabilities =
     KoiosCapabilities
-        { capKoiosExactOutput = \_txIdHex _index -> pure (Left notAccountedForYet)
-        , capKoiosBoardOutputs = \_policyId _address -> pure (Left notAccountedForYet)
+        { capKoiosExactOutput = \txIdHex index ->
+            acquired
+                <$> runChainQuery
+                    (koiosInterpreter unreachableUrl Nothing)
+                    (outputAt OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index})
+        , capKoiosBoardOutputs = \policyId address ->
+            acquired
+                <$> runChainQuery
+                    (koiosInterpreter unreachableUrl Nothing)
+                    ( boardCatalogWithOutputs
+                        BoardLocator{boardLocatorPolicyId = policyId, boardLocatorAddress = address}
+                    )
         }
 
-notAccountedForYet :: ChainQueryError
-notAccountedForYet =
-    ProviderFailure
-        "the Koios interpreter does not account for this operation family yet"
+-- | Flatten the eager-rejection layer into the interpreter-result layer.
+acquired :: Either ChainQueryError (Either ChainQueryError a) -> Either ChainQueryError a
+acquired = join
 
 -- | A canonical lower-case 32-byte transaction id.
 koiosTxIdHex :: Text
@@ -433,7 +450,9 @@ poisonExceptWatermark watermark =
         (\_ -> error "poison: live-checkpoints must never be reached")
         (\_ -> error "poison: reference-scripts must never be reached")
         (\_ -> error "poison: board-catalog must never be reached")
+        (\_ -> error "poison: board-catalog-with-outputs must never be reached")
         (\_ -> error "poison: payer-utxos must never be reached")
+        (\_ -> error "poison: output-at must never be reached")
         (pure (Right watermark))
         SourceKoios
         LegacySequential

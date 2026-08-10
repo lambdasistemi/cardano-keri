@@ -33,11 +33,28 @@ module Cardano.KERI.Deployment.CLI (
     boardUpdateSettingsParser,
     boardRetireSettingsParser,
     runDeploy,
+    runDeployWith,
     runRegister,
     runRegisterWith,
     runAdvance,
+    runAdvanceWith,
     runClose,
+    runCloseWith,
     runBoard,
+    runBoardDeploy,
+    runBoardDeployWith,
+    runBoardPost,
+    runBoardPostWith,
+    runBoardUpdate,
+    runBoardUpdateWith,
+    runBoardRetire,
+    runBoardRetireWith,
+
+    -- * A-013 repair: the swappable local\/live brackets (T240-S1-14 audit
+    -- finding 1), reused by "Cardano.KERI.Indexer.LocalWritePathSpec"'s
+    -- production-entrypoint proof.
+    LocalOpener,
+    LiveOpener,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
@@ -177,6 +194,32 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Database.KV.Transaction (Transaction, runTransaction)
 import OptEnvConf qualified as Opt
 import System.Directory (doesDirectoryExist)
+
+{- | A-013 repair (T240-S1-14 audit finding 1): the local-store bracket
+every write verb's @run*With@ entrypoint takes as a swappable parameter,
+matching 'Cardano.KERI.Indexer.ChainQuery.withLocalQueryScope''s own type
+exactly -- production passes 'withLocalQueryScope' itself
+(@run* = run*With withLocalQueryScope withLiveContext@, the same shape
+'runRegister'\/'runRegisterWith' already established); a compiled test
+passes an in-memory, counting-runner substitute instead, so it can observe
+how many times the REAL production entrypoint's underlying transaction
+runner fires -- not a helper the entrypoint merely happens to also call,
+which cannot detect a bypass, a raw second acquisition, or a dropped call.
+-}
+type LocalOpener =
+    forall a. LocalSettings -> (forall cf op. LocalQueryScope cf op -> IO a) -> IO a
+
+{- | A-013 repair: the live-node bracket every submitting write verb's
+@run*With@ entrypoint takes as a swappable parameter, matching
+'Cardano.KERI.Deployment.LiveRuntime.withLiveContext''s own type exactly --
+production passes 'withLiveContext' itself; a compiled test passes a stub
+that never dials a socket, reaches its own callback with a minimal
+'LiveContext', and lets the test observe that the LOCAL acquisition (which
+runs strictly before this bracket opens) already completed, and how many
+times.
+-}
+type LiveOpener =
+    forall a. LiveConfig -> (TxId -> IO ()) -> (LiveContext -> IO a) -> IO a
 
 {- | #240: no 'ManifestVerify'\/'BoardList' constructor here (moved to
 "Cardano.KERI.Deployment.Verify", the provider-owning module) -- every
@@ -1006,7 +1049,11 @@ runBoard = \case
     BoardRetire settings -> runBoardRetire settings
 
 runBoardDeploy :: DeploySettings -> IO ()
-runBoardDeploy settings = do
+runBoardDeploy = runBoardDeployWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardDeployWith :: LocalOpener -> LiveOpener -> DeploySettings -> IO ()
+runBoardDeployWith openLocalScope openLiveContext settings = do
     unless
         (deployNetwork settings == "preprod" && deployNetworkMagic settings == 1)
         (fail "M1 endpoint-board deployment supports only preprod network magic 1")
@@ -1022,8 +1069,8 @@ runBoardDeploy settings = do
     verifySourceTree (deploySourceRepo settings) commit
     let localSettings = deployLocalSettingsFor (deployStorePath settings)
     references <-
-        withLocalQueryScope localSettings $ \scope ->
-            withLiveContext
+        openLocalScope localSettings $ \scope ->
+            openLiveContext
                 (deployLiveConfig settings)
                 (awaitLocalTransaction scope (deployTimeoutSeconds settings))
                 $ \context ->
@@ -1048,7 +1095,11 @@ runBoardDeploy settings = do
     putStrLn ("board manifest: " <> deployOut settings)
 
 runBoardPost :: BoardPostSettings -> IO ()
-runBoardPost settings = do
+runBoardPost = runBoardPostWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardPostWith :: LocalOpener -> LiveOpener -> BoardPostSettings -> IO ()
+runBoardPostWith openLocalScope openLiveContext settings = do
     let transaction = boardPostTransaction settings
     validateBoardTransactionSettings transaction
     endpointBytes <- BS.readFile (boardPostEndpointRecord settings)
@@ -1065,14 +1116,14 @@ runBoardPost settings = do
     localSettings <-
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
-    withLocalQueryScope localSettings $ \scope -> do
+    openLocalScope localSettings $ \scope -> do
         envelope <-
             runLocalSnapshotTx
                 scope
                 (boardWriteBundleTx info (boardTransactionFundingAddress transaction))
                 >>= either (fail . show) pure
         let (reference, funding) = snapshotValue envelope
-        withBoardContext scope transaction [reference] $ \_context config -> do
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
             result <-
                 BoardTx.runBoardPostTransaction config plan funding
                     >>= either (fail . show) pure
@@ -1085,7 +1136,11 @@ runBoardPost settings = do
                     <> " tADA"
 
 runBoardUpdate :: BoardUpdateSettings -> IO ()
-runBoardUpdate settings = do
+runBoardUpdate = runBoardUpdateWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardUpdateWith :: LocalOpener -> LiveOpener -> BoardUpdateSettings -> IO ()
+runBoardUpdateWith openLocalScope openLiveContext settings = do
     let transaction = boardUpdateTransaction settings
     validateBoardTransactionSettings transaction
     endpointBytes <- BS.readFile (boardUpdateEndpointRecord settings)
@@ -1095,7 +1150,7 @@ runBoardUpdate settings = do
     localSettings <-
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
-    withLocalQueryScope localSettings $ \scope -> do
+    openLocalScope localSettings $ \scope -> do
         envelope <-
             runLocalSnapshotTx
                 scope
@@ -1116,7 +1171,7 @@ runBoardUpdate settings = do
                     (boardTransactionFundingAddress transaction)
                     entry
                     record
-        withBoardContext scope transaction [reference] $ \_context config -> do
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
             result <-
                 BoardTx.runBoardUpdateTransaction config plan funding boardInput
                     >>= either (fail . show) pure
@@ -1129,7 +1184,11 @@ runBoardUpdate settings = do
                     <> T.unpack (BoardTx.boardUpdateSpentReference plan)
 
 runBoardRetire :: BoardRetireSettings -> IO ()
-runBoardRetire settings = do
+runBoardRetire = runBoardRetireWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runBoardRetireWith :: LocalOpener -> LiveOpener -> BoardRetireSettings -> IO ()
+runBoardRetireWith openLocalScope openLiveContext settings = do
     let transaction = boardRetireTransaction settings
     validateBoardTransactionSettings transaction
     witness <- either fail pure (parseWitnessKey $ boardRetireWitness settings)
@@ -1138,7 +1197,7 @@ runBoardRetire settings = do
     localSettings <-
         either fail pure $
             boardLocalSettingsFor (boardTransactionStorePath transaction) info
-    withLocalQueryScope localSettings $ \scope -> do
+    openLocalScope localSettings $ \scope -> do
         envelope <-
             runLocalSnapshotTx
                 scope
@@ -1159,7 +1218,7 @@ runBoardRetire settings = do
                     (boardTransactionFundingAddress transaction)
                     (boardRetireTo settings)
                     entry
-        withBoardContext scope transaction [reference] $ \_context config -> do
+        withBoardContext openLiveContext scope transaction [reference] $ \_context config -> do
             result <-
                 BoardTx.runBoardRetireTransaction config plan funding boardInput
                     >>= either (fail . show) pure
@@ -1196,13 +1255,14 @@ build only -- 'references' arrives already resolved by the phase's own
 combined local snapshot (never N2C\/'resolveBoardReference' here).
 -}
 withBoardContext ::
+    LiveOpener ->
     LocalQueryScope cf op ->
     BoardTransactionSettings ->
     [(TxIn, TxOut ConwayEra)] ->
     (LiveContext -> BoardTx.BoardConfig -> IO a) ->
     IO a
-withBoardContext scope settings references action =
-    withLiveContext
+withBoardContext openLiveContext scope settings references action =
+    openLiveContext
         (boardLiveConfig settings)
         (awaitLocalTransaction scope (boardTransactionTimeoutSeconds settings))
         $ \context -> do
@@ -1367,10 +1427,13 @@ boardCatalogBundleTx scope info fundingAddress = do
                     pure ((,,) ref catalog <$> fundingResult)
 
 {- | #240 (N-022): advance\/close's shared submit-phase bundle -- every
-manifest reference script, the exact active-checkpoint output being
-spent (by the SAME @(txid,index)@ identity 'activeCheckpointLocal' already
-found, re-read fresh so the real ledger 'TxOut'\/datum is used, never the
-'ActiveCheckpoint' summary), and funding, composed together.
+manifest reference script, the exact active-checkpoint output being spent
+(by the caller-supplied @(txid,index)@ identity, re-read fresh so the real
+ledger 'TxOut'\/datum is used, never the 'ActiveCheckpoint' summary), and
+funding, composed together. A-013 repair: this identity now always arrives
+from 'activeCheckpointSubmitBundleTx', composed inside the SAME
+'Transaction' as the checkpoint lookup that derived it -- never a second,
+separately-run acquisition (INV-240-SNAPSHOT).
 -}
 manifestAndActiveBundleTx ::
     Manifest ->
@@ -1397,6 +1460,48 @@ manifestAndActiveBundleTx manifest activeTxId activeIndex fundingAddress = do
                 Right activeOut -> do
                     fundingResult <- fundingOutputsTx fundingAddress
                     pure ((,,) refs activeOut <$> fundingResult)
+
+{- | A-013 repair (INV-240-LOCALTIER\/INV-240-SNAPSHOT, T240-S1-14 audit
+finding 1): advance\/close's whole submit-phase acquisition, as ONE
+composed 'Transaction' -- the current checkpoint lookup that used to run
+through its own standalone 'activeCheckpointLocal' call is now the FIRST
+step of this SAME transaction, immediately followed by
+'manifestAndActiveBundleTx' using the identity it just found. A write
+verb that decides to submit therefore invokes the store transaction
+runner exactly once for its whole build phase, never a split
+acquisition; the (still legitimate, still single-acquisition-on-its-own)
+signing-package-only path keeps calling 'activeCheckpointLocal' directly,
+since no second read ever follows it there.
+-}
+data ActiveCheckpointSubmitBundle
+    = ActiveCheckpointNotRegistered
+    | ActiveCheckpointSubmitBundle
+        !ActiveCheckpoint
+        ![(TxIn, TxOut ConwayEra)]
+        !(TxIn, TxOut ConwayEra)
+        ![(TxIn, TxOut ConwayEra)]
+
+activeCheckpointSubmitBundleTx ::
+    LocalQueryScope cf op ->
+    Manifest ->
+    Text ->
+    Text ->
+    Transaction IO cf Cols op (Either ChainQueryError ActiveCheckpointSubmitBundle)
+activeCheckpointSubmitBundleTx scope manifest aid fundingAddress = do
+    activeResult <- localCurrentCheckpoint scope aid
+    case activeResult of
+        Left err -> pure (Left err)
+        Right Nothing -> pure (Right ActiveCheckpointNotRegistered)
+        Right (Just active) -> do
+            bundleResult <-
+                manifestAndActiveBundleTx
+                    manifest
+                    (activeCheckpointTxId active)
+                    (activeCheckpointIndex active)
+                    fundingAddress
+            pure $
+                (\(refs, activeOut, funding) -> ActiveCheckpointSubmitBundle active refs activeOut funding)
+                    <$> bundleResult
 
 {- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): every board write verb
 dispatches neither 'currentCheckpoint' nor 'liveCheckpoints' -- the
@@ -1860,7 +1965,16 @@ submitRegistration scope settings manifest plan =
                     <> " tADA (min 2 + D 1000 + B 5)"
 
 runAdvance :: AdvanceSettings -> IO ()
-runAdvance settings = do
+runAdvance = runAdvanceWith withLocalQueryScope withLiveContext
+
+{- | A-013 repair (T240-S1-14 audit finding 1): 'runAdvance' is now a
+zero-behavior-change alias of this, with the local\/live brackets
+parameterized (mirrors 'runRegister'\/'runRegisterWith'). A compiled test
+calls this directly with a counting 'LocalOpener' and a stub 'LiveOpener'
+to observe the real production entrypoint's acquisition wiring.
+-}
+runAdvanceWith :: LocalOpener -> LiveOpener -> AdvanceSettings -> IO ()
+runAdvanceWith openLocalScope openLiveContext settings = do
     unless
         (advanceNetwork settings == "preprod" && advanceNetworkMagic settings == 1)
         (fail "M1 V1 advance supports only preprod network magic 1")
@@ -1889,16 +2003,16 @@ runAdvance settings = do
         readManifest (advanceManifest settings) >>= either fail pure
     localSettings <-
         either fail pure (manifestLocalSettingsFor (advanceStorePath settings) manifest)
-    withLocalQueryScope localSettings $ \scope -> do
-        active <- activeCheckpointLocal scope (advanceConfiguredAid settings)
-        package <-
-            either fail pure (mkAdvancePackage manifest active rotation)
+    openLocalScope localSettings $ \scope ->
         case ( advanceSigningPackage settings
              , advanceControllerSignatures settings
              ) of
             (Just directory, Nothing) -> do
                 when (negativeCount /= 0) $
                     fail "validator-test modes apply only when submitting"
+                active <- activeCheckpointLocal scope (advanceConfiguredAid settings)
+                package <-
+                    either fail pure (mkAdvancePackage manifest active rotation)
                 files <- writeAdvanceSigningPackage directory package
                 putStrLn $
                     "signing package: "
@@ -1910,21 +2024,31 @@ runAdvance settings = do
                     "spent checkpoint: "
                         <> T.unpack (advanceSpentReference package)
             (Nothing, Just signatureFile) ->
-                submitAdvance scope settings manifest active package signatureFile
+                submitAdvance openLiveContext scope settings manifest rotation signatureFile
             _ ->
                 fail
                     "choose exactly one of --signing-package DIR or \
                     \--controller-signatures FILE"
 
+{- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
+acquisition -- current checkpoint, manifest references, the active
+checkpoint's own ledger output, and funding -- now runs as ONE
+'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
+'activeCheckpointLocal' call followed by a second, separately-run
+acquisition (INV-240-LOCALTIER\/INV-240-SNAPSHOT). The live bracket is a
+'LiveOpener' parameter, matching 'runAdvanceWith''s own seam, so a test can
+observe the local acquisition completed (and how many times) without
+dialing a real node.
+-}
 submitAdvance ::
+    LiveOpener ->
     LocalQueryScope cf op ->
     AdvanceSettings ->
     Manifest ->
-    ActiveCheckpoint ->
-    AdvancePackage ->
+    RotationExport ->
     FilePath ->
     IO ()
-submitAdvance scope settings manifest active package signatureFile = do
+submitAdvance openLiveContext scope settings manifest rotation signatureFile = do
     payer <-
         requireAdvanceSetting "--payer" (advancePayer settings)
     nodeSocket <-
@@ -1934,21 +2058,26 @@ submitAdvance scope settings manifest active package signatureFile = do
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
-    submittedPackage <-
-        prepareSubmittedPackage settings active signatures package
-    plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
     envelope <-
         runLocalSnapshotTx
             scope
-            ( manifestAndActiveBundleTx
+            ( activeCheckpointSubmitBundleTx
+                scope
                 manifest
-                (activeCheckpointTxId active)
-                (activeCheckpointIndex active)
+                (advanceConfiguredAid settings)
                 fundingAddress
             )
             >>= either (fail . show) pure
-    let (references, activeInput, funding) = snapshotValue envelope
-    withLiveContext
+    (active, references, activeInput, funding) <-
+        case snapshotValue envelope of
+            ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+            ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                pure (active, refs, activeInput, funding)
+    package <- either fail pure (mkAdvancePackage manifest active rotation)
+    submittedPackage <-
+        prepareSubmittedPackage settings active signatures package
+    plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
+    openLiveContext
         ( advanceLiveConfig
             settings
             payer
@@ -2054,7 +2183,11 @@ requireAdvanceSetting name =
     maybe (fail $ name <> " is required when submitting an advance") pure
 
 runClose :: CloseSettings -> IO ()
-runClose settings = do
+runClose = runCloseWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runCloseWith :: LocalOpener -> LiveOpener -> CloseSettings -> IO ()
+runCloseWith openLocalScope openLiveContext settings = do
     unless
         (closeNetwork settings == "preprod" && closeNetworkMagic settings == 1)
         (fail "M1 V1 close supports only preprod network magic 1")
@@ -2073,14 +2206,14 @@ runClose settings = do
         readManifest (closeManifest settings) >>= either fail pure
     localSettings <-
         either fail pure (manifestLocalSettingsFor (closeStorePath settings) manifest)
-    withLocalQueryScope localSettings $ \scope -> do
-        active <- activeCheckpointLocal scope (closeConfiguredAid settings)
-        package <-
-            either fail pure (mkClosePackage manifest active $ closeTo settings)
+    openLocalScope localSettings $ \scope ->
         case (closeSigningPackage settings, closeControllerSignatures settings) of
             (Just directory, Nothing) -> do
                 when (closeValidatorTestNonController settings) $
                     fail "validator-test mode applies only when submitting"
+                active <- activeCheckpointLocal scope (closeConfiguredAid settings)
+                package <-
+                    either fail pure (mkClosePackage manifest active $ closeTo settings)
                 files <- writeCloseSigningPackage directory package
                 putStrLn $
                     "signing package: "
@@ -2097,20 +2230,28 @@ runClose settings = do
                         <> " tADA to "
                         <> T.unpack (closeRefundAddress package)
             (Nothing, Just signatureFile) ->
-                submitClose scope settings manifest package signatureFile
+                submitClose openLiveContext scope settings manifest signatureFile
             _ ->
                 fail
                     "choose exactly one of --signing-package DIR or \
                     \--controller-signatures FILE"
 
+{- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
+acquisition -- current checkpoint, manifest references, the active
+checkpoint's own ledger output, and funding -- now runs as ONE
+'activeCheckpointSubmitBundleTx' 'Transaction', never a standalone
+'activeCheckpointLocal' call followed by a second, separately-run
+acquisition (INV-240-LOCALTIER\/INV-240-SNAPSHOT). The live bracket is a
+'LiveOpener' parameter, matching 'submitAdvance''s own seam.
+-}
 submitClose ::
+    LiveOpener ->
     LocalQueryScope cf op ->
     CloseSettings ->
     Manifest ->
-    ClosePackage ->
     FilePath ->
     IO ()
-submitClose scope settings manifest package signatureFile = do
+submitClose openLiveContext scope settings manifest signatureFile = do
     payer <- requireCloseSetting "--payer" (closePayer settings)
     nodeSocket <-
         requireCloseSetting "--node-socket" (closeNodeSocket settings)
@@ -2123,6 +2264,22 @@ submitClose scope settings manifest package signatureFile = do
     signatureBytes <- BS.readFile signatureFile
     signatures <-
         either fail pure (parseIndexedSignatureLines signatureBytes)
+    envelope <-
+        runLocalSnapshotTx
+            scope
+            ( activeCheckpointSubmitBundleTx
+                scope
+                manifest
+                (closeConfiguredAid settings)
+                fundingAddress
+            )
+            >>= either (fail . show) pure
+    (active, references, activeInput, funding) <-
+        case snapshotValue envelope of
+            ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+            ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                pure (active, refs, activeInput, funding)
+    package <- either fail pure (mkClosePackage manifest active $ closeTo settings)
     submittedPackage <-
         if closeValidatorTestNonController settings
             then do
@@ -2144,24 +2301,13 @@ submitClose scope settings manifest package signatureFile = do
                     (attachCloseControllerSignatures signatures package)
     plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
     change <- either fail pure (decodePaymentAddress changeAddress)
-    envelope <-
-        runLocalSnapshotTx
-            scope
-            ( manifestAndActiveBundleTx
-                manifest
-                (activeCheckpointTxId $ closeActiveCheckpoint submittedPackage)
-                (activeCheckpointIndex $ closeActiveCheckpoint submittedPackage)
-                fundingAddress
-            )
-            >>= either (fail . show) pure
-    let (references, active, funding) = snapshotValue envelope
-        liveConfig =
+    let liveConfig =
             closeLiveConfig
                 settings
                 payer
                 nodeSocket
                 fundingAddress
-    withLiveContext
+    openLiveContext
         liveConfig
         (awaitLocalTransaction scope (closeTimeoutSeconds settings))
         $ \context -> do
@@ -2177,7 +2323,7 @@ submitClose scope settings manifest package signatureFile = do
                         }
                     plan
                     funding
-                    active
+                    activeInput
                     >>= either (fail . show) pure
             let txId = CloseTx.closeResultTxId result
             _ <-
@@ -2201,7 +2347,11 @@ requireCloseSetting name =
     maybe (fail $ name <> " is required when submitting a close") pure
 
 runDeploy :: DeploySettings -> IO ()
-runDeploy settings = do
+runDeploy = runDeployWith withLocalQueryScope withLiveContext
+
+-- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
+runDeployWith :: LocalOpener -> LiveOpener -> DeploySettings -> IO ()
+runDeployWith openLocalScope openLiveContext settings = do
     unless
         (deployNetwork settings == "preprod" && deployNetworkMagic settings == 1)
         (fail "M1 V1 deployment supports only preprod network magic 1")
@@ -2215,8 +2365,8 @@ runDeploy settings = do
     verifySourceTree (deploySourceRepo settings) commit
     let localSettings = deployLocalSettingsFor (deployStorePath settings)
     references <-
-        withLocalQueryScope localSettings $ \scope ->
-            withLiveContext
+        openLocalScope localSettings $ \scope ->
+            openLiveContext
                 (deployLiveConfig settings)
                 (awaitLocalTransaction scope (deployTimeoutSeconds settings))
                 $ \context ->

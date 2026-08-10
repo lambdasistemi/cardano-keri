@@ -39,6 +39,7 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
  )
 import Cardano.KERI.ChainQuery.Program (boardCatalog, payerUtxos, referenceScripts, storeWatermark)
 import Cardano.KERI.ChainQuery.Types (
+    BoardEntry,
     BoardLocator (..),
     ChainAssetUtxo (..),
     ChainQueryError (..),
@@ -263,6 +264,71 @@ spec = describe "Cardano.KERI.ChainQuery.Koios (extended decode, A-001)" $ do
 
         it "never reports AtomicLocal, since Koios issues several independent calls rather than one shared-snapshot read" $
             interpreterConsistency (koiosInterpreter unreachableUrl Nothing) `shouldNotBe` AtomicLocal
+
+    describe
+        "#262 RQ-262-06 -- the Koios interpreter accounts EXPLICITLY for both \
+        \new operation families, RED against the closed test-local stand-in"
+        $ do
+            it "answers the exact-output operation with a named UnsupportedOperation rather than a partial value, a fallback, or an HTTP attempt" $ do
+                result <- capKoiosExactOutput redKoiosCapabilities koiosTxIdHex 0
+                case result of
+                    Left (UnsupportedOperation _) -> pure ()
+                    other ->
+                        fail
+                            ( "expected Koios to account for the exact-output operation with a \
+                              \named UnsupportedOperation, got "
+                                <> show other
+                            )
+
+            it "answers the board/output operation with a named UnsupportedOperation, never falling through to the local interpreter" $ do
+                result <-
+                    capKoiosBoardOutputs
+                        redKoiosCapabilities
+                        canonicalPolicyHex
+                        testAddressBech32
+                case result of
+                    Left (UnsupportedOperation _) -> pure ()
+                    other ->
+                        fail
+                            ( "expected Koios to account for the board/output operation with a \
+                              \named UnsupportedOperation, got "
+                                <> show other
+                            )
+
+{- | The two \#262 operations as answered by the REAL production
+'koiosInterpreter', behind a test-local adapter whose field types take the
+locators' own pieces and are therefore identical before and after
+implementation. RED closes both with a stand-in that reports the wrong
+failure, so each example fails for exactly the missing accounting rather
+than for a compilation reason.
+
+'unreachableUrl' is the point: an interpreter that answered either operation
+by dialing Koios would fail with a transport error instead of a named
+'UnsupportedOperation', so these examples also witness that no HTTP call is
+attempted.
+-}
+data KoiosCapabilities = KoiosCapabilities
+    { capKoiosExactOutput ::
+        Text -> Int -> IO (Either ChainQueryError ChainAssetUtxo)
+    , capKoiosBoardOutputs ::
+        Text -> Text -> IO (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])
+    }
+
+redKoiosCapabilities :: KoiosCapabilities
+redKoiosCapabilities =
+    KoiosCapabilities
+        { capKoiosExactOutput = \_txIdHex _index -> pure (Left notAccountedForYet)
+        , capKoiosBoardOutputs = \_policyId _address -> pure (Left notAccountedForYet)
+        }
+
+notAccountedForYet :: ChainQueryError
+notAccountedForYet =
+    ProviderFailure
+        "the Koios interpreter does not account for this operation family yet"
+
+-- | A canonical lower-case 32-byte transaction id.
+koiosTxIdHex :: Text
+koiosTxIdHex = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 0x91))
 
 {- | A genuine, checksum-valid testnet address: real ledger bytes
 (mirroring 'Cardano.KERI.Indexer.ReadsSpec.checkpointLedgerAddress')

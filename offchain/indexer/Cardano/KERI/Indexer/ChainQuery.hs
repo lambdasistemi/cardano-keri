@@ -312,18 +312,16 @@ localCurrentCheckpoint scope aidText =
                 Left err -> pure (Left (InvalidLocator err))
                 Right targetAid -> do
                     entries <- scanAddressTx addr
-                    let matching =
-                            [ entry
-                            | entry@(txIn, txOut) <- entries
-                            , Right record <- [decodeCheckpointOutput policy txIn addr txOut]
-                            , crAid record == targetAid
-                            ]
-                    pure $ case traverse (decodeActiveCheckpoint policy addr aidText) matching of
-                        Left err -> Left err
-                        Right [] -> Right Nothing
-                        Right [one] -> Right (Just one)
-                        Right (_ : _ : _) ->
-                            Left (AmbiguousCurrentState "more than one live checkpoint output for this AID")
+                    pure $ do
+                        rows <- decodedCheckpointRows policy addr entries
+                        let matching =
+                                [entry | (entry, record) <- rows, crAid record == targetAid]
+                        actives <- traverse (decodeActiveCheckpoint policy addr aidText) matching
+                        case actives of
+                            [] -> Right Nothing
+                            [one] -> Right (Just one)
+                            (_ : _ : _) ->
+                                Left (AmbiguousCurrentState "more than one live checkpoint output for this AID")
 
 {- | Every live checkpoint at the checkpoint address, each rendered with its
 own decoded AID (CESR-encoded from the datum).
@@ -334,12 +332,48 @@ localLiveCheckpoints scope =
         Nothing -> pure (Left (InvalidLocator "this write command has no checkpoint identity configured"))
         Just (policy, addr) -> do
             entries <- scanAddressTx addr
-            let decoded =
-                    [ (entry, TE.decodeUtf8 (qb64Aid (crAid record)))
-                    | entry@(txIn, txOut) <- entries
-                    , Right record <- [decodeCheckpointOutput policy txIn addr txOut]
-                    ]
-            pure (traverse (\(entry, aidText) -> decodeActiveCheckpoint policy addr aidText entry) decoded)
+            pure $ do
+                rows <- decodedCheckpointRows policy addr entries
+                traverse
+                    ( \(entry, record) ->
+                        decodeActiveCheckpoint
+                            policy
+                            addr
+                            (TE.decodeUtf8 (qb64Aid (crAid record)))
+                            entry
+                    )
+                    rows
+
+{- | #240 (A-013 finding 3, INV-240-PARITY): decode EVERY scanned checkpoint
+row, failing closed on the first row that does not decode.
+
+Both checkpoint readers above previously selected rows with a
+@Right record <- [decodeCheckpointOutput ...]@ pattern guard. That guard
+silently DROPS a row whose datum is undecodable or schema-malformed and then
+reports the survivors as the whole truth: a corrupted live checkpoint read as
+"this AID has no checkpoint" through 'localCurrentCheckpoint', and simply
+vanished from 'localLiveCheckpoints', while the frozen base provider answers
+@Left (DecodingFailure ...)@ for the very same storage. Divergence in the
+fail-open direction is the worst available one — a write verb would proceed
+against a state it could not read.
+
+This is the ONE decode both readers now share, and it is @traverse@-shaped
+rather than a filter, so the fail-open form cannot be reintroduced in one
+reader alone without deleting this function from under the other.
+-}
+decodedCheckpointRows ::
+    PolicyID ->
+    Indexer.Address ->
+    [(Indexer.TxIn, Indexer.TxOut)] ->
+    Either ChainQueryError [((Indexer.TxIn, Indexer.TxOut), CheckpointRecord)]
+decodedCheckpointRows policy addr =
+    traverse decodeRow
+  where
+    decodeRow entry@(txIn, txOut) =
+        (,) entry
+            <$> first
+                (DecodingFailure . T.pack . show)
+                (decodeCheckpointOutput policy txIn addr txOut)
 
 {- | Decode one indexed output into 'ActiveCheckpoint': datum via the
 existing 'decodeCheckpointOutput'; lovelace\/assets via a fresh ledger

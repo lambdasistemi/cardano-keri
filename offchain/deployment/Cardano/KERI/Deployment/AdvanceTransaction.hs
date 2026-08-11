@@ -6,7 +6,8 @@ Module      : Cardano.KERI.Deployment.AdvanceTransaction
 Description : Build and settle V1 Advance through the in-process runtime
 
 #181 Slice 3 replaces the external transaction runner with the shared
-'Cardano.KERI.Deployment.TransactionRuntime.runTransactionBuild' kernel.
+in-process build kernel; \#232 moves it onto the bounded-collateral
+'Cardano.KERI.Deployment.TransactionRuntime.runPlutusTransactionBuild'.
 The caller supplies a coherent funding snapshot, resolved reference scripts,
 and the observer reward account; this module owns the ledger body and its
 operation-specific checks.
@@ -48,13 +49,14 @@ import Cardano.KERI.Deployment.Registration (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     AggregateExUnitsError,
+    CollateralContract (..),
     FundingPair (..),
     PayerSelectionError,
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
     fundingSpends,
-    runTransactionBuild,
+    runPlutusTransactionBuild,
     selectFundingPair,
  )
 import Cardano.Ledger.Address (
@@ -95,16 +97,12 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Tx.Balance (CollateralUtxos (..))
 import Cardano.Tx.Build (
-    BuildOptions (..),
     CertWitness (ScriptCert),
     Check (..),
     InterpretIO (..),
     TxBuild,
     certify,
-    collateral,
-    defaultBuildOptions,
     payTo',
     reference,
     spend,
@@ -230,19 +228,17 @@ runAdvanceTransaction config plan fundingInputs activeInput registerObserver =
             let runtime = advanceRuntime config
             pparams <- trQueryProtocolParams runtime
             let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
-                options =
-                    defaultBuildOptions
-                        { boCollateralUtxos =
-                            CollateralUtxos [fundingCollateral advanceFunding]
-                        }
             result <-
-                runTransactionBuild
-                    options
+                runPlutusTransactionBuild
                     frozenRuntime
                     advanceInterpret
                     (fundingSpends advanceFunding <> [advanceActiveInput])
                     advanceReferences
                     (advanceFundingAddress config)
+                    CollateralContract
+                        { collateralInput = fundingCollateral advanceFunding
+                        , collateralReturnAddress = advanceFundingAddress config
+                        }
                     (advanceProgram pparams config registerObserver AdvanceInputs{..})
             pure $
                 first AdvanceBuildFailed result >>= \txId ->
@@ -323,7 +319,6 @@ advanceProgram
         } = do
         mapM_ (spend . fst) (fundingSpends funding)
         _ <- spendScript (fst advanceActiveInput) advanceSpendData
-        collateral (fst $ fundingCollateral funding)
         _ <-
             payTo'
                 advanceCheckpointAddress

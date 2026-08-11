@@ -31,8 +31,17 @@ fixture under that boundary.
 -}
 module Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
     testPParams,
+
+    -- * \#232 bounded-collateral proof oracle
+    statedMaximumCollateralLovelace,
+    statedRequiredCollateral,
+    withCollateralPercentage,
+    withFixedFee,
+    shouldDeclareBoundedCollateral,
+    shouldDeclareNoCollateral,
 ) where
 
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Api.PParams (
     PParams,
     emptyPParams,
@@ -45,14 +54,37 @@ import Cardano.Ledger.Api.PParams (
     ppTxFeeFixedL,
     ppTxFeePerByteL,
  )
+import Cardano.Ledger.Api.Tx (bodyTxL)
+import Cardano.Ledger.Api.Tx.Body (
+    collateralInputsTxBodyL,
+    collateralReturnTxBodyL,
+    feeTxBodyL,
+    inputsTxBodyL,
+    totalCollateralTxBodyL,
+ )
+import Cardano.Ledger.Api.Tx.Out (
+    TxOut,
+    addrTxOutL,
+    coinTxOutL,
+    getMinCoinTxOut,
+    valueTxOutL,
+ )
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), compactCoinOrError)
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, mkCostModel, mkCostModels)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Node.Client.Ledger (ConwayTx)
 import Data.Int (Int64)
 import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
+import Data.Word (Word16)
+import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
+import Test.Hspec (Expectation, expectationFailure, shouldBe)
 
 {- | Real, non-degenerate Conway protocol parameters. Non-zero minimum fee
 coefficients, a real @coinsPerUTxOByte@, mainnet-shaped 'ppMaxTxExUnits', a
@@ -88,6 +120,133 @@ requireNonZeroKeyDeposit pparams =
             error $
                 "Fixtures.testPParams: ppKeyDepositL must be positive, got "
                     <> show deposit
+
+-- ---------------------------------------------------------------------------
+-- #232 bounded-collateral proof oracle
+
+{- | The product's absolute phase-2 loss ceiling, stated by the proof itself:
+**5,000,000 lovelace**. Deliberately a literal here rather than an import of
+'Cardano.KERI.Deployment.TransactionRuntime.maximumCollateralLovelace' — a
+proof that reads the constant it exists to police cannot go RED when that
+constant drifts (INV-232-LOSS-BOUND).
+-}
+statedMaximumCollateralLovelace :: Coin
+statedMaximumCollateralLovelace = Coin 5_000_000
+
+{- | The exact protocol-required total collateral for a final fee, derived
+independently of the implementation under test: @ceiling (fee * p / 100)@ for
+the snapshot's collateral percentage @p@ (DATA-INV-232-01).
+-}
+statedRequiredCollateral :: PParams ConwayEra -> Coin -> Coin
+statedRequiredCollateral pparams (Coin fee) =
+    Coin ((fee * percent + 99) `div` 100)
+  where
+    percent = fromIntegral (pparams ^. ppCollateralPercentageL)
+
+{- | Raise a snapshot's flat fee component. This drives a real converged build
+past the 5,000,000-lovelace ceiling deterministically, without depending on the
+transaction size any particular operation happens to produce — so the
+cap-breach negative control cannot silently stop exercising the cap because a
+body got smaller.
+-}
+withFixedFee :: Coin -> PParams ConwayEra -> PParams ConwayEra
+withFixedFee fixedFee pparams = pparams & ppTxFeeFixedL .~ fixedFee
+
+{- | Replace the snapshot's collateral percentage.
+
+Every fixture in this repository used to sit at the mainnet default of 150,
+which made "reads the protocol parameter" indistinguishable from "happens to
+equal the value it would have read": hardcoding 150 in production passed every
+example. Varying @p@ is what closes that gap, so this helper exists to be used
+across the parameter's legal range — not to add one or two more constants.
+-}
+withCollateralPercentage :: Word16 -> PParams ConwayEra -> PParams ConwayEra
+withCollateralPercentage percentage pparams =
+    pparams & ppCollateralPercentageL .~ fromIntegral percentage
+
+{- | Assert every \#232 bounded-collateral property of one converged body
+against the snapshot that balanced it and the resolved collateral input:
+exact protocol arithmetic, the absolute maximum, exact and disjoint collateral
+input identity, and one present ADA-only min-UTxO-valid return to the funding
+address that conserves the input exactly
+(DATA-INV-232-01 through DATA-INV-232-05).
+-}
+shouldDeclareBoundedCollateral ::
+    (HasCallStack) =>
+    PParams ConwayEra ->
+    -- | the operation's funding address, which must receive the remainder
+    Addr ->
+    -- | the resolved collateral input
+    (TxIn, TxOut ConwayEra) ->
+    ConwayTx ->
+    Expectation
+shouldDeclareBoundedCollateral
+    pparams
+    fundingAddress
+    (collateralIn, collateralOut)
+    tx = do
+        adaOnly collateralOut
+            `orFail` "#232: the resolved collateral input is not ADA-only"
+        body ^. collateralInputsTxBodyL `shouldBe` Set.singleton collateralIn
+        not (Set.member collateralIn (body ^. inputsTxBodyL))
+            `orFail` "#232: the collateral input is also a regular spending input"
+        case (body ^. totalCollateralTxBodyL, body ^. collateralReturnTxBodyL) of
+            (SNothing, _) ->
+                expectationFailure $
+                    "#232: no total_collateral declared; the exact requirement is "
+                        <> show required
+            (_, SNothing) ->
+                expectationFailure $
+                    "#232: no collateral_return declared, so the whole "
+                        <> show available
+                        <> " is exposed to a phase-2 failure"
+            (SJust declaredTotal, SJust returnOut) -> do
+                declaredTotal `shouldBe` required
+                (declaredTotal <= statedMaximumCollateralLovelace)
+                    `orFail` ( "#232: declared total collateral "
+                                <> show declaredTotal
+                                <> " exceeds the stated maximum "
+                                <> show statedMaximumCollateralLovelace
+                             )
+                returnOut ^. addrTxOutL `shouldBe` fundingAddress
+                adaOnly returnOut
+                    `orFail` "#232: the collateral return is not ADA-only"
+                let returned = returnOut ^. coinTxOutL
+                    minimumReturn = getMinCoinTxOut pparams returnOut
+                (returned >= minimumReturn)
+                    `orFail` ( "#232: collateral return "
+                                <> show returned
+                                <> " is below its min-UTxO requirement "
+                                <> show minimumReturn
+                             )
+                let Coin totalLovelace = declaredTotal
+                    Coin returnedLovelace = returned
+                Coin (totalLovelace + returnedLovelace) `shouldBe` available
+      where
+        body = tx ^. bodyTxL
+        required = statedRequiredCollateral pparams (body ^. feeTxBodyL)
+        available = collateralOut ^. coinTxOutL
+
+{- | Assert that a script-free body invents no collateral commitment at all:
+no collateral inputs, and both Conway collateral fields absent
+(DATA-INV-232-06).
+-}
+shouldDeclareNoCollateral :: (HasCallStack) => ConwayTx -> Expectation
+shouldDeclareNoCollateral tx = do
+    body ^. collateralInputsTxBodyL `shouldBe` Set.empty
+    body ^. totalCollateralTxBodyL `shouldBe` SNothing
+    body ^. collateralReturnTxBodyL `shouldBe` SNothing
+  where
+    body = tx ^. bodyTxL
+
+adaOnly :: TxOut ConwayEra -> Bool
+adaOnly txOut =
+    case txOut ^. valueTxOutL of
+        MaryValue _ (MultiAsset assets) -> Map.null assets
+
+orFail :: (HasCallStack) => Bool -> String -> Expectation
+orFail True _ = pure ()
+orFail False message = expectationFailure message
 
 testCostModels :: CostModels
 testCostModels =

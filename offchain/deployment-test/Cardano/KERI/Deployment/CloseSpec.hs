@@ -24,12 +24,18 @@ import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
+    CollateralSafetyError (..),
     TransactionBuildError (..),
     TransactionRuntime (..),
     signWithPaymentKey,
     transactionId,
  )
-import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
+    shouldDeclareBoundedCollateral,
+    statedMaximumCollateralLovelace,
+    testPParams,
+    withFixedFee,
+ )
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
     TransactionScriptFailure (UnknownTxIn),
@@ -105,6 +111,8 @@ import Test.Hspec (
     it,
     shouldBe,
     shouldContain,
+    shouldNotBe,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -215,6 +223,81 @@ spec = describe "in-process close transaction" $ do
         result <- awaitClose query 1 0 disagreeingId
         readIORef pollsRef >>= (`shouldSatisfy` (>= 1))
         result `shouldBe` Left (CloseObservationTimeout disagreeingId)
+
+    boundedCollateralSpec
+
+-- ---------------------------------------------------------------------------
+-- #232 bounded phase-2 collateral loss
+
+{- | The row 'selectFundingPair' reserves as collateral for close: the smallest
+eligible entry in 'fundingInputs'.
+-}
+closeCollateralUtxo :: (TxIn, TxOut ConwayEra)
+closeCollateralUtxo = (stubTxIn 2, plainTxOut 50_000_000)
+
+boundedCollateralSpec :: Spec
+boundedCollateralSpec = describe "#232 bounded collateral" $ do
+    it "returns the remainder to the funding address, not close's change address" $ do
+        -- Non-vacuity: close is one of the two verbs whose ordinary change
+        -- address genuinely differs from its funding address, so this
+        -- assertion cannot pass without the explicit return instruction.
+        fundingAddr `shouldNotBe` changeAddr
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        result <-
+            runCloseTransaction
+                (closeConfig runtime)
+                syntheticPlan
+                fundingInputs
+                activeInput
+        case result of
+            Left err -> fail ("expected close success, got " <> show err)
+            Right _ -> do
+                tx <-
+                    readIORef signedRef
+                        >>= maybe (fail "trSign was never called") pure
+                shouldDeclareBoundedCollateral
+                    testPParams
+                    fundingAddr
+                    closeCollateralUtxo
+                    tx
+
+    it "refuses a requirement above 5,000,000 lovelace before signing" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        baseRuntime <- standInRuntime callsRef signedRef
+        let cappedRuntime =
+                baseRuntime
+                    { trQueryProtocolParams =
+                        pure (withFixedFee (Coin 4_000_000) testPParams)
+                    }
+        result <-
+            runCloseTransaction
+                (closeConfig cappedRuntime)
+                syntheticPlan
+                fundingInputs
+                activeInput
+        case result of
+            Left
+                ( CloseBuildFailed
+                        ( TransactionBuildCollateralRejected
+                                CollateralRequirementAboveMaximum
+                                    { collateralRequiredLovelace
+                                    , collateralMaximumLovelace
+                                    }
+                            )
+                    ) -> do
+                    collateralMaximumLovelace
+                        `shouldBe` statedMaximumCollateralLovelace
+                    collateralRequiredLovelace
+                        `shouldSatisfy` (> statedMaximumCollateralLovelace)
+            other ->
+                fail ("expected a bounded-collateral rejection, got " <> show other)
+        readIORef signedRef >>= (`shouldBe` Nothing)
+        calls <- readIORef callsRef
+        calls `shouldNotContain` ["sign"]
+        calls `shouldNotContain` ["submit"]
 
 isFundingFailure :: Either CloseError CloseResult -> Bool
 isFundingFailure (Left CloseFundingSelectionFailed{}) = True

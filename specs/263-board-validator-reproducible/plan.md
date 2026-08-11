@@ -41,7 +41,7 @@ Owned behavior/proof paths:
 - `deploy/preprod/endpoint-board-blueprint.json` (new exact artifact);
 - `offchain/flake.nix` (board-specific test binding only);
 - `offchain/deployment-test/Cardano/KERI/Deployment/ManifestSpec.hs`;
-- `offchain/deployment-test/Cardano/KERI/LocalWritePathSpec.hs`;
+- `offchain/query-test/Cardano/KERI/Indexer/LocalWritePathSpec.hs`;
 - the smallest cabal/Just test registration surface needed for the permanent
   identity check, if an existing test target cannot host it.
 
@@ -78,7 +78,7 @@ Forbidden paths:
 | Artifact | Bytes | Lines | Ceiling |
 | --- | ---: | ---: | --- |
 | `spec.md` | 3,951 | 81 | 6,000 / 150 |
-| `plan.md` | 3,826 | 85 | 6,000 / 150 |
+| `plan.md` | 3,829 | 85 | 6,000 / 150 |
 | `modules-model.md` | 2,930 | 69 | 5,000 / 130 |
 | `data-model.md` | 2,935 | 71 | 5,000 / 130 |
 | `functions-model.md` | 2,211 | 61 | 5,000 / 130 |

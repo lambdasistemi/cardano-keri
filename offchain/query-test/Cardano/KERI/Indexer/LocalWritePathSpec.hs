@@ -125,7 +125,14 @@ import Cardano.KERI.Deployment.Manifest (
     readManifest,
     writeManifestAtomic,
  )
-import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
+import Cardano.KERI.Deployment.Script (
+    ScriptArtifact (artifactProgram),
+    computeScriptHash,
+    deriveBoardScript,
+    loadBlueprint,
+    mkCageScript,
+    scriptHashText,
+ )
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
 import Cardano.KERI.Indexer.ChainQuery (
     LocalQueryScope (..),
@@ -830,43 +837,137 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                     entrypointBoardDeploy
                     expectIncompletePhase
 
-            -- RESIDUAL, #263 (A-003 / Q-003 Option A). These three verbs have
-            -- no complete-read-set reading available in this repository: their
-            -- first acquisition step resolves the frozen board policy as a live
-            -- reference-script hash, and nothing here hashes to it. Each verb
-            -- below therefore proves the strongest reachable statement, and
-            -- 'expectFrozenBoardReferenceUnresolvable' is written so that these
-            -- examples go red as soon as #263 lands.
+            -- #263 (RQ-263-06, T263-S1-05/06/07). #240's three residual
+            -- readings are gone. Their obstacle was real and is now removed:
+            -- the frozen board policy had no script preimage in this
+            -- repository, so no fixture could seed the live reference output
+            -- these verbs resolve first. The recovered artifact IS that
+            -- preimage, so each verb below now proves the SAME complete
+            -- statement as the other five: it reaches its real builder
+            -- boundary having performed exactly one local acquisition.
+            --
+            -- Every board reference row below carries the exact recovered
+            -- deployed script, seeded through the production
+            -- loader/derivation -- never a hand-built hash and never a
+            -- weakened manifest, resolution, or expectation.
             it
-                "runBoardPostWith opens its scope and fails closed inside its one acquisition -- the frozen board policy resolves to no live reference script (residual, #263)"
+                "runBoardPostWith's phase reaches its builder boundary having acquired exactly once"
+                $ do
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    reference <- entrypointBoardReferenceSeed
+                    withBoundaryProbe
+                        (reference <> entrypointFundingSeed)
+                        (entrypointBoardPost recordPath)
+                        expectCompletePhase
+
+            it
+                "runBoardPostWith does NOT reach its builder boundary when the recovered reference row is withheld"
                 $ do
                     recordPath <-
                         getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
                     withBoundaryProbe
                         entrypointFundingSeed
                         (entrypointBoardPost recordPath)
-                        expectFrozenBoardReferenceUnresolvable
+                        expectIncompletePhase
 
             it
-                "runBoardUpdateWith opens its scope and fails closed inside its one acquisition even with a complete authenticated catalog -- the frozen board policy resolves to no live reference script (residual, #263)"
+                "runBoardPostWith does NOT reach its builder boundary when the recovered script sits at a transaction the manifest locator does not name"
+                $ do
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    reference <- entrypointBoardReferenceSeedAtWrongLocator
+                    withBoundaryProbe
+                        (reference <> entrypointFundingSeed)
+                        (entrypointBoardPost recordPath)
+                        expectLocatorDisagreement
+
+            it
+                "runBoardUpdateWith's phase reaches its builder boundary having acquired exactly once"
                 $ do
                     records <- entrypointWitnessRecords
                     recordPath <-
                         getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    reference <- entrypointBoardReferenceSeed
                     withBoundaryProbe
-                        (entrypointBoardCatalogSeedWithout Nothing records <> entrypointFundingSeed)
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout Nothing records
+                            <> entrypointFundingSeed
+                        )
                         (entrypointBoardUpdate recordPath)
-                        expectFrozenBoardReferenceUnresolvable
+                        expectCompletePhase
 
             it
-                "runBoardRetireWith opens its scope and fails closed inside its one acquisition even with a complete authenticated catalog -- the frozen board policy resolves to no live reference script (residual, #263)"
+                "runBoardUpdateWith does NOT reach its builder boundary when the catalog row it must replace is withheld"
+                $ do
+                    records <- entrypointWitnessRecords
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    reference <- entrypointBoardReferenceSeed
+                    withBoundaryProbe
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout (Just 0) records
+                            <> entrypointFundingSeed
+                        )
+                        (entrypointBoardUpdate recordPath)
+                        expectIncompletePhase
+
+            it
+                "runBoardUpdateWith does NOT reach its builder boundary when the recovered script sits at a transaction the manifest locator does not name"
+                $ do
+                    records <- entrypointWitnessRecords
+                    recordPath <-
+                        getDataFileName "deployment-test/fixtures/witness-1-oobi.cesr"
+                    reference <- entrypointBoardReferenceSeedAtWrongLocator
+                    withBoundaryProbe
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout Nothing records
+                            <> entrypointFundingSeed
+                        )
+                        (entrypointBoardUpdate recordPath)
+                        expectLocatorDisagreement
+
+            it
+                "runBoardRetireWith's phase reaches its builder boundary having acquired exactly once"
                 $ do
                     records <- entrypointWitnessRecords
                     witness <- entrypointFirstWitnessIdentifier records
+                    reference <- entrypointBoardReferenceSeed
                     withBoundaryProbe
-                        (entrypointBoardCatalogSeedWithout Nothing records <> entrypointFundingSeed)
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout Nothing records
+                            <> entrypointFundingSeed
+                        )
                         (entrypointBoardRetire witness)
-                        expectFrozenBoardReferenceUnresolvable
+                        expectCompletePhase
+
+            it
+                "runBoardRetireWith does NOT reach its builder boundary when the catalog row it must retire is withheld"
+                $ do
+                    records <- entrypointWitnessRecords
+                    witness <- entrypointFirstWitnessIdentifier records
+                    reference <- entrypointBoardReferenceSeed
+                    withBoundaryProbe
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout (Just 0) records
+                            <> entrypointFundingSeed
+                        )
+                        (entrypointBoardRetire witness)
+                        expectIncompletePhase
+
+            it
+                "runBoardRetireWith does NOT reach its builder boundary when the recovered script sits at a transaction the manifest locator does not name"
+                $ do
+                    records <- entrypointWitnessRecords
+                    witness <- entrypointFirstWitnessIdentifier records
+                    reference <- entrypointBoardReferenceSeedAtWrongLocator
+                    withBoundaryProbe
+                        ( reference
+                            <> entrypointBoardCatalogSeedWithout Nothing records
+                            <> entrypointFundingSeed
+                        )
+                        (entrypointBoardRetire witness)
+                        expectLocatorDisagreement
   where
     targetTxIn = sampleTxIn 0x30
     targetTxId = TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0x30))))
@@ -1400,68 +1501,67 @@ expectIncompletePhase probe outcome = do
                     <> show outcome
                 )
 
-{- | The RESIDUAL reading for board post\/update\/retire, authorized by A-003
-(the Q-003 ruling, Option A) and owned by __#263__: the frozen board policy
-'frozenEndpointBoardPolicyId' (@54494f8a…@, the DEPLOYED board's script hash)
-has no script preimage anywhere in this repository -- the repository's own
-blueprint derives @398a358a…@ -- so no local fixture can seed the live
-reference output these three verbs resolve first. What IS reachable, and what
-this reading asserts, is that the verb genuinely opens its local scope, runs
-its ONE acquisition, and that acquisition fails closed inside
-'boardReferenceOutputTx' naming exactly that frozen policy.
+{- | #263 (CORRECTION-001, REL-263-LOCATOR-AGREEMENT): the wrong-locator
+control shared by all three board write verbs.
 
-This is a real executing assertion, never a pending, disabled, or
-exception-swallowing example, and it is deliberately three checks:
+'boardReferenceOutputProgram' does two things, and only one of them is
+observed by the positive readings above: it resolves the frozen board policy
+to a live reference output, AND it requires that output's own @TxIn@ to equal
+the transaction id and index the manifest's 'endpointBoardReference' records.
+The second half is defence in depth against a stale or substituted manifest,
+and nothing else in this suite would notice its removal -- a resolvable
+reference row would satisfy every other assertion here.
 
-  * the builder boundary was NOT reached -- the phase stopped where claimed;
-  * exactly ONE acquisition ran. Without this, a fixture that failed before
-    the local scope even opened (a rejected manifest, an undecodable address)
-    would report the same absent boundary and would prove nothing whatever
-    about acquisition;
-  * the failure names the frozen policy hash itself, so this example goes RED
-    the moment #263 makes that hash resolvable -- which is exactly when this
-    residual should be replaced by the complete eight-verb reading.
+So this control seeds the EXACT recovered deployed script -- the same bytes,
+through the same production derivation, as the positive readings -- at a
+transaction the manifest does not name, and requires three things:
 
-The @consumerErrors@ equality in
-"Cardano.KERI.Deployment.EndpointBoardManifest" is deliberately NOT weakened,
-parameterized away, or bypassed here: it is the live fail-closed property
-binding every consumer to the deployed board. #263 owns the reproducibility
-repair and the missing gate assertion that the repository blueprint-derived
-board script equals 'frozenEndpointBoardPolicyId'.
+  * the builder boundary was NOT reached;
+  * exactly ONE acquisition ran, so the phase genuinely opened its local scope
+    and got as far as resolving the reference (a manifest rejected at count 0
+    would otherwise report the same absent boundary and prove nothing);
+  * the failure names the locator disagreement specifically, not merely "some
+    failure" -- an unresolvable hash produces a DIFFERENT message and would not
+    satisfy this.
+
+Delete the tx-id\/index equality from 'boardReferenceOutputProgram' and all
+three examples go red: the row resolves, the phase reaches its boundary, and
+both the boundary and the message assertions fail.
 -}
-expectFrozenBoardReferenceUnresolvable ::
+expectLocatorDisagreement ::
     BoundaryProbe -> Either SomeException () -> IO ()
-expectFrozenBoardReferenceUnresolvable probe outcome = do
+expectLocatorDisagreement probe outcome = do
     atBoundary <- readIORef (probeAtBoundary probe)
     total <- readIORef (probeAcquisitions probe)
     atBoundary `shouldBe` Nothing
     total `shouldBe` 1
     case outcome of
         Left err
-            | frozenReferenceFailure `T.isInfixOf` T.pack (show err) -> pure ()
+            | locatorFailure `T.isInfixOf` T.pack (show err) -> pure ()
         _ ->
             expectationFailure
-                ( "expected the phase to fail closed inside boardReferenceOutputTx, \
-                  \naming the frozen board policy that resolves to no live reference \
-                  \script (#263), got "
+                ( "expected the phase to fail closed inside \
+                  \boardReferenceOutputProgram naming the manifest locator \
+                  \disagreement, got "
                     <> show outcome
                 )
   where
-    frozenReferenceFailure =
-        "no live output carries the requested reference script hash: "
-            <> frozenEndpointBoardPolicyId
+    locatorFailure =
+        "board reference output does not match the manifest's recorded locator"
 
 {- | A board manifest carrying the SAME 'frozenEndpointBoardPolicyId'\/
 'frozenEndpointBoardAddress' every real manifest must (every board plan
 builder checks the manifest's own board identity against these frozen
 constants BEFORE the acquisition step is ever reached -- an arbitrary
 identity fails closed there, at count 0, before proving anything), and a
-well-formed reference locator. No live row answers that locator, and under
-A-003 none can: 'boardReferenceOutputTx' -- every board verb's first
-acquisition step -- resolves the frozen policy as a reference-script hash
-first, and nothing in this repository hashes to it (#263). The locator is
-still a real, schema-valid value because @consumerErrors@ validates its
-shape before the manifest is accepted at all.
+well-formed reference locator.
+
+\#263: that locator is now ANSWERED. 'entrypointBoardReferenceSeed' seeds the
+recovered deployed script at exactly @sampleTxIn 0x63@ index 0, so
+'boardReferenceOutputProgram' -- every board verb's first acquisition step --
+both resolves the frozen policy and agrees with this recorded locator. The
+manifest itself is unchanged and is still accepted only because
+@consumerErrors@ validates its identity and its locator's shape.
 -}
 entrypointBoardManifest :: EndpointBoardManifest
 entrypointBoardManifest =
@@ -1608,15 +1708,67 @@ entrypointBlueprintPath = do
                 "KERI_CHECKPOINT_BLUEPRINT is unset or empty; the complete \
                 \deploy/board entrypoint fixtures cannot run"
 
-{- | 'frozenEndpointBoardPolicyId' as its raw 28-byte script hash.
-
-A-003 (Q-003, Option A): there is deliberately NO fixture deriving the board
-script from the repository blueprint. It was measured to hash to
-@398a358a…@, not to this frozen @54494f8a…@, so it could never seed the
-reference output the board write verbs resolve. Reconstructing the deployed
-artifact is #263's work, not this slice's; see
-'expectFrozenBoardReferenceUnresolvable'.
+{- | #263 (DAT-263-BOARD-BINDING): the recovered deployed board artifact's own
+path, from its OWN required binding. Never @KERI_CHECKPOINT_BLUEPRINT@: that
+blueprint is the current source build, whose endpoint-board validator hashes
+to @398a358a…@ rather than the deployed @54494f8a…@ and could not seed these
+reference rows. Fails closed on an unset or empty binding rather than falling
+back to it -- the substitution this ticket exists to make impossible.
 -}
+entrypointBoardBlueprintPath :: IO FilePath
+entrypointBoardBlueprintPath = do
+    value <- lookupEnv "KERI_BOARD_BLUEPRINT"
+    case value of
+        Just path | not (null path) -> pure path
+        _ ->
+            fail
+                "KERI_BOARD_BLUEPRINT is unset or empty; the board \
+                \post/update/retire read-set proofs cannot run"
+
+{- | #263: the exact deployed board program as a ledger 'Script', obtained
+through the REAL production loader and derivation
+('Cardano.KERI.Deployment.Script.loadBlueprint' then 'deriveBoardScript'),
+never a hand-assembled fixture. Its hash is therefore whatever those functions
+produce from the checked-in bytes; if that is not
+'frozenEndpointBoardPolicyId', the seeded row does not answer the verbs'
+reference lookup and every positive reading below fails closed rather than
+quietly passing.
+-}
+entrypointRecoveredBoardScript :: IO (Script ConwayEra)
+entrypointRecoveredBoardScript = do
+    path <- entrypointBoardBlueprintPath
+    blueprint <- loadBlueprint path >>= either fail pure
+    artifact <- either fail pure (deriveBoardScript blueprint)
+    pure (mkCageScript (artifactProgram artifact))
+
+{- | The recovered board reference output, seeded at an arbitrary marker.
+
+Its address is deliberately an ordinary key-hash address rather than the board
+address: 'localReferenceScriptsTx' scans every live row with no address
+scoping, and keeping the reference row off both the funding address and the
+board catalog address is what stops it from perturbing the OTHER two families
+in these verbs' read sets.
+-}
+entrypointBoardReferenceSeedAt :: Word8 -> IO [UtxoOp]
+entrypointBoardReferenceSeedAt marker = do
+    script <- entrypointRecoveredBoardScript
+    pure [referenceCreateAt (sampleTxIn marker) script addrA]
+
+{- | The reference row at exactly the locator 'entrypointBoardManifest'
+records (@sampleTxIn 0x63@, index 0), so 'boardReferenceOutputProgram' 's
+locator check agrees.
+-}
+entrypointBoardReferenceSeed :: IO [UtxoOp]
+entrypointBoardReferenceSeed = entrypointBoardReferenceSeedAt 0x63
+
+{- | CORRECTION-001: the SAME recovered script at a transaction id the
+manifest's locator does not name. Marker @0x6A@ collides with no other seeded
+row in this suite. Paired with 'expectLocatorDisagreement'.
+-}
+entrypointBoardReferenceSeedAtWrongLocator :: IO [UtxoOp]
+entrypointBoardReferenceSeedAtWrongLocator = entrypointBoardReferenceSeedAt 0x6A
+
+-- | 'frozenEndpointBoardPolicyId' as its raw 28-byte script hash.
 entrypointBoardScriptHash :: ScriptHash
 entrypointBoardScriptHash =
     case convertFromBase Base16 (TE.encodeUtf8 frozenEndpointBoardPolicyId) of
@@ -1806,7 +1958,7 @@ entrypointBoundaryRegisterRuntime probe =
 
 {- | Run one production entrypoint against a fresh probe and a complete (or
 deliberately incomplete) seeded read set, and hand the caller both the probe
-and the entrypoint's own outcome. Every one of the sixteen examples below is
+and the entrypoint's own outcome. Every one of the nineteen examples above is
 this shape, so a verb's positive case and its negative control differ in
 exactly one thing: which rows were seeded.
 -}

@@ -503,6 +503,20 @@
           keriBlueprintPath =
             if (e2eWiring ? blueprint) then "${e2eWiring.blueprint}" else "";
 
+          # #263 (DAT-263-BOARD-BINDING / EDGE-263-04): the RECOVERED deployed
+          # endpoint-board artifact, bound separately from
+          # `KERI_CHECKPOINT_BLUEPRINT` and never aliased to it. That blueprint
+          # is the current source build under the pinned aiken 1.1.23
+          # toolchain; its endpoint-board validator hashes to `398a358a…`, not
+          # to the deployed `54494f8a…`, so substituting it would silently
+          # prove the wrong program. The artifact lives at repo-root
+          # `deploy/preprod/`, outside this flake's own `src`, so it arrives
+          # through the existing `deployPreprod` input exactly as
+          # `board-manifest.json` already does. Every consumer below fails
+          # closed on an empty or missing value rather than falling back.
+          keriBoardBlueprintPath =
+            "${inputs.deployPreprod}/endpoint-board-blueprint.json";
+
           local-write-path-check-runner = pkgs.writeShellApplication {
             name = "local-write-path-check";
             runtimeInputs = [
@@ -534,6 +548,20 @@
               export KERI_CHECKPOINT_BLUEPRINT="${keriBlueprintPath}"
               if [ ! -s "$KERI_CHECKPOINT_BLUEPRINT" ]; then
                 echo "FAIL: KERI_CHECKPOINT_BLUEPRINT is unset or empty; runDeployWith's complete entrypoint property cannot run" >&2
+                exit 1
+              fi
+
+              # #263: the DISTINCT board binding, same fail-closed contract.
+              # Board post/update/retire seed their reference row with the
+              # recovered deployed script; without this the three complete
+              # read-set proofs cannot run at all.
+              export KERI_BOARD_BLUEPRINT="${keriBoardBlueprintPath}"
+              if [ ! -s "$KERI_BOARD_BLUEPRINT" ]; then
+                echo "FAIL: KERI_BOARD_BLUEPRINT is unset or empty; the board post/update/retire read-set proofs cannot run" >&2
+                exit 1
+              fi
+              if [ "$KERI_BOARD_BLUEPRINT" = "$KERI_CHECKPOINT_BLUEPRINT" ]; then
+                echo "FAIL: KERI_BOARD_BLUEPRINT aliases KERI_CHECKPOINT_BLUEPRINT (DATA-INV-263-03)" >&2
                 exit 1
               fi
 
@@ -1049,6 +1077,9 @@
               text = ''
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
+                # #263: the recovered deployed board artifact, distinct from
+                # the source-built checkpoint blueprint above.
+                export KERI_BOARD_BLUEPRINT="${inputs.deployPreprod}/endpoint-board-blueprint.json"
                 exec ${deploymentTestsExe}/bin/deployment-tests "$@"
               '';
             };
@@ -1750,6 +1781,12 @@
           devShells.default =
             project.shell.overrideAttrs (_previous: {
               KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
+              # #263: same reasoning as the line above -- the focused commands
+              # `nix develop -c cabal run local-write-path-tests` and
+              # `... deployment-tests` must observe the SAME board binding the
+              # permanent runners set, or a fixture would pass under one
+              # command and fail under the other.
+              KERI_BOARD_BLUEPRINT = keriBoardBlueprintPath;
             });
         };
     };

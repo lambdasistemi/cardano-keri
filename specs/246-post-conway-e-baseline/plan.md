@@ -266,6 +266,38 @@ variant E named. Depends on Slice A's variant answer and on any bridge repair
 Slice A finds necessary, which would itself become a new frozen source and
 manifest identity before this slice measures anything.
 
+## Slice B invariants
+
+Severity fixed **here, at spec time**, and never argued at audit time. Slice B
+is where the chain-state test stops being one step removed: these rows are the
+identity of the compiled validators that govern registration bonds, freeze
+bonds, conviction forfeiture and endpoint deposits.
+
+| ID | Severity | Must hold | Observable failure |
+|---|---|---|---|
+| INV-246-B1 | BLOCKING | The baseline blueprint is **rebuilt from source** at the accepted anchor with the Aiken version the repository validates its onchain sources with, not substituted by a declared output hash. | The artifact is content-addressed such that a cold store cannot reproduce it, or it is built with a toolchain other than the repository's validating one. |
+| INV-246-B2 | **ADVISORY** | What a cold store does with the retired pre-#219 fixed-output baseline is established mechanically, by a check that runs inside the gate. | The claim is asserted from the divergence of declared hash and builder inputs rather than observed. |
+| INV-246-B3 | BLOCKING | The manifest covers all 23 titles over 8 distinct programs, every field computed from the artifact; the cardinality is asserted, not assumed. A title is not a program — `mint`/`spend`/`else` of one validator share one `compiledCode`. | A field is a literal that happens to equal the computed value; or the cardinality is taken from the mandate rather than measured. |
+| INV-246-B4 | BLOCKING | Variant E is bound as the evaluation identity, and any version-derived selection is named as a separate value that cannot silently stand in for it. | The record names no variant, names C as E, or infers the variant from a program's UPLC version. |
+| INV-246-B5 | BLOCKING | Mutating any single manifest input — a title, a program byte, the toolchain, the variant — makes verification exit non-zero **and name which input moved**. | A mutated input still verifies, or the failure does not identify what changed. |
+| INV-246-B6 | BLOCKING | Historical C / pre-#219 material is relabelled in place, neither deleted nor reinterpreted, and can never satisfy a P0 claim. | A C record is presented as E, or historical material is removed rather than relabelled. |
+| INV-246-B7 | BLOCKING | The identity-consistency check goes RED when any element of `COMMIT + TOOLCHAIN + VARIANT` is unnamed, or when the elements describe different configurations — applied to **every** record the bundle carries, receipts included. | An internally inconsistent record passes, or an unnamed element is treated as anything other than `COULD-NOT-EVALUATE`. |
+| INV-246-B8 | BLOCKING | That check is demonstrated RED **against the retained pre-slice receipt** before any clean baseline is accepted; the retained receipt is never repaired, regenerated or deleted. | The checker is validated only against an invented broken input, or the retained receipt is modified. |
+
+**Carried into Slice B, not re-derived:**
+
+| ID | Severity | State |
+|---|---|---|
+| `INV-246-ORACLE-CLOSURE-IDENTITY` | BLOCKING | `OPEN` — the `.ilean` root the oracle consumes is independently bound to the intended complete pinned upstream closure, not merely supplied by the same Nix interpolation the checker compares against. Terminates **only** `KILLED` by a named mutant or `BLOCKED` naming the exact infeasibility fact. Never `RESIDUAL`. |
+| `INV-246-TRACKED-IMPORT-ORDER` | ADVISORY | `OPEN` — the source re-elaboration compiles tracked modules in dependency order, not alphabetical order. |
+
+Ten rows, seven `BLOCKING`. Audit budget for Slice B is a **fresh**
+`builds_spent=0 / builds_budget=3`, separate from the spent Slice A2 ladder and
+its one finalisation run. Bill stated in advance: seven blocking rows each
+needing a named killing mutant or a named blocking fact, inside three building
+audits. If that does not fit, the outcome is escalation, never a quiet
+`RESIDUAL`.
+
 ### Slice C — stranger-runnable bundle skeleton and downstream record schema
 
 Turns the frozen identity into something a stranger re-derives from a fresh

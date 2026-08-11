@@ -793,6 +793,9 @@
               baselineSourceCommit = sourceIdentity;
               baselineVariant = "defaultFunSemanticsVariantE";
               baselineEra = "post-Conway";
+              baselineSelection = "explicit-era-binding";
+              baselineVersionDerived = "defaultFunSemanticsVariantC";
+              baselineVerificationReceipt = "manifest-verification";
               validatingAikenVersion = aikenPkgs.aiken.version;
               baselineToolchain =
                 "aiken=${validatingAikenVersion};lean-blaster=${leanBlaster.rev};plutus-core-blaster=${plutusCoreBlaster.rev};cardano-ledger-api-blaster=${cardanoLedgerApiBlaster.rev}";
@@ -1100,7 +1103,15 @@
                     pkgs.lib.escapeShellArg baselineVariant
                   }
                   export BASELINE_ERA=${pkgs.lib.escapeShellArg baselineEra}
-                  export BASELINE_VERSION_DERIVED=defaultFunSemanticsVariantC
+                  export BASELINE_SELECTION=${
+                    pkgs.lib.escapeShellArg baselineSelection
+                  }
+                  export BASELINE_VERSION_DERIVED=${
+                    pkgs.lib.escapeShellArg baselineVersionDerived
+                  }
+                  export BASELINE_VERIFICATION_RECEIPT=${
+                    pkgs.lib.escapeShellArg baselineVerificationReceipt
+                  }
                   export BASELINE_LOCK_SHA256=${
                     pkgs.lib.escapeShellArg lockSha256
                   }
@@ -1268,6 +1279,15 @@
                       pkgs.lib.escapeShellArg baselineVariant
                     } \
                     --expected-era ${pkgs.lib.escapeShellArg baselineEra} \
+                    --expected-selection ${
+                      pkgs.lib.escapeShellArg baselineSelection
+                    } \
+                    --expected-version-derived ${
+                      pkgs.lib.escapeShellArg baselineVersionDerived
+                    } \
+                    --expected-verification-receipt ${
+                      pkgs.lib.escapeShellArg baselineVerificationReceipt
+                    } \
                     --expected-toolchain ${
                       pkgs.lib.escapeShellArg baselineToolchain
                     } \
@@ -1291,16 +1311,18 @@
                   blueprint_sha256="$(jq -er '.blueprint_sha256' "$identity_manifest")"
                   records_checked="$(sed -n 's/^CBIC_IDENTITY_RESULT records_checked=//p' "$identity_out")"
                   inconsistent="$(sed -n 's/^CBIC_IDENTITY_RESULT inconsistent=//p' "$identity_out")"
-                  identity_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT identity_fields=//p' "$identity_out")"
-                  externally_expected="$(sed -n 's/^CBIC_IDENTITY_RESULT externally_expected=//p' "$identity_out")"
+                  identity_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT fields=//p' "$identity_out")"
+                  reconciled_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT reconciled=//p' "$identity_out")"
                   unexpected_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT unexpected=//p' "$identity_out")"
+                  enumerated_by="$(sed -n 's/^CBIC_IDENTITY_RESULT enumerated_by=//p' "$identity_out")"
                   test "$titles" -eq 23
                   test "$programs" -eq 8
                   test "$records_checked" -ge 1
                   test "$inconsistent" -eq 0
                   test "$identity_fields" -ge 1
-                  test "$externally_expected" -eq "$identity_fields"
+                  test "$reconciled_fields" -eq "$identity_fields"
                   test "$unexpected_fields" -eq 0
+                  test "$enumerated_by" = jq-scalar-paths
 
                   echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build outcome=ESTABLISHED"
                   jq -r '.programs[] | [.title, (.params | tostring), .program_sha256] | @tsv' \
@@ -1310,9 +1332,9 @@
                       done
                   echo "AUDIT-BASELINE built_from=source toolchain=aiken:${validatingAikenVersion} validating_toolchain=aiken:${validatingAikenVersion} agreement=by-construction predicate=validating-aiken-pin-reconciliation outcome=ESTABLISHED"
                   echo "AUDIT-BASELINE-COMMIT declared=${baselineSourceCommit} observed=${sourceIdentity} authority=flake-self-rev agreement=by-construction outcome=ESTABLISHED"
-                  echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=explicit-era-binding version_derived=defaultFunSemanticsVariantC outcome=ESTABLISHED"
+                  echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=${baselineSelection} version_derived=${baselineVersionDerived} outcome=ESTABLISHED"
                   echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records outcome=ESTABLISHED"
-                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields externally_expected=$externally_expected unexpected=$unexpected_fields instrument=check-blaster-identity-consistency window=manifest-identity-and-all-record-identity-fields outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields reconciled=$reconciled_fields unexpected=$unexpected_fields enumerated_by=$enumerated_by instrument=check-blaster-identity-consistency window=manifest-identity-and-all-record-fields outcome=ESTABLISHED"
 
                   # The Nix check executes the same app in a build sandbox,
                   # where the deliberately retained /tmp receipt and a nested
@@ -1331,7 +1353,9 @@
                     BASELINE_AIKEN=${pkgs.lib.escapeShellArg validatingAikenVersion} \
                     BASELINE_VARIANT=${pkgs.lib.escapeShellArg baselineVariant} \
                     BASELINE_ERA=${pkgs.lib.escapeShellArg baselineEra} \
-                    BASELINE_VERSION_DERIVED=defaultFunSemanticsVariantC \
+                    BASELINE_SELECTION=${pkgs.lib.escapeShellArg baselineSelection} \
+                    BASELINE_VERSION_DERIVED=${pkgs.lib.escapeShellArg baselineVersionDerived} \
+                    BASELINE_VERIFICATION_RECEIPT=${pkgs.lib.escapeShellArg baselineVerificationReceipt} \
                     BASELINE_TOOLCHAIN=${pkgs.lib.escapeShellArg baselineToolchain} \
                     BASELINE_LOCK_SHA256=${pkgs.lib.escapeShellArg lockSha256} \
                     BASELINE_LEAN_BLASTER_REV=${pkgs.lib.escapeShellArg leanBlaster.rev} \
@@ -1377,7 +1401,9 @@
                     for leg in record-toolchain-mutated \
                                identity-field-without-external-expectation \
                                control-schema-narrower-than-production \
-                               baseline-commit-authority-substituted; do
+                               baseline-commit-authority-substituted \
+                               carried-field-without-reconciled-expectation \
+                               coverage-count-not-enumerated; do
                       repair_rc="$(sed -n "s/^REPAIR-SELFTEST leg=$leg rc=\([0-9][0-9]*\) outcome=REFUTED$/\1/p" "$baseline_contract_out")"
                       test "$repair_rc" -gt 0
                       echo "AUDIT-SELFTEST leg=$leg rc=$repair_rc outcome=REFUTED"

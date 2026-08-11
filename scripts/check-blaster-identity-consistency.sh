@@ -117,7 +117,10 @@ usage: check-blaster-identity-consistency.sh [--repo-root <dir>] [--self-test]
        check-blaster-identity-consistency.sh --identity-manifest <json>
          --blueprint <plutus.json> --expected-commit <sha>
          --expected-aiken <version> --expected-variant <name>
-         --expected-era <era> --expected-toolchain <identity>
+         --expected-era <era> --expected-selection <method>
+         --expected-version-derived <variant>
+         --expected-verification-receipt <label>
+         --expected-toolchain <identity>
          --expected-lock-sha256 <hex>
          --expected-lean-blaster-rev <sha>
          --expected-plutus-core-rev <sha>
@@ -152,6 +155,9 @@ EXPECTED_COMMIT=""
 EXPECTED_AIKEN=""
 EXPECTED_VARIANT=""
 EXPECTED_ERA=""
+EXPECTED_SELECTION=""
+EXPECTED_VERSION_DERIVED=""
+EXPECTED_VERIFICATION_RECEIPT=""
 EXPECTED_TOOLCHAIN=""
 EXPECTED_LOCK_SHA256=""
 EXPECTED_LEAN_BLASTER_REV=""
@@ -171,6 +177,9 @@ while [ $# -gt 0 ]; do
     --expected-aiken) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_AIKEN=$2; shift 2 ;;
     --expected-variant) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_VARIANT=$2; shift 2 ;;
     --expected-era) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_ERA=$2; shift 2 ;;
+    --expected-selection) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_SELECTION=$2; shift 2 ;;
+    --expected-version-derived) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_VERSION_DERIVED=$2; shift 2 ;;
+    --expected-verification-receipt) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_VERIFICATION_RECEIPT=$2; shift 2 ;;
     --expected-toolchain) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_TOOLCHAIN=$2; shift 2 ;;
     --expected-lock-sha256) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LOCK_SHA256=$2; shift 2 ;;
     --expected-lean-blaster-rev) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LEAN_BLASTER_REV=$2; shift 2 ;;
@@ -560,6 +569,169 @@ require_manifest_identity_arguments() {
     || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: upstream.plutus_core_blaster"
   [ -n "$EXPECTED_LEDGER_API_REV" ] \
     || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: upstream.cardano_ledger_api_blaster"
+  [ -n "$EXPECTED_SELECTION" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: selection"
+  [ -n "$EXPECTED_VERSION_DERIVED" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: version_derived"
+  [ -n "$EXPECTED_VERIFICATION_RECEIPT" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: verification-receipt.receipt"
+}
+
+# Enumerate the population named by the published coverage verdict. Each line
+# is PATH<TAB>JSON-VALUE. The path count therefore comes from the artifact,
+# never from record cardinality or a closed-form multiplier.
+enumerate_identity_field_population() { # <json> <output>
+  jq -r '
+    def path_string($prefix; $path):
+      reduce $path[] as $part ($prefix;
+        if ($part | type) == "number" then
+          . + "[\($part)]"
+        else
+          . + "." + ($part | tostring)
+        end);
+    (.identity as $identity
+      | ($identity | paths(scalars)) as $path
+      | [path_string("identity"; $path),
+         ($identity | getpath($path) | tojson)] | @tsv),
+    (.records as $records
+      | ($records | paths(scalars)) as $path
+      | [path_string("records"; $path),
+         ($records | getpath($path) | tojson)] | @tsv)
+  ' "$1" | LC_ALL=C sort -t $'\t' -k1,1 > "$2"
+}
+
+# Build the expectation population only from caller-supplied authorities and
+# the source-built blueprint. Nothing in this function reads the manifest
+# under test. The resulting document is consumed by the same enumerator as the
+# observed manifest, keeping the coverage denominator and expectation registry
+# in one instrument without making them one computation.
+build_expected_identity_population() { # <blueprint> <blueprint-sha> <output> <work>
+  local blueprint=$1 blueprint_sha=$2 output=$3 work=$4
+  local title params code program_sha
+
+  : > "$work/programs.jsonl"
+  while IFS=$'\t' read -r title params code; do
+    program_sha=$(printf '%s' "$code" | sha256sum | cut -d ' ' -f 1)
+    jq -cn --arg title "$title" --argjson params "$params" \
+      --arg program_sha256 "$program_sha" \
+      '{title:$title, params:$params, program_sha256:$program_sha256}' \
+      >> "$work/programs.jsonl"
+  done < <(jq -r '.validators[] |
+    [.title, ((.parameters // []) | length), .compiledCode] | @tsv' "$blueprint")
+  jq -s . "$work/programs.jsonl" > "$work/programs.json"
+
+  jq -n \
+    --arg commit "$EXPECTED_COMMIT" \
+    --arg aiken "$EXPECTED_AIKEN" \
+    --arg toolchain "$EXPECTED_TOOLCHAIN" \
+    --arg variant "$EXPECTED_VARIANT" \
+    --arg era "$EXPECTED_ERA" \
+    --arg selection "$EXPECTED_SELECTION" \
+    --arg version_derived "$EXPECTED_VERSION_DERIVED" \
+    --arg verification_receipt "$EXPECTED_VERIFICATION_RECEIPT" \
+    --arg blueprint_sha256 "$blueprint_sha" \
+    --arg lock_sha256 "$EXPECTED_LOCK_SHA256" \
+    --arg lean_blaster "$EXPECTED_LEAN_BLASTER_REV" \
+    --arg plutus_core "$EXPECTED_PLUTUS_CORE_REV" \
+    --arg ledger_api "$EXPECTED_LEDGER_API_REV" \
+    --slurpfile programs "$work/programs.json" '
+    def identity: {
+      commit:$commit, aiken:$aiken, toolchain:$toolchain,
+      variant:$variant, ledger_language:"PlutusV3", era:$era,
+      blueprint_sha256:$blueprint_sha256
+    };
+    ($programs[0]) as $ps |
+    {
+      identity:(identity + {
+        built_from:"source",
+        validating_aiken:$aiken,
+        selection:$selection,
+        version_derived:$version_derived,
+        lock_sha256:$lock_sha256,
+        upstream:{lean_blaster:$lean_blaster,
+          plutus_core_blaster:$plutus_core,
+          cardano_ledger_api_blaster:$ledger_api}
+      }),
+      records: (
+        [(identity + {record:"manifest"})]
+        + [$ps[] | identity + {record:"program", title:.title,
+            params:.params, program_sha256:.program_sha256}]
+        + [
+            (identity + {record:"baseline"}),
+            (identity + {record:"evaluation-identity"}),
+            (identity + {record:"verification-receipt",
+              receipt:$verification_receipt})
+          ]
+      )
+    }' > "$output"
+}
+
+reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
+  local manifest=$1 blueprint=$2 blueprint_sha=$3
+  local work fields expected_fields reconciled unexpected first unexpected_path
+  local missing missing_path duplicate_expected mismatch_path expected_value actual_value
+  work=$(mktemp -d "${TMPDIR:-/tmp}/identity-field-coverage.XXXXXXXX") \
+    || fail "COULD-NOT-EVALUATE: identity-field coverage scratch allocation failed"
+  trap "rm -rf '$work'" EXIT
+
+  build_expected_identity_population \
+    "$blueprint" "$blueprint_sha" "$work/expected.json" "$work"
+  enumerate_identity_field_population "$manifest" "$work/actual.tsv"
+  enumerate_identity_field_population "$work/expected.json" "$work/expected.tsv"
+  cut -f1 "$work/actual.tsv" > "$work/actual.paths"
+  cut -f1 "$work/expected.tsv" > "$work/expected.paths"
+
+  duplicate_expected=$(uniq -d "$work/expected.paths" | head -1)
+  [ -z "$duplicate_expected" ] \
+    || fail "COULD-NOT-EVALUATE: duplicate reconciled expectation: $duplicate_expected"
+
+  fields=$(wc -l < "$work/actual.paths"); fields=${fields//[[:space:]]/}
+  expected_fields=$(wc -l < "$work/expected.paths"); expected_fields=${expected_fields//[[:space:]]/}
+  reconciled=$(comm -12 "$work/actual.paths" "$work/expected.paths" | wc -l)
+  reconciled=${reconciled//[[:space:]]/}
+  unexpected=$((fields - reconciled))
+
+  echo "CBIC_IDENTITY_RESULT fields=$fields"
+  echo "CBIC_IDENTITY_RESULT reconciled=$reconciled"
+  echo "CBIC_IDENTITY_RESULT unexpected=$unexpected"
+  echo "CBIC_IDENTITY_RESULT enumerated_by=jq-scalar-paths"
+
+  if [ "$unexpected" -ne 0 ]; then
+    unexpected_path=$(comm -23 "$work/actual.paths" "$work/expected.paths" | head -1)
+    fail "COULD-NOT-EVALUATE: identity field lacks reconciled expectation: ${unexpected_path:-<unnamed>} (externally-unexpected field set)"
+  fi
+
+  missing=$((expected_fields - reconciled))
+  if [ "$missing" -ne 0 ]; then
+    missing_path=$(comm -13 "$work/actual.paths" "$work/expected.paths" | head -1)
+    first=${missing_path##*.}
+    fail "unnamed identity input: ${first:-<unnamed>} path=${missing_path:-<unnamed>} (identity schema moved)"
+  fi
+
+  # The expectation registry is not merely a denominator. Its values drive the
+  # comparisons whose coverage the verdict publishes; a path-only intersection
+  # would recreate the self-referential count under a more elaborate name.
+  awk -F '\t' '
+    NR == FNR { expected[$1] = $2; next }
+    ($1 in expected) && expected[$1] != $2 {
+      print $1 "\t" expected[$1] "\t" $2
+    }
+  ' "$work/expected.tsv" "$work/actual.tsv" > "$work/mismatches.tsv"
+  if IFS=$'\t' read -r mismatch_path expected_value actual_value \
+      < "$work/mismatches.tsv"; then
+    first=${mismatch_path##*.}
+    case "$mismatch_path" in
+      identity.*)
+        fail "identity input moved: $first path=$mismatch_path expected=$expected_value actual=$actual_value"
+        ;;
+      records*)
+        fail "inconsistent identity input: $first path=$mismatch_path expected=$expected_value actual=$actual_value"
+        ;;
+      *)
+        fail "identity input moved: $mismatch_path expected=$expected_value actual=$actual_value"
+        ;;
+    esac
+  fi
 }
 
 identity_manifest_mode() {
@@ -597,6 +769,8 @@ identity_manifest_mode() {
 
   local actual_blueprint_sha manifest_blueprint_sha
   actual_blueprint_sha=$(sha256sum "$BLUEPRINT" | cut -d ' ' -f 1)
+  reconcile_identity_field_population \
+    "$IDENTITY_MANIFEST" "$BLUEPRINT" "$actual_blueprint_sha"
   manifest_blueprint_sha=$(jq -r '.blueprint_sha256 // empty' "$IDENTITY_MANIFEST")
   [ "$manifest_blueprint_sha" = "$actual_blueprint_sha" ] \
     || fail "manifest input moved: blueprint_sha256 expected=$actual_blueprint_sha actual=${manifest_blueprint_sha:-<unnamed>}"
@@ -645,10 +819,12 @@ identity_manifest_mode() {
     || fail "identity input moved: ledger_language"
   [ "$(jq -r '.identity.built_from // empty' "$IDENTITY_MANIFEST")" = source ] \
     || fail "identity input moved: built_from"
-  [ -n "$(jq -r '.identity.selection // empty' "$IDENTITY_MANIFEST")" ] \
-    || fail "unnamed identity input: selection"
+  got=$(jq -r '.identity.selection // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_SELECTION" ] \
+    || fail "identity input moved: selection expected=$EXPECTED_SELECTION actual=${got:-<unnamed>}"
   got=$(jq -r '.identity.version_derived // empty' "$IDENTITY_MANIFEST")
-  [ -n "$got" ] || fail "unnamed identity input: version_derived"
+  [ "$got" = "$EXPECTED_VERSION_DERIVED" ] \
+    || fail "identity input moved: version_derived expected=$EXPECTED_VERSION_DERIVED actual=${got:-<unnamed>}"
   [ "$got" != "$EXPECTED_VARIANT" ] \
     || fail "identity input moved: version_derived silently stands in for explicit variant"
   [ "$(jq -r '.identity.blueprint_sha256 // empty' "$IDENTITY_MANIFEST")" = "$actual_blueprint_sha" ] \
@@ -732,6 +908,11 @@ identity_manifest_mode() {
     value=$(jq -r '.era' <<< "$record")
     [ "$value" = "$EXPECTED_ERA" ] \
       || fail "inconsistent identity input: era record_index=$index expected=$EXPECTED_ERA actual=$value"
+    if [ "$record_kind" = verification-receipt ]; then
+      value=$(jq -r '.receipt // empty' <<< "$record")
+      [ "$value" = "$EXPECTED_VERIFICATION_RECEIPT" ] \
+        || fail "inconsistent identity input: receipt record_index=$index expected=$EXPECTED_VERIFICATION_RECEIPT actual=${value:-<unnamed>}"
+    fi
     index=$((index + 1))
   done < <(jq -c '.records[]' "$IDENTITY_MANIFEST")
   [ "$index" -eq "$records_checked" ] \
@@ -739,9 +920,6 @@ identity_manifest_mode() {
 
   echo "CBIC_IDENTITY_RESULT records_checked=$records_checked"
   echo "CBIC_IDENTITY_RESULT inconsistent=0"
-  echo "CBIC_IDENTITY_RESULT identity_fields=$((15 + records_checked * 7))"
-  echo "CBIC_IDENTITY_RESULT externally_expected=$((15 + records_checked * 7))"
-  echo "CBIC_IDENTITY_RESULT unexpected=0"
   echo "CBIC_IDENTITY_RESULT titles=$titles"
   echo "CBIC_IDENTITY_RESULT programs=$distinct_programs"
   echo "check-blaster-identity-consistency: OK — baseline manifest and every carried record share one complete identity"

@@ -12,8 +12,9 @@ seed="${4:-}"
 namespace_seed="${5:-}"
 nested_namespace_seed="${6:-}"
 unrecognised_seed="${7:-}"
-base="${8:-}"
-expected_commit="${9:-}"
+collector_seed="${8:-}"
+base="${9:-}"
+expected_commit="${10:-}"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -57,39 +58,59 @@ validate_a3() {
 validate_selftests() {
   local out="$1" leg
   for leg in unresolved-in-tracked-scope namespace-move nested-namespace export-alias \
-      prefix-field probe-twin synthesised-reference collector-narrowing; do
+      prefix-field probe-twin synthesised-reference collector-narrowing \
+      collector-closure pinned-module-graph foreign-build-root; do
     grep -Eq "^AUDIT-SELFTEST leg=$leg rc=[1-9][0-9]* outcome=REFUTED$" "$out" \
       || return 1
   done
 }
 
 validate_discovery() {
-  local out="$1" commit="$2" collected
-  collected="$(sed -nE 's/^AUDIT-DISCOVERY scope=tracked collected=([0-9]+) instrument=collect-lean-references\.pl\/v2 window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$/\1/p' "$out")"
-  [[ $collected =~ ^[1-9][0-9]*$ ]] || return 1
+  local out="$1" commit="$2" coverage collected total instrument total_instrument
+  coverage="$(grep -E '^AUDIT-COVERAGE collected=[0-9]+ total=[0-9]+ digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$' "$out" || true)"
+  [[ $(grep -c . <<<"$coverage" || true) -eq 1 ]] || return 1
+  collected="$(sed -nE 's/^AUDIT-COVERAGE collected=([0-9]+) .*/\1/p' <<<"$coverage")"
+  total="$(sed -nE 's/^AUDIT-COVERAGE collected=[0-9]+ total=([0-9]+) .*/\1/p' <<<"$coverage")"
+  instrument="$(sed -nE 's/.* instrument=([^ ]+) .*/\1/p' <<<"$coverage")"
+  total_instrument="$(sed -nE 's/.* total_instrument=([^ ]+) .*/\1/p' <<<"$coverage")"
+  [[ $collected =~ ^[1-9][0-9]*$ && $total =~ ^[1-9][0-9]*$ ]] || return 1
+  [[ $collected -eq $total ]] || return 1
+  [[ -n $instrument && -n $total_instrument && $instrument != "$total_instrument" ]] \
+    || return 1
   grep -Fq "window=commit:$commit:scope:tracked outcome=ESTABLISHED" "$out" \
     || return 1
-  grep -Eq '^AUDIT-SELFTEST leg=collector-narrowing rc=[1-9][0-9]* outcome=REFUTED$' "$out"
+  grep -Eq '^AUDIT-SELFTEST leg=collector-closure rc=[1-9][0-9]* outcome=REFUTED$' "$out"
 }
 
 validate_oracle() {
-  local out="$1" rows disagreements
+  local out="$1"
   ! grep -Eq '^AUDIT-REFERENCE scope=tracked .* resolved=false ' "$out" \
     || return 1
   grep -Eq '^AUDIT-REFERENCE scope=selftest-nested-namespace .*reference=PlutusCore\.ByteStringInternal\.appendByteString resolved=false outcome=REFUTED$' "$out" \
     || return 1
   grep -Eq '^AUDIT-REFERENCE scope=selftest-nested-namespace .*reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' "$out" \
     || return 1
-  rows="$(sed -nE 's/^AUDIT-ORACLE agreement=elaborator both_directions=true rows_compared=([0-9]+) disagreements=([0-9]+) outcome=ESTABLISHED$/\1/p' "$out")"
-  disagreements="$(sed -nE 's/^AUDIT-ORACLE agreement=elaborator both_directions=true rows_compared=([0-9]+) disagreements=([0-9]+) outcome=ESTABLISHED$/\2/p' "$out")"
-  [[ $rows =~ ^[1-9][0-9]*$ && $disagreements == 0 ]]
+  grep -Fxq 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED' "$out"
 }
 
 validate_synthesised() {
   local out="$1"
-  grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=synthesised reference=PlutusCore\.Default\.Internal\.BuiltinSemanticsVariant\.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED$' "$out" \
+  grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=elaborated reference=PlutusCore\.Default\.Internal\.BuiltinSemanticsVariant\.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED$' "$out" \
+    || return 1
+  ! grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=synthesised ' "$out" \
     || return 1
   grep -Eq '^AUDIT-SELFTEST leg=synthesised-reference rc=[1-9][0-9]* outcome=REFUTED$' "$out"
+}
+
+validate_binding() {
+  local out="$1"
+  grep -Eq '^AUDIT-ORACLE-ROOT path=/nix/store/[a-z0-9]+-KeriBlaster-depRoot instrument=flake:keriBlasterPackage\.modRoot window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$' "$out" \
+    || return 1
+  grep -Eq '^AUDIT-SELFTEST leg=pinned-module-graph rc=[1-9][0-9]* outcome=REFUTED$' "$out"
+}
+
+validate_attribution() {
+  grep -Fxq 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED' "$1"
 }
 
 validate_a4() {
@@ -146,10 +167,13 @@ validate_a14() {
     || return 1
   grep -Eq "^AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=[0-9]+ unresolved=[0-9]+ denominator=[0-9]+ instrument=Lean.Environment window=commit:$commit:seed:retired-reference outcome=ESTABLISHED$" "$out" \
     || return 1
-  grep -Eq "^AUDIT-MEASUREMENT metric=oracle-agreement rows_compared=[1-9][0-9]* disagreements=0 denominator=[1-9][0-9]* instrument=Lean.resolveGlobalConst window=commit:$commit:scope:tracked outcome=ESTABLISHED$" "$out" \
+  grep -Eq "^AUDIT-COVERAGE collected=[1-9][0-9]* total=[1-9][0-9]* digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:$commit:scope:tracked outcome=ESTABLISHED$" "$out" \
+    || return 1
+  grep -Eq "^AUDIT-ORACLE-ROOT path=[^ ]+ instrument=flake:keriBlasterPackage.modRoot window=commit:$commit:scope:tracked outcome=ESTABLISHED$" "$out" \
     || return 1
   for leg in unresolved-in-tracked-scope namespace-move nested-namespace export-alias \
-      prefix-field probe-twin synthesised-reference collector-narrowing; do
+      prefix-field probe-twin synthesised-reference collector-narrowing \
+      collector-closure pinned-module-graph foreign-build-root; do
     rc="$(sed -nE "s/^AUDIT-SELFTEST leg=$leg rc=([1-9][0-9]*) outcome=REFUTED$/\\1/p" "$out")"
     [[ $rc =~ ^[1-9][0-9]*$ ]] || return 1
     grep -Fq "AUDIT-MEASUREMENT metric=selftest-exit-code leg=$leg value=$rc " "$out" \
@@ -182,8 +206,8 @@ prove_assertions_can_fail() {
     printf 'AUDIT-PIN leanBlaster=%s outcome=ESTABLISHED\n' "$lean_rev"
     printf 'AUDIT-PIN plutusCoreBlaster=%s outcome=ESTABLISHED\n' "$plutus_rev"
     printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$ledger_rev"
-    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Evidence.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.BuiltinFunctions.Evaluate.evaluateBuiltinFunction resolved=true outcome=ESTABLISHED'
-    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster provenance=synthesised reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Evidence.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.UPLC.BuiltinFunctions.Evaluate.evaluateBuiltinFunction resolved=true outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-RESOLVED count=2'
     printf '%s\n' 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0'
     printf '%s\n' 'AUDIT-CONTROL id=source-positive kind=positive-resolution expected=resolve observed=resolved outcome=ESTABLISHED'
@@ -208,12 +232,19 @@ prove_assertions_can_fail() {
     printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=synthesised-reference value=1 instrument=compatibility-audit/collector-mutation window=commit:%s:seed:synthesised-reference outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=collector-narrowing rc=1 outcome=REFUTED'
     printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-narrowing value=1 instrument=collect-lean-references.pl/v2 window=commit:%s:seed:collector-narrowing outcome=ESTABLISHED\n' "$head"
-    printf '%s\n' 'AUDIT-ORACLE agreement=elaborator both_directions=true rows_compared=2 disagreements=0 outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-SELFTEST leg=collector-closure rc=1 outcome=REFUTED'
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=1 instrument=Lean.frontend window=commit:%s:seed:collector-closure outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-SELFTEST leg=pinned-module-graph rc=1 outcome=REFUTED'
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=1 instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-SELFTEST leg=foreign-build-root rc=1 outcome=REFUTED'
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=1 instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED'
+    printf 'AUDIT-ORACLE-ROOT path=/nix/store/00000000000000000000000000000000-KeriBlaster-depRoot instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=true selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantE outcome=ESTABLISHED'
-    printf 'AUDIT-DISCOVERY scope=tracked collected=2 instrument=collect-lean-references.pl/v2 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-COVERAGE collected=2 total=2 digest=0123456789abcdef classes=direct-imports,elaborated-constants instrument=Lean.ilean/v4 total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED'
     printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=2 unresolved=0 denominator=2 instrument=Lean.Environment window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
     printf 'AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=1 unresolved=1 denominator=2 instrument=Lean.Environment window=commit:%s:seed:retired-reference outcome=ESTABLISHED\n' "$head"
-    printf 'AUDIT-MEASUREMENT metric=oracle-agreement rows_compared=2 disagreements=0 denominator=2 instrument=Lean.resolveGlobalConst window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-VERDICT PASS'
   } >"$good"
 
@@ -227,10 +258,8 @@ prove_assertions_can_fail() {
   expect_red INV-A1 real-nested-name-rejected validate_oracle "$mutant"
   grep -v '^AUDIT-ORACLE ' "$good" >"$mutant"
   expect_red INV-A1 textual-oracle-unattested validate_oracle "$mutant"
-  sed 's/rows_compared=2 disagreements=0/rows_compared=2 disagreements=1/' "$good" >"$mutant"
-  expect_red INV-A1 whole-run-disagreement-hidden validate_oracle "$mutant"
-  sed '/AUDIT-RESOLVED count=2/i AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster reference=PlutusCore.Default.BuiltinSemanticsVariant resolved=false outcome=REFUTED' "$good" >"$mutant"
-  expect_red INV-A1 false-elaborator-agreement-record validate_oracle "$mutant"
+  sed 's/agreement=by-construction predicate=Lean.resolveGlobalConstCore/agreement=elaborator rows_compared=2 disagreements=0/' "$good" >"$mutant"
+  expect_red INV-A1 tautology-labelled-as-measurement validate_oracle "$mutant"
   grep -v 'AUDIT-SELFTEST leg=export-alias' "$good" >"$mutant"
   expect_red INV-246-LEAN-ENVIRONMENT declaration-membership-alias-regression validate_selftests "$mutant"
   grep -v 'AUDIT-SELFTEST leg=prefix-field' "$good" >"$mutant"
@@ -239,12 +268,24 @@ prove_assertions_can_fail() {
   expect_red INV-A2 positive-probe-without-negative-twin validate_selftests "$mutant"
   grep -v 'AUDIT-SELFTEST leg=synthesised-reference' "$good" >"$mutant"
   expect_red INV-246-SYNTHESISED-REFERENCE producer-mutation-absent validate_selftests "$mutant"
-  sed 's/provenance=synthesised reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC/provenance=copied reference=PlutusCore.Default.BuiltinSemanticsVariant.defaultFunSemanticsVariantC/' "$good" >"$mutant"
+  sed 's/provenance=elaborated reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC/provenance=synthesised reference=PlutusCore.Default.BuiltinSemanticsVariant.defaultFunSemanticsVariantC/' "$good" >"$mutant"
   expect_red INV-246-SYNTHESISED-REFERENCE fabricated-spelling-published validate_synthesised "$mutant"
   grep -v 'AUDIT-SELFTEST leg=collector-narrowing' "$good" >"$mutant"
-  expect_red INV-246-REFERENCE-DISCOVERY unrecognised-construct-narrows-denominator validate_discovery "$mutant" "$head"
-  grep -v '^AUDIT-DISCOVERY ' "$good" >"$mutant"
+  expect_red INV-246-REFERENCE-DISCOVERY unrecognised-construct-narrows-denominator validate_selftests "$mutant"
+  grep -v '^AUDIT-COVERAGE ' "$good" >"$mutant"
   expect_red INV-246-REFERENCE-DISCOVERY collected-count-without-provenance validate_discovery "$mutant" "$head"
+  sed 's/AUDIT-COVERAGE collected=2 total=2/AUDIT-COVERAGE collected=1 total=2/' "$good" >"$mutant"
+  expect_red INV-A1.v1 semantic-population-row-dropped validate_discovery "$mutant" "$head"
+  grep -v 'AUDIT-SELFTEST leg=foreign-build-root' "$good" >"$mutant"
+  expect_red INV-246-BUILD-ROOT-PROVENANCE foreign-build-root-control-absent validate_selftests "$mutant"
+  sed 's/total_instrument=Lean.frontend\/source-reelaboration-v4/total_instrument=Lean.ilean\/v4/' "$good" >"$mutant"
+  expect_red INV-246-DENOMINATOR-INSTRUMENT-DISJOINT shared-denominator-instrument validate_discovery "$mutant" "$head"
+  grep -v '^AUDIT-ATTRIBUTION ' "$good" >"$mutant"
+  expect_red INV-246-PACKAGE-ATTRIBUTION-AGREEMENT split-attribution-predicate validate_attribution "$mutant"
+  grep -v '^AUDIT-ORACLE-ROOT ' "$good" >"$mutant"
+  expect_red INV-246-RESOLUTION-CLOSURE-BINDING unnamed-oracle-root validate_binding "$mutant"
+  grep -v 'AUDIT-SELFTEST leg=pinned-module-graph' "$good" >"$mutant"
+  expect_red INV-246-PINNED-MODULE-GRAPH unmutated-module-graph validate_binding "$mutant"
   grep -v 'kind=positive-resolution' "$good" >"$mutant"
   expect_red INV-A2 missing-positive-control validate_a2 "$mutant"
   grep -v 'reference=.*defaultFunSemanticsVariantC ' "$good" >"$mutant"
@@ -261,7 +302,13 @@ prove_assertions_can_fail() {
   expect_red INV-A6 could-not-evaluate-counted-clean validate_a6 "$mutant"
   grep -v 'kind=positive-resolution' "$good" >"$mutant"
   expect_red INV-A7 control-not-reached validate_a7 "$mutant"
-  expect_red INV-A8 lock-mutated validate_a8 before after
+  cp "$lock" "$work/lock-mutant.json"
+  lock_before="$(sha256sum "$work/lock-mutant.json" | cut -d ' ' -f 1)"
+  jq '.nodes.root.inputs.__slice_a2_mutant = "missing-node"' \
+    "$work/lock-mutant.json" >"$work/lock-mutant.rewritten.json"
+  mv "$work/lock-mutant.rewritten.json" "$work/lock-mutant.json"
+  lock_after="$(sha256sum "$work/lock-mutant.json" | cut -d ' ' -f 1)"
+  expect_red INV-A8 actual-lock-rewrite validate_a8 "$lock_before" "$lock_after"
   printf '%s\n' offchain/blaster/KeriBlaster.lean >"$mutant"
   expect_red INV-A9 tracked-lean-rewritten validate_a9 "$mutant"
   sed "s/commit=$head/commit=wrong-tree/" "$good" >"$mutant"
@@ -276,6 +323,7 @@ prove_assertions_can_fail() {
 [[ -n $namespace_seed && -f $namespace_seed ]] || fail "namespace-move seed is unavailable: $namespace_seed"
 [[ -n $nested_namespace_seed && -f $nested_namespace_seed ]] || fail "nested-namespace seed is unavailable: $nested_namespace_seed"
 [[ -n $unrecognised_seed && -f $unrecognised_seed ]] || fail "unrecognised-syntax seed is unavailable: $unrecognised_seed"
+[[ -n $collector_seed && -f $collector_seed ]] || fail "collector-closure seed is unavailable: $collector_seed"
 [[ -n $base ]] || fail 'pre-slice base was not provided'
 
 # First prove each assertion independently rejects the defect it names.  These
@@ -312,6 +360,8 @@ grep -Fq 'PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString' 
   || fail 'nested-namespace real reference is absent'
 grep -Fq 'open PlutusCore.UPLC' "$unrecognised_seed" \
   || fail 'collector-narrowing bare-open construct is absent'
+grep -Fq '| .Halt _ => true' "$collector_seed" \
+  || fail 'collector-closure leading-dot construct is absent'
 
 if [[ ! -x $runner ]]; then
   printf 'RED: compatibility audit executable absent after live contract controls: %s\n' \
@@ -336,6 +386,10 @@ validate_synthesised "$work/audit.out" \
   || fail 'INV-246-SYNTHESISED-REFERENCE provenance or spelling is invalid'
 validate_discovery "$work/audit.out" "$expected_commit" \
   || fail 'INV-246-REFERENCE-DISCOVERY did not fail closed or publish its measured denominator'
+validate_binding "$work/audit.out" \
+  || fail 'oracle resolution is not bound to the tracked package build root'
+validate_attribution "$work/audit.out" \
+  || fail 'package attribution is not owned by one shared predicate'
 validate_a4 "$work/audit.out" || fail 'INV-A4 pin identity does not match the lock'
 validate_a5 "$work/audit.out" || fail 'INV-A5 variant answer is absent'
 validate_a6 "$work/audit.out" || fail 'INV-A6 outcome discipline failed'

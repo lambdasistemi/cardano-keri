@@ -7,11 +7,13 @@ if (( $# != 0 )); then
 fi
 
 required_env=(
-  AUDIT_COMMIT AUDIT_COLLECTOR AUDIT_ORACLE AUDIT_SOURCE_ROOT AUDIT_SEED
+  AUDIT_COMMIT AUDIT_TEXT_COLLECTOR AUDIT_ILEAN_COLLECTOR
+  AUDIT_SOURCE_ELABORATOR AUDIT_ORACLE
+  AUDIT_SOURCE_ROOT AUDIT_SEED AUDIT_COLLECTOR_SEED
   AUDIT_NAMESPACE_SEED AUDIT_NESTED_NAMESPACE_SEED AUDIT_UNRECOGNISED_SEED
-  AUDIT_PLUTUS_CORE_ROOT
+  AUDIT_LEAN_BLASTER_ROOT AUDIT_PLUTUS_CORE_ROOT AUDIT_LEDGER_API_ROOT
   AUDIT_LEAN_BLASTER_REV AUDIT_PLUTUS_CORE_REV AUDIT_LEDGER_API_REV
-  AUDIT_TRACKED_BUILD
+  AUDIT_TRACKED_BUILD AUDIT_S2_ARTIFACTS LEAN_PATH
 )
 for name in "${required_env[@]}"; do
   if [[ -z ${!name:-} ]]; then
@@ -23,7 +25,21 @@ for name in "${required_env[@]}"; do
 done
 
 collect() {
-  "$AUDIT_COLLECTOR" "$AUDIT_SOURCE_ROOT" "$@"
+  "$AUDIT_TEXT_COLLECTOR" "$AUDIT_SOURCE_ROOT" "$@"
+}
+
+collect_tracked() {
+  "$AUDIT_ILEAN_COLLECTOR" "$AUDIT_TRACKED_BUILD" "$AUDIT_SOURCE_ROOT" "$@"
+}
+
+collect_root() {
+  local root="$1"
+  shift
+  "$AUDIT_ILEAN_COLLECTOR" "$root" "$AUDIT_SOURCE_ROOT" "$@"
+}
+
+populations_match() {
+  cmp -s "$1" "$2"
 }
 
 emit_records() {
@@ -41,7 +57,8 @@ emit_records() {
   fi
   while IFS=$'\t' read -r source package reference kind resolution provenance elaborator_resolution; do
     [[ -n $source ]] || continue
-    if [[ $provenance != copied && $provenance != synthesised ]]; then
+    if [[ $provenance != copied && $provenance != synthesised \
+        && $provenance != elaborated ]]; then
       printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=unknown reference=%s resolved=false outcome=COULD-NOT-EVALUATE layer=reference-provenance\n' \
         "$scope" "$source" "$package" "$reference"
       return 2
@@ -104,16 +121,24 @@ printf 'AUDIT-PIN leanBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_LEAN_BLASTER_REV
 printf 'AUDIT-PIN plutusCoreBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_PLUTUS_CORE_REV"
 printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_LEDGER_API_REV"
 
-# The package build is Lean's authoritative resolution of the complete tracked
-# source graph.  The records below make its external textual reference surface
-# visible and independently identify every target package and pin.
+# The package build is Lean's authoritative elaboration and reference index for
+# the complete tracked source graph.  Bind both collection and resolution to
+# that exact root before reading a single record.
 [[ -e $AUDIT_TRACKED_BUILD ]] || {
   echo 'AUDIT-IDENTITY commit=unknown outcome=COULD-NOT-EVALUATE layer=lean-elaboration'
   echo 'AUDIT-VERDICT FAIL'
   exit 1
 }
+if [[ $LEAN_PATH != "$AUDIT_TRACKED_BUILD" ]]; then
+  printf 'AUDIT-ORACLE-ROOT path=%s instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked outcome=COULD-NOT-EVALUATE layer=module-graph-binding\n' \
+    "$LEAN_PATH" "$AUDIT_COMMIT"
+  printf 'AUDIT-VERDICT FAIL\n'
+  exit 1
+fi
+printf 'AUDIT-ORACLE-ROOT path=%s instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+  "$AUDIT_TRACKED_BUILD" "$AUDIT_COMMIT"
 
-if ! collect "${tracked_sources[@]}" >"$work/tracked.tsv" 2>"$work/tracked-discovery.err"; then
+if ! collect_tracked "${tracked_sources[@]}" >"$work/tracked.tsv" 2>"$work/tracked-discovery.err"; then
   cat "$work/tracked-discovery.err" >&2
   printf 'AUDIT-DISCOVERY scope=tracked outcome=COULD-NOT-EVALUATE layer=reference-discovery\n'
   printf 'AUDIT-VERDICT FAIL\n'
@@ -125,8 +150,57 @@ if (( tracked_collected == 0 )); then
   printf 'AUDIT-VERDICT FAIL\n'
   exit 1
 fi
-printf 'AUDIT-DISCOVERY scope=tracked collected=%s instrument=collect-lean-references.pl/v2 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
-  "$tracked_collected" "$AUDIT_COMMIT"
+
+# Re-elaborate the exact tracked source into a fresh root.  The denominator is
+# therefore produced by Lean's frontend from source, not by reading the
+# supplied root a second time.  Both populations use the one package
+# attribution predicate owned by the semantic collector.
+source_build="$work/source-reelaboration"
+if ! "$AUDIT_SOURCE_ELABORATOR" "$AUDIT_TRACKED_BUILD" "$AUDIT_SOURCE_ROOT" \
+    "$AUDIT_S2_ARTIFACTS" "$source_build" "${tracked_sources[@]}" \
+    >"$work/source-reelaboration.log" 2>&1; then
+  cat "$work/source-reelaboration.log" >&2
+  printf 'AUDIT-COVERAGE collected=%s total=0 digest=unavailable classes=direct-imports,elaborated-constants instrument=Lean.ilean/unknown total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=COULD-NOT-EVALUATE layer=build-root-provenance\n' \
+    "$tracked_collected" "$AUDIT_COMMIT"
+  printf 'AUDIT-VERDICT FAIL\n'
+  exit 1
+fi
+if ! collect_root "$source_build" "${tracked_sources[@]}" \
+    >"$work/source-derived.tsv" 2>"$work/source-derived.err"; then
+  cat "$work/source-derived.err" >&2
+  printf 'AUDIT-COVERAGE collected=%s total=0 digest=unavailable classes=direct-imports,elaborated-constants instrument=Lean.ilean/unknown total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=COULD-NOT-EVALUATE layer=build-root-provenance\n' \
+    "$tracked_collected" "$AUDIT_COMMIT"
+  printf 'AUDIT-VERDICT FAIL\n'
+  exit 1
+fi
+tracked_total="$(wc -l <"$work/source-derived.tsv")"
+population_digest="$(sha256sum "$work/source-derived.tsv" | cut -d ' ' -f 1)"
+if (( tracked_total == 0 )) \
+    || ! populations_match "$work/tracked.tsv" "$work/source-derived.tsv"; then
+  printf 'AUDIT-COVERAGE collected=%s total=%s digest=%s classes=direct-imports,elaborated-constants instrument=Lean.ilean/unknown total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=COULD-NOT-EVALUATE layer=build-root-provenance\n' \
+    "$tracked_collected" "$tracked_total" "$population_digest" "$AUDIT_COMMIT"
+  printf 'AUDIT-VERDICT FAIL\n'
+  exit 1
+fi
+
+mapfile -t ilean_versions < <(
+  for source in "${tracked_sources[@]}"; do
+    relative="${source#"$AUDIT_SOURCE_ROOT"/}"
+    module="${relative%.lean}"
+    module="${module//\//.}"
+    jq -er '.version' "$AUDIT_TRACKED_BUILD/${module//./\/}.ilean"
+  done | sort -u
+)
+if (( ${#ilean_versions[@]} != 1 )); then
+  printf 'AUDIT-COVERAGE collected=%s total=0 classes=direct-imports,elaborated-constants instrument=Lean.ilean/unknown window=commit:%s:scope:tracked outcome=COULD-NOT-EVALUATE layer=reference-discovery\n' \
+    "$tracked_collected" "$AUDIT_COMMIT"
+  printf 'AUDIT-VERDICT FAIL\n'
+  exit 1
+fi
+printf 'AUDIT-COVERAGE collected=%s total=%s digest=%s classes=direct-imports,elaborated-constants instrument=Lean.ilean/v%s total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+  "$tracked_collected" "$tracked_total" "$population_digest" \
+  "${ilean_versions[0]}" "$AUDIT_COMMIT"
+printf 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED\n'
 tracked_rc=0
 run_scope tracked "$work/tracked.tsv" "$work/tracked.out" || tracked_rc=$?
 if (( tracked_rc == 2 )); then
@@ -142,8 +216,6 @@ sed '$d' "$work/tracked.out"
 printf 'AUDIT-RESOLVED count=%s\n' "$tracked_resolved"
 printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
   "$tracked_resolved" "$tracked_unresolved" "$((tracked_resolved + tracked_unresolved))" "$AUDIT_COMMIT"
-printf 'AUDIT-MEASUREMENT metric=oracle-agreement rows_compared=%s disagreements=%s denominator=%s instrument=Lean.resolveGlobalConst window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
-  "$tracked_compared" "$tracked_disagreements" "$tracked_compared" "$AUDIT_COMMIT"
 if (( tracked_rc == 0 )); then
   printf 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0\n'
 else
@@ -234,18 +306,22 @@ for leg in unresolved-in-tracked-scope namespace-move nested-namespace; do
 done
 
 # Exported names are accepted by Lean's elaborator even when they do not have
-# their own declaration entry.  Re-running the tracked inventory through the
-# old declaration-membership approximation must therefore reject a known
-# exported alias while the authoritative tracked run accepts it.
+# their own declaration entry.  The compiler's semantic inventory records the
+# declaration that the alias resolves to, so retain this deliberately textual
+# fixture only as a negative control for the retired membership oracle.
+collect "${tracked_sources[@]}" >"$work/textual-tracked.tsv"
+export_alias_elaborator_rc=0
+run_scope export-alias-elaborator "$work/textual-tracked.tsv" \
+  "$work/export-alias-elaborator.out" || export_alias_elaborator_rc=$?
 export_alias_rc=0
-run_scope export-alias "$work/tracked.tsv" "$work/export-alias.out" \
+run_scope export-alias "$work/textual-tracked.tsv" "$work/export-alias.out" \
   declaration-membership || export_alias_rc=$?
 export_alias_pass=false
-if (( export_alias_rc > 0 )) \
+if (( export_alias_elaborator_rc == 0 && export_alias_rc > 0 )) \
     && grep -Eq 'reference=PlutusCore\.Default\.BuiltinSemanticsVariant resolved=false outcome=REFUTED$' \
       "$work/export-alias.out" \
     && grep -Eq 'reference=PlutusCore\.Default\.BuiltinSemanticsVariant resolved=true outcome=ESTABLISHED$' \
-      "$work/tracked.out"; then
+      "$work/export-alias-elaborator.out"; then
   printf 'AUDIT-SELFTEST leg=export-alias rc=%s outcome=REFUTED\n' \
     "$export_alias_rc"
   printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=export-alias value=%s instrument=compatibility-audit/declaration-membership window=commit:%s:seed:export-alias outcome=ESTABLISHED\n' \
@@ -341,6 +417,134 @@ else
   selftests_pass=false
 fi
 
+# The semantic collector names no Lean syntax classes.  Compile a real
+# leading-dot constructor occurrence to `.ilean`, require the collector to
+# publish Lean's resolved constant, then rename that occurrence to an absent
+# constructor and require elaboration under the pinned graph to go RED.
+closure_source_root="$work/collector-closure-source"
+closure_build_root="$work/collector-closure-build"
+mkdir -p "$closure_source_root/KeriBlaster" "$closure_build_root/KeriBlaster"
+cp "$AUDIT_COLLECTOR_SEED" \
+  "$closure_source_root/KeriBlaster/CollectorClosure.lean"
+closure_clean_rc=0
+(cd "$closure_source_root" && lean \
+  -i "$closure_build_root/KeriBlaster/CollectorClosure.ilean" \
+  -o "$closure_build_root/KeriBlaster/CollectorClosure.olean" \
+  KeriBlaster/CollectorClosure.lean) \
+  >"$work/collector-closure-clean.log" 2>&1 || closure_clean_rc=$?
+closure_visible=false
+if (( closure_clean_rc == 0 )) \
+    && "$AUDIT_ILEAN_COLLECTOR" "$closure_build_root" "$closure_source_root" \
+      "$closure_source_root/KeriBlaster/CollectorClosure.lean" \
+      >"$work/collector-closure.tsv" 2>"$work/collector-closure.err" \
+    && grep -Fq $'PlutusCore.UPLC.CekMachine.State.Halt\tname\telaborated' \
+      "$work/collector-closure.tsv"; then
+  closure_visible=true
+fi
+
+closure_mutant="$closure_source_root/KeriBlaster/CollectorClosureMutant.lean"
+cp "$AUDIT_COLLECTOR_SEED" "$closure_mutant"
+closure_before="$(grep -Fc '| .Halt _ => true' "$closure_mutant" || true)"
+perl -0pi -e 's/\| \.Halt _ => true/| .Stop _ => true/' "$closure_mutant"
+closure_after_old="$(grep -Fc '| .Halt _ => true' "$closure_mutant" || true)"
+closure_after_new="$(grep -Fc '| .Stop _ => true' "$closure_mutant" || true)"
+closure_mutant_rc=0
+(cd "$closure_source_root" && lean \
+  -i "$closure_build_root/KeriBlaster/CollectorClosureMutant.ilean" \
+  -o "$closure_build_root/KeriBlaster/CollectorClosureMutant.olean" \
+  KeriBlaster/CollectorClosureMutant.lean) \
+  >"$work/collector-closure-mutant.log" 2>&1 \
+  || closure_mutant_rc=$?
+if [[ $closure_visible == true && $closure_before == 1 \
+      && $closure_after_old == 0 && $closure_after_new == 1 ]] \
+    && (( closure_mutant_rc > 0 )); then
+  printf 'AUDIT-SELFTEST leg=collector-closure rc=%s outcome=REFUTED\n' \
+    "$closure_mutant_rc"
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=%s instrument=Lean.frontend window=commit:%s:seed:collector-closure outcome=ESTABLISHED\n' \
+    "$closure_mutant_rc" "$AUDIT_COMMIT"
+else
+  printf 'AUDIT-SELFTEST leg=collector-closure rc=%s outcome=COULD-NOT-EVALUATE layer=collector-closure\n' \
+    "$closure_mutant_rc"
+  selftests_pass=false
+fi
+
+# Build one tracked module from a deliberately different, still-valid source
+# and splice its compiler products into an otherwise complete source-derived
+# root.  The same full-population comparison used above must reject it.  This
+# makes foreign-root provenance a live property rather than a caller promise.
+foreign_source_root="$work/foreign-build-source"
+foreign_patch_root="$work/foreign-build-patch"
+foreign_build_root="$work/foreign-build-root"
+mkdir -p "$foreign_source_root/KeriBlaster" "$foreign_build_root"
+cp "$AUDIT_SOURCE_ROOT/KeriBlaster/S2Cek.lean" \
+  "$foreign_source_root/KeriBlaster/S2Cek.lean"
+chmod u+w "$foreign_source_root/KeriBlaster/S2Cek.lean"
+printf '\n#check PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticVariant\n' \
+  >>"$foreign_source_root/KeriBlaster/S2Cek.lean"
+foreign_mutation_count="$(grep -Fc '#check PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticVariant' \
+  "$foreign_source_root/KeriBlaster/S2Cek.lean" || true)"
+foreign_elaboration_rc=0
+"$AUDIT_SOURCE_ELABORATOR" "$AUDIT_TRACKED_BUILD" "$foreign_source_root" \
+  "$AUDIT_S2_ARTIFACTS" "$foreign_patch_root" \
+  "$foreign_source_root/KeriBlaster/S2Cek.lean" \
+  >"$work/foreign-build-elaboration.log" 2>&1 || foreign_elaboration_rc=$?
+foreign_collect_rc=0
+foreign_build_rc=0
+foreign_reference_visible=false
+if (( foreign_elaboration_rc == 0 )); then
+  cp -R "$source_build/." "$foreign_build_root/"
+  cp "$foreign_patch_root/KeriBlaster/S2Cek.ilean" \
+    "$foreign_build_root/KeriBlaster/S2Cek.ilean"
+  cp "$foreign_patch_root/KeriBlaster/S2Cek.olean" \
+    "$foreign_build_root/KeriBlaster/S2Cek.olean"
+  collect_root "$foreign_build_root" "${tracked_sources[@]}" \
+    >"$work/foreign-build.tsv" 2>"$work/foreign-build.err" \
+    || foreign_collect_rc=$?
+  if (( foreign_collect_rc == 0 )) \
+      && grep -Fq $'PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticVariant\tname\telaborated' \
+        "$work/foreign-build.tsv"; then
+    foreign_reference_visible=true
+  fi
+  if (( foreign_collect_rc == 0 )) \
+      && populations_match "$work/foreign-build.tsv" "$work/source-derived.tsv"; then
+    foreign_build_rc=0
+  else
+    foreign_build_rc=1
+  fi
+else
+  foreign_build_rc=$foreign_elaboration_rc
+fi
+if (( foreign_mutation_count == 1 && foreign_elaboration_rc == 0 \
+      && foreign_collect_rc == 0 && foreign_build_rc > 0 )) \
+    && [[ $foreign_reference_visible == true ]]; then
+  printf 'AUDIT-SELFTEST leg=foreign-build-root rc=%s outcome=REFUTED\n' \
+    "$foreign_build_rc"
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=%s instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root outcome=ESTABLISHED\n' \
+    "$foreign_build_rc" "$AUDIT_COMMIT"
+else
+  printf 'AUDIT-SELFTEST leg=foreign-build-root rc=%s outcome=COULD-NOT-EVALUATE layer=build-root-provenance\n' \
+    "$foreign_build_rc"
+  selftests_pass=false
+fi
+
+# Named module-graph mutant: point the same oracle and same complete record set
+# at an empty module root.  Resolution must become RED, proving that the
+# published root is a live input rather than descriptive text.
+mkdir -p "$work/empty-lean-path"
+pinned_graph_rc=0
+LEAN_PATH="$work/empty-lean-path" \
+  run_scope pinned-module-graph "$work/tracked.tsv" \
+    "$work/pinned-module-graph.out" || pinned_graph_rc=$?
+if (( pinned_graph_rc > 0 )); then
+  printf 'AUDIT-SELFTEST leg=pinned-module-graph rc=%s outcome=REFUTED\n' \
+    "$pinned_graph_rc"
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=%s instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph outcome=ESTABLISHED\n' \
+    "$pinned_graph_rc" "$AUDIT_COMMIT"
+else
+  printf 'AUDIT-SELFTEST leg=pinned-module-graph rc=0 outcome=COULD-NOT-EVALUATE layer=module-graph-binding\n'
+  selftests_pass=false
+fi
+
 if (( tracked_unresolved == 0 && tracked_resolved > 0 \
       && tracked_compared > 0 && tracked_disagreements == 0 )) \
     && [[ $export_alias_pass == true ]] \
@@ -348,11 +552,9 @@ if (( tracked_unresolved == 0 && tracked_resolved > 0 \
     "$work/selftest-nested-namespace.out" \
     && grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' \
       "$work/selftest-nested-namespace.out"; then
-  printf 'AUDIT-ORACLE agreement=elaborator both_directions=true rows_compared=%s disagreements=0 outcome=ESTABLISHED\n' \
-    "$tracked_compared"
+  printf 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED\n'
 else
-  printf 'AUDIT-ORACLE agreement=elaborator both_directions=false rows_compared=%s disagreements=%s outcome=COULD-NOT-EVALUATE layer=oracle-agreement\n' \
-    "$tracked_compared" "$tracked_disagreements"
+  printf 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=COULD-NOT-EVALUATE layer=oracle-agreement\n'
   selftests_pass=false
 fi
 

@@ -34,7 +34,8 @@ def parseReference (line : String) : Except String Reference :=
         throw s!"empty compatibility reference field: {line}"
       else if kind != "module" && kind != "namespace" && kind != "name" then
         throw s!"unknown compatibility reference kind: {kind}"
-      else if provenance != "copied" && provenance != "synthesised" then
+      else if provenance != "copied" && provenance != "synthesised" &&
+          provenance != "elaborated" then
         throw s!"unknown compatibility reference provenance: {provenance}"
       else
         pure { source, package, name, kind, provenance }

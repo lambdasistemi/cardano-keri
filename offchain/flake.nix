@@ -945,6 +945,7 @@
                 runtimeInputs = [
                   pkgs.coreutils
                   pkgs.diffutils
+                  pkgs.findutils
                   pkgs.gnugrep
                   pkgs.jq
                 ];
@@ -1045,25 +1046,34 @@
                   leanPkgs.lean-all
                   pkgs.bash
                   pkgs.coreutils
+                  pkgs.diffutils
                   pkgs.findutils
                   pkgs.gnugrep
+                  pkgs.gnused
+                  pkgs.jq
                   pkgs.perl
                 ];
                 text = ''
                   export AUDIT_COMMIT=${sourceIdentity}
-                  export AUDIT_COLLECTOR=${./blaster/collect-lean-references.pl}
+                  export AUDIT_TEXT_COLLECTOR=${./blaster/collect-lean-references.pl}
+                  export AUDIT_ILEAN_COLLECTOR=${./blaster/collect-ilean-references.sh}
+                  export AUDIT_SOURCE_ELABORATOR=${./blaster/elaborate-ilean-root.sh}
                   export AUDIT_ORACLE=${compatibilityOracle}/bin/compatibility-oracle
                   export LEAN_PATH=${keriBlasterPackage.modRoot}
                   export AUDIT_SOURCE_ROOT=${cleanBlasterSource}
                   export AUDIT_SEED=${cleanBlasterSource}/CompatibilityRetiredReference.lean
+                  export AUDIT_COLLECTOR_SEED=${cleanBlasterSource}/CompatibilityCollectorClosureReference.lean
                   export AUDIT_NAMESPACE_SEED=${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean
                   export AUDIT_NESTED_NAMESPACE_SEED=${cleanBlasterSource}/CompatibilityNestedNamespaceReference.lean
                   export AUDIT_UNRECOGNISED_SEED=${cleanBlasterSource}/CompatibilityUnrecognisedReference.lean
+                  export AUDIT_LEAN_BLASTER_ROOT=${leanBlaster}
                   export AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster}
+                  export AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster}
                   export AUDIT_LEAN_BLASTER_REV=${leanBlaster.rev}
                   export AUDIT_PLUTUS_CORE_REV=${plutusCoreBlaster.rev}
                   export AUDIT_LEDGER_API_REV=${cardanoLedgerApiBlaster.rev}
                   export AUDIT_TRACKED_BUILD=${keriBlasterPackage.modRoot}
+                  export AUDIT_S2_ARTIFACTS=${s2Artifacts}
                   bash ${./blaster/compatibility-audit.sh} "$@"
                 '';
               };
@@ -1073,10 +1083,13 @@
                 runtimeInputs = [
                   auditRunner
                   compatibilityAuditRunner
+                  leanPkgs.lean-all
                   pkgs.bash
                   pkgs.coreutils
                   pkgs.diffutils
+                  pkgs.findutils
                   pkgs.gnugrep
+                  pkgs.gnused
                   pkgs.jq
                 ];
                 text = ''
@@ -1085,6 +1098,15 @@
                   bash ${./blaster/test-production-source.sh} \
                     ${pkgs.lib.getExe auditRunner}
                   ${pkgs.lib.getExe auditRunner}
+                  AUDIT_LEAN_BLASTER_ROOT=${leanBlaster} \
+                  AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster} \
+                  AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster} \
+                    bash ${./blaster/test-ilean-reference-collector.sh} \
+                      ${./blaster/collect-ilean-references.sh} \
+                      ${./blaster/elaborate-ilean-root.sh} \
+                      ${keriBlasterPackage.modRoot} \
+                      ${cleanBlasterSource} \
+                      ${s2Artifacts}
                   bash ${./blaster/test-compatibility-audit.sh} \
                     ${pkgs.lib.getExe compatibilityAuditRunner} \
                     ${./flake.lock} \
@@ -1093,6 +1115,7 @@
                     ${cleanBlasterSource}/CompatibilityNamespaceMoveReference.lean \
                     ${cleanBlasterSource}/CompatibilityNestedNamespaceReference.lean \
                     ${cleanBlasterSource}/CompatibilityUnrecognisedReference.lean \
+                    ${cleanBlasterSource}/CompatibilityCollectorClosureReference.lean \
                     137704294061cc3ed597167b15a586906ba23aba \
                     ${sourceIdentity}
 

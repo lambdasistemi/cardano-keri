@@ -5,62 +5,62 @@ and the slice has been independently audited and accepted.
 
 ## Slice A — compatibility audit and its two controls
 
-- [ ] T246-A1 — Executable RED proof for INV-A1..INV-A9, failing for the
+- [x] T246-A1 — Executable RED proof for INV-A1..INV-A9, failing for the
   intended missing behaviour rather than for setup, before any production
   change.
-- [ ] T246-A2 — Compatibility audit surface that resolves every reference the
+- [x] T246-A2 — Compatibility audit surface that resolves every reference the
   tracked bridge source makes into the three pinned upstream packages and
   reports resolved count and the complete unresolved set (INV-A1, INV-A2).
-- [ ] T246-A3 — Positive resolution control demonstrating in the same run that
+- [x] T246-A3 — Positive resolution control demonstrating in the same run that
   the resolver finds references that exist (INV-A2).
-- [ ] T246-A4 — Seeded retired-reference negative control that makes the audit
+- [x] T246-A4 — Seeded retired-reference negative control that makes the audit
   report the seeded name unresolved and exit non-zero (INV-A3).
-- [ ] T246-A5 — Pin identity bound from the locked inputs rather than
+- [x] T246-A5 — Pin identity bound from the locked inputs rather than
   transcribed (INV-A4).
-- [ ] T246-A6 — Explicit reported answer on whether variant E and an era-based
+- [x] T246-A6 — Explicit reported answer on whether variant E and an era-based
   variant selection are expressible at the pins (INV-A5, D-04).
-- [ ] T246-A7 — Three-outcome records on every checked item, with
+- [x] T246-A7 — Three-outcome records on every checked item, with
   `COULD-NOT-EVALUATE` naming its failed layer and forcing RED (INV-A6, D-01).
-- [ ] T246-A8 — Audit and both controls reached by the single flake-owned
+- [x] T246-A8 — Audit and both controls reached by the single flake-owned
   command the gate runs (INV-A7).
-- [ ] T246-A9 — `offchain/flake.lock` brought into sync so evaluation from a
+- [x] T246-A9 — `offchain/flake.lock` brought into sync so evaluation from a
   clean checkout leaves the working tree unmodified (INV-A8).
-- [ ] T246-A10 — Evidence that no bridge assertion, theorem, or existing check
+- [x] T246-A10 — Evidence that no bridge assertion, theorem, or existing check
   was weakened and no tracked Lean source was rewritten by the audit (INV-A9).
-- [ ] T246-A11 — The audit's own records name the commit they are about, so a
+- [x] T246-A11 — The audit's own records name the commit they are about, so a
   source-compatibility result cannot be read against the wrong tree (R-09,
   INV-A10).
-- [ ] T246-A12 — Resolution decided by an oracle derived from Lean's own
+- [x] T246-A12 — Resolution decided by an oracle derived from Lean's own
   environment for the pinned packages, agreeing with the elaborator in both
   directions; a textual approximation does not satisfy it (INV-A1, F-A1).
-- [ ] T246-A13 — Reliance declaration filed before the RED bundle, in registry
+- [x] T246-A13 — Reliance declaration filed before the RED bundle, in registry
   shape, with `enforced: NONE` available as a complete outcome.
-- [ ] T246-A14 — Every quantity the audit reports carries its instrument and
+- [x] T246-A14 — Every quantity the audit reports carries its instrument and
   its measurement window (R-12, D-09).
 
 ## Slice A2 — collector closure over the source language
 
 Authorized re-cut inside #246 (A-001). Carries `INV-A1.v1` intact.
 
-- [ ] T246-A2-1 — Collector closure over the tracked source language, including
+- [x] T246-A2-1 — Collector closure over the tracked source language, including
   syntax whose source spelling omits an upstream namespace; closure decided by
   the pins, not by the collector's own token pattern (`INV-A1.v1`).
-- [ ] T246-A2-2 — Every explicit cross-package reference is collected or the run
+- [x] T246-A2-2 — Every explicit cross-package reference is collected or the run
   reports `COULD-NOT-EVALUATE`/RED. No silent omission, no third outcome.
-- [ ] T246-A2-3 — Named killing mutant seeding an unrecognised or
+- [x] T246-A2-3 — Named killing mutant seeding an unrecognised or
   previously-omitted construct **of a class the collector does not already
   name** into tracked scope, making the real run RED rather than smaller.
-- [ ] T246-A2-4 — Honest bounded publication for `INV-A1.v2`: `collected`,
+- [x] T246-A2-4 — Honest bounded publication for `INV-A1.v2`: `collected`,
   `total`, coverage classes, collecting instrument, measurement window —
   remeasured against the candidate, never transcribed, and never a bare
   `unresolved=0`.
-- [ ] T246-A2-5 — The agreement record either states `agreement=by-construction`
+- [x] T246-A2-5 — The agreement record either states `agreement=by-construction`
   with its predicate named, or uses a genuinely discriminating second predicate.
   No non-falsifiable assertion ships labelled as a measurement.
-- [ ] T246-A2-6 — `INV-246-RESOLUTION-CLOSURE-BINDING` killed: the audit record
+- [x] T246-A2-6 — `INV-246-RESOLUTION-CLOSURE-BINDING` killed: the audit record
   names the store path the oracle resolved against, and it is the tracked
   package's own build root.
-- [ ] T246-A2-7 — `INV-246-PINNED-MODULE-GRAPH` killed by a named mutant, not
+- [x] T246-A2-7 — `INV-246-PINNED-MODULE-GRAPH` killed by a named mutant, not
   only structurally verified.
 
 ## Carried follow-ups
@@ -69,11 +69,29 @@ Filed inside #246 with named owners. These exist so an `ADVISORY` row can
 terminate `RESIDUAL` against a real ID rather than an invented one; no new
 ticket is authorized.
 
-- [ ] T246-F1 — Seed an actual `offchain/flake.lock` rewrite and require the run
-  RED. Owner: the Slice A2 commit owner. **Honest limit of what ships without
-  it:** `INV-246-A8`'s present mutant compares two literal strings, so what is
-  established is the *observation* that the lock did not change, not a
-  demonstration that a change would be caught.
+- [x] T246-F1 — Seed an actual `offchain/flake.lock` rewrite and require the run
+  RED. Owner: the Slice A2 commit owner. *Closed by Slice A2:
+  `actual-lock-rewrite` performs a real `jq` rewrite of a lock copy and asserts
+  the digest moves, with both locks bracketed by live before/after digests.
+  **Remaining honest limit:** lock stability is proven for this runner over this
+  invocation window, not for arbitrary evaluation of the flake.*
+- [ ] T246-F2 — Publish the discriminating input the run already computes: emit
+  an `AUDIT-DISAGREEMENT` record for the input on which the elaborator and
+  declaration-membership predicates differ, so the published record **exhibits**
+  one rather than merely the run containing one. Owner: a later #246 slice.
+  Follow-up for `INV-246-COMPARISON-DISCRIMINATION` (`RESIDUAL`). **Honest limit
+  of what ships without it:** the green establishes that a discriminating input
+  exists inside the run, not that the record shows it — which is what the row
+  asks. Zero `AUDIT-DISAGREEMENT` lines are emitted today.
+- [ ] T246-F3 — Share one package-attribution predicate across every instrument
+  that maps a module or reference to a pinned package; `collect-lean-references.pl`
+  calls the same lookup rather than re-implementing a prefix list with no
+  `Cryptograph` arm. Owner: a later #246 slice. Follow-up for
+  `INV-246-PACKAGE-ATTRIBUTION-AGREEMENT` (`RESIDUAL`). **Honest limit of what
+  ships without it:** the green establishes that the tracked numerator and
+  denominator share one predicate, not that every attributing instrument does.
+  The direction of harm stays closed only because the perl population feeds no
+  denominator, and nothing enforces that.
 
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 

@@ -297,7 +297,14 @@ loggingInterpreterWith callLog referenceScriptsOp =
         (\_ -> loggedCall callLog "liveCheckpoints" (pure []))
         referenceScriptsOp
         (\_ -> loggedCall callLog "boardCatalog" (pure []))
+        (\_ -> loggedCall callLog "boardCatalogWithOutputs" (pure []))
         (\_ -> loggedCall callLog "payerUtxos" (pure []))
+        ( \_ ->
+            loggedCall
+                callLog
+                "outputAt"
+                (fail "registration composes no exact-output read")
+        )
 
 -- | The default logging double: every operation empty\/absent, cold watermark.
 loggingInterpreter :: IORef [String] -> ChainQueryInterpreter IO

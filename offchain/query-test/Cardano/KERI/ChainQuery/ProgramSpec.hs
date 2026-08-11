@@ -1,3 +1,5 @@
+{-# LANGUAGE NumericUnderscores #-}
+
 {- |
 Module      : Cardano.KERI.ChainQuery.ProgramSpec
 Description : #257 RED — operation surface and free-monad composition
@@ -16,22 +18,28 @@ import Cardano.KERI.ChainQuery.Interpreter (
  )
 import Cardano.KERI.ChainQuery.Program (
     boardCatalog,
+    boardCatalogWithOutputs,
     currentCheckpoint,
     liveCheckpoints,
+    outputAt,
     payerUtxos,
     referenceScripts,
     storeWatermark,
  )
 import Cardano.KERI.ChainQuery.Types (
+    BoardEntry,
     BoardLocator (..),
+    ChainAssetUtxo (..),
     ChainQueryError (..),
     ChainReference,
     CheckpointLocator (..),
     ColdOr (Cold),
+    OutputLocator (..),
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal),
  )
 import Codec.Binary.Bech32 qualified as Bech32
+import Control.Monad (join)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
@@ -44,6 +52,7 @@ import Test.Hspec (
     describe,
     it,
     shouldBe,
+    shouldNotBe,
  )
 
 spec :: Spec
@@ -99,6 +108,172 @@ spec = describe "Cardano.KERI.ChainQuery.Program" $ do
         calls <- readIORef callLog
         reverse calls `shouldBe` ["currentCheckpoint", "referenceScripts"]
 
+    exactOutputOperation
+
+    boardOutputsOperation
+
+{- | \#262 RQ-262-03\/DATA-INV-262-01: a concrete locator is validated the
+moment the operation is BUILT, so an invalid one never becomes an operation
+node and no interpreter -- local or Koios -- is ever given the chance to
+answer it.
+
+This is the layer at which that claim can actually fail, and the only one.
+Against a real store an invalid locator simply matches no row, so a lazily
+validating implementation looks identical; only a logging interpreter can
+distinguish "rejected before dispatch" from "dispatched and found nothing".
+The instrument is therefore the call log, and every example below reads it.
+-}
+exactOutputOperation :: Spec
+exactOutputOperation =
+    describe
+        "#262 outputAt -- exact-output operation, RED against the closed \
+        \test-local stand-in"
+        $ do
+            it "dispatches exactly one operation for a valid locator, in program order" $ do
+                callLog <- newIORef []
+                result <-
+                    capExactOutput
+                        redAlgebraCapabilities
+                        (loggingInterpreter callLog)
+                        validTxIdHex
+                        3
+                case result of
+                    Right _ -> pure ()
+                    Left err -> fail ("expected the operation to resolve, got " <> show err)
+                calls <- readIORef callLog
+                reverse calls `shouldBe` ["outputAt"]
+
+            it "never reaches the interpreter for an invalid locator (DATA-INV-262-01)" $
+                mapM_ rejectsWithoutDispatch invalidExactLocators
+
+{- | Every shape a concrete exact-output locator can be wrong in. Upper-case
+hex is included deliberately: it decodes to 32 bytes, so a validity check
+written as "decodes to 32 bytes" admits an identity no canonical stored row
+can ever equal.
+-}
+invalidExactLocators :: [(String, Text, Int)]
+invalidExactLocators =
+    [ ("a non-hexadecimal transaction id", T.replicate 64 "z", 0)
+    , ("a short transaction id", T.replicate 62 "9", 0)
+    , ("a long transaction id", T.replicate 66 "9", 0)
+    , ("an upper-case transaction id", T.toUpper validTxIdHex, 0)
+    , ("an empty transaction id", "", 0)
+    , ("a negative output index", validTxIdHex, -1)
+    , ("an output index outside the ledger range", validTxIdHex, 65_536)
+    ]
+
+rejectsWithoutDispatch :: (String, Text, Int) -> IO ()
+rejectsWithoutDispatch (label, txIdHex, index) = do
+    -- fixture control: the upper-case row can only test anything if
+    -- upper-casing actually CHANGES the id.
+    T.toUpper validTxIdHex `shouldNotBe` validTxIdHex
+    callLog <- newIORef []
+    result <-
+        capExactOutput
+            redAlgebraCapabilities
+            (loggingInterpreter callLog)
+            txIdHex
+            index
+    case result of
+        Left (InvalidLocator _) -> pure ()
+        other ->
+            fail
+                ("expected " <> label <> " to be rejected as an invalid locator, got " <> show other)
+    calls <- readIORef callLog
+    calls `shouldBe` []
+
+{- | \#262 RQ-262-02\/DATA-INV-262-05: the board\/output operation is one
+dispatch like every other, and a failing interpreter answer short-circuits
+the program rather than falling through to another operation or another
+provider.
+-}
+boardOutputsOperation :: Spec
+boardOutputsOperation =
+    describe
+        "#262 boardCatalogWithOutputs -- board/output operation, RED against \
+        \the closed test-local stand-in"
+        $ do
+            it "dispatches exactly one operation for a valid locator" $ do
+                callLog <- newIORef []
+                result <-
+                    capBoardOutputs
+                        redAlgebraCapabilities
+                        (loggingInterpreter callLog)
+                        (canonicalHashHex 0x01)
+                        (canonicalAddress 0x01)
+                case result of
+                    Right _ -> pure ()
+                    Left err -> fail ("expected the operation to resolve, got " <> show err)
+                calls <- readIORef callLog
+                reverse calls `shouldBe` ["boardCatalogWithOutputs"]
+
+            it "never reaches the interpreter for an invalid board locator" $ do
+                callLog <- newIORef []
+                result <-
+                    capBoardOutputs
+                        redAlgebraCapabilities
+                        (loggingInterpreter callLog)
+                        "not-a-policy-id"
+                        (canonicalAddress 0x01)
+                case result of
+                    Left (InvalidLocator _) -> pure ()
+                    other -> fail ("expected an InvalidLocator, got " <> show other)
+                calls <- readIORef callLog
+                calls `shouldBe` []
+
+{- | The two \#262 operations as one test-local adapter, taking the locator's
+own PIECES rather than a locator value so the field types are identical
+before and after implementation: RED closes them with a stand-in, GREEN
+eta-expands them onto the real smart constructors, and no property body
+above changes between the two.
+-}
+data AlgebraCapabilities = AlgebraCapabilities
+    { capExactOutput ::
+        ChainQueryInterpreter IO ->
+        Text ->
+        Int ->
+        IO (Either ChainQueryError ChainAssetUtxo)
+    , capBoardOutputs ::
+        ChainQueryInterpreter IO ->
+        Text ->
+        Text ->
+        IO (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])
+    }
+
+redAlgebraCapabilities :: AlgebraCapabilities
+redAlgebraCapabilities =
+    AlgebraCapabilities
+        { capExactOutput = \interpreter txIdHex index ->
+            acquired
+                <$> runChainQuery
+                    interpreter
+                    (outputAt OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index})
+        , capBoardOutputs = \interpreter policyId address ->
+            acquired
+                <$> runChainQuery
+                    interpreter
+                    ( boardCatalogWithOutputs
+                        BoardLocator{boardLocatorPolicyId = policyId, boardLocatorAddress = address}
+                    )
+        }
+
+{- | Flatten the eager-rejection layer into the interpreter-result layer. An
+invalid locator produces the OUTER 'Left' without an operation ever existing;
+an interpreter failure produces the inner one. For these examples both are
+"the operation did not resolve", and the call log -- not this value -- is
+what distinguishes them.
+-}
+acquired :: Either ChainQueryError (Either ChainQueryError a) -> Either ChainQueryError a
+acquired = join
+
+{- | A canonical lower-case 32-byte transaction id, containing hex LETTERS on
+purpose: 'invalidExactLocators' upper-cases it, and an all-digit id would
+upper-case to itself, making that row assert nothing while reporting a pass.
+'rejectsWithoutDispatch' asserts the difference before using it.
+-}
+validTxIdHex :: Text
+validTxIdHex = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 0xAB))
+
 {- | A well-formed 44-character KERI E-code identifier, and genuinely
 canonical hex\/bech32 locator\/address\/hash fixtures -- so every operation
 in this file's programs actually reaches the interpreter under test
@@ -149,10 +324,30 @@ loggingInterpreterWith callLog referenceScriptsOp =
         (\_ -> loggedCall callLog "liveCheckpoints" (pure []))
         referenceScriptsOp
         (\_ -> loggedCall callLog "boardCatalog" (pure []))
+        (\_ -> loggedCall callLog "boardCatalogWithOutputs" (pure []))
         (\_ -> loggedCall callLog "payerUtxos" (pure []))
+        (\_ -> loggedCall callLog "outputAt" (pure sampleOutput))
         (loggedCall callLog "storeWatermark" (pure Cold))
         SourceLocal
         AtomicLocal
+
+{- | The one output this file's logging double answers 'outputAt' with. Its
+VALUE is irrelevant here -- every #262 example in this module asserts which
+operations were DISPATCHED, not what they returned -- but it must be a real
+'ChainAssetUtxo' rather than an error, so that "the operation ran" and "the
+operation failed" stay distinguishable in the call log.
+-}
+sampleOutput :: ChainAssetUtxo
+sampleOutput =
+    ChainAssetUtxo
+        { chainAssetTxId = validTxIdHex
+        , chainAssetIndex = 3
+        , chainAssetAddress = canonicalAddress 0x06
+        , chainAssetLovelace = 5_000_000
+        , chainAssetList = []
+        , chainAssetInlineDatum = Nothing
+        , chainAssetReferenceScript = Nothing
+        }
 
 loggingInterpreter :: IORef [String] -> ChainQueryInterpreter IO
 loggingInterpreter callLog =

@@ -130,3 +130,36 @@ spec = describe "MOD-240-WRITE-COMPOSITION component boundary (INV-240-NOPROVIDE
         gpd <- parseCabalFile >>= either fail pure
         cliLib <- either fail pure (namedLibrary "cli" gpd)
         any ("write-composition" `isInfixOf`) (dependencyTokens cliLib) `shouldBe` True
+
+    it "positive control: the store-route method can see a real store dependency (the `indexer` component genuinely has one)" $ do
+        gpd <- parseCabalFile >>= either fail pure
+        indexerLib <- either fail pure (namedLibrary "indexer" gpd)
+        hasStoreDependency (dependencyTokens indexerLib) `shouldBe` True
+
+    it "#262 INV-262-SOLE-ROUTE: has no store-transaction dependency edge at all, so no direct local acquisition route is even nameable (EDGE-262-05)" $ do
+        gpd <- parseCabalFile >>= either fail pure
+        case namedLibrary "write-composition" gpd of
+            Left reason -> expectationFailure reason
+            Right lib -> hasStoreDependency (dependencyTokens lib) `shouldBe` False
+
+{- | Package\/sublibrary tokens that make a component able to open, compose,
+or name a local store transaction.
+
+\#262 (INV-262-SOLE-ROUTE): once every build-phase read routes through the
+local interpreter, write composition needs neither of these, and the Cabal
+graph is what makes that a guarantee rather than a habit. A source scan can
+say "this module contains no direct route today"; this says a direct route
+cannot be WRITTEN, because the types it would need are not in scope for the
+component at all. That is the same argument MOD-240-WRITE-COMPOSITION makes
+for the provider boundary above, applied to the store.
+
+@-Wunused-packages@ is the reason this is cheap to keep honest: the component
+cannot carry either dependency without using it, so the graph and the source
+cannot drift apart in the harmless direction either.
+-}
+storeDependencySubstrings :: [String]
+storeDependencySubstrings = ["rocksdb", "kv-transactions", "utxo-indexer"]
+
+hasStoreDependency :: [String] -> Bool
+hasStoreDependency =
+    any (\dep -> any (`isInfixOf` map toLower dep) storeDependencySubstrings)

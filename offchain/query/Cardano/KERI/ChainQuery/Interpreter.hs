@@ -18,9 +18,9 @@ caller cannot use the raw constructor, record construction or update,
 explicit-field or @NamedFieldPuns@ destructuring, or positional matching to
 build a value or project a raw operation out of one. It can assemble an
 interpreter only through the controlled 'chainQueryInterpreter' factory, and
-the validated 'runChainQuery' \/ 'runChainQuerySnapshot' runners are the only
-public OPERATION eliminators — the provenance accessors below are public too,
-but perform no effect. So the only way to reach a provider's effect is a
+the validated 'runChainQuery' \/ 'runChainQueryResultSnapshot' runners are the
+only public OPERATION eliminators — the provenance accessors below are public
+too, but perform no effect. So the only way to reach a provider's effect is a
 'Cardano.KERI.ChainQuery.Program.ChainQuery' value, which only
 "Cardano.KERI.ChainQuery.Program"'s eagerly validating smart constructors can
 build. Invalid input therefore cannot reach a store or HTTP effect on any
@@ -38,12 +38,13 @@ module Cardano.KERI.ChainQuery.Interpreter (
     interpreterSource,
     interpreterConsistency,
     runChainQuery,
-    runChainQuerySnapshot,
+    runChainQueryResultSnapshot,
 ) where
 
 import Cardano.KERI.ChainQuery.Program (
     ChainQuery,
     ChainQueryF (..),
+    eagerRejection,
     foldChainQuery,
     storeWatermark,
  )
@@ -57,6 +58,7 @@ import Cardano.KERI.ChainQuery.Types (
     ChainWatermark,
     CheckpointLocator,
     ColdOr,
+    OutputLocator,
     QuerySnapshot (..),
     QuerySource,
     SnapshotConsistency,
@@ -81,8 +83,12 @@ data ChainQueryInterpreter effect = ChainQueryInterpreter
         [Text] -> effect (Either ChainQueryError [ChainReference])
     , interpretBoardCatalog ::
         BoardLocator -> effect (Either ChainQueryError [BoardEntry])
+    , interpretBoardCatalogWithOutputs ::
+        BoardLocator -> effect (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])
     , interpretPayerUtxos ::
         [Text] -> effect (Either ChainQueryError [ChainAssetUtxo])
+    , interpretOutputAt ::
+        OutputLocator -> effect (Either ChainQueryError ChainAssetUtxo)
     , interpretStoreWatermark ::
         effect (Either ChainQueryError (ColdOr ChainWatermark))
     , interpreterSource :: !QuerySource
@@ -108,7 +114,9 @@ chainQueryInterpreter ::
     (CheckpointLocator -> effect (Either ChainQueryError [ActiveCheckpoint])) ->
     ([Text] -> effect (Either ChainQueryError [ChainReference])) ->
     (BoardLocator -> effect (Either ChainQueryError [BoardEntry])) ->
+    (BoardLocator -> effect (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])) ->
     ([Text] -> effect (Either ChainQueryError [ChainAssetUtxo])) ->
+    (OutputLocator -> effect (Either ChainQueryError ChainAssetUtxo)) ->
     effect (Either ChainQueryError (ColdOr ChainWatermark)) ->
     QuerySource ->
     SnapshotConsistency ->
@@ -149,7 +157,9 @@ runChainQuery interpreter program =
         , interpretLiveCheckpoints
         , interpretReferenceScripts
         , interpretBoardCatalog
+        , interpretBoardCatalogWithOutputs
         , interpretPayerUtxos
+        , interpretOutputAt
         , interpretStoreWatermark
         } = interpreter
     dispatch :: forall x. ChainQueryF (ExceptT ChainQueryError effect x) -> ExceptT ChainQueryError effect x
@@ -162,36 +172,79 @@ runChainQuery interpreter program =
             ExceptT (interpretReferenceScripts hashes) >>= k
         BoardCatalog locator k ->
             ExceptT (interpretBoardCatalog locator) >>= k
+        BoardCatalogWithOutputs locator k ->
+            ExceptT (interpretBoardCatalogWithOutputs locator) >>= k
         PayerUtxos addrs k ->
             ExceptT (interpretPayerUtxos addrs) >>= k
+        OutputAt locator k ->
+            ExceptT (interpretOutputAt locator) >>= k
         StoreWatermark k ->
             ExceptT interpretStoreWatermark >>= k
 
-{- | 'runChainQuery' plus the always-attached watermark, source, and
-consistency envelope (DAT-257-RESULT). The watermark read is composed into
-the very SAME 'ChainQuery' value as the caller's program (via ordinary
-'Monad' sequencing) rather than issued as a second, separate
-'runChainQuery' call — for the local interpreter this is exactly what keeps
-a multi-operation program plus its watermark inside one store transaction
-(see "Cardano.KERI.Indexer.ChainQuery").
+{- | The ONE snapshot runner (DAT-257-RESULT): a program's result plus the
+watermark, source, and consistency envelope.
+
+A-262-02 (NOTE-003, A-001 ruling 1) — what this replaced, and why the
+replacement is a deletion rather than a warning. Until now this module also
+exported a runner accepting any @'ChainQuery' a@, which appended
+'Cardano.KERI.ChainQuery.Program.storeWatermark' to every program it was
+handed. For a program that can reject its own argument eagerly — which is
+every program built from a validating smart constructor — a locator refused
+before any operation node existed was still followed by a watermark
+dispatch, and at the local interpreter by an opened store transaction. Eager
+validation that touches the store is not eager validation.
+
+That runner could not be repaired in place: with an @a@ result it has no
+failure channel to inspect, so it cannot tell a rejection from a value, and
+making it invent a watermark would have hidden the symptom while the store
+transaction still opened. Restricting it by convention was tried and
+rejected — a public API that still has the defect, guarded only by what
+today's caller passes it, is avoided rather than prevented. So it is gone,
+and this runner takes a program that states its own failure channel.
+
+Behaviour:
+
+  * an eagerly rejected argument short-circuits BEFORE interpretation, so
+    the rejection reaches the caller having invoked no handler at all — not
+    the operation's, and not the watermark's;
+  * the watermark is composed INSIDE the caller's failure channel rather
+    than appended outside it, so an operation failure or a post-acquisition
+    resolution failure does not read a watermark either. This is the shape
+    'Cardano.KERI.ChainQuery.Registration.runRegistrationSnapshot' has used
+    since NOTE-021\/A-006;
+  * for a program that RESOLVES, the watermark is still read LAST, in the
+    same composed 'ChainQuery' value — so the local interpreter's
+    one-store-transaction guarantee and the 'AtomicLocal' claim are
+    unchanged, and \#257's own valid-program proofs hold against this runner
+    without weakening.
+
+The two 'Either' layers are flattened into one: a caller unwraps once, and a
+failure never carries a watermark that was never fetched.
 -}
-runChainQuerySnapshot ::
+runChainQueryResultSnapshot ::
     (Monad effect) =>
     ChainQueryInterpreter effect ->
-    ChainQuery a ->
+    ChainQuery (Either ChainQueryError a) ->
     effect (Either ChainQueryError (QuerySnapshot a))
-runChainQuerySnapshot interpreter program = do
-    result <- runChainQuery interpreter combined
-    pure (fmap toSnapshot result)
+runChainQueryResultSnapshot interpreter program =
+    case eagerRejection program of
+        Just err -> pure (Left err)
+        Nothing -> do
+            outcome <- runChainQuery interpreter withWatermark
+            pure $ case outcome of
+                Left err -> Left err
+                Right (Left err) -> Left err
+                Right (Right (value, watermark)) ->
+                    Right
+                        QuerySnapshot
+                            { snapshotValue = value
+                            , snapshotWatermark = watermark
+                            , snapshotSource = interpreterSource interpreter
+                            , snapshotConsistency = interpreterConsistency interpreter
+                            }
   where
-    combined = do
-        value <- program
-        watermark <- storeWatermark
-        pure (value, watermark)
-    toSnapshot (value, watermark) =
-        QuerySnapshot
-            { snapshotValue = value
-            , snapshotWatermark = watermark
-            , snapshotSource = interpreterSource interpreter
-            , snapshotConsistency = interpreterConsistency interpreter
-            }
+    withWatermark = do
+        outcome <- program
+        case outcome of
+            Left err -> pure (Left err)
+            Right value -> Right . (,) value <$> storeWatermark

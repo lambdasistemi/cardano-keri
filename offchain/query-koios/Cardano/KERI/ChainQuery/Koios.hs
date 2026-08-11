@@ -757,6 +757,7 @@ koiosInterpreter baseUrl token =
         (koiosLiveCheckpoints baseUrl token)
         (koiosReferenceScripts baseUrl token)
         (koiosBoardCatalog baseUrl token)
+        (\_locator -> pure (Left (koiosDoesNotAnswer "boardCatalogWithOutputs")))
         ( \addresses ->
             case validPayerAddresses addresses of
                 Left err -> pure (Left err)
@@ -764,6 +765,7 @@ koiosInterpreter baseUrl token =
                     results <- traverse (queryAddressUtxos baseUrl token) addresses
                     pure (Right (concat results))
         )
+        (\_locator -> pure (Left (koiosDoesNotAnswer "outputAt")))
         ( do
             tips <- queryTip baseUrl token
             pure $ case tips of
@@ -773,3 +775,28 @@ koiosInterpreter baseUrl token =
         )
         SourceKoios
         LegacySequential
+
+{- | #262 RQ-262-06\/MOD-262-KOIOS: how this interpreter accounts for the two
+build-phase operation families it does not answer.
+
+Explicitly, per operation, with the operation's own name in the failure --
+never a default handler, never a fall-through to another interpreter, and
+never an HTTP attempt. RQ-257-05 already established 'UnsupportedOperation'
+as one legitimate answer an interpreter may give; what \#262 requires is that
+the answer be a decision this module made, visible at the construction site
+above, rather than the absence of a decision.
+
+These two families exist to serve write composition, and write composition
+never selects Koios (EDGE-240-04\/MOD-262-KOIOS: "never participates in write
+composition"). Answering them from Koios's own endpoints would be
+implementable and pointless: it would add a provider-reachable route to
+exactly the acquisition path \#240 removed one from.
+-}
+koiosDoesNotAnswer :: Text -> ChainQueryError
+koiosDoesNotAnswer operation =
+    UnsupportedOperation
+        ( "the Koios interpreter does not answer the "
+            <> operation
+            <> " operation: it serves write-transaction build phases, which \
+               \never select a provider"
+        )

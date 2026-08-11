@@ -812,12 +812,21 @@
               # One module per route, because ghc reports only the first
               # offending binding per module: compiling them together would
               # prove one route and silently skip five.
+              #
+              # #262: the construction and positional fixtures name every field
+              # POSITIONALLY, so they pin the interpreter's arity. Adding an
+              # operation family therefore breaks the POSITIVE control (the
+              # negative controls still fail by name, since an out-of-scope
+              # constructor is out of scope at any arity) -- which is the
+              # intended behaviour: an arity change must not be able to
+              # silently degrade this instrument into "fails for some other
+              # reason". Keep both fixtures at the current field count.
               routes=(
-                "construction:built = ChainQueryInterpreter u u u u u (u u) u u where u = undefined"
+                "construction:built = ChainQueryInterpreter u u u u u u u (u u) u u where u = undefined"
                 "update:updated i = i { interpretPayerUtxos = undefined }"
                 "explicit-field:field ChainQueryInterpreter{interpretPayerUtxos = op} = op"
                 "puns:puns ChainQueryInterpreter{interpretReferenceScripts} = interpretReferenceScripts"
-                "positional:positional (ChainQueryInterpreter _ _ _ _ op _ _ _) = op"
+                "positional:positional (ChainQueryInterpreter _ _ _ _ _ op _ _ _ _) = op"
                 "extract-and-invoke:invoked i = (case i of ChainQueryInterpreter{interpretPayerUtxos = op} -> op) []"
               )
               writeRoute() {
@@ -828,11 +837,11 @@
               {-# LANGUAGE NamedFieldPuns #-}
               module OpaqueAll where
               import Cardano.KERI.ChainQuery.Interpreter
-              built = ChainQueryInterpreter u u u u u (u u) u u where u = undefined
+              built = ChainQueryInterpreter u u u u u u u (u u) u u where u = undefined
               updated i = i { interpretPayerUtxos = undefined }
               field ChainQueryInterpreter{interpretPayerUtxos = op} = op
               puns ChainQueryInterpreter{interpretReferenceScripts} = interpretReferenceScripts
-              positional (ChainQueryInterpreter _ _ _ _ op _ _ _) = op
+              positional (ChainQueryInterpreter _ _ _ _ _ op _ _ _ _) = op
               invoked i = field i []
               BOUNDARY
               ghcbin=${project.shell.ghc}/bin/ghc

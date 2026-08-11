@@ -37,8 +37,16 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
     chainAssetUtxoToLedgerOutput,
     chainReferenceToLedgerOutput,
  )
-import Cardano.KERI.ChainQuery.Program (boardCatalog, payerUtxos, referenceScripts, storeWatermark)
+import Cardano.KERI.ChainQuery.Program (
+    boardCatalog,
+    boardCatalogWithOutputs,
+    outputAt,
+    payerUtxos,
+    referenceScripts,
+    storeWatermark,
+ )
 import Cardano.KERI.ChainQuery.Types (
+    BoardEntry,
     BoardLocator (..),
     ChainAssetUtxo (..),
     ChainQueryError (..),
@@ -47,6 +55,7 @@ import Cardano.KERI.ChainQuery.Types (
     ChainWatermark (..),
     CheckpointLocator (..),
     ColdOr (Cold, Populated),
+    OutputLocator (..),
     QuerySource (SourceKoios),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
@@ -264,6 +273,80 @@ spec = describe "Cardano.KERI.ChainQuery.Koios (extended decode, A-001)" $ do
         it "never reports AtomicLocal, since Koios issues several independent calls rather than one shared-snapshot read" $
             interpreterConsistency (koiosInterpreter unreachableUrl Nothing) `shouldNotBe` AtomicLocal
 
+    describe
+        "#262 RQ-262-06 -- the Koios interpreter accounts EXPLICITLY for both \
+        \new operation families, RED against the closed test-local stand-in"
+        $ do
+            it "answers the exact-output operation with a named UnsupportedOperation rather than a partial value, a fallback, or an HTTP attempt" $ do
+                result <- capKoiosExactOutput redKoiosCapabilities koiosTxIdHex 0
+                case result of
+                    Left (UnsupportedOperation _) -> pure ()
+                    other ->
+                        fail
+                            ( "expected Koios to account for the exact-output operation with a \
+                              \named UnsupportedOperation, got "
+                                <> show other
+                            )
+
+            it "answers the board/output operation with a named UnsupportedOperation, never falling through to the local interpreter" $ do
+                result <-
+                    capKoiosBoardOutputs
+                        redKoiosCapabilities
+                        canonicalPolicyHex
+                        testAddressBech32
+                case result of
+                    Left (UnsupportedOperation _) -> pure ()
+                    other ->
+                        fail
+                            ( "expected Koios to account for the board/output operation with a \
+                              \named UnsupportedOperation, got "
+                                <> show other
+                            )
+
+{- | The two \#262 operations as answered by the REAL production
+'koiosInterpreter', behind a test-local adapter whose field types take the
+locators' own pieces and are therefore identical before and after
+implementation. RED closes both with a stand-in that reports the wrong
+failure, so each example fails for exactly the missing accounting rather
+than for a compilation reason.
+
+'unreachableUrl' is the point: an interpreter that answered either operation
+by dialing Koios would fail with a transport error instead of a named
+'UnsupportedOperation', so these examples also witness that no HTTP call is
+attempted.
+-}
+data KoiosCapabilities = KoiosCapabilities
+    { capKoiosExactOutput ::
+        Text -> Int -> IO (Either ChainQueryError ChainAssetUtxo)
+    , capKoiosBoardOutputs ::
+        Text -> Text -> IO (Either ChainQueryError [(BoardEntry, ChainAssetUtxo)])
+    }
+
+redKoiosCapabilities :: KoiosCapabilities
+redKoiosCapabilities =
+    KoiosCapabilities
+        { capKoiosExactOutput = \txIdHex index ->
+            acquired
+                <$> runChainQuery
+                    (koiosInterpreter unreachableUrl Nothing)
+                    (outputAt OutputLocator{outputLocatorTxId = txIdHex, outputLocatorIndex = index})
+        , capKoiosBoardOutputs = \policyId address ->
+            acquired
+                <$> runChainQuery
+                    (koiosInterpreter unreachableUrl Nothing)
+                    ( boardCatalogWithOutputs
+                        BoardLocator{boardLocatorPolicyId = policyId, boardLocatorAddress = address}
+                    )
+        }
+
+-- | Flatten the eager-rejection layer into the interpreter-result layer.
+acquired :: Either ChainQueryError (Either ChainQueryError a) -> Either ChainQueryError a
+acquired = join
+
+-- | A canonical lower-case 32-byte transaction id.
+koiosTxIdHex :: Text
+koiosTxIdHex = TE.decodeUtf8 (convertToBase Base16 (BS.replicate 32 0x91))
+
 {- | A genuine, checksum-valid testnet address: real ledger bytes
 (mirroring 'Cardano.KERI.Indexer.ReadsSpec.checkpointLedgerAddress')
 rendered through the real 'Bech32.encodeLenient' encoder, so decode
@@ -367,7 +450,9 @@ poisonExceptWatermark watermark =
         (\_ -> error "poison: live-checkpoints must never be reached")
         (\_ -> error "poison: reference-scripts must never be reached")
         (\_ -> error "poison: board-catalog must never be reached")
+        (\_ -> error "poison: board-catalog-with-outputs must never be reached")
         (\_ -> error "poison: payer-utxos must never be reached")
+        (\_ -> error "poison: output-at must never be reached")
         (pure (Right watermark))
         SourceKoios
         LegacySequential

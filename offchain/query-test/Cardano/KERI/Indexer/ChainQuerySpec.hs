@@ -21,8 +21,6 @@ import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.ChainQuery.Interpreter (
     ChainQueryInterpreter,
     chainQueryInterpreter,
-    interpreterConsistency,
-    interpreterSource,
     runChainQuery,
  )
 import Cardano.KERI.ChainQuery.Program (boardCatalog, currentCheckpoint, payerUtxos, referenceScripts, storeWatermark)
@@ -36,7 +34,7 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal, LegacySequential),
  )
-import Cardano.KERI.Indexer.ChainQuery (localInterpreter, queryHandleLocalScope, runLocalChainQuery)
+import Cardano.KERI.Indexer.ChainQuery (queryHandleLocalScope, runLocalQuery)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..), payerUtxosTxAcrossAddresses, watermarkTx)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
@@ -61,7 +59,6 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent.Async (async, wait)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Concurrent.STM (STM)
-import Control.Monad (join)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
@@ -81,13 +78,11 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [payerCreate (sampleTxIn 0x10) addrA]
             counter <- newIORef (0 :: Int)
             let qHandle = queryHandleLocalScope (testQueryHandle (countingRunner counter runner))
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             count <- readIORef counter
             count `shouldBe` 1
             case result of
-                Right snapshot -> case snapshotValue snapshot of
-                    Right utxos -> length utxos `shouldBe` 1
-                    Left err -> fail ("expected a resolved payer list, got " <> show err)
+                Right snapshot -> length (snapshotValue snapshot) `shouldBe` 1
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     it "the concurrent property is observed failing under an intentional split-run mutation (T257-S2-05)" $
@@ -126,25 +121,24 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             writer <- async $ do
                 applyAtSlot handle (Indexer.SlotNo 20) (blockHash 0x02) [payerCreate (sampleTxIn 0x11) addrA]
                 putMVar advanced ()
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             takeMVar advanced
             wait writer
             case result of
-                Right snapshot -> case (snapshotWatermark snapshot, snapshotValue snapshot) of
-                    (Populated watermark, Right utxos) -> do
+                Right snapshot -> case snapshotWatermark snapshot of
+                    Populated watermark -> do
                         -- Coherent by construction: either the watermark is
                         -- still slot 10 and exactly one row is visible, or
                         -- the watermark has advanced to slot 20 and exactly
                         -- two rows are visible — never one row with slot 20,
                         -- and never two rows with slot 10.
-                        expectedRowCount watermark `shouldBe` length utxos
+                        expectedRowCount watermark `shouldBe` length (snapshotValue snapshot)
                         -- DATA-INV-257-02: the watermark's block hash must be
                         -- the EXACT hash of its own bound slot, not just a
                         -- row-count-consistent slot number — a constant or
                         -- swapped hash must fail this.
                         watermarkBlockHash watermark `shouldBe` expectedBlockHash watermark
-                    (Cold, _) -> fail "expected a populated watermark"
-                    (_, Left err) -> fail ("expected a resolved payer list, got " <> show err)
+                    Cold -> fail "expected a populated watermark"
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     it "the named coherence property fails under a production-path split-transaction mutation, then passes restored (T257-S2-04, frozen production-path proof)" $
@@ -159,7 +153,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             -- 'syncingRunner' releases the concurrent writer exactly after
             -- its FIRST wrapped transaction call and forces any SECOND call
             -- to wait for the writer's commit. A correct single-transaction
-            -- 'runLocalChainQuery' makes exactly one call, so the release
+            -- 'runLocalQuery' makes exactly one call, so the release
             -- happens only after its (already-computed) coherent result --
             -- deterministically slot 10\/one row every time. A
             -- split-transaction defect's second call is forced to observe
@@ -168,15 +162,14 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             -- the real production entrypoint, not a bespoke bypass.
             wrapped <- syncingRunner advanceSignal advanced runner
             let qHandle = queryHandleLocalScope (testQueryHandle wrapped)
-            result <- runLocalChainQuery qHandle (payerUtxos [addrText addrA])
+            result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
             wait writer
             case result of
-                Right snapshot -> case (snapshotWatermark snapshot, snapshotValue snapshot) of
-                    (Populated watermark, Right utxos) -> do
-                        expectedRowCount watermark `shouldBe` length utxos
+                Right snapshot -> case snapshotWatermark snapshot of
+                    Populated watermark -> do
+                        expectedRowCount watermark `shouldBe` length (snapshotValue snapshot)
                         watermarkBlockHash watermark `shouldBe` expectedBlockHash watermark
-                    (Cold, _) -> fail "expected a populated watermark"
-                    (_, Left err) -> fail ("expected a resolved payer list, got " <> show err)
+                    Cold -> fail "expected a populated watermark"
                 Left err -> fail ("expected a snapshot, got " <> show err)
 
     describe "local interpreter locator validation fails closed before any store effect (DATA-INV-257-01)" $ do
@@ -190,11 +183,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
             withInMemoryIndexerRunner $ \_handle runner -> do
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery
-                            (localInterpreter qHandle)
-                            (currentCheckpoint (CheckpointLocator "" "") validAidText)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (currentCheckpoint (CheckpointLocator "" "") validAidText)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects a checkpoint locator that disagrees with the store's own configuration, rather than silently answering for it" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -205,19 +195,15 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                 -- earlier and left this branch untested.
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery
-                            (localInterpreter qHandle)
-                            (currentCheckpoint mismatchingCheckpointLocator validAidText)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (currentCheckpoint mismatchingCheckpointLocator validAidText)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects an empty board locator" $
             withInMemoryIndexerRunner $ \_handle runner -> do
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery (localInterpreter qHandle) (boardCatalog (BoardLocator "" ""))
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (boardCatalog (BoardLocator "" ""))
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "rejects a board locator whose address disagrees with the store's own board address, rather than silently answering for it" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -225,9 +211,8 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                 -- case above: only the store-identity branch can reject it.
                 let qHandle = queryHandleLocalScope (testQueryHandle runner)
                 result <-
-                    runTransaction runner $
-                        runChainQuery (localInterpreter qHandle) (boardCatalog mismatchingBoardLocator)
-                join result `shouldSatisfy` isLeftInvalidLocator
+                    runLocalQuery qHandle (boardCatalog mismatchingBoardLocator)
+                result `shouldSatisfy` isLeftInvalidLocator
 
         it "structurally rejects a malformed current-checkpoint AID before ever invoking the interpreter, with an otherwise-valid locator (NOTE-020)" $
             withInMemoryIndexerRunner $ \_handle runner -> do
@@ -294,13 +279,24 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery (#257 S257-2)" $ do
                     Right inner -> inner `shouldSatisfy` isLeftInvalidLocator
                     Left err -> fail ("expected a pure structural rejection, got an interpreter-level error " <> show err)
 
-    describe "the actual production localInterpreter reports its own real provenance (not a fake stand-in), DATA-INV-257-03" $
+    describe "the actual production local acquisition reports its own real provenance (not a fake stand-in), DATA-INV-257-03" $
         it "reports SourceLocal and AtomicLocal, never LegacySequential (INV-257-CONSISTENCY)" $
+            -- A-262-03: observed on a real acquisition's own snapshot rather
+            -- than on a constructed interpreter value. The local interpreter
+            -- is no longer public -- exporting a transaction-backed
+            -- interpreter alongside a public store runner would let any
+            -- caller rebuild the retired bypass -- and a snapshot is the
+            -- stronger observation anyway: it is the provenance a consumer
+            -- actually receives.
             withInMemoryIndexerRunner $ \_handle runner -> do
-                let interpreter = localInterpreter (queryHandleLocalScope (testQueryHandle runner))
-                interpreterSource interpreter `shouldBe` SourceLocal
-                interpreterConsistency interpreter `shouldBe` AtomicLocal
-                interpreterConsistency interpreter `shouldNotBe` LegacySequential
+                let qHandle = queryHandleLocalScope (testQueryHandle runner)
+                result <- runLocalQuery qHandle (payerUtxos [addrText addrA])
+                case result of
+                    Right snapshot -> do
+                        snapshotSource snapshot `shouldBe` SourceLocal
+                        snapshotConsistency snapshot `shouldBe` AtomicLocal
+                        snapshotConsistency snapshot `shouldNotBe` LegacySequential
+                    Left err -> fail ("expected a snapshot, got " <> show err)
   where
     expectedRowCount watermark
         | watermarkSlot watermark >= 20 = 2 :: Int
@@ -330,7 +326,9 @@ poisonExceptWatermark watermark =
         (\_ -> error "poison: live-checkpoints must never be reached")
         (\_ -> error "poison: reference-scripts must never be reached")
         (\_ -> error "poison: board-catalog must never be reached")
+        (\_ -> error "poison: board-catalog-with-outputs must never be reached")
         (\_ -> error "poison: payer-utxos must never be reached")
+        (\_ -> error "poison: output-at must never be reached")
         (pure (Right watermark))
         SourceLocal
         AtomicLocal

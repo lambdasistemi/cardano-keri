@@ -15,6 +15,11 @@ commit=4e840934deeb55aa9fd45a34fc516bb4c635bf81
 aiken=1.1.23
 variant=defaultFunSemanticsVariantE
 era=post-Conway
+toolchain='aiken=1.1.23;lean-blaster=62d2d59abda37e90097e655b40e27545bba16f3c;plutus-core-blaster=7cf5a78c54b9694ef093bf49edb5d3799b2a49c9;cardano-ledger-api-blaster=577e3eb03b5be09354cfdb1c0d0c12e9e16541a0'
+lock_sha=96f9405089d9a28b305fae4fff9e657ec8363a157c326bcc66c3e232b8f92200
+lean_blaster_rev=62d2d59abda37e90097e655b40e27545bba16f3c
+plutus_core_rev=7cf5a78c54b9694ef093bf49edb5d3799b2a49c9
+ledger_api_rev=577e3eb03b5be09354cfdb1c0d0c12e9e16541a0
 receipt_sha=e747878a9a84bfcb3c871084c93648c54dadaf59b25509ab3403d37da999e69c
 log_sha=6a0459158505243ac6eb3451d08240c47977338d4b558ee93562908cd402b3e6
 
@@ -51,12 +56,17 @@ jq -s . "$work/programs.jsonl" > "$work/programs.json"
 jq -n \
   --arg commit "$commit" \
   --arg aiken "$aiken" \
+  --arg toolchain "$toolchain" \
   --arg variant "$variant" \
   --arg era "$era" \
+  --arg lock_sha256 "$lock_sha" \
+  --arg lean_blaster "$lean_blaster_rev" \
+  --arg plutus_core "$plutus_core_rev" \
+  --arg ledger_api "$ledger_api_rev" \
   --arg blueprint_sha256 "$blueprint_sha" \
   --slurpfile programs "$work/programs.json" '
   def identity: {
-    commit:$commit, aiken:$aiken, variant:$variant,
+    commit:$commit, aiken:$aiken, toolchain:$toolchain, variant:$variant,
     ledger_language:"PlutusV3", era:$era,
     blueprint_sha256:$blueprint_sha256
   };
@@ -67,7 +77,11 @@ jq -n \
       built_from:"source",
       validating_aiken:$aiken,
       selection:"explicit-era-binding",
-      version_derived:"defaultFunSemanticsVariantC"
+      version_derived:"defaultFunSemanticsVariantC",
+      lock_sha256:$lock_sha256,
+      upstream:{lean_blaster:$lean_blaster,
+        plutus_core_blaster:$plutus_core,
+        cardano_ledger_api_blaster:$ledger_api}
     }),
     blueprint_sha256:$blueprint_sha256,
     programs:$ps,
@@ -91,6 +105,11 @@ identity_args=(
   --expected-aiken "$aiken"
   --expected-variant "$variant"
   --expected-era "$era"
+  --expected-toolchain "$toolchain"
+  --expected-lock-sha256 "$lock_sha"
+  --expected-lean-blaster-rev "$lean_blaster_rev"
+  --expected-plutus-core-rev "$plutus_core_rev"
+  --expected-ledger-api-rev "$ledger_api_rev"
 )
 
 run_identity() { "$checker" "${identity_args[@]}"; }
@@ -102,6 +121,7 @@ expect_red() { # label expected-diagnostic command...
   [ "$rc" -ne 0 ] || fail "$label unexpectedly exited 0"
   [[ $out == *"$expected"* ]] \
     || fail "$label exited $rc without naming '$expected': $out"
+  last_red_rc=$rc
   printf 'RED-PROOF invariant=%s rc=%s diagnostic=%s outcome=REFUTED\n' \
     "$label" "$rc" "$expected"
 }
@@ -124,6 +144,12 @@ grep -Fq 'CBIC_IDENTITY_RESULT records_checked=27' <<< "$clean_out" \
   || fail "clean identity result did not publish records_checked=27"
 grep -Fq 'CBIC_IDENTITY_RESULT inconsistent=0' <<< "$clean_out" \
   || fail "clean identity result did not publish inconsistent=0"
+grep -Fq 'CBIC_IDENTITY_RESULT identity_fields=204' <<< "$clean_out" \
+  || fail "clean identity result did not publish the production field denominator"
+grep -Fq 'CBIC_IDENTITY_RESULT externally_expected=204' <<< "$clean_out" \
+  || fail "clean identity result did not externally expect every identity field"
+grep -Fq 'CBIC_IDENTITY_RESULT unexpected=0' <<< "$clean_out" \
+  || fail "clean identity result did not reject fields outside the expectation registry"
 
 # Every manifest input class moves independently and must be named.
 expect_red_identity_copy INV-246-B5-title \
@@ -151,6 +177,30 @@ expect_red_identity_copy INV-246-B7-unnamed-variant \
   'del(.records[0].variant)' 'unnamed identity input: variant'
 expect_red_identity_copy INV-246-B7-inconsistent-receipt \
   '.records[-1].commit = ("d" * 40)' 'inconsistent identity input: commit'
+
+# Audit submission 1 repair classes. These use the producer's complete record
+# shape, including the verification receipt, and each control must first prove
+# its mutation can make the canonical checker fail.
+expect_red_identity_copy INV-246-B7-record-toolchain-mutated \
+  '.records[3].toolchain = "aiken=0.0.0"' \
+  'inconsistent identity input: toolchain'
+printf 'REPAIR-SELFTEST leg=record-toolchain-mutated rc=%s outcome=REFUTED\n' "$last_red_rc"
+
+expect_red_identity_copy INV-246-IDENTITY-FIELD-EXPECTATION-DISJOINT \
+  '.identity.unregistered_identity = "has-no-external-expectation"' \
+  'externally-unexpected field set'
+printf 'REPAIR-SELFTEST leg=identity-field-without-external-expectation rc=%s outcome=REFUTED\n' "$last_red_rc"
+
+expect_red_identity_copy INV-246-CONTROL-SCHEMA-PRODUCTION \
+  'del(.identity.toolchain) | .records |= map(del(.toolchain))' \
+  'identity schema moved'
+printf 'REPAIR-SELFTEST leg=control-schema-narrower-than-production rc=%s outcome=REFUTED\n' "$last_red_rc"
+
+expect_red_identity_copy INV-246-B1-COMMIT-AUTHORITY \
+  '("0" * 40) as $commit | .identity.commit = $commit |
+    .records |= map(.commit = $commit)' \
+  'identity input moved: commit'
+printf 'REPAIR-SELFTEST leg=baseline-commit-authority-substituted rc=%s outcome=REFUTED\n' "$last_red_rc"
 
 # Full-population schema reliance: these mutants alter the blueprint, not the
 # manifest, and must fail for their schema class before a hash mismatch can

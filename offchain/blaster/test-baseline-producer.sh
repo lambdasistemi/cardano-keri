@@ -15,25 +15,35 @@ for path in "$blueprint" "$manifest"; do [ -r "$path" ] || fail "not readable: $
 work=$(mktemp -d "${TMPDIR:-/tmp}/baseline-producer-contract.XXXXXXXX")
 trap 'rm -rf "$work"' EXIT
 
-export BASELINE_COMMIT=4e840934deeb55aa9fd45a34fc516bb4c635bf81
-export BASELINE_AIKEN=1.1.23
-export BASELINE_VARIANT=defaultFunSemanticsVariantE
-export BASELINE_ERA=post-Conway
-export BASELINE_VERSION_DERIVED=defaultFunSemanticsVariantC
-export BASELINE_TOOLCHAIN
-BASELINE_TOOLCHAIN=$(jq -er '.identity.toolchain' "$manifest")
-export BASELINE_LOCK_SHA256
-BASELINE_LOCK_SHA256=$(jq -er '.identity.lock_sha256' "$manifest")
-export BASELINE_LEAN_BLASTER_REV
-BASELINE_LEAN_BLASTER_REV=$(jq -er '.identity.upstream.lean_blaster' "$manifest")
-export BASELINE_PLUTUS_CORE_REV
-BASELINE_PLUTUS_CORE_REV=$(jq -er '.identity.upstream.plutus_core_blaster' "$manifest")
-export BASELINE_LEDGER_API_REV
-BASELINE_LEDGER_API_REV=$(jq -er '.identity.upstream.cardano_ledger_api_blaster' "$manifest")
+# Every producer expectation is supplied by the caller from the flake's source
+# identity, lock and inputs. Reading any of these values back out of $manifest
+# would make byte comparison self-referential and unable to falsify drift.
+for name in BASELINE_COMMIT BASELINE_AIKEN BASELINE_VARIANT BASELINE_ERA \
+  BASELINE_VERSION_DERIVED BASELINE_TOOLCHAIN BASELINE_LOCK_SHA256 \
+  BASELINE_LEAN_BLASTER_REV BASELINE_PLUTUS_CORE_REV \
+  BASELINE_LEDGER_API_REV; do
+  [ -n "${!name:-}" ] || fail "external producer expectation is missing: $name"
+  export "$name"
+done
 
 "$generator" "$blueprint" "$work/regenerated.json"
 cmp "$manifest" "$work/regenerated.json" \
   || fail "real manifest is not the generator's byte-identical output"
+
+"$checker" \
+  --repo-root "$repo_root" \
+  --identity-manifest "$manifest" \
+  --blueprint "$blueprint" \
+  --expected-commit "$BASELINE_COMMIT" \
+  --expected-aiken "$BASELINE_AIKEN" \
+  --expected-variant "$BASELINE_VARIANT" \
+  --expected-era "$BASELINE_ERA" \
+  --expected-toolchain "$BASELINE_TOOLCHAIN" \
+  --expected-lock-sha256 "$BASELINE_LOCK_SHA256" \
+  --expected-lean-blaster-rev "$BASELINE_LEAN_BLASTER_REV" \
+  --expected-plutus-core-rev "$BASELINE_PLUTUS_CORE_REV" \
+  --expected-ledger-api-rev "$BASELINE_LEDGER_API_REV" \
+  > "$work/checker.out"
 
 expect_red() { local label=$1 expected=$2 out rc; shift 2
   set +e; out=$("$@" 2>&1); rc=$?; set -e

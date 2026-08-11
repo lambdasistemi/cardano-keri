@@ -787,7 +787,10 @@
               # the repository's validating Aiken rather than substituted by
               # a declared output hash.
               baselineBlueprint = e2eWiring.blueprint;
-              baselineSourceCommit = "4e840934deeb55aa9fd45a34fc516bb4c635bf81";
+              # The baseline commit is the revision of the flake source that
+              # supplies e2eWiring.onchainSrc, never a second literal that can
+              # drift while still feeding both producer and checker.
+              baselineSourceCommit = sourceIdentity;
               baselineVariant = "defaultFunSemanticsVariantE";
               baselineEra = "post-Conway";
               validatingAikenVersion = aikenPkgs.aiken.version;
@@ -1265,6 +1268,21 @@
                       pkgs.lib.escapeShellArg baselineVariant
                     } \
                     --expected-era ${pkgs.lib.escapeShellArg baselineEra} \
+                    --expected-toolchain ${
+                      pkgs.lib.escapeShellArg baselineToolchain
+                    } \
+                    --expected-lock-sha256 ${
+                      pkgs.lib.escapeShellArg lockSha256
+                    } \
+                    --expected-lean-blaster-rev ${
+                      pkgs.lib.escapeShellArg leanBlaster.rev
+                    } \
+                    --expected-plutus-core-rev ${
+                      pkgs.lib.escapeShellArg plutusCoreBlaster.rev
+                    } \
+                    --expected-ledger-api-rev ${
+                      pkgs.lib.escapeShellArg cardanoLedgerApiBlaster.rev
+                    } \
                     > "$identity_out"
                   cat "$identity_out"
 
@@ -1273,10 +1291,16 @@
                   blueprint_sha256="$(jq -er '.blueprint_sha256' "$identity_manifest")"
                   records_checked="$(sed -n 's/^CBIC_IDENTITY_RESULT records_checked=//p' "$identity_out")"
                   inconsistent="$(sed -n 's/^CBIC_IDENTITY_RESULT inconsistent=//p' "$identity_out")"
+                  identity_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT identity_fields=//p' "$identity_out")"
+                  externally_expected="$(sed -n 's/^CBIC_IDENTITY_RESULT externally_expected=//p' "$identity_out")"
+                  unexpected_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT unexpected=//p' "$identity_out")"
                   test "$titles" -eq 23
                   test "$programs" -eq 8
                   test "$records_checked" -ge 1
                   test "$inconsistent" -eq 0
+                  test "$identity_fields" -ge 1
+                  test "$externally_expected" -eq "$identity_fields"
+                  test "$unexpected_fields" -eq 0
 
                   echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build outcome=ESTABLISHED"
                   jq -r '.programs[] | [.title, (.params | tostring), .program_sha256] | @tsv' \
@@ -1284,9 +1308,11 @@
                     | while IFS=$'\t' read -r program_title params program_sha256; do
                         echo "AUDIT-PROGRAM title=$program_title params=$params program_sha256=$program_sha256"
                       done
-                  echo "AUDIT-BASELINE built_from=source toolchain=${validatingAikenVersion} validating_toolchain=${validatingAikenVersion} match=true outcome=ESTABLISHED"
+                  echo "AUDIT-BASELINE built_from=source toolchain=aiken:${validatingAikenVersion} validating_toolchain=aiken:${validatingAikenVersion} agreement=by-construction predicate=validating-aiken-pin-reconciliation outcome=ESTABLISHED"
+                  echo "AUDIT-BASELINE-COMMIT declared=${baselineSourceCommit} observed=${sourceIdentity} authority=flake-self-rev agreement=by-construction outcome=ESTABLISHED"
                   echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=explicit-era-binding version_derived=defaultFunSemanticsVariantC outcome=ESTABLISHED"
                   echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields externally_expected=$externally_expected unexpected=$unexpected_fields instrument=check-blaster-identity-consistency window=manifest-identity-and-all-record-identity-fields outcome=ESTABLISHED"
 
                   # The Nix check executes the same app in a build sandbox,
                   # where the deliberately retained /tmp receipt and a nested
@@ -1301,7 +1327,17 @@
                       "$identity_checker" "$repo_root" \
                       "$retained_receipt" "$retained_log" \
                       | tee "$baseline_contract_out"
-                    bash ${./blaster/test-baseline-producer.sh} \
+                    BASELINE_COMMIT=${pkgs.lib.escapeShellArg baselineSourceCommit} \
+                    BASELINE_AIKEN=${pkgs.lib.escapeShellArg validatingAikenVersion} \
+                    BASELINE_VARIANT=${pkgs.lib.escapeShellArg baselineVariant} \
+                    BASELINE_ERA=${pkgs.lib.escapeShellArg baselineEra} \
+                    BASELINE_VERSION_DERIVED=defaultFunSemanticsVariantC \
+                    BASELINE_TOOLCHAIN=${pkgs.lib.escapeShellArg baselineToolchain} \
+                    BASELINE_LOCK_SHA256=${pkgs.lib.escapeShellArg lockSha256} \
+                    BASELINE_LEAN_BLASTER_REV=${pkgs.lib.escapeShellArg leanBlaster.rev} \
+                    BASELINE_PLUTUS_CORE_REV=${pkgs.lib.escapeShellArg plutusCoreBlaster.rev} \
+                    BASELINE_LEDGER_API_REV=${pkgs.lib.escapeShellArg cardanoLedgerApiBlaster.rev} \
+                      bash ${./blaster/test-baseline-producer.sh} \
                       ${./blaster/make-baseline-manifest.sh} \
                       "$identity_checker" "$repo_root" \
                       "$identity_blueprint" "$identity_manifest" \
@@ -1331,11 +1367,21 @@
                     for rc in "$manifest_rc" "$unnamed_rc" "$historical_rc" "$retained_rc"; do
                       test "$rc" -gt 0
                     done
+                    manifest_moved="$(sed -n 's/^RED-PROOF invariant=INV-246-B5-\([^ ]*\) .*$/\1/p' "$baseline_contract_out" | paste -sd, -)"
+                    test -n "$manifest_moved"
                     echo "AUDIT-SELFTEST leg=manifest-mutation rc=$manifest_rc outcome=REFUTED"
-                    echo "AUDIT-SELFTEST leg=manifest-mutation rc=$manifest_rc moved=title,program-byte,parameters,blueprint,toolchain,variant outcome=REFUTED"
+                    echo "AUDIT-SELFTEST leg=manifest-mutation rc=$manifest_rc moved=$manifest_moved outcome=REFUTED"
                     echo "AUDIT-SELFTEST leg=unnamed-variant rc=$unnamed_rc outcome=REFUTED"
                     echo "AUDIT-SELFTEST leg=historical-c-relabel rc=$historical_rc outcome=REFUTED"
                     echo "AUDIT-SELFTEST leg=retained-red-receipt rc=$retained_rc outcome=REFUTED"
+                    for leg in record-toolchain-mutated \
+                               identity-field-without-external-expectation \
+                               control-schema-narrower-than-production \
+                               baseline-commit-authority-substituted; do
+                      repair_rc="$(sed -n "s/^REPAIR-SELFTEST leg=$leg rc=\([0-9][0-9]*\) outcome=REFUTED$/\1/p" "$baseline_contract_out")"
+                      test "$repair_rc" -gt 0
+                      echo "AUDIT-SELFTEST leg=$leg rc=$repair_rc outcome=REFUTED"
+                    done
                   fi
                   echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
                 '';

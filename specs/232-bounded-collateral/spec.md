@@ -1,55 +1,86 @@
-# Story 232: collateral exposure is unbounded — a failed script can seize a large UTxO
+# Feature specification — #232 bounded phase-2 collateral loss
 
-**Created**: 2026-08-03
-**Status**: Draft
-**Input**: source review during the ckeri 0.2.0 funded-lifecycle experiment
-(found while grounding feedback F1/F3).
+Artifact ceiling: 6,000 bytes and 150 lines.
 
 ## Outcome
 
-A phase-2 script failure after submission can never seize more than a small,
-stated amount from the operator's wallet, regardless of their UTxO layout.
+Every ckeri Plutus transaction declares exact protocol-required total
+collateral and returns the unused input to the funding address. A phase-2
+failure can seize at most **5,000,000 lovelace** (5 ADA), independent of the
+wallet's UTxO layout.
 
-## Observed risk (verified in 0.2.0 sources)
+## Current-state correction
 
-- `selectFundingPair` (all four transaction modules) picks the
-  **second-largest** plain UTxO of the funding wallet as the collateral
-  input. With a consolidated wallet this can be thousands of tADA: in the
-  2026-08-03 round the collateral candidate was a ~4993 tADA UTxO on every
-  Plutus transaction.
-- No build argument list anywhere in `offchain/deployment/` sets
-  `--tx-total-collateral` or `--tx-out-return-collateral` (verified by
-  repository-wide search).
-- Conway semantics: without a declared total collateral, a phase-2 failure
-  seizes the **entire** collateral input. The happy path never hits this —
-  every validation that can fail locally does so before submission — but any
-  failure that only surfaces during ledger script evaluation (stale state
-  races, acceptance-test redeemer variants, future regressions) would
-  destroy the collateral UTxO.
+The operator's 2026-08-03 story predates #181's in-process builder. At this
+ticket's base, pinned `cardano-tx-tools` derives Conway `total_collateral` and
+`collateral_return` during balancing, but ckeri neither enforces the resulting
+body fields nor requires the funding address as the return destination. The
+upstream balancer may also omit return and declare the whole collateral input
+when its remainder is below min-UTxO. This ticket makes the funds-safety rule a
+ckeri-owned boundary rather than an upstream implementation assumption.
 
-## Acceptance scenarios
+## Requirements
 
-1. **Given** any funded verb, **When** ckeri builds a Plutus transaction,
-   **Then** the transaction declares a total collateral bounded by a small
-   published multiple of the fee (e.g. 2× the estimated fee), so a phase-2
-   failure can seize at most that amount.
-2. **Given** the same build, **When** collateral return is supported by the
-   era/tooling, **Then** the unused collateral remainder is routed back to
-   the funding address rather than left exposed.
-3. **Given** the acceptance validator-test flags
-   (`--validator-test-*`), **When** they deliberately drive failing script
-   evaluation, **Then** the seized amount observed on chain is the bounded
-   total collateral, not the whole collateral UTxO (this becomes a live
-   proof of the bound).
+- **RQ-232-01 — protocol amount:** for a final fee `f` and the queried protocol
+  collateral percentage `p`, declared total collateral is exactly
+  `ceiling(f * p / 100)` lovelace.
+- **RQ-232-02 — absolute loss ceiling:** the exact protocol amount must not
+  exceed **5,000,000 lovelace**. A transaction above that ceiling is rejected
+  before signing or submission.
+- **RQ-232-03 — return destination:** the collateral-return output pays the
+  unused ADA-only remainder to the operation's funding address, including
+  `close` and board operations whose ordinary change address may differ.
+- **RQ-232-04 — complete conservation:** declared total collateral plus the
+  returned lovelace equals the resolved collateral input lovelace. The return
+  output is present and min-UTxO-valid.
+- **RQ-232-05 — fail closed:** missing, mismatched, oversized, non-returning, or
+  underfunded collateral is a named collateral-safety build rejection. No
+  fallback signs or submits an unbounded transaction.
+- **RQ-232-06 — complete Plutus surface:** registration premint/register,
+  advance (with and without observer registration), close, and endpoint-board
+  post/update/retire all use the shared bounded kernel. Script-free reference
+  publication remains explicitly outside the collateral rule.
+- **RQ-232-07 — retained selection:** retain #181's shared deterministic
+  `selectFundingPair` policy, which reserves the smallest eligible UTxO as
+  collateral. The cap is the primary guarantee; no #229 coin-selection or
+  change-routing behavior is added.
+- **RQ-232-08 — no regression:** local build/sign/submit paths still work;
+  #240's no-provider boundary and #262's sole ChainQuery acquisition route
+  remain enforced.
 
-## Notes
+## Invariants
 
-- cardano-cli 10.x supports both `--tx-total-collateral` and
-  `--tx-out-return-collateral` under `conway transaction build`.
-- This also reduces the severity of Story 229's selection concern: with a
-  bounded total, which UTxO carries collateral matters far less.
+- **INV-232-BOUNDED (BLOCKING):** every ckeri-built Plutus transaction carries
+  explicit total collateral equal to the protocol requirement and a present
+  collateral-return output. An unbounded body is rejected before signing.
+- **INV-232-FAILS-CLOSED (BLOCKING):** any collateral input or final body that
+  cannot satisfy the exact amount, 5,000,000-lovelace ceiling, min-UTxO return,
+  conservation, and funding-address destination fails with a named
+  collateral-safety error; there is no permissive fallback.
+- **INV-232-FALSIFIABLE (BLOCKING):** a mutation removing or weakening the cap
+  makes the lasting proof RED; restored code makes it GREEN, with both receipts
+  retained.
+- **INV-232-LOSS-BOUND (BLOCKING):** the executable proof states
+  **5,000,000 lovelace** and proves every accepted Plutus body has
+  `total_collateral <= 5,000,000`.
+- **INV-232-NO-REGRESSION (BLOCKING):** every write verb still builds and
+  reaches its mocked submit boundary, while #240's no-provider and #262's
+  sole-route properties remain GREEN.
 
-## Out of scope
+## Rejection behavior
 
-- Changing which UTxO is picked as collateral (Story 229 covers selection
-  ergonomics for funding inputs).
+- A protocol-required amount above 5,000,000 lovelace names the required and
+  maximum amounts and stops before signing.
+- A collateral input unable to fund both the exact total and a valid return
+  names required and available value and stops before signing.
+- Missing or inconsistent final body fields name the violated collateral
+  property and stop before signing.
+- No failure path substitutes the full collateral input as total collateral.
+
+## Non-goals
+
+- No live-chain submission or deliberate phase-2 failure is authorized in this
+  ticket campaign.
+- No change to the #181 funding/collateral selection ordering.
+- No #229 ordinary change-address or fee-input ergonomics.
+- No dependency-pin, protocol-parameter source, ChainQuery, or provider change.

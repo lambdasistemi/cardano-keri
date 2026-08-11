@@ -117,7 +117,11 @@ usage: check-blaster-identity-consistency.sh [--repo-root <dir>] [--self-test]
        check-blaster-identity-consistency.sh --identity-manifest <json>
          --blueprint <plutus.json> --expected-commit <sha>
          --expected-aiken <version> --expected-variant <name>
-         --expected-era <era> [--repo-root <dir>]
+         --expected-era <era> --expected-toolchain <identity>
+         --expected-lock-sha256 <hex>
+         --expected-lean-blaster-rev <sha>
+         --expected-plutus-core-rev <sha>
+         --expected-ledger-api-rev <sha> [--repo-root <dir>]
        check-blaster-identity-consistency.sh --retained-receipt <path>
          --retained-log <path> --expected-receipt-sha256 <hex>
          --expected-log-sha256 <hex> --expected-commit <sha>
@@ -148,6 +152,11 @@ EXPECTED_COMMIT=""
 EXPECTED_AIKEN=""
 EXPECTED_VARIANT=""
 EXPECTED_ERA=""
+EXPECTED_TOOLCHAIN=""
+EXPECTED_LOCK_SHA256=""
+EXPECTED_LEAN_BLASTER_REV=""
+EXPECTED_PLUTUS_CORE_REV=""
+EXPECTED_LEDGER_API_REV=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo-root) [ $# -ge 2 ] || { usage >&2; exit 2; }; REPO_ROOT=$2; shift 2 ;;
@@ -162,6 +171,11 @@ while [ $# -gt 0 ]; do
     --expected-aiken) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_AIKEN=$2; shift 2 ;;
     --expected-variant) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_VARIANT=$2; shift 2 ;;
     --expected-era) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_ERA=$2; shift 2 ;;
+    --expected-toolchain) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_TOOLCHAIN=$2; shift 2 ;;
+    --expected-lock-sha256) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LOCK_SHA256=$2; shift 2 ;;
+    --expected-lean-blaster-rev) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LEAN_BLASTER_REV=$2; shift 2 ;;
+    --expected-plutus-core-rev) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_PLUTUS_CORE_REV=$2; shift 2 ;;
+    --expected-ledger-api-rev) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LEDGER_API_REV=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
@@ -534,8 +548,22 @@ require_identity_arguments() {
     || fail "expected commit '$EXPECTED_COMMIT' is not a 40-byte hex identity"
 }
 
-identity_manifest_mode() {
+require_manifest_identity_arguments() {
   require_identity_arguments
+  [ -n "$EXPECTED_TOOLCHAIN" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: toolchain"
+  [ -n "$EXPECTED_LOCK_SHA256" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: lock_sha256"
+  [ -n "$EXPECTED_LEAN_BLASTER_REV" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: upstream.lean_blaster"
+  [ -n "$EXPECTED_PLUTUS_CORE_REV" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: upstream.plutus_core_blaster"
+  [ -n "$EXPECTED_LEDGER_API_REV" ] \
+    || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: upstream.cardano_ledger_api_blaster"
+}
+
+identity_manifest_mode() {
+  require_manifest_identity_arguments
   [ -r "$IDENTITY_MANIFEST" ] || fail "cannot read identity manifest '$IDENTITY_MANIFEST'"
   [ -r "$BLUEPRINT" ] || fail "cannot read blueprint '$BLUEPRINT'"
   jq -e . "$IDENTITY_MANIFEST" >/dev/null 2>&1 \
@@ -573,10 +601,16 @@ identity_manifest_mode() {
   [ "$manifest_blueprint_sha" = "$actual_blueprint_sha" ] \
     || fail "manifest input moved: blueprint_sha256 expected=$actual_blueprint_sha actual=${manifest_blueprint_sha:-<unnamed>}"
 
-  local got
+  local got identity_keys upstream_keys
   got=$(jq -r '.schema // empty' "$IDENTITY_MANIFEST")
   [ "$got" = cardano-keri-baseline-v1 ] \
     || fail "manifest input moved: schema expected=cardano-keri-baseline-v1 actual=${got:-<unnamed>}"
+  identity_keys=$(jq -r '.identity | keys | sort | join(",")' "$IDENTITY_MANIFEST")
+  [ "$identity_keys" = "aiken,blueprint_sha256,built_from,commit,era,ledger_language,lock_sha256,selection,toolchain,upstream,validating_aiken,variant,version_derived" ] \
+    || fail "identity schema moved: unexpected or externally-unexpected field set: ${identity_keys:-<unnamed>}"
+  upstream_keys=$(jq -r '.identity.upstream | keys | sort | join(",")' "$IDENTITY_MANIFEST")
+  [ "$upstream_keys" = "cardano_ledger_api_blaster,lean_blaster,plutus_core_blaster" ] \
+    || fail "identity schema moved: unexpected upstream field set: ${upstream_keys:-<unnamed>}"
   got=$(jq -r '.identity.commit // empty' "$IDENTITY_MANIFEST")
   [ "$got" = "$EXPECTED_COMMIT" ] \
     || fail "identity input moved: commit expected=$EXPECTED_COMMIT actual=${got:-<unnamed>}"
@@ -592,6 +626,21 @@ identity_manifest_mode() {
   got=$(jq -r '.identity.era // empty' "$IDENTITY_MANIFEST")
   [ "$got" = "$EXPECTED_ERA" ] \
     || fail "identity input moved: era expected=$EXPECTED_ERA actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.toolchain // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_TOOLCHAIN" ] \
+    || fail "identity input moved: toolchain expected=$EXPECTED_TOOLCHAIN actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.lock_sha256 // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_LOCK_SHA256" ] \
+    || fail "identity input moved: lock_sha256 expected=$EXPECTED_LOCK_SHA256 actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.upstream.lean_blaster // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_LEAN_BLASTER_REV" ] \
+    || fail "identity input moved: upstream.lean_blaster expected=$EXPECTED_LEAN_BLASTER_REV actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.upstream.plutus_core_blaster // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_PLUTUS_CORE_REV" ] \
+    || fail "identity input moved: upstream.plutus_core_blaster expected=$EXPECTED_PLUTUS_CORE_REV actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.upstream.cardano_ledger_api_blaster // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_LEDGER_API_REV" ] \
+    || fail "identity input moved: upstream.cardano_ledger_api_blaster expected=$EXPECTED_LEDGER_API_REV actual=${got:-<unnamed>}"
   [ "$(jq -r '.identity.ledger_language // empty' "$IDENTITY_MANIFEST")" = PlutusV3 ] \
     || fail "identity input moved: ledger_language"
   [ "$(jq -r '.identity.built_from // empty' "$IDENTITY_MANIFEST")" = source ] \
@@ -637,27 +686,52 @@ identity_manifest_mode() {
       || fail "identity record inventory moved: kind=$kind expected=$want actual=$count"
   done
 
-  local records_checked record index=0 value
+  local records_checked record index=0 value record_kind record_keys expected_record_keys
   records_checked=$(jq -er '.records | length' "$IDENTITY_MANIFEST")
   [ "$records_checked" -eq $((titles + 4)) ] \
     || fail "identity record inventory moved: expected=$((titles + 4)) actual=$records_checked"
   while IFS= read -r record; do
-    for field in commit aiken variant blueprint_sha256; do
+    for field in commit aiken toolchain variant ledger_language era blueprint_sha256; do
       value=$(jq -r --arg field "$field" '.[$field] // empty' <<< "$record")
       [ -n "$value" ] || fail "unnamed identity input: $field record_index=$index"
     done
+    record_kind=$(jq -r '.record // empty' <<< "$record")
+    record_keys=$(jq -r 'keys | sort | join(",")' <<< "$record")
+    case "$record_kind" in
+      manifest|baseline|evaluation-identity)
+        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,record,toolchain,variant"
+        ;;
+      program)
+        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,params,program_sha256,record,title,toolchain,variant"
+        ;;
+      verification-receipt)
+        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,receipt,record,toolchain,variant"
+        ;;
+      *) fail "identity record schema moved: unnamed or unexpected record kind at index=$index" ;;
+    esac
+    [ "$record_keys" = "$expected_record_keys" ] \
+      || fail "identity record schema moved: kind=$record_kind index=$index expected=$expected_record_keys actual=$record_keys"
     value=$(jq -r '.commit' <<< "$record")
     [ "$value" = "$EXPECTED_COMMIT" ] \
       || fail "inconsistent identity input: commit record_index=$index expected=$EXPECTED_COMMIT actual=$value"
     value=$(jq -r '.aiken' <<< "$record")
     [ "$value" = "$EXPECTED_AIKEN" ] \
       || fail "inconsistent identity input: aiken record_index=$index expected=$EXPECTED_AIKEN actual=$value"
+    value=$(jq -r '.toolchain' <<< "$record")
+    [ "$value" = "$EXPECTED_TOOLCHAIN" ] \
+      || fail "inconsistent identity input: toolchain record_index=$index expected=$EXPECTED_TOOLCHAIN actual=$value"
     value=$(jq -r '.variant' <<< "$record")
     [ "$value" = "$EXPECTED_VARIANT" ] \
       || fail "inconsistent identity input: variant record_index=$index expected=$EXPECTED_VARIANT actual=$value"
     value=$(jq -r '.blueprint_sha256' <<< "$record")
     [ "$value" = "$actual_blueprint_sha" ] \
       || fail "inconsistent identity input: blueprint_sha256 record_index=$index expected=$actual_blueprint_sha actual=$value"
+    value=$(jq -r '.ledger_language' <<< "$record")
+    [ "$value" = PlutusV3 ] \
+      || fail "inconsistent identity input: ledger_language record_index=$index expected=PlutusV3 actual=$value"
+    value=$(jq -r '.era' <<< "$record")
+    [ "$value" = "$EXPECTED_ERA" ] \
+      || fail "inconsistent identity input: era record_index=$index expected=$EXPECTED_ERA actual=$value"
     index=$((index + 1))
   done < <(jq -c '.records[]' "$IDENTITY_MANIFEST")
   [ "$index" -eq "$records_checked" ] \
@@ -665,6 +739,9 @@ identity_manifest_mode() {
 
   echo "CBIC_IDENTITY_RESULT records_checked=$records_checked"
   echo "CBIC_IDENTITY_RESULT inconsistent=0"
+  echo "CBIC_IDENTITY_RESULT identity_fields=$((15 + records_checked * 7))"
+  echo "CBIC_IDENTITY_RESULT externally_expected=$((15 + records_checked * 7))"
+  echo "CBIC_IDENTITY_RESULT unexpected=0"
   echo "CBIC_IDENTITY_RESULT titles=$titles"
   echo "CBIC_IDENTITY_RESULT programs=$distinct_programs"
   echo "check-blaster-identity-consistency: OK — baseline manifest and every carried record share one complete identity"

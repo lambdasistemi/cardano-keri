@@ -285,6 +285,38 @@ library write-composition
 
   exposed-modules:  Cardano.KERI.Deployment.CLI
 
+-- #266 T266-S1-04/T266-S1-05: compiled regression fixtures for the
+-- public-surface guard. These are export SHAPES -- byte-zero module
+-- declarations, nested block comments carrying fake headers, `module` in
+-- prose and in string literals, a record field whose type continues past its
+-- `::` line, an exported operator, whole-module and imported re-exports, and a
+-- store-backed interpreter nested inside a result container. Each one made the
+-- #262 source reader under-report at least once, so each is now handed to GHC
+-- as a real compiled module and the guard's controls require GHC's answer.
+--
+-- `visibility: private` is load-bearing, not tidiness: it keeps these modules
+-- OUT of the public surface the guard ranges over (a public route requires a
+-- publicly visible library component), which matters because
+-- `fixtureNestedCapability` is deliberately the shape the capability rule
+-- forbids on the real surface. The guard asserts that exclusion rather than
+-- assuming it.
+library public-surface-fixtures
+  import:           warnings
+  visibility:       private
+  default-language: GHC2021
+  hs-source-dirs:   query-test/surface-fixtures
+  build-depends:
+    , base
+    , cardano-keri:chain-query
+    , cardano-keri:indexer
+    , cardano-node-clients:utxo-indexer-lib
+    , rocksdb-kv-transactions:kv-transactions
+
+  exposed-modules:
+    Cardano.KERI.SurfaceFixture.ByteZero
+    Cardano.KERI.SurfaceFixture.Defining
+    Cardano.KERI.SurfaceFixture.Umbrella
+
 -- #177 Slice 1: the production `ckeri status` backend seam. Depends on both
 -- `deployment` (Koios/manifest/endpoint-board reuse) and `indexer` (the local
 -- transactional query engine) — acyclic since neither of those depends back
@@ -825,6 +857,7 @@ test-suite local-write-path-tests
   hs-source-dirs:   query-test
   main-is:          local-write-path/LocalWritePathMain.hs
   other-modules:
+    Cardano.KERI.Compiler.ExportSurface
     Cardano.KERI.Indexer.LocalWritePathSpec
     Cardano.KERI.Indexer.PublicSurfaceSpec
     Paths_cardano_keri
@@ -841,6 +874,7 @@ test-suite local-write-path-tests
     , cardano-keri:chain-query-koios
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-keri:public-surface-fixtures
     , cardano-keri:write-composition
     , cardano-ledger-api
     , cardano-ledger-binary
@@ -852,6 +886,7 @@ test-suite local-write-path-tests
     , containers
     , directory
     , filepath
+    , ghc
     , hspec                                    >=2.11 && <2.12
     , memory                                   >=0.18 && <0.19
     , microlens

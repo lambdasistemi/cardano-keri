@@ -26,8 +26,10 @@ hand-maintained list of names:
     Cabal's own parser (the same technique, and the same reason, as
     "Cardano.KERI.CLI.WriteCompositionBoundarySpec": a hand parser is brittle
     in the direction that stays silent);
-  * WHAT EACH MODULE EXPORTS, and each export's type, comes from that
-    module's own source;
+  * WHAT EACH MODULE EXPORTS, and each export's type, comes from GHC's
+    resolved export information for the compiled module (#266) — never from
+    that module's source, so spelling, layout, comments, string literals and
+    re-export form cannot move a route in or out;
   * WHICH INPUT TYPES CAN BE EAGERLY REJECTED comes from the smart
     constructors in "Cardano.KERI.ChainQuery.Program" that actually call a
     validator, plus the records that embed those types.
@@ -80,6 +82,16 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal),
  )
+import Cardano.KERI.Compiler.ExportSurface (
+    ExportKind (..),
+    PublicExport (..),
+    PublicValue (..),
+    SurfaceFailure (..),
+    exposedRoutesOf,
+    publicExportsOf,
+    publicValuesOf,
+    withCompilerExportSession,
+ )
 import Cardano.KERI.Deployment.CLI (
     RegisterRuntime (..),
     RegisterSettings (..),
@@ -98,16 +110,17 @@ import Cardano.KERI.Indexer.ChainQuery (
     runLocalQuery,
     runLocalRegistrationSnapshot,
  )
+import Cardano.KERI.SurfaceFixture.ByteZero (commentTrapExport)
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withInMemoryIndexerRunner)
 import Codec.Binary.Bech32 qualified as Bech32
-import Control.Exception (SomeException, bracket, try)
-import Control.Monad (unless, when)
+import Control.Exception (SomeException, try)
+import Control.Monad (unless)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.Char (isAlpha, isAlphaNum)
 import Data.Foldable (fold, for_, toList)
-import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef, writeIORef)
 import Data.List (isInfixOf, isSuffixOf, nub, sort)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (maybeToList)
@@ -120,16 +133,17 @@ import Database.KV.Transaction (RunTransaction (..))
 import Distribution.Fields.ParseResult (runParseResult)
 import Distribution.PackageDescription.Parsec (parseGenericPackageDescription)
 import Distribution.Pretty (prettyShow)
-import Distribution.Types.BuildInfo (BuildInfo (hsSourceDirs, otherModules))
+import Distribution.Types.BuildInfo (BuildInfo (hsSourceDirs))
 import Distribution.Types.CondTree (CondTree)
 import Distribution.Types.GenericPackageDescription (
     GenericPackageDescription (condLibrary, condSubLibraries),
  )
-import Distribution.Types.Library (Library (exposedModules, libBuildInfo))
+import Distribution.Types.Library (Library (exposedModules, libBuildInfo, libVisibility))
+import Distribution.Types.LibraryVisibility (LibraryVisibility (LibraryVisibilityPrivate))
 import Paths_cardano_keri (getDataFileName)
-import System.Directory (doesFileExist, getTemporaryDirectory, removeFile)
+import System.Directory (doesFileExist)
 import System.FilePath ((</>))
-import System.IO (hClose, openTempFile)
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
 
 -- ---------------------------------------------------------------------------
@@ -153,11 +167,11 @@ spec =
                 -- every test module lives outside every library component
                 filter ("Spec" `isSuffixOf`) (map fst modules) `shouldBe` []
 
-            it "derivation control: exported signatures are read from the module's own source, and a private definition is not among them" $ do
+            it "#266 RQ-266-01 derivation control: exported signatures come from GHC's export data, and a private definition is not among them" $ do
                 signatures <- exportedSignaturesOf "Cardano.KERI.Indexer.ChainQuery"
                 map fst signatures `shouldContainName` "runLocalQuery"
                 -- 'localOutputAt' is defined in that module but deliberately
-                -- not exported; if it appeared here the reader would be
+                -- not exported; if it appeared here the derivation would be
                 -- reporting definitions rather than exports.
                 map fst signatures `shouldNotContainName` "localOutputAt"
 
@@ -172,27 +186,52 @@ spec =
                 signatures <- exportedSignaturesOf localInterpreterModule
                 map fst signatures `shouldContainName` "localScopeRunner"
 
-            it "derivation control: an exported operator is parsed from both its export item and its top-level signature (CORRECTION-011)" $ do
-                case classifyExportItem "(>>>)" of
-                    Right (PlainName name) -> name `shouldBe` ">>>"
-                    other ->
-                        expectationFailure
-                            ("an operator export item was not recognised as a name: " <> show other)
-                map fst (topLevelSignatures "(>>>) :: ChainQuery a -> IO ()")
-                    `shouldBe` [">>>"]
+            -- #266 T266-S1-05. These four used to drive a hand-written parser
+            -- over source text. They now drive the SHIPPED derivation over
+            -- COMPILED fixture modules, so each one asserts what GHC answers
+            -- about a real export shape rather than what a reader believed
+            -- about a string. The fixtures live in a `visibility: private`
+            -- component, so they are queryable but are not public routes.
 
-            it "derivation control: a reexport of a PRIVATE local module resolves to that module's real names (CORRECTION-011)" $ do
-                every <- allLocalModules
-                exposed <- publicModules
-                let privateModules = filter (`notElem` map fst exposed) (map fst every)
-                -- the resolution map must be strictly larger than the seed
-                -- set, or a reexport through a private module would silently
-                -- contribute nothing
-                privateModules `shouldNotBe` []
+            it "#266 T266-S1-05 shape control: an exported OPERATOR is a public value, with no export-item parsing anywhere in the answer" $
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureDefiningModule
+                    map exportedName values `shouldContainName` ">|<"
 
-            it "derivation control: a nested export item does not corrupt its neighbours" $ do
-                let items = map (T.unpack . T.strip) (splitTopLevelCommas "Alpha (a, b), Beta, Gamma (..)")
-                items `shouldBe` ["Alpha (a, b)", "Beta", "Gamma (..)"]
+            it "#266 T266-S1-05 shape control: a record field whose type CONTINUES past its `::` line derives exactly what the one-line spelling derives -- physical layout is not part of what a module exports (the submission-4 counterexample, now compiled)" $
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureDefiningModule
+                    let typeOf name =
+                            [exportedType value | value <- values, exportedName value == name]
+                    case (typeOf "fixtureContinuedField", typeOf "fixtureOneLineField") of
+                        ([continued], [oneLine]) -> continued `shouldBe` oneLine
+                        other ->
+                            expectationFailure
+                                ("the two identical field spellings did not both derive: " <> show other)
+
+            it "#266 T266-S1-05 shape control: a whole-module re-export contributes the re-exported names on the RE-EXPORTING route, while GHC still attributes them to their defining module" $
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureUmbrellaModule
+                    let defining name =
+                            [definingIdentity value | value <- values, exportedName value == name]
+                    defining "fixturePlainValue" `shouldBe` [fixtureDefiningModule]
+                    -- and an IMPORTED re-export, from another component
+                    -- entirely: the 'plutusDataJson' shape that had been
+                    -- leaving the #262 enumeration unnoticed
+                    defining "outputAt" `shouldBe` ["Cardano.KERI.ChainQuery.Program"]
+
+            it "#266 T266-S1-04 lexical control: a nested block comment carrying a fake module header, `module` in prose, and `module` in a string literal contribute NOTHING -- the route derives exactly its two real exports" $
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureByteZeroModule
+                    sort (map exportedName values)
+                        `shouldBe` ["byteZeroExport", "commentTrapExport"]
+
+            it "#266 DATA-INV-266-03 fail-closed control: enumeration does not go through source at all -- the fixture routes derive even though their source directory belongs to no publicly visible library, so no source-path resolution for them exists" $ do
+                modules <- publicModules
+                map fst modules `shouldNotContainName` fixtureDefiningModule
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureDefiningModule
+                    values `shouldNotBe` []
 
             it "derivation control: rejectable input types are derived from the validating smart constructors, not listed" $ do
                 rejectable <- rejectableInputTypes
@@ -235,34 +274,26 @@ spec =
                     Nothing -> expectationFailure "the field expansion lost localScopeRunner"
                     Just signature -> resultPortion signature `shouldNotBe` ""
 
-            it "signature control: PHYSICAL FORMATTING does not change the derived public set -- a field whose type continues past the `::` line derives exactly what the one-line spelling derives (submission-4 audit counterexample 1)" $ do
-                continued <- derivedSurfaceOf multilineFieldSpelling
-                oneLine <- derivedSurfaceOf singleLineFieldSpelling
-                sort continued `shouldBe` sort oneLine
-
-            it "signature control: and that continued field really JOINS the qualifying set under the shipped rules, rather than being derived as an empty type nobody can classify (submission-4 audit counterexample 1)" $ do
-                continued <- derivedSurfaceOf multilineFieldSpelling
+            it "#266 T266-S1-05 signature control: the continued field really JOINS the qualifying set under the shipped rules, rather than deriving a type nobody can classify (the submission-4 counterexample, now compiled)" $ do
                 rejectable <- rejectableInputTypes
-                case lookup mutantFieldName continued of
-                    Nothing ->
-                        expectationFailure
-                            ( "the field expansion lost "
-                                <> mutantFieldName
-                                <> " entirely: "
-                                <> show continued
-                            )
-                    Just signature -> do
-                        acceptsRejectableInput rejectable signature `shouldBe` True
-                        performsAnEffect signature `shouldBe` True
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureDefiningModule
+                    case [exportedType value | value <- values, exportedName value == "fixtureContinuedField"] of
+                        [signature] -> do
+                            acceptsRejectableInput rejectable signature `shouldBe` True
+                            performsAnEffect signature `shouldBe` True
+                        other ->
+                            expectationFailure
+                                ("the continued field did not derive exactly once: " <> show other)
 
-            it "capability control: a store-transaction-backed interpreter NESTED under an ordinary result container is still a handed-out capability, read through the real source derivation (submission-4 audit counterexample 2)" $ do
-                continued <- derivedSurfaceOf multilineFieldSpelling
-                case lookup mutantCapabilityName continued of
-                    Nothing ->
-                        expectationFailure
-                            ("the export reader lost " <> mutantCapabilityName)
-                    Just signature ->
-                        supplyingStoreBackedInterpreter signature `shouldBe` True
+            it "#266 T266-S1-05 capability control: a store-transaction-backed interpreter NESTED under an ordinary result container is still a handed-out capability, read through the real derivation (the submission-4 counterexample, now compiled)" $
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureDefiningModule
+                    case [exportedType value | value <- values, exportedName value == "fixtureNestedCapability"] of
+                        [signature] -> supplyingStoreBackedInterpreter signature `shouldBe` True
+                        other ->
+                            expectationFailure
+                                ("the nested capability did not derive exactly once: " <> show other)
 
             it "capability control: the same nesting is detected directly, under each container the result of such an export realistically wears" $
                 for_
@@ -273,36 +304,21 @@ spec =
                     ]
                     (\signature -> supplyingStoreBackedInterpreter signature `shouldBe` True)
 
-            it "fail-closed control: a legal module whose declaration begins at BYTE ZERO is enumerated, not silently emptied (submission-5 audit finding 1)" $ do
-                atByteZero <- derivedSurfaceOfSource (mutantSurfaceSource [] multilineFieldSpelling)
-                belowAComment <- derivedSurfaceOf multilineFieldSpelling
-                sort atByteZero `shouldBe` sort belowAComment
-
-            it "fail-closed control: and the omission was never synthetic -- a really Cabal-exposed module that declares at byte zero really does have exports" $ do
+            it "#266 T266-S1-04 fail-closed control: a module whose declaration begins at BYTE ZERO is enumerated, not silently emptied (submission-5 audit finding 1) -- and the omission was never synthetic, because a really Cabal-exposed byte-zero module also has exports" $ do
                 signatures <- exportedSignaturesOf "Cardano.KERI.AID.CESR"
                 map fst signatures `shouldContainName` "parsePrimitive"
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session fixtureByteZeroModule
+                    values `shouldNotBe` []
 
-            it "fail-closed control: a zero-byte module cannot be reported as a successfully empty public surface, and the diagnostic names it" $
-                requiresFailClosed [mutantSurfaceModule] (derivedSurfaceOfSource "")
+            it "#266 DAT-266-SURFACE-FAILURE fail-closed control: asking for a route no compiled unit exposes names that route instead of answering with an empty surface" $
+                withCompilerExportSession $ \session ->
+                    requiresSurfaceFailure
+                        "Cardano.KERI.SurfaceFixture.NotAModule"
+                        (publicExportsOf session "Cardano.KERI.SurfaceFixture.NotAModule")
 
-            it "fail-closed control: an export shape the reader cannot place identifies itself instead of being skipped" $
-                requiresFailClosed
-                    [mutantSurfaceModule, T.unpack unclassifiableExportItem]
-                    (derivedSurfaceOfSource unclassifiableExportSource)
-
-            it "fail-closed control: a public export whose type cannot be found here or in any local module identifies itself instead of leaving the surface quietly" $
-                requiresFailClosed
-                    [mutantSurfaceModule, untypedExportName]
-                    (derivedSurfaceOfSource untypedExportSource)
-
-            it "fail-closed control: a module that cannot be read is not mistaken for one with no exports, and the diagnostic names its module and its path" $
-                requiresFailClosed
-                    [mutantSurfaceModule, unreadableSourcePath]
-                    ( signaturesOf
-                        [(mutantSurfaceModule, unreadableSourcePath)]
-                        Set.empty
-                        mutantSurfaceModule
-                    )
+            it "#266 DAT-266-SURFACE-FAILURE fail-closed control: a route outside the cabal-exposed public set is a category error, not a quietly empty answer" $
+                requiresFailClosedDerivation (exportedSignaturesOf "Mutant.Surface")
 
             it "capability control: widening to nested results does NOT swallow the caller-chosen-effect negative, at any nesting" $
                 for_
@@ -334,7 +350,7 @@ spec =
                 uncoveredMembers [elsewhereButSameName] (map fst proofActions)
                     `shouldBe` [elsewhereButSameName]
 
-            it "every derived qualifying public entry point has an EXECUTABLE zero-effect proof, and it is executed here" $ do
+            it "#266 INV-266-FALSIFIABLE (A-262-03): every derived qualifying public entry point has an EXECUTABLE zero-effect proof, and it is executed here -- so a newly exported qualifying entry point joins this set or fails this example" $ do
                 derived <- qualifyingPublicEntryPoints
                 derived `shouldNotBe` []
                 let uncovered = uncoveredMembers derived (map fst proofActions)
@@ -353,9 +369,80 @@ spec =
                             Nothing -> expectationFailure ("no proof action for " <> show member)
                             Just proof -> proof
 
-            it "coverage control: every proof action still names a real derived member, so the registry cannot drift into fiction" $ do
+            it "#266 INV-266-NO-REGRESSION coverage control: every proof action still names a real derived member, so the registry cannot drift into fiction while #262's behavioural proofs stay untouched" $ do
                 derived <- qualifyingPublicEntryPoints
                 uncoveredMembers (map fst proofActions) derived `shouldBe` []
+
+            -- ---------------------------------------------------------------
+            -- #266: the enumeration is the COMPILER's, not a source reader's
+            --
+            -- INV-266-DERIVED is an equality, so it is asserted as one: for
+            -- every Cabal-exposed module, the value routes this suite derives
+            -- must be exactly the value routes GHC reports for that module.
+            -- Anything the derivation adds is fiction; anything it drops is a
+            -- public entry point that silently left the guard, which is the
+            -- defect five #262 submissions kept shipping under different names.
+
+            it "#266 INV-266-DERIVED: the derived public value routes of EVERY cabal-exposed module are exactly the routes GHC reports for it" $ do
+                routes <- publicModuleRoutes
+                withCompilerExportSession $ \session -> do
+                    disagreements <- fmap concat . for routes $ \route -> do
+                        derived <- map fst <$> exportedSignaturesOf route
+                        compiled <- map exportedName <$> publicValuesOf session route
+                        pure
+                            [ (route, sort (nub derived), sort (nub compiled))
+                            | sort (nub derived) /= sort (nub compiled)
+                            ]
+                    if null disagreements
+                        then pure ()
+                        else
+                            expectationFailure $
+                                "the enumerated public surface is not the one GHC resolved. Each \
+                                \entry is (module, derived here, reported by GHC): "
+                                    <> show disagreements
+
+            it "#266 INV-266-DERIVED anti-vacuity: the compiler surface is non-empty and names known public routes, so an equality against nothing cannot pass" $ do
+                routes <- publicModuleRoutes
+                routes `shouldNotBe` []
+                withCompilerExportSession $ \session -> do
+                    values <- publicValuesOf session localInterpreterModule
+                    map exportedName values `shouldContainName` "runLocalQuery"
+                    map exportedName values `shouldContainName` "localScopeRunner"
+
+            it "#266 RQ-266-02: a re-exported name keeps the ROUTE it is imported through, while GHC still reports its defining module -- two identities, never collapsed" $
+                withCompilerExportSession $ \session -> do
+                    umbrella <- publicValuesOf session "Cardano.KERI.ChainQuery"
+                    case [value | value <- umbrella, exportedName value == "runChainQuery"] of
+                        [] -> expectationFailure "the umbrella route lost runChainQuery"
+                        (value : _) -> do
+                            routeModule value `shouldBe` "Cardano.KERI.ChainQuery"
+                            definingIdentity value `shouldBe` "Cardano.KERI.ChainQuery.Interpreter"
+
+            it "#266 RQ-266-03/RQ-266-04: GHC's answer contains record field selectors as typed values, and classifies constructors and types explicitly rather than dropping them" $
+                withCompilerExportSession $ \session -> do
+                    exports <- publicExportsOf session localInterpreterModule
+                    let named name = [exportKind e | e <- exports, exportName e == name]
+                    case named "localScopeRunner" of
+                        [ExportedValue signature] -> resultPortion signature `shouldNotBe` ""
+                        other -> expectationFailure ("localScopeRunner: " <> show other)
+                    named "LocalQueryScope"
+                        `shouldMatchClasses` [ExportedTypeOrClass, ExportedConstructor]
+
+            it "#266 RQ-266-04: an exposed module the compiler environment cannot resolve fails closed and names the route, instead of reporting an empty surface" $
+                withCompilerExportSession $ \session ->
+                    requiresSurfaceFailure
+                        "Cardano.KERI.Definitely.Not.A.Module"
+                        (publicExportsOf session "Cardano.KERI.Definitely.Not.A.Module")
+
+            it "#266 DATA-INV-266-01: every module the cabal seed calls public is a module the compiler environment actually exposes, so the two never drift apart silently" $ do
+                routes <- publicModuleRoutes
+                withCompilerExportSession $ \session -> do
+                    let compiled = exposedRoutesOf session
+                        unexposed = filter (`notElem` compiled) routes
+                    unexposed `shouldBe` []
+
+            it "#266 T266-S1-04 fixture non-vacuity: the compiled comment-trap module really carries the word `module` in a string literal" $
+                ("module " `isInfixOf` commentTrapExport) `shouldBe` True
 
 {- | Each public entry point paired with an EXECUTABLE proof that it obeys the
 property, not with a claim that it does.
@@ -804,187 +891,40 @@ loggingInterpreter calls =
     observed label result = modifyIORef' calls (<> [label]) >> pure result
 
 -- ---------------------------------------------------------------------------
--- Permanent controls for the two shapes the fourth audit proved invisible
+-- The compiled regression fixtures (#266 INV-266-REGRESSIONS, T266-S1-04, T266-S1-05)
 --
--- The fourth fresh audit compiled two public shapes that the derivation
--- claimed to enumerate and did not see: a `Type (..)` field selector whose
--- type continues past the physical `::` line, and a store-backed interpreter
--- capability nested inside an ordinary result container. Neither was a
--- product defect -- the shipped surface was safe -- but both refute the one
--- promise NOTE-004 exists to make: that a new qualifying export JOINS the set
--- or FAILS the check. A detector that silently under-counts is the
--- hand-maintained list wearing the derivation's clothes.
+-- Every shape below defeated the #262 source reader at least once. They used
+-- to be strings written to a temporary file and read back by that reader, so
+-- the control could only ever be as good as the reader's opinion of them.
+-- They are now REAL COMPILED MODULES in a `visibility: private` library
+-- component, queried through the same session the shipped enumeration uses,
+-- and the assertion is on GHC's answer.
 --
--- So they stay here as permanent controls, not as one-off repairs. They are
--- driven through the SAME readers the shipped property uses -- 'signaturesOf'
--- over a real file on disk, and the shipped 'supplyingStoreBackedInterpreter'
--- -- rather than through a test-local parser that could agree with the tests
--- while the real derivation stays blind. A control that bypasses the
--- instrument under test proves nothing about it.
+-- Private visibility is load-bearing twice over: it keeps the fixtures out of
+-- the public surface the property ranges over (so the deliberately forbidden
+-- capability in them is not a finding), and it makes them a positive control
+-- for "enumeration does not read source" -- their source directory belongs to
+-- no publicly visible library, so no source-path resolution for them exists,
+-- yet they enumerate.
 
-mutantSurfaceModule :: String
-mutantSurfaceModule = "Mutant.Surface"
+{- | The derivation refuses rather than under-reporting (NOTE-005).
 
-mutantFieldName :: String
-mutantFieldName = "mutantField"
-
-mutantCapabilityName :: String
-mutantCapabilityName = "mutantNestedCapability"
-
-{- | The audit's first counterexample: one public record field, spelled with
-its type continued after the @::@. Its argument list mentions 'ChainQuery',
-so the derived signature is one the real qualification rules must accept.
+The product rule #240 established for checkpoint decoding is that an input
+that cannot be read fails closed and names itself, with no silent fallback.
+Over-inclusion costs noise; under-inclusion costs the invariant.
 -}
-multilineFieldSpelling :: [Text]
-multilineFieldSpelling =
-    [ "    { mutantField ::"
-    , "        LocalQueryScope cf op ->"
-    , "        ChainQuery a ->"
-    , "        IO (Either ChainQueryError ())"
-    , "    }"
-    ]
+failClosed :: String -> IO a
+failClosed reason =
+    fail ("public-surface derivation FAILED CLOSED -- " <> reason)
 
-{- | The identical field written on the @::@ line. The audit's sharpest
-observation was that this spelling IS detected while the one above is not, so
-the control is an equality between the two derivations rather than a claim
-about either one alone.
--}
-singleLineFieldSpelling :: [Text]
-singleLineFieldSpelling =
-    [ "    { mutantField :: LocalQueryScope cf op -> ChainQuery a -> IO (Either ChainQueryError ())"
-    , "    }"
-    ]
+fixtureDefiningModule :: String
+fixtureDefiningModule = "Cardano.KERI.SurfaceFixture.Defining"
 
-{- | A module exporting both counterexamples: the field through @Type (..)@,
-and the audit's second counterexample as a top-level export whose result
-container hides the store-backed interpreter.
--}
-mutantSurfaceSource :: [Text] -> [Text] -> Text
-mutantSurfaceSource prelude fieldLines =
-    T.unlines $
-        prelude
-            <> [ "module Mutant.Surface (MutantCarrier (..), mutantNestedCapability) where"
-               , ""
-               , "data MutantCarrier cf op = MutantCarrier"
-               ]
-            <> fieldLines
-            <> [ ""
-               , "mutantNestedCapability ::"
-               , "    LocalQueryScope cf op ->"
-               , "    Maybe (ChainQueryInterpreter (Transaction IO cf Cols op))"
-               , "mutantNestedCapability = error \"a fixture, not a definition\""
-               ]
+fixtureUmbrellaModule :: String
+fixtureUmbrellaModule = "Cardano.KERI.SurfaceFixture.Umbrella"
 
-{- | The ordinary prelude: a comment above the declaration, which is what
-almost every module in this repository looks like — and exactly why the
-byte-zero case below went unnoticed for five submissions.
--}
-commentPrelude :: [Text]
-commentPrelude =
-    [ "-- A control fixture, never compiled: it is read by the same"
-    , "-- derivation the shipped property runs against the real tree."
-    ]
-
-{- | The exported names and signatures the SHIPPED reader derives from that
-module, resolved from a real file, because the reader takes a path and reads
-it. Nothing tracked is written: the fixture lives in the temporary directory
-and is removed even if the example fails.
--}
-derivedSurfaceOf :: [Text] -> IO [(String, Text)]
-derivedSurfaceOf = derivedSurfaceOfSource . mutantSurfaceSource commentPrelude
-
--- | The same reader, over source text the control supplies verbatim.
-derivedSurfaceOfSource :: Text -> IO [(String, Text)]
-derivedSurfaceOfSource source =
-    withMutantSurfaceFile source $ \path ->
-        signaturesOf [(mutantSurfaceModule, path)] Set.empty mutantSurfaceModule
-
-{- | An export item this reader deliberately does not understand: a namespaced
-@type@ export. No module in this repository writes one today, which is the
-point — the reader must say so rather than skip it and report a surface it
-never actually enumerated.
--}
-unclassifiableExportItem :: Text
-unclassifiableExportItem = "type MutantAlias"
-
-unclassifiableExportSource :: Text
-unclassifiableExportSource =
-    T.unlines
-        [ "module Mutant.Surface (type MutantAlias, mutantNestedCapability) where"
-        , ""
-        , "mutantNestedCapability ::"
-        , "    LocalQueryScope cf op ->"
-        , "    Maybe (ChainQueryInterpreter (Transaction IO cf Cols op))"
-        , "mutantNestedCapability = error \"a fixture, not a definition\""
-        ]
-
-{- | A public VALUE export with no type signature anywhere. The reader cannot
-tell whether it is a qualifying entry point, so the only honest answers are
-"here it is with its type" and "I could not classify this one" — never
-silence.
--}
-untypedExportName :: String
-untypedExportName = "mutantUntypedExport"
-
-untypedExportSource :: Text
-untypedExportSource =
-    T.unlines
-        [ "module Mutant.Surface (mutantUntypedExport) where"
-        , ""
-        , "mutantUntypedExport = error \"a fixture, not a definition\""
-        ]
-
-{- | A path no fixture was ever written to, so the reader must refuse rather
-than report a module it could not open as one with no exports.
--}
-unreadableSourcePath :: FilePath
-unreadableSourcePath = "/nonexistent/public-surface-control/Mutant/Surface.hs"
-
-{- | Require that a derivation FAILS, and that its diagnostic names each of
-the given things.
-
-Both halves matter. A derivation that fails for an unrelated reason — a
-missing fixture, a harness slip, an exception from somewhere else entirely —
-would satisfy "it failed" while proving nothing about the classifier, which
-is precisely the manufactured-confidence shape this suite exists to refuse.
-So the failure has to identify what it could not handle.
--}
-requiresFailClosed :: (Show a) => [String] -> IO a -> IO ()
-requiresFailClosed named derivation = do
-    outcome <- try derivation
-    case outcome of
-        Right derived ->
-            expectationFailure
-                ( "the derivation reported a surface instead of failing closed on input it \
-                  \cannot enumerate; it returned "
-                    <> show derived
-                )
-        Left failure ->
-            for_ named $ \needle ->
-                unless (needle `isInfixOf` show (failure :: SomeException)) $
-                    expectationFailure
-                        ( "the derivation failed, but its diagnostic does not name "
-                            <> show needle
-                            <> ", so an unrelated exception would satisfy this control just as \
-                               \well: "
-                            <> show failure
-                        )
-
-{- | One unambiguous lifecycle (CORRECTION-023): acquire writes the fixture
-and closes its handle, returning only a path; release removes that path; the
-reader under test sees a closed file. Nothing about the fixture's cleanup can
-then be mistaken for the classifier's verdict.
--}
-withMutantSurfaceFile :: Text -> (FilePath -> IO a) -> IO a
-withMutantSurfaceFile source use = do
-    directory <- getTemporaryDirectory
-    bracket (writeFixture directory) removeFile use
-  where
-    writeFixture directory = do
-        (path, handle) <- openTempFile directory "MutantSurface.hs"
-        BS.hPut handle (TE.encodeUtf8 source)
-        hClose handle
-        pure path
+fixtureByteZeroModule :: String
+fixtureByteZeroModule = "Cardano.KERI.SurfaceFixture.ByteZero"
 
 -- ---------------------------------------------------------------------------
 -- Derivation 1: which modules are public
@@ -999,24 +939,19 @@ conditional branches, so no branch is silently skipped.
 publicModules :: IO [(String, FilePath)]
 publicModules = modulesOfLibraries exposedOnly
 
-{- | Every module of every library component, exposed or not, for RESOLVING a
-re-export target.
+{- | Exposed modules of a library a consumer can actually import.
 
-An exposed module may legally re-export an @other-modules@ implementation
-module, and those names become public through the exposed re-exporter
-(CORRECTION-011). Resolution therefore needs the private sources too, while
-the derived set is still SEEDED only from exposed modules — a private module
-is not itself a public route.
+Ticket #266: visibility is part of the answer, not decoration. A
+@visibility: private@ component -- the compiled regression fixtures -- is
+unimportable from outside this package, so its modules are not public routes
+and must not reach the qualification rules either. Leaving them in would let a
+fixture record deliberately embedding 'ChainQuery' widen the derived
+rejectable-input set, which is the tests contaminating the thing they measure.
 -}
-allLocalModules :: IO [(String, FilePath)]
-allLocalModules = modulesOfLibraries exposedAndPrivate
-
 exposedOnly :: Library -> [String]
-exposedOnly = map prettyShow . exposedModules
-
-exposedAndPrivate :: Library -> [String]
-exposedAndPrivate library =
-    map prettyShow (exposedModules library) <> map prettyShow (otherModules (libBuildInfo library))
+exposedOnly library
+    | libVisibility library == LibraryVisibilityPrivate = []
+    | otherwise = map prettyShow (exposedModules library)
 
 modulesOfLibraries :: (Library -> [String]) -> IO [(String, FilePath)]
 modulesOfLibraries selectModules = do
@@ -1069,399 +1004,71 @@ filterExisting paths = do
     pure [path | (path, True) <- zip paths flags]
 
 -- ---------------------------------------------------------------------------
--- Derivation 2: what each module exports, and with what type
+-- Derivation 2: what each module exports, and with what type -- ASKED, NOT PARSED
+--
+-- #266. This used to be a source reader: it located a module's file, stripped
+-- comments and string literals, found the export list, split it at top-level
+-- commas, classified each item, expanded `module X` re-exports and
+-- `Type (..)` field selectors, and hunted each name's signature across the
+-- package. Five #262 submissions each taught it one more legal spelling, and
+-- each was followed by an audit naming the next one -- and it was STILL wrong:
+-- the RED commit this replaces recorded eight public record selectors of
+-- "Cardano.KERI.Deployment.EndpointBoard" that it never reported.
+--
+-- GHC already did all of that work to compile the package. So the enumeration
+-- now asks it. Source spelling, layout, comments, string literals and
+-- re-export form cannot move a route in or out of the derived set, because
+-- none of them is an input to it any more (DATA-INV-266-03).
 
-{- | Every exported name of a public module paired with its own top-level
-type signature, both read from that module's source.
+{- | The complete compiler-reported public surface, computed ONCE.
+
+FUN-266-SESSION requires one session to serve the whole enumeration, and the
+property asks about the same modules many times, so the result is memoised
+rather than the session reopened per question. A session per module would also
+allow two modules to be described by two different compilers, which is not a
+surface anyone could import.
+-}
+{-# NOINLINE publicSurfaceCache #-}
+publicSurfaceCache :: IORef (Maybe [PublicExport])
+publicSurfaceCache = unsafePerformIO (newIORef Nothing)
+
+derivedPublicExports :: IO [PublicExport]
+derivedPublicExports =
+    readIORef publicSurfaceCache >>= \case
+        Just cached -> pure cached
+        Nothing -> do
+            routes <- publicModuleRoutes
+            exports <-
+                withCompilerExportSession $ \session ->
+                    concat <$> traverse (publicExportsOf session) routes
+            writeIORef publicSurfaceCache (Just exports)
+            pure exports
+
+{- | Every exported VALUE of a public module, with the type GHC gives it
+(FUN-266-EXPORTED).
+
+The consumer-visible route is preserved independently of where GHC says each
+name is defined, so a re-export stays a distinct public route. Everything
+downstream -- qualification, the capability rule, coverage -- is unchanged;
+only where membership comes from has changed.
 -}
 exportedSignaturesOf :: String -> IO [(String, Text)]
-exportedSignaturesOf moduleName = do
-    -- resolution uses every local module, including private ones an exposed
-    -- module may re-export through (CORRECTION-011)
-    modules <- allLocalModules
-    signaturesOf modules Set.empty moduleName
-
-{- | A module's exported names and their types, following the shapes an
-export list can actually take (CORRECTION-008).
-
-Three of them are not a bare name with a top-level signature, and the first
-version of this reader saw only that one:
-
-  * @module X@ RE-EXPORTS everything X exports.
-    "Cardano.KERI.ChainQuery" is Cabal-exposed and its export list is nothing
-    BUT these, so every runner has a second public route through it. A member
-    is keyed by the module a consumer imports it from, so the same function
-    re-exported by the umbrella is a DISTINCT member from the one in its
-    defining module — that is two public routes, and the property is about
-    routes.
-  * @Type (..)@ exports the type's record field SELECTORS, which are public
-    functions whose signatures live indented inside the data declaration.
-    @LocalQueryScope (..)@ in the module under repair is exactly this.
-  * @Type (a, b)@ exports named members, and its commas are nested — splitting
-    the export list on every comma would corrupt the neighbouring items.
-
-The visited set is what makes the re-export recursion terminate on a cycle.
--}
-signaturesOf ::
-    [(String, FilePath)] -> Set.Set String -> String -> IO [(String, Text)]
-signaturesOf modules visited moduleName
-    | moduleName `Set.member` visited = pure []
-    | otherwise = case lookup moduleName modules of
-        -- a re-export of a module outside this package contributes no public
-        -- surface of its own. This is a CLASSIFICATION, not a skip: the map
-        -- passed in holds every local module, exposed and private alike, so a
-        -- name absent from it belongs to another package, whose surface is
-        -- not ours to enumerate. A local module missing its source fails in
-        -- 'resolveLibrary' before it can reach here.
-        Nothing -> pure []
-        Just path -> do
-            contents <- readModuleSource moduleName path
-            items <-
-                either (failClosedIn moduleName path) pure (exportItems contents)
-            let topLevel = topLevelSignatures contents
-                fields = recordFieldSignatures contents
-                known name = lookup name topLevel `orElse` lookup name fields
-            fmap concat . for items $ \item ->
-                case classifyExportItem item of
-                    Left reason -> failClosedIn moduleName path reason
-                    Right (ReexportedModule other) ->
-                        signaturesOf modules (Set.insert moduleName visited) other
-                    Right (WildcardType typeName) ->
-                        -- @Type (..)@ contributes its record field SELECTORS.
-                        -- Data constructors and class methods are deliberately
-                        -- not members: a constructor returns the type, it
-                        -- cannot dispatch an operation or open a transaction.
-                        -- A sum type with no fields therefore contributes
-                        -- nothing, by this stated rule rather than by silence.
-                        pure (fieldsOfType typeName contents)
-                    Right (ExplicitMembers typeName members) ->
-                        fmap
-                            concat
-                            (traverse (resolveMember modules moduleName path known) (typeName : members))
-                    Right (PlainName name) -> resolveMember modules moduleName path known name
-  where
-    orElse (Just value) _ = Just value
-    orElse Nothing fallback = fallback
-
-{- | One exported name, resolved to its type or else refused by name.
-
-The refusal is the point. A lowercase export is a VALUE, and a value whose
-type this reader cannot find is a value it cannot classify — it might be a
-qualifying entry point and there is no way to tell. Dropping it out of a list
-comprehension is how a public export leaves the enumeration without anyone
-knowing, which is the exact defect this property exists to prevent, so it
-fails and says which export it was.
--}
-resolveMember ::
-    [(String, FilePath)] ->
-    String ->
-    FilePath ->
-    (String -> Maybe Text) ->
-    String ->
-    IO [(String, Text)]
-resolveMember modules moduleName path known name =
-    case known name of
-        Just signature -> pure [(name, signature)]
-        Nothing
-            -- a type, class, or data constructor: no value-level signature
-            -- exists to read, and none is expected
-            | any (`elem` ['A' .. 'Z']) (take 1 name) -> pure []
-            | otherwise -> do
-                -- a module may export a name it IMPORTED, whose signature
-                -- lives in the module that defines it. That name is part of
-                -- THIS module's public surface -- a second route to it -- so
-                -- the reader follows it rather than dropping it, which is how
-                -- 'Cardano.KERI.Deployment.Registration.plutusDataJson' had
-                -- been leaving the enumeration unnoticed.
-                defined <- signaturesDefinedLocally modules name
-                case nub defined of
-                    [signature] -> pure [(name, signature)]
-                    [] ->
-                        failClosedIn
-                            moduleName
-                            path
-                            ( "public export `"
-                                <> name
-                                <> "` has no readable type signature here or in any local \
-                                   \module, so it cannot be classified as a qualifying entry \
-                                   \point or excluded from the surface"
-                            )
-                    ambiguous ->
-                        failClosedIn
-                            moduleName
-                            path
-                            ( "public export `"
-                                <> name
-                                <> "` resolves to more than one local signature, so which one \
-                                   \this module re-exports cannot be determined: "
-                                <> show ambiguous
-                            )
-
-{- | Every top-level or field signature any LOCAL module gives this name.
-
-Used only for a name a module exports without defining, so it costs a read of
-the package's own sources exactly when a re-export needs resolving.
--}
-signaturesDefinedLocally :: [(String, FilePath)] -> String -> IO [Text]
-signaturesDefinedLocally modules name =
-    fmap concat . for modules $ \(definingModule, definingPath) -> do
-        contents <- readModuleSource definingModule definingPath
-        pure
-            ( maybeToList (lookup name (topLevelSignatures contents))
-                <> maybeToList (lookup name (recordFieldSignatures contents))
+exportedSignaturesOf routeModuleName = do
+    routes <- publicModuleRoutes
+    unless (routeModuleName `elem` routes) $
+        failClosed
+            ( routeModuleName
+                <> " is not a cabal-exposed public route, so asking for its exported \
+                   \signatures is a category error rather than a question with an empty \
+                   \answer"
             )
-
-{- | Read a module's source, or refuse while naming both the module and the
-path.
-
-An unreadable or empty source is the shape that matters here: a reader that
-answers "no exports" for a module it never actually read reports a complete
-surface it never enumerated, and the report looks exactly like a module that
-genuinely exports nothing.
--}
-readModuleSource :: String -> FilePath -> IO Text
-readModuleSource moduleName path = do
-    outcome <- try (BS.readFile path)
-    bytes <- case outcome of
-        Left failure ->
-            failClosedIn
-                moduleName
-                path
-                ("its source could not be read: " <> show (failure :: SomeException))
-        Right bytes -> pure bytes
-    when (BS.null bytes) $
-        failClosedIn moduleName path "its source is empty, so it has no module declaration to read"
-    pure (TE.decodeUtf8 bytes)
-
-{- | The derivation refuses rather than under-reporting (NOTE-005).
-
-The product rule #240 established for checkpoint decoding is that a source
-that cannot be read fails closed and names itself, with no silent fallback.
-This instrument was written to enforce that rule and then broke it: a module
-whose declaration begins at byte zero left the enumeration silently, so the
-check could not fail for the very thing it omitted. Over-inclusion costs
-noise; under-inclusion costs the invariant.
--}
-failClosed :: String -> IO a
-failClosed reason =
-    fail ("public-surface derivation FAILED CLOSED -- " <> reason)
-
-failClosedIn :: String -> FilePath -> String -> IO a
-failClosedIn moduleName path reason =
-    failClosed (moduleName <> " (" <> path <> "): " <> reason)
-
-data ExportItem
-    = ReexportedModule String
-    | WildcardType String
-    | ExplicitMembers String [String]
-    | PlainName String
-    deriving stock (Eq, Show)
-
-classifyExportItem :: Text -> Either String ExportItem
-classifyExportItem item
-    | T.null trimmed = Left "an empty export item, which no export list should produce"
-    | otherwise =
-        case T.words trimmed of
-            ("module" : other : _) -> Right (ReexportedModule (T.unpack other))
-            ["module"] ->
-                Left "an export item reading `module` with no module named after it"
-            (namespace : _)
-                | namespace `elem` ["type", "pattern", "data"] ->
-                    Left
-                        ( "a namespaced export item this reader does not understand: `"
-                            <> T.unpack trimmed
-                            <> "`"
-                        )
-            _
-                -- an operator export is written parenthesised, e.g. @(>>>)@, so
-                -- it has no leading identifier at all; both it and its top-level
-                -- signature normalise to the bare symbol (CORRECTION-011)
-                | Just symbol <- operatorName trimmed -> Right (PlainName symbol)
-                | "(..)" `T.isInfixOf` withoutSpaces -> named WildcardType
-                | "(" `T.isInfixOf` withoutSpaces ->
-                    named $ \name ->
-                        ExplicitMembers
-                            name
-                            ( map T.unpack
-                                . filter (not . T.null)
-                                . map T.strip
-                                . T.splitOn ","
-                                . T.takeWhile (/= ')')
-                                . T.drop 1
-                                . T.dropWhile (/= '(')
-                                $ withoutSpaces
-                            )
-                | otherwise -> named PlainName
-  where
-    trimmed = T.strip item
-    withoutSpaces = T.filter (/= ' ') trimmed
-    headName = T.unpack (T.takeWhile (\c -> c /= '(' && c /= ' ') trimmed)
-    -- an item whose leading name is empty is a shape this reader cannot
-    -- place; it says so rather than contributing a nameless member
-    named build
-        | null headName =
-            Left ("an export item with no leading name: `" <> T.unpack trimmed <> "`")
-        | otherwise = Right (build headName)
-
-{- | The bare symbol of a parenthesised operator, if that is what this text
-is. Used for both export items and top-level signatures so the two agree on
-one key.
--}
-operatorName :: Text -> Maybe String
-operatorName text = do
-    inner <- T.stripSuffix ")" =<< T.stripPrefix "(" text
-    let symbol = T.strip inner
-    if not (T.null symbol) && T.all isOperatorChar symbol
-        then Just (T.unpack symbol)
-        else Nothing
-
-isOperatorChar :: Char -> Bool
-isOperatorChar c = c `elem` ("!#$%&*+./<=>?@\\^|-~:" :: String)
-
-{- | A module's export items, split at top level only, so the commas inside
-@Type (a, b)@ do not split their own item.
--}
-exportItems :: Text -> Either String [Text]
-exportItems rawContents = do
-    declaration <- moduleDeclaration
-    let afterName = T.dropWhile (/= '(') declaration
-    when (T.null afterName) $
-        Left "its module declaration has no export list, so its public surface cannot be enumerated"
-    let (region, closing) = T.breakOn ") where" (T.drop 1 afterName)
-    when (T.null closing) $
-        Left "its export list has no closing `) where`, so where it ends cannot be determined"
-    -- Haskell permits a trailing comma before the closing parenthesis, and
-    -- most export lists here use one, so the split yields a final
-    -- whitespace-only item. Discarding it cannot lose an export -- there is
-    -- no name in it to lose -- which is what separates it from the silent
-    -- skips this repair removes. Anything non-empty still has to classify.
-    pure (filter (not . T.null . T.strip) (splitTopLevelCommas (flattened region)))
-  where
-    -- Comments and string literals are removed BEFORE the declaration is
-    -- located. Without that, a module haddock containing the word "module" at
-    -- the start of a line captures the search and the reader parses an export
-    -- list out of prose: 'Cardano.KERI.Indexer.Query.Tx' really does say
-    -- "\nmodule haddock on ..." in its header, and the pre-repair reader
-    -- derived `twice` from the phrase "(twice, unexported)" while missing
-    -- every real export of that module. It reported a surface it had never
-    -- read, and said nothing.
-    contents = stripCommentsAndStrings rawContents
-    -- A module declaration may also begin at BYTE ZERO. Searching only for a
-    -- preceding newline silently emptied every such module -- including the
-    -- really Cabal-exposed 'Cardano.KERI.AID.CESR' and
-    -- 'Cardano.KERI.AID.Ed25519' (submission-5 audit finding 1).
-    moduleDeclaration
-        | "module " `T.isPrefixOf` T.stripStart contents = Right (T.stripStart contents)
-        | otherwise = case T.breakOn "\nmodule " contents of
-            (_, rest)
-                | T.null rest ->
-                    Left "it contains no `module` declaration, at byte zero or anywhere else"
-                | otherwise -> Right (T.drop 1 rest)
-    flattened = T.unwords . map T.strip . T.lines
-
-splitTopLevelCommas :: Text -> [Text]
-splitTopLevelCommas = go (0 :: Int) "" . T.unpack
-  where
-    go _ acc [] = [T.pack (reverse acc)]
-    go depth acc (c : rest)
-        | c == ',' && depth == 0 = T.pack (reverse acc) : go 0 "" rest
-        | c == '(' = go (depth + 1) (c : acc) rest
-        | c == ')' = go (depth - 1) (c : acc) rest
-        | otherwise = go depth (c : acc) rest
-
-{- | Every record field selector a data declaration defines, with the field's
-own type. These are public functions whenever the type is exported with
-@(..)@ or with the field named explicitly.
-
-A field's type may continue past the physical @::@ line exactly as a
-top-level signature's may, and the fourth audit proved that reading only the
-@::@ line dropped such a field from the derived surface while its IDENTICAL
-one-line spelling was found. Physical formatting is not part of what a module
-exports, so a public field must derive the same way in either spelling or the
-enumeration is not the surface it claims to be.
-
-Continuation lines are therefore gathered the same semantic way
-'topLevelSignatures' gathers them, at the field's level rather than the
-module's: a continuation is a non-blank line indented STRICTLY DEEPER than
-the line that opened the field. That single rule is what makes the next
-field, the closing brace, a @deriving@ clause, and a sibling signature in an
-indented @where@ block all terminate the type — each of them sits at the
-opening line's own indentation or less.
--}
-recordFieldSignatures :: Text -> [(String, Text)]
-recordFieldSignatures contents = go (T.lines contents)
-  where
-    go [] = []
-    go (line : rest)
-        | Just (name, opening) <- fieldStart line =
-            let (continuation, remainder) = span (continues line) rest
-                signature =
-                    T.unwords
-                        (filter (not . T.null) (opening : map T.strip continuation))
-             in (name, signature) : go remainder
-        | otherwise = go rest
-    fieldStart line
-        | " " `T.isPrefixOf` line || "\t" `T.isPrefixOf` line
-        , let stripped = T.strip line
-        , "::" `T.isInfixOf` stripped
-        , let (before, rest) = T.breakOn "::" stripped
-        , let name = T.strip (T.dropWhile (\c -> c == ',' || c == '{' || c == ' ') before)
-        , not (T.null name)
-        , isAlpha (T.head name)
-        , T.all (\c -> isAlphaNum c || c == '\'' || c == '_') name =
-            Just (T.unpack name, T.strip (T.drop 2 rest))
-        | otherwise = Nothing
-    continues opening line =
-        not (T.null (T.strip line))
-            && indentationOf line > indentationOf opening
-            -- a Haddock or ordinary comment under a field is documentation,
-            -- not more type, and appending it would corrupt the very
-            -- signature this repair exists to derive correctly
-            && not ("--" `T.isPrefixOf` T.strip line)
-    indentationOf line = T.length (T.takeWhile (\c -> c == ' ' || c == '\t') line)
-
--- | The field selectors belonging to one named data declaration.
-fieldsOfType :: String -> Text -> [(String, Text)]
-fieldsOfType typeName contents =
-    recordFieldSignatures (T.unlines declarationLines)
-  where
-    declarationLines =
-        takeWhile (\line -> T.null (T.strip line) || " " `T.isPrefixOf` line || "\t" `T.isPrefixOf` line)
-            . drop 1
-            . dropWhile (not . declares)
-            $ T.lines contents
-    declares line = case T.words line of
-        (keyword : name : _) -> keyword `elem` ["data", "newtype"] && name == T.pack typeName
-        _ -> False
-
-{- | Every top-level @name :: type@ in a module, with the type flattened to
-one line. A signature may span many lines, so continuation lines are joined
-until the next top-level construct begins.
--}
-topLevelSignatures :: Text -> [(String, Text)]
-topLevelSignatures contents = go (T.lines contents)
-  where
-    go [] = []
-    go (line : rest)
-        | Just name <- signatureStart line =
-            let (continuation, remainder) = span isContinuation rest
-                signature = T.unwords (map T.strip (afterColons line : continuation))
-             in (name, signature) : go remainder
-        | otherwise = go rest
-    signatureStart line = case T.words line of
-        (name : "::" : _)
-            | not (T.null name)
-            , not (" " `T.isPrefixOf` line) ->
-                if isAlpha (T.head name) && T.all isIdentifierChar name
-                    then Just (T.unpack name)
-                    else -- a top-level operator declaration, @(>>>) :: ...@,
-                    -- normalised to the same bare symbol its export item is
-                        operatorName name
-        _ -> Nothing
-    afterColons line = T.strip (T.drop 2 (snd (T.breakOn "::" line)))
-    isContinuation line =
-        not (T.null (T.strip line)) && (" " `T.isPrefixOf` line || "\t" `T.isPrefixOf` line)
-    isIdentifierChar c = isAlphaNum c || c == '\'' || c == '_'
+    exports <- derivedPublicExports
+    pure
+        [ (exportName export, signature)
+        | export <- exports
+        , exportRoute export == routeModuleName
+        , ExportedValue signature <- [exportKind export]
+        ]
 
 -- ---------------------------------------------------------------------------
 -- Derivation 3: which input types can be eagerly rejected
@@ -1891,3 +1498,117 @@ shouldNotContainName haystack needle
     | otherwise =
         expectationFailure
             ("the derivation wrongly included " <> needle <> "; it found " <> show (sort haystack))
+
+-- ---------------------------------------------------------------------------
+-- #266: the Cabal seed, reduced to module ROUTES
+--
+-- The seed's whole job is now "which modules can a consumer import", and a
+-- module name is the entire answer. It deliberately does NOT resolve a source
+-- file: under the compiler-owned enumeration, a module's public surface has
+-- nothing to do with whether its source is present, readable, or spelled the
+-- way a reader expects (DATA-INV-266-03). The source-path resolution below
+-- survives only for the two derivations that genuinely read bodies -- which
+-- constructors validate, and what reaches the store runner.
+
+{- | Every module a PUBLICLY VISIBLE library component exposes.
+
+Visibility is the rule, not a name list: a consumer can only import through a
+component that is visible to them, so a @visibility: private@ component -- the
+compiled regression fixtures -- is not a public route, while every real
+sub-library remains one.
+-}
+publicModuleRoutes :: IO [String]
+publicModuleRoutes = fmap (nub . sort . concat) (withLibraries publicVisibleModules)
+  where
+    publicVisibleModules library
+        | libVisibility library == LibraryVisibilityPrivate = []
+        | otherwise = map prettyShow (exposedModules library)
+
+withLibraries :: (Library -> [a]) -> IO [[a]]
+withLibraries selectFrom = do
+    contents <- BS.readFile cabalFilePath
+    case runParseResult (parseGenericPackageDescription contents) of
+        (_warnings, Left (_version, errs)) ->
+            fail ("failed to parse " <> cabalFilePath <> ": " <> show (toList errs))
+        (_warnings, Right gpd) ->
+            pure
+                [ selectFrom (fold tree)
+                | tree <- maybeToList (condLibrary gpd) <> map snd (condSubLibraries gpd)
+                ]
+
+-- ---------------------------------------------------------------------------
+-- #266: assertion helpers for the compiler-derived controls
+
+{- | Require a derivation to fail CLOSED with a surface failure that names the
+route it could not describe.
+
+Both halves matter, exactly as for the reader this replaces: a failure for an
+unrelated reason would satisfy "it failed" while proving nothing about the
+enumeration, so the failure has to identify what it could not handle.
+-}
+requiresSurfaceFailure :: (Show a) => String -> IO a -> IO ()
+requiresSurfaceFailure route derivation = do
+    outcome <- try derivation
+    case outcome of
+        Right derived ->
+            expectationFailure
+                ( "the compiler surface reported a result instead of failing closed on a route \
+                  \it cannot describe; it returned "
+                    <> show derived
+                )
+        Left failure
+            | failedModule failure == route -> pure ()
+            | otherwise ->
+                expectationFailure
+                    ( "the derivation failed closed, but named "
+                        <> show (failedModule failure)
+                        <> " rather than "
+                        <> show route
+                        <> ", so an unrelated failure would satisfy this control: "
+                        <> show failure
+                    )
+
+-- | Require a set of export classifications, order-independently.
+shouldMatchClasses :: [ExportKind] -> [ExportKind] -> IO ()
+shouldMatchClasses actual expected
+    | sort (map summarise actual) == sort (map summarise expected) = pure ()
+    | otherwise =
+        expectationFailure
+            ( "expected the export classifications "
+                <> show expected
+                <> " but GHC reported "
+                <> show actual
+            )
+  where
+    summarise = \case
+        ExportedValue _ -> "value" :: String
+        ExportedTypeOrClass -> "type-or-class"
+        ExportedConstructor -> "constructor"
+        ExportedAxiom -> "axiom"
+
+{- | Require an enumeration to refuse rather than answer.
+
+The refusal has to come from the derivation's own fail-closed rule, so the
+control asserts the message it names rather than merely that something threw:
+an unrelated exception would otherwise satisfy "it failed" while proving
+nothing, which is the manufactured-confidence shape this suite exists to
+refuse.
+-}
+requiresFailClosedDerivation :: (Show a) => IO a -> IO ()
+requiresFailClosedDerivation derivation = do
+    outcome <- try derivation
+    case outcome of
+        Right derived ->
+            expectationFailure
+                ( "the derivation answered instead of failing closed; it returned "
+                    <> show derived
+                )
+        Left failure
+            | "public-surface derivation FAILED CLOSED"
+                `isInfixOf` show (failure :: SomeException) ->
+                pure ()
+            | otherwise ->
+                expectationFailure
+                    ( "the derivation failed, but not through its own fail-closed rule: "
+                        <> show failure
+                    )

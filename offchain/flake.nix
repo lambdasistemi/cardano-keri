@@ -296,6 +296,35 @@
                     >> "$__keri_cfg"
                   export CABAL_CONFIG="$__keri_cfg"
                 fi
+
+                # #266 MOD-266-COMPILER-SURFACE. The public-surface guard runs a
+                # GHC session over the COMPILED package modules, and a binary
+                # linked against the GHC API cannot find a compiler installation
+                # by itself: `findTopDir Nothing` answers <dirname exe>/../lib and
+                # GHC.Settings.Config carries no libdir. So the environment is
+                # supplied explicitly here, in the SAME two bindings the packaged
+                # `local-write-path-check` runner exports, so the in-shell
+                # `cabal test` and the packaged run observe one contract rather
+                # than two. Absent or unusable bindings make the guard fail closed
+                # (it never reports an empty public surface).
+                #
+                # The dev-shell's compiled modules are cabal's, so the databases
+                # are cabal's three: this shell's GHC package DB (reached through
+                # the libdir), cabal's store — where the CHaP stack is installed
+                # `global` style — and dist-newstyle's in-place component
+                # registrations. Globbed rather than pinned so a compiler bump
+                # does not silently select a stale directory; a superfluous store
+                # DB is harmless, an absent one is skipped, and an empty result
+                # fails the guard closed at session start.
+                export KERI_PUBLIC_SURFACE_GHC_LIBDIR="$NIX_GHC_LIBDIR"
+                __keri_dbs=""
+                for __keri_db in \
+                  "$PWD"/dist-newstyle/packagedb/ghc-* \
+                  "''${XDG_STATE_HOME:-$HOME/.local/state}"/cabal/store/ghc-*/package.db; do
+                  [ -d "$__keri_db" ] || continue
+                  __keri_dbs="''${__keri_dbs:+$__keri_dbs:}$__keri_db"
+                done
+                export KERI_PUBLIC_SURFACE_PACKAGE_DBS="$__keri_dbs"
               '';
             };
           };
@@ -517,6 +546,34 @@
           keriBoardBlueprintPath =
             "${inputs.deployPreprod}/endpoint-board-blueprint.json";
 
+          # #266 MOD-266-COMPILER-SURFACE. The packaged counterpart of the
+          # dev-shell bindings above: the compiler environment the public-surface
+          # guard runs its GHC session in. `local-write-path-check` executes the
+          # haskell.nix-built suite from a writeShellApplication whose PATH holds
+          # only the test executables, so without these two bindings the session
+          # has neither a libdir nor any database describing this package's
+          # compiled components, and the guard would have to either fail or (far
+          # worse) report an empty public surface.
+          #
+          # The environment registers every library component of this package,
+          # named explicitly rather than discovered, so a new component that is
+          # not added here makes the guard fail closed on an unresolvable route
+          # instead of quietly dropping that route from the public surface.
+          surfaceGhc = project.pkg-set.config.ghc.package;
+          surfaceGhcEnv = project.ghcWithPackages (ps: [
+            ps.cardano-keri.components.library
+            ps.cardano-keri.components.sublibs.chain-query
+            ps.cardano-keri.components.sublibs.chain-query-koios
+            ps.cardano-keri.components.sublibs.cli
+            ps.cardano-keri.components.sublibs.deployment
+            ps.cardano-keri.components.sublibs.indexer
+            ps.cardano-keri.components.sublibs.public-surface-fixtures
+            ps.cardano-keri.components.sublibs.write-composition
+          ]);
+          surfaceGhcLibdir =
+            "${surfaceGhcEnv}/lib/ghc-${surfaceGhc.version}/lib";
+          surfacePackageDb = "${surfaceGhcLibdir}/package.conf.d";
+
           local-write-path-check-runner = pkgs.writeShellApplication {
             name = "local-write-path-check";
             runtimeInputs = [
@@ -545,6 +602,11 @@
               # blueprint would make `runDeployWith`'s entrypoint example fail
               # for a harness reason rather than a candidate reason, which is
               # precisely the degeneracy T240-S1-14 finding 2 reported.
+              # #266: the compiler environment for the public-surface guard's
+              # GHC session, in the same two bindings the dev shell exports.
+              export KERI_PUBLIC_SURFACE_GHC_LIBDIR="${surfaceGhcLibdir}"
+              export KERI_PUBLIC_SURFACE_PACKAGE_DBS="${surfacePackageDb}"
+
               export KERI_CHECKPOINT_BLUEPRINT="${keriBlueprintPath}"
               if [ ! -s "$KERI_CHECKPOINT_BLUEPRINT" ]; then
                 echo "FAIL: KERI_CHECKPOINT_BLUEPRINT is unset or empty; runDeployWith's complete entrypoint property cannot run" >&2

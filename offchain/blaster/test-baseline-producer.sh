@@ -19,7 +19,8 @@ trap 'rm -rf "$work"' EXIT
 # identity, lock and inputs. Reading any of these values back out of $manifest
 # would make byte comparison self-referential and unable to falsify drift.
 for name in BASELINE_COMMIT BASELINE_AIKEN BASELINE_VARIANT BASELINE_ERA \
-  BASELINE_VERSION_DERIVED BASELINE_TOOLCHAIN BASELINE_LOCK_SHA256 \
+  BASELINE_SELECTION BASELINE_VERSION_DERIVED \
+  BASELINE_VERIFICATION_RECEIPT BASELINE_TOOLCHAIN BASELINE_LOCK_SHA256 \
   BASELINE_LEAN_BLASTER_REV BASELINE_PLUTUS_CORE_REV \
   BASELINE_LEDGER_API_REV; do
   [ -n "${!name:-}" ] || fail "external producer expectation is missing: $name"
@@ -38,6 +39,9 @@ cmp "$manifest" "$work/regenerated.json" \
   --expected-aiken "$BASELINE_AIKEN" \
   --expected-variant "$BASELINE_VARIANT" \
   --expected-era "$BASELINE_ERA" \
+  --expected-selection "$BASELINE_SELECTION" \
+  --expected-version-derived "$BASELINE_VERSION_DERIVED" \
+  --expected-verification-receipt "$BASELINE_VERIFICATION_RECEIPT" \
   --expected-toolchain "$BASELINE_TOOLCHAIN" \
   --expected-lock-sha256 "$BASELINE_LOCK_SHA256" \
   --expected-lean-blaster-rev "$BASELINE_LEAN_BLASTER_REV" \

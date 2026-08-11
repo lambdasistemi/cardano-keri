@@ -8,7 +8,8 @@ blueprint=$1
 output=$2
 
 for name in BASELINE_COMMIT BASELINE_AIKEN BASELINE_TOOLCHAIN BASELINE_VARIANT \
-  BASELINE_ERA BASELINE_VERSION_DERIVED BASELINE_LOCK_SHA256 \
+  BASELINE_ERA BASELINE_SELECTION BASELINE_VERSION_DERIVED \
+  BASELINE_VERIFICATION_RECEIPT BASELINE_LOCK_SHA256 \
   BASELINE_LEAN_BLASTER_REV BASELINE_PLUTUS_CORE_REV BASELINE_LEDGER_API_REV; do
   [ -n "${!name:-}" ] || fail "unnamed producer input: $name"
 done
@@ -56,7 +57,9 @@ jq -n \
   --arg toolchain "$BASELINE_TOOLCHAIN" \
   --arg variant "$BASELINE_VARIANT" \
   --arg era "$BASELINE_ERA" \
+  --arg selection "$BASELINE_SELECTION" \
   --arg version_derived "$BASELINE_VERSION_DERIVED" \
+  --arg verification_receipt "$BASELINE_VERIFICATION_RECEIPT" \
   --arg blueprint_sha256 "$blueprint_sha256" \
   --arg lock_sha256 "$BASELINE_LOCK_SHA256" \
   --arg lean_blaster "$BASELINE_LEAN_BLASTER_REV" \
@@ -74,7 +77,7 @@ jq -n \
     identity:(identity + {
       built_from:"source",
       validating_aiken:$aiken,
-      selection:"explicit-era-binding",
+      selection:$selection,
       version_derived:$version_derived,
       lock_sha256:$lock_sha256,
       upstream:{lean_blaster:$lean_blaster,
@@ -91,8 +94,7 @@ jq -n \
           (identity + {record:"baseline"}),
           (identity + {record:"evaluation-identity"}),
           (identity + {record:"verification-receipt",
-            receipt:"manifest-verification"})
+            receipt:$verification_receipt})
         ]
     )
   }' > "$output"
-

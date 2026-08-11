@@ -79,6 +79,7 @@ import Cardano.KERI.ChainQuery (
     SettlementTimeoutPolicy (..),
     boardCatalogWithOutputs,
     currentCheckpoint,
+    eagerRejection,
     observeSettlement,
     outputAt,
     payerUtxos,
@@ -91,6 +92,7 @@ import Cardano.KERI.ChainQuery.LedgerOutput (
 import Cardano.KERI.ChainQuery.Registration (
     RegistrationQueryRequest (..),
     RegistrationSnapshot (..),
+    registrationSnapshotProgram,
  )
 import Cardano.KERI.Deployment.Advance (
     AdvancePackage (..),
@@ -1867,6 +1869,29 @@ runRegisterWith openLocalScope runtime settings = do
                             { boardLocatorPolicyId = endpointBoardPolicyId boardInfo
                             , boardLocatorAddress = endpointBoardAddress boardInfo
                             }
+    let snapshotRequest =
+            RegistrationQueryRequest
+                { registrationQueryCheckpointLocator =
+                    CheckpointLocator (planCheckpointPolicy plan) (planCheckpointAddress plan)
+                , registrationQueryAid = planAid plan
+                , registrationQueryBoardLocator = boardLocator
+                , registrationQueryReferenceHashes = []
+                , registrationQueryPayerAddresses = []
+                }
+    -- #262 A-004: 'registerQuerySnapshot' is a PUBLIC slot, so the callback
+    -- that runs here belongs to whoever constructed the runtime, and nothing
+    -- can be promised about it. What can be promised is that it is never
+    -- handed an input the request's own program has already refused. The
+    -- guard therefore lives in this carrying runner, ahead of identity
+    -- decoding, the store bracket, and the callback alike -- so the guarantee
+    -- holds for EVERY constructible 'RegisterRuntime' rather than for the one
+    -- 'productionRegisterRuntime' happens to wire. Refusing here also keeps
+    -- the refusal's identity ('InvalidLocator') rather than leaving it to the
+    -- address and policy decoders below, which reject the same shapes today
+    -- for entirely different reasons.
+    case eagerRejection (registrationSnapshotProgram snapshotRequest) of
+        Just rejection -> fail (show rejection)
+        Nothing -> pure ()
     checkpointAddr <- either fail pure (decodeAddress (planCheckpointAddress plan))
     checkpointPolicy <- either fail pure (decodePolicyId (planCheckpointPolicy plan))
     boardIdentity <-
@@ -1881,17 +1906,7 @@ runRegisterWith openLocalScope runtime settings = do
                 }
     openLocalScope localSettings $ \scope -> do
         envelope <-
-            registerQuerySnapshot
-                runtime
-                scope
-                RegistrationQueryRequest
-                    { registrationQueryCheckpointLocator =
-                        CheckpointLocator (planCheckpointPolicy plan) (planCheckpointAddress plan)
-                    , registrationQueryAid = planAid plan
-                    , registrationQueryBoardLocator = boardLocator
-                    , registrationQueryReferenceHashes = []
-                    , registrationQueryPayerAddresses = []
-                    }
+            registerQuerySnapshot runtime scope snapshotRequest
                 >>= either (fail . show) pure
         registerWriteLine runtime (renderQuerySnapshotDiagnostic envelope)
         let snapshot = snapshotValue envelope

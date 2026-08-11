@@ -80,20 +80,34 @@ import Cardano.KERI.ChainQuery.Types (
     QuerySource (SourceLocal),
     SnapshotConsistency (AtomicLocal),
  )
+import Cardano.KERI.Deployment.CLI (
+    RegisterRuntime (..),
+    RegisterSettings (..),
+    runRegisterWith,
+ )
+import Cardano.KERI.Deployment.EndpointBoardManifest (readEndpointBoardManifest)
+import Cardano.KERI.Deployment.Manifest (
+    CheckpointInfo (..),
+    Manifest (..),
+    ScriptEntry (..),
+    readManifest,
+ )
 import Cardano.KERI.Indexer.ChainQuery (
     LocalQueryScope (..),
+    LocalSettings,
     runLocalQuery,
     runLocalRegistrationSnapshot,
  )
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withInMemoryIndexerRunner)
 import Codec.Binary.Bech32 qualified as Bech32
+import Control.Exception (SomeException, bracket, try)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.Char (isAlpha, isAlphaNum)
 import Data.Foldable (fold, for_, toList)
 import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
-import Data.List (isSuffixOf, nub, sort)
+import Data.List (isInfixOf, isSuffixOf, nub, sort)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (maybeToList)
 import Data.Set qualified as Set
@@ -111,8 +125,10 @@ import Distribution.Types.GenericPackageDescription (
     GenericPackageDescription (condLibrary, condSubLibraries),
  )
 import Distribution.Types.Library (Library (exposedModules, libBuildInfo))
-import System.Directory (doesFileExist)
+import Paths_cardano_keri (getDataFileName)
+import System.Directory (doesFileExist, getTemporaryDirectory, removeFile)
 import System.FilePath ((</>))
+import System.IO (hClose, openTempFile)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
 
 -- ---------------------------------------------------------------------------
@@ -216,6 +232,52 @@ spec =
                     Nothing -> expectationFailure "the field expansion lost localScopeRunner"
                     Just signature -> resultPortion signature `shouldNotBe` ""
 
+            it "signature control: PHYSICAL FORMATTING does not change the derived public set -- a field whose type continues past the `::` line derives exactly what the one-line spelling derives (submission-4 audit counterexample 1)" $ do
+                continued <- derivedSurfaceOf multilineFieldSpelling
+                oneLine <- derivedSurfaceOf singleLineFieldSpelling
+                sort continued `shouldBe` sort oneLine
+
+            it "signature control: and that continued field really JOINS the qualifying set under the shipped rules, rather than being derived as an empty type nobody can classify (submission-4 audit counterexample 1)" $ do
+                continued <- derivedSurfaceOf multilineFieldSpelling
+                rejectable <- rejectableInputTypes
+                case lookup mutantFieldName continued of
+                    Nothing ->
+                        expectationFailure
+                            ( "the field expansion lost "
+                                <> mutantFieldName
+                                <> " entirely: "
+                                <> show continued
+                            )
+                    Just signature -> do
+                        acceptsRejectableInput rejectable signature `shouldBe` True
+                        performsAnEffect signature `shouldBe` True
+
+            it "capability control: a store-transaction-backed interpreter NESTED under an ordinary result container is still a handed-out capability, read through the real source derivation (submission-4 audit counterexample 2)" $ do
+                continued <- derivedSurfaceOf multilineFieldSpelling
+                case lookup mutantCapabilityName continued of
+                    Nothing ->
+                        expectationFailure
+                            ("the export reader lost " <> mutantCapabilityName)
+                    Just signature ->
+                        supplyingStoreBackedInterpreter signature `shouldBe` True
+
+            it "capability control: the same nesting is detected directly, under each container the result of such an export realistically wears" $
+                for_
+                    [ "LocalQueryScope cf op -> Maybe (ChainQueryInterpreter (Transaction IO cf Cols op))"
+                    , "LocalQueryScope cf op -> IO (ChainQueryInterpreter (Transaction IO cf Cols op))"
+                    , "LocalQueryScope cf op -> Either ChainQueryError (ChainQueryInterpreter (Transaction IO cf Cols op))"
+                    , "LocalQueryScope cf op -> [ChainQueryInterpreter (Transaction IO cf Cols op)]"
+                    ]
+                    (\signature -> supplyingStoreBackedInterpreter signature `shouldBe` True)
+
+            it "capability control: widening to nested results does NOT swallow the caller-chosen-effect negative, at any nesting" $
+                for_
+                    [ "Text -> Maybe KoiosToken -> ChainQueryInterpreter IO"
+                    , "Text -> Maybe KoiosToken -> Maybe (ChainQueryInterpreter IO)"
+                    , "Text -> Maybe KoiosToken -> IO (ChainQueryInterpreter effect)"
+                    ]
+                    (\signature -> supplyingStoreBackedInterpreter signature `shouldBe` False)
+
             it "no public export hands out a store-transaction-backed interpreter capability (A-262-03)" $ do
                 capabilities <- storeBackedInterpreterCapabilities
                 if null capabilities
@@ -312,6 +374,10 @@ definingModuleRoutes =
     ,
         ( SurfaceMember localInterpreterModule "runLocalRegistrationSnapshot"
         , provesLocalLayer (`runLocalRegistrationSnapshot` invalidRegistrationRequest)
+        )
+    ,
+        ( SurfaceMember "Cardano.KERI.Deployment.CLI" "registerQuerySnapshot"
+        , provesRegisterCarryingRunnerRefusesFirst
         )
     ,
         ( koiosModuleMember "koiosCurrentCheckpoint"
@@ -469,6 +535,138 @@ provesLocalLayer run =
             Left other -> unexpected "Left (InvalidLocator _)" other
             Right _ -> expectationFailure "expected the rejected locator to be refused"
 
+{- | The member the repaired field reader FOUND, and why its proof is about
+the CARRYING RUNNER rather than about any one runtime value.
+
+'Cardano.KERI.Deployment.CLI.registerQuerySnapshot' is a public @Type (..)@
+field selector whose type continues past its physical @::@ line, so the
+pre-repair reader derived an empty type for it and it was absent from the
+enumeration through all four submissions. It qualifies on the same terms as
+every other member: it takes a 'RegistrationQueryRequest', which is eagerly
+rejected, and its result is an 'IO' action over a 'LocalQueryScope'.
+
+But it is a SLOT, not a runner: it returns whatever the constructing caller
+put in it. Nothing can be promised about a callback a caller supplies, and an
+action that ran the value this suite chose to construct would prove today's
+construction site rather than the surface — the manufactured-confidence shape
+this campaign exists to remove (A-004). What CAN be promised, and is what the
+production carrying runner now enforces, is that an eagerly rejected request
+never reaches the slot at all:
+'Cardano.KERI.Deployment.CLI.runRegisterWith' asks the request's own program
+whether it already refused BEFORE it decodes an identity, opens a local
+scope, or invokes any caller-supplied callback.
+
+So this proof hands 'runRegisterWith' a deliberately hostile runtime — a
+callback that records its own invocation and fails, over a manifest whose
+checkpoint policy is not a canonical script hash — together with a local
+opener that records ITS own invocation, and requires all three things: the
+opener never ran, the callback never ran, and the refusal that came back is
+the eager 'InvalidLocator' rather than an incidental decode failure. Because
+the callback is never reached, the result holds for every callback a caller
+could put in that slot, which is the universal statement the selector needs
+and the one-value action could not make.
+
+Stated limit, so the green is not read as more than it earns: the CLI's own
+address and policy decoders would independently have refused these same
+inputs today. What the guard adds is that the refusal is now the runner's own
+stated invariant, asserted by identity — so a future change that moves,
+loosens, or reorders those decoders fails this proof instead of silently
+letting a rejected request reach a caller's callback.
+-}
+provesRegisterCarryingRunnerRefusesFirst :: IO ()
+provesRegisterCarryingRunnerRefusesFirst = do
+    kelPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+    manifestPath <- getDataFileName "deployment-test/fixtures/register-preflight-m1-manifest.json"
+    boardManifestPath <-
+        getDataFileName "deployment-test/fixtures/register-preflight-board-manifest.json"
+    opened <- newIORef (0 :: Int)
+    reached <- newIORef (0 :: Int)
+    outcome <-
+        try
+            ( runRegisterWith
+                (refusingLocalOpener opened)
+                (hostileRegisterRuntime reached kelPath manifestPath boardManifestPath)
+                (rejectedRegisterSettings kelPath manifestPath boardManifestPath)
+            )
+    readIORef opened >>= (`shouldBe` 0)
+    readIORef reached >>= (`shouldBe` 0)
+    case outcome of
+        Right () ->
+            expectationFailure
+                "the registration runner accepted a request its own program had already refused"
+        Left failure
+            | "InvalidLocator" `isInfixOf` show (failure :: SomeException) -> pure ()
+            | otherwise ->
+                expectationFailure
+                    ( "the request was refused, but not BY THE EAGER GUARD -- an incidental \
+                      \failure cannot be relied on to keep a caller-supplied callback away \
+                      \from a rejected request: "
+                        <> show failure
+                    )
+
+{- | A local opener that must never be reached. It counts first, so a reached
+opener is visible even though it then refuses to open anything.
+-}
+refusingLocalOpener :: IORef Int -> LocalSettings -> (forall cf op. LocalQueryScope cf op -> IO a) -> IO a
+refusingLocalOpener opened _settings _use = do
+    atomicModifyIORef' opened (\n -> (n + 1, ()))
+    fail "no local scope may be opened for an eagerly rejected registration request"
+
+{- | The hostile runtime: every reader is real, so the flow gets far enough
+to build its request, and the one caller-supplied query callback records that
+it was reached. Its snapshot is never returned because it must never run.
+-}
+hostileRegisterRuntime :: IORef Int -> FilePath -> FilePath -> FilePath -> RegisterRuntime
+hostileRegisterRuntime reached _kelPath _manifestPath _boardManifestPath =
+    RegisterRuntime
+        { registerReadKel = BS.readFile
+        , registerReadManifest = fmap (fmap withUnusableCheckpointPolicy) . readManifest
+        , registerReadBoardManifest = readEndpointBoardManifest
+        , registerQuerySnapshot = \_scope _request -> do
+            atomicModifyIORef' reached (\n -> (n + 1, ()))
+            fail "a caller-supplied callback received an eagerly rejected registration request"
+        , registerWriteLine = \_line -> pure ()
+        , registerSubmit = \_scope _settings _manifest _plan ->
+            fail "registration submitted despite an eagerly rejected request"
+        }
+
+{- | The same manifest with its checkpoint policy replaced by a value that is
+not a canonical 28-byte hex script hash, kept consistent with its own script
+entry so the registration plan still builds and the REQUEST is what fails.
+-}
+withUnusableCheckpointPolicy :: Manifest -> Manifest
+withUnusableCheckpointPolicy manifest =
+    manifest
+        { manifestCheckpoint =
+            (manifestCheckpoint manifest){checkpointPolicyId = unusablePolicyId}
+        , manifestScripts = map rehash (manifestScripts manifest)
+        }
+  where
+    rehash entry
+        | scriptName entry == "checkpoint-register" = entry{scriptHash = unusablePolicyId}
+        | otherwise = entry
+
+unusablePolicyId :: Text
+unusablePolicyId = "not-a-canonical-28-byte-hex-script-hash"
+
+rejectedRegisterSettings :: FilePath -> FilePath -> FilePath -> RegisterSettings
+rejectedRegisterSettings kelPath manifestPath boardManifestPath =
+    RegisterSettings
+        { registerNetwork = "preprod"
+        , registerNetworkMagic = 1
+        , registerKel = kelPath
+        , registerPayer = "unused-payer"
+        , registerNodeSocket = "unused-node-socket"
+        , registerFundingAddress = "unused-funding-address"
+        , registerManifest = manifestPath
+        , registerBoardManifest = boardManifestPath
+        , registerStorePath = "unused-store-path"
+        , registerTimeoutSeconds = 30
+        , registerAllowUnlistedWitnesses = False
+        , registerAllowExistingCheckpoint = False
+        , registerEscrowLovelace = 1_007_000_000
+        }
+
 -- ---------------------------------------------------------------------------
 -- Fixtures and harness for the proof actions
 --
@@ -570,6 +768,105 @@ loggingInterpreter calls =
         AtomicLocal
   where
     observed label result = modifyIORef' calls (<> [label]) >> pure result
+
+-- ---------------------------------------------------------------------------
+-- Permanent controls for the two shapes the fourth audit proved invisible
+--
+-- The fourth fresh audit compiled two public shapes that the derivation
+-- claimed to enumerate and did not see: a `Type (..)` field selector whose
+-- type continues past the physical `::` line, and a store-backed interpreter
+-- capability nested inside an ordinary result container. Neither was a
+-- product defect -- the shipped surface was safe -- but both refute the one
+-- promise NOTE-004 exists to make: that a new qualifying export JOINS the set
+-- or FAILS the check. A detector that silently under-counts is the
+-- hand-maintained list wearing the derivation's clothes.
+--
+-- So they stay here as permanent controls, not as one-off repairs. They are
+-- driven through the SAME readers the shipped property uses -- 'signaturesOf'
+-- over a real file on disk, and the shipped 'supplyingStoreBackedInterpreter'
+-- -- rather than through a test-local parser that could agree with the tests
+-- while the real derivation stays blind. A control that bypasses the
+-- instrument under test proves nothing about it.
+
+mutantSurfaceModule :: String
+mutantSurfaceModule = "Mutant.Surface"
+
+mutantFieldName :: String
+mutantFieldName = "mutantField"
+
+mutantCapabilityName :: String
+mutantCapabilityName = "mutantNestedCapability"
+
+{- | The audit's first counterexample: one public record field, spelled with
+its type continued after the @::@. Its argument list mentions 'ChainQuery',
+so the derived signature is one the real qualification rules must accept.
+-}
+multilineFieldSpelling :: [Text]
+multilineFieldSpelling =
+    [ "    { mutantField ::"
+    , "        LocalQueryScope cf op ->"
+    , "        ChainQuery a ->"
+    , "        IO (Either ChainQueryError ())"
+    , "    }"
+    ]
+
+{- | The identical field written on the @::@ line. The audit's sharpest
+observation was that this spelling IS detected while the one above is not, so
+the control is an equality between the two derivations rather than a claim
+about either one alone.
+-}
+singleLineFieldSpelling :: [Text]
+singleLineFieldSpelling =
+    [ "    { mutantField :: LocalQueryScope cf op -> ChainQuery a -> IO (Either ChainQueryError ())"
+    , "    }"
+    ]
+
+{- | A module exporting both counterexamples: the field through @Type (..)@,
+and the audit's second counterexample as a top-level export whose result
+container hides the store-backed interpreter.
+-}
+mutantSurfaceSource :: [Text] -> Text
+mutantSurfaceSource fieldLines =
+    T.unlines $
+        [ "-- A control fixture, never compiled: it is read by the same"
+        , "-- derivation the shipped property runs against the real tree."
+        , "module Mutant.Surface (MutantCarrier (..), mutantNestedCapability) where"
+        , ""
+        , "data MutantCarrier cf op = MutantCarrier"
+        ]
+            <> fieldLines
+            <> [ ""
+               , "mutantNestedCapability ::"
+               , "    LocalQueryScope cf op ->"
+               , "    Maybe (ChainQueryInterpreter (Transaction IO cf Cols op))"
+               , "mutantNestedCapability = error \"a fixture, not a definition\""
+               ]
+
+{- | The exported names and signatures the SHIPPED reader derives from that
+module, resolved from a real file, because the reader takes a path and reads
+it. Nothing tracked is written: the fixture lives in the temporary directory
+and is removed even if the example fails.
+-}
+derivedSurfaceOf :: [Text] -> IO [(String, Text)]
+derivedSurfaceOf fieldLines =
+    withMutantSurfaceFile (mutantSurfaceSource fieldLines) $ \path ->
+        signaturesOf [(mutantSurfaceModule, path)] Set.empty mutantSurfaceModule
+
+{- | One unambiguous lifecycle (CORRECTION-023): acquire writes the fixture
+and closes its handle, returning only a path; release removes that path; the
+reader under test sees a closed file. Nothing about the fixture's cleanup can
+then be mistaken for the classifier's verdict.
+-}
+withMutantSurfaceFile :: Text -> (FilePath -> IO a) -> IO a
+withMutantSurfaceFile source use = do
+    directory <- getTemporaryDirectory
+    bracket (writeFixture directory) removeFile use
+  where
+    writeFixture directory = do
+        (path, handle) <- openTempFile directory "MutantSurface.hs"
+        BS.hPut handle (TE.encodeUtf8 source)
+        hClose handle
+        pure path
 
 -- ---------------------------------------------------------------------------
 -- Derivation 1: which modules are public
@@ -776,20 +1073,53 @@ splitTopLevelCommas = go (0 :: Int) "" . T.unpack
 {- | Every record field selector a data declaration defines, with the field's
 own type. These are public functions whenever the type is exported with
 @(..)@ or with the field named explicitly.
+
+A field's type may continue past the physical @::@ line exactly as a
+top-level signature's may, and the fourth audit proved that reading only the
+@::@ line dropped such a field from the derived surface while its IDENTICAL
+one-line spelling was found. Physical formatting is not part of what a module
+exports, so a public field must derive the same way in either spelling or the
+enumeration is not the surface it claims to be.
+
+Continuation lines are therefore gathered the same semantic way
+'topLevelSignatures' gathers them, at the field's level rather than the
+module's: a continuation is a non-blank line indented STRICTLY DEEPER than
+the line that opened the field. That single rule is what makes the next
+field, the closing brace, a @deriving@ clause, and a sibling signature in an
+indented @where@ block all terminate the type — each of them sits at the
+opening line's own indentation or less.
 -}
 recordFieldSignatures :: Text -> [(String, Text)]
-recordFieldSignatures contents =
-    [ (T.unpack name, T.strip (T.drop 2 rest))
-    | line <- T.lines contents
-    , let stripped = T.strip line
-    , "::" `T.isInfixOf` stripped
-    , " " `T.isPrefixOf` line || "\t" `T.isPrefixOf` line
-    , let (before, rest) = T.breakOn "::" stripped
-    , let name = T.strip (T.dropWhile (\c -> c == ',' || c == '{' || c == ' ') before)
-    , not (T.null name)
-    , isAlpha (T.head name)
-    , T.all (\c -> isAlphaNum c || c == '\'' || c == '_') name
-    ]
+recordFieldSignatures contents = go (T.lines contents)
+  where
+    go [] = []
+    go (line : rest)
+        | Just (name, opening) <- fieldStart line =
+            let (continuation, remainder) = span (continues line) rest
+                signature =
+                    T.unwords
+                        (filter (not . T.null) (opening : map T.strip continuation))
+             in (name, signature) : go remainder
+        | otherwise = go rest
+    fieldStart line
+        | " " `T.isPrefixOf` line || "\t" `T.isPrefixOf` line
+        , let stripped = T.strip line
+        , "::" `T.isInfixOf` stripped
+        , let (before, rest) = T.breakOn "::" stripped
+        , let name = T.strip (T.dropWhile (\c -> c == ',' || c == '{' || c == ' ') before)
+        , not (T.null name)
+        , isAlpha (T.head name)
+        , T.all (\c -> isAlphaNum c || c == '\'' || c == '_') name =
+            Just (T.unpack name, T.strip (T.drop 2 rest))
+        | otherwise = Nothing
+    continues opening line =
+        not (T.null (T.strip line))
+            && indentationOf line > indentationOf opening
+            -- a Haddock or ordinary comment under a field is documentation,
+            -- not more type, and appending it would corrupt the very
+            -- signature this repair exists to derive correctly
+            && not ("--" `T.isPrefixOf` T.strip line)
+    indentationOf line = T.length (T.takeWhile (\c -> c == ' ' || c == '\t') line)
 
 -- | The field selectors belonging to one named data declaration.
 fieldsOfType :: String -> Text -> [(String, Text)]
@@ -1049,13 +1379,71 @@ The distinction matters: an interpreter over @IO@ or over a caller-chosen
 effect carries no store with it, while one over @Transaction ...@ is already
 attached to the local store and only needs a runner the caller can already
 obtain.
+
+The fourth audit proved that reading only the result's HEAD missed the same
+capability handed back inside an ordinary container:
+@Maybe (ChainQueryInterpreter (Transaction ...))@ is the identical capability
+with one @fmap@ between the caller and it. So every application of
+'ChainQueryInterpreter' in the result is examined, at any depth — and it
+remains the EFFECT IT IS APPLIED TO that decides, which is what keeps the
+caller-chosen-effect negative excluded at every one of those depths rather
+than swallowed by the widening.
 -}
 supplyingStoreBackedInterpreter :: Text -> Bool
 supplyingStoreBackedInterpreter signature =
-    case T.words (resultPortion signature) of
-        ("ChainQueryInterpreter" : arguments) ->
-            any ("Transaction" `T.isInfixOf`) arguments
-        _ -> False
+    any ("Transaction" `T.isInfixOf`) (interpreterEffects (resultPortion signature))
+
+-- | The name whose applications carry the capability this rule forbids.
+interpreterTypeName :: Text
+interpreterTypeName = "ChainQueryInterpreter"
+
+{- | The effect argument of every 'ChainQueryInterpreter' application in a
+type fragment, at any nesting depth.
+
+Both ends of each occurrence are checked for a token boundary, so a longer
+type name that merely contains this one cannot be read as an application of
+it. A module qualification is a boundary rather than part of the name, so a
+qualified occurrence is still found.
+-}
+interpreterEffects :: Text -> [Text]
+interpreterEffects = go
+  where
+    go fragment =
+        case T.breakOn interpreterTypeName fragment of
+            (_, match)
+                | T.null match -> []
+            (before, match) ->
+                let after = T.drop (T.length interpreterTypeName) match
+                 in [firstTypeArgument after | isWholeToken before after]
+                        <> go after
+    isWholeToken before after =
+        boundary (fmap snd (T.unsnoc before)) && boundary (fmap fst (T.uncons after))
+    boundary Nothing = True
+    boundary (Just character) =
+        not (isAlphaNum character || character == '\'' || character == '_')
+
+{- | The first type argument applied to something: a parenthesised group
+taken whole, or the bare word that follows.
+-}
+firstTypeArgument :: Text -> Text
+firstTypeArgument text =
+    case T.uncons applied of
+        Nothing -> ""
+        Just ('(', rest) -> balancedGroup rest
+        _ -> T.takeWhile (`notElem` (" ()[],-" :: String)) applied
+  where
+    applied = T.stripStart text
+
+-- | Everything up to the parenthesis that closes the group already entered.
+balancedGroup :: Text -> Text
+balancedGroup = T.pack . go (0 :: Int) . T.unpack
+  where
+    go _ [] = []
+    go depth (character : rest)
+        | character == ')' && depth == 0 = []
+        | character == ')' = character : go (depth - 1) rest
+        | character == '(' = character : go (depth + 1) rest
+        | otherwise = character : go depth rest
 
 acceptsRejectableInput :: [String] -> Text -> Bool
 acceptsRejectableInput rejectable signature =

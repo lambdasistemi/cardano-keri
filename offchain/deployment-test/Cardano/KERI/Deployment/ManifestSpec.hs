@@ -2,6 +2,8 @@
 
 module Cardano.KERI.Deployment.ManifestSpec (spec) where
 
+import Cardano.Crypto.Hash.Class (digest)
+import Cardano.Crypto.Hash.SHA256 (SHA256)
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
     EndpointBoardManifest (..),
@@ -17,16 +19,25 @@ import Cardano.KERI.Deployment.Manifest (
     mkManifest,
  )
 import Cardano.KERI.Deployment.Script (
+    Blueprint (..),
     ScriptArtifact (..),
+    Validator (..),
+    boardAddress,
     deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
+    scriptHashText,
  )
+import Data.Aeson (FromJSON (..), withObject, (.:))
 import Data.Aeson qualified as Aeson
+import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteString (ByteString)
 import Data.ByteString.Short qualified as SBS
 import Data.List (sort)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
-import System.Environment (getEnv)
+import Data.Text.Encoding qualified as TE
+import System.Environment (getEnv, lookupEnv)
 import System.IO.Temp (withSystemTempDirectory)
 import System.Posix.Files (
     fileMode,
@@ -40,7 +51,6 @@ import Test.Hspec (
     aroundAll,
     describe,
     it,
-    pendingWith,
     shouldBe,
     shouldContain,
     shouldSatisfy,
@@ -90,17 +100,19 @@ spec =
                 let info = endpointBoardManifestInfo manifest
                 endpointBoardPolicyId info `shouldBe` expectedBoardPolicy
                 endpointBoardAddress info `shouldBe` expectedBoardAddress
-            -- #219 A4/NOTE-009: this test's `endpointBoardManifestValidationErrors`
-            -- call transitively compares the manifest against production
-            -- code's `frozenEndpointBoardPolicyId`/`frozenEndpointBoardAddress`
-            -- (`EndpointBoardManifest.hs`, parked as Q-007 -- out of this
-            -- slice's fence). Restructuring this test to avoid that call
-            -- would touch more than moving/re-scoping the existing
-            -- assertion, so it stays pending pending Q-007's resolution
-            -- rather than guessing a redesign.
+            -- #263 (INV-263-UNPARKED): formerly parked. This test's
+            -- `endpointBoardManifestValidationErrors` call transitively
+            -- compares the manifest against production code's
+            -- `frozenEndpointBoardPolicyId`/`frozenEndpointBoardAddress`,
+            -- which is exactly what could not hold while the repository owned
+            -- no copy of the deployed program. It holds now because
+            -- `loadBoardArtifact` derives the board from the RECOVERED
+            -- artifact (`KERI_BOARD_BLUEPRINT`) rather than from the current
+            -- source-built checkpoint blueprint, whose endpoint-board
+            -- validator is a different, non-deployed program. Nothing in
+            -- `EndpointBoardManifest.hs` was weakened, parameterized away, or
+            -- bypassed to unpark it.
             it "round-trips and validates the reproducible board manifest" $ \_ -> do
-                pendingWith
-                    "blocked on Q-007 (EndpointBoardManifest.hs production frozen constants), not a stale pin"
                 board <- loadBoardArtifact
                 manifest <-
                     either fail pure $
@@ -139,6 +151,50 @@ spec =
                         `shouldBe` groupReadMode
                     mode `intersectFileModes` otherReadMode
                         `shouldBe` otherReadMode
+        -- #263 (RQ-263-01/03, INV-263-REPRODUCIBLE, DATA-INV-263-01/02/05).
+        -- The permanent identity proof. It is deliberately NOT a comparison of
+        -- JSON fields against each other: the artifact's bytes are decoded by
+        -- the real production `loadBlueprint` and hashed by the real
+        -- production `deriveBoardScript`/`computeScriptHash`, so the values
+        -- asserted here are DERIVED from the checked-in program, and a single
+        -- perturbed nibble changes all three of length, digest, and policy.
+        describe "#263 recovered endpoint-board artifact" $ do
+            it "production-derives the deployed board identity from the repository bytes" $ \_ -> do
+                artifact <- loadBoardArtifact
+                artifactBlueprintTitle artifact `shouldBe` recoveredBoardTitle
+                SBS.length (artifactProgram artifact)
+                    `shouldBe` recoveredProgramBytes
+                sha256Hex (SBS.fromShort (artifactProgram artifact))
+                    `shouldBe` recoveredProgramSha256
+                scriptHashText (artifactScriptHash artifact)
+                    `shouldBe` expectedBoardPolicy
+                boardAddress artifact `shouldBe` Right expectedBoardAddress
+            it "keeps exactly one validator and provenance its own payload confirms" $ \_ -> do
+                path <- boardBlueprintPath
+                blueprint <- loadBlueprint path >>= either fail pure
+                -- PROMOTE-263-02: the compact artifact promotes the deployed
+                -- board and nothing else; the other 22 historical validators
+                -- have no consumer and are not retained.
+                map vTitle (validators blueprint)
+                    `shouldBe` [recoveredBoardTitle]
+                artifact <- either fail pure (deriveBoardScript blueprint)
+                provenance <- readBoardProvenance path
+                provenanceSourceCommit provenance `shouldBe` recoveredSourceCommit
+                provenanceCompiler provenance `shouldBe` "aiken 1.1.21"
+                provenanceSourceBlueprintBytes provenance `shouldBe` 581_696
+                provenanceSourceBlueprintSha256 provenance
+                    `shouldBe` recoveredSourceBlueprintSha256
+                -- DAT-263-PROVENANCE: metadata is never trusted about its own
+                -- payload. Both program facts must equal what the decoded
+                -- bytes actually are, not merely the frozen literals -- so a
+                -- provenance block edited to match a tampered program still
+                -- fails.
+                provenanceProgramBytes provenance
+                    `shouldBe` SBS.length (artifactProgram artifact)
+                provenanceProgramSha256 provenance
+                    `shouldBe` sha256Hex (SBS.fromShort (artifactProgram artifact))
+                provenanceProgramBytes provenance `shouldBe` recoveredProgramBytes
+                provenanceProgramSha256 provenance `shouldBe` recoveredProgramSha256
         describe "M1 V1 manifest" $ do
             it "round-trips deterministically" $ \artifacts -> do
                 manifest <- requireManifest artifacts
@@ -216,11 +272,91 @@ programLength name artifacts =
         [size] -> size
         _ -> error "programLength: artifact not found uniquely"
 
+{- | #263 (DAT-263-BOARD-BINDING, EDGE-263-04): the board artifact comes from
+its OWN required binding, never from @KERI_CHECKPOINT_BLUEPRINT@. The current
+source-built checkpoint blueprint stays independently consumed for the five V1
+checkpoint validators above; its endpoint-board validator is a different,
+non-deployed program and must never stand in for the recovered one. There is
+deliberately no fallback: an unset or empty binding fails closed rather than
+silently reverting to the checkpoint blueprint, which is precisely the
+substitution this ticket exists to make impossible.
+-}
+boardBlueprintPath :: IO FilePath
+boardBlueprintPath = do
+    value <- lookupEnv "KERI_BOARD_BLUEPRINT"
+    case value of
+        Just path | not (null path) -> pure path
+        _ ->
+            fail
+                "KERI_BOARD_BLUEPRINT is unset or empty; the recovered \
+                \endpoint-board artifact identity proof cannot run"
+
 loadBoardArtifact :: IO ScriptArtifact
 loadBoardArtifact = do
-    path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+    path <- boardBlueprintPath
     blueprint <- loadBlueprint path >>= either fail pure
     either fail pure (deriveBoardScript blueprint)
+
+{- | The recovery record carried beside the program in the compact artifact.
+
+Decoded through its own envelope so the assertions read the artifact's real
+@provenance@ object rather than a re-encoding of it.
+-}
+data BoardProvenance = BoardProvenance
+    { provenanceSourceCommit :: !Text
+    , provenanceCompiler :: !Text
+    , provenanceSourceBlueprintBytes :: !Int
+    , provenanceSourceBlueprintSha256 :: !Text
+    , provenanceProgramBytes :: !Int
+    , provenanceProgramSha256 :: !Text
+    }
+    deriving stock (Show, Eq)
+
+instance FromJSON BoardProvenance where
+    parseJSON = withObject "BoardProvenance" $ \objectValue ->
+        BoardProvenance
+            <$> objectValue .: "sourceCommit"
+            <*> objectValue .: "compiler"
+            <*> objectValue .: "sourceBlueprintBytes"
+            <*> objectValue .: "sourceBlueprintSha256"
+            <*> objectValue .: "programBytes"
+            <*> objectValue .: "programSha256"
+
+newtype BoardArtifactEnvelope = BoardArtifactEnvelope BoardProvenance
+
+instance FromJSON BoardArtifactEnvelope where
+    parseJSON = withObject "BoardArtifactEnvelope" $ \objectValue ->
+        BoardArtifactEnvelope <$> objectValue .: "provenance"
+
+readBoardProvenance :: FilePath -> IO BoardProvenance
+readBoardProvenance path = do
+    BoardArtifactEnvelope provenance <-
+        Aeson.eitherDecodeFileStrict' path >>= either fail pure
+    pure provenance
+
+{- | SHA-256 of raw bytes as lowercase hex, computed here rather than read from
+the artifact -- the whole point of 'provenanceProgramSha256''s assertion.
+-}
+sha256Hex :: ByteString -> Text
+sha256Hex =
+    TE.decodeUtf8 . convertToBase Base16 . digest (Proxy @SHA256)
+
+recoveredBoardTitle :: Text
+recoveredBoardTitle = "endpoint_board.endpoint_board.mint"
+
+recoveredProgramBytes :: Int
+recoveredProgramBytes = 3_158
+
+recoveredProgramSha256 :: Text
+recoveredProgramSha256 =
+    "b9562988d5d1c8995a0e58a4ebbec21848352f8b1e9e363b46dc3b36bd8543fe"
+
+recoveredSourceCommit :: Text
+recoveredSourceCommit = "95b554fbdc9dee5b4437d3a8deeb882f114a0bf3"
+
+recoveredSourceBlueprintSha256 :: Text
+recoveredSourceBlueprintSha256 =
+    "896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c"
 
 expectedBoardPolicy :: Text
 expectedBoardPolicy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"

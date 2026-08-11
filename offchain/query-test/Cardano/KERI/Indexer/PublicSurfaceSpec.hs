@@ -102,6 +102,7 @@ import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withInMemoryIndexerRunner)
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Exception (SomeException, bracket, try)
+import Control.Monad (unless, when)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.Char (isAlpha, isAlphaNum)
@@ -173,8 +174,10 @@ spec =
 
             it "derivation control: an exported operator is parsed from both its export item and its top-level signature (CORRECTION-011)" $ do
                 case classifyExportItem "(>>>)" of
-                    PlainName name -> name `shouldBe` ">>>"
-                    _ -> expectationFailure "an operator export item was not recognised as a name"
+                    Right (PlainName name) -> name `shouldBe` ">>>"
+                    other ->
+                        expectationFailure
+                            ("an operator export item was not recognised as a name: " <> show other)
                 map fst (topLevelSignatures "(>>>) :: ChainQuery a -> IO ()")
                     `shouldBe` [">>>"]
 
@@ -269,6 +272,37 @@ spec =
                     , "LocalQueryScope cf op -> [ChainQueryInterpreter (Transaction IO cf Cols op)]"
                     ]
                     (\signature -> supplyingStoreBackedInterpreter signature `shouldBe` True)
+
+            it "fail-closed control: a legal module whose declaration begins at BYTE ZERO is enumerated, not silently emptied (submission-5 audit finding 1)" $ do
+                atByteZero <- derivedSurfaceOfSource (mutantSurfaceSource [] multilineFieldSpelling)
+                belowAComment <- derivedSurfaceOf multilineFieldSpelling
+                sort atByteZero `shouldBe` sort belowAComment
+
+            it "fail-closed control: and the omission was never synthetic -- a really Cabal-exposed module that declares at byte zero really does have exports" $ do
+                signatures <- exportedSignaturesOf "Cardano.KERI.AID.CESR"
+                map fst signatures `shouldContainName` "parsePrimitive"
+
+            it "fail-closed control: a zero-byte module cannot be reported as a successfully empty public surface, and the diagnostic names it" $
+                requiresFailClosed [mutantSurfaceModule] (derivedSurfaceOfSource "")
+
+            it "fail-closed control: an export shape the reader cannot place identifies itself instead of being skipped" $
+                requiresFailClosed
+                    [mutantSurfaceModule, T.unpack unclassifiableExportItem]
+                    (derivedSurfaceOfSource unclassifiableExportSource)
+
+            it "fail-closed control: a public export whose type cannot be found here or in any local module identifies itself instead of leaving the surface quietly" $
+                requiresFailClosed
+                    [mutantSurfaceModule, untypedExportName]
+                    (derivedSurfaceOfSource untypedExportSource)
+
+            it "fail-closed control: a module that cannot be read is not mistaken for one with no exports, and the diagnostic names its module and its path" $
+                requiresFailClosed
+                    [mutantSurfaceModule, unreadableSourcePath]
+                    ( signaturesOf
+                        [(mutantSurfaceModule, unreadableSourcePath)]
+                        Set.empty
+                        mutantSurfaceModule
+                    )
 
             it "capability control: widening to nested results does NOT swallow the caller-chosen-effect negative, at any nesting" $
                 for_
@@ -825,15 +859,14 @@ singleLineFieldSpelling =
 and the audit's second counterexample as a top-level export whose result
 container hides the store-backed interpreter.
 -}
-mutantSurfaceSource :: [Text] -> Text
-mutantSurfaceSource fieldLines =
+mutantSurfaceSource :: [Text] -> [Text] -> Text
+mutantSurfaceSource prelude fieldLines =
     T.unlines $
-        [ "-- A control fixture, never compiled: it is read by the same"
-        , "-- derivation the shipped property runs against the real tree."
-        , "module Mutant.Surface (MutantCarrier (..), mutantNestedCapability) where"
-        , ""
-        , "data MutantCarrier cf op = MutantCarrier"
-        ]
+        prelude
+            <> [ "module Mutant.Surface (MutantCarrier (..), mutantNestedCapability) where"
+               , ""
+               , "data MutantCarrier cf op = MutantCarrier"
+               ]
             <> fieldLines
             <> [ ""
                , "mutantNestedCapability ::"
@@ -842,15 +875,100 @@ mutantSurfaceSource fieldLines =
                , "mutantNestedCapability = error \"a fixture, not a definition\""
                ]
 
+{- | The ordinary prelude: a comment above the declaration, which is what
+almost every module in this repository looks like — and exactly why the
+byte-zero case below went unnoticed for five submissions.
+-}
+commentPrelude :: [Text]
+commentPrelude =
+    [ "-- A control fixture, never compiled: it is read by the same"
+    , "-- derivation the shipped property runs against the real tree."
+    ]
+
 {- | The exported names and signatures the SHIPPED reader derives from that
 module, resolved from a real file, because the reader takes a path and reads
 it. Nothing tracked is written: the fixture lives in the temporary directory
 and is removed even if the example fails.
 -}
 derivedSurfaceOf :: [Text] -> IO [(String, Text)]
-derivedSurfaceOf fieldLines =
-    withMutantSurfaceFile (mutantSurfaceSource fieldLines) $ \path ->
+derivedSurfaceOf = derivedSurfaceOfSource . mutantSurfaceSource commentPrelude
+
+-- | The same reader, over source text the control supplies verbatim.
+derivedSurfaceOfSource :: Text -> IO [(String, Text)]
+derivedSurfaceOfSource source =
+    withMutantSurfaceFile source $ \path ->
         signaturesOf [(mutantSurfaceModule, path)] Set.empty mutantSurfaceModule
+
+{- | An export item this reader deliberately does not understand: a namespaced
+@type@ export. No module in this repository writes one today, which is the
+point — the reader must say so rather than skip it and report a surface it
+never actually enumerated.
+-}
+unclassifiableExportItem :: Text
+unclassifiableExportItem = "type MutantAlias"
+
+unclassifiableExportSource :: Text
+unclassifiableExportSource =
+    T.unlines
+        [ "module Mutant.Surface (type MutantAlias, mutantNestedCapability) where"
+        , ""
+        , "mutantNestedCapability ::"
+        , "    LocalQueryScope cf op ->"
+        , "    Maybe (ChainQueryInterpreter (Transaction IO cf Cols op))"
+        , "mutantNestedCapability = error \"a fixture, not a definition\""
+        ]
+
+{- | A public VALUE export with no type signature anywhere. The reader cannot
+tell whether it is a qualifying entry point, so the only honest answers are
+"here it is with its type" and "I could not classify this one" — never
+silence.
+-}
+untypedExportName :: String
+untypedExportName = "mutantUntypedExport"
+
+untypedExportSource :: Text
+untypedExportSource =
+    T.unlines
+        [ "module Mutant.Surface (mutantUntypedExport) where"
+        , ""
+        , "mutantUntypedExport = error \"a fixture, not a definition\""
+        ]
+
+{- | A path no fixture was ever written to, so the reader must refuse rather
+than report a module it could not open as one with no exports.
+-}
+unreadableSourcePath :: FilePath
+unreadableSourcePath = "/nonexistent/public-surface-control/Mutant/Surface.hs"
+
+{- | Require that a derivation FAILS, and that its diagnostic names each of
+the given things.
+
+Both halves matter. A derivation that fails for an unrelated reason — a
+missing fixture, a harness slip, an exception from somewhere else entirely —
+would satisfy "it failed" while proving nothing about the classifier, which
+is precisely the manufactured-confidence shape this suite exists to refuse.
+So the failure has to identify what it could not handle.
+-}
+requiresFailClosed :: (Show a) => [String] -> IO a -> IO ()
+requiresFailClosed named derivation = do
+    outcome <- try derivation
+    case outcome of
+        Right derived ->
+            expectationFailure
+                ( "the derivation reported a surface instead of failing closed on input it \
+                  \cannot enumerate; it returned "
+                    <> show derived
+                )
+        Left failure ->
+            for_ named $ \needle ->
+                unless (needle `isInfixOf` show (failure :: SomeException)) $
+                    expectationFailure
+                        ( "the derivation failed, but its diagnostic does not name "
+                            <> show needle
+                            <> ", so an unrelated exception would satisfy this control just as \
+                               \well: "
+                            <> show failure
+                        )
 
 {- | One unambiguous lifecycle (CORRECTION-023): acquire writes the fixture
 and closes its handle, returning only a path; release removes that path; the
@@ -924,9 +1042,26 @@ resolveLibrary selectModules tree = do
                 | directory <- sourceDirs
                 ]
         existing <- filterExisting candidates
-        pure [(moduleName, path) | path <- take 1 existing]
+        case existing of
+            (path : _) -> pure [(moduleName, path)]
+            []
+                -- Cabal generates this one; there is no source file to read
+                -- and no public surface of ours in it. Named, not skipped.
+                | moduleName == generatedPathsModule -> pure []
+                | otherwise ->
+                    failClosed
+                        ( moduleName
+                            <> " is declared by the Cabal file but no source was found at any of "
+                            <> show candidates
+                            <> "; a module that cannot be located cannot be enumerated, and \
+                               \omitting it would report a surface that was never read"
+                        )
   where
     dotToSlash character = if character == '.' then '/' else character
+
+-- | Cabal's generated path module, which has no source file in the tree.
+generatedPathsModule :: String
+generatedPathsModule = "Paths_cardano_keri"
 
 filterExisting :: [FilePath] -> IO [FilePath]
 filterExisting paths = do
@@ -972,64 +1107,201 @@ signaturesOf ::
 signaturesOf modules visited moduleName
     | moduleName `Set.member` visited = pure []
     | otherwise = case lookup moduleName modules of
-        -- a re-export of a module outside the public set contributes no
-        -- public surface of its own
+        -- a re-export of a module outside this package contributes no public
+        -- surface of its own. This is a CLASSIFICATION, not a skip: the map
+        -- passed in holds every local module, exposed and private alike, so a
+        -- name absent from it belongs to another package, whose surface is
+        -- not ours to enumerate. A local module missing its source fails in
+        -- 'resolveLibrary' before it can reach here.
         Nothing -> pure []
         Just path -> do
-            contents <- TE.decodeUtf8 <$> BS.readFile path
-            let items = exportItems contents
-                topLevel = topLevelSignatures contents
+            contents <- readModuleSource moduleName path
+            items <-
+                either (failClosedIn moduleName path) pure (exportItems contents)
+            let topLevel = topLevelSignatures contents
                 fields = recordFieldSignatures contents
                 known name = lookup name topLevel `orElse` lookup name fields
             fmap concat . for items $ \item ->
                 case classifyExportItem item of
-                    ReexportedModule other ->
+                    Left reason -> failClosedIn moduleName path reason
+                    Right (ReexportedModule other) ->
                         signaturesOf modules (Set.insert moduleName visited) other
-                    WildcardType typeName ->
+                    Right (WildcardType typeName) ->
+                        -- @Type (..)@ contributes its record field SELECTORS.
+                        -- Data constructors and class methods are deliberately
+                        -- not members: a constructor returns the type, it
+                        -- cannot dispatch an operation or open a transaction.
+                        -- A sum type with no fields therefore contributes
+                        -- nothing, by this stated rule rather than by silence.
                         pure (fieldsOfType typeName contents)
-                    ExplicitMembers typeName members ->
-                        pure
-                            [ (name, signature)
-                            | name <- typeName : members
-                            , Just signature <- [known name]
-                            ]
-                    PlainName name -> pure [(name, signature) | Just signature <- [known name]]
+                    Right (ExplicitMembers typeName members) ->
+                        fmap
+                            concat
+                            (traverse (resolveMember modules moduleName path known) (typeName : members))
+                    Right (PlainName name) -> resolveMember modules moduleName path known name
   where
     orElse (Just value) _ = Just value
     orElse Nothing fallback = fallback
+
+{- | One exported name, resolved to its type or else refused by name.
+
+The refusal is the point. A lowercase export is a VALUE, and a value whose
+type this reader cannot find is a value it cannot classify — it might be a
+qualifying entry point and there is no way to tell. Dropping it out of a list
+comprehension is how a public export leaves the enumeration without anyone
+knowing, which is the exact defect this property exists to prevent, so it
+fails and says which export it was.
+-}
+resolveMember ::
+    [(String, FilePath)] ->
+    String ->
+    FilePath ->
+    (String -> Maybe Text) ->
+    String ->
+    IO [(String, Text)]
+resolveMember modules moduleName path known name =
+    case known name of
+        Just signature -> pure [(name, signature)]
+        Nothing
+            -- a type, class, or data constructor: no value-level signature
+            -- exists to read, and none is expected
+            | any (`elem` ['A' .. 'Z']) (take 1 name) -> pure []
+            | otherwise -> do
+                -- a module may export a name it IMPORTED, whose signature
+                -- lives in the module that defines it. That name is part of
+                -- THIS module's public surface -- a second route to it -- so
+                -- the reader follows it rather than dropping it, which is how
+                -- 'Cardano.KERI.Deployment.Registration.plutusDataJson' had
+                -- been leaving the enumeration unnoticed.
+                defined <- signaturesDefinedLocally modules name
+                case nub defined of
+                    [signature] -> pure [(name, signature)]
+                    [] ->
+                        failClosedIn
+                            moduleName
+                            path
+                            ( "public export `"
+                                <> name
+                                <> "` has no readable type signature here or in any local \
+                                   \module, so it cannot be classified as a qualifying entry \
+                                   \point or excluded from the surface"
+                            )
+                    ambiguous ->
+                        failClosedIn
+                            moduleName
+                            path
+                            ( "public export `"
+                                <> name
+                                <> "` resolves to more than one local signature, so which one \
+                                   \this module re-exports cannot be determined: "
+                                <> show ambiguous
+                            )
+
+{- | Every top-level or field signature any LOCAL module gives this name.
+
+Used only for a name a module exports without defining, so it costs a read of
+the package's own sources exactly when a re-export needs resolving.
+-}
+signaturesDefinedLocally :: [(String, FilePath)] -> String -> IO [Text]
+signaturesDefinedLocally modules name =
+    fmap concat . for modules $ \(definingModule, definingPath) -> do
+        contents <- readModuleSource definingModule definingPath
+        pure
+            ( maybeToList (lookup name (topLevelSignatures contents))
+                <> maybeToList (lookup name (recordFieldSignatures contents))
+            )
+
+{- | Read a module's source, or refuse while naming both the module and the
+path.
+
+An unreadable or empty source is the shape that matters here: a reader that
+answers "no exports" for a module it never actually read reports a complete
+surface it never enumerated, and the report looks exactly like a module that
+genuinely exports nothing.
+-}
+readModuleSource :: String -> FilePath -> IO Text
+readModuleSource moduleName path = do
+    outcome <- try (BS.readFile path)
+    bytes <- case outcome of
+        Left failure ->
+            failClosedIn
+                moduleName
+                path
+                ("its source could not be read: " <> show (failure :: SomeException))
+        Right bytes -> pure bytes
+    when (BS.null bytes) $
+        failClosedIn moduleName path "its source is empty, so it has no module declaration to read"
+    pure (TE.decodeUtf8 bytes)
+
+{- | The derivation refuses rather than under-reporting (NOTE-005).
+
+The product rule #240 established for checkpoint decoding is that a source
+that cannot be read fails closed and names itself, with no silent fallback.
+This instrument was written to enforce that rule and then broke it: a module
+whose declaration begins at byte zero left the enumeration silently, so the
+check could not fail for the very thing it omitted. Over-inclusion costs
+noise; under-inclusion costs the invariant.
+-}
+failClosed :: String -> IO a
+failClosed reason =
+    fail ("public-surface derivation FAILED CLOSED -- " <> reason)
+
+failClosedIn :: String -> FilePath -> String -> IO a
+failClosedIn moduleName path reason =
+    failClosed (moduleName <> " (" <> path <> "): " <> reason)
 
 data ExportItem
     = ReexportedModule String
     | WildcardType String
     | ExplicitMembers String [String]
     | PlainName String
+    deriving stock (Eq, Show)
 
-classifyExportItem :: Text -> ExportItem
-classifyExportItem item =
-    case T.words (T.strip item) of
-        ("module" : other : _) -> ReexportedModule (T.unpack other)
-        _
-            -- an operator export is written parenthesised, e.g. @(>>>)@, so
-            -- it has no leading identifier at all; both it and its top-level
-            -- signature normalise to the bare symbol (CORRECTION-011)
-            | Just symbol <- operatorName (T.strip item) -> PlainName symbol
-            | "(..)" `T.isInfixOf` withoutSpaces -> WildcardType headName
-            | "(" `T.isInfixOf` withoutSpaces ->
-                ExplicitMembers
-                    headName
-                    ( map T.unpack
-                        . filter (not . T.null)
-                        . map T.strip
-                        . T.splitOn ","
-                        . T.takeWhile (/= ')')
-                        . T.drop 1
-                        . T.dropWhile (/= '(')
-                        $ withoutSpaces
-                    )
-            | otherwise -> PlainName headName
+classifyExportItem :: Text -> Either String ExportItem
+classifyExportItem item
+    | T.null trimmed = Left "an empty export item, which no export list should produce"
+    | otherwise =
+        case T.words trimmed of
+            ("module" : other : _) -> Right (ReexportedModule (T.unpack other))
+            ["module"] ->
+                Left "an export item reading `module` with no module named after it"
+            (namespace : _)
+                | namespace `elem` ["type", "pattern", "data"] ->
+                    Left
+                        ( "a namespaced export item this reader does not understand: `"
+                            <> T.unpack trimmed
+                            <> "`"
+                        )
+            _
+                -- an operator export is written parenthesised, e.g. @(>>>)@, so
+                -- it has no leading identifier at all; both it and its top-level
+                -- signature normalise to the bare symbol (CORRECTION-011)
+                | Just symbol <- operatorName trimmed -> Right (PlainName symbol)
+                | "(..)" `T.isInfixOf` withoutSpaces -> named WildcardType
+                | "(" `T.isInfixOf` withoutSpaces ->
+                    named $ \name ->
+                        ExplicitMembers
+                            name
+                            ( map T.unpack
+                                . filter (not . T.null)
+                                . map T.strip
+                                . T.splitOn ","
+                                . T.takeWhile (/= ')')
+                                . T.drop 1
+                                . T.dropWhile (/= '(')
+                                $ withoutSpaces
+                            )
+                | otherwise -> named PlainName
   where
-    withoutSpaces = T.filter (/= ' ') (T.strip item)
-    headName = T.unpack (T.takeWhile (\c -> c /= '(' && c /= ' ') (T.strip item))
+    trimmed = T.strip item
+    withoutSpaces = T.filter (/= ' ') trimmed
+    headName = T.unpack (T.takeWhile (\c -> c /= '(' && c /= ' ') trimmed)
+    -- an item whose leading name is empty is a shape this reader cannot
+    -- place; it says so rather than contributing a nameless member
+    named build
+        | null headName =
+            Left ("an export item with no leading name: `" <> T.unpack trimmed <> "`")
+        | otherwise = Right (build headName)
 
 {- | The bare symbol of a parenthesised operator, if that is what this text
 is. Used for both export items and top-level signatures so the two agree on
@@ -1049,16 +1321,43 @@ isOperatorChar c = c `elem` ("!#$%&*+./<=>?@\\^|-~:" :: String)
 {- | A module's export items, split at top level only, so the commas inside
 @Type (a, b)@ do not split their own item.
 -}
-exportItems :: Text -> [Text]
-exportItems contents = splitTopLevelCommas exportRegion
+exportItems :: Text -> Either String [Text]
+exportItems rawContents = do
+    declaration <- moduleDeclaration
+    let afterName = T.dropWhile (/= '(') declaration
+    when (T.null afterName) $
+        Left "its module declaration has no export list, so its public surface cannot be enumerated"
+    let (region, closing) = T.breakOn ") where" (T.drop 1 afterName)
+    when (T.null closing) $
+        Left "its export list has no closing `) where`, so where it ends cannot be determined"
+    -- Haskell permits a trailing comma before the closing parenthesis, and
+    -- most export lists here use one, so the split yields a final
+    -- whitespace-only item. Discarding it cannot lose an export -- there is
+    -- no name in it to lose -- which is what separates it from the silent
+    -- skips this repair removes. Anything non-empty still has to classify.
+    pure (filter (not . T.null . T.strip) (splitTopLevelCommas (flattened region)))
   where
-    afterModule = T.drop 1 (T.dropWhile (/= '(') (snd (T.breakOn "\nmodule " contents)))
-    exportRegion =
-        T.unwords
-            . filter (not . ("--" `T.isPrefixOf`))
-            . map T.strip
-            . T.lines
-            $ fst (T.breakOn ") where" afterModule)
+    -- Comments and string literals are removed BEFORE the declaration is
+    -- located. Without that, a module haddock containing the word "module" at
+    -- the start of a line captures the search and the reader parses an export
+    -- list out of prose: 'Cardano.KERI.Indexer.Query.Tx' really does say
+    -- "\nmodule haddock on ..." in its header, and the pre-repair reader
+    -- derived `twice` from the phrase "(twice, unexported)" while missing
+    -- every real export of that module. It reported a surface it had never
+    -- read, and said nothing.
+    contents = stripCommentsAndStrings rawContents
+    -- A module declaration may also begin at BYTE ZERO. Searching only for a
+    -- preceding newline silently emptied every such module -- including the
+    -- really Cabal-exposed 'Cardano.KERI.AID.CESR' and
+    -- 'Cardano.KERI.AID.Ed25519' (submission-5 audit finding 1).
+    moduleDeclaration
+        | "module " `T.isPrefixOf` T.stripStart contents = Right (T.stripStart contents)
+        | otherwise = case T.breakOn "\nmodule " contents of
+            (_, rest)
+                | T.null rest ->
+                    Left "it contains no `module` declaration, at byte zero or anywhere else"
+                | otherwise -> Right (T.drop 1 rest)
+    flattened = T.unwords . map T.strip . T.lines
 
 splitTopLevelCommas :: Text -> [Text]
 splitTopLevelCommas = go (0 :: Int) "" . T.unpack
@@ -1388,6 +1687,11 @@ with one @fmap@ between the caller and it. So every application of
 remains the EFFECT IT IS APPLIED TO that decides, which is what keeps the
 caller-chosen-effect negative excluded at every one of those depths rather
 than swallowed by the widening.
+
+@Transaction@ is matched as a SUBSTRING, so a longer unrelated effect name
+containing it is also flagged: a deliberate over-approximation kept per
+NOTE-005, because over-inclusion costs a noisy guard while under-inclusion
+costs the invariant.
 -}
 supplyingStoreBackedInterpreter :: Text -> Bool
 supplyingStoreBackedInterpreter signature =

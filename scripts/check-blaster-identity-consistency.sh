@@ -114,11 +114,23 @@ SELF="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
 usage() {
   cat <<'EOF'
 usage: check-blaster-identity-consistency.sh [--repo-root <dir>] [--self-test]
+       check-blaster-identity-consistency.sh --identity-manifest <json>
+         --blueprint <plutus.json> --expected-commit <sha>
+         --expected-aiken <version> --expected-variant <name>
+         --expected-era <era> [--repo-root <dir>]
+       check-blaster-identity-consistency.sh --retained-receipt <path>
+         --retained-log <path> --expected-receipt-sha256 <hex>
+         --expected-log-sha256 <hex> --expected-commit <sha>
+         --expected-aiken <version> --expected-variant <name>
+         --expected-era <era> [--repo-root <dir>]
 
   --repo-root <dir>  repository root containing docs/architecture/
                      blaster-tractability.md and offchain/flake.lock
                      (default: parent of this script's directory)
   --self-test        seeded RED/GREEN falsification on temporary copies only
+  --identity-manifest
+                     verify a computed baseline manifest against its blueprint
+  --retained-receipt verify and reject the authenticated historical RED record
 EOF
 }
 
@@ -126,10 +138,30 @@ fail() { echo "check-blaster-identity-consistency: FAIL: $*" >&2; exit 1; }
 
 REPO_ROOT=""
 SELF_TEST=0
+IDENTITY_MANIFEST=""
+BLUEPRINT=""
+RETAINED_RECEIPT=""
+RETAINED_LOG=""
+EXPECTED_RECEIPT_SHA256=""
+EXPECTED_LOG_SHA256=""
+EXPECTED_COMMIT=""
+EXPECTED_AIKEN=""
+EXPECTED_VARIANT=""
+EXPECTED_ERA=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo-root) [ $# -ge 2 ] || { usage >&2; exit 2; }; REPO_ROOT=$2; shift 2 ;;
     --self-test) SELF_TEST=1; shift ;;
+    --identity-manifest) [ $# -ge 2 ] || { usage >&2; exit 2; }; IDENTITY_MANIFEST=$2; shift 2 ;;
+    --blueprint) [ $# -ge 2 ] || { usage >&2; exit 2; }; BLUEPRINT=$2; shift 2 ;;
+    --retained-receipt) [ $# -ge 2 ] || { usage >&2; exit 2; }; RETAINED_RECEIPT=$2; shift 2 ;;
+    --retained-log) [ $# -ge 2 ] || { usage >&2; exit 2; }; RETAINED_LOG=$2; shift 2 ;;
+    --expected-receipt-sha256) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_RECEIPT_SHA256=$2; shift 2 ;;
+    --expected-log-sha256) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_LOG_SHA256=$2; shift 2 ;;
+    --expected-commit) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_COMMIT=$2; shift 2 ;;
+    --expected-aiken) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_AIKEN=$2; shift 2 ;;
+    --expected-variant) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_VARIANT=$2; shift 2 ;;
+    --expected-era) [ $# -ge 2 ] || { usage >&2; exit 2; }; EXPECTED_ERA=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
@@ -140,14 +172,23 @@ done
 DOC_REL="docs/architecture/blaster-tractability.md"
 NIX_REL="offchain/flake.nix"
 LOCK_REL="offchain/flake.lock"
+JUST_REL="justfile"
+CI_REL=".github/workflows/ci.yml"
 DOC_FILE="$REPO_ROOT/$DOC_REL"
 LOCK_FILE="$REPO_ROOT/$LOCK_REL"
 NIX_FILE="$REPO_ROOT/$NIX_REL"
+JUST_FILE="$REPO_ROOT/$JUST_REL"
+CI_FILE="$REPO_ROOT/$CI_REL"
 
 command -v jq >/dev/null 2>&1 || fail "jq is required"
-[ -r "$DOC_FILE" ] || fail "cannot read $DOC_REL from repo root '$REPO_ROOT'"
-[ -r "$LOCK_FILE" ] || fail "cannot read $LOCK_REL from repo root '$REPO_ROOT'"
-jq -e . "$LOCK_FILE" >/dev/null 2>&1 || fail "$LOCK_REL is not valid JSON"
+if [ -z "$IDENTITY_MANIFEST" ] && [ -z "$RETAINED_RECEIPT" ]; then
+  [ -r "$DOC_FILE" ] || fail "cannot read $DOC_REL from repo root '$REPO_ROOT'"
+  [ -r "$LOCK_FILE" ] || fail "cannot read $LOCK_REL from repo root '$REPO_ROOT'"
+  [ -r "$NIX_FILE" ] || fail "cannot read $NIX_REL from repo root '$REPO_ROOT'"
+  [ -r "$JUST_FILE" ] || fail "cannot read $JUST_REL from repo root '$REPO_ROOT'"
+  [ -r "$CI_FILE" ] || fail "cannot read $CI_REL from repo root '$REPO_ROOT'"
+  jq -e . "$LOCK_FILE" >/dev/null 2>&1 || fail "$LOCK_REL is not valid JSON"
+fi
 
 trim() { local s=$1; s=${s#"${s%%[![:space:]]*}"}; s=${s%"${s##*[![:space:]]}"}; printf '%s' "$s"; }
 
@@ -242,7 +283,7 @@ COMPONENT_ORACLE=(
   'lean4-nix|LOCK lean4Nix'
   'Lean nixpkgs|LOCK leanNixpkgs'
   'Z3|NONLOCK version pin + fetchurl source hash (not a flake.lock node)'
-  'Aiken|LOCK haskellNix nixpkgs-unstable'
+  'Aiken|LOCK aikenNixpkgs'
 )
 
 classify_row() { # <component> -> "LOCK <key>..." | "NONLOCK <reason>"; rc 1 if not declared
@@ -482,6 +523,201 @@ count_row_fields() { # <component> <node> <raw-row>; sets ROW_FIELDS, updates CO
   fi
 }
 
+# --- frozen baseline identity ----------------------------------------------
+
+require_identity_arguments() {
+  [ -n "$EXPECTED_COMMIT" ] || fail "expected identity is missing commit"
+  [ -n "$EXPECTED_AIKEN" ] || fail "expected identity is missing aiken"
+  [ -n "$EXPECTED_VARIANT" ] || fail "expected identity is missing variant"
+  [ -n "$EXPECTED_ERA" ] || fail "expected identity is missing era"
+  [[ $EXPECTED_COMMIT =~ ^[0-9a-f]{40}$ ]] \
+    || fail "expected commit '$EXPECTED_COMMIT' is not a 40-byte hex identity"
+}
+
+identity_manifest_mode() {
+  require_identity_arguments
+  [ -r "$IDENTITY_MANIFEST" ] || fail "cannot read identity manifest '$IDENTITY_MANIFEST'"
+  [ -r "$BLUEPRINT" ] || fail "cannot read blueprint '$BLUEPRINT'"
+  jq -e . "$IDENTITY_MANIFEST" >/dev/null 2>&1 \
+    || fail "identity manifest is not valid JSON"
+  jq -e . "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: artifact is not valid JSON"
+
+  jq -e '.validators | type == "array" and length > 0' "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: validators must be a non-empty array"
+  jq -e '[.validators[].title | type == "string" and length > 0 and test("^[^[:space:]]+$")] | all' \
+    "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: title must be a non-empty whitespace-free string"
+  jq -e '[.validators[].compiledCode | type == "string" and length > 0 and
+      test("^[0-9A-Fa-f]+$") and ((length % 2) == 0)] | all' \
+    "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: compiledCode must be non-empty even-length hex on every row"
+  jq -e '[.validators[] | ((.parameters // []) | type) == "array"] | all' \
+    "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: parameters must be an array on every row"
+
+  local titles distinct_programs
+  titles=$(jq -er '.validators | length' "$BLUEPRINT")
+  distinct_programs=$(jq -er '[.validators[].compiledCode] | unique | length' "$BLUEPRINT")
+  [ "$titles" -eq 23 ] \
+    || fail "manifest cardinality moved: titles expected=23 actual=$titles"
+  [ "$distinct_programs" -eq 8 ] \
+    || fail "manifest cardinality moved: programs expected=8 actual=$distinct_programs"
+  jq -e '([.validators[].title] | length) == ([.validators[].title] | unique | length)' \
+    "$BLUEPRINT" >/dev/null 2>&1 \
+    || fail "blueprint schema: duplicate title"
+
+  local actual_blueprint_sha manifest_blueprint_sha
+  actual_blueprint_sha=$(sha256sum "$BLUEPRINT" | cut -d ' ' -f 1)
+  manifest_blueprint_sha=$(jq -r '.blueprint_sha256 // empty' "$IDENTITY_MANIFEST")
+  [ "$manifest_blueprint_sha" = "$actual_blueprint_sha" ] \
+    || fail "manifest input moved: blueprint_sha256 expected=$actual_blueprint_sha actual=${manifest_blueprint_sha:-<unnamed>}"
+
+  local got
+  got=$(jq -r '.schema // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = cardano-keri-baseline-v1 ] \
+    || fail "manifest input moved: schema expected=cardano-keri-baseline-v1 actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.commit // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_COMMIT" ] \
+    || fail "identity input moved: commit expected=$EXPECTED_COMMIT actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.aiken // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_AIKEN" ] \
+    || fail "identity input moved: aiken expected=$EXPECTED_AIKEN actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.validating_aiken // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_AIKEN" ] \
+    || fail "identity input moved: validating_aiken expected=$EXPECTED_AIKEN actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.variant // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_VARIANT" ] \
+    || fail "identity input moved: variant expected=$EXPECTED_VARIANT actual=${got:-<unnamed>}"
+  got=$(jq -r '.identity.era // empty' "$IDENTITY_MANIFEST")
+  [ "$got" = "$EXPECTED_ERA" ] \
+    || fail "identity input moved: era expected=$EXPECTED_ERA actual=${got:-<unnamed>}"
+  [ "$(jq -r '.identity.ledger_language // empty' "$IDENTITY_MANIFEST")" = PlutusV3 ] \
+    || fail "identity input moved: ledger_language"
+  [ "$(jq -r '.identity.built_from // empty' "$IDENTITY_MANIFEST")" = source ] \
+    || fail "identity input moved: built_from"
+  [ -n "$(jq -r '.identity.selection // empty' "$IDENTITY_MANIFEST")" ] \
+    || fail "unnamed identity input: selection"
+  got=$(jq -r '.identity.version_derived // empty' "$IDENTITY_MANIFEST")
+  [ -n "$got" ] || fail "unnamed identity input: version_derived"
+  [ "$got" != "$EXPECTED_VARIANT" ] \
+    || fail "identity input moved: version_derived silently stands in for explicit variant"
+  [ "$(jq -r '.identity.blueprint_sha256 // empty' "$IDENTITY_MANIFEST")" = "$actual_blueprint_sha" ] \
+    || fail "manifest input moved: identity.blueprint_sha256"
+
+  local manifest_programs i=0 title params code expected_title expected_params
+  local expected_program_sha manifest_title manifest_params manifest_program_sha
+  manifest_programs=$(jq -er '.programs | length' "$IDENTITY_MANIFEST")
+  [ "$manifest_programs" -eq "$titles" ] \
+    || fail "manifest cardinality moved: program rows expected=$titles actual=$manifest_programs"
+  while IFS=$'\t' read -r title params code; do
+    expected_title=$title
+    expected_params=$params
+    expected_program_sha=$(printf '%s' "$code" | sha256sum | cut -d ' ' -f 1)
+    manifest_title=$(jq -r --argjson i "$i" '.programs[$i].title // empty' "$IDENTITY_MANIFEST")
+    manifest_params=$(jq -r --argjson i "$i" '.programs[$i].params // empty' "$IDENTITY_MANIFEST")
+    manifest_program_sha=$(jq -r --argjson i "$i" '.programs[$i].program_sha256 // empty' "$IDENTITY_MANIFEST")
+    [ "$manifest_title" = "$expected_title" ] \
+      || fail "manifest input moved: title row=$i expected=$expected_title actual=${manifest_title:-<unnamed>}"
+    [ "$manifest_params" = "$expected_params" ] \
+      || fail "manifest input moved: params title=$expected_title expected=$expected_params actual=${manifest_params:-<unnamed>}"
+    [ "$manifest_program_sha" = "$expected_program_sha" ] \
+      || fail "manifest input moved: program_sha256 title=$expected_title expected=$expected_program_sha actual=${manifest_program_sha:-<unnamed>}"
+    i=$((i + 1))
+  done < <(jq -r '.validators[] | [.title, ((.parameters // []) | length), .compiledCode] | @tsv' "$BLUEPRINT")
+  [ "$i" -eq "$titles" ] || fail "COULD-NOT-EVALUATE: blueprint row traversal stopped at $i of $titles"
+
+  jq -e '[.records[] | select(.record == "program") |
+      {title, params, program_sha256}] == .programs' "$IDENTITY_MANIFEST" >/dev/null 2>&1 \
+    || fail "inconsistent identity input: program records do not equal manifest rows"
+  for spec in manifest:1 baseline:1 evaluation-identity:1 verification-receipt:1; do
+    local kind=${spec%%:*} want=${spec##*:} count
+    count=$(jq -r --arg kind "$kind" '[.records[] | select(.record == $kind)] | length' "$IDENTITY_MANIFEST")
+    [ "$count" -eq "$want" ] \
+      || fail "identity record inventory moved: kind=$kind expected=$want actual=$count"
+  done
+
+  local records_checked record index=0 value
+  records_checked=$(jq -er '.records | length' "$IDENTITY_MANIFEST")
+  [ "$records_checked" -eq $((titles + 4)) ] \
+    || fail "identity record inventory moved: expected=$((titles + 4)) actual=$records_checked"
+  while IFS= read -r record; do
+    for field in commit aiken variant blueprint_sha256; do
+      value=$(jq -r --arg field "$field" '.[$field] // empty' <<< "$record")
+      [ -n "$value" ] || fail "unnamed identity input: $field record_index=$index"
+    done
+    value=$(jq -r '.commit' <<< "$record")
+    [ "$value" = "$EXPECTED_COMMIT" ] \
+      || fail "inconsistent identity input: commit record_index=$index expected=$EXPECTED_COMMIT actual=$value"
+    value=$(jq -r '.aiken' <<< "$record")
+    [ "$value" = "$EXPECTED_AIKEN" ] \
+      || fail "inconsistent identity input: aiken record_index=$index expected=$EXPECTED_AIKEN actual=$value"
+    value=$(jq -r '.variant' <<< "$record")
+    [ "$value" = "$EXPECTED_VARIANT" ] \
+      || fail "inconsistent identity input: variant record_index=$index expected=$EXPECTED_VARIANT actual=$value"
+    value=$(jq -r '.blueprint_sha256' <<< "$record")
+    [ "$value" = "$actual_blueprint_sha" ] \
+      || fail "inconsistent identity input: blueprint_sha256 record_index=$index expected=$actual_blueprint_sha actual=$value"
+    index=$((index + 1))
+  done < <(jq -c '.records[]' "$IDENTITY_MANIFEST")
+  [ "$index" -eq "$records_checked" ] \
+    || fail "COULD-NOT-EVALUATE: identity record traversal stopped at $index of $records_checked"
+
+  echo "CBIC_IDENTITY_RESULT records_checked=$records_checked"
+  echo "CBIC_IDENTITY_RESULT inconsistent=0"
+  echo "CBIC_IDENTITY_RESULT titles=$titles"
+  echo "CBIC_IDENTITY_RESULT programs=$distinct_programs"
+  echo "check-blaster-identity-consistency: OK — baseline manifest and every carried record share one complete identity"
+}
+
+retained_receipt_mode() {
+  require_identity_arguments
+  [ -r "$RETAINED_RECEIPT" ] || fail "cannot read retained receipt '$RETAINED_RECEIPT'"
+  [ -r "$RETAINED_LOG" ] || fail "cannot read retained log '$RETAINED_LOG'"
+  [ -n "$EXPECTED_RECEIPT_SHA256" ] || fail "retained receipt expected digest is unnamed"
+  [ -n "$EXPECTED_LOG_SHA256" ] || fail "retained log expected digest is unnamed"
+  local actual_receipt_sha actual_log_sha
+  actual_receipt_sha=$(sha256sum "$RETAINED_RECEIPT" | cut -d ' ' -f 1)
+  actual_log_sha=$(sha256sum "$RETAINED_LOG" | cut -d ' ' -f 1)
+  [ "$actual_receipt_sha" = "$EXPECTED_RECEIPT_SHA256" ] \
+    || fail "retained receipt digest moved: expected=$EXPECTED_RECEIPT_SHA256 actual=$actual_receipt_sha"
+  [ "$actual_log_sha" = "$EXPECTED_LOG_SHA256" ] \
+    || fail "retained log digest moved: expected=$EXPECTED_LOG_SHA256 actual=$actual_log_sha"
+  grep -Fq "$EXPECTED_LOG_SHA256" "$RETAINED_RECEIPT" \
+    || fail "retained receipt does not bind the authenticated raw log digest"
+
+  local observed_commit observed_aiken observed_variant inconsistent=0
+  observed_commit=$(sed -n 's/^artifact\.source_identity=\([0-9a-f]\{40\}\)$/\1/p' "$RETAINED_LOG" | head -1)
+  observed_aiken=$(sed -n 's/^toolchain\.aiken=\([^:]*\):.*$/\1/p' "$RETAINED_LOG" | head -1)
+  observed_variant=$(grep -Eo '^identity\.variant=[^ ]+|^variant=[^ ]+' "$RETAINED_LOG" | head -1 | cut -d= -f2 || true)
+  if [ -z "$observed_commit" ]; then
+    echo "unnamed identity input: commit" >&2
+    inconsistent=$((inconsistent + 1))
+  elif [ "$observed_commit" != "$EXPECTED_COMMIT" ]; then
+    echo "inconsistent identity input: commit expected=$EXPECTED_COMMIT actual=$observed_commit" >&2
+    inconsistent=$((inconsistent + 1))
+  fi
+  if [ -z "$observed_aiken" ]; then
+    echo "unnamed identity input: aiken" >&2
+    inconsistent=$((inconsistent + 1))
+  elif [ "$observed_aiken" != "$EXPECTED_AIKEN" ]; then
+    echo "inconsistent identity input: aiken expected=$EXPECTED_AIKEN actual=$observed_aiken" >&2
+    inconsistent=$((inconsistent + 1))
+  fi
+  if [ -z "$observed_variant" ]; then
+    echo "unnamed identity input: variant" >&2
+    inconsistent=$((inconsistent + 1))
+  elif [ "$observed_variant" != "$EXPECTED_VARIANT" ]; then
+    echo "inconsistent identity input: variant expected=$EXPECTED_VARIANT actual=$observed_variant" >&2
+    inconsistent=$((inconsistent + 1))
+  fi
+  echo "CBIC_IDENTITY_RESULT records_checked=1"
+  echo "CBIC_IDENTITY_RESULT inconsistent=$inconsistent"
+  [ "$inconsistent" -eq 0 ] \
+    || fail "retained pre-slice receipt is REFUTED under the frozen identity"
+  fail "retained pre-slice receipt unexpectedly describes the frozen identity"
+}
+
 # --- normal mode ---
 
 
@@ -491,6 +727,8 @@ count_row_fields() { # <component> <node> <raw-row>; sets ROW_FIELDS, updates CO
 NORMAL_RESULT_EMITTED=0
 classified=0
 lock_backed=0
+validating_aiken_pins=0
+historical_c_records=0
 emit_normal_result() {
   [ "$NORMAL_RESULT_EMITTED" = 0 ] || return 0
   NORMAL_RESULT_EMITTED=1
@@ -498,6 +736,63 @@ emit_normal_result() {
   echo "CBIC_RESULT lock_backed_rows=$lock_backed"
   echo "CBIC_RESULT compared_fields=$COMPARED"
   echo "CBIC_RESULT mismatches=$MISMATCHES"
+  echo "CBIC_RESULT validating_aiken_pins=$validating_aiken_pins"
+  echo "CBIC_RESULT historical_c_records=$historical_c_records"
+}
+
+check_aiken_pin_owner() { # <owner-label> <file> <flake|command> <expected-rev>
+  local owner=$1 file=$2 mode=$3 expected=$4 line armed=0 rev
+  local -A seen=()
+  while IFS= read -r line; do
+    if [ "$mode" = flake ]; then
+      if [[ $line == *aikenNixpkgs.url* ]]; then
+        armed=1
+        if [[ $line =~ github:NixOS/nixpkgs/([0-9a-f]{40}) ]]; then
+          seen[${BASH_REMATCH[1]}]=1
+          armed=0
+        fi
+        continue
+      fi
+      [ "$armed" -eq 1 ] || continue
+      if [[ $line =~ github:NixOS/nixpkgs/([0-9a-f]{40}) ]]; then
+        seen[${BASH_REMATCH[1]}]=1
+        armed=0
+      elif [[ $line == *';'* ]]; then
+        armed=0
+      fi
+    elif [[ $line =~ github:NixOS/nixpkgs/([0-9a-f]{40})#aiken ]]; then
+      seen[${BASH_REMATCH[1]}]=1
+    fi
+  done < "$file"
+  if [ "${#seen[@]}" -ne 1 ]; then
+    fail "validating Aiken pin moved: $owner names ${#seen[@]} distinct revisions (expected exactly one: $expected)"
+  fi
+  for rev in "${!seen[@]}"; do
+    [ "$rev" = "$expected" ] \
+      || fail "validating Aiken pin moved: $owner expected=$expected actual=$rev"
+  done
+  validating_aiken_pins=$((validating_aiken_pins + 1))
+}
+
+check_non_artifact_identity_axes() {
+  resolve_spec aikenNixpkgs
+  local aiken_node=$RESOLVED_NODE expected_aiken_rev
+  _jq "validating Aiken revision" -r --arg n "$aiken_node" '.nodes[$n].locked.rev // empty' "$LOCK_FILE"
+  expected_aiken_rev=$JQ_OUT
+  [[ $expected_aiken_rev =~ ^[0-9a-f]{40}$ ]] \
+    || fail "COULD-NOT-EVALUATE: validating Aiken lock node '$aiken_node' has no revision"
+  check_aiken_pin_owner offchain/flake.nix "$NIX_FILE" flake "$expected_aiken_rev"
+  check_aiken_pin_owner justfile "$JUST_FILE" command "$expected_aiken_rev"
+  check_aiken_pin_owner .github/workflows/ci.yml "$CI_FILE" command "$expected_aiken_rev"
+
+  local historical_marker='Historical evidence identity: `PlutusV3 / pre-Conway / defaultFunSemanticsVariantC`.'
+  grep -Fqx "$historical_marker" "$DOC_FILE" \
+    || fail "historical C material relabelled or unnamed: expected exact marker '$historical_marker'"
+  grep -Fq '896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c' "$DOC_FILE" \
+    || fail "historical C material relabelled: retired pre-#219 blueprint identity is missing"
+  grep -Fq '713c747bc83226c71fdcf6b6c174832fd4f69d738439842990d68e163ac26a9a' "$DOC_FILE" \
+    || fail "historical C material relabelled: retired pre-#219 program identity is missing"
+  historical_c_records=1
 }
 normal_mode() {
   local rows
@@ -570,6 +865,8 @@ normal_mode() {
   done
   [ "${#missing[@]}" -eq 0 ] \
     || fail "missing Pinned trust base component(s): ${missing[*]} — every declared component must be documented exactly once"
+
+  check_non_artifact_identity_axes
 
   emit_normal_result
 
@@ -672,11 +969,14 @@ run_seed_leg() { # <key> <label> <expected-diagnostic-substring> <mutator-fn>
   local key=$1 label=$2 expect=$3 mut=$4 pathpfx=${5:-} root out rc
   root=$(mktemp -d "${TMPDIR:-/tmp}/blaster-identity-seed-$key.XXXXXXXX") \
     || fail "COULD-NOT-EVALUATE: $label: mktemp failed"
-  mkdir -p "$root/$(dirname "$DOC_REL")" "$root/$(dirname "$LOCK_REL")" "$root/$(dirname "$NIX_REL")" \
+  mkdir -p "$root/$(dirname "$DOC_REL")" "$root/$(dirname "$LOCK_REL")" \
+    "$root/$(dirname "$NIX_REL")" "$root/$(dirname "$CI_REL")" \
     || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: could not build the scratch tree"; }
   cp -- "$DOC_FILE" "$root/$DOC_REL"   || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: doc copy failed"; }
   cp -- "$LOCK_FILE" "$root/$LOCK_REL" || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: lock copy failed"; }
   cp -- "$NIX_FILE" "$root/$NIX_REL"   || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: nix copy failed"; }
+  cp -- "$JUST_FILE" "$root/$JUST_REL" || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: justfile copy failed"; }
+  cp -- "$CI_FILE" "$root/$CI_REL"     || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: CI copy failed"; }
   "$mut" "$root" || { rm -rf "$root"; fail "COULD-NOT-EVALUATE: $label: the seed mutator failed, so the control never ran"; }
   set +e
   if [ -n "$pathpfx" ]; then
@@ -752,11 +1052,13 @@ _seed_sub() { # <file> <literal-from> <literal-to>  — literal, never regex
 
   local r
   for r in "$red_root" "$green_root" "$miss_nonlock_root" "$miss_lock_root" "$dup_root"; do
-    mkdir -p "$r/docs/architecture" "$r/offchain"
+    mkdir -p "$r/docs/architecture" "$r/offchain" "$r/.github/workflows"
     # The non-lock authority (offchain/flake.nix) is now part of every scratch
     # root: without it the checker cannot establish the Z3 identity and every
     # leg would report could-not-evaluate instead of testing what it names.
     cp "$NIX_FILE" "$r/$NIX_REL"
+    cp "$JUST_FILE" "$r/$JUST_REL"
+    cp "$CI_FILE" "$r/$CI_REL"
     cp "$LOCK_FILE" "$r/$LOCK_REL"
   done
   cp "$DOC_FILE" "$green_root/$DOC_REL"
@@ -914,7 +1216,15 @@ _seed_sub() { # <file> <literal-from> <literal-to>  — literal, never regex
   fi
 }
 
-if [ "$SELF_TEST" -eq 1 ]; then
+if [ -n "$IDENTITY_MANIFEST" ] && [ -n "$RETAINED_RECEIPT" ]; then
+  fail "identity-manifest and retained-receipt modes are mutually exclusive"
+elif [ -n "$IDENTITY_MANIFEST" ]; then
+  [ "$SELF_TEST" -eq 0 ] || fail "identity-manifest mode cannot be combined with --self-test"
+  identity_manifest_mode
+elif [ -n "$RETAINED_RECEIPT" ]; then
+  [ "$SELF_TEST" -eq 0 ] || fail "retained-receipt mode cannot be combined with --self-test"
+  retained_receipt_mode
+elif [ "$SELF_TEST" -eq 1 ]; then
   self_test_mode
 else
   normal_mode

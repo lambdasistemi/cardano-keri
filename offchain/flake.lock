@@ -82,6 +82,18 @@
         "type": "github"
       }
     },
+    "blasterIdentityScripts": {
+      "flake": false,
+      "locked": {
+        "path": "../scripts",
+        "type": "path"
+      },
+      "original": {
+        "path": "../scripts",
+        "type": "path"
+      },
+      "parent": []
+    },
     "blst": {
       "flake": false,
       "locked": {
@@ -1860,6 +1872,7 @@
       "inputs": {
         "CHaP": "CHaP",
         "aikenNixpkgs": "aikenNixpkgs",
+        "blasterIdentityScripts": "blasterIdentityScripts",
         "bundlers": "bundlers",
         "cardano-node": "cardano-node",
         "cardano-node-clients": "cardano-node-clients",

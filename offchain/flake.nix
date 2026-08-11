@@ -90,12 +90,18 @@
     # to carry.
     aikenNixpkgs.url =
       "github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46";
+    # The standing repository identity checker remains canonical in
+    # scripts/.  Import that directory as data so the flake-owned Blaster
+    # runner executes the same checker as `just ci`, never a forked copy.
+    blasterIdentityScripts = {
+      url = "path:../scripts";
+      flake = false;
+    };
   };
 
-  outputs =
-    inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP, bundlers
-      , leanBlaster, lean4Nix, leanNixpkgs, plutusCoreBlaster
-      , cardanoLedgerApiBlaster, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-parts, haskellNix, iohkNix, CHaP
+    , bundlers, leanBlaster, lean4Nix, leanNixpkgs, plutusCoreBlaster
+    , cardanoLedgerApiBlaster, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-darwin" ];
       perSystem = { system, ... }:
@@ -135,8 +141,7 @@
             src = ./blaster;
             filter = path: type:
               let baseName = builtins.baseNameOf (toString path);
-              in pkgs.lib.cleanSourceFilter path type
-              && baseName != ".lake"
+              in pkgs.lib.cleanSourceFilter path type && baseName != ".lake"
               && !(pkgs.lib.hasPrefix "result" baseName);
           };
           # #219 A4: the repo-pinned aiken (v1.1.23) — see the `aikenNixpkgs`
@@ -418,7 +423,8 @@
           # is `just backend-check`'s focused command.
           backend-check-runner = pkgs.writeShellApplication {
             name = "backend-check";
-            runtimeInputs = [ ckeri-exe cli-tests-exe pkgs.bash pkgs.coreutils pkgs.gnugrep ];
+            runtimeInputs =
+              [ ckeri-exe cli-tests-exe pkgs.bash pkgs.coreutils pkgs.gnugrep ];
             text = ''
               cli-tests
 
@@ -452,15 +458,12 @@
           # same canonical in-flake validator and negative-control self-test.
           backend-transcript-check-runner = pkgs.writeShellApplication {
             name = "backend-transcript-check";
-            runtimeInputs = [
-              pkgs.bash
-              pkgs.coreutils
-              pkgs.gawk
-              pkgs.gnugrep
-              pkgs.gnused
-            ];
+            runtimeInputs =
+              [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.gnused ];
             text = ''
-              export BACKEND_TRANSCRIPT_VALIDATOR=${./scripts/check-backend-status-transcripts.sh}
+              export BACKEND_TRANSCRIPT_VALIDATOR=${
+                ./scripts/check-backend-status-transcripts.sh
+              }
               bash ${./scripts/test-backend-status-transcripts.sh}
               bash ${./scripts/check-backend-status-transcripts.sh} \
                 --transcript ${./evidence/m1-backend-status-acceptance.txt}
@@ -505,7 +508,7 @@
             # from a pre-populated `build/packages/` is fully hermetic (see
             # the blueprint derivation below), so vendoring here lets the
             # blueprint itself become an ordinary input-addressed derivation.
-            aikenPkgSource = { owner, repo, rev, hash }:
+            aikenPkgSource = { owner, repo, rev, hash, }:
               pkgs.fetchFromGitHub { inherit owner repo rev hash; };
             aikenStdlib = aikenPkgSource {
               owner = "aiken-lang";
@@ -778,6 +781,18 @@
                   cp plutus.json "$out"
                 '';
               };
+              # Slice B freezes a new identity without disturbing the retired
+              # pre-#219 artifact above.  This is the ordinary input-addressed
+              # source rebuild already used by production consumers, built by
+              # the repository's validating Aiken rather than substituted by
+              # a declared output hash.
+              baselineBlueprint = e2eWiring.blueprint;
+              baselineSourceCommit = "4e840934deeb55aa9fd45a34fc516bb4c635bf81";
+              baselineVariant = "defaultFunSemanticsVariantE";
+              baselineEra = "post-Conway";
+              validatingAikenVersion = aikenPkgs.aiken.version;
+              baselineToolchain =
+                "aiken=${validatingAikenVersion};lean-blaster=${leanBlaster.rev};plutus-core-blaster=${plutusCoreBlaster.rev};cardano-ledger-api-blaster=${cardanoLedgerApiBlaster.rev}";
               sourceIdentity =
                 if self ? rev then self.rev else (self.dirtyRev or "dirty");
               lockSha256 = builtins.hashFile "sha256" ./flake.lock;
@@ -819,7 +834,8 @@
                 # SHA-bound blueprint's output.
                 overrideBuildModAttrs = _final: prev:
                   {
-                    buildInputs = (prev.buildInputs or [ ]) ++ [ leanNixPkgs.z3 ];
+                    buildInputs = (prev.buildInputs or [ ])
+                      ++ [ leanNixPkgs.z3 ];
                   } // pkgs.lib.optionalAttrs (prev.name == s2EvidenceModule) {
                     buildCommand = ''
                       mkdir -p nix-generated
@@ -853,14 +869,38 @@
               # parameter counts. This list is the selection key set; the
               # blueprint remains the only source of program bytes.
               s2Programs = [
-                { title = "checkpoint.checkpoint.spend"; params = 6; }
-                { title = "hash_proof.hash_proof.mint"; params = 0; }
-                { title = "checkpoint_observer.observer_lifecycle.withdraw"; params = 3; }
-                { title = "checkpoint_observer.observer_lifecycle.publish"; params = 3; }
-                { title = "checkpoint_observer.observer_advance.withdraw"; params = 1; }
-                { title = "checkpoint_observer.observer_advance.publish"; params = 1; }
-                { title = "checkpoint_observer.observer_enforcement.withdraw"; params = 1; }
-                { title = "checkpoint_observer.observer_enforcement.publish"; params = 1; }
+                {
+                  title = "checkpoint.checkpoint.spend";
+                  params = 6;
+                }
+                {
+                  title = "hash_proof.hash_proof.mint";
+                  params = 0;
+                }
+                {
+                  title = "checkpoint_observer.observer_lifecycle.withdraw";
+                  params = 3;
+                }
+                {
+                  title = "checkpoint_observer.observer_lifecycle.publish";
+                  params = 3;
+                }
+                {
+                  title = "checkpoint_observer.observer_advance.withdraw";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_advance.publish";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_enforcement.withdraw";
+                  params = 1;
+                }
+                {
+                  title = "checkpoint_observer.observer_enforcement.publish";
+                  params = 1;
+                }
               ];
 
               # The eight exact single-CBOR-hex programs plus a
@@ -1034,6 +1074,54 @@
                 '';
               };
 
+              # The all-title manifest is generated only from the source-built
+              # blueprint and Nix-bound identity inputs.  No program digest or
+              # cardinality is transcribed: the independent standing checker
+              # below recomputes them from the blueprint before publication.
+              baselineManifest =
+                pkgs.runCommand "cardano-keri-post-conway-e-baseline-manifest" {
+                  nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+                } ''
+                  set -euo pipefail
+                  mkdir -p "$out"
+                  export BASELINE_COMMIT=${
+                    pkgs.lib.escapeShellArg baselineSourceCommit
+                  }
+                  export BASELINE_AIKEN=${
+                    pkgs.lib.escapeShellArg validatingAikenVersion
+                  }
+                  export BASELINE_TOOLCHAIN=${
+                    pkgs.lib.escapeShellArg baselineToolchain
+                  }
+                  export BASELINE_VARIANT=${
+                    pkgs.lib.escapeShellArg baselineVariant
+                  }
+                  export BASELINE_ERA=${pkgs.lib.escapeShellArg baselineEra}
+                  export BASELINE_VERSION_DERIVED=defaultFunSemanticsVariantC
+                  export BASELINE_LOCK_SHA256=${
+                    pkgs.lib.escapeShellArg lockSha256
+                  }
+                  export BASELINE_LEAN_BLASTER_REV=${
+                    pkgs.lib.escapeShellArg leanBlaster.rev
+                  }
+                  export BASELINE_PLUTUS_CORE_REV=${
+                    pkgs.lib.escapeShellArg plutusCoreBlaster.rev
+                  }
+                  export BASELINE_LEDGER_API_REV=${
+                    pkgs.lib.escapeShellArg cardanoLedgerApiBlaster.rev
+                  }
+                  bash ${./blaster/make-baseline-manifest.sh} \
+                    ${baselineBlueprint} "$out/manifest.json"
+                '';
+
+              # A different derivation name forces a genuinely absent output
+              # path while preserving the retired builder, inputs, and declared
+              # fixed output.  The host-side runner invokes it with substitution
+              # disabled and records the observed result; it is never a
+              # dependency of the clean baseline or production consumers.
+              retiredM8ColdProbe = frozenM8Blueprint.overrideAttrs
+                (_: { name = "keri-plutus-blueprint-m8-retired-cold-probe"; });
+
               # Source-compatibility is a separate, argument-free audit.  Its
               # package identities and source roots come directly from the
               # locked flake inputs; the tracked bridge build is the Lean
@@ -1048,16 +1136,24 @@
                   pkgs.coreutils
                   pkgs.diffutils
                   pkgs.findutils
+                  pkgs.gawk
                   pkgs.gnugrep
                   pkgs.gnused
                   pkgs.jq
+                  pkgs.nix
                   pkgs.perl
                 ];
                 text = ''
                   export AUDIT_COMMIT=${sourceIdentity}
-                  export AUDIT_TEXT_COLLECTOR=${./blaster/collect-lean-references.pl}
-                  export AUDIT_ILEAN_COLLECTOR=${./blaster/collect-ilean-references.sh}
-                  export AUDIT_SOURCE_ELABORATOR=${./blaster/elaborate-ilean-root.sh}
+                  export AUDIT_TEXT_COLLECTOR=${
+                    ./blaster/collect-lean-references.pl
+                  }
+                  export AUDIT_ILEAN_COLLECTOR=${
+                    ./blaster/collect-ilean-references.sh
+                  }
+                  export AUDIT_SOURCE_ELABORATOR=${
+                    ./blaster/elaborate-ilean-root.sh
+                  }
                   export AUDIT_ORACLE=${compatibilityOracle}/bin/compatibility-oracle
                   export LEAN_PATH=${keriBlasterPackage.modRoot}
                   export AUDIT_SOURCE_ROOT=${cleanBlasterSource}
@@ -1142,26 +1238,127 @@
                     ${s2Evidence}/bin/s2-evidence \
                     ${s2Artifacts} \
                     ${cleanBlasterSource}/KeriBlaster/S2Evidence.lean
+
+                  # Slice B: recompute and verify the all-title identity with
+                  # the canonical repository checker.  The checker recomputes
+                  # every title, parameter count, program hash and blueprint
+                  # hash from the source-built artifact, then reconciles every
+                  # carried record (including the verification receipt).
+                  identity_checker=${inputs.blasterIdentityScripts}/check-blaster-identity-consistency.sh
+                  identity_manifest=${baselineManifest}/manifest.json
+                  identity_blueprint=${baselineBlueprint}
+                  identity_out="$(mktemp)"
+                  baseline_contract_out="$(mktemp)"
+                  producer_contract_out="$(mktemp)"
+                  cold_out="$(mktemp)"
+                  trap 'rm -f "$identity_out" "$baseline_contract_out" "$producer_contract_out" "$cold_out"' EXIT
+                  "$identity_checker" \
+                    --identity-manifest "$identity_manifest" \
+                    --blueprint "$identity_blueprint" \
+                    --expected-commit ${
+                      pkgs.lib.escapeShellArg baselineSourceCommit
+                    } \
+                    --expected-aiken ${
+                      pkgs.lib.escapeShellArg validatingAikenVersion
+                    } \
+                    --expected-variant ${
+                      pkgs.lib.escapeShellArg baselineVariant
+                    } \
+                    --expected-era ${pkgs.lib.escapeShellArg baselineEra} \
+                    > "$identity_out"
+                  cat "$identity_out"
+
+                  titles="$(jq -er '.programs | length' "$identity_manifest")"
+                  programs="$(jq -er '[.programs[].program_sha256] | unique | length' "$identity_manifest")"
+                  blueprint_sha256="$(jq -er '.blueprint_sha256' "$identity_manifest")"
+                  records_checked="$(sed -n 's/^CBIC_IDENTITY_RESULT records_checked=//p' "$identity_out")"
+                  inconsistent="$(sed -n 's/^CBIC_IDENTITY_RESULT inconsistent=//p' "$identity_out")"
+                  test "$titles" -eq 23
+                  test "$programs" -eq 8
+                  test "$records_checked" -ge 1
+                  test "$inconsistent" -eq 0
+
+                  echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build outcome=ESTABLISHED"
+                  jq -r '.programs[] | [.title, (.params | tostring), .program_sha256] | @tsv' \
+                    "$identity_manifest" \
+                    | while IFS=$'\t' read -r program_title params program_sha256; do
+                        echo "AUDIT-PROGRAM title=$program_title params=$params program_sha256=$program_sha256"
+                      done
+                  echo "AUDIT-BASELINE built_from=source toolchain=${validatingAikenVersion} validating_toolchain=${validatingAikenVersion} match=true outcome=ESTABLISHED"
+                  echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=explicit-era-binding version_derived=defaultFunSemanticsVariantC outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records outcome=ESTABLISHED"
+
+                  # The Nix check executes the same app in a build sandbox,
+                  # where the deliberately retained /tmp receipt and a nested
+                  # nix-daemon cold-store probe are unavailable. The frozen
+                  # Slice B gate runs the ordinary host branch below and is the
+                  # authority for those two live-boundary controls.
+                  if [ "''${CKERI_BLASTER_SANDBOX_CHECK:-0}" != 1 ]; then
+                    repo_root="$(cd "$PWD/.." && pwd)"
+                    retained_receipt=/tmp/ms-keri-8/e190/t246/evidence/RED-baseline-receipt.md
+                    retained_log=/tmp/ms-keri-8/e190/t246/evidence/baseline-blaster.log
+                    bash ${./blaster/test-baseline-identity.sh} \
+                      "$identity_checker" "$repo_root" \
+                      "$retained_receipt" "$retained_log" \
+                      | tee "$baseline_contract_out"
+                    bash ${./blaster/test-baseline-producer.sh} \
+                      ${./blaster/make-baseline-manifest.sh} \
+                      "$identity_checker" "$repo_root" \
+                      "$identity_blueprint" "$identity_manifest" \
+                      | tee "$producer_contract_out"
+
+                    set +e
+                    nix build --no-link --option substitute false \
+                      .#retired-m8-cold-probe > "$cold_out" 2>&1
+                    cold_rc=$?
+                    set -e
+                    if [ "$cold_rc" -eq 0 ]; then
+                      cold_observed=unexpected-success
+                      cold_outcome=ESTABLISHED
+                    elif grep -qi 'hash mismatch' "$cold_out"; then
+                      cold_observed=output-hash-mismatch
+                      cold_outcome=REFUTED
+                    else
+                      cold_observed="nix-build-exit-$cold_rc"
+                      cold_outcome=REFUTED
+                    fi
+                    echo "AUDIT-COLD-STORE artifact=retired-pre-219-fixed-output observed=$cold_observed instrument=nix-build-no-substitute window=single-cold-probe-invocation outcome=$cold_outcome"
+
+                    manifest_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B5-title rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
+                    unnamed_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B7-unnamed-variant rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
+                    historical_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B6-historical-c-relabel rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
+                    retained_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B8 .* rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
+                    for rc in "$manifest_rc" "$unnamed_rc" "$historical_rc" "$retained_rc"; do
+                      test "$rc" -gt 0
+                    done
+                    echo "AUDIT-SELFTEST leg=manifest-mutation rc=$manifest_rc outcome=REFUTED"
+                    echo "AUDIT-SELFTEST leg=manifest-mutation rc=$manifest_rc moved=title,program-byte,parameters,blueprint,toolchain,variant outcome=REFUTED"
+                    echo "AUDIT-SELFTEST leg=unnamed-variant rc=$unnamed_rc outcome=REFUTED"
+                    echo "AUDIT-SELFTEST leg=historical-c-relabel rc=$historical_rc outcome=REFUTED"
+                    echo "AUDIT-SELFTEST leg=retained-red-receipt rc=$retained_rc outcome=REFUTED"
+                  fi
                   echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
                 '';
               };
               check = pkgs.runCommand "blaster-check" { } ''
-                ${pkgs.lib.getExe runner}
+                CKERI_BLASTER_SANDBOX_CHECK=1 ${pkgs.lib.getExe runner}
                 touch "$out"
               '';
             in {
-              inherit artifact auditRunner check compatibilityAuditRunner runner;
+              inherit artifact auditRunner baselineManifest check
+                compatibilityAuditRunner retiredM8ColdProbe runner;
               lean = leanPkgs.lean-all;
             });
 
           # Linux release artifacts (AppImage, DEB, RPM) via NixOS/bundlers.
           # Release artifacts use the bare Cabal version; dev artifacts append
           # -<shortRev> so PR/manual runs never collide with tag publications.
-          cabalVersion = pkgs.lib.fileContents (
-            pkgs.runCommand "cabal-version" { } ''
-              sed -n 's/^version:[[:space:]]*//p' ${./cardano-keri.cabal} | head -1 | tr -d '[:space:]' > $out
-            ''
-          );
+          cabalVersion = pkgs.lib.fileContents
+            (pkgs.runCommand "cabal-version" { } ''
+              sed -n 's/^version:[[:space:]]*//p' ${
+                ./cardano-keri.cabal
+              } | head -1 | tr -d '[:space:]' > $out
+            '');
           linuxArtifacts =
             if system == "x86_64-linux" && e2eWiring ? ckeriRunner then
               import ./nix/linux-release.nix {
@@ -1203,32 +1400,38 @@
             plutus-blueprint = e2eWiring.blueprint;
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
             blaster = blasterWiring.runner;
+            blaster-baseline-manifest = blasterWiring.baselineManifest;
+            retired-m8-cold-probe = blasterWiring.retiredM8ColdProbe;
             lean = blasterWiring.lean;
           } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
             ckeri-appimage = linuxArtifacts.appimage;
             ckeri-deb = linuxArtifacts.deb;
             ckeri-rpm = linuxArtifacts.rpm;
-            linux-release-artifacts = pkgs.runCommand "ckeri-linux-release-artifacts"
-              { inherit (linuxArtifacts) appimage deb rpm; version = cabalVersion; } ''
-              mkdir -p $out
-              cp "$appimage" "$out/ckeri-$version-x86_64.AppImage"
-              cp "$deb"/* $out/ 2>/dev/null || true
-              cp "$rpm"/* $out/ 2>/dev/null || true
-            '';
+            linux-release-artifacts =
+              pkgs.runCommand "ckeri-linux-release-artifacts" {
+                inherit (linuxArtifacts) appimage deb rpm;
+                version = cabalVersion;
+              } ''
+                mkdir -p $out
+                cp "$appimage" "$out/ckeri-$version-x86_64.AppImage"
+                cp "$deb"/* $out/ 2>/dev/null || true
+                cp "$rpm"/* $out/ 2>/dev/null || true
+              '';
           } // pkgs.lib.optionalAttrs (linuxDevArtifacts ? appimage) {
             ckeri-dev-appimage = linuxDevArtifacts.appimage;
             ckeri-dev-deb = linuxDevArtifacts.deb;
             ckeri-dev-rpm = linuxDevArtifacts.rpm;
-            linux-dev-release-artifacts = pkgs.runCommand "ckeri-linux-dev-release-artifacts"
-              { inherit (linuxDevArtifacts) appimage deb rpm;
+            linux-dev-release-artifacts =
+              pkgs.runCommand "ckeri-linux-dev-release-artifacts" {
+                inherit (linuxDevArtifacts) appimage deb rpm;
                 version = cabalVersion;
                 shortRev = self.shortRev or "dirty";
               } ''
-              mkdir -p $out
-              cp "$appimage" "$out/ckeri-$version-$shortRev-x86_64.AppImage"
-              cp "$deb"/* $out/ 2>/dev/null || true
-              cp "$rpm"/* $out/ 2>/dev/null || true
-            '';
+                mkdir -p $out
+                cp "$appimage" "$out/ckeri-$version-$shortRev-x86_64.AppImage"
+                cp "$deb"/* $out/ 2>/dev/null || true
+                cp "$rpm"/* $out/ 2>/dev/null || true
+              '';
           };
           checks = {
             unit-tests = unit-tests-check;
@@ -1311,11 +1514,13 @@
           } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
             linux-artifact-smoke = {
               type = "app";
-              program = "${pkgs.writeShellApplication {
-                name = "linux-artifact-smoke";
-                runtimeInputs = [ pkgs.cpio pkgs.rpm pkgs.dpkg ];
-                text = builtins.readFile ./nix/linux-artifact-smoke.sh;
-              }}/bin/linux-artifact-smoke";
+              program = "${
+                  pkgs.writeShellApplication {
+                    name = "linux-artifact-smoke";
+                    runtimeInputs = [ pkgs.cpio pkgs.rpm pkgs.dpkg ];
+                    text = builtins.readFile ./nix/linux-artifact-smoke.sh;
+                  }
+                }/bin/linux-artifact-smoke";
             };
           };
           devShells.default = project.shell;

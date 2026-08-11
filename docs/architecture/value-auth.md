@@ -36,9 +36,12 @@ Every other case fails closed:
 - stale or already spent outref;
 - wrong policy or asset;
 - malformed or mismatched datum;
-- ARMED;
-- FROZEN; or
-- TOMBSTONE.
+- ARMED; or
+- FROZEN.
+
+A convicted identity is not a further role to reject. Conviction burns the AID
+token, so the terminal edge leaves nothing to resolve and the application meets
+the first case above — no checkpoint.
 
 There is no identity-root inclusion proof and no separate Freeze-registry
 absence proof. Freeze changes the sovereign checkpoint's own role address.
@@ -146,7 +149,9 @@ A timely response Advance creates a new ACTIVE checkpoint at the next
 sequence, so the application must obtain fresh authorization against that
 input.
 
-Future FROZEN and TOMBSTONE outputs follow the same fail-closed rule.
+A future FROZEN output follows the same fail-closed rule. Conviction produces
+no output to resolve at all: the token is burned, so the application meets the
+no-checkpoint case rather than a role it must recognise.
 
 ## Credential-gated actions
 

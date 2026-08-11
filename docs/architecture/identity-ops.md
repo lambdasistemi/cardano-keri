@@ -31,7 +31,7 @@ The token remains the stable handle while the datum advances.
 | Response Advance | Apply the genuine next event before the ARMED deadline and keep `B` | Settled in [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
 | ClaimFreeze | Pay `B` to the recorded hunter and enter FROZEN after the deadline | Fail closed; [#138](https://github.com/lambdasistemi/cardano-keri/issues/138) |
 | Thaw Advance | Advance FROZEN back to ACTIVE while re-posting `B` | Depends on #138 |
-| Convict | Pay for a fully witnessed irreconcilable fork and enter TOMBSTONE | Not exposed by the small-story checkpoint; [#151](https://github.com/lambdasistemi/cardano-keri/issues/151) |
+| Convict | Pay for a fully witnessed irreconcilable fork; burn the AID token and create no successor — the burn is the whole terminal edge | Not exposed by the small-story checkpoint; [#151](https://github.com/lambdasistemi/cardano-keri/issues/151) |
 
 ## Register
 
@@ -223,7 +223,11 @@ small-story claims:
   `min + D_reg`, and the Advance that re-posts `B`.
 - [Conviction — #151](https://github.com/lambdasistemi/cardano-keri/issues/151)
   must prove the fully witnessed conflict, protected payouts from every live
-  state, and terminal TOMBSTONE output.
+  state, and the burn-only terminal edge: the AID token is burned and no
+  checkpoint-role successor is created. There is no terminal identity output
+  to prove, and #151 must not produce one. Such an output would assert a fact
+  about the identity with no key-event preimage, which Core Principle VI of
+  the project constitution forbids.
 
 The high-level state and economics are documented in
 [Lifecycle and the two bonds](lifecycle-and-bonds.md). The detailed freeze

@@ -83,12 +83,21 @@ by a caller-controlled status field:
 | ACTIVE | Current checkpoint | May be considered, subject to all other checks |
 | ARMED | Later-event challenge is open | Reject |
 | FROZEN | Delay bond was claimed | Reject |
-| TOMBSTONE | Fork conviction is terminal | Reject |
 
 The small story has settled ACTIVE, ARMED, and the response back to ACTIVE.
-FROZEN and TOMBSTONE are target roles whose opening stories remain
-[#138](https://github.com/lambdasistemi/cardano-keri/issues/138) and
-[#151](https://github.com/lambdasistemi/cardano-keri/issues/151). See
+FROZEN is a target role whose opening story remains
+[#138](https://github.com/lambdasistemi/cardano-keri/issues/138).
+
+There is no conviction role, and there will not be one. Conviction burns the AID
+token and creates no successor, so the burn is the whole terminal edge — it
+removes the checkpoint rather than replacing it with a role that pronounces the
+identity dead. A consumer therefore meets no candidate at all, which the
+resolution rules above already reject. This follows from Core Principle VI of
+the project constitution: the chain projects the KEL and never originates
+identity state, and no key event says "this AID is dead" for a validator to
+project. The convict transaction in ledger history is the record. Conviction
+itself remains unopened
+([#151](https://github.com/lambdasistemi/cardano-keri/issues/151)). See
 [Lifecycle and the two bonds](lifecycle-and-bonds.md).
 
 There is no separate global Freeze registry in this production story. Freeze

@@ -39,13 +39,14 @@ import Cardano.KERI.Deployment.Registration (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     AggregateExUnitsError,
+    CollateralContract (..),
     FundingPair (..),
     PayerSelectionError,
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
     fundingSpends,
-    runTransactionBuild,
+    runPlutusTransactionBuild,
     selectFundingPair,
  )
 import Cardano.Ledger.Address (Addr (..), decodeAddr)
@@ -72,14 +73,10 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Tx.Balance (CollateralUtxos (..))
 import Cardano.Tx.Build (
-    BuildOptions (..),
     Check (..),
     InterpretIO (..),
     TxBuild,
-    collateral,
-    defaultBuildOptions,
     mint,
     output,
     reference,
@@ -194,19 +191,20 @@ runCloseTransaction config plan fundingInputs activeInput =
             let runtime = closeRuntime config
             pparams <- trQueryProtocolParams runtime
             let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
-                options =
-                    defaultBuildOptions
-                        { boCollateralUtxos =
-                            CollateralUtxos [fundingCollateral funding]
-                        }
             result <-
-                runTransactionBuild
-                    options
+                runPlutusTransactionBuild
                     frozenRuntime
                     closeInterpret
                     (fundingSpends funding <> [activeInput])
                     (closeReferences inputs)
                     (closeChangeAddress config)
+                    -- The collateral remainder goes to the funding address,
+                    -- which close deliberately keeps distinct from its
+                    -- ordinary change address (RQ-232-03).
+                    CollateralContract
+                        { collateralInput = fundingCollateral funding
+                        , collateralReturnAddress = closeFundingAddress config
+                        }
                     (closeProgram pparams inputs)
             pure (CloseResult <$> first CloseBuildFailed result)
 
@@ -271,7 +269,6 @@ closeProgram ::
 closeProgram pparams CloseInputs{closeFunding = FundingPair{..}, ..} = do
     mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst closeActiveInput) closeSpendData
-    collateral (fst fundingCollateral)
     _ <-
         output $
             mkBasicTxOut

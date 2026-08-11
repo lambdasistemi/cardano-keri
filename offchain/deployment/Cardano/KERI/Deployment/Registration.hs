@@ -6,7 +6,8 @@ Module      : Cardano.KERI.Deployment.Registration
 Description : Build and settle V1 registration through the in-process runtime
 
 #181 Slice 2C replaces the external transaction command path with the shared
-'Cardano.KERI.Deployment.TransactionRuntime.runTransactionBuild' kernel. The
+in-process build kernel; \#232 moves both phases onto the bounded-collateral
+'Cardano.KERI.Deployment.TransactionRuntime.runPlutusTransactionBuild'. The
 premint and register phases consume a caller-resolved 'RegistrationSnapshot'
 (#257: the algebra's fully resolved current-state read, A-001), validate
 reference-script hashes against the immutable plan, build and sign in
@@ -57,13 +58,14 @@ import Cardano.KERI.Deployment.Manifest (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     AggregateExUnitsError,
+    CollateralContract (..),
     FundingPair (..),
     PayerSelectionError,
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
     fundingSpends,
-    runTransactionBuild,
+    runPlutusTransactionBuild,
     selectFundingPair,
  )
 import Cardano.Ledger.Address (
@@ -106,16 +108,12 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Tx.Balance (CollateralUtxos (..))
 import Cardano.Tx.Build (
-    BuildOptions (..),
     CertWitness (ScriptCert),
     Check (..),
     InterpretIO (..),
     TxBuild,
     certify,
-    collateral,
-    defaultBuildOptions,
     mint,
     output,
     payTo',
@@ -506,7 +504,6 @@ premintProgram
     proofRedeemer
     lifecycleRedeemer = do
         mapM_ (spend . fst) (fundingSpends funding)
-        collateral (fst $ fundingCollateral funding)
         _ <-
             output $
                 mkBasicTxOut
@@ -566,7 +563,6 @@ registerProgram
     checkpointDatum = do
         mapM_ (spend . fst) (fundingSpends funding)
         _ <- spend (fst proofInput)
-        collateral (fst $ fundingCollateral funding)
         _ <-
             payTo'
                 checkpointAddress
@@ -604,19 +600,17 @@ runRegistrationBuild
         let runtime = registerRuntime config
         pparams <- trQueryProtocolParams runtime
         let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
-            options =
-                defaultBuildOptions
-                    { boCollateralUtxos =
-                        CollateralUtxos [fundingCollateral funding]
-                    }
         first RegistrationBuildFailed
-            <$> runTransactionBuild
-                options
+            <$> runPlutusTransactionBuild
                 frozenRuntime
                 registerInterpret
                 (fundingSpends funding <> extraInputs)
                 references
                 (registerFundingAddress config)
+                CollateralContract
+                    { collateralInput = fundingCollateral funding
+                    , collateralReturnAddress = registerFundingAddress config
+                    }
                 (mkProgram pparams)
 
 data RegisterCtx a

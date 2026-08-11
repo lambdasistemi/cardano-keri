@@ -81,13 +81,19 @@ import Cardano.KERI.Deployment.Script (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     AggregateExUnitsError (..),
+    CollateralSafetyError (..),
     TransactionBuildError (..),
     TransactionRuntime (..),
     TransactionSigningError (..),
     signWithPaymentKey,
     transactionId,
  )
-import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
+    shouldDeclareBoundedCollateral,
+    statedMaximumCollateralLovelace,
+    testPParams,
+    withFixedFee,
+ )
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -169,6 +175,7 @@ import Test.Hspec (
     it,
     shouldBe,
     shouldContain,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -178,6 +185,109 @@ spec = do
     registrationLedgerBoundarySpec
     failureTaxonomySpec
     awaitAssetSpec
+    boundedCollateralSpec
+
+-- ---------------------------------------------------------------------------
+-- #232 bounded phase-2 collateral loss
+
+boundedCollateralSpec :: Spec
+boundedCollateralSpec = describe "#232 bounded collateral" $ do
+    it "premint declares exact bounded collateral returned to the funding address" $ do
+        signedRef <- newIORef Nothing
+        callsRef <- newIORef []
+        runtime <- standInRuntime callsRef signedRef
+        let config = mkConfig runtime (standInQueryAsset signedRef)
+            premintInputs =
+                [ (stubTxIn 1, plainTxOut 200_000_000)
+                , (stubTxIn 2, plainTxOut 50_000_000)
+                ]
+        result <-
+            premintOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos premintInputs)
+                True
+        case result of
+            Left err -> fail ("expected premint success, got " <> show err)
+            Right _ -> do
+                tx <-
+                    readIORef signedRef
+                        >>= maybe (fail "trSign was never called") pure
+                shouldDeclareBoundedCollateral
+                    testPParams
+                    fundingAddr
+                    (stubTxIn 2, plainTxOut 50_000_000)
+                    tx
+
+    it "register declares exact bounded collateral returned to the funding address" $ do
+        signedRef <- newIORef Nothing
+        callsRef <- newIORef []
+        runtime <- standInRuntime callsRef signedRef
+        let config = mkConfig runtime (standInQueryAsset signedRef)
+            registerInputs =
+                [ (stubTxIn 3, plainTxOut 200_000_000)
+                , (stubTxIn 4, plainTxOut 50_000_000)
+                ]
+        result <-
+            registerOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos registerInputs)
+                (stubTxIn 5, proofTxOut 5_000_000)
+        case result of
+            Left err -> fail ("expected register success, got " <> show err)
+            Right _ -> do
+                tx <-
+                    readIORef signedRef
+                        >>= maybe (fail "trSign was never called") pure
+                shouldDeclareBoundedCollateral
+                    testPParams
+                    fundingAddr
+                    (stubTxIn 4, plainTxOut 50_000_000)
+                    tx
+
+    it "refuses a requirement above 5,000,000 lovelace before signing" $ do
+        signedRef <- newIORef Nothing
+        callsRef <- newIORef []
+        baseRuntime <- standInRuntime callsRef signedRef
+        -- A 4 ADA flat fee forces ceiling(fee * 150 / 100) >= 6 ADA whatever
+        -- this body's size is.
+        let cappedRuntime =
+                baseRuntime
+                    { trQueryProtocolParams =
+                        pure (withFixedFee (Coin 4_000_000) testPParams)
+                    }
+            config = mkConfig cappedRuntime (standInQueryAsset signedRef)
+            premintInputs =
+                [ (stubTxIn 1, plainTxOut 200_000_000)
+                , (stubTxIn 2, plainTxOut 50_000_000)
+                ]
+        result <-
+            premintOne
+                config
+                syntheticPlan
+                (mkSnapshot syntheticReferenceUtxos premintInputs)
+                True
+        case result of
+            Left
+                ( RegistrationBuildFailed
+                        ( TransactionBuildCollateralRejected
+                                CollateralRequirementAboveMaximum
+                                    { collateralRequiredLovelace
+                                    , collateralMaximumLovelace
+                                    }
+                            )
+                    ) -> do
+                    collateralMaximumLovelace
+                        `shouldBe` statedMaximumCollateralLovelace
+                    collateralRequiredLovelace
+                        `shouldSatisfy` (> statedMaximumCollateralLovelace)
+            other ->
+                fail ("expected a bounded-collateral rejection, got " <> show other)
+        readIORef signedRef >>= (`shouldBe` Nothing)
+        calls <- readIORef callsRef
+        calls `shouldNotContain` ["sign"]
+        calls `shouldNotContain` ["submit"]
 
 -- ---------------------------------------------------------------------------
 -- Pure plan/plutus-data behaviour (migrated byte-for-byte; the retired

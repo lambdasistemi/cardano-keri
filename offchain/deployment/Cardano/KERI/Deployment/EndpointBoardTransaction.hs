@@ -58,13 +58,14 @@ import Cardano.KERI.Deployment.Registration (
  )
 import Cardano.KERI.Deployment.TransactionRuntime (
     AggregateExUnitsError,
+    CollateralContract (..),
     FundingPair (..),
     PayerSelectionError,
     TransactionBuildError,
     TransactionRuntime (..),
     checkAggregateExUnits,
     fundingSpends,
-    runTransactionBuild,
+    runPlutusTransactionBuild,
     selectFundingPair,
  )
 import Cardano.Ledger.Address (Addr (..), decodeAddr)
@@ -96,14 +97,10 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Tx.Balance (CollateralUtxos (..))
 import Cardano.Tx.Build (
-    BuildOptions (..),
     Check (..),
     InterpretIO (..),
     TxBuild,
-    collateral,
-    defaultBuildOptions,
     mint,
     output,
     payTo',
@@ -364,18 +361,20 @@ runBoardBuild config funding extraInputs references program = do
     let runtime = boardRuntime config
     pparams <- trQueryProtocolParams runtime
     let frozenRuntime = runtime{trQueryProtocolParams = pure pparams}
-        options =
-            defaultBuildOptions
-                { boCollateralUtxos = CollateralUtxos [fundingCollateral funding]
-                }
     result <-
-        runTransactionBuild
-            options
+        runPlutusTransactionBuild
             frozenRuntime
             boardInterpret
             (fundingSpends funding <> extraInputs)
             references
             (boardChangeAddress config)
+            -- The collateral remainder goes to the funding address, which the
+            -- board deliberately keeps distinct from its ordinary change
+            -- address (RQ-232-03).
+            CollateralContract
+                { collateralInput = fundingCollateral funding
+                , collateralReturnAddress = boardFundingAddress config
+                }
             (program pparams)
     pure (BoardResult <$> first BoardBuildFailed result)
 
@@ -513,7 +512,6 @@ postProgram ::
     TxBuild BoardCtx BoardCheckError ()
 postProgram BoardPostInputs{postFunding = FundingPair{..}, ..} pparams = do
     mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
-    collateral (fst fundingCollateral)
     _ <- payTo' postAddress postValue postDatum
     mint postPolicy (Map.singleton postAsset 1) postMintData
     mapM_ (reference . fst) postReferences
@@ -526,7 +524,6 @@ updateProgram ::
 updateProgram BoardUpdateInputs{updateFunding = FundingPair{..}, ..} pparams = do
     mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst updateInput) updateSpendData
-    collateral (fst fundingCollateral)
     _ <- payTo' updateAddress updateValue updateDatumData
     mapM_ (reference . fst) updateReferences
     requireSignature updateOwner
@@ -539,7 +536,6 @@ retireProgram ::
 retireProgram BoardRetireInputs{retireFunding = FundingPair{..}, ..} pparams = do
     mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
     _ <- spendScript (fst retireInput) retireSpendData
-    collateral (fst fundingCollateral)
     _ <- output $ mkBasicTxOut retireRefundAddr (MaryValue (Coin retireRefundCoin) $ MultiAsset mempty)
     mint retirePolicy (Map.singleton retireAsset (-1)) retireMintData
     mapM_ (reference . fst) retireReferences

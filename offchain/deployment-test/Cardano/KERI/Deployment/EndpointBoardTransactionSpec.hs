@@ -29,12 +29,18 @@ import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
+    CollateralSafetyError (..),
     TransactionBuildError (..),
     TransactionRuntime (..),
     signWithPaymentKey,
     transactionId,
  )
-import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
+    shouldDeclareBoundedCollateral,
+    statedMaximumCollateralLovelace,
+    testPParams,
+    withFixedFee,
+ )
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
     TransactionScriptFailure (UnknownTxIn),
@@ -112,6 +118,8 @@ import Test.Hspec (
     it,
     shouldBe,
     shouldContain,
+    shouldNotBe,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -253,6 +261,81 @@ spec = describe "in-process endpoint-board transactions" $ do
         result <- awaitBoard query 1 0 disagreeingId
         readIORef pollsRef >>= (`shouldSatisfy` (>= 1))
         result `shouldBe` Left (BoardObservationTimeout disagreeingId)
+
+    boundedCollateralSpec
+
+-- ---------------------------------------------------------------------------
+-- #232 bounded phase-2 collateral loss
+
+{- | The row 'selectFundingPair' reserves as collateral for every board verb:
+the smallest eligible entry in 'fundingInputs'.
+-}
+boardCollateralUtxo :: (TxIn, TxOut ConwayEra)
+boardCollateralUtxo = (stubTxIn 2, plainTxOut 50_000_000)
+
+boundedCollateralSpec :: Spec
+boundedCollateralSpec = describe "#232 bounded collateral" $ do
+    it "post, update, and retire all return the remainder to the funding address" $ do
+        -- Non-vacuity: the board's ordinary change address genuinely differs
+        -- from its funding address, so none of these three can pass without
+        -- the explicit return instruction.
+        fundingAddr `shouldNotBe` changeAddr
+        (_, postTx, _) <- capture $ \runtime ->
+            runBoardPostTransaction (boardConfig runtime) postPlan fundingInputs
+        (_, updateTx, _) <- capture $ \runtime ->
+            runBoardUpdateTransaction
+                (boardConfig runtime)
+                updatePlan
+                fundingInputs
+                boardInput
+        (_, retireTx, _) <- capture $ \runtime ->
+            runBoardRetireTransaction
+                (boardConfig runtime)
+                retirePlan
+                fundingInputs
+                boardInput
+        mapM_
+            ( shouldDeclareBoundedCollateral
+                testPParams
+                fundingAddr
+                boardCollateralUtxo
+            )
+            [postTx, updateTx, retireTx]
+
+    it "refuses a requirement above 5,000,000 lovelace before signing" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        baseRuntime <- standInRuntime callsRef signedRef
+        let cappedRuntime =
+                baseRuntime
+                    { trQueryProtocolParams =
+                        pure (withFixedFee (Coin 4_000_000) testPParams)
+                    }
+        result <-
+            runBoardPostTransaction
+                (boardConfig cappedRuntime)
+                postPlan
+                fundingInputs
+        case result of
+            Left
+                ( BoardBuildFailed
+                        ( TransactionBuildCollateralRejected
+                                CollateralRequirementAboveMaximum
+                                    { collateralRequiredLovelace
+                                    , collateralMaximumLovelace
+                                    }
+                            )
+                    ) -> do
+                    collateralMaximumLovelace
+                        `shouldBe` statedMaximumCollateralLovelace
+                    collateralRequiredLovelace
+                        `shouldSatisfy` (> statedMaximumCollateralLovelace)
+            other ->
+                fail ("expected a bounded-collateral rejection, got " <> show other)
+        readIORef signedRef >>= (`shouldBe` Nothing)
+        calls <- readIORef callsRef
+        calls `shouldNotContain` ["sign"]
+        calls `shouldNotContain` ["submit"]
 
 assertTerminal :: ConwayTx -> TxId -> [String] -> IO ()
 assertTerminal tx txId order = do

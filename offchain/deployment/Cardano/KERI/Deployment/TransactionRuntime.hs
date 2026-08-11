@@ -42,6 +42,13 @@ module Cardano.KERI.Deployment.TransactionRuntime (
     runTransactionBuild,
     runTransactionBuildGeneric,
 
+    -- * Bounded phase-2 collateral safety (#232)
+    CollateralContract (..),
+    CollateralSafetyError (..),
+    maximumCollateralLovelace,
+    validateCollateralSafety,
+    runPlutusTransactionBuild,
+
     -- * Aggregate execution-unit check
     AggregateExUnitsError (..),
     checkAggregateExUnits,
@@ -64,14 +71,31 @@ import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.Api.Tx (txIdTx, witsTxL)
-import Cardano.Ledger.Api.Tx.Out (TxOut, coinTxOutL)
+import Cardano.Ledger.Api.PParams (ppCollateralPercentageL)
+import Cardano.Ledger.Api.Tx (bodyTxL, txIdTx, witsTxL)
+import Cardano.Ledger.Api.Tx.Body (
+    collateralInputsTxBodyL,
+    collateralReturnTxBodyL,
+    feeTxBodyL,
+    inputsTxBodyL,
+    totalCollateralTxBodyL,
+ )
+import Cardano.Ledger.Api.Tx.Out (
+    TxOut,
+    addrTxOutL,
+    coinTxOutL,
+    getMinCoinTxOut,
+    mkBasicTxOut,
+    valueTxOutL,
+ )
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose)
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Hashes (extractHash)
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.ExUnits (ExUnits, pointWiseExUnits)
 import Cardano.Ledger.TxIn (TxId, TxIn, unTxId)
 
@@ -82,15 +106,18 @@ import Cardano.Ledger.TxIn (TxId, TxIn, unTxId)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Provider (EvaluateTxResult)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
-import Cardano.Tx.Balance (BalanceError)
+import Cardano.Tx.Balance (BalanceError, CollateralUtxos (..))
 import Cardano.Tx.Build (
     BuildError (..),
-    BuildOptions,
+    BuildOptions (..),
     Check (..),
     InterpretIO,
     TxBuild,
     buildWith,
+    collateral,
+    defaultBuildOptions,
     mkPParamsBound,
+    setCollateralReturn,
  )
 import Cardano.Tx.Inputs (spendingIndex)
 import Cardano.Tx.Sign.Core (
@@ -110,9 +137,11 @@ import Data.List (intercalate, sortBy)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Ord (Down (..))
+import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
+import Lens.Micro ((^.))
 
 -- ---------------------------------------------------------------------------
 -- Funding selection
@@ -427,6 +456,10 @@ data TransactionBuildError e
     | TransactionBuildInternalError !String
     | TransactionBuildSigningRejected !TransactionSigningError
     | TransactionBuildSubmissionRejected !ByteString
+    | {- | \#232: the converged body could not prove a bounded phase-2
+      collateral loss, so it was refused before signing.
+      -}
+      TransactionBuildCollateralRejected !CollateralSafetyError
     deriving stock (Eq, Show)
 
 {- | Build one transaction to convergence with the pinned transaction-tool
@@ -446,8 +479,38 @@ runTransactionBuildGeneric ::
     Addr ->
     TxBuild q e a ->
     IO (Either (TransactionBuildError e) TxId)
-runTransactionBuildGeneric
+runTransactionBuildGeneric options =
+    runTransactionBuildWith options acceptAnyConvergedBody
+  where
+    acceptAnyConvergedBody _pparams = Right
+
+{- | The shared build/sign/submit evolution with one post-convergence,
+pre-sign gate. The gate sees the protocol snapshot that balanced the body and
+the converged body itself, and a rejection short-circuits before 'sign' is
+ever called — which is what makes \#232's collateral refusal a refusal to
+/sign/, not merely a refusal to submit.
+
+Not exported: callers reach it through 'runTransactionBuildGeneric' (no gate,
+the script-free path) or 'runPlutusTransactionBuild' (the bounded-collateral
+gate), so no operation can supply a gate of its own.
+-}
+runTransactionBuildWith ::
+    BuildOptions ->
+    (PParams ConwayEra -> ConwayTx -> Either (TransactionBuildError e) ConwayTx) ->
+    IO (PParams ConwayEra) ->
+    (ConwayTx -> IO BuildEvaluationResult) ->
+    (ConwayTx -> IO (Either TransactionSigningError ConwayTx)) ->
+    (ConwayTx -> IO SubmitResult) ->
+    (TxId -> IO ()) ->
+    InterpretIO q ->
+    [(TxIn, TxOut ConwayEra)] ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Addr ->
+    TxBuild q e a ->
+    IO (Either (TransactionBuildError e) TxId)
+runTransactionBuildWith
     options
+    gate
     queryPParams
     evaluate
     sign
@@ -471,19 +534,21 @@ runTransactionBuildGeneric
                 program
         case builtResult of
             Left err -> pure (Left (mapBuildError err))
-            Right built -> do
-                signedResult <- sign built
-                case signedResult of
-                    Left err -> pure (Left (TransactionBuildSigningRejected err))
-                    Right signed -> do
-                        let signedId = transactionId signed
-                        submission <- submit signed
-                        case submission of
-                            Rejected reason ->
-                                pure (Left (TransactionBuildSubmissionRejected reason))
-                            Submitted _submittedId -> do
-                                observe signedId
-                                pure (Right signedId)
+            Right built -> case gate pparams built of
+                Left err -> pure (Left err)
+                Right accepted -> do
+                    signedResult <- sign accepted
+                    case signedResult of
+                        Left err -> pure (Left (TransactionBuildSigningRejected err))
+                        Right signed -> do
+                            let signedId = transactionId signed
+                            submission <- submit signed
+                            case submission of
+                                Rejected reason ->
+                                    pure (Left (TransactionBuildSubmissionRejected reason))
+                                Submitted _submittedId -> do
+                                    observe signedId
+                                    pure (Right signedId)
       where
         mapBuildError (EvalFailure purpose detail) =
             TransactionBuildEvaluationRejected purpose detail
@@ -494,9 +559,18 @@ runTransactionBuildGeneric
         mapBuildError (BumpFeeFailed detail) =
             TransactionBuildInternalError detail
 
-{- | Production record wrapper over 'runTransactionBuildGeneric'. It adapts
-the real node-client evaluation failure to the string detail expected by
-pinned 'buildWith', while preserving every purpose key.
+{- | Adapt the real node-client evaluation failure to the string detail
+expected by pinned 'buildWith', preserving every purpose key.
+-}
+adaptEvaluation ::
+    TransactionRuntime IO -> ConwayTx -> IO BuildEvaluationResult
+adaptEvaluation TransactionRuntime{trEvaluate} tx =
+    fmap (Map.map (first show)) (trEvaluate tx)
+
+{- | Production record wrapper over 'runTransactionBuildGeneric'. This is the
+script-free entry point: it adds no collateral resolution and no collateral
+gate, so a body carrying no redeemer keeps absent Conway collateral fields
+(DATA-INV-232-06).
 -}
 runTransactionBuild ::
     BuildOptions ->
@@ -507,17 +581,14 @@ runTransactionBuild ::
     Addr ->
     TxBuild q e a ->
     IO (Either (TransactionBuildError e) TxId)
-runTransactionBuild options TransactionRuntime{..} =
+runTransactionBuild options runtime@TransactionRuntime{..} =
     runTransactionBuildGeneric
         options
         trQueryProtocolParams
-        adaptEvaluation
+        (adaptEvaluation runtime)
         trSign
         trSubmit
         trObserve
-  where
-    adaptEvaluation tx =
-        fmap (Map.map (first show)) (trEvaluate tx)
 
 -- ---------------------------------------------------------------------------
 -- Aggregate execution units
@@ -549,3 +620,251 @@ checkAggregateExUnits pparams tx
     Redeemers redeemers = getConst (rdmrsTxWitsL Const txWits)
     declared = foldMap snd redeemers
     maximumUnits = getConst (ppMaxTxExUnitsL Const pparams)
+
+-- ---------------------------------------------------------------------------
+-- Bounded phase-2 collateral safety (#232)
+
+{- | The resolved collateral commitment one Plutus build is willing to expose
+to a phase-2 failure: exactly one plain ADA-only funding UTxO, and the
+operation's own funding address as the destination of the unused remainder.
+
+The product maximum is deliberately not a field: it is fixed for every ckeri
+Plutus transaction by 'maximumCollateralLovelace' and is not
+caller-configurable (DAT-232-COLLATERAL-CONTRACT).
+-}
+data CollateralContract = CollateralContract
+    { collateralInput :: !(TxIn, TxOut ConwayEra)
+    -- ^ the one resolved ADA-only collateral input
+    , collateralReturnAddress :: !Addr
+    -- ^ the operation's funding address, which receives the remainder
+    }
+    deriving stock (Eq, Show)
+
+{- | The absolute ceiling on what one ckeri Plutus transaction may lose to a
+phase-2 script failure: 5,000,000 lovelace (5 ADA), independent of the
+wallet's UTxO layout (RQ-232-02, DATA-INV-232-02).
+-}
+maximumCollateralLovelace :: Coin
+maximumCollateralLovelace = Coin 5_000_000
+
+{- | Every way a converged body can fail to prove a bounded phase-2 loss.
+Each case names the violated property and carries the lovelace or identity it
+disagreed about, so no rejection collapses into an unnamed failure
+(DAT-232-COLLATERAL-FAILURE).
+-}
+data CollateralSafetyError
+    = -- | The exact protocol requirement itself exceeds the product ceiling.
+      CollateralRequirementAboveMaximum
+        { collateralRequiredLovelace :: !Coin
+        , collateralMaximumLovelace :: !Coin
+        }
+    | {- | The resolved input cannot fund the exact total and still leave a
+      min-UTxO-valid return.
+      -}
+      CollateralInputInsufficient
+        { collateralRequiredLovelace :: !Coin
+        , collateralMinimumReturnLovelace :: !Coin
+        , collateralAvailableLovelace :: !Coin
+        }
+    | -- | The body's collateral inputs are not exactly the contract's input.
+      CollateralInputSetMismatch
+        { collateralExpectedInput :: !TxIn
+        , collateralDeclaredInputs :: !(Set TxIn)
+        }
+    | -- | The collateral input is also a regular spending input.
+      CollateralInputAlsoSpent
+        { collateralExpectedInput :: !TxIn
+        }
+    | -- | The resolved collateral input carries native assets.
+      CollateralInputNotAdaOnly
+        { collateralExpectedInput :: !TxIn
+        }
+    | -- | The body declares no total collateral at all.
+      CollateralTotalMissing
+        { collateralRequiredLovelace :: !Coin
+        }
+    | -- | The declared total is not the exact protocol requirement.
+      CollateralTotalMismatch
+        { collateralRequiredLovelace :: !Coin
+        , collateralDeclaredLovelace :: !Coin
+        }
+    | -- | No collateral return is present, so the whole input is exposed.
+      CollateralReturnMissing
+        { collateralExpectedReturnLovelace :: !Coin
+        }
+    | -- | The collateral return pays somewhere other than the funding address.
+      CollateralReturnMisaddressed
+        { collateralExpectedReturnAddress :: !Addr
+        , collateralDeclaredReturnAddress :: !Addr
+        }
+    | -- | The collateral return carries native assets.
+      CollateralReturnNotAdaOnly
+        { collateralDeclaredReturnAddress :: !Addr
+        }
+    | -- | The collateral return is below its own min-UTxO requirement.
+      CollateralReturnBelowMinimum
+        { collateralDeclaredReturnLovelace :: !Coin
+        , collateralMinimumReturnLovelace :: !Coin
+        }
+    | -- | Declared total plus returned lovelace is not the input lovelace.
+      CollateralConservationViolated
+        { collateralDeclaredLovelace :: !Coin
+        , collateralDeclaredReturnLovelace :: !Coin
+        , collateralAvailableLovelace :: !Coin
+        }
+    deriving stock (Eq, Show)
+
+{- | Decide whether one converged Conway body proves a bounded phase-2 loss
+against the protocol snapshot that balanced it and the resolved collateral
+contract. Every property is read from the final body and the resolved input —
+never from a caller's claim — and every rejection is typed.
+-}
+validateCollateralSafety ::
+    PParams ConwayEra ->
+    CollateralContract ->
+    ConwayTx ->
+    Either CollateralSafetyError ConwayTx
+validateCollateralSafety pparams contract tx
+    | required > maximumCollateralLovelace =
+        Left (CollateralRequirementAboveMaximum required maximumCollateralLovelace)
+    | not (isAdaOnly resolvedOutput) =
+        Left (CollateralInputNotAdaOnly resolvedInput)
+    | declaredInputs /= Set.singleton resolvedInput =
+        Left (CollateralInputSetMismatch resolvedInput declaredInputs)
+    | Set.member resolvedInput (body ^. inputsTxBodyL) =
+        Left (CollateralInputAlsoSpent resolvedInput)
+    | available < required || residual < minimumResidualReturn =
+        Left (CollateralInputInsufficient required minimumResidualReturn available)
+    | otherwise = checkDeclaredTotal
+  where
+    body = tx ^. bodyTxL
+    (resolvedInput, resolvedOutput) = collateralInput contract
+    returnAddress = collateralReturnAddress contract
+    declaredInputs = body ^. collateralInputsTxBodyL
+    available = resolvedOutput ^. coinTxOutL
+    required = requiredTotalCollateral pparams (body ^. feeTxBodyL)
+    residual = clampedDifference available required
+    minimumResidualReturn =
+        getMinCoinTxOut pparams (adaOnlyOutput returnAddress residual)
+
+    checkDeclaredTotal =
+        case body ^. totalCollateralTxBodyL of
+            SNothing -> Left (CollateralTotalMissing required)
+            SJust declaredTotal
+                | declaredTotal /= required ->
+                    Left (CollateralTotalMismatch required declaredTotal)
+                | otherwise -> checkDeclaredReturn declaredTotal
+
+    checkDeclaredReturn declaredTotal =
+        case body ^. collateralReturnTxBodyL of
+            SNothing -> Left (CollateralReturnMissing residual)
+            SJust returnOutput
+                | declaredReturnAddress /= returnAddress ->
+                    Left
+                        ( CollateralReturnMisaddressed
+                            returnAddress
+                            declaredReturnAddress
+                        )
+                | not (isAdaOnly returnOutput) ->
+                    Left (CollateralReturnNotAdaOnly returnAddress)
+                | returned < minimumReturn ->
+                    Left (CollateralReturnBelowMinimum returned minimumReturn)
+                | addLovelace declaredTotal returned /= available ->
+                    Left
+                        ( CollateralConservationViolated
+                            declaredTotal
+                            returned
+                            available
+                        )
+                | otherwise -> Right tx
+              where
+                declaredReturnAddress = returnOutput ^. addrTxOutL
+                returned = returnOutput ^. coinTxOutL
+                minimumReturn = getMinCoinTxOut pparams returnOutput
+
+{- | @ceiling (fee * p / 100)@ for the snapshot's collateral percentage @p@ —
+the exact amount the Conway ledger requires (DATA-INV-232-01). Derived here
+from the protocol snapshot rather than accepted from the balancer's own
+output, so a body whose declared total disagrees is refused.
+-}
+requiredTotalCollateral :: PParams ConwayEra -> Coin -> Coin
+requiredTotalCollateral pparams (Coin fee) =
+    Coin (ceilingDiv (fee * percentage) 100)
+  where
+    percentage = fromIntegral (pparams ^. ppCollateralPercentageL)
+    ceilingDiv numerator denominator =
+        (numerator + denominator - 1) `div` denominator
+
+isAdaOnly :: TxOut ConwayEra -> Bool
+isAdaOnly txOut =
+    case txOut ^. valueTxOutL of
+        MaryValue _ (MultiAsset assets) -> Map.null assets
+
+adaOnlyOutput :: Addr -> Coin -> TxOut ConwayEra
+adaOnlyOutput address amount =
+    mkBasicTxOut address (MaryValue amount (MultiAsset mempty))
+
+addLovelace :: Coin -> Coin -> Coin
+addLovelace (Coin left) (Coin right) = Coin (left + right)
+
+-- | Never negative: a shortfall is reported by its own named case instead.
+clampedDifference :: Coin -> Coin -> Coin
+clampedDifference (Coin left) (Coin right) = Coin (max 0 (left - right))
+
+{- | The bounded Plutus build kernel: converge one script-bearing transaction,
+prove its collateral safety, and only then sign, submit, and observe it.
+
+It owns the collateral resolution option and the explicit funding-address
+return instruction, so no operation module constructs either independently
+(MOD-232-WRITES, EDGE-232-03). 'runTransactionBuild' remains the script-free
+entry point for Publisher.
+-}
+runPlutusTransactionBuild ::
+    TransactionRuntime IO ->
+    InterpretIO q ->
+    [(TxIn, TxOut ConwayEra)] ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Addr ->
+    CollateralContract ->
+    TxBuild q e a ->
+    IO (Either (TransactionBuildError e) TxId)
+runPlutusTransactionBuild
+    runtime@TransactionRuntime{..}
+    interpret
+    spendingInputs
+    referenceInputs
+    changeAddress
+    contract
+    program =
+        runTransactionBuildWith
+            collateralOptions
+            collateralGate
+            trQueryProtocolParams
+            (adaptEvaluation runtime)
+            trSign
+            trSubmit
+            trObserve
+            interpret
+            spendingInputs
+            referenceInputs
+            changeAddress
+            boundedProgram
+      where
+        collateralOptions =
+            defaultBuildOptions
+                { boCollateralUtxos = CollateralUtxos [collateralInput contract]
+                }
+
+        collateralGate pparams built =
+            first TransactionBuildCollateralRejected $
+                validateCollateralSafety pparams contract built
+
+        -- The contract is the single source of both instructions, so no
+        -- operation builder declares a collateral input or a return
+        -- destination of its own. Sequenced after the caller's program
+        -- because 'setCollateralReturn' is last-write-wins upstream.
+        boundedProgram = do
+            result <- program
+            collateral (fst (collateralInput contract))
+            setCollateralReturn (collateralReturnAddress contract)
+            pure result

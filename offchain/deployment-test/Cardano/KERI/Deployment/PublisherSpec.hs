@@ -42,7 +42,10 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     signWithPaymentKey,
     transactionId,
  )
-import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
+    shouldDeclareNoCollateral,
+    testPParams,
+ )
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
@@ -415,3 +418,37 @@ spec = do
     selectFundingPairSpec
     awaitReferenceSpec
     publishOneSpec
+    scriptFreeCollateralSpec
+
+-- ---------------------------------------------------------------------------
+-- #232: a script-free publish invents no collateral commitment
+
+scriptFreeCollateralSpec :: Spec
+scriptFreeCollateralSpec = describe "#232 script-free collateral absence" $
+    it "publishes with no collateral input, total, or return" $ do
+        -- DATA-INV-232-06. Publisher keeps the script-free build entry point,
+        -- so the bounded-collateral rule must not manufacture Conway
+        -- collateral fields for a body that carries no redeemer.
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        let config =
+                PublishConfig
+                    { publishRuntime = runtime
+                    , publishInputUtxos =
+                        [ (stubTxIn 1, plainTxOut 200_000_000)
+                        , (stubTxIn 2, plainTxOut 50_000_000)
+                        ]
+                    , publishFundingAddress = fundingAddr
+                    , publishReferenceLovelace = 100_000_000
+                    , publishQueryReferences = standInQueryReferences signedRef
+                    , publishTimeoutSeconds = 30
+                    }
+        result <- publishOne config sampleArtifact
+        case result of
+            Left err -> fail ("expected publish success, got " <> show err)
+            Right _ ->
+                readIORef signedRef
+                    >>= maybe
+                        (fail "trSign was never called")
+                        shouldDeclareNoCollateral

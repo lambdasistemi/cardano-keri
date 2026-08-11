@@ -21,12 +21,18 @@ import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Cardano.KERI.Deployment.Script (computeScriptHash, mkCageScript, scriptHashText)
 import Cardano.KERI.Deployment.TransactionRuntime (
+    CollateralSafetyError (..),
     TransactionBuildError (..),
     TransactionRuntime (..),
     signWithPaymentKey,
     transactionId,
  )
-import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
+import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (
+    shouldDeclareBoundedCollateral,
+    statedMaximumCollateralLovelace,
+    testPParams,
+    withFixedFee,
+ )
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -120,6 +126,7 @@ import Test.Hspec (
     it,
     shouldBe,
     shouldContain,
+    shouldNotContain,
     shouldSatisfy,
  )
 
@@ -261,6 +268,86 @@ spec = describe "in-process advance transaction" $ do
                     "signed-advance-id"
                     syntheticCheckpointAddress
                 )
+
+    boundedCollateralSpec
+
+-- ---------------------------------------------------------------------------
+-- #232 bounded phase-2 collateral loss
+
+{- | The row 'selectFundingPair' reserves as collateral for advance: the
+smallest eligible entry in 'fundingInputs'.
+-}
+advanceCollateralUtxo :: (TxIn, TxOut ConwayEra)
+advanceCollateralUtxo = (stubTxIn 2, plainTxOut 50_000_000)
+
+boundedCollateralSpec :: Spec
+boundedCollateralSpec = describe "#232 bounded collateral" $ do
+    it "declares exact bounded collateral on both observer-registration branches" $
+        mapM_ assertBoundedAdvance [False, True]
+
+    it "refuses a requirement above 5,000,000 lovelace before signing" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        baseRuntime <- standInRuntime callsRef signedRef
+        -- A 4 ADA flat fee forces ceiling(fee * 150 / 100) >= 6 ADA whatever
+        -- this body's size is, so the ceiling — not an accident of size — is
+        -- what rejects.
+        let cappedRuntime =
+                baseRuntime
+                    { trQueryProtocolParams =
+                        pure (withFixedFee (Coin 4_000_000) testPParams)
+                    }
+        result <-
+            runAdvanceTransaction
+                (advanceConfig cappedRuntime)
+                syntheticPlan
+                fundingInputs
+                activeInput
+                False
+        case result of
+            Left
+                ( AdvanceBuildFailed
+                        ( TransactionBuildCollateralRejected
+                                CollateralRequirementAboveMaximum
+                                    { collateralRequiredLovelace
+                                    , collateralMaximumLovelace
+                                    }
+                            )
+                    ) -> do
+                    collateralMaximumLovelace
+                        `shouldBe` statedMaximumCollateralLovelace
+                    collateralRequiredLovelace
+                        `shouldSatisfy` (> statedMaximumCollateralLovelace)
+            other ->
+                fail ("expected a bounded-collateral rejection, got " <> show other)
+        readIORef signedRef >>= (`shouldBe` Nothing)
+        calls <- readIORef callsRef
+        calls `shouldNotContain` ["sign"]
+        calls `shouldNotContain` ["submit"]
+
+assertBoundedAdvance :: Bool -> IO ()
+assertBoundedAdvance registerObserver = do
+    callsRef <- newIORef []
+    signedRef <- newIORef Nothing
+    runtime <- standInRuntime callsRef signedRef
+    result <-
+        runAdvanceTransaction
+            (advanceConfig runtime)
+            syntheticPlan
+            fundingInputs
+            activeInput
+            registerObserver
+    case result of
+        Left err -> fail ("expected advance success, got " <> show err)
+        Right _ -> do
+            tx <-
+                readIORef signedRef
+                    >>= maybe (fail "trSign was never called") pure
+            shouldDeclareBoundedCollateral
+                testPParams
+                fundingAddr
+                advanceCollateralUtxo
+                tx
 
 isFundingFailure :: Either AdvanceError AdvanceResult -> Bool
 isFundingFailure (Left AdvanceFundingSelectionFailed{}) = True

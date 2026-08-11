@@ -15,6 +15,9 @@ commit=4e840934deeb55aa9fd45a34fc516bb4c635bf81
 aiken=1.1.23
 variant=defaultFunSemanticsVariantE
 era=post-Conway
+selection=explicit-era-binding
+version_derived=defaultFunSemanticsVariantC
+verification_receipt=fixture-clean
 toolchain='aiken=1.1.23;lean-blaster=62d2d59abda37e90097e655b40e27545bba16f3c;plutus-core-blaster=7cf5a78c54b9694ef093bf49edb5d3799b2a49c9;cardano-ledger-api-blaster=577e3eb03b5be09354cfdb1c0d0c12e9e16541a0'
 lock_sha=96f9405089d9a28b305fae4fff9e657ec8363a157c326bcc66c3e232b8f92200
 lean_blaster_rev=62d2d59abda37e90097e655b40e27545bba16f3c
@@ -59,6 +62,9 @@ jq -n \
   --arg toolchain "$toolchain" \
   --arg variant "$variant" \
   --arg era "$era" \
+  --arg selection "$selection" \
+  --arg version_derived "$version_derived" \
+  --arg verification_receipt "$verification_receipt" \
   --arg lock_sha256 "$lock_sha" \
   --arg lean_blaster "$lean_blaster_rev" \
   --arg plutus_core "$plutus_core_rev" \
@@ -76,8 +82,8 @@ jq -n \
     identity:(identity + {
       built_from:"source",
       validating_aiken:$aiken,
-      selection:"explicit-era-binding",
-      version_derived:"defaultFunSemanticsVariantC",
+      selection:$selection,
+      version_derived:$version_derived,
       lock_sha256:$lock_sha256,
       upstream:{lean_blaster:$lean_blaster,
         plutus_core_blaster:$plutus_core,
@@ -92,7 +98,8 @@ jq -n \
       + [
           (identity + {record:"baseline"}),
           (identity + {record:"evaluation-identity"}),
-          (identity + {record:"verification-receipt", receipt:"fixture-clean"})
+          (identity + {record:"verification-receipt",
+            receipt:$verification_receipt})
         ]
     )
   }' > "$work/manifest.json"
@@ -111,6 +118,23 @@ identity_args=(
   --expected-plutus-core-rev "$plutus_core_rev"
   --expected-ledger-api-rev "$ledger_api_rev"
 )
+
+# These expectations are caller inputs, never values read back from the
+# manifest under test. Keep the RED bundle runnable against the rejected
+# checker, which predates the three options, while requiring the repaired
+# checker to expose and consume all three before the bundle can pass.
+checker_help=$($checker --help)
+coverage_expectation_options=0
+if grep -Fq -- '--expected-selection' <<< "$checker_help" &&
+   grep -Fq -- '--expected-version-derived' <<< "$checker_help" &&
+   grep -Fq -- '--expected-verification-receipt' <<< "$checker_help"; then
+  identity_args+=(
+    --expected-selection "$selection"
+    --expected-version-derived "$version_derived"
+    --expected-verification-receipt "$verification_receipt"
+  )
+  coverage_expectation_options=3
+fi
 
 run_identity() { "$checker" "${identity_args[@]}"; }
 
@@ -144,12 +168,89 @@ grep -Fq 'CBIC_IDENTITY_RESULT records_checked=27' <<< "$clean_out" \
   || fail "clean identity result did not publish records_checked=27"
 grep -Fq 'CBIC_IDENTITY_RESULT inconsistent=0' <<< "$clean_out" \
   || fail "clean identity result did not publish inconsistent=0"
-grep -Fq 'CBIC_IDENTITY_RESULT identity_fields=204' <<< "$clean_out" \
-  || fail "clean identity result did not publish the production field denominator"
-grep -Fq 'CBIC_IDENTITY_RESULT externally_expected=204' <<< "$clean_out" \
-  || fail "clean identity result did not externally expect every identity field"
-grep -Fq 'CBIC_IDENTITY_RESULT unexpected=0' <<< "$clean_out" \
-  || fail "clean identity result did not reject fields outside the expectation registry"
+
+# Audit submission 2 property classes. Exercise every reported survivor and
+# aggregate the results so one surviving instance cannot hide another. The
+# count control adds a scalar field without changing the 27-record inventory:
+# an enumerated population must move 301 -> 302, while a closed form over
+# records remains stuck at its clean value.
+coverage_failures=0
+coverage_rc=0
+coverage_expect_red_identity_copy() { # label jq-filter expected-diagnostic
+  local label=$1 filter=$2 expected=$3 out rc
+  jq "$filter" "$work/manifest.json" > "$work/coverage-mutant.json"
+  cmp -s "$work/manifest.json" "$work/coverage-mutant.json" &&
+    fail "$label mutation did not apply"
+  local saved=${identity_args[3]}
+  identity_args[3]="$work/coverage-mutant.json"
+  set +e; out=$(run_identity 2>&1); rc=$?; set -e
+  identity_args[3]=$saved
+  if [ "$rc" -ne 0 ] && [[ $out == *"$expected"* ]]; then
+    [ "$coverage_rc" -ne 0 ] || coverage_rc=$rc
+    printf 'RED-PROOF invariant=%s rc=%s diagnostic=%s outcome=REFUTED\n' \
+      "$label" "$rc" "$expected"
+  else
+    coverage_failures=$((coverage_failures + 1))
+    printf 'COVERAGE-RED-FAIL invariant=%s rc=%s expected=%s\n' \
+      "$label" "$rc" "$expected" >&2
+    printf '%s\n' "$out" | sed 's/^/    [checker] /' >&2
+  fi
+}
+
+if [ "$coverage_expectation_options" -ne 3 ]; then
+  coverage_failures=$((coverage_failures + 1))
+  echo 'COVERAGE-RED-FAIL checker does not expose all three caller-supplied expectation options' >&2
+fi
+
+coverage_expect_red_identity_copy INV-246-B5-selection \
+  '.identity.selection = "version-derived"' \
+  'identity input moved: selection'
+coverage_expect_red_identity_copy INV-246-B5-version-derived \
+  '.identity.version_derived = "defaultFunSemanticsVariantA"' \
+  'identity input moved: version_derived'
+coverage_expect_red_identity_copy INV-246-B5-verification-receipt \
+  '.records[-1].receipt = "AUDIT-MUTANT"' \
+  'inconsistent identity input: receipt'
+
+if [ "$coverage_rc" -ne 0 ]; then
+  printf 'REPAIR-SELFTEST leg=carried-field-without-reconciled-expectation rc=%s outcome=REFUTED\n' \
+    "$coverage_rc"
+fi
+
+jq '.identity.unregistered_identity = "same-record-count-mutant"' \
+  "$work/manifest.json" > "$work/coverage-count-mutant.json"
+cmp -s "$work/manifest.json" "$work/coverage-count-mutant.json" &&
+  fail 'coverage-count mutation did not apply'
+saved=${identity_args[3]}
+identity_args[3]="$work/coverage-count-mutant.json"
+set +e; coverage_count_out=$(run_identity 2>&1); coverage_count_rc=$?; set -e
+identity_args[3]=$saved
+if [ "$coverage_count_rc" -ne 0 ] &&
+   [[ $coverage_count_out == *'COULD-NOT-EVALUATE: identity field lacks reconciled expectation: identity.unregistered_identity'* ]] &&
+   grep -Fq 'CBIC_IDENTITY_RESULT fields=302' <<< "$coverage_count_out" &&
+   grep -Fq 'CBIC_IDENTITY_RESULT reconciled=301' <<< "$coverage_count_out" &&
+   grep -Fq 'CBIC_IDENTITY_RESULT unexpected=1' <<< "$coverage_count_out"; then
+  printf 'REPAIR-SELFTEST leg=coverage-count-not-enumerated rc=%s outcome=REFUTED\n' \
+    "$coverage_count_rc"
+else
+  coverage_failures=$((coverage_failures + 1))
+  echo 'COVERAGE-RED-FAIL count control did not enumerate 302 carried fields with one unreconciled expectation' >&2
+  printf '%s\n' "$coverage_count_out" | sed 's/^/    [checker] /' >&2
+fi
+
+for result in \
+  'fields=301' \
+  'reconciled=301' \
+  'unexpected=0' \
+  'enumerated_by=jq-scalar-paths'; do
+  if ! grep -Fq "CBIC_IDENTITY_RESULT $result" <<< "$clean_out"; then
+    coverage_failures=$((coverage_failures + 1))
+    echo "COVERAGE-RED-FAIL clean result did not publish $result" >&2
+  fi
+done
+
+[ "$coverage_failures" -eq 0 ] \
+  || fail "$coverage_failures identity-field coverage property leg(s) remain RED"
 
 # Every manifest input class moves independently and must be named.
 expect_red_identity_copy INV-246-B5-title \

@@ -62,7 +62,7 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 - **Downstream consumers:** board family, board parity codec, board consumers.
 - **Promotions:** none; endpoint authentication remains board-owned.
 - **Forbidden dependencies:** generic migration code may not interpret or
-  weaken #253's signed owner/sequence/content contract.
+  weaken or restate #253's accepted target-authentication contract.
 
 ## `MOD-254-BOARD-FAMILY` — board migration enforcement
 

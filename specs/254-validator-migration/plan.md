@@ -68,8 +68,8 @@ attacker-created old policy from minting a trusted successor.
 
 1. Inventory the exact three current records under the frozen board policy.
 2. Each old owner authorizes v0 `Retire`/`Burn`; the target record also
-   satisfies the target schema's witness authorization. For #253's target,
-   that signature binds owner and monotonic sequence as well as endpoint.
+   satisfies #253's accepted target-schema witness authorization without
+   migration code interpreting or restating that schema.
 3. Mint one same-witness-name target marker and preserve the deposit and
    content in the transaction that spends the exact v0 input. Reconcile all
    three witnesses before calling the board cut over.
@@ -144,8 +144,8 @@ a generic migration envelope.
 | --- | --- |
 | `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
 | #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
-| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the audited standalone entitlement component from #271 (`1e3e767`, PR #278) and owns its family-coupled ArmedV2 plus Freeze/Convict integration. Its audits charge #271's separate ledger, and the #271 owner reviews its submission through the epic owner. `extra_signatories` remains consent-only, not the theft fix; #163/#164 stay blocked until the entitlement ships. |
-| #253 board hardening | Rides the family. It finalizes the not-yet-deployed target board release by adding owner+sequence witness binding; the first deployment of that release contains both migration entry and #253 semantics. Do not deploy an intermediate unhardened target. NOTE-006 changes DEP-253-254: script hash identifies the release and the transaction is the edge; route the revised contract through the epic owner before S254-2. |
+| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the audited standalone entitlement component from #271 (`1e3e767`, PR #278) and owns its family-coupled integration without restating or revising #271's internal authorization schema. Its audits charge #271's separate ledger, and the #271 owner reviews its submission through the epic owner. #163/#164 stay blocked until the entitlement ships. |
+| #253 board hardening | Rides the family. #253 owns the accepted authentication schema of the not-yet-deployed target board release; #254 supplies only the atomic migration vehicle and may not enumerate or weaken that schema. The first deployment contains both migration entry and #253 semantics; no intermediate unhardened target is deployed. NOTE-006 changes DEP-253-254: script hash identifies the release and the transaction is the edge; route the revised contract through the epic owner before S254-2. |
 | #171 consumer halves | Desk-negotiated implementation of multi-release follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
 | e171 consumer example / #166 | Must consume the family-neutral resolved result and demonstrate no address/policy retrofit. Runs after cutover readiness. |
@@ -180,8 +180,8 @@ No slice starts while the machine build gate is closed.
 
 - Add hash/policy-pinned board migrate-out/in checks plus the frozen
   v0 Retire bridge.
-- Bind the target-schema hook so #253 finalizes witness owner+sequence
-  authentication before target deployment.
+- Bind the target-schema hook so #253's accepted authentication runs unchanged
+  before target deployment; #254 does not own its internal fields.
 - Prove one-for-one three-record inventory and reject field/authentication/
   deposit mutants.
 

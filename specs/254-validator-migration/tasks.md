@@ -45,10 +45,9 @@ The machine build gate is a hard prerequisite for implementation or audit.
 ## Phase 3 — S254-E enforcement entitlement integration
 
 - [ ] T254-107 [US1] Adopt the audited #271 standalone commitment component
-  and require authenticated hunter/convictor entitlement throughout ArmedV2
-  and the Freeze/Convict branches, demonstrating substituted-payee RED before
-  #163/#164. Charge its audits to #271's ledger and obtain the #271 owner
-  review through the epic owner before acceptance.
+  and accepted authorization unchanged in the family integration; demonstrate
+  substituted-entitlement RED. Charge #271's ledger and obtain its owner
+  review through the epic owner; #254 does not restate internal fields.
 
 ## Phase 4 — S254-2 board family
 
@@ -60,9 +59,9 @@ The machine build gate is a hard prerequisite for implementation or audit.
 - [ ] T254-203 [US2] Implement and prove the frozen v0 `Retire`/`Burn`
   bridge, same-name successor confinement, target authentication, and exact
   predecessor input spend in the same transaction.
-- [ ] T254-204 [US2] Provide #253's target-schema handoff and require the
-  first deployed successor to contain owner+sequence binding; do not deploy an
-  intermediate unhardened version.
+- [ ] T254-204 [US2] Provide #253's target-schema handoff and require its
+  accepted authentication unchanged in the first deployed successor; deploy
+  no intermediate unhardened version and restate no internal fields.
 - [ ] T254-205 [US2] Demonstrate missing/duplicate/changed-row and partial
   three-record inventory RED, then reconcile all three expected witnesses.
 - [ ] T254-206 [US2] Generate board parity vectors and register the exact

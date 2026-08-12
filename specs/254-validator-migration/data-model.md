@@ -94,10 +94,12 @@ The successor uses `BoardDatumForRelease`, with no generic version or origin
 envelope.
 
 Continuity fields across migration are witness key, endpoint content,
-lifecycle owner key hash, and protected deposit. The target schema owns any
-new signed sequence/context fields. For the #253 target, witness authorization
-must bind endpoint content, owner, and monotonic sequence; generic migration
-metadata cannot waive that check.
+lifecycle owner key hash, and protected deposit. The board successor uses
+#253's accepted target schema (owner plus consumed-nonce witness
+authorization; no sequence field and no version-only constructor under the
+routed DEP contract). #254 owns only the atomic-migration vehicle, not the
+board's internal authentication fields, and generic migration metadata cannot
+waive the target-schema check.
 
 ## `DAT-254-BOARD-TRANSITION`
 

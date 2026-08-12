@@ -1,9 +1,8 @@
-# Tasks — #254 validator-version migration
+# Tasks — #254 migration
 
 Artifact ceiling: 7,000 bytes and 160 lines.
 
-All tasks are unchecked. The machine build gate is a hard prerequisite for any
-implementation, proof execution, child seating, or audit.
+The machine build gate is a hard prerequisite for implementation or audit.
 
 ## Phase 1 — dependency and contract freeze
 
@@ -12,27 +11,29 @@ implementation, proof execution, child seating, or audit.
   `a716f4b` plus the current PR template before any behavior work.
 - [x] T254-002 Obtain the epic ruling on batching #271 into S254-1; freeze
   the exact owned paths only after that answer.
-- [ ] T254-003 Negotiate the version-registry and resolved-result contract
-  with #171 through the milestone desk; version this mandate if the agreed seam
-  changes any producer field or invariant.
+- [ ] T254-003 Negotiate the release-hash registry/resolved-result contract
+  with #171 through the desk; amend producer fields/invariants if needed.
 - [ ] T254-004 Freeze the preproduction v0 checkpoint/board policies,
   references, network parameters, earliest scan point, and three expected board
   witness identities as legacy bridge inputs.
-- [x] T254-005 Initialize the runtime campaign ledger with all eight
-  BLOCKING rows OPEN, `builds_spent=0`, `builds_budget=3`, and the tail/overrun
-  rule from `plan.md`.
+- [x] T254-005 Initialize the runtime campaign ledger and apply A-002's charged
+  extension: all eight BLOCKING rows retain evidence, `builds_spent=3`,
+  `builds_budget=6`, with builds 4/5/6 allocated by `plan.md`.
 
 ## Phase 2 — S254-1 checkpoint family
 
-- [x] T254-101 [US1] Add the shared version, predecessor-origin, target,
-  and canonical migration-authorization models in onchain/offchain parity.
+- [ ] T254-101 [US1] Remove the superseded version/origin datum models; retain
+  only demonstrated target and canonical migration-authorization fields in
+  onchain/offchain parity, with release identity supplied by applied hash.
 - [ ] T254-102 [US1] Demonstrate RED for missing/foreign/below-threshold
   current-controller authorization and GREEN for permissionless relay of the
   same controller-signed package.
 - [ ] T254-103 [US1] Demonstrate RED for redirect/replay mutants changing
-  source outref, policy/version, target, role/state, or legacy refund.
-- [ ] T254-104 [US1] Implement and prove permanent N migrate-out plus pinned
-  N+1 migrate-in with exact role, datum, token, and value continuity.
+  source outref/policy, target, role/state, or legacy refund, including stale
+  signed state against the actually consumed input.
+- [ ] T254-104 [US1] Implement and prove permanent migrate-out plus a successor
+  applied with one predecessor policy, with exact role, datum, token, atomic
+  predecessor spend, and value continuity.
 - [ ] T254-105 [US1] Implement and prove the exact preproduction v0 ACTIVE
   `Close`/`CloseBurn` bridge, including refund plus equal successor
   capitalization and rejection of v0 ARMED/FROZEN rows.
@@ -51,14 +52,14 @@ implementation, proof execution, child seating, or audit.
 
 ## Phase 4 — S254-2 board family
 
-- [ ] T254-201 [US2] Add version/origin board envelopes without interpreting
-  or weakening the target endpoint-authentication schema.
-- [ ] T254-202 [US2] Implement and prove permanent board N migrate-out and
-  pinned N+1 migrate-in with owner, witness marker, content, deposit, and target
-  authentication continuity.
+- [ ] T254-201 [US2] Use the target board schema directly, with no generic
+  version/origin envelope and without weakening endpoint authentication.
+- [ ] T254-202 [US2] Implement and prove permanent board migrate-out and
+  applied-predecessor migrate-in with owner, witness marker, content, deposit,
+  and target authentication continuity.
 - [ ] T254-203 [US2] Implement and prove the frozen v0 `Retire`/`Burn`
   bridge, same-name successor confinement, target authentication, and exact
-  predecessor origin.
+  predecessor input spend in the same transaction.
 - [ ] T254-204 [US2] Provide #253's target-schema handoff and require the
   first deployed successor to contain owner+sequence binding; do not deploy an
   intermediate unhardened version.
@@ -69,20 +70,20 @@ implementation, proof execution, child seating, or audit.
 
 ## Phase 5 — S254-3 registry and consumer-ready cutover surface
 
-- [ ] T254-301 [US3] Add and validate the append-only multi-version release
-  registry with checkpoint role addresses, board addresses, predecessor edges,
-  references, source identities, and earliest scan point.
+- [ ] T254-301 [US3] Add and validate the append-only minimal release-label-to-
+  hash registry with checkpoint role addresses, board addresses, accepted
+  predecessor policies, references, source identities, and earliest scan point.
 - [ ] T254-302 [US3] Preserve the committed v0 manifests as immutable
   history and publish the target as a new registry entry, never a replacement.
 - [ ] T254-303 [US3] Add no-secret checkpoint/board migration package
   preparation and one-for-one dry-run inventory reconciliation without live
   submission.
-- [ ] T254-304 [US3] Prove the consumer example can obtain version, policy,
+- [ ] T254-304 [US3] Prove the consumer example can obtain release/hash, policy,
   outref, and current KEL authority from the family-neutral producer result
   without a single-address assumption.
-- [ ] T254-305 [US3] Hand the exact registry schema, origin semantics, and
-  simulated old/new stream to #171 through the desk for its follower/query/
-  relayer blindness proof.
+- [ ] T254-305 [US3] Hand the exact registry schema, transaction-derived edge
+  semantics, and simulated old/new stream to #171 through the desk for its
+  follower/query/relayer blindness proof.
 - [ ] T254-306 [US3] Document the cutover preflight, temporary v0 liquidity,
   controller/witness package flow, reconciliation format, rollback boundary,
   and explicit no-live-submit limit.
@@ -97,14 +98,13 @@ implementation, proof execution, child seating, or audit.
   machine gate and build budget.
 - [ ] T254-403 Reconcile the final compiled checkpoint/board identities with
   the M8 registered targets and record both acceptance-time announcements.
-- [ ] T254-404 Produce a reproducible no-submit preproduction dry-run from
-  the committed v0 inventories to the target family, showing every checkpoint
-  and all three board rows pairable with no orphan.
+- [ ] T254-404 Produce a no-submit v0-to-target dry-run pairing every
+  checkpoint and all three board rows with no orphan.
 - [ ] T254-405 Obtain the #171 seam acceptance and cutover-readiness proof;
   #254 cannot declare the preproduction event unblocked from producer evidence
   alone.
-- [ ] T254-406 Verify all task stamps, exact audited tree, campaign terminal
-  state, history, draft PR description, and final commit before push/review.
+- [ ] T254-406 Verify task stamps, audited tree, campaign, history, PR, and
+  final commit before push/review.
 - [ ] T254-407 After #253, #171, M8, and the desk cutover gate are satisfied,
   execute the first real preproduction migration: carry every inventoried
   checkpoint plus all three live board records, retain the raw reproducible
@@ -119,3 +119,8 @@ S254-1 and S254-2 share protocol types and therefore are not independent.
 #253 finalizes the target board schema after the S254-2 contract exists and
 before any successor deployment. #171 consumer implementation may proceed
 after T254-003/T254-305 but cutover readiness waits for both sides.
+
+## YAGNI demonstration rule
+
+Every retained task traces to `spec.md`'s demonstration table. Without a
+concrete attack or exact failed consumer read, cut it by mandate amendment.

@@ -1,18 +1,21 @@
-# Implementation plan — #254 validator-version migration
+# Implementation plan — #254 validator migration
 
 Artifact ceiling: 14,000 bytes and 260 lines.
 
 ## Durable design
 
-Introduce a version-parameterized checkpoint and board family. A normal
-version N program owns `MigrateOut`; version N+1 owns `MigrateIn` and pins N's
-policy/version. Both sides validate one transaction, exact continuity, and the
-same domain-separated current-controller authorization. Governance publishes
-the registry and cutover time but has no identity-migration authority.
+Introduce a hash-identified checkpoint and board family. A source program owns
+`MigrateOut`; its successor owns `MigrateIn` and is applied with the one
+predecessor policy it accepts. Both sides validate the same transaction, exact
+continuity, and the same domain-separated current-controller authorization.
+The applied script hash is on-chain release identity. The transaction is the
+lineage edge. Datums contain neither a version integer nor an origin pointer.
+Governance publishes the minimal release-label-to-hash registry and cutover
+time but has no identity-migration authority.
 
 The deployed preproduction version 0 predates this protocol. Its immutable
 checkpoint already exposes controller-authorized `Close`/`CloseBurn`, and its
-board exposes owner-authorized `Retire`/`Burn`. Version 1 therefore contains
+board exposes owner-authorized `Retire`/`Burn`. The successor therefore contains
 explicit legacy entry checks over those existing exits. The bridge is narrow:
 ACTIVE checkpoints only, current board rows only, exact old policy IDs, and
 the committed preproduction network. Later versions use the permanent two-
@@ -22,14 +25,15 @@ sided family protocol.
 
 | Option | Benefit | Cost / rejection |
 | --- | --- | --- |
-| Dedicated migrate action only | Small new redeemer surface. | Cannot retrofit deployed v0; without a pinned family it permits target/version drift and repeats the design at every release. |
-| Version-parameterized family | Checked version marker, pinned predecessor, uniform later upgrades, explicit legacy bridge, consumer registry. | More datum/manifest/parity surface and a coordinated checkpoint/board cutover. **Chosen.** |
+| Dedicated migrate action only | Small new redeemer surface. | Cannot retrofit deployed v0; without a pinned successor it permits target drift and repeats the design at every release. |
+| Datum version + origin family | Makes metadata visible without transaction history. | Duplicates script-hash identity and ledger history, has no M1 consumer, and created the audited sync gap. Rejected by NOTE-006. |
+| Hash-identified family | Applied successor pins one predecessor policy; atomic transaction is lineage; minimal registry serves off-chain selection. | Requires coordinated checkpoint/board cutover and history-aware consumers. **Chosen.** |
 | Governance-gated transition | Easy global scheduling and allowlist. | Central authority can move identity state, contrary to #219 and the projection constitution; controller compromise model becomes operator compromise. Rejected. |
 
 ## Authority and anti-replay
 
 The migration authorization is a Cardano-context message, not a KERI event.
-It binds network, source version/policy/outref, target version/policy, source
+It binds network, source policy/outref, target policy/address, source
 role, exact carried state, and any legacy refund address. Its signatures are
 evaluated against the source checkpoint's current threshold. This preserves
 #219's separation: KERI events alone authorize key-state advancement;
@@ -39,8 +43,8 @@ may submit the signed package.
 The ledger's single-spend rule plus exact source burn prevents a second
 settlement. The signed outref and target binding prevent one authorization
 from being redirected to another duplicate projection or successor family.
-The successor's pinned predecessor prevents an attacker-created old policy
-from minting a trusted successor.
+The successor's applied predecessor-policy parameter prevents an
+attacker-created old policy from minting a trusted successor.
 
 ## Legacy cutover shape
 
@@ -52,9 +56,9 @@ from minting a trusted successor.
 2. For each row, obtain the existing v0 `Close` authorization and the new
    migration authorization from the same current controller quorum.
 3. In one transaction, spend and burn the v0 token, satisfy the exact v0
-   refund, mint and confine the v1 token, and create the v1 state with unchanged
-   KEL fields, ACTIVE role, source lovelace floor, and an origin naming the v0
-   input.
+   refund, mint and confine the successor token, and create successor state
+   with unchanged KEL fields, ACTIVE role, and source lovelace floor. The same
+   transaction is the predecessor-to-successor edge.
 4. Reconcile old inventory to new inventory one-for-one. The old refund means
    the payer supplies equal temporary lovelace for the new escrow; accepted v0
    checkpoints contain no foreign assets, so no unique non-ADA asset must be
@@ -66,9 +70,9 @@ from minting a trusted successor.
 2. Each old owner authorizes v0 `Retire`/`Burn`; the target record also
    satisfies the target schema's witness authorization. For #253's target,
    that signature binds owner and monotonic sequence as well as endpoint.
-3. Mint one same-witness-name target marker, preserve the deposit and content,
-   and record the exact v0 input origin. Reconcile all three witnesses before
-   calling the board cut over.
+3. Mint one same-witness-name target marker and preserve the deposit and
+   content in the transaction that spends the exact v0 input. Reconcile all
+   three witnesses before calling the board cut over.
 
 ## Draft cross-seam contract for #171
 
@@ -77,23 +81,22 @@ consumer epic.
 
 ### Version registry
 
-Replace the singular deployment locator with an ordered registry containing:
+Replace the singular deployment locator with a minimal ordered registry
+containing:
 
 - registry schema version and earliest scan slot/block;
-- for each checkpoint validator version: non-negative version, policy ID,
-  ACTIVE/ARMED/FROZEN addresses, predecessor version/policy, and reference
+- for each checkpoint release label: applied script hash, policy ID,
+  ACTIVE/ARMED/FROZEN addresses, accepted predecessor policy, and reference
   scripts;
-- for each board version: version, policy/address, predecessor edge, and
-  reference script;
+- for each board release label: applied hash, policy/address, accepted
+  predecessor policy, and reference script;
 - cutover status (`prepared`, `open`, or `complete`) without deleting prior
   entries.
 
-The checkpoint datum marker is `CheckpointDatumV2 { validator_version,
-migration_origin, state }`, where `state` is the unchanged V1 KEL projection
-and `migration_origin` is absent for native registration or contains immediate
-source version/policy/outref. ARMED wraps that versioned checkpoint and retains
-hunter/deadline. The board successor uses the same version/origin envelope
-around the board schema selected by #253.
+Checkpoint and board datums remain their role/schema state only. They do not
+carry registry labels, validator versions, or migration origins. ARMED retains
+hunter/deadline. The board successor uses the schema selected by #253 without
+a generic migration envelope.
 
 ### Follower semantics
 
@@ -109,27 +112,28 @@ around the board schema selected by #253.
 ### Query and resolution semantics
 
 - Query inputs select a registry, not one `(policy,address)` pair. Results
-  expose validator version, policy, role, outref, origin, and decoded KEL
+  expose release label, applied hash/policy, role, outref, and decoded KEL
   state.
-- Candidates group by AID. Valid same-version spends and exact migration
-  origins form lineage edges. Resolution prefers the candidate demonstrating
+- Candidates group by AID. Valid ordinary spends and atomic migration
+  transactions form lineage edges. Resolution prefers the candidate demonstrating
   greatest authenticated use (`seq`, then `native_sn`) along a valid lineage;
-  a version number alone never wins. A tie without a unique used lineage is an
+  a registry label alone never wins. A tie without a unique used lineage is an
   explicit ambiguity.
-- Unknown versions, malformed origins, gaps in a claimed edge, or policy-to-
-  registry mismatch are errors. They never collapse to “not found.”
+- Unknown hashes/labels, incomplete migration transactions, gaps in a derived
+  edge, or policy-to-registry mismatch are errors. They never collapse to “not
+  found.”
 - Board lookup applies the analogous witness-key lineage and the target
-  version's authentication rules; malformed old/new rows fail the whole
+  release's authentication rules; malformed old/new rows fail the whole
   catalog closed.
 
 ### Relayer and #166
 
-- The relayer receives the resolved version/policy/outref and selects the
-  matching family scripts; it refuses a version outside the registry rather
+- The relayer receives the resolved release/hash/policy/outref and selects the
+  matching family scripts; it refuses a hash outside the registry rather
   than falling back to the newest manifest.
 - The consumer example receives a family-neutral resolved checkpoint whose
   current keys and threshold can authorize a CID mint. No consumer derives
-  authority from policy/version metadata.
+  authority from policy/release metadata.
 - The #166 stranger transcript crosses or starts after the cutover using the
   same registry and records the source/migration/successor identities it
   actually observed.
@@ -141,8 +145,8 @@ around the board schema selected by #253.
 | `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
 | #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
 | #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the audited standalone entitlement component from #271 (`1e3e767`, PR #278) and owns its family-coupled ArmedV2 plus Freeze/Convict integration. Its audits charge #271's separate ledger, and the #271 owner reviews its submission through the epic owner. `extra_signatories` remains consent-only, not the theft fix; #163/#164 stay blocked until the entitlement ships. |
-| #253 board hardening | Rides the family. It finalizes the not-yet-deployed target board version by adding owner+sequence witness binding; the first deployment of that version contains both migration entry and #253 semantics. Do not deploy an intermediate unhardened target. |
-| #171 consumer halves | Desk-negotiated implementation of multi-version follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
+| #253 board hardening | Rides the family. It finalizes the not-yet-deployed target board release by adding owner+sequence witness binding; the first deployment of that release contains both migration entry and #253 semantics. Do not deploy an intermediate unhardened target. NOTE-006 changes DEP-253-254: script hash identifies the release and the transaction is the edge; route the revised contract through the epic owner before S254-2. |
+| #171 consumer halves | Desk-negotiated implementation of multi-release follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
 | e171 consumer example / #166 | Must consume the family-neutral resolved result and demonstrate no address/policy retrofit. Runs after cutover readiness. |
 | M8 Blaster | Compile-target and property dependency. New hashes/entrypoints are registered at acceptance and cutover; authority/replay proof target cannot move silently. |
@@ -151,10 +155,12 @@ around the board schema selected by #253.
 
 No slice starts while the machine build gate is closed.
 
-### S254-1 — shared version and checkpoint migration family
+### S254-1 — shared authorization and checkpoint migration family
 
-- Add the version/origin and migration-authorization parity types.
-- Add permanent v1 migrate-out/in checks and the exact preproduction v0 ACTIVE
+- Remove the superseded version/origin datum types and retain only the
+  demonstrated migration-authorization parity fields.
+- Apply the successor with one accepted predecessor policy; add permanent
+  migrate-out/in checks and the exact preproduction v0 ACTIVE
   bridge.
 - Extend deployment manifest/build-package surfaces without removing v0.
 - Ship RED controls for authority, redirect/replay, identity, role, asset, and
@@ -172,7 +178,7 @@ No slice starts while the machine build gate is closed.
 
 ### S254-2 — endpoint-board parity and #253 handoff
 
-- Add board version/origin and permanent migrate-out/in checks plus the frozen
+- Add hash/policy-pinned board migrate-out/in checks plus the frozen
   v0 Retire bridge.
 - Bind the target-schema hook so #253 finalizes witness owner+sequence
   authentication before target deployment.
@@ -181,7 +187,7 @@ No slice starts while the machine build gate is closed.
 
 ### S254-3 — release registry and reproducible cutover tooling
 
-- Publish the multi-version registry schema and exact source/reference
+- Publish the minimal release-label-to-hash registry and exact source/reference
   identities while preserving historical entries.
 - Build inventory/reconciliation and transaction-package tooling that can
   execute the desk-gated cutover after every dependency is accepted. No live
@@ -212,19 +218,19 @@ Forbidden without a revised contract:
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 
-Budget: **3 building audits** for #254's rows, initially `builds_spent=0` and
-`builds_budget=3`. Owner development builds are separately controlled and do
-not spend this audit budget. S254-E instead charges the distinct #271 ledger;
-neither slice may borrow from the other without an explicit higher-scope
-ruling.
+Budget: **6 building audits** for #254's rows after the charged A-002 extension,
+currently `builds_spent=3` and `builds_budget=6`; the first three remain on the
+record. Owner development builds are separately controlled. S254-E instead
+charges the distinct #271 ledger; neither slice may borrow from the other.
 
-1. Build 1: fresh audit of the first complete candidate; establish one warm
-   tree and attack all eight declared rows with named source/value/signature
-   mutants.
-2. Build 2: reserved for the one permitted repaired candidate and fresh audit;
-   unused if submission 1 settles every row.
-3. Build 3: contingency for an epic-authorized fresh campaign or compiled-UPLC
-   discrepancy. It is not automatic permission for a third submission.
+1. Builds 1–3: spent on S254-1A and the superseded S254-1B design/audits; all
+   evidence remains retained.
+2. Build 4/6: the sole independent audit of the complete lean S254-1 repair.
+3. Build 5/6: the first independent audit of S254-2.
+4. Build 6/6: the first independent audit of S254-3.
+
+Any blocking finding that requires another repair submission is a fresh
+overrun and requires an itemized epic ruling.
 
 Reading, typecheck-only, and interpreted mutation work that compiles nothing is
 unmetered. A build cannot begin while the machine gate is closed or if it would
@@ -236,18 +242,3 @@ as RESIDUAL. A row may become BLOCKED only with the exact external fact named.
 The campaign closes at set-point only when every row is terminal. A quiet tail
 round never closes over an OPEN row; budget exhaustion with an OPEN row records
 campaign overrun and escalates rather than accepting silence.
-
-## Artifact measurements
-
-Measured after authoring and before mandate submission. The compiled six-file
-packet ceiling is 60,000 bytes and 1,200 lines.
-
-| Artifact | Bytes | Lines | Ceiling |
-| --- | ---: | ---: | --- |
-| `spec.md` | 11,454 | 185 | 12,000 / 210 |
-| `plan.md` | 13,198 | 243 | 14,000 / 260 |
-| `modules-model.md` | 8,054 | 157 | 9,000 / 180 |
-| `data-model.md` | 7,490 | 192 | 8,000 / 210 |
-| `functions-model.md` | 9,067 | 176 | 10,000 / 200 |
-| `tasks.md` | 6,513 | 116 | 7,000 / 160 |
-| **Total** | **55,776** | **1,069** | **60,000 / 1,200** |

@@ -1,15 +1,15 @@
-# Feature specification — #254 validator-version migration
+# Feature specification — #254 validator migration
 
 Artifact ceiling: 12,000 bytes and 210 lines.
 
 ## Outcome
 
-A deployed checkpoint or endpoint-board record can move from validator version
-N to the approved N+1 family without abandoning its identity, authority,
+A deployed checkpoint or endpoint-board record can move from one validator
+hash to its approved successor without abandoning identity, authority,
 anti-replay state, protected value, or observable history. The preproduction
-version-0 deployment is the first migration: every live checkpoint and all
-three live board records move to the cutover family and remain resolvable on
-both sides of the transaction.
+deployment is the first migration: every live checkpoint and all three live
+board records move to the cutover hashes and remain resolvable on both sides
+of the atomic migration transaction.
 
 The motivation is stranding only. Migration records transaction context; they
 never create KERI identity facts, conviction records, or tombstones.
@@ -25,111 +25,76 @@ AID token with the same asset name under the successor policy.
 
 ### US2 — the live endpoint board crosses the same cutover (P1)
 
-Each existing board owner retires its version-0 marker into the version-1
+Each existing board owner retires its deployed marker into the successor
 family. The successor retains witness identity, endpoint content, lifecycle
 owner, and deposit while satisfying the successor datum/authentication rules.
 All three public records migrate; a partial catalog is not called a cutover.
 
-### US3 — consumers resolve an AID across versions (P1)
+### US3 — consumers resolve an AID across releases (P1)
 
 Followers, query services, relayers, and the #166 stranger journey receive a
-version registry and explicit migration edges rather than one checkpoint
-address. A consumer example that mints a CID authorized by the resolved KEL
-can use the returned current controller state without a later interface
-retrofit.
+minimal release-label-to-hash registry rather than one checkpoint address.
+They derive migration edges from the transaction that spends the predecessor,
+burns its token, mints the successor token, and creates the successor. A
+consumer example that mints a CID authorized by the resolved KEL can use the
+returned current controller state without a later interface retrofit.
 
 ## Design decision
 
-Choose a **version-parameterized validator family with explicit migration
-entry and exit actions**.
-
-- A bare dedicated action is insufficient for the first cutover: the deployed
-  version-0 scripts are immutable and do not contain it. The successor must
-  also understand the existing, already-authorized `Close` and `Retire`
-  exits.
-- A family gives every applied program a checked version, pins the permitted
-  predecessor at the successor, and makes later N to N+1 transitions the same
-  protocol rather than another retrofit.
-- A governance-gated redeploy is rejected. Governance may publish the version
-  registry and schedule a cutover, but it cannot authorize an identity move or
-  choose new controller state. That would replace the #219 authority model
-  with an operator key.
+Choose a **hash-identified validator family with migration entry/exit**. Each
+successor is applied with its one accepted predecessor policy; its script hash
+is release identity and the atomic transaction is the lineage edge. Datum
+version and origin fields are forbidden duplication. The immutable v0 bridge
+uses its existing `Close`/`Retire` exits. Governance may publish the registry
+and schedule cutover, but never authorize an identity move.
 
 Migration changes transaction context, not KEL state. Authorization therefore
 uses the source datum's current controller threshold over a domain-separated
-migration message binding source version/policy/outref, target
-version/policy, lifecycle role, carried state, and legacy refund address when
-present. This follows `close.ak`'s context-binding pattern. A controller signs
-once and any party may relay the complete authorization.
-
-Two checks fix the design boundary now:
-
-1. **Consumer example:** the resolved checkpoint result includes version,
-   policy, outref, and unchanged current KEL keys/threshold, so “mint a CID
-   signed by a KEL” consumes the family-neutral result directly.
-2. **First real event:** the cutover transcript starts from the committed
-   version-0 checkpoint and board manifests, migrates every discovered live
-   checkpoint plus the three-record board, and proves no source identity or
-   record was orphaned.
+migration message binding source policy/outref, target policy/address,
+lifecycle role, carried state, and legacy refund address when present. This
+follows `close.ak`. A controller signs once; any party may relay the package.
 
 ## Requirements
 
-- **RQ-254-01 — version is enforced:** every successor datum carries a
-  non-negative validator version equal to the applied program's version. A
-  caller cannot claim a different version in datum or redeemer data.
-- **RQ-254-02 — pinned edge:** a successor accepts migration only from its
-  applied predecessor version and policy. The target version is exactly source
-  version plus one.
-- **RQ-254-03 — controller authority:** checkpoint migration signatures are
-  checked against the source checkpoint's current keys and threshold. No
-  governance, payment, or relayer key substitutes for that quorum.
+- **RQ-254-01 — hash is release identity:** no datum version exists. Applied
+  script/policy hashes identify releases; labels live only in the registry.
+- **RQ-254-02 — pinned predecessor spend:** a successor accepts migration only
+  when one transaction consumes the named outref under its compile-time
+  predecessor policy; caller data cannot choose another predecessor.
+- **RQ-254-03 — controller authority:** checkpoint migration signatures use
+  the source checkpoint's current keys/threshold; no other key substitutes.
 - **RQ-254-04 — permissionless submission:** controller authorization is data,
-  not a required transaction signer; an unrelated relayer can submit it
-  without changing the authorized source, target, role, state, or refund.
+  not a transaction signer; any relayer may submit the unchanged package.
 - **RQ-254-05 — exact checkpoint continuity:** `cesr_aid`, current and next
   keys/thresholds, witnesses, `toad`, checkpoint `seq`, and KERI `native_sn`
   are byte-for-byte unchanged. ACTIVE, ARMED, and FROZEN retain their role;
   ARMED also retains hunter/deadline. No terminal successor is invented.
 - **RQ-254-06 — one-for-one asset transition:** the named source token is
   burned once, the successor token is minted once with the same derived asset
-  name under the target policy, and it is confined to the one exact successor
-  output. No source or target policy extras are admitted.
+  name under the target policy and confined to one successor; no policy extras.
 - **RQ-254-07 — value continuity:** the successor carries the source role's
-  complete protected lovelace and admitted assets, with only the policy-token
-  replacement. The legacy version-0 bridge may refund the old lovelace through
-  its existing exit and require equal successor capitalization in the same
-  transaction; the transcript states that temporary liquidity cost honestly.
+  protected lovelace/assets except policy-token replacement. The v0 bridge may
+  refund old lovelace but requires equal same-transaction capitalization.
 - **RQ-254-08 — replay resistance:** authorization binds the consumed outref
-  and both policy/version identities. A used authorization, a changed target,
+  and both policy identities. A used authorization, a changed target,
   a changed role/state/refund, or a migration from another duplicate
   projection rejects.
-- **RQ-254-09 — durable audit edge:** every migrated successor carries a
-  `MigrationOrigin` naming source version, source policy, and source outref.
-  Ordinary same-version transitions retain that origin; the next migration
-  replaces it with the new immediate predecessor, yielding a traversable
-  ledger lineage.
+- **RQ-254-09 — durable transaction edge:** the accepted transaction itself
+  spends the predecessor, burns its token, mints the same-name successor, and
+  creates it. Consumers derive lineage from the event; no origin field exists.
 - **RQ-254-10 — legacy checkpoint bridge:** a deployed version-0 ACTIVE
-  checkpoint migrates atomically through its existing controller-authorized
-  `Close` plus token burn and the successor's migration entry. Cutover
-  preflight must prove every version-0 checkpoint is ACTIVE; any ARMED or
-  FROZEN version-0 checkpoint blocks the cutover because its immutable script
-  has no authorized exit.
-- **RQ-254-11 — future checkpoint path:** every family version introduced by
-  this change supports exact-role migration out and pinned-predecessor
-  migration in, so the legacy bridge is not repeated at version 1.
-- **RQ-254-12 — board parity:** a versioned board successor binds its
-  predecessor edge and preserves witness key, endpoint content, owner, and
-  deposit. The version-0 bridge uses existing owner-authorized `Retire` and
-  burn; the successor requires whatever new witness authorization its schema
-  declares, including #253's owner-and-sequence binding.
+  checkpoint migrates through its existing authorized `Close` plus burn and
+  successor entry. Any v0 ARMED/FROZEN row blocks cutover: it has no such exit.
+- **RQ-254-11 — future checkpoint path:** every new family member introduced
+  supports exact-role out and one compile-time predecessor policy.
+- **RQ-254-12 — board parity:** a board successor spends its pinned
+  predecessor and preserves witness/content/owner/deposit. The v0 bridge uses
+  authorized `Retire`/burn; target authentication includes #253's binding.
 - **RQ-254-13 — no partial cutover:** deployment succeeds only when the source
-  inventory and successor inventory reconcile one-for-one and the three known
-  board witnesses all have successors. Missing, duplicated, or ambiguous rows
-  fail the cutover.
-- **RQ-254-14 — cross-version consumer surface:** the deployment artifact
-  publishes an ordered registry of supported checkpoint and board versions,
-  their policies/role addresses, predecessor edges, references, and earliest
-  scan point. It never replaces the old entry with a single new address.
+  inventories reconcile one-for-one and all three board witnesses succeed.
+- **RQ-254-14 — cross-release consumer surface:** the deployment artifact
+  publishes an append-only label-to-hash/policy/address/reference map and
+  earliest scan point, with no duplicate on-chain release metadata.
 - **RQ-254-15 — constitutional projection:** migration may bind transaction
   context and copy KEL-derived state, but may not originate or alter an
   identity-state field without a checked KERI event.
@@ -147,39 +112,38 @@ signature. Initial state is OPEN; passing examples alone do not close a row.
 | --- | --- | --- | --- |
 | `INV-254-IDENTITY` | BLOCKING | Any projected KEL field or live role changes during migration. | A named field/role mutant is rejected and the exact source state is retained. |
 | `INV-254-AUTHORITY` | BLOCKING | Migration lands without the source current-controller quorum, or governance/relayer authority substitutes for it. | A missing, foreign, or below-threshold controller authorization is rejected; the same authorization is relayable. |
-| `INV-254-REPLAY` | BLOCKING | Authorization can be reused or redirected to another outref, version, policy, role, state, or refund. | A named binding mutant is rejected by a permanent property. |
+| `INV-254-REPLAY` | BLOCKING | Authorization can be reused or redirected to another outref, policy, role, state, target, or refund. | A named binding mutant is rejected by a permanent property. |
 | `INV-254-VALUE` | BLOCKING | Source/target tokens or protected escrow can be lost, duplicated, redirected, or multiplied. | Exact burn/mint/confinement and role-value mutants are rejected. |
-| `INV-254-LINKAGE` | BLOCKING | Datum version disagrees with the applied family or the origin does not name the actual predecessor. | Version/origin mutants fail and a consumer can traverse the on-chain edge. |
+| `INV-254-LINKAGE` | BLOCKING | Migration succeeds without spending the exact predecessor input accepted by the successor's applied policy parameter. | Wrong-policy, wrong-outref, missing-input, and split-transaction mutants fail; a follower derives the edge from the accepted transaction. |
 | `INV-254-BOARD` | BLOCKING | A board row changes witness/content/owner/deposit, bypasses successor authentication, or one of the three live rows is omitted. | Field/authentication/partial-inventory mutants reject and all three successors reconcile. |
-| `INV-254-CONSUMER` | BLOCKING | A supported migration becomes invisible or resolves from existence/version alone rather than authenticated use. | A simulated old-to-new stream remains visible from both bootstrap sides; ambiguity fails closed. |
+| `INV-254-CONSUMER` | BLOCKING | A supported migration becomes invisible or resolves from existence/release recency alone rather than authenticated use. | A simulated old-to-new stream remains visible from both bootstrap sides; ambiguity fails closed. |
 | `INV-254-UPLC` | BLOCKING | Compiled UPLC admits an authority or replay bypass hidden by source-level tests, or the proof target changes silently. | M8 kills a named compiled mutant for both classes against the announced target. |
 
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 The termination and build budget are fixed in `plan.md`.
 
-## Rejection and edge behavior
+## Demonstration burden for every retained requirement
 
-- Unknown versions, skipped edges, wrong predecessor policies, multiple target
-  outputs, foreign datum constructors, malformed origin fields, and ambiguous
-  consumer tips fail closed.
-- A duplicate projection is not called a forgery. Resolution prefers
-  authenticated use (`seq`/`native_sn` and valid lineage), never mere existence
-  or the numerically highest validator version; unresolved ties remain
-  explicit ambiguity.
-- Version-0 ACTIVE checkpoints and board rows need temporary lovelace because
-  their existing exit refunds the old deposit while the successor must be
-  capitalized. This is a cutover cost, not value continuity evidence.
+The default is CUT. A security requirement stays only when the table names an
+attack transaction that succeeds without it; a consumer requirement stays
+only when it names the exact read that fails without it.
 
-## Non-goals
-
-- No live transaction, deployment, manifest replacement, or cutover occurs in
-  the current mandate phase. The eventual preproduction event remains
-  desk-gated acceptance work after producer, #253, #171, and M8 readiness; it
-  is not replaced by a rehearsal that would cease to make the cutover the
-  first real migration.
-- No consumer-side #171 code is owned here; `plan.md` supplies a draft contract
-  for desk-mediated negotiation.
-- No #253 endpoint-authentication or #271 payee-authentication ruling is
-  silently absorbed. Their dependency and batching recommendation are explicit
-  in `plan.md`.
+| Requirement | Demonstration without the feature |
+| --- | --- |
+| RQ-254-01 | Consumer read: deployment, follower, relayer, and M8 cannot select or verify a script from a label without the label-to-hash registry; no on-chain datum integer is needed for that read. |
+| RQ-254-02 | Attack: submit a genuine signed package while spending a duplicate under an attacker policy; it reaches the trusted successor unless the applied successor pins and observes the real predecessor. |
+| RQ-254-03 | Attack: migrate another controller's checkpoint with no current-controller quorum. |
+| RQ-254-04 | Consumer action: an unrelated relayer cannot submit the controller's already-signed package if relay identity is part of authority. |
+| RQ-254-05 | Attack: change keys, threshold, sequence, AID, witnesses, or lifecycle role during a context-only move and thereby forge KEL state. |
+| RQ-254-06 | Attack: burn without mint, mint twice, change the AID asset name, or redirect the successor token. |
+| RQ-254-07 | Attack: skim lovelace/admitted assets or create an undercapitalized successor; the audit's empty-output transaction is the minimal witness. |
+| RQ-254-08 | Attack: reuse a signed package against a different consumed outref or sign stale state while consuming a newer checkpoint; the audit's `7/4` versus `23/19` transaction is the minimal witness. |
+| RQ-254-09 | Consumer read: the follower's block-atomic transaction application cannot associate predecessor spend with successor creation if they are allowed in separate transactions; no stored origin is read. |
+| RQ-254-10 | Attack/availability: accept a v0 ARMED/FROZEN row through a Close path the immutable deployed script does not authorize, or silently orphan it during cutover. |
+| RQ-254-11 | Attack: a future source burns independently while an unrelated predecessor mints into the successor unless both family arms enforce the same atomic transaction. |
+| RQ-254-12 | Attack: change board witness/content/owner/deposit or bypass #253 target authentication during migration. |
+| RQ-254-13 | Consumer read: the cutover desk cannot distinguish complete migration from an orphaned checkpoint or missing one of the three board rows without inventory reconciliation. |
+| RQ-254-14 | Consumer read: follower address interest, relayer script selection, query decoding, and M8 target selection fail after a hash change if only one current locator is published. |
+| RQ-254-15 | Attack: manufacture new controller/KEL facts during migration without a checked KERI event. |
+| RQ-254-16 | Consumer read/security control: M8 cannot prove the shipped program rejected authority/replay mutants if the exact applied hash/entrypoint is not registered. |

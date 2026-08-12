@@ -1,44 +1,42 @@
-# Modules model — #254 validator-version migration
+# Modules model — #254 validator migration
 
 Artifact ceiling: 9,000 bytes and 180 lines.
 
 ## `MOD-254-PROTOCOL` — shared migration contract
 
 - **Status:** new shared owner.
-- **Responsibility:** own validator version, predecessor origin, target, role,
+- **Responsibility:** own applied predecessor-policy, target, role,
   authorization message, and structured migration verdict abstractions used by
   checkpoint and board families.
-- **Owns abstractions:** `DAT-254-VERSION`, `DAT-254-ORIGIN`,
-  `DAT-254-TARGET`, `DAT-254-AUTHORIZATION`.
+- **Owns abstractions:** `DAT-254-PREDECESSOR`, `DAT-254-TARGET`,
+  `DAT-254-AUTHORIZATION`; `DAT-254-RELEASE` is registry-owned.
 - **Upstream dependencies:** ledger output references, policy IDs, addresses,
   threshold/signature primitives, network discriminator.
 - **Downstream consumers:** checkpoint migration, board migration, Haskell
   parity/generator, deployment packages, release registry.
-- **Promotions:** version/origin move to the nearest shared onchain/offchain
-  protocol owner because both checkpoint and board require identical edge
-  semantics.
+- **Promotions:** none. Script hash identifies the release and transaction
+  history owns lineage; neither is duplicated into shared datum state.
 - **Forbidden dependencies:** no dependency on follower, query provider,
   governance key, deployment environment, or #253-specific endpoint content.
 
-## `MOD-254-CHECKPOINT-STATE` — versioned checkpoint datum family
+## `MOD-254-CHECKPOINT-STATE` — unchanged checkpoint role state
 
 - **Status:** changed owner of checkpoint wire state.
-- **Responsibility:** wrap the frozen V1 KEL projection with applied validator
-  version and optional immediate migration origin; carry that wrapper through
-  ACTIVE/ARMED/FROZEN roles.
+- **Responsibility:** preserve the frozen V1 KEL projection and existing
+  ACTIVE/ARMED/FROZEN role shapes without adding migration metadata.
 - **Owns abstractions:** `DAT-254-CHECKPOINT`, `DAT-254-ARMED`.
-- **Upstream dependencies:** `MOD-254-PROTOCOL`, frozen checkpoint V1 state.
+- **Upstream dependencies:** frozen checkpoint V1 state.
 - **Downstream consumers:** checkpoint spend/mint arm, observers, parity codec,
   consumer contract.
 - **Promotions:** none; the KEL projection remains owned by the existing datum
   module and is referenced, not copied field-by-field into migration logic.
-- **Forbidden dependencies:** migration metadata must not become KEL state or
+- **Forbidden dependencies:** migration metadata must not enter KEL state or
   alter registration/advance event semantics.
 
 ## `MOD-254-CHECKPOINT-FAMILY` — checkpoint migration enforcement
 
 - **Status:** changed validator family.
-- **Responsibility:** enforce normal migrate-out, pinned-predecessor migrate-in,
+- **Responsibility:** enforce normal migrate-out, applied-predecessor migrate-in,
   and the exact deployed-v0 ACTIVE bridge alongside existing lifecycle arms.
 - **Owns abstractions:** checkpoint migration entry/exit redeemers and
   `FUN-254-CP-*` verdicts in `functions-model.md`.
@@ -52,19 +50,17 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 - **Forbidden dependencies:** no operator/governance authorization and no
   mutation of KEL fields during migration.
 
-## `MOD-254-BOARD-STATE` — versioned board datum family
+## `MOD-254-BOARD-STATE` — target board datum
 
 - **Status:** changed board wire owner.
-- **Responsibility:** wrap the target board schema with applied version and
-  immediate predecessor origin while preserving witness/content/owner/deposit
-  continuity.
+- **Responsibility:** use the target board schema directly while preserving
+  witness/content/owner/deposit continuity; add no generic migration envelope.
 - **Owns abstractions:** `DAT-254-BOARD` and the target-schema boundary used by
   #253.
 - **Upstream dependencies:** `MOD-254-PROTOCOL`, existing board datum; #253
   supplies the target authentication schema before deployment.
 - **Downstream consumers:** board family, board parity codec, board consumers.
-- **Promotions:** version/origin are reused from `MOD-254-PROTOCOL`; endpoint
-  authentication remains board-owned.
+- **Promotions:** none; endpoint authentication remains board-owned.
 - **Forbidden dependencies:** generic migration code may not interpret or
   weaken #253's signed owner/sequence/content contract.
 
@@ -87,7 +83,7 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 
 - **Status:** changed shared proof owner.
 - **Responsibility:** keep onchain and offchain encodings/verdicts identical for
-  every new version, origin, authorization, checkpoint, and board migration
+  every retained authorization, checkpoint, and board migration
   case; generate vectors from the offchain source.
 - **Owns abstractions:** vector cases and parity verdict mapping, not duplicate
   business rules.
@@ -111,17 +107,17 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 - **Upstream dependencies:** release registry, chain-query algebra, parity
   codec, transaction builder.
 - **Downstream consumers:** future cutover operation and #166 documentation.
-- **Promotions:** the version registry is promoted out of one manifest entry
+- **Promotions:** the release registry is promoted out of one manifest entry
   because deployment, follower, query, relayer, and M8 all consume it.
 - **Forbidden dependencies:** no live submission before the desk release and
   no direct provider fallback outside the selected query interpreter.
 
 ## `MOD-254-REGISTRY` — supported validator-family release identity
 
-- **Status:** new versioned deployment artifact.
-- **Responsibility:** publish ordered checkpoint/board version identities,
-  predecessor edges, role addresses, references, and earliest scan point while
-  retaining historical versions.
+- **Status:** new append-only deployment artifact.
+- **Responsibility:** publish a minimal ordered label-to-hash map for
+  checkpoint/board releases, accepted predecessor policies, role addresses,
+  references, and earliest scan point while retaining historical releases.
 - **Owns abstractions:** `DAT-254-REGISTRY`, `DAT-254-REGISTRY-ENTRY`.
 - **Upstream dependencies:** applied script derivation and immutable release
   facts.
@@ -135,11 +131,12 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 ## `MOD-254-CONSUMER-CONTRACT` — desk-negotiated seam
 
 - **Status:** contract only; implementation belongs to #171.
-- **Responsibility:** define multi-address observation, lineage validation,
-  ambiguity, and family-neutral resolved-result semantics.
+- **Responsibility:** define multi-address observation, transaction-derived
+  lineage validation, ambiguity, and family-neutral resolved-result semantics.
 - **Owns abstractions:** only the draft contract in `plan.md`; no source files
   in #254.
-- **Upstream dependencies:** `MOD-254-REGISTRY`, on-chain origin semantics.
+- **Upstream dependencies:** `MOD-254-REGISTRY`, atomic migration transaction
+  semantics.
 - **Downstream consumers:** follower, local/hosted/third-party query tiers,
   relayer, CID consumer example, #166.
 - **Promotions:** none until the milestone desk ratifies the seam owner.
@@ -153,5 +150,5 @@ Artifact ceiling: 9,000 bytes and 180 lines.
 - `{CHECKPOINT-FAMILY, BOARD-FAMILY} -> DEPLOYMENT` is forbidden; deployment
   consumes validators and cannot define their acceptance rules.
 - `REGISTRY -> live query state` is forbidden; release identity is immutable.
-- Consumer resolution may depend on registry/origin, but no validator depends
-  on a consumer interpretation.
+- Consumer resolution may depend on registry/transaction history, but no
+  validator depends on a consumer interpretation.

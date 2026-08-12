@@ -1,47 +1,45 @@
-# Data model — #254 validator-version migration
+# Data model — #254 validator migration
 
 Artifact ceiling: 8,000 bytes and 210 lines.
 
-## `DAT-254-VERSION` — validator version
+## `DAT-254-RELEASE` — off-chain release identity
 
-- Field: `value`, non-negative integer.
-- Applied-program invariant: datum/source/target version equals the validator's
-  applied version parameter where that program owns the state.
-- Transition invariant: target is exactly source plus one.
+- `label`: human-readable, unique only within the release registry;
+- `script_hash`, `policy_id`, role addresses, and reference identity;
+- `accepted_predecessor_policy: Option<PolicyId>`.
 
-This is deployment protocol metadata, not KERI sequence state. It never
+The applied hash is on-chain identity. The label is deployment metadata and is
+never serialized into checkpoint/board datum or redeemer state. It never
 substitutes for checkpoint `seq` or KERI `native_sn`.
 
-## `DAT-254-ORIGIN` — immediate migration predecessor
+## `DAT-254-PREDECESSOR` — applied successor parameter
 
-- `source_version: ValidatorVersion`
-- `source_policy: PolicyId`
-- `source_ref: OutputReference`
+- `accepted_policy: PolicyId`
 
 Validation:
 
-- absent for a checkpoint/board row natively created in its current family;
-- present for migration, byte-identical to the transaction's consumed source;
-- source version/policy equal the target family's pinned predecessor;
-- retained across same-version lifecycle transitions;
-- replaced only by the next successful version migration.
+- compiled/applied into each successor validator, never caller-selected;
+- migrate-in observes an input at `source_ref` under `accepted_policy`;
+- the same transaction burns that predecessor token, mints the successor, and
+  creates the exact successor output;
+- nothing is stored in the successor datum: the accepted transaction is the
+  predecessor edge.
 
 ## `DAT-254-TARGET` — authorized successor identity
 
-- `target_version: ValidatorVersion`
 - `target_policy: PolicyId`
 - `target_role: CheckpointRole | BoardRole`
 - `target_address: Address`
 - `legacy_refund_address: Option<Address>`
 
-The policy/version/address/role tuple is checked against the applied family.
+The policy/address/role tuple is checked against the applied family.
 The refund is present only when an immutable legacy exit requires it.
 
 ## `DAT-254-AUTHORIZATION` — checkpoint migration package
 
 - `domain`: new frozen versioned protocol identifier;
 - `network_id`;
-- `source_version`, `source_policy`, `source_ref`;
+- `source_policy`, `source_ref`;
 - complete `target: DAT-254-TARGET`;
 - exact source lifecycle role;
 - exact carried checkpoint projection and role payload;
@@ -52,13 +50,10 @@ identity, value, or successor selection. Signatures are evaluated against the
 source checkpoint's current keys/threshold. Duplicate indices never increase
 quorum.
 
-## `DAT-254-CHECKPOINT` — versioned checkpoint state
+## `DAT-254-CHECKPOINT` — carried checkpoint state
 
-- `validator_version: DAT-254-VERSION`
-- `migration_origin: Option<DAT-254-ORIGIN>`
-- `state: CheckpointDatumV1`
-
-`state` preserves exactly:
+The successor uses the existing checkpoint role datum shape; it adds no
+generic version/origin envelope. Migration preserves exactly:
 
 - AID;
 - current keys and threshold;
@@ -66,18 +61,18 @@ quorum.
 - witnesses and `toad`;
 - Cardano checkpoint `seq` and KERI `native_sn`.
 
-Native registration sets the applied version and no origin. Advance may change
-only the fields authenticated by its KERI rotation and retains version/origin.
-Migration changes only version/origin and retains all KEL projection fields.
+Native registration and ordinary lifecycle transitions therefore need no
+migration-specific metadata path. Advance may change only fields authenticated
+by its KERI rotation. Migration retains every KEL projection field.
 
-## `DAT-254-ARMED` — versioned in-flight challenge
+## `DAT-254-ARMED` — in-flight challenge
 
-- `checkpoint: DAT-254-CHECKPOINT`
+- `checkpoint: CheckpointDatumV1`
 - `hunter_pkh`
 - `deadline`
 
 Migration preserves all three fields and the ARMED role. FROZEN preserves the
-versioned checkpoint and FROZEN role. Version-0 ARMED/FROZEN have no legacy
+checkpoint and FROZEN role. Version-0 ARMED/FROZEN have no legacy
 exit and therefore block the first cutover rather than being rewritten.
 
 ## `DAT-254-CHECKPOINT-TRANSITION`
@@ -88,16 +83,15 @@ Relationships:
   `(source_policy, derived_aid_asset_name, source_ref)`;
 - burns exactly that token under source policy;
 - mints exactly one token with the same asset name under target policy;
-- creates exactly one target-role output containing `DAT-254-CHECKPOINT` (or
-  `DAT-254-ARMED`) and the target token;
+- creates exactly one target-role output containing the unchanged role datum
+  and the target token;
 - carries the source role's exact protected value, subject only to the
   documented legacy refund/re-capitalization shape.
 
-## `DAT-254-BOARD` — versioned board record
+## `DAT-254-BOARD` — board successor record
 
-- `validator_version: DAT-254-VERSION`
-- `migration_origin: Option<DAT-254-ORIGIN>`
-- `record: BoardDatumForVersion`
+The successor uses `BoardDatumForRelease`, with no generic version or origin
+envelope.
 
 Continuity fields across migration are witness key, endpoint content,
 lifecycle owner key hash, and protected deposit. The target schema owns any
@@ -114,28 +108,31 @@ Relationships:
 - requires the source board owner's authorization and the target schema's
   witness authorization;
 - preserves source deposit and continuity fields;
-- records the exact predecessor origin.
+- spends the exact predecessor input accepted by the successor's applied
+  policy parameter in the same transaction.
 
 The v0 bridge uses the frozen policy and existing `Retire`/`Burn`; later
-versions use the permanent family migration actions.
+releases use the permanent family migration actions.
 
 ## `DAT-254-REGISTRY` — validator-family registry
 
 - `schema_version`
 - `network`
 - `earliest_scan_point: (slot, block_hash)`
-- `checkpoint_versions: NonEmpty<CheckpointVersionEntry>`
-- `board_versions: NonEmpty<BoardVersionEntry>`
+- `checkpoint_releases: NonEmpty<CheckpointReleaseEntry>`
+- `board_releases: NonEmpty<BoardReleaseEntry>`
 - `cutover_status`
 
-Each checkpoint entry contains version, policy, ACTIVE/ARMED/FROZEN addresses,
-predecessor version/policy when any, script/reference identities, and source
-commit. Each board entry contains the analogous version, policy/address,
-predecessor, reference, and source identity.
+Each checkpoint entry contains a release label, applied hash, policy,
+ACTIVE/ARMED/FROZEN addresses, accepted predecessor policy when any,
+script/reference identities, and source commit. Each board entry contains the
+analogous label, applied hash, policy/address, accepted predecessor policy,
+reference, and source identity.
 
 Validation:
 
-- versions are unique, ordered, and contiguous along each predecessor edge;
+- labels and hashes are unique; accepted-predecessor policies name an earlier
+  entry when the predecessor is supported;
 - policy/address/reference identities are exact and non-empty;
 - historical entries are append-only;
 - earliest scan point is not later than any registered deployment;
@@ -157,7 +154,7 @@ the package.
 ## `DAT-254-INVENTORY` and `DAT-254-RECONCILIATION`
 
 Inventory rows identify every discovered source checkpoint/board row by
-version, policy, role, outref, asset name, datum digest, and value digest.
+release label/hash, policy, role, outref, asset name, datum digest, and value digest.
 Reconciliation pairs each source with exactly one settled successor and records
 the migration transaction plus successor outref/digests.
 
@@ -171,22 +168,22 @@ Cutover completeness requires:
 
 ## State transitions
 
-- `Native(version N, origin=None) -> Migrate(version N+1, origin=source)`
-- `Migrate/Native -> Advance(same version, same origin, KEL-authenticated state)`
-- `ACTIVE(N) -> ARMED(N) -> ACTIVE/FROZEN(N)` retains version/origin.
-- `ACTIVE|ARMED|FROZEN(N>=1) -> same role(N+1)` through migration.
-- `ACTIVE(v0) -> ACTIVE(v1)` through the legacy checkpoint bridge only.
-- `Board(v0) -> Board(v1)` through legacy Retire/Burn plus target entry.
+- `Native(hash A) -> Migrate(hash B)` only when B is applied with A's policy.
+- `Migrate/Native -> Advance` uses the ordinary KEL-authenticated state shape.
+- `ACTIVE -> ARMED -> ACTIVE/FROZEN` carries no migration metadata.
+- `ACTIVE|ARMED|FROZEN(source) -> same role(successor)` through migration.
+- `ACTIVE(v0) -> ACTIVE(successor)` through the legacy checkpoint bridge only.
+- `Board(v0) -> Board(successor)` through legacy Retire/Burn plus target entry.
 - Any terminal burn has no migration successor and creates no identity datum.
 
 ## Data invariants
 
-- `DATA-INV-254-01`: version/origin are transaction-verified metadata, never
-  caller assertions.
+- `DATA-INV-254-01`: applied hash/policy identifies the family; the accepted
+  predecessor is a program parameter, never datum/redeemer state.
 - `DATA-INV-254-02`: migration preserves all KEL projection fields exactly.
 - `DATA-INV-254-03`: source and target asset maps are exact singleton policy
   transitions with one confined successor.
 - `DATA-INV-254-04`: role payload and protected value survive migration.
 - `DATA-INV-254-05`: board continuity cannot bypass target authentication.
-- `DATA-INV-254-06`: registry history and lineage edges remain sufficient for
-  old/new bootstrap and rollback.
+- `DATA-INV-254-06`: registry history plus atomic migration transactions remain
+  sufficient for old/new bootstrap and rollback.

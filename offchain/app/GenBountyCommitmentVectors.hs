@@ -78,9 +78,6 @@ commitmentSchema = 1
 commitMinAge :: Integer
 commitMinAge = 1
 
-commitmentLifetime :: Integer
-commitmentLifetime = 10000
-
 commitDepositFloor :: Integer
 commitDepositFloor = 5000000
 
@@ -230,11 +227,23 @@ nonce = BS.replicate 32 0x11
 commitUpper :: Integer
 commitUpper = 1000
 
+{- | The release lifetime this fixture's deployment chose, in slots.
+
+An explicitly named example, not a protocol default: the release magnitude
+is an applied parameter of the on-chain program, so neither language
+publishes a mandated value for it. Only the *derived* boundary below is
+emitted as a vector, and the Aiken side binds it back to its own named
+example, so changing this without changing that reddens a proof instead of
+regenerating quietly.
+-}
+exampleLifetime :: Integer
+exampleLifetime = 10000
+
 eligibleAfter :: Integer
 eligibleAfter = commitUpper + commitMinAge
 
 expiresAt :: Integer
-expiresAt = commitUpper + commitmentLifetime
+expiresAt = commitUpper + exampleLifetime
 
 refundIndex :: Integer
 refundIndex = 1
@@ -339,7 +348,6 @@ output =
           , intConst "schema" commitmentSchema
           , intConst "network" 42
           , intConst "commit_min_age" commitMinAge
-          , intConst "commitment_lifetime" commitmentLifetime
           , intConst "commit_deposit_floor" commitDepositFloor
           , intConst "commit_deposit" appliedDeposit
           , intConst "commit_upper" commitUpper

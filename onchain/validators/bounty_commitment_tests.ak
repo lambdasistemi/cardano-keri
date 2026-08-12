@@ -12,7 +12,7 @@
 //// Haskell-generated vectors through `bounty_commitment_tests`, so the
 //// transactions here and the parity proofs there are the same commitment.
 
-use aiken/interval.{NegativeInfinity, PositiveInfinity}
+use aiken/interval.{Interval, NegativeInfinity, PositiveInfinity}
 use bounty_commitment
 use cage_context.{spend_context}
 use cardano/address.{Address, Script, from_verification_key}
@@ -22,10 +22,11 @@ use cardano/transaction.{
 }
 use cardano_keri/bounty_commitment.{
   BountyCommitment, BountyCommitmentV1, BountyRevealV1, BountyScope,
-  ExpiredCommitmentSweepV1, Open, Retire, Reveal, Sweep,
+  CommitmentParameters, ExpiredCommitmentSweepV1, Open, Retire, Reveal, Sweep,
 } as protocol
 use cardano_keri/bounty_commitment_tests.{
-  between, commitment, flip_last, from_slot, other_seed_ref, parameters, scope,
+  alt_expires_at, alt_lifetime, alt_parameters, between, commitment,
+  example_lifetime, flip_last, from_slot, other_seed_ref, parameters, scope,
   seed_ref, until_slot, window,
 }
 use cardano_keri/bounty_commitment_vectors as vec
@@ -944,6 +945,236 @@ test bounty_commitment_open_rejects_an_empty_opening_range() {
         ..open_tx(),
         validity_range: until_slot(vec.commit_upper, False),
       },
+    ),
+  }
+}
+
+// ---------------------------------------------------------------------
+// INV-271-YAGNI-LIFETIME / INV-271-LIFETIME — the release magnitude is an
+// applied deployment parameter, proved through the REAL handlers at two
+// distinct valid values, with invalid magnitudes rejected by the real open
+// handler. Every transaction below is the honest one of its shape with only
+// the datum's derived expiry and the validity range moved, so a verdict can
+// only be caused by the applied lifetime under test.
+// ---------------------------------------------------------------------
+
+/// The deployment with an arbitrary applied release lifetime.
+fn parameters_with_lifetime(life: Int) -> CommitmentParameters {
+  CommitmentParameters { ..parameters(), commitment_lifetime: life }
+}
+
+/// The canonical commitment whose scope expiry is derived from `life`. The
+/// stored hash is reused unchanged: the lifecycle handlers constrain its
+/// width and never recompute it (`INV-271-REL-HASH-OPAQUE-TO-HANDLERS`).
+fn commitment_with_lifetime(life: Int) -> BountyCommitment {
+  BountyCommitmentV1 {
+    ..commitment(),
+    scope: BountyScope { ..scope(), expires_at: vec.commit_upper + life },
+  }
+}
+
+fn open_tx_with_lifetime(life: Int) -> Transaction {
+  Transaction {
+    ..open_tx(),
+    outputs: [
+      commitment_output(confined_value(), commitment_with_lifetime(life)),
+    ],
+  }
+}
+
+fn opens_with(params: CommitmentParameters, tx: Transaction) -> Bool {
+  bounty_commitment.bounty_commitment.mint(
+    params,
+    Open { seed_ref: seed_ref() },
+    policy,
+    tx,
+  )
+}
+
+fn reveal_tx_with(life: Int, range: Interval<Int>) -> Transaction {
+  Transaction {
+    ..reveal_tx(),
+    inputs: [
+      Input {
+        output_reference: own_ref(),
+        output: commitment_output(
+          confined_value(),
+          commitment_with_lifetime(life),
+        ),
+      },
+    ],
+    validity_range: range,
+  }
+}
+
+fn reveals_with(params: CommitmentParameters, tx: Transaction) -> Bool {
+  bounty_commitment.bounty_commitment.spend(
+    params,
+    None,
+    Reveal(reveal()),
+    own_ref(),
+    tx,
+  )
+}
+
+fn sweep_tx_with(life: Int, range: Interval<Int>) -> Transaction {
+  Transaction {
+    ..sweep_tx(),
+    inputs: [
+      Input {
+        output_reference: own_ref(),
+        output: commitment_output(
+          confined_value(),
+          commitment_with_lifetime(life),
+        ),
+      },
+    ],
+    validity_range: range,
+  }
+}
+
+fn sweeps_with(params: CommitmentParameters, tx: Transaction) -> Bool {
+  bounty_commitment.bounty_commitment.spend(
+    params,
+    None,
+    Sweep(sweep()),
+    own_ref(),
+    tx,
+  )
+}
+
+test bounty_commitment_open_accepts_a_parameterized_lifetime() {
+  and {
+    opens_with(parameters(), open_tx_with_lifetime(example_lifetime())),
+    opens_with(alt_parameters(), open_tx_with_lifetime(alt_lifetime())),
+    // neither example's opening is admissible under the other's parameters:
+    // the stored expiry must be derived from the lifetime actually applied
+    !opens_with(alt_parameters(), open_tx_with_lifetime(example_lifetime())),
+    !opens_with(parameters(), open_tx_with_lifetime(alt_lifetime())),
+    // the shortest admissible release opens: one mature reveal slot exists
+    opens_with(
+      parameters_with_lifetime(vec.commit_min_age),
+      open_tx_with_lifetime(vec.commit_min_age),
+    ),
+  }
+}
+
+test bounty_commitment_open_rejects_invalid_lifetime_parameters() {
+  // Each datum is made self-consistent with the invalid magnitude it is
+  // opened under, so the rejection can only come from the parameter rule
+  // itself and never from a scope-derivation mismatch.
+  and {
+    !opens_with(parameters_with_lifetime(0), open_tx_with_lifetime(0)),
+    !opens_with(parameters_with_lifetime(-1), open_tx_with_lifetime(-1)),
+    // an expiry before the opening endpoint is unreachable in either
+    // direction, and is refused for being an invalid release, not by luck
+    !opens_with(
+      parameters_with_lifetime(0 - example_lifetime()),
+      open_tx_with_lifetime(0 - example_lifetime()),
+    ),
+  }
+}
+
+test bounty_commitment_reveal_final_boundary_follows_the_lifetime() {
+  and {
+    // each release accepts exactly its own final reveal slot
+    reveals_with(
+      parameters(),
+      reveal_tx_with(
+        example_lifetime(),
+        between(vec.eligible_after, True, vec.expires_at, True),
+      ),
+    ),
+    reveals_with(
+      alt_parameters(),
+      reveal_tx_with(
+        alt_lifetime(),
+        between(vec.eligible_after, True, alt_expires_at(), True),
+      ),
+    ),
+    // one slot past its own expiry rejects, at both examples
+    !reveals_with(
+      parameters(),
+      reveal_tx_with(
+        example_lifetime(),
+        between(vec.eligible_after, True, vec.expires_at + 1, True),
+      ),
+    ),
+    !reveals_with(
+      alt_parameters(),
+      reveal_tx_with(
+        alt_lifetime(),
+        between(vec.eligible_after, True, alt_expires_at() + 1, True),
+      ),
+    ),
+    // the longer example's window is long past expiry for the shorter
+    // release: the boundary moved with the parameter, not with the protocol
+    !reveals_with(
+      alt_parameters(),
+      reveal_tx_with(
+        alt_lifetime(),
+        between(vec.eligible_after, True, vec.expires_at, True),
+      ),
+    ),
+    // exact one-slot maturity is unchanged by the release choice
+    !reveals_with(
+      alt_parameters(),
+      reveal_tx_with(
+        alt_lifetime(),
+        between(vec.commit_upper, True, alt_expires_at(), True),
+      ),
+    ),
+    // and an empty window stays empty whatever the release choice
+    !reveals_with(
+      alt_parameters(),
+      reveal_tx_with(
+        alt_lifetime(),
+        between(alt_expires_at(), True, vec.eligible_after, True),
+      ),
+    ),
+  }
+}
+
+test bounty_commitment_sweep_boundary_follows_the_lifetime() {
+  and {
+    // the first instant strictly after each release's own expiry sweeps
+    sweeps_with(
+      alt_parameters(),
+      sweep_tx_with(
+        alt_lifetime(),
+        between(alt_expires_at() + 1, True, alt_expires_at() + 2_000, True),
+      ),
+    ),
+    sweeps_with(
+      alt_parameters(),
+      sweep_tx_with(
+        alt_lifetime(),
+        between(alt_expires_at(), False, alt_expires_at() + 2_000, True),
+      ),
+    ),
+    // at its own expiry is still premature
+    !sweeps_with(
+      alt_parameters(),
+      sweep_tx_with(
+        alt_lifetime(),
+        between(alt_expires_at(), True, alt_expires_at() + 2_000, True),
+      ),
+    ),
+    // the very same window is premature under the longer release, and the
+    // longer release's own first post-expiry instant still sweeps
+    !sweeps_with(
+      parameters(),
+      sweep_tx_with(
+        example_lifetime(),
+        between(alt_expires_at() + 1, True, alt_expires_at() + 2_000, True),
+      ),
+    ),
+    sweeps_with(
+      parameters(),
+      sweep_tx_with(
+        example_lifetime(),
+        between(vec.expires_at + 1, True, vec.expires_at + 2_000, True),
+      ),
     ),
   }
 }

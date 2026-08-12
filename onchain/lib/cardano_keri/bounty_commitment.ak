@@ -41,10 +41,16 @@ pub const commitment_schema: Int = 1
 /// Mandated minimum commitment age: one network slot.
 pub const commit_min_age: Int = 1
 
-/// Mandated commitment lifetime: 10,000 network slots.
-pub const commitment_lifetime: Int = 10_000
-
 /// Mandated floor for the applied commitment deposit, in lovelace.
+///
+/// The floor's removal was tested and rejected, so be exact about what it
+/// buys. It raises the *concurrent capital* an attacker must lock to open
+/// Open_1..Open_N over candidate checkpoint/action/evidence preimages and
+/// reveal only the one that matches. It does not defeat that grind and does
+/// not force a loss: minimum ADA plus the permissionless expired sweep bound
+/// how long each losing commitment's UTxO lives, and the attacker may
+/// self-sweep its own expired losers and recycle the deposit. A surviving
+/// economic residual, not a defeated attack.
 pub const commit_deposit_floor: Int = 5_000_000
 
 /// Marker asset names are a full blake2b-256 digest.
@@ -131,7 +137,8 @@ pub type BountyMint {
 }
 
 /// `DAT-271-PARAMETERS`, applied magnitudes only. No ambient manifest
-/// lookup: every value is an explicit argument.
+/// lookup and no protocol default: every value, including the release
+/// lifetime, is an explicit argument of the applied program.
 pub type CommitmentParameters {
   network: Int,
   commit_min_age: Int,
@@ -233,14 +240,25 @@ pub fn commitment_hash(preimage: BountyCommitmentPreimage) -> ByteArray {
   blake2b_256(cbor.serialise(preimage))
 }
 
-/// The applied magnitudes must be exactly the mandated ones, with a deposit
-/// at or above the floor.
+/// The applied magnitudes must be admissible: exactly the mandated one-slot
+/// age, an explicit release lifetime long enough to contain at least one
+/// mature reveal slot, and a deposit at or above the floor.
+///
+/// The release lifetime's *magnitude* is a deployment choice, not a security
+/// invariant, so this module publishes no default for it and pins no exact
+/// value. What it does owe is that the applied value is explicit and denotes
+/// a reachable window: `expires_at` is `commit_upper + commitment_lifetime`
+/// and the first mature slot is `commit_upper + commit_min_age`, so a
+/// lifetime below the age would expire the commitment before it could ever
+/// be revealed. Because the leg above has already pinned the applied age to
+/// the mandated one slot, this same comparison is what rejects zero and
+/// negative lifetimes — they are one class of magnitude, not three.
 pub fn parameters_well_formed(
   parameters: CommitmentParameters,
 ) -> ParametersVerdict {
   if parameters.commit_min_age != commit_min_age {
     ParametersInvalid(ParametersAge)
-  } else if parameters.commitment_lifetime != commitment_lifetime {
+  } else if parameters.commitment_lifetime < parameters.commit_min_age {
     ParametersInvalid(ParametersLifetime)
   } else if parameters.commit_deposit < commit_deposit_floor {
     ParametersInvalid(ParametersDeposit)

@@ -26,10 +26,9 @@ use cardano_keri/bounty_commitment.{
   ScopeCheckpointPolicyWidth, ScopeCheckpointRefWidth, ScopeDomain, ScopeInvalid,
   ScopeLifetime, ScopeMarkerWidth, ScopeNetwork, ScopeSchema, ScopeValid, Sweep,
   at_or_after, at_or_before, commit_deposit_floor, commit_min_age,
-  commitment_domain, commitment_hash, commitment_lifetime, commitment_preimage,
-  commitment_schema, commitment_well_formed, entitlement_matches, marker_name,
-  non_empty, parameters_well_formed, raw_upper, scope_well_formed,
-  strictly_after,
+  commitment_domain, commitment_hash, commitment_preimage, commitment_schema,
+  commitment_well_formed, entitlement_matches, marker_name, non_empty,
+  parameters_well_formed, raw_upper, scope_well_formed, strictly_after,
 }
 use cardano_keri/bounty_commitment_vectors as vec
 
@@ -61,14 +60,41 @@ pub fn checkpoint_ref() -> OutputReference {
   }
 }
 
+/// The canonical fixture's applied release lifetime, in slots. An explicitly
+/// named example of one deployment's choice — never a protocol default. The
+/// generated vectors publish only the *derived* boundary, and
+/// `bounty_commitment_generated_boundary_derives_from_the_example_lifetime`
+/// keeps this example bound to it.
+pub fn example_lifetime() -> Int {
+  10_000
+}
+
+/// A second, deliberately different applied release lifetime. Two distinct
+/// magnitudes are what make "the boundary is derived from the applied
+/// parameter" falsifiable: one magnitude pinned in the protocol cannot serve
+/// both, so every cross-pairing below would have to fail.
+pub fn alt_lifetime() -> Int {
+  250
+}
+
 /// The applied deployment magnitudes.
 pub fn parameters() -> CommitmentParameters {
   CommitmentParameters {
     network: vec.network,
     commit_min_age: vec.commit_min_age,
-    commitment_lifetime: vec.commitment_lifetime,
+    commitment_lifetime: example_lifetime(),
     commit_deposit: vec.commit_deposit,
   }
+}
+
+/// The same deployment with the second applied release lifetime.
+pub fn alt_parameters() -> CommitmentParameters {
+  CommitmentParameters { ..parameters(), commitment_lifetime: alt_lifetime() }
+}
+
+/// The second release choice's derived expiry, from the same opening.
+pub fn alt_expires_at() -> Int {
+  vec.commit_upper + alt_lifetime()
 }
 
 /// The canonical scope.
@@ -89,6 +115,12 @@ pub fn scope() -> BountyScope {
 
 fn preimage() -> BountyCommitmentPreimage {
   commitment_preimage(scope(), vec.evidence_digest, vec.payee, vec.nonce)
+}
+
+/// The canonical scope under the second release choice: same opening, same
+/// one-slot maturity, a different derived expiry.
+pub fn alt_scope() -> BountyScope {
+  BountyScope { ..scope(), expires_at: alt_expires_at() }
 }
 
 /// The canonical live commitment datum.
@@ -143,8 +175,23 @@ test bounty_commitment_constants_match_haskell() {
     commitment_domain == vec.domain,
     commitment_schema == vec.schema,
     commit_min_age == vec.commit_min_age,
-    commitment_lifetime == vec.commitment_lifetime,
     commit_deposit_floor == vec.commit_deposit_floor,
+  }
+}
+
+/// The generated fixture must publish the *derived* boundary and no release
+/// default. Nothing on either side may name a mandated lifetime magnitude, so
+/// this is what binds the named example to the oracle's arithmetic: change the
+/// fixture's lifetime in the Haskell generator without changing the example
+/// here, and this reddens instead of regenerating quietly.
+test bounty_commitment_generated_boundary_derives_from_the_example_lifetime() {
+  and {
+    vec.expires_at == vec.commit_upper + example_lifetime(),
+    vec.eligible_after == vec.commit_upper + vec.commit_min_age,
+    // the two examples are genuinely different deployments, so every
+    // cross-pairing below is a real discrimination and not a tautology
+    alt_lifetime() != example_lifetime(),
+    alt_expires_at() != vec.expires_at,
   }
 }
 
@@ -334,7 +381,8 @@ test bounty_commitment_payee_digest_and_nonce_bind() {
 }
 
 // ---------------------------------------------------------------------
-// DAT-271-PARAMETERS — mandated magnitudes, no ambient lookup
+// DAT-271-PARAMETERS — mandated age and deposit floor, applied release
+// lifetime, no ambient lookup
 // ---------------------------------------------------------------------
 
 test bounty_commitment_parameters_are_the_mandated_ones() {
@@ -343,9 +391,15 @@ test bounty_commitment_parameters_are_the_mandated_ones() {
     parameters_well_formed(
       CommitmentParameters { ..parameters(), commit_min_age: 2 },
     ) == ParametersInvalid(ParametersAge),
+    // a release one slot shorter than this fixture's example is a different
+    // deployment choice, not an invalid one: the age and the floor are
+    // mandated magnitudes, the release lifetime is an applied one
     parameters_well_formed(
-      CommitmentParameters { ..parameters(), commitment_lifetime: 9_999 },
-    ) == ParametersInvalid(ParametersLifetime),
+      CommitmentParameters {
+        ..parameters(),
+        commitment_lifetime: example_lifetime() - 1,
+      },
+    ) == ParametersValid,
     parameters_well_formed(
       CommitmentParameters {
         ..parameters(),
@@ -355,6 +409,118 @@ test bounty_commitment_parameters_are_the_mandated_ones() {
     parameters_well_formed(
       CommitmentParameters {
         ..parameters(),
+        commit_deposit: commit_deposit_floor,
+      },
+    ) == ParametersValid,
+  }
+}
+
+// ---------------------------------------------------------------------
+// INV-271-YAGNI-LIFETIME — the release lifetime is an applied deployment
+// parameter, not a protocol magnitude. Its *magnitude* constrains nothing
+// about safety; what the protocol owes is that the value is explicit,
+// positive, and long enough to contain at least one mature reveal slot.
+// ---------------------------------------------------------------------
+
+test bounty_commitment_parameterized_lifetime_is_accepted_at_both_examples() {
+  and {
+    parameters_well_formed(parameters()) == ParametersValid,
+    parameters_well_formed(alt_parameters()) == ParametersValid,
+    // the shortest admissible release: expiry lands exactly on the first
+    // mature slot, so the reveal window is one slot wide and non-empty
+    parameters_well_formed(
+      CommitmentParameters {
+        ..parameters(),
+        commitment_lifetime: vec.commit_min_age,
+      },
+    ) == ParametersValid,
+  }
+}
+
+test bounty_commitment_invalid_lifetime_parameters_reject() {
+  // Honest limit: because the mandated age is exactly one slot, "shorter
+  // than the age" and "nonpositive" denote the SAME set of magnitudes. All
+  // three spellings are proved so the rule stays honest whichever way a
+  // future reader reads it — they are one class, not three.
+  let nonpositive_lifetime = CommitmentParameters {
+    ..parameters(),
+    commitment_lifetime: 0,
+  }
+  let negative_lifetime = CommitmentParameters {
+    ..parameters(),
+    commitment_lifetime: -1,
+  }
+  let short_lifetime = CommitmentParameters {
+    ..parameters(),
+    commitment_lifetime: vec.commit_min_age - 1,
+  }
+  and {
+    parameters_well_formed(nonpositive_lifetime) == ParametersInvalid(
+      ParametersLifetime,
+    ),
+    parameters_well_formed(negative_lifetime) == ParametersInvalid(
+      ParametersLifetime,
+    ),
+    parameters_well_formed(short_lifetime) == ParametersInvalid(
+      ParametersLifetime,
+    ),
+  }
+}
+
+test bounty_commitment_parameterized_lifetime_derives_distinct_expiry() {
+  and {
+    // each applied release accepts exactly its own derived boundary
+    scope_well_formed(parameters(), scope()) == ScopeValid,
+    scope_well_formed(alt_parameters(), alt_scope()) == ScopeValid,
+    // and rejects the other example's: the magnitude is applied, not ambient
+    scope_well_formed(alt_parameters(), scope()) == ScopeInvalid(ScopeLifetime),
+    scope_well_formed(parameters(), alt_scope()) == ScopeInvalid(ScopeLifetime),
+    // the exact one-slot maturity is untouched by either release choice
+    scope_well_formed(
+      alt_parameters(),
+      BountyScope { ..alt_scope(), eligible_after: vec.commit_upper },
+    ) == ScopeInvalid(ScopeAge),
+    scope_well_formed(
+      alt_parameters(),
+      BountyScope { ..alt_scope(), eligible_after: vec.eligible_after + 1 },
+    ) == ScopeInvalid(ScopeAge),
+  }
+}
+
+test bounty_commitment_deposit_floor_bounds_grind_capital_only() {
+  // The floor's removal was tested and rejected, so state what it buys. It
+  // raises the *concurrent capital* an attacker must lock to open
+  // Open_1..Open_N over candidate checkpoint/action/evidence preimages and
+  // reveal only the matching one. It does not defeat that grind and does
+  // not force a loss: minimum ADA plus the permissionless expired sweep
+  // bound how long each losing UTxO lives, and the attacker may self-sweep
+  // its own expired losers and recycle the deposit. Surviving residual, not
+  // a defeated attack.
+  and {
+    commit_deposit_floor == 5_000_000,
+    parameters_well_formed(
+      CommitmentParameters {
+        ..parameters(),
+        commit_deposit: commit_deposit_floor - 1,
+      },
+    ) == ParametersInvalid(ParametersDeposit),
+    parameters_well_formed(
+      CommitmentParameters {
+        ..parameters(),
+        commit_deposit: commit_deposit_floor,
+      },
+    ) == ParametersValid,
+    // the floor is a property of the deployment, not of the release choice:
+    // a shorter lifetime buys no discount on the capital at risk
+    parameters_well_formed(
+      CommitmentParameters {
+        ..alt_parameters(),
+        commit_deposit: commit_deposit_floor - 1,
+      },
+    ) == ParametersInvalid(ParametersDeposit),
+    parameters_well_formed(
+      CommitmentParameters {
+        ..alt_parameters(),
         commit_deposit: commit_deposit_floor,
       },
     ) == ParametersValid,

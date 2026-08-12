@@ -10,8 +10,6 @@ pub const network: Int = 42
 
 pub const commit_min_age: Int = 1
 
-pub const commitment_lifetime: Int = 10000
-
 pub const commit_deposit_floor: Int = 5000000
 
 pub const commit_deposit: Int = 6000000

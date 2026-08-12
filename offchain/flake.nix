@@ -1475,7 +1475,8 @@
               # construction cannot change when this slice changes the
               # validator. A migration proof read from the frozen pin would
               # pass without ever executing the code it claims to be about.
-              migrationTitle = "checkpoint_observer.observer_migration.withdraw";
+              migrationTitle =
+                "checkpoint_observer.observer_migration.withdraw";
               migrationModule = "KeriBlaster.Migration";
 
               migrationArtifacts =

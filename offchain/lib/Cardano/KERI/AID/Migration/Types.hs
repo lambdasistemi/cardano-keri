@@ -10,7 +10,7 @@ no deployment identity, no registry, and no consumer resolution live here.
 Checkpoint, board, deployment, and the #253 endpoints all read these types, so
 the module depends on nothing but ledger references, policies, addresses, and
 network identity.  Constructor indices and field order are protocol surface;
-they change only by minting a new 'ValidatorVersion'.  The Aiken mirror is
+they change only by a new applied program hash.  The Aiken mirror is
 @onchain\/lib\/cardano_keri\/migration\/types.ak@ and
 @offchain\/app\/GenMigrationTypesVectors.hs@ is the sole source of the byte
 fixtures both suites assert against.
@@ -30,9 +30,8 @@ module Cardano.KERI.AID.Migration.Types (
 
     -- * Shared migration contract
     migrationDomain,
-    ValidatorVersion (..),
     MigrationRole (..),
-    MigrationOrigin (..),
+    MigrationPredecessor (..),
     MigrationTarget (..),
     MigrationAuthorization (..),
 
@@ -186,17 +185,6 @@ replayed as another protocol's message.
 migrationDomain :: ByteString
 migrationDomain = TE.encodeUtf8 "cardano-keri/migration/v1"
 
-{- | A validator program generation (DAT-254-VERSION).  The wrapper is
-deliberate: a version is never a bare 'Integer', so it cannot alias any other
-positional integer field.  @value@ is non-negative; transaction validation
-later binds it to the applied program and the N -> N+1 edge, which this
-protocol layer does not check.
--}
-newtype ValidatorVersion = ValidatorVersion
-    { vvValue :: Integer
-    }
-    deriving stock (Show, Eq)
-
 {- | Which live lifecycle position a migration moves.  The terminal burn state
 is deliberately absent: it is an end state, not something that can be
 migrated, so it is unrepresentable rather than merely unused.  @Board@ is the
@@ -209,18 +197,19 @@ data MigrationRole
     | Board
     deriving stock (Show, Eq)
 
-{- | The immediate migration predecessor (DAT-254-ORIGIN): the exact program
-generation, minting policy, and spent output the current state came from.
-Absent for state that was never migrated, and exactly one step back — each
-generation records its own predecessor, never a chain.
+{- | The exact predecessor a migration consumes (DAT-254-PREDECESSOR): the
+minting policy that holds it and the output being spent.
+
+There is no program generation here and no stored back-pointer.  The successor
+program is applied with the one predecessor policy it accepts, so its own hash
+is its release identity, and the atomic transaction -- spend this output, burn
+its token, mint and confine the same-name successor -- is the lineage edge.
 -}
-data MigrationOrigin = MigrationOrigin
-    { moSourceVersion :: !ValidatorVersion
-    -- ^ the predecessor's program generation
-    , moSourcePolicy :: !ByteString
-    -- ^ the predecessor's minting policy
-    , moSourceRef :: !OutputRef
-    -- ^ the exact predecessor output that was spent
+data MigrationPredecessor = MigrationPredecessor
+    { mpPredecessorPolicy :: !ByteString
+    -- ^ the minting policy holding the predecessor
+    , mpPredecessorRef :: !OutputRef
+    -- ^ the exact output being spent
     }
     deriving stock (Show, Eq)
 
@@ -229,9 +218,7 @@ and legacy-only: it names where value from a retired generation is returned,
 and is absent for every target with no legacy remainder.
 -}
 data MigrationTarget = MigrationTarget
-    { mtTargetVersion :: !ValidatorVersion
-    -- ^ the successor program generation
-    , mtTargetPolicy :: !ByteString
+    { mtTargetPolicy :: !ByteString
     -- ^ the successor minting policy
     , mtTargetRole :: !MigrationRole
     -- ^ the lifecycle position the successor occupies
@@ -269,8 +256,8 @@ data MigrationAuthorization = MigrationAuthorization
     -- ^ the frozen protocol domain separator
     , maNetworkId :: !Integer
     -- ^ the chain this authorization is valid on
-    , maSourceOrigin :: !MigrationOrigin
-    -- ^ the exact predecessor being migrated away from
+    , maSource :: !MigrationPredecessor
+    -- ^ the exact predecessor output being spent
     , maSourceRole :: !MigrationRole
     -- ^ the predecessor's live lifecycle position
     , maSourceState :: !Data
@@ -281,14 +268,6 @@ data MigrationAuthorization = MigrationAuthorization
     -- ^ indexed current-controller signature evidence, never narrowed
     }
     deriving stock (Show, Eq)
-
-instance ToData ValidatorVersion where
-    toBuiltinData (ValidatorVersion v) = BuiltinData (Constr 0 [I v])
-
-instance FromData ValidatorVersion where
-    fromBuiltinData (BuiltinData d) = case d of
-        Constr 0 [I v] -> Just (ValidatorVersion v)
-        _ -> Nothing
 
 instance ToData MigrationRole where
     toBuiltinData = \case
@@ -305,23 +284,15 @@ instance FromData MigrationRole where
         Constr 3 [] -> Just Board
         _ -> Nothing
 
-instance ToData MigrationOrigin where
-    toBuiltinData MigrationOrigin{..} =
+instance ToData MigrationPredecessor where
+    toBuiltinData MigrationPredecessor{..} =
         BuiltinData $
-            Constr
-                0
-                [ asData moSourceVersion
-                , B moSourcePolicy
-                , asData moSourceRef
-                ]
+            Constr 0 [B mpPredecessorPolicy, asData mpPredecessorRef]
 
-instance FromData MigrationOrigin where
+instance FromData MigrationPredecessor where
     fromBuiltinData (BuiltinData d) = case d of
-        Constr 0 [version, B policy, ref] ->
-            MigrationOrigin
-                <$> fromData version
-                <*> pure policy
-                <*> fromData ref
+        Constr 0 [B policy, ref] ->
+            MigrationPredecessor policy <$> fromData ref
         _ -> Nothing
 
 instance ToData MigrationTarget where
@@ -329,8 +300,7 @@ instance ToData MigrationTarget where
         BuiltinData $
             Constr
                 0
-                [ asData mtTargetVersion
-                , B mtTargetPolicy
+                [ B mtTargetPolicy
                 , asData mtTargetRole
                 , asData mtTargetAddress
                 , optionData mtLegacyRefundAddress
@@ -338,11 +308,9 @@ instance ToData MigrationTarget where
 
 instance FromData MigrationTarget where
     fromBuiltinData (BuiltinData d) = case d of
-        Constr 0 [version, B policy, role, address, refund] ->
-            MigrationTarget
-                <$> fromData version
-                <*> pure policy
-                <*> fromData role
+        Constr 0 [B policy, role, address, refund] ->
+            MigrationTarget policy
+                <$> fromData role
                 <*> fromData address
                 <*> optionFrom refund
         _ -> Nothing
@@ -354,7 +322,7 @@ instance ToData MigrationAuthorization where
                 0
                 [ B maDomain
                 , I maNetworkId
-                , asData maSourceOrigin
+                , asData maSource
                 , asData maSourceRole
                 , maSourceState
                 , asData maTarget
@@ -366,9 +334,9 @@ instance ToData MigrationAuthorization where
 
 instance FromData MigrationAuthorization where
     fromBuiltinData (BuiltinData d) = case d of
-        Constr 0 [B domain, I network, origin, role, state, target, List sigs] ->
+        Constr 0 [B domain, I network, source, role, state, target, List sigs] ->
             MigrationAuthorization domain network
-                <$> fromData origin
+                <$> fromData source
                 <*> fromData role
                 <*> pure state
                 <*> fromData target

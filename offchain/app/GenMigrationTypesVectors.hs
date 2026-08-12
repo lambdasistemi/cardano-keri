@@ -29,16 +29,14 @@ import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
     FullAddress (..),
     MigrationAuthorization (..),
-    MigrationOrigin (..),
+    MigrationPredecessor (..),
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
     StakeCredential (..),
-    ValidatorVersion (..),
     canonicalCbor,
     canonicalCborData,
     migrationDomain,
-    optionData,
  )
 import Control.Monad (unless)
 import Data.ByteArray.Encoding (
@@ -119,12 +117,11 @@ stateWith counter =
 sourceRef :: OutputRef
 sourceRef = OutputRef{orTransactionId = sourceTxid, orOutputIndex = 3}
 
-origin :: MigrationOrigin
-origin =
-    MigrationOrigin
-        { moSourceVersion = ValidatorVersion 1
-        , moSourcePolicy = sourcePolicy
-        , moSourceRef = sourceRef
+predecessor :: MigrationPredecessor
+predecessor =
+    MigrationPredecessor
+        { mpPredecessorPolicy = sourcePolicy
+        , mpPredecessorRef = sourceRef
         }
 
 targetAddress, refundAddress, pointerAddress, plainScriptAddress :: FullAddress
@@ -153,8 +150,7 @@ plainScriptAddress =
 migrationTarget, targetNoRefund, targetPointerStake :: MigrationTarget
 migrationTarget =
     MigrationTarget
-        { mtTargetVersion = ValidatorVersion 2
-        , mtTargetPolicy = targetPolicy
+        { mtTargetPolicy = targetPolicy
         , mtTargetRole = CheckpointActive
         , mtTargetAddress = targetAddress
         , mtLegacyRefundAddress = Just refundAddress
@@ -175,7 +171,7 @@ authorization =
     MigrationAuthorization
         { maDomain = migrationDomain
         , maNetworkId = 1
-        , maSourceOrigin = origin
+        , maSource = predecessor
         , maSourceRole = CheckpointFrozen
         , maSourceState = sourceState
         , maTarget = migrationTarget
@@ -203,20 +199,16 @@ mutations =
         authorization{maDomain = mutantDomain}
     , n "network_mutated" "the network identity" $
         authorization{maNetworkId = 0}
-    , n "source_version_bumped" "the predecessor program generation" $
-        withOrigin origin{moSourceVersion = ValidatorVersion 2}
     , n "source_policy_crossed" "the predecessor minting policy" $
-        withOrigin origin{moSourcePolicy = targetPolicy}
+        withPredecessor predecessor{mpPredecessorPolicy = targetPolicy}
     , n "source_ref_txid_mutated" "the spent predecessor transaction" $
-        withOrigin origin{moSourceRef = sourceRef{orTransactionId = mutantTxid}}
+        withPredecessor predecessor{mpPredecessorRef = sourceRef{orTransactionId = mutantTxid}}
     , n "source_ref_index_bumped" "the spent predecessor output index" $
-        withOrigin origin{moSourceRef = sourceRef{orOutputIndex = 4}}
+        withPredecessor predecessor{mpPredecessorRef = sourceRef{orOutputIndex = 4}}
     , n "source_role_board" "the predecessor lifecycle position" $
         authorization{maSourceRole = Board}
     , n "source_state_mutated" "the carried predecessor state" $
         authorization{maSourceState = mutantSourceState}
-    , n "target_version_bumped" "the successor program generation" $
-        withTarget migrationTarget{mtTargetVersion = ValidatorVersion 3}
     , n "target_policy_crossed" "the successor minting policy" $
         withTarget migrationTarget{mtTargetPolicy = sourcePolicy}
     , n "target_role_swapped" "the successor lifecycle position" $
@@ -232,7 +224,7 @@ mutations =
     ]
   where
     n name field value = ("negative_auth_" <> name, field, value)
-    withOrigin value = authorization{maSourceOrigin = value}
+    withPredecessor value = authorization{maSource = value}
     withTarget value = authorization{maTarget = value}
 
 -- ---------------------------------------------------------
@@ -265,15 +257,11 @@ fixtures =
 goldens :: [Vec]
 goldens =
     [ Vec "golden_migration_domain" "domain: the frozen UTF-8 separator" migrationDomain
-    , Vec "golden_version_zero" "version: generation 0" (canonicalCbor (ValidatorVersion 0))
-    , Vec "golden_version_one" "version: generation 1" (canonicalCbor (ValidatorVersion 1))
     , Vec "golden_role_checkpoint_active" "role: checkpoint active" (canonicalCbor CheckpointActive)
     , Vec "golden_role_checkpoint_frozen" "role: checkpoint frozen" (canonicalCbor CheckpointFrozen)
     , Vec "golden_role_checkpoint_armed" "role: checkpoint armed" (canonicalCbor CheckpointArmed)
     , Vec "golden_role_board" "role: board" (canonicalCbor Board)
-    , Vec "golden_origin" "origin: the immediate predecessor" (canonicalCbor origin)
-    , Vec "golden_origin_present" "origin: present (migrated state)" (canonicalCborData (optionData (Just origin)))
-    , Vec "golden_origin_absent" "origin: absent (native state)" (canonicalCborData (optionData noOrigin))
+    , Vec "golden_predecessor" "predecessor: the exact consumed output" (canonicalCbor predecessor)
     , Vec "golden_target" "target: delegated address with legacy refund" (canonicalCbor migrationTarget)
     , Vec "golden_target_no_refund" "target: undelegated address, no refund" (canonicalCbor targetNoRefund)
     , Vec "golden_target_pointer_stake" "target: pointer stake credential" (canonicalCbor targetPointerStake)
@@ -282,16 +270,10 @@ goldens =
     , Vec "golden_authorization" "authorization: every redirectable field" (canonicalCbor authorization)
     , Vec "golden_auth_wide_index" "authorization: controller index past the machine word" (canonicalCbor authorizationWideIndex)
     ]
-  where
-    noOrigin = Nothing :: Maybe MigrationOrigin
 
 negatives :: [Vec]
 negatives =
-    Vec
-        "negative_version_bare_int"
-        "version negative: the bare integer a version must never alias"
-        (canonicalCborData (I 1))
-        : Vec "negative_auth_wide_index_narrowed" "authorization negative: the wide controller index aliased to a machine word" (canonicalCbor authorizationNarrowedIndex)
+    Vec "negative_auth_wide_index_narrowed" "authorization negative: the wide controller index aliased to a machine word" (canonicalCbor authorizationNarrowedIndex)
         : [ Vec name ("authorization negative: " <> field <> " mutated") (canonicalCbor value)
           | (name, field, value) <- mutations
           ]

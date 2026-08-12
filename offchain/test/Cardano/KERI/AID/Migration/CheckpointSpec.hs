@@ -32,6 +32,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
  )
+import Cardano.KERI.AID.Checkpoint.FreezeBond (
+    Role (..),
+ )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
  )
@@ -43,12 +46,11 @@ import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
     FullAddress (..),
     MigrationAuthorization (..),
-    MigrationOrigin (..),
+    MigrationPredecessor (..),
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
     StakeCredential (..),
-    ValidatorVersion (..),
     migrationDomain,
  )
 import Data.ByteString (
@@ -106,8 +108,7 @@ targetPolicy = bytesOf 28 0x51
 sourceTxid = bytesOf 32 0x60
 mutantTxid = bytesOf 32 0x61
 
-targetScript, refundVkey, witnessKey :: ByteString
-targetScript = bytesOf 28 0x70
+refundVkey, witnessKey :: ByteString
 refundVkey = bytesOf 28 0x72
 witnessKey = bytesOf 32 0x90
 
@@ -135,51 +136,33 @@ wrapping the inner record.
 sourceStateData :: Data
 sourceStateData = let BuiltinData d = toBuiltinData (V1 sourceDatum) in d
 
-{- | The inner record alone.  'VersionedCheckpoint' embeds the projection
-unwrapped; re-wrapping it would nest two version tags.
+{- | The row datum: the frozen `CheckpointDatum` version sum.  The lean design
+carries no generation integer and no origin back-pointer.
 -}
-innerStateData :: Data
-innerStateData = let BuiltinData d = toBuiltinData sourceDatum in d
-
--- | A versioned row: applied generation, optional origin, inner projection.
-versionedData :: Integer -> Maybe MigrationOrigin -> Data
-versionedData version origin =
-    Constr
-        0
-        [ Constr 0 [I version]
-        , maybe (Constr 1 []) (\o -> Constr 0 [originTree o]) origin
-        , innerStateData
-        ]
-  where
-    originTree MigrationOrigin{..} =
-        Constr
-            0
-            [ Constr 0 [I (vvValue moSourceVersion)]
-            , B moSourcePolicy
-            , Constr
-                0
-                [B (orTransactionId moSourceRef), I (orOutputIndex moSourceRef)]
-            ]
+rowData :: Data
+rowData = sourceStateData
 
 sourceRef, mutantRef :: OutputRef
 sourceRef = OutputRef sourceTxid 1
 mutantRef = OutputRef mutantTxid 1
 
-sourceOrigin :: MigrationOrigin
-sourceOrigin = MigrationOrigin (ValidatorVersion 1) sourcePolicy sourceRef
+sourcePredecessor :: MigrationPredecessor
+sourcePredecessor = MigrationPredecessor sourcePolicy sourceRef
 
 targetAddress, refundAddress :: FullAddress
-targetAddress =
-    FullAddress
-        (ScriptCredential targetScript)
-        (Just (InlineStakeCredential (ScriptCredential targetScript)))
+-- The successor lands at a role address of the target policy, and the source
+-- is held at a role address of its own policy.  A fixture that puts either at
+-- some other script is not reachable at the transaction boundary.
+targetAddress = FullAddress (ScriptCredential targetPolicy) Nothing
+
+sourceAddress :: FullAddress
+sourceAddress = FullAddress (ScriptCredential sourcePolicy) Nothing
 refundAddress = FullAddress (VerificationKeyCredential refundVkey) Nothing
 
 migrationTarget :: MigrationTarget
 migrationTarget =
     MigrationTarget
-        { mtTargetVersion = ValidatorVersion 2
-        , mtTargetPolicy = targetPolicy
+        { mtTargetPolicy = targetPolicy
         , mtTargetRole = CheckpointActive
         , mtTargetAddress = targetAddress
         , mtLegacyRefundAddress = Nothing
@@ -189,7 +172,6 @@ source :: MigrationSource
 source =
     MigrationSource
         { msNetworkId = 1
-        , msSourceVersion = ValidatorVersion 1
         , msSourcePolicy = sourcePolicy
         , msSourceRef = sourceRef
         , msSourceRole = CheckpointActive
@@ -211,7 +193,7 @@ authorization =
     MigrationAuthorization
         { maDomain = migrationDomain
         , maNetworkId = 1
-        , maSourceOrigin = sourceOrigin
+        , maSource = sourcePredecessor
         , maSourceRole = CheckpointActive
         , maSourceState = sourceStateData
         , maTarget = migrationTarget
@@ -219,11 +201,7 @@ authorization =
         }
 
 pinned :: Predecessor
-pinned = Predecessor (ValidatorVersion 1) sourcePolicy
-
--- | The successor record, in the exact wire layout the decoder reads.
-successorData :: Integer -> Maybe MigrationOrigin -> Data
-successorData = versionedData
+pinned = Predecessor sourcePolicy
 
 protectedLovelace :: Integer
 protectedLovelace = 8_000_000
@@ -239,9 +217,9 @@ sourceInput :: MigrationInput
 sourceInput =
     MigrationInput
         { miRef = sourceRef
-        , miAddress = targetAddress
+        , miAddress = sourceAddress
         , miValue = valueWith sourcePolicy protectedLovelace
-        , miDatum = Just (versionedData 1 Nothing)
+        , miDatum = Just rowData
         }
 
 successorOutput :: MigrationOutput
@@ -249,7 +227,7 @@ successorOutput =
     MigrationOutput
         { moAddress = targetAddress
         , moValue = valueWith targetPolicy protectedLovelace
-        , moDatum = Just (successorData 2 (Just sourceOrigin))
+        , moDatum = Just rowData
         }
 
 -- | The burn\/mint pair of a correct permanent-family move.
@@ -286,26 +264,24 @@ legacyPolicy = lcPolicy preprodV0
 legacyTarget :: MigrationTarget
 legacyTarget =
     migrationTarget
-        { mtTargetVersion = ValidatorVersion 1
-        , mtLegacyRefundAddress = Just refundAddress
+        { mtLegacyRefundAddress = Just refundAddress
         }
 
 legacySource :: MigrationSource
 legacySource =
     source
         { msNetworkId = lcNetworkId preprodV0
-        , msSourceVersion = lcVersion preprodV0
         , msSourcePolicy = legacyPolicy
         }
 
-legacyOrigin :: MigrationOrigin
-legacyOrigin = MigrationOrigin (ValidatorVersion 0) legacyPolicy sourceRef
+legacyPredecessor :: MigrationPredecessor
+legacyPredecessor = MigrationPredecessor legacyPolicy sourceRef
 
 legacyAuthorization :: MigrationAuthorization
 legacyAuthorization =
     authorization
         { maNetworkId = lcNetworkId preprodV0
-        , maSourceOrigin = legacyOrigin
+        , maSource = legacyPredecessor
         , maTarget = legacyTarget
         , maControllerSignatures =
             [ (0, signOver controller0 legacyBytes)
@@ -327,9 +303,19 @@ legacyClose =
 and the successor is capitalized __independently__ with equal protected
 lovelace — a recapitalization, not a transfer of the refunded ada.
 -}
+
+-- | The legacy source is a v0 row held by the v0 script.
+legacySourceInput :: MigrationInput
+legacySourceInput =
+    sourceInput
+        { miAddress = FullAddress (ScriptCredential legacyPolicy) Nothing
+        , miValue = valueWith legacyPolicy protectedLovelace
+        , miDatum = Just sourceStateData
+        }
+
 legacySuccessorOutput, legacyRefundOutput :: MigrationOutput
 legacySuccessorOutput =
-    successorOutput{moDatum = Just (successorData 1 (Just legacyOrigin))}
+    successorOutput{moDatum = Just rowData}
 legacyRefundOutput =
     MigrationOutput
         { moAddress = refundAddress
@@ -341,14 +327,7 @@ legacyTx :: MigrationTx
 legacyTx =
     MigrationTx
         { mtxNetworkId = lcNetworkId preprodV0
-        , mtxInputs =
-            -- The legacy source is a v0 row: its datum is the v0 version sum,
-            -- not a versioned record — v0 has no such field.
-            [ sourceInput
-                { miValue = valueWith legacyPolicy protectedLovelace
-                , miDatum = Just sourceStateData
-                }
-            ]
+        , mtxInputs = [legacySourceInput]
         , mtxOutputs = [legacySuccessorOutput, legacyRefundOutput]
         , mtxMint =
             Map.fromList
@@ -418,33 +397,49 @@ spec = describe "checkpoint migration" $ do
                 replayed
                 `shouldBe` Left MigrationQuorumUnsatisfied
 
-    describe "family edge" $ do
-        it "accepts exactly the successor generation and refuses a skip" $ do
-            let edge v =
-                    validMigrationEdge
-                        source
-                        (MigrationSuccessor (ValidatorVersion v) targetPolicy (Just sourceOrigin) CheckpointActive)
-                        pinned
-            edge 2 `shouldBe` Right ()
-            edge 3 `shouldBe` Left MigrationVersionNotSuccessor
+    describe "predecessor transition" $ do
+        it "accepts the exact spent predecessor" $
+            -- Release identity is the applied hash, so the lineage edge is the
+            -- spend itself: this transaction genuinely consumes the signed
+            -- output, holding its own token, under the accepted policy.
+            validPredecessorTransition source pinned migrateInTx `shouldBe` Right ()
 
-        it "refuses a foreign predecessor and a wrong or absent origin" $ do
-            let successorWith origin =
-                    MigrationSuccessor (ValidatorVersion 2) targetPolicy origin CheckpointActive
-            validMigrationEdge source (successorWith (Just sourceOrigin)) pinned
-                `shouldBe` Right ()
-            validMigrationEdge
+        it "refuses a foreign predecessor policy" $
+            validPredecessorTransition
                 source
-                (successorWith (Just sourceOrigin))
                 pinned{pdPredecessorPolicy = legacyPolicy}
+                migrateInTx
                 `shouldBe` Left MigrationForeignPredecessor
-            validMigrationEdge
-                source
-                (successorWith (Just sourceOrigin{moSourceRef = mutantRef}))
+
+        it "refuses an output this transaction does not consume" $
+            validPredecessorTransition
+                source{msSourceRef = mutantRef}
                 pinned
-                `shouldBe` Left MigrationOriginMismatch
-            validMigrationEdge source (successorWith Nothing) pinned
-                `shouldBe` Left MigrationOriginMismatch
+                migrateInTx
+                `shouldBe` Left MigrationSourceMissing
+
+        it "refuses a signed projection that is not the consumed one" $ do
+            -- The observed input is the naming authority; the signed payload
+            -- must equal it. A package signed over another checkpoint cannot
+            -- move this one.
+            let elsewhere =
+                    let BuiltinData d =
+                            toBuiltinData (V1 sourceDatum{cdSeq = 23})
+                     in d
+            validPredecessorTransition
+                source{msSourceState = elsewhere}
+                pinned
+                migrateInTx
+                `shouldBe` Left MigrationIdentityChanged
+
+        it "refuses a split transition that consumes nothing" $
+            -- The mint requires this spend, so burn and mint cannot be in
+            -- different transactions.
+            validPredecessorTransition
+                source
+                pinned
+                migrateInTx{mtxInputs = []}
+                `shouldBe` Left MigrationSourceMissing
 
     describe "identity, role and value continuity" $ do
         let active d = CheckpointRoleState CheckpointActive d Nothing Nothing
@@ -489,26 +484,32 @@ spec = describe "checkpoint migration" $ do
 
     describe "migrate-out arm" $ do
         it "accepts a controller-authorized exit and refuses a missing source" $ do
-            validateCheckpointMigrateOut 1 authorization sourceRef migrateOutTx
+            validateCheckpointMigrateOut authorization sourceRef migrateInTx
                 `shouldBe` Right ()
-            validateCheckpointMigrateOut 1 authorization mutantRef migrateOutTx
+            validateCheckpointMigrateOut authorization mutantRef migrateInTx
                 `shouldBe` Left MigrationSourceMissing
-
-        it "refuses an applied version that is not the source generation" $
-            validateCheckpointMigrateOut 2 authorization sourceRef migrateOutTx
-                `shouldBe` Left MigrationAppliedVersionMismatch
 
         it "refuses an exit that does not burn the source token" $
             validateCheckpointMigrateOut
-                1
                 authorization
                 sourceRef
-                migrateOutTx{mtxMint = Map.empty}
+                migrateInTx{mtxMint = Map.empty}
                 `shouldBe` Left MigrationTokenTransitionInvalid
+
+        it "refuses an exit that composes no successor" $
+            -- The burn is exactly the authorized one and nothing else is
+            -- wrong; only successor composition can refuse this, and without
+            -- it the identity is destroyed under a package the controllers
+            -- genuinely signed.
+            validateCheckpointMigrateOut
+                authorization
+                sourceRef
+                migrateOutTx{mtxOutputs = []}
+                `shouldBe` Left MigrationSourceMissing
 
     describe "migrate-in arm" $ do
         it "accepts the pinned-predecessor entry" $
-            validateCheckpointMigrateIn 2 pinned sourceRef authorization targetPolicy migrateInTx
+            validateCheckpointMigrateIn pinned sourceRef authorization targetPolicy migrateInTx
                 `shouldBe` Right ()
 
         it "stays accepted whoever relays it" $ do
@@ -516,12 +517,11 @@ spec = describe "checkpoint migration" $ do
             -- the standing proof is that acceptance depends on nothing but
             -- the package and the observed transaction.
             let relayed = migrateInTx{mtxInputs = mtxInputs migrateInTx}
-            validateCheckpointMigrateIn 2 pinned sourceRef authorization targetPolicy relayed
+            validateCheckpointMigrateIn pinned sourceRef authorization targetPolicy relayed
                 `shouldSatisfy` accepted
 
         it "refuses a foreign predecessor pin" $
             validateCheckpointMigrateIn
-                2
                 pinned{pdPredecessorPolicy = legacyPolicy}
                 sourceRef
                 authorization
@@ -531,7 +531,6 @@ spec = describe "checkpoint migration" $ do
 
         it "refuses a duplicated successor" $
             validateCheckpointMigrateIn
-                2
                 pinned
                 sourceRef
                 authorization
@@ -539,13 +538,8 @@ spec = describe "checkpoint migration" $ do
                 migrateInTx{mtxOutputs = [successorOutput, successorOutput]}
                 `shouldBe` Left MigrationAmbiguousSuccessor
 
-        it "refuses a successor whose applied version disagrees with its datum" $
-            validateCheckpointMigrateIn 3 pinned sourceRef authorization targetPolicy migrateInTx
-                `shouldBe` Left MigrationAppliedVersionMismatch
-
         it "refuses a mint that is not the one-for-one replacement" $
             validateCheckpointMigrateIn
-                2
                 pinned
                 sourceRef
                 authorization
@@ -555,6 +549,116 @@ spec = describe "checkpoint migration" $ do
                     }
                 `shouldBe` Left MigrationTokenTransitionInvalid
 
+    describe "source address shape" $ do
+        -- An address is a whole structure, not a hash with some decoration.
+        -- The previous method PROJECTED the address down to its payment
+        -- script hash, so every other part of it -- the stake credential
+        -- above all -- was simply not looked at. The live Aiken path
+        -- classifies the entire address, so a correct payment hash carrying a
+        -- spurious stake credential passed here and failed on chain.
+        --
+        -- These controls enumerate the full 2x4 shape cross-product. Every
+        -- shape carries the SAME policy bytes, so the constructor shape is
+        -- the only discriminating dimension.
+        let stakeVariants =
+                [ ("absent", Nothing)
+                , ("inline-key", Just (InlineStakeCredential (VerificationKeyCredential sourcePolicy)))
+                , ("inline-script", Just (InlineStakeCredential (ScriptCredential sourcePolicy)))
+                , ("pointer", Just (PointerStakeCredential 1 2 3))
+                ]
+            paymentVariants =
+                [ ("script", ScriptCredential sourcePolicy)
+                , ("vkey", VerificationKeyCredential sourcePolicy)
+                ]
+            shapes =
+                [ (paymentName <> "/" <> stakeName, FullAddress payment stake)
+                | (paymentName, payment) <- paymentVariants
+                , (stakeName, stake) <- stakeVariants
+                ]
+            -- Exactly one of the eight is the canonical ACTIVE role address.
+            canonical = roleAddress sourcePolicy Active
+            expectedFor address = address == canonical
+
+            atHelper address =
+                sourceAddressIsRole
+                    CheckpointActive
+                    sourcePolicy
+                    sourceInput{miAddress = address}
+            atMigrateIn address =
+                validPredecessorTransition
+                    source
+                    pinned
+                    migrateInTx{mtxInputs = [sourceInput{miAddress = address}]}
+            atMigrateOut address =
+                validateCheckpointMigrateOut
+                    authorization
+                    sourceRef
+                    migrateInTx{mtxInputs = [sourceInput{miAddress = address}]}
+            atLegacy address =
+                runLegacy
+                    legacyAuthorization
+                    legacyTx{mtxInputs = [legacySourceInput{miAddress = address}]}
+
+            enumerate :: String -> (FullAddress -> Either MigrationError ()) -> Spec
+            enumerate name boundary =
+                it ("classifies all eight address shapes at " <> name) $
+                    [ (shapeName, boundary address == Right ())
+                    | (shapeName, address) <- shapes
+                    ]
+                        `shouldBe` [ (shapeName :: String, expectedFor address)
+                                   | (shapeName, address) <- shapes
+                                   ]
+
+        it "exactly one shape in the cross-product is canonical" $
+            length (filter (expectedFor . snd) shapes) `shouldBe` 1
+
+        enumerate "the exported helper" atHelper
+        enumerate "migrate-in" atMigrateIn
+        enumerate "migrate-out" atMigrateOut
+
+        it "classifies all eight address shapes at the legacy bridge" $
+            -- The legacy role address is the v0 policy's, not the source's.
+            let legacyCanonical = roleAddress legacyPolicy Active
+                legacyShapes =
+                    [ (paymentName <> "/" <> stakeName, FullAddress payment stake)
+                    | (paymentName, payment) <-
+                        [ ("script", ScriptCredential legacyPolicy)
+                        , ("vkey", VerificationKeyCredential legacyPolicy)
+                        ]
+                    , (stakeName, stake) <-
+                        [ ("absent", Nothing)
+                        , ("inline-key", Just (InlineStakeCredential (VerificationKeyCredential legacyPolicy)))
+                        , ("inline-script", Just (InlineStakeCredential (ScriptCredential legacyPolicy)))
+                        , ("pointer", Just (PointerStakeCredential 1 2 3))
+                        ]
+                    ]
+             in [ (shapeName, atLegacy address == Right ())
+                | (shapeName, address) <- legacyShapes
+                ]
+                    `shouldBe` [ (shapeName :: String, address == legacyCanonical)
+                               | (shapeName, address) <- legacyShapes
+                               ]
+
+        it "no single-field-ignoring comparator can pass this enumeration" $ do
+            -- Application-verified mutants: each ignores exactly one field of
+            -- the address. Each is APPLIED to the same eight shapes, and each
+            -- must accept something the total rule rejects. This is what makes
+            -- the claim "no single-field omission survives" testable rather
+            -- than asserted -- and it is why the total comparison cannot miss
+            -- the next field: there is no field list to forget to extend.
+            let ignoringStake address =
+                    faPaymentCredential address == faPaymentCredential canonical
+                ignoringPayment address =
+                    faStakeCredential address == faStakeCredential canonical
+                survivorsOf :: (FullAddress -> Bool) -> [String]
+                survivorsOf mutant =
+                    [ shapeName
+                    | (shapeName, address) <- shapes
+                    , mutant address
+                    , not (expectedFor address)
+                    ]
+            survivorsOf ignoringStake `shouldNotBe` []
+            survivorsOf ignoringPayment `shouldNotBe` []
     describe "legacy preprod v0 bridge" $ do
         it "accepts the exact committed v0 ACTIVE source" $
             runLegacy legacyAuthorization legacyTx `shouldBe` Right ()
@@ -570,7 +674,7 @@ spec = describe "checkpoint migration" $ do
         it "refuses a source that is not the committed v0 family" $
             runLegacy
                 legacyAuthorization
-                    { maSourceOrigin = legacyOrigin{moSourcePolicy = sourcePolicy}
+                    { maSource = legacyPredecessor{mpPredecessorPolicy = sourcePolicy}
                     }
                 legacyTx
                 `shouldBe` Left MigrationLegacyIdentityMismatch

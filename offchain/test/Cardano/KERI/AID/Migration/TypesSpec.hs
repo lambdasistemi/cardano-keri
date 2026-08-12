@@ -6,16 +6,13 @@ import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
     FullAddress (..),
     MigrationAuthorization (..),
-    MigrationOrigin (..),
+    MigrationPredecessor (..),
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
     StakeCredential (..),
-    ValidatorVersion (..),
     canonicalCbor,
-    canonicalCborData,
     migrationDomain,
-    optionData,
  )
 import Data.ByteArray.Encoding (
     Base (Base16),
@@ -95,9 +92,8 @@ wireWith :: Integer -> Data
 wireWith n =
     Constr 0 [B migrationDomain, I n, origin', Constr 1 [], sourceState, target', sigs]
   where
-    version = Constr 0 [I n]
-    origin' = Constr 0 [version, B sourcePolicy, Constr 0 [B sourceTxid, I n]]
-    target' = Constr 0 [version, B targetPolicy, Constr 0 [], address, Constr 1 []]
+    origin' = Constr 0 [B sourcePolicy, Constr 0 [B sourceTxid, I n]]
+    target' = Constr 0 [B targetPolicy, Constr 0 [], address, Constr 1 []]
     address =
         Constr 0 [Constr 1 [B paymentScript], Constr 0 [Constr 1 [I n, I n, I n]]]
     sigs = List [List [I n, B sigA]]
@@ -150,12 +146,11 @@ stateWith counter =
 sourceRef :: OutputRef
 sourceRef = OutputRef{orTransactionId = sourceTxid, orOutputIndex = 3}
 
-origin :: MigrationOrigin
-origin =
-    MigrationOrigin
-        { moSourceVersion = ValidatorVersion 1
-        , moSourcePolicy = sourcePolicy
-        , moSourceRef = sourceRef
+predecessor :: MigrationPredecessor
+predecessor =
+    MigrationPredecessor
+        { mpPredecessorPolicy = sourcePolicy
+        , mpPredecessorRef = sourceRef
         }
 
 targetAddress, refundAddress :: FullAddress
@@ -174,8 +169,7 @@ refundAddress =
 migrationTarget :: MigrationTarget
 migrationTarget =
     MigrationTarget
-        { mtTargetVersion = ValidatorVersion 2
-        , mtTargetPolicy = targetPolicy
+        { mtTargetPolicy = targetPolicy
         , mtTargetRole = CheckpointActive
         , mtTargetAddress = targetAddress
         , mtLegacyRefundAddress = Just refundAddress
@@ -190,7 +184,7 @@ authorization =
     MigrationAuthorization
         { maDomain = migrationDomain
         , maNetworkId = 1
-        , maSourceOrigin = origin
+        , maSource = predecessor
         , maSourceRole = CheckpointFrozen
         , maSourceState = sourceState
         , maTarget = migrationTarget
@@ -204,13 +198,11 @@ mutations :: [MigrationAuthorization]
 mutations =
     [ authorization{maDomain = mutantDomain}
     , authorization{maNetworkId = 0}
-    , withOrigin origin{moSourceVersion = ValidatorVersion 2}
-    , withOrigin origin{moSourcePolicy = targetPolicy}
-    , withOrigin origin{moSourceRef = sourceRef{orTransactionId = mutantTxid}}
-    , withOrigin origin{moSourceRef = sourceRef{orOutputIndex = 4}}
+    , withPredecessor predecessor{mpPredecessorPolicy = targetPolicy}
+    , withPredecessor predecessor{mpPredecessorRef = sourceRef{orTransactionId = mutantTxid}}
+    , withPredecessor predecessor{mpPredecessorRef = sourceRef{orOutputIndex = 4}}
     , authorization{maSourceRole = Board}
     , authorization{maSourceState = mutantSourceState}
-    , withTarget migrationTarget{mtTargetVersion = ValidatorVersion 3}
     , withTarget migrationTarget{mtTargetPolicy = sourcePolicy}
     , withTarget migrationTarget{mtTargetRole = CheckpointFrozen}
     , withTarget
@@ -220,7 +212,7 @@ mutations =
     , authorization{maControllerSignatures = [(2, sigB), (0, sigA)]}
     ]
   where
-    withOrigin value = authorization{maSourceOrigin = value}
+    withPredecessor value = authorization{maSource = value}
     withTarget value = authorization{maTarget = value}
 
 -- ---------------------------------------------------------
@@ -236,9 +228,6 @@ genWideInteger = elements (small <> wide <> map negate wide)
   where
     small = [0, 1, 2, 7, -1, 2 ^ (127 :: Int)]
     wide = [wordBoundary - 1, wordBoundary, wordBoundary + 1, 2 * wordBoundary]
-
-genVersion :: Gen ValidatorVersion
-genVersion = ValidatorVersion <$> genWideInteger
 
 genRole :: Gen MigrationRole
 genRole = elements [CheckpointActive, CheckpointFrozen, CheckpointArmed, Board]
@@ -262,18 +251,16 @@ genAddress =
   where
     wide = genWideInteger
 
-genOrigin :: Gen MigrationOrigin
-genOrigin =
-    MigrationOrigin
-        <$> genVersion
-        <*> genBytes 28
+genPredecessor :: Gen MigrationPredecessor
+genPredecessor =
+    MigrationPredecessor
+        <$> genBytes 28
         <*> (OutputRef <$> genBytes 32 <*> genWideInteger)
 
 genTarget :: Gen MigrationTarget
 genTarget =
     MigrationTarget
-        <$> genVersion
-        <*> genBytes 28
+        <$> genBytes 28
         <*> genRole
         <*> genAddress
         <*> oneof [pure Nothing, Just <$> genAddress]
@@ -282,7 +269,7 @@ genAuthorization :: Gen MigrationAuthorization
 genAuthorization =
     MigrationAuthorization migrationDomain
         <$> genWideInteger
-        <*> genOrigin
+        <*> genPredecessor
         <*> genRole
         <*> (stateWith <$> genWideInteger)
         <*> genTarget
@@ -298,14 +285,6 @@ spec = do
         it "the domain is the exact UTF-8 protocol string" $
             migrationDomain
                 `shouldBe` hexBs "63617264616e6f2d6b6572692f6d6967726174696f6e2f7631"
-        it "a version is Constr 0 wrapping its integer value" $
-            dataOf (ValidatorVersion 7) `shouldBe` Constr 0 [I 7]
-        it "versions 0 and 1 encode to independently derived bytes" $
-            map (canonicalCbor . ValidatorVersion) [0, 1]
-                `shouldBe` map hexBs ["d8799f00ff", "d8799f01ff"]
-        it "a version never aliases the bare integer it wraps" $
-            canonicalCbor (ValidatorVersion 1)
-                `shouldNotBe` canonicalCborData (I 1)
         it "the four migration roles are Constr 0..3 with no fields" $
             map dataOf [CheckpointActive, CheckpointFrozen, CheckpointArmed, Board]
                 `shouldBe` [Constr 0 [], Constr 1 [], Constr 2 [], Constr 3 []]
@@ -316,23 +295,20 @@ spec = do
                 `shouldBe` map hexBs ["d87980", "d87a80", "d87b80", "d87c80"]
 
     describe "migration types: frozen field order" $ do
-        it "an origin is version, policy, then the exact spent reference" $
-            dataOf origin
+        it "a predecessor is the policy, then the exact spent reference" $
+            -- No generation: release identity is the applied hash, and the
+            -- spend itself is the lineage edge.
+            dataOf predecessor
                 `shouldBe` Constr
                     0
-                    [ Constr 0 [I 1]
-                    , B sourcePolicy
+                    [ B sourcePolicy
                     , Constr 0 [B sourceTxid, I 3]
                     ]
-        it "a present origin is Constr 0 and an absent one Constr 1" $
-            map optionData [Just origin, Nothing]
-                `shouldBe` [Constr 0 [dataOf origin], Constr 1 []]
-        it "a target is version, policy, role, address, optional refund" $
+        it "a target is policy, role, address, optional refund" $
             dataOf migrationTarget
                 `shouldBe` Constr
                     0
-                    [ Constr 0 [I 2]
-                    , B targetPolicy
+                    [ B targetPolicy
                     , Constr 0 []
                     , Constr
                         0
@@ -347,7 +323,7 @@ spec = do
                     0
                     [ B migrationDomain
                     , I 1
-                    , dataOf origin
+                    , dataOf predecessor
                     , Constr 1 []
                     , sourceState
                     , dataOf migrationTarget
@@ -359,7 +335,7 @@ spec = do
     describe "migration types: named field mutations stay distinguishable" $ do
         it "no mutation collides with the golden or with another mutation" $
             let encodings = map canonicalCbor (authorization : mutations)
-             in (length encodings, length (nub encodings)) `shouldBe` (16, 16)
+             in (length encodings, length (nub encodings)) `shouldBe` (14, 14)
         it "dropping the legacy refund changes the target bytes" $
             canonicalCbor migrationTarget
                 `shouldNotBe` canonicalCbor
@@ -381,5 +357,5 @@ spec = do
             forAll genTarget $ \value ->
                 fromBuiltinData (toBuiltinData value) === Just value
         it "an origin round-trips through Plutus Data" $
-            forAll genOrigin $ \value ->
+            forAll genPredecessor $ \value ->
                 fromBuiltinData (toBuiltinData value) === Just value

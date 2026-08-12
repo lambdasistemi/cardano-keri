@@ -105,40 +105,26 @@ def checkpointDatumV1 : Data :=
 authorization carries verbatim. -/
 def carriedState : Data := Data.Constr 0 [checkpointDatumV1]
 
-/-- `VersionedCheckpoint`: applied generation, optional origin, and the
-projection embedded **unwrapped**. -/
-def versionedCheckpoint (version : Int) (origin : Option Data) : Data :=
-  Data.Constr 0
-    [ Data.Constr 0 [Data.I version]
-    , match origin with
-      | some o => Data.Constr 0 [o]
-      | none => Data.Constr 1 []
-    , checkpointDatumV1
-    ]
+/-- The consumed row's datum is the frozen `CheckpointDatum` version sum: the
+lean design carries no generation integer and no origin back-pointer, because
+the applied hash is release identity and the migration transaction is the
+lineage edge. -/
+def versionedDatum : Data := Data.Constr 0 [checkpointDatumV1]
 
-/-- `VersionedCheckpointDatum.VersionedV1`. -/
-def versionedDatum (version : Int) (origin : Option Data) : Data :=
-  Data.Constr 0 [versionedCheckpoint version origin]
-
-/-- `MigrationOrigin`: predecessor generation, policy, and spent output. -/
-def originData (txid : ByteString) : Data :=
-  Data.Constr 0
-    [ Data.Constr 0 [Data.I 1]
-    , Data.B sourcePolicy
-    , outRefData txid 0
-    ]
+/-- `MigrationPredecessor`: the policy holding the spent output, and the
+output itself. -/
+def predecessorData (txid : ByteString) : Data :=
+  Data.Constr 0 [Data.B sourcePolicy, outRefData txid 0]
 
 /-- A script address with no delegation part, matching Aiken `from_script`. -/
 def fromScript (scriptHash : ByteString) : Address where
   addressCredential := .ScriptCredential scriptHash
   addressStakingCredential := none
 
-/-- `MigrationTarget`: generation 2 under the target policy, ACTIVE, no
-legacy refund. -/
+/-- `MigrationTarget`: the target policy, ACTIVE, no legacy refund. -/
 def targetData : Data :=
   Data.Constr 0
-    [ Data.Constr 0 [Data.I 2]
-    , Data.B targetPolicy
+    [ Data.B targetPolicy
     , Data.Constr 0 []
     , IsData.toData (fromScript targetPolicy)
     , Data.Constr 1 []
@@ -150,20 +136,20 @@ def authorizationData (txid : ByteString) (signatures : List Data) : Data :=
   Data.Constr 0
     [ Data.B (label "cardano-keri/migration/v1")
     , Data.I 0
-    , originData txid
+    , predecessorData txid
     , Data.Constr 0 []
     , carriedState
     , targetData
     , Data.List signatures
     ]
 
-/-- The consumed source: an ACTIVE generation-1 row holding its own token. -/
+/-- The consumed source: an ACTIVE row holding its own token. -/
 def sourceInput : TxInInfo where
   txInInfoOutRef := ownRef
   txInInfoResolved :=
     { txOutAddress := fromScript sourcePolicy
     , txOutValue := []
-    , txOutDatum := .OutputDatum (versionedDatum 1 none)
+    , txOutDatum := .OutputDatum versionedDatum
     , txOutReferenceScript := none }
 
 /-- `MigrationProof.MigrateOutProof` is constructor 0: the source generation
@@ -213,14 +199,12 @@ def migrateOutContext (claimTxid : ByteString) (authorization : Data) :
   scriptContextRedeemer := observerEnvelope claimTxid authorization
   scriptContextScriptInfo := .RewardingScript observerCredential
 
-/-- The two applied parameters of `observer_migration`: the generation this
-program enforces, and the predecessor family it is pinned to. Both are applied
-parameters, never redeemer fields — that is what makes a foreign or skipped
-predecessor unrepresentable rather than merely rejected. -/
+/-- The single applied parameter of `observer_migration`: the one predecessor
+policy it accepts. It is an applied parameter, never a redeemer field, and the
+resulting program hash is this release's identity -- there is no generation
+integer to apply. -/
 def appliedParameters : List Data :=
-  [ Data.I 1
-  , Data.B predecessorPolicy
-  ]
+  [Data.B predecessorPolicy]
 
 /-- A `Data` argument as a UPLC term. -/
 def dataTerm (value : Data) : PlutusCore.UPLC.Term.Term := .Const (.Data value)

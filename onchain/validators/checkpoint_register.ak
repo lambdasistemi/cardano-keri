@@ -68,7 +68,6 @@ pub type SpendRedeemer {
 const checkpoint_min_ada: Int = 2_000_000
 
 validator checkpoint_register(
-  _version: Int,
   migration_hash: PolicyId,
   lifecycle_hash: PolicyId,
   advance_hash: PolicyId,

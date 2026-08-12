@@ -34,13 +34,12 @@ use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/role.{Active, Armed, Frozen}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{
-  MigrateInProof, MigrateOutProof, MigrationProof, VersionedCheckpoint,
-  VersionedCheckpointDatum, VersionedV1,
+  MigrateInProof, MigrateOutProof, MigrationProof,
 }
 use cardano_keri/migration/checkpoint_vectors as mig_vec
 use cardano_keri/migration/types.{
-  CheckpointActive, MigrationAuthorization, MigrationOrigin, MigrationTarget,
-  ValidatorVersion,
+  CheckpointActive, MigrationAuthorization, MigrationPredecessor,
+  MigrationTarget,
 }
 use checkpoint_observer
 use checkpoint_register.{
@@ -138,7 +137,6 @@ fn run_register(
 ) -> Bool {
   let tx = register_tx(d, lovelace, evidence)
   checkpoint_register.checkpoint_register.mint(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -243,7 +241,6 @@ fn close_tx(evidence: CloseEvidence) -> Transaction {
 fn run_close(evidence: CloseEvidence) -> Bool {
   let tx = close_tx(evidence)
   checkpoint_register.checkpoint_register.mint(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -256,7 +253,6 @@ fn run_close(evidence: CloseEvidence) -> Bool {
     policy,
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -368,7 +364,6 @@ fn run_rotate_small(
   let envelope = advance_envelope(spent, evidence)
   let tx = with_advance_observer(rotate_tx(spent, created), envelope)
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -387,7 +382,6 @@ fn run_rotate_small(
 test rotate_small_rejects_missing_advance_observer() fail {
   let spent = advance_vec.pos_adv_wit_2key_spent
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -445,7 +439,6 @@ test rotate_small_rejects_changed_successor_value() fail {
       |> merge(from_asset(policy, spent.aid_asset_name, 1)),
   }
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -556,7 +549,6 @@ fn run_freeze_small(
 ) -> Bool {
   let envelope = freeze_envelope(evidence)
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -581,7 +573,6 @@ test freeze_small_accepts_genuine_witnessed_later_rotation() {
 test freeze_small_rejects_missing_enforcement_observer() fail {
   let tip = enforcement_vec.lag_freeze_tip
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -710,7 +701,6 @@ fn run_armed_response(upper: Int) -> Bool {
   let evidence = advance_vec.pos_adv_wit_2key_evidence
   let tx = armed_rotate_tx(spent, created, upper)
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -794,7 +784,6 @@ fn claimed_value(tip: CheckpointDatumV1) -> Value {
 
 fn run_claim_small(tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -897,7 +886,6 @@ fn run_thaw_small(successor_lovelace: Int) -> Bool {
   let created = advance_vec.pos_adv_wit_2key_created
   let evidence = advance_vec.pos_adv_wit_2key_evidence
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1101,7 +1089,6 @@ fn run_convict_with_action(
 ) -> Bool {
   let envelope = convict_envelope_at(action, convict_ref(), evidence)
   checkpoint_register.checkpoint_register.mint(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1114,7 +1101,6 @@ fn run_convict_with_action(
     policy,
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1316,7 +1302,6 @@ test convict_small_rejects_freeze_action_tag_for_convict_spend() fail {
     observe_freeze,
   )
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1388,7 +1373,6 @@ test convict_small_rejects_crossed_observer_and_spend_own_refs() fail {
     redeemers: [Pair(Withdraw(credential), observer_redeemer)],
   }
   checkpoint_register.checkpoint_register.mint(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1401,7 +1385,6 @@ test convict_small_rejects_crossed_observer_and_spend_own_refs() fail {
     policy,
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1434,7 +1417,6 @@ test freeze_small_rejects_convict_action_tag() fail {
     redeemers: [Pair(Withdraw(credential), observer_redeemer)],
   }
   checkpoint_register.checkpoint_register.spend(
-    0,
     migration_hash,
     lifecycle_hash,
     advance_hash,
@@ -1490,17 +1472,15 @@ fn mig_source_ref() -> OutputReference {
   }
 }
 
-fn mig_origin() -> MigrationOrigin {
-  MigrationOrigin {
-    source_version: ValidatorVersion { value: 1 },
-    source_policy: mig_source_policy,
-    source_ref: mig_source_ref(),
+fn mig_predecessor() -> MigrationPredecessor {
+  MigrationPredecessor {
+    predecessor_policy: mig_source_policy,
+    predecessor_ref: mig_source_ref(),
   }
 }
 
 fn mig_target() -> MigrationTarget {
   MigrationTarget {
-    target_version: ValidatorVersion { value: 2 },
     target_policy: mig_target_policy,
     target_role: CheckpointActive,
     target_address: from_script(mig_target_policy),
@@ -1514,7 +1494,7 @@ fn mig_authorization(signed_state: Data) -> MigrationAuthorization {
   MigrationAuthorization {
     domain: mig_vec.golden_migration_domain,
     network_id: 1,
-    source_origin: mig_origin(),
+    source: mig_predecessor(),
     source_role: CheckpointActive,
     source_state: signed_state,
     target: mig_target(),
@@ -1541,15 +1521,7 @@ fn mig_source_input(carried: CheckpointDatumV1) -> Input {
         |> merge(
             from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
           ),
-      datum: InlineDatum(
-        VersionedV1(
-          VersionedCheckpoint {
-            validator_version: ValidatorVersion { value: 1 },
-            migration_origin: None,
-            state: carried,
-          },
-        ),
-      ),
+      datum: InlineDatum(V1(carried)),
       reference_script: None,
     },
   )
@@ -1560,15 +1532,7 @@ fn mig_successor_output(carried: CheckpointDatumV1) -> Output {
     address: from_script(mig_target_policy),
     value: from_lovelace(mig_protected)
       |> merge(from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1)),
-    datum: InlineDatum(
-      VersionedV1(
-        VersionedCheckpoint {
-          validator_version: ValidatorVersion { value: 2 },
-          migration_origin: Some(mig_origin()),
-          state: carried,
-        },
-      ),
-    ),
+    datum: InlineDatum(V1(carried)),
     reference_script: None,
   }
 }
@@ -1597,13 +1561,11 @@ fn mig_envelope(
 
 /// Run the promoted observer of one generation over a real transaction.
 fn run_migration_observer(
-  version: Int,
   claim_policy: PolicyId,
   proof: MigrationProof,
   tx: Transaction,
 ) -> Bool {
   checkpoint_observer.observer_migration.withdraw(
-    version,
     mig_source_policy,
     mig_envelope(claim_policy, proof),
     0,
@@ -1611,14 +1573,14 @@ fn run_migration_observer(
   )
 }
 
-/// The target generation observes an entry: version N+1, target policy.
+/// The successor program observes an entry under the target policy.
 fn run_migrate_in(proof: MigrationProof, tx: Transaction) -> Bool {
-  run_migration_observer(2, mig_target_policy, proof, tx)
+  run_migration_observer(mig_target_policy, proof, tx)
 }
 
-/// The source generation observes its own exit: version N, source policy.
+/// The source program observes its own exit under the source policy.
 fn run_migrate_out(proof: MigrationProof, tx: Transaction) -> Bool {
-  run_migration_observer(1, mig_source_policy, proof, tx)
+  run_migration_observer(mig_source_policy, proof, tx)
 }
 
 // INV-254-REPLAY — the signed projection must be the consumed projection.
@@ -1723,6 +1685,7 @@ test migration_boundary_accepts_composed_migrate_out() {
     tx,
   )
 }
+
 // Cut by epic ruling NOTE-006 (2026-08-12), sha256
 // 1ef670c52897ebdda575805ac8a4fcf011bcc3749a3d5632c6d5c196a588c4d1:
 //
@@ -1730,8 +1693,9 @@ test migration_boundary_accepts_composed_migrate_out() {
 //   migration_lifecycle_migrated_row_advances_retaining_origin
 //   migration_lifecycle_advance_may_not_rewrite_origin
 //
-// These asserted that a datum-carried version integer and `MigrationOrigin`
-// back-pointer survive ordinary lifecycle transitions. Both fields are CUT:
+// These asserted that a datum-carried generation integer and a stored
+// predecessor back-pointer survive ordinary lifecycle transitions. Both
+// fields are CUT:
 // the script hash already identifies the validator, and the migration
 // transaction — spend the predecessor, burn its token, mint the successor,
 // atomically — is a more durable lineage record than a datum field no M1
@@ -1742,3 +1706,93 @@ test migration_boundary_accepts_composed_migrate_out() {
 // were genuinely RED against `0e6b445` and were not made to pass; the
 // behaviour they demanded is no longer wanted. Their value/replay siblings
 // above survive untouched, and those carry 2 of the 3 audit findings.
+
+// The lean lineage edge, at the transaction boundary.
+//
+// Release identity is the applied successor hash and there is no stored
+// back-pointer, so the only thing that ties a successor to its predecessor is
+// that this transaction genuinely spends it. These four controls are that
+// property; each is paired with the accepting case above, which is what keeps
+// them from passing vacuously.
+
+test migration_boundary_rejects_wrong_predecessor_policy() fail {
+  // The successor program accepts exactly one predecessor policy. A package
+  // naming another family is refused even though a real output is spent.
+  let foreign = MigrationAuthorization {
+    ..mig_authorization(mig_signed_state()),
+    source: MigrationPredecessor {
+      predecessor_policy: mig_target_policy,
+      predecessor_ref: mig_source_ref(),
+    },
+  }
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(MigrateInProof { authorization: foreign }, tx)
+}
+
+test migration_boundary_rejects_wrong_predecessor_outref() fail {
+  // The signed output and the consumed output must be the same output.
+  let elsewhere = MigrationAuthorization {
+    ..mig_authorization(mig_signed_state()),
+    source: MigrationPredecessor {
+      predecessor_policy: mig_source_policy,
+      predecessor_ref: OutputReference {
+        transaction_id: mig_vec.fixture_mutant_txid,
+        output_index: 1,
+      },
+    },
+  }
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(MigrateInProof { authorization: elsewhere }, tx)
+}
+
+test migration_boundary_rejects_missing_predecessor_input() fail {
+  // Minting a successor while consuming nothing has no lineage at all.
+  let tx = spend_context(
+    [],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(
+    MigrateInProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+test migration_boundary_rejects_split_transition() fail {
+  // Splitting the move across two transactions is exactly what the atomic
+  // edge forbids: this one mints the successor without burning the source,
+  // which is what the second half of a split would look like.
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(
+    MigrateInProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}

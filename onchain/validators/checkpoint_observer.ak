@@ -58,10 +58,10 @@ validator observer_advance(_version: Int) {
 ///
 /// The applied Register program cannot carry the migration verdict and stay
 /// under the released 16,133-byte signed-reference transaction ceiling, so the
-/// heavy half runs here. `version` and `predecessor_policy` are applied
-/// parameters, never redeemer fields: that is what makes an unknown, skipped,
-/// or foreign predecessor unrepresentable rather than merely rejected.
-validator observer_migration(version: Int, predecessor_policy: PolicyId) {
+/// heavy half runs here. `predecessor_policy` is an applied parameter, never a
+/// redeemer field: the applied hash is this program's release identity, and the
+/// one policy it accepts is its only lineage input.
+validator observer_migration(predecessor_policy: PolicyId) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
     let claim = envelope.claim
@@ -72,7 +72,6 @@ validator observer_migration(version: Int, predecessor_policy: PolicyId) {
     expect Some(source_ref) = claim.own_ref
     expect proof: MigrationProof = envelope.payload
     validate_migration_observation(
-      version,
       predecessor_policy,
       claim.checkpoint_policy,
       source_ref,

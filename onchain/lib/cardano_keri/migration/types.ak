@@ -6,7 +6,7 @@
 //// identity.
 ////
 //// Constructor indices and field order are protocol surface: they change
-//// only by minting a new `ValidatorVersion`. The Haskell mirror is
+//// only by a new applied program hash. The Haskell mirror is
 //// `Cardano.KERI.AID.Migration.Types`, and
 //// `offchain/app/GenMigrationTypesVectors.hs` is the sole source of the
 //// byte fixtures in `types_vectors.ak`, which `types_tests.ak` asserts this
@@ -22,15 +22,6 @@ use cardano/transaction.{OutputReference}
 pub const migration_domain: ByteArray =
   #"63617264616e6f2d6b6572692f6d6967726174696f6e2f7631"
 
-/// A validator program generation (DAT-254-VERSION). The wrapper is
-/// deliberate: a version is never a bare `Int`, so it cannot alias any other
-/// positional integer field. `value` is non-negative; transaction validation
-/// later binds it to the applied program and the N -> N+1 edge, which this
-/// protocol layer does not check.
-pub type ValidatorVersion {
-  value: Int,
-}
-
 /// Which live lifecycle position a migration moves. The terminal burn state
 /// is deliberately absent: it is an end state, not something that can be
 /// migrated, so it is unrepresentable here rather than merely unused. `Board`
@@ -43,21 +34,24 @@ pub type MigrationRole {
   Board
 }
 
-/// The immediate migration predecessor (DAT-254-ORIGIN): the exact program
-/// generation, minting policy, and spent output the current state came from.
-/// Absent — `None` — for state that was never migrated. It is exactly one
-/// step back, never a chain: each generation records its own predecessor.
-pub type MigrationOrigin {
-  source_version: ValidatorVersion,
-  source_policy: PolicyId,
-  source_ref: OutputReference,
+/// The exact predecessor a migration consumes (DAT-254-PREDECESSOR): the
+/// minting policy that holds it and the output being spent.
+///
+/// There is no program generation here and no stored back-pointer. The
+/// successor program is applied with the one predecessor policy it accepts, so
+/// its own hash is its release identity, and the atomic transaction — spend
+/// this output, burn its token, mint and confine the same-name successor — is
+/// the lineage edge. A datum field restating either would be duplicated state
+/// that no consumer reads.
+pub type MigrationPredecessor {
+  predecessor_policy: PolicyId,
+  predecessor_ref: OutputReference,
 }
 
 /// Where a migration lands (DAT-254-TARGET). `legacy_refund_address` is
 /// optional and legacy-only: it names where value from a retired generation
 /// is returned, and is `None` for every target that has no legacy remainder.
 pub type MigrationTarget {
-  target_version: ValidatorVersion,
   target_policy: PolicyId,
   target_role: MigrationRole,
   target_address: Address,
@@ -66,8 +60,8 @@ pub type MigrationTarget {
 
 /// Every input the later canonical authorization message is built from
 /// (DAT-254-AUTHORIZATION). No redirectable caller field is omitted: the
-/// domain and network pin the protocol and chain, the origin pins the exact
-/// spent predecessor, the role and state pin what is being moved, the target
+/// domain and network pin the protocol and chain, the predecessor pins the
+/// exact spent output, the role and state pin what is being moved, the target
 /// pins where it lands including any refund, and the indexed signatures carry
 /// the controller evidence.
 ///
@@ -84,7 +78,7 @@ pub type MigrationTarget {
 pub type MigrationAuthorization {
   domain: ByteArray,
   network_id: Int,
-  source_origin: MigrationOrigin,
+  source: MigrationPredecessor,
   source_role: MigrationRole,
   source_state: Data,
   target: MigrationTarget,

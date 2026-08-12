@@ -11,10 +11,11 @@ claim to know about, and are their identities and predecessor edges coherent —
 so that a build which silently drops, relabels, or renumbers a family fails
 here rather than at a cutover desk.
 
-The historical entry is immutable released evidence: its version stays
-@0@ (the @v1CheckpointVersion@ of the M1 release, whose name refers to the
-manifest schema, not the family generation) and it is never relabelled as the
-new family.  The new family is published __beside__ it.
+The historical entry is immutable released evidence: its minting policy is the
+deployed one and it is never relabelled as the new family.  The new family is
+published __beside__ it.  Release identity is the applied program hash, so a
+family is named by its policy and its lineage is the single predecessor policy
+it accepts -- there is no generation integer anywhere in this contract.
 -}
 module Cardano.KERI.Deployment.CheckpointMigration (
     CheckpointFamilyIdentity (..),
@@ -25,10 +26,6 @@ module Cardano.KERI.Deployment.CheckpointMigration (
     checkpointFamilyPublicationErrors,
 ) where
 
-import Cardano.KERI.Deployment.Script (
-    checkpointFamilyV1Version,
-    v1CheckpointVersion,
- )
 import Data.Map.Strict qualified as Map
 import Data.Maybe (
     isNothing,
@@ -39,17 +36,18 @@ import Data.Text (
  )
 import Data.Text qualified as Text
 
-{- | One published checkpoint family: its generation, minting policy, the
-address its ACTIVE role occupies, the generation it succeeds (absent for the
-first), and the source commit that produced it.
+{- | One published checkpoint family: its minting policy, the single
+predecessor policy it accepts (absent for the first), and the source commit
+that produced it.
 -}
 data CheckpointFamilyIdentity = CheckpointFamilyIdentity
-    { cfiVersion :: !Integer
-    -- ^ the program generation (DAT-254-VERSION)
-    , cfiPolicy :: !Text
+    { cfiPolicy :: !Text
     -- ^ the minting policy id, lowercase hex
-    , cfiPredecessor :: !(Maybe Integer)
-    -- ^ the generation this one succeeds, absent for the first
+    , cfiPredecessor :: !(Maybe Text)
+    {- ^ the single predecessor policy this family accepts, absent for the
+    first: release identity is the applied hash, so lineage is a policy,
+    never a generation integer
+    -}
     , cfiSourceCommit :: !Text
     -- ^ the commit whose build produced this family
     , cfiManifestPath :: !Text
@@ -59,16 +57,14 @@ data CheckpointFamilyIdentity = CheckpointFamilyIdentity
 
 -- | Why a published family set is not coherent.
 data PublicationError
-    = -- | two entries claim the same generation
-      DuplicateFamilyVersion !Integer
-    | -- | a predecessor edge names a generation that is not published
-      UnknownPredecessor !Integer !Integer
-    | -- | generations are not contiguous along the predecessor edge
-      NonContiguousFamilies !Integer !Integer
+    = -- | two entries claim the same minting policy
+      DuplicateFamilyPolicy !Text
+    | -- | a predecessor edge names a policy that is not published
+      UnknownPredecessor !Text !Text
     | -- | more than one family claims to be the first
       MultipleRootFamilies
     | -- | an identity field is empty
-      EmptyIdentityField !Integer !Text
+      EmptyIdentityField !Text !Text
     | -- | the historical family is absent or was relabelled
       HistoricalFamilyNotPreserved
     | -- | this contract is not implemented
@@ -76,29 +72,27 @@ data PublicationError
     deriving stock (Show, Eq)
 
 {- | The deployed preprod M1 checkpoint family.  Immutable released evidence:
-its generation is @v1CheckpointVersion@ (= 0) and its manifest entry is
-historical fact.
+its policy and manifest entry are historical fact.
 -}
 historicalCheckpointFamily :: CheckpointFamilyIdentity
 historicalCheckpointFamily =
     CheckpointFamilyIdentity
-        { cfiVersion = v1CheckpointVersion
-        , cfiPolicy = "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
+        { cfiPolicy = "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
         , cfiPredecessor = Nothing
         , cfiSourceCommit = "50a582064ddfde15ebfa3649c6b6fea8d39fc697"
         , cfiManifestPath = "deploy/preprod/m1-manifest.json"
         }
 
-{- | The #254 checkpoint family: generation 1, succeeding the deployed
-generation 0.  It carries no manifest path because it is not deployed — this
-is a build contract, not a cutover record.
+{- | The #254 checkpoint family, accepting the deployed policy as its single
+predecessor.  It carries no manifest path because it is not deployed -- this is
+a build contract, not a cutover record.
 -}
 migrationCheckpointFamily :: CheckpointFamilyIdentity
 migrationCheckpointFamily =
     CheckpointFamilyIdentity
-        { cfiVersion = checkpointFamilyV1Version
-        , cfiPolicy = "" -- derived at deployment; see S254-3
-        , cfiPredecessor = Just v1CheckpointVersion
+        { cfiPolicy = "" -- derived at deployment; see S254-3
+        , cfiPredecessor =
+            Just "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
         , cfiSourceCommit = ""
         , cfiManifestPath = ""
         }
@@ -128,12 +122,12 @@ checkpointFamilyPublicationErrors families =
         , historicalErrors
         ]
   where
-    versions = map cfiVersion families
-    published = Set.fromList versions
+    policies = map cfiPolicy families
+    published = Set.fromList policies
 
     duplicates =
-        [ DuplicateFamilyVersion version
-        | (version, count) <- Map.toList (counted versions)
+        [ DuplicateFamilyPolicy policy
+        | (policy, count) <- Map.toList (counted policies)
         , count > (1 :: Int)
         ]
     counted = foldr (\v -> Map.insertWith (+) v 1) Map.empty
@@ -144,9 +138,7 @@ checkpointFamilyPublicationErrors families =
                 Nothing -> []
                 Just predecessor
                     | not (predecessor `Set.member` published) ->
-                        [UnknownPredecessor (cfiVersion family) predecessor]
-                    | cfiVersion family /= predecessor + 1 ->
-                        [NonContiguousFamilies predecessor (cfiVersion family)]
+                        [UnknownPredecessor (cfiPolicy family) predecessor]
                     | otherwise -> []
             | family <- families
             ]
@@ -158,7 +150,7 @@ checkpointFamilyPublicationErrors families =
 
     identityErrors =
         concat
-            [ [ EmptyIdentityField (cfiVersion family) name
+            [ [ EmptyIdentityField (cfiPolicy family) name
               | (name, value) <-
                     [("policy", cfiPolicy family), ("commit", cfiSourceCommit family)]
               , Text.null value
@@ -167,12 +159,12 @@ checkpointFamilyPublicationErrors families =
             , not (Text.null (cfiManifestPath family))
             ]
 
-    -- The deployed generation must still be published, with its own version
-    -- and its own manifest entry. This is the check that fails if released
-    -- history is ever relabelled as the new family instead of kept beside it.
+    -- The deployed family must still be published, with its own policy and
+    -- its own manifest entry. This is the check that fails if released history
+    -- is ever relabelled as the new family instead of kept beside it.
     historicalErrors
         | any isHistorical families = []
         | otherwise = [HistoricalFamilyNotPreserved]
     isHistorical family =
-        cfiVersion family == cfiVersion historicalCheckpointFamily
+        cfiPolicy family == cfiPolicy historicalCheckpointFamily
             && cfiManifestPath family == cfiManifestPath historicalCheckpointFamily

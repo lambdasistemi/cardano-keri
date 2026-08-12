@@ -22,24 +22,24 @@ The machine build gate is a hard prerequisite for implementation or audit.
 
 ## Phase 2 — S254-1 checkpoint family
 
-- [ ] T254-101 [US1] Remove the superseded version/origin datum models; retain
+- [x] T254-101 [US1] Remove the superseded version/origin datum models; retain
   only demonstrated target and canonical migration-authorization fields in
   onchain/offchain parity, with release identity supplied by applied hash.
-- [ ] T254-102 [US1] Demonstrate RED for missing/foreign/below-threshold
+- [x] T254-102 [US1] Demonstrate RED for missing/foreign/below-threshold
   current-controller authorization and GREEN for permissionless relay of the
   same controller-signed package.
-- [ ] T254-103 [US1] Demonstrate RED for redirect/replay mutants changing
+- [x] T254-103 [US1] Demonstrate RED for redirect/replay mutants changing
   source outref/policy, target, role/state, or legacy refund, including stale
   signed state against the actually consumed input.
-- [ ] T254-104 [US1] Implement and prove permanent migrate-out plus a successor
+- [x] T254-104 [US1] Implement and prove permanent migrate-out plus a successor
   applied with one predecessor policy, with exact role, datum, token, atomic
   predecessor spend, and value continuity.
-- [ ] T254-105 [US1] Implement and prove the exact preproduction v0 ACTIVE
+- [x] T254-105 [US1] Implement and prove the exact preproduction v0 ACTIVE
   `Close`/`CloseBurn` bridge, including refund plus equal successor
   capitalization and rejection of v0 ARMED/FROZEN rows.
-- [ ] T254-106 [US1] Generate cross-layer vectors and prove byte/verdict
+- [x] T254-106 [US1] Generate cross-layer vectors and prove byte/verdict
   parity; no generated Aiken vector is hand edited.
-- [ ] T254-108 [US1] Register the exact changed compiled checkpoint family
+- [x] T254-108 [US1] Register the exact changed compiled checkpoint family
   with M8 and kill named authority and replay mutants against that target.
 
 ## Phase 3 — S254-E enforcement entitlement integration

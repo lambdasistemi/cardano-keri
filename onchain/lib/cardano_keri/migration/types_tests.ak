@@ -23,7 +23,7 @@ use cardano/address.{Address, Inline, Pointer, Script, VerificationKey}
 use cardano/transaction.{OutputReference}
 use cardano_keri/migration/types.{
   Board, CheckpointActive, CheckpointArmed, CheckpointFrozen,
-  MigrationAuthorization, MigrationOrigin, MigrationTarget, ValidatorVersion,
+  MigrationAuthorization, MigrationPredecessor, MigrationTarget,
   migration_domain,
 }
 use cardano_keri/migration/types_vectors as vec
@@ -36,11 +36,10 @@ fn source_ref() -> OutputReference {
   OutputReference { transaction_id: vec.fixture_source_txid, output_index: 3 }
 }
 
-fn origin() -> MigrationOrigin {
-  MigrationOrigin {
-    source_version: ValidatorVersion { value: 1 },
-    source_policy: vec.fixture_source_policy,
-    source_ref: source_ref(),
+fn predecessor() -> MigrationPredecessor {
+  MigrationPredecessor {
+    predecessor_policy: vec.fixture_source_policy,
+    predecessor_ref: source_ref(),
   }
 }
 
@@ -69,7 +68,6 @@ fn pointer_address() -> Address {
 
 fn target() -> MigrationTarget {
   MigrationTarget {
-    target_version: ValidatorVersion { value: 2 },
     target_policy: vec.fixture_target_policy,
     target_role: CheckpointActive,
     target_address: target_address(),
@@ -109,7 +107,7 @@ fn authorization() -> MigrationAuthorization {
   MigrationAuthorization {
     domain: migration_domain,
     network_id: 1,
-    source_origin: origin(),
+    source: predecessor(),
     source_role: CheckpointFrozen,
     source_state: state(),
     target: target(),
@@ -125,22 +123,8 @@ test domain_matches_haskell() {
   migration_domain == vec.golden_migration_domain
 }
 
-test version_bytes_match_haskell() {
-  and {
-    cbor.serialise(ValidatorVersion { value: 0 }) == vec.golden_version_zero,
-    cbor.serialise(ValidatorVersion { value: 1 }) == vec.golden_version_one,
-  }
-}
-
-/// INV-254-LINKAGE: a version is a distinct wrapper, never the bare integer
-/// it wraps, so it can never alias a positional `Int` field.
-test version_does_not_alias_a_bare_integer() {
-  and {
-    cbor.serialise(1) == vec.negative_version_bare_int,
-    cbor.serialise(ValidatorVersion { value: 1 }) != vec.negative_version_bare_int,
-  }
-}
-
+/// The lifecycle vocabulary is protocol surface: each role is a distinct
+/// constructor, so a role can never be confused with another on the wire.
 test role_bytes_match_haskell() {
   and {
     cbor.serialise(CheckpointActive) == vec.golden_role_checkpoint_active,
@@ -160,16 +144,10 @@ test roles_are_pairwise_distinct() {
   list.length(list.unique(encodings)) == 4
 }
 
-/// DAT-254-ORIGIN: exact for an immediate predecessor, absent for native
-/// state — so the `Option` wrapper is protocol surface too.
-test origin_bytes_match_haskell() {
-  let absent: Option<MigrationOrigin> = None
-  and {
-    cbor.serialise(origin()) == vec.golden_origin,
-    cbor.serialise(Some(origin())) == vec.golden_origin_present,
-    cbor.serialise(absent) == vec.golden_origin_absent,
-    vec.golden_origin_present != vec.golden_origin_absent,
-  }
+/// DAT-254-PREDECESSOR: the exact policy and output a migration consumes.
+/// There is no generation and no back-pointer: the spend is the edge.
+test predecessor_bytes_match_haskell() {
+  cbor.serialise(predecessor()) == vec.golden_predecessor
 }
 
 test target_bytes_match_haskell() {
@@ -226,27 +204,18 @@ fn mutations() -> List<ByteArray> {
     cbor.serialise(
       MigrationAuthorization {
         ..auth,
-        source_origin: MigrationOrigin {
-          ..origin(),
-          source_version: ValidatorVersion { value: 2 },
+        source: MigrationPredecessor {
+          ..predecessor(),
+          predecessor_policy: vec.fixture_target_policy,
         },
       },
     ),
     cbor.serialise(
       MigrationAuthorization {
         ..auth,
-        source_origin: MigrationOrigin {
-          ..origin(),
-          source_policy: vec.fixture_target_policy,
-        },
-      },
-    ),
-    cbor.serialise(
-      MigrationAuthorization {
-        ..auth,
-        source_origin: MigrationOrigin {
-          ..origin(),
-          source_ref: OutputReference {
+        source: MigrationPredecessor {
+          ..predecessor(),
+          predecessor_ref: OutputReference {
             ..source_ref(),
             transaction_id: vec.fixture_mutant_txid,
           },
@@ -256,24 +225,15 @@ fn mutations() -> List<ByteArray> {
     cbor.serialise(
       MigrationAuthorization {
         ..auth,
-        source_origin: MigrationOrigin {
-          ..origin(),
-          source_ref: OutputReference { ..source_ref(), output_index: 4 },
+        source: MigrationPredecessor {
+          ..predecessor(),
+          predecessor_ref: OutputReference { ..source_ref(), output_index: 4 },
         },
       },
     ),
     cbor.serialise(MigrationAuthorization { ..auth, source_role: Board }),
     cbor.serialise(
       MigrationAuthorization { ..auth, source_state: mutant_state() },
-    ),
-    cbor.serialise(
-      MigrationAuthorization {
-        ..auth,
-        target: MigrationTarget {
-          ..target(),
-          target_version: ValidatorVersion { value: 3 },
-        },
-      },
     ),
     cbor.serialise(
       MigrationAuthorization {
@@ -324,13 +284,11 @@ fn generated_mutations() -> List<ByteArray> {
   [
     vec.negative_auth_domain_mutated,
     vec.negative_auth_network_mutated,
-    vec.negative_auth_source_version_bumped,
     vec.negative_auth_source_policy_crossed,
     vec.negative_auth_source_ref_txid_mutated,
     vec.negative_auth_source_ref_index_bumped,
     vec.negative_auth_source_role_board,
     vec.negative_auth_source_state_mutated,
-    vec.negative_auth_target_version_bumped,
     vec.negative_auth_target_policy_crossed,
     vec.negative_auth_target_role_swapped,
     vec.negative_auth_target_address_stake_dropped,

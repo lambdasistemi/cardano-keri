@@ -32,69 +32,13 @@ use cardano/transaction.{
 use cardano_keri/checkpoint/datum.{
   CheckpointDatum, CheckpointDatumV1, DatumValid, V1, datum_well_formed,
 }
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/role
 use cardano_keri/checkpoint/threshold.{evaluate}
 use cardano_keri/migration/types.{
   CheckpointActive, CheckpointArmed, CheckpointFrozen, MigrationAuthorization,
-  MigrationOrigin, MigrationRole, MigrationTarget, ValidatorVersion,
-  migration_domain,
-}
-
-// ---------------------------------------------------------
-// Versioned checkpoint state (DAT-254-CHECKPOINT, DAT-254-ARMED)
-// ---------------------------------------------------------
-
-/// The frozen KEL projection wrapped with the deployment metadata the
-/// migration family needs (DAT-254-CHECKPOINT).
-///
-/// `state` is the *same* `CheckpointDatumV1` the v0 family carries, referenced
-/// rather than restated: migration metadata must never become KEL state, and a
-/// field-by-field copy here would be exactly the lossy alternate
-/// representation INV-254-IDENTITY forbids.
-///
-/// These wrappers live with the migration family rather than inside
-/// `checkpoint/datum.ak` for a measured reason: putting them there makes every
-/// consumer of the frozen datum module — including the lifecycle observer —
-/// import the migration protocol transitively, which grew the applied
-/// `observer-lifecycle` program past the 16,133-byte signed-reference
-/// transaction budget the M1 release is deployed under. Responsibility is
-/// unchanged; only placement is, which is exactly the promotion
-/// `modules-model.md` anticipates for applied-program limits.
-///
-/// - `validator_version`: the generation of the program that owns this output.
-///   A natively registered row carries its applied version and no origin.
-/// - `migration_origin`: the *immediate* predecessor this row was migrated
-///   from — one step back, never a chain. `None` for a natively created row.
-pub type VersionedCheckpoint {
-  validator_version: ValidatorVersion,
-  migration_origin: Option<MigrationOrigin>,
-  state: CheckpointDatumV1,
-}
-
-/// The versioned checkpoint datum sum, carried at the ACTIVE and FROZEN
-/// addresses exactly as `CheckpointDatum` is in the v0 family. `VersionedV1`
-/// is constructor index 0; an unknown constructor fails closed.
-///
-/// This is a *new* wire type beside `CheckpointDatum`, never a relabelling of
-/// it: the deployed v0 rows keep their own encoding and their own program.
-pub type VersionedCheckpointDatum {
-  VersionedV1(VersionedCheckpoint)
-}
-
-/// The versioned in-flight challenge (DAT-254-ARMED): the versioned checkpoint
-/// plus the *exact* hunter and deadline the source carried. Migration
-/// preserves all three and the ARMED position; it never resolves, extends, or
-/// reassigns a challenge in flight.
-pub type VersionedArmed {
-  armed_checkpoint: VersionedCheckpoint,
-  armed_hunter_pkh: ByteArray,
-  armed_deadline: Int,
-}
-
-/// The versioned ARMED datum sum, beside — never replacing — `ArmedDatum`.
-pub type VersionedArmedDatum {
-  VersionedArmedV1(VersionedArmed)
+  MigrationPredecessor, MigrationRole, MigrationTarget, migration_domain,
 }
 
 // ---------------------------------------------------------
@@ -107,7 +51,6 @@ pub type VersionedArmedDatum {
 /// carries it.
 pub type MigrationSource {
   network_id: Int,
-  source_version: ValidatorVersion,
   source_policy: PolicyId,
   source_ref: OutputReference,
   source_role: MigrationRole,
@@ -115,19 +58,17 @@ pub type MigrationSource {
 }
 
 /// The canonical, versioned, domain-separated migration preimage. Field order
-/// is protocol surface: it changes only by minting a new `ValidatorVersion`.
+/// is protocol surface: it changes only by a new applied program hash.
 /// Every caller-controlled field that could redirect identity, value, or
 /// successor selection appears here, which is what makes a signature over it
 /// unreplayable onto a different move.
 pub type MigrationMessage {
   domain: ByteArray,
   network_id: Int,
-  source_version: ValidatorVersion,
   source_policy: PolicyId,
   source_ref: OutputReference,
   source_role: MigrationRole,
   source_state: Data,
-  target_version: ValidatorVersion,
   target_policy: PolicyId,
   target_role: MigrationRole,
   target_address: Address,
@@ -138,16 +79,7 @@ pub type MigrationMessage {
 /// into the successor program as parameters, so no datum or redeemer value can
 /// substitute either identity.
 pub type Predecessor {
-  predecessor_version: ValidatorVersion,
   predecessor_policy: PolicyId,
-}
-
-/// The successor a transaction actually proposes, read from its output.
-pub type MigrationSuccessor {
-  successor_version: ValidatorVersion,
-  successor_policy: PolicyId,
-  successor_origin: Option<MigrationOrigin>,
-  successor_role: MigrationRole,
 }
 
 /// A decoded lifecycle position plus its complete role payload. ARMED carries
@@ -177,7 +109,6 @@ pub type LegacyCheckpointIdentity {
   legacy_network_name: ByteArray,
   legacy_network_magic: Int,
   legacy_network_id: Int,
-  legacy_version: ValidatorVersion,
   legacy_policy: PolicyId,
   legacy_source_commit: ByteArray,
 }
@@ -202,20 +133,16 @@ pub type MigrationError {
   MigrationDatumIllFormed
   /// the current controller threshold is not met by valid distinct indices
   MigrationQuorumUnsatisfied
-  /// the target is not exactly the source generation plus one
-  MigrationVersionNotSuccessor
   /// the consumed source is not the successor program's pinned predecessor
   MigrationForeignPredecessor
-  /// the recorded origin is not the actual consumed source output
-  MigrationOriginMismatch
-  /// the successor's applied version marker disagrees with its datum
-  MigrationAppliedVersionMismatch
   /// a KEL projection field changed across the move
   MigrationIdentityChanged
   /// the lifecycle position or its role payload changed across the move
   MigrationRoleChanged
   /// value moved by more than the one admitted policy-token replacement
   MigrationValueChanged
+  /// the named predecessor output is not consumed by this transaction
+  MigrationSourceMissing
   /// the behaviour required here is not implemented
   MigrationNotImplemented
 }
@@ -238,12 +165,10 @@ pub fn migration_message(
   MigrationMessage {
     domain: migration_domain,
     network_id: source.network_id,
-    source_version: source.source_version,
     source_policy: source.source_policy,
     source_ref: source.source_ref,
     source_role: source.source_role,
     source_state: source.source_state,
-    target_version: target.target_version,
     target_policy: target.target_policy,
     target_role: target.target_role,
     target_address: target.target_address,
@@ -306,27 +231,53 @@ fn verified_indices(
   )
 }
 
-/// Check the permanent N -> N+1 edge, the pinned predecessor identity, and the
-/// successor's recorded origin against the actually consumed source.
-pub fn valid_migration_edge(
+/// The lineage edge, as the transaction itself.
+///
+/// Release identity is the applied successor hash, so there is no version to
+/// compare and no stored back-pointer to trust. What must hold is that the
+/// exact output the controllers signed over is genuinely spent here, holding
+/// its own token, under the one predecessor policy this successor program was
+/// applied with.
+///
+/// This is also what makes a split transaction unrepresentable: the mint
+/// requires this spend, so the burn and the mint cannot be in different
+/// transactions.
+pub fn valid_predecessor_transition(
   source: MigrationSource,
-  successor: MigrationSuccessor,
   expected_predecessor: Predecessor,
+  tx: Transaction,
 ) -> MigrationVerdict {
-  if source.source_version != expected_predecessor.predecessor_version || source.source_policy != expected_predecessor.predecessor_policy {
+  if source.source_policy != expected_predecessor.predecessor_policy {
     MigrationInvalid(MigrationForeignPredecessor)
-  } else if successor.successor_version.value != source.source_version.value + 1 {
-    MigrationInvalid(MigrationVersionNotSuccessor)
-  } else if successor.successor_origin != Some(
-    MigrationOrigin {
-      source_version: source.source_version,
-      source_policy: source.source_policy,
-      source_ref: source.source_ref,
-    },
-  ) {
-    MigrationInvalid(MigrationOriginMismatch)
   } else {
-    MigrationValid
+    when find_input(tx.inputs, source.source_ref) is {
+      None -> MigrationInvalid(MigrationSourceMissing)
+      Some(input) -> {
+        // The observed consumed output is the naming authority. Deriving the
+        // asset name from the signed payload instead would let a package name
+        // the token it wants to move rather than the one it is actually
+        // spending.
+        let observed_role = migration_role_of(
+          source.source_policy,
+          input.output.address,
+        )
+        let observed = role_state_of(observed_role, input.output)
+        let asset_name = deriveAidAssetName(observed.checkpoint.cesr_aid)
+        if quantity_of(input.output.value, source.source_policy, asset_name) != 1 {
+          MigrationInvalid(MigrationForeignPredecessor)
+        } else {
+          // Separately, the projection the quorum signed must be the one this
+          // transaction consumes: the signature decides what was approved,
+          // while every continuity check reads the observation.
+          expect signed: CheckpointDatum = source.source_state
+          if signed != V1(observed.checkpoint) {
+            MigrationInvalid(MigrationIdentityChanged)
+          } else {
+            MigrationValid
+          }
+        }
+      }
+    }
   }
 }
 
@@ -392,7 +343,6 @@ pub type MigrationProof {
 /// consumed output. Neither side trusts the other's reading of the transaction:
 /// each derives what it needs from `tx`.
 pub fn validate_migration_observation(
-  version: Int,
   predecessor_policy: PolicyId,
   checkpoint_policy: PolicyId,
   source_ref: OutputReference,
@@ -401,14 +351,10 @@ pub fn validate_migration_observation(
 ) -> Bool {
   when proof is {
     MigrateOutProof { authorization } ->
-      validate_checkpoint_migrate_out(version, authorization, source_ref, tx)
+      validate_checkpoint_migrate_out(authorization, source_ref, tx)
     MigrateInProof { authorization } ->
       validate_checkpoint_migrate_in(
-        version,
-        Predecessor {
-          predecessor_version: ValidatorVersion { value: version - 1 },
-          predecessor_policy,
-        },
+        Predecessor { predecessor_policy },
         source_ref,
         authorization,
         checkpoint_policy,
@@ -434,7 +380,6 @@ pub fn preprod_v0_identity() -> LegacyCheckpointIdentity {
     legacy_network_name: "preprod",
     legacy_network_magic: 1,
     legacy_network_id: 0,
-    legacy_version: ValidatorVersion { value: 0 },
     legacy_policy: #"0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
     legacy_source_commit: "50a582064ddfde15ebfa3649c6b6fea8d39fc697",
   }
@@ -442,12 +387,11 @@ pub fn preprod_v0_identity() -> LegacyCheckpointIdentity {
 
 /// The source view an authorization proposes.
 fn source_of(authorization: MigrationAuthorization) -> MigrationSource {
-  let origin = authorization.source_origin
+  let predecessor = authorization.source
   MigrationSource {
     network_id: authorization.network_id,
-    source_version: origin.source_version,
-    source_policy: origin.source_policy,
-    source_ref: origin.source_ref,
+    source_policy: predecessor.predecessor_policy,
+    source_ref: predecessor.predecessor_ref,
     source_role: authorization.source_role,
     source_state: authorization.source_state,
   }
@@ -470,34 +414,27 @@ fn migration_role_of(policy: PolicyId, address: Address) -> MigrationRole {
 fn role_state_of(
   observed_role: MigrationRole,
   output: Output,
-) -> (CheckpointRoleState, VersionedCheckpoint) {
+) -> CheckpointRoleState {
   expect InlineDatum(datum_data) = output.datum
   when observed_role is {
     CheckpointArmed -> {
-      expect armed: VersionedArmedDatum = datum_data
-      let VersionedArmedV1(a) = armed
-      (
-        CheckpointRoleState {
-          state_role: CheckpointArmed,
-          checkpoint: a.armed_checkpoint.state,
-          hunter_pkh: Some(a.armed_hunter_pkh),
-          deadline: Some(a.armed_deadline),
-        },
-        a.armed_checkpoint,
-      )
+      expect armed: ArmedDatum = datum_data
+      let ArmedV1 { checkpoint, hunter_pkh, deadline } = armed
+      CheckpointRoleState {
+        state_role: CheckpointArmed,
+        checkpoint,
+        hunter_pkh: Some(hunter_pkh),
+        deadline: Some(deadline),
+      }
     }
     _ -> {
-      expect versioned: VersionedCheckpointDatum = datum_data
-      let VersionedV1(vc) = versioned
-      (
-        CheckpointRoleState {
-          state_role: observed_role,
-          checkpoint: vc.state,
-          hunter_pkh: None,
-          deadline: None,
-        },
-        vc,
-      )
+      expect V1(state): CheckpointDatum = datum_data
+      CheckpointRoleState {
+        state_role: observed_role,
+        checkpoint: state,
+        hunter_pkh: None,
+        deadline: None,
+      }
     }
   }
 }
@@ -542,7 +479,6 @@ fn sole_successor(
 /// exactly the source token. Where the successor lands is the entry arm's
 /// business: that is the program which owns the target address.
 pub fn validate_checkpoint_migrate_out(
-  version: Int,
   authorization: MigrationAuthorization,
   own_ref: OutputReference,
   tx: Transaction,
@@ -550,17 +486,10 @@ pub fn validate_checkpoint_migrate_out(
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
   let observed_role = migration_role_of(own_hash, own_input.output.address)
-  let (source_role_state, versioned) = role_state_of(
-    observed_role,
-    own_input.output,
-  )
-  let origin = authorization.source_origin
-  // The applied generation, the datum's own marker, and the authorization all
-  // have to be the same generation; any disagreement is a refusal.
-  expect versioned.validator_version.value == version
-  expect origin.source_version.value == version
-  expect origin.source_policy == own_hash
-  expect origin.source_ref == own_ref
+  let source_role_state = role_state_of(observed_role, own_input.output)
+  let predecessor = authorization.source
+  expect predecessor.predecessor_policy == own_hash
+  expect predecessor.predecessor_ref == own_ref
   expect authorization.source_role == observed_role
   // The carried payload is the source's own projection, not a caller's
   // restatement of it: decode it through the frozen codec and require it to
@@ -594,10 +523,7 @@ pub fn validate_checkpoint_migrate_out(
     successor_output.address,
   )
   expect successor_role == target.target_role
-  let (successor_role_state, _) = role_state_of(
-    successor_role,
-    successor_output,
-  )
+  let successor_role_state = role_state_of(successor_role, successor_output)
   expect exact_token_replacement(own_hash, target.target_policy, asset_name, tx)
   expect
     checkpoint_transition_continuous(
@@ -620,7 +546,6 @@ pub fn validate_checkpoint_migrate_out(
 /// or redeemer, which is what makes "unknown version", "skipped version" and
 /// "foreign family" unrepresentable rather than merely rejected.
 pub fn validate_checkpoint_migrate_in(
-  version: Int,
   predecessor: Predecessor,
   source_ref: OutputReference,
   authorization: MigrationAuthorization,
@@ -633,10 +558,10 @@ pub fn validate_checkpoint_migrate_in(
     source_hash,
     source_input.output.address,
   )
-  let (source_role_state, _) = role_state_of(observed_role, source_input.output)
-  let origin = authorization.source_origin
-  expect origin.source_ref == source_ref
-  expect origin.source_policy == source_hash
+  let source_role_state = role_state_of(observed_role, source_input.output)
+  let predecessor_named = authorization.source
+  expect predecessor_named.predecessor_ref == source_ref
+  expect predecessor_named.predecessor_policy == source_hash
   expect authorization.source_role == observed_role
   // The quorum signs over `source_state`, so that field decides what the
   // controllers actually approved. If it is not the projection this
@@ -653,28 +578,14 @@ pub fn validate_checkpoint_migrate_in(
   expect successor_output.address == target.target_address
   let successor_role = migration_role_of(policy_id, successor_output.address)
   expect successor_role == target.target_role
-  let (successor_role_state, successor_versioned) = role_state_of(
-    successor_role,
-    successor_output,
-  )
-  expect successor_versioned.validator_version.value == version
+  let successor_role_state = role_state_of(successor_role, successor_output)
   expect
     checkpoint_migration_authorized(
       source_role_state.checkpoint,
       migration_message(source, target),
       authorization.controller_signatures,
     ) == MigrationValid
-  expect
-    valid_migration_edge(
-      source,
-      MigrationSuccessor {
-        successor_version: successor_versioned.validator_version,
-        successor_policy: policy_id,
-        successor_origin: successor_versioned.migration_origin,
-        successor_role,
-      },
-      predecessor,
-    ) == MigrationValid
+  expect valid_predecessor_transition(source, predecessor, tx) == MigrationValid
   expect exact_token_replacement(source_hash, policy_id, asset_name, tx)
   expect
     checkpoint_transition_continuous(
@@ -710,12 +621,11 @@ pub fn validate_legacy_checkpoint_migrate_in(
   tx: Transaction,
 ) -> Bool {
   expect Some(source_input) = find_input(tx.inputs, source_ref)
-  let origin = authorization.source_origin
+  let predecessor = authorization.source
   // The only admitted legacy source is the exact committed preprod v0 family.
-  expect origin.source_policy == preprod_v0.legacy_policy
-  expect origin.source_version == preprod_v0.legacy_version
+  expect predecessor.predecessor_policy == preprod_v0.legacy_policy
   expect authorization.network_id == preprod_v0.legacy_network_id
-  expect origin.source_ref == source_ref
+  expect predecessor.predecessor_ref == source_ref
   // v0 ARMED and FROZEN have no authorized exit at all: they block the
   // cutover rather than being rewritten through this bridge.
   expect authorization.source_role == CheckpointActive
@@ -750,13 +660,10 @@ pub fn validate_legacy_checkpoint_migrate_in(
   expect Some(successor_output) = sole_successor(policy_id, asset_name, tx)
   expect successor_output.address == target.target_address
   expect InlineDatum(successor_data) = successor_output.datum
-  expect successor: VersionedCheckpointDatum = successor_data
-  let VersionedV1(vc) = successor
-  expect vc.validator_version.value == preprod_v0.legacy_version.value + 1
-  expect vc.migration_origin == Some(origin)
+  expect V1(successor_state): CheckpointDatum = successor_data
   // The exact ACTIVE KEL projection survives, and the successor is funded
   // independently to the same protected lovelace the source held.
-  expect vc.state == source_state
+  expect successor_state == source_state
   expect
     lovelace_of(successor_output.value) == lovelace_of(
       source_input.output.value,

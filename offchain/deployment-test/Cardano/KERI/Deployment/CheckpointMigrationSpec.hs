@@ -15,9 +15,8 @@ new family instead of publishing beside it.
 module Cardano.KERI.Deployment.CheckpointMigrationSpec (spec) where
 
 import Cardano.KERI.Deployment.CheckpointMigration
-import Cardano.KERI.Deployment.Script (
-    checkpointFamilyV1Version,
-    v1CheckpointVersion,
+import Data.Text (
+    Text,
  )
 import Test.Hspec (
     Spec,
@@ -33,41 +32,30 @@ spec = describe "checkpoint migration publication" $ do
     it "publishes a coherent family set" $
         checkpointFamilyPublicationErrors publishedCheckpointFamilies `shouldBe` []
 
-    it "retains the deployed generation beside the new one" $ do
-        -- Released history is never relabelled: the deployed family keeps
-        -- generation 0 and the new family is generation 1.
-        map cfiVersion publishedCheckpointFamilies
-            `shouldBe` [v1CheckpointVersion, checkpointFamilyV1Version]
+    it "retains the deployed family beside the new one" $ do
+        -- Released history is never relabelled. Lineage is a policy, not a
+        -- generation: the new family names the deployed policy it accepts.
+        map cfiPolicy publishedCheckpointFamilies
+            `shouldBe` [deployedPolicy, ""]
         cfiPredecessor historicalCheckpointFamily `shouldBe` Nothing
-        cfiPredecessor migrationCheckpointFamily `shouldBe` Just v1CheckpointVersion
+        cfiPredecessor migrationCheckpointFamily `shouldBe` Just deployedPolicy
 
     it "keeps the released manifest entry as the historical record" $ do
         cfiManifestPath historicalCheckpointFamily
             `shouldBe` "deploy/preprod/m1-manifest.json"
-        cfiPolicy historicalCheckpointFamily
-            `shouldBe` "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
+        cfiPolicy historicalCheckpointFamily `shouldBe` deployedPolicy
 
-    it "reports a duplicated generation" $
+    it "reports a duplicated family policy" $
         checkpointFamilyPublicationErrors
             [historicalCheckpointFamily, historicalCheckpointFamily]
-            `shouldContain` [DuplicateFamilyVersion v1CheckpointVersion]
+            `shouldContain` [DuplicateFamilyPolicy deployedPolicy]
 
-    it "reports a predecessor edge that names an unpublished generation" $
+    it "reports a predecessor edge that names an unpublished policy" $
         checkpointFamilyPublicationErrors
-            [migrationCheckpointFamily{cfiPredecessor = Just 9}]
+            [migrationCheckpointFamily{cfiPredecessor = Just "deadbeef"}]
             `shouldSatisfy` any isUnknownPredecessor
 
-    it "reports a skipped generation" $
-        checkpointFamilyPublicationErrors
-            [ historicalCheckpointFamily
-            , migrationCheckpointFamily
-                { cfiVersion = 5
-                , cfiPredecessor = Just v1CheckpointVersion
-                }
-            ]
-            `shouldContain` [NonContiguousFamilies v1CheckpointVersion 5]
-
-    it "reports a set with no first generation" $
+    it "reports a set with no first family" $
         checkpointFamilyPublicationErrors [migrationCheckpointFamily]
             `shouldSatisfy` any isUnknownPredecessor
 
@@ -80,8 +68,11 @@ spec = describe "checkpoint migration publication" $ do
     it "reports an empty released identity field" $
         checkpointFamilyPublicationErrors
             [historicalCheckpointFamily{cfiPolicy = ""}, migrationCheckpointFamily]
-            `shouldContain` [EmptyIdentityField v1CheckpointVersion "policy"]
+            `shouldContain` [EmptyIdentityField "" "policy"]
   where
+    deployedPolicy :: Text
+    deployedPolicy = "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
+
     isUnknownPredecessor = \case
         UnknownPredecessor _ _ -> True
         _ -> False

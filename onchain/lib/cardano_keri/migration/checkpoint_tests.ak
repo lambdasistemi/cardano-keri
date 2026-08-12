@@ -13,21 +13,21 @@
 //// exactly the failure mode a fail-closed body would hide.
 
 use aiken/cbor
-use cardano/address.{Address, Inline, Script, VerificationKey}
+use cardano/address.{Address, Inline, Script, VerificationKey, from_script}
 use cardano/assets.{add, zero}
-use cardano/transaction.{OutputReference}
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano/transaction.{
+  InlineDatum, Input, Output, OutputReference, Transaction, placeholder,
+}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{
-  CheckpointRoleState, MigrationInvalid, MigrationSource, MigrationSuccessor,
-  MigrationValid, PolicyReplacement, Predecessor,
-  checkpoint_migration_authorized, checkpoint_transition_continuous,
-  migration_message, valid_migration_edge,
+  CheckpointRoleState, MigrationSource, MigrationValid, PolicyReplacement,
+  Predecessor, checkpoint_migration_authorized, checkpoint_transition_continuous,
+  migration_message, valid_predecessor_transition,
 }
 use cardano_keri/migration/checkpoint_vectors as vec
 use cardano_keri/migration/types.{
-  CheckpointActive, CheckpointFrozen, MigrationOrigin, MigrationTarget,
-  ValidatorVersion,
+  CheckpointActive, CheckpointFrozen, MigrationTarget,
 }
 
 // ---------------------------------------------------------
@@ -60,14 +60,6 @@ fn mutant_ref() -> OutputReference {
   OutputReference { transaction_id: vec.fixture_mutant_txid, output_index: 1 }
 }
 
-fn source_origin() -> MigrationOrigin {
-  MigrationOrigin {
-    source_version: ValidatorVersion { value: 1 },
-    source_policy: vec.fixture_source_policy,
-    source_ref: source_ref(),
-  }
-}
-
 /// The successor lands at a real role address of the target policy:
 /// `role.address(policy, Active)` is `from_script(policy)`. A target address
 /// that is not a role address of its own policy is unreachable at the
@@ -88,7 +80,6 @@ fn refund_address() -> Address {
 
 fn migration_target() -> MigrationTarget {
   MigrationTarget {
-    target_version: ValidatorVersion { value: 2 },
     target_policy: vec.fixture_target_policy,
     target_role: CheckpointActive,
     target_address: target_address(),
@@ -99,7 +90,6 @@ fn migration_target() -> MigrationTarget {
 fn source() -> MigrationSource {
   MigrationSource {
     network_id: 1,
-    source_version: ValidatorVersion { value: 1 },
     source_policy: vec.fixture_source_policy,
     source_ref: source_ref(),
     source_role: CheckpointActive,
@@ -145,23 +135,28 @@ fn quorum() -> List<(Int, ByteArray)> {
   sigs([(0, vec.fixture_sig_0), (1, vec.fixture_sig_1)])
 }
 
-fn successor_of(
-  version: Int,
-  origin: Option<MigrationOrigin>,
-) -> MigrationSuccessor {
-  MigrationSuccessor {
-    successor_version: ValidatorVersion { value: version },
-    successor_policy: vec.fixture_target_policy,
-    successor_origin: origin,
-    successor_role: CheckpointActive,
-  }
+fn pinned() -> Predecessor {
+  Predecessor { predecessor_policy: vec.fixture_source_policy }
 }
 
-fn pinned() -> Predecessor {
-  Predecessor {
-    predecessor_version: ValidatorVersion { value: 1 },
-    predecessor_policy: vec.fixture_source_policy,
+/// A transaction that genuinely spends the named predecessor output holding
+/// its own token. The lineage edge is this spend, so the fixtures build it
+/// rather than asserting it.
+fn spending_tx(policy: ByteArray, ref: OutputReference) -> Transaction {
+  let input = Input {
+    output_reference: ref,
+    output: Output {
+      address: from_script(policy),
+      value: source_value(),
+      datum: InlineDatum(V1(source_datum())),
+      reference_script: None,
+    },
   }
+  Transaction { ..placeholder, inputs: [input] }
+}
+
+fn predecessor_tx() -> Transaction {
+  spending_tx(vec.fixture_source_policy, source_ref())
 }
 
 fn active_role(d: CheckpointDatumV1) -> CheckpointRoleState {
@@ -219,19 +214,13 @@ test checkpoint_migration_message_binds_network() {
 }
 
 test checkpoint_migration_message_binds_source_family() {
-  // Both halves of the source family identity — which generation, and which
-  // minting policy — are pinned by the signature.
-  let other_version = MigrationSource {
-    ..source(),
-    source_version: ValidatorVersion { value: 2 },
-  }
+  // The source family identity is its minting policy. There is no generation
+  // integer to pin: the applied program hash is the release identity.
   let other_policy = MigrationSource {
     ..source(),
     source_policy: vec.fixture_target_policy,
   }
   and {
-    encoded(other_version, migration_target()) == vec.negative_message_source_version,
-    encoded(other_version, migration_target()) != golden(),
     encoded(other_policy, migration_target()) == vec.negative_message_source_policy,
     encoded(other_policy, migration_target()) != golden(),
   }
@@ -263,19 +252,13 @@ test checkpoint_migration_message_binds_source_state() {
 }
 
 test checkpoint_migration_message_binds_target_family() {
-  // Which generation the move lands on, and under which minting policy, are
-  // both signed — a package cannot be steered to another family.
-  let other_version = MigrationTarget {
-    ..migration_target(),
-    target_version: ValidatorVersion { value: 3 },
-  }
+  // Which minting policy the move lands under is signed, so a package cannot
+  // be steered to another family.
   let other_policy = MigrationTarget {
     ..migration_target(),
     target_policy: vec.fixture_source_policy,
   }
   and {
-    encoded(source(), other_version) == vec.negative_message_target_version,
-    encoded(source(), other_version) != golden(),
     encoded(source(), other_policy) == vec.negative_message_target_policy,
     encoded(source(), other_policy) != golden(),
   }
@@ -382,56 +365,60 @@ test checkpoint_migration_permissionless_relay() {
 // Permanent family edge (INV-254-LINKAGE)
 // ---------------------------------------------------------
 
-test checkpoint_migration_edge_accepts_exact_successor() {
+test checkpoint_migration_predecessor_accepts_exact_source() {
+  // The lineage edge is the spend itself: the exact signed output, holding
+  // its own token, under the one policy this successor accepts.
+  valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid
+}
+
+test checkpoint_migration_wrong_predecessor_policy_rejects() {
+  // A package naming another family is refused even though that family's
+  // output is genuinely spent.
+  let foreign = Predecessor { predecessor_policy: vec.fixture_legacy_policy }
   and {
-    valid_migration_edge(
-      source(),
-      successor_of(2, Some(source_origin())),
-      pinned(),
-    ) == MigrationValid,
-    // A skipped generation is not an edge.
-    valid_migration_edge(
-      source(),
-      successor_of(3, Some(source_origin())),
-      pinned(),
-    ) != MigrationValid,
+    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
+    valid_predecessor_transition(source(), foreign, predecessor_tx()) != MigrationValid,
   }
 }
 
-test checkpoint_migration_foreign_predecessor_rejects() {
-  let foreign = Predecessor {
-    predecessor_version: ValidatorVersion { value: 1 },
-    predecessor_policy: vec.fixture_legacy_policy,
-  }
+test checkpoint_migration_wrong_predecessor_outref_rejects() {
+  // The signed output and the consumed output must be the same output.
+  let elsewhere = MigrationSource { ..source(), source_ref: mutant_ref() }
   and {
-    valid_migration_edge(
-      source(),
-      successor_of(2, Some(source_origin())),
-      pinned(),
-    ) == MigrationValid,
-    valid_migration_edge(
-      source(),
-      successor_of(2, Some(source_origin())),
-      foreign,
-    ) != MigrationValid,
+    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
+    valid_predecessor_transition(elsewhere, pinned(), predecessor_tx()) != MigrationValid,
   }
 }
 
-test checkpoint_migration_origin_must_be_actual_source() {
-  // An origin naming a different spent output, and an absent origin, are both
-  // refused: a migrated row must record where it actually came from.
-  let wrong_ref = MigrationOrigin {
-    ..source_origin(),
-    source_ref: mutant_ref(),
+test checkpoint_migration_missing_predecessor_input_rejects() {
+  // Nothing is spent at all: there is no edge to stand on.
+  and {
+    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
+    valid_predecessor_transition(source(), pinned(), placeholder) != MigrationValid,
+  }
+}
+
+test checkpoint_migration_split_transaction_rejects() {
+  // Splitting the move across two transactions is unrepresentable: a mint
+  // that does not consume the predecessor here has no predecessor at all.
+  // The spent output carries no token of the accepted policy, which is what a
+  // second transaction would look like from inside the first.
+  let tokenless = Input {
+    output_reference: source_ref(),
+    output: Output {
+      address: from_script(vec.fixture_source_policy),
+      value: zero |> add("", "", 8_000_000),
+      datum: InlineDatum(V1(source_datum())),
+      reference_script: None,
+    },
   }
   and {
-    valid_migration_edge(
+    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
+    valid_predecessor_transition(
       source(),
-      successor_of(2, Some(source_origin())),
       pinned(),
-    ) == MigrationValid,
-    valid_migration_edge(source(), successor_of(2, Some(wrong_ref)), pinned()) != MigrationValid,
-    valid_migration_edge(source(), successor_of(2, None), pinned()) != MigrationValid,
+      Transaction { ..placeholder, inputs: [tokenless] },
+    ) != MigrationValid,
   }
 }
 

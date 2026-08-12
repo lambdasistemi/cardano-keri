@@ -18,6 +18,7 @@ module Cardano.KERI.Deployment.Script (
     extractCompiledCode,
     applyParams,
     applyCheckpointParams,
+    applyPredecessorParam,
     applyLifecycleParams,
     applyAdvanceParams,
     mkCageScript,
@@ -30,7 +31,6 @@ module Cardano.KERI.Deployment.Script (
     checkpointAddress,
     scriptHashText,
     v1CheckpointVersion,
-    checkpointFamilyV1Version,
     v1NetworkDiscriminator,
     v1RegistrationBond,
     v1FreezeBond,
@@ -150,6 +150,15 @@ applyParams :: Integer -> ByteString -> SBS.ShortByteString -> SBS.ShortByteStri
 applyParams version predecessorPolicy =
     applyDataArgs [I version, B predecessorPolicy]
 
+{- | Apply the one lineage input a #254 successor program takes: the single
+predecessor minting policy it accepts.  Release identity is the resulting
+hash, so no generation integer is applied.
+-}
+applyPredecessorParam ::
+    ByteString -> SBS.ShortByteString -> SBS.ShortByteString
+applyPredecessorParam predecessorPolicy =
+    applyDataArgs [B predecessorPolicy]
+
 applyCheckpointParams ::
     Integer ->
     ByteString ->
@@ -231,13 +240,6 @@ released history: it stays @0@ and is never relabelled as the #254 family.
 v1CheckpointVersion :: Integer
 v1CheckpointVersion = 0
 
-{- | The #254 permanent checkpoint family generation (DAT-254-VERSION), which
-succeeds 'v1CheckpointVersion' on the @N -> N+1@ edge.  Published beside the
-historical generation, never in place of it.
--}
-checkpointFamilyV1Version :: Integer
-checkpointFamilyV1Version = 1
-
 v1NetworkDiscriminator :: Integer
 v1NetworkDiscriminator = 0
 
@@ -311,11 +313,12 @@ deriveV1Scripts blueprint = do
         require
             "checkpoint_observer.observer_migration.withdraw"
             "observer-migration"
-    let appliedMigration =
-            applyParams
-                checkpointFamilyV1Version
-                (scriptHashBytes hashProofHash)
-                migrationProgram
+    -- The successor observer is applied with exactly one input: the single
+    -- predecessor policy it accepts.  Its own hash is its release identity, so
+    -- there is no generation integer to apply.
+    let predecessor_policy = scriptHashBytes hashProofHash
+        appliedMigration =
+            applyPredecessorParam predecessor_policy migrationProgram
         migrationHash = computeScriptHash appliedMigration
         migration =
             artifact

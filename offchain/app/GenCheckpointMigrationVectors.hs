@@ -56,7 +56,6 @@ import Cardano.KERI.AID.Migration.Checkpoint (
     MigrationMessage,
     MigrationSource (..),
     Predecessor (..),
-    VersionedCheckpoint (..),
     checkpointMigrationAuthorized,
     encodeMigrationMessage,
     migrationMessage,
@@ -65,11 +64,10 @@ import Cardano.KERI.AID.Migration.Checkpoint (
 import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
     FullAddress (..),
-    MigrationOrigin (..),
+    MigrationPredecessor (..),
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
-    ValidatorVersion (..),
     canonicalCborData,
     migrationDomain,
  )
@@ -179,9 +177,8 @@ record.  This wrapped form is what the authorization carries verbatim.
 checkpointTree :: Data
 checkpointTree = Constr 0 [innerCheckpointTree]
 
-{- | The inner nine-field record alone.  'VersionedCheckpoint' embeds the
-projection __unwrapped__ — the version sum belongs to the v0 datum, and
-re-wrapping it inside the versioned record would nest two version tags.
+{- | The inner nine-field record alone, kept because the message carries the
+wrapped form and some fixtures need the bare record.
 -}
 innerCheckpointTree :: Data
 innerCheckpointTree =
@@ -202,12 +199,11 @@ sourceRef, mutantRef :: OutputRef
 sourceRef = OutputRef{orTransactionId = sourceTxid, orOutputIndex = 1}
 mutantRef = OutputRef{orTransactionId = mutantTxid, orOutputIndex = 1}
 
-sourceOrigin :: MigrationOrigin
-sourceOrigin =
-    MigrationOrigin
-        { moSourceVersion = ValidatorVersion 1
-        , moSourcePolicy = sourcePolicy
-        , moSourceRef = sourceRef
+sourcePredecessor :: MigrationPredecessor
+sourcePredecessor =
+    MigrationPredecessor
+        { mpPredecessorPolicy = sourcePolicy
+        , mpPredecessorRef = sourceRef
         }
 
 targetAddress, refundAddress :: FullAddress
@@ -231,8 +227,7 @@ refundAddress =
 migrationTarget :: MigrationTarget
 migrationTarget =
     MigrationTarget
-        { mtTargetVersion = ValidatorVersion 2
-        , mtTargetPolicy = targetPolicy
+        { mtTargetPolicy = targetPolicy
         , mtTargetRole = CheckpointActive
         , mtTargetAddress = targetAddress
         , mtLegacyRefundAddress = Nothing
@@ -241,17 +236,13 @@ migrationTarget =
 -- | The legacy-bridge target: version 1 succeeding deployed v0, with refund.
 legacyTarget :: MigrationTarget
 legacyTarget =
-    migrationTarget
-        { mtTargetVersion = ValidatorVersion 1
-        , mtLegacyRefundAddress = Just refundAddress
-        }
+    migrationTarget{mtLegacyRefundAddress = Just refundAddress}
 
 -- | The permanent-family source: an ACTIVE version-1 row on network 1.
 source :: MigrationSource
 source =
     MigrationSource
         { msNetworkId = 1
-        , msSourceVersion = ValidatorVersion 1
         , msSourcePolicy = sourcePolicy
         , msSourceRef = sourceRef
         , msSourceRole = CheckpointActive
@@ -266,7 +257,6 @@ legacySource :: MigrationSource
 legacySource =
     source
         { msNetworkId = lcNetworkId preprodV0
-        , msSourceVersion = lcVersion preprodV0
         , msSourcePolicy = legacyPolicyBytes
         }
 
@@ -295,10 +285,6 @@ messageMutants :: [(String, String, ByteString)]
 messageMutants =
     [ m "network" "the chain identity" $
         encodeMigrationMessage source{msNetworkId = 0} migrationTarget
-    , m "source_version" "the source generation" $
-        encodeMigrationMessage
-            source{msSourceVersion = ValidatorVersion 2}
-            migrationTarget
     , m "source_policy" "the source minting policy" $
         encodeMigrationMessage source{msSourcePolicy = targetPolicy} migrationTarget
     , m "source_ref" "the exact consumed source output" $
@@ -307,10 +293,6 @@ messageMutants =
         encodeMigrationMessage source{msSourceRole = CheckpointFrozen} migrationTarget
     , m "source_state" "the carried source projection" $
         encodeMigrationMessage source{msSourceState = mutantStateData} migrationTarget
-    , m "target_version" "the successor generation" $
-        encodeMigrationMessage
-            source
-            migrationTarget{mtTargetVersion = ValidatorVersion 3}
     , m "target_policy" "the successor minting policy" $
         encodeMigrationMessage source migrationTarget{mtTargetPolicy = sourcePolicy}
     , m "target_role" "the successor lifecycle position" $
@@ -388,30 +370,9 @@ authorityNegatives =
 -- Successor material
 -- ---------------------------------------------------------
 
--- | The successor record a correct migration lands.
-successor :: VersionedCheckpoint
-successor =
-    VersionedCheckpoint
-        { vcValidatorVersion = ValidatorVersion 2
-        , vcMigrationOrigin = Just sourceOrigin
-        , vcState = sourceDatum
-        }
-
--- | A natively registered row: applied version, and deliberately no origin.
-nativeSuccessor :: VersionedCheckpoint
-nativeSuccessor =
-    successor
-        { vcValidatorVersion = ValidatorVersion 1
-        , vcMigrationOrigin = Nothing
-        }
-
--- | The pinned predecessor the target program compiles in.
+-- | The single predecessor policy the target program is applied with.
 pinnedPredecessor :: Predecessor
-pinnedPredecessor =
-    Predecessor
-        { pdPredecessorVersion = ValidatorVersion 1
-        , pdPredecessorPolicy = sourcePolicy
-        }
+pinnedPredecessor = Predecessor{pdPredecessorPolicy = sourcePolicy}
 
 -- ---------------------------------------------------------
 -- The vector set
@@ -458,12 +419,10 @@ goldens =
     , Vec "golden_mutant_source_state" "state: a projection with a bumped counter" (canonicalCborData mutantStateData)
     , Vec "golden_message" "message: the canonical permanent-family preimage" goldenBytes
     , Vec "golden_legacy_message" "message: the canonical legacy-bridge preimage" legacyBytes
-    , Vec "golden_origin" "origin: the actual consumed predecessor" (canonicalCbor sourceOrigin)
+    , Vec "golden_predecessor" "predecessor: the actual consumed output" (canonicalCbor sourcePredecessor)
     , Vec "golden_target" "target: the permanent-family successor identity" (canonicalCbor migrationTarget)
     , Vec "golden_legacy_target" "target: the legacy successor identity with refund" (canonicalCbor legacyTarget)
-    , Vec "golden_successor" "successor: the migrated versioned record" (canonicalCborData (successorTree successor))
-    , Vec "golden_native_successor" "successor: a natively registered row, no origin" (canonicalCborData (successorTree nativeSuccessor))
-    , Vec "golden_predecessor_version" "edge: the pinned predecessor generation" (canonicalCbor (pdPredecessorVersion pinnedPredecessor))
+    , Vec "golden_pinned_predecessor_policy" "edge: the single accepted predecessor policy" (pdPredecessorPolicy pinnedPredecessor)
     ]
 
 negatives :: [Vec]
@@ -471,30 +430,6 @@ negatives =
     [ Vec name ("message negative: " <> field <> " mutated") bytes
     | (name, field, bytes) <- messageMutants
     ]
-
-{- | The successor record as a @Data@ tree, matching the Aiken
-@VersionedCheckpoint@ constructor-0 layout.
--}
-successorTree :: VersionedCheckpoint -> Data
-successorTree VersionedCheckpoint{..} =
-    Constr
-        0
-        [ Constr 0 [I (vvValue vcValidatorVersion)]
-        , maybe (Constr 1 []) (\o -> Constr 0 [originTree o]) vcMigrationOrigin
-        , innerCheckpointTree
-        ]
-  where
-    originTree MigrationOrigin{..} =
-        Constr
-            0
-            [ Constr 0 [I (vvValue moSourceVersion)]
-            , B moSourcePolicy
-            , Constr
-                0
-                [ B (orTransactionId moSourceRef)
-                , I (orOutputIndex moSourceRef)
-                ]
-            ]
 
 -- ---------------------------------------------------------
 -- Self-checks: a vector set that cannot fail is worthless

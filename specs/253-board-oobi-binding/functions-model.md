@@ -2,61 +2,63 @@
 
 Artifact ceiling: 6,000 bytes and 155 lines.
 
-Only new or changed public signatures are modeled here. Types and wire shapes
-are in `data-model.md`; ownership is in `modules-model.md`.
+Only changed public signatures are modeled. Wire shapes are in
+`data-model.md`; ownership is in `modules-model.md`.
 
 ## Canonical authorization
 
-- **FUN-253-AUTH-RECONSTRUCT:** `reconstructBoardAuthorization policyId datumV2 -> BoardAuthorizationV2`
+- **FUN-253-AUTH-RECONSTRUCT:** `reconstructBoardAuthorization policyId authorizedDatum -> BoardAuthorization`
 - **FUN-253-AUTH-BYTES:** `boardAuthorizationBytes authorization -> ByteArray`
-- **FUN-253-AUTH-VERIFY:** `verifyBoardAuthorization policyId datumV2 -> Bool`
+- **FUN-253-AUTH-VERIFY:** `verifyBoardAuthorization policyId authorizedDatum -> Bool`
 
 Constraints:
 
-- reconstruction accepts the trusted policy id and typed V2 datum, never a
-  caller-supplied preimage;
+- reconstruction accepts trusted applied policy id and typed authorized datum,
+  never a caller preimage;
 - bytes are canonical Plutus Data CBOR for **DAT-253-AUTHORIZATION**;
-- verification uses `datumV2.witness_key` and
-  `datumV2.authorization_signature` and does not replace endpoint-signature
-  verification.
+- verification uses datum witness/signature and remains independent from
+  endpoint-signature verification;
+- no sequence or version enters any signature or return type.
 
 ## Validator predicates
 
-- **FUN-253-DATUM-AUTHENTIC:** `datumIsAuthentic expectedKey policyId datumV2 -> Bool`
-- **FUN-253-POST:** `validatePost policyId transaction -> Bool`
+- **FUN-253-DATUM-AUTHENTIC:** `datumIsAuthentic expectedKey policyId authorizedDatum -> Bool`
+- **FUN-253-POST:** `validatePost predecessorPolicy policyId transaction -> Bool`
 - **FUN-253-UPDATE:** `validateUpdate inputOutput policyId ownRef oldDatum transaction -> Bool`
 - **FUN-253-MIGRATE:** `validateBoardMigration migrationContext transaction -> Bool`
 
 Constraints:
 
-- `datumIsAuthentic` validates both signatures, all field widths, non-negative
-  sequence, expected key, and the exact authorization policy;
-- Post accepts only sequence zero and requires the datum nonce among consumed
-  inputs with no endpoint-board marker under any supported version;
-- Update requires the old owner, one successor, exact marker/deposit, sequence
-  `old + 1`, nonce equal to `ownRef`, and fresh successor authenticity;
-- migration enforces **DAT-253-MIGRATION-LINK** and does not delegate its
-  continuity checks to ordinary Post.
+- `datumIsAuthentic` validates both signatures, field widths, expected witness,
+  and exact target policy;
+- Post requires datum nonce among consumed inputs and rejects a nonce input
+  carrying a marker under the target or applied predecessor policy;
+- Update requires recorded owner, one confined successor, exact marker/deposit,
+  nonce equal to `ownRef`, and fresh successor authenticity;
+- migration enforces **DAT-253-MIGRATION-LINK** and cannot delegate continuity
+  to ordinary Post.
 
-Retire's signature is unchanged; it continues to consume the typed current
-datum and enforce old-owner, burn, and refund rules.
+Retire continues to consume typed current datum and enforce recorded owner,
+burn, and refund rules.
 
 ## Producer and codec surface
 
-- **FUN-253-DECODE-DATUM:** `decodeBoardDatum boardVersion policyId plutusData -> Either BoardDecodeError VersionedBoardDatum`
-- **FUN-253-AUTH-PAYLOAD:** `mkBoardAuthorizationPayload policyId witnessKey endpointRecord ownerKeyHash sequence nonce -> BoardAuthorizationPayload`
-- **FUN-253-ATTACH-AUTH:** `attachBoardAuthorization payload signature -> Either BoardAuthorizationError BoardDatumV2`
-- **FUN-253-RESOLVE-CATALOG:** `resolveBoardCatalog boardLocators chainOutputs -> Either String [BoardEntry]`
+- **FUN-253-DECODE-LEGACY:** `decodeLegacyBoardDatum plutusData -> Either BoardDecodeError LegacyBoardDatum`
+- **FUN-253-DECODE-AUTHORIZED:** `decodeAuthorizedBoardDatum policyId plutusData -> Either BoardDecodeError AuthorizedBoardDatum`
+- **FUN-253-AUTH-PAYLOAD:** `mkBoardAuthorizationPayload policyId witnessKey endpointRecord ownerKeyHash nonce -> BoardAuthorizationPayload`
+- **FUN-253-ATTACH-AUTH:** `attachBoardAuthorization payload signature -> Either BoardAuthorizationError AuthorizedBoardDatum`
+- **FUN-253-RESOLVE-CATALOG:** `resolveBoardCatalog releaseRegistry chainTransactions -> Either String [BoardEntry]`
 
 Constraints:
 
-- V1 decoding preserves the frozen four-field wire but never promotes it as
-  authenticated V2;
-- payload construction returns exact signable CBOR plus typed fields so an
-  external witness signer can confirm what it signs;
-- attaching rejects a signature that does not verify before a plan is built;
-- catalog resolution chooses policy/version from the matched locator, verifies
-  every applicable signature, and retains all-or-nothing error behavior.
+- the matched release selects one exact decoder; legacy four-field data is not
+  promoted under target policy and authorized six-field data is not accepted
+  under legacy policy;
+- payload returns exact signable CBOR and typed fields for an external signer;
+- attaching verifies the signature before a plan is built;
+- catalog resolution verifies every applicable signature, derives migration
+  edges atomically, and retains all-or-nothing errors for unknown/incomplete
+  data.
 
 ## Transaction planning
 
@@ -66,14 +68,13 @@ Constraints:
 
 Constraints:
 
-- Post includes and consumes the exact selected nonce input named by the signed
-  datum; funding selection cannot silently replace it;
-- Update derives sequence and nonce from the selected current `BoardEntry` and
-  rejects a pre-signed successor that differs;
-- migration accepts only V2 sequence zero with nonce equal to the selected V1
-  out-ref and preserves every **DAT-253-MIGRATION-LINK** field;
-- plans consume resolved values and signatures and never access witness private
-  key material or query the chain while constructing a transaction.
+- Post includes and consumes the exact selected nonce named by signed datum;
+  funding selection cannot replace it;
+- Update derives nonce from selected current entry and rejects any pre-signed
+  successor that differs;
+- migration requires nonce equal to legacy out-ref and preserves every
+  **DAT-253-MIGRATION-LINK** field;
+- plans never access witness private material or query during construction.
 
 ## Consumer/query compatibility
 
@@ -82,9 +83,6 @@ Constraints:
 
 Constraints:
 
-- both surfaces retain all existing fields and add validator version and
-  sequence;
-- no public response can be constructed directly from an unverified raw V2
-  datum;
-- watchability continues to consume authenticated entries and count distinct
-  witness keys, not versions, lineages, or sequence values.
+- both surfaces retain existing fields with no added version or sequence;
+- no public response is constructed directly from unverified authorized data;
+- watchability counts distinct witness keys, not releases or lineages.

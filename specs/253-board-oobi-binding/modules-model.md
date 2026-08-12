@@ -7,82 +7,91 @@ are in `data-model.md`; callable signatures are in `functions-model.md`.
 
 ## Components and modules
 
-### MOD-253-BOARD-TYPES — shared versioned board protocol
+### MOD-253-BOARD-TYPES — shared board authorization protocol
 
-- Owns the legacy V1 decode shape, current V2 datum, authorization preimage,
-  domain constant, and normal lifecycle redeemers.
-- Preserves constructor/field identity as protocol data; no consumer defines a
-  private approximation of either version.
-- Is the nearest stable owner shared by validator vectors and off-chain codecs.
+- Owns the frozen legacy shape, authorized target shape, stable authorization
+  domain/preimage, nonce, and normal lifecycle redeemers.
+- Preserves exact constructor/field shape as protocol data. It owns no datum
+  version, version-only constructor, sequence, or origin field.
+- Is shared by validator vectors and off-chain codecs; consumers do not define
+  private approximations.
 
-### MOD-253-BOARD-VALIDATOR — V2 mint/spend validator
+### MOD-253-BOARD-VALIDATOR — target mint/spend validator
 
-- Reconstructs **DAT-253-AUTHORIZATION** from trusted policy/transaction
-  context and **DAT-253-DATUM-V2**, then verifies both witness signatures.
-- Owns genesis sequence, successor sequence, consumed nonce, marker/value,
-  owner, and lifecycle validation.
-- Accepts only V2 current outputs. It depends on **MOD-253-BOARD-TYPES** and the
-  migration context exposed by **MOD-253-MIGRATION**, not on Haskell codecs.
+- Reconstructs **DAT-253-AUTHORIZATION** from its applied policy identity and
+  **DAT-253-AUTHORIZED-DATUM**, then verifies both witness signatures.
+- Owns consumed nonce, marker/value, recorded-owner, unique-successor, and
+  lifecycle validation.
+- Accepts only the authorized target shape. It depends on
+  **MOD-253-BOARD-TYPES** and #254's migration context, not Haskell codecs.
 
-### MOD-253-MIGRATION — #254 board version vehicle
+### MOD-253-MIGRATION — #254 applied-hash vehicle
 
-- Owns the version transition action and the on-chain link from one consumed
-  V1 record to one V2 successor.
-- Supplies the exact source version/policy/out-ref context required by
-  **DEP-253-254-01** through **DEP-253-254-07**.
-- Owns no endpoint semantics and cannot waive V2 witness authorization.
+- Owns the atomic transaction from one consumed predecessor policy/out-ref to
+  one target successor under its applied predecessor-policy parameter.
+- Supplies the revised `DEP-253-254` contract in `plan.md`.
+- Owns no endpoint semantics and cannot waive target witness authorization.
 
 ### MOD-253-BOARD-CODEC — producer/reader protocol codec
 
-- Owns canonical V2 authorization bytes, version-aware datum decoding, and
-  independent endpoint/authorization verification.
-- Retains fail-closed whole-catalog semantics and yields the promoted
-  **DAT-253-BOARD-ENTRY** only after all checks pass.
-- Depends on stable protocol/domain data, never on CLI settings or a concrete
-  chain provider.
+- Owns canonical authorization bytes, structural datum decoding under a matched
+  release policy, and independent endpoint/authorization verification.
+- Retains fail-closed whole-catalog semantics and yields
+  **DAT-253-BOARD-ENTRY** only after all applicable checks pass.
+- Depends on protocol data and applied-policy registry entries, never CLI
+  settings or a concrete chain provider.
 
 ### MOD-253-BOARD-TRANSACTION — board transaction planning
 
-- Owns Post nonce selection/consumption, Update predecessor binding, V2 datum
-  construction, owner requirements, and migration plan inputs.
-- Receives an externally produced witness authorization; it does not own or
-  access the witness's private KERI key.
-- Depends on **MOD-253-BOARD-CODEC** and resolved chain inputs, with no query
-  during transaction construction.
+- Owns Post nonce selection/consumption, Update predecessor binding, authorized
+  datum construction, owner requirements, and migration plan inputs.
+- Receives an externally produced witness authorization; it never accesses the
+  witness private key.
+- Depends on **MOD-253-BOARD-CODEC** and resolved inputs, with no query during
+  transaction construction.
 
 ### MOD-253-CONSUMERS — catalog/query/watchability consumers
 
 - Consume authenticated **DAT-253-BOARD-ENTRY** values without reimplementing
   datum or signature verification.
-- Preserve existing witness/AID/URL, owner, out-ref, deposit, duplicate, and
-  watchability behavior while carrying validator version and sequence.
-- Query JSON adds version/sequence without removing or renaming existing fields.
+- Preserve witness/AID/URL, owner, out-ref, deposit, duplicate, and watchability
+  behavior. No version or sequence is added to the public view.
+- Resolve releases by applied policy hash through #254's registry and derive
+  migration lineage from atomic transaction history.
 
 ### MOD-253-PROOF — lasting security and cutover evidence
 
-- Owns focused field-mutation, substitution, replay, authorization, and
-  migration-continuity properties plus frozen cross-language vectors.
-- Keeps the endpoint board in the compiled-UPLC target and records settled
-  V1/V2 predecessor/successor facts for the three-record preprod transition.
+- Owns retained-field mutation, custody substitution, replay, dual-signature,
+  lifecycle, and migration-continuity properties plus frozen vectors.
+- Keeps the board in the compiled target and records settled transaction edges
+  for all three preprod records.
 
 ## Dependency edges
 
 - **EDGE-253-01:** validator and codec → shared board protocol.
-- **EDGE-253-02:** migration → shared protocol; V2 validator → migration context.
+- **EDGE-253-02:** migration → shared protocol; target validator → migration
+  context only at the dedicated migration arm.
 - **EDGE-253-03:** transaction planning → codec and provider-neutral resolved
   chain values.
-- **EDGE-253-04:** catalog/query/watchability → authenticated board entry;
-  consumers do not depend on raw Plutus datum layout.
-- **EDGE-253-05:** proof coverage → real validator, codec, transaction, and
-  migration boundaries; production modules never depend on proof modules.
+- **EDGE-253-04:** consumers → authenticated entry and release registry;
+  consumers do not depend on raw datum layout.
+- **EDGE-253-05:** proof → real validator, codec, transaction, and migration
+  boundaries; production never depends on proof modules.
 
 ## Promotion decisions
 
-- **PROMOTE-253-01:** V1/V2 wire tags and V2 authorization domain/preimage move
-  to the shared protocol owner because Aiken and Haskell must agree exactly.
-- **PROMOTE-253-02:** board validator version and sequence join the promoted
-  board-entry view because query and write consumers need them.
+- **PROMOTE-253-01:** the stable domain, authorization preimage, nonce, and
+  exact legacy/authorized shapes live in the shared protocol owner because
+  Aiken and Haskell must agree byte-for-byte.
+- **PROMOTE-253-02:** applied release identities live only in #254's registry;
+  they are lookup input, not copied into datum or promoted entry fields.
 - **PROMOTE-253-03:** raw nonce and authorization signature remain codec-level
-  verification data unless the #171 consumer contract identifies a public use.
-- **PROMOTE-253-04:** witness key custody and signature production remain
-  outside transaction planning; only payload bytes and a signature cross in.
+  verification data unless #171 demonstrates a public consumer.
+- **PROMOTE-253-04:** witness-key custody remains outside transaction planning;
+  only payload bytes and a signature cross in.
+
+## Forbidden restoration
+
+No S253-2 implementation may restore sequence, datum version/tag, stored
+origin, or a promoted version field without a newly demonstrated attack or
+named consumer read and a re-authorized mandate.

@@ -2,68 +2,74 @@
 
 Artifact ceiling: 6,000 bytes and 145 lines.
 
-Boxes are checked only after the exact behavior and its permanent properties
-are independently accepted. Verification evidence records named invariant rows
-and immutable artifact hashes.
+Boxes are checked only after exact behavior and permanent properties are
+independently accepted. S253-1 checkmarks record its accepted historical slice;
+S253-2 explicitly amends its superseded sequence/version shape.
 
-## S253-1 — canonical authorization and codecs
+## S253-1 — canonical authorization and codecs (accepted foundation)
 
-- [x] **T253-S1-01** Add **DAT-253-AUTHORIZATION** and the versioned V1/V2 datum
-  protocol with frozen constructor, field-order, and domain vectors.
-- [x] **T253-S1-02** Implement **FUN-253-AUTH-RECONSTRUCT** through
-  **FUN-253-AUTH-VERIFY** in the shared on-chain/off-chain contract surfaces.
-- [x] **T253-S1-03** Preserve endpoint-signature verification separately and
-  require both signatures before promoting a V2 **DAT-253-BOARD-ENTRY**.
-- [x] **T253-S1-04** Add producer payload/signature handling without importing
-  or storing witness private key material.
-- [x] **T253-S1-05** Demonstrate the **INV-253-SIGNED-FIELDS** mutant class can
-  fail for every ordered field and record its evidence in the campaign ledger.
+- [x] **T253-S1-01** Add canonical authorization and legacy/target codec
+  groundwork with frozen cross-language vectors.
+- [x] **T253-S1-02** Implement authorization reconstruction, canonical bytes,
+  and verification in shared on-chain/off-chain surfaces.
+- [x] **T253-S1-03** Preserve endpoint verification separately and require both
+  signatures before target promotion.
+- [x] **T253-S1-04** Add producer payload/signature handling without witness
+  private key material.
+- [x] **T253-S1-05** Demonstrate the signed-field mutant class can fail and
+  record immutable audit evidence.
 
-## S253-2 — V2 validator and transaction paths
+## S253-2 — slim authorization, validator, and transaction paths
 
-- [ ] **T253-S2-01** Enforce V2 Post sequence zero, consumed nonce, exact
-  marker/policy binding, and both witness signatures.
-- [ ] **T253-S2-02** Enforce Update old-owner authority, exact sequence advance,
-  predecessor nonce, one successor, and fresh successor authorization.
-- [ ] **T253-S2-03** Preserve Retire's owner, burn, and exact-refund guarantees
-  for V2 state.
-- [ ] **T253-S2-04** Update Post/Update plans to consume and cross-check the
-  signed nonce/sequence rather than selecting different inputs afterward.
-- [ ] **T253-S2-05** Kill the owner-substitution, stale-resurrection,
-  nonce-replay, and endpoint-only authorization mutant classes for
-  **INV-253-OWNER**, **INV-253-SEQUENCE**, **INV-253-NONCE**, and
-  **INV-253-WITNESS-AUTH**.
-- [ ] **T253-S2-06** Keep the V2 endpoint-board properties in the M8
-  compiled-UPLC target and preserve reproducible policy/manifest checks.
+- [ ] **T253-S2-01** Delete sequence from datum, authorization, codecs, producer,
+  reader, vectors, and tests; delete the version-only constructor/API and use
+  exact four-field legacy versus six-field authorized structural decoding under
+  the matched applied policy.
+- [ ] **T253-S2-02** Freeze the stable non-versioned domain and exact six-field
+  authorization bytes in Aiken/Haskell vectors; prove every retained field is
+  observed and both signatures remain independent.
+- [ ] **T253-S2-03** Enforce target Post with exact policy/marker binding, both
+  signatures, one consumed named nonce, and rejection when the nonce input
+  carries a marker under the target or applied predecessor policy.
+- [ ] **T253-S2-04** Enforce Update with recorded-owner authority, exact
+  predecessor nonce, one confined successor, preserved marker/deposit, and
+  fresh successor authorization.
+- [ ] **T253-S2-05** Preserve Retire's recorded-owner, burn, and exact-refund
+  guarantees for the authorized target shape.
+- [ ] **T253-S2-06** Update Post/Update planners to consume and cross-check the
+  signed nonce rather than selecting a different input afterward.
+- [ ] **T253-S2-07** Permanently kill custody-substitution, wrong/missing/reused
+  nonce replay/resurrection, endpoint-only, wrong-shape, and lifecycle mutant
+  classes for owner, nonce, and witness-auth invariants.
+- [ ] **T253-S2-08** Keep target board properties in M8's compiled target and
+  preserve reproducible policy/manifest checks.
 
 ## S253-3 — migration, consumer seam, and preprod cutover
 
-- [ ] **T253-S3-01** Integrate the #254 action/context satisfying
-  **DEP-253-254-01** through **DEP-253-254-07**.
-- [ ] **T253-S3-02** Implement one-to-one V1-to-V2 continuity with V2 sequence
-  zero, legacy out-ref nonce, fresh witness authorization, and preserved record,
-  owner, and deposit.
-- [ ] **T253-S3-03** Make board locators/readers version-aware and retain
-  fail-closed whole-catalog authentication across the transition.
-- [ ] **T253-S3-04** Add validator version and sequence to the promoted entry and
-  query contract without removing existing fields or changing watchability.
-- [ ] **T253-S3-05** Kill the crossed-field, dropped-value, replay, and
-  one-to-many migration mutant classes for **INV-253-MIGRATION**.
-- [ ] **T253-S3-06** Migrate the three live preprod V1 records through the
-  supported version transition and record settled predecessor/successor facts.
-- [ ] **T253-S3-07** Verify the final current catalog contains the three
-  authenticated V2 successors and no spent V1 predecessor is reported current.
+- [ ] **T253-S3-01** Integrate the revised `DEP-253-254` applied-hash contract.
+- [ ] **T253-S3-02** Implement one atomic legacy-to-target transition with
+  source-out-ref nonce, fresh authorization, and preserved record, owner, and
+  deposit under both policy arms.
+- [ ] **T253-S3-03** Make catalog resolution registry-backed and fail closed for
+  unknown hashes or incomplete transaction edges without promoting version or
+  origin.
+- [ ] **T253-S3-04** Preserve the existing public board-entry/query fields and
+  watchability contract without adding version or sequence.
+- [ ] **T253-S3-05** Kill crossed-field, dropped-value, wrong-policy,
+  split-transaction, replay, and one-to-many migration mutants.
+- [ ] **T253-S3-06** Migrate all three live preprod legacy records and record
+  settled transaction-derived predecessor/successor facts.
+- [ ] **T253-S3-07** Verify the final current catalog contains three
+  authenticated successors and no spent predecessor is current.
 
 ## Release acceptance
 
-- [ ] **T253-A-01** Confirm the #171 consumer contract agrees on version-aware
-  locators, additive query fields, verification ownership, and cutover current
-  semantics.
+- [ ] **T253-A-01** Confirm #171 agrees on registry-backed locators,
+  applied-policy decoder selection, verification ownership, and atomic cutover
+  semantics with no public version/sequence additions.
 - [ ] **T253-A-02** Require every BLOCKING invariant row to terminate as
-  `KILLED` or `BLOCKED`; neither tail-stop nor budget exhaustion may close an
-  `OPEN` row.
-- [ ] **T253-A-03** Verify the exact accepted tree, focused board properties,
-  complete repository gate, compiled-UPLC target, and clean index with
-  hash-bound receipts.
-- [ ] **T253-A-04** Publish the V2 policy/address/schema and migration facts only
-  after the three-record cutover and consumer checks are complete.
+  `KILLED` or `BLOCKED`; budget exhaustion cannot close an OPEN row.
+- [ ] **T253-A-03** Verify exact accepted tree, focused properties, repository
+  gate, compiled target, and clean index with hash-bound receipts.
+- [ ] **T253-A-04** Publish target applied hash/address/schema and migration
+  facts only after three-record cutover and consumer checks complete.

@@ -4,184 +4,159 @@ Artifact ceiling: 11,000 bytes and 210 lines.
 
 ## Source-derived strategy
 
-The current predicate verifies the KERI signature over `endpoint_record` only
-(`onchain/validators/endpoint_board.ak:25-34`). Post accepts that datum without
-transaction-bound witness authorization (`endpoint_board.ak:63-75`), and
-Update reuses the same predicate after checking only the old Cardano owner
-(`endpoint_board.ak:101-119`). The released V1 wire has no sequence or nonce
-(`onchain/lib/cardano_keri/endpoint_board_types.ak:10-16`).
+The deployed predicate verifies only the KERI signature over
+`endpoint_record`; Post has no transaction-bound witness authorization and
+Update checks only the recorded Cardano owner. Keep that KERI signature and
+add **DAT-253-AUTHORIZATION** plus `authorization_signature`.
 
-Keep that KERI signature and add **DAT-253-AUTHORIZATION** plus
-`authorization_signature`. This preserves the endpoint event's standard KERI
-meaning while making Cardano custody and currency an explicit witness-approved
-projection. Canonical Plutus Data CBOR follows the repository's existing
-domain-separated signed-message convention (`onchain/lib/cardano_keri/checkpoint/close.ak:18-64,85-92`).
-
-The nonce is a consumed `OutputReference`, not caller-chosen inert bytes. A
-normal Post binds one selected spend input; Update binds the board `own_ref`
-already supplied to the spend handler (`endpoint_board.ak:154-166`); migration
-binds the consumed V1 board out-ref. Ledger consumption supplies the one-use
-property, while sequence supplies lineage order.
+Canonical Plutus Data CBOR follows the existing domain-separated signed-message
+convention. The nonce is a consumed `OutputReference`, not inert caller bytes.
+Post binds one selected ordinary spend input; Update binds the exact board
+`own_ref`; migration binds the consumed legacy board out-ref. Ledger
+consumption gives one-use authorization, and transaction history gives lineage
+order. A stored sequence adds no rejection while exact nonce remains enforced,
+so it is deleted.
 
 ## Compatibility and wire transition
 
-- Preserve V1 constructor 0 and its exact four fields as a legacy decode and
-  migration source. The released schema remains historically true.
-- Emit only **DAT-253-DATUM-V2** constructor 1 at the V2 policy/address.
-- Preserve the marker asset name as the raw witness key and preserve the
-  endpoint signature over the endpoint event.
-- Keep normal Post, Burn, Update, and Retire meanings. #254 supplies a distinct
-  version-migration action/context so migration cannot be mistaken for an
-  ordinary unlinked Post.
-- Existing V1 signatures are insufficient for V2 because they never approved
-  the owner, sequence, or nonce. Each of the three live witnesses must provide
-  one fresh board-authorization signature for cutover; the exact endpoint bytes
-  and original endpoint signature are otherwise carried unchanged.
+- Preserve the legacy constructor 0 with its exact four fields for historical
+  decoding and migration only.
+- Emit the authorized target as constructor 0 with six fields: witness,
+  endpoint bytes, endpoint signature, owner, nonce, authorization signature.
+- Route decoding through the applied policy hash and release registry, then
+  require the release's exact structural shape. Unknown hashes fail closed.
+- Preserve marker asset name as raw witness key and preserve the endpoint
+  signature over the endpoint event.
+- Keep normal Post, Burn, Update, and Retire meanings. #254 supplies atomic
+  migration entry/exit tied to the applied predecessor policy.
+- Existing legacy signatures are insufficient because they did not approve
+  owner and nonce. Each live witness supplies fresh board authorization for
+  cutover; endpoint bytes/signature remain unchanged.
+- Store no datum version, version-only constructor, sequence, or origin. Do not
+  promote any of them into consumer types or JSON.
 
-## Dependency contract for #254
+## Revised dependency contract for #254
 
-The board version vehicle supplied by #254 must satisfy all of the following
-before V2 activation:
+This `DEP-253-254` contract supersedes clauses `DEP-253-254-01` through `-07`:
 
-- **DEP-253-254-01:** identify source and destination board versions and bind
-  the exact consumed V1 out-ref to the V2 successor on chain.
-- **DEP-253-254-02:** make the transition atomic: consume and retire/burn one V1
-  marker while minting exactly one V2 marker for the same witness key; an
-  ordinary V2 Post cannot claim migration continuity.
-- **DEP-253-254-03:** require the V1 recorded owner under the V1 lifecycle rule
-  and require V2 witness authorization whose nonce is that V1 out-ref.
-- **DEP-253-254-04:** require equality of witness key, endpoint bytes, endpoint
-  signature, owner key hash, and board deposit between the decoded V1 source
-  and V2 successor; map the legacy record to V2 sequence zero.
-- **DEP-253-254-05:** expose a verifiable predecessor/successor version link to
-  readers and reject unauthorized, replayed, one-to-many, many-to-one, or bare
-  redeployment transitions.
-- **DEP-253-254-06:** support the actual combined V1 burn/retire constraints;
-  the migration must be valid under both deployed V1 and new V2 policies, not
-  only under a model of the new policy.
-- **DEP-253-254-07:** keep the endpoint board in the migration and M8
-  compiled-UPLC proof targets, and carry all three live preprod records through
-  the controlled cutover.
+1. Source and destination are identified by applied script/policy hash and the
+   off-chain release registry. The successor pins the exact predecessor policy
+   and consumes the named predecessor out-ref. No datum version is stored.
+2. One transaction spends and retires/burns one deployed marker, mints one
+   same-witness successor marker, and confines it to one output.
+3. The recorded source owner authorizes the spend, and target witness
+   authorization binds a nonce equal to the exact source out-ref. Custody
+   substitution and replay remain permanent RED controls.
+4. Witness key, endpoint bytes/signature, owner, and deposit are preserved. The
+   target uses the structurally distinct six-field authorized datum without a
+   sequence field or version-only constructor.
+5. Readers derive predecessor/successor from the atomic transaction. Unknown
+   hashes and incomplete transactions fail closed; no origin or version is
+   promoted.
+6. Both deployed source Retire/burn constraints and target policy accept the
+   same transaction.
+7. Board migration remains in M8 with the all-three-record cutover proof.
 
-These are observable requirements on #254's mechanism; its checkpoint datum,
-governance, and general version-family design remain owned by #254.
+#254 owns its generic migration mechanics, registry, and checkpoint design; it
+cannot waive the target board authentication supplied here.
 
 ## Consumer impact draft for #171
 
-The producer proposes the following cross-seam contract for agreement before
-implementation:
-
-- Board locators become version-aware and can query the V1 and V2 policy/address
-  set during cutover; after an atomic migration, only the unspent V2 successor
-  is current.
-- `resolveBoardCatalog` currently accepts only `Constr 0` and verifies the
-  endpoint signature (`offchain/deployment/Cardano/KERI/Deployment/EndpointBoard.hs:135-186`).
-  It must decode V1/V2 by policy/version, verify both V2 signatures, and keep
-  its all-or-nothing failure behavior.
-- `BoardEntry` keeps witness key, AID, scheme, URL, out-ref, lovelace, and owner
-  (`offchain/query/Cardano/KERI/ChainQuery/Types.hs:378-395`) and adds validator
-  version and sequence. Nonce and raw authorization may remain verification
-  internals unless a consumer demonstrates a public need.
-- Existing query JSON fields stay stable. `validator_version` and `sequence`
-  are additive fields; watchability remains one per witness regardless of
-  duplicates. Query schema/docs must not label a V2 row verified unless both
-  signatures passed.
-- During cutover, a V1 predecessor and its V2 successor are one migration
-  lineage, never two current records. Unrelated valid duplicates remain
-  visible under the existing policy.
+- Board locators become registry-backed applied-policy/address sets during
+  cutover. The matched release entry selects the exact decoder and target
+  policy used for authorization verification.
+- `resolveBoardCatalog` preserves all-or-nothing failure. It decodes legacy or
+  authorized shapes only under known policies, verifies both target signatures,
+  and rejects unknown hashes and incomplete migration edges.
+- `BoardEntry` retains witness key, AID, scheme, URL, out-ref, lovelace, and
+  owner. The matched policy/release identity may remain authenticated internal
+  provenance because registry lookup and authorization verification consume
+  it; no public datum-version or sequence field is added.
+- Existing query JSON remains stable. During cutover, a spent predecessor and
+  its atomic successor are one lineage, never two current records. Unrelated
+  valid duplicates remain visible.
 
 ## Ordered slices
 
-### S253-1 — canonical authorization and codecs
+### S253-1 — canonical authorization and codecs (accepted foundation)
 
-Add the versioned data/authentication model, canonical CBOR vectors, producer
-payload/signature inputs, and fail-closed V1/V2 reader codecs. Preserve
-independent endpoint-signature verification and prove every signed field is
-observed.
+The accepted slice added canonical authorization, cross-language vectors,
+producer payload/signature inputs, and fail-closed codec groundwork. It used
+the pre-amendment sequence/version shape; S253-2 must slim this surface before
+wiring it into a validator.
 
-Bisect condition: no deployed policy changes; producer/reader code agrees on
-the exact V2 bytes and field mutation properties are red under a weakened
-authorization predicate.
+Bisect condition met at `82b790f265eeb1c5ce786eadb31ee68c17a82757`:
+no deployed policy changed and the authorization field mutant class was killed.
 
-### S253-2 — V2 validator and transaction paths
+### S253-2 — slim authorization, validator, and transaction paths
 
-Enforce V2 Post/Update/Retire rules, consumed nonce semantics, exact sequence,
-and fresh witness authorization. Transaction planning selects and consumes the
-declared Post nonce and uses the spent board out-ref for Update.
+Delete sequence and version-only wire/API state. Freeze new six-field datum and
+six-field signed-message vectors, then enforce Post/Update/Retire, exact consumed
+nonce, marker/policy binding, owner authority, unique successor, and both
+signatures. Transaction planning selects and consumes the declared Post nonce
+and derives the Update nonce from the spent board out-ref.
 
-Bisect condition: the V2 policy is reproducible and all binding/replay
-properties pass, but no live record is moved without S253-3.
+Bisect condition: the target policy is reproducible and custody-substitution,
+replay/resurrection, endpoint-only, shape, and lifecycle properties pass; no
+live record moves without S253-3.
 
 ### S253-3 — migration, consumer seam, and cutover evidence
 
-Integrate #254's board transition, version-aware catalog/query behavior, and
-the three-record preprod migration. Record predecessor/successor references and
-prove endpoint, owner, value, authorization, and current-set continuity.
+Integrate #254's applied-hash transition, registry-backed catalog behavior, and
+the three-record preprod migration. Record transaction-derived predecessor and
+successor references and prove endpoint, owner, deposit, authorization, and
+current-set continuity.
 
-Bisect condition: every V1 record has one settled V2 successor, consumers show
-only current state, and the compiled-UPLC target includes the new properties.
+Bisect condition: every legacy record has one settled successor, consumers show
+only current state, and the compiled target includes the new properties.
 
 ## Declared invariant campaign
 
-Runtime ledger path: `/tmp/ms-keri-1/e274/cardano-keri-253/evidence/campaign-ledger.md`; verification
-configuration must resolve the variable to an absolute retained path before a
-campaign starts. Initial accounting is `builds_spent=0` and `builds_budget=3`
-build-consuming verification runs. Read-only inspection, typecheck-only work,
-and interpreted instruments do not spend this build budget.
+Runtime ledger: `/tmp/ms-keri-1/e274/cardano-keri-253/evidence/campaign-ledger.md`.
+Build accounting is retained there; interpreted or typecheck-only work does not
+spend the build budget.
 
-| Invariant row | Severity | Initial state | Required killing class |
-|---|---|---|---|
-| INV-253-SIGNED-FIELDS | BLOCKING | OPEN | Omit or alter each signed field while keeping the rest valid. |
-| INV-253-OWNER | BLOCKING | OPEN | Substitute custody owner on Post, Update, and migration. |
-| INV-253-SEQUENCE | BLOCKING | OPEN | Reuse stale sequence, skip a generation, or use nonzero genesis. |
-| INV-253-NONCE | BLOCKING | OPEN | Reuse a spent nonce or bind a nonce absent from consumed inputs. |
-| INV-253-WITNESS-AUTH | BLOCKING | OPEN | Accept endpoint-only or owner-only authority. |
-| INV-253-MIGRATION | BLOCKING | OPEN | Lose/cross/duplicate a preserved V1 field or predecessor link. |
+| Invariant row | Severity | Required killing class |
+|---|---|---|
+| INV-253-SIGNED-FIELDS | BLOCKING | Omit/alter each retained signed field while the rest stays valid. |
+| INV-253-OWNER | BLOCKING | Substitute custody owner on Post, Update, or migration. |
+| INV-253-NONCE | BLOCKING | Reuse authorization, omit consumed nonce, or bind the wrong predecessor. |
+| INV-253-WITNESS-AUTH | BLOCKING | Accept endpoint-only or owner-only authority. |
+| INV-253-MIGRATION | BLOCKING | Lose/cross/duplicate a preserved field or transaction edge. |
 
-A row becomes `KILLED` only with a named mutant, failure evidence hash, and a
-permanent property that kills its class. `BLOCKED` names the exact unavailable
-fact. No row is eligible for `RESIDUAL` because every row reaches chain state
-or a signature. The campaign ends when all rows are terminal. A tail round or
-exhausted budget cannot close over any `OPEN` BLOCKING row; it records an
-overrun and requires a higher-scope decision before further builds.
+The former sequence row is retired by accepted necessity analysis, conditional
+on exact nonce. A row becomes `KILLED` only with a named mutant, failure-evidence
+hash, and permanent property. No quiet tail or exhausted budget closes an OPEN
+BLOCKING row.
 
 ## Verification contract
 
-- Demonstrate RED for custody substitution, stale resurrection, nonce replay,
-  endpoint-only registration, and broken migration continuity against named
-  weakened variants before relying on GREEN.
-- Assert the exact signed bytes from producer, on-chain reconstruction, and
-  reader verification agree through frozen vectors.
-- Cross the real transaction boundary for Post, Update, and V1-to-V2 migration;
-  unit-only success does not establish nonce consumption or version linkage.
-- Run focused board checks, the complete repository gate, compiled-UPLC checks,
-  and the settled preprod cutover in the authorized build environment.
+- Demonstrate RED for custody substitution, nonce replay/resurrection,
+  endpoint-only registration, wrong structural shape, and broken migration
+  continuity against named weakened variants before relying on GREEN.
+- Assert exact producer, on-chain reconstruction, and reader bytes through
+  frozen cross-language vectors for every retained signed field.
+- Cross the real transaction boundary for Post, Update, and migration; unit-only
+  success does not establish consumption or atomic linkage.
+- Run focused board checks, the complete repository gate, compiled-target
+  checks, and the settled preprod cutover in the authorized build environment.
 
 ## Risks and controls
 
-- **Two signatures are conflated:** distinct data fields and verification
-  errors preserve KERI-event authenticity versus board-context authorization.
-- **A nonce is merely stored:** validation requires membership in consumed
-  inputs or equality to the exact spent predecessor out-ref.
-- **Sequence is treated globally:** it is scoped to one record lineage;
-  duplicates remain independent and visible.
-- **Legacy data appears valid at V2:** constructor and policy/version checks
-  reject V1 as V2 current state.
-- **Migration strands live records:** V2 activation is gated by #254 and fresh
+- **Two signatures are conflated:** distinct fields and errors preserve KERI
+  endpoint authenticity versus board-context authorization.
+- **Nonce is merely stored:** Post requires the named consumed input; Update
+  and migration require exact equality with the spent predecessor out-ref.
+- **Legacy shape appears current:** applied policy selects the decoder and each
+  release requires an exact field count; four-field data rejects at target.
+- **Policy label is trusted:** authorization uses applied policy id; labels are
+  registry metadata only.
+- **Migration strands live records:** activation is gated by #254 and fresh
   authorizations for all three preprod witnesses.
-- **Consumers silently trust endpoint-only evidence:** V2 catalog verification
-  is all-or-nothing and exposes version/sequence at the query seam.
+- **Consumers trust endpoint-only evidence:** authorized catalog verification
+  is all-or-nothing and unknown release hashes fail closed.
 
 ## Artifact measurements
 
-Provider-reported token counts are unavailable for local files. Actual byte and
-line counts are measured from the planning tree before publication.
-
-| Artifact | Ceiling bytes / lines | Actual bytes / lines |
-|---|---:|---:|
-| `spec.md` | 8,000 / 180 | 7,772 / 132 |
-| `plan.md` | 11,000 / 210 | 9,979 / 187 |
-| `modules-model.md` | 6,000 / 145 | 4,282 / 88 |
-| `data-model.md` | 7,000 / 175 | 5,495 / 148 |
-| `functions-model.md` | 6,000 / 155 | 4,429 / 90 |
-| `tasks.md` | 6,000 / 145 | 3,781 / 69 |
+Actual byte and line counts are measured from the amended planning tree before
+publication and must remain under the ceilings stated in each artifact.

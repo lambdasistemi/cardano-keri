@@ -12,7 +12,17 @@ import Cardano.Crypto.Hash (
     hashFromStringAsHex,
     hashToBytes,
  )
+import Cardano.KERI.Deployment.EndpointBoard (
+    BoardAuthorizationV2 (..),
+    BoardDatumV2 (..),
+    BoardNonce (..),
+    EndpointRecord (..),
+    VersionedBoardDatum (..),
+    boardDatumBytes,
+ )
 import Cardano.KERI.Deployment.EndpointBoardTransaction (
+    BoardAuthorizationError (..),
+    BoardAuthorizationPayload (..),
     BoardConfig (..),
     BoardError (..),
     BoardObservationTimeout (..),
@@ -20,7 +30,9 @@ import Cardano.KERI.Deployment.EndpointBoardTransaction (
     BoardResult (..),
     BoardRetirePlan (..),
     BoardUpdatePlan (..),
+    attachBoardAuthorization,
     awaitBoard,
+    mkBoardAuthorizationPayload,
     runBoardPostTransaction,
     runBoardRetireTransaction,
     runBoardUpdateTransaction,
@@ -98,9 +110,15 @@ import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Codec.Binary.Bech32 qualified as Bech32
 import Data.Aeson (Value, object, (.=))
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteArray.Encoding (
+    Base (Base16),
+    convertFromBase,
+    convertToBase,
+ )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
+import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Map.Strict qualified as Map
@@ -263,6 +281,8 @@ spec = describe "in-process endpoint-board transactions" $ do
         result `shouldBe` Left (BoardObservationTimeout disagreeingId)
 
     boundedCollateralSpec
+
+    boardAuthorizationProducerSpec
 
 -- ---------------------------------------------------------------------------
 -- #232 bounded phase-2 collateral loss
@@ -580,3 +600,196 @@ inlineDatum txOut =
             let LedgerData.Data datum = LedgerData.binaryDataToData binaryDatum
              in datum
         other -> error ("expected inline datum, got " <> show other)
+
+-- ---------------------------------------------------------------
+-- #253 S253-1 producer boundary: payload out, signature in, no key
+-- ---------------------------------------------------------------
+
+{- | The witness's private key never appears in this module's production
+counterpart. A producer emits bytes, an external signer returns 64 bytes,
+and attachment refuses anything that does not verify.
+
+The golden constants are the same independently derived vectors asserted
+from Aiken and from 'Cardano.KERI.Deployment.EndpointBoardSpec'.
+-}
+boardAuthorizationProducerSpec :: Spec
+boardAuthorizationProducerSpec =
+    describe "board authorization producer" $ do
+        it "emits exactly the frozen signable bytes" $ do
+            payload <- expectPayload
+            boardPayloadSignableBytes payload
+                `shouldBe` frozenAuthorizationBytes
+
+        it "shows the signer the typed fields those bytes encode" $ do
+            payload <- expectPayload
+            boardPayloadAuthorization payload
+                `shouldBe` BoardAuthorizationV2
+                    { boardAuthDomain =
+                        "cardano-keri/endpoint-board/authorization/v2"
+                    , boardAuthPolicyId = frozenPolicyBytes
+                    , boardAuthWitnessKey = frozenWitnessKey
+                    , boardAuthEndpointRecord = frozenRecord
+                    , boardAuthOwnerKeyHash = frozenOwner
+                    , boardAuthSequence = 7
+                    , boardAuthNonce = frozenNonce
+                    }
+            boardPayloadEndpointSignature payload
+                `shouldBe` frozenEndpointSignature
+
+        it "refuses malformed material before anything is signed" $ do
+            let cases =
+                    [ mkPayload "not hex" frozenRecordValue frozenOwner 7 frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointWitnessKey = BS.take 31 frozenWitnessKey}
+                        frozenOwner
+                        7
+                        frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointEventBytes = ""}
+                        frozenOwner
+                        7
+                        frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointSignature = BS.take 63 frozenEndpointSignature}
+                        frozenOwner
+                        7
+                        frozenNonce
+                    , mkPayload frozenPolicy frozenRecordValue (BS.replicate 27 0x33) 7 frozenNonce
+                    , mkPayload frozenPolicy frozenRecordValue frozenOwner (-1) frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue
+                        frozenOwner
+                        7
+                        (BoardNonce (BS.replicate 31 0x11) 0)
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue
+                        frozenOwner
+                        7
+                        (BoardNonce (BS.replicate 32 0x11) (-1))
+                    ]
+            cases `shouldSatisfy` all isLeft
+
+        it "refuses a signature of the wrong width" $ do
+            payload <- expectPayload
+            attachBoardAuthorization
+                payload
+                (BS.take 63 frozenAuthorizationSignature)
+                `shouldBe` Left
+                    (BoardAuthorizationFieldWidth "authorization signature" 63)
+
+        it "refuses a genuine signature by a foreign signer" $ do
+            payload <- expectPayload
+            attachBoardAuthorization payload frozenForeignSignature
+                `shouldBe` Left BoardAuthorizationSignatureRejected
+
+        it "attaches a verified signature as the frozen V2 datum" $ do
+            payload <- expectPayload
+            datum <-
+                either
+                    (fail . show)
+                    pure
+                    (attachBoardAuthorization payload frozenAuthorizationSignature)
+            boardDatumBytes (VersionedBoardV2 datum)
+                `shouldBe` frozenDatumV2Bytes
+            boardV2AuthorizationSignature datum
+                `shouldBe` frozenAuthorizationSignature
+
+mkPayload ::
+    Text ->
+    EndpointRecord ->
+    ByteString ->
+    Integer ->
+    BoardNonce ->
+    Either BoardAuthorizationError BoardAuthorizationPayload
+mkPayload = mkBoardAuthorizationPayload
+
+expectPayload :: IO BoardAuthorizationPayload
+expectPayload =
+    either
+        (fail . show)
+        pure
+        (mkPayload frozenPolicy frozenRecordValue frozenOwner 7 frozenNonce)
+
+boardHex :: ByteString -> ByteString
+boardHex encoded =
+    case convertFromBase Base16 encoded of
+        Right bytes -> bytes
+        Left err ->
+            error ("EndpointBoardTransactionSpec: bad vector hex: " <> err)
+
+frozenPolicy :: Text
+frozenPolicy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
+
+frozenPolicyBytes :: ByteString
+frozenPolicyBytes = boardHex (TE.encodeUtf8 frozenPolicy)
+
+frozenWitnessKey :: ByteString
+frozenWitnessKey =
+    boardHex "d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729"
+
+frozenOwner :: ByteString
+frozenOwner = BS.replicate 28 0x33
+
+frozenRecord :: ByteString
+frozenRecord = "loc/scheme-vector-1"
+
+frozenNonce :: BoardNonce
+frozenNonce = BoardNonce (BS.replicate 32 0x11) 0
+
+frozenRecordValue :: EndpointRecord
+frozenRecordValue =
+    EndpointRecord
+        { endpointEventBytes = frozenRecord
+        , endpointSignature = frozenEndpointSignature
+        , endpointWitnessKey = frozenWitnessKey
+        , endpointAid = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+        , endpointScheme = "https"
+        , endpointUrl = "https://witness-test.example/"
+        }
+
+frozenEndpointSignature :: ByteString
+frozenEndpointSignature =
+    boardHex
+        "1a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6\
+        \989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05"
+
+frozenAuthorizationBytes :: ByteString
+frozenAuthorizationBytes =
+    boardHex
+        "d8799f582c63617264616e6f2d6b6572692f656e64706f696e742d626f617264\
+        \2f617574686f72697a6174696f6e2f7632581c54494f8a1b2930241b7b9fa010\
+        \f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6\
+        \068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563\
+        \746f722d31581c33333333333333333333333333333333333333333333333333\
+        \33333307d8799f58201111111111111111111111111111111111111111111111\
+        \11111111111111111100ffff"
+
+frozenAuthorizationSignature :: ByteString
+frozenAuthorizationSignature =
+    boardHex
+        "557039f68e7446091c0d8586b1b0876ce1e97570b512b5b0013ae1ba5cffeb24\
+        \4d6d16ff345fcc7846697f1383fcc7466827b299f81469069472a5351a52820b"
+
+frozenForeignSignature :: ByteString
+frozenForeignSignature =
+    boardHex
+        "3d7b875a2f3dc1de4202ca5e2b4644042937efaf9054457930ad015a646bf637\
+        \7aff3129a59d71f3198a1ef475c81dd3fd6d0180596c3526865fe3cbd919a408"
+
+frozenDatumV2Bytes :: ByteString
+frozenDatumV2Bytes =
+    boardHex
+        "d87a9f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7af\
+        \e125f54729536c6f632f736368656d652d766563746f722d3158401a809536db\
+        \02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9eb\
+        \bd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05581c333333\
+        \3333333333333333333333333333333333333333333333333307d8799f582011\
+        \1111111111111111111111111111111111111111111111111111111111111100\
+        \ff5840557039f68e7446091c0d8586b1b0876ce1e97570b512b5b0013ae1ba5c\
+        \ffeb244d6d16ff345fcc7846697f1383fcc7466827b299f81469069472a5351a\
+        \52820bff"

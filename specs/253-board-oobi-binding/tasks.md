@@ -8,15 +8,15 @@ and immutable artifact hashes.
 
 ## S253-1 — canonical authorization and codecs
 
-- [ ] **T253-S1-01** Add **DAT-253-AUTHORIZATION** and the versioned V1/V2 datum
+- [x] **T253-S1-01** Add **DAT-253-AUTHORIZATION** and the versioned V1/V2 datum
   protocol with frozen constructor, field-order, and domain vectors.
-- [ ] **T253-S1-02** Implement **FUN-253-AUTH-RECONSTRUCT** through
+- [x] **T253-S1-02** Implement **FUN-253-AUTH-RECONSTRUCT** through
   **FUN-253-AUTH-VERIFY** in the shared on-chain/off-chain contract surfaces.
-- [ ] **T253-S1-03** Preserve endpoint-signature verification separately and
+- [x] **T253-S1-03** Preserve endpoint-signature verification separately and
   require both signatures before promoting a V2 **DAT-253-BOARD-ENTRY**.
-- [ ] **T253-S1-04** Add producer payload/signature handling without importing
+- [x] **T253-S1-04** Add producer payload/signature handling without importing
   or storing witness private key material.
-- [ ] **T253-S1-05** Demonstrate the **INV-253-SIGNED-FIELDS** mutant class can
+- [x] **T253-S1-05** Demonstrate the **INV-253-SIGNED-FIELDS** mutant class can
   fail for every ordered field and record its evidence in the campaign ledger.
 
 ## S253-2 — V2 validator and transaction paths

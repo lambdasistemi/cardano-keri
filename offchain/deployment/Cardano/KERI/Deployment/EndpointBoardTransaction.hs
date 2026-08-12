@@ -20,6 +20,10 @@ module Cardano.KERI.Deployment.EndpointBoardTransaction (
     BoardError (..),
     BoardObservationTimeout (..),
     BoardResult (..),
+    BoardAuthorizationPayload (..),
+    BoardAuthorizationError (..),
+    mkBoardAuthorizationPayload,
+    attachBoardAuthorization,
     selectBoardEntry,
     mkBoardPostPlan,
     mkBoardUpdatePlan,
@@ -38,8 +42,14 @@ import Cardano.KERI.AID.Checkpoint.Close (
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.Deployment.Close (decodeRefundAddress)
 import Cardano.KERI.Deployment.EndpointBoard (
+    BoardAuthorizationV2 (..),
+    BoardDatumV2 (..),
     BoardEntry (..),
+    BoardNonce (..),
     EndpointRecord (..),
+    boardAuthorizationBytes,
+    boardAuthorizationDomain,
+    verifyBoardAuthorization,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
@@ -205,6 +215,116 @@ newtype RawData = RawData Data
 
 instance ToData RawData where
     toBuiltinData (RawData datum) = BuiltinData datum
+
+{- | Everything an external witness signer needs, and nothing it must not
+have: the exact bytes to sign plus the typed fields those bytes mean.
+
+The witness's private KERI key is deliberately absent from this module and
+from every type it exposes. A producer builds a payload, hands the bytes to
+whoever holds the key, and comes back with 64 bytes.
+-}
+data BoardAuthorizationPayload = BoardAuthorizationPayload
+    { boardPayloadPolicyId :: !ByteString
+    , boardPayloadAuthorization :: !BoardAuthorizationV2
+    , boardPayloadSignableBytes :: !ByteString
+    , boardPayloadEndpointSignature :: !ByteString
+    }
+    deriving stock (Show, Eq)
+
+-- | Why a producer payload or witness signature is refused before planning.
+data BoardAuthorizationError
+    = -- | A protocol field has the wrong byte width.
+      BoardAuthorizationFieldWidth !String !Int
+    | -- | A counter that must be non-negative is not.
+      BoardAuthorizationNegative !String !Integer
+    | -- | The endpoint record is empty.
+      BoardAuthorizationEmptyRecord
+    | -- | The policy id is not hexadecimal.
+      BoardAuthorizationPolicyMalformed !String
+    | -- | The supplied signature does not verify over the payload bytes.
+      BoardAuthorizationSignatureRejected
+    deriving stock (Show, Eq)
+
+{- | FUN-253-AUTH-PAYLOAD: the exact signable CBOR plus the typed fields it
+encodes, so an external signer can confirm what it is about to sign.
+-}
+mkBoardAuthorizationPayload ::
+    Text ->
+    EndpointRecord ->
+    ByteString ->
+    Integer ->
+    BoardNonce ->
+    Either BoardAuthorizationError BoardAuthorizationPayload
+mkBoardAuthorizationPayload policy record ownerKeyHash sequenceNumber nonce = do
+    policyId <-
+        first BoardAuthorizationPolicyMalformed $
+            decodeHexSized "board policy id" 28 policy
+    requireWidth "witness key" 32 (endpointWitnessKey record)
+    requireWidth "endpoint signature" 64 (endpointSignature record)
+    requireWidth "owner key hash" 28 ownerKeyHash
+    requireWidth "nonce transaction id" 32 (boardNonceTxId nonce)
+    when (BS.null $ endpointEventBytes record) $
+        Left BoardAuthorizationEmptyRecord
+    requireNonNegative "sequence" sequenceNumber
+    requireNonNegative "nonce output index" (boardNonceOutputIndex nonce)
+    let authorization =
+            BoardAuthorizationV2
+                { boardAuthDomain = boardAuthorizationDomain
+                , boardAuthPolicyId = policyId
+                , boardAuthWitnessKey = endpointWitnessKey record
+                , boardAuthEndpointRecord = endpointEventBytes record
+                , boardAuthOwnerKeyHash = ownerKeyHash
+                , boardAuthSequence = sequenceNumber
+                , boardAuthNonce = nonce
+                }
+    pure
+        BoardAuthorizationPayload
+            { boardPayloadPolicyId = policyId
+            , boardPayloadAuthorization = authorization
+            , boardPayloadSignableBytes =
+                boardAuthorizationBytes authorization
+            , boardPayloadEndpointSignature = endpointSignature record
+            }
+  where
+    requireWidth label expected bytes =
+        unless (BS.length bytes == expected) $
+            Left (BoardAuthorizationFieldWidth label (BS.length bytes))
+    requireNonNegative label value =
+        when (value < 0) $
+            Left (BoardAuthorizationNegative label value)
+
+{- | FUN-253-ATTACH-AUTH: bind a witness signature to its payload.
+
+The signature is verified here, before any plan exists, so an unusable datum
+can never reach transaction construction.
+-}
+attachBoardAuthorization ::
+    BoardAuthorizationPayload ->
+    ByteString ->
+    Either BoardAuthorizationError BoardDatumV2
+attachBoardAuthorization payload signature = do
+    unless (BS.length signature == 64) $
+        Left
+            ( BoardAuthorizationFieldWidth
+                "authorization signature"
+                (BS.length signature)
+            )
+    let authorization = boardPayloadAuthorization payload
+        datum =
+            BoardDatumV2
+                { boardV2WitnessKey = boardAuthWitnessKey authorization
+                , boardV2EndpointRecord =
+                    boardAuthEndpointRecord authorization
+                , boardV2EndpointSignature =
+                    boardPayloadEndpointSignature payload
+                , boardV2OwnerKeyHash = boardAuthOwnerKeyHash authorization
+                , boardV2Sequence = boardAuthSequence authorization
+                , boardV2Nonce = boardAuthNonce authorization
+                , boardV2AuthorizationSignature = signature
+                }
+    unless (verifyBoardAuthorization (boardPayloadPolicyId payload) datum) $
+        Left BoardAuthorizationSignatureRejected
+    pure datum
 
 -- | Resolve one current witness record without hiding ratified duplicates.
 selectBoardEntry ::

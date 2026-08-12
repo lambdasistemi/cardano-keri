@@ -140,7 +140,7 @@ around the board schema selected by #253.
 | --- | --- |
 | `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
 | #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
-| #271 payee authentication | Recommend batching into #254 because migration changes the checkpoint spend dispatch and role/value branches that contain Freeze/Convict payouts; #253 touches only the board. Require hunter/convictor payee key hashes in `extra_signatories`, with substituted-payee RED, before #163/#164. Epic ruling required before the implementation fence freezes. |
+| #271 payee authentication | Payee protection requires a pre-reveal entitlement mechanism (commit/reveal class, designed in the #271 mandate); `extra_signatories` remains a necessary consent check but is not the theft fix. Migration changes the checkpoint spend dispatch and the role/value branches containing Freeze/Convict payouts, so #254 remains the natural vehicle for the entitlement datum/state; #253 touches only the board. The epic's batching ruling waits on the #271 mandate's shipping recommendation, and #163/#164 remain blocked until the protection ships. |
 | #253 board hardening | Rides the family. It finalizes the not-yet-deployed target board version by adding owner+sequence witness binding; the first deployment of that version contains both migration entry and #253 semantics. Do not deploy an intermediate unhardened target. |
 | #171 consumer halves | Desk-negotiated implementation of multi-version follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
@@ -159,8 +159,9 @@ No slice starts while the machine build gate is closed.
 - Extend deployment manifest/build-package surfaces without removing v0.
 - Ship RED controls for authority, redirect/replay, identity, role, asset, and
   value classes; generated Haskell/Aiken vectors remain one source.
-- If the epic accepts the #271 recommendation, include its checkpoint payee
-  signer properties here because the same dispatch/value surface is changed.
+- If the epic rules that #271 rides here, include its entitlement state and
+  properties per the #271 mandate because the same dispatch/value surface is
+  changed; payee signer properties alone are not the theft fix.
 
 ### S254-2 — endpoint-board parity and #253 handoff
 

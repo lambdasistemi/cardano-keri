@@ -576,6 +576,41 @@ pub fn validate_checkpoint_migrate_out(
     ) == MigrationValid
   let asset_name = deriveAidAssetName(source_role_state.checkpoint.cesr_aid)
   expect dict.to_pairs(tokens(tx.mint, own_hash)) == [Pair(asset_name, -1)]
+  // The exit is inseparable from its successor. Burning the source token and
+  // creating nothing is not a migration, it is destruction of the identity —
+  // and it would be authorized by exactly the same package. So the same
+  // signed target that the controllers approved must actually be composed
+  // here: one confined successor, at the signed address and role, carrying
+  // the one-for-one token replacement and all protected value.
+  let target = authorization.target
+  expect Some(successor_output) = sole_successor(
+    target.target_policy,
+    asset_name,
+    tx,
+  )
+  expect successor_output.address == target.target_address
+  let successor_role = migration_role_of(
+    target.target_policy,
+    successor_output.address,
+  )
+  expect successor_role == target.target_role
+  let (successor_role_state, _) = role_state_of(
+    successor_role,
+    successor_output,
+  )
+  expect exact_token_replacement(own_hash, target.target_policy, asset_name, tx)
+  expect
+    checkpoint_transition_continuous(
+      source_role_state,
+      successor_role_state,
+      PolicyReplacement {
+        source_policy: own_hash,
+        target_policy: target.target_policy,
+        asset_name,
+        source_value: own_input.output.value,
+        successor_value: successor_output.value,
+      },
+    ) == MigrationValid
   True
 }
 
@@ -603,6 +638,13 @@ pub fn validate_checkpoint_migrate_in(
   expect origin.source_ref == source_ref
   expect origin.source_policy == source_hash
   expect authorization.source_role == observed_role
+  // The quorum signs over `source_state`, so that field decides what the
+  // controllers actually approved. If it is not the projection this
+  // transaction consumes, a valid signature over one checkpoint would
+  // authorize moving a different one — and every later continuity check
+  // reads the observed projection, so nothing downstream would notice.
+  expect carried: CheckpointDatum = authorization.source_state
+  expect carried == V1(source_role_state.checkpoint)
   let source = source_of(authorization)
   let target = authorization.target
   expect target.target_policy == policy_id
@@ -680,6 +722,10 @@ pub fn validate_legacy_checkpoint_migrate_in(
   expect source_input.output.address == from_script(preprod_v0.legacy_policy)
   expect InlineDatum(source_data) = source_input.output.datum
   expect V1(source_state): CheckpointDatum = source_data
+  // Same binding as the permanent entry: the projection the quorum signed
+  // must be the projection this transaction consumes.
+  expect legacy_carried: CheckpointDatum = authorization.source_state
+  expect legacy_carried == V1(source_state)
   let asset_name = deriveAidAssetName(source_state.cesr_aid)
   expect close.legacy_burned_asset_name == asset_name
   let source = source_of(authorization)

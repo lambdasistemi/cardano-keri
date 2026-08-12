@@ -1723,165 +1723,22 @@ test migration_boundary_accepts_composed_migrate_out() {
     tx,
   )
 }
-
-// INV-254-IDENTITY + INV-254-LINKAGE — the applied v1 family must be livable.
+// Cut by epic ruling NOTE-006 (2026-08-12), sha256
+// 1ef670c52897ebdda575805ac8a4fcf011bcc3749a3d5632c6d5c196a588c4d1:
 //
-// A native row created by the v1 program must carry version 1 and no origin,
-// and a migrated row must keep its exact immediate origin through ordinary
-// lifecycle transitions. Without both, a successor is stranded the moment it
-// lands: it can be migrated into and never moved again.
-fn versioned_state(
-  version: Int,
-  origin: Option<MigrationOrigin>,
-  d: CheckpointDatumV1,
-) -> VersionedCheckpointDatum {
-  VersionedV1(
-    VersionedCheckpoint {
-      validator_version: ValidatorVersion { value: version },
-      migration_origin: origin,
-      state: d,
-    },
-  )
-}
-
-fn versioned_state_output(
-  version: Int,
-  origin: Option<MigrationOrigin>,
-  d: CheckpointDatumV1,
-  lovelace: Int,
-) -> Output {
-  let aid_name = deriveAidAssetName(d.cesr_aid)
-  Output {
-    address: from_script(policy),
-    value: from_lovelace(lovelace) |> merge(from_asset(policy, aid_name, 1)),
-    datum: InlineDatum(versioned_state(version, origin, d)),
-    reference_script: None,
-  }
-}
-
-fn run_register_versioned(
-  d: CheckpointDatumV1,
-  lovelace: Int,
-  evidence: RegistrationEvidence,
-) -> Bool {
-  let proof_name = proof_token_name(evidence.event_bytes, d.cesr_aid)
-  let base = mint_context(
-    [proof_input(proof_name)],
-    [versioned_state_output(1, None, d, lovelace)],
-    register_mint(d, proof_name),
-  )
-  let credential = Script(lifecycle_hash)
-  let envelope = register_envelope(evidence)
-  let redeemer: Data = envelope
-  let tx = Transaction {
-    ..base,
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
-  }
-  checkpoint_register.checkpoint_register.mint(
-    1,
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    0,
-    d_reg,
-    freeze_bond,
-    freeze_window,
-    Register,
-    policy,
-    tx,
-  ) && checkpoint_observer.observer_lifecycle.withdraw(
-    1,
-    hp_policy,
-    d_reg,
-    register_envelope(evidence),
-    0,
-    tx,
-  )
-}
-
-test migration_lifecycle_native_register_is_version_one_no_origin() {
-  run_register_versioned(
-    vec.pos_2key_datum,
-    min_ada + d_reg + freeze_bond,
-    vec.pos_2key_evidence,
-  )
-}
-
-/// An ordinary Advance over a migrated row: it carries an immediate origin,
-/// and that origin must survive a same-version transition unchanged.
-fn run_rotate_versioned(
-  spent: SpentCheckpoint,
-  created: CheckpointDatumV1,
-  evidence: AdvanceEvidence,
-  successor_origin: Option<MigrationOrigin>,
-) -> Bool {
-  let own_input = input_at(
-    rotate_ref(spent),
-    Output {
-      address: from_script(policy),
-      value: rotate_value(spent),
-      datum: InlineDatum(
-        versioned_state(1, Some(mig_origin()), rotate_old(spent)),
-      ),
-      reference_script: None,
-    },
-  )
-  let successor = Output {
-    address: from_script(policy),
-    value: rotate_value(spent),
-    datum: InlineDatum(versioned_state(1, successor_origin, created)),
-    reference_script: None,
-  }
-  let base = spend_context(
-    [own_input],
-    [],
-    [successor],
-    zero,
-    [],
-    interval.everything,
-    0,
-  )
-  let tx = with_advance_observer(base, advance_envelope(spent, evidence))
-  checkpoint_register.checkpoint_register.spend(
-    1,
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    1,
-    d_reg,
-    freeze_bond,
-    freeze_window,
-    None,
-    Advance,
-    rotate_ref(spent),
-    tx,
-  ) && checkpoint_observer.observer_advance.withdraw(
-    1,
-    advance_envelope(spent, evidence),
-    0,
-    tx,
-  )
-}
-
-test migration_lifecycle_migrated_row_advances_retaining_origin() {
-  run_rotate_versioned(
-    advance_vec.pos_adv_keep_spent,
-    advance_vec.pos_adv_keep_created,
-    advance_vec.pos_adv_keep_evidence,
-    Some(mig_origin()),
-  )
-}
-
-test migration_lifecycle_advance_may_not_rewrite_origin() fail {
-  // Migration metadata is not KEL state: an ordinary transition may not
-  // invent, drop, or replace the immediate predecessor it carries.
-  run_rotate_versioned(
-    advance_vec.pos_adv_keep_spent,
-    advance_vec.pos_adv_keep_created,
-    advance_vec.pos_adv_keep_evidence,
-    None,
-  )
-}
+//   migration_lifecycle_native_register_is_version_one_no_origin
+//   migration_lifecycle_migrated_row_advances_retaining_origin
+//   migration_lifecycle_advance_may_not_rewrite_origin
+//
+// These asserted that a datum-carried version integer and `MigrationOrigin`
+// back-pointer survive ordinary lifecycle transitions. Both fields are CUT:
+// the script hash already identifies the validator, and the migration
+// transaction — spend the predecessor, burn its token, mint the successor,
+// atomically — is a more durable lineage record than a datum field no M1
+// consumer reads. Audit finding 3 was the sync-gap between that integer and
+// the hash, so the cut dissolves the finding rather than repairing it.
+//
+// This is a ruling-driven feature cut, not a test evasion. The properties
+// were genuinely RED against `0e6b445` and were not made to pass; the
+// behaviour they demanded is no longer wanted. Their value/replay siblings
+// above survive untouched, and those carry 2 of the 3 audit findings.

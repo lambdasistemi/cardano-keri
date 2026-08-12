@@ -2146,6 +2146,8 @@
                   identity_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT fields=//p' "$identity_out")"
                   reconciled_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT reconciled=//p' "$identity_out")"
                   unexpected_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT unexpected=//p' "$identity_out")"
+                  identity_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT containers=//p' "$identity_out")"
+                  uncovered_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT uncovered_containers=//p' "$identity_out")"
                   enumerated_by="$(sed -n 's/^CBIC_IDENTITY_RESULT enumerated_by=//p' "$identity_out")"
                   test "$titles" -eq 23
                   test "$programs" -eq 8
@@ -2154,7 +2156,9 @@
                   test "$identity_fields" -ge 1
                   test "$reconciled_fields" -eq "$identity_fields"
                   test "$unexpected_fields" -eq 0
-                  test "$enumerated_by" = jq-scalar-paths
+                  test "$identity_containers" -ge 2
+                  test "$uncovered_containers" -eq 0
+                  test "$enumerated_by" = jq-leaf-and-container-paths
 
                   echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build outcome=ESTABLISHED"
                   jq -r '.programs[] | [.title, (.params | tostring), .program_sha256] | @tsv' \
@@ -2166,7 +2170,7 @@
                   echo "AUDIT-BASELINE-COMMIT declared=${baselineSourceCommit} observed=${sourceIdentity} authority=flake-self-rev agreement=by-construction outcome=ESTABLISHED"
                   echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=${baselineSelection} version_derived=${baselineVersionDerived} outcome=ESTABLISHED"
                   echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records outcome=ESTABLISHED"
-                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields reconciled=$reconciled_fields unexpected=$unexpected_fields enumerated_by=$enumerated_by instrument=check-blaster-identity-consistency window=manifest-identity-and-all-record-fields outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields reconciled=$reconciled_fields unexpected=$unexpected_fields containers=$identity_containers uncovered_containers=$uncovered_containers enumerated_by=$enumerated_by instrument=check-blaster-identity-consistency window=complete-baseline-manifest outcome=ESTABLISHED"
 
                   # The Nix check executes the same app in a build sandbox,
                   # where the deliberately retained /tmp receipt and a nested
@@ -2235,7 +2239,10 @@
                                control-schema-narrower-than-production \
                                baseline-commit-authority-substituted \
                                carried-field-without-reconciled-expectation \
-                               coverage-count-not-enumerated; do
+                               coverage-count-not-enumerated \
+                               unenumerated-container \
+                               top-level-variant-contradiction \
+                               collation-deterministic-comparison; do
                       repair_rc="$(sed -n "s/^REPAIR-SELFTEST leg=$leg rc=\([0-9][0-9]*\) outcome=REFUTED$/\1/p" "$baseline_contract_out")"
                       test "$repair_rc" -gt 0
                       echo "AUDIT-SELFTEST leg=$leg rc=$repair_rc outcome=REFUTED"

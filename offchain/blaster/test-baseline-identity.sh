@@ -169,15 +169,17 @@ grep -Fq 'CBIC_IDENTITY_RESULT records_checked=27' <<< "$clean_out" \
 grep -Fq 'CBIC_IDENTITY_RESULT inconsistent=0' <<< "$clean_out" \
   || fail "clean identity result did not publish inconsistent=0"
 
-# Audit submission 2 property classes. Exercise every reported survivor and
-# aggregate the results so one surviving instance cannot hide another. The
-# count control adds a scalar field without changing the 27-record inventory:
-# an enumerated population must move 301 -> 302, while a closed form over
-# records remains stuck at its clean value.
+# Audit property classes. Exercise every reported survivor and aggregate the
+# results so one surviving instance cannot hide another. The field-count
+# control adds a scalar field without changing the 27-record inventory: an
+# enumeration over the complete manifest must move 372 -> 373, while the
+# independently built expectation population remains at its clean value.
 coverage_failures=0
 coverage_rc=0
+last_coverage_red_rc=0
 coverage_expect_red_identity_copy() { # label jq-filter expected-diagnostic
   local label=$1 filter=$2 expected=$3 out rc
+  last_coverage_red_rc=0
   jq "$filter" "$work/manifest.json" > "$work/coverage-mutant.json"
   cmp -s "$work/manifest.json" "$work/coverage-mutant.json" &&
     fail "$label mutation did not apply"
@@ -187,6 +189,7 @@ coverage_expect_red_identity_copy() { # label jq-filter expected-diagnostic
   identity_args[3]=$saved
   if [ "$rc" -ne 0 ] && [[ $out == *"$expected"* ]]; then
     [ "$coverage_rc" -ne 0 ] || coverage_rc=$rc
+    last_coverage_red_rc=$rc
     printf 'RED-PROOF invariant=%s rc=%s diagnostic=%s outcome=REFUTED\n' \
       "$label" "$rc" "$expected"
   else
@@ -227,22 +230,67 @@ set +e; coverage_count_out=$(run_identity 2>&1); coverage_count_rc=$?; set -e
 identity_args[3]=$saved
 if [ "$coverage_count_rc" -ne 0 ] &&
    [[ $coverage_count_out == *'COULD-NOT-EVALUATE: identity field lacks reconciled expectation: identity.unregistered_identity'* ]] &&
-   grep -Fq 'CBIC_IDENTITY_RESULT fields=302' <<< "$coverage_count_out" &&
-   grep -Fq 'CBIC_IDENTITY_RESULT reconciled=301' <<< "$coverage_count_out" &&
+   grep -Fq 'CBIC_IDENTITY_RESULT fields=373' <<< "$coverage_count_out" &&
+   grep -Fq 'CBIC_IDENTITY_RESULT reconciled=372' <<< "$coverage_count_out" &&
    grep -Fq 'CBIC_IDENTITY_RESULT unexpected=1' <<< "$coverage_count_out"; then
   printf 'REPAIR-SELFTEST leg=coverage-count-not-enumerated rc=%s outcome=REFUTED\n' \
     "$coverage_count_rc"
 else
   coverage_failures=$((coverage_failures + 1))
-  echo 'COVERAGE-RED-FAIL count control did not enumerate 302 carried fields with one unreconciled expectation' >&2
+  echo 'COVERAGE-RED-FAIL count control did not enumerate 373 carried fields with one unreconciled expectation' >&2
   printf '%s\n' "$coverage_count_out" | sed 's/^/    [checker] /' >&2
 fi
 
+# Release property class: a future container anywhere in the manifest must be
+# covered without adding its path to a hand-maintained list. An empty nested
+# object has no scalar descendant, so only the structural registry can see it.
+coverage_expect_red_identity_copy INV-246-IDENTITY-FIELD-EXPECTATION-DISJOINT-container \
+  '.audit_container = {nested:{}}' \
+  'COULD-NOT-EVALUATE: manifest container lacks structural expectation: audit_container'
+if [ "$last_coverage_red_rc" -ne 0 ]; then
+  printf 'REPAIR-SELFTEST leg=unenumerated-container rc=%s outcome=REFUTED\n' \
+    "$last_coverage_red_rc"
+fi
+
+# Named red condition from A-e190-018. This is also a scalar-field closure
+# control over the manifest object itself, outside .identity and .records.
+coverage_expect_red_identity_copy INV-246-IDENTITY-FIELD-EXPECTATION-DISJOINT-top-level-variant \
+  '.variant = "defaultFunSemanticsVariantA"' \
+  'COULD-NOT-EVALUATE: identity field lacks reconciled expectation: variant'
+if [ "$last_coverage_red_rc" -ne 0 ]; then
+  printf 'REPAIR-SELFTEST leg=top-level-variant-contradiction rc=%s outcome=REFUTED\n' \
+    "$last_coverage_red_rc"
+fi
+
+# The path registry is C-sorted, so every comparison must use that same
+# collation. An uppercase addition is deliberately ordered differently by the
+# host UTF-8 locale; it must still reach the named checker diagnostic.
+jq '.identity.NEWFIELD = "locale-mutant"' \
+  "$work/manifest.json" > "$work/collation-mutant.json"
+cmp -s "$work/manifest.json" "$work/collation-mutant.json" &&
+  fail 'collation mutation did not apply'
+saved=${identity_args[3]}
+identity_args[3]="$work/collation-mutant.json"
+set +e; collation_out=$(LC_ALL=en_GB.utf8 run_identity 2>&1); collation_rc=$?; set -e
+identity_args[3]=$saved
+if [ "$collation_rc" -ne 0 ] &&
+   [[ $collation_out == *'COULD-NOT-EVALUATE: identity field lacks reconciled expectation: identity.NEWFIELD'* ]] &&
+   [[ $collation_out != *'comm:'* ]]; then
+  printf 'REPAIR-SELFTEST leg=collation-deterministic-comparison rc=%s outcome=REFUTED\n' \
+    "$collation_rc"
+else
+  coverage_failures=$((coverage_failures + 1))
+  echo 'COVERAGE-RED-FAIL locale control did not reach the named field diagnostic deterministically' >&2
+  printf '%s\n' "$collation_out" | sed 's/^/    [checker] /' >&2
+fi
+
 for result in \
-  'fields=301' \
-  'reconciled=301' \
+  'fields=372' \
+  'reconciled=372' \
   'unexpected=0' \
-  'enumerated_by=jq-scalar-paths'; do
+  'containers=55' \
+  'uncovered_containers=0' \
+  'enumerated_by=jq-leaf-and-container-paths'; do
   if ! grep -Fq "CBIC_IDENTITY_RESULT $result" <<< "$clean_out"; then
     coverage_failures=$((coverage_failures + 1))
     echo "COVERAGE-RED-FAIL clean result did not publish $result" >&2

@@ -577,27 +577,42 @@ require_manifest_identity_arguments() {
     || fail "COULD-NOT-EVALUATE: identity field lacks external expectation: verification-receipt.receipt"
 }
 
-# Enumerate the population named by the published coverage verdict. Each line
-# is PATH<TAB>JSON-VALUE. The path count therefore comes from the artifact,
-# never from record cardinality or a closed-form multiplier.
-enumerate_identity_field_population() { # <json> <output>
+# Enumerate every leaf in the published manifest. Each line is
+# PATH<TAB>JSON-VALUE. `scalars` omits null, so use the structural definition
+# of a leaf: anything that is neither an object nor an array.
+enumerate_manifest_leaf_population() { # <json> <output>
   jq -r '
-    def path_string($prefix; $path):
-      reduce $path[] as $part ($prefix;
+    def path_string($path):
+      reduce $path[] as $part ("";
         if ($part | type) == "number" then
           . + "[\($part)]"
+        elif . == "" then
+          ($part | tostring)
         else
           . + "." + ($part | tostring)
         end);
-    (.identity as $identity
-      | ($identity | paths(scalars)) as $path
-      | [path_string("identity"; $path),
-         ($identity | getpath($path) | tojson)] | @tsv),
-    (.records as $records
-      | ($records | paths(scalars)) as $path
-      | [path_string("records"; $path),
-         ($records | getpath($path) | tojson)] | @tsv)
+    paths(type != "object" and type != "array") as $path
+    | [path_string($path), (getpath($path) | tojson)] | @tsv
   ' "$1" | LC_ALL=C sort -t $'\t' -k1,1 > "$2"
+}
+
+# Enumerate every object and array, including the manifest root. Comparing
+# this population with the independently built expected document makes an
+# empty or future container visible even when it has no leaf beneath it.
+enumerate_manifest_container_population() { # <json> <output>
+  jq -r '
+    def path_string($path):
+      reduce $path[] as $part ("";
+        if ($part | type) == "number" then
+          . + "[\($part)]"
+        elif . == "" then
+          ($part | tostring)
+        else
+          . + "." + ($part | tostring)
+        end);
+    (([]), paths(type == "object" or type == "array")) as $path
+    | if ($path | length) == 0 then "$" else path_string($path) end
+  ' "$1" | LC_ALL=C sort > "$2"
 }
 
 # Build the expectation population only from caller-supplied authorities and
@@ -642,6 +657,7 @@ build_expected_identity_population() { # <blueprint> <blueprint-sha> <output> <w
     };
     ($programs[0]) as $ps |
     {
+      schema:"cardano-keri-baseline-v1",
       identity:(identity + {
         built_from:"source",
         validating_aiken:$aiken,
@@ -652,6 +668,8 @@ build_expected_identity_population() { # <blueprint> <blueprint-sha> <output> <w
           plutus_core_blaster:$plutus_core,
           cardano_ledger_api_blaster:$ledger_api}
       }),
+      blueprint_sha256:$blueprint_sha256,
+      programs:$ps,
       records: (
         [(identity + {record:"manifest"})]
         + [$ps[] | identity + {record:"program", title:.title,
@@ -670,14 +688,17 @@ reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
   local manifest=$1 blueprint=$2 blueprint_sha=$3
   local work fields expected_fields reconciled unexpected first unexpected_path
   local missing missing_path duplicate_expected mismatch_path expected_value actual_value
+  local containers covered_containers uncovered_containers uncovered_container
   work=$(mktemp -d "${TMPDIR:-/tmp}/identity-field-coverage.XXXXXXXX") \
     || fail "COULD-NOT-EVALUATE: identity-field coverage scratch allocation failed"
   trap "rm -rf '$work'" EXIT
 
   build_expected_identity_population \
     "$blueprint" "$blueprint_sha" "$work/expected.json" "$work"
-  enumerate_identity_field_population "$manifest" "$work/actual.tsv"
-  enumerate_identity_field_population "$work/expected.json" "$work/expected.tsv"
+  enumerate_manifest_leaf_population "$manifest" "$work/actual.tsv"
+  enumerate_manifest_leaf_population "$work/expected.json" "$work/expected.tsv"
+  enumerate_manifest_container_population "$manifest" "$work/actual.containers"
+  enumerate_manifest_container_population "$work/expected.json" "$work/expected.containers"
   cut -f1 "$work/actual.tsv" > "$work/actual.paths"
   cut -f1 "$work/expected.tsv" > "$work/expected.paths"
 
@@ -687,23 +708,38 @@ reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
 
   fields=$(wc -l < "$work/actual.paths"); fields=${fields//[[:space:]]/}
   expected_fields=$(wc -l < "$work/expected.paths"); expected_fields=${expected_fields//[[:space:]]/}
-  reconciled=$(comm -12 "$work/actual.paths" "$work/expected.paths" | wc -l)
+  reconciled=$(LC_ALL=C comm -12 "$work/actual.paths" "$work/expected.paths" | wc -l)
   reconciled=${reconciled//[[:space:]]/}
   unexpected=$((fields - reconciled))
+  containers=$(wc -l < "$work/actual.containers"); containers=${containers//[[:space:]]/}
+  covered_containers=$(LC_ALL=C comm -12 \
+    "$work/actual.containers" "$work/expected.containers" | wc -l)
+  covered_containers=${covered_containers//[[:space:]]/}
+  uncovered_containers=$((containers - covered_containers))
 
   echo "CBIC_IDENTITY_RESULT fields=$fields"
   echo "CBIC_IDENTITY_RESULT reconciled=$reconciled"
   echo "CBIC_IDENTITY_RESULT unexpected=$unexpected"
-  echo "CBIC_IDENTITY_RESULT enumerated_by=jq-scalar-paths"
+  echo "CBIC_IDENTITY_RESULT containers=$containers"
+  echo "CBIC_IDENTITY_RESULT uncovered_containers=$uncovered_containers"
+  echo "CBIC_IDENTITY_RESULT enumerated_by=jq-leaf-and-container-paths"
 
   if [ "$unexpected" -ne 0 ]; then
-    unexpected_path=$(comm -23 "$work/actual.paths" "$work/expected.paths" | head -1)
+    unexpected_path=$(LC_ALL=C comm -23 \
+      "$work/actual.paths" "$work/expected.paths" | head -1)
     fail "COULD-NOT-EVALUATE: identity field lacks reconciled expectation: ${unexpected_path:-<unnamed>} (externally-unexpected field set)"
+  fi
+
+  if [ "$uncovered_containers" -ne 0 ]; then
+    uncovered_container=$(LC_ALL=C comm -23 \
+      "$work/actual.containers" "$work/expected.containers" | head -1)
+    fail "COULD-NOT-EVALUATE: manifest container lacks structural expectation: ${uncovered_container:-<unnamed>}"
   fi
 
   missing=$((expected_fields - reconciled))
   if [ "$missing" -ne 0 ]; then
-    missing_path=$(comm -13 "$work/actual.paths" "$work/expected.paths" | head -1)
+    missing_path=$(LC_ALL=C comm -13 \
+      "$work/actual.paths" "$work/expected.paths" | head -1)
     first=${missing_path##*.}
     fail "unnamed identity input: ${first:-<unnamed>} path=${missing_path:-<unnamed>} (identity schema moved)"
   fi
@@ -726,6 +762,9 @@ reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
         ;;
       records*)
         fail "inconsistent identity input: $first path=$mismatch_path expected=$expected_value actual=$actual_value"
+        ;;
+      programs*|blueprint_sha256|schema)
+        fail "manifest input moved: $first path=$mismatch_path expected=$expected_value actual=$actual_value"
         ;;
       *)
         fail "identity input moved: $mismatch_path expected=$expected_value actual=$actual_value"

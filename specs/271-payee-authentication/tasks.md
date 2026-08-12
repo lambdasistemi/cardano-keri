@@ -11,9 +11,10 @@ component here; #254 S254-E adopts it and owns checkpoint-family integration.
 - [ ] **T271-001** Apply the split ruling: standalone S271-1 on #271, S254-E
   adoption/integration on #254, and every `INV-271-*` row without reducing
   entitlement to signer membership.
-- [ ] **T271-002** Version the #254 checkpoint/ARMED schema and registry for the
-  commitment policy, reference, one-slot age, 10,000-slot lifetime, deposit,
-  and historical v0 exposure boundary.
+- [ ] **T271-002** Register the #254 checkpoint/ARMED schema and release data for the
+  commitment policy, reference, one-slot age, finite release lifetime, deposit,
+  lean `DAT-254-ARMED`, and historical v0 exposure boundary; pin lean-types
+  manifest `2ff85bc01a91180d1da0d6b2864f0f620fbcf5cece1cd8ed670d87f1a4d10240`.
 - [ ] **T271-003** Initialize the campaign ledger with all eight BLOCKING rows
   OPEN, `builds_spent=0`, `builds_budget=3`, and the set-point/tail/overrun rule.
 
@@ -32,11 +33,23 @@ component here; #254 S254-E adopts it and owns checkpoint-family integration.
 - [ ] **T271-105** Demonstrate every scope/preimage mutation in
   `INV-271-SCOPE` rejects and remains covered by a permanent property.
 
+## S271-1R — YAGNI correction
+
+- [ ] **T271-106** Remove the exact lifetime constant/default and accept a
+  documented positive finite applied lifetime that leaves a mature reveal
+  window; keep exact expiry/sweep ledger-boundary semantics.
+- [ ] **T271-107** Retain the 5 ADA floor with the named
+  open-many/reveal-one/self-sweep-losers grind demonstration and state honestly
+  that the floor raises capital cost rather than eliminating the attack.
+- [ ] **T271-108** Re-prove canonical parity and real open/reveal/sweep handlers
+  for multiple valid lifetimes plus invalid zero/short lifetime controls, then
+  publish the accepted SHA as `LEAN-COMPONENT-READY` without checkpoint claims.
+
 ## S271-2 — enforcement integration
 
 - [ ] **T271-201** Require the actual observer evidence digest and a matching
-  mature Freeze commitment for ACTIVE to `ArmedV2`; record hunter plus marker
-  identity and refund the commitment deposit exactly.
+  mature Freeze commitment for ACTIVE to lean `DAT-254-ARMED`; record the
+  hunter and refund the commitment deposit exactly.
 - [ ] **T271-202** Preserve ClaimFreeze's exact recorded-hunter bond payout and
   prove a caller cannot substitute the beneficiary or impose a fresh hunter
   witness requirement.
@@ -58,8 +71,8 @@ component here; #254 S254-E adopts it and owns checkpoint-family integration.
   registry without replacing v0 history.
 - [ ] **T271-302** Extend no-secret deployment packages for commit, reveal,
   sweep, required signers, exact values, references, and settlement identities.
-- [ ] **T271-303** Prove migration creates the entitlement-aware versioned
-  checkpoint/ARMED family and never describes old v0 outputs as repaired.
+- [ ] **T271-303** Prove migration creates the entitlement-aware
+  lean checkpoint/ARMED family and never describes old v0 outputs as repaired.
 - [ ] **T271-304** Add the #163/#164 readiness condition: no hunter journey or
   incentive claim opens before the protected family is deployed.
 
@@ -80,7 +93,7 @@ component here; #254 S254-E adopts it and owns checkpoint-family integration.
 
 ## Ordering
 
-`T271-001..003 -> S271-1 -> S254-E -> T271-401..405`.
+`T271-001..003 -> S271-1 -> S271-1R -> S254-E -> T271-401..405`.
 
 S271-1 may run in parallel with #254 S254-1. S254-E waits for both because an
 enforcement branch cannot claim entitlement before marker lifecycle/parity and

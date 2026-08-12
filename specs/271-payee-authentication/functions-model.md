@@ -37,7 +37,8 @@ Only new or changed public signatures are modeled. Data is defined in
 
 - **Signature:** `validate_commitment_open(parameters: CommitmentParameters, seed_ref: OutputReference, datum: BountyCommitmentV1, policy_id: PolicyId, tx: Transaction) -> Bool`
 - **Constraints:** exact seed, unique marker mint/confinement, datum/value/timing,
-  deposit, and payee required signer.
+  one-slot age, positive finite applied lifetime with at least one mature reveal
+  slot and no standalone default, deposit floor, and payee required signer.
 
 ### `validate_commitment_reveal`
 
@@ -68,7 +69,7 @@ Only new or changed public signatures are modeled. Data is defined in
 
 ### `validate_claim_entitled_payout`
 
-- **Signature:** `validate_claim_entitled_payout(armed: ArmedV2, hunter_output_index: Int, tx: Transaction) -> Bool`
+- **Signature:** `validate_claim_entitled_payout(armed: DAT-254-ARMED, hunter_output_index: Int, tx: Transaction) -> Bool`
 - **Constraints:** beneficiary and entitlement derive only from ARMED; exact
   bond/output; no fresh hunter signer requirement.
 

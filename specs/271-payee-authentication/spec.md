@@ -34,11 +34,6 @@ The combined mirror has the same exposures at `checkpoint.ak:78-87,141-191,
 uncommitted payees and sets no required signer in
 `CheckpointTxBuilder.hs:3110-3215,3337-3477,3624-3690`.
 
-Positive control: board update/retire read `extra_signatories` at
-`endpoint_board.ak:107-108,129-130`. Comparator `close.ak:20-64,77-100` binds
-refund address, policy, AID, outref, and prior state in a preimage authorized by
-datum-fixed keys. Enforcement lacks equivalent pre-existing entitlement.
-
 ## Entitlement protocol
 
 ### Commit before reveal
@@ -61,7 +56,9 @@ consent independently of a later submitter.
   The applied `commit_min_age` is exactly one slot in ledger validity units.
   A commitment and reveal cannot settle in the same slot or same-block package.
 - **Expiry:** reveal requires a finite upper endpoint no later than
-  `commit_upper + 10,000 slots`. After that point it cannot reveal.
+  `commit_upper + commitment_lifetime`. This positive finite #254 release
+  parameter balances reveal latency against stale-state lifetime; the
+  standalone component fixes no magnitude.
 - **Grinding price:** a commitment locks exactly the marker plus
   `D_commit = max(5,000,000 lovelace, the current ledger minimum for the
   output)`. A valid reveal returns it to the committed payee. After expiry,
@@ -73,7 +70,12 @@ consent independently of a later submitter.
   unique checkpoint input settles. All losing commitments become stale and
   remain sweepable after expiry. “First commit wins” is rejected because it
   needs global per-checkpoint exclusion and lets a speculative commitment
-  block genuine evidence. Same-block ties are ledger transaction order.
+  block genuine evidence. Same-block ties are ledger transaction order; there
+  is no separate timestamp, ordering field, or arbitration state.
+
+The deposit-floor cut fails: an attacker opens `Open_1..Open_N`, reveals the
+match, then self-sweeps expired losers. Minimum ADA plus sweep bounds UTxO
+lifetime but permits recycling, so the 5 ADA concurrent-capital floor stays.
 
 A genuine reveal unconfirmed beyond `commit_min_age` reopens the race: an
 observer can age a competing commitment, then congestion and fees—not the
@@ -87,10 +89,9 @@ Independent pre-reveal commitment is legitimate competition, not mempool theft.
 
 - **Freeze:** consumes one mature unexpired Freeze commitment for the exact
   ACTIVE checkpoint and actual observer evidence. The committed payee must
-  equal `hunter_pkh`; the marker burns and deposit refunds exactly. `ArmedV2`
-  records both hunter and commitment identity, making the later entitlement
-  provenance durable.
-- **ClaimFreeze:** pays only the hunter and entitlement recorded by `ArmedV2`.
+  equal `hunter_pkh`; marker burn and refund are exact. Lean `DAT-254-ARMED`
+  wraps checkpoint, hunter, and deadline without a version/origin envelope.
+- **ClaimFreeze:** pays only the hunter recorded by lean `DAT-254-ARMED`.
   It needs no new caller-selected payee. The payee consented when opening the
   commitment, so requiring a fresh hunter signature here is forbidden: an
   absent hunter must not permanently veto Claim or a later conviction.
@@ -99,7 +100,7 @@ Independent pre-reveal commitment is legitimate competition, not mempool theft.
   marker burns, deposit refunds, and the existing source-specific bounty goes
   only to that key.
 - **Convict ARMED:** applies the same commitment rule to the convictor share.
-  The hunter share remains fixed by `ArmedV2`; its earlier signed commitment is
+  The hunter share remains fixed by lean `DAT-254-ARMED`; its earlier signed commitment is
   durable consent, so the hunter cannot veto terminal conviction by withholding
   a fresh signature.
 
@@ -119,7 +120,8 @@ context; KERI evidence continues to prove only later event or witnessed fork.
   action, marker, payee, evidence, and timing. Cross-input/action/evidence use
   rejects.
 - **RQ-271-05:** Commit and reveal validity ranges enforce the one-slot minimum
-  age and 10,000-slot maximum lifetime at the ledger boundary.
+  age and positive finite applied lifetime at the ledger boundary, leaving at
+  least one mature reveal slot without a standalone lifetime constant.
 - **RQ-271-06:** Open, reveal, and expired sweep conserve exactly one marker and
   `D_commit`; no duplicate mint, retained marker, alternate refund, or
   unsignatured caller-selected recipient is admitted.
@@ -165,9 +167,11 @@ The build-denominated stopping contract is fixed in `plan.md`.
 
 ## Shipping recommendation
 
-Ship the family-independent commitment component on this branch, in parallel
-with #254's first migration slice. #254 then adopts it as S254-E after S254-1
-and before checkpoint-family acceptance, owning `ArmedV2`, enforcement reveal
-integration, registry, M8, migration, and cutover. This exposes no standalone
-protection claim: immutable v0 paths remain vulnerable and #163/#164 stay
-blocked until S254-E is deployed. #253 still touches only the board.
+Ship the family-independent component here. #254 adopts it as S254-E after
+S254-1, owning lean `DAT-254-ARMED`, enforcement integration, registry, M8,
+migration, and cutover. No standalone protection is claimed: v0 remains
+vulnerable and #163/#164 stay blocked until S254-E deployment.
+
+S254-E pins lean-types manifest sha256
+`2ff85bc01a91180d1da0d6b2864f0f620fbcf5cece1cd8ed670d87f1a4d10240`;
+superseded `4fb4930` shapes are forbidden.

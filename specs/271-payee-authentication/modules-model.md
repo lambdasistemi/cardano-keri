@@ -30,7 +30,8 @@ This model owns changed responsibilities and dependency direction. Data is in
 - `onchain/validators/checkpoint_register.ak` continues to own thin role,
   datum, token, reserve, payout-index, and observer-coupling checks.
 - Requires the commitment policy and exact commitment reference for Freeze and
-  Convict. It records the proven hunter commitment identity in `ArmedV2`.
+  Convict. Freeze writes the proven hunter into lean `DAT-254-ARMED`; no
+  version/origin envelope or commitment-specific checkpoint wrapper is added.
 - Claim and ARMED hunter payout consume only stored entitlement; no fresh
   caller may select that beneficiary and no fresh signature may veto progress.
 
@@ -86,8 +87,9 @@ This model owns changed responsibilities and dependency direction. Data is in
   shared checkpoint protocol, not duplicated in validator files.
 - **PROMOTE-271-02:** KERI `EnforcementEvidence` remains in enforcement; only its
   canonical digest crosses into entitlement.
-- **PROMOTE-271-03:** `ArmedV2` belongs to the #254 versioned checkpoint state,
-  because changing frozen `ArmedV1` in place is forbidden.
+- **PROMOTE-271-03:** ARMED integration belongs to #254's lean checkpoint state
+  pinned by manifest `2ff85bc01a91180d1da0d6b2864f0f620fbcf5cece1cd8ed670d87f1a4d10240`;
+  superseded version/origin envelope assumptions are forbidden.
 - **PROMOTE-271-04:** Registry and deployed magnitudes belong to #254 release
   data; pure entitlement types contain no ambient manifest or network lookup.
 

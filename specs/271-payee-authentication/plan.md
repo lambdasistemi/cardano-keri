@@ -23,9 +23,9 @@ they never manufacture an entitlement only at reveal time.
 | Question | Decision and reason |
 | --- | --- |
 | Minimum age | One complete network slot. Reveal lower bound is at least `commit_upper + commit_min_age`; same-slot/same-block commit+reveal is impossible while latency remains minimal. |
-| Expiry | 10,000 slots after `commit_upper`. This matches the existing enforcement horizon scale, bounds stale state, and gives a claimant hours rather than seconds to reveal. |
+| Expiry | Positive finite `commitment_lifetime` supplied by the #254 release registry. It must leave at least one mature reveal slot; release rationale balances legitimate reveal latency against bounded stale-state lifetime. No standalone magic value is a security invariant. |
 | Garbage collection | After expiry anyone may burn the unique marker and take the exact commitment lovelace to a signer-controlled sweep output. This removes abandoned state without a privileged collector. |
-| Grinding price | Exact marker plus `max(5 ADA, ledger min-ADA)` per commitment. Valid reveal refunds it; expiry exposes it to sweep, pricing broad speculation in locked capital and loss risk. |
+| Grinding price | Keep exact marker plus `max(5 ADA, ledger min-ADA)` per commitment. The concrete `Open_1..Open_N`, reveal-one, self-sweep-losers attack survives with min-ADA alone; sweep bounds lifetime but permits capital recycling. The floor raises concurrent capital cost without claiming to eliminate grinding. |
 | Competing commitments | First valid reveal wins; ledger order breaks ties. First-commit-wins is rejected because global exclusion lets speculative commits block genuine evidence. |
 | Payee consent | Payee signs commitment creation and reveal/refund when directly participating. Stored entitlement is durable consent for later Claim and ARMED hunter payment; no fresh signature may create a hunter veto. |
 | Evidence meaning | Unchanged. The commitment binds the complete evidence digest but does not alter KERI verification or make payee data identity state. |
@@ -37,7 +37,8 @@ they never manufacture an entitlement only at reveal time.
 Build this family-independent component on #271 in new files only, in parallel
 with #254 S254-1: versioned commitment/preimage/reveal types, canonical vectors,
 unique marker minting, opening, valid reveal, expired sweep, and standalone
-properties. Freeze the one-slot age, 10,000-slot lifetime, and deposit floor.
+properties. Freeze the one-slot age and deposit floor; take the finite lifetime
+from explicit applied parameters and require a non-empty mature reveal window.
 Demonstrate RED for counterfeit output, missing signer, same-slot reveal,
 post-expiry reveal, premature sweep, retained/duplicated marker, changed refund,
 and changed preimage scope. Checkpoint, board, and deployment wiring remain
@@ -45,6 +46,18 @@ untouched.
 
 Bisect condition: commitment lifecycle and generated vectors are complete,
 but no checkpoint action claims entitlement protection yet.
+
+### S271-1R — YAGNI correction and lean handoff
+
+Forward-correct the published standalone component: remove the exact lifetime
+constant/default while retaining finite expiry and permissionless sweep; keep
+the demonstrated one-slot age and 5 ADA floor; prove at least two valid finite
+lifetime values derive distinct exact reveal/sweep boundaries and invalid
+zero/short lifetimes reject. Publish the verified SHA as
+`LEAN-COMPONENT-READY`; do not claim checkpoint protection.
+
+Bisect condition: the standalone lifecycle is parameterized and owner-gate
+green, while all checkpoint-family integration remains S254-E.
 
 ### S254-E — enforcement integration
 
@@ -116,7 +129,7 @@ Ledger path:
 
 | Dependency | Contract |
 | --- | --- |
-| #254 | **Integration vehicle.** S254-1 may proceed in parallel with standalone S271-1. S254-E then adopts that component before checkpoint-family acceptance, supplies `ArmedV2` and reveal integration, and carries registry/migration/cutover work. |
+| #254 | **Integration vehicle.** S254-1 may proceed in parallel with standalone S271-1. S254-E then adopts the `LEAN-COMPONENT-READY` SHA before checkpoint-family acceptance, uses lean `DAT-254-ARMED`, and carries reveal/registry/migration/cutover work. Its type surface is pinned by lean-types manifest `2ff85bc01a91180d1da0d6b2864f0f620fbcf5cece1cd8ed670d87f1a4d10240`. |
 | #253 | No implementation dependency; it changes the endpoint board, not enforcement state. Share only #254 registry/cutover mechanics. |
 | #163/#164 | Remain blocked until the entitlement-aware family is deployed; a specs-only or source-green state does not restore hunter incentives. |
 | M8 | Register the new commitment and checkpoint compiled targets at acceptance and cutover; entitlement/age mutants are part of the proof surface. |
@@ -130,7 +143,8 @@ Ledger path:
   commitment too young.
 - **Broad speculative commitments:** deposit lock, expiry sweep, exact input
   scope, and first-valid-reveal make speculation costly without granting a
-  blocking first-commit right.
+  blocking first-commit right. The floor does not eliminate the named
+  reveal-one/self-sweep-losers grind; it raises its concurrent capital cost.
 - **Hunter veto:** selection-time consent is stored; later fixed payments do
   not demand a new witness.
 - **Counterfeit script output:** authenticated unique marker and policy checks
@@ -148,9 +162,9 @@ byte/line counts are filled from the committed mandate before publication.
 
 | Artifact | Ceiling bytes / lines | Actual bytes / lines |
 | --- | ---: | ---: |
-| `spec.md` | 12,000 / 220 | 11,713 / 173 |
-| `plan.md` | 12,000 / 240 | 9,111 / 156 |
-| `modules-model.md` | 8,000 / 160 | 5,064 / 102 |
-| `data-model.md` | 10,000 / 200 | 6,367 / 163 |
-| `functions-model.md` | 8,000 / 160 | 5,384 / 105 |
-| `tasks.md` | 8,000 / 180 | 4,773 / 88 |
+| `spec.md` | 12,000 / 220 | 11,887 / 177 |
+| `plan.md` | 12,000 / 240 | 10,276 / 170 |
+| `modules-model.md` | 8,000 / 160 | 5,235 / 104 |
+| `data-model.md` | 10,000 / 200 | 6,544 / 165 |
+| `functions-model.md` | 8,000 / 160 | 5,509 / 106 |
+| `tasks.md` | 8,000 / 180 | 5,591 / 101 |

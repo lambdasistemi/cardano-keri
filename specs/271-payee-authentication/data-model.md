@@ -96,18 +96,19 @@ marker and pays exactly `D_commit` to a datum-free, lovelace-only enterprise
 address for the recipient, who must be in `extra_signatories`. It references no
 checkpoint and grants no entitlement.
 
-## `DAT-271-ARMED` — `ArmedV2`
+## `DAT-271-ARMED` — lean `DAT-254-ARMED` integration
 
-Versioned checkpoint-family datum containing:
+The #254 lean checkpoint-family datum containing:
 
-- versioned inner checkpoint state from #254;
+- lean checkpoint datum from #254;
 - hunter payee key hash;
-- hunter commitment marker identity;
 - existing hard response deadline.
 
 Freeze may create it only from a matching valid reveal. Claim and ARMED Convict
-use both stored hunter and entitlement identity; neither accepts a caller-
-selected hunter. `ArmedV1` bytes remain historical and unchanged.
+derive the beneficiary from the stored hunter; neither accepts a caller-
+selected hunter. It has no generic version/origin envelope. This interface is
+pinned to lean-types manifest sha256
+`2ff85bc01a91180d1da0d6b2864f0f620fbcf5cece1cd8ed670d87f1a4d10240`.
 
 ## `DAT-271-ENFORCEMENT-REDEEMERS`
 
@@ -128,7 +129,8 @@ constructor indices and serialized data are not edited.
 
 - commitment policy/reference identity;
 - `commit_min_age`: one network slot in ledger validity units;
-- `commitment_lifetime`: 10,000 network slots;
+- `commitment_lifetime`: positive finite release value, at least
+  `commit_min_age`, with no standalone default;
 - `commit_deposit`: `max(5,000,000 lovelace, ledger minimum for commitment
   output)` at release preparation.
 
@@ -138,9 +140,9 @@ Changing them creates a new family identity.
 ## State transitions
 
 - `Seed + Open -> LiveCommitment`
-- `LiveCommitment + matching ACTIVE Freeze -> ArmedV2 + marker burn + deposit refund`
+- `LiveCommitment + matching ACTIVE Freeze -> lean ARMED + marker burn + deposit refund`
 - `LiveCommitment + matching ACTIVE|ARMED|FROZEN Convict -> terminal checkpoint burn + marker burn + exact payouts/refund`
-- `ArmedV2 -> ClaimFreeze -> FROZEN`, retaining no caller-selected beneficiary.
+- `lean ARMED -> ClaimFreeze -> FROZEN`, retaining no caller-selected beneficiary.
 - `Expired LiveCommitment -> Sweep -> marker absent + sweep payout`
 - Losing/stale commitments cannot touch a changed/spent checkpoint and become
   sweepable only at their own expiry.
@@ -155,7 +157,7 @@ Changing them creates a new family identity.
   bounded by expiry.
 - **DATA-INV-271-04:** marker and `D_commit` are conserved exactly across every
   terminal commitment path.
-- **DATA-INV-271-05:** every later hunter payment derives from `ArmedV2` and its
+- **DATA-INV-271-05:** every later hunter payment derives from lean `DAT-254-ARMED` and its
   creation-time consent, without a new beneficiary or veto.
 - **DATA-INV-271-06:** first valid checkpoint spend decides a race; commitment
   timestamps or caller order claims never decide ledger settlement.

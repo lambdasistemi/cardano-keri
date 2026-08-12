@@ -144,7 +144,7 @@ a generic migration envelope.
 | --- | --- |
 | `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
 | #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
-| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the audited standalone entitlement component from #271 (`1e3e767`, PR #278) and owns its family-coupled integration without restating or revising #271's internal authorization schema. Its audits charge #271's separate ledger, and the #271 owner reviews its submission through the epic owner. #163/#164 stay blocked until the entitlement ships. |
+| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the revised standalone entitlement component from #271 (`03da8a72e3a58d63ca4268bdfd6157e41a7ebf33`, manifest `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895`, PR #278), superseding `1e3e767`, and owns its family-coupled integration without restating or revising #271's internal authorization schema. Its sole remaining build audits the revised lifecycle and integration together on #271's separate ledger, and the #271 owner reviews its submission through the epic owner. #163/#164 stay blocked until the entitlement ships. |
 | #253 board hardening | Rides the family. #253 owns the accepted authentication schema of the not-yet-deployed target board release; #254 supplies only the atomic migration vehicle and may not enumerate or weaken that schema. The first deployment contains both migration entry and #253 semantics; no intermediate unhardened target is deployed. NOTE-006 changes DEP-253-254: script hash identifies the release and the transaction is the edge; route the revised contract through the epic owner before S254-2. |
 | #171 consumer halves | Desk-negotiated implementation of multi-release follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
@@ -168,12 +168,17 @@ No slice starts while the machine build gate is closed.
 
 ### S254-E — enforcement entitlement integration
 
-- Adopt, rather than recreate, the audited #271 standalone commitment
-  component at `1e3e767` / PR #278.
+- Adopt, rather than recreate, the seven revised #271 standalone component
+  sources byte-identically from `03da8a72e3a58d63ca4268bdfd6157e41a7ebf33`
+  under manifest `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895`.
+- Supply the component's finite lifetime as an explicit release parameter and
+  retain its demonstrated 5,000,000-lovelace concurrent-capital floor; no
+  standalone 10,000-slot default is recreated downstream.
 - Integrate reveal consumption through ArmedV2 and the Freeze/Convict payout
   branches under the complete #271 mandate and invariant set.
-- Charge every building audit to #271's ledger; require the #271 design-owner
-  review through the epic owner before ticket-owner acceptance.
+- Charge the one combined revised-lifecycle plus family-integration audit as
+  build 3/3 on #271's ledger; require the #271 design-owner review through the
+  epic owner before ticket-owner acceptance.
 - Do not begin until S254-1 is accepted and pushed.
 
 ### S254-2 — endpoint-board parity and #253 handoff
@@ -218,16 +223,18 @@ Forbidden without a revised contract:
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 
-Budget: **6 building audits** for #254's rows after the charged A-002 extension,
-currently `builds_spent=3` and `builds_budget=6`; the first three remain on the
-record. Owner development builds are separately controlled. S254-E instead
-charges the distinct #271 ledger; neither slice may borrow from the other.
+Budget: **8 building audits** for #254's rows after the charged A-005 extension,
+currently `builds_spent=6` and `builds_budget=8`; all six remain on the record.
+Owner development builds are separately controlled. S254-E instead charges
+the distinct #271 ledger at 2/3 with build 3/3 reserved for its combined
+revised-lifecycle plus family-integration audit; neither ledger may borrow from
+the other.
 
-1. Builds 1–3: spent on S254-1A and the superseded S254-1B design/audits; all
-   evidence remains retained.
-2. Build 4/6: the sole independent audit of the complete lean S254-1 repair.
-3. Build 5/6: the first independent audit of S254-2.
-4. Build 6/6: the first independent audit of S254-3.
+1. Builds 1–5: spent on S254-1A, the superseded S254-1B design/audits, and its
+   first parity repairs; all evidence remains retained.
+2. Build 6/8: spent on the accepted structural full-address S254-1 repair.
+3. Build 7/8: reserved for the first independent audit of S254-2.
+4. Build 8/8: reserved for the first independent audit of S254-3.
 
 Any blocking finding that requires another repair submission is a fresh
 overrun and requires an itemized epic ruling.

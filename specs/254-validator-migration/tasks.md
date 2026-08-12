@@ -16,9 +16,9 @@ The machine build gate is a hard prerequisite for implementation or audit.
 - [ ] T254-004 Freeze the preproduction v0 checkpoint/board policies,
   references, network parameters, earliest scan point, and three expected board
   witness identities as legacy bridge inputs.
-- [x] T254-005 Initialize the runtime campaign ledger and apply A-002's charged
-  extension: all eight BLOCKING rows retain evidence, `builds_spent=3`,
-  `builds_budget=6`, with builds 4/5/6 allocated by `plan.md`.
+- [x] T254-005 Initialize the runtime campaign ledger and carry its charged
+  extensions through A-005: all eight BLOCKING rows retain evidence,
+  `builds_spent=6`, `builds_budget=8`, with builds 7/8 allocated by `plan.md`.
 
 ## Phase 2 — S254-1 checkpoint family
 
@@ -44,10 +44,12 @@ The machine build gate is a hard prerequisite for implementation or audit.
 
 ## Phase 3 — S254-E enforcement entitlement integration
 
-- [ ] T254-107 [US1] Adopt the audited #271 standalone commitment component
-  and accepted authorization unchanged in the family integration; demonstrate
-  substituted-entitlement RED. Charge #271's ledger and obtain its owner
-  review through the epic owner; #254 does not restate internal fields.
+- [ ] T254-107 [US1] Adopt the revised #271 standalone commitment component at
+  `03da8a72e3a58d63ca4268bdfd6157e41a7ebf33` byte-identically under manifest
+  `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895` and
+  integrate it without restating internal fields; demonstrate substituted-
+  entitlement RED. Charge build 3/3 to #271's ledger for one combined audit
+  and obtain its owner review through the epic owner.
 
 ## Phase 4 — S254-2 board family
 

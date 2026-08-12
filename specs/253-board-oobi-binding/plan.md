@@ -123,7 +123,7 @@ only current state, and the compiled-UPLC target includes the new properties.
 
 ## Declared invariant campaign
 
-Runtime ledger path: `$TICKET_RUNTIME_ROOT/campaign-ledger.md`; verification
+Runtime ledger path: `/tmp/ms-keri-1/e274/cardano-keri-253/evidence/campaign-ledger.md`; verification
 configuration must resolve the variable to an absolute retained path before a
 campaign starts. Initial accounting is `builds_spent=0` and `builds_budget=3`
 build-consuming verification runs. Read-only inspection, typecheck-only work,

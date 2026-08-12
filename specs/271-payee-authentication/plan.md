@@ -30,21 +30,23 @@ they never manufacture an entitlement only at reveal time.
 | Payee consent | Payee signs commitment creation and reveal/refund when directly participating. Stored entitlement is durable consent for later Claim and ARMED hunter payment; no fresh signature may create a hunter veto. |
 | Evidence meaning | Unchanged. The commitment binds the complete evidence digest but does not alter KERI verification or make payee data identity state. |
 
-## Ordered slices inside #254
+## Ordered delivery
 
 ### S271-1 — commitment protocol and parity
 
-Add versioned commitment/preimage/reveal types, canonical Haskell/Aiken parity,
-unique marker minting, opening, valid reveal, and expired sweep. Freeze a
-parameter set containing commitment policy, one-slot age, 10,000-slot lifetime,
-and deposit floor. Demonstrate RED for counterfeit output, missing signer,
-same-slot reveal, post-expiry reveal, premature sweep, retained/duplicated
-marker, changed refund, and changed preimage scope.
+Build this family-independent component on #271 in new files only, in parallel
+with #254 S254-1: versioned commitment/preimage/reveal types, canonical vectors,
+unique marker minting, opening, valid reveal, expired sweep, and standalone
+properties. Freeze the one-slot age, 10,000-slot lifetime, and deposit floor.
+Demonstrate RED for counterfeit output, missing signer, same-slot reveal,
+post-expiry reveal, premature sweep, retained/duplicated marker, changed refund,
+and changed preimage scope. Checkpoint, board, and deployment wiring remain
+untouched.
 
 Bisect condition: commitment lifecycle and generated vectors are complete,
 but no checkpoint action claims entitlement protection yet.
 
-### S271-2 — enforcement integration
+### S254-E — enforcement integration
 
 Require mature commitments in Freeze and all Convict roles; record commitment
 identity in the new ARMED datum; preserve fixed-beneficiary Claim and ARMED
@@ -56,7 +58,7 @@ Bisect condition: every exposure row rejects a substituted/no-commitment payee,
 all exact payout and lifecycle behavior remains valid, and source/mirror verdicts
 agree.
 
-### S271-3 — release registry and migration composition
+### S254-E release composition
 
 Register the commitment script/reference/parameters and entitlement-aware
 checkpoint family in #254's append-only version registry. Extend migration and
@@ -114,7 +116,7 @@ Ledger path:
 
 | Dependency | Contract |
 | --- | --- |
-| #254 | **Selected vehicle.** Add S271-1/S271-2 before checkpoint-family acceptance and carry S271-3 in its registry/cutover slice. #254's versioned datum provides `ArmedV2`; its migration moves v0 state to the protected family. |
+| #254 | **Integration vehicle.** S254-1 may proceed in parallel with standalone S271-1. S254-E then adopts that component before checkpoint-family acceptance, supplies `ArmedV2` and reveal integration, and carries registry/migration/cutover work. |
 | #253 | No implementation dependency; it changes the endpoint board, not enforcement state. Share only #254 registry/cutover mechanics. |
 | #163/#164 | Remain blocked until the entitlement-aware family is deployed; a specs-only or source-green state does not restore hunter incentives. |
 | M8 | Register the new commitment and checkpoint compiled targets at acceptance and cutover; entitlement/age mutants are part of the proof surface. |
@@ -146,9 +148,9 @@ byte/line counts are filled from the committed mandate before publication.
 
 | Artifact | Ceiling bytes / lines | Actual bytes / lines |
 | --- | ---: | ---: |
-| `spec.md` | 12,000 / 220 | 11,961 / 176 |
-| `plan.md` | 12,000 / 240 | 9,010 / 154 |
+| `spec.md` | 12,000 / 220 | 11,713 / 173 |
+| `plan.md` | 12,000 / 240 | 9,111 / 156 |
 | `modules-model.md` | 8,000 / 160 | 5,064 / 102 |
 | `data-model.md` | 10,000 / 200 | 6,367 / 163 |
 | `functions-model.md` | 8,000 / 160 | 5,384 / 105 |
-| `tasks.md` | 8,000 / 180 | 4,740 / 88 |
+| `tasks.md` | 8,000 / 180 | 4,773 / 88 |

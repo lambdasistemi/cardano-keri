@@ -165,12 +165,9 @@ The build-denominated stopping contract is fixed in `plan.md`.
 
 ## Shipping recommendation
 
-Batch implementation into #254's checkpoint-family migration, as a distinct
-entitlement slice before its checkpoint-family acceptance. #254 already changes
-the checkpoint dispatch, datum version, applied parameters, registry, reference
-scripts, M8 target, and preproduction cutover that this protocol necessarily
-changes. #253 touches only the board. A standalone implementation would still
-depend on #254 to move immutable v0 checkpoints and would create a second
-validator-version/cutover event. The extra commitment transaction adds latency
-and capital lock, but one slot and a refundable 5 ADA floor are bounded costs;
-duplicating the migration vehicle would cost more and delay #163/#164 further.
+Ship the family-independent commitment component on this branch, in parallel
+with #254's first migration slice. #254 then adopts it as S254-E after S254-1
+and before checkpoint-family acceptance, owning `ArmedV2`, enforcement reveal
+integration, registry, M8, migration, and cutover. This exposes no standalone
+protection claim: immutable v0 paths remain vulnerable and #163/#164 stay
+blocked until S254-E is deployed. #253 still touches only the board.

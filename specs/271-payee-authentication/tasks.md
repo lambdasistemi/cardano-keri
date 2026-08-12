@@ -2,15 +2,15 @@
 
 Artifact ceiling: 8,000 bytes and 180 lines.
 
-All tasks are unchecked. Implementation is carried as a distinct slice in
-#254's entitlement-aware checkpoint family; #163/#164 remain blocked through
-the family cutover.
+All tasks are unchecked. S271-1 ships the family-independent commitment
+component here; #254 S254-E adopts it and owns checkpoint-family integration.
+#163/#164 remain blocked through the family cutover.
 
 ## Contract adoption
 
-- [ ] **T271-001** Obtain the #254 batching ruling and incorporate S271-1
-  through S271-3 plus every `INV-271-*` row without reducing them to signer
-  membership.
+- [ ] **T271-001** Apply the split ruling: standalone S271-1 on #271, S254-E
+  adoption/integration on #254, and every `INV-271-*` row without reducing
+  entitlement to signer membership.
 - [ ] **T271-002** Version the #254 checkpoint/ARMED schema and registry for the
   commitment policy, reference, one-slot age, 10,000-slot lifetime, deposit,
   and historical v0 exposure boundary.
@@ -80,9 +80,9 @@ the family cutover.
 
 ## Ordering
 
-`T271-001..003 -> S271-1 -> S271-2 -> S271-3 -> T271-401..405`.
+`T271-001..003 -> S271-1 -> S254-E -> T271-401..405`.
 
-S271-1 and S271-2 are serial because an enforcement branch cannot claim
-entitlement before marker lifecycle/parity is complete. S271-3 composes with
-#254's registry and cutover work. #253 can proceed on its board slice, but the
-shared release is not ready until both families and their proofs are accepted.
+S271-1 may run in parallel with #254 S254-1. S254-E waits for both because an
+enforcement branch cannot claim entitlement before marker lifecycle/parity and
+the successor checkpoint family exist. #253 can proceed on its board slice;
+the shared release waits for both families and their proofs.

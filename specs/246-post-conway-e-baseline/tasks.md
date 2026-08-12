@@ -93,27 +93,51 @@ ticket is authorized.
   The direction of harm stays closed only because the perl population feeds no
   denominator, and nothing enforces that.
 
+- [ ] T246-F4 — Give the cold-store probe a named killing mutant: make a changed
+  cold-store outcome go RED, rather than only observing today's rejection of the
+  retired fixed-output baseline. Owner: a later #246 slice. Follow-up for
+  `INV-246-B2` (`RESIDUAL`). **Honest limit of what ships without it:** the green
+  establishes the observed cold-store rejection of the retired artifact, not that
+  a future changed cold-store result would be detected by a proven falsifier.
+- [ ] T246-F5 — Re-derive `elaborate-ilean-root.sh`'s compile order from each
+  module's declared imports instead of `sort`, with a mutant that reorders two
+  genuinely dependent modules and makes the run RED. Owner: a later #246 slice.
+  Follow-up for `INV-246-TRACKED-IMPORT-ORDER` (`RESIDUAL`). **Honest limit of
+  what ships without it:** elaboration succeeds today only because alphabetical
+  order happens to be a valid topological order for the current tracked module
+  set; nothing enforces that, and a future module whose dependency sorts after it
+  would break it silently.
+- [ ] T246-F6 — Replace `gate-B-v4.sh`'s `[ "$cov_cont" -ge 2 ]` with a bound
+  that a narrowed container enumerator cannot clear, and add the missing-direction
+  check (`expected_containers − covered_containers`) to the container registry.
+  Owner: the next gate version. Raised by `auditor-B2-s2` advisories 1 and 3.
+  **Honest limit of what ships without it:** a regression narrowing the enumerator
+  back to `.identity`/`.records` would shrink both populations together, leave
+  `uncovered_containers=0` and still clear a bound of 2 against a true value of
+  55 — the class is protected there by the two seeded `REFUTED` legs and by this
+  audit's inspection and census, not by the count.
+
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 
 Dispatched after Slice A is accepted; its invariants are versioned before
 dispatch.
 
-- [ ] T246-B1 — Baseline blueprint reproducible from source at the anchor
+- [x] T246-B1 — Baseline blueprint reproducible from source at the anchor
   commit with the Aiken version the repository validates with (F-B1).
-- [ ] T246-B2 — Mechanical evidence of what a cold store does with the previous
+- [x] T246-B2 — Mechanical evidence of what a cold store does with the previous
   baseline artifact, as a check that runs inside the gate (F-02).
-- [ ] T246-B3 — Manifest over all 23 titles and 8 distinct programs with every
+- [x] T246-B3 — Manifest over all 23 titles and 8 distinct programs with every
   field computed (F-B2, D-05).
-- [ ] T246-B4 — Variant E bound as the evaluation identity, with any
+- [x] T246-B4 — Variant E bound as the evaluation identity, with any
   version-derived selection named separately (F-B3, D-04).
-- [ ] T246-B5 — Mutation of any single manifest input makes verification exit
+- [x] T246-B5 — Mutation of any single manifest input makes verification exit
   non-zero and name which input moved.
-- [ ] T246-B6 — Historical C / pre-#219 material relabelled in place, neither
+- [x] T246-B6 — Historical C / pre-#219 material relabelled in place, neither
   deleted nor reinterpreted.
-- [ ] T246-B7 — Identity-consistency check that goes RED when any element of
+- [x] T246-B7 — Identity-consistency check that goes RED when any element of
   the triple is unnamed or when the elements describe different configurations,
   applied to every record including verification receipts (R-09, D-08).
-- [ ] T246-B8 — That check demonstrated RED against the retained pre-slice
+- [x] T246-B8 — That check demonstrated RED against the retained pre-slice
   receipt before any clean baseline is accepted; the retained receipt is not
   repaired, rewritten, or deleted (R-10).
 

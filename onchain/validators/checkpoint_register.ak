@@ -32,12 +32,32 @@ use cardano_keri/checkpoint/observer.{
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active, Armed}
+use cardano_keri/migration/checkpoint.{
+  LegacyCheckpointIdentity, LegacyCloseEvidence, Predecessor,
+} as migration
+use cardano_keri/migration/types.{MigrationAuthorization, ValidatorVersion}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
+///
+/// The #254 migration arms are appended, never inserted: constructor indices
+/// are wire surface, so an existing redeemer must keep the index it was
+/// deployed with.
 pub type MintRedeemer {
   Register
   CloseBurn { checkpoint_ref: OutputReference }
   ConvictBurn { checkpoint_ref: OutputReference }
+  /// Enter this generation from its pinned predecessor (#254 T254-104).
+  MigrateInMint {
+    source_ref: OutputReference,
+    authorization: MigrationAuthorization,
+  }
+  /// Enter this generation from the immutable deployed preprod v0 program,
+  /// whose only authorized exit is its own `Close`/`CloseBurn` (#254 T254-105).
+  LegacyMigrateInMint {
+    source_ref: OutputReference,
+    close: LegacyCloseEvidence,
+    authorization: MigrationAuthorization,
+  }
 }
 
 pub type SpendRedeemer {
@@ -50,12 +70,15 @@ pub type SpendRedeemer {
     convictor_output_index: Int,
     hunter_output_index: Int,
   }
+  /// Leave this generation under its own controller quorum (#254 T254-104).
+  MigrateOut { authorization: MigrationAuthorization }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
 
 validator checkpoint_register(
-  _version: Int,
+  version: Int,
+  predecessor_policy: PolicyId,
   lifecycle_hash: PolicyId,
   advance_hash: PolicyId,
   enforcement_hash: PolicyId,
@@ -77,6 +100,27 @@ validator checkpoint_register(
         validate_close_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
       ConvictBurn { checkpoint_ref } ->
         validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
+      MigrateInMint { source_ref, authorization } ->
+        migration.validate_checkpoint_migrate_in(
+          version,
+          Predecessor {
+            predecessor_version: ValidatorVersion { value: version - 1 },
+            predecessor_policy,
+          },
+          source_ref,
+          authorization,
+          policy_id,
+          tx,
+        )
+      LegacyMigrateInMint { source_ref, close, authorization } ->
+        migration.validate_legacy_checkpoint_migrate_in(
+          preprod_v0_identity(),
+          source_ref,
+          close,
+          authorization,
+          policy_id,
+          tx,
+        )
     }
   }
 
@@ -134,11 +178,32 @@ validator checkpoint_register(
           tx,
         )
       }
+      MigrateOut { authorization } ->
+        migration.validate_checkpoint_migrate_out(
+          version,
+          authorization,
+          own_ref,
+          tx,
+        )
     }
   }
 
   else(_) {
     fail
+  }
+}
+
+/// The immutable deployed preprod v0 checkpoint identity (T254-004). Pinned as
+/// data: recompiling current source would produce different bytes and prove
+/// nothing about what is actually deployed on preprod.
+fn preprod_v0_identity() -> LegacyCheckpointIdentity {
+  LegacyCheckpointIdentity {
+    legacy_network_name: "preprod",
+    legacy_network_magic: 1,
+    legacy_network_id: 0,
+    legacy_version: ValidatorVersion { value: 0 },
+    legacy_policy: #"0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
+    legacy_source_commit: "50a582064ddfde15ebfa3649c6b6fea8d39fc697",
   }
 }
 

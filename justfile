@@ -446,6 +446,28 @@ gen-migration-types-vectors:
 check-migration-types-vectors: gen-migration-types-vectors
     git diff --exit-code onchain/lib/cardano_keri/migration/types_vectors.ak
 
+# #254 S254-1B: regenerate the Aiken checkpoint-migration fixtures from
+# GenCheckpointMigrationVectors.hs. OFFLINE. The module is never hand edited.
+# The generator signs with real Ed25519 keys and refuses to emit a set whose
+# golden quorum is not accepted or whose named authority negatives are not
+# actually refused by the oracle, so a control that cannot fail never ships.
+gen-checkpoint-migration-vectors:
+    mkdir -p onchain/lib/cardano_keri/migration
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-migration-vectors -- ../onchain/lib/cardano_keri/migration/checkpoint_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/migration/checkpoint_vectors.ak
+
+# Drift check: Haskell is the sole source of the checkpoint-migration message
+# bytes and signature material, so a stale or hand-touched vector module must
+# FAIL the gate.
+check-checkpoint-migration-vectors: gen-checkpoint-migration-vectors
+    git diff --exit-code onchain/lib/cardano_keri/migration/checkpoint_vectors.ak
+
+# #254 T254-108: prove the EXACT changed compiled checkpoint family, derived
+# from current source (never the frozen M8 baseline), rejects a named
+# authority mutant and a named replay mutant under the pinned CEK machine.
+checkpoint-migration-blaster:
+    cd offchain && nix run --quiet --no-write-lock-file .#checkpoint-migration-blaster
+
 # Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
 # generated-vector drift.
 check-lean-traceability:

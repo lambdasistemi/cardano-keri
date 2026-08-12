@@ -30,6 +30,7 @@ module Cardano.KERI.Deployment.Script (
     checkpointAddress,
     scriptHashText,
     v1CheckpointVersion,
+    checkpointFamilyV1Version,
     v1NetworkDiscriminator,
     v1RegistrationBond,
     v1FreezeBond,
@@ -221,8 +222,19 @@ cageScriptAddr :: SBS.ShortByteString -> Network -> Addr
 cageScriptAddr bytes network =
     Addr network (ScriptHashObj (computeScriptHash bytes)) StakeRefNull
 
+{- | The deployed M1 checkpoint family generation.  The @v1@ in the name refers
+to the M1 manifest schema, not the family generation, and this value is
+released history: it stays @0@ and is never relabelled as the #254 family.
+-}
 v1CheckpointVersion :: Integer
 v1CheckpointVersion = 0
+
+{- | The #254 permanent checkpoint family generation (DAT-254-VERSION), which
+succeeds 'v1CheckpointVersion' on the @N -> N+1@ edge.  Published beside the
+historical generation, never in place of it.
+-}
+checkpointFamilyV1Version :: Integer
+checkpointFamilyV1Version = 1
 
 v1NetworkDiscriminator :: Integer
 v1NetworkDiscriminator = 0

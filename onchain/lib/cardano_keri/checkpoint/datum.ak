@@ -15,6 +15,7 @@
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/threshold.{Invalid, Threshold, ThresholdError}
+use cardano_keri/migration/types.{MigrationOrigin, ValidatorVersion}
 
 // ---------------------------------------------------------
 // Types (constructor order + field order frozen against vectors.ak)
@@ -49,6 +50,38 @@ pub type CheckpointDatumV1 {
 /// `Constr 0 [<inner CheckpointDatumV1>]`.
 pub type CheckpointDatum {
   V1(CheckpointDatumV1)
+}
+
+// ---------------------------------------------------------
+// Versioned checkpoint state (#254, DAT-254-CHECKPOINT)
+// ---------------------------------------------------------
+
+/// The frozen KEL projection wrapped with the deployment metadata the
+/// migration family needs (DAT-254-CHECKPOINT).
+///
+/// `state` is the *same* `CheckpointDatumV1` the v0 family carries, referenced
+/// rather than restated: migration metadata must never become KEL state, and a
+/// field-by-field copy here would be exactly the lossy alternate
+/// representation INV-254-IDENTITY forbids.
+///
+/// - `validator_version`: the generation of the program that owns this output.
+///   A natively registered row carries its applied version and no origin.
+/// - `migration_origin`: the *immediate* predecessor this row was migrated
+///   from — one step back, never a chain. `None` for a natively created row.
+pub type VersionedCheckpoint {
+  validator_version: ValidatorVersion,
+  migration_origin: Option<MigrationOrigin>,
+  state: CheckpointDatumV1,
+}
+
+/// The versioned checkpoint datum sum, carried at the ACTIVE and FROZEN
+/// addresses exactly as `CheckpointDatum` is in the v0 family. `VersionedV1`
+/// is constructor index 0; an unknown constructor fails closed.
+///
+/// This is a *new* wire type beside `CheckpointDatum`, never a relabelling of
+/// it: the deployed v0 rows keep their own encoding and their own program.
+pub type VersionedCheckpointDatum {
+  VersionedV1(VersionedCheckpoint)
 }
 
 // ---------------------------------------------------------

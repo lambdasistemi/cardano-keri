@@ -76,6 +76,7 @@ library
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
+    Cardano.KERI.AID.Migration.Checkpoint
     Cardano.KERI.AID.Migration.Types
 
   other-modules:
@@ -164,6 +165,7 @@ library deployment
   exposed-modules:
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
+    Cardano.KERI.Deployment.CheckpointMigration
     Cardano.KERI.Deployment.Close
     Cardano.KERI.Deployment.CloseTransaction
     Cardano.KERI.Deployment.EndpointBoard
@@ -400,6 +402,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
+    Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
@@ -942,6 +945,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
+    Cardano.KERI.AID.Migration.CheckpointSpec
     Cardano.KERI.AID.Migration.TypesSpec
     Paths_cardano_keri
 
@@ -1056,6 +1060,22 @@ executable gen-migration-types-vectors
     , memory        >=0.18 && <0.19
     , plutus-core
     , plutus-tx
+
+-- #254 S254-1B: the sole source of the Aiken checkpoint-migration fixtures.
+-- Signs with real Ed25519 keys, so its self-check can prove the authority
+-- negatives are actually refused before any vector is written.
+executable gen-checkpoint-migration-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenCheckpointMigrationVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , memory                >=0.18 && <0.19
+    , plutus-core
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

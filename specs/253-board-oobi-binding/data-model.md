@@ -126,6 +126,14 @@ During cutover, registry-backed locators read registered policies; spent
 predecessors are not current and atomic successors are not duplicate current
 records. Unknown policies and incomplete transaction edges fail closed.
 
+### DAT-253-TARGET-LOCATOR — resolved authorized target
+
+A provider-neutral planning input contains the target applied policy id,
+script address, and reference-script out-ref resolved from #254's registry.
+It contains no release label, datum version, predecessor origin, or live query
+handle. S253-2 tests may construct it directly; S253-3 supplies it through
+registry-backed CLI/local-write composition.
+
 ## Redeemer compatibility
 
 - Target `Post`, `Burn`, `Update`, and `Retire` preserve legacy constructor

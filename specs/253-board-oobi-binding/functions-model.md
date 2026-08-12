@@ -62,19 +62,27 @@ Constraints:
 
 ## Transaction planning
 
-- **FUN-253-POST-PLAN:** `mkBoardPostPlan manifest ownerAddress deposit nonceInput authorizedDatum -> Either String BoardPostPlan`
-- **FUN-253-UPDATE-PLAN:** `mkBoardUpdatePlan manifest ownerAddress entry authorizedSuccessor -> Either String BoardUpdatePlan`
+- **FUN-253-POST-PLAN:** `mkAuthorizedBoardPostPlan target ownerAddress deposit nonceInput authorizedDatum -> Either String AuthorizedBoardPostPlan`
+- **FUN-253-UPDATE-PLAN:** `mkAuthorizedBoardUpdatePlan target ownerAddress entry authorizedSuccessor -> Either String AuthorizedBoardUpdatePlan`
+- **FUN-253-POST-RUN:** `runAuthorizedBoardPostTransaction config plan nonceInput fundingInputs -> IO (Either BoardError BoardResult)`
+- **FUN-253-UPDATE-RUN:** `runAuthorizedBoardUpdateTransaction config plan fundingInputs boardInput -> IO (Either BoardError BoardResult)`
 - **FUN-253-MIGRATION-PLAN:** `mkBoardMigrationPlan migrationManifest ownerAddress legacyEntry authorizedSuccessor -> Either String BoardMigrationPlan`
 
 Constraints:
 
 - Post includes and consumes the exact selected nonce named by signed datum;
-  funding selection cannot replace it;
+  the supplied `nonceInput` out-ref must match the plan and funding selection
+  cannot replace or omit it;
 - Update derives nonce from selected current entry and rejects any pre-signed
   successor that differs;
 - migration requires nonce equal to legacy out-ref and preserves every
   **DAT-253-MIGRATION-LINK** field;
 - plans never access witness private material or query during construction.
+- Existing `mkBoardPostPlan`, `mkBoardUpdatePlan`, and `runBoard*Transaction`
+  legacy surfaces keep their signatures and four-field deployed-policy
+  behavior. They are not aliases for the authorized target functions. CLI and
+  local-write routing to the new functions belongs to S253-3 after registry
+  resolution supplies `ResolvedBoardTarget`.
 
 ## Consumer/query compatibility
 

@@ -93,8 +93,11 @@ no deployed policy changed and the authorization field mutant class was killed.
 Delete sequence and version-only wire/API state. Freeze new six-field datum and
 six-field signed-message vectors, then enforce Post/Update/Retire, exact consumed
 nonce, marker/policy binding, owner authority, unique successor, and both
-signatures. Transaction planning selects and consumes the declared Post nonce
-and derives the Update nonce from the spent board out-ref.
+signatures. Add separately named target-policy planners that select and consume
+the declared Post nonce and derive the Update nonce from the spent board
+out-ref. The existing deployed-policy planners and their run functions remain
+byte-compatible: they target the immutable four-field legacy policy and cannot
+emit the authorized target datum.
 
 Bisect condition: the target policy is reproducible and custody-substitution,
 replay/resurrection, endpoint-only, shape, and lifecycle properties pass; no
@@ -105,7 +108,9 @@ live record moves without S253-3.
 Integrate #254's applied-hash transition, registry-backed catalog behavior, and
 the three-record preprod migration. Record transaction-derived predecessor and
 successor references and prove endpoint, owner, deposit, authorization, and
-current-set continuity.
+current-set continuity. Wire the additive target planners into CLI/local-write
+composition only after the target release entry exists; no S253-2 command is
+allowed to point the deployed legacy policy at the six-field datum.
 
 Bisect condition: every legacy record has one settled successor, consumers show
 only current state, and the compiled target includes the new properties.
@@ -153,6 +158,9 @@ BLOCKING row.
   registry metadata only.
 - **Migration strands live records:** activation is gated by #254 and fresh
   authorizations for all three preprod witnesses.
+- **Target datum is sent to the deployed policy:** legacy planner names and
+  behavior remain unchanged; additive target planners accept a resolved target
+  locator and S253-3 alone wires them to the release registry and CLI.
 - **Consumers trust endpoint-only evidence:** authorized catalog verification
   is all-or-nothing and unknown release hashes fail closed.
 

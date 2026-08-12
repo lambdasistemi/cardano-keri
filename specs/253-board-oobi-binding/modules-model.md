@@ -43,12 +43,17 @@ are in `data-model.md`; callable signatures are in `functions-model.md`.
 
 ### MOD-253-BOARD-TRANSACTION — board transaction planning
 
-- Owns Post nonce selection/consumption, Update predecessor binding, authorized
-  datum construction, owner requirements, and migration plan inputs.
+- Owns additive target-policy Post nonce selection/consumption, Update
+  predecessor binding, authorized datum construction, owner requirements, and
+  migration plan inputs. Existing deployed-policy planner names and run
+  functions remain unchanged until the cutover slice.
 - Receives an externally produced witness authorization; it never accesses the
   witness private key.
 - Depends on **MOD-253-BOARD-CODEC** and resolved inputs, with no query during
   transaction construction.
+- The additive target planners consume a resolved target locator; S253-3 owns
+  registry/CLI wiring, so S253-2 never points the deployed legacy policy at the
+  six-field target datum.
 
 ### MOD-253-CONSUMERS — catalog/query/watchability consumers
 

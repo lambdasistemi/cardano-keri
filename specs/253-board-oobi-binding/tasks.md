@@ -36,8 +36,10 @@ S253-2 explicitly amends its superseded sequence/version shape.
   fresh successor authorization.
 - [ ] **T253-S2-05** Preserve Retire's recorded-owner, burn, and exact-refund
   guarantees for the authorized target shape.
-- [ ] **T253-S2-06** Update Post/Update planners to consume and cross-check the
-  signed nonce rather than selecting a different input afterward.
+- [ ] **T253-S2-06** Add separately named authorized-target Post/Update planners
+  and run functions that consume and cross-check the signed nonce. Preserve
+  existing deployed-policy planner/run signatures and four-field behavior;
+  defer CLI/local-write routing to S253-3.
 - [ ] **T253-S2-07** Permanently kill custody-substitution, wrong/missing/reused
   nonce replay/resurrection, endpoint-only, wrong-shape, and lifecycle mutant
   classes for owner, nonce, and witness-auth invariants.
@@ -61,6 +63,9 @@ S253-2 explicitly amends its superseded sequence/version shape.
   settled transaction-derived predecessor/successor facts.
 - [ ] **T253-S3-07** Verify the final current catalog contains three
   authenticated successors and no spent predecessor is current.
+- [ ] **T253-S3-08** Route CLI/local-write Post and Update through the additive
+  authorized-target planners only after resolving the target registry entry;
+  never emit target data to the deployed legacy policy.
 
 ## Release acceptance
 

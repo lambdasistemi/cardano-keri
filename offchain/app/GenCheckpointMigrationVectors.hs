@@ -69,7 +69,6 @@ import Cardano.KERI.AID.Migration.Types (
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
-    StakeCredential (..),
     ValidatorVersion (..),
     canonicalCborData,
     migrationDomain,
@@ -212,11 +211,15 @@ sourceOrigin =
         }
 
 targetAddress, refundAddress :: FullAddress
+-- The successor must land at a real role address of the target policy:
+-- `role.address(policy, Active)` is `from_script(policy)` with no delegation
+-- part.  A target address that is not a role address of its own policy can
+-- never be reached at the transaction boundary, which is exactly the gap the
+-- pure message controls could not see.
 targetAddress =
     FullAddress
-        { faPaymentCredential = ScriptCredential targetScript
-        , faStakeCredential =
-            Just (InlineStakeCredential (ScriptCredential targetStakeScript))
+        { faPaymentCredential = ScriptCredential targetPolicy
+        , faStakeCredential = Nothing
         }
 refundAddress =
     FullAddress
@@ -319,7 +322,7 @@ messageMutants =
             source
             migrationTarget
                 { mtTargetAddress =
-                    targetAddress{faStakeCredential = Nothing}
+                    FullAddress (ScriptCredential targetScript) Nothing
                 }
     , m "refund" "the legacy refund destination" $
         encodeMigrationMessage

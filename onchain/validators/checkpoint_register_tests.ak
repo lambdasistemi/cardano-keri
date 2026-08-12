@@ -1,5 +1,6 @@
 //// #136 — real-script tests for the register-only checkpoint vertical.
 
+use aiken/cbor
 use aiken/interval
 use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
@@ -24,7 +25,7 @@ use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_freeze, observe_register, observe_response_advance,
+  observe_freeze, observe_migration, observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
@@ -32,6 +33,15 @@ use cardano_keri/checkpoint/registration.{
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/role.{Active, Armed, Frozen}
 use cardano_keri/checkpoint/threshold.{Unweighted}
+use cardano_keri/migration/checkpoint.{
+  MigrateInProof, MigrateOutProof, MigrationProof, VersionedCheckpoint,
+  VersionedCheckpointDatum, VersionedV1,
+}
+use cardano_keri/migration/checkpoint_vectors as mig_vec
+use cardano_keri/migration/types.{
+  CheckpointActive, MigrationAuthorization, MigrationOrigin, MigrationTarget,
+  ValidatorVersion,
+}
 use checkpoint_observer
 use checkpoint_register.{
   Advance, ClaimFreeze, Close, CloseBurn, Convict, ConvictBurn, Freeze, Register,
@@ -1437,5 +1447,441 @@ test freeze_small_rejects_convict_action_tag() fail {
     Freeze { hunter_pkh: hunter },
     freeze_ref(),
     tx,
+  )
+}
+
+// ---------------------------------------------------------
+// #254 repair: transaction-boundary and lifecycle properties
+// ---------------------------------------------------------
+//
+// Submission 1 proved the migration rules as pure functions and proved the
+// compiled observer refuses two mutants. Neither reaches the composition an
+// actual migration transaction has to satisfy, and that gap is what the
+// independent audit found. These controls run the real applied programs over
+// real transactions.
+
+const mig_source_policy: PolicyId = mig_vec.fixture_source_policy
+
+const mig_target_policy: PolicyId = mig_vec.fixture_target_policy
+
+/// The exact source projection the generator signed over.
+fn mig_source_datum() -> CheckpointDatumV1 {
+  CheckpointDatumV1 {
+    cesr_aid: mig_vec.fixture_cesr_aid,
+    cur_keys: [
+      mig_vec.fixture_ctrl_key_0,
+      mig_vec.fixture_ctrl_key_1,
+      mig_vec.fixture_ctrl_key_2,
+    ],
+    cur_threshold: Unweighted(2),
+    next_keys: [mig_vec.fixture_next_key_0, mig_vec.fixture_next_key_1],
+    next_threshold: Unweighted(1),
+    witnesses: [mig_vec.fixture_witness_key],
+    toad: 1,
+    seq: 7,
+    native_sn: 4,
+  }
+}
+
+fn mig_source_ref() -> OutputReference {
+  OutputReference {
+    transaction_id: mig_vec.fixture_source_txid,
+    output_index: 1,
+  }
+}
+
+fn mig_origin() -> MigrationOrigin {
+  MigrationOrigin {
+    source_version: ValidatorVersion { value: 1 },
+    source_policy: mig_source_policy,
+    source_ref: mig_source_ref(),
+  }
+}
+
+fn mig_target() -> MigrationTarget {
+  MigrationTarget {
+    target_version: ValidatorVersion { value: 2 },
+    target_policy: mig_target_policy,
+    target_role: CheckpointActive,
+    target_address: from_script(mig_target_policy),
+    legacy_refund_address: None,
+  }
+}
+
+/// The controller-signed package. `signed_state` is what the quorum actually
+/// put its signatures over, which is the whole subject of the replay control.
+fn mig_authorization(signed_state: Data) -> MigrationAuthorization {
+  MigrationAuthorization {
+    domain: mig_vec.golden_migration_domain,
+    network_id: 1,
+    source_origin: mig_origin(),
+    source_role: CheckpointActive,
+    source_state: signed_state,
+    target: mig_target(),
+    controller_signatures: [
+      (0, mig_vec.fixture_sig_0),
+      (1, mig_vec.fixture_sig_1),
+    ],
+  }
+}
+
+fn mig_signed_state() -> Data {
+  expect Some(state) = cbor.deserialise(mig_vec.golden_source_state)
+  state
+}
+
+const mig_protected: Int = min_ada + d_reg + freeze_bond
+
+fn mig_source_input(carried: CheckpointDatumV1) -> Input {
+  input_at(
+    mig_source_ref(),
+    Output {
+      address: from_script(mig_source_policy),
+      value: from_lovelace(mig_protected)
+        |> merge(
+            from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
+          ),
+      datum: InlineDatum(
+        VersionedV1(
+          VersionedCheckpoint {
+            validator_version: ValidatorVersion { value: 1 },
+            migration_origin: None,
+            state: carried,
+          },
+        ),
+      ),
+      reference_script: None,
+    },
+  )
+}
+
+fn mig_successor_output(carried: CheckpointDatumV1) -> Output {
+  Output {
+    address: from_script(mig_target_policy),
+    value: from_lovelace(mig_protected)
+      |> merge(from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1)),
+    datum: InlineDatum(
+      VersionedV1(
+        VersionedCheckpoint {
+          validator_version: ValidatorVersion { value: 2 },
+          migration_origin: Some(mig_origin()),
+          state: carried,
+        },
+      ),
+    ),
+    reference_script: None,
+  }
+}
+
+fn mig_replacement_mint() -> Value {
+  from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, -1)
+    |> merge(from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1))
+}
+
+/// The claim names the policy of the program that is asking. Migrate-out is
+/// asked by the source generation, migrate-in by the target generation, so the
+/// two directions carry different policies and different applied observers.
+fn mig_envelope(
+  claim_policy: PolicyId,
+  proof: MigrationProof,
+) -> ObserverEnvelope {
+  ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_migration,
+      checkpoint_policy: claim_policy,
+      own_ref: Some(mig_source_ref()),
+    },
+    payload: proof,
+  }
+}
+
+/// Run the promoted observer of one generation over a real transaction.
+fn run_migration_observer(
+  version: Int,
+  claim_policy: PolicyId,
+  proof: MigrationProof,
+  tx: Transaction,
+) -> Bool {
+  checkpoint_observer.observer_migration.withdraw(
+    version,
+    mig_source_policy,
+    mig_envelope(claim_policy, proof),
+    0,
+    tx,
+  )
+}
+
+/// The target generation observes an entry: version N+1, target policy.
+fn run_migrate_in(proof: MigrationProof, tx: Transaction) -> Bool {
+  run_migration_observer(2, mig_target_policy, proof, tx)
+}
+
+/// The source generation observes its own exit: version N, source policy.
+fn run_migrate_out(proof: MigrationProof, tx: Transaction) -> Bool {
+  run_migration_observer(1, mig_source_policy, proof, tx)
+}
+
+// INV-254-REPLAY — the signed projection must be the consumed projection.
+//
+// The package below is genuinely controller-signed and its quorum verifies:
+// the signatures really do cover `golden_source_state`. What differs is the
+// state the transaction actually consumes and lands. Nothing about the
+// message bytes is wrong, so a message-inequality control cannot see this;
+// only the transaction boundary can.
+test migration_boundary_rejects_signed_state_mismatch() fail {
+  let consumed = CheckpointDatumV1 { ..mig_source_datum(), seq: 23 }
+  let tx = spend_context(
+    [mig_source_input(consumed)],
+    [],
+    [mig_successor_output(consumed)],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(
+    MigrateInProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+// The same transaction with the signed and consumed projections agreeing is
+// accepted, so the control above rejects for the mismatch and not because the
+// fixture is unsatisfiable.
+test migration_boundary_accepts_matching_signed_state() {
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_in(
+    MigrateInProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+// INV-254-VALUE — migrate-out is inseparable from its successor.
+//
+// A controller-authorized exit that burns the source token and creates no
+// successor destroys the identity. The burn is exactly the authorized one, so
+// only successor composition can refuse this.
+test migration_boundary_rejects_migrate_out_without_successor() fail {
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [],
+    from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, -1),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_out(
+    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+// A redirected successor is the same class: the value leaves the family.
+test migration_boundary_rejects_migrate_out_redirected_successor() fail {
+  let elsewhere = Output {
+    ..mig_successor_output(mig_source_datum()),
+    address: from_verification_key(owner_vkh),
+  }
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [elsewhere],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_out(
+    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+// The composed migrate-out is accepted, so the two controls above are not
+// passing because migrate-out rejects everything.
+test migration_boundary_accepts_composed_migrate_out() {
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_out(
+    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
+// INV-254-IDENTITY + INV-254-LINKAGE — the applied v1 family must be livable.
+//
+// A native row created by the v1 program must carry version 1 and no origin,
+// and a migrated row must keep its exact immediate origin through ordinary
+// lifecycle transitions. Without both, a successor is stranded the moment it
+// lands: it can be migrated into and never moved again.
+fn versioned_state(
+  version: Int,
+  origin: Option<MigrationOrigin>,
+  d: CheckpointDatumV1,
+) -> VersionedCheckpointDatum {
+  VersionedV1(
+    VersionedCheckpoint {
+      validator_version: ValidatorVersion { value: version },
+      migration_origin: origin,
+      state: d,
+    },
+  )
+}
+
+fn versioned_state_output(
+  version: Int,
+  origin: Option<MigrationOrigin>,
+  d: CheckpointDatumV1,
+  lovelace: Int,
+) -> Output {
+  let aid_name = deriveAidAssetName(d.cesr_aid)
+  Output {
+    address: from_script(policy),
+    value: from_lovelace(lovelace) |> merge(from_asset(policy, aid_name, 1)),
+    datum: InlineDatum(versioned_state(version, origin, d)),
+    reference_script: None,
+  }
+}
+
+fn run_register_versioned(
+  d: CheckpointDatumV1,
+  lovelace: Int,
+  evidence: RegistrationEvidence,
+) -> Bool {
+  let proof_name = proof_token_name(evidence.event_bytes, d.cesr_aid)
+  let base = mint_context(
+    [proof_input(proof_name)],
+    [versioned_state_output(1, None, d, lovelace)],
+    register_mint(d, proof_name),
+  )
+  let credential = Script(lifecycle_hash)
+  let envelope = register_envelope(evidence)
+  let redeemer: Data = envelope
+  let tx = Transaction {
+    ..base,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+  checkpoint_register.checkpoint_register.mint(
+    1,
+    migration_hash,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    0,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    Register,
+    policy,
+    tx,
+  ) && checkpoint_observer.observer_lifecycle.withdraw(
+    1,
+    hp_policy,
+    d_reg,
+    register_envelope(evidence),
+    0,
+    tx,
+  )
+}
+
+test migration_lifecycle_native_register_is_version_one_no_origin() {
+  run_register_versioned(
+    vec.pos_2key_datum,
+    min_ada + d_reg + freeze_bond,
+    vec.pos_2key_evidence,
+  )
+}
+
+/// An ordinary Advance over a migrated row: it carries an immediate origin,
+/// and that origin must survive a same-version transition unchanged.
+fn run_rotate_versioned(
+  spent: SpentCheckpoint,
+  created: CheckpointDatumV1,
+  evidence: AdvanceEvidence,
+  successor_origin: Option<MigrationOrigin>,
+) -> Bool {
+  let own_input = input_at(
+    rotate_ref(spent),
+    Output {
+      address: from_script(policy),
+      value: rotate_value(spent),
+      datum: InlineDatum(
+        versioned_state(1, Some(mig_origin()), rotate_old(spent)),
+      ),
+      reference_script: None,
+    },
+  )
+  let successor = Output {
+    address: from_script(policy),
+    value: rotate_value(spent),
+    datum: InlineDatum(versioned_state(1, successor_origin, created)),
+    reference_script: None,
+  }
+  let base = spend_context(
+    [own_input],
+    [],
+    [successor],
+    zero,
+    [],
+    interval.everything,
+    0,
+  )
+  let tx = with_advance_observer(base, advance_envelope(spent, evidence))
+  checkpoint_register.checkpoint_register.spend(
+    1,
+    migration_hash,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    Advance,
+    rotate_ref(spent),
+    tx,
+  ) && checkpoint_observer.observer_advance.withdraw(
+    1,
+    advance_envelope(spent, evidence),
+    0,
+    tx,
+  )
+}
+
+test migration_lifecycle_migrated_row_advances_retaining_origin() {
+  run_rotate_versioned(
+    advance_vec.pos_adv_keep_spent,
+    advance_vec.pos_adv_keep_created,
+    advance_vec.pos_adv_keep_evidence,
+    Some(mig_origin()),
+  )
+}
+
+test migration_lifecycle_advance_may_not_rewrite_origin() fail {
+  // Migration metadata is not KEL state: an ordinary transition may not
+  // invent, drop, or replace the immediate predecessor it carries.
+  run_rotate_versioned(
+    advance_vec.pos_adv_keep_spent,
+    advance_vec.pos_adv_keep_created,
+    advance_vec.pos_adv_keep_evidence,
+    None,
   )
 }

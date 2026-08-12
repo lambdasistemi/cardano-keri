@@ -68,10 +68,14 @@ fn source_origin() -> MigrationOrigin {
   }
 }
 
+/// The successor lands at a real role address of the target policy:
+/// `role.address(policy, Active)` is `from_script(policy)`. A target address
+/// that is not a role address of its own policy is unreachable at the
+/// transaction boundary.
 fn target_address() -> Address {
   Address {
-    payment_credential: Script(vec.fixture_target_script),
-    stake_credential: Some(Inline(Script(vec.fixture_target_stake_script))),
+    payment_credential: Script(vec.fixture_target_policy),
+    stake_credential: None,
   }
 }
 

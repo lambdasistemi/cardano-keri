@@ -146,7 +146,7 @@ byte/line counts are filled from the committed mandate before publication.
 
 | Artifact | Ceiling bytes / lines | Actual bytes / lines |
 | --- | ---: | ---: |
-| `spec.md` | 12,000 / 220 | 11,766 / 172 |
+| `spec.md` | 12,000 / 220 | 11,961 / 176 |
 | `plan.md` | 12,000 / 240 | 9,010 / 154 |
 | `modules-model.md` | 8,000 / 160 | 5,064 / 102 |
 | `data-model.md` | 10,000 / 200 | 6,367 / 163 |

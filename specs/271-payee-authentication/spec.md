@@ -75,6 +75,10 @@ consent independently of a later submitter.
   needs global per-checkpoint exclusion and lets a speculative commitment
   block genuine evidence. Same-block ties are ledger transaction order.
 
+A genuine reveal unconfirmed beyond `commit_min_age` reopens the race: an
+observer can age a competing commitment, then congestion and fees—not the
+validator—pick the ledger-ordered winner.
+
 Copying an opaque commitment cannot change its payee or hidden nonce. Once
 reveal exposes the nonce, the age rule makes a reactive commitment too young.
 Independent pre-reveal commitment is legitimate competition, not mempool theft.

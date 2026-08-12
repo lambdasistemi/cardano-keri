@@ -116,6 +116,16 @@ ticket is authorized.
   `uncovered_containers=0` and still clear a bound of 2 against a true value of
   55 — the class is protected there by the two seeded `REFUTED` legs and by this
   audit's inspection and census, not by the count.
+- [ ] T246-F7 — Restore container closure over the manifest's **own top-level
+  object** and record the semantics variant on a checked surface. Owner: a scope
+  decision above this ticket. Follow-up target for the wider (v1) claim of
+  `INV-246-IDENTITY-FIELD-EXPECTATION-DISJOINT`, which ships scoped to
+  `paths(scalars)` of `.identity` and `.records` and terminates `BLOCKED` by
+  operator decision 2026-08-12. **Honest limit at filing:** the shipped claim
+  does not extend to the manifest's top-level object, so no *declared* invariant
+  constrains what is carried there, whatever the implementation happens to do.
+  The wider claim is retained here rather than overwritten, and settling it
+  requires a scope change above the ticket.
 
 ## Slice B — frozen post-#219 / post-Conway baseline identity
 

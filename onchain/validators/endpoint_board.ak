@@ -1,14 +1,25 @@
-//// M1 endpoint-board combined minting and spending validator (#165).
+//// Authorized endpoint-board combined minting and spending validator (#253).
 ////
 //// Each current record is one enterprise-script UTxO containing one marker
 //// whose asset name is the raw 32-byte witness key. The exact endpoint bytes
-//// are authenticated by the witness at post/update. A recorded Cardano
-//// payment key controls update/retire and the complete lovelace deposit is
-//// preserved or refunded.
+//// are authenticated by the witness's #165 endpoint signature, and the
+//// Cardano binding of those bytes — this applied policy, this owner, this
+//// one-use nonce — is authenticated by a second, independent witness
+//// signature. A recorded Cardano payment key controls update/retire and the
+//// complete lovelace deposit is preserved or refunded.
+////
+//// The validator is applied with the predecessor policy it accepts, so its
+//// identity is a function of that parameter. The parameter is used here to
+//// refuse a board marker — of this release or of its predecessor — as a Post
+//// nonce: the nonce must be an ordinary consumed output, never another
+//// lineage's marker.
+////
+//// It accepts only the six-field authorized shape. A four-field legacy datum
+//// fails to decode at this policy, which is what keeps the two releases
+//// distinguishable while both use constructor 0.
 
 use aiken/collection/dict
 use aiken/collection/list
-use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano/address.{Script, from_script}
 use cardano/assets.{
@@ -17,21 +28,11 @@ use cardano/assets.{
 use cardano/transaction.{
   InlineDatum, NoDatum, Output, OutputReference, Transaction, find_input,
 }
-use cardano_keri/endpoint_board_types.{
-  BoardAction, BoardDatumV1, BoardMintRedeemer, Burn, Post, Retire, Update,
+use cardano_keri/endpoint_board_authorization.{
+  AuthorizedBoardDatum, datum_is_authentic, nonce_names, nonce_reference,
 }
-
-/// Validate all byte-level invariants in the frozen datum.
-pub fn datum_is_authentic(expected_key: ByteArray, datum: BoardDatumV1) -> Bool {
-  bytearray.length(expected_key) == 32 && datum.witness_key == expected_key && bytearray.length(
-    datum.endpoint_record,
-  ) > 0 && bytearray.length(datum.endpoint_signature) == 64 && bytearray.length(
-    datum.owner_key_hash,
-  ) == 28 && verify_ed25519_signature(
-    datum.witness_key,
-    datum.endpoint_record,
-    datum.endpoint_signature,
-  )
+use cardano_keri/endpoint_board_types.{
+  BoardAction, BoardMintRedeemer, Burn, Post, Retire, Update,
 }
 
 fn exact_marker_value(
@@ -45,35 +46,60 @@ fn exact_marker_value(
   )
 }
 
+/// The single continuing output this policy may create.
+fn board_outputs(policy_id: PolicyId, outputs: List<Output>) -> List<Output> {
+  list.filter(outputs, fn(output) { output.address == from_script(policy_id) })
+}
+
 fn read_board_input(
   own_ref: OutputReference,
   tx: Transaction,
-) -> (Output, PolicyId, BoardDatumV1) {
+) -> (Output, PolicyId, AuthorizedBoardDatum) {
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect Script(policy_id) = own_input.output.address.payment_credential
   expect own_input.output.address == from_script(policy_id)
   expect InlineDatum(datum_data) = own_input.output.datum
-  expect datum: BoardDatumV1 = datum_data
-  expect datum_is_authentic(datum.witness_key, datum)
+  expect datum: AuthorizedBoardDatum = datum_data
+  expect datum_is_authentic(datum.witness_key, policy_id, datum)
   expect
     exact_marker_value(own_input.output.value, policy_id, datum.witness_key)
   (own_input.output, policy_id, datum)
 }
 
-fn validate_post(policy_id: PolicyId, tx: Transaction) -> Bool {
+/// The nonce output must be consumed by this very transaction and must not be
+/// a board marker of this release or of the accepted predecessor release.
+///
+/// Consumption is what makes the witness's approval one-use: the ledger will
+/// never allow the same output to be spent twice, so the same signed Post can
+/// never create a second live record — nor resurrect a retired one.
+fn consumes_ordinary_nonce(
+  accepted_predecessor_policy: PolicyId,
+  policy_id: PolicyId,
+  datum: AuthorizedBoardDatum,
+  tx: Transaction,
+) -> Bool {
+  expect Some(nonce_input) = find_input(tx.inputs, nonce_reference(datum.nonce))
+  expect dict.to_pairs(tokens(nonce_input.output.value, policy_id)) == []
+  expect
+    dict.to_pairs(tokens(nonce_input.output.value, accepted_predecessor_policy)) == []
+  True
+}
+
+fn validate_post(
+  accepted_predecessor_policy: PolicyId,
+  policy_id: PolicyId,
+  tx: Transaction,
+) -> Bool {
   let Transaction { outputs, mint, .. } = tx
   expect [Pair(witness_key, quantity)] = dict.to_pairs(tokens(mint, policy_id))
   expect bytearray.length(witness_key) == 32
   expect quantity == 1
-  expect [record_output] = list.filter(
-    outputs,
-    fn(output) { output.address == from_script(policy_id) },
-  )
+  expect [record_output] = board_outputs(policy_id, outputs)
   expect InlineDatum(datum_data) = record_output.datum
-  expect datum: BoardDatumV1 = datum_data
-  expect datum_is_authentic(witness_key, datum)
+  expect datum: AuthorizedBoardDatum = datum_data
+  expect datum_is_authentic(witness_key, policy_id, datum)
   expect exact_marker_value(record_output.value, policy_id, witness_key)
-  True
+  consumes_ordinary_nonce(accepted_predecessor_policy, policy_id, datum, tx)
 }
 
 fn validate_burn(policy_id: PolicyId, tx: Transaction) -> Bool {
@@ -92,37 +118,41 @@ fn validate_burn(policy_id: PolicyId, tx: Transaction) -> Bool {
     },
   )
   expect InlineDatum(datum_data) = board_input.output.datum
-  expect datum: BoardDatumV1 = datum_data
-  expect datum_is_authentic(witness_key, datum)
+  expect datum: AuthorizedBoardDatum = datum_data
+  expect datum_is_authentic(witness_key, policy_id, datum)
   expect exact_marker_value(board_input.output.value, policy_id, witness_key)
   True
 }
 
+/// An Update spends the current record and creates exactly one successor.
+///
+/// The successor's nonce is the exact out-ref just spent, so one witness
+/// authorization can bless exactly one successor of exactly one predecessor.
+/// Custody may move, but only when the recorded owner signs the spend AND the
+/// witness's fresh authorization names the new owner: neither alone suffices.
 fn validate_update(
   input_output: Output,
   policy_id: PolicyId,
-  old: BoardDatumV1,
+  own_ref: OutputReference,
+  old: AuthorizedBoardDatum,
   tx: Transaction,
 ) -> Bool {
   let Transaction { outputs, mint, extra_signatories, .. } = tx
   expect list.has(extra_signatories, old.owner_key_hash)
   expect dict.to_pairs(tokens(mint, policy_id)) == []
-  expect [successor] = list.filter(
-    outputs,
-    fn(output) { output.address == from_script(policy_id) },
-  )
+  expect [successor] = board_outputs(policy_id, outputs)
   expect successor.value == input_output.value
   expect InlineDatum(datum_data) = successor.datum
-  expect new: BoardDatumV1 = datum_data
+  expect new: AuthorizedBoardDatum = datum_data
   expect new.witness_key == old.witness_key
-  expect datum_is_authentic(old.witness_key, new)
-  True
+  expect nonce_names(new.nonce, own_ref)
+  datum_is_authentic(old.witness_key, policy_id, new)
 }
 
 fn validate_retire(
   input_output: Output,
   policy_id: PolicyId,
-  old: BoardDatumV1,
+  old: AuthorizedBoardDatum,
   refund_address,
   tx: Transaction,
 ) -> Bool {
@@ -143,16 +173,16 @@ fn validate_retire(
   True
 }
 
-validator endpoint_board {
+validator endpoint_board(accepted_predecessor_policy: PolicyId) {
   mint(redeemer: BoardMintRedeemer, policy_id: PolicyId, tx: Transaction) {
     when redeemer is {
-      Post -> validate_post(policy_id, tx)
+      Post -> validate_post(accepted_predecessor_policy, policy_id, tx)
       Burn -> validate_burn(policy_id, tx)
     }
   }
 
   spend(
-    maybe_datum: Option<BoardDatumV1>,
+    maybe_datum: Option<AuthorizedBoardDatum>,
     redeemer: BoardAction,
     own_ref: OutputReference,
     tx: Transaction,
@@ -161,7 +191,7 @@ validator endpoint_board {
     let (input_output, policy_id, old) = read_board_input(own_ref, tx)
     expect old == supplied_datum
     when redeemer is {
-      Update -> validate_update(input_output, policy_id, old, tx)
+      Update -> validate_update(input_output, policy_id, own_ref, old, tx)
       Retire { refund_address } ->
         validate_retire(input_output, policy_id, old, refund_address, tx)
     }

@@ -21,29 +21,29 @@ S253-2 explicitly amends its superseded sequence/version shape.
 
 ## S253-2 — slim authorization, validator, and transaction paths
 
-- [ ] **T253-S2-01** Delete sequence from datum, authorization, codecs, producer,
+- [x] **T253-S2-01** Delete sequence from datum, authorization, codecs, producer,
   reader, vectors, and tests; delete the version-only constructor/API and use
   exact four-field legacy versus six-field authorized structural decoding under
   the matched applied policy.
-- [ ] **T253-S2-02** Freeze the stable non-versioned domain and exact six-field
+- [x] **T253-S2-02** Freeze the stable non-versioned domain and exact six-field
   authorization bytes in Aiken/Haskell vectors; prove every retained field is
   observed and both signatures remain independent.
-- [ ] **T253-S2-03** Enforce target Post with exact policy/marker binding, both
+- [x] **T253-S2-03** Enforce target Post with exact policy/marker binding, both
   signatures, one consumed named nonce, and rejection when the nonce input
   carries a marker under the target or applied predecessor policy.
-- [ ] **T253-S2-04** Enforce Update with recorded-owner authority, exact
+- [x] **T253-S2-04** Enforce Update with recorded-owner authority, exact
   predecessor nonce, one confined successor, preserved marker/deposit, and
   fresh successor authorization.
-- [ ] **T253-S2-05** Preserve Retire's recorded-owner, burn, and exact-refund
+- [x] **T253-S2-05** Preserve Retire's recorded-owner, burn, and exact-refund
   guarantees for the authorized target shape.
-- [ ] **T253-S2-06** Add separately named authorized-target Post/Update planners
+- [x] **T253-S2-06** Add separately named authorized-target Post/Update planners
   and run functions that consume and cross-check the signed nonce. Preserve
   existing deployed-policy planner/run signatures and four-field behavior;
   defer CLI/local-write routing to S253-3.
-- [ ] **T253-S2-07** Permanently kill custody-substitution, wrong/missing/reused
+- [x] **T253-S2-07** Permanently kill custody-substitution, wrong/missing/reused
   nonce replay/resurrection, endpoint-only, wrong-shape, and lifecycle mutant
   classes for owner, nonce, and witness-auth invariants.
-- [ ] **T253-S2-08** Keep target board properties in M8's compiled target and
+- [x] **T253-S2-08** Keep target board properties in M8's compiled target and
   preserve reproducible policy/manifest checks.
 
 ## S253-3 — migration, consumer seam, and preprod cutover

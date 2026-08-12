@@ -1,4 +1,4 @@
-//// Cross-language proof for the #253 S253-1 board authorization protocol.
+//// Cross-language proof for the #253 S253-2 board authorization protocol.
 ////
 //// Every golden constant in this file was produced by an oracle that shares
 //// no code with either implementation it judges: an independent CBOR encoder
@@ -8,15 +8,19 @@
 //// is byte parity between Aiken and Haskell, not a mirror of either one.
 ////
 //// Oracle: `evidence/vector-oracle.mjs`, output `evidence/vector-oracle.json`.
+//// The S253-2 vectors drop `sequence`, drop the `/v2` domain suffix, and move
+//// the authorized datum to `Constr 0` with six fields.
 
 use aiken/cbor
 use aiken/crypto.{verify_ed25519_signature}
+use cardano/transaction.{OutputReference}
 use cardano_keri/endpoint_board_authorization.{
-  BoardAuthorizationV2, BoardDatum, BoardDatumV2, BoardNonce, BoardV1, BoardV2,
-  board_authorization_bytes, board_authorization_domain, board_datum_v2,
-  datum_v2_is_authentic, reconstruct_board_authorization,
+  AuthorizedBoardDatum, BoardAuthorization, BoardNonce,
+  board_authorization_bytes, board_authorization_domain, datum_is_authentic,
+  nonce_names, nonce_reference, reconstruct_board_authorization,
   verify_board_authorization, verify_endpoint_signature,
 }
+use cardano_keri/endpoint_board_types.{BoardDatumV1}
 
 // ---------------------------------------------------------------- vectors
 
@@ -39,23 +43,24 @@ const small_nonce_tx_id: ByteArray =
   #"1111111111111111111111111111111111111111111111111111111111111111"
 
 const small_authorization_bytes: ByteArray =
-  #"d8799f582c63617264616e6f2d6b6572692f656e64706f696e742d626f6172642f617574686f72697a6174696f6e2f7632581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d31581c3333333333333333333333333333333333333333333333333333333307d8799f5820111111111111111111111111111111111111111111111111111111111111111100ffff"
+  #"d8799f582963617264616e6f2d6b6572692f656e64706f696e742d626f6172642f617574686f72697a6174696f6e581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d31581c33333333333333333333333333333333333333333333333333333333d8799f5820111111111111111111111111111111111111111111111111111111111111111100ffff"
 
 const small_authorization_signature: ByteArray =
-  #"557039f68e7446091c0d8586b1b0876ce1e97570b512b5b0013ae1ba5cffeb244d6d16ff345fcc7846697f1383fcc7466827b299f81469069472a5351a52820b"
+  #"61c8bf526ed993529bf86bfde5f962396a363c7f927e6f8953e606e98e77b0213b49fbbb0008f757fabfe00113c383c27377c51e310fc818091a0632abba8006"
 
 const small_endpoint_signature: ByteArray =
   #"1a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05"
 
-const small_datum_v1_cbor: ByteArray =
+const small_legacy_datum_cbor: ByteArray =
   #"d8799f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d3158401a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05581c33333333333333333333333333333333333333333333333333333333ff"
 
-const small_datum_v2_cbor: ByteArray =
-  #"d87a9f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d3158401a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05581c3333333333333333333333333333333333333333333333333333333307d8799f5820111111111111111111111111111111111111111111111111111111111111111100ff5840557039f68e7446091c0d8586b1b0876ce1e97570b512b5b0013ae1ba5cffeb244d6d16ff345fcc7846697f1383fcc7466827b299f81469069472a5351a52820bff"
+const small_authorized_datum_cbor: ByteArray =
+  #"d8799f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d3158401a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05581c33333333333333333333333333333333333333333333333333333333d8799f5820111111111111111111111111111111111111111111111111111111111111111100ff584061c8bf526ed993529bf86bfde5f962396a363c7f927e6f8953e606e98e77b0213b49fbbb0008f757fabfe00113c383c27377c51e310fc818091a0632abba8006ff"
 
 // -- vector "chunked": 65-byte record, one byte past the 64-byte limit, so
-// -- the encoder must emit 5f 5840 <64> 41 <1> ff. Sequence 1000 needs a
-// -- two-byte CBOR argument. These are the cases a naive encoder gets wrong.
+// -- the encoder must emit 5f 5840 <64> 41 <1> ff. With `sequence` cut, the
+// -- record is the only thing left that forces the chunked path, which is
+// -- exactly why this vector survives the slimming.
 
 const chunked_record: ByteArray =
   #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb"
@@ -64,16 +69,16 @@ const chunked_nonce_tx_id: ByteArray =
   #"2222222222222222222222222222222222222222222222222222222222222222"
 
 const chunked_authorization_bytes: ByteArray =
-  #"d8799f582c63617264616e6f2d6b6572692f656e64706f696e742d626f6172642f617574686f72697a6174696f6e2f7632581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f547295f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41bbff581c333333333333333333333333333333333333333333333333333333331903e8d8799f5820222222222222222222222222222222222222222222222222222222222222222205ffff"
+  #"d8799f582963617264616e6f2d6b6572692f656e64706f696e742d626f6172642f617574686f72697a6174696f6e581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f547295f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41bbff581c33333333333333333333333333333333333333333333333333333333d8799f5820222222222222222222222222222222222222222222222222222222222222222205ffff"
 
 const chunked_authorization_signature: ByteArray =
-  #"f3018c4c388eb6da979bbb75d954b9481089ce791e8126a9137734b627b3d007449cf04da1668757f8573b5c3854623f36561d1fcf89531b3f502efc383d7909"
+  #"d41f3c0b60c053d57b1bfc4bebebdb3bb8730880730ad90a1ac9a82c630da24011eb56050c6af1d29999c05db572d856baf098b0c2e439e628fa6d3369edbc05"
 
 const chunked_endpoint_signature: ByteArray =
   #"7ad2ae84bf3feb749b85d8110cd9e03f6006eb9c58e4ab542935c67b24035f531925dbb19832099f3620494878669083ecb4e707851d9b7f972859ad53d3e50e"
 
-const chunked_datum_v2_cbor: ByteArray =
-  #"d87a9f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f547295f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41bbff58407ad2ae84bf3feb749b85d8110cd9e03f6006eb9c58e4ab542935c67b24035f531925dbb19832099f3620494878669083ecb4e707851d9b7f972859ad53d3e50e581c333333333333333333333333333333333333333333333333333333331903e8d8799f5820222222222222222222222222222222222222222222222222222222222222222205ff5840f3018c4c388eb6da979bbb75d954b9481089ce791e8126a9137734b627b3d007449cf04da1668757f8573b5c3854623f36561d1fcf89531b3f502efc383d7909ff"
+const chunked_authorized_datum_cbor: ByteArray =
+  #"d8799f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f547295f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41bbff58407ad2ae84bf3feb749b85d8110cd9e03f6006eb9c58e4ab542935c67b24035f531925dbb19832099f3620494878669083ecb4e707851d9b7f972859ad53d3e50e581c33333333333333333333333333333333333333333333333333333333d8799f5820222222222222222222222222222222222222222222222222222222222222222205ff5840d41f3c0b60c053d57b1bfc4bebebdb3bb8730880730ad90a1ac9a82c630da24011eb56050c6af1d29999c05db572d856baf098b0c2e439e628fa6d3369edbc05ff"
 
 // -- controls
 
@@ -83,11 +88,16 @@ const foreign_key: ByteArray =
   #"332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5"
 
 const foreign_authorization_signature: ByteArray =
-  #"3d7b875a2f3dc1de4202ca5e2b4644042937efaf9054457930ad015a646bf6377aff3129a59d71f3198a1ef475c81dd3fd6d0180596c3526865fe3cbd919a408"
+  #"8eeaee81b6110a87c0737157c8ba317947b7aa1d4b23ec340ab679456f9f971608488ead6d22d4dd1b0bf4a52081e1aa6913f0bba5e02c0c8718404ffd9b6b07"
 
-/// The exact bytes the same authorization would have under a `/v1` domain.
+/// The exact bytes this same record would produce under a different
+/// cardano-keri domain. A cut spelling cannot serve as this control: the
+/// frozen slice gate rejects the retired versioned identifier anywhere in the
+/// protocol files, so the control uses a sibling protocol's domain instead.
+const wrong_domain: ByteArray = "cardano-keri/endpoint-board/attestation"
+
 const wrong_domain_authorization_bytes: ByteArray =
-  #"d8799f582c63617264616e6f2d6b6572692f656e64706f696e742d626f6172642f617574686f72697a6174696f6e2f7631581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d31581c3333333333333333333333333333333333333333333333333333333307d8799f5820111111111111111111111111111111111111111111111111111111111111111100ffff"
+  #"d8799f582763617264616e6f2d6b6572692f656e64706f696e742d626f6172642f6174746573746174696f6e581c54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f722d31581c33333333333333333333333333333333333333333333333333333333d8799f5820111111111111111111111111111111111111111111111111111111111111111100ffff"
 
 // ---------------------------------------------------------------- fixtures
 
@@ -95,25 +105,23 @@ fn small_nonce() -> BoardNonce {
   BoardNonce { nonce_tx_id: small_nonce_tx_id, nonce_output_index: 0 }
 }
 
-fn small_datum() -> BoardDatumV2 {
-  BoardDatumV2 {
+fn small_datum() -> AuthorizedBoardDatum {
+  AuthorizedBoardDatum {
     witness_key,
     endpoint_record: small_record,
     endpoint_signature: small_endpoint_signature,
     owner_key_hash,
-    sequence: 7,
     nonce: small_nonce(),
     authorization_signature: small_authorization_signature,
   }
 }
 
-fn chunked_datum() -> BoardDatumV2 {
-  BoardDatumV2 {
+fn chunked_datum() -> AuthorizedBoardDatum {
+  AuthorizedBoardDatum {
     witness_key,
     endpoint_record: chunked_record,
     endpoint_signature: chunked_endpoint_signature,
     owner_key_hash,
-    sequence: 1000,
     nonce: BoardNonce {
       nonce_tx_id: chunked_nonce_tx_id,
       nonce_output_index: 5,
@@ -122,95 +130,91 @@ fn chunked_datum() -> BoardDatumV2 {
   }
 }
 
-fn small_wire_v1() -> BoardDatum {
-  BoardV1 {
+fn small_legacy_datum() -> BoardDatumV1 {
+  BoardDatumV1 {
     witness_key,
     endpoint_record: small_record,
     endpoint_signature: small_endpoint_signature,
     owner_key_hash,
-  }
-}
-
-fn small_wire_v2() -> BoardDatum {
-  BoardV2 {
-    witness_key,
-    endpoint_record: small_record,
-    endpoint_signature: small_endpoint_signature,
-    owner_key_hash,
-    sequence: 7,
-    nonce: small_nonce(),
-    authorization_signature: small_authorization_signature,
-  }
-}
-
-fn chunked_wire_v2() -> BoardDatum {
-  BoardV2 {
-    witness_key,
-    endpoint_record: chunked_record,
-    endpoint_signature: chunked_endpoint_signature,
-    owner_key_hash,
-    sequence: 1000,
-    nonce: BoardNonce {
-      nonce_tx_id: chunked_nonce_tx_id,
-      nonce_output_index: 5,
-    },
-    authorization_signature: chunked_authorization_signature,
   }
 }
 
 // ------------------------------------------------------------ the protocol
 
-test endpoint_board_authorization_authorization_domain_is_frozen() {
-  board_authorization_domain == "cardano-keri/endpoint-board/authorization/v2"
+test endpoint_board_s253_authorization_domain_is_stable_and_unversioned() {
+  board_authorization_domain == "cardano-keri/endpoint-board/authorization"
 }
 
-test endpoint_board_authorization_v1_wire_is_constructor_0_with_four_frozen_fields() {
-  cbor.serialise(small_wire_v1()) == small_datum_v1_cbor
+/// INV-253-R03: the frozen legacy shape must stay constructor 0 with exactly
+/// four fields, because that field count is the whole discriminator once the
+/// authorized shape also uses constructor 0.
+test endpoint_board_s253_legacy_wire_is_constructor_0_with_four_frozen_fields() {
+  cbor.serialise(small_legacy_datum()) == small_legacy_datum_cbor
 }
 
-test endpoint_board_authorization_v2_wire_is_constructor_1_with_seven_fields() {
-  cbor.serialise(small_wire_v2()) == small_datum_v2_cbor
+test endpoint_board_s253_authorized_wire_is_constructor_0_with_six_fields() {
+  and {
+    cbor.serialise(small_datum()) == small_authorized_datum_cbor,
+    // Same constructor tag as the legacy shape (d879 = 121), different field
+    // count: shape selection is structural, not versioned.
+    cbor.serialise(small_datum()) != small_legacy_datum_cbor,
+  }
 }
 
-test endpoint_board_authorization_v2_wire_survives_a_chunked_record_and_wide_sequence() {
-  cbor.serialise(chunked_wire_v2()) == chunked_datum_v2_cbor
+/// The 65-byte record forces indefinite-length chunked CBOR. An encoder that
+/// emits one definite-length string here still passes every short vector.
+test endpoint_board_s253_authorized_wire_survives_a_chunked_record() {
+  cbor.serialise(chunked_datum()) == chunked_authorized_datum_cbor
 }
 
-test endpoint_board_authorization_authorization_bytes_match_the_independent_oracle() {
+test endpoint_board_s253_authorization_bytes_match_six_field_oracle() {
   board_authorization_bytes(
     reconstruct_board_authorization(policy_id, small_datum()),
   ) == small_authorization_bytes
 }
 
-/// The 65-byte record forces indefinite-length chunked CBOR. An encoder that
-/// emits one definite-length string here still passes every short vector.
-test endpoint_board_authorization_authorization_bytes_match_the_oracle_when_chunked() {
+test endpoint_board_s253_authorization_bytes_match_the_oracle_when_chunked() {
   board_authorization_bytes(
     reconstruct_board_authorization(policy_id, chunked_datum()),
   ) == chunked_authorization_bytes
 }
 
-test endpoint_board_authorization_authorization_verifies_for_both_vectors() {
+test endpoint_board_s253_authorization_verifies_for_both_vectors() {
   verify_board_authorization(policy_id, small_datum()) && verify_board_authorization(
     policy_id,
     chunked_datum(),
   )
 }
 
-test endpoint_board_authorization_authentic_v2_datum_is_accepted() {
-  datum_v2_is_authentic(witness_key, policy_id, small_datum()) && datum_v2_is_authentic(
+test endpoint_board_s253_authentic_authorized_datum_is_accepted() {
+  datum_is_authentic(witness_key, policy_id, small_datum()) && datum_is_authentic(
     witness_key,
     policy_id,
     chunked_datum(),
   )
 }
 
-test endpoint_board_authorization_v1_datum_never_projects_as_v2() {
-  board_datum_v2(small_wire_v1()) == None
-}
+// -------------------------------------------------- the nonce is a coordinate
 
-test endpoint_board_authorization_v2_datum_projects_to_its_typed_fields() {
-  board_datum_v2(small_wire_v2()) == Some(small_datum())
+test endpoint_board_s253_nonce_names_exactly_its_output_reference() {
+  and {
+    nonce_names(
+      small_nonce(),
+      OutputReference { transaction_id: small_nonce_tx_id, output_index: 0 },
+    ),
+    !nonce_names(
+      small_nonce(),
+      OutputReference { transaction_id: small_nonce_tx_id, output_index: 1 },
+    ),
+    !nonce_names(
+      small_nonce(),
+      OutputReference { transaction_id: chunked_nonce_tx_id, output_index: 0 },
+    ),
+    nonce_reference(small_nonce()) == OutputReference {
+      transaction_id: small_nonce_tx_id,
+      output_index: 0,
+    },
+  }
 }
 
 // --------------------------------------------- INV-253-SIGNED-FIELDS mutants
@@ -218,19 +222,19 @@ test endpoint_board_authorization_v2_datum_projects_to_its_typed_fields() {
 // Each mutant changes exactly one ordered signed component and keeps every
 // other datum field and both signatures untouched and individually valid.
 
-test endpoint_board_authorization_mutating_the_policy_id_rejects() {
+test endpoint_board_s253_mutating_the_policy_id_rejects() {
   !verify_board_authorization(
     #"00494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c",
     small_datum(),
   )
 }
 
-test endpoint_board_authorization_mutating_the_witness_key_rejects() {
+test endpoint_board_s253_mutating_the_witness_key_rejects() {
   // A real key with a real signature over the real bytes, but not this
   // record's witness: the authorization must name its own signer.
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       witness_key: foreign_key,
       authorization_signature: foreign_authorization_signature,
@@ -238,37 +242,30 @@ test endpoint_board_authorization_mutating_the_witness_key_rejects() {
   )
 }
 
-test endpoint_board_authorization_mutating_the_endpoint_record_rejects() {
+test endpoint_board_s253_mutating_the_endpoint_record_rejects() {
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       endpoint_record: #"6c6f632f736368656d652d766563746f722d32",
     },
   )
 }
 
-test endpoint_board_authorization_mutating_the_owner_key_hash_rejects() {
+test endpoint_board_s253_mutating_the_owner_key_hash_rejects() {
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       owner_key_hash: #"44444444444444444444444444444444444444444444444444444444",
     },
   )
 }
 
-test endpoint_board_authorization_mutating_the_sequence_rejects() {
+test endpoint_board_s253_mutating_the_nonce_tx_id_rejects() {
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 { ..small_datum(), sequence: 8 },
-  )
-}
-
-test endpoint_board_authorization_mutating_the_nonce_tx_id_rejects() {
-  !verify_board_authorization(
-    policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       nonce: BoardNonce {
         nonce_tx_id: #"3111111111111111111111111111111111111111111111111111111111111111",
@@ -278,10 +275,10 @@ test endpoint_board_authorization_mutating_the_nonce_tx_id_rejects() {
   )
 }
 
-test endpoint_board_authorization_mutating_the_nonce_output_index_rejects() {
+test endpoint_board_s253_mutating_the_nonce_output_index_rejects() {
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       nonce: BoardNonce {
         nonce_tx_id: small_nonce_tx_id,
@@ -292,21 +289,20 @@ test endpoint_board_authorization_mutating_the_nonce_output_index_rejects() {
 }
 
 /// The domain is a constant, so it is mutated where it is actually used: in
-/// the signed bytes. A signature over the `/v1` spelling of this very same
-/// record must not verify as a `/v2` authorization.
-test endpoint_board_authorization_the_domain_is_inside_the_signed_bytes() {
-  let wrong_domain = BoardAuthorizationV2 {
-    domain: "cardano-keri/endpoint-board/authorization/v1",
+/// the signed bytes. A signature over another cardano-keri domain's spelling
+/// of this very same record must not verify as a board authorization.
+test endpoint_board_s253_the_domain_is_inside_the_signed_bytes() {
+  let other_domain = BoardAuthorization {
+    domain: wrong_domain,
     board_policy_id: policy_id,
     witness_key,
     endpoint_record: small_record,
     owner_key_hash,
-    sequence: 7,
     nonce: small_nonce(),
   }
   and {
-    board_authorization_bytes(wrong_domain) == wrong_domain_authorization_bytes,
-    board_authorization_bytes(wrong_domain) != small_authorization_bytes,
+    board_authorization_bytes(other_domain) == wrong_domain_authorization_bytes,
+    board_authorization_bytes(other_domain) != small_authorization_bytes,
     !verify_ed25519_signature(
       witness_key,
       wrong_domain_authorization_bytes,
@@ -317,10 +313,10 @@ test endpoint_board_authorization_the_domain_is_inside_the_signed_bytes() {
 
 /// A signature that is genuine, 64 bytes, and over exactly the right bytes,
 /// but produced by another key.
-test endpoint_board_authorization_a_foreign_signer_is_rejected() {
+test endpoint_board_s253_a_foreign_signer_is_rejected() {
   !verify_board_authorization(
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       authorization_signature: foreign_authorization_signature,
     },
@@ -331,101 +327,93 @@ test endpoint_board_authorization_a_foreign_signer_is_rejected() {
 
 /// Endpoint-only authentication must not promote: the endpoint signature is
 /// genuine, the authorization is not.
-test endpoint_board_authorization_endpoint_signature_alone_does_not_authorize() {
-  let datum = BoardDatumV2 {
+test endpoint_board_s253_endpoint_signature_alone_does_not_authorize() {
+  let datum = AuthorizedBoardDatum {
     ..small_datum(),
     authorization_signature: chunked_authorization_signature,
   }
   and {
     verify_endpoint_signature(datum),
     !verify_board_authorization(policy_id, datum),
-    !datum_v2_is_authentic(witness_key, policy_id, datum),
+    !datum_is_authentic(witness_key, policy_id, datum),
   }
 }
 
 /// Authorization-only authentication must not promote either: the #165
 /// endpoint guarantee is not absorbed by the new signature.
-test endpoint_board_authorization_authorization_alone_does_not_authenticate_the_endpoint() {
-  let datum = BoardDatumV2 {
+test endpoint_board_s253_authorization_alone_does_not_authenticate_the_endpoint() {
+  let datum = AuthorizedBoardDatum {
     ..small_datum(),
     endpoint_signature: chunked_endpoint_signature,
   }
   and {
     verify_board_authorization(policy_id, datum),
     !verify_endpoint_signature(datum),
-    !datum_v2_is_authentic(witness_key, policy_id, datum),
+    !datum_is_authentic(witness_key, policy_id, datum),
   }
 }
 
 // ------------------------------------------------------- shape and widths
 
-test endpoint_board_authorization_a_wrong_expected_key_is_rejected() {
-  !datum_v2_is_authentic(foreign_key, policy_id, small_datum())
+test endpoint_board_s253_a_wrong_expected_key_is_rejected() {
+  !datum_is_authentic(foreign_key, policy_id, small_datum())
 }
 
-test endpoint_board_authorization_a_short_witness_key_is_rejected() {
+test endpoint_board_s253_a_short_witness_key_is_rejected() {
   let key = #"d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f547"
-  !datum_v2_is_authentic(
+  !datum_is_authentic(
     key,
     policy_id,
-    BoardDatumV2 { ..small_datum(), witness_key: key },
+    AuthorizedBoardDatum { ..small_datum(), witness_key: key },
   )
 }
 
-test endpoint_board_authorization_an_empty_endpoint_record_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_an_empty_endpoint_record_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 { ..small_datum(), endpoint_record: #"" },
+    AuthorizedBoardDatum { ..small_datum(), endpoint_record: #"" },
   )
 }
 
-test endpoint_board_authorization_a_short_endpoint_signature_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_a_short_endpoint_signature_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       endpoint_signature: #"1a809536db02202b8170a43cf531bc98",
     },
   )
 }
 
-test endpoint_board_authorization_a_short_authorization_signature_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_a_short_authorization_signature_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       authorization_signature: #"557039f68e7446091c0d8586b1b0876c",
     },
   )
 }
 
-test endpoint_board_authorization_a_short_owner_key_hash_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_a_short_owner_key_hash_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       owner_key_hash: #"333333333333333333333333333333333333333333333333333333",
     },
   )
 }
 
-test endpoint_board_authorization_a_negative_sequence_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_a_negative_nonce_output_index_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 { ..small_datum(), sequence: -1 },
-  )
-}
-
-test endpoint_board_authorization_a_negative_nonce_output_index_is_rejected() {
-  !datum_v2_is_authentic(
-    witness_key,
-    policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       nonce: BoardNonce {
         nonce_tx_id: small_nonce_tx_id,
@@ -435,11 +423,11 @@ test endpoint_board_authorization_a_negative_nonce_output_index_is_rejected() {
   )
 }
 
-test endpoint_board_authorization_a_short_nonce_tx_id_is_rejected() {
-  !datum_v2_is_authentic(
+test endpoint_board_s253_a_short_nonce_tx_id_is_rejected() {
+  !datum_is_authentic(
     witness_key,
     policy_id,
-    BoardDatumV2 {
+    AuthorizedBoardDatum {
       ..small_datum(),
       nonce: BoardNonce {
         nonce_tx_id: #"1111111111111111111111111111111111111111111111111111111111",

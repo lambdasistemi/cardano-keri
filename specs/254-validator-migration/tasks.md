@@ -7,10 +7,10 @@ implementation, proof execution, child seating, or audit.
 
 ## Phase 1 — dependency and contract freeze
 
-- [ ] T254-001 Rebase `feat/254-validator-migration` onto current
+- [x] T254-001 Rebase `feat/254-validator-migration` onto current
   `origin/main`, retaining the six mandate files and incorporating constitution
   `a716f4b` plus the current PR template before any behavior work.
-- [ ] T254-002 Obtain the epic ruling on batching #271 into S254-1; freeze
+- [x] T254-002 Obtain the epic ruling on batching #271 into S254-1; freeze
   the exact owned paths only after that answer.
 - [ ] T254-003 Negotiate the version-registry and resolved-result contract
   with #171 through the milestone desk; version this mandate if the agreed seam
@@ -18,7 +18,7 @@ implementation, proof execution, child seating, or audit.
 - [ ] T254-004 Freeze the preproduction v0 checkpoint/board policies,
   references, network parameters, earliest scan point, and three expected board
   witness identities as legacy bridge inputs.
-- [ ] T254-005 Initialize the runtime campaign ledger with all eight
+- [x] T254-005 Initialize the runtime campaign ledger with all eight
   BLOCKING rows OPEN, `builds_spent=0`, `builds_budget=3`, and the tail/overrun
   rule from `plan.md`.
 
@@ -38,13 +38,18 @@ implementation, proof execution, child seating, or audit.
   capitalization and rejection of v0 ARMED/FROZEN rows.
 - [ ] T254-106 [US1] Generate cross-layer vectors and prove byte/verdict
   parity; no generated Aiken vector is hand edited.
-- [ ] T254-107 [US1] If #271 batching is accepted, require authenticated
-  hunter/convictor payees throughout the touched checkpoint branches and
-  demonstrate substituted-payee RED before #163/#164.
 - [ ] T254-108 [US1] Register the exact changed compiled checkpoint family
   with M8 and kill named authority and replay mutants against that target.
 
-## Phase 3 — S254-2 board family
+## Phase 3 — S254-E enforcement entitlement integration
+
+- [ ] T254-107 [US1] Adopt the audited #271 standalone commitment component
+  and require authenticated hunter/convictor entitlement throughout ArmedV2
+  and the Freeze/Convict branches, demonstrating substituted-payee RED before
+  #163/#164. Charge its audits to #271's ledger and obtain the #271 owner
+  review through the epic owner before acceptance.
+
+## Phase 4 — S254-2 board family
 
 - [ ] T254-201 [US2] Add version/origin board envelopes without interpreting
   or weakening the target endpoint-authentication schema.
@@ -62,7 +67,7 @@ implementation, proof execution, child seating, or audit.
 - [ ] T254-206 [US2] Generate board parity vectors and register the exact
   compiled board target with M8 authority/replay checks.
 
-## Phase 4 — S254-3 registry and consumer-ready cutover surface
+## Phase 5 — S254-3 registry and consumer-ready cutover surface
 
 - [ ] T254-301 [US3] Add and validate the append-only multi-version release
   registry with checkpoint role addresses, board addresses, predecessor edges,
@@ -108,7 +113,7 @@ implementation, proof execution, child seating, or audit.
 
 ## Ordering
 
-`T254-001..005 -> S254-1 -> S254-2 -> S254-3 -> T254-401..406 -> T254-407`.
+`T254-001..005 -> S254-1 -> S254-E -> S254-2 -> S254-3 -> T254-401..406 -> T254-407`.
 
 S254-1 and S254-2 share protocol types and therefore are not independent.
 #253 finalizes the target board schema after the S254-2 contract exists and

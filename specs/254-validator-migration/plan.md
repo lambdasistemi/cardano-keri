@@ -140,7 +140,7 @@ around the board schema selected by #253.
 | --- | --- |
 | `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
 | #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
-| #271 payee authentication | Payee protection requires a pre-reveal entitlement mechanism (commit/reveal class, designed in the #271 mandate); `extra_signatories` remains a necessary consent check but is not the theft fix. Migration changes the checkpoint spend dispatch and the role/value branches containing Freeze/Convict payouts, so #254 remains the natural vehicle for the entitlement datum/state; #253 touches only the board. The epic's batching ruling waits on the #271 mandate's shipping recommendation, and #163/#164 remain blocked until the protection ships. |
+| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the audited standalone entitlement component from #271 (`1e3e767`, PR #278) and owns its family-coupled ArmedV2 plus Freeze/Convict integration. Its audits charge #271's separate ledger, and the #271 owner reviews its submission through the epic owner. `extra_signatories` remains consent-only, not the theft fix; #163/#164 stay blocked until the entitlement ships. |
 | #253 board hardening | Rides the family. It finalizes the not-yet-deployed target board version by adding owner+sequence witness binding; the first deployment of that version contains both migration entry and #253 semantics. Do not deploy an intermediate unhardened target. |
 | #171 consumer halves | Desk-negotiated implementation of multi-version follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
@@ -159,9 +159,16 @@ No slice starts while the machine build gate is closed.
 - Extend deployment manifest/build-package surfaces without removing v0.
 - Ship RED controls for authority, redirect/replay, identity, role, asset, and
   value classes; generated Haskell/Aiken vectors remain one source.
-- If the epic rules that #271 rides here, include its entitlement state and
-  properties per the #271 mandate because the same dispatch/value surface is
-  changed; payee signer properties alone are not the theft fix.
+
+### S254-E — enforcement entitlement integration
+
+- Adopt, rather than recreate, the audited #271 standalone commitment
+  component at `1e3e767` / PR #278.
+- Integrate reveal consumption through ArmedV2 and the Freeze/Convict payout
+  branches under the complete #271 mandate and invariant set.
+- Charge every building audit to #271's ledger; require the #271 design-owner
+  review through the epic owner before ticket-owner acceptance.
+- Do not begin until S254-1 is accepted and pushed.
 
 ### S254-2 — endpoint-board parity and #253 handoff
 
@@ -205,9 +212,11 @@ Forbidden without a revised contract:
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 
-Budget: **3 building audits**, initially `builds_spent=0` and
+Budget: **3 building audits** for #254's rows, initially `builds_spent=0` and
 `builds_budget=3`. Owner development builds are separately controlled and do
-not spend this audit budget.
+not spend this audit budget. S254-E instead charges the distinct #271 ledger;
+neither slice may borrow from the other without an explicit higher-scope
+ruling.
 
 1. Build 1: fresh audit of the first complete candidate; establish one warm
    tree and attack all eight declared rows with named source/value/signature

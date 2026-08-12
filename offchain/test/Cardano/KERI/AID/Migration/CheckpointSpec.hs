@@ -129,8 +129,37 @@ sourceDatum =
         , cdNativeSn = 4
         }
 
+{- | The projection the authorization carries verbatim: the v0 version sum
+wrapping the inner record.
+-}
 sourceStateData :: Data
 sourceStateData = let BuiltinData d = toBuiltinData (V1 sourceDatum) in d
+
+{- | The inner record alone.  'VersionedCheckpoint' embeds the projection
+unwrapped; re-wrapping it would nest two version tags.
+-}
+innerStateData :: Data
+innerStateData = let BuiltinData d = toBuiltinData sourceDatum in d
+
+-- | A versioned row: applied generation, optional origin, inner projection.
+versionedData :: Integer -> Maybe MigrationOrigin -> Data
+versionedData version origin =
+    Constr
+        0
+        [ Constr 0 [I version]
+        , maybe (Constr 1 []) (\o -> Constr 0 [originTree o]) origin
+        , innerStateData
+        ]
+  where
+    originTree MigrationOrigin{..} =
+        Constr
+            0
+            [ Constr 0 [I (vvValue moSourceVersion)]
+            , B moSourcePolicy
+            , Constr
+                0
+                [B (orTransactionId moSourceRef), I (orOutputIndex moSourceRef)]
+            ]
 
 sourceRef, mutantRef :: OutputRef
 sourceRef = OutputRef sourceTxid 1
@@ -194,23 +223,7 @@ pinned = Predecessor (ValidatorVersion 1) sourcePolicy
 
 -- | The successor record, in the exact wire layout the decoder reads.
 successorData :: Integer -> Maybe MigrationOrigin -> Data
-successorData version origin =
-    Constr
-        0
-        [ Constr 0 [I version]
-        , maybe (Constr 1 []) (\o -> Constr 0 [originTree o]) origin
-        , sourceStateData
-        ]
-  where
-    originTree MigrationOrigin{..} =
-        Constr
-            0
-            [ Constr 0 [I (vvValue moSourceVersion)]
-            , B moSourcePolicy
-            , Constr
-                0
-                [B (orTransactionId moSourceRef), I (orOutputIndex moSourceRef)]
-            ]
+successorData = versionedData
 
 protectedLovelace :: Integer
 protectedLovelace = 8_000_000
@@ -219,13 +232,16 @@ valueWith :: ByteString -> Integer -> MigrationValue
 valueWith policy lovelace =
     Map.fromList [(lovelaceKey, lovelace), ((policy, aidAssetName), 1)]
 
+{- | The permanent-family source: a natively registered generation-1 row, so
+it carries its applied version and deliberately no origin.
+-}
 sourceInput :: MigrationInput
 sourceInput =
     MigrationInput
         { miRef = sourceRef
         , miAddress = targetAddress
         , miValue = valueWith sourcePolicy protectedLovelace
-        , miDatum = Just sourceStateData
+        , miDatum = Just (versionedData 1 Nothing)
         }
 
 successorOutput :: MigrationOutput
@@ -326,7 +342,13 @@ legacyTx =
     MigrationTx
         { mtxNetworkId = lcNetworkId preprodV0
         , mtxInputs =
-            [sourceInput{miValue = valueWith legacyPolicy protectedLovelace}]
+            -- The legacy source is a v0 row: its datum is the v0 version sum,
+            -- not a versioned record — v0 has no such field.
+            [ sourceInput
+                { miValue = valueWith legacyPolicy protectedLovelace
+                , miDatum = Just sourceStateData
+                }
+            ]
         , mtxOutputs = [legacySuccessorOutput, legacyRefundOutput]
         , mtxMint =
             Map.fromList

@@ -43,11 +43,11 @@ const hp_policy: PolicyId =
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 
-/// The generation this applied program succeeds (#254). These regression
-/// tests exercise generation 0, which has no predecessor, so the pin is a
-/// policy no lifecycle test transaction ever mints under.
-const predecessor_policy: PolicyId =
-  #"0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
+/// The promoted #254 migration observer this applied program requires for a
+/// migrate arm. These regression tests exercise the pre-migration lifecycle,
+/// which never withdraws under it.
+const migration_hash: PolicyId =
+  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
 const lifecycle_hash: PolicyId =
   #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -129,7 +129,7 @@ fn run_register(
   let tx = register_tx(d, lovelace, evidence)
   checkpoint_register.checkpoint_register.mint(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -234,7 +234,7 @@ fn run_close(evidence: CloseEvidence) -> Bool {
   let tx = close_tx(evidence)
   checkpoint_register.checkpoint_register.mint(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -247,7 +247,7 @@ fn run_close(evidence: CloseEvidence) -> Bool {
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -359,7 +359,7 @@ fn run_rotate_small(
   let tx = with_advance_observer(rotate_tx(spent, created), envelope)
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -378,7 +378,7 @@ test rotate_small_rejects_missing_advance_observer() fail {
   let spent = advance_vec.pos_adv_wit_2key_spent
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -436,7 +436,7 @@ test rotate_small_rejects_changed_successor_value() fail {
   }
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -547,7 +547,7 @@ fn run_freeze_small(
   let envelope = freeze_envelope(evidence)
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -572,7 +572,7 @@ test freeze_small_rejects_missing_enforcement_observer() fail {
   let tip = enforcement_vec.lag_freeze_tip
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -701,7 +701,7 @@ fn run_armed_response(upper: Int) -> Bool {
   let tx = armed_rotate_tx(spent, created, upper)
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -785,7 +785,7 @@ fn claimed_value(tip: CheckpointDatumV1) -> Value {
 fn run_claim_small(tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -888,7 +888,7 @@ fn run_thaw_small(successor_lovelace: Int) -> Bool {
   let evidence = advance_vec.pos_adv_wit_2key_evidence
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1092,7 +1092,7 @@ fn run_convict_with_action(
   let envelope = convict_envelope_at(action, convict_ref(), evidence)
   checkpoint_register.checkpoint_register.mint(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1105,7 +1105,7 @@ fn run_convict_with_action(
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1307,7 +1307,7 @@ test convict_small_rejects_freeze_action_tag_for_convict_spend() fail {
   )
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1379,7 +1379,7 @@ test convict_small_rejects_crossed_observer_and_spend_own_refs() fail {
   }
   checkpoint_register.checkpoint_register.mint(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1392,7 +1392,7 @@ test convict_small_rejects_crossed_observer_and_spend_own_refs() fail {
     tx,
   ) && checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,
@@ -1425,7 +1425,7 @@ test freeze_small_rejects_convict_action_tag() fail {
   }
   checkpoint_register.checkpoint_register.spend(
     0,
-    predecessor_policy,
+    migration_hash,
     lifecycle_hash,
     advance_hash,
     enforcement_hash,

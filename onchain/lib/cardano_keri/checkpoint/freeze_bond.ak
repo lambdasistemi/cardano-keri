@@ -5,7 +5,7 @@
 //// ArmedV1 bytes, and deadline checks all have Haskell-generated vectors.
 
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, VersionedCheckpoint}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 
 /// Mechanical minimum freeze bond in lovelace.
 pub const freeze_bond_floor: Int = 5_000_000
@@ -27,22 +27,6 @@ pub type ArmedDatum {
     hunter_pkh: ByteArray,
     deadline: Int,
   }
-}
-
-/// The versioned in-flight challenge (#254, DAT-254-ARMED): the versioned
-/// checkpoint plus the *exact* hunter and deadline the source carried.
-/// Migration preserves all three and the ARMED position; it never resolves,
-/// extends, or reassigns a challenge in flight.
-pub type VersionedArmed {
-  armed_checkpoint: VersionedCheckpoint,
-  armed_hunter_pkh: ByteArray,
-  armed_deadline: Int,
-}
-
-/// The versioned ARMED datum sum. `VersionedArmedV1` is constructor index 0,
-/// beside — never replacing — the v0 `ArmedDatum`.
-pub type VersionedArmedDatum {
-  VersionedArmedV1(VersionedArmed)
 }
 
 pub type ArmedDatumError {

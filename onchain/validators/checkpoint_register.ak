@@ -28,14 +28,10 @@ use cardano_keri/checkpoint/freeze_bond.{
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_freeze, observe_register, observe_response_advance,
+  observe_freeze, observe_migration, observe_register, observe_response_advance,
 }
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active, Armed}
-use cardano_keri/migration/checkpoint.{
-  LegacyCheckpointIdentity, LegacyCloseEvidence, Predecessor,
-} as migration
-use cardano_keri/migration/types.{MigrationAuthorization, ValidatorVersion}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
 ///
@@ -46,18 +42,13 @@ pub type MintRedeemer {
   Register
   CloseBurn { checkpoint_ref: OutputReference }
   ConvictBurn { checkpoint_ref: OutputReference }
-  /// Enter this generation from its pinned predecessor (#254 T254-104).
-  MigrateInMint {
-    source_ref: OutputReference,
-    authorization: MigrationAuthorization,
-  }
+  /// Enter this generation from its pinned predecessor (#254 T254-104). The
+  /// verdict runs in the promoted migration observer; this arm owns the token
+  /// mechanics and requires that exact withdrawal.
+  MigrateInMint { source_ref: OutputReference }
   /// Enter this generation from the immutable deployed preprod v0 program,
   /// whose only authorized exit is its own `Close`/`CloseBurn` (#254 T254-105).
-  LegacyMigrateInMint {
-    source_ref: OutputReference,
-    close: LegacyCloseEvidence,
-    authorization: MigrationAuthorization,
-  }
+  LegacyMigrateInMint { source_ref: OutputReference }
 }
 
 pub type SpendRedeemer {
@@ -71,14 +62,14 @@ pub type SpendRedeemer {
     hunter_output_index: Int,
   }
   /// Leave this generation under its own controller quorum (#254 T254-104).
-  MigrateOut { authorization: MigrationAuthorization }
+  MigrateOut
 }
 
 const checkpoint_min_ada: Int = 2_000_000
 
 validator checkpoint_register(
-  version: Int,
-  predecessor_policy: PolicyId,
+  _version: Int,
+  migration_hash: PolicyId,
   lifecycle_hash: PolicyId,
   advance_hash: PolicyId,
   enforcement_hash: PolicyId,
@@ -100,27 +91,14 @@ validator checkpoint_register(
         validate_close_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
       ConvictBurn { checkpoint_ref } ->
         validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
-      MigrateInMint { source_ref, authorization } ->
-        migration.validate_checkpoint_migrate_in(
-          version,
-          Predecessor {
-            predecessor_version: ValidatorVersion { value: version - 1 },
-            predecessor_policy,
-          },
-          source_ref,
-          authorization,
-          policy_id,
-          tx,
-        )
-      LegacyMigrateInMint { source_ref, close, authorization } ->
-        migration.validate_legacy_checkpoint_migrate_in(
-          preprod_v0_identity(),
-          source_ref,
-          close,
-          authorization,
-          policy_id,
-          tx,
-        )
+      MigrateInMint { source_ref } -> {
+        expect ran_migration_check(migration_hash, policy_id, source_ref, tx)
+        validate_migrate_in_tokens(source_ref, policy_id, tx)
+      }
+      LegacyMigrateInMint { source_ref } -> {
+        expect ran_migration_check(migration_hash, policy_id, source_ref, tx)
+        validate_migrate_in_tokens(source_ref, policy_id, tx)
+      }
     }
   }
 
@@ -178,13 +156,11 @@ validator checkpoint_register(
           tx,
         )
       }
-      MigrateOut { authorization } ->
-        migration.validate_checkpoint_migrate_out(
-          version,
-          authorization,
-          own_ref,
-          tx,
-        )
+      MigrateOut -> {
+        let own = own_hash(tx, own_ref)
+        expect ran_migration_check(migration_hash, own, own_ref, tx)
+        validate_migrate_out_tokens(own, own_ref, tx)
+      }
     }
   }
 
@@ -193,18 +169,87 @@ validator checkpoint_register(
   }
 }
 
-/// The immutable deployed preprod v0 checkpoint identity (T254-004). Pinned as
-/// data: recompiling current source would produce different bytes and prove
-/// nothing about what is actually deployed on preprod.
-fn preprod_v0_identity() -> LegacyCheckpointIdentity {
-  LegacyCheckpointIdentity {
-    legacy_network_name: "preprod",
-    legacy_network_magic: 1,
-    legacy_network_id: 0,
-    legacy_version: ValidatorVersion { value: 0 },
-    legacy_policy: #"0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734",
-    legacy_source_commit: "50a582064ddfde15ebfa3649c6b6fea8d39fc697",
-  }
+/// The #254 migration arms delegate their verdict to the promoted observer and
+/// keep the token mechanics here, where they cannot be delegated without
+/// circular trust: the observer would otherwise be asserting facts about the
+/// very policy whose program is asking it.
+///
+/// This mirrors `ran_register_check` exactly, and additionally binds the named
+/// source output, so an observation of one migration can never satisfy another.
+fn ran_migration_check(
+  migration_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  source_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let credential: Credential = Script(migration_hash)
+  expect
+    list.any(
+      tx.withdrawals,
+      fn(Pair(withdrawal_credential, lovelace)) {
+        withdrawal_credential == credential && lovelace == 0
+      },
+    )
+  expect
+    list.any(
+      tx.redeemers,
+      fn(Pair(purpose, redeemer)) {
+        when purpose is {
+          Withdraw(redeemer_credential) ->
+            if redeemer_credential == credential {
+              expect envelope: ObserverEnvelope = redeemer
+              let claim = envelope.claim
+              claim.action == observe_migration && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+                source_ref,
+              )
+            } else {
+              False
+            }
+          _ -> False
+        }
+      },
+    )
+  True
+}
+
+/// Entry token mechanics: exactly one token of the source's name is minted
+/// under this policy and confined to one output. Which successor, and whether
+/// its state and value are continuous, is the observer's verdict.
+fn validate_migrate_in_tokens(
+  source_ref: OutputReference,
+  policy_id: PolicyId,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(source_input) = find_input(inputs, source_ref)
+  expect InlineDatum(_) = source_input.output.datum
+  expect [Pair(aid_name, 1)] = dict.to_pairs(tokens(mint, policy_id))
+  expect [successor] = list.filter(
+    outputs,
+    fn(output) { quantity_of(output.value, policy_id, aid_name) > 0 },
+  )
+  expect quantity_of(successor.value, policy_id, aid_name) == 1
+  True
+}
+
+/// Exit token mechanics: exactly one token of the spent checkpoint's name is
+/// burned under this policy, and no output retains it.
+fn validate_migrate_out_tokens(
+  own: PolicyId,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect InlineDatum(_) = own_input.output.datum
+  expect [Pair(aid_name, -1)] = dict.to_pairs(tokens(mint, own))
+  expect quantity_of(own_input.output.value, own, aid_name) == 1
+  expect
+    list.all(
+      outputs,
+      fn(output) { quantity_of(output.value, own, aid_name) == 0 },
+    )
+  True
 }
 
 fn own_hash(tx: Transaction, own_ref: OutputReference) -> PolicyId {

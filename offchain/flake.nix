@@ -1367,6 +1367,17 @@
                       mkdir -p nix-generated
                       cp ${s2Artifacts}/*.hex nix-generated/
                     '' + prev.buildCommand;
+                    # #254 T254-108: the migration module's own import, taken
+                    # from the LIVE blueprint. It is a separate placement from
+                    # the S2 one above so the two bodies of evidence cannot
+                    # accidentally read each other's programs: S2 sees only
+                    # the frozen deployed baseline, this sees only what
+                    # onchain/ currently compiles to.
+                  } // pkgs.lib.optionalAttrs (prev.name == migrationModule) {
+                    buildCommand = ''
+                      mkdir -p nix-generated
+                      cp ${migrationArtifacts}/*.hex nix-generated/
+                    '' + prev.buildCommand;
                   };
               };
 
@@ -1453,6 +1464,59 @@
               # compiled modules that carry the eight production imports, so
               # it cannot report on anything but the imported values.
               s2Evidence = keriBlasterPackage.executable;
+
+              # ---------------------------------------------------------
+              # #254 T254-108: the exact CHANGED compiled checkpoint family.
+              # ---------------------------------------------------------
+              # This target is derived from `e2eWiring.blueprint`, the LIVE
+              # blueprint of whatever `onchain/` currently compiles to. It is
+              # deliberately NOT `frozenM8Blueprint`: that pin exists to hold
+              # ms8's baseline at the exact DEPLOYED bytecode and by
+              # construction cannot change when this slice changes the
+              # validator. A migration proof read from the frozen pin would
+              # pass without ever executing the code it claims to be about.
+              migrationTitle = "checkpoint_observer.observer_migration.withdraw";
+              migrationModule = "KeriBlaster.Migration";
+
+              migrationArtifacts =
+                pkgs.runCommand "cardano-keri-migration-uplc-program" {
+                  nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+                } ''
+                  set -euo pipefail
+                  mkdir -p "$out"
+                  blueprint=${e2eWiring.blueprint}
+                  test "$(jq -er --arg title "${migrationTitle}" \
+                    '[.validators[] | select(.title == $title)] | length' \
+                    "$blueprint")" -eq 1
+                  jq -er --arg title "${migrationTitle}" \
+                    -f ${./blaster/extract-program.jq} "$blueprint" \
+                    | tr -d '\n\r[:space:]' > "$out/${migrationTitle}.hex"
+                  test -s "$out/${migrationTitle}.hex"
+                  sha256sum "$out/${migrationTitle}.hex" | cut -d ' ' -f 1 \
+                    > "$out/program_sha256"
+                '';
+
+              migrationRunner = pkgs.writeShellApplication {
+                name = "checkpoint-migration-blaster";
+                runtimeInputs = [ pkgs.coreutils pkgs.jq ];
+                text = ''
+                  artifacts=${migrationArtifacts}
+                  program_sha256="$(cat "$artifacts/program_sha256")"
+
+                  # The identity of the program actually executed below. It is
+                  # recomputed from the extracted bytes rather than restated,
+                  # so it changes whenever onchain/ changes -- which is the
+                  # whole point of reading the live blueprint.
+                  recomputed="$(sha256sum \
+                    "$artifacts/${migrationTitle}.hex" | cut -d ' ' -f 1)"
+                  test "$recomputed" = "$program_sha256"
+
+                  printf 'M8.migration-target title=%s program_sha256=%s\n' \
+                    "${migrationTitle}" "$program_sha256"
+
+                  MIGRATION_EVIDENCE=1 ${s2Evidence}/bin/s2-evidence
+                '';
+              };
 
               artifact = pkgs.runCommand "cardano-keri-blaster-artifact" {
                 nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
@@ -1625,7 +1689,7 @@
                 touch "$out"
               '';
             in {
-              inherit artifact auditRunner check runner;
+              inherit artifact auditRunner check runner migrationRunner;
               lean = leanPkgs.lean-all;
             });
 
@@ -1685,6 +1749,7 @@
             plutus-blueprint = e2eWiring.blueprint;
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
             blaster = blasterWiring.runner;
+            checkpoint-migration-blaster = blasterWiring.migrationRunner;
             lean = blasterWiring.lean;
           } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
             ckeri-appimage = linuxArtifacts.appimage;
@@ -1733,15 +1798,15 @@
           # `gate.sh`'s preflight and `just ci-offchain` reach it by name; on a
           # system without the blueprint it now fails closed with a named
           # message instead of running a silently reduced suite.
-          // pkgs.lib.optionalAttrs (e2eWiring ? blueprint) {
-            local-write-path-check = local-write-path-check-check;
-          } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
-            deployment-tests = e2eWiring.deploymentTestsCheck;
-            e2e = e2eWiring.check;
-            sweep-consistency = e2eWiring.sweepConsistency;
-          } // pkgs.lib.optionalAttrs (blasterWiring ? check) {
-            blaster = blasterWiring.check;
-          };
+            // pkgs.lib.optionalAttrs (e2eWiring ? blueprint) {
+              local-write-path-check = local-write-path-check-check;
+            } // pkgs.lib.optionalAttrs (e2eWiring ? check) {
+              deployment-tests = e2eWiring.deploymentTestsCheck;
+              e2e = e2eWiring.check;
+              sweep-consistency = e2eWiring.sweepConsistency;
+            } // pkgs.lib.optionalAttrs (blasterWiring ? check) {
+              blaster = blasterWiring.check;
+            };
           apps = {
             format = {
               type = "app";
@@ -1840,16 +1905,15 @@
           # the gate runner had it, so the same fixture would pass under one
           # command and fail under the other. It is therefore a real derivation
           # environment attribute, which `-c` does honour.
-          devShells.default =
-            project.shell.overrideAttrs (_previous: {
-              KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
-              # #263: same reasoning as the line above -- the focused commands
-              # `nix develop -c cabal run local-write-path-tests` and
-              # `... deployment-tests` must observe the SAME board binding the
-              # permanent runners set, or a fixture would pass under one
-              # command and fail under the other.
-              KERI_BOARD_BLUEPRINT = keriBoardBlueprintPath;
-            });
+          devShells.default = project.shell.overrideAttrs (_previous: {
+            KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
+            # #263: same reasoning as the line above -- the focused commands
+            # `nix develop -c cabal run local-write-path-tests` and
+            # `... deployment-tests` must observe the SAME board binding the
+            # permanent runners set, or a fixture would pass under one
+            # command and fail under the other.
+            KERI_BOARD_BLUEPRINT = keriBoardBlueprintPath;
+          });
         };
     };
 }

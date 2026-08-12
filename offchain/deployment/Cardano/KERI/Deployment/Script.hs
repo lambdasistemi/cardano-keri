@@ -155,15 +155,17 @@ applyCheckpointParams ::
     ByteString ->
     ByteString ->
     ByteString ->
+    ByteString ->
     Integer ->
     Integer ->
     Integer ->
     Integer ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointParams version lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
+applyCheckpointParams version migrationHash lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
     applyDataArgs
         [ I version
+        , B migrationHash
         , B lifecycleHash
         , B advanceHash
         , B enforcementHash
@@ -302,6 +304,25 @@ deriveV1Scripts blueprint = do
                 enforcementTitle
                 "withdrawal-observer"
                 appliedEnforcement
+    -- #254 A-001: the promoted migration observer, derived as a v1 family
+    -- component and applied to the checkpoint program by hash.  Its
+    -- predecessor pin is an applied parameter, never a redeemer field.
+    (migrationTitle, migrationProgram) <-
+        require
+            "checkpoint_observer.observer_migration.withdraw"
+            "observer-migration"
+    let appliedMigration =
+            applyParams
+                checkpointFamilyV1Version
+                (scriptHashBytes hashProofHash)
+                migrationProgram
+        migrationHash = computeScriptHash appliedMigration
+        migration =
+            artifact
+                "observer-migration"
+                migrationTitle
+                "withdrawal-observer"
+                appliedMigration
     (checkpointTitle, checkpointProgram) <-
         require
             "checkpoint_register.checkpoint_register.mint"
@@ -309,6 +330,7 @@ deriveV1Scripts blueprint = do
     let appliedCheckpoint =
             applyCheckpointParams
                 v1CheckpointVersion
+                (scriptHashBytes migrationHash)
                 (scriptHashBytes lifecycleHash)
                 (scriptHashBytes advanceHash)
                 (scriptHashBytes enforcementHash)
@@ -323,7 +345,7 @@ deriveV1Scripts blueprint = do
                 checkpointTitle
                 "validator-and-minting-policy"
                 appliedCheckpoint
-    pure [hashProof, lifecycle, advance, enforcement, checkpoint]
+    pure [hashProof, lifecycle, advance, enforcement, migration, checkpoint]
   where
     require title name =
         maybe

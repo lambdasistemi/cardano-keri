@@ -34,9 +34,16 @@ unit match="":
 build-offchain:
     cd offchain && nix build --quiet --no-write-lock-file .#checks.x86_64-linux.unit-tests
 
-# Run the release-script derivation and manifest unit tests.
-deployment-unit:
-    cd offchain && nix run --quiet --no-write-lock-file .#deployment-tests
+# Run the release-script derivation and manifest unit tests. An optional
+# match narrows the suite to one focused population (#254 S254-1B).
+deployment-unit match="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=()
+    if [[ '{{ match }}' != "" ]]; then
+        args+=(--match "{{ match }}")
+    fi
+    cd offchain && nix run --quiet --no-write-lock-file .#deployment-tests -- "${args[@]}"
 
 # Run checkpoint indexer codec tests (executes the binary).
 indexer-unit:

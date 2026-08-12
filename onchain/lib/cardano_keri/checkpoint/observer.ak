@@ -38,6 +38,15 @@ pub const observe_response_advance: Int = 3
 /// The stable action tag for Convict.
 pub const observe_convict: Int = 4
 
+/// The stable action tag for a checkpoint-family migration (#254).
+///
+/// The heavy migration verdict — canonical message reconstruction, the
+/// controller quorum, the family edge, and identity/role/value continuity —
+/// runs in its own observer, because the applied Register program cannot hold
+/// it and stay under the released signed-reference transaction ceiling. Only
+/// the tag lives here; the checks stay owned by MOD-254-CHECKPOINT-FAMILY.
+pub const observe_migration: Int = 5
+
 /// The claim checked independently by the checkpoint minting policy.
 pub type ObserverClaim {
   action: Int,

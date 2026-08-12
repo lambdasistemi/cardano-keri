@@ -68,6 +68,9 @@ spec =
                         , "observer-advance"
                         , "observer-enforcement"
                         , "observer-lifecycle"
+                        , -- #254 A-001: the promoted migration observer is a
+                          -- v1 family component, published beside the M1 set.
+                          "observer-migration"
                         ]
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
@@ -378,8 +381,11 @@ requireManifest artifacts =
 
 testReferences :: [Reference]
 testReferences =
+    -- One per published artifact. #254 A-001 added the promoted migration
+    -- observer, so this is six: a short list silently leaves the last
+    -- artifact without a reference rather than failing on the count.
     [ Reference (txId index) index
-    | index <- [0 .. 4]
+    | index <- [0 .. 5]
     ]
   where
     txId _ =

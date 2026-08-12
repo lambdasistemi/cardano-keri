@@ -398,11 +398,11 @@ test-suite deployment-tests
   other-modules:
     Cardano.KERI.Deployment.AdvanceSpec
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.CloseSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
-    Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec

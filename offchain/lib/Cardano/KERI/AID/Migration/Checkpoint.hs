@@ -542,9 +542,13 @@ validateCheckpointMigrateOut ::
     MigrationVerdict
 validateCheckpointMigrateOut version authorization ownRef tx = do
     input <- maybe (Left MigrationSourceMissing) Right (findInput ownRef tx)
-    sourceState <- decodeCheckpoint (miDatum input)
-    let origin = maSourceOrigin authorization
-    if vvValue (moSourceVersion origin) /= version
+    -- A permanent-family source is itself a versioned row, so its own applied
+    -- marker is available and must agree with the program's generation.
+    sourceVersioned <- decodeVersioned (miDatum input)
+    let sourceState = vcState sourceVersioned
+        origin = maSourceOrigin authorization
+    if vvValue (vcValidatorVersion sourceVersioned) /= version
+        || vvValue (moSourceVersion origin) /= version
         then Left MigrationAppliedVersionMismatch
         else do
             let source = sourceOf authorization (mtxNetworkId tx)
@@ -578,8 +582,9 @@ validateCheckpointMigrateIn ::
     MigrationVerdict
 validateCheckpointMigrateIn version predecessor sourceRef authorization policy tx = do
     input <- maybe (Left MigrationSourceMissing) Right (findInput sourceRef tx)
-    sourceState <- decodeCheckpoint (miDatum input)
-    let source = sourceOf authorization (mtxNetworkId tx)
+    sourceVersioned <- decodeVersioned (miDatum input)
+    let sourceState = vcState sourceVersioned
+        source = sourceOf authorization (mtxNetworkId tx)
         target = maTarget authorization
         message = migrationMessage source target
         assetName = assetNameOf sourceState

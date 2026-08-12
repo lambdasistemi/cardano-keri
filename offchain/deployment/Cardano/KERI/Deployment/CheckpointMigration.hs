@@ -29,9 +29,15 @@ import Cardano.KERI.Deployment.Script (
     checkpointFamilyV1Version,
     v1CheckpointVersion,
  )
+import Data.Map.Strict qualified as Map
+import Data.Maybe (
+    isNothing,
+ )
+import Data.Set qualified as Set
 import Data.Text (
     Text,
  )
+import Data.Text qualified as Text
 
 {- | One published checkpoint family: its generation, minting policy, the
 address its ACTIVE role occupies, the generation it succeeds (absent for the
@@ -103,8 +109,70 @@ publishedCheckpointFamilies =
     [historicalCheckpointFamily, migrationCheckpointFamily]
 
 {- | Every structural fault in a published family set, or an empty list.  All
-faults are reported together so one build reveals the whole picture.
+faults are reported together so one build reveals the whole picture rather
+than one fault per rebuild.
+
+Identity fields are required only of __released__ entries — those carrying a
+manifest path.  The new family legitimately has no policy or commit yet: it is
+not deployed, and demanding one here would force a placeholder that looks like
+a release.
 -}
 checkpointFamilyPublicationErrors ::
     [CheckpointFamilyIdentity] -> [PublicationError]
-checkpointFamilyPublicationErrors _ = [PublicationNotImplemented]
+checkpointFamilyPublicationErrors families =
+    concat
+        [ duplicates
+        , edgeErrors
+        , rootErrors
+        , identityErrors
+        , historicalErrors
+        ]
+  where
+    versions = map cfiVersion families
+    published = Set.fromList versions
+
+    duplicates =
+        [ DuplicateFamilyVersion version
+        | (version, count) <- Map.toList (counted versions)
+        , count > (1 :: Int)
+        ]
+    counted = foldr (\v -> Map.insertWith (+) v 1) Map.empty
+
+    edgeErrors =
+        concat
+            [ case cfiPredecessor family of
+                Nothing -> []
+                Just predecessor
+                    | not (predecessor `Set.member` published) ->
+                        [UnknownPredecessor (cfiVersion family) predecessor]
+                    | cfiVersion family /= predecessor + 1 ->
+                        [NonContiguousFamilies predecessor (cfiVersion family)]
+                    | otherwise -> []
+            | family <- families
+            ]
+
+    rootErrors
+        | length [() | family <- families, isNothing (cfiPredecessor family)] > 1 =
+            [MultipleRootFamilies]
+        | otherwise = []
+
+    identityErrors =
+        concat
+            [ [ EmptyIdentityField (cfiVersion family) name
+              | (name, value) <-
+                    [("policy", cfiPolicy family), ("commit", cfiSourceCommit family)]
+              , Text.null value
+              ]
+            | family <- families
+            , not (Text.null (cfiManifestPath family))
+            ]
+
+    -- The deployed generation must still be published, with its own version
+    -- and its own manifest entry. This is the check that fails if released
+    -- history is ever relabelled as the new family instead of kept beside it.
+    historicalErrors
+        | any isHistorical families = []
+        | otherwise = [HistoricalFamilyNotPreserved]
+    isHistorical family =
+        cfiVersion family == cfiVersion historicalCheckpointFamily
+            && cfiManifestPath family == cfiManifestPath historicalCheckpointFamily

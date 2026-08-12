@@ -174,24 +174,29 @@ sourceStateData :: Data
 sourceStateData = checkpointTree
 
 {- | The projection as a @Data@ tree, in the exact constructor-0 layout the
-frozen @CheckpointDatum@ codec emits.
+frozen @CheckpointDatum@ codec emits: the version sum wrapping the inner
+record.  This wrapped form is what the authorization carries verbatim.
 -}
 checkpointTree :: Data
-checkpointTree =
+checkpointTree = Constr 0 [innerCheckpointTree]
+
+{- | The inner nine-field record alone.  'VersionedCheckpoint' embeds the
+projection __unwrapped__ — the version sum belongs to the v0 datum, and
+re-wrapping it inside the versioned record would nest two version tags.
+-}
+innerCheckpointTree :: Data
+innerCheckpointTree =
     Constr
         0
-        [ Constr
-            0
-            [ B (cdCesrAid sourceDatum)
-            , List [B k | k <- cdCurKeys sourceDatum]
-            , Constr 0 [I 2]
-            , List [B k | k <- cdNextKeys sourceDatum]
-            , Constr 0 [I 1]
-            , List [B w | w <- cdWitnesses sourceDatum]
-            , I (cdToad sourceDatum)
-            , I (cdSeq sourceDatum)
-            , I (cdNativeSn sourceDatum)
-            ]
+        [ B (cdCesrAid sourceDatum)
+        , List [B k | k <- cdCurKeys sourceDatum]
+        , Constr 0 [I 2]
+        , List [B k | k <- cdNextKeys sourceDatum]
+        , Constr 0 [I 1]
+        , List [B w | w <- cdWitnesses sourceDatum]
+        , I (cdToad sourceDatum)
+        , I (cdSeq sourceDatum)
+        , I (cdNativeSn sourceDatum)
         ]
 
 sourceRef, mutantRef :: OutputRef
@@ -473,7 +478,7 @@ successorTree VersionedCheckpoint{..} =
         0
         [ Constr 0 [I (vvValue vcValidatorVersion)]
         , maybe (Constr 1 []) (\o -> Constr 0 [originTree o]) vcMigrationOrigin
-        , checkpointTree
+        , innerCheckpointTree
         ]
   where
     originTree MigrationOrigin{..} =
@@ -522,12 +527,10 @@ selfCheck = do
             Left MigrationQuorumUnsatisfied -> pure ()
             Left e ->
                 fail
-                    ( "authority negative " <> name <> " failed for the wrong reason: " <> show e
-                    )
+                    ("authority negative " <> name <> " failed for the wrong reason: " <> show e)
             Right () ->
                 fail
-                    ( "authority negative " <> name <> " was ACCEPTED; the control cannot fail"
-                    )
+                    ("authority negative " <> name <> " was ACCEPTED; the control cannot fail")
 
 -- ---------------------------------------------------------
 -- Rendering

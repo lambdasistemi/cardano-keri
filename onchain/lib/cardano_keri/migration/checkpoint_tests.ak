@@ -15,19 +15,20 @@
 use aiken/cbor
 use cardano/address.{Address, Inline, Script, VerificationKey}
 use cardano/assets.{add, zero}
+use cardano/transaction.{OutputReference}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{
   CheckpointRoleState, MigrationInvalid, MigrationSource, MigrationSuccessor,
-  MigrationValid, PolicyReplacement, Predecessor, checkpoint_migration_authorized,
-  checkpoint_transition_continuous, migration_message, valid_migration_edge,
+  MigrationValid, PolicyReplacement, Predecessor,
+  checkpoint_migration_authorized, checkpoint_transition_continuous,
+  migration_message, valid_migration_edge,
 }
 use cardano_keri/migration/checkpoint_vectors as vec
 use cardano_keri/migration/types.{
   CheckpointActive, CheckpointFrozen, MigrationOrigin, MigrationTarget,
   ValidatorVersion,
 }
-use cardano/transaction.{OutputReference}
 
 // ---------------------------------------------------------
 // Fixture material, built from the generator's own inputs
@@ -36,8 +37,11 @@ use cardano/transaction.{OutputReference}
 fn source_datum() -> CheckpointDatumV1 {
   CheckpointDatumV1 {
     cesr_aid: vec.fixture_cesr_aid,
-    cur_keys: [vec.fixture_ctrl_key_0, vec.fixture_ctrl_key_1,
-      vec.fixture_ctrl_key_2],
+    cur_keys: [
+      vec.fixture_ctrl_key_0,
+      vec.fixture_ctrl_key_1,
+      vec.fixture_ctrl_key_2,
+    ],
     cur_threshold: Unweighted(2),
     next_keys: [vec.fixture_next_key_0, vec.fixture_next_key_1],
     next_threshold: Unweighted(1),
@@ -137,7 +141,10 @@ fn quorum() -> List<(Int, ByteArray)> {
   sigs([(0, vec.fixture_sig_0), (1, vec.fixture_sig_1)])
 }
 
-fn successor_of(version: Int, origin: Option<MigrationOrigin>) -> MigrationSuccessor {
+fn successor_of(
+  version: Int,
+  origin: Option<MigrationOrigin>,
+) -> MigrationSuccessor {
   MigrationSuccessor {
     successor_version: ValidatorVersion { value: version },
     successor_policy: vec.fixture_target_policy,
@@ -210,10 +217,14 @@ test checkpoint_migration_message_binds_network() {
 test checkpoint_migration_message_binds_source_family() {
   // Both halves of the source family identity — which generation, and which
   // minting policy — are pinned by the signature.
-  let other_version =
-    MigrationSource { ..source(), source_version: ValidatorVersion { value: 2 } }
-  let other_policy =
-    MigrationSource { ..source(), source_policy: vec.fixture_target_policy }
+  let other_version = MigrationSource {
+    ..source(),
+    source_version: ValidatorVersion { value: 2 },
+  }
+  let other_policy = MigrationSource {
+    ..source(),
+    source_policy: vec.fixture_target_policy,
+  }
   and {
     encoded(other_version, migration_target()) == vec.negative_message_source_version,
     encoded(other_version, migration_target()) != golden(),
@@ -250,13 +261,14 @@ test checkpoint_migration_message_binds_source_state() {
 test checkpoint_migration_message_binds_target_family() {
   // Which generation the move lands on, and under which minting policy, are
   // both signed — a package cannot be steered to another family.
-  let other_version =
-    MigrationTarget {
-      ..migration_target(),
-      target_version: ValidatorVersion { value: 3 },
-    }
-  let other_policy =
-    MigrationTarget { ..migration_target(), target_policy: vec.fixture_source_policy }
+  let other_version = MigrationTarget {
+    ..migration_target(),
+    target_version: ValidatorVersion { value: 3 },
+  }
+  let other_policy = MigrationTarget {
+    ..migration_target(),
+    target_policy: vec.fixture_source_policy,
+  }
   and {
     encoded(source(), other_version) == vec.negative_message_target_version,
     encoded(source(), other_version) != golden(),
@@ -266,8 +278,10 @@ test checkpoint_migration_message_binds_target_family() {
 }
 
 test checkpoint_migration_message_binds_target_role() {
-  let redirected =
-    MigrationTarget { ..migration_target(), target_role: CheckpointFrozen }
+  let redirected = MigrationTarget {
+    ..migration_target(),
+    target_role: CheckpointFrozen,
+  }
   and {
     encoded(source(), redirected) == vec.negative_message_target_role,
     encoded(source(), redirected) != golden(),
@@ -276,14 +290,13 @@ test checkpoint_migration_message_binds_target_role() {
 
 test checkpoint_migration_message_binds_target_address() {
   // Dropping only the delegation part still redirects where value lands.
-  let redirected =
-    MigrationTarget {
-      ..migration_target(),
-      target_address: Address {
-        payment_credential: Script(vec.fixture_target_script),
-        stake_credential: None,
-      },
-    }
+  let redirected = MigrationTarget {
+    ..migration_target(),
+    target_address: Address {
+      payment_credential: Script(vec.fixture_target_script),
+      stake_credential: None,
+    },
+  }
   and {
     encoded(source(), redirected) == vec.negative_message_target_address,
     encoded(source(), redirected) != golden(),
@@ -291,11 +304,10 @@ test checkpoint_migration_message_binds_target_address() {
 }
 
 test checkpoint_migration_message_binds_legacy_refund() {
-  let redirected =
-    MigrationTarget {
-      ..migration_target(),
-      legacy_refund_address: Some(refund_address()),
-    }
+  let redirected = MigrationTarget {
+    ..migration_target(),
+    legacy_refund_address: Some(refund_address()),
+  }
   and {
     encoded(source(), redirected) == vec.negative_message_refund,
     encoded(source(), redirected) != golden(),
@@ -345,7 +357,9 @@ test checkpoint_migration_replayed_signature_rejects() {
   // whole point of binding every field into the preimage.
   and {
     authorized(quorum()),
-    !authorized(sigs([(0, vec.fixture_sig_0_over_mutant), (1, vec.fixture_sig_1)])),
+    !authorized(
+      sigs([(0, vec.fixture_sig_0_over_mutant), (1, vec.fixture_sig_1)]),
+    ),
   }
 }
 
@@ -381,26 +395,31 @@ test checkpoint_migration_edge_accepts_exact_successor() {
 }
 
 test checkpoint_migration_foreign_predecessor_rejects() {
-  let foreign =
-    Predecessor {
-      predecessor_version: ValidatorVersion { value: 1 },
-      predecessor_policy: vec.fixture_legacy_policy,
-    }
+  let foreign = Predecessor {
+    predecessor_version: ValidatorVersion { value: 1 },
+    predecessor_policy: vec.fixture_legacy_policy,
+  }
   and {
     valid_migration_edge(
       source(),
       successor_of(2, Some(source_origin())),
       pinned(),
     ) == MigrationValid,
-    valid_migration_edge(source(), successor_of(2, Some(source_origin())), foreign) != MigrationValid,
+    valid_migration_edge(
+      source(),
+      successor_of(2, Some(source_origin())),
+      foreign,
+    ) != MigrationValid,
   }
 }
 
 test checkpoint_migration_origin_must_be_actual_source() {
   // An origin naming a different spent output, and an absent origin, are both
   // refused: a migrated row must record where it actually came from.
-  let wrong_ref =
-    MigrationOrigin { ..source_origin(), source_ref: mutant_ref() }
+  let wrong_ref = MigrationOrigin {
+    ..source_origin(),
+    source_ref: mutant_ref(),
+  }
   and {
     valid_migration_edge(
       source(),
@@ -437,13 +456,12 @@ test checkpoint_migration_preserves_kel_projection() {
 test checkpoint_migration_preserves_role_payload() {
   // ACTIVE must stay ACTIVE, and a successor that invents an ARMED payload is
   // not the role it claims to be.
-  let invented =
-    CheckpointRoleState {
-      state_role: CheckpointActive,
-      checkpoint: source_datum(),
-      hunter_pkh: Some(vec.fixture_refund_vkey),
-      deadline: Some(99),
-    }
+  let invented = CheckpointRoleState {
+    state_role: CheckpointActive,
+    checkpoint: source_datum(),
+    hunter_pkh: Some(vec.fixture_refund_vkey),
+    deadline: Some(99),
+  }
   and {
     checkpoint_transition_continuous(
       active_role(source_datum()),
@@ -461,13 +479,11 @@ test checkpoint_migration_preserves_role_payload() {
 test checkpoint_migration_value_admits_only_policy_replacement() {
   // Protected lovelace may not be skimmed, and the source token may not
   // survive alongside the new one.
-  let skimmed =
-    zero
-      |> add("", "", 7_000_000)
-      |> add(vec.fixture_target_policy, vec.fixture_aid_asset_name, 1)
-  let retained =
-    successor_value()
-      |> add(vec.fixture_source_policy, vec.fixture_aid_asset_name, 1)
+  let skimmed = zero
+    |> add("", "", 7_000_000)
+    |> add(vec.fixture_target_policy, vec.fixture_aid_asset_name, 1)
+  let retained = successor_value()
+    |> add(vec.fixture_source_policy, vec.fixture_aid_asset_name, 1)
   and {
     checkpoint_transition_continuous(
       active_role(source_datum()),

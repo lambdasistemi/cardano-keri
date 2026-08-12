@@ -24,7 +24,7 @@ implementation, proof execution, child seating, or audit.
 
 ## Phase 2 — S254-1 checkpoint family
 
-- [ ] T254-101 [US1] Add the shared version, predecessor-origin, target,
+- [x] T254-101 [US1] Add the shared version, predecessor-origin, target,
   and canonical migration-authorization models in onchain/offchain parity.
 - [ ] T254-102 [US1] Demonstrate RED for missing/foreign/below-threshold
   current-controller authorization and GREEN for permissionless relay of the

@@ -18,6 +18,7 @@ import Cardano.KERI.AID.Checkpoint.RegistrationSpec qualified as RegistrationSpe
 import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
+import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
@@ -40,3 +41,4 @@ main = hspec $ do
     RegistrationFixturesSpec.spec
     RegistrationSpec.spec
     WireSpec.spec
+    MigrationTypesSpec.spec

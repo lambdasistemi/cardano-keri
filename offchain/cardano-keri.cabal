@@ -76,6 +76,7 @@ library
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
+    Cardano.KERI.AID.Migration.Types
 
   other-modules:
     Cardano.KERI.AID.E2E.Mpf
@@ -941,6 +942,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
+    Cardano.KERI.AID.Migration.TypesSpec
     Paths_cardano_keri
 
   ghc-options:      -threaded -with-rtsopts=-N
@@ -1038,6 +1040,22 @@ executable gen-lifecycle-trace-vectors
   build-depends:
     , base
     , cardano-keri
+
+-- #254 S254-1A: the sole source of the shared migration-type parity
+-- fixtures. Emits both the inputs and the expected encodings, so the Aiken
+-- suite cannot silently assert against material this generator never saw.
+executable gen-migration-types-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenMigrationTypesVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

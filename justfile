@@ -428,6 +428,24 @@ gen-lifecycle-trace-vectors:
 check-lifecycle-trace-vectors: gen-lifecycle-trace-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
 
+# --- migration shared types (#254) ---
+
+# Regenerate the committed #254 shared migration-type parity vectors from the
+# Haskell wire codec (Cardano.KERI.AID.Migration.Types) via
+# GenMigrationTypesVectors.hs. OFFLINE. The module is never hand edited: it
+# carries both the inputs the Aiken suite builds its values from and the
+# expected encodings, and the generator refuses to emit a set whose named
+# mutations collide. `aiken fmt` then canonicalizes the emitted module.
+gen-migration-types-vectors:
+    mkdir -p onchain/lib/cardano_keri/migration
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-migration-types-vectors -- ../onchain/lib/cardano_keri/migration/types_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/migration/types_vectors.ak
+
+# Drift check: Haskell is the sole source of the shared migration wire bytes,
+# so a stale or hand-touched vector module must FAIL the gate.
+check-migration-types-vectors: gen-migration-types-vectors
+    git diff --exit-code onchain/lib/cardano_keri/migration/types_vectors.ak
+
 # Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
 # generated-vector drift.
 check-lean-traceability:
@@ -541,7 +559,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-lean-traceability check-blaster-identity-consistency
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-lean-traceability check-blaster-identity-consistency
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required

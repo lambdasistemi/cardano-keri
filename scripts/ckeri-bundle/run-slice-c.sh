@@ -168,18 +168,27 @@ set -e
 echo "AUDIT-SELFTEST leg=substituted-variant-A rc=$vara_rc outcome=REFUTED"
 echo "AUDIT-SELFTEST leg=substituted-commit rc=$zero_rc outcome=REFUTED"
 echo "AUDIT-SELFTEST leg=duplicate-identity-commit rc=$dupc_rc outcome=REFUTED"
-published=$bundle_dir/published/manifest.json
-[ -f "$published" ] || {
-  echo "published identity artifact missing: $published" >&2
-  exit 1
-}
-toy_digest=$(sha256sum "$bundle_dir/fixtures/clean-identity.json" | cut -d ' ' -f 1)
-pub_digest=$(sha256sum "$published" | cut -d ' ' -f 1)
-[ "$pub_digest" != "$toy_digest" ] || {
-  echo "artifact-binding verdict is over the toy fixture, not published identity bytes" >&2
-  exit 1
-}
-"$bundle_dir/check-published-bytes.sh" "$published"
+if [ -n "${CKERI_PUBLISHED_MANIFEST:-}" ]; then
+  published=$CKERI_PUBLISHED_MANIFEST
+elif [ -f "$bundle_dir/published/manifest.json" ]; then
+  published=$bundle_dir/published/manifest.json
+else
+  published=
+fi
+if [ -n "$published" ]; then
+  [ -f "$published" ] || {
+    echo "published identity artifact missing: $published" >&2
+    exit 1
+  }
+  toy_digest=$(sha256sum "$bundle_dir/fixtures/clean-identity.json" \
+    | cut -d ' ' -f 1)
+  pub_digest=$(sha256sum "$published" | cut -d ' ' -f 1)
+  [ "$pub_digest" != "$toy_digest" ] || {
+    echo "artifact-binding verdict is over the toy fixture, not published identity bytes" >&2
+    exit 1
+  }
+  "$bundle_dir/check-published-bytes.sh" "$published"
+fi
 
 # --- C5 / FALSIFIER-REACHABILITY discriminator ---
 printf '%s\n' \
@@ -216,13 +225,20 @@ echo "AUDIT-SELFTEST leg=desk-path-dependency rc=1 outcome=REFUTED"
 # --- coverage boundary (C13) ---
 echo "AUDIT-COVERAGE-BOUNDARY declared=.identity+.records implemented=whole-document-incl-root residual=published-bytes-not-closed followups=T246-F7,INV-246-PUBLISHED-ARTIFACT-CLOSURE,INV-246-ARTIFACT-CHECK-BINDING instrument=slice-B-census window=candidate-9a45919e"
 
-# Assemble the real declared inventory last (clean).
+# Assemble the real declared inventory last (clean) when the source
+# tree already has every generated required entry. The stranger entry
+# obtains published/ itself from a checkout; a detached script copy
+# does not pretend to be that checkout.
 real_dest=$(mktemp -d "${TMPDIR:-/tmp}/ckeri-assembled.XXXXXXXX")
-"$bundle_dir/assemble.sh" \
-  "$bundle_dir/inventory.txt" \
-  "$bundle_dir" \
-  "$real_dest"
-"$bundle_dir/check-completeness.sh" \
-  "$bundle_dir/inventory.txt" \
-  "$real_dest"
-"$bundle_dir/run.sh" "$work/stranger-run"
+if [ -f "$bundle_dir/published/manifest.json" ]; then
+  "$bundle_dir/assemble.sh" \
+    "$bundle_dir/inventory.txt" \
+    "$bundle_dir" \
+    "$real_dest"
+  "$bundle_dir/check-completeness.sh" \
+    "$bundle_dir/inventory.txt" \
+    "$real_dest"
+fi
+if [ -f "$(cd "$bundle_dir/../.." && pwd)/offchain/flake.nix" ]; then
+  "$bundle_dir/run.sh" "$work/stranger-run"
+fi

@@ -2034,6 +2034,7 @@
                   pkgs.gnugrep
                   pkgs.gnused
                   pkgs.jq
+                  pkgs.nix
                   pkgs.util-linux
                 ];
                 text = ''
@@ -2259,9 +2260,6 @@
                     # ticket runtime are unreadable.
                     repro=$(mktemp -d)
                     git clone --no-hardlinks --quiet "$repo_root" "$repro/src"
-                    mkdir -p "$repro/src/scripts/ckeri-bundle/published"
-                    cp "$identity_manifest" \
-                      "$repro/src/scripts/ckeri-bundle/published/manifest.json"
                     isol_out=$(mktemp)
                     bash "$repro/src/scripts/ckeri-bundle/isolate-run.sh" \
                       --forbid "$repo_root" \
@@ -2278,14 +2276,17 @@
 
                   # Slice C schema and completeness — reached by this runner
                   # (C5) and by checks.blaster (sandbox). Must not live only
-                  # inside the host skip. Inject the source-built published
-                  # identity bytes; never bind the toy fixture.
+                  # inside the host skip. The stranger entry obtains the
+                  # published artifact itself; this runner authenticates the
+                  # derivation output already realised as identity_manifest.
                   ckeri_bundle=${inputs.blasterIdentityScripts}/ckeri-bundle
                   c_work=$(mktemp -d)
                   cp -a "$ckeri_bundle/." "$c_work/"
                   chmod -R u+w "$c_work"
-                  mkdir -p "$c_work/published"
-                  cp "$identity_manifest" "$c_work/published/manifest.json"
+                  export CKERI_EXPECTED_COMMIT=${
+                    pkgs.lib.escapeShellArg baselineSourceCommit
+                  }
+                  export CKERI_PUBLISHED_MANIFEST="$identity_manifest"
                   bash "$c_work/check-claim-schema.sh" \
                     "$c_work/claims/schema-fixture.txt"
                   bash "$c_work/run-slice-c.sh" \

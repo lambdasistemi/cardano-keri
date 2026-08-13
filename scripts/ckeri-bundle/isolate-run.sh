@@ -61,6 +61,22 @@ for root in "${forbids[@]}"; do
     readable=$((readable + 1))
   fi
 done
+for fdpath in /proc/self/fd/*; do
+  n=${fdpath##*/}
+  [[ $n =~ ^[0-9]+$ ]] || continue
+  [ "$n" -le 2 ] && continue
+  dest=$(readlink "$fdpath" || true)
+  [ -n "$dest" ] || continue
+  for root in "${forbids[@]}"; do
+    case "$dest" in
+      "$root"|"$root"/*)
+        echo "forbidden root reachable via inherited fd $n -> $dest" >&2
+        readable=$((readable + 1))
+        eval "exec ${n}<&-"
+        ;;
+    esac
+  done
+done
 echo "AUDIT-ISOLATION forbidden=$probed readable=$readable instrument=unshare-mount-tmpfs window=single-entry"
 if [ "$readable" -ne 0 ]; then
   echo "worktree_access is not none: readable=$readable" >&2

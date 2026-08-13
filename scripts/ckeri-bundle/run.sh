@@ -4,12 +4,37 @@
 set -euo pipefail
 
 bundle_dir=$(cd "$(dirname "$0")" && pwd)
+repo_root=$(cd "$bundle_dir/../.." && pwd)
 dest=${1:-}
 
 if [ -z "$dest" ]; then
   dest=$(mktemp -d "${TMPDIR:-/tmp}/ckeri-bundle.XXXXXXXX")
 fi
 mkdir -p "$dest"
+
+published_src=$bundle_dir/published/manifest.json
+if [ ! -f "$published_src" ]; then
+  echo "obtaining published/manifest.json from .#blaster-baseline-manifest" >&2
+  if [ ! -f "$repo_root/offchain/flake.nix" ]; then
+    echo "failed to obtain published/manifest.json: offchain flake is not in this checkout" >&2
+    exit 1
+  fi
+  set +e
+  pubdir=$(
+    cd "$repo_root/offchain" \
+      && nix build --no-link --print-out-paths \
+        .#blaster-baseline-manifest
+  )
+  obtain_rc=$?
+  set -e
+  if [ "$obtain_rc" -ne 0 ] || [ -z "${pubdir:-}" ]; then
+    echo "failed to obtain published/manifest.json via nix build .#blaster-baseline-manifest" >&2
+    exit 1
+  fi
+  pubdir=$(printf '%s\n' "$pubdir" | head -1)
+  mkdir -p "$bundle_dir/published"
+  cp "$pubdir/manifest.json" "$published_src"
+fi
 
 "$bundle_dir/assemble.sh" \
   "$bundle_dir/inventory.txt" \

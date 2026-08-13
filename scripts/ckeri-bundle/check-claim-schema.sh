@@ -15,8 +15,9 @@ without_falsifier=0
 established_unbounded=0
 advance_n=0
 advance_wrong_variant=0
+missing_required=0
 purposes=""
-refuted_ids=" "
+refuted_keys=" "
 
 if [ ! -r "$claims" ]; then
   echo "AUDIT-CLAIM-SCHEMA claims=0 with_falsifier=0 without_falsifier=0 reached_by=missing instrument=ckeri-bundle/check-claim-schema window=claims-file outcome=COULD-NOT-EVALUATE layer=MEASUREMENT-FAILED"
@@ -34,17 +35,26 @@ while IFS= read -r line || [ -n "${line:-}" ]; do
   variant=$(sed -n 's/.* variant=\([^ ]*\).*/\1/p' <<<"$line")
   claim_id=$(sed -n 's/.* id=\([^ ]*\).*/\1/p' <<<"$line")
   [ -n "$claim_id" ] || claim_id=unnamed
+  if [ -z "$variant" ]; then
+    echo "CLAIM missing required field: variant" >&2
+    missing_required=$((missing_required + 1))
+  fi
+  if [ -z "$outcome" ]; then
+    echo "CLAIM missing required field: outcome" >&2
+    missing_required=$((missing_required + 1))
+  fi
+  pair_key="${claim_id}|${variant}"
   case "$outcome" in
     REFUTED)
       has_falsifier=$((has_falsifier + 1))
-      case " $refuted_ids " in
-        *" $claim_id "*) ;;
-        *) refuted_ids="$refuted_ids $claim_id " ;;
+      case " $refuted_keys " in
+        *" $pair_key "*) ;;
+        *) refuted_keys="$refuted_keys $pair_key " ;;
       esac
       ;;
     ESTABLISHED)
-      case " $refuted_ids " in
-        *" $claim_id "*) ;;
+      case " $refuted_keys " in
+        *" $pair_key "*) ;;
         *)
           without_falsifier=$((without_falsifier + 1))
           echo "ESTABLISHED without per-claim falsifier: id=$claim_id" >&2
@@ -77,7 +87,8 @@ done
 schema_outcome=ESTABLISHED
 if [ "$claims_n" -eq 0 ] || [ "$without_falsifier" -ne 0 ] \
   || [ "$established_unbounded" -ne 0 ] \
-  || [ "$advance_wrong_variant" -ne 0 ]; then
+  || [ "$advance_wrong_variant" -ne 0 ] \
+  || [ "$missing_required" -ne 0 ]; then
   schema_outcome=REFUTED
 fi
 if [ "$advance_n" -gt 0 ] && [ "$distinct" -lt 2 ]; then
@@ -88,6 +99,10 @@ echo "AUDIT-ADVANCE-RECORDS count=$advance_n distinct_purposes=$distinct instrum
 
 if [ "$claims_n" -eq 0 ]; then
   echo "MEASUREMENT-FAILED: no claims examined" >&2
+  exit 1
+fi
+if [ "$missing_required" -ne 0 ]; then
+  echo "CLAIM missing required field: count=$missing_required" >&2
   exit 1
 fi
 if [ "$without_falsifier" -ne 0 ]; then

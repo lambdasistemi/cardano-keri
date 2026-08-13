@@ -20,6 +20,10 @@ module Cardano.KERI.Deployment.EndpointBoardTransaction (
     BoardError (..),
     BoardObservationTimeout (..),
     BoardResult (..),
+    BoardAuthorizationPayload (..),
+    BoardAuthorizationError (..),
+    mkBoardAuthorizationPayload,
+    attachBoardAuthorization,
     selectBoardEntry,
     mkBoardPostPlan,
     mkBoardUpdatePlan,
@@ -28,9 +32,18 @@ module Cardano.KERI.Deployment.EndpointBoardTransaction (
     runBoardUpdateTransaction,
     runBoardRetireTransaction,
     awaitBoard,
+
+    -- * Authorized target planning (#253 S253-2, additive)
+    ResolvedBoardTarget (..),
+    AuthorizedBoardPostPlan (..),
+    AuthorizedBoardUpdatePlan (..),
+    mkAuthorizedBoardPostPlan,
+    mkAuthorizedBoardUpdatePlan,
+    runAuthorizedBoardPostTransaction,
+    runAuthorizedBoardUpdateTransaction,
 ) where
 
-import Cardano.Crypto.Hash (hashFromBytes)
+import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Checkpoint.Close (
     AddressCredential (..),
     FullAddress (..),
@@ -38,8 +51,16 @@ import Cardano.KERI.AID.Checkpoint.Close (
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.Deployment.Close (decodeRefundAddress)
 import Cardano.KERI.Deployment.EndpointBoard (
+    AuthorizedBoardDatum (..),
+    BoardAuthorization (..),
     BoardEntry (..),
+    BoardNonce (..),
     EndpointRecord (..),
+    authorizedBoardDatumData,
+    boardAuthorizationBytes,
+    boardAuthorizationDomain,
+    boardDatumIsAuthentic,
+    verifyBoardAuthorization,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardInfo (..),
@@ -86,6 +107,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Hashes (
     KeyHash (..),
     ScriptHash (..),
+    extractHash,
     unsafeMakeSafeHash,
  )
 import Cardano.Ledger.Keys (KeyRole (Guard))
@@ -95,7 +117,7 @@ import Cardano.Ledger.Mary.Value (
     MultiAsset (..),
     PolicyID (..),
  )
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), unTxId)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Tx.Build (
     Check (..),
@@ -206,6 +228,112 @@ newtype RawData = RawData Data
 instance ToData RawData where
     toBuiltinData (RawData datum) = BuiltinData datum
 
+{- | Everything an external witness signer needs, and nothing it must not
+have: the exact bytes to sign plus the typed fields those bytes mean.
+
+The witness's private KERI key is deliberately absent from this module and
+from every type it exposes. A producer builds a payload, hands the bytes to
+whoever holds the key, and comes back with 64 bytes.
+-}
+data BoardAuthorizationPayload = BoardAuthorizationPayload
+    { boardPayloadPolicyId :: !ByteString
+    , boardPayloadAuthorization :: !BoardAuthorization
+    , boardPayloadSignableBytes :: !ByteString
+    , boardPayloadEndpointSignature :: !ByteString
+    }
+    deriving stock (Show, Eq)
+
+-- | Why a producer payload or witness signature is refused before planning.
+data BoardAuthorizationError
+    = -- | A protocol field has the wrong byte width.
+      BoardAuthorizationFieldWidth !String !Int
+    | -- | A counter that must be non-negative is not.
+      BoardAuthorizationNegative !String !Integer
+    | -- | The endpoint record is empty.
+      BoardAuthorizationEmptyRecord
+    | -- | The policy id is not hexadecimal.
+      BoardAuthorizationPolicyMalformed !String
+    | -- | The supplied signature does not verify over the payload bytes.
+      BoardAuthorizationSignatureRejected
+    deriving stock (Show, Eq)
+
+{- | FUN-253-AUTH-PAYLOAD: the exact signable CBOR plus the typed fields it
+encodes, so an external signer can confirm what it is about to sign.
+-}
+mkBoardAuthorizationPayload ::
+    Text ->
+    EndpointRecord ->
+    ByteString ->
+    BoardNonce ->
+    Either BoardAuthorizationError BoardAuthorizationPayload
+mkBoardAuthorizationPayload policy record ownerKeyHash nonce = do
+    policyId <-
+        first BoardAuthorizationPolicyMalformed $
+            decodeHexSized "board policy id" 28 policy
+    requireWidth "witness key" 32 (endpointWitnessKey record)
+    requireWidth "endpoint signature" 64 (endpointSignature record)
+    requireWidth "owner key hash" 28 ownerKeyHash
+    requireWidth "nonce transaction id" 32 (boardNonceTxId nonce)
+    when (BS.null $ endpointEventBytes record) $
+        Left BoardAuthorizationEmptyRecord
+    requireNonNegative "nonce output index" (boardNonceOutputIndex nonce)
+    let authorization =
+            BoardAuthorization
+                { boardAuthDomain = boardAuthorizationDomain
+                , boardAuthPolicyId = policyId
+                , boardAuthWitnessKey = endpointWitnessKey record
+                , boardAuthEndpointRecord = endpointEventBytes record
+                , boardAuthOwnerKeyHash = ownerKeyHash
+                , boardAuthNonce = nonce
+                }
+    pure
+        BoardAuthorizationPayload
+            { boardPayloadPolicyId = policyId
+            , boardPayloadAuthorization = authorization
+            , boardPayloadSignableBytes =
+                boardAuthorizationBytes authorization
+            , boardPayloadEndpointSignature = endpointSignature record
+            }
+  where
+    requireWidth label expected bytes =
+        unless (BS.length bytes == expected) $
+            Left (BoardAuthorizationFieldWidth label (BS.length bytes))
+    requireNonNegative label value =
+        when (value < 0) $
+            Left (BoardAuthorizationNegative label value)
+
+{- | FUN-253-ATTACH-AUTH: bind a witness signature to its payload.
+
+The signature is verified here, before any plan exists, so an unusable datum
+can never reach transaction construction.
+-}
+attachBoardAuthorization ::
+    BoardAuthorizationPayload ->
+    ByteString ->
+    Either BoardAuthorizationError AuthorizedBoardDatum
+attachBoardAuthorization payload signature = do
+    unless (BS.length signature == 64) $
+        Left
+            ( BoardAuthorizationFieldWidth
+                "authorization signature"
+                (BS.length signature)
+            )
+    let authorization = boardPayloadAuthorization payload
+        datum =
+            AuthorizedBoardDatum
+                { authorizedWitnessKey = boardAuthWitnessKey authorization
+                , authorizedEndpointRecord =
+                    boardAuthEndpointRecord authorization
+                , authorizedEndpointSignature =
+                    boardPayloadEndpointSignature payload
+                , authorizedOwnerKeyHash = boardAuthOwnerKeyHash authorization
+                , authorizedNonce = boardAuthNonce authorization
+                , authorizedSignature = signature
+                }
+    unless (verifyBoardAuthorization (boardPayloadPolicyId payload) datum) $
+        Left BoardAuthorizationSignatureRejected
+    pure datum
+
 -- | Resolve one current witness record without hiding ratified duplicates.
 selectBoardEntry ::
     Maybe Text ->
@@ -300,6 +428,168 @@ mkBoardRetirePlan manifest ownerAddress refundAddress entry = do
         boardRetireMintRedeemer = plutusDataJson (Constr 1 [])
     pure BoardRetirePlan{..}
 
+{- | DAT-253-TARGET-LOCATOR: a provider-neutral resolved authorized target.
+
+Applied policy, script address and reference out-ref, and nothing else: no
+release label, no datum version, no predecessor origin, no live query handle.
+S253-3 supplies this from #254's registry; S253-2 tests construct it directly.
+-}
+data ResolvedBoardTarget = ResolvedBoardTarget
+    { resolvedTargetPolicyId :: !Text
+    , resolvedTargetAddress :: !Text
+    , resolvedTargetReference :: !Text
+    }
+    deriving stock (Show, Eq)
+
+{- | An authorized-target Post plan.
+
+Distinct from 'BoardPostPlan', which keeps targeting the deployed four-field
+policy: the two must never be interchangeable, because sending six-field data
+to the deployed policy would be rejected on chain and sending four-field data
+to the target policy would be rejected too.
+-}
+data AuthorizedBoardPostPlan = AuthorizedBoardPostPlan
+    { authorizedPostPolicy :: !Text
+    , authorizedPostAddress :: !Text
+    , authorizedPostReference :: !Text
+    , authorizedPostAssetName :: !Text
+    , authorizedPostDepositLovelace :: !Integer
+    , authorizedPostNonceReference :: !Text
+    , authorizedPostDatum :: !Value
+    , authorizedPostMintRedeemer :: !Value
+    }
+    deriving stock (Show, Eq)
+
+-- | An authorized-target Update plan.
+data AuthorizedBoardUpdatePlan = AuthorizedBoardUpdatePlan
+    { authorizedUpdatePolicy :: !Text
+    , authorizedUpdateAddress :: !Text
+    , authorizedUpdateReference :: !Text
+    , authorizedUpdateSpentReference :: !Text
+    , authorizedUpdateAssetName :: !Text
+    , authorizedUpdateDepositLovelace :: !Integer
+    , authorizedUpdateOwnerKeyHash :: !Text
+    , authorizedUpdateDatum :: !Value
+    , authorizedUpdateSpendRedeemer :: !Value
+    }
+    deriving stock (Show, Eq)
+
+{- | FUN-253-POST-PLAN: plan an authorized-target Post.
+
+The plan names the exact output reference the witness signed as the record's
+one-use nonce, and refuses if the caller offers any other input. Nothing here
+queries the chain or touches witness key material.
+-}
+mkAuthorizedBoardPostPlan ::
+    ResolvedBoardTarget ->
+    Text ->
+    Integer ->
+    TxIn ->
+    AuthorizedBoardDatum ->
+    Either String AuthorizedBoardPostPlan
+mkAuthorizedBoardPostPlan target ownerAddress deposit nonceInput datum = do
+    when (deposit <= 0) $ Left "deposit-lovelace must be positive"
+    policyId <-
+        decodeHexSized
+            "board target policy id"
+            28
+            (resolvedTargetPolicyId target)
+    owner <- paymentKeyHash ownerAddress
+    unless (owner == authorizedOwnerKeyHash datum) $
+        Left "funding address payment key is not the authorized board owner"
+    unless (authorizedNonce datum == txInNonce nonceInput) $
+        Left "supplied nonce input is not the output reference the witness signed"
+    unless
+        ( boardDatumIsAuthentic
+            (authorizedWitnessKey datum)
+            policyId
+            datum
+        )
+        $ Left
+            "authorized datum is not signed by its witness under the target policy"
+    let authorizedPostPolicy = resolvedTargetPolicyId target
+        authorizedPostAddress = resolvedTargetAddress target
+        authorizedPostReference = resolvedTargetReference target
+        authorizedPostAssetName = hexText (authorizedWitnessKey datum)
+        authorizedPostDepositLovelace = deposit
+        authorizedPostNonceReference = renderTxIn nonceInput
+        authorizedPostDatum = plutusDataJson (authorizedBoardDatumData datum)
+        authorizedPostMintRedeemer = plutusDataJson (Constr 0 [])
+    pure AuthorizedBoardPostPlan{..}
+
+{- | FUN-253-UPDATE-PLAN: plan an authorized-target Update.
+
+The successor's nonce is derived from the selected current record, and any
+pre-signed successor bound to a different out-ref is refused rather than
+silently rebound.
+-}
+mkAuthorizedBoardUpdatePlan ::
+    ResolvedBoardTarget ->
+    Text ->
+    BoardEntry ->
+    AuthorizedBoardDatum ->
+    Either String AuthorizedBoardUpdatePlan
+mkAuthorizedBoardUpdatePlan target ownerAddress entry successor = do
+    policyId <-
+        decodeHexSized
+            "board target policy id"
+            28
+            (resolvedTargetPolicyId target)
+    owner <- paymentKeyHash ownerAddress
+    unless (owner == boardOwnerKeyHash entry) $
+        Left "funding address payment key does not own the selected board record"
+    unless (authorizedWitnessKey successor == boardWitnessKey entry) $
+        Left "updated endpoint record belongs to a different witness"
+    when (boardLovelace entry <= 0) $
+        Left "selected board record has a non-positive deposit"
+    spent <- entryNonce entry
+    unless (authorizedNonce successor == spent) $
+        Left "successor nonce is not the exact board output being spent"
+    unless
+        ( boardDatumIsAuthentic
+            (boardWitnessKey entry)
+            policyId
+            successor
+        )
+        $ Left
+            "successor datum is not signed by its witness under the target policy"
+    let authorizedUpdatePolicy = resolvedTargetPolicyId target
+        authorizedUpdateAddress = resolvedTargetAddress target
+        authorizedUpdateReference = resolvedTargetReference target
+        authorizedUpdateSpentReference = boardEntryReference entry
+        authorizedUpdateAssetName = hexText (boardWitnessKey entry)
+        authorizedUpdateDepositLovelace = boardLovelace entry
+        authorizedUpdateOwnerKeyHash = hexText owner
+        authorizedUpdateDatum =
+            plutusDataJson (authorizedBoardDatumData successor)
+        authorizedUpdateSpendRedeemer = plutusDataJson (Constr 0 [])
+    pure AuthorizedBoardUpdatePlan{..}
+
+-- | The nonce naming a resolved chain input.
+txInNonce :: TxIn -> BoardNonce
+txInNonce (TxIn txid (TxIx index)) =
+    BoardNonce
+        (hashToBytes . extractHash $ unTxId txid)
+        (fromIntegral index)
+
+-- | The nonce a successor of this current record must carry.
+entryNonce :: BoardEntry -> Either String BoardNonce
+entryNonce entry = do
+    txIdBytes <-
+        either
+            (const $ Left "board entry transaction id is not hexadecimal")
+            pure
+            (convertFromBase Base16 . TE.encodeUtf8 $ boardTxId entry)
+    unless (BS.length txIdBytes == 32) $
+        Left "board entry transaction id is not 32 bytes"
+    pure (BoardNonce txIdBytes (fromIntegral $ boardIndex entry))
+
+renderTxIn :: TxIn -> Text
+renderTxIn (TxIn txid (TxIx index)) =
+    hexText (hashToBytes . extractHash $ unTxId txid)
+        <> "#"
+        <> T.pack (show index)
+
 runBoardPostTransaction ::
     BoardConfig ->
     BoardPostPlan ->
@@ -349,6 +639,157 @@ runBoardRetireTransaction config plan fundingInputs boardInput =
                 [boardInput]
                 (retireReferences inputs)
                 (retireProgram inputs)
+
+{- | FUN-253-POST-RUN: build, sign and submit an authorized-target Post.
+
+The exact nonce input the witness signed is spent by this transaction. Funding
+selection cannot reach it — offering it as funding is refused outright — so the
+one output the witness authorized cannot be quietly consumed as change instead
+of as this record's nonce.
+-}
+runAuthorizedBoardPostTransaction ::
+    BoardConfig ->
+    AuthorizedBoardPostPlan ->
+    (TxIn, TxOut ConwayEra) ->
+    [(TxIn, TxOut ConwayEra)] ->
+    IO (Either BoardError BoardResult)
+runAuthorizedBoardPostTransaction config plan nonceInput fundingInputs =
+    case authorizedPostInputs config plan nonceInput fundingInputs of
+        Left err -> pure (Left err)
+        Right inputs@BoardPostInputs{postFunding = funding} ->
+            runBoardBuild
+                config
+                funding
+                [nonceInput]
+                (postReferences inputs)
+                (authorizedPostProgram (fst nonceInput) inputs)
+
+{- | FUN-253-UPDATE-RUN: build, sign and submit an authorized-target Update.
+
+The board input is cross-checked against the plan, which already pinned the
+successor's nonce to that exact out-ref.
+-}
+runAuthorizedBoardUpdateTransaction ::
+    BoardConfig ->
+    AuthorizedBoardUpdatePlan ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    IO (Either BoardError BoardResult)
+runAuthorizedBoardUpdateTransaction config plan fundingInputs boardInput =
+    case authorizedUpdateInputs config plan fundingInputs boardInput of
+        Left err -> pure (Left err)
+        Right inputs@BoardUpdateInputs{updateFunding = funding} ->
+            runBoardBuild
+                config
+                funding
+                [boardInput]
+                (updateReferences inputs)
+                (updateProgram inputs)
+
+authorizedPostInputs ::
+    BoardConfig ->
+    AuthorizedBoardPostPlan ->
+    (TxIn, TxOut ConwayEra) ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Either BoardError BoardPostInputs
+authorizedPostInputs config plan nonceInput fundingInputs = do
+    named <- planTxIn (authorizedPostNonceReference plan)
+    unless (fst nonceInput == named) $
+        Left
+            ( BoardPlanRejected
+                "supplied nonce input disagrees with the authorized post plan"
+            )
+    when (any ((== named) . fst) fundingInputs) $
+        Left
+            ( BoardPlanRejected
+                "the authorized nonce output must not be offered as funding"
+            )
+    policyHash <- planScriptHash "board policy" (authorizedPostPolicy plan)
+    postAsset <- planAssetName "board asset name" (authorizedPostAssetName plan)
+    postAddress <- planAddress "board address" (authorizedPostAddress plan)
+    when (authorizedPostDepositLovelace plan <= 0) $
+        Left (BoardPlanRejected "board deposit must be positive")
+    boardReference <-
+        resolveReference
+            policyHash
+            (authorizedPostReference plan)
+            (boardReferenceUtxos config)
+    postDatum <- rawPlanData "board datum" (authorizedPostDatum plan)
+    postMintData <-
+        rawPlanData "board mint redeemer" (authorizedPostMintRedeemer plan)
+    postFunding <-
+        first BoardFundingSelectionFailed $
+            selectFundingPair
+                isPlainUtxo
+                (Coin $ authorizedPostDepositLovelace plan + 5_000_000)
+                fundingInputs
+    let postPolicy = PolicyID policyHash
+        postValue =
+            singletonMarkerValue
+                (authorizedPostDepositLovelace plan)
+                postPolicy
+                postAsset
+        postReferences = [boardReference]
+    pure BoardPostInputs{..}
+
+authorizedUpdateInputs ::
+    BoardConfig ->
+    AuthorizedBoardUpdatePlan ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Either BoardError BoardUpdateInputs
+authorizedUpdateInputs config plan fundingInputs boardInput = do
+    spent <- planTxIn (authorizedUpdateSpentReference plan)
+    unless (fst boardInput == spent) $
+        Left
+            ( BoardPlanRejected
+                "resolved board record disagrees with the authorized update plan"
+            )
+    policyHash <- planScriptHash "board policy" (authorizedUpdatePolicy plan)
+    asset <- planAssetName "board asset name" (authorizedUpdateAssetName plan)
+    requireMarkerValue
+        (Coin $ authorizedUpdateDepositLovelace plan)
+        (PolicyID policyHash)
+        asset
+        boardInput
+    updateAddress <- planAddress "board address" (authorizedUpdateAddress plan)
+    when (authorizedUpdateDepositLovelace plan <= 0) $
+        Left (BoardPlanRejected "board deposit must be positive")
+    boardReference <-
+        resolveReference
+            policyHash
+            (authorizedUpdateReference plan)
+            (boardReferenceUtxos config)
+    updateDatumData <- rawPlanData "board datum" (authorizedUpdateDatum plan)
+    updateSpendData <-
+        rawPlanData
+            "board update redeemer"
+            (authorizedUpdateSpendRedeemer plan)
+    updateOwner <- planOwnerKeyHash (authorizedUpdateOwnerKeyHash plan)
+    updateFunding <- selectBoardFunding fundingInputs
+    let updateInput = boardInput
+        updateReferences = [boardReference]
+        updateValue =
+            singletonMarkerValue
+                (authorizedUpdateDepositLovelace plan)
+                (PolicyID policyHash)
+                asset
+    pure BoardUpdateInputs{..}
+
+authorizedPostProgram ::
+    TxIn ->
+    BoardPostInputs ->
+    PParams ConwayEra ->
+    TxBuild BoardCtx BoardCheckError ()
+authorizedPostProgram nonce BoardPostInputs{postFunding = FundingPair{..}, ..} pparams = do
+    mapM_ (spend . fst) (fundingSpend : fundingAdditionalSpends)
+    -- The one-use nonce: this is what the witness authorized, and consuming
+    -- it here is what makes that authorization unrepeatable.
+    _ <- spend nonce
+    _ <- payTo' postAddress postValue postDatum
+    mint postPolicy (Map.singleton postAsset 1) postMintData
+    mapM_ (reference . fst) postReferences
+    valid (boardCheck pparams)
 
 runBoardBuild ::
     BoardConfig ->

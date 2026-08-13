@@ -13,7 +13,7 @@ The machine build gate precedes implementation and audit.
   the exact owned paths only after that answer.
 - [ ] T254-003 Negotiate the release-hash registry/resolved-result contract
   with #171 through the desk; amend producer fields/invariants if needed.
-- [ ] T254-004 Freeze v0 checkpoint/board policies, references, network, scan
+- [x] T254-004 Freeze v0 checkpoint/board policies, references, network, scan
   point, and three board witnesses as legacy inputs.
 - [x] T254-005 Initialize the runtime campaign ledger and carry its charged
   extensions through A-007: all BLOCKING rows retain evidence,

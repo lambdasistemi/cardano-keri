@@ -219,12 +219,23 @@ Forbidden without a revised contract:
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 
-Budget: **9 building audits** for #254's rows after charged ruling A-007,
-currently `builds_spent=6` and `builds_budget=9`; all six remain on the record.
-Owner development builds are separately controlled. S254-E instead charges
-the distinct #271 ledger at 2/3 with build 3/3 reserved for its combined
-revised-lifecycle plus family-integration audit; neither ledger may borrow from
-the other.
+Budget: **three separate counters** (e274 A-003, A-004, A-005). They are not one
+ledger, and merging them once made owner-development churn look like an
+audit-ceiling breach.
+
+1. **#254 audit ceiling — 10, epic-granted, currently 8/10.** Independent
+   auditor runs for S254-1/S254-R plus the S254-2 and S254-3 audits still to
+   come. Only the epic moves this; the ticket owner asks.
+2. **Owner development — separately controlled, machine-disk bounded.** Gate
+   authoring, gate churn, readiness loops, and repairs caused by a defective
+   gate. These never charge the audit ceiling.
+3. **#271 ledger — S254-E integration audits, now 5/5 spent.** Extended 3→4
+   (A-004) and 4→5 (A-005), each charged and each for one named mandatory fresh
+   audit. Neither ledger may borrow from the other.
+
+S254-E consumed #271 3/3, 4/4 and 5/5 across three audited submissions and is
+closed. S254-2 and S254-3 each receive their own #254 audit allocation when the
+epic rules those slices.
 
 1. Builds 1–5: spent on S254-1A, the superseded S254-1B design/audits, and its
    first parity repairs; all evidence remains retained.

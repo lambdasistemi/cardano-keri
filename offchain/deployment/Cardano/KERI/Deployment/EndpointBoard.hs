@@ -15,6 +15,7 @@ module Cardano.KERI.Deployment.EndpointBoard (
     renderBoardCatalog,
     watchabilityGrade,
     missingBoardWitnesses,
+    reconcileBoardMigration,
     renderWatchability,
 
     -- * Board datum protocol (#253 DAT-253-LEGACY-DATUM/DAT-253-AUTHORIZED-DATUM)
@@ -609,6 +610,19 @@ missingBoardWitnesses witnesses entries =
     ]
   where
     catalogKeys = Set.fromList (map boardWitnessKey entries)
+
+{- | Reconcile one complete source board inventory with its successors.
+
+This RED surface is deliberately fail-closed until the S254-2 proof bundle
+drives the one-for-one implementation.
+-}
+reconcileBoardMigration ::
+    [Text] ->
+    [BoardEntry] ->
+    [BoardEntry] ->
+    Either String [(BoardEntry, BoardEntry)]
+reconcileBoardMigration _expected _sources _successors =
+    Left "board migration reconciliation is not implemented"
 
 renderWatchability :: [ByteString] -> [BoardEntry] -> Text
 renderWatchability witnesses entries =

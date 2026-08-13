@@ -6,6 +6,8 @@
 
 use aiken/crypto.{VerificationKeyHash}
 use cardano/address.{Address}
+use cardano/transaction.{OutputReference}
+use cardano_keri/migration/types.{MigrationTarget}
 
 /// An authenticated KERI endpoint record and its Cardano lifecycle owner.
 pub type BoardDatumV1 {
@@ -19,10 +21,13 @@ pub type BoardDatumV1 {
 pub type BoardMintRedeemer {
   Post
   Burn
+  MigrateIn { source_ref: OutputReference }
+  LegacyMigrateIn { source_ref: OutputReference }
 }
 
 /// Spend-side endpoint-board lifecycle action.
 pub type BoardAction {
   Update
   Retire { refund_address: Address }
+  MigrateOut { target: MigrationTarget }
 }

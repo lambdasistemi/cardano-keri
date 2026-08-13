@@ -31,8 +31,10 @@ use cardano/transaction.{
 use cardano_keri/endpoint_board_authorization.{
   AuthorizedBoardDatum, datum_is_authentic, nonce_names, nonce_reference,
 }
+use cardano_keri/endpoint_board_migration
 use cardano_keri/endpoint_board_types.{
-  BoardAction, BoardMintRedeemer, Burn, Post, Retire, Update,
+  BoardAction, BoardMintRedeemer, Burn, LegacyMigrateIn, MigrateIn, MigrateOut,
+  Post, Retire, Update,
 }
 
 fn exact_marker_value(
@@ -178,6 +180,22 @@ validator endpoint_board(accepted_predecessor_policy: PolicyId) {
     when redeemer is {
       Post -> validate_post(accepted_predecessor_policy, policy_id, tx)
       Burn -> validate_burn(policy_id, tx)
+      MigrateIn { source_ref } ->
+        endpoint_board_migration.validate_board_migrate_in(
+          accepted_predecessor_policy,
+          source_ref,
+          target_record(tx, policy_id),
+          policy_id,
+          tx,
+        )
+      LegacyMigrateIn { source_ref } ->
+        endpoint_board_migration.validate_legacy_board_migrate_in(
+          endpoint_board_migration.preprod_v0_identity(),
+          source_ref,
+          target_record(tx, policy_id),
+          policy_id,
+          tx,
+        )
     }
   }
 
@@ -194,10 +212,19 @@ validator endpoint_board(accepted_predecessor_policy: PolicyId) {
       Update -> validate_update(input_output, policy_id, own_ref, old, tx)
       Retire { refund_address } ->
         validate_retire(input_output, policy_id, old, refund_address, tx)
+      MigrateOut { target } ->
+        endpoint_board_migration.validate_board_migrate_out(target, own_ref, tx)
     }
   }
 
   else(_) {
     fail
   }
+}
+
+fn target_record(tx: Transaction, policy_id: PolicyId) -> AuthorizedBoardDatum {
+  expect [successor] = board_outputs(policy_id, tx.outputs)
+  expect InlineDatum(datum_data) = successor.datum
+  expect datum: AuthorizedBoardDatum = datum_data
+  datum
 }

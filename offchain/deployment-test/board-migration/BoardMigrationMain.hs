@@ -6,12 +6,24 @@ License     : Apache-2.0
 -}
 module Main (main) where
 
+import Cardano.KERI.Deployment.EndpointBoard (
+    BoardEntry (..),
+    reconcileBoardMigration,
+ )
 import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as EndpointBoardTransactionSpec
 import Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec qualified as RestrictedPathSpec
 import Control.Monad (when)
+import Data.ByteString qualified as BS
+import Data.Text (Text)
+import Data.Text qualified as T
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import Test.Hspec (Spec)
+import Test.Hspec (
+    Spec,
+    describe,
+    it,
+    shouldSatisfy,
+ )
 import Test.Hspec.Core.Runner (
     evaluateSummary,
     hspecResult,
@@ -31,3 +43,95 @@ spec :: Spec
 spec = do
     EndpointBoardTransactionSpec.spec
     RestrictedPathSpec.spec
+    boardInventorySpec
+
+boardInventorySpec :: Spec
+boardInventorySpec =
+    describe "S254-2 board inventory reconciliation" $ do
+        it "reconciles all three frozen witness identities one-for-one" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                successorBoardInventory
+                `shouldSatisfy` isRight
+
+        it "s254_2_board_inventory_missing_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                (drop 1 successorBoardInventory)
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_duplicate_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                (successorOne : successorBoardInventory)
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_changed_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( changedFirst
+                    { boardUrl = "https://attacker.invalid"
+                    }
+                    : drop 1 successorBoardInventory
+                )
+                `shouldSatisfy` isLeft
+  where
+    changedFirst = successorOne
+
+-- D-004's three identities are frozen external anchors, not a count. Each is
+-- named here so replacing one with a fourth row cannot satisfy completeness.
+expectedPreprodBoardAids :: [Text]
+expectedPreprodBoardAids =
+    [ witnessOneAid
+    , witnessTwoAid
+    , witnessThreeAid
+    ]
+
+witnessOneAid, witnessTwoAid, witnessThreeAid :: Text
+witnessOneAid = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+witnessTwoAid = "BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B"
+witnessThreeAid = "BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4"
+
+sourceBoardInventory :: [BoardEntry]
+sourceBoardInventory = zipWith boardRow expectedPreprodBoardAids [1 ..]
+
+successorBoardInventory :: [BoardEntry]
+successorBoardInventory = zipWith successorRow expectedPreprodBoardAids [1 ..]
+
+successorOne :: BoardEntry
+successorOne = successorRow witnessOneAid 1
+
+successorRow :: Text -> Int -> BoardEntry
+successorRow aid marker =
+    (boardRow aid marker)
+        { boardTxId = replicateText 64 (marker + 10)
+        }
+
+boardRow :: Text -> Int -> BoardEntry
+boardRow aid marker =
+    BoardEntry
+        { boardWitnessKey = BS.replicate 32 (fromIntegral marker)
+        , boardAid = aid
+        , boardScheme = "https"
+        , boardUrl = "https://witness.preprod.plutimus.com"
+        , boardTxId = replicateText 64 marker
+        , boardIndex = 0
+        , boardLovelace = 4_000_000
+        , boardOwnerKeyHash = BS.replicate 28 0x33
+        }
+
+replicateText :: Int -> Int -> Text
+replicateText width marker =
+    T.replicate width (T.singleton $ toEnum (fromEnum 'a' + marker `mod` 6))
+
+isLeft :: Either a b -> Bool
+isLeft (Left _) = True
+isLeft (Right _) = False
+
+isRight :: Either a b -> Bool
+isRight (Right _) = True
+isRight (Left _) = False

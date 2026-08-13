@@ -32,7 +32,9 @@ use cardano/transaction.{
 use cardano_keri/checkpoint/datum.{
   CheckpointDatum, CheckpointDatumV1, DatumValid, V1, datum_well_formed,
 }
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
+use cardano_keri/checkpoint/freeze_bond.{
+  ArmedDatum, armed_checkpoint, armed_deadline, armed_hunter,
+}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/role
 use cardano_keri/checkpoint/threshold.{evaluate}
@@ -419,12 +421,14 @@ fn role_state_of(
   when observed_role is {
     CheckpointArmed -> {
       expect armed: ArmedDatum = datum_data
-      let ArmedV1 { checkpoint, hunter_pkh, deadline } = armed
+      // Both ARMED versions are observed and preserved identically: the
+      // migration observer reads through the shared accessors, so a lean
+      // ArmedV2 state migrates exactly as an ArmedV1 one does.
       CheckpointRoleState {
         state_role: CheckpointArmed,
-        checkpoint,
-        hunter_pkh: Some(hunter_pkh),
-        deadline: Some(deadline),
+        checkpoint: armed_checkpoint(armed),
+        hunter_pkh: Some(armed_hunter(armed)),
+        deadline: Some(armed_deadline(armed)),
       }
     }
     _ -> {

@@ -66,9 +66,11 @@ library
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Advance
+    Cardano.KERI.AID.Checkpoint.BountyCommitment
     Cardano.KERI.AID.Checkpoint.Close
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
+    Cardano.KERI.AID.Checkpoint.Entitlement
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.LifecycleModel
     Cardano.KERI.AID.Checkpoint.Message
@@ -397,6 +399,7 @@ test-suite deployment-tests
   main-is:          Main.hs
   other-modules:
     Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.CloseSpec
@@ -936,9 +939,11 @@ test-suite unit-tests
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
+    Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.CloseSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
+    Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
@@ -1080,6 +1085,22 @@ executable gen-checkpoint-migration-vectors
     , cardano-keri
     , memory                >=0.18 && <0.19
     , plutus-core
+
+-- #254 S254-E: the entitlement-layer parity vectors. Unlike the #271
+-- component's independent oracle, this generator imports the production
+-- mirror: what it proves is that the shipped Haskell and the shipped Aiken
+-- agree on the canonical enforcement-evidence digest and on the shared
+-- matcher's verdict, which is the seam DATA-INV-271-02 leaves open.
+executable gen-bounty-entitlement-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenBountyEntitlementVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

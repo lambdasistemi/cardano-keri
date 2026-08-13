@@ -67,6 +67,7 @@ spec =
                         , "hash-proof"
                         , "observer-advance"
                         , "observer-enforcement"
+                        , "observer-entitlement"
                         , "observer-lifecycle"
                         , -- #254 A-001: the promoted migration observer is a
                           -- v1 family component, published beside the M1 set.
@@ -75,11 +76,11 @@ spec =
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
                     `shouldSatisfy` all (<= 16_133)
-                -- Slice A6: freshly measured from the combined tree with
-                -- main's input-addressed blueprint fix and T219-A1's
-                -- advance.ak deletions. Matching the old pre-rebase pin is
-                -- coincidental; this value was re-derived, not reused.
-                programLength "observer-advance" artifacts `shouldBe` 14_775
+                -- #254 S254-E: re-derived from deriveV1Scripts after the
+                -- observer split, not reused from A-002 (14_876) or S254-R
+                -- (14_775). Transitive compiled drift; the 16_133 ceiling
+                -- is unchanged.
+                programLength "observer-advance" artifacts `shouldBe` 14_876
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint
@@ -226,6 +227,14 @@ spec =
                             tampered
                 errors `shouldSatisfy` (not . null)
                 unlines errors `shouldContain` "script hash-proof mismatch"
+            it "rejects a truncated reference list rather than dropping an artifact" $ \artifacts -> do
+                let names = map artifactName artifacts
+                    full = referencesFor artifacts
+                    short = take (length artifacts - 1) full
+                zipExact names short
+                    `shouldSatisfy` either (const True) (const False)
+                zipExact names full
+                    `shouldSatisfy` either (const False) (const True)
             it "rejects malformed or reused references" $ \artifacts -> do
                 manifest <- requireManifest artifacts
                 let scripts = manifestScripts manifest
@@ -370,26 +379,47 @@ expectedBoardAddress =
 
 requireManifest :: [ScriptArtifact] -> IO Manifest
 requireManifest artifacts =
-    either fail pure $
+    either fail pure $ do
+        pairs <-
+            zipExact
+                (map artifactName artifacts)
+                (referencesFor artifacts)
         mkManifest
             "https://github.com/lambdasistemi/cardano-keri"
             "0000000000000000000000000000000000000000"
             testBlueprintDigest
             "2026-07-28T00:00:00Z"
             artifacts
-            (zip (map artifactName artifacts) testReferences)
+            pairs
 
-testReferences :: [Reference]
-testReferences =
-    -- One per published artifact. #254 A-001 added the promoted migration
-    -- observer, so this is six: a short list silently leaves the last
-    -- artifact without a reference rather than failing on the count.
-    [ Reference (txId index) index
-    | index <- [0 .. 5]
+{- | One reference per published artifact, derived from the artifact list.
+
+A hand-written upper bound would have to agree with 'deriveV1Scripts'
+and would silently drop the last name when it did not.  Indexing the
+artifacts themselves makes that drift impossible.
+-}
+referencesFor :: [ScriptArtifact] -> [Reference]
+referencesFor artifacts =
+    [ Reference testTxId index
+    | (index, _) <- zip [0 ..] artifacts
     ]
-  where
-    txId _ =
-        testTxId
+
+{- | Pair names with references, or fail.
+
+'zip' truncates the longer side.  That is how a six-reference fixture
+left @checkpoint-register@ unpublished in the manifest while the
+artifact list had already grown to seven.  Equal length is required.
+-}
+zipExact :: [a] -> [b] -> Either String [(a, b)]
+zipExact xs ys
+    | length xs == length ys = Right (zip xs ys)
+    | otherwise =
+        Left $
+            "manifest references: "
+                <> show (length ys)
+                <> " references for "
+                <> show (length xs)
+                <> " artifacts; zip would drop the tail"
 
 testTxId :: Text
 testTxId =

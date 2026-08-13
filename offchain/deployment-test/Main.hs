@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Cardano.KERI.Deployment.AdvanceSpec qualified as AdvanceSpec
+import Cardano.KERI.Deployment.BountyEntitlementSpec qualified as BountyEntitlementSpec
 import Cardano.KERI.Deployment.ChainIndexSpec qualified as ChainIndexSpec
 import Cardano.KERI.Deployment.CheckpointMigrationSpec qualified as CheckpointMigrationSpec
 import Cardano.KERI.Deployment.CloseSpec qualified as CloseSpec
@@ -55,6 +56,7 @@ suite = hspec $ do
     KELSpec.spec
     ManifestSpec.spec
     CheckpointMigrationSpec.spec
+    BountyEntitlementSpec.spec
     RegistrationSpec.spec
     ScriptAritySpec.spec
     TransactionRuntimeSpec.spec

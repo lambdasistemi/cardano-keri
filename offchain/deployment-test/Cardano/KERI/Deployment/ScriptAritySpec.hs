@@ -48,6 +48,7 @@ import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
     Validator (..),
+    applyCommitmentParams,
     applyParams,
     deriveBoardScript,
     deriveV1Scripts,
@@ -55,6 +56,7 @@ import Cardano.KERI.Deployment.Script (
     mkAppliedArtifact,
     scriptHashText,
     v1CheckpointVersion,
+    v1CommitmentParameters,
     v1FreezeBond,
     v1FreezeWindow,
     v1NetworkDiscriminator,
@@ -76,7 +78,6 @@ import Data.Foldable (forM_, toList)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf, nub, sort, tails)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -312,7 +313,7 @@ spec = beforeAll withFixture $
         it "s254_r_register_version_argument_absent" $ \fixture -> do
             applied <- registerArguments fixture
             expected <- expectedRegisterArguments fixture
-            -- The exact eight-argument list, in order, built from the sibling
+            -- The exact nine-argument list, in order, built from the sibling
             -- artifacts this same derivation produced.
             applied `shouldBe` expected
             -- Stated separately so a failure names the defect rather than
@@ -637,7 +638,7 @@ sha256Hex :: ByteString -> Text
 sha256Hex bytes =
     TE.decodeUtf8 (convertToBase Base16 (hash bytes :: Digest SHA256))
 
-{- | What the corrected register must be applied to: the four sibling policy
+{- | What the corrected register must be applied to: the five sibling policy
 hashes this same derivation produced, then the four deployment integers.  No
 element of this list is written down twice.
 -}
@@ -647,11 +648,13 @@ expectedRegisterArguments fixture = do
     lifecycle <- policyOf "observer-lifecycle"
     advance <- policyOf "observer-advance"
     enforcement <- policyOf "observer-enforcement"
+    entitlement <- policyOf "observer-entitlement"
     pure
         [ B migration
         , B lifecycle
         , B advance
         , B enforcement
+        , B entitlement
         , I v1NetworkDiscriminator
         , I v1RegistrationBond
         , I v1FreezeBond
@@ -715,6 +718,12 @@ groupBoundaries :: [(Text, Boundary)]
 groupBoundaries =
     [ ("hash_proof.hash_proof", PublishedBy "hash-proof")
     ,
+        ( "bounty_commitment.bounty_commitment"
+        , AppliedBy
+            "applyCommitmentParams"
+            (applyCommitmentParams v1CommitmentParameters)
+        )
+    ,
         ( "checkpoint_observer.observer_lifecycle"
         , PublishedBy "observer-lifecycle"
         )
@@ -725,6 +734,10 @@ groupBoundaries =
     ,
         ( "checkpoint_observer.observer_enforcement"
         , PublishedBy "observer-enforcement"
+        )
+    ,
+        ( "checkpoint_observer.observer_entitlement"
+        , PublishedBy "observer-entitlement"
         )
     ,
         ( "checkpoint_observer.observer_migration"
@@ -749,6 +762,18 @@ groupBoundaries =
             \parameters and publishes no identity"
         )
     ]
+
+{- | Every name an 'AppliedBy' row declares.
+
+The scanner's recognized-applier set is derived from this list.  A newly
+named applier therefore cannot enter an unscanned parallel hand-list.
+-}
+appliedByNames :: [String]
+appliedByNames =
+    nub
+        [ T.unpack name
+        | (_, AppliedBy name _) <- groupBoundaries
+        ]
 
 {- | A placeholder predecessor policy for the Cage boundary, at the exact
 28-byte width a policy id has. The census is about how many arguments
@@ -946,6 +971,19 @@ isRight = not . isLeft
 -- The S254-R derived deployment control
 -- ---------------------------------------------------------------------------
 
+{- | Constructor internals the PublishedBy path actually uses.
+
+These are not a parallel 'AppliedBy' list.  Names declared by
+'groupBoundaries' enter 'applierNames' by derivation.
+-}
+primitiveHeads :: [String]
+primitiveHeads =
+    [ "applyDataArgs"
+    , "applyProgram"
+    , "mkAppliedArtifact"
+    , "runProgram"
+    ]
+
 {- | The production appliers whose application expressions the census
 inventories.
 
@@ -955,15 +993,12 @@ call spelled across three lines, wrapped in parentheses, carrying a type
 annotation, or sharing a line with another call is the same one row as a call
 spelled plainly — which is exactly the class of question the rejected
 source-text control could not answer.
+
+The set is the constructor internals plus every 'AppliedBy' name.  A
+hand-maintained parallel list is the defect this derivation closes.
 -}
 applierNames :: [String]
-applierNames =
-    [ "applyDataArgs"
-    , "applyParams"
-    , "applyProgram"
-    , "mkAppliedArtifact"
-    , "runProgram"
-    ]
+applierNames = nub (primitiveHeads ++ appliedByNames)
 
 {- | Directory names the walk never descends into.
 
@@ -1006,6 +1041,16 @@ deploymentModule name =
 cageBuilderPath :: FilePath
 cageBuilderPath = "offchain/e2e/CageTxBuilder.hs"
 
+{- | Deployment proof that drives production appliers as a test.
+
+It is not a production application surface, but it necessarily mentions
+'AppliedBy' names.  The discovery sweep would otherwise treat those
+mentions as an incomplete horizon.
+-}
+entitlementSpecPath :: FilePath
+entitlementSpecPath =
+    "offchain/deployment-test/Cardano/KERI/Deployment/BountyEntitlementSpec.hs"
+
 {- | One census row: a module, an identifier, and how many times that identifier
 occurs in that module's syntax tree.
 
@@ -1042,10 +1087,11 @@ builder is hand-declared because it is the one production applier outside that
 directory, and a hand-declared path is guarded twice: it must exist, and the
 discovery sweep independently fails if any other module mentions an applier.
 
-The one exclusion is this module.  It necessarily names every applier and every
-version-shaped identifier it is written to detect, so leaving it inside the
-horizon would make the control a census of itself.  The exclusion is proved
-load-bearing by the @exclusion-removed@ falsification leg.
+The exclusions are this module, which necessarily names every applier, and
+'BountyEntitlementSpec', which drives production appliers as a test.
+Leaving this module inside the horizon would make the control a census of
+itself.  Each exclusion is proved load-bearing by its own falsification
+leg.
 -}
 defaultScanConfig :: FilePath -> ScanConfig
 defaultScanConfig root =
@@ -1055,6 +1101,7 @@ defaultScanConfig root =
         , scanHorizonExtras = [cageBuilderPath]
         , scanExclusions =
             [ "offchain/deployment-test/Cardano/KERI/Deployment/ScriptAritySpec.hs"
+            , entitlementSpecPath
             ]
         }
 
@@ -1346,9 +1393,10 @@ disappearing are equally a catch.
 -}
 declaredApplications :: [CensusRow]
 declaredApplications =
-    [ CensusRow deploymentScriptPath "applyDataArgs" 2
+    [ CensusRow deploymentScriptPath "applyCommitmentParams" 1
+    , CensusRow deploymentScriptPath "applyDataArgs" 4
     , CensusRow deploymentScriptPath "applyProgram" 1
-    , CensusRow deploymentScriptPath "mkAppliedArtifact" 7
+    , CensusRow deploymentScriptPath "mkAppliedArtifact" 8
     , CensusRow cageBuilderPath "applyParams" 1
     ]
 
@@ -1378,7 +1426,7 @@ declaredVersions =
     , CensusRow (deploymentModule "Manifest") "parameterCheckpointVersion" 3
     , CensusRow (deploymentModule "Manifest") "v1CheckpointVersion" 2
     , CensusRow deploymentScriptPath "v1CheckpointVersion" 7
-    , CensusRow deploymentScriptPath "version" 6
+    , CensusRow deploymentScriptPath "version" 10
     , CensusRow deploymentScriptPath "versionTag" 2
     , CensusRow cageBuilderPath "cageVersion" 4
     ]
@@ -1618,17 +1666,50 @@ data SelfTestLeg = SelfTestLeg
     , legPerturb :: FilePath -> ScanConfig -> IO (Either String ScanConfig)
     }
 
+{- | A hidden rebinding of one 'AppliedBy' name outside the scan horizon.
+
+Generated from 'appliedByNames', so a newly declared applier cannot enter
+the census without this control covering it.  The plant is a source-only
+binding: discovery must refuse it, which is how a name the scanner cannot
+see is distinguished from one it can.
+-}
+hiddenRebindingLeg :: String -> SelfTestLeg
+hiddenRebindingLeg name =
+    SelfTestLeg ("hidden-rebinding-" <> name) $ \tree config -> do
+        present <- doesDirectoryExist (tree </> "offchain")
+        if not present
+            then pure (Left "offchain is absent from the materialized tree")
+            else do
+                writeSource
+                    (tree </> "offchain/S254RHidden" <> name <> ".hs")
+                    ( unlines
+                        [ "module S254RHidden" <> name <> " where"
+                        , "s254r_hidden_" <> name <> " = " <> name
+                        ]
+                    )
+                pure (Right config)
+
 {- | Every derived skip, exclusion and fail-closed branch, each shown to be
 load-bearing.
 
 An exclusion nobody can show mattering is a suppression; a skip nobody can show
-mattering is a hole.  These six legs are the answer to "what happens where this
-does not apply?" for every branch the control has.
+mattering is a hole.  The hidden-rebinding legs close the class that a
+census row can name an applier the scanner cannot see.
 -}
 selfTestLegs :: [SelfTestLeg]
 selfTestLegs =
     [ SelfTestLeg "exclusion-removed" $ \_ config ->
         pure (Right config{scanExclusions = []})
+    , SelfTestLeg "entitlement-spec-exclusion-removed" $ \_ config ->
+        pure
+            ( Right
+                config
+                    { scanExclusions =
+                        filter
+                            (/= entitlementSpecPath)
+                            (scanExclusions config)
+                    }
+            )
     , SelfTestLeg "stale-exclusion" $ \_ config ->
         pure
             ( Right
@@ -1656,6 +1737,7 @@ selfTestLegs =
         writeSource path (source <> "\ns254rUnparseable = (\n")
         pure (Right config)
     ]
+        <> map hiddenRebindingLeg appliedByNames
 
 {- | Run the self-test.
 
@@ -1686,29 +1768,30 @@ runSelfTest repoRoot legacyRef = do
         putStrLn line
         pure held
 
--- | The ref the self-test materializes when none was named.
-selfTestRef :: Maybe String -> String
-selfTestRef = fromMaybe "HEAD"
+{- | Materialize the candidate, mutate it, and read both controls' verdicts.
 
-{- | Materialize the base tree, mutate it, and read both controls' verdicts.
+The derived half always scans HEAD.  Declared census rows are measured
+from this candidate; materializing the frozen source-text sweep's tree
+would make every IGNORE case fail for stale counts rather than for the
+parser property under test.
 
-The mutation proves it materialized before either verdict is read, so a
-mutation that silently failed to apply cannot report a clean IGNORE.
+The frozen half, when requested, materializes the legacy ref separately
+so it still runs the historical source-text sweep against that tree.
 -}
 runSelfTestCase ::
     FilePath -> Maybe String -> SelfTestCase -> IO (String, Bool)
 runSelfTestCase repoRoot legacyRef testCase =
     withSystemTempDirectory "s254r-case" $ \scratch -> do
-        let tree = scratch </> "tree"
-        materialized <- materializeRef repoRoot (selfTestRef legacyRef) tree
+        let derivedTree = scratch </> "derived"
+        materialized <- materializeRef repoRoot "HEAD" derivedTree
         case materialized of
             Left reason -> pure (harness reason)
             Right () -> do
-                mutated <- caseMutate testCase tree
+                mutated <- caseMutate testCase derivedTree
                 case mutated of
                     Left reason -> pure (harness reason)
                     Right () -> do
-                        verdict <- runScan (defaultScanConfig tree)
+                        verdict <- runScan (defaultScanConfig derivedTree)
                         let derived = newLabel testCase (verdictCode verdict)
                         case legacyRef of
                             Nothing ->
@@ -1716,32 +1799,45 @@ runSelfTestCase repoRoot legacyRef testCase =
                                     ( marker <> " new=" <> derived
                                     , derived == expectedNew testCase
                                     )
-                            Just _ -> do
-                                (code, output) <- runLegacy scratch tree
-                                let frozen = oldLabel testCase code output
-                                pure
-                                    ( marker
-                                        <> " old="
-                                        <> frozen
-                                        <> " new="
-                                        <> derived
-                                    , frozen == expectedOld testCase
-                                        && derived == expectedNew testCase
-                                    )
+                            Just ref ->
+                                runFrozenHalf scratch ref derived
   where
     marker = "S254R_DERIVED_SELFTEST case=" <> caseName testCase
     harness reason = (marker <> " harness=broken reason=" <> show reason, False)
+    runFrozenHalf scratch ref derived = do
+        let frozenTree = scratch </> "frozen"
+        materialized <- materializeRef repoRoot ref frozenTree
+        case materialized of
+            Left reason -> pure (harness reason)
+            Right () -> do
+                mutated <- caseMutate testCase frozenTree
+                case mutated of
+                    Left reason -> pure (harness reason)
+                    Right () -> do
+                        (code, output) <- runLegacy scratch frozenTree
+                        let frozen = oldLabel testCase code output
+                        pure
+                            ( marker
+                                <> " old="
+                                <> frozen
+                                <> " new="
+                                <> derived
+                            , frozen == expectedOld testCase
+                                && derived == expectedNew testCase
+                            )
 
-{- | Run one falsification leg against a freshly materialized tree.
+{- | Run one falsification leg against the candidate tree.
 
+Legs prove the current control's configuration is load-bearing, so they
+materialize HEAD rather than the frozen source-text sweep's tree.
 Both halves are required: unperturbed the tree must scan clean, perturbed it
 must report a broken instrument.
 -}
 runSelfTestLeg :: FilePath -> Maybe String -> SelfTestLeg -> IO (String, Bool)
-runSelfTestLeg repoRoot legacyRef leg =
+runSelfTestLeg repoRoot _legacyRef leg =
     withSystemTempDirectory "s254r-leg" $ \scratch -> do
         let tree = scratch </> "tree"
-        materialized <- materializeRef repoRoot (selfTestRef legacyRef) tree
+        materialized <- materializeRef repoRoot "HEAD" tree
         case materialized of
             Left reason -> pure (harness reason)
             Right () -> do

@@ -50,7 +50,7 @@ The machine build gate precedes implementation and audit.
 
 ## Phase 4 — S254-E enforcement entitlement integration
 
-- [ ] T254-107 [US1] Adopt the revised #271 standalone commitment component at
+- [x] T254-107 [US1] Adopt the revised #271 standalone commitment component at
   `03da8a72e3a58d63ca4268bdfd6157e41a7ebf33` byte-identically under manifest
   `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895` and
   integrate it without restating internal fields; demonstrate substituted-

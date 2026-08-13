@@ -7,7 +7,9 @@
 use cardano/assets.{PolicyId}
 use cardano/certificate.{Certificate, RegisterCredential}
 use cardano/transaction.{Transaction}
+use cardano_keri/bounty_commitment.{CommitmentFamily}
 use cardano_keri/checkpoint/enforcement_observer.{validate_enforcement}
+use cardano_keri/checkpoint/entitlement.{validate_entitlement_observation}
 use cardano_keri/checkpoint/observer.{
   ObserverEnvelope, observe_migration, validate_advance, validate_registration,
 }
@@ -89,10 +91,43 @@ validator observer_migration(predecessor_policy: PolicyId) {
   }
 }
 
-validator observer_enforcement(_version: Int) {
+/// The enforcement observer is applied with the release commitment family:
+/// the policy is the identity of the commitment program whose reservations
+/// this release honours, and the nested parameters are its explicit finite
+/// age, lifetime and deposit magnitudes.
+validator observer_enforcement(_version: Int, commitment: CommitmentFamily) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
-    validate_enforcement(envelope, tx)
+    validate_enforcement(commitment, envelope, tx)
+  }
+
+  publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {
+    accept_own_registration_only(certificate)
+  }
+
+  else(_) {
+    fail
+  }
+}
+
+/// #254 A-002 — the entitlement half of the two-observer split.
+///
+/// It is applied with exactly the arguments `observer_enforcement` takes, and
+/// for the same reason: the commitment family's policy is inside this program's
+/// own hash, so a release cannot point its entitlement rule at a different
+/// reservation program without changing the credential it publishes.
+///
+/// The split exists because one applied program carrying both responsibilities
+/// measures 16,912 bytes against the 16,133-byte signed-reference publication
+/// budget, and the entitlement leg inside it is 2,117 bytes of generated
+/// Plutus-Data codecs that cannot be cut without deleting a demonstrated check.
+/// Splitting moves bytes, not authority: this handler validates the mature
+/// authentic reservation, `observer_enforcement` validates the actual KERI
+/// evidence, and neither alone authorizes a settlement.
+validator observer_entitlement(_version: Int, commitment: CommitmentFamily) {
+  withdraw(redeemer: Data, _account: Data, tx: Transaction) {
+    expect envelope: ObserverEnvelope = redeemer
+    validate_entitlement_observation(commitment, envelope, tx)
   }
 
   publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {

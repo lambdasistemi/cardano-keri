@@ -123,6 +123,54 @@ data EnforcementEvidence = EnforcementEvidence
     }
     deriving stock (Show, Eq)
 
+{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+
+The encoder lives here, beside the type whose wire shape it is, because #254
+S254-E made it load-bearing beyond transaction building: the canonical
+enforcement evidence digest is @blake2b_256@ over exactly these bytes, and a
+second copy of the field order would be a second thing to keep in step.
+"Cardano.KERI.AID.Checkpoint.Wire" still exposes it as
+@enforcementEvidenceData@ for the observer envelopes.
+-}
+instance ToData EnforcementEvidence where
+    toBuiltinData EnforcementEvidence{..} =
+        BuiltinData $
+            Constr
+                0
+                [ B eneEventBytes
+                , I (fromIntegral eneOffT)
+                , I (fromIntegral eneOffI)
+                , I (fromIntegral eneOffS)
+                , I (fromIntegral eneOffD)
+                , evidenceIntList eneOffK
+                , I (fromIntegral eneOffKt)
+                , evidenceIntList eneOffN
+                , I (fromIntegral eneOffNt)
+                , I (fromIntegral eneOffBt)
+                , I eneNativeSn
+                , B eneSaid
+                , List (map B eneRevealedKeys)
+                , List (map B eneNextKeys)
+                , evidenceData eneCurThreshold
+                , evidenceData eneNextThreshold
+                , I eneToad
+                , evidenceSignatureList eneCtrlSigs
+                , evidenceSignatureList eneWitSigs
+                ]
+
+evidenceData :: (ToData a) => a -> Data
+evidenceData value = let BuiltinData dat = toBuiltinData value in dat
+
+evidenceIntList :: (Integral a) => [a] -> Data
+evidenceIntList = List . map (I . fromIntegral)
+
+-- | Aiken tuples are Data lists, not record-shaped constructors.
+evidenceSignatureList :: [(Int, ByteString)] -> Data
+evidenceSignatureList =
+    List
+        . map
+            (\(index, signature) -> List [I (fromIntegral index), B signature])
+
 -- | Structured rejection from the ordered EE0-EE9 wire binder.
 data EnforcementBindingError
     = EE0EventBytesLength

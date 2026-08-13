@@ -34,6 +34,7 @@ use cardano/assets.{
 use cardano/transaction.{
   InlineDatum, NoDatum, Output, OutputReference, Transaction, find_input,
 }
+use cardano_keri/bounty_commitment.{BountyRevealV1, CommitmentFamily}
 use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
@@ -42,9 +43,14 @@ use cardano_keri/checkpoint/enforcement.{
   ConvictValid, EnforcementBindingValid, EnforcementEvidence, FreezeValid,
   TombstoneV1, bind_enforcement_evidence, convict_predicate, freeze_predicate,
 }
+use cardano_keri/checkpoint/entitlement.{
+  validate_claim_entitled_payout, validate_convict_entitlement,
+  validate_convict_payouts, validate_freeze_entitlement,
+}
 use cardano_keri/checkpoint/freeze_bond.{
-  ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
-  freeze_bond_valid, freeze_window_valid,
+  ArmedDatum, ArmedDatumValid, ArmedV2, armed_checkpoint,
+  armed_datum_well_formed, armed_deadline, armed_hunter, freeze_bond_valid,
+  freeze_window_valid,
 }
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
@@ -77,13 +83,18 @@ pub type MintRedeemer {
 /// remains fail-closed.
 pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
-  Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
+  Freeze {
+    evidence: EnforcementEvidence,
+    hunter_pkh: ByteArray,
+    reveal: BountyRevealV1,
+  }
   ClaimFreeze { hunter_output_index: Int }
   Convict {
     evidence: EnforcementEvidence,
     convictor_pkh: ByteArray,
     convictor_output_index: Int,
     hunter_output_index: Int,
+    reveal: BountyRevealV1,
   }
   Close
 }
@@ -105,6 +116,7 @@ validator checkpoint(
   d_reg: Int,
   freeze_bond: Int,
   freeze_window: Int,
+  commitment: CommitmentFamily,
 ) {
   mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
     expect valid_registration_deposit(d_reg)
@@ -138,10 +150,18 @@ validator checkpoint(
       tx,
     )
     when rdm is {
-      Freeze { evidence, hunter_pkh } ->
+      Freeze { evidence, hunter_pkh, reveal } ->
         when input_role is {
           ActiveCheckpoint ->
-            validate_arm(freeze_window, evidence, hunter_pkh, own_ref, tx)
+            validate_arm(
+              commitment,
+              freeze_window,
+              evidence,
+              hunter_pkh,
+              reveal,
+              own_ref,
+              tx,
+            )
           _ -> fail
         }
       ClaimFreeze { hunter_output_index } ->
@@ -155,37 +175,44 @@ validator checkpoint(
         convictor_pkh,
         convictor_output_index,
         hunter_output_index,
+        reveal,
       } ->
         when input_role is {
           ActiveCheckpoint ->
             validate_convict_active(
+              commitment,
               d_reg,
               freeze_bond,
               evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
+              reveal,
               own_ref,
               tx,
             )
           ArmedCheckpoint ->
             validate_convict_armed(
+              commitment,
               d_reg,
               freeze_bond,
               evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
+              reveal,
               own_ref,
               tx,
             )
           FrozenCheckpoint ->
             validate_convict_frozen(
+              commitment,
               d_reg,
               evidence,
               convictor_pkh,
               convictor_output_index,
               hunter_output_index,
+              reveal,
               own_ref,
               tx,
             )
@@ -225,11 +252,11 @@ fn classify_spend_input(
   } else if own_input.output.address == role.address(own_hash, Armed) {
     expect armed: ArmedDatum = datum_data
     expect ArmedDatumValid = armed_datum_well_formed(armed)
-    let ArmedV1 { checkpoint: armed_checkpoint, .. } = armed
+    let armed_tip = armed_checkpoint(armed)
     expect
       checkpoint_input_value_valid(
         own_hash,
-        armed_checkpoint.cesr_aid,
+        armed_tip.cesr_aid,
         checkpoint_min_ada + d_reg + freeze_bond,
         own_input.output.value,
       )
@@ -346,9 +373,11 @@ fn validate_register(
 /// validity upper endpoint anchors the stored deadline; inclusivity is never
 /// normalized inward.
 fn validate_arm(
+  commitment: CommitmentFamily,
   freeze_window: Int,
   evidence: EnforcementEvidence,
   hunter_pkh: ByteArray,
+  reveal: BountyRevealV1,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -365,10 +394,22 @@ fn validate_arm(
     evidence,
   )
   expect freeze_predicate(tip, decoded) == FreezeValid
+  // The hunter position is EARNED, not asserted: a matured, authentic
+  // commitment must already name this checkpoint, the Freeze action, the
+  // digest of this actual evidence, and this exact payee.
+  expect
+    validate_freeze_entitlement(
+      commitment,
+      evidence,
+      hunter_pkh,
+      reveal,
+      own_ref,
+      tx,
+    )
   expect !interval.is_empty(validity_range)
   expect interval.Finite(upper) = validity_range.upper_bound.bound_type
   let deadline = upper + freeze_window
-  let armed = ArmedV1 { checkpoint: tip, hunter_pkh, deadline }
+  let armed = ArmedV2 { checkpoint: tip, hunter_pkh, deadline }
   expect ArmedDatumValid = armed_datum_well_formed(armed)
   expect [state_output] = list.filter(
     outputs,
@@ -399,16 +440,20 @@ fn validate_claim(
   expect InlineDatum(armed_data) = own_input.output.datum
   expect armed: ArmedDatum = armed_data
   expect ArmedDatumValid = armed_datum_well_formed(armed)
-  let ArmedV1 { checkpoint: tip, hunter_pkh, deadline } = armed
+  let tip = armed_checkpoint(armed)
+  let hunter_pkh = armed_hunter(armed)
+  let deadline = armed_deadline(armed)
   let aid_name = deriveAidAssetName(tip.cesr_aid)
   expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
   expect !interval.is_empty(validity_range)
   expect interval.Finite(lower) = validity_range.lower_bound.bound_type
   expect lower >= deadline
+  // The beneficiary comes from stored consent through the shared rule; this
+  // arm owns only the bond magnitude. No fresh hunter signature is required,
+  // so no party can acquire a veto by withholding one.
+  expect validate_claim_entitled_payout(armed, hunter_output_index, tx)
   expect Some(hunter_output) = list.at(outputs, hunter_output_index)
-  expect hunter_output.address == from_verification_key(hunter_pkh)
   expect hunter_output.value == from_lovelace(freeze_bond)
-  expect NoDatum = hunter_output.datum
   expect [state_output] = list.filter(
     outputs,
     fn(output) { output.address == role.address(own_hash, Frozen) },
@@ -427,12 +472,14 @@ fn validate_claim(
 /// ACTIVE conviction routes the protected deposit and bond together to the
 /// named convictor before applying the shared terminal transition.
 fn validate_convict_active(
+  commitment: CommitmentFamily,
   d_reg: Int,
   freeze_bond: Int,
   evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
-  _hunter_output_index: Int,
+  hunter_output_index: Int,
+  reveal: BountyRevealV1,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -443,6 +490,21 @@ fn validate_convict_active(
   expect InlineDatum(tip_data) = own_input.output.datum
   expect V1(tip): CheckpointDatum = tip_data
   expect bytearray.length(convictor_pkh) == 28
+  expect
+    validate_convict_payouts(
+      Active,
+      validate_convict_entitlement(
+        commitment,
+        evidence,
+        convictor_pkh,
+        reveal,
+        own_ref,
+        tx,
+      ),
+      convictor_output_index,
+      hunter_output_index,
+      tx,
+    )
   expect
     expect_exact_payout(
       outputs,
@@ -456,12 +518,14 @@ fn validate_convict_active(
 /// ARMED conviction keeps the two protected payouts distinct: the deposit
 /// goes to the convictor and the bond goes to the hunter stored in the datum.
 fn validate_convict_armed(
+  commitment: CommitmentFamily,
   d_reg: Int,
   freeze_bond: Int,
   evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
   hunter_output_index: Int,
+  reveal: BountyRevealV1,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -472,8 +536,24 @@ fn validate_convict_armed(
   expect InlineDatum(armed_data) = own_input.output.datum
   expect armed: ArmedDatum = armed_data
   expect ArmedDatumValid = armed_datum_well_formed(armed)
-  let ArmedV1 { checkpoint: tip, hunter_pkh, .. } = armed
+  let tip = armed_checkpoint(armed)
+  let hunter_pkh = armed_hunter(armed)
   expect bytearray.length(convictor_pkh) == 28
+  expect
+    validate_convict_payouts(
+      Armed,
+      validate_convict_entitlement(
+        commitment,
+        evidence,
+        convictor_pkh,
+        reveal,
+        own_ref,
+        tx,
+      ),
+      convictor_output_index,
+      hunter_output_index,
+      tx,
+    )
   expect convictor_output_index != hunter_output_index
   expect
     expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg)
@@ -485,11 +565,13 @@ fn validate_convict_armed(
 /// FROZEN conviction routes only the protected registration deposit because
 /// the freeze bond has already left checkpoint state.
 fn validate_convict_frozen(
+  commitment: CommitmentFamily,
   d_reg: Int,
   evidence: EnforcementEvidence,
   convictor_pkh: ByteArray,
   convictor_output_index: Int,
-  _hunter_output_index: Int,
+  hunter_output_index: Int,
+  reveal: BountyRevealV1,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -500,6 +582,21 @@ fn validate_convict_frozen(
   expect InlineDatum(tip_data) = own_input.output.datum
   expect V1(tip): CheckpointDatum = tip_data
   expect bytearray.length(convictor_pkh) == 28
+  expect
+    validate_convict_payouts(
+      Frozen,
+      validate_convict_entitlement(
+        commitment,
+        evidence,
+        convictor_pkh,
+        reveal,
+        own_ref,
+        tx,
+      ),
+      convictor_output_index,
+      hunter_output_index,
+      tx,
+    )
   expect
     expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg)
   validate_convict_terminal(tip, evidence, own_ref, tx)

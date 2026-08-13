@@ -42,12 +42,16 @@ use cardano/transaction.{
   Datum, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
   placeholder,
 }
+use cardano_keri/bounty_commitment.{
+  BountyRevealV1, CommitmentFamily, CommitmentParameters,
+}
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
+use cardano_keri/checkpoint/entitlement.{validate_freeze_entitlement}
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1, ArmedV2}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
@@ -246,6 +250,7 @@ fn run_register(e: RegistrationEvidence, tx: Transaction) -> Bool {
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     Register { evidence: e },
     policy,
     tx,
@@ -265,6 +270,7 @@ fn run_register_with_deposit(
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     Register { evidence: e },
     policy,
     tx,
@@ -419,6 +425,7 @@ test t116_s7_reject_d_reg_below_mechanical_floor_registration_mint() fail {
     vec.d_reg_below_floor,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     Register { evidence: vec.pos_2key_evidence },
     policy,
     tx,
@@ -440,6 +447,7 @@ test t114_r3_reject_freeze_bond_below_mechanical_floor_registration_mint() fail 
     d_reg,
     r2_freeze_bond - 1,
     r2_freeze_window,
+    applied_commitment,
     Register { evidence: vec.pos_2key_evidence },
     policy,
     tx,
@@ -749,6 +757,7 @@ test reject_r10_spend_fails_closed() fail {
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     Some(datum_data),
     rdm,
     out_ref(seed_tx_id, 0),
@@ -953,6 +962,7 @@ fn run_advance(
     d_reg,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     None,
     redeemer,
     own_ref,
@@ -973,6 +983,7 @@ fn run_advance_with_d_reg(
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     None,
     redeemer,
     own_ref,
@@ -2791,7 +2802,7 @@ fn r2_armed_datum(
   hunter_pkh: ByteArray,
   deadline: Int,
 ) -> ArmedDatum {
-  ArmedV1 { checkpoint: tip, hunter_pkh, deadline }
+  ArmedV2 { checkpoint: tip, hunter_pkh, deadline }
 }
 
 fn r2_armed_output(
@@ -2920,6 +2931,7 @@ fn run_r2_with_parameters(
     d_reg,
     freeze_bond_parameter,
     freeze_window_parameter,
+    applied_commitment,
     None,
     redeemer_data,
     own_ref,
@@ -2945,14 +2957,20 @@ fn r2_claim_redeemer(index: Int) -> R2SpendRedeemer {
   R2ClaimFreeze { hunter_output_index: index }
 }
 
+// The #116 arming acceptance rows below likewise carry the hunter's authentic
+// matured reservation now. Each still asserts exactly what it always did — that
+// the complete value is preserved and the deadline recorded, that the exact
+// reserve floor is admissible, that a raw exclusive upper endpoint is never
+// normalized inward, and that unrelated inputs and outputs are tolerated — with
+// the arm made entitled rather than unauthenticated.
+
 test t116_r2_accept_arm_preserves_complete_value_and_records_deadline() {
-  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(enf_vec.lag_freeze_tip))
+  run_s254e_arm(r2_arm_tx(enf_vec.lag_freeze_tip))
 }
 
 test t116_r2_accept_arm_at_exact_reserve_floor() {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
-    r2_arm_redeemer(r2_hunter),
+  run_s254e_arm(
     r2_arm_tx_with(
       tip,
       r2_reserve_value(tip),
@@ -2965,8 +2983,7 @@ test t116_r2_accept_arm_at_exact_reserve_floor() {
 
 test t116_r2_accept_arm_raw_exclusive_upper_without_normalizing() {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
-    r2_arm_redeemer(r2_hunter),
+  run_s254e_arm(
     r2_arm_tx_with(
       tip,
       r2_surplus_value(tip),
@@ -2986,8 +3003,7 @@ test t116_r2_accept_arm_with_unrelated_extra_input_and_output() {
     from_lovelace(9_000_000),
     NoDatum,
   )
-  run_r2(
-    r2_arm_redeemer(r2_hunter),
+  run_s254e_arm(
     Transaction {
       ..tx,
       inputs: list.concat(tx.inputs, [extra_input]),
@@ -4038,6 +4054,7 @@ fn run_r3_with_d_reg(
     d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     None,
     redeemer_data,
     convict_own_ref,
@@ -4062,20 +4079,28 @@ fn r3_honest_redeemer(
   )
 }
 
+// The #116 conviction acceptance rows below now carry an authentic matured
+// reservation for the convictor they pay. They are unchanged in what they
+// assert — deposit and bond routing, surplus change, index distinctness,
+// tolerance of unrelated inputs and outputs — but a conviction with no
+// reservation at all is exactly what this slice makes rejectable, so the honest
+// fixture has to become an honest ENTITLED fixture or these rows would be
+// asserting the acceptance of the defect.
+
 test t116_r3_accept_convict_active_routes_deposit_and_bond() {
-  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_active_tx())
+  run_s254e_convict(r3_convictor, 0, 0, r3_active_tx())
 }
 
 test t116_r3_accept_convict_armed_routes_deposit_and_recorded_hunter_bond() {
-  run_r3(r3_honest_redeemer(r3_convictor, 0, 1), r3_armed_tx())
+  run_s254e_convict(r3_convictor, 0, 1, r3_armed_tx())
 }
 
 test t116_r3_accept_convict_frozen_routes_deposit() {
-  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_frozen_tx())
+  run_s254e_convict(r3_convictor, 0, 0, r3_frozen_tx())
 }
 
 test t116_r3_accept_convict_preserves_unreserved_surplus_as_change() {
-  run_r3(r3_honest_redeemer(r3_convictor, 0, 0), r3_active_tx())
+  run_s254e_convict(r3_convictor, 0, 0, r3_active_tx())
 }
 
 test t116_r3_accept_convict_with_unrelated_extra_input_and_output() {
@@ -4086,8 +4111,10 @@ test t116_r3_accept_convict_with_unrelated_extra_input_and_output() {
     from_lovelace(9_000_000),
     NoDatum,
   )
-  run_r3(
-    r3_honest_redeemer(r3_convictor, 0, 0),
+  run_s254e_convict(
+    r3_convictor,
+    0,
+    0,
     Transaction {
       ..tx,
       inputs: list.concat(tx.inputs, [extra_input]),
@@ -4110,7 +4137,7 @@ test t116_r3_accept_self_conviction_and_same_hunter_recipient_at_distinct_indice
     NoDatum,
     r3_terminal_value(tip),
   )
-  run_r3(r3_honest_redeemer(r2_hunter, 0, 1), tx)
+  run_s254e_convict(r2_hunter, 0, 1, tx)
 }
 
 test t116_r3_accept_armed_distinct_indices_when_payout_amounts_coincide() {
@@ -4130,7 +4157,7 @@ test t116_r3_accept_armed_distinct_indices_when_payout_amounts_coincide() {
     ],
     zero,
   )
-  run_r3_with_d_reg(equal_d_reg, r3_honest_redeemer(r2_hunter, 0, 1), tx)
+  run_s254e_convict_with_d_reg(equal_d_reg, r2_hunter, 0, 1, tx)
 }
 
 test t116_r3_reject_convictor_wrong_width() fail {
@@ -4772,6 +4799,17 @@ const s254e_commitment_ref: OutputReference =
 const s254e_losing_commitment_ref: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 79 }
 
+/// A well-formed reference to a commitment the transaction does not consume.
+/// Naming it produces a verdict from the entitlement leg rather than a decoder
+/// rejection.
+const s254e_absent_commitment_ref: OutputReference =
+  OutputReference { transaction_id: seed_tx_id, output_index: 80 }
+
+/// A foreign script that is NOT the release commitment family. Anything parked
+/// there is counterfeit however well-formed it looks.
+const s254e_foreign_commit_policy: PolicyId =
+  #"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+
 /// Test-side mirror of the frozen `BountyAction`.
 type S254EAction {
   S254EFreezeEntitlement
@@ -4909,14 +4947,24 @@ fn s254e_commitment_input(
   ref: OutputReference,
   commitment: S254ECommitment,
 ) -> Input {
+  s254e_commitment_input_at(s254e_commit_policy, ref, commitment)
+}
+
+/// The same UTxO shape at an arbitrary script. The counterfeit control uses it
+/// to park a structurally perfect commitment somewhere it does not belong.
+fn s254e_commitment_input_at(
+  script: PolicyId,
+  ref: OutputReference,
+  commitment: S254ECommitment,
+) -> Input {
   let S254ECommitmentV1 { marker, .. } = commitment
   let datum: Data = commitment
   input_at(
     ref,
     Output {
-      address: from_script(s254e_commit_policy),
+      address: from_script(script),
       value: from_lovelace(s254e_commit_deposit)
-        |> merge(from_asset(s254e_commit_policy, marker, 1)),
+        |> merge(from_asset(script, marker, 1)),
       datum: InlineDatum(datum),
       reference_script: None,
     },
@@ -4926,6 +4974,10 @@ fn s254e_commitment_input(
 /// The marker burn that makes a reveal single-use.
 fn s254e_marker_burn(marker: ByteArray) -> Value {
   from_asset(s254e_commit_policy, marker, -1)
+}
+
+fn s254e_marker_burn_at(script: PolicyId, marker: ByteArray) -> Value {
+  from_asset(script, marker, -1)
 }
 
 fn s254e_refund_output(payee_pkh: ByteArray) -> Output {
@@ -4940,7 +4992,26 @@ fn s254e_reveal(
   S254EReveal { commitment_ref: ref, nonce, refund_index: index }
 }
 
+/// The LIVE reveal type, for rows that call the shared rule directly rather
+/// than through the applied program's redeemer wire.
+fn s254e_live_reveal(
+  ref: OutputReference,
+  nonce: ByteArray,
+  index: Int,
+) -> BountyRevealV1 {
+  BountyRevealV1 { commitment_ref: ref, nonce, refund_index: index }
+}
+
 fn run_s254e(
+  redeemer: S254ESpendRedeemer,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  run_s254e_with_d_reg(d_reg, redeemer, own_ref, tx)
+}
+
+fn run_s254e_with_d_reg(
+  d_reg_parameter: Int,
   redeemer: S254ESpendRedeemer,
   own_ref: OutputReference,
   tx: Transaction,
@@ -4950,13 +5021,50 @@ fn run_s254e(
     0,
     hp_policy,
     network_id,
-    d_reg,
+    d_reg_parameter,
     r2_freeze_bond,
     r2_freeze_window,
+    applied_commitment,
     None,
     redeemer_data,
     own_ref,
     tx,
+  )
+}
+
+/// An honest ENTITLED conviction: the transaction under test plus the matured
+/// authentic reservation the named convictor opened over this checkpoint, the
+/// Convict action, and the digest of this actual evidence.
+fn run_s254e_convict(
+  convictor_pkh: ByteArray,
+  convictor_index: Int,
+  hunter_index: Int,
+  tx: Transaction,
+) -> Bool {
+  run_s254e_convict_with_d_reg(
+    d_reg,
+    convictor_pkh,
+    convictor_index,
+    hunter_index,
+    tx,
+  )
+}
+
+fn run_s254e_convict_with_d_reg(
+  d_reg_parameter: Int,
+  convictor_pkh: ByteArray,
+  convictor_index: Int,
+  hunter_index: Int,
+  tx: Transaction,
+) -> Bool {
+  run_s254e_with_d_reg(
+    d_reg_parameter,
+    s254e_convict_redeemer(convictor_pkh, convictor_index, hunter_index),
+    convict_own_ref,
+    s254e_with_convict_commitment(
+      tx,
+      s254e_convict_commitment(convict_own_ref, convictor_pkh),
+    ),
   )
 }
 
@@ -5008,6 +5116,45 @@ fn s254e_arm_tx_with(
   }
 }
 
+/// Make an EXISTING arm transaction entitled without disturbing what the row
+/// under test is about.
+///
+/// The validity range keeps its exact upper endpoint — that is what anchors the
+/// stored deadline, and what the raw-exclusive row exists to pin — while the
+/// lower endpoint moves up to the maturity slot, because a commitment revealed
+/// in the slot it was opened in is not aged. Everything else the row set up
+/// (values, extra inputs and outputs, the ARMED successor) is carried through
+/// untouched.
+fn s254e_entitle_arm(base: Transaction, hunter_pkh: ByteArray) -> Transaction {
+  let commitment = s254e_freeze_commitment(hunter_pkh)
+  let S254ECommitmentV1 { marker, payee_pkh, .. } = commitment
+  Transaction {
+    ..base,
+    validity_range: interval.Interval {
+      lower_bound: interval.IntervalBound {
+        bound_type: interval.Finite(s254e_commit_min_age),
+        is_inclusive: True,
+      },
+      upper_bound: base.validity_range.upper_bound,
+    },
+    inputs: list.concat(
+      base.inputs,
+      [s254e_commitment_input(s254e_commitment_ref, commitment)],
+    ),
+    outputs: list.concat(base.outputs, [s254e_refund_output(payee_pkh)]),
+    mint: base.mint |> merge(s254e_marker_burn(marker)),
+  }
+}
+
+/// An honest ENTITLED arm over an arbitrary arming transaction.
+fn run_s254e_arm(base: Transaction) -> Bool {
+  run_s254e(
+    s254e_entitled_arm_redeemer(r2_hunter),
+    freeze_own_ref,
+    s254e_entitle_arm(base, r2_hunter),
+  )
+}
+
 fn s254e_entitled_arm_tx() -> Transaction {
   s254e_arm_tx_with(
     s254e_freeze_commitment(r2_hunter),
@@ -5046,29 +5193,47 @@ test s254_e_freeze_entitled_settlement_accepts() {
 
 /// INV-271-ENTITLEMENT. A Freeze carrying no commitment at all must reject.
 /// At base an unaccompanied arm is accepted, which is the defect.
+/// INV-271-ENTITLEMENT. A Freeze that names no reservation the transaction
+/// actually consumes must reject.
+///
+/// It is driven on the TARGET wire with a well-formed reveal whose
+/// `commitment_ref` is simply not among the inputs, so `own_commitment` finds
+/// nothing and the rule refuses. That is a verdict from the entitlement leg
+/// itself — not a decoder bounce, which is what a base-wire redeemer would
+/// produce now that the wire carries a reveal, and which would prove only that
+/// two record shapes differ.
 test s254_e_freeze_without_commitment_rejects() fail {
-  run_r2(r2_arm_redeemer(r2_hunter), r2_arm_tx(enf_vec.lag_freeze_tip))
+  let tip = enf_vec.lag_freeze_tip
+  run_s254e(
+    s254e_arm_redeemer(
+      r2_hunter,
+      s254e_reveal(s254e_absent_commitment_ref, s254e_nonce, 2),
+    ),
+    freeze_own_ref,
+    s254e_entitled_arm_tx(),
+  )
 }
 
-/// INV-271-ENTITLEMENT. The attacker rebuilds the whole arm naming ITSELF in
-/// both the redeemer and the ARMED datum, so nothing is internally
-/// inconsistent and no other check can object.
+/// INV-271-ENTITLEMENT. The substitution attack in its strongest form.
 ///
-/// Driven on the BASE wire deliberately: the attack needs no commitment to
-/// express, so this row runs the real validator through to its verdict rather
-/// than bouncing off the decoder. At base it is ACCEPTED — the defect — and
-/// the row fails honestly. It stays meaningful unchanged at GREEN, where an
-/// arm carrying no reveal at all must reject.
+/// The attacker observes the honest hunter's Freeze, rebuilds the whole arm
+/// naming ITSELF in both the redeemer and the ARMED datum, and points the
+/// reveal at the honest hunter's real, matured, authentic commitment. Nothing
+/// is internally inconsistent: the evidence is genuine, the commitment is
+/// genuine, the marker burns, the deposit refunds. The single fact that stops
+/// it is that the reservation names a different payee — which is exactly the
+/// leg a consent check cannot supply, and why
+/// `s254_e_signer_only_mutant_accepts_substitution` exists beside it.
 test s254_e_freeze_substituted_payee_rejects() fail {
   let tip = enf_vec.lag_freeze_tip
-  run_r2(
-    r2_arm_redeemer(s254e_attacker),
-    r2_arm_tx_with(
-      tip,
-      r2_surplus_value(tip),
+  run_s254e(
+    s254e_entitled_arm_redeemer(s254e_attacker),
+    freeze_own_ref,
+    s254e_arm_tx_with(
+      s254e_freeze_commitment(r2_hunter),
+      s254e_commitment_ref,
       s254e_attacker,
-      r2_deadline,
-      interval.between(0, r2_arm_upper),
+      tip,
     ),
   )
 }
@@ -5224,25 +5389,45 @@ test s254_e_first_valid_reveal_wins_checkpoint_spend() fail {
 /// INV-271-VALUE. The commitment deposit is refunded exactly once to the
 /// committed payee and the checkpoint reserve is untouched by it. Draining the
 /// refund to the attacker must reject.
+/// INV-271-VALUE, at the layer the CHECKPOINT actually owns.
+///
+/// The reservation must be retired exactly once by the settling transaction:
+/// burning nothing would leave a spent commitment alive to settle again, and
+/// burning two would consume value that was never reserved. Both must reject.
+///
+/// Scope note, stated rather than implied: the destination of the commitment
+/// DEPOSIT REFUND is not a checkpoint rule. It is enforced by the commitment
+/// program's own `validate_commitment_reveal`, which pins
+/// `exact_payout(tx, refund_index, payee_pkh, deposit)` against the committed
+/// payee. That leg is covered by the adopted component's own suite, which ships
+/// byte-identically. Asserting it here would have tested the wrong program — the
+/// checkpoint accepts a misdirected refund because refunds are none of its
+/// business, and an earlier version of this row failed for exactly that reason.
 test s254_e_commitment_refund_and_bounties_conserve_value() fail {
   let tip = enf_vec.lag_freeze_tip
   let commitment = s254e_freeze_commitment(r2_hunter)
-  let base = s254e_arm_tx_with(commitment, s254e_commitment_ref, r2_hunter, tip)
-  run_s254e(
-    s254e_entitled_arm_redeemer(r2_hunter),
-    freeze_own_ref,
-    Transaction {
-      ..base,
-      outputs: list.concat(
-        r2_arm_tx_with(
-          tip,
-          r2_surplus_value(tip),
-          r2_hunter,
-          r2_deadline,
-          interval.between(s254e_commit_min_age, r2_arm_upper),
-        ).outputs,
-        [s254e_refund_output(s254e_attacker)],
-      ),
+  let S254ECommitmentV1 { marker, .. } = commitment
+  let honest = s254e_arm_tx_with(
+    commitment,
+    s254e_commitment_ref,
+    r2_hunter,
+    tip,
+  )
+  list.any(
+    [
+      // settle while leaving the reservation unburned
+      Transaction { ..honest, mint: zero },
+      // retire more than was ever reserved
+      Transaction {
+        ..honest,
+        mint: from_asset(s254e_commit_policy, marker, -2),
+      },
+      // redirect the hunter bounty: the ARMED successor names the attacker
+      // while the reveal still proves entitlement for the committed hunter
+      s254e_arm_tx_with(commitment, s254e_commitment_ref, s254e_attacker, tip),
+    ],
+    fn(tx) {
+      run_s254e(s254e_entitled_arm_redeemer(r2_hunter), freeze_own_ref, tx)
     },
   )
 }
@@ -5264,10 +5449,27 @@ test s254_e_claim_uses_stored_hunter_without_fresh_signature() {
 /// INV-271-CONSENT. The ARMED hunter share on conviction is likewise derived
 /// from stored consent, with no fresh hunter signature.
 test s254_e_convict_armed_uses_stored_hunter_without_fresh_signature() {
-  let tx = r3_armed_tx()
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  let tx = s254e_with_convict_commitment(
+    r3_armed_tx_with(
+      tip,
+      evidence,
+      r3_convictor,
+      r2_hunter,
+      from_lovelace(d_reg),
+      from_lovelace(r2_freeze_bond),
+      NoDatum,
+      NoDatum,
+      r3_terminal_value(tip),
+    ),
+    s254e_convict_commitment(convict_own_ref, r3_convictor),
+  )
   and {
+    // The CONVICTOR earned its share through a commitment; the HUNTER share is
+    // paid from stored ARMED consent with no signature from anyone at all.
     tx.extra_signatories == [],
-    run_r3(r3_honest_redeemer(r3_convictor, 0, 1), tx),
+    run_s254e(s254e_convict_redeemer(r3_convictor, 0, 1), convict_own_ref, tx),
   }
 }
 
@@ -5312,6 +5514,7 @@ fn s254e_with_convict_commitment(
   let S254ECommitmentV1 { marker, payee_pkh, .. } = commitment
   Transaction {
     ..base,
+    validity_range: interval.between(s254e_commit_min_age, r2_arm_upper),
     inputs: list.concat(
       base.inputs,
       [s254e_commitment_input(s254e_commitment_ref, commitment)],
@@ -5322,20 +5525,25 @@ fn s254e_with_convict_commitment(
 }
 
 /// INV-271-ENTITLEMENT over ACTIVE conviction: the attacker names itself as
-/// convictor on someone else's witnessed fork. Base wire, for the same reason
-/// as the Freeze row — the real validator runs to a verdict and accepts.
+/// convictor on someone else's witnessed fork, and points the reveal at the
+/// honest convictor's real matured reservation. The conviction itself is
+/// genuine and every other leg is satisfied; only the committed payee differs.
 test s254_e_convict_active_substituted_payee_rejects() fail {
   let tip = enf_vec.fork_witnessed_convict_tip
   let evidence = enf_vec.fork_witnessed_convict_wire
-  run_r3(
-    r3_honest_redeemer(s254e_attacker, 0, 0),
-    r3_active_tx_with(
-      tip,
-      evidence,
-      s254e_attacker,
-      from_lovelace(d_reg + r2_freeze_bond),
-      NoDatum,
-      r3_terminal_value(tip),
+  run_s254e(
+    s254e_convict_redeemer(s254e_attacker, 0, 0),
+    convict_own_ref,
+    s254e_with_convict_commitment(
+      r3_active_tx_with(
+        tip,
+        evidence,
+        s254e_attacker,
+        from_lovelace(d_reg + r2_freeze_bond),
+        NoDatum,
+        r3_terminal_value(tip),
+      ),
+      s254e_convict_commitment(convict_own_ref, r3_convictor),
     ),
   )
 }
@@ -5345,18 +5553,22 @@ test s254_e_convict_active_substituted_payee_rejects() fail {
 test s254_e_convict_armed_substituted_payee_rejects() fail {
   let tip = enf_vec.fork_witnessed_convict_tip
   let evidence = enf_vec.fork_witnessed_convict_wire
-  run_r3(
-    r3_honest_redeemer(s254e_attacker, 0, 1),
-    r3_armed_tx_with(
-      tip,
-      evidence,
-      s254e_attacker,
-      r2_hunter,
-      from_lovelace(d_reg),
-      from_lovelace(r2_freeze_bond),
-      NoDatum,
-      NoDatum,
-      r3_terminal_value(tip),
+  run_s254e(
+    s254e_convict_redeemer(s254e_attacker, 0, 1),
+    convict_own_ref,
+    s254e_with_convict_commitment(
+      r3_armed_tx_with(
+        tip,
+        evidence,
+        s254e_attacker,
+        r2_hunter,
+        from_lovelace(d_reg),
+        from_lovelace(r2_freeze_bond),
+        NoDatum,
+        NoDatum,
+        r3_terminal_value(tip),
+      ),
+      s254e_convict_commitment(convict_own_ref, r3_convictor),
     ),
   )
 }
@@ -5365,15 +5577,19 @@ test s254_e_convict_armed_substituted_payee_rejects() fail {
 test s254_e_convict_frozen_substituted_payee_rejects() fail {
   let tip = enf_vec.fork_witnessed_convict_tip
   let evidence = enf_vec.fork_witnessed_convict_wire
-  run_r3(
-    r3_honest_redeemer(s254e_attacker, 0, 0),
-    r3_frozen_tx_with(
-      tip,
-      evidence,
-      s254e_attacker,
-      from_lovelace(d_reg),
-      NoDatum,
-      r3_terminal_value(tip),
+  run_s254e(
+    s254e_convict_redeemer(s254e_attacker, 0, 0),
+    convict_own_ref,
+    s254e_with_convict_commitment(
+      r3_frozen_tx_with(
+        tip,
+        evidence,
+        s254e_attacker,
+        from_lovelace(d_reg),
+        NoDatum,
+        r3_terminal_value(tip),
+      ),
+      s254e_convict_commitment(convict_own_ref, r3_convictor),
     ),
   )
 }
@@ -5414,12 +5630,116 @@ test s254_e_signer_only_mutant_accepts_substitution() {
   }
 }
 
-// --- Split / combined parity --------------------------------------------
+// --- Counterfeit family policy ------------------------------------------
 
-/// INV-271-PARITY. The Freeze and Convict entitlement rules are ONE rule: the
-/// entitled settlement must be admitted on both paths under the same shared
-/// predicate, so the split validator and the combined mirror cannot diverge.
-test s254_e_split_and_combined_mirror_agree() {
+/// An arm carrying a STRUCTURALLY PERFECT commitment parked at a foreign
+/// script.
+///
+/// Everything the settlement rule reads is right: the scope names this
+/// checkpoint, this action and the digest of this actual evidence; the payee is
+/// the party being paid; the reservation is already mature and unexpired; the
+/// UTxO holds exactly its own seed-derived marker plus the applied deposit; the
+/// marker is burned; the deposit is refunded. The one thing wrong with it is
+/// where it lives — which is the whole of `INV-271-COMMITMENT-POLICY-AUTHENTICITY`.
+fn s254e_counterfeit_arm_tx() -> Transaction {
+  let commitment = s254e_freeze_commitment(s254e_attacker)
+  let S254ECommitmentV1 { marker, payee_pkh, .. } = commitment
+  let base = r2_arm_tx_with(
+    enf_vec.lag_freeze_tip,
+    r2_surplus_value(enf_vec.lag_freeze_tip),
+    s254e_attacker,
+    r2_deadline,
+    interval.between(s254e_commit_min_age, r2_arm_upper),
+  )
+  Transaction {
+    ..base,
+    inputs: list.concat(
+      base.inputs,
+      [
+        s254e_commitment_input_at(
+          s254e_foreign_commit_policy,
+          s254e_commitment_ref,
+          commitment,
+        ),
+      ],
+    ),
+    outputs: list.concat(base.outputs, [s254e_refund_output(payee_pkh)]),
+    mint: s254e_marker_burn_at(s254e_foreign_commit_policy, marker),
+  }
+}
+
+/// The same release magnitudes, pinned to the FOREIGN script instead. This is
+/// the un-pinned mutant expressed exactly: if the family policy were not
+/// consulted, this field could not change any verdict.
+const s254e_foreign_family: CommitmentFamily =
+  CommitmentFamily {
+    policy: s254e_foreign_commit_policy,
+    parameters: CommitmentParameters {
+      network: network_id,
+      commit_min_age: 1,
+      commitment_lifetime: s254e_applied_test_lifetime,
+      commit_deposit: s254e_commit_deposit,
+    },
+  }
+
+/// INV-271-COMMITMENT-POLICY-AUTHENTICITY, proved BOTH ways in one row.
+///
+/// The first conjunct is the calibration: applied against a family pinned to
+/// the script the counterfeit actually sits at, the shipped shared rule ACCEPTS
+/// it. So no other leg objects — not the scope, not the payee, not the age, not
+/// the expiry, not the marker burn — and the fixture is not quietly broken.
+///
+/// The second conjunct is the property: the identical transaction, judged by
+/// the identical function, is REFUSED once the applied family is the real one.
+/// Nothing changes between the two calls except the pinned policy, so the
+/// verdict turns on the pin and on nothing else. Neither call is a decoder,
+/// setup, missing-input or value-shape rejection: both reach the rule and
+/// return a Bool.
+test s254_e_counterfeit_commitment_policy_rejects() {
+  let tx = s254e_counterfeit_arm_tx()
+  let reveal = s254e_live_reveal(s254e_commitment_ref, s254e_nonce, 2)
+  and {
+    validate_freeze_entitlement(
+      s254e_foreign_family,
+      enf_vec.lag_freeze_wire,
+      s254e_attacker,
+      reveal,
+      freeze_own_ref,
+      tx,
+    ),
+    !validate_freeze_entitlement(
+      applied_commitment,
+      enf_vec.lag_freeze_wire,
+      s254e_attacker,
+      reveal,
+      freeze_own_ref,
+      tx,
+    ),
+  }
+}
+
+/// The same counterfeit, refused by the APPLIED PROGRAM rather than by the
+/// shared function in isolation. This is what ties the row above to the
+/// bytecode that actually ships.
+test s254_e_counterfeit_commitment_policy_rejected_by_applied_checkpoint() fail {
+  run_s254e(
+    s254e_entitled_arm_redeemer(s254e_attacker),
+    freeze_own_ref,
+    s254e_counterfeit_arm_tx(),
+  )
+}
+
+// --- Both enforcement actions under one shared rule ---------------------
+
+/// INV-271-PARITY, split side. Freeze and Convict entitlement are ONE rule
+/// applied to two actions, so the entitled settlement must be admitted on both
+/// of the split family's enforcement paths under the same shared predicate.
+///
+/// The cross-FAMILY half of INV-271-PARITY — this validator and the combined
+/// register reaching the same verdict on ONE transaction — lives in
+/// `s254_e_split_and_combined_mirror_agree` in `checkpoint_register_tests.ak`,
+/// which is the only module where both families are in scope.
+test s254_e_freeze_and_convict_share_one_entitlement_rule() {
   let convict_tip = enf_vec.fork_witnessed_convict_tip
   let convict_evidence = enf_vec.fork_witnessed_convict_wire
   let convict_base = r3_active_tx_with(
@@ -5446,3 +5766,22 @@ test s254_e_split_and_combined_mirror_agree() {
     ),
   }
 }
+
+/// The applied commitment FAMILY these fixtures deploy under.
+///
+/// `policy` is release identity: the commitment program whose reservations this
+/// checkpoint honours, and the pin that makes a commitment-shaped datum at any
+/// other script counterfeit (`INV-271-COMMITMENT-POLICY-AUTHENTICITY`). The
+/// nested magnitudes are explicit, finite, at or above the mandated one-slot
+/// age and the 5 ADA deposit floor — and deliberately not a published protocol
+/// default.
+const applied_commitment: CommitmentFamily =
+  CommitmentFamily {
+    policy: s254e_commit_policy,
+    parameters: CommitmentParameters {
+      network: network_id,
+      commit_min_age: 1,
+      commitment_lifetime: s254e_applied_test_lifetime,
+      commit_deposit: s254e_commit_deposit,
+    },
+  }

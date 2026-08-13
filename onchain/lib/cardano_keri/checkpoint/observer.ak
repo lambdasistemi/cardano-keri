@@ -16,7 +16,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, armed_checkpoint}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
@@ -114,8 +114,8 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   } else {
     // The thin checkpoint arm admits only actions 1 and 3, so this branch is
     // necessarily the Armed response form in the composed transaction.
-    expect ArmedV1 { checkpoint: old, .. }: ArmedDatum = old_data
-    old
+    expect armed: ArmedDatum = old_data
+    armed_checkpoint(armed)
   }
   expect Some(state_output) = list.find(
     tx.outputs,

@@ -1417,6 +1417,16 @@
                       mkdir -p nix-generated
                       cp ${registerArtifacts}/*.hex nix-generated/
                     '' + prev.buildCommand;
+                    # #254 S254-E: the entitlement module's own two imports,
+                    # taken from the LIVE blueprint for the same reason the
+                    # migration module's is. A third separate placement, so
+                    # the three bodies of evidence cannot read each other's
+                    # programs.
+                  } // pkgs.lib.optionalAttrs (prev.name == entitlementModule) {
+                    buildCommand = ''
+                      mkdir -p nix-generated
+                      cp ${entitlementArtifacts}/*.hex nix-generated/
+                    '' + prev.buildCommand;
                   };
               };
 
@@ -1619,6 +1629,96 @@
                 '';
               };
 
+              # ---------------------------------------------------------
+              # #254 S254-E: the exact compiled entitlement family.
+              # ---------------------------------------------------------
+              # Derived from `e2eWiring.blueprint`, the LIVE blueprint of
+              # whatever `onchain/` currently compiles to, for exactly the
+              # reason the migration target is: `frozenM8Blueprint` holds
+              # ms8's baseline at the DEPLOYED bytecode and by construction
+              # cannot change when this slice changes the validators, so a
+              # proof read from it would pass without executing the code it
+              # claims to be about. The commitment program does not even
+              # exist in that baseline.
+              entitlementModule = "KeriBlaster.Entitlement";
+
+              # The two target identities, with the applied-argument count
+              # each program must still declare. The counts are the arity
+              # evidence: the checkpoint's seventh argument is the
+              # `CommitmentFamily` this slice threads through it, and a
+              # deployment that stubbed the family away would change this
+              # number and fail the extraction rather than the proof.
+              entitlementPrograms = [
+                {
+                  role = "commitment";
+                  title = "bounty_commitment.bounty_commitment.spend";
+                  params = 1;
+                }
+                {
+                  role = "checkpoint";
+                  title = "checkpoint.checkpoint.spend";
+                  params = 7;
+                }
+              ];
+
+              entitlementArtifacts =
+                pkgs.runCommand "cardano-keri-entitlement-uplc-programs" {
+                  nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+                } ''
+                  set -euo pipefail
+                  mkdir -p "$out"
+                  blueprint=${e2eWiring.blueprint}
+                  ${pkgs.lib.concatMapStrings (entry: ''
+                    title=${pkgs.lib.escapeShellArg entry.title}
+                    params=${toString entry.params}
+                    test "$(jq -er --arg title "$title" \
+                      '[.validators[] | select(.title == $title)] | length' \
+                      "$blueprint")" -eq 1
+                    test "$(jq -er --arg title "$title" \
+                      '.validators[] | select(.title == $title) | (.parameters // []) | length' \
+                      "$blueprint")" -eq "$params"
+                    jq -er --arg title "$title" \
+                      -f ${./blaster/extract-program.jq} "$blueprint" \
+                      | tr -d '\n\r[:space:]' > "$out/$title.hex"
+                    test -s "$out/$title.hex"
+                    printf '%s\t%s\t%s\t%s\n' ${
+                      pkgs.lib.escapeShellArg entry.role
+                    } "$title" "$params" \
+                      "$(sha256sum "$out/$title.hex" | cut -d ' ' -f 1)" \
+                      >> "$out/entitlement-manifest.tsv"
+                  '') entitlementPrograms}
+                  test "$(wc -l < "$out/entitlement-manifest.tsv")" \
+                    -eq ${toString (builtins.length entitlementPrograms)}
+                  test "$(ls "$out"/*.hex | wc -l)" \
+                    -eq ${toString (builtins.length entitlementPrograms)}
+                '';
+
+              entitlementRunner = pkgs.writeShellApplication {
+                name = "bounty-entitlement-blaster";
+                runtimeInputs = [ pkgs.coreutils pkgs.gnugrep ];
+                text = ''
+                  artifacts=${entitlementArtifacts}
+
+                  # The identity of each program actually executed below,
+                  # recomputed from the extracted bytes rather than restated,
+                  # so it changes whenever onchain/ changes -- which is the
+                  # whole point of reading the live blueprint. The manifest's
+                  # own recorded hash is compared against that recomputation,
+                  # so a manifest that drifted from its artifacts fails here
+                  # rather than being reported as an identity.
+                  while IFS=$'\t' read -r role title params recorded; do
+                    recomputed="$(sha256sum "$artifacts/$title.hex" \
+                      | cut -d ' ' -f 1)"
+                    test "$recomputed" = "$recorded"
+                    test "$params" -ge 1
+                    printf 'M8.entitlement-target role=%s title=%s program_sha256=%s\n' \
+                      "$role" "$title" "$recomputed"
+                  done < "$artifacts/entitlement-manifest.tsv"
+
+                  ENTITLEMENT_EVIDENCE=1 ${s2Evidence}/bin/s2-evidence
+                '';
+              };
+
               migrationRunner = pkgs.writeShellApplication {
                 name = "checkpoint-migration-blaster";
                 runtimeInputs = [ pkgs.coreutils pkgs.jq ];
@@ -1813,7 +1913,7 @@
               '';
             in {
               inherit artifact auditRunner check runner migrationRunner
-                registerRunner;
+                registerRunner entitlementRunner;
               lean = leanPkgs.lean-all;
             });
 
@@ -1876,6 +1976,7 @@
             blaster = blasterWiring.runner;
             checkpoint-migration-blaster = blasterWiring.migrationRunner;
             checkpoint-register-blaster = blasterWiring.registerRunner;
+            bounty-entitlement-blaster = blasterWiring.entitlementRunner;
             lean = blasterWiring.lean;
           } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
             ckeri-appimage = linuxArtifacts.appimage;

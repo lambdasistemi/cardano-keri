@@ -1,6 +1,7 @@
 import Blaster
 import CardanoLedgerApi.V3
 import PlutusCore.UPLC
+import KeriBlaster.Entitlement
 import KeriBlaster.Migration
 import KeriBlaster.RegisterArity
 import KeriBlaster.S2Cek
@@ -245,6 +246,14 @@ def main : IO UInt32 := do
   -- the migration evidence does.
   if (← IO.getEnv "REGISTER_EVIDENCE").isSome then
     return (← KeriBlaster.RegisterArity.run)
+  -- #254 S254-E. The entitlement evidence is a third distinct question over
+  -- two further imported programs (the exact compiled commitment and split
+  -- checkpoint families), so it gets its own entry rather than being folded
+  -- into either of the others. It shares this binary, and therefore this
+  -- pinned module graph, so no body of evidence here can come from a copy of
+  -- the checking path.
+  if (← IO.getEnv "ENTITLEMENT_EVIDENCE").isSome then
+    return (← KeriBlaster.Entitlement.run)
   let control ← readControl
   let some artifactDir ← IO.getEnv "S2_ARTIFACTS"
     | do

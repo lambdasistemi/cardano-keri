@@ -14,16 +14,18 @@ use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
-  find_input,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
+  Transaction, Withdraw, find_input,
 }
 use cardano_keri/checkpoint/close.{
   CloseContext, CloseEvidence, CloseValid, close_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{
-  ArmedDatum, ArmedDatumValid, ArmedV1, armed_datum_well_formed,
-  freeze_bond_valid, freeze_window_valid,
+  ArmedDatum, ArmedDatumValid, ArmedV2, armed_checkpoint,
+  armed_datum_well_formed, armed_deadline, armed_hunter, freeze_bond_valid,
+  freeze_window_valid,
 }
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
@@ -72,6 +74,10 @@ validator checkpoint_register(
   lifecycle_hash: PolicyId,
   advance_hash: PolicyId,
   enforcement_hash: PolicyId,
+  /// Applied credential of `observer_entitlement`. Required beside
+  /// `observer_enforcement` on every Freeze/Convict settlement; both
+  /// withdrawal redeemers must be the same envelope value.
+  entitlement_hash: PolicyId,
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -122,7 +128,9 @@ validator checkpoint_register(
         expect
           ran_enforcement_check(
             enforcement_hash,
+            entitlement_hash,
             own_hash(tx, own_ref),
+            hunter_pkh,
             own_ref,
             tx,
           )
@@ -141,7 +149,9 @@ validator checkpoint_register(
         expect
           ran_convict_check(
             enforcement_hash,
+            entitlement_hash,
             own_hash(tx, own_ref),
+            convictor_pkh,
             own_ref,
             tx,
           )
@@ -328,76 +338,104 @@ fn ran_advance_check(
   True
 }
 
+/// The combined family's half of the entitlement division of labour.
+///
+/// The observer holds the actual evidence and owns the entitlement verdict; the
+/// register owns the value. What the register must not delegate is WHO it pays:
+/// an envelope that authorized the honest hunter would otherwise sit happily
+/// beside a redeemer paying an attacker, and each side would be individually
+/// satisfied. So the payee this arm is about to route value to is compared
+/// against the payee the observer actually reconciled, and the two cannot
+/// diverge. `authorized_payee` returns `None` for any action this observer does
+/// not own, so no payee can be read out of an envelope that established no
+/// entitlement.
 fn ran_enforcement_check(
   enforcement_hash: PolicyId,
+  entitlement_hash: PolicyId,
   checkpoint_policy: PolicyId,
+  payee_pkh: ByteArray,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  let credential: Credential = Script(enforcement_hash)
-  expect
-    list.any(
-      tx.withdrawals,
-      fn(Pair(withdrawal_credential, lovelace)) {
-        withdrawal_credential == credential && lovelace == 0
-      },
-    )
-  expect
-    list.any(
-      tx.redeemers,
-      fn(Pair(purpose, redeemer)) {
-        when purpose is {
-          Withdraw(redeemer_credential) ->
-            if redeemer_credential == credential {
-              expect envelope: ObserverEnvelope = redeemer
-              let claim = envelope.claim
-              claim.action == observe_freeze && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
-                own_ref,
-              )
-            } else {
-              False
-            }
-          _ -> False
-        }
-      },
-    )
-  True
+  ran_observed_enforcement(
+    enforcement_hash,
+    entitlement_hash,
+    checkpoint_policy,
+    observe_freeze,
+    payee_pkh,
+    own_ref,
+    tx,
+  )
 }
 
 fn ran_convict_check(
   enforcement_hash: PolicyId,
+  entitlement_hash: PolicyId,
   checkpoint_policy: PolicyId,
+  payee_pkh: ByteArray,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  let credential: Credential = Script(enforcement_hash)
-  expect
-    list.any(
-      tx.withdrawals,
-      fn(Pair(withdrawal_credential, lovelace)) {
-        withdrawal_credential == credential && lovelace == 0
-      },
-    )
-  expect
-    list.any(
-      tx.redeemers,
-      fn(Pair(purpose, redeemer)) {
-        when purpose is {
-          Withdraw(redeemer_credential) ->
-            if redeemer_credential == credential {
-              expect envelope: ObserverEnvelope = redeemer
-              let claim = envelope.claim
-              claim.action == observe_convict && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
-                own_ref,
-              )
-            } else {
-              False
-            }
-          _ -> False
-        }
-      },
-    )
-  True
+  ran_observed_enforcement(
+    enforcement_hash,
+    entitlement_hash,
+    checkpoint_policy,
+    observe_convict,
+    payee_pkh,
+    own_ref,
+    tx,
+  )
+}
+
+fn zero_withdrawal(tx: Transaction, credential: Credential) -> Bool {
+  list.any(
+    tx.withdrawals,
+    fn(Pair(withdrawal_credential, lovelace)) {
+      withdrawal_credential == credential && lovelace == 0
+    },
+  )
+}
+
+fn required_envelope(
+  tx: Transaction,
+  credential: Credential,
+) -> ObserverEnvelope {
+  expect Some(Pair(_, redeemer)) = list.find(
+    tx.redeemers,
+    fn(Pair(purpose, _): Pair<ScriptPurpose, Redeemer>) -> Bool {
+      when purpose is {
+        Withdraw(redeemer_credential) -> redeemer_credential == credential
+        _ -> False
+      }
+    },
+  )
+  expect envelope: ObserverEnvelope = redeemer
+  envelope
+}
+
+/// Both applied observer credentials must appear as zero-lovelace
+/// withdrawals, and their redeemers must be the same `ObserverEnvelope`
+/// value — not two independently asserted payees.
+fn ran_observed_enforcement(
+  enforcement_hash: PolicyId,
+  entitlement_hash: PolicyId,
+  checkpoint_policy: PolicyId,
+  action: Int,
+  payee_pkh: ByteArray,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let enforcement_credential: Credential = Script(enforcement_hash)
+  let entitlement_credential: Credential = Script(entitlement_hash)
+  expect zero_withdrawal(tx, enforcement_credential)
+  expect zero_withdrawal(tx, entitlement_credential)
+  let enforcement_envelope = required_envelope(tx, enforcement_credential)
+  let entitlement_envelope = required_envelope(tx, entitlement_credential)
+  expect enforcement_envelope == entitlement_envelope
+  let claim = enforcement_envelope.claim
+  claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+    own_ref,
+  ) && authorized_payee(enforcement_envelope) == Some(payee_pkh)
 }
 
 fn validate_register(
@@ -480,8 +518,11 @@ fn convict_source(
   } else if input.output.address == role.address(policy_id, Armed) {
     expect armed: ArmedDatum = source_data
     expect ArmedDatumValid = armed_datum_well_formed(armed)
-    let ArmedV1 { checkpoint: tip, hunter_pkh, .. } = armed
-    (tip, checkpoint_min_ada + d_reg + freeze_bond, Some(hunter_pkh))
+    (
+      armed_checkpoint(armed),
+      checkpoint_min_ada + d_reg + freeze_bond,
+      Some(armed_hunter(armed)),
+    )
   } else if input.output.address == role.address(policy_id, role.Frozen) {
     expect V1(tip): CheckpointDatum = source_data
     (tip, checkpoint_min_ada + d_reg, None)
@@ -600,7 +641,8 @@ fn validate_advance(
   } else if own_input.output.address == role.address(own_hash, Armed) {
     expect armed: ArmedDatum = old_datum_data
     expect ArmedDatumValid = armed_datum_well_formed(armed)
-    let ArmedV1 { checkpoint: old, deadline, .. } = armed
+    let old = armed_checkpoint(armed)
+    let deadline = armed_deadline(armed)
     expect !interval.is_empty(validity_range)
     expect interval.Finite(upper) = validity_range.upper_bound.bound_type
     expect upper < deadline
@@ -650,7 +692,7 @@ fn validate_freeze(
     lovelace_of(own_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
   expect !interval.is_empty(validity_range)
   expect interval.Finite(upper) = validity_range.upper_bound.bound_type
-  let armed = ArmedV1 {
+  let armed = ArmedV2 {
     checkpoint: tip,
     hunter_pkh,
     deadline: upper + freeze_window,
@@ -683,7 +725,9 @@ fn validate_claim(
   expect InlineDatum(armed_data) = own_input.output.datum
   expect armed: ArmedDatum = armed_data
   expect ArmedDatumValid = armed_datum_well_formed(armed)
-  let ArmedV1 { checkpoint: tip, hunter_pkh, deadline } = armed
+  let tip = armed_checkpoint(armed)
+  let hunter_pkh = armed_hunter(armed)
+  let deadline = armed_deadline(armed)
   let aid_name = deriveAidAssetName(tip.cesr_aid)
   expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
   expect

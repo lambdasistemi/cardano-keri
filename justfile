@@ -469,6 +469,29 @@ gen-checkpoint-migration-vectors:
 check-checkpoint-migration-vectors: gen-checkpoint-migration-vectors
     git diff --exit-code onchain/lib/cardano_keri/migration/checkpoint_vectors.ak
 
+# #271 S271-1 / #254 S254-E: the adopted component's own parity gate. One
+# Haskell computation is the sole source of every committed canonical byte
+# string, commitment hash and marker name, and the checker carries its own
+# negative control.
+check-bounty-commitment-vectors:
+    ./scripts/check-bounty-commitment-vectors.sh
+
+# #254 S254-E: regenerate the entitlement-layer parity vectors from
+# GenBountyEntitlementVectors.hs. OFFLINE. The module is never hand edited.
+# The generator refuses to emit a set in which two evidence-field mutants share
+# a digest, in which a mutant reproduces the honest digest, in which the honest
+# verdict row is not accepted, or in which every verdict row agrees — so a
+# vector set that could not distinguish anything never ships.
+gen-bounty-entitlement-vectors:
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-bounty-entitlement-vectors -- ../onchain/lib/cardano_keri/checkpoint/entitlement_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/entitlement_vectors.ak
+
+# Drift check: Haskell is the sole source of the canonical enforcement-evidence
+# digest and of the shared matcher's verdicts, so a stale or hand-touched
+# vector module must FAIL. The checker carries its own negative control.
+check-bounty-entitlement-vectors:
+    ./scripts/check-bounty-entitlement-vectors.sh
+
 # #254 T254-108: prove the EXACT changed compiled checkpoint family, derived
 # from current source (never the frozen M8 baseline), rejects a named
 # authority mutant and a named replay mutant under the pinned CEK machine.
@@ -489,6 +512,14 @@ checkpoint-register-blaster:
 check-version-remnant-sweep:
     ./scripts/check-version-remnant-sweep.sh --self-test
     ./scripts/check-version-remnant-sweep.sh
+
+# #254 S254-E: prove the EXACT compiled entitlement family, derived from
+# current source (never the frozen M8 baseline, which does not even contain the
+# commitment program), accepts the honest matured reveal and rejects the named
+# entitlement, age, scope and payout mutants under the pinned CEK machine.
+# Emits one identity line per target and one row per mutant.
+bounty-entitlement-blaster:
+    cd offchain && nix run --quiet --no-write-lock-file .#bounty-entitlement-blaster
 
 # Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
 # generated-vector drift.
@@ -570,6 +601,44 @@ measure-checkpoint:
       '\'' "$1"
     ' _ "$results"
 
+# #254 S254-E: measure and mechanically gate the four applied #271
+# commitment-program ACCEPT paths. The component became part of a settlement
+# path in S254-E — a hunter opens, matures and reveals a reservation inside the
+# same story that arms or convicts — so its cost is now part of the entitled
+# family's cost and needs its own row. Same caveat as measure-enforcement: an
+# INVOCATION printing exact mem/cpu, plus an explicit title set and 25%-headroom
+# limits over the measured maxima (517.76 K mem, 222.00 M cpu).
+measure-bounty-commitment:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    results="$(mktemp)"
+    trap 'rm -f "$results"' EXIT
+    cd onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#jq --command bash -euo pipefail -c '
+      aiken check --plain-numbers -m measure_bounty_commitment | tee "$1"
+      jq -e '\''
+        [
+          "measure_bounty_commitment_open",
+          "measure_bounty_commitment_reveal",
+          "measure_bounty_commitment_sweep",
+          "measure_bounty_commitment_retire"
+        ] as $required
+        | [.modules[].tests[] | select(.title | startswith("measure_bounty_commitment"))] as $tests
+        | ($tests | map(.title)) as $actual
+        | if ($actual | sort) != ($required | sort) then
+            error("commitment measurement title mismatch: expected \($required | sort); actual \($actual | sort)")
+          elif any($tests[]; .status != "pass") then
+            error("commitment measurement did not pass: \([$tests[] | select(.status != "pass") | {title, status}])")
+          elif any($tests[]; ((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) then
+            error("commitment measurement lacks execution units: \([$tests[] | select(((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) | .title])")
+          elif any($tests[]; .execution_units.mem > 650000 or .execution_units.cpu > 280000000) then
+            error("commitment measurement exceeds hard limit: \([$tests[] | select(.execution_units.mem > 650000 or .execution_units.cpu > 280000000) | {title, execution_units}])")
+          else
+            $tests | map({title, status, execution_units})
+          end
+      '\'' "$1"
+    ' _ "$results"
+
 # --- BLAKE3 spike (pinned Aiken) ---
 
 # Format the BLAKE3 spike with its pinned compiler
@@ -603,7 +672,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required

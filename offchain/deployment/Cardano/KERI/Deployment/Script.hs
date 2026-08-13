@@ -16,12 +16,22 @@ module Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     loadBlueprint,
     extractCompiledCode,
+    extractCompiledCodeExact,
     mkAppliedArtifact,
+    validatorParameterCount,
     applyParams,
     applyCheckpointParams,
     applyPredecessorParam,
     applyLifecycleParams,
     applyAdvanceParams,
+    applyCommitmentParams,
+    applyDataArgs,
+    applyEnforcementParams,
+    applyCheckpointFamilyParams,
+    v1CommitmentParameters,
+    v1CommitmentLifetime,
+    v1CommitDeposit,
+    deriveCommitmentFamily,
     mkCageScript,
     computeScriptHash,
     cagePolicyId,
@@ -30,6 +40,7 @@ module Cardano.KERI.Deployment.Script (
     deriveV1Scripts,
     boardAddress,
     checkpointAddress,
+    scriptHashBytes,
     scriptHashText,
     v1CheckpointVersion,
     v1NetworkDiscriminator,
@@ -39,6 +50,11 @@ module Cardano.KERI.Deployment.Script (
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)
+import Cardano.KERI.AID.Checkpoint.BountyCommitment (
+    CommitmentFamily (..),
+    CommitmentParameters (..),
+    commitMinAge,
+ )
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import Cardano.Ledger.Alonzo.Scripts (fromPlutusScript, mkPlutusScript)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
@@ -67,6 +83,8 @@ import Data.Text.Encoding qualified as TE
 import PlutusCore qualified as PLC
 import PlutusCore.Data (Data (..))
 import PlutusLedgerApi.V3 (serialiseUPLC, uncheckedDeserialiseUPLC)
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (ToData (..))
 import UntypedPlutusCore (Program (..), applyProgram)
 import UntypedPlutusCore qualified as UPLC
 
@@ -126,6 +144,27 @@ extractValidator prefix blueprint = do
     validator <-
         find (T.isPrefixOf prefix . vTitle) (validators blueprint)
     validatorProgram validator
+
+{- | The compiled program of one exactly-named blueprint validator.  Unlike
+'extractCompiledCode' this refuses a prefix match, so a proof about one
+handler can never read another's bytes.
+-}
+extractCompiledCodeExact :: Text -> Blueprint -> Maybe SBS.ShortByteString
+extractCompiledCodeExact title blueprint =
+    snd <$> extractValidatorExact title blueprint
+
+{- | How many arguments a named compiled validator still expects.
+
+#254 S254-E asserts these counts as deployment facts: the split checkpoint
+takes a seventh @CommitmentFamily@ argument and the enforcement observer takes
+a second, so an implementation that quietly dropped either would change this
+number and be caught here rather than at settlement time.  The count is the
+length of the blueprint parameter list — the only source of declared arity.
+-}
+validatorParameterCount :: Text -> Blueprint -> Maybe Int
+validatorParameterCount title blueprint =
+    length . vParameters
+        <$> find ((== title) . vTitle) (validators blueprint)
 
 extractValidatorExact ::
     Text -> Blueprint -> Maybe (Validator, SBS.ShortByteString)
@@ -222,11 +261,13 @@ applyPredecessorParam predecessorPolicy =
 
 There is no version argument.  @checkpoint_register@ declares no version
 parameter, so the integer this plan used to lead with occupied the slot the
-ledger fills with the script context (#254 A-007).  The corrected
-eight-argument applied program is this family's register identity; the release
-is identified by that hash, never by a version datum.
+ledger fills with the script context (#254 A-007).  After A-002 the plan is
+nine arguments: the five sibling observer hashes (migration, lifecycle,
+advance, enforcement, entitlement) then the four deployment integers.  The
+constructor still fails closed on declared-vs-supplied arity.
 -}
 applyCheckpointParams ::
+    ByteString ->
     ByteString ->
     ByteString ->
     ByteString ->
@@ -236,11 +277,12 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     [Data]
-applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
+applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond freezeWindow =
     [ B migrationHash
     , B lifecycleHash
     , B advanceHash
     , B enforcementHash
+    , B entitlementHash
     , I network
     , I registrationBond
     , I freezeBond
@@ -255,6 +297,69 @@ applyAdvanceParams :: Integer -> [Data]
 applyAdvanceParams version =
     [I version]
 
+{- | Apply the single argument of the #271 commitment program: its explicit
+release magnitudes.  The program learns its own policy from the ledger
+context, so there is no self-hash to apply and no circularity to resolve.
+-}
+applyCommitmentParams ::
+    CommitmentParameters ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyCommitmentParams parameters =
+    applyDataArgs [asData parameters]
+
+{- | #254 S254-E: the enforcement observer now takes TWO applied arguments.
+
+The second is the deployed commitment family it reconciles entitlement
+against.  Applying it is not decoration: the observer's own program hash — and
+therefore the applied checkpoint register that pins that hash — changes with
+the commitment policy, so a release cannot silently point its entitlement rule
+at a different reservation program.
+-}
+applyEnforcementParams ::
+    Integer ->
+    CommitmentFamily ->
+    [Data]
+applyEnforcementParams version family =
+    [I version, asData family]
+
+{- | #254 S254-E: the split checkpoint validator's SEVENTH applied argument.
+
+The split family is not part of the M1 deployment derived by
+'deriveV1Scripts' — the combined register is — but the argument is real and
+its arity is observable in the compiled blueprint, which is what the
+@bounty-entitlement-blaster@ M8 control applies and asserts.
+-}
+applyCheckpointFamilyParams ::
+    Integer ->
+    ByteString ->
+    Integer ->
+    Integer ->
+    Integer ->
+    Integer ->
+    CommitmentFamily ->
+    SBS.ShortByteString ->
+    SBS.ShortByteString
+applyCheckpointFamilyParams version hashProofPolicy network registrationBond freezeBond freezeWindow family =
+    applyDataArgs
+        [ I version
+        , B hashProofPolicy
+        , I network
+        , I registrationBond
+        , I freezeBond
+        , I freezeWindow
+        , asData family
+        ]
+
+-- | Strip the 'BuiltinData' wrapper from a value's 'Data' tree.
+asData :: (ToData a) => a -> Data
+asData x = let BuiltinData d = toBuiltinData x in d
+
+{- | Apply a list of Plutus 'Data' arguments to a compiled program.
+
+This is the single UPLC application primitive.  Named production
+appliers call it directly.
+-}
 applyDataArgs :: [Data] -> SBS.ShortByteString -> SBS.ShortByteString
 applyDataArgs arguments code =
     serialiseUPLC $
@@ -307,6 +412,60 @@ v1FreezeBond = 5_000_000
 v1FreezeWindow :: Integer
 v1FreezeWindow = 10_000
 
+{- | #254 S254-E: the release's explicit commitment lifetime, in slots.
+
+There is no protocol default for this magnitude and the component publishes
+none — a reservation's lifetime is a deployment choice, so it is named here,
+once, as an applied argument.  Two hours of preprod slots is long enough for a
+hunter to open, mature, gather evidence and reveal, and short enough that a
+grinder's concurrent capital is tied up rather than parked indefinitely.
+-}
+v1CommitmentLifetime :: Integer
+v1CommitmentLifetime = 7_200
+
+{- | #254 S254-E: the release's applied commitment deposit, in lovelace.
+
+Held at the component's demonstrated floor.  Be exact about what it buys: it
+raises the concurrent capital an open-many\/reveal-one grinder must lock, and
+it does not defeat that grind — the grinder may self-sweep its own expired
+losers and recycle the deposit.
+-}
+v1CommitDeposit :: Integer
+v1CommitDeposit = 5_000_000
+
+{- | The release's applied commitment magnitudes.  Every value is explicit;
+nothing here is read from an ambient manifest.
+-}
+v1CommitmentParameters :: CommitmentParameters
+v1CommitmentParameters =
+    CommitmentParameters
+        { cpNetwork = v1NetworkDiscriminator
+        , cpCommitMinAge = commitMinAge
+        , cpCommitmentLifetime = v1CommitmentLifetime
+        , cpCommitDeposit = v1CommitDeposit
+        }
+
+{- | Derive the deployed commitment family from the production blueprint.
+
+The policy is the hash of the commitment program applied to
+'v1CommitmentParameters' — read from the compiled blueprint, never asserted —
+so the family the enforcement observer is applied to is the family that
+actually exists.
+-}
+deriveCommitmentFamily :: Blueprint -> Either String CommitmentFamily
+deriveCommitmentFamily blueprint = do
+    (_, program) <-
+        maybe
+            (Left "bounty-commitment compiled code not found in production blueprint")
+            Right
+            (extractValidatorExact "bounty_commitment.bounty_commitment.spend" blueprint)
+    let applied = applyCommitmentParams v1CommitmentParameters program
+    pure
+        CommitmentFamily
+            { cfPolicy = scriptHashBytes (computeScriptHash applied)
+            , cfParameters = v1CommitmentParameters
+            }
+
 deriveV1Scripts :: Blueprint -> Either String [ScriptArtifact]
 deriveV1Scripts blueprint = do
     (hashProofValidator, hashProofProgram) <-
@@ -351,14 +510,33 @@ deriveV1Scripts blueprint = do
         require
             "checkpoint_observer.observer_enforcement.withdraw"
             "observer-enforcement"
+    (entitlementValidator, entitlementProgram) <-
+        require
+            "checkpoint_observer.observer_entitlement.withdraw"
+            "observer-entitlement"
+    -- #254 S254-E / A-002: both split observers take the same two applied
+    -- arguments and go through the S254-R constructor, each as its own
+    -- published artifact.  The application-site census follows this shape;
+    -- it is not a number to preserve.
+    commitmentFamily <- deriveCommitmentFamily blueprint
+    let familyPlan =
+            applyEnforcementParams v1CheckpointVersion commitmentFamily
     enforcement <-
         mkAppliedArtifact
             "observer-enforcement"
             "withdrawal-observer"
             enforcementValidator
-            (applyAdvanceParams v1CheckpointVersion)
+            familyPlan
             enforcementProgram
+    entitlement <-
+        mkAppliedArtifact
+            "observer-entitlement"
+            "withdrawal-observer"
+            entitlementValidator
+            familyPlan
+            entitlementProgram
     let enforcementHash = artifactScriptHash enforcement
+        entitlementHash = artifactScriptHash entitlement
     -- #254 A-001: the promoted migration observer, derived as a v1 family
     -- component and applied to the checkpoint program by hash.  Its
     -- predecessor pin is an applied parameter, never a redeemer field.
@@ -391,6 +569,7 @@ deriveV1Scripts blueprint = do
                     (scriptHashBytes lifecycleHash)
                     (scriptHashBytes advanceHash)
                     (scriptHashBytes enforcementHash)
+                    (scriptHashBytes entitlementHash)
                     v1NetworkDiscriminator
                     v1RegistrationBond
                     v1FreezeBond
@@ -398,7 +577,15 @@ deriveV1Scripts blueprint = do
                 )
                 checkpointProgram
     checkpoint <- appliedCheckpoint
-    pure [hashProof, lifecycle, advance, enforcement, migration, checkpoint]
+    pure
+        [ hashProof
+        , lifecycle
+        , advance
+        , enforcement
+        , entitlement
+        , migration
+        , checkpoint
+        ]
   where
     require title name =
         maybe

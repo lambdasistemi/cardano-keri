@@ -1,0 +1,76 @@
+warning: updating lock file "/code/cardano-keri-246-e-baseline/offchain/flake.lock":
+• Added input 'deployPreprod':
+    'path:../deploy/preprod'
+evaluation warning: 'system' has been renamed to/replaced by 'stdenv.hostPlatform.system'
+evaluation warning: 'system' has been renamed to/replaced by 'stdenv.hostPlatform.system'
+PASS: exact extraction selector positive and rejection controls executed
+expected blueprint sha256: 896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+actual blueprint sha256:   896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+expected blueprint sha256: 896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+actual blueprint sha256:   896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+PASS: production entry point ignores ambient blueprints and rejects paths
+expected blueprint sha256: 896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+actual blueprint sha256:   896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+artifact.blueprint_sha256=896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c
+artifact.title=checkpoint.checkpoint.spend
+artifact.title_count=1
+artifact.program_sha256=713c747bc83226c71fdcf6b6c174832fd4f69d738439842990d68e163ac26a9a
+artifact.source_identity=fe535810d7bb7a343b0cb30c950c43ea356105e7
+artifact.lock_sha256=596a6aa4bdb3921df55489b6a3bc82d5b0841a64a8fea7fc62e5cef66bd337ca
+toolchain.lean=leanprover/lean4:v4.24.0
+toolchain.lean_blaster=d57a9079a164ca25e58f119112162efea617b5e6:sha256-pXH5QpO7bJEmmtfOTkSdU31lF6tVZROjRLea+i+Hya0=
+toolchain.plutus_core_blaster=17cee18a2058790bca36282d82c19146587fb2d1:sha256-tzdKOl9R9f/N1uQ2Algk6zTbbb119uBGByejNQOOe1U=
+toolchain.cardano_ledger_api_blaster=577e3eb03b5be09354cfdb1c0d0c12e9e16541a0:sha256-EORoTM/YbdjV7sc+7e1VTl7IuP2IyIgBvT0Oe9HhxSk=
+toolchain.z3=4.15.2:z3-4.15.2:sha256-hUGZdr0VPxZ0mEUpcck1AC0MpyZMjiMw/kK8WX7t0xU=
+toolchain.aiken=1.1.21:13043924aaa7375ce482ebe2494338e058282925:sha256-nwASzrRDD1JBEu/o8ekKYEXm/oJW6EMCzCRdrwcLe90=
+toolchain.nixpkgs=13043924aaa7375ce482ebe2494338e058282925:sha256-nwASzrRDD1JBEu/o8ekKYEXm/oJW6EMCzCRdrwcLe90=
+toolchain.lean4_nix=faebfa2e0d7093fea3ffaa493b316bf3449c1dbf:sha256-D3PN4o8RtyHEjlAtsLa6M9xRjIwtMUk4pIkfsNSMAvQ=
+toolchain.lean_nixpkgs=1306659b587dc277866c7b69eb97e5f07864d8c4:sha256-KJ2wa/BLSrTqDjbfyNx70ov/HdgNBCBBSQP3BIzKnv4=
+PASS: exact production artifact and pinned Blaster toolchain audited
+S2.import title=checkpoint.checkpoint.spend params=6 program_sha256=713c747bc83226c71fdcf6b6c174832fd4f69d738439842990d68e163ac26a9a
+S2.import title=hash_proof.hash_proof.mint params=0 program_sha256=ac14c0fa64a0b3bf17286ce24d5583ed1c7a434d434b496584c984ae3e15e946
+S2.import title=checkpoint_observer.observer_lifecycle.withdraw params=3 program_sha256=463e3c6a69f49923ef53ffc52dd3feb33485865d983fb954305bc782e6281e67
+S2.import title=checkpoint_observer.observer_lifecycle.publish params=3 program_sha256=463e3c6a69f49923ef53ffc52dd3feb33485865d983fb954305bc782e6281e67
+S2.import title=checkpoint_observer.observer_advance.withdraw params=1 program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761
+S2.import title=checkpoint_observer.observer_advance.publish params=1 program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761
+S2.import title=checkpoint_observer.observer_enforcement.withdraw params=1 program_sha256=aeb29380cece4aa3c706ccd3fbb4fe4cd98ef0ca230f8e5e160ab6286fee060e
+S2.import title=checkpoint_observer.observer_enforcement.publish params=1 program_sha256=aeb29380cece4aa3c706ccd3fbb4fe4cd98ef0ca230f8e5e160ab6286fee060e
+S2.decoded title=checkpoint.checkpoint.spend distinct_builtins=42 xor_bytearray_occurrences=64
+S2.decoded title=hash_proof.hash_proof.mint distinct_builtins=33 xor_bytearray_occurrences=64
+S2.decoded title=checkpoint_observer.observer_lifecycle.withdraw distinct_builtins=36 xor_bytearray_occurrences=0
+S2.decoded title=checkpoint_observer.observer_lifecycle.publish distinct_builtins=36 xor_bytearray_occurrences=0
+S2.decoded title=checkpoint_observer.observer_advance.withdraw distinct_builtins=37 xor_bytearray_occurrences=64
+S2.decoded title=checkpoint_observer.observer_advance.publish distinct_builtins=37 xor_bytearray_occurrences=64
+S2.decoded title=checkpoint_observer.observer_enforcement.withdraw distinct_builtins=36 xor_bytearray_occurrences=64
+S2.decoded title=checkpoint_observer.observer_enforcement.publish distinct_builtins=36 xor_bytearray_occurrences=64
+S2.decoded-audit programs=8 distinct_builtins=43
+S2.purpose-run observer=observer_lifecycle case=certify outcome=HALT steps=293 reached_builtins=11 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=none dispatch_failed_builtin=none
+S2.purpose-run observer=observer_lifecycle case=wrong_certify outcome=ERROR steps=280 reached_builtins=11 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=term-error dispatch_failed_builtin=none
+S2.purpose-run observer=observer_lifecycle case=wrong_reward outcome=ERROR steps=240 reached_builtins=11 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData
+S2.purpose-run observer=observer_lifecycle case=reward outcome=ERROR steps=274 reached_builtins=11 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.TailList error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.TailList
+S2.purpose-binding observer=observer_lifecycle program_sha256=463e3c6a69f49923ef53ffc52dd3feb33485865d983fb954305bc782e6281e67 applied_contexts=4 distinct_contexts=4
+S2.purpose-run observer=observer_advance case=certify outcome=HALT steps=271 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=none dispatch_failed_builtin=none
+S2.purpose-run observer=observer_advance case=wrong_certify outcome=ERROR steps=258 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=term-error dispatch_failed_builtin=none
+S2.purpose-run observer=observer_advance case=wrong_reward outcome=ERROR steps=218 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData
+S2.purpose-run observer=observer_advance case=reward outcome=ERROR steps=4090 reached_builtins=20 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.AppendByteString error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.Blake2b_256
+S2.purpose-binding observer=observer_advance program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761 applied_contexts=4 distinct_contexts=4
+S2.purpose-run observer=observer_enforcement case=certify outcome=HALT steps=271 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=none dispatch_failed_builtin=none
+S2.purpose-run observer=observer_enforcement case=wrong_certify outcome=ERROR steps=258 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.IfThenElse error_kind=term-error dispatch_failed_builtin=none
+S2.purpose-run observer=observer_enforcement case=wrong_reward outcome=ERROR steps=218 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.UnConstrData
+S2.purpose-run observer=observer_enforcement case=reward outcome=ERROR steps=252 reached_builtins=10 last_builtin=PlutusCore.UPLC.Term.BuiltinFun.TailList error_kind=builtin-dispatch dispatch_failed_builtin=PlutusCore.UPLC.Term.BuiltinFun.TailList
+S2.purpose-binding observer=observer_enforcement program_sha256=aeb29380cece4aa3c706ccd3fbb4fe4cd98ef0ca230f8e5e160ab6286fee060e applied_contexts=4 distinct_contexts=4
+S2.result verdict=FAIL limiting_class=builtin-support observer=observer_advance case=reward dispatch_failed_builtin=Blake2b_256 program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761 pinned_rev=17cee18a2058790bca36282d82c19146587fb2d1 decisive_log_sha256=829f62f062b474ed2ba380d9b230c3dfb57049a95d626b7ada4935ea10f28c59
+S2.unproved subject=xor_bytearray basis=syntactic-occurrences-only reached=NO
+S2.unproved subject=hash_proof_preparation basis=not-executed reached=NO
+S2.unproved subject=observer_lifecycle_withdraw basis=bounded-at-earlier-dispatch-failure reached=NO
+S2.unproved subject=observer_enforcement_withdraw basis=bounded-at-earlier-dispatch-failure reached=NO
+S2.boundary crypto=UNINTERPRETED semantic_claims=LIMITED
+S2.control-observed kind=duplicated-context observers=3 baseline_dropped=0 perturbed_dropped=3
+S2.control-observed baseline S2.purpose-binding observer=observer_lifecycle program_sha256=463e3c6a69f49923ef53ffc52dd3feb33485865d983fb954305bc782e6281e67 applied_contexts=4 distinct_contexts=4
+S2.control-observed baseline S2.purpose-binding observer=observer_advance program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761 applied_contexts=4 distinct_contexts=4
+S2.control-observed baseline S2.purpose-binding observer=observer_enforcement program_sha256=aeb29380cece4aa3c706ccd3fbb4fe4cd98ef0ca230f8e5e160ab6286fee060e applied_contexts=4 distinct_contexts=4
+S2.control-observed perturbed S2.purpose-binding observer=observer_lifecycle program_sha256=463e3c6a69f49923ef53ffc52dd3feb33485865d983fb954305bc782e6281e67 applied_contexts=5 distinct_contexts=4
+S2.control-observed perturbed S2.purpose-binding observer=observer_advance program_sha256=5d871f1bab855f2d57eb56cb084a96658adea471782fc26b553355be37320761 applied_contexts=5 distinct_contexts=4
+S2.control-observed perturbed S2.purpose-binding observer=observer_enforcement program_sha256=aeb29380cece4aa3c706ccd3fbb4fe4cd98ef0ca230f8e5e160ab6286fee060e applied_contexts=5 distinct_contexts=4
+PASS: S2 contract validated 8 titles and executed controls: removed-import substituted-artifact literalized-evidence duplicated-context
+PASS: blaster app executed controls, extraction, pin audit, and Lean build

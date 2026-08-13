@@ -1,0 +1,15 @@
+# path	origin	mode	required
+run.sh	tracked	755	1
+run-slice-c.sh	tracked	755	1
+assemble.sh	tracked	755	1
+check-completeness.sh	tracked	755	1
+check-claim-schema.sh	tracked	755	1
+check-published-bytes.sh	tracked	755	1
+check-falsifier-reachability.sh	tracked	755	1
+test-bundle-contract.sh	tracked	755	1
+inventory.txt	tracked	644	1
+COVERAGE-BOUNDARY.md	tracked	644	1
+claims/schema-fixture.txt	tracked	644	1
+fixtures/clean-identity.json	tracked	644	1
+retained/RED-baseline-receipt.md	tracked	644	1
+retained/baseline-blaster.log	tracked	644	1

@@ -2030,6 +2030,7 @@
                   pkgs.coreutils
                   pkgs.diffutils
                   pkgs.findutils
+                  pkgs.git
                   pkgs.gnugrep
                   pkgs.gnused
                   pkgs.jq
@@ -2147,7 +2148,9 @@
                   reconciled_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT reconciled=//p' "$identity_out")"
                   unexpected_fields="$(sed -n 's/^CBIC_IDENTITY_RESULT unexpected=//p' "$identity_out")"
                   identity_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT containers=//p' "$identity_out")"
+                  expected_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT expected_containers=//p' "$identity_out")"
                   uncovered_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT uncovered_containers=//p' "$identity_out")"
+                  missing_containers="$(sed -n 's/^CBIC_IDENTITY_RESULT missing_containers=//p' "$identity_out")"
                   enumerated_by="$(sed -n 's/^CBIC_IDENTITY_RESULT enumerated_by=//p' "$identity_out")"
                   test "$titles" -eq 23
                   test "$programs" -eq 8
@@ -2157,20 +2160,22 @@
                   test "$reconciled_fields" -eq "$identity_fields"
                   test "$unexpected_fields" -eq 0
                   test "$identity_containers" -ge 2
+                  test "$expected_containers" -ge 1
                   test "$uncovered_containers" -eq 0
+                  test "$missing_containers" -eq 0
                   test "$enumerated_by" = jq-leaf-and-container-paths
 
-                  echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build outcome=ESTABLISHED"
+                  echo "AUDIT-MANIFEST titles=$titles programs=$programs blueprint_sha256=$blueprint_sha256 aiken=${validatingAikenVersion} commit=${baselineSourceCommit} instrument=baseline-manifest-producer+canonical-checker window=source-blueprint-build coverage=parsed-document outcome=ESTABLISHED"
                   jq -r '.programs[] | [.title, (.params | tostring), .program_sha256] | @tsv' \
                     "$identity_manifest" \
                     | while IFS=$'\t' read -r program_title params program_sha256; do
                         echo "AUDIT-PROGRAM title=$program_title params=$params program_sha256=$program_sha256"
                       done
-                  echo "AUDIT-BASELINE built_from=source toolchain=aiken:${validatingAikenVersion} validating_toolchain=aiken:${validatingAikenVersion} agreement=by-construction predicate=validating-aiken-pin-reconciliation outcome=ESTABLISHED"
-                  echo "AUDIT-BASELINE-COMMIT declared=${baselineSourceCommit} observed=${sourceIdentity} authority=flake-self-rev agreement=by-construction outcome=ESTABLISHED"
-                  echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=${baselineSelection} version_derived=${baselineVersionDerived} outcome=ESTABLISHED"
-                  echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records outcome=ESTABLISHED"
-                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields reconciled=$reconciled_fields unexpected=$unexpected_fields containers=$identity_containers uncovered_containers=$uncovered_containers enumerated_by=$enumerated_by instrument=check-blaster-identity-consistency window=complete-baseline-manifest outcome=ESTABLISHED"
+                  echo "AUDIT-BASELINE built_from=source toolchain=aiken:${validatingAikenVersion} validating_toolchain=aiken:${validatingAikenVersion} agreement=by-construction predicate=validating-aiken-pin-reconciliation coverage=parsed-document outcome=ESTABLISHED"
+                  echo "AUDIT-BASELINE-COMMIT declared=${baselineSourceCommit} observed=${sourceIdentity} authority=flake-self-rev agreement=by-construction coverage=parsed-document outcome=ESTABLISHED"
+                  echo "AUDIT-EVALUATION-IDENTITY ledger_language=PlutusV3 era=${baselineEra} variant=${baselineVariant} selection=${baselineSelection} version_derived=${baselineVersionDerived} coverage=parsed-document outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-CONSISTENCY records_checked=$records_checked inconsistent=$inconsistent instrument=check-blaster-identity-consistency window=all-baseline-manifest-records coverage=parsed-document outcome=ESTABLISHED"
+                  echo "AUDIT-IDENTITY-FIELD-COVERAGE fields=$identity_fields reconciled=$reconciled_fields unexpected=$unexpected_fields containers=$identity_containers expected_containers=$expected_containers uncovered_containers=$uncovered_containers missing_containers=$missing_containers enumerated_by=$enumerated_by instrument=check-blaster-identity-consistency window=complete-baseline-manifest coverage=parsed-document outcome=ESTABLISHED"
 
                   # The Nix check executes the same app in a build sandbox,
                   # where the deliberately retained /tmp receipt and a nested
@@ -2218,7 +2223,7 @@
                       cold_observed="nix-build-exit-$cold_rc"
                       cold_outcome=REFUTED
                     fi
-                    echo "AUDIT-COLD-STORE artifact=retired-pre-219-fixed-output observed=$cold_observed instrument=nix-build-no-substitute window=single-cold-probe-invocation outcome=$cold_outcome"
+                    echo "AUDIT-COLD-STORE artifact=retired-pre-219-fixed-output observed=$cold_observed instrument=nix-build-no-substitute window=single-cold-probe-invocation coverage=parsed-document outcome=$cold_outcome"
 
                     manifest_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B5-title rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
                     unnamed_rc="$(sed -n 's/^RED-PROOF invariant=INV-246-B7-unnamed-variant rc=\([0-9][0-9]*\).*/\1/p' "$baseline_contract_out")"
@@ -2247,7 +2252,25 @@
                       test "$repair_rc" -gt 0
                       echo "AUDIT-SELFTEST leg=$leg rc=$repair_rc outcome=REFUTED"
                     done
+
+                    # C1/C2/C9: execute the bundle entry from a fresh clone
+                    # with no access to this worktree and no desk path.
+                    repro=$(mktemp -d)
+                    git clone --no-hardlinks --quiet "$repo_root" "$repro/src"
+                    bash "$repro/src/scripts/ckeri-bundle/run.sh" "$repro/run"
+                    echo "AUDIT-REPRODUCTION source=fresh-clone worktree_access=none entry_point=scripts/ckeri-bundle/run.sh exit=0 instrument=git-clone-no-hardlinks window=single-clone coverage=parsed-document outcome=ESTABLISHED"
+                    rm -rf "$repro"
                   fi
+
+                  # Slice C schema and completeness — reached by this runner
+                  # (C5) and by checks.blaster (sandbox). Must not live only
+                  # inside the host skip.
+                  ckeri_bundle=${inputs.blasterIdentityScripts}/ckeri-bundle
+                  bash "$ckeri_bundle/check-claim-schema.sh" \
+                    "$ckeri_bundle/claims/schema-fixture.txt"
+                  bash "$ckeri_bundle/run-slice-c.sh" \
+                    "$ckeri_bundle" ${./flake.nix}
+
                   echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
                 '';
               };

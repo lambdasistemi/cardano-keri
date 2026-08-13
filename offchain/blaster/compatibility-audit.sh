@@ -77,7 +77,7 @@ emit_records() {
       fi
     fi
     if [[ $resolution == true ]]; then
-      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=true outcome=ESTABLISHED\n' \
+      printf 'AUDIT-REFERENCE scope=%s source_path=%s target_package=%s provenance=%s reference=%s resolved=true coverage=parsed-document outcome=ESTABLISHED\n' \
         "$scope" "$source" "$package" "$provenance" "$reference"
       ((resolved += 1))
     elif [[ $resolution == false ]]; then
@@ -116,10 +116,10 @@ mapfile -d '' tracked_sources < <(
   exit 1
 }
 
-printf 'AUDIT-IDENTITY commit=%s outcome=ESTABLISHED\n' "$AUDIT_COMMIT"
-printf 'AUDIT-PIN leanBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_LEAN_BLASTER_REV"
-printf 'AUDIT-PIN plutusCoreBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_PLUTUS_CORE_REV"
-printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$AUDIT_LEDGER_API_REV"
+printf 'AUDIT-IDENTITY commit=%s coverage=parsed-document outcome=ESTABLISHED\n' "$AUDIT_COMMIT"
+printf 'AUDIT-PIN leanBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$AUDIT_LEAN_BLASTER_REV"
+printf 'AUDIT-PIN plutusCoreBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$AUDIT_PLUTUS_CORE_REV"
+printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$AUDIT_LEDGER_API_REV"
 
 # The package build is Lean's authoritative elaboration and reference index for
 # the complete tracked source graph.  Bind both collection and resolution to
@@ -135,7 +135,7 @@ if [[ $LEAN_PATH != "$AUDIT_TRACKED_BUILD" ]]; then
   printf 'AUDIT-VERDICT FAIL\n'
   exit 1
 fi
-printf 'AUDIT-ORACLE-ROOT path=%s instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+printf 'AUDIT-ORACLE-ROOT path=%s instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' \
   "$AUDIT_TRACKED_BUILD" "$AUDIT_COMMIT"
 
 if ! collect_tracked "${tracked_sources[@]}" >"$work/tracked.tsv" 2>"$work/tracked-discovery.err"; then
@@ -197,10 +197,10 @@ if (( ${#ilean_versions[@]} != 1 )); then
   printf 'AUDIT-VERDICT FAIL\n'
   exit 1
 fi
-printf 'AUDIT-COVERAGE collected=%s total=%s digest=%s classes=direct-imports,elaborated-constants instrument=Lean.ilean/v%s total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+printf 'AUDIT-COVERAGE collected=%s total=%s digest=%s classes=direct-imports,elaborated-constants instrument=Lean.ilean/v%s total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' \
   "$tracked_collected" "$tracked_total" "$population_digest" \
   "${ilean_versions[0]}" "$AUDIT_COMMIT"
-printf 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED\n'
+printf 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module coverage=parsed-document outcome=ESTABLISHED\n'
 tracked_rc=0
 run_scope tracked "$work/tracked.tsv" "$work/tracked.out" || tracked_rc=$?
 if (( tracked_rc == 2 )); then
@@ -214,7 +214,7 @@ tracked_compared="$scope_compared"
 tracked_disagreements="$scope_disagreements"
 sed '$d' "$work/tracked.out"
 printf 'AUDIT-RESOLVED count=%s\n' "$tracked_resolved"
-printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:scope:tracked outcome=ESTABLISHED\n' \
+printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' \
   "$tracked_resolved" "$tracked_unresolved" "$((tracked_resolved + tracked_unresolved))" "$AUDIT_COMMIT"
 if (( tracked_rc == 0 )); then
   printf 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0\n'
@@ -226,7 +226,7 @@ positive_control=true
 positive_resolved=0
 for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
   if grep -Eq $'\tplutusCoreBlaster\t[^\t]*'"$probe"$'\t' "$work/tracked.tsv" \
-    && grep -Eq "reference=[^ ]*$probe resolved=true outcome=ESTABLISHED$" "$work/tracked.out"; then
+    && grep -Eq "reference=[^ ]*$probe resolved=true coverage=parsed-document outcome=ESTABLISHED$" "$work/tracked.out"; then
     ((positive_resolved += 1))
   else
     positive_control=false
@@ -234,7 +234,7 @@ for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
 done
 
 if [[ $positive_control == true ]]; then
-  printf '%s\n' 'AUDIT-CONTROL id=tracked-required-probes kind=positive-resolution expected=resolve:required-probes observed=resolved:required-probes probes=evaluateBuiltinFunction,defaultFunSemanticsVariantC outcome=ESTABLISHED'
+  printf '%s\n' 'AUDIT-CONTROL id=tracked-required-probes kind=positive-resolution expected=resolve:required-probes observed=resolved:required-probes probes=evaluateBuiltinFunction,defaultFunSemanticsVariantC coverage=parsed-document outcome=ESTABLISHED'
   positive_control=true
 else
   printf 'AUDIT-CONTROL id=tracked-required-probes kind=positive-resolution expected=resolve:2 observed=resolved:%s probes=evaluateBuiltinFunction,defaultFunSemanticsVariantC outcome=REFUTED\n' \
@@ -250,13 +250,13 @@ sed '$d' "$work/seed.out"
 combined_unresolved=$((tracked_unresolved + seed_unresolved))
 if (( combined_unresolved > 0 )); then
   printf 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=%s\n' "$combined_unresolved"
-  printf 'AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:seed:retired-reference outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=%s unresolved=%s denominator=%s instrument=Lean.Environment window=commit:%s:seed:retired-reference coverage=parsed-document outcome=ESTABLISHED\n' \
     "$seed_resolved" "$seed_unresolved" "$((seed_resolved + seed_unresolved))" "$AUDIT_COMMIT"
   printf '%s\n' 'AUDIT-CONTROL id=retired-cek-selector kind=seeded-retired-reference expected=unresolved observed=unresolved outcome=REFUTED'
   retired_control=true
 else
   printf 'AUDIT-RUN scope=tracked+seeded-retired verdict=PASS unresolved=0\n'
-  printf '%s\n' 'AUDIT-CONTROL id=retired-cek-selector kind=seeded-retired-reference expected=unresolved observed=resolved outcome=ESTABLISHED'
+  printf '%s\n' 'AUDIT-CONTROL id=retired-cek-selector kind=seeded-retired-reference expected=unresolved observed=resolved coverage=parsed-document outcome=ESTABLISHED'
   retired_control=false
 fi
 
@@ -288,7 +288,7 @@ for leg in unresolved-in-tracked-scope namespace-move nested-namespace; do
     sed '$d' "$work/selftest-$leg.out"
     grep -Eq 'reference=PlutusCore\.ByteStringInternal\.appendByteString resolved=false outcome=REFUTED$' \
       "$work/selftest-$leg.out" || nested_directions=false
-    grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' \
+    grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED$' \
       "$work/selftest-$leg.out" || nested_directions=false
   fi
   if (( selftest_rc > 0 \
@@ -296,7 +296,7 @@ for leg in unresolved-in-tracked-scope namespace-move nested-namespace; do
       && scope_unresolved == expected_unresolved )) \
       && [[ $nested_directions == true ]]; then
     printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=REFUTED\n' "$leg" "$selftest_rc"
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=%s value=%s instrument=compatibility-audit/run_scope window=commit:%s:seed:%s outcome=ESTABLISHED\n' \
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=%s value=%s instrument=compatibility-audit/run_scope window=commit:%s:seed:%s coverage=parsed-document outcome=ESTABLISHED\n' \
       "$leg" "$selftest_rc" "$AUDIT_COMMIT" "$leg"
   else
     printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=COULD-NOT-EVALUATE layer=selftest-shape\n' \
@@ -320,11 +320,11 @@ export_alias_pass=false
 if (( export_alias_elaborator_rc == 0 && export_alias_rc > 0 )) \
     && grep -Eq 'reference=PlutusCore\.Default\.BuiltinSemanticsVariant resolved=false outcome=REFUTED$' \
       "$work/export-alias.out" \
-    && grep -Eq 'reference=PlutusCore\.Default\.BuiltinSemanticsVariant resolved=true outcome=ESTABLISHED$' \
+    && grep -Eq 'reference=PlutusCore\.Default\.BuiltinSemanticsVariant resolved=true coverage=parsed-document outcome=ESTABLISHED$' \
       "$work/export-alias-elaborator.out"; then
   printf 'AUDIT-SELFTEST leg=export-alias rc=%s outcome=REFUTED\n' \
     "$export_alias_rc"
-  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=export-alias value=%s instrument=compatibility-audit/declaration-membership window=commit:%s:seed:export-alias outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=export-alias value=%s instrument=compatibility-audit/declaration-membership window=commit:%s:seed:export-alias coverage=parsed-document outcome=ESTABLISHED\n' \
     "$export_alias_rc" "$AUDIT_COMMIT"
   export_alias_pass=true
 else
@@ -343,7 +343,7 @@ run_negative_producer_selftest() {
       && grep -Fq "provenance=$provenance reference=$reference resolved=false outcome=REFUTED" \
         "$work/selftest-$leg.out"; then
     printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=REFUTED\n' "$leg" "$selftest_rc"
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=%s value=%s instrument=%s window=commit:%s:seed:%s outcome=ESTABLISHED\n' \
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=%s value=%s instrument=%s window=commit:%s:seed:%s coverage=parsed-document outcome=ESTABLISHED\n' \
       "$leg" "$selftest_rc" "$instrument" "$AUDIT_COMMIT" "$leg"
   else
     printf 'AUDIT-SELFTEST leg=%s rc=%s outcome=COULD-NOT-EVALUATE layer=selftest-shape\n' \
@@ -409,7 +409,7 @@ if (( collector_narrowing_rc > 0 )) \
       "$work/collector-narrowing.err"; then
   printf 'AUDIT-SELFTEST leg=collector-narrowing rc=%s outcome=REFUTED\n' \
     "$collector_narrowing_rc"
-  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-narrowing value=%s instrument=collect-lean-references.pl/v2 window=commit:%s:seed:collector-narrowing outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-narrowing value=%s instrument=collect-lean-references.pl/v2 window=commit:%s:seed:collector-narrowing coverage=parsed-document outcome=ESTABLISHED\n' \
     "$collector_narrowing_rc" "$AUDIT_COMMIT"
 else
   printf 'AUDIT-SELFTEST leg=collector-narrowing rc=%s outcome=COULD-NOT-EVALUATE layer=selftest-shape\n' \
@@ -460,7 +460,7 @@ if [[ $closure_visible == true && $closure_before == 1 \
     && (( closure_mutant_rc > 0 )); then
   printf 'AUDIT-SELFTEST leg=collector-closure rc=%s outcome=REFUTED\n' \
     "$closure_mutant_rc"
-  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=%s instrument=Lean.frontend window=commit:%s:seed:collector-closure outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=%s instrument=Lean.frontend window=commit:%s:seed:collector-closure coverage=parsed-document outcome=ESTABLISHED\n' \
     "$closure_mutant_rc" "$AUDIT_COMMIT"
 else
   printf 'AUDIT-SELFTEST leg=collector-closure rc=%s outcome=COULD-NOT-EVALUATE layer=collector-closure\n' \
@@ -519,7 +519,7 @@ if (( foreign_mutation_count == 1 && foreign_elaboration_rc == 0 \
     && [[ $foreign_reference_visible == true ]]; then
   printf 'AUDIT-SELFTEST leg=foreign-build-root rc=%s outcome=REFUTED\n' \
     "$foreign_build_rc"
-  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=%s instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=%s instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root coverage=parsed-document outcome=ESTABLISHED\n' \
     "$foreign_build_rc" "$AUDIT_COMMIT"
 else
   printf 'AUDIT-SELFTEST leg=foreign-build-root rc=%s outcome=COULD-NOT-EVALUATE layer=build-root-provenance\n' \
@@ -538,7 +538,7 @@ LEAN_PATH="$work/empty-lean-path" \
 if (( pinned_graph_rc > 0 )); then
   printf 'AUDIT-SELFTEST leg=pinned-module-graph rc=%s outcome=REFUTED\n' \
     "$pinned_graph_rc"
-  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=%s instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph outcome=ESTABLISHED\n' \
+  printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=%s instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph coverage=parsed-document outcome=ESTABLISHED\n' \
     "$pinned_graph_rc" "$AUDIT_COMMIT"
 else
   printf 'AUDIT-SELFTEST leg=pinned-module-graph rc=0 outcome=COULD-NOT-EVALUATE layer=module-graph-binding\n'
@@ -550,9 +550,9 @@ if (( tracked_unresolved == 0 && tracked_resolved > 0 \
     && [[ $export_alias_pass == true ]] \
     && grep -Eq 'reference=PlutusCore\.ByteStringInternal\.appendByteString resolved=false outcome=REFUTED$' \
     "$work/selftest-nested-namespace.out" \
-    && grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' \
+    && grep -Eq 'reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED$' \
       "$work/selftest-nested-namespace.out"; then
-  printf 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED\n'
+  printf 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore coverage=parsed-document outcome=ESTABLISHED\n'
 else
   printf 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=COULD-NOT-EVALUATE layer=oracle-agreement\n'
   selftests_pass=false
@@ -577,7 +577,7 @@ else
     else
       variant_outcome=REFUTED
     fi
-    printf 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=%s selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=%s outcome=%s\n' \
+    printf 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=%s selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=%s coverage=parsed-document outcome=%s\n' \
       "$expressible" "$selected" "$variant_outcome"
     variant_evaluated=true
   else

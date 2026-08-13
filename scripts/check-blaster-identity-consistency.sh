@@ -712,16 +712,23 @@ reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
   reconciled=${reconciled//[[:space:]]/}
   unexpected=$((fields - reconciled))
   containers=$(wc -l < "$work/actual.containers"); containers=${containers//[[:space:]]/}
+  expected_containers=$(wc -l < "$work/expected.containers")
+  expected_containers=${expected_containers//[[:space:]]/}
   covered_containers=$(LC_ALL=C comm -12 \
     "$work/actual.containers" "$work/expected.containers" | wc -l)
   covered_containers=${covered_containers//[[:space:]]/}
   uncovered_containers=$((containers - covered_containers))
+  missing_containers=$(LC_ALL=C comm -13 \
+    "$work/actual.containers" "$work/expected.containers" | wc -l)
+  missing_containers=${missing_containers//[[:space:]]/}
 
   echo "CBIC_IDENTITY_RESULT fields=$fields"
   echo "CBIC_IDENTITY_RESULT reconciled=$reconciled"
   echo "CBIC_IDENTITY_RESULT unexpected=$unexpected"
   echo "CBIC_IDENTITY_RESULT containers=$containers"
+  echo "CBIC_IDENTITY_RESULT expected_containers=$expected_containers"
   echo "CBIC_IDENTITY_RESULT uncovered_containers=$uncovered_containers"
+  echo "CBIC_IDENTITY_RESULT missing_containers=$missing_containers"
   echo "CBIC_IDENTITY_RESULT enumerated_by=jq-leaf-and-container-paths"
 
   if [ "$unexpected" -ne 0 ]; then
@@ -734,6 +741,12 @@ reconcile_identity_field_population() { # <manifest> <blueprint> <blueprint-sha>
     uncovered_container=$(LC_ALL=C comm -23 \
       "$work/actual.containers" "$work/expected.containers" | head -1)
     fail "COULD-NOT-EVALUATE: manifest container lacks structural expectation: ${uncovered_container:-<unnamed>}"
+  fi
+
+  if [ "$missing_containers" -ne 0 ]; then
+    missing_container=$(LC_ALL=C comm -13 \
+      "$work/actual.containers" "$work/expected.containers" | head -1)
+    fail "COULD-NOT-EVALUATE: declared container absent from the artifact: ${missing_container:-<unnamed>}"
   fi
 
   missing=$((expected_fields - reconciled))

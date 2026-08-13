@@ -25,7 +25,7 @@ fail() {
 }
 
 reference_count() {
-  grep -cE '^AUDIT-REFERENCE scope=tracked .* resolved=true outcome=ESTABLISHED$' "$1" || true
+  grep -cE '^AUDIT-REFERENCE scope=tracked .* resolved=true coverage=parsed-document outcome=ESTABLISHED$' "$1" || true
 }
 
 validate_a1() {
@@ -43,7 +43,7 @@ validate_a2() {
   [[ $(reference_count "$out") -gt 0 ]] || return 1
   grep -Eq '^AUDIT-CONTROL id=[^ ]+ kind=positive-resolution .*outcome=ESTABLISHED$' "$out" || return 1
   for probe in evaluateBuiltinFunction defaultFunSemanticsVariantC; do
-    grep -Eq "^AUDIT-REFERENCE scope=tracked .*reference=[^ ]*$probe .*resolved=true outcome=ESTABLISHED$" "$out" \
+    grep -Eq "^AUDIT-REFERENCE scope=tracked .*reference=[^ ]*$probe .*resolved=true coverage=parsed-document outcome=ESTABLISHED$" "$out" \
       || return 1
   done
 }
@@ -67,7 +67,7 @@ validate_selftests() {
 
 validate_discovery() {
   local out="$1" commit="$2" coverage collected total instrument total_instrument
-  coverage="$(grep -E '^AUDIT-COVERAGE collected=[0-9]+ total=[0-9]+ digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$' "$out" || true)"
+  coverage="$(grep -E '^AUDIT-COVERAGE collected=[0-9]+ total=[0-9]+ digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:[^:]+:scope:tracked coverage=parsed-document outcome=ESTABLISHED$' "$out" || true)"
   [[ $(grep -c . <<<"$coverage" || true) -eq 1 ]] || return 1
   collected="$(sed -nE 's/^AUDIT-COVERAGE collected=([0-9]+) .*/\1/p' <<<"$coverage")"
   total="$(sed -nE 's/^AUDIT-COVERAGE collected=[0-9]+ total=([0-9]+) .*/\1/p' <<<"$coverage")"
@@ -77,7 +77,7 @@ validate_discovery() {
   [[ $collected -eq $total ]] || return 1
   [[ -n $instrument && -n $total_instrument && $instrument != "$total_instrument" ]] \
     || return 1
-  grep -Fq "window=commit:$commit:scope:tracked outcome=ESTABLISHED" "$out" \
+  grep -Fq "window=commit:$commit:scope:tracked coverage=parsed-document outcome=ESTABLISHED" "$out" \
     || return 1
   grep -Eq '^AUDIT-SELFTEST leg=collector-closure rc=[1-9][0-9]* outcome=REFUTED$' "$out"
 }
@@ -88,14 +88,14 @@ validate_oracle() {
     || return 1
   grep -Eq '^AUDIT-REFERENCE scope=selftest-nested-namespace .*reference=PlutusCore\.ByteStringInternal\.appendByteString resolved=false outcome=REFUTED$' "$out" \
     || return 1
-  grep -Eq '^AUDIT-REFERENCE scope=selftest-nested-namespace .*reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true outcome=ESTABLISHED$' "$out" \
+  grep -Eq '^AUDIT-REFERENCE scope=selftest-nested-namespace .*reference=PlutusCore\.ByteString\.PlutusCore\.ByteStringInternal\.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED$' "$out" \
     || return 1
-  grep -Fxq 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED' "$out"
+  grep -Fxq 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore coverage=parsed-document outcome=ESTABLISHED' "$out"
 }
 
 validate_synthesised() {
   local out="$1"
-  grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=elaborated reference=PlutusCore\.Default\.Internal\.BuiltinSemanticsVariant\.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED$' "$out" \
+  grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=elaborated reference=PlutusCore\.Default\.Internal\.BuiltinSemanticsVariant\.defaultFunSemanticsVariantC resolved=true coverage=parsed-document outcome=ESTABLISHED$' "$out" \
     || return 1
   ! grep -Eq '^AUDIT-REFERENCE scope=tracked .*provenance=synthesised ' "$out" \
     || return 1
@@ -104,13 +104,13 @@ validate_synthesised() {
 
 validate_binding() {
   local out="$1"
-  grep -Eq '^AUDIT-ORACLE-ROOT path=/nix/store/[a-z0-9]+-KeriBlaster-depRoot instrument=flake:keriBlasterPackage\.modRoot window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$' "$out" \
+  grep -Eq '^AUDIT-ORACLE-ROOT path=/nix/store/[a-z0-9]+-KeriBlaster-depRoot instrument=flake:keriBlasterPackage\.modRoot window=commit:[^:]+:scope:tracked coverage=parsed-document outcome=ESTABLISHED$' "$out" \
     || return 1
   grep -Eq '^AUDIT-SELFTEST leg=pinned-module-graph rc=[1-9][0-9]* outcome=REFUTED$' "$out"
 }
 
 validate_attribution() {
-  grep -Fxq 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED' "$1"
+  grep -Fxq 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module coverage=parsed-document outcome=ESTABLISHED' "$1"
 }
 
 validate_a4() {
@@ -119,12 +119,12 @@ validate_a4() {
     rev="$(jq -er --arg n "$pkg" \
       'def direct($x): .nodes[.nodes[.root].inputs[$x]]; direct($n).locked.rev' \
       "$lock")" || return 1
-    grep -Fq "AUDIT-PIN $pkg=$rev outcome=ESTABLISHED" "$out" || return 1
+    grep -Fq "AUDIT-PIN $pkg=$rev coverage=parsed-document outcome=ESTABLISHED" "$out" || return 1
   done
 }
 
 validate_a5() {
-  grep -Eq '^AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=(true|false) selection=era-based:[^ ]+ outcome=(ESTABLISHED|REFUTED)$' "$1"
+  grep -Eq '^AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=(true|false) selection=era-based:[^ ]+( coverage=[^ ]+)? outcome=(ESTABLISHED|REFUTED)$' "$1"
 }
 
 validate_a6() {
@@ -152,24 +152,24 @@ validate_a9() {
 }
 
 validate_a10() {
-  grep -Fq "AUDIT-IDENTITY commit=$2 outcome=ESTABLISHED" "$1"
+  grep -Fq "AUDIT-IDENTITY commit=$2 coverage=parsed-document outcome=ESTABLISHED" "$1"
 }
 
 validate_a14() {
   local out="$1" commit="$2" resolved unresolved denominator leg rc
-  resolved="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$/\1/p' "$out")"
-  unresolved="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$/\2/p' "$out")"
-  denominator="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked outcome=ESTABLISHED$/\3/p' "$out")"
+  resolved="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked coverage=parsed-document outcome=ESTABLISHED$/\1/p' "$out")"
+  unresolved="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked coverage=parsed-document outcome=ESTABLISHED$/\2/p' "$out")"
+  denominator="$(sed -nE 's/^AUDIT-MEASUREMENT metric=reference-resolution resolved=([0-9]+) unresolved=([0-9]+) denominator=([0-9]+) instrument=Lean\.Environment window=commit:[^:]+:scope:tracked coverage=parsed-document outcome=ESTABLISHED$/\3/p' "$out")"
   [[ $resolved =~ ^[0-9]+$ && $unresolved =~ ^[0-9]+$ && $denominator =~ ^[0-9]+$ ]] \
     || return 1
   [[ $((resolved + unresolved)) -eq $denominator ]] || return 1
-  grep -Fq "window=commit:$commit:scope:tracked outcome=ESTABLISHED" "$out" \
+  grep -Fq "window=commit:$commit:scope:tracked coverage=parsed-document outcome=ESTABLISHED" "$out" \
     || return 1
-  grep -Eq "^AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=[0-9]+ unresolved=[0-9]+ denominator=[0-9]+ instrument=Lean.Environment window=commit:$commit:seed:retired-reference outcome=ESTABLISHED$" "$out" \
+  grep -Eq "^AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=[0-9]+ unresolved=[0-9]+ denominator=[0-9]+ instrument=Lean.Environment window=commit:$commit:seed:retired-reference coverage=parsed-document outcome=ESTABLISHED$" "$out" \
     || return 1
-  grep -Eq "^AUDIT-COVERAGE collected=[1-9][0-9]* total=[1-9][0-9]* digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:$commit:scope:tracked outcome=ESTABLISHED$" "$out" \
+  grep -Eq "^AUDIT-COVERAGE collected=[1-9][0-9]* total=[1-9][0-9]* digest=[0-9a-f]{16,} classes=direct-imports,elaborated-constants instrument=[^ ]+ total_instrument=[^ ]+ window=commit:$commit:scope:tracked coverage=parsed-document outcome=ESTABLISHED$" "$out" \
     || return 1
-  grep -Eq "^AUDIT-ORACLE-ROOT path=[^ ]+ instrument=flake:keriBlasterPackage.modRoot window=commit:$commit:scope:tracked outcome=ESTABLISHED$" "$out" \
+  grep -Eq "^AUDIT-ORACLE-ROOT path=[^ ]+ instrument=flake:keriBlasterPackage.modRoot window=commit:$commit:scope:tracked coverage=parsed-document outcome=ESTABLISHED$" "$out" \
     || return 1
   for leg in unresolved-in-tracked-scope namespace-move nested-namespace export-alias \
       prefix-field probe-twin synthesised-reference collector-narrowing \
@@ -178,7 +178,7 @@ validate_a14() {
     [[ $rc =~ ^[1-9][0-9]*$ ]] || return 1
     grep -Fq "AUDIT-MEASUREMENT metric=selftest-exit-code leg=$leg value=$rc " "$out" \
       || return 1
-    grep -Eq "^AUDIT-MEASUREMENT metric=selftest-exit-code leg=$leg value=$rc instrument=[^ ]+ window=commit:$commit:seed:$leg outcome=ESTABLISHED$" "$out" \
+    grep -Eq "^AUDIT-MEASUREMENT metric=selftest-exit-code leg=$leg value=$rc instrument=[^ ]+ window=commit:$commit:seed:$leg coverage=parsed-document outcome=ESTABLISHED$" "$out" \
       || return 1
   done
 }
@@ -202,49 +202,49 @@ prove_assertions_can_fail() {
   ledger_rev="$(jq -er 'def direct($x): .nodes[.nodes[.root].inputs[$x]]; direct("cardanoLedgerApiBlaster").locked.rev' "$lock")"
 
   {
-    printf 'AUDIT-IDENTITY commit=%s outcome=ESTABLISHED\n' "$head"
-    printf 'AUDIT-PIN leanBlaster=%s outcome=ESTABLISHED\n' "$lean_rev"
-    printf 'AUDIT-PIN plutusCoreBlaster=%s outcome=ESTABLISHED\n' "$plutus_rev"
-    printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s outcome=ESTABLISHED\n' "$ledger_rev"
-    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Evidence.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.UPLC.BuiltinFunctions.Evaluate.evaluateBuiltinFunction resolved=true outcome=ESTABLISHED'
-    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC resolved=true outcome=ESTABLISHED'
+    printf 'AUDIT-IDENTITY commit=%s coverage=parsed-document outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-PIN leanBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$lean_rev"
+    printf 'AUDIT-PIN plutusCoreBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$plutus_rev"
+    printf 'AUDIT-PIN cardanoLedgerApiBlaster=%s coverage=parsed-document outcome=ESTABLISHED\n' "$ledger_rev"
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Evidence.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.UPLC.BuiltinFunctions.Evaluate.evaluateBuiltinFunction resolved=true coverage=parsed-document outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=tracked source_path=offchain/blaster/KeriBlaster/S2Cek.lean target_package=plutusCoreBlaster provenance=elaborated reference=PlutusCore.Default.Internal.BuiltinSemanticsVariant.defaultFunSemanticsVariantC resolved=true coverage=parsed-document outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-RESOLVED count=2'
     printf '%s\n' 'AUDIT-RUN scope=tracked verdict=PASS unresolved=0'
-    printf '%s\n' 'AUDIT-CONTROL id=source-positive kind=positive-resolution expected=resolve observed=resolved outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-CONTROL id=source-positive kind=positive-resolution expected=resolve observed=resolved coverage=parsed-document outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-REFERENCE scope=seeded-retired source_path=offchain/blaster/CompatibilityRetiredReference.lean target_package=plutusCoreBlaster reference=PlutusCore.UPLC.CekMachine.cekExecuteProgramWithSemanticsVariant resolved=false outcome=REFUTED'
     printf '%s\n' 'AUDIT-RUN scope=tracked+seeded-retired verdict=FAIL unresolved=1'
     printf '%s\n' 'AUDIT-CONTROL id=retired-reference kind=seeded-retired-reference expected=unresolved observed=unresolved outcome=REFUTED'
     printf '%s\n' 'AUDIT-SELFTEST leg=unresolved-in-tracked-scope rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=unresolved-in-tracked-scope value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:unresolved-in-tracked-scope outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=unresolved-in-tracked-scope value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:unresolved-in-tracked-scope coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=namespace-move rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=namespace-move value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:namespace-move outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=namespace-move value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:namespace-move coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-REFERENCE scope=selftest-nested-namespace source_path=offchain/blaster/CompatibilityNestedNamespaceReference.lean target_package=plutusCoreBlaster reference=PlutusCore.ByteStringInternal.appendByteString resolved=false outcome=REFUTED'
-    printf '%s\n' 'AUDIT-REFERENCE scope=selftest-nested-namespace source_path=offchain/blaster/CompatibilityNestedNamespaceReference.lean target_package=plutusCoreBlaster reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=true outcome=ESTABLISHED'
+    printf '%s\n' 'AUDIT-REFERENCE scope=selftest-nested-namespace source_path=offchain/blaster/CompatibilityNestedNamespaceReference.lean target_package=plutusCoreBlaster reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED'
     printf '%s\n' 'AUDIT-SELFTEST leg=nested-namespace rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=nested-namespace value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:nested-namespace outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=nested-namespace value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:nested-namespace coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=export-alias rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=export-alias value=1 instrument=compatibility-audit/declaration-membership window=commit:%s:seed:export-alias outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=export-alias value=1 instrument=compatibility-audit/declaration-membership window=commit:%s:seed:export-alias coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=prefix-field rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=prefix-field value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:prefix-field outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=prefix-field value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:prefix-field coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=probe-twin rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=probe-twin value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:probe-twin outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=probe-twin value=1 instrument=compatibility-audit/run_scope window=commit:%s:seed:probe-twin coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=synthesised-reference rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=synthesised-reference value=1 instrument=compatibility-audit/collector-mutation window=commit:%s:seed:synthesised-reference outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=synthesised-reference value=1 instrument=compatibility-audit/collector-mutation window=commit:%s:seed:synthesised-reference coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=collector-narrowing rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-narrowing value=1 instrument=collect-lean-references.pl/v2 window=commit:%s:seed:collector-narrowing outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-narrowing value=1 instrument=collect-lean-references.pl/v2 window=commit:%s:seed:collector-narrowing coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=collector-closure rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=1 instrument=Lean.frontend window=commit:%s:seed:collector-closure outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=collector-closure value=1 instrument=Lean.frontend window=commit:%s:seed:collector-closure coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=pinned-module-graph rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=1 instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=pinned-module-graph value=1 instrument=compatibility-oracle/LEAN_PATH window=commit:%s:seed:pinned-module-graph coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-SELFTEST leg=foreign-build-root rc=1 outcome=REFUTED'
-    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=1 instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root outcome=ESTABLISHED\n' "$head"
-    printf '%s\n' 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore outcome=ESTABLISHED'
-    printf 'AUDIT-ORACLE-ROOT path=/nix/store/00000000000000000000000000000000-KeriBlaster-depRoot instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
-    printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=true selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantE outcome=ESTABLISHED'
-    printf 'AUDIT-COVERAGE collected=2 total=2 digest=0123456789abcdef classes=direct-imports,elaborated-constants instrument=Lean.ilean/v4 total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
-    printf '%s\n' 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module outcome=ESTABLISHED'
-    printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=2 unresolved=0 denominator=2 instrument=Lean.Environment window=commit:%s:scope:tracked outcome=ESTABLISHED\n' "$head"
-    printf 'AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=1 unresolved=1 denominator=2 instrument=Lean.Environment window=commit:%s:seed:retired-reference outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=selftest-exit-code leg=foreign-build-root value=1 instrument=source-reelaboration/root-comparison window=commit:%s:seed:foreign-build-root coverage=parsed-document outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-ORACLE agreement=by-construction predicate=Lean.resolveGlobalConstCore coverage=parsed-document outcome=ESTABLISHED'
+    printf 'AUDIT-ORACLE-ROOT path=/nix/store/00000000000000000000000000000000-KeriBlaster-depRoot instrument=flake:keriBlasterPackage.modRoot window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-VARIANT variant=defaultFunSemanticsVariantE expressible=true selection=era-based:PlutusVersion.toSemanticsVariant:postConway:selected=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED'
+    printf 'AUDIT-COVERAGE collected=2 total=2 digest=0123456789abcdef classes=direct-imports,elaborated-constants instrument=Lean.ilean/v4 total_instrument=Lean.frontend/source-reelaboration-v4 window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' "$head"
+    printf '%s\n' 'AUDIT-ATTRIBUTION agreement=by-construction predicate=collect-ilean-references/package_for_module coverage=parsed-document outcome=ESTABLISHED'
+    printf 'AUDIT-MEASUREMENT metric=reference-resolution resolved=2 unresolved=0 denominator=2 instrument=Lean.Environment window=commit:%s:scope:tracked coverage=parsed-document outcome=ESTABLISHED\n' "$head"
+    printf 'AUDIT-MEASUREMENT metric=reference-resolution scope=seeded-retired resolved=1 unresolved=1 denominator=2 instrument=Lean.Environment window=commit:%s:seed:retired-reference coverage=parsed-document outcome=ESTABLISHED\n' "$head"
     printf '%s\n' 'AUDIT-VERDICT PASS'
   } >"$good"
 
@@ -252,9 +252,9 @@ prove_assertions_can_fail() {
   expect_red INV-A1 incomplete-resolution-set validate_a1 "$mutant"
   grep -v 'AUDIT-SELFTEST leg=namespace-move' "$good" >"$mutant"
   expect_red INV-A1 namespace-move-not-exercised validate_selftests "$mutant"
-  sed 's/reference=PlutusCore.ByteStringInternal.appendByteString resolved=false outcome=REFUTED/reference=PlutusCore.ByteStringInternal.appendByteString resolved=true outcome=ESTABLISHED/' "$good" >"$mutant"
+  sed 's/reference=PlutusCore.ByteStringInternal.appendByteString resolved=false outcome=REFUTED/reference=PlutusCore.ByteStringInternal.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED/' "$good" >"$mutant"
   expect_red INV-A1 fabricated-nested-name-accepted validate_oracle "$mutant"
-  sed 's/reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=true outcome=ESTABLISHED/reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=false outcome=REFUTED/' "$good" >"$mutant"
+  sed 's/reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=true coverage=parsed-document outcome=ESTABLISHED/reference=PlutusCore.ByteString.PlutusCore.ByteStringInternal.appendByteString resolved=false outcome=REFUTED/' "$good" >"$mutant"
   expect_red INV-A1 real-nested-name-rejected validate_oracle "$mutant"
   grep -v '^AUDIT-ORACLE ' "$good" >"$mutant"
   expect_red INV-A1 textual-oracle-unattested validate_oracle "$mutant"

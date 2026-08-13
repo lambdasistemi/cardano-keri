@@ -1,0 +1,6 @@
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE outcome=REFUTED
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED
+CLAIM id=adv-compat kind=advance purpose=compatibility-refreeze variant=defaultFunSemanticsVariantE outcome=REFUTED
+CLAIM id=adv-compat kind=advance purpose=compatibility-refreeze variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED
+CLAIM id=adv-composed kind=advance purpose=p3-p6-composed variant=defaultFunSemanticsVariantE outcome=REFUTED
+CLAIM id=adv-composed kind=advance purpose=p3-p6-composed variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED

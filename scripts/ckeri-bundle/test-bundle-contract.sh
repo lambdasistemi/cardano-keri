@@ -267,6 +267,106 @@ expect_red INV-246-C9-worktree-access \
   'reproduction still has worktree access' \
   check_reproduction fresh-clone issue-worktree
 
+# C1: the entry point may not depend on a path outside the checkout
+# and its declared pins. C2/C9 do not cover this — the desk-path
+# retained receipt is the concrete case.
+check_entry_pins() { # entry-file
+  local entry=$1
+  [ -r "$entry" ] || {
+    echo "entry point unreadable: $entry" >&2
+    return 1
+  }
+  if grep -E '/tmp/ms-keri-8' "$entry" >/dev/null; then
+    echo "entry point depends on a path outside a fresh checkout: /tmp/ms-keri-8" >&2
+    return 1
+  fi
+  return 0
+}
+printf '%s\n' '#!/bin/sh' \
+  'cat /tmp/ms-keri-8/e190/t246/evidence/RED-baseline-receipt.md' \
+  > "$work/entry-desk-path.sh"
+expect_red INV-246-C1-desk-path-dependency \
+  'path outside a fresh checkout' \
+  check_entry_pins "$work/entry-desk-path.sh"
+
+# C10: a completeness result that publishes missing=0 with no
+# declared= denominator must go RED.
+check_completeness_denominator() { # record-line
+  local record=$1
+  if grep -Eq 'missing=' <<<"$record" \
+    && ! grep -Eq 'declared=' <<<"$record"; then
+    echo "completeness missing= published without declared denominator" >&2
+    return 1
+  fi
+  return 0
+}
+expect_red INV-246-C10-bare-missing-zero \
+  'published without declared denominator' \
+  check_completeness_denominator \
+  'AUDIT-BUNDLE-COMPLETENESS missing=0 outcome=ESTABLISHED'
+
+# C12: both branches must be falsified BEFORE the clean assembly
+# is accepted. Accepting ESTABLISHED first violates the ordering.
+check_completeness_order() { # log
+  local log=$1
+  local omit_ln empty_ln clean_ln
+  omit_ln=$(grep -nE 'omitted-declared-artifact|INV-246-C8-omitted' "$log" \
+    | head -1 | cut -d: -f1)
+  empty_ln=$(grep -nE 'empty-or-unreadable-inventory|INV-246-C11-empty' "$log" \
+    | head -1 | cut -d: -f1)
+  clean_ln=$(grep -nE 'AUDIT-BUNDLE-COMPLETENESS .*outcome=ESTABLISHED' "$log" \
+    | head -1 | cut -d: -f1)
+  if [ -z "${omit_ln:-}" ] || [ -z "${empty_ln:-}" ]; then
+    echo "both completeness branches were not falsified" >&2
+    return 1
+  fi
+  if [ -n "${clean_ln:-}" ] \
+    && { [ "$clean_ln" -lt "$omit_ln" ] || [ "$clean_ln" -lt "$empty_ln" ]; }; then
+    echo "clean assembly accepted before both branches were falsified" >&2
+    return 1
+  fi
+  return 0
+}
+cat > "$work/order-violated.log" <<'EOF'
+AUDIT-BUNDLE-COMPLETENESS declared=2 present=2 missing=0 outcome=ESTABLISHED
+AUDIT-SELFTEST leg=omitted-declared-artifact rc=1 outcome=REFUTED
+AUDIT-SELFTEST leg=empty-or-unreadable-inventory rc=1 outcome=REFUTED
+EOF
+expect_red INV-246-C12-clean-before-both-branches \
+  'clean assembly accepted before both branches were falsified' \
+  check_completeness_order "$work/order-violated.log"
+
+# C6: tree enumeration may contribute; it may not define coverage.
+# A walk of the assembly that counts an untracked extra as a declared
+# entry, while a declared path is missing, publishes the wrong
+# denominator.
+check_inventory_defines_coverage() { # inventory assembly record
+  local inventory=$1 assembly=$2 record=$3
+  local inv_declared walk_declared
+  inv_declared=$(grep -cEv '^#|^$' "$inventory" || true)
+  walk_declared=$(find "$assembly" -type f | wc -l)
+  walk_declared=${walk_declared//[[:space:]]/}
+  rec_declared=$(sed -n 's/.* declared=\([0-9]*\).*/\1/p' <<<"$record")
+  if [ "$walk_declared" -ne "$inv_declared" ] \
+    && [ "$rec_declared" = "$walk_declared" ]; then
+    echo "tree walk defined coverage: declared=$rec_declared inventory=$inv_declared walk=$walk_declared" >&2
+    return 1
+  fi
+  return 0
+}
+mkdir -p "$work/assembly/walk"
+printf '%s\n' '#!/bin/sh' > "$work/assembly/walk/entry.sh"
+printf '%s\n' 'extra' > "$work/assembly/walk/extra.txt"
+printf '%s\n' 'also' > "$work/assembly/walk/also.txt"
+# inventory still declares entry.sh + notes.txt (2). Walk sees 3 files.
+# A record that takes declared= from the walk has let the tree define coverage.
+expect_red INV-246-C6-tree-walk-defines-coverage \
+  'tree walk defined coverage' \
+  check_inventory_defines_coverage \
+  "$work/inventory.txt" \
+  "$work/assembly/walk" \
+  'AUDIT-BUNDLE-COMPLETENESS declared=3 present=3 missing=0 outcome=ESTABLISHED'
+
 # ---------------------------------------------------------------------------
 # Published-bytes closure and check binding (carried rows).
 # ---------------------------------------------------------------------------
@@ -345,6 +445,26 @@ EOF
 expect_red INV-246-FALSIFIER-REACHABILITY \
   'shipped falsifier only reachable outside CKERI_BLASTER_SANDBOX_CHECK' \
   check_falsifier_reachability "$(cat "$work/runner-host-only.txt")"
+
+# C5 is deliberately not FALSIFIER-REACHABILITY. A runner that reaches
+# the completeness falsifiers but never invokes the schema check would
+# let one green stand for both rows.
+check_schema_reached_by_runner() { # runner-file
+  local runner=$1
+  if ! grep -Eq 'check-claim-schema|AUDIT-CLAIM-SCHEMA' "$runner"; then
+    echo "schema check not reached by the gate runner" >&2
+    return 1
+  fi
+  return 0
+}
+cat > "$work/runner-falsifiers-no-schema.txt" <<'EOF'
+echo "AUDIT-SELFTEST leg=omitted-declared-artifact rc=1 outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=empty-or-unreadable-inventory rc=1 outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=declared-mode-mismatch rc=1 outcome=REFUTED"
+EOF
+expect_red INV-246-C5-schema-not-on-gate-runner \
+  'schema check not reached by the gate runner' \
+  check_schema_reached_by_runner "$work/runner-falsifiers-no-schema.txt"
 
 # ---------------------------------------------------------------------------
 # T246-F6 / INV-246-IDENTITY-LINE-PROTOCOL: the standing checker must
@@ -469,11 +589,17 @@ for required in \
   "$bundle_dir/check-claim-schema.sh" \
   "$bundle_dir/assemble.sh" \
   "$bundle_dir/run.sh" \
+  "$bundle_dir/run-slice-c.sh" \
   "$bundle_dir/inventory.txt" \
   "$bundle_dir/check-published-bytes.sh" \
   "$bundle_dir/check-falsifier-reachability.sh" \
   "$bundle_dir/COVERAGE-BOUNDARY.md"; do
   [ -e "$required" ] || fail "declared production surface missing: $required"
 done
+
+check_entry_pins "$bundle_dir/run.sh" \
+  || fail "INV-246-C1: production entry point depends on a desk path"
+check_schema_reached_by_runner "$repo_root/offchain/flake.nix" \
+  || fail "INV-246-C5: flake-owned runner does not reach the schema check"
 
 echo "bundle-contract: OK"

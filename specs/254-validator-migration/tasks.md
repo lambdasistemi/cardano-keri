@@ -2,7 +2,7 @@
 
 Artifact ceiling: 7,000 bytes and 160 lines.
 
-The machine build gate is a hard prerequisite for implementation or audit.
+The machine build gate precedes implementation and audit.
 
 ## Phase 1 — dependency and contract freeze
 
@@ -13,12 +13,11 @@ The machine build gate is a hard prerequisite for implementation or audit.
   the exact owned paths only after that answer.
 - [ ] T254-003 Negotiate the release-hash registry/resolved-result contract
   with #171 through the desk; amend producer fields/invariants if needed.
-- [ ] T254-004 Freeze the preproduction v0 checkpoint/board policies,
-  references, network parameters, earliest scan point, and three expected board
-  witness identities as legacy bridge inputs.
+- [ ] T254-004 Freeze v0 checkpoint/board policies, references, network, scan
+  point, and three board witnesses as legacy inputs.
 - [x] T254-005 Initialize the runtime campaign ledger and carry its charged
-  extensions through A-005: all eight BLOCKING rows retain evidence,
-  `builds_spent=6`, `builds_budget=8`, with builds 7/8 allocated by `plan.md`.
+  extensions through A-007: all BLOCKING rows retain evidence,
+  `builds_spent=6`, `builds_budget=9`, allocated by `plan.md`.
 
 ## Phase 2 — S254-1 checkpoint family
 
@@ -42,7 +41,14 @@ The machine build gate is a hard prerequisite for implementation or audit.
 - [x] T254-108 [US1] Register the exact changed compiled checkpoint family
   with M8 and kill named authority and replay mutants against that target.
 
-## Phase 3 — S254-E enforcement entitlement integration
+## Phase 3 — S254-R register derivation repair
+
+- [ ] T254-109 [US1] Drop the cut-version remnant from register deployment;
+  prove every live-blueprint validator's declared/applied arity agrees, sweep
+  deployment/serialization/manifests for other version remnants, register M8
+  against the corrected identity, and pass fresh audit build 7/9 before push.
+
+## Phase 4 — S254-E enforcement entitlement integration
 
 - [ ] T254-107 [US1] Adopt the revised #271 standalone commitment component at
   `03da8a72e3a58d63ca4268bdfd6157e41a7ebf33` byte-identically under manifest
@@ -51,7 +57,7 @@ The machine build gate is a hard prerequisite for implementation or audit.
   entitlement RED. Charge build 3/3 to #271's ledger for one combined audit
   and obtain its owner review through the epic owner.
 
-## Phase 4 — S254-2 board family
+## Phase 5 — S254-2 board family
 
 - [ ] T254-201 [US2] Use the target board schema directly, with no generic
   version/origin envelope and without weakening endpoint authentication.
@@ -69,31 +75,27 @@ The machine build gate is a hard prerequisite for implementation or audit.
 - [ ] T254-206 [US2] Generate board parity vectors and register the exact
   compiled board target with M8 authority/replay checks.
 
-## Phase 5 — S254-3 registry and consumer-ready cutover surface
+## Phase 6 — S254-3 registry and consumer-ready cutover surface
 
-- [ ] T254-301 [US3] Add and validate the append-only minimal release-label-to-
-  hash registry with checkpoint role addresses, board addresses, accepted
-  predecessor policies, references, source identities, and earliest scan point.
+- [ ] T254-301 [US3] Validate the append-only release-label-to-hash registry:
+  role/board addresses, predecessor policies, references, sources, scan point.
 - [ ] T254-302 [US3] Preserve the committed v0 manifests as immutable
   history and publish the target as a new registry entry, never a replacement.
-- [ ] T254-303 [US3] Add no-secret checkpoint/board migration package
-  preparation and one-for-one dry-run inventory reconciliation without live
-  submission.
+- [ ] T254-303 [US3] Prepare no-secret migration packages and one-for-one
+  dry-run inventory reconciliation without live submission.
 - [ ] T254-304 [US3] Prove the consumer example can obtain release/hash, policy,
   outref, and current KEL authority from the family-neutral producer result
   without a single-address assumption.
-- [ ] T254-305 [US3] Hand the exact registry schema, transaction-derived edge
-  semantics, and simulated old/new stream to #171 through the desk for its
-  follower/query/relayer blindness proof.
+- [ ] T254-305 [US3] Hand the registry, transaction-derived edges, and simulated
+  old/new stream to #171 for follower/query/relayer blindness proof.
 - [ ] T254-306 [US3] Document the cutover preflight, temporary v0 liquidity,
   controller/witness package flow, reconciliation format, rollback boundary,
   and explicit no-live-submit limit.
 
 ## Verification and acceptance
 
-- [ ] T254-401 Prove every declared invariant with at least one named mutant
-  shown RED and its permanent property GREEN; update the campaign ledger row by
-  row without closing any BLOCKING row as residual.
+- [ ] T254-401 Prove every invariant with named RED and permanent GREEN; close
+  no BLOCKING campaign row as residual.
 - [ ] T254-402 Complete focused onchain/offchain parity, package, registry,
   inventory, and consumer-contract checks plus full repository CI under the
   machine gate and build budget.
@@ -104,17 +106,15 @@ The machine build gate is a hard prerequisite for implementation or audit.
 - [ ] T254-405 Obtain the #171 seam acceptance and cutover-readiness proof;
   #254 cannot declare the preproduction event unblocked from producer evidence
   alone.
-- [ ] T254-406 Verify task stamps, audited tree, campaign, history, PR, and
-  final commit before push/review.
-- [ ] T254-407 After #253, #171, M8, and the desk cutover gate are satisfied,
-  execute the first real preproduction migration: carry every inventoried
-  checkpoint plus all three live board records, retain the raw reproducible
-  transcript, and prove identity/value/lineage continuity with unauthorized
-  and replay rejection. No rehearsal migration precedes it.
+- [ ] T254-406 Verify task stamps, audited tree, campaign, history, and PR.
+- [ ] T254-407 After #253/#171/M8/desk gates, execute the first real cutover;
+  carry all inventoried checkpoints and three board rows, retain the raw
+  transcript, and prove identity/value/lineage plus attack rejection. No
+  rehearsal migration precedes it.
 
 ## Ordering
 
-`T254-001..005 -> S254-1 -> S254-E -> S254-2 -> S254-3 -> T254-401..406 -> T254-407`.
+`T254-001..005 -> S254-1 -> S254-R -> S254-E -> S254-2 -> S254-3 -> T254-401..406 -> T254-407`.
 
 S254-1 and S254-2 share protocol types and therefore are not independent.
 #253 finalizes the target board schema after the S254-2 contract exists and

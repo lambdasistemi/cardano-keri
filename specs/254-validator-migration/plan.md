@@ -4,14 +4,12 @@ Artifact ceiling: 14,000 bytes and 260 lines.
 
 ## Durable design
 
-Introduce a hash-identified checkpoint and board family. A source program owns
-`MigrateOut`; its successor owns `MigrateIn` and is applied with the one
-predecessor policy it accepts. Both sides validate the same transaction, exact
-continuity, and the same domain-separated current-controller authorization.
-The applied script hash is on-chain release identity. The transaction is the
-lineage edge. Datums contain neither a version integer nor an origin pointer.
-Governance publishes the minimal release-label-to-hash registry and cutover
-time but has no identity-migration authority.
+Use a hash-identified checkpoint/board family. The source owns `MigrateOut`;
+its successor owns `MigrateIn` and is applied with its accepted predecessor.
+Both validate one transaction, exact continuity, and domain-separated current-
+controller authorization. Applied hash is release identity; the transaction is
+lineage. Datums have no version/origin. Governance publishes registry and
+cutover time but has no migration authority.
 
 The deployed preproduction version 0 predates this protocol. Its immutable
 checkpoint already exposes controller-authorized `Close`/`CloseBurn`, and its
@@ -100,31 +98,20 @@ a generic migration envelope.
 
 ### Follower semantics
 
-- Interest is the union of every supported checkpoint role address and board
-  address, plus unrelated funding addresses. It is constructed from the full
-  registry, never one current manifest entry.
-- A fresh follower starts no later than the earliest registered deployment so
-  it observes source rows and migration transactions. Applying a migration
-  and its derived edge is block-atomic and rollback-exact.
-- Missing one side of a simulated migration is a failing signal, not an empty
-  successful result.
+- Interest unions every registered checkpoint/board address plus funding
+  addresses; it never reads one current manifest entry.
+- Start by the earliest deployment; apply migration edges block-atomically and
+  rollback-exactly. A missing side is an error, never an empty success.
 
 ### Query and resolution semantics
 
-- Query inputs select a registry, not one `(policy,address)` pair. Results
-  expose release label, applied hash/policy, role, outref, and decoded KEL
-  state.
-- Candidates group by AID. Valid ordinary spends and atomic migration
-  transactions form lineage edges. Resolution prefers the candidate demonstrating
-  greatest authenticated use (`seq`, then `native_sn`) along a valid lineage;
-  a registry label alone never wins. A tie without a unique used lineage is an
-  explicit ambiguity.
-- Unknown hashes/labels, incomplete migration transactions, gaps in a derived
-  edge, or policy-to-registry mismatch are errors. They never collapse to “not
-  found.”
-- Board lookup applies the analogous witness-key lineage and the target
-  release's authentication rules; malformed old/new rows fail the whole
-  catalog closed.
+- Queries select a registry and return label, applied hash/policy, role,
+  outref, and KEL state. Candidates group by AID; ordinary spends and atomic
+  migrations form lineage. Resolve greatest authenticated use (`seq`, then
+  `native_sn`); labels never win, and a non-unique used lineage is ambiguous.
+- Unknown identity, incomplete/gapped edge, or registry-policy mismatch is an
+  error, never “not found.” Board lookup applies witness lineage plus target
+  authentication and fails the catalog closed on malformed rows.
 
 ### Relayer and #166
 
@@ -142,11 +129,11 @@ a generic migration envelope.
 
 | Dependency | Direction and condition |
 | --- | --- |
-| `origin/main` constitution and PR template | Rebase before implementation. Seed `03ca794` is based on `6e2bd82`, before constitution merge `a716f4b` and template merge `35970a6`; planning reads those main artifacts now, but no behavior campaign starts on the stale base. |
-| #219 permissionless advance | Predecessor authority model. Migration must not alter its KEL-event authorization or eq5/AE anti-replay mechanism. |
-| #271 payee authentication | The epic ruling inserts S254-E after S254-1 and before S254-2. S254-E adopts the revised standalone entitlement component from #271 (`03da8a72e3a58d63ca4268bdfd6157e41a7ebf33`, manifest `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895`, PR #278), superseding `1e3e767`, and owns its family-coupled integration without restating or revising #271's internal authorization schema. Its sole remaining build audits the revised lifecycle and integration together on #271's separate ledger, and the #271 owner reviews its submission through the epic owner. #163/#164 stay blocked until the entitlement ships. |
+| `origin/main` constitution and PR template | Rebase before implementation; no behavior campaign starts on the stale seed. |
+| #219 permissionless advance | Preserve KEL authorization and eq5/AE anti-replay. |
+| #271 payee authentication | S254-E follows accepted S254-R and adopts revised component `03da8a72e3a58d63ca4268bdfd6157e41a7ebf33` (manifest `03ad05e8a32c97b9ee456beb698a4e93b9974d1ba2b0607bc83cada054586895`, PR #278) without restating its schema. #271's final build audits standalone plus rebased integration; its owner reviews through the epic owner. #163/#164 stay blocked until it ships. |
 | #253 board hardening | Rides the family. #253 owns the accepted authentication schema of the not-yet-deployed target board release; #254 supplies only the atomic migration vehicle and may not enumerate or weaken that schema. The first deployment contains both migration entry and #253 semantics; no intermediate unhardened target is deployed. NOTE-006 changes DEP-253-254: script hash identifies the release and the transaction is the edge; route the revised contract through the epic owner before S254-2. |
-| #171 consumer halves | Desk-negotiated implementation of multi-release follower/query/relayer semantics and #253 board verification. Must land before cutover opens. |
+| #171 consumer halves | Multi-release follower/query/relayer and board verification; required before cutover. |
 | Preproduction cutover | First real migration consumer. Requires producer and #171 consumer changes, reference publication, inventory reconciliation, controller/witness authorizations, and an approved live-operation plan. |
 | e171 consumer example / #166 | Must consume the family-neutral resolved result and demonstrate no address/policy retrofit. Runs after cutover readiness. |
 | M8 Blaster | Compile-target and property dependency. New hashes/entrypoints are registered at acceptance and cutover; authority/replay proof target cannot move silently. |
@@ -166,6 +153,14 @@ No slice starts while the machine build gate is closed.
 - Ship RED controls for authority, redirect/replay, identity, role, asset, and
   value classes; generated Haskell/Aiken vectors remain one source.
 
+### S254-R — register arity and version-remnant repair
+
+- Drop `v1CheckpointVersion`; the resulting eight-argument hash is this
+  branch's first settleable register identity.
+- Permanently compare every blueprint declaration/application arity; sweep
+  deployment and serialized artifacts for version remnants; repin M8.
+- Land and push before accepting S254-E. Charge a fresh audit as build 7/9.
+
 ### S254-E — enforcement entitlement integration
 
 - Adopt, rather than recreate, the seven revised #271 standalone component
@@ -179,7 +174,8 @@ No slice starts while the machine build gate is closed.
 - Charge the one combined revised-lifecycle plus family-integration audit as
   build 3/3 on #271's ledger; require the #271 design-owner review through the
   epic owner before ticket-owner acceptance.
-- Do not begin until S254-1 is accepted and pushed.
+- Implementation may overlap S254-R, but it must rebase onto accepted S254-R;
+  review and audit use only the corrected register identity.
 
 ### S254-2 — endpoint-board parity and #253 handoff
 
@@ -223,8 +219,8 @@ Forbidden without a revised contract:
 Campaign ledger:
 `/tmp/ms-keri-1/e274/cardano-keri-254/evidence/mutation-campaign.md`.
 
-Budget: **8 building audits** for #254's rows after the charged A-005 extension,
-currently `builds_spent=6` and `builds_budget=8`; all six remain on the record.
+Budget: **9 building audits** for #254's rows after charged ruling A-007,
+currently `builds_spent=6` and `builds_budget=9`; all six remain on the record.
 Owner development builds are separately controlled. S254-E instead charges
 the distinct #271 ledger at 2/3 with build 3/3 reserved for its combined
 revised-lifecycle plus family-integration audit; neither ledger may borrow from
@@ -232,9 +228,10 @@ the other.
 
 1. Builds 1–5: spent on S254-1A, the superseded S254-1B design/audits, and its
    first parity repairs; all evidence remains retained.
-2. Build 6/8: spent on the accepted structural full-address S254-1 repair.
-3. Build 7/8: reserved for the first independent audit of S254-2.
-4. Build 8/8: reserved for the first independent audit of S254-3.
+2. Build 6/9: spent on the accepted structural full-address S254-1 repair.
+3. Build 7/9: S254-R's fresh audit, including every same-class arity mismatch.
+4. Build 8/9: reserved for the first independent audit of S254-2.
+5. Build 9/9: reserved for the first independent audit of S254-3.
 
 Any blocking finding that requires another repair submission is a fresh
 overrun and requires an itemized epic ruling.

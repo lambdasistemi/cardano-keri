@@ -73,6 +73,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (digitToInt, isHexDigit)
 import Data.List (sortOn)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -613,16 +614,67 @@ missingBoardWitnesses witnesses entries =
 
 {- | Reconcile one complete source board inventory with its successors.
 
-This RED surface is deliberately fail-closed until the S254-2 proof bundle
-drives the one-for-one implementation.
+Both inventories must contain exactly the expected witness identities, once
+each, and every protected field must survive the migration unchanged.  The
+transaction out-ref is deliberately allowed to change: it identifies the new
+successor UTxO rather than board content or custody.
 -}
 reconcileBoardMigration ::
     [Text] ->
     [BoardEntry] ->
     [BoardEntry] ->
     Either String [(BoardEntry, BoardEntry)]
-reconcileBoardMigration _expected _sources _successors =
-    Left "board migration reconciliation is not implemented"
+reconcileBoardMigration expected sources successors = do
+    ensureUnique "expected witness identity" expected
+    sourceByAid <- inventoryByAid "source" sources
+    successorByAid <- inventoryByAid "successor" successors
+    unless (Set.fromList expected == Map.keysSet sourceByAid) $
+        Left "source board inventory does not match the expected witnesses"
+    unless (Set.fromList expected == Map.keysSet successorByAid) $
+        Left "successor board inventory does not match the expected witnesses"
+    traverse (reconcileOne sourceByAid successorByAid) expected
+  where
+    reconcileOne sourceByAid successorByAid aid = do
+        source <- lookupAid "source" aid sourceByAid
+        successor <- lookupAid "successor" aid successorByAid
+        unless (boardRowContinuous source successor) $
+            Left
+                ( "successor board row changed protected fields for "
+                    <> T.unpack aid
+                )
+        pure (source, successor)
+
+inventoryByAid :: String -> [BoardEntry] -> Either String (Map.Map Text BoardEntry)
+inventoryByAid label entries = do
+    ensureUnique (label <> " board witness identity") (map boardAid entries)
+    pure (Map.fromList [(boardAid entry, entry) | entry <- entries])
+
+ensureUnique :: (Ord a) => String -> [a] -> Either String ()
+ensureUnique label values =
+    unless (Set.size (Set.fromList values) == length values) $
+        Left (label <> " appears more than once")
+
+lookupAid ::
+    String ->
+    Text ->
+    Map.Map Text BoardEntry ->
+    Either String BoardEntry
+lookupAid label aid entries =
+    maybe
+        (Left $ label <> " board inventory is missing " <> T.unpack aid)
+        Right
+        (Map.lookup aid entries)
+
+boardRowContinuous :: BoardEntry -> BoardEntry -> Bool
+boardRowContinuous source successor =
+    and
+        [ boardWitnessKey successor == boardWitnessKey source
+        , boardAid successor == boardAid source
+        , boardScheme successor == boardScheme source
+        , boardUrl successor == boardUrl source
+        , boardLovelace successor == boardLovelace source
+        , boardOwnerKeyHash successor == boardOwnerKeyHash source
+        ]
 
 renderWatchability :: [ByteString] -> [BoardEntry] -> Text
 renderWatchability witnesses entries =

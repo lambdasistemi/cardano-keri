@@ -40,6 +40,9 @@ module Cardano.KERI.Deployment.ScriptAritySpec (
     derivedControlMain,
 ) where
 
+import Cardano.KERI.Deployment.EndpointBoardManifest (
+    frozenEndpointBoardPolicyId,
+ )
 import Cardano.KERI.Deployment.Manifest (
     Reference (..),
     mkManifest,
@@ -50,8 +53,9 @@ import Cardano.KERI.Deployment.Script (
     Validator (..),
     applyCommitmentParams,
     applyParams,
-    deriveBoardScript,
+    deriveBoardTargetScript,
     deriveV1Scripts,
+    extractCompiledCodeExact,
     loadBlueprint,
     mkAppliedArtifact,
     scriptHashText,
@@ -170,7 +174,12 @@ withFixture = do
     programs <- either fail pure (compiledPrograms value)
     blueprint <- loadBlueprint path >>= either fail pure
     artifacts <- either fail pure (deriveV1Scripts blueprint)
-    board <- either fail pure (deriveBoardScript blueprint)
+    predecessor <- either fail pure (decodeHex frozenEndpointBoardPolicyId)
+    board <-
+        either
+            fail
+            pure
+            (deriveBoardTargetScript predecessor blueprint)
     pure
         Fixture
             { fixtureValue = value
@@ -187,7 +196,12 @@ withFixture = do
             }
 
 spec :: Spec
-spec = beforeAll withFixture $
+spec = do
+    boardTargetApplicationSpec
+    registerAritySpec
+
+registerAritySpec :: Spec
+registerAritySpec = beforeAll withFixture $
     describe "S254-R register deployment arity" $ do
         it
             "s254_r_all_derived_validator_arities_match_live_blueprint"
@@ -373,6 +387,38 @@ spec = beforeAll withFixture $
                     )
             sort (versionShapedKeys (Aeson.toJSON manifest))
                 `shouldBe` ["checkpointVersion"]
+
+boardTargetApplicationSpec :: Spec
+boardTargetApplicationSpec =
+    describe "S254-2 target board application" $
+        it "s254_2_board_target_applies_frozen_predecessor_policy" $ do
+            path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+            blueprint <- loadBlueprint path >>= either fail pure
+            raw <-
+                maybe
+                    (fail "target board compiled code is absent")
+                    pure
+                    ( extractCompiledCodeExact
+                        "endpoint_board.endpoint_board.mint"
+                        blueprint
+                    )
+            predecessor <- either fail pure (decodeHex frozenEndpointBoardPolicyId)
+            artifact <-
+                either fail pure (deriveBoardTargetScript predecessor blueprint)
+            arguments <-
+                either fail pure (appliedArguments raw $ artifactProgram artifact)
+            arguments `shouldBe` [B predecessor]
+
+            let substituted = BS.replicate 28 0
+            substitutedArtifact <-
+                either fail pure (deriveBoardTargetScript substituted blueprint)
+            substitutedArguments <-
+                either
+                    fail
+                    pure
+                    (appliedArguments raw $ artifactProgram substitutedArtifact)
+            substitutedArguments `shouldBe` [B substituted]
+            substitutedArguments `shouldNotBe` arguments
 
 -- ---------------------------------------------------------------------------
 -- The structural oracle
@@ -1396,7 +1442,7 @@ declaredApplications =
     [ CensusRow deploymentScriptPath "applyCommitmentParams" 1
     , CensusRow deploymentScriptPath "applyDataArgs" 4
     , CensusRow deploymentScriptPath "applyProgram" 1
-    , CensusRow deploymentScriptPath "mkAppliedArtifact" 8
+    , CensusRow deploymentScriptPath "mkAppliedArtifact" 9
     , CensusRow cageBuilderPath "applyParams" 1
     ]
 

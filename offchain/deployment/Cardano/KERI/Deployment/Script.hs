@@ -37,6 +37,7 @@ module Cardano.KERI.Deployment.Script (
     cagePolicyId,
     cageScriptAddr,
     deriveBoardScript,
+    deriveBoardTargetScript,
     deriveV1Scripts,
     boardAddress,
     checkpointAddress,
@@ -610,6 +611,27 @@ deriveBoardScript blueprint = do
         "validator-and-minting-policy"
         validator
         []
+        program
+
+{- | Derive the authorized endpoint-board target applied to its one accepted
+predecessor policy.
+
+This is deliberately separate from 'deriveBoardScript': that function
+reproduces the frozen zero-parameter v0 artifact, while this function derives
+the successor whose release identity includes its lineage pin.
+-}
+deriveBoardTargetScript :: ByteString -> Blueprint -> Either String ScriptArtifact
+deriveBoardTargetScript acceptedPredecessorPolicy blueprint = do
+    (validator, program) <-
+        maybe
+            (Left "endpoint-board target compiled code not found in production blueprint")
+            Right
+            (extractValidatorExact "endpoint_board.endpoint_board.mint" blueprint)
+    mkAppliedArtifact
+        "endpoint-board"
+        "validator-and-minting-policy"
+        validator
+        (applyPredecessorParam acceptedPredecessorPolicy)
         program
 
 scriptHashBytes :: ScriptHash -> ByteString

@@ -14,7 +14,9 @@ claims_n=0
 without_falsifier=0
 established_unbounded=0
 advance_n=0
+advance_wrong_variant=0
 purposes=""
+refuted_ids=" "
 
 if [ ! -r "$claims" ]; then
   echo "AUDIT-CLAIM-SCHEMA claims=0 with_falsifier=0 without_falsifier=0 reached_by=missing instrument=ckeri-bundle/check-claim-schema window=claims-file outcome=COULD-NOT-EVALUATE layer=MEASUREMENT-FAILED"
@@ -30,12 +32,24 @@ while IFS= read -r line || [ -n "${line:-}" ]; do
   outcome=$(sed -n 's/.* outcome=\([^ ]*\).*/\1/p' <<<"$line")
   purpose=$(sed -n 's/.* purpose=\([^ ]*\).*/\1/p' <<<"$line")
   variant=$(sed -n 's/.* variant=\([^ ]*\).*/\1/p' <<<"$line")
+  claim_id=$(sed -n 's/.* id=\([^ ]*\).*/\1/p' <<<"$line")
+  [ -n "$claim_id" ] || claim_id=unnamed
   case "$outcome" in
-    REFUTED) has_falsifier=1 ;;
+    REFUTED)
+      has_falsifier=$((has_falsifier + 1))
+      case " $refuted_ids " in
+        *" $claim_id "*) ;;
+        *) refuted_ids="$refuted_ids $claim_id " ;;
+      esac
+      ;;
     ESTABLISHED)
-      if [ "$has_falsifier" -eq 0 ]; then
-        without_falsifier=$((without_falsifier + 1))
-      fi
+      case " $refuted_ids " in
+        *" $claim_id "*) ;;
+        *)
+          without_falsifier=$((without_falsifier + 1))
+          echo "ESTABLISHED without per-claim falsifier: id=$claim_id" >&2
+          ;;
+      esac
       if [[ $line != *coverage=* ]]; then
         established_unbounded=$((established_unbounded + 1))
       fi
@@ -49,7 +63,8 @@ while IFS= read -r line || [ -n "${line:-}" ]; do
       *) purposes="$purposes $purpose" ;;
     esac
     if [ "$variant" != defaultFunSemanticsVariantE ]; then
-      echo "advance record missing E variant: $line" >&2
+      echo "advance record is not variant E: $line" >&2
+      advance_wrong_variant=$((advance_wrong_variant + 1))
     fi
   fi
 done < "$claims"
@@ -61,7 +76,8 @@ done
 
 schema_outcome=ESTABLISHED
 if [ "$claims_n" -eq 0 ] || [ "$without_falsifier" -ne 0 ] \
-  || [ "$established_unbounded" -ne 0 ]; then
+  || [ "$established_unbounded" -ne 0 ] \
+  || [ "$advance_wrong_variant" -ne 0 ]; then
   schema_outcome=REFUTED
 fi
 if [ "$advance_n" -gt 0 ] && [ "$distinct" -lt 2 ]; then
@@ -84,6 +100,10 @@ if [ "$established_unbounded" -ne 0 ]; then
 fi
 if [ "$advance_n" -gt 0 ] && [ "$distinct" -lt 2 ]; then
   echo "advance family lacks two distinct purposes: count=$advance_n distinct=$distinct" >&2
+  exit 1
+fi
+if [ "$advance_wrong_variant" -ne 0 ]; then
+  echo "advance record is not variant E: count=$advance_wrong_variant" >&2
   exit 1
 fi
 exit 0

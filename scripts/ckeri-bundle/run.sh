@@ -23,8 +23,19 @@ mkdir -p "$dest"
 "$bundle_dir/check-claim-schema.sh" \
   "$dest/claims/schema-fixture.txt"
 
-"$bundle_dir/check-published-bytes.sh" \
-  "$dest/fixtures/clean-identity.json"
+published=$dest/published/manifest.json
+toy=$dest/fixtures/clean-identity.json
+if [ ! -f "$published" ]; then
+  echo "published identity artifact missing: $published" >&2
+  exit 1
+fi
+pub_digest=$(sha256sum "$published" | cut -d ' ' -f 1)
+toy_digest=$(sha256sum "$toy" | cut -d ' ' -f 1)
+if [ "$pub_digest" = "$toy_digest" ]; then
+  echo "artifact-binding verdict is over the toy fixture, not published identity bytes" >&2
+  exit 1
+fi
+"$bundle_dir/check-published-bytes.sh" "$published"
 
 [ -s "$dest/COVERAGE-BOUNDARY.md" ] \
   || { echo "coverage boundary prose missing from assembled bundle" >&2; exit 1; }

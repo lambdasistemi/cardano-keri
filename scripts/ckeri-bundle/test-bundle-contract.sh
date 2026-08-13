@@ -235,6 +235,28 @@ expect_red INV-246-C13-established-without-coverage \
 expect_red INV-246-C4-single-advance-purpose \
   'advance family lacks two distinct purposes' \
   check_claim_schema "$work/claims-one-advance.txt"
+
+# Finding class from auditor-C1-s1 schema-pairing-probe.sh
+# (sha256 bf59a5bf565047c9f4061ada1ada564479804a80110543bb546dab135d39f834)
+# against candidate 35e2ec92: a REFUTED claim must not license a
+# different claim's ESTABLISHED, and a non-E Advance must fail.
+cat > "$work/claims-orphan.txt" <<'EOF'
+CLAIM id=a kind=spend variant=defaultFunSemanticsVariantE outcome=REFUTED
+CLAIM id=b kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED
+EOF
+cat > "$work/claims-wrong-variant.txt" <<'EOF'
+CLAIM id=a kind=advance purpose=compatibility-refreeze variant=defaultFunSemanticsVariantA outcome=REFUTED
+CLAIM id=a kind=advance purpose=compatibility-refreeze variant=defaultFunSemanticsVariantA coverage=parsed-document outcome=ESTABLISHED
+CLAIM id=b kind=advance purpose=p3-p6-composed variant=defaultFunSemanticsVariantA outcome=REFUTED
+CLAIM id=b kind=advance purpose=p3-p6-composed variant=defaultFunSemanticsVariantA coverage=parsed-document outcome=ESTABLISHED
+EOF
+expect_red INV-246-C3-orphan-claim-pairing \
+  'ESTABLISHED without per-claim falsifier' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-orphan.txt"
+expect_red INV-246-C4-advance-non-e-variant \
+  'advance record is not variant E' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-wrong-variant.txt"
+
 check_claim_schema "$work/claims-clean.txt" > "$work/schema.out"
 grep -Fq 'without_falsifier=0' "$work/schema.out" \
   || fail "clean schema oracle did not publish without_falsifier=0"
@@ -593,7 +615,8 @@ for required in \
   "$bundle_dir/inventory.txt" \
   "$bundle_dir/check-published-bytes.sh" \
   "$bundle_dir/check-falsifier-reachability.sh" \
-  "$bundle_dir/COVERAGE-BOUNDARY.md"; do
+  "$bundle_dir/COVERAGE-BOUNDARY.md" \
+  "$bundle_dir/isolate-run.sh"; do
   [ -e "$required" ] || fail "declared production surface missing: $required"
 done
 
@@ -601,5 +624,66 @@ check_entry_pins "$bundle_dir/run.sh" \
   || fail "INV-246-C1: production entry point depends on a desk path"
 check_schema_reached_by_runner "$repo_root/offchain/flake.nix" \
   || fail "INV-246-C5: flake-owned runner does not reach the schema check"
+
+# Finding class from auditor-C1-s1 artifact-binding-subject-probe.sh
+# (sha256 9c3b64613d7b0a6cbf028d3a5f385c6fac7b6f6378274fc0d6d852459a5cbb1f)
+# against candidate 35e2ec92: binding must not be the toy fixture when
+# the inventory names no published subject.
+judge_binding_subject() {
+  local out=$1
+  local binding fixture subjects
+  binding=$(sed -n 's/^AUDIT-ARTIFACT-BINDING digest=\([^ ]*\).*/\1/p' "$out")
+  fixture=$(sha256sum "$bundle_dir/fixtures/clean-identity.json" | cut -d' ' -f1)
+  subjects=$(grep -cE '(^|/)(plutus\.json|manifest\.json|blueprint\.json)([[:space:]]|$)' \
+    "$bundle_dir/inventory.txt" || true)
+  if [ "$subjects" -eq 0 ]; then
+    echo "inventory names no published identity artifact" >&2
+    return 1
+  fi
+  if [ -z "$binding" ] || [ "$binding" = "$fixture" ]; then
+    echo "artifact-binding verdict is over the toy fixture, not published identity bytes" >&2
+    return 1
+  fi
+  return 0
+}
+expect_red INV-246-ARTIFACT-BINDING-TOY-SUBJECT \
+  'declared artifact missing from source: published/manifest.json' \
+  "$bundle_dir/run.sh" "$work/bind-missing"
+cp -a "$bundle_dir" "$work/bundle-copy"
+mkdir -p "$work/bundle-copy/published"
+cp "$work/bundle-copy/fixtures/clean-identity.json" \
+  "$work/bundle-copy/published/manifest.json"
+expect_red INV-246-ARTIFACT-BINDING-TOY-COPY \
+  'toy fixture, not published identity bytes' \
+  "$work/bundle-copy/run.sh" "$work/bind-toy"
+printf '%s\n' \
+  '{"identity":{"variant":"defaultFunSemanticsVariantE","source":"not-the-toy"}}' \
+  > "$work/bundle-copy/published/manifest.json"
+"$work/bundle-copy/run.sh" "$work/bind-real" > "$work/bind.out"
+judge_binding_subject "$work/bind.out" \
+  || fail "non-toy published identity was not accepted as the binding subject"
+
+# Finding class from auditor-C1-s1 reproduction-access-probe.sh
+# (sha256 fa0c03e405659361f64991d9e5aac61e13c34d9d71ed85383cfe00d790876f82):
+# worktree_access=none is RED unless isolation measured readable=0.
+judge_isolation_record() {
+  local record=$1
+  if grep -Eq 'worktree_access=none' <<<"$record" \
+    && ! grep -Eq 'readable=0' <<<"$record"; then
+    echo "worktree_access=none is asserted, not measured" >&2
+    return 1
+  fi
+  return 0
+}
+expect_red INV-246-C9-access-asserted-not-measured \
+  'worktree_access=none is asserted, not measured' \
+  judge_isolation_record \
+  'AUDIT-REPRODUCTION source=fresh-clone worktree_access=none entry_point=scripts/ckeri-bundle/run.sh exit=0'
+iso_out=$("$bundle_dir/isolate-run.sh" \
+  --forbid "$repo_root" \
+  --forbid /tmp/ms-keri-8/e190/t246 \
+  -- true)
+echo "$iso_out" | grep -Eq 'readable=0' \
+  || fail "isolate-run did not measure readable=0: $iso_out"
 
 echo "bundle-contract: OK"

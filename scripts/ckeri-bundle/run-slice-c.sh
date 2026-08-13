@@ -84,6 +84,16 @@ c3_rc=$?
 set -e
 [ "$c3_rc" -gt 0 ]
 echo "AUDIT-SELFTEST leg=green-without-falsifier rc=$c3_rc outcome=REFUTED"
+printf '%s\n' \
+  'CLAIM id=a kind=spend variant=defaultFunSemanticsVariantE outcome=REFUTED' \
+  'CLAIM id=b kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED' \
+  > "$work/orphan.txt"
+set +e
+orphan_out=$("$bundle_dir/check-claim-schema.sh" "$work/orphan.txt" 2>&1)
+orphan_rc=$?
+set -e
+[ "$orphan_rc" -gt 0 ]
+echo "AUDIT-SELFTEST leg=orphan-claim-pairing rc=$orphan_rc outcome=REFUTED"
 
 # --- published bytes ---
 set +e
@@ -99,8 +109,18 @@ set -e
 [ "$dup_rc" -gt 0 ] && [ "$bom_rc" -gt 0 ]
 echo "AUDIT-SELFTEST leg=second-conforming-parse-differs rc=$dup_rc outcome=REFUTED"
 echo "AUDIT-SELFTEST leg=artifact-not-bound-to-verdict rc=$bom_rc outcome=REFUTED"
-"$bundle_dir/check-published-bytes.sh" \
-  "$bundle_dir/fixtures/clean-identity.json"
+published=$bundle_dir/published/manifest.json
+[ -f "$published" ] || {
+  echo "published identity artifact missing: $published" >&2
+  exit 1
+}
+toy_digest=$(sha256sum "$bundle_dir/fixtures/clean-identity.json" | cut -d ' ' -f 1)
+pub_digest=$(sha256sum "$published" | cut -d ' ' -f 1)
+[ "$pub_digest" != "$toy_digest" ] || {
+  echo "artifact-binding verdict is over the toy fixture, not published identity bytes" >&2
+  exit 1
+}
+"$bundle_dir/check-published-bytes.sh" "$published"
 
 # --- C5 / FALSIFIER-REACHABILITY discriminator ---
 printf '%s\n' \

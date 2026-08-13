@@ -2034,6 +2034,7 @@
                   pkgs.gnugrep
                   pkgs.gnused
                   pkgs.jq
+                  pkgs.util-linux
                 ];
                 text = ''
                   bash ${./blaster/test-extraction.sh} \
@@ -2254,22 +2255,41 @@
                     done
 
                     # C1/C2/C9: execute the bundle entry from a fresh clone
-                    # with no access to this worktree and no desk path.
+                    # under a mount namespace where the issue worktree and
+                    # ticket runtime are unreadable.
                     repro=$(mktemp -d)
                     git clone --no-hardlinks --quiet "$repo_root" "$repro/src"
-                    bash "$repro/src/scripts/ckeri-bundle/run.sh" "$repro/run"
-                    echo "AUDIT-REPRODUCTION source=fresh-clone worktree_access=none entry_point=scripts/ckeri-bundle/run.sh exit=0 instrument=git-clone-no-hardlinks window=single-clone coverage=parsed-document outcome=ESTABLISHED"
+                    mkdir -p "$repro/src/scripts/ckeri-bundle/published"
+                    cp "$identity_manifest" \
+                      "$repro/src/scripts/ckeri-bundle/published/manifest.json"
+                    isol_out=$(mktemp)
+                    bash "$repro/src/scripts/ckeri-bundle/isolate-run.sh" \
+                      --forbid "$repo_root" \
+                      --forbid /tmp/ms-keri-8/e190/t246 \
+                      -- bash "$repro/src/scripts/ckeri-bundle/run.sh" \
+                      "$repro/run" | tee "$isol_out"
+                    isol_line=$(grep -E '^AUDIT-ISOLATION ' "$isol_out" | tail -1)
+                    echo "$isol_line"
+                    echo "$isol_line" | grep -Eq 'readable=0' \
+                      || { echo "worktree_access is not none: $isol_line" >&2; exit 1; }
+                    echo "AUDIT-REPRODUCTION source=fresh-clone worktree_access=none entry_point=scripts/ckeri-bundle/run.sh exit=0 instrument=unshare-mount-tmpfs window=single-clone coverage=parsed-document outcome=ESTABLISHED"
                     rm -rf "$repro"
                   fi
 
                   # Slice C schema and completeness — reached by this runner
                   # (C5) and by checks.blaster (sandbox). Must not live only
-                  # inside the host skip.
+                  # inside the host skip. Inject the source-built published
+                  # identity bytes; never bind the toy fixture.
                   ckeri_bundle=${inputs.blasterIdentityScripts}/ckeri-bundle
-                  bash "$ckeri_bundle/check-claim-schema.sh" \
-                    "$ckeri_bundle/claims/schema-fixture.txt"
-                  bash "$ckeri_bundle/run-slice-c.sh" \
-                    "$ckeri_bundle" ${./flake.nix}
+                  c_work=$(mktemp -d)
+                  cp -a "$ckeri_bundle/." "$c_work/"
+                  chmod -R u+w "$c_work"
+                  mkdir -p "$c_work/published"
+                  cp "$identity_manifest" "$c_work/published/manifest.json"
+                  bash "$c_work/check-claim-schema.sh" \
+                    "$c_work/claims/schema-fixture.txt"
+                  bash "$c_work/run-slice-c.sh" \
+                    "$c_work" ${./flake.nix}
 
                   echo "PASS: blaster app executed controls, extraction, pin audit, and Lean build"
                 '';

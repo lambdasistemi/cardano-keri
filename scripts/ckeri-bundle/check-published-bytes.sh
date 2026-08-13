@@ -20,8 +20,8 @@ if [ "$(head -c 3 "$bytes" | od -An -tx1 | tr -d ' \n')" = "efbbbf" ]; then
 fi
 
 parsed_last=$(jq -er '.identity.variant' "$bytes")
-parsed_first=$(grep -oE '"variant":"[^"]+"' "$bytes" | head -1 \
-  | sed 's/"variant":"//;s/"$//')
+parsed_first=$(grep -oE '"variant"[[:space:]]*:[[:space:]]*"[^"]+"' "$bytes" \
+  | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
 if [ -z "$parsed_first" ] || [ "$parsed_last" != "$parsed_first" ]; then
   echo "AUDIT-SELFTEST leg=second-conforming-parse-differs rc=1 outcome=REFUTED"
   echo "second conforming parse differs: last_wins=$parsed_last first_wins=${parsed_first:-<none>}" >&2

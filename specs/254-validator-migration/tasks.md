@@ -17,7 +17,7 @@ The machine build gate precedes implementation and audit.
   point, and three board witnesses as legacy inputs.
 - [x] T254-005 Initialize the runtime campaign ledger and carry its charged
   extensions through A-007: all BLOCKING rows retain evidence,
-  `builds_spent=6`, `builds_budget=9`, allocated by `plan.md`.
+  `builds_spent=8`, `builds_budget=10`, allocated by `plan.md`.
 
 ## Phase 2 — S254-1 checkpoint family
 
@@ -43,10 +43,10 @@ The machine build gate precedes implementation and audit.
 
 ## Phase 3 — S254-R register derivation repair
 
-- [ ] T254-109 [US1] Drop the cut-version remnant from register deployment;
+- [x] T254-109 [US1] Drop the cut-version remnant from register deployment;
   prove every live-blueprint validator's declared/applied arity agrees, sweep
   deployment/serialization/manifests for other version remnants, register M8
-  against the corrected identity, and pass fresh audit build 7/9 before push.
+  against the corrected identity, and pass fresh audit build 8/10 before push.
 
 ## Phase 4 — S254-E enforcement entitlement integration
 

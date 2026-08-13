@@ -1150,6 +1150,36 @@
                 ${deploymentTestsRunner}/bin/deployment-tests
                 touch "$out"
               '';
+            # S254-R: the derived deployment control, verification-only. It is
+            # the same binary as deploymentTestsRunner because its arity truth
+            # must come from THIS blueprint fixture; a separate executable
+            # would need a second copy of that wiring and the two could drift.
+            #
+            # Strict PATH beyond the executable: `self-test` materializes trees
+            # with git+tar and then runs the base tree's own legacy sweep, whose
+            # external tools must all be present. If any were missing, three
+            # `old=` legs would report NO-EVIDENCE — which fails closed, but for
+            # the wrong reason — so they are listed rather than inherited.
+            derivedControls = pkgs.writeShellApplication {
+              name = "s254r-derived-controls";
+              runtimeInputs = [
+                deploymentTestsExe
+                pkgs.git
+                pkgs.gnutar
+                pkgs.coreutils
+                pkgs.gnugrep
+                pkgs.gawk
+                pkgs.gnused
+                pkgs.findutils
+                pkgs.diffutils
+              ];
+              text = ''
+                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
+                export KERI_BOARD_BLUEPRINT="${inputs.deployPreprod}/endpoint-board-blueprint.json"
+                exec ${deploymentTestsExe}/bin/deployment-tests "$@"
+              '';
+            };
             # The merged PV11 fixture deliberately shortens epochs from 500 to
             # 100 slots. Register runs against that stock fixture. The legacy
             # Cage smoke still probes a fixed +30s horizon, so preserve its
@@ -1274,8 +1304,8 @@
             '';
           in {
             inherit blueprint onchainSrc ckeriRunner deploymentTestsCheck
-              deploymentTestsRunner runner followerRunner check sweepRunner
-              sweepConsistency;
+              deploymentTestsRunner derivedControls runner followerRunner check
+              sweepRunner sweepConsistency;
           });
 
           # S1 exact-artifact and complete pinned-toolchain surface. This is
@@ -1841,6 +1871,7 @@
             e2e-sweep = e2eWiring.sweepRunner;
             follower-e2e = e2eWiring.followerRunner;
             plutus-blueprint = e2eWiring.blueprint;
+            s254r-derived-controls = e2eWiring.derivedControls;
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
             blaster = blasterWiring.runner;
             checkpoint-migration-blaster = blasterWiring.migrationRunner;

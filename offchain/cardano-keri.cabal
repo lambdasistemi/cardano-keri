@@ -434,9 +434,10 @@ test-suite deployment-tests
     , crypton
     , directory
     , filepath
-    , hspec                           >=2.11 && <2.12
+    , ghc-lib-parser                  >=9.12.3 && <9.13
+    , hspec                           >=2.11   && <2.12
     , http-conduit
-    , memory                          >=0.18 && <0.19
+    , memory                          >=0.18   && <0.19
     , microlens
     , plutus-core
     , plutus-ledger-api

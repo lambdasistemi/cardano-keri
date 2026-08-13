@@ -18,7 +18,9 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
+import System.Environment (getEnv)
 import System.Exit (exitFailure)
+import System.FilePath (replaceFileName)
 import System.IO (hPutStrLn, stderr)
 import Test.Hspec (
     Spec,
@@ -107,9 +109,10 @@ instance FromJSON WitnessAnchor where
 -- makes the positive reconciliation control fail.
 readPreprodBoardAids :: IO [Text]
 readPreprodBoardAids = do
+    boardBlueprintPath <- getEnv "KERI_BOARD_BLUEPRINT"
     decoded <-
         Aeson.eitherDecodeFileStrict'
-            "../deploy/preprod/witnesses.json"
+            (replaceFileName boardBlueprintPath "witnesses.json")
     anchors <- either fail pure decoded
     pure (map witnessAnchorAid anchors)
 

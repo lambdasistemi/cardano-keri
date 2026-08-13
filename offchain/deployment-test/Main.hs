@@ -9,6 +9,7 @@ import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as Endpoin
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
+import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
 import Cardano.KERI.Deployment.TransactionRuntimeSpec qualified as TransactionRuntimeSpec
 import Test.Hspec (hspec)
 
@@ -23,4 +24,5 @@ main = hspec $ do
     ManifestSpec.spec
     CheckpointMigrationSpec.spec
     RegistrationSpec.spec
+    ScriptAritySpec.spec
     TransactionRuntimeSpec.spec

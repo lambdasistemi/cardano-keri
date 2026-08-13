@@ -16,6 +16,7 @@ module Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     loadBlueprint,
     extractCompiledCode,
+    mkAppliedArtifact,
     applyParams,
     applyCheckpointParams,
     applyPredecessorParam,
@@ -52,7 +53,7 @@ import Cardano.Ledger.Plutus.Language (
     PlutusBinary (..),
  )
 import Codec.Binary.Bech32 qualified as Bech32
-import Data.Aeson (FromJSON (..), withObject, (.:), (.:?))
+import Data.Aeson (FromJSON (..), withObject, (.!=), (.:), (.:?))
 import Data.Aeson qualified as Aeson
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
@@ -73,6 +74,10 @@ data Validator = Validator
     { vTitle :: Text
     , vHash :: Text
     , vCompiledCode :: Maybe Text
+    , vParameters :: [Text]
+    {- ^ the titles of the applied parameters this validator declares, in
+    order.  The blueprint is the only place a declared arity comes from.
+    -}
     }
     deriving stock (Show, Eq)
 
@@ -96,6 +101,14 @@ instance FromJSON Validator where
             <$> o .: "title"
             <*> o .: "hash"
             <*> o .:? "compiledCode"
+            <*> (map parameterTitle <$> (o .:? "parameters" .!= []))
+
+newtype Parameter = Parameter {parameterTitle :: Text}
+    deriving stock (Show, Eq)
+
+instance FromJSON Parameter where
+    parseJSON = withObject "Parameter" $ \o ->
+        Parameter <$> (o .:? "title" .!= "")
 
 instance FromJSON Blueprint where
     parseJSON = withObject "Blueprint" $ \o -> Blueprint <$> o .: "validators"
@@ -107,23 +120,25 @@ extractCompiledCode :: Text -> Blueprint -> Maybe SBS.ShortByteString
 extractCompiledCode prefix blueprint =
     snd <$> extractValidator prefix blueprint
 
-extractValidator :: Text -> Blueprint -> Maybe (Text, SBS.ShortByteString)
+extractValidator ::
+    Text -> Blueprint -> Maybe (Validator, SBS.ShortByteString)
 extractValidator prefix blueprint = do
     validator <-
         find (T.isPrefixOf prefix . vTitle) (validators blueprint)
     validatorProgram validator
 
-extractValidatorExact :: Text -> Blueprint -> Maybe (Text, SBS.ShortByteString)
+extractValidatorExact ::
+    Text -> Blueprint -> Maybe (Validator, SBS.ShortByteString)
 extractValidatorExact title blueprint = do
     validator <-
         find ((== title) . vTitle) (validators blueprint)
     validatorProgram validator
 
-validatorProgram :: Validator -> Maybe (Text, SBS.ShortByteString)
+validatorProgram :: Validator -> Maybe (Validator, SBS.ShortByteString)
 validatorProgram validator = do
     hex <- vCompiledCode validator
     bytes <- decodeHex hex
-    pure (vTitle validator, SBS.toShort bytes)
+    pure (validator, SBS.toShort bytes)
 
 decodeHex :: Text -> Maybe BS.ByteString
 decodeHex text
@@ -150,14 +165,38 @@ applyParams :: Integer -> ByteString -> SBS.ShortByteString -> SBS.ShortByteStri
 applyParams version predecessorPolicy =
     applyDataArgs [I version, B predecessorPolicy]
 
-{- | Apply the one lineage input a #254 successor program takes: the single
+{- | Build one published deployment artifact from a blueprint validator and the
+exact argument plan applied to it.
+
+Every V1 artifact is constructed here, so a caller cannot publish an
+application this constructor has not accepted, and the plan a validator is
+applied to is always visible beside the declaration it has to match.
+-}
+mkAppliedArtifact ::
+    Text ->
+    Text ->
+    Validator ->
+    [Data] ->
+    SBS.ShortByteString ->
+    Either String ScriptArtifact
+mkAppliedArtifact name role validator plan program =
+    let applied = applyDataArgs plan program
+     in Right
+            ScriptArtifact
+                { artifactName = name
+                , artifactBlueprintTitle = vTitle validator
+                , artifactRole = role
+                , artifactProgram = applied
+                , artifactScriptHash = computeScriptHash applied
+                }
+
+{- | The one lineage input a #254 successor program takes: the single
 predecessor minting policy it accepts.  Release identity is the resulting
 hash, so no generation integer is applied.
 -}
-applyPredecessorParam ::
-    ByteString -> SBS.ShortByteString -> SBS.ShortByteString
+applyPredecessorParam :: ByteString -> [Data]
 applyPredecessorParam predecessorPolicy =
-    applyDataArgs [B predecessorPolicy]
+    [B predecessorPolicy]
 
 applyCheckpointParams ::
     Integer ->
@@ -169,36 +208,26 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
+    [Data]
 applyCheckpointParams version migrationHash lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
-    applyDataArgs
-        [ I version
-        , B migrationHash
-        , B lifecycleHash
-        , B advanceHash
-        , B enforcementHash
-        , I network
-        , I registrationBond
-        , I freezeBond
-        , I freezeWindow
-        ]
+    [ I version
+    , B migrationHash
+    , B lifecycleHash
+    , B advanceHash
+    , B enforcementHash
+    , I network
+    , I registrationBond
+    , I freezeBond
+    , I freezeWindow
+    ]
 
-applyLifecycleParams ::
-    Integer ->
-    ByteString ->
-    Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
+applyLifecycleParams :: Integer -> ByteString -> Integer -> [Data]
 applyLifecycleParams version proofPolicy registrationBond =
-    applyDataArgs [I version, B proofPolicy, I registrationBond]
+    [I version, B proofPolicy, I registrationBond]
 
-applyAdvanceParams ::
-    Integer ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
+applyAdvanceParams :: Integer -> [Data]
 applyAdvanceParams version =
-    applyDataArgs [I version]
+    [I version]
 
 applyDataArgs :: [Data] -> SBS.ShortByteString -> SBS.ShortByteString
 applyDataArgs arguments code =
@@ -254,100 +283,96 @@ v1FreezeWindow = 10_000
 
 deriveV1Scripts :: Blueprint -> Either String [ScriptArtifact]
 deriveV1Scripts blueprint = do
-    (hashProofTitle, hashProofProgram) <-
+    (hashProofValidator, hashProofProgram) <-
         require "hash_proof.hash_proof.mint" "hash-proof"
-    let hashProofHash = computeScriptHash hashProofProgram
-        hashProof =
-            artifact
-                "hash-proof"
-                hashProofTitle
-                "minting-policy"
-                hashProofProgram
-    (lifecycleTitle, lifecycleProgram) <-
+    hashProof <-
+        mkAppliedArtifact
+            "hash-proof"
+            "minting-policy"
+            hashProofValidator
+            []
+            hashProofProgram
+    let hashProofHash = artifactScriptHash hashProof
+    (lifecycleValidator, lifecycleProgram) <-
         require
             "checkpoint_observer.observer_lifecycle.withdraw"
             "observer-lifecycle"
-    let appliedLifecycle =
-            applyLifecycleParams
+    lifecycle <-
+        mkAppliedArtifact
+            "observer-lifecycle"
+            "withdrawal-observer"
+            lifecycleValidator
+            ( applyLifecycleParams
                 v1CheckpointVersion
                 (scriptHashBytes hashProofHash)
                 v1RegistrationBond
-                lifecycleProgram
-        lifecycleHash = computeScriptHash appliedLifecycle
-        lifecycle =
-            artifact
-                "observer-lifecycle"
-                lifecycleTitle
-                "withdrawal-observer"
-                appliedLifecycle
-    (advanceTitle, advanceProgram) <-
+            )
+            lifecycleProgram
+    let lifecycleHash = artifactScriptHash lifecycle
+    (advanceValidator, advanceProgram) <-
         require
             "checkpoint_observer.observer_advance.withdraw"
             "observer-advance"
-    let appliedAdvance =
-            applyAdvanceParams v1CheckpointVersion advanceProgram
-        advanceHash = computeScriptHash appliedAdvance
-        advance =
-            artifact
-                "observer-advance"
-                advanceTitle
-                "withdrawal-observer"
-                appliedAdvance
-    (enforcementTitle, enforcementProgram) <-
+    advance <-
+        mkAppliedArtifact
+            "observer-advance"
+            "withdrawal-observer"
+            advanceValidator
+            (applyAdvanceParams v1CheckpointVersion)
+            advanceProgram
+    let advanceHash = artifactScriptHash advance
+    (enforcementValidator, enforcementProgram) <-
         require
             "checkpoint_observer.observer_enforcement.withdraw"
             "observer-enforcement"
-    let appliedEnforcement =
-            applyAdvanceParams v1CheckpointVersion enforcementProgram
-        enforcementHash = computeScriptHash appliedEnforcement
-        enforcement =
-            artifact
-                "observer-enforcement"
-                enforcementTitle
-                "withdrawal-observer"
-                appliedEnforcement
+    enforcement <-
+        mkAppliedArtifact
+            "observer-enforcement"
+            "withdrawal-observer"
+            enforcementValidator
+            (applyAdvanceParams v1CheckpointVersion)
+            enforcementProgram
+    let enforcementHash = artifactScriptHash enforcement
     -- #254 A-001: the promoted migration observer, derived as a v1 family
     -- component and applied to the checkpoint program by hash.  Its
     -- predecessor pin is an applied parameter, never a redeemer field.
-    (migrationTitle, migrationProgram) <-
+    (migrationValidator, migrationProgram) <-
         require
             "checkpoint_observer.observer_migration.withdraw"
             "observer-migration"
     -- The successor observer is applied with exactly one input: the single
     -- predecessor policy it accepts.  Its own hash is its release identity, so
     -- there is no generation integer to apply.
-    let predecessor_policy = scriptHashBytes hashProofHash
-        appliedMigration =
-            applyPredecessorParam predecessor_policy migrationProgram
-        migrationHash = computeScriptHash appliedMigration
-        migration =
-            artifact
-                "observer-migration"
-                migrationTitle
-                "withdrawal-observer"
-                appliedMigration
-    (checkpointTitle, checkpointProgram) <-
+    migration <-
+        mkAppliedArtifact
+            "observer-migration"
+            "withdrawal-observer"
+            migrationValidator
+            (applyPredecessorParam (scriptHashBytes hashProofHash))
+            migrationProgram
+    let migrationHash = artifactScriptHash migration
+    (checkpointValidator, checkpointProgram) <-
         require
             "checkpoint_register.checkpoint_register.mint"
             "checkpoint-register"
     let appliedCheckpoint =
-            applyCheckpointParams
-                v1CheckpointVersion
-                (scriptHashBytes migrationHash)
-                (scriptHashBytes lifecycleHash)
-                (scriptHashBytes advanceHash)
-                (scriptHashBytes enforcementHash)
-                v1NetworkDiscriminator
-                v1RegistrationBond
-                v1FreezeBond
-                v1FreezeWindow
-                checkpointProgram
-        checkpoint =
-            artifact
+            mkAppliedArtifact
                 "checkpoint-register"
-                checkpointTitle
                 "validator-and-minting-policy"
-                appliedCheckpoint
+                checkpointValidator
+                ( applyCheckpointParams
+                    v1CheckpointVersion
+                    (scriptHashBytes migrationHash)
+                    (scriptHashBytes lifecycleHash)
+                    (scriptHashBytes advanceHash)
+                    (scriptHashBytes enforcementHash)
+                    v1NetworkDiscriminator
+                    v1RegistrationBond
+                    v1FreezeBond
+                    v1FreezeWindow
+                )
+                checkpointProgram
+    checkpoint <- appliedCheckpoint
     pure [hashProof, lifecycle, advance, enforcement, migration, checkpoint]
   where
     require title name =
@@ -355,14 +380,6 @@ deriveV1Scripts blueprint = do
             (Left $ T.unpack name <> " compiled code not found in production blueprint")
             Right
             (extractValidatorExact title blueprint)
-    artifact name title role program =
-        ScriptArtifact
-            { artifactName = name
-            , artifactBlueprintTitle = title
-            , artifactRole = role
-            , artifactProgram = program
-            , artifactScriptHash = computeScriptHash program
-            }
 
 {- | Derive the parameter-free endpoint-board combined validator exactly.
 
@@ -371,19 +388,17 @@ combined Aiken validator carries the same compiled program.
 -}
 deriveBoardScript :: Blueprint -> Either String ScriptArtifact
 deriveBoardScript blueprint = do
-    (title, program) <-
+    (validator, program) <-
         maybe
             (Left "endpoint-board compiled code not found in production blueprint")
             Right
             (extractValidatorExact "endpoint_board.endpoint_board.mint" blueprint)
-    pure
-        ScriptArtifact
-            { artifactName = "endpoint-board"
-            , artifactBlueprintTitle = title
-            , artifactRole = "validator-and-minting-policy"
-            , artifactProgram = program
-            , artifactScriptHash = computeScriptHash program
-            }
+    mkAppliedArtifact
+        "endpoint-board"
+        "validator-and-minting-policy"
+        validator
+        []
+        program
 
 scriptHashBytes :: ScriptHash -> ByteString
 scriptHashBytes (ScriptHash hash) = hashToBytes hash

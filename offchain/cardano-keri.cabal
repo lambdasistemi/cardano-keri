@@ -406,6 +406,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
@@ -437,6 +438,7 @@ test-suite deployment-tests
     , memory                          >=0.18 && <0.19
     , microlens
     , plutus-core
+    , plutus-ledger-api
     , temporary
     , text
     , unix

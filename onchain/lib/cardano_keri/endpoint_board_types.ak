@@ -22,7 +22,7 @@ pub type BoardMintRedeemer {
   Post
   Burn
   MigrateIn { source_ref: OutputReference }
-  LegacyMigrateIn { source_ref: OutputReference }
+  LegacyMigrateIn { source_ref: OutputReference, refund_address: Address }
 }
 
 /// Spend-side endpoint-board lifecycle action.

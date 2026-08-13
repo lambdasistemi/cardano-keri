@@ -26,10 +26,12 @@ use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
 use cardano/transaction.{
-  InlineDatum, NoDatum, Output, OutputReference, Transaction, find_input,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, find_input,
+  placeholder,
 }
 use cardano_keri/endpoint_board_authorization.{
-  AuthorizedBoardDatum, datum_is_authentic, nonce_names, nonce_reference,
+  AuthorizedBoardDatum, BoardNonce, datum_is_authentic, nonce_names,
+  nonce_reference,
 }
 use cardano_keri/endpoint_board_migration
 use cardano_keri/endpoint_board_types.{
@@ -184,15 +186,13 @@ validator endpoint_board(accepted_predecessor_policy: PolicyId) {
         endpoint_board_migration.validate_board_migrate_in(
           accepted_predecessor_policy,
           source_ref,
-          target_record(tx, policy_id),
           policy_id,
           tx,
         )
-      LegacyMigrateIn { source_ref } ->
+      LegacyMigrateIn { source_ref, refund_address } ->
         endpoint_board_migration.validate_legacy_board_migrate_in(
-          endpoint_board_migration.preprod_v0_identity(),
           source_ref,
-          target_record(tx, policy_id),
+          refund_address,
           policy_id,
           tx,
         )
@@ -222,9 +222,108 @@ validator endpoint_board(accepted_predecessor_policy: PolicyId) {
   }
 }
 
-fn target_record(tx: Transaction, policy_id: PolicyId) -> AuthorizedBoardDatum {
-  expect [successor] = board_outputs(policy_id, tx.outputs)
-  expect InlineDatum(datum_data) = successor.datum
-  expect datum: AuthorizedBoardDatum = datum_data
-  datum
+// S254-2 falsification fixture for the applied-parameter seam. This lives in
+// the validator module so the control invokes the real mint entrypoint rather
+// than only the migration helper beneath it.
+const s254_2_source_policy: PolicyId =
+  #"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+
+const s254_2_target_policy: PolicyId =
+  #"b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"
+
+const s254_2_foreign_policy: PolicyId =
+  #"d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"
+
+const s254_2_witness_key: ByteArray =
+  #"d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729"
+
+const s254_2_endpoint_record: ByteArray =
+  #"6c6f632f736368656d652d766563746f722d31"
+
+const s254_2_endpoint_signature: ByteArray =
+  #"1a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05"
+
+const s254_2_owner: ByteArray =
+  #"11111111111111111111111111111111111111111111111111111111"
+
+const s254_2_source_authorization_signature: ByteArray =
+  #"9f6fc1ede2a56451d479fa7939d11a002488ed0796fac74c3ef9151bc373304dc8311bcc6bbc6b4e94a08e81a4a25c47934dd7c7757d3eb8a16793513f508d07"
+
+const s254_2_target_authorization_signature: ByteArray =
+  #"6293d5c43801949c41ab88499ab334120b564f0bc087c11d3017d37c3c7aa31d07868fb2bee97371b139c4e8dd0d671d387a1e12aa65b9ef654dd13dba45580d"
+
+const s254_2_source_tx_id: ByteArray =
+  #"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+
+fn s254_2_source_ref() -> OutputReference {
+  OutputReference { transaction_id: s254_2_source_tx_id, output_index: 0 }
+}
+
+fn s254_2_seam_datum(
+  nonce_tx_id: ByteArray,
+  authorization_signature: ByteArray,
+) -> AuthorizedBoardDatum {
+  AuthorizedBoardDatum {
+    witness_key: s254_2_witness_key,
+    endpoint_record: s254_2_endpoint_record,
+    endpoint_signature: s254_2_endpoint_signature,
+    owner_key_hash: s254_2_owner,
+    nonce: BoardNonce { nonce_tx_id, nonce_output_index: 0 },
+    authorization_signature,
+  }
+}
+
+fn s254_2_seam_output(
+  policy_id: PolicyId,
+  datum: AuthorizedBoardDatum,
+) -> Output {
+  Output {
+    address: from_script(policy_id),
+    value: from_lovelace(4_000_000)
+      |> merge(from_asset(policy_id, s254_2_witness_key, 1)),
+    datum: InlineDatum(datum),
+    reference_script: None,
+  }
+}
+
+fn s254_2_seam_tx() -> Transaction {
+  let source = s254_2_seam_datum(
+    #"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+    s254_2_source_authorization_signature,
+  )
+  let target = s254_2_seam_datum(
+    s254_2_source_tx_id,
+    s254_2_target_authorization_signature,
+  )
+  Transaction {
+    ..placeholder,
+    inputs: [
+      Input {
+        output_reference: s254_2_source_ref(),
+        output: s254_2_seam_output(s254_2_source_policy, source),
+      },
+    ],
+    outputs: [s254_2_seam_output(s254_2_target_policy, target)],
+    mint: from_asset(s254_2_source_policy, s254_2_witness_key, -1)
+      |> merge(from_asset(s254_2_target_policy, s254_2_witness_key, 1)),
+    extra_signatories: [s254_2_owner],
+  }
+}
+
+test board_validator_accepts_applied_predecessor_policy() {
+  endpoint_board.mint(
+    s254_2_source_policy,
+    MigrateIn { source_ref: s254_2_source_ref() },
+    s254_2_target_policy,
+    s254_2_seam_tx(),
+  )
+}
+
+test s254_2_board_validator_rejects_foreign_predecessor_policy() fail {
+  endpoint_board.mint(
+    s254_2_foreign_policy,
+    MigrateIn { source_ref: s254_2_source_ref() },
+    s254_2_target_policy,
+    s254_2_seam_tx(),
+  )
 }

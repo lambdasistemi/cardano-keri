@@ -13,6 +13,8 @@ import Cardano.KERI.Deployment.EndpointBoard (
 import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as EndpointBoardTransactionSpec
 import Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec qualified as RestrictedPathSpec
 import Control.Monad (when)
+import Data.Aeson (FromJSON (..), (.:))
+import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -22,6 +24,7 @@ import Test.Hspec (
     Spec,
     describe,
     it,
+    runIO,
     shouldSatisfy,
  )
 import Test.Hspec.Core.Runner (
@@ -46,7 +49,8 @@ spec = do
     boardInventorySpec
 
 boardInventorySpec :: Spec
-boardInventorySpec =
+boardInventorySpec = do
+    expectedPreprodBoardAids <- runIO readPreprodBoardAids
     describe "S254-2 board inventory reconciliation" $ do
         it "reconciles all three frozen witness identities one-for-one" $
             reconcileBoardMigration
@@ -79,17 +83,45 @@ boardInventorySpec =
                     : drop 1 successorBoardInventory
                 )
                 `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_substituted_identity_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( successorRow plausibleForeignAid 1
+                    : drop 1 successorBoardInventory
+                )
+                `shouldSatisfy` isLeft
   where
     changedFirst = successorOne
 
--- D-004's three identities are frozen external anchors, not a count. Each is
--- named here so replacing one with a fourth row cannot satisfy completeness.
-expectedPreprodBoardAids :: [Text]
-expectedPreprodBoardAids =
+newtype WitnessAnchor = WitnessAnchor {witnessAnchorAid :: Text}
+
+instance FromJSON WitnessAnchor where
+    parseJSON =
+        Aeson.withObject "preprod witness anchor" $ \object ->
+            WitnessAnchor <$> object .: "aid"
+
+-- D-004's expected identities come from the committed deployment artifact.
+-- The source/successor fixtures remain independent, so changing either side
+-- makes the positive reconciliation control fail.
+readPreprodBoardAids :: IO [Text]
+readPreprodBoardAids = do
+    decoded <-
+        Aeson.eitherDecodeFileStrict'
+            "../deploy/preprod/witnesses.json"
+    anchors <- either fail pure decoded
+    pure (map witnessAnchorAid anchors)
+
+fixturePreprodBoardAids :: [Text]
+fixturePreprodBoardAids =
     [ witnessOneAid
     , witnessTwoAid
     , witnessThreeAid
     ]
+
+plausibleForeignAid :: Text
+plausibleForeignAid = "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 witnessOneAid, witnessTwoAid, witnessThreeAid :: Text
 witnessOneAid = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
@@ -97,10 +129,10 @@ witnessTwoAid = "BBkK9o9mMm_nIu5yl3x3L7ti8cYoKg-AoxpqQapMcE5B"
 witnessThreeAid = "BNP31dFWbqS_oUe2CUu24Ct7cQjpk3DscLzbpGT5OEz4"
 
 sourceBoardInventory :: [BoardEntry]
-sourceBoardInventory = zipWith boardRow expectedPreprodBoardAids [1 ..]
+sourceBoardInventory = zipWith boardRow fixturePreprodBoardAids [1 ..]
 
 successorBoardInventory :: [BoardEntry]
-successorBoardInventory = zipWith successorRow expectedPreprodBoardAids [1 ..]
+successorBoardInventory = zipWith successorRow fixturePreprodBoardAids [1 ..]
 
 successorOne :: BoardEntry
 successorOne = successorRow witnessOneAid 1

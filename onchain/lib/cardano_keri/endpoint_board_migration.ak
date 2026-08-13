@@ -8,17 +8,17 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
-use cardano/address.{Script, from_script}
+use cardano/address.{Address, Script, from_script}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
 use cardano/transaction.{
-  InlineDatum, NoDatum, Output, OutputReference, Transaction, find_input,
+  InlineDatum, NoDatum, Output, OutputReference, Spend, Transaction, find_input,
 }
 use cardano_keri/endpoint_board_authorization.{
   AuthorizedBoardDatum, datum_is_authentic, nonce_names,
 }
-use cardano_keri/endpoint_board_types.{BoardDatumV1}
+use cardano_keri/endpoint_board_types.{BoardAction, BoardDatumV1, Retire}
 use cardano_keri/migration/types.{Board, MigrationTarget}
 
 /// The immutable identity of the deployed preprod v0 board program.
@@ -61,7 +61,6 @@ pub fn validate_board_migrate_out(
     own_ref,
     source,
     target.target_policy,
-    None,
     tx,
   )
 }
@@ -70,7 +69,6 @@ pub fn validate_board_migrate_out(
 pub fn validate_board_migrate_in(
   accepted_predecessor_policy: PolicyId,
   source_ref: OutputReference,
-  target_record: AuthorizedBoardDatum,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
@@ -85,25 +83,24 @@ pub fn validate_board_migrate_in(
     source_ref,
     source,
     policy_id,
-    Some(target_record),
     tx,
   )
 }
 
 /// Enter from the frozen deployed v0 board through Retire/Burn.
 pub fn validate_legacy_board_migrate_in(
-  preprod_v0: LegacyBoardIdentity,
   source_ref: OutputReference,
-  target_record: AuthorizedBoardDatum,
+  refund_address: Address,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
-  expect preprod_v0 == preprod_v0_identity()
+  let preprod_v0 = preprod_v0_identity()
   expect Some(source_input) = find_input(tx.inputs, source_ref)
   expect source_input.output.address == from_script(preprod_v0.legacy_policy)
   expect InlineDatum(source_data) = source_input.output.datum
   expect source: BoardDatumV1 = source_data
   expect legacy_datum_is_authentic(source)
+  expect source_refund_address(source_ref, tx) == refund_address
   expect
     exact_marker_value(
       source_input.output,
@@ -111,29 +108,27 @@ pub fn validate_legacy_board_migrate_in(
       source.witness_key,
     )
   expect list.has(tx.extra_signatories, source.owner_key_hash)
-  expect policy_id != preprod_v0.legacy_policy
+  expect Some(successor) = sole_successor(policy_id, tx)
+  expect successor.address == from_script(policy_id)
+  expect InlineDatum(successor_data) = successor.datum
+  expect target: AuthorizedBoardDatum = successor_data
   expect
     exact_token_replacement(
       preprod_v0.legacy_policy,
       policy_id,
       source.witness_key,
+      target.witness_key,
       tx,
     )
-  expect Some(successor) = sole_successor(policy_id, source.witness_key, tx)
-  expect successor.address == from_script(policy_id)
-  expect InlineDatum(successor_data) = successor.datum
-  expect observed: AuthorizedBoardDatum = successor_data
-  expect observed == target_record
   expect
     board_continuity(
       source.witness_key,
       source.endpoint_record,
-      source.endpoint_signature,
       source.owner_key_hash,
       lovelace_of(source_input.output.value),
       source_ref,
       policy_id,
-      target_record,
+      target,
       successor,
     )
   // The v0 Retire/Burn scripts execute in this same transaction. Mirror their
@@ -150,7 +145,7 @@ pub fn validate_legacy_board_migrate_in(
   let deposit = lovelace_of(source_input.output.value)
   expect [_refund] = list.filter(
     tx.outputs,
-    fn(output) { is_exact_refund(output, deposit) },
+    fn(output) { is_exact_refund(output, refund_address, deposit) },
   )
   True
 }
@@ -176,31 +171,24 @@ fn permanent_transition(
   source_ref: OutputReference,
   source: AuthorizedBoardDatum,
   target_policy: PolicyId,
-  supplied_target: Option<AuthorizedBoardDatum>,
   tx: Transaction,
 ) -> Bool {
-  expect source_policy != target_policy
   expect list.has(tx.extra_signatories, source.owner_key_hash)
+  expect Some(successor) = sole_successor(target_policy, tx)
+  expect successor.address == from_script(target_policy)
+  expect InlineDatum(successor_data) = successor.datum
+  expect target: AuthorizedBoardDatum = successor_data
   expect
     exact_token_replacement(
       source_policy,
       target_policy,
       source.witness_key,
+      target.witness_key,
       tx,
     )
-  expect Some(successor) = sole_successor(target_policy, source.witness_key, tx)
-  expect successor.address == from_script(target_policy)
-  expect InlineDatum(successor_data) = successor.datum
-  expect target: AuthorizedBoardDatum = successor_data
-  expect
-    when supplied_target is {
-      Some(expected) -> target == expected
-      None -> True
-    }
   board_continuity(
     source.witness_key,
     source.endpoint_record,
-    source.endpoint_signature,
     source.owner_key_hash,
     lovelace_of(source_output.value),
     source_ref,
@@ -213,7 +201,6 @@ fn permanent_transition(
 fn board_continuity(
   witness_key: ByteArray,
   endpoint_record: ByteArray,
-  endpoint_signature: ByteArray,
   owner_key_hash: ByteArray,
   deposit: Int,
   source_ref: OutputReference,
@@ -224,11 +211,10 @@ fn board_continuity(
   and {
     target.witness_key == witness_key,
     target.endpoint_record == endpoint_record,
-    target.endpoint_signature == endpoint_signature,
     target.owner_key_hash == owner_key_hash,
     nonce_names(target.nonce, source_ref),
-    datum_is_authentic(witness_key, target_policy, target),
-    exact_marker_value(successor, target_policy, witness_key),
+    datum_is_authentic(target.witness_key, target_policy, target),
+    exact_marker_value(successor, target_policy, target.witness_key),
     lovelace_of(successor.value) == deposit,
   }
 }
@@ -247,24 +233,25 @@ fn exact_marker_value(
 fn exact_token_replacement(
   source_policy: PolicyId,
   target_policy: PolicyId,
-  witness_key: ByteArray,
+  source_witness_key: ByteArray,
+  target_witness_key: ByteArray,
   tx: Transaction,
 ) -> Bool {
   and {
-    dict.to_pairs(tokens(tx.mint, source_policy)) == [Pair(witness_key, -1)],
-    dict.to_pairs(tokens(tx.mint, target_policy)) == [Pair(witness_key, 1)],
+    dict.to_pairs(tokens(tx.mint, source_policy)) == [
+      Pair(source_witness_key, -1),
+    ],
+    dict.to_pairs(tokens(tx.mint, target_policy)) == [
+      Pair(target_witness_key, 1),
+    ],
   }
 }
 
-fn sole_successor(
-  policy_id: PolicyId,
-  witness_key: ByteArray,
-  tx: Transaction,
-) -> Option<Output> {
+fn sole_successor(policy_id: PolicyId, tx: Transaction) -> Option<Output> {
   when
     list.filter(
       tx.outputs,
-      fn(output) { quantity_of(output.value, policy_id, witness_key) == 1 },
+      fn(output) { dict.to_pairs(tokens(output.value, policy_id)) != [] },
     )
   is {
     [output] -> Some(output)
@@ -286,9 +273,32 @@ fn legacy_datum_is_authentic(datum: BoardDatumV1) -> Bool {
   }
 }
 
-fn is_exact_refund(output: Output, deposit: Int) -> Bool {
+fn source_refund_address(
+  source_ref: OutputReference,
+  tx: Transaction,
+) -> Address {
+  expect Some(Pair(_, redeemer)) = list.find(
+    tx.redeemers,
+    fn(Pair(purpose, _)) {
+      when purpose is {
+        Spend(reference) -> reference == source_ref
+        _ -> False
+      }
+    },
+  )
+  expect action: BoardAction = redeemer
+  expect Retire { refund_address } = action
+  refund_address
+}
+
+fn is_exact_refund(
+  output: Output,
+  refund_address: Address,
+  deposit: Int,
+) -> Bool {
   when output.datum is {
-    NoDatum -> output.value == from_lovelace(deposit)
+    NoDatum ->
+      output.address == refund_address && output.value == from_lovelace(deposit)
     _ -> False
   }
 }

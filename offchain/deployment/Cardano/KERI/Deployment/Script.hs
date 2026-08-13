@@ -171,6 +171,14 @@ exact argument plan applied to it.
 Every V1 artifact is constructed here, so a caller cannot publish an
 application this constructor has not accepted, and the plan a validator is
 applied to is always visible beside the declaration it has to match.
+
+The two counts are structural and neither is written down: the declared count
+is the length of the parameter list the blueprint carries for this validator,
+and the applied count is the length of the argument list actually applied.  A
+mismatch fails closed, before any program, hash, address or manifest entry
+exists to be published — #254 A-007 derived a register hash, policy id and
+address from a nine-argument application of an eight-parameter program, and
+those identities could not have settled a transaction.
 -}
 mkAppliedArtifact ::
     Text ->
@@ -179,16 +187,28 @@ mkAppliedArtifact ::
     [Data] ->
     SBS.ShortByteString ->
     Either String ScriptArtifact
-mkAppliedArtifact name role validator plan program =
-    let applied = applyDataArgs plan program
-     in Right
-            ScriptArtifact
-                { artifactName = name
-                , artifactBlueprintTitle = vTitle validator
-                , artifactRole = role
-                , artifactProgram = applied
-                , artifactScriptHash = computeScriptHash applied
-                }
+mkAppliedArtifact name role validator plan program
+    | declared /= supplied =
+        Left $
+            T.unpack (vTitle validator)
+                <> " declares "
+                <> show declared
+                <> " applied parameters but the deployment supplies "
+                <> show supplied
+                <> "; no artifact is derived from an arity mismatch"
+    | otherwise =
+        let applied = applyDataArgs plan program
+         in Right
+                ScriptArtifact
+                    { artifactName = name
+                    , artifactBlueprintTitle = vTitle validator
+                    , artifactRole = role
+                    , artifactProgram = applied
+                    , artifactScriptHash = computeScriptHash applied
+                    }
+  where
+    declared = length (vParameters validator)
+    supplied = length plan
 
 {- | The one lineage input a #254 successor program takes: the single
 predecessor minting policy it accepts.  Release identity is the resulting
@@ -198,8 +218,15 @@ applyPredecessorParam :: ByteString -> [Data]
 applyPredecessorParam predecessorPolicy =
     [B predecessorPolicy]
 
+{- | The exact argument plan the combined register is applied to.
+
+There is no version argument.  @checkpoint_register@ declares no version
+parameter, so the integer this plan used to lead with occupied the slot the
+ledger fills with the script context (#254 A-007).  The corrected
+eight-argument applied program is this family's register identity; the release
+is identified by that hash, never by a version datum.
+-}
 applyCheckpointParams ::
-    Integer ->
     ByteString ->
     ByteString ->
     ByteString ->
@@ -209,9 +236,8 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     [Data]
-applyCheckpointParams version migrationHash lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
-    [ I version
-    , B migrationHash
+applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash network registrationBond freezeBond freezeWindow =
+    [ B migrationHash
     , B lifecycleHash
     , B advanceHash
     , B enforcementHash
@@ -361,7 +387,6 @@ deriveV1Scripts blueprint = do
                 "validator-and-minting-policy"
                 checkpointValidator
                 ( applyCheckpointParams
-                    v1CheckpointVersion
                     (scriptHashBytes migrationHash)
                     (scriptHashBytes lifecycleHash)
                     (scriptHashBytes advanceHash)

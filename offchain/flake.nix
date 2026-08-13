@@ -1378,6 +1378,15 @@
                       mkdir -p nix-generated
                       cp ${migrationArtifacts}/*.hex nix-generated/
                     '' + prev.buildCommand;
+                    # #254 T254-109: the register module's own import, also
+                    # from the LIVE blueprint and placed separately for the
+                    # same reason: no two bodies of evidence may read each
+                    # other's programs.
+                  } // pkgs.lib.optionalAttrs (prev.name == registerModule) {
+                    buildCommand = ''
+                      mkdir -p nix-generated
+                      cp ${registerArtifacts}/*.hex nix-generated/
+                    '' + prev.buildCommand;
                   };
               };
 
@@ -1496,6 +1505,89 @@
                   sha256sum "$out/${migrationTitle}.hex" | cut -d ' ' -f 1 \
                     > "$out/program_sha256"
                 '';
+
+              # ---------------------------------------------------------
+              # #254 T254-109: the corrected compiled register at its exact
+              # declared arity.
+              # ---------------------------------------------------------
+              # Read from `e2eWiring.blueprint`, the LIVE blueprint, for the
+              # same reason the migration target is: the frozen M8 baseline
+              # cannot change when this slice changes the derivation, so a
+              # register proof read from it would pass without ever executing
+              # the corrected program.
+              registerTitle = "checkpoint_register.checkpoint_register.mint";
+              registerModule = "KeriBlaster.RegisterArity";
+
+              registerArtifacts =
+                pkgs.runCommand "cardano-keri-register-uplc-program" {
+                  nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+                } ''
+                  set -euo pipefail
+                  mkdir -p "$out"
+                  blueprint=${e2eWiring.blueprint}
+                  test "$(jq -er --arg title "${registerTitle}" \
+                    '[.validators[] | select(.title == $title)] | length' \
+                    "$blueprint")" -eq 1
+                  jq -er --arg title "${registerTitle}" \
+                    -f ${./blaster/extract-program.jq} "$blueprint" \
+                    | tr -d '\n\r[:space:]' > "$out/${registerTitle}.hex"
+                  test -s "$out/${registerTitle}.hex"
+                  sha256sum "$out/${registerTitle}.hex" | cut -d ' ' -f 1 \
+                    > "$out/program_sha256"
+                  # The declared arity, read from the blueprint itself. It is
+                  # never written down here: a hand-authored 8 on this side
+                  # would be exactly the duplicated literal whose absence on
+                  # the other side produced A-007.
+                  jq -er --arg title "${registerTitle}" \
+                    '.validators[] | select(.title == $title)
+                     | (.parameters // []) | length' \
+                    "$blueprint" > "$out/declared_args"
+                '';
+
+              registerRunner = pkgs.writeShellApplication {
+                name = "checkpoint-register-blaster";
+                runtimeInputs = [ pkgs.coreutils pkgs.gnugrep pkgs.jq ];
+                text = ''
+                  artifacts=${registerArtifacts}
+                  declared_args="$(cat "$artifacts/declared_args")"
+
+                  # The identity of the program actually executed below,
+                  # recomputed from the extracted bytes rather than restated.
+                  program_sha256="$(sha256sum \
+                    "$artifacts/${registerTitle}.hex" | cut -d ' ' -f 1)"
+                  test "$program_sha256" = "$(cat "$artifacts/program_sha256")"
+
+                  # The applied identity comes from the production derivation,
+                  # not from this recipe: the deployment binary is already
+                  # wired to the same live blueprint and emits what it would
+                  # publish.
+                  identity="$(KERI_REGISTER_IDENTITY=1 \
+                    ${e2eWiring.deploymentTestsRunner}/bin/deployment-tests)"
+
+                  field() {
+                    printf '%s\n' "$identity" \
+                      | tr ' ' '\n' | grep "^$1=" | cut -d '=' -f 2-
+                  }
+
+                  derived_program_sha256="$(field program_sha256)"
+                  script_hash="$(field script_hash)"
+                  derived_declared_args="$(field declared_args)"
+                  applied_args="$(field applied_args)"
+
+                  # The derivation and the CEK must be talking about the same
+                  # program and the same declaration. Without this the row
+                  # could announce one validator's identity above another
+                  # validator's execution.
+                  test "$derived_program_sha256" = "$program_sha256"
+                  test "$derived_declared_args" = "$declared_args"
+
+                  printf 'M8.register-target title=%s program_sha256=%s script_hash=%s declared_args=%s applied_args=%s\n' \
+                    "${registerTitle}" "$program_sha256" "$script_hash" \
+                    "$declared_args" "$applied_args"
+
+                  REGISTER_EVIDENCE=1 ${s2Evidence}/bin/s2-evidence
+                '';
+              };
 
               migrationRunner = pkgs.writeShellApplication {
                 name = "checkpoint-migration-blaster";
@@ -1690,7 +1782,8 @@
                 touch "$out"
               '';
             in {
-              inherit artifact auditRunner check runner migrationRunner;
+              inherit artifact auditRunner check runner migrationRunner
+                registerRunner;
               lean = leanPkgs.lean-all;
             });
 
@@ -1751,6 +1844,7 @@
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
             blaster = blasterWiring.runner;
             checkpoint-migration-blaster = blasterWiring.migrationRunner;
+            checkpoint-register-blaster = blasterWiring.registerRunner;
             lean = blasterWiring.lean;
           } // pkgs.lib.optionalAttrs (linuxArtifacts ? appimage) {
             ckeri-appimage = linuxArtifacts.appimage;

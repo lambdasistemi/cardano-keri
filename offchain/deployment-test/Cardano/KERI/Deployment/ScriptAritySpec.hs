@@ -36,6 +36,7 @@ against declarations rather than searching for a forbidden word.
 -}
 module Cardano.KERI.Deployment.ScriptAritySpec (
     spec,
+    emitRegisterIdentity,
 ) where
 
 import Cardano.KERI.Deployment.Manifest (
@@ -46,6 +47,7 @@ import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
     Validator (..),
+    applyParams,
     deriveBoardScript,
     deriveV1Scripts,
     loadBlueprint,
@@ -57,10 +59,11 @@ import Cardano.KERI.Deployment.Script (
     v1NetworkDiscriminator,
     v1RegistrationBond,
  )
+import Crypto.Hash (Digest, SHA256, hash)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
@@ -95,6 +98,11 @@ import UntypedPlutusCore qualified as UPLC
 data Fixture = Fixture
     { fixtureValue :: Aeson.Value
     -- ^ the live blueprint, parsed here rather than by the module under test
+    , fixtureTitles :: [Text]
+    {- ^ every validator title the blueprint carries, in order and NOT
+    deduplicated: a census that asks about duplicates has to be given a
+    list that could still contain one
+    -}
     , fixtureDeclared :: Map Text [Text]
     -- ^ blueprint title to its declared parameter titles, in order
     , fixturePrograms :: Map Text SBS.ShortByteString
@@ -117,6 +125,7 @@ withFixture = do
     path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
     bytes <- BS.readFile path
     value <- either fail pure (Aeson.eitherDecodeStrict' bytes)
+    titles <- either fail pure (validatorTitles value)
     declared <- either fail pure (declaredParameters value)
     programs <- either fail pure (compiledPrograms value)
     blueprint <- loadBlueprint path >>= either fail pure
@@ -125,6 +134,7 @@ withFixture = do
     pure
         Fixture
             { fixtureValue = value
+            , fixtureTitles = titles
             , fixtureDeclared = declared
             , fixturePrograms = programs
             , fixtureValidators =
@@ -160,6 +170,58 @@ spec = beforeAll withFixture $
                 sequence_
                     [ (validator, length (nub declarations)) `shouldBe` (validator, 1)
                     | (validator, declarations) <- siblingDeclarations fixture
+                    ]
+
+        it
+            "s254_r_every_blueprint_group_is_bound_or_unapplied"
+            $ \fixture -> do
+                -- "Every live-blueprint validator", not "every artifact this
+                -- derivation happens to publish". The publication list covers
+                -- seven groups; the blueprint carries more, and a group whose
+                -- program is applied somewhere else would keep an unchecked
+                -- deployment identity out of every control above.
+                let rawTitles = fixtureTitles fixture
+                    classified = map fst groupBoundaries
+                -- Set equality both ways, over the RAW title list: a new group
+                -- in the blueprint is unclassified and fails, a classification
+                -- whose group has gone is stale and fails, and a duplicated
+                -- validator entry fails rather than being collapsed.
+                groupCensus rawTitles classified `shouldBe` Right ()
+                -- Shown able to fail, on each of the three ways it can. A
+                -- census only ever observed passing is not a census.
+                groupCensus (rawTitles <> ["s254r_new.s254r_new.mint"]) classified
+                    `shouldSatisfy` isLeft
+                groupCensus
+                    (filter ((/= "hash_proof.hash_proof") . validatorOf) rawTitles)
+                    classified
+                    `shouldSatisfy` isLeft
+                groupCensus (rawTitles <> take 1 rawTitles) classified
+                    `shouldSatisfy` isLeft
+                sequence_
+                    [ case boundary of
+                        PublishedBy name -> do
+                            artifact <- artifactNamed fixture name
+                            arguments <- recoveredArguments fixture artifact
+                            (group, length arguments)
+                                `shouldBe` (group, declaredForGroup fixture group)
+                        AppliedBy _ apply -> do
+                            -- Bound, not exempted: the test drives the
+                            -- production applier and recovers what it applied.
+                            raw <- groupProgram fixture group
+                            arguments <-
+                                either fail pure (appliedArguments raw (apply raw))
+                            (group, length arguments)
+                                `shouldBe` (group, declaredForGroup fixture group)
+                        Unapplied _ ->
+                            -- Classified raw. It must genuinely not be
+                            -- published, or the classification is a lie.
+                            [ artifactName artifact
+                            | artifact <- publishedArtifacts fixture
+                            , validatorOf (artifactBlueprintTitle artifact)
+                                == group
+                            ]
+                                `shouldBe` []
+                    | (group, boundary) <- groupBoundaries
                     ]
 
         it "s254_r_declared_arity_mutant_rejects" $ \fixture -> do
@@ -346,6 +408,16 @@ applyArgumentList arguments code =
 -- Blueprint reading, independent of the production parser
 -- ---------------------------------------------------------------------------
 
+{- | Every validator title, in blueprint order, with nothing collapsed.
+
+'declaredParameters' builds a 'Map' and would silently keep one of a duplicate
+pair; asking that map about duplicates could only ever answer no.
+-}
+validatorTitles :: Aeson.Value -> Either String [Text]
+validatorTitles value = do
+    entries <- validatorEntries value
+    traverse (textField "title") entries
+
 declaredParameters :: Aeson.Value -> Either String (Map Text [Text])
 declaredParameters value = do
     entries <- validatorEntries value
@@ -469,20 +541,62 @@ appliedArgumentLists fixture =
                 (Map.lookup title (fixturePrograms fixture))
         appliedArguments raw (artifactProgram artifact)
 
+-- | The published register artifact.
+registerArtifact :: Fixture -> IO ScriptArtifact
+registerArtifact fixture =
+    maybe
+        (fail "the register artifact was not published")
+        pure
+        ( lookup
+            registerTitle
+            [ (artifactBlueprintTitle candidate, candidate)
+            | candidate <- fixtureArtifacts fixture
+            ]
+        )
+
 registerArguments :: Fixture -> IO [Data]
 registerArguments fixture = do
     raw <- programOf fixture registerTitle
-    artifact <-
-        maybe
-            (fail "the register artifact was not published")
-            pure
-            ( lookup
-                registerTitle
-                [ (artifactBlueprintTitle candidate, candidate)
-                | candidate <- fixtureArtifacts fixture
-                ]
-            )
+    artifact <- registerArtifact fixture
     either fail pure (appliedArguments raw (artifactProgram artifact))
+
+{- | Emit the corrected register's deployment identity for the M8 compiled
+target recipe.
+
+Every field is computed here, from the live blueprint and the production
+derivation, so the recipe prints the identity the deployment would actually
+publish rather than a value restated beside it.  The program digest is the
+SHA-256 of the exact @compiledCode@ hex the blueprint carries, which is how the
+flake extracts the program the Lean CEK executes; the recipe requires the two
+digests to be equal, so the announced identity and the executed program cannot
+be different validators.
+-}
+emitRegisterIdentity :: IO ()
+emitRegisterIdentity = do
+    fixture <- withFixture
+    validator <- blueprintValidator fixture registerTitle
+    hex <-
+        maybe
+            (fail "the register carries no compiled code")
+            pure
+            (vCompiledCode validator)
+    artifact <- registerArtifact fixture
+    applied <- registerArguments fixture
+    putStrLn $
+        "register-identity title="
+            <> T.unpack registerTitle
+            <> " program_sha256="
+            <> T.unpack (sha256Hex (TE.encodeUtf8 hex))
+            <> " script_hash="
+            <> T.unpack (scriptHashText (artifactScriptHash artifact))
+            <> " declared_args="
+            <> show (length (vParameters validator))
+            <> " applied_args="
+            <> show (length applied)
+
+sha256Hex :: ByteString -> Text
+sha256Hex bytes =
+    TE.decodeUtf8 (convertToBase Base16 (hash bytes :: Digest SHA256))
 
 {- | What the corrected register must be applied to: the four sibling policy
 hashes this same derivation produced, then the four deployment integers.  No
@@ -513,6 +627,152 @@ expectedRegisterArguments fixture = do
                     pure
                     (decodeHex (scriptHashText (artifactScriptHash artifact)))
             _ -> fail (T.unpack name <> " was not published exactly once")
+
+-- ---------------------------------------------------------------------------
+-- The blueprint-group boundary census
+-- ---------------------------------------------------------------------------
+
+{- | How this repository applies arguments to one blueprint validator group.
+
+Every group in the live blueprint carries exactly one of these. There is no
+default and no fallthrough: an unrecognised group fails the census rather than
+being assumed harmless, because the failure mode being closed here is precisely
+a validator whose program acquires an applied identity somewhere nobody
+enumerated.
+-}
+data Boundary
+    = -- | published by the deployment derivation under this artifact name
+      PublishedBy Text
+    | -- | applied by a named production applier the census drives directly
+      AppliedBy Text (SBS.ShortByteString -> SBS.ShortByteString)
+    | -- | no application boundary in this repository, with the reason
+      Unapplied Text
+
+{- | The complete classification of live blueprint groups at this candidate.
+
+Cage is bound, not excused: `applyParams` is a real production application
+boundary that does not run through 'mkAppliedArtifact' — its consumer,
+@offchain/e2e/CageTxBuilder.hs@, is outside this slice's fence — so the census
+drives that exact applier and recovers what it applied instead of taking its
+arity on trust.
+
+@checkpoint.checkpoint@ is the legacy M1 group in THIS live blueprint, and it
+is classified raw and unpublished: the deployment derivation does not touch it,
+so it produces no artifact and no identity. It is classified rather than
+omitted, so it cannot quietly acquire one.
+
+That is a separate fact from the M8 S2 evidence, which executes a
+@checkpoint.checkpoint.spend@ program taken from the FROZEN baseline blueprint.
+That is a different artifact of a different blueprint, it publishes no identity
+either, and it is classified on its own row in the application-site census in
+@scripts/check-version-remnant-sweep.sh@. The two are deliberately not conflated
+here: "this live group is unapplied" and "that frozen program is executed as
+evidence" are different claims about different bytes.
+
+S254-E's entitlement group will appear here after rebase, and will have to enter
+this same census.
+-}
+groupBoundaries :: [(Text, Boundary)]
+groupBoundaries =
+    [ ("hash_proof.hash_proof", PublishedBy "hash-proof")
+    ,
+        ( "checkpoint_observer.observer_lifecycle"
+        , PublishedBy "observer-lifecycle"
+        )
+    ,
+        ( "checkpoint_observer.observer_advance"
+        , PublishedBy "observer-advance"
+        )
+    ,
+        ( "checkpoint_observer.observer_enforcement"
+        , PublishedBy "observer-enforcement"
+        )
+    ,
+        ( "checkpoint_observer.observer_migration"
+        , PublishedBy "observer-migration"
+        )
+    ,
+        ( "checkpoint_register.checkpoint_register"
+        , PublishedBy "checkpoint-register"
+        )
+    , ("endpoint_board.endpoint_board", PublishedBy "endpoint-board")
+    ,
+        ( "cage.mpfCage"
+        , AppliedBy
+            "applyParams"
+            (applyParams v1CheckpointVersion cagePredecessorPolicy)
+        )
+    ,
+        ( "checkpoint.checkpoint"
+        , Unapplied
+            "legacy M1 group: no off-chain application site; the M8 S2 \
+            \evidence executes it from the frozen baseline with Lean-supplied \
+            \parameters and publishes no identity"
+        )
+    ]
+
+{- | A placeholder predecessor policy for the Cage boundary, at the exact
+28-byte width a policy id has. The census is about how many arguments
+'applyParams' applies, not which policy it names.
+-}
+cagePredecessorPolicy :: ByteString
+cagePredecessorPolicy = BS.replicate 28 0
+
+{- | The group census, as a value rather than as an expectation.
+
+Returning 'Either' is what lets the census be shown rejecting a new group, a
+missing group and a duplicate title, instead of only ever being observed
+passing. It is given the raw title list precisely so the duplicate check has
+something to find.
+-}
+groupCensus :: [Text] -> [Text] -> Either String ()
+groupCensus rawTitles classified
+    | nub rawTitles /= rawTitles =
+        Left "the blueprint carries a duplicate validator title"
+    | nub classified /= classified =
+        Left "the classification carries a duplicate group"
+    | not (null unclassified) =
+        Left ("unclassified blueprint groups: " <> show unclassified)
+    | not (null vanished) =
+        Left ("classified groups absent from the blueprint: " <> show vanished)
+    | otherwise = Right ()
+  where
+    present = nub (map validatorOf rawTitles)
+    unclassified = filter (`notElem` classified) present
+    vanished = filter (`notElem` present) classified
+
+-- | The declared parameter count of a group, from any of its handler entries.
+declaredForGroup :: Fixture -> Text -> Int
+declaredForGroup fixture group =
+    case [ parameters
+         | (title, parameters) <- Map.toList (fixtureDeclared fixture)
+         , validatorOf title == group
+         ] of
+        (parameters : _) -> length parameters
+        [] -> -1
+
+{- | The unapplied compiled program of a group, from any handler entry carrying
+one. Every handler of an Aiken validator compiles to the same program.
+-}
+groupProgram :: Fixture -> Text -> IO SBS.ShortByteString
+groupProgram fixture group =
+    case [ program
+         | (title, program) <- Map.toList (fixturePrograms fixture)
+         , validatorOf title == group
+         ] of
+        (program : _) -> pure program
+        [] -> fail (T.unpack group <> " carries no compiled code")
+
+artifactNamed :: Fixture -> Text -> IO ScriptArtifact
+artifactNamed fixture name =
+    case filter ((== name) . artifactName) (publishedArtifacts fixture) of
+        [artifact] -> pure artifact
+        _ -> fail (T.unpack name <> " was not published exactly once")
+
+recoveredArguments :: Fixture -> ScriptArtifact -> IO [Data]
+recoveredArguments fixture artifact = do
+    raw <- programOf fixture (artifactBlueprintTitle artifact)
+    either fail pure (appliedArguments raw (artifactProgram artifact))
 
 -- | Declared parameter lists, grouped by the validator that owns them.
 siblingDeclarations :: Fixture -> [(Text, [[Text]])]
@@ -624,7 +884,7 @@ versionShapedKeys (Aeson.Object object) =
     filter isVersionShaped (map Key.toText (KeyMap.keys object))
         <> concatMap versionShapedKeys (KeyMap.elems object)
 versionShapedKeys (Aeson.Array items) =
-    concatMap versionShapedKeys (toList items)
+    concatMap versionShapedKeys items
 versionShapedKeys _ = []
 
 -- | Distinct placeholder references, one per published artifact.

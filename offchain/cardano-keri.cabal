@@ -431,6 +431,7 @@ test-suite deployment-tests
     , cardano-node-clients
     , cardano-tx-tools:tx-build
     , containers
+    , crypton
     , directory
     , filepath
     , hspec                           >=2.11 && <2.12

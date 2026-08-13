@@ -475,6 +475,21 @@ check-checkpoint-migration-vectors: gen-checkpoint-migration-vectors
 checkpoint-migration-blaster:
     cd offchain && nix run --quiet --no-write-lock-file .#checkpoint-migration-blaster
 
+# #254 T254-109: announce the corrected register's deployment identity from the
+# live blueprint, and prove under the pinned CEK machine that the exact
+# compiled program settles at its declared parameters and refuses one more.
+checkpoint-register-blaster:
+    cd offchain && nix run --quiet --no-write-lock-file .#checkpoint-register-blaster
+
+# #254 T254-109: permanent census of every residual version reference on the
+# deployment, derivation, blueprint, serialization and manifest surfaces. Each
+# match is either cut or allowlisted with a concrete consumer. The self-test
+# runs first, so every invocation shows the scanner still able to fail before
+# its pass is believed.
+check-version-remnant-sweep:
+    ./scripts/check-version-remnant-sweep.sh --self-test
+    ./scripts/check-version-remnant-sweep.sh
+
 # Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
 # generated-vector drift.
 check-lean-traceability:
@@ -588,7 +603,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-lean-traceability check-blaster-identity-consistency
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required

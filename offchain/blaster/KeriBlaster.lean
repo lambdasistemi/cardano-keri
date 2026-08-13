@@ -2,6 +2,7 @@ import Blaster
 import CardanoLedgerApi.V3
 import PlutusCore.UPLC
 import KeriBlaster.Migration
+import KeriBlaster.RegisterArity
 import KeriBlaster.S2Cek
 import KeriBlaster.S2Evidence
 import KeriBlaster.S2Fixtures
@@ -239,6 +240,11 @@ def main : IO UInt32 := do
   -- evidence can come from a copy of the checking path.
   if (← IO.getEnv "MIGRATION_EVIDENCE").isSome then
     return (← KeriBlaster.Migration.run)
+  -- #254 T254-109. The corrected register's arity is a distinct question over
+  -- a distinct imported program, so it gets its own entry for the same reason
+  -- the migration evidence does.
+  if (← IO.getEnv "REGISTER_EVIDENCE").isSome then
+    return (← KeriBlaster.RegisterArity.run)
   let control ← readControl
   let some artifactDir ← IO.getEnv "S2_ARTIFACTS"
     | do

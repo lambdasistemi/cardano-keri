@@ -95,6 +95,36 @@ set -e
 [ "$orphan_rc" -gt 0 ]
 echo "AUDIT-SELFTEST leg=orphan-claim-pairing rc=$orphan_rc outcome=REFUTED"
 
+# C3: pairing is (id, variant); variant and outcome are required.
+printf '%s\n' \
+  'CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantA outcome=REFUTED' \
+  'CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED' \
+  > "$work/mismatch-identity.txt"
+printf '%s\n' \
+  'CLAIM id=p0-spend kind=spend outcome=REFUTED' \
+  'CLAIM id=p0-spend kind=spend coverage=parsed-document outcome=ESTABLISHED' \
+  > "$work/missing-variant.txt"
+printf '%s\n' \
+  'CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE' \
+  > "$work/missing-outcome.txt"
+set +e
+mismatch_out=$("$bundle_dir/check-claim-schema.sh" \
+  "$work/mismatch-identity.txt" 2>&1)
+mismatch_rc=$?
+novar_out=$("$bundle_dir/check-claim-schema.sh" \
+  "$work/missing-variant.txt" 2>&1)
+novar_rc=$?
+noout_out=$("$bundle_dir/check-claim-schema.sh" \
+  "$work/missing-outcome.txt" 2>&1)
+noout_rc=$?
+set -e
+[ "$mismatch_rc" -gt 0 ]
+[ "$novar_rc" -gt 0 ]
+[ "$noout_rc" -gt 0 ]
+echo "AUDIT-SELFTEST leg=same-id-mismatched-identity rc=$mismatch_rc outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=claim-missing-variant rc=$novar_rc outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=claim-missing-outcome rc=$noout_rc outcome=REFUTED"
+
 # --- published bytes ---
 set +e
 printf '%s' $'{"identity":{"variant":"defaultFunSemanticsVariantA","variant":"defaultFunSemanticsVariantE"}}' \
@@ -109,6 +139,35 @@ set -e
 [ "$dup_rc" -gt 0 ] && [ "$bom_rc" -gt 0 ]
 echo "AUDIT-SELFTEST leg=second-conforming-parse-differs rc=$dup_rc outcome=REFUTED"
 echo "AUDIT-SELFTEST leg=artifact-not-bound-to-verdict rc=$bom_rc outcome=REFUTED"
+
+# Binding/closure over unique substitutions, not only BOM / dup-variant.
+source_commit=$(git -C "$(cd "$bundle_dir/../.." && pwd)" rev-parse HEAD \
+  2>/dev/null || true)
+[ -n "$source_commit" ] || source_commit=missing-source-identity
+jq -n --arg c "$source_commit" \
+  '{identity:{commit:$c,aiken:"1.1.23",toolchain:"aiken=1.1.23",variant:"defaultFunSemanticsVariantE"}}' \
+  > "$work/pub-clean.json"
+jq '.identity.variant="defaultFunSemanticsVariantA"' \
+  "$work/pub-clean.json" > "$work/pub-variant-a.json"
+jq '.identity.commit="0000000000000000000000000000000000000000"' \
+  "$work/pub-clean.json" > "$work/pub-zero-commit.json"
+sed '0,/"commit"[[:space:]]*:/s//"commit":"0000000000000000000000000000000000000000","commit":/' \
+  "$work/pub-clean.json" > "$work/pub-dup-commit.json"
+set +e
+vara_out=$("$bundle_dir/check-published-bytes.sh" \
+  "$work/pub-variant-a.json" 2>&1)
+vara_rc=$?
+zero_out=$("$bundle_dir/check-published-bytes.sh" \
+  "$work/pub-zero-commit.json" 2>&1)
+zero_rc=$?
+dupc_out=$("$bundle_dir/check-published-bytes.sh" \
+  "$work/pub-dup-commit.json" 2>&1)
+dupc_rc=$?
+set -e
+[ "$vara_rc" -gt 0 ] && [ "$zero_rc" -gt 0 ] && [ "$dupc_rc" -gt 0 ]
+echo "AUDIT-SELFTEST leg=substituted-variant-A rc=$vara_rc outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=substituted-commit rc=$zero_rc outcome=REFUTED"
+echo "AUDIT-SELFTEST leg=duplicate-identity-commit rc=$dupc_rc outcome=REFUTED"
 published=$bundle_dir/published/manifest.json
 [ -f "$published" ] || {
   echo "published identity artifact missing: $published" >&2

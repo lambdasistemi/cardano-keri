@@ -604,6 +604,119 @@ else
   fail "INV-246-IDENTITY-LINE-PROTOCOL: standing checker did not publish expected_containers/missing_containers"
 fi
 
+# ---------------------------------------------------------------------------
+# Open rows at 75a2ba21 (auditor-C1-s2). Drive the *shipped* checkers,
+# not the in-process oracles above. Each mutant is accepted today;
+# the contract fails until every one is rejected for a named reason.
+# ---------------------------------------------------------------------------
+source_commit=$(git -C "$repo_root" rev-parse HEAD)
+jq -n --arg c "$source_commit" \
+  '{identity:{commit:$c,aiken:"1.1.23",toolchain:"aiken=1.1.23",variant:"defaultFunSemanticsVariantE"}}' \
+  > "$work/pub-clean.json"
+jq '.identity.variant="defaultFunSemanticsVariantA"' \
+  "$work/pub-clean.json" > "$work/pub-variant-a.json"
+jq '.identity.commit="0000000000000000000000000000000000000000"' \
+  "$work/pub-clean.json" > "$work/pub-zero-commit.json"
+sed '0,/"commit"[[:space:]]*:/s//"commit":"0000000000000000000000000000000000000000","commit":/' \
+  "$work/pub-clean.json" > "$work/pub-dup-commit.json"
+cat > "$work/claims-mismatch-identity.txt" <<'EOF'
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantA outcome=REFUTED
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED
+EOF
+cat > "$work/claims-missing-variant.txt" <<'EOF'
+CLAIM id=p0-spend kind=spend outcome=REFUTED
+CLAIM id=p0-spend kind=spend coverage=parsed-document outcome=ESTABLISHED
+EOF
+cat > "$work/claims-missing-outcome.txt" <<'EOF'
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE
+EOF
+
+still_green=0
+assert_shipped_red() {
+  local label=$1 expected=$2 out rc
+  shift 2
+  set +e
+  out=$("$@" 2>&1)
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ]; then
+    printf 'STILL-GREEN invariant=%s production accepted the mutant\n' \
+      "$label" >&2
+    still_green=$((still_green + 1))
+    return 0
+  fi
+  if [[ $out != *"$expected"* ]]; then
+    printf 'STILL-GREEN invariant=%s rejected but missed %s: %s\n' \
+      "$label" "$expected" "$out" >&2
+    still_green=$((still_green + 1))
+    return 0
+  fi
+  printf 'RED-PROOF invariant=%s rc=%s diagnostic=%s outcome=REFUTED\n' \
+    "$label" "$rc" "$expected"
+}
+
+assert_shipped_red INV-246-C3-same-id-mismatched-identity \
+  'ESTABLISHED without per-claim falsifier' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-mismatch-identity.txt"
+assert_shipped_red INV-246-C3-claim-missing-variant \
+  'CLAIM missing required field: variant' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-missing-variant.txt"
+assert_shipped_red INV-246-C3-claim-missing-outcome \
+  'CLAIM missing required field: outcome' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-missing-outcome.txt"
+assert_shipped_red INV-246-ARTIFACT-CHECK-BINDING-substituted-variant-A \
+  'published identity variant is not defaultFunSemanticsVariantE' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-variant-a.json"
+assert_shipped_red INV-246-ARTIFACT-CHECK-BINDING-substituted-commit \
+  'published identity commit is not the source identity' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-zero-commit.json"
+assert_shipped_red INV-246-PUBLISHED-ARTIFACT-CLOSURE-duplicate-commit \
+  'second conforming parse differs' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-dup-commit.json"
+
+set +e
+iso_out=$(bash -c \
+  'exec 9<"$1"; bash "$2" --forbid "$1" -- ls /proc/self/fd/9' \
+  _ "$repo_root" "$bundle_dir/isolate-run.sh" 2>&1)
+iso_rc=$?
+set -e
+if [ "$iso_rc" -eq 0 ]; then
+  printf 'STILL-GREEN invariant=INV-246-C9-descriptor-alias production accepted inherited fd\n' >&2
+  still_green=$((still_green + 1))
+elif [[ $iso_out != *'inherited'* && $iso_out != *'forbidden root'* ]]; then
+  printf 'STILL-GREEN invariant=INV-246-C9-descriptor-alias rejected without naming the alias: %s\n' \
+    "$iso_out" >&2
+  still_green=$((still_green + 1))
+else
+  printf 'RED-PROOF invariant=INV-246-C9-descriptor-alias rc=%s outcome=REFUTED\n' \
+    "$iso_rc"
+fi
+
+if grep -Fq 'repro/src/scripts/ckeri-bundle/published' \
+  "$repo_root/offchain/flake.nix"; then
+  printf 'STILL-GREEN invariant=INV-246-C1-flake-clone-injection clone is still handed published/\n' >&2
+  still_green=$((still_green + 1))
+else
+  printf 'RED-PROOF invariant=INV-246-C1-flake-clone-injection rc=0 outcome=REFUTED\n'
+fi
+if grep -Fq '$c_work/published/manifest.json' \
+  "$repo_root/offchain/flake.nix"; then
+  printf 'STILL-GREEN invariant=INV-246-C1-flake-host-injection host branch still copies published/\n' >&2
+  still_green=$((still_green + 1))
+else
+  printf 'RED-PROOF invariant=INV-246-C1-flake-host-injection rc=0 outcome=REFUTED\n'
+fi
+if ! grep -Eq 'blaster-baseline-manifest' "$bundle_dir/run.sh"; then
+  printf 'STILL-GREEN invariant=INV-246-C1-obtain-in-entry run.sh does not obtain the flake package\n' >&2
+  still_green=$((still_green + 1))
+else
+  printf 'RED-PROOF invariant=INV-246-C1-obtain-in-entry rc=0 outcome=REFUTED\n'
+fi
+
+if [ "$still_green" -ne 0 ]; then
+  fail "$still_green open-row properties still accepted (C3/C9/C1/artifact)"
+fi
+
 # Production surfaces. Required after the oracles so a missing file cannot
 # stand in for a property that was never shown able to fail.
 for required in \
@@ -646,9 +759,16 @@ judge_binding_subject() {
   fi
   return 0
 }
+mkdir -p "$work/fakebin"
+cat > "$work/fakebin/nix" <<'EOF'
+#!/bin/sh
+echo "nix: stub refuses to realise (bundle-contract)" >&2
+exit 1
+EOF
+chmod 755 "$work/fakebin/nix"
 expect_red INV-246-ARTIFACT-BINDING-TOY-SUBJECT \
-  'declared artifact missing from source: published/manifest.json' \
-  "$bundle_dir/run.sh" "$work/bind-missing"
+  'published' \
+  env PATH="$work/fakebin:$PATH" "$bundle_dir/run.sh" "$work/bind-missing"
 cp -a "$bundle_dir" "$work/bundle-copy"
 mkdir -p "$work/bundle-copy/published"
 cp "$work/bundle-copy/fixtures/clean-identity.json" \
@@ -656,8 +776,8 @@ cp "$work/bundle-copy/fixtures/clean-identity.json" \
 expect_red INV-246-ARTIFACT-BINDING-TOY-COPY \
   'toy fixture, not published identity bytes' \
   "$work/bundle-copy/run.sh" "$work/bind-toy"
-printf '%s\n' \
-  '{"identity":{"variant":"defaultFunSemanticsVariantE","source":"not-the-toy"}}' \
+jq -n --arg c "$source_commit" \
+  '{identity:{commit:$c,aiken:"1.1.23",toolchain:"aiken=1.1.23",variant:"defaultFunSemanticsVariantE",source:"not-the-toy"}}' \
   > "$work/bundle-copy/published/manifest.json"
 "$work/bundle-copy/run.sh" "$work/bind-real" > "$work/bind.out"
 judge_binding_subject "$work/bind.out" \

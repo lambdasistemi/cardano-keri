@@ -37,6 +37,7 @@ module Cardano.KERI.Deployment.Script (
     cagePolicyId,
     cageScriptAddr,
     deriveBoardScript,
+    deriveBoardV0Script,
     deriveBoardTargetScript,
     deriveV1Scripts,
     boardAddress,
@@ -594,13 +595,15 @@ deriveV1Scripts blueprint = do
             Right
             (extractValidatorExact title blueprint)
 
-{- | Derive the parameter-free endpoint-board combined validator exactly.
+{- | Derive the endpoint-board successor applied to its accepted predecessor.
 
 The mint handler is the canonical blueprint entry because every handler of a
 combined Aiken validator carries the same compiled program.
+
+The applied predecessor policy is the #253 coupling to the frozen v0 release.
 -}
-deriveBoardScript :: Blueprint -> Either String ScriptArtifact
-deriveBoardScript blueprint = do
+deriveBoardScript :: ByteString -> Blueprint -> Either String ScriptArtifact
+deriveBoardScript acceptedPredecessorPolicy blueprint = do
     (validator, program) <-
         maybe
             (Left "endpoint-board compiled code not found in production blueprint")
@@ -610,29 +613,31 @@ deriveBoardScript blueprint = do
         "endpoint-board"
         "validator-and-minting-policy"
         validator
-        []
+        (applyPredecessorParam acceptedPredecessorPolicy)
         program
 
-{- | Derive the authorized endpoint-board target applied to its one accepted
-predecessor policy.
+{- | Reproduce the frozen parameter-free v0 endpoint-board artifact exactly.
 
-This is deliberately separate from 'deriveBoardScript': that function
-reproduces the frozen zero-parameter v0 artifact, while this function derives
-the successor whose release identity includes its lineage pin.
+This historical derivation remains separate from 'deriveBoardScript', whose
+successor identity includes its lineage pin.
 -}
-deriveBoardTargetScript :: ByteString -> Blueprint -> Either String ScriptArtifact
-deriveBoardTargetScript acceptedPredecessorPolicy blueprint = do
+deriveBoardV0Script :: Blueprint -> Either String ScriptArtifact
+deriveBoardV0Script blueprint = do
     (validator, program) <-
         maybe
-            (Left "endpoint-board target compiled code not found in production blueprint")
+            (Left "endpoint-board v0 compiled code not found in recovered blueprint")
             Right
             (extractValidatorExact "endpoint_board.endpoint_board.mint" blueprint)
     mkAppliedArtifact
         "endpoint-board"
         "validator-and-minting-policy"
         validator
-        (applyPredecessorParam acceptedPredecessorPolicy)
+        []
         program
+
+-- | Backwards-compatible name for the authorized endpoint-board target.
+deriveBoardTargetScript :: ByteString -> Blueprint -> Either String ScriptArtifact
+deriveBoardTargetScript = deriveBoardScript
 
 scriptHashBytes :: ScriptHash -> ByteString
 scriptHashBytes (ScriptHash hash) = hashToBytes hash
@@ -651,11 +656,10 @@ checkpointAddress artifacts = do
 
 {- | Render the endpoint-board enterprise address on preprod/testnet.
 
-The historical v0 artifact remains parameter-free, while a target artifact's
-address and policy ID include the predecessor policy applied by
-'deriveBoardTargetScript'.
-
-The predecessor-policy parameter is the #253 coupling between the frozen v0 policy and its authorized successor.
+The address and policy ID reproduce the exact applied program carried by the
+artifact. A target derived by 'deriveBoardScript' therefore includes its
+accepted predecessor policy, while 'deriveBoardV0Script' remains
+parameter-free for the historical v0 artifact.
 -}
 boardAddress :: ScriptArtifact -> Either String Text
 boardAddress artifact

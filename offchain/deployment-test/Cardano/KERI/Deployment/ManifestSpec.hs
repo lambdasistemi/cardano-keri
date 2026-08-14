@@ -23,7 +23,7 @@ import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     Validator (..),
     boardAddress,
-    deriveBoardScript,
+    deriveBoardV0Script,
     deriveV1Scripts,
     loadBlueprint,
     scriptHashText,
@@ -159,7 +159,7 @@ spec =
         -- The permanent identity proof. It is deliberately NOT a comparison of
         -- JSON fields against each other: the artifact's bytes are decoded by
         -- the real production `loadBlueprint` and hashed by the real
-        -- production `deriveBoardScript`/`computeScriptHash`, so the values
+        -- production `deriveBoardV0Script`/`computeScriptHash`, so the values
         -- asserted here are DERIVED from the checked-in program, and a single
         -- perturbed nibble changes all three of length, digest, and policy.
         describe "#263 recovered endpoint-board artifact" $ do
@@ -181,7 +181,7 @@ spec =
                 -- have no consumer and are not retained.
                 map vTitle (validators blueprint)
                     `shouldBe` [recoveredBoardTitle]
-                artifact <- either fail pure (deriveBoardScript blueprint)
+                artifact <- either fail pure (deriveBoardV0Script blueprint)
                 provenance <- readBoardProvenance path
                 provenanceSourceCommit provenance `shouldBe` recoveredSourceCommit
                 provenanceCompiler provenance `shouldBe` "aiken 1.1.21"
@@ -307,7 +307,7 @@ loadBoardArtifact :: IO ScriptArtifact
 loadBoardArtifact = do
     path <- boardBlueprintPath
     blueprint <- loadBlueprint path >>= either fail pure
-    either fail pure (deriveBoardScript blueprint)
+    either fail pure (deriveBoardV0Script blueprint)
 
 {- | The recovery record carried beside the program in the compact artifact.
 

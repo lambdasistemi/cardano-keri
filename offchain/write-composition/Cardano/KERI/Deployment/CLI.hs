@@ -163,7 +163,7 @@ import Cardano.KERI.Deployment.Registration (
 import Cardano.KERI.Deployment.Registration qualified as Registration
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
-    deriveBoardScript,
+    deriveBoardV0Script,
     deriveV1Scripts,
     loadBlueprint,
  )
@@ -1066,7 +1066,7 @@ runBoardDeployWith openLocalScope openLiveContext settings = do
         fail "timeout-seconds must be positive"
     blueprint <-
         loadBlueprint (deployBlueprint settings) >>= either fail pure
-    artifact <- either fail pure (deriveBoardScript blueprint)
+    artifact <- either fail pure (deriveBoardV0Script blueprint)
     digest <- blueprintSha256 (deployBlueprint settings)
     commit <- resolveSourceCommit settings
     verifySourceTree (deploySourceRepo settings) commit

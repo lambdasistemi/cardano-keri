@@ -53,7 +53,7 @@ import Cardano.KERI.Deployment.Script (
     Validator (..),
     applyCommitmentParams,
     applyParams,
-    deriveBoardTargetScript,
+    deriveBoardScript,
     deriveV1Scripts,
     extractCompiledCodeExact,
     loadBlueprint,
@@ -179,7 +179,7 @@ withFixture = do
         either
             fail
             pure
-            (deriveBoardTargetScript predecessor blueprint)
+            (deriveBoardScript predecessor blueprint)
     pure
         Fixture
             { fixtureValue = value
@@ -404,14 +404,14 @@ boardTargetApplicationSpec =
                     )
             predecessor <- either fail pure (decodeHex frozenEndpointBoardPolicyId)
             artifact <-
-                either fail pure (deriveBoardTargetScript predecessor blueprint)
+                either fail pure (deriveBoardScript predecessor blueprint)
             arguments <-
                 either fail pure (appliedArguments raw $ artifactProgram artifact)
             arguments `shouldBe` [B predecessor]
 
             let substituted = BS.replicate 28 0
             substitutedArtifact <-
-                either fail pure (deriveBoardTargetScript substituted blueprint)
+                either fail pure (deriveBoardScript substituted blueprint)
             substitutedArguments <-
                 either
                     fail

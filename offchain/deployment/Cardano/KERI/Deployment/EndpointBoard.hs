@@ -667,9 +667,11 @@ lookupAid label aid entries =
 
 boardRowContinuous :: BoardEntry -> BoardEntry -> Bool
 boardRowContinuous source successor =
+    -- The AID is deliberately absent: reconciliation has already selected
+    -- both rows from maps keyed by this exact expected AID, so comparing it
+    -- here would be the tautology @aid == aid@ rather than a continuity check.
     and
         [ boardWitnessKey successor == boardWitnessKey source
-        , boardAid successor == boardAid source
         , boardScheme successor == boardScheme source
         , boardUrl successor == boardUrl source
         , boardLovelace successor == boardLovelace source

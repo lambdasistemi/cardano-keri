@@ -59,18 +59,18 @@ The machine build gate precedes implementation and audit.
 
 ## Phase 5 — S254-2 board family
 
-- [ ] T254-201 [US2] Use the target board schema directly, with no generic
+- [x] T254-201 [US2] Use the target board schema directly, with no generic
   version/origin envelope and without weakening endpoint authentication.
-- [ ] T254-202 [US2] Implement and prove permanent board migrate-out and
+- [x] T254-202 [US2] Implement and prove permanent board migrate-out and
   applied-predecessor migrate-in with owner, witness marker, content, deposit,
   and target authentication continuity.
-- [ ] T254-203 [US2] Implement and prove the frozen v0 `Retire`/`Burn`
+- [x] T254-203 [US2] Implement and prove the frozen v0 `Retire`/`Burn`
   bridge, same-name successor confinement, target authentication, and exact
   predecessor input spend in the same transaction.
 - [ ] T254-204 [US2] Provide #253's target-schema handoff and require its
   accepted authentication unchanged in the first deployed successor; deploy
   no intermediate unhardened version and restate no internal fields.
-- [ ] T254-205 [US2] Demonstrate missing/duplicate/changed-row and partial
+- [x] T254-205 [US2] Demonstrate missing/duplicate/changed-row and partial
   three-record inventory RED, then reconcile all three expected witnesses.
 - [ ] T254-206 [US2] Generate board parity vectors and register the exact
   compiled board target with M8 authority/replay checks.

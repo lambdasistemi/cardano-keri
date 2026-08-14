@@ -199,3 +199,28 @@ dispatch.
   follow-up ID for each (`INV-246-D5`).
 - [ ] T246-D6 — The three additive-union rebase resolutions in
   `offchain/flake.nix` inspected and owned, not inherited silently.
+
+## Follow-ups split out of Slice C by the 2026-08-14 rescope
+
+These three classes were `BLOCKING` rows on Slice C. The rescope retains only
+producer-bound identity inside #246 (as `INV-246-D1`) and splits the rest out.
+They are filed here so `INV-246-D5` can name a real ID; scheduling is the epic's.
+
+- [ ] T246-F9 — Byte closure must reject **duplicate decoded identity keys**
+  independent of their JSON spelling **and value type**, using a structural
+  duplicate-key-rejecting parse rather than a textual key regex. A filter over
+  values must not erase a key occurrence. Owner: ticket owner (#246). From
+  `INV-246-PUBLISHED-ARTIFACT-CLOSURE`, `auditor-C2-s1`/`auditor-C2-s2`.
+- [ ] T246-F10 — Parse each downstream claim as a **closed record** with exactly
+  one `id`, `variant` and `outcome`; duplicates, ambiguity, unknown values and
+  `COULD-NOT-EVALUATE` are RED before pairing. Owner: ticket owner (#246). From
+  `INV-246-C3`, `auditor-C2-s1`/`auditor-C2-s2`.
+- [ ] T246-F11 — Reconcile every surviving mount and file descriptor to the
+  forbidden **subtree**, including descendant bind mounts and file binds.
+  Root-inode equality is not subtree isolation. Owner: ticket owner (#246).
+  From `INV-246-C9`, `auditor-C2-s1`/`auditor-C2-s2`.
+- [ ] T246-F12 — `gate-D-v3`'s `T246-D6` block tests **occurrence, not
+  membership**: replace the seven `grep -q` name checks with a membership test
+  over the evaluated `inherit` set and evaluated runtime inputs. Owner: ticket
+  owner (#246). Raised by `commit-owner-D2`, reliance row
+  `INV-246-D-REL-REBASE-UNIONS`.

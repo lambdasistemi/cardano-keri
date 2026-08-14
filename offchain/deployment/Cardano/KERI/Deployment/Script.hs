@@ -651,8 +651,11 @@ checkpointAddress artifacts = do
 
 {- | Render the endpoint-board enterprise address on preprod/testnet.
 
-The script is parameter-free, so this address and its policy ID are a single
-reproducible contract seam.
+The historical v0 artifact remains parameter-free, while a target artifact's
+address and policy ID include the predecessor policy applied by
+'deriveBoardTargetScript'.
+
+The predecessor-policy parameter is the #253 coupling between the frozen v0 policy and its authorized successor.
 -}
 boardAddress :: ScriptArtifact -> Either String Text
 boardAddress artifact

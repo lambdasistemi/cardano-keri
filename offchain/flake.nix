@@ -1757,6 +1757,19 @@
                     -eq ${toString (builtins.length entitlementPrograms)}
                 '';
 
+              # Source re-elaboration stages every artifact referenced by the
+              # tracked modules from one root. Derive that root from the four
+              # existing artifact producers instead of naming one module as
+              # the only possible artifact consumer.
+              allBlasterArtifacts =
+                pkgs.runCommand "cardano-keri-all-blaster-artifacts" { } ''
+                  mkdir -p "$out"
+                  cp ${s2Artifacts}/*.hex "$out/"
+                  cp ${entitlementArtifacts}/bounty_commitment.bounty_commitment.spend.hex "$out/"
+                  cp ${migrationArtifacts}/*.hex "$out/"
+                  cp ${registerArtifacts}/*.hex "$out/"
+                '';
+
               entitlementRunner = pkgs.writeShellApplication {
                 name = "bounty-entitlement-blaster";
                 runtimeInputs = [ pkgs.coreutils pkgs.gnugrep ];
@@ -2037,7 +2050,7 @@
                   export AUDIT_PLUTUS_CORE_REV=${plutusCoreBlaster.rev}
                   export AUDIT_LEDGER_API_REV=${cardanoLedgerApiBlaster.rev}
                   export AUDIT_TRACKED_BUILD=${keriBlasterPackage.modRoot}
-                  export AUDIT_S2_ARTIFACTS=${s2Artifacts}
+                  export AUDIT_S2_ARTIFACTS=${allBlasterArtifacts}
                   bash ${./blaster/compatibility-audit.sh} "$@"
                 '';
               };
@@ -2065,6 +2078,11 @@
                   bash ${./blaster/test-production-source.sh} \
                     ${pkgs.lib.getExe auditRunner}
                   ${pkgs.lib.getExe auditRunner}
+                  bash ${./blaster/test-elaboration-order.sh} \
+                    ${./blaster/elaborate-ilean-root.sh} \
+                    ${keriBlasterPackage.modRoot} \
+                    ${cleanBlasterSource} \
+                    ${allBlasterArtifacts}
                   AUDIT_LEAN_BLASTER_ROOT=${leanBlaster} \
                   AUDIT_PLUTUS_CORE_ROOT=${plutusCoreBlaster} \
                   AUDIT_LEDGER_API_ROOT=${cardanoLedgerApiBlaster} \
@@ -2073,7 +2091,7 @@
                       ${./blaster/elaborate-ilean-root.sh} \
                       ${keriBlasterPackage.modRoot} \
                       ${cleanBlasterSource} \
-                      ${s2Artifacts}
+                      ${allBlasterArtifacts}
                   bash ${./blaster/test-compatibility-audit.sh} \
                     ${pkgs.lib.getExe compatibilityAuditRunner} \
                     ${./flake.lock} \
@@ -2083,7 +2101,7 @@
                     ${cleanBlasterSource}/CompatibilityNestedNamespaceReference.lean \
                     ${cleanBlasterSource}/CompatibilityUnrecognisedReference.lean \
                     ${cleanBlasterSource}/CompatibilityCollectorClosureReference.lean \
-                    137704294061cc3ed597167b15a586906ba23aba \
+                    590f492b928d4a177ac28d5785f0234a3a76078c \
                     ${sourceIdentity}
 
                   # The S2 evidence oracle and its falsification controls run

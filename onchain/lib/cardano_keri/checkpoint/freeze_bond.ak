@@ -21,8 +21,26 @@ pub fn freeze_window_valid(freeze_window: Int) -> Bool {
 }
 
 /// Versioned ARMED wire datum. ArmedV1 is constructor 0 with three fields.
+///
+/// `ArmedV2` is constructor 1: the lean #254 successor. It carries exactly the
+/// same three fields — the lean checkpoint, the hunter payee, and the existing
+/// deadline — and deliberately gains NO generic version/origin envelope and no
+/// commitment-specific wrapper. The commitment that established the hunter's
+/// entitlement is consumed and burned in the arming transaction itself, so the
+/// ARMED state records only its outcome: this payee, this deadline.
+///
+/// The version bump is what carries the meaning. Under `ArmedV1` the hunter was
+/// a caller-supplied redeemer field; under `ArmedV2` it is the payee of a
+/// matured, hash-committed reservation. The bytes are shaped alike; the
+/// authority behind them is not. `ArmedV1` remains declared because the
+/// pre-existing migration family still names it.
 pub type ArmedDatum {
   ArmedV1 {
+    checkpoint: CheckpointDatumV1,
+    hunter_pkh: ByteArray,
+    deadline: Int,
+  }
+  ArmedV2 {
     checkpoint: CheckpointDatumV1,
     hunter_pkh: ByteArray,
     deadline: Int,
@@ -47,15 +65,46 @@ pub fn classify(datum: Data) -> Option<ArmedDatum> {
   }
 }
 
-/// The hunter is an exact Cardano 28-byte verification-key hash.
+/// The hunter is an exact Cardano 28-byte verification-key hash, in either
+/// version. Width is a wire property and is checked identically for both.
 pub fn armed_datum_well_formed(armed: ArmedDatum) -> ArmedDatumVerdict {
+  let hunter_pkh = when armed is {
+    ArmedV1 { hunter_pkh, .. } -> hunter_pkh
+    ArmedV2 { hunter_pkh, .. } -> hunter_pkh
+  }
+  if bytearray.length(hunter_pkh) == 28 {
+    ArmedDatumValid
+  } else {
+    ArmedDatumInvalid(HunterPkhWidth)
+  }
+}
+
+/// The hunter payee recorded in an ARMED state, whichever version it is.
+///
+/// Claim and the ARMED conviction share read the beneficiary through this
+/// accessor and through nothing else: the payee is derived from stored state,
+/// never from a redeemer, so neither path can gain a new beneficiary and no
+/// party can acquire a veto by withholding a fresh signature.
+pub fn armed_hunter(armed: ArmedDatum) -> ByteArray {
   when armed is {
-    ArmedV1 { hunter_pkh, .. } ->
-      if bytearray.length(hunter_pkh) == 28 {
-        ArmedDatumValid
-      } else {
-        ArmedDatumInvalid(HunterPkhWidth)
-      }
+    ArmedV1 { hunter_pkh, .. } -> hunter_pkh
+    ArmedV2 { hunter_pkh, .. } -> hunter_pkh
+  }
+}
+
+/// The lean checkpoint carried by an ARMED state.
+pub fn armed_checkpoint(armed: ArmedDatum) -> CheckpointDatumV1 {
+  when armed is {
+    ArmedV1 { checkpoint, .. } -> checkpoint
+    ArmedV2 { checkpoint, .. } -> checkpoint
+  }
+}
+
+/// The stored hard deadline carried by an ARMED state.
+pub fn armed_deadline(armed: ArmedDatum) -> Int {
+  when armed is {
+    ArmedV1 { deadline, .. } -> deadline
+    ArmedV2 { deadline, .. } -> deadline
   }
 }
 

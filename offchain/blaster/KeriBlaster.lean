@@ -1,6 +1,9 @@
 import Blaster
 import CardanoLedgerApi.V3
 import PlutusCore.UPLC
+import KeriBlaster.Entitlement
+import KeriBlaster.Migration
+import KeriBlaster.RegisterArity
 import KeriBlaster.S2Cek
 import KeriBlaster.S2Evidence
 import KeriBlaster.S2Fixtures
@@ -231,6 +234,26 @@ manifest disagrees with the registry; and whenever an active falsification
 control's perturbation is not rejected.
 -/
 def main : IO UInt32 := do
+  -- #254 T254-108. The migration evidence is a distinct question over a
+  -- distinct imported program (the exact CHANGED checkpoint family), so it
+  -- gets its own entry rather than being folded into the S2 rows. It shares
+  -- this binary, and therefore this pinned module graph, so neither body of
+  -- evidence can come from a copy of the checking path.
+  if (← IO.getEnv "MIGRATION_EVIDENCE").isSome then
+    return (← KeriBlaster.Migration.run)
+  -- #254 T254-109. The corrected register's arity is a distinct question over
+  -- a distinct imported program, so it gets its own entry for the same reason
+  -- the migration evidence does.
+  if (← IO.getEnv "REGISTER_EVIDENCE").isSome then
+    return (← KeriBlaster.RegisterArity.run)
+  -- #254 S254-E. The entitlement evidence is a third distinct question over
+  -- two further imported programs (the exact compiled commitment and split
+  -- checkpoint families), so it gets its own entry rather than being folded
+  -- into either of the others. It shares this binary, and therefore this
+  -- pinned module graph, so no body of evidence here can come from a copy of
+  -- the checking path.
+  if (← IO.getEnv "ENTITLEMENT_EVIDENCE").isSome then
+    return (← KeriBlaster.Entitlement.run)
   let control ← readControl
   let some artifactDir ← IO.getEnv "S2_ARTIFACTS"
     | do

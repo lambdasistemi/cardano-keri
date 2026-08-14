@@ -66,9 +66,11 @@ library
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Advance
+    Cardano.KERI.AID.Checkpoint.BountyCommitment
     Cardano.KERI.AID.Checkpoint.Close
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
+    Cardano.KERI.AID.Checkpoint.Entitlement
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.LifecycleModel
     Cardano.KERI.AID.Checkpoint.Message
@@ -76,6 +78,8 @@ library
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
+    Cardano.KERI.AID.Migration.Checkpoint
+    Cardano.KERI.AID.Migration.Types
 
   other-modules:
     Cardano.KERI.AID.E2E.Mpf
@@ -163,6 +167,7 @@ library deployment
   exposed-modules:
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
+    Cardano.KERI.Deployment.CheckpointMigration
     Cardano.KERI.Deployment.Close
     Cardano.KERI.Deployment.CloseTransaction
     Cardano.KERI.Deployment.EndpointBoard
@@ -394,7 +399,9 @@ test-suite deployment-tests
   main-is:          Main.hs
   other-modules:
     Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.CloseSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
@@ -402,6 +409,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
@@ -426,13 +434,16 @@ test-suite deployment-tests
     , cardano-node-clients
     , cardano-tx-tools:tx-build
     , containers
+    , crypton
     , directory
     , filepath
-    , hspec                           >=2.11 && <2.12
+    , ghc-lib-parser                  >=9.12.3 && <9.13
+    , hspec                           >=2.11   && <2.12
     , http-conduit
-    , memory                          >=0.18 && <0.19
+    , memory                          >=0.18   && <0.19
     , microlens
     , plutus-core
+    , plutus-ledger-api
     , temporary
     , text
     , unix
@@ -928,9 +939,11 @@ test-suite unit-tests
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
+    Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.CloseSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
+    Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
@@ -941,6 +954,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
+    Cardano.KERI.AID.Migration.CheckpointSpec
+    Cardano.KERI.AID.Migration.TypesSpec
     Paths_cardano_keri
 
   ghc-options:      -threaded -with-rtsopts=-N
@@ -1038,6 +1053,54 @@ executable gen-lifecycle-trace-vectors
   build-depends:
     , base
     , cardano-keri
+
+-- #254 S254-1A: the sole source of the shared migration-type parity
+-- fixtures. Emits both the inputs and the expected encodings, so the Aiken
+-- suite cannot silently assert against material this generator never saw.
+executable gen-migration-types-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenMigrationTypesVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
+
+-- #254 S254-1B: the sole source of the Aiken checkpoint-migration fixtures.
+-- Signs with real Ed25519 keys, so its self-check can prove the authority
+-- negatives are actually refused before any vector is written.
+executable gen-checkpoint-migration-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenCheckpointMigrationVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-crypto-class
+    , cardano-keri
+    , memory                >=0.18 && <0.19
+    , plutus-core
+
+-- #254 S254-E: the entitlement-layer parity vectors. Unlike the #271
+-- component's independent oracle, this generator imports the production
+-- mirror: what it proves is that the shipped Haskell and the shipped Aiken
+-- agree on the canonical enforcement-evidence digest and on the shared
+-- matcher's verdict, which is the seam DATA-INV-271-02 leaves open.
+executable gen-bounty-entitlement-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenBountyEntitlementVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
 
 -- Live-boundary E2E smoke: builds a hardened #99 `Modify` transaction and
 -- submits it to a real cardano-node started via cardano-node-clients'

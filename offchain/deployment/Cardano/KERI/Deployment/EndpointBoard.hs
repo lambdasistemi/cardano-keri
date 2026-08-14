@@ -15,6 +15,7 @@ module Cardano.KERI.Deployment.EndpointBoard (
     renderBoardCatalog,
     watchabilityGrade,
     missingBoardWitnesses,
+    reconcileBoardMigration,
     renderWatchability,
 
     -- * Board datum protocol (#253 DAT-253-LEGACY-DATUM/DAT-253-AUTHORIZED-DATUM)
@@ -72,6 +73,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (digitToInt, isHexDigit)
 import Data.List (sortOn)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -609,6 +611,61 @@ missingBoardWitnesses witnesses entries =
     ]
   where
     catalogKeys = Set.fromList (map boardWitnessKey entries)
+
+{- | Reconcile one complete source board inventory with its successors.
+
+Both inventories must contain exactly the expected witness identities, once
+each, and every protected field must survive the migration unchanged.  The
+transaction out-ref is deliberately allowed to change: it identifies the new
+successor UTxO rather than board content or custody.
+-}
+reconcileBoardMigration ::
+    [Text] ->
+    [BoardEntry] ->
+    [BoardEntry] ->
+    Either String [(BoardEntry, BoardEntry)]
+reconcileBoardMigration expected sources successors = do
+    ensureUnique "expected witness identity" expected
+    sourceByAid <- inventoryByAid "source" sources
+    successorByAid <- inventoryByAid "successor" successors
+    unless (Set.fromList expected == Map.keysSet sourceByAid) $
+        Left "source board inventory does not match the expected witnesses"
+    unless (Set.fromList expected == Map.keysSet successorByAid) $
+        Left "successor board inventory does not match the expected witnesses"
+    traverse
+        reconcileOne
+        (Map.elems $ Map.intersectionWith (,) sourceByAid successorByAid)
+  where
+    reconcileOne (source, successor) = do
+        unless (boardRowContinuous source successor) $
+            Left
+                ( "successor board row changed protected fields for "
+                    <> T.unpack (boardAid source)
+                )
+        pure (source, successor)
+
+inventoryByAid :: String -> [BoardEntry] -> Either String (Map.Map Text BoardEntry)
+inventoryByAid label entries = do
+    ensureUnique (label <> " board witness identity") (map boardAid entries)
+    pure (Map.fromList [(boardAid entry, entry) | entry <- entries])
+
+ensureUnique :: (Ord a) => String -> [a] -> Either String ()
+ensureUnique label values =
+    unless (Set.size (Set.fromList values) == length values) $
+        Left (label <> " appears more than once")
+
+boardRowContinuous :: BoardEntry -> BoardEntry -> Bool
+boardRowContinuous source successor =
+    -- The AID is deliberately absent: reconciliation has already selected
+    -- both rows from maps keyed by this exact expected AID, so comparing it
+    -- here would be the tautology @aid == aid@ rather than a continuity check.
+    and
+        [ boardWitnessKey successor == boardWitnessKey source
+        , boardScheme successor == boardScheme source
+        , boardUrl successor == boardUrl source
+        , boardLovelace successor == boardLovelace source
+        , boardOwnerKeyHash successor == boardOwnerKeyHash source
+        ]
 
 renderWatchability :: [ByteString] -> [BoardEntry] -> Text
 renderWatchability witnesses entries =

@@ -7,7 +7,9 @@ Description : Offline regression for the Register observer wire
 module Cardano.KERI.AID.Checkpoint.WireSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.BountyCommitment (BountyRevealV1 (..))
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
@@ -19,12 +21,14 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     convictObserverRedeemerData,
     convictSpendRedeemerData,
     enforcementEvidenceData,
+    enforcementProofData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     responseAdvanceObserverRedeemerData,
  )
+import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Data.ByteString qualified as BS
 import PlutusCore.Data (Data (..))
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -94,6 +98,23 @@ freezeEvidence =
             [ (0, BS.replicate 64 0xe2)
             , (2, BS.replicate 64 0xe3)
             ]
+        }
+
+{- | S254-E: the enforcement observer no longer carries bare evidence.  The
+proof adds the payee the register will bind and the reveal that names the
+reservation earning it.
+-}
+freezeProof :: EnforcementProofV1
+freezeProof =
+    EnforcementProofV1
+        { epEvidence = freezeEvidence
+        , epPayeePkh = BS.replicate 28 0x9a
+        , epReveal =
+            BountyRevealV1
+                { brCommitmentRef = OutputRef (BS.replicate 32 0x0c) 0
+                , brNonce = BS.replicate 32 0x11
+                , brRefundIndex = 1
+                }
         }
 
 spec :: Spec
@@ -210,12 +231,12 @@ spec = describe "#136 Register observer wire" $ do
         claimFreezeSpendRedeemerData 5
             `shouldBe` Constr 3 [I 5]
 
-    it "forwards the exact Freeze evidence under observer action two" $
+    it "forwards the exact Freeze proof under observer action two" $
         freezeObserverRedeemerData
             (BS.replicate 28 0xc0)
             (BS.replicate 32 0xf0)
             9
-            freezeEvidence
+            freezeProof
             `shouldBe` Constr
                 0
                 [ Constr
@@ -231,7 +252,21 @@ spec = describe "#136 Register observer wire" $ do
                             ]
                         ]
                     ]
-                , enforcementEvidenceData freezeEvidence
+                , enforcementProofData freezeProof
+                ]
+
+    it "S254-E pins the EnforcementProofV1 field order as wire surface" $
+        enforcementProofData freezeProof
+            `shouldBe` Constr
+                0
+                [ enforcementEvidenceData freezeEvidence
+                , B (BS.replicate 28 0x9a)
+                , Constr
+                    0
+                    [ Constr 0 [B (BS.replicate 32 0x0c), I 0]
+                    , B (BS.replicate 32 0x11)
+                    , I 1
+                    ]
                 ]
 
     it "encodes enforcement signature tuples as two-item lists" $
@@ -285,12 +320,12 @@ spec = describe "#136 Register observer wire" $ do
                 , I 7
                 ]
 
-    it "forwards witnessed-conflict evidence under isolated observer action four" $
+    it "forwards the witnessed-conflict proof under isolated observer action four" $
         convictObserverRedeemerData
             (BS.replicate 28 0xc0)
             (BS.replicate 32 0xf1)
             11
-            freezeEvidence
+            freezeProof
             `shouldBe` Constr
                 0
                 [ Constr
@@ -306,5 +341,5 @@ spec = describe "#136 Register observer wire" $ do
                             ]
                         ]
                     ]
-                , enforcementEvidenceData freezeEvidence
+                , enforcementProofData freezeProof
                 ]

@@ -6,9 +6,11 @@ import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec qualified as AdvanceFixturesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
+import Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec qualified as BountyCommitmentSpec
 import Cardano.KERI.AID.Checkpoint.CloseSpec qualified as CloseSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
 import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
+import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
 import Cardano.KERI.AID.Checkpoint.Keri68OracleSpec qualified as Keri68OracleSpec
 import Cardano.KERI.AID.Checkpoint.LifecycleModelSpec qualified as LifecycleModelSpec
@@ -18,6 +20,8 @@ import Cardano.KERI.AID.Checkpoint.RegistrationSpec qualified as RegistrationSpe
 import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
+import Cardano.KERI.AID.Migration.CheckpointSpec qualified as MigrationCheckpointSpec
+import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
@@ -37,6 +41,10 @@ main = hspec $ do
     LifecycleModelSpec.spec
     EnforcementSpec.spec
     FreezeBondSpec.spec
+    BountyCommitmentSpec.spec
+    EntitlementSpec.spec
     RegistrationFixturesSpec.spec
     RegistrationSpec.spec
     WireSpec.spec
+    MigrationTypesSpec.spec
+    MigrationCheckpointSpec.spec

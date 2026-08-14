@@ -16,7 +16,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, ArmedV1}
+use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, armed_checkpoint}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
@@ -37,6 +37,15 @@ pub const observe_response_advance: Int = 3
 
 /// The stable action tag for Convict.
 pub const observe_convict: Int = 4
+
+/// The stable action tag for a checkpoint-family migration (#254).
+///
+/// The heavy migration verdict — canonical message reconstruction, the
+/// controller quorum, the family edge, and identity/role/value continuity —
+/// runs in its own observer, because the applied Register program cannot hold
+/// it and stay under the released signed-reference transaction ceiling. Only
+/// the tag lives here; the checks stay owned by MOD-254-CHECKPOINT-FAMILY.
+pub const observe_migration: Int = 5
 
 /// The claim checked independently by the checkpoint minting policy.
 pub type ObserverClaim {
@@ -105,8 +114,8 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   } else {
     // The thin checkpoint arm admits only actions 1 and 3, so this branch is
     // necessarily the Armed response form in the composed transaction.
-    expect ArmedV1 { checkpoint: old, .. }: ArmedDatum = old_data
-    old
+    expect armed: ArmedDatum = old_data
+    armed_checkpoint(armed)
   }
   expect Some(state_output) = list.find(
     tx.outputs,

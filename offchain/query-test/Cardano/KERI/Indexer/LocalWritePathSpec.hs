@@ -128,7 +128,7 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (artifactProgram),
     computeScriptHash,
-    deriveBoardScript,
+    deriveBoardV0Script,
     loadBlueprint,
     mkCageScript,
     scriptHashText,
@@ -1659,11 +1659,11 @@ entrypointBoardTransactionSettings manifestPath =
         }
 
 {- | A blueprint JSON with exactly the one validator
-'Cardano.KERI.Deployment.Script.deriveBoardScript' requires
+'Cardano.KERI.Deployment.Script.deriveBoardV0Script' requires
 (@endpoint_board.endpoint_board.mint@). Unlike the five-validator
 'Cardano.KERI.Deployment.Script.deriveV1Scripts' path (which APPLIES
 parameters through 'PlutusLedgerApi.V3.uncheckedDeserialiseUPLC', needing
-genuinely valid compiled UPLC), 'deriveBoardScript' only extracts and
+genuinely valid compiled UPLC), 'deriveBoardV0Script' only extracts and
 hashes the raw bytes -- an arbitrary even-length hex string decodes fine.
 -}
 entrypointBoardBlueprintJson :: BSL.ByteString
@@ -1727,7 +1727,7 @@ entrypointBoardBlueprintPath = do
 
 {- | #263: the exact deployed board program as a ledger 'Script', obtained
 through the REAL production loader and derivation
-('Cardano.KERI.Deployment.Script.loadBlueprint' then 'deriveBoardScript'),
+('Cardano.KERI.Deployment.Script.loadBlueprint' then 'deriveBoardV0Script'),
 never a hand-assembled fixture. Its hash is therefore whatever those functions
 produce from the checked-in bytes; if that is not
 'frozenEndpointBoardPolicyId', the seeded row does not answer the verbs'
@@ -1738,7 +1738,7 @@ entrypointRecoveredBoardScript :: IO (Script ConwayEra)
 entrypointRecoveredBoardScript = do
     path <- entrypointBoardBlueprintPath
     blueprint <- loadBlueprint path >>= either fail pure
-    artifact <- either fail pure (deriveBoardScript blueprint)
+    artifact <- either fail pure (deriveBoardV0Script blueprint)
     pure (mkCageScript (artifactProgram artifact))
 
 {- | The recovered board reference output, seeded at an arbitrary marker.
@@ -2133,7 +2133,7 @@ entrypointRegister kelPath probe runner =
 {- | 'runDeployWith' begins at @loadArtifacts@ -> @deriveV1Scripts@, which
 APPLIES parameters through @uncheckedDeserialiseUPLC@ and therefore needs
 the REAL compiled blueprint (A-002 ruling 2) -- the arbitrary-hex shortcut
-'entrypointBoardBlueprintJson' takes for 'deriveBoardScript' cannot reach
+'entrypointBoardBlueprintJson' takes for 'deriveBoardV0Script' cannot reach
 it. Its local acquisition runs INSIDE the live bracket, so the boundary is
 'publishBoundaryLiveOpener''s stand-in runtime; @selectFundingPair@ fails
 closed BEFORE the first runtime operation, which is what makes the funding

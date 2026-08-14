@@ -16,11 +16,18 @@ use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
+use cardano_keri/bounty_commitment.{
+  BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
+  BountyScope, CommitmentFamily, CommitmentParameters, ConvictEntitlement,
+  FreezeEntitlement, commitment_domain, commitment_hash, commitment_preimage,
+  commitment_schema, marker_name,
+}
 use cardano_keri/checkpoint/advance_vectors as adv_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
-use cardano_keri/checkpoint/freeze_bond.{ArmedV1}
+use cardano_keri/checkpoint/entitlement.{enforcement_evidence_digest}
+use cardano_keri/checkpoint/freeze_bond.{ArmedV1, ArmedV2}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
@@ -141,6 +148,7 @@ test measure_checkpoint_register_2key() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     redeemer_2key,
     policy,
     tx_2key,
@@ -155,6 +163,7 @@ test measure_checkpoint_register_witnessed() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     redeemer_witnessed,
     policy,
     tx_witnessed,
@@ -169,6 +178,7 @@ test measure_checkpoint_register_7key() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     redeemer_7key,
     policy,
     tx_7key,
@@ -332,9 +342,10 @@ fn freeze_measurement_value(d: CheckpointDatumV1) -> Value {
 fn freeze_measurement_tx(
   own_ref: OutputReference,
   d: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
 ) -> Transaction {
   let value = freeze_measurement_value(d)
-  spend_context(
+  let base = spend_context(
     [
       input_at(
         own_ref,
@@ -352,7 +363,7 @@ fn freeze_measurement_tx(
         address: role.address(policy, Armed),
         value,
         datum: InlineDatum(
-          ArmedV1 { checkpoint: d, hunter_pkh, deadline: 1_000 + freeze_window },
+          ArmedV2 { checkpoint: d, hunter_pkh, deadline: 1_000 + freeze_window },
         ),
         reference_script: None,
       },
@@ -362,19 +373,31 @@ fn freeze_measurement_tx(
     interval.between(0, 1_000),
     0,
   )
+  with_measured_reservation(
+    base,
+    measured_commitment(own_ref, FreezeEntitlement, hunter_pkh, evidence),
+  )
 }
 
 const own_ref_freeze_2key: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 7 }
 
 const tx_freeze_2key: Transaction =
-  freeze_measurement_tx(own_ref_freeze_2key, enf_vec.honest2_freeze_tip)
+  freeze_measurement_tx(
+    own_ref_freeze_2key,
+    enf_vec.honest2_freeze_tip,
+    honest2_freeze_wire,
+  )
 
 const own_ref_freeze_7key: OutputReference =
   OutputReference { transaction_id: seed_tx_id, output_index: 5 }
 
 const tx_freeze_7key: Transaction =
-  freeze_measurement_tx(own_ref_freeze_7key, enf_vec.honest7_freeze_tip)
+  freeze_measurement_tx(
+    own_ref_freeze_7key,
+    enf_vec.honest7_freeze_tip,
+    honest7_freeze_wire,
+  )
 
 test measure_checkpoint_arm_2key() {
   checkpoint.checkpoint.spend(
@@ -384,8 +407,13 @@ test measure_checkpoint_arm_2key() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
-    Freeze { evidence: honest2_freeze_wire, hunter_pkh },
+    Freeze {
+      evidence: honest2_freeze_wire,
+      hunter_pkh,
+      reveal: measured_reveal,
+    },
     own_ref_freeze_2key,
     tx_freeze_2key,
   )
@@ -399,8 +427,13 @@ test measure_checkpoint_arm_7key() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
-    Freeze { evidence: honest7_freeze_wire, hunter_pkh },
+    Freeze {
+      evidence: honest7_freeze_wire,
+      hunter_pkh,
+      reveal: measured_reveal,
+    },
     own_ref_freeze_7key,
     tx_freeze_7key,
   )
@@ -468,6 +501,7 @@ test measure_checkpoint_claim() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
     ClaimFreeze { hunter_output_index: 0 },
     own_ref_freeze_lag,
@@ -524,6 +558,28 @@ fn exact_payout(pkh: ByteArray, lovelace: Int) -> Output {
 }
 
 fn convict_witnessed_tx(
+  input_address: Address,
+  input_datum: Data,
+  protected: Int,
+  protected_outputs: List<Output>,
+) -> Transaction {
+  with_measured_reservation(
+    convict_witnessed_base(
+      input_address,
+      input_datum,
+      protected,
+      protected_outputs,
+    ),
+    measured_commitment(
+      own_ref_convict_witnessed,
+      ConvictEntitlement,
+      convictor_pkh,
+      enf_vec.fork_witnessed_convict_wire,
+    ),
+  )
+}
+
+fn convict_witnessed_base(
   input_address: Address,
   input_datum: Data,
   protected: Int,
@@ -604,6 +660,7 @@ fn convict_redeemer(
     convictor_pkh,
     convictor_output_index,
     hunter_output_index,
+    reveal: measured_reveal,
   }
 }
 
@@ -615,6 +672,7 @@ test measure_checkpoint_convict_active() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
     convict_redeemer(0, 0),
     own_ref_convict_witnessed,
@@ -630,6 +688,7 @@ test measure_checkpoint_convict_armed() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
     convict_redeemer(0, 1),
     own_ref_convict_witnessed,
@@ -645,9 +704,143 @@ test measure_checkpoint_convict_frozen() {
     d_reg,
     freeze_bond,
     freeze_window,
+    applied_commitment,
     None,
     convict_redeemer(0, 0),
     own_ref_convict_witnessed,
     tx_convict_witnessed_frozen,
   )
 }
+
+/// The release commitment family these fixtures deploy under. Explicit, finite,
+/// at or above the mandated one-slot age and the 5 ADA deposit floor — and
+/// deliberately not a published protocol default. `policy` is the release
+/// identity the settlement rule pins against.
+const commit_policy: PolicyId =
+  #"c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0"
+
+const applied_lifetime: Int = 4_321
+
+const applied_deposit: Int = 5_000_000
+
+const applied_commitment: CommitmentFamily =
+  CommitmentFamily {
+    policy: commit_policy,
+    parameters: CommitmentParameters {
+      network: network_id,
+      commit_min_age: 1,
+      commitment_lifetime: applied_lifetime,
+      commit_deposit: applied_deposit,
+    },
+  }
+
+/// The seed the measured reservation's marker derives from.
+const commit_seed_ref: OutputReference =
+  OutputReference {
+    transaction_id: #"7777777777777777777777777777777777777777777777777777777777777777",
+    output_index: 76,
+  }
+
+const commit_nonce: ByteArray =
+  #"6e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e6365000f"
+
+/// The reservation a measured settlement consumes. Built from the ADOPTED
+/// component types, over the exact checkpoint, action and actual evidence the
+/// measured transaction carries — so the entitlement leg does real work inside
+/// the measured budget instead of short-circuiting out of it.
+fn measured_commitment(
+  checkpoint_ref: OutputReference,
+  action: BountyAction,
+  payee_pkh: ByteArray,
+  evidence: EnforcementEvidence,
+) -> BountyCommitment {
+  let marker = marker_name(commit_seed_ref)
+  let scope = BountyScope {
+    domain: commitment_domain,
+    schema: commitment_schema,
+    network: network_id,
+    checkpoint_policy: policy,
+    checkpoint_ref,
+    action,
+    marker,
+    commit_upper: 0,
+    eligible_after: 1,
+    expires_at: applied_lifetime,
+  }
+  BountyCommitmentV1 {
+    scope,
+    payee_pkh,
+    hash: commitment_hash(
+      commitment_preimage(
+        scope,
+        enforcement_evidence_digest(evidence),
+        payee_pkh,
+        commit_nonce,
+      ),
+    ),
+    marker,
+  }
+}
+
+/// Attach the reservation to a measured transaction: the authentic commitment
+/// input at the FAMILY policy, its marker burn, the deposit refund, and a
+/// validity range whose lower endpoint clears maturity while its upper endpoint
+/// is preserved exactly, because that is what anchors the recorded deadline.
+fn with_measured_reservation(
+  base: Transaction,
+  commitment: BountyCommitment,
+) -> Transaction {
+  let BountyCommitmentV1 { marker, payee_pkh, scope, .. } = commitment
+  let datum: Data = commitment
+  let upper = when base.validity_range.upper_bound.bound_type is {
+    interval.Finite(_) -> base.validity_range.upper_bound
+    _ ->
+      interval.IntervalBound {
+        bound_type: interval.Finite(scope.expires_at),
+        is_inclusive: True,
+      }
+  }
+  Transaction {
+    ..base,
+    validity_range: interval.Interval {
+      lower_bound: interval.IntervalBound {
+        bound_type: interval.Finite(1),
+        is_inclusive: True,
+      },
+      upper_bound: upper,
+    },
+    inputs: list.concat(
+      base.inputs,
+      [
+        input_at(
+          measured_reveal.commitment_ref,
+          Output {
+            address: from_script(commit_policy),
+            value: from_lovelace(applied_deposit)
+              |> merge(from_asset(commit_policy, marker, 1)),
+            datum: InlineDatum(datum),
+            reference_script: None,
+          },
+        ),
+      ],
+    ),
+    outputs: list.concat(
+      base.outputs,
+      [exact_payout(payee_pkh, applied_deposit)],
+    ),
+    mint: base.mint |> merge(from_asset(commit_policy, marker, -1)),
+  }
+}
+
+/// The reveal these measurements exercise. Measurement rows are an INVOCATION
+/// of the real applied program, so the entitlement leg must be present in the
+/// measured path rather than stubbed out of it.
+const measured_reveal: BountyRevealV1 =
+  BountyRevealV1 {
+    commitment_ref: OutputReference {
+      transaction_id: #"7777777777777777777777777777777777777777777777777777777777777777",
+      output_index: 77,
+    },
+    nonce: #"6e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e6365000f",
+    refund_index: 3,
+  }

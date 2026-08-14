@@ -4,12 +4,13 @@ use aiken/cbor
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{TombstoneV1}
 use cardano_keri/checkpoint/freeze_bond.{
-  ArmedDatum, ArmedDatumInvalid, ArmedDatumValid, ArmedV1, Deadline,
+  ArmedDatum, ArmedDatumInvalid, ArmedDatumValid, ArmedV1, ArmedV2, Deadline,
   DeadlineInvalid, Exclusive, Finite, HunterPkhWidth, Inclusive,
   MissingUpperBound, NegativeInfinity, NonFiniteUpperBound,
-  NonPositiveFreezeWindow, PositiveInfinity, arm_deadline,
-  armed_datum_well_formed, claim_at_or_after_deadline, classify,
-  freeze_bond_valid, freeze_window_valid, response_before_deadline,
+  NonPositiveFreezeWindow, PositiveInfinity, arm_deadline, armed_checkpoint,
+  armed_datum_well_formed, armed_deadline, armed_hunter,
+  claim_at_or_after_deadline, classify, freeze_bond_valid, freeze_window_valid,
+  response_before_deadline,
 }
 use cardano_keri/checkpoint/freeze_bond_vectors as vec
 use cardano_keri/checkpoint/threshold.{Unweighted}
@@ -60,15 +61,47 @@ test checkpoint_wrapper_does_not_classify_as_armed() {
   classify(data) == None
 }
 
+fn armed_v1_with(hunter_pkh: ByteArray) -> ArmedDatum {
+  ArmedV1 { checkpoint: checkpoint(), hunter_pkh, deadline: 1001 }
+}
+
+fn armed_v2_with(hunter_pkh: ByteArray) -> ArmedDatum {
+  ArmedV2 { checkpoint: checkpoint(), hunter_pkh, deadline: 1001 }
+}
+
+/// Width is a wire property of the ARMED state, so it must hold identically for
+/// the legacy constructor and the lean #254 successor. Checking only one of them
+/// would leave the other free to carry a malformed payee.
 test hunter_width_is_exactly_28_bytes() {
   and {
     armed_datum_well_formed(armed()) == ArmedDatumValid,
-    armed_datum_well_formed(ArmedV1 { ..armed(), hunter_pkh: vec.hunter_short }) == ArmedDatumInvalid(
+    armed_datum_well_formed(armed_v2_with(vec.hunter)) == ArmedDatumValid,
+    armed_datum_well_formed(armed_v1_with(vec.hunter_short)) == ArmedDatumInvalid(
       HunterPkhWidth,
     ),
-    armed_datum_well_formed(ArmedV1 { ..armed(), hunter_pkh: vec.hunter_long }) == ArmedDatumInvalid(
+    armed_datum_well_formed(armed_v1_with(vec.hunter_long)) == ArmedDatumInvalid(
       HunterPkhWidth,
     ),
+    armed_datum_well_formed(armed_v2_with(vec.hunter_short)) == ArmedDatumInvalid(
+      HunterPkhWidth,
+    ),
+    armed_datum_well_formed(armed_v2_with(vec.hunter_long)) == ArmedDatumInvalid(
+      HunterPkhWidth,
+    ),
+  }
+}
+
+/// The shared accessors read the same three fields out of either constructor.
+/// Claim and the ARMED conviction share depend on this: they must see the
+/// stored payee whichever version the state was written in.
+test shared_accessors_agree_across_both_armed_versions() {
+  and {
+    armed_hunter(armed_v1_with(vec.hunter)) == vec.hunter,
+    armed_hunter(armed_v2_with(vec.hunter)) == vec.hunter,
+    armed_checkpoint(armed_v1_with(vec.hunter)) == checkpoint(),
+    armed_checkpoint(armed_v2_with(vec.hunter)) == checkpoint(),
+    armed_deadline(armed_v1_with(vec.hunter)) == 1001,
+    armed_deadline(armed_v2_with(vec.hunter)) == 1001,
   }
 }
 

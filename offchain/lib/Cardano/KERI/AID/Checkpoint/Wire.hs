@@ -19,13 +19,15 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeSpendRedeemerData,
     freezeObserverRedeemerData,
     enforcementEvidenceData,
+    enforcementProofData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
-import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence)
+import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Data.ByteString (ByteString)
 import PlutusCore.Data (Data (..))
@@ -134,16 +136,16 @@ convictSpendRedeemerData convictorPkh convictorOutputIndex hunterOutputIndex =
         ]
 
 {- | The enforcement observer envelope for @Freeze@: stable action two, the
-applied checkpoint policy, the named spent output reference, and the unchanged
-enforcement evidence.
+applied checkpoint policy, the named spent output reference, and the #254
+@EnforcementProofV1@ payload that replaced the bare evidence.
 -}
 freezeObserverRedeemerData ::
     ByteString ->
     ByteString ->
     Integer ->
-    EnforcementEvidence ->
+    EnforcementProofV1 ->
     Data
-freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex proof =
     Constr
         0
         [ Constr
@@ -152,7 +154,7 @@ freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
             , B checkpointPolicy
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]
-        , enforcementEvidenceData evidence
+        , enforcementProofData proof
         ]
 
 -- | The witnessed-conflict observer envelope uses isolated action four.
@@ -160,9 +162,9 @@ convictObserverRedeemerData ::
     ByteString ->
     ByteString ->
     Integer ->
-    EnforcementEvidence ->
+    EnforcementProofV1 ->
     Data
-convictObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+convictObserverRedeemerData checkpointPolicy spentTxId spentIndex proof =
     Constr
         0
         [ Constr
@@ -171,7 +173,20 @@ convictObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
             , B checkpointPolicy
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]
-        , enforcementEvidenceData evidence
+        , enforcementProofData proof
+        ]
+
+{- | The Aiken @EnforcementProofV1@ record: @Constr 0@ of the complete actual
+evidence, the payee this enforcement authorizes, and the reveal that names the
+reservation earning it.  Field order is wire surface (#254 S254-E).
+-}
+enforcementProofData :: EnforcementProofV1 -> Data
+enforcementProofData EnforcementProofV1{..} =
+    Constr
+        0
+        [ enforcementEvidenceData epEvidence
+        , B epPayeePkh
+        , asPlcData epReveal
         ]
 
 -- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 15 fields.
@@ -196,31 +211,15 @@ advanceEvidenceData AdvanceEvidence{..} =
         , signatureListData aeWitReceipts
         ]
 
--- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+
+The field order itself lives with the type, in
+"Cardano.KERI.AID.Checkpoint.Enforcement", because #254 S254-E made these
+exact bytes the preimage of the canonical enforcement evidence digest.  A
+second copy here would be a second thing to keep in step.
+-}
 enforcementEvidenceData :: EnforcementEvidence -> Data
-enforcementEvidenceData EnforcementEvidence{..} =
-    Constr
-        0
-        [ B eneEventBytes
-        , I (fromIntegral eneOffT)
-        , I (fromIntegral eneOffI)
-        , I (fromIntegral eneOffS)
-        , I (fromIntegral eneOffD)
-        , intListData eneOffK
-        , I (fromIntegral eneOffKt)
-        , intListData eneOffN
-        , I (fromIntegral eneOffNt)
-        , I (fromIntegral eneOffBt)
-        , I eneNativeSn
-        , B eneSaid
-        , List (map B eneRevealedKeys)
-        , List (map B eneNextKeys)
-        , asPlcData eneCurThreshold
-        , asPlcData eneNextThreshold
-        , I eneToad
-        , signatureListData eneCtrlSigs
-        , signatureListData eneWitSigs
-        ]
+enforcementEvidenceData = asPlcData
 
 -- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 12 fields.
 registrationEvidenceData :: RegistrationEvidence -> Data

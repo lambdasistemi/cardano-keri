@@ -7,9 +7,14 @@
 use cardano/assets.{PolicyId}
 use cardano/certificate.{Certificate, RegisterCredential}
 use cardano/transaction.{Transaction}
+use cardano_keri/bounty_commitment.{CommitmentFamily}
 use cardano_keri/checkpoint/enforcement_observer.{validate_enforcement}
+use cardano_keri/checkpoint/entitlement.{validate_entitlement_observation}
 use cardano_keri/checkpoint/observer.{
-  ObserverEnvelope, validate_advance, validate_registration,
+  ObserverEnvelope, observe_migration, validate_advance, validate_registration,
+}
+use cardano_keri/migration/checkpoint.{
+  MigrationProof, validate_migration_observation,
 }
 
 fn accept_own_registration_only(certificate: Certificate) -> Bool {
@@ -51,10 +56,78 @@ validator observer_advance(_version: Int) {
   }
 }
 
-validator observer_enforcement(_version: Int) {
+/// #254 A-001 — the promoted checkpoint-migration observer.
+///
+/// The applied Register program cannot carry the migration verdict and stay
+/// under the released 16,133-byte signed-reference transaction ceiling, so the
+/// heavy half runs here. `predecessor_policy` is an applied parameter, never a
+/// redeemer field: the applied hash is this program's release identity, and the
+/// one policy it accepts is its only lineage input.
+validator observer_migration(predecessor_policy: PolicyId) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
-    validate_enforcement(envelope, tx)
+    let claim = envelope.claim
+    expect claim.action == observe_migration
+    // The checkpoint program independently requires this same claim to name
+    // its own policy and its own consumed output, so neither side is trusting
+    // the other's reading of the transaction.
+    expect Some(source_ref) = claim.own_ref
+    expect proof: MigrationProof = envelope.payload
+    validate_migration_observation(
+      predecessor_policy,
+      claim.checkpoint_policy,
+      source_ref,
+      proof,
+      tx,
+    )
+  }
+
+  publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {
+    accept_own_registration_only(certificate)
+  }
+
+  else(_) {
+    fail
+  }
+}
+
+/// The enforcement observer is applied with the release commitment family:
+/// the policy is the identity of the commitment program whose reservations
+/// this release honours, and the nested parameters are its explicit finite
+/// age, lifetime and deposit magnitudes.
+validator observer_enforcement(_version: Int, commitment: CommitmentFamily) {
+  withdraw(redeemer: Data, _account: Data, tx: Transaction) {
+    expect envelope: ObserverEnvelope = redeemer
+    validate_enforcement(commitment, envelope, tx)
+  }
+
+  publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {
+    accept_own_registration_only(certificate)
+  }
+
+  else(_) {
+    fail
+  }
+}
+
+/// #254 A-002 — the entitlement half of the two-observer split.
+///
+/// It is applied with exactly the arguments `observer_enforcement` takes, and
+/// for the same reason: the commitment family's policy is inside this program's
+/// own hash, so a release cannot point its entitlement rule at a different
+/// reservation program without changing the credential it publishes.
+///
+/// The split exists because one applied program carrying both responsibilities
+/// measures 16,912 bytes against the 16,133-byte signed-reference publication
+/// budget, and the entitlement leg inside it is 2,117 bytes of generated
+/// Plutus-Data codecs that cannot be cut without deleting a demonstrated check.
+/// Splitting moves bytes, not authority: this handler validates the mature
+/// authentic reservation, `observer_enforcement` validates the actual KERI
+/// evidence, and neither alone authorizes a settlement.
+validator observer_entitlement(_version: Int, commitment: CommitmentFamily) {
+  withdraw(redeemer: Data, _account: Data, tx: Transaction) {
+    expect envelope: ObserverEnvelope = redeemer
+    validate_entitlement_observation(commitment, envelope, tx)
   }
 
   publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {

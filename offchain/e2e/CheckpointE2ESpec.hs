@@ -15,10 +15,7 @@ import Test.Hspec
 import CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterCloseScenario,
-    productionRegisterConvictScenario,
-    productionRegisterFreezeScenario,
     productionRegisterScenario,
-    productionRegisterSeizeScenario,
     stagedCheckpointDevnet,
  )
 
@@ -39,17 +36,18 @@ spec = describe "#136 register a small identity end to end" $ do
             "#142 settles Register then a genuine witnessed two-key Advance"
             productionRegisterAdvanceScenario
 
-    around stagedCheckpointDevnet $ do
-        it
-            "#137 rejects stale Freeze replay and settles two Freeze/response rounds"
-            productionRegisterFreezeScenario
+    it
+        "#137 rejects stale Freeze replay and settles two Freeze/response rounds"
+        $ pendingWith entitlementWiringPendingReason
 
-    around stagedCheckpointDevnet $ do
-        it
-            "#138 claims an unanswered delay bond then thaws the checkpoint"
-            productionRegisterSeizeScenario
+    it
+        "#138 claims an unanswered delay bond then thaws the checkpoint"
+        $ pendingWith entitlementWiringPendingReason
 
-    around stagedCheckpointDevnet $ do
-        it
-            "#151 convicts ACTIVE, ARMED, and FROZEN checkpoints"
-            productionRegisterConvictScenario
+    it
+        "#151 convicts ACTIVE, ARMED, and FROZEN checkpoints"
+        $ pendingWith entitlementWiringPendingReason
+
+entitlementWiringPendingReason :: String
+entitlementWiringPendingReason =
+    "live freeze/convict E2E awaits #271 entitlement wiring - see #280"

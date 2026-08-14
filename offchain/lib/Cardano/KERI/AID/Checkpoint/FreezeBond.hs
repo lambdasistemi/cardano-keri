@@ -22,6 +22,9 @@ module Cardano.KERI.AID.Checkpoint.FreezeBond (
     ArmedDatum (..),
     ArmedDatumError (..),
     armedDatumWellFormed,
+    armedCheckpoint,
+    armedHunter,
+    armedDeadline,
 
     -- * Raw validity-range endpoints
     Inclusivity (..),
@@ -99,40 +102,72 @@ roleHash policy role =
 roleDomain :: ByteString
 roleDomain = "cardano-keri/checkpoint/role/v1"
 
-{- | Versioned ARMED datum. The @ArmedV1@ constructor is the wire version tag
-(@Constr 0@), with the unchanged inner 'CheckpointDatumV1', hunter key hash,
-and hard deadline as its three fields.
+{- | Versioned ARMED datum, one shared sum with two wire versions.
+
+@ArmedV1@ is constructor 0 and @ArmedV2@ is constructor 1; both carry the
+unchanged inner 'CheckpointDatumV1', hunter key hash, and hard deadline as
+their three fields.  #254 S254-E's lean successor is deliberately identical in
+shape: it carries no version integer, migration origin, commitment wrapper, or
+arbitration state, because a freeze under the entitled family differs from a
+legacy one in /how it was earned/, not in what it records.
+
+A freeze PRODUCES @ArmedV2@.  Both constructors stay decodable and every
+reader goes through 'armedCheckpoint', 'armedHunter' and 'armedDeadline', so
+existing @ArmedV1@ state remains spendable and no consumer can quietly become
+version-specific.
 -}
-data ArmedDatum = ArmedV1
-    { adCheckpoint :: !CheckpointDatumV1
-    , adHunterPkh :: !ByteString
-    , adDeadline :: !Integer
-    }
+data ArmedDatum
+    = ArmedV1
+        { adCheckpoint :: !CheckpointDatumV1
+        , adHunterPkh :: !ByteString
+        , adDeadline :: !Integer
+        }
+    | ArmedV2
+        { adCheckpoint :: !CheckpointDatumV1
+        , adHunterPkh :: !ByteString
+        , adDeadline :: !Integer
+        }
     deriving stock (Show, Eq)
 
 -- | Strip the 'BuiltinData' wrapper from a value's 'Data' tree.
 asData :: (ToData a) => a -> Data
 asData x = let BuiltinData d = toBuiltinData x in d
 
+-- | The carried checkpoint state, whichever ARMED version holds it.
+armedCheckpoint :: ArmedDatum -> CheckpointDatumV1
+armedCheckpoint = adCheckpoint
+
+-- | The stored hunter, whichever ARMED version holds it.
+armedHunter :: ArmedDatum -> ByteString
+armedHunter = adHunterPkh
+
+-- | The stored hard deadline, whichever ARMED version holds it.
+armedDeadline :: ArmedDatum -> Integer
+armedDeadline = adDeadline
+
 instance ToData ArmedDatum where
-    toBuiltinData ArmedV1{..} =
+    toBuiltinData armed =
         BuiltinData $
             Constr
-                0
-                [ asData adCheckpoint
-                , B adHunterPkh
-                , I adDeadline
+                (armedConstructor armed)
+                [ asData (armedCheckpoint armed)
+                , B (armedHunter armed)
+                , I (armedDeadline armed)
                 ]
 
+-- | The wire version tag of an ARMED datum.
+armedConstructor :: ArmedDatum -> Integer
+armedConstructor ArmedV1{} = 0
+armedConstructor ArmedV2{} = 1
+
 instance FromData ArmedDatum where
-    fromBuiltinData (BuiltinData (Constr 0 [checkpoint, B hunter, I deadline])) = do
-        adCheckpoint <- fromBuiltinData (BuiltinData checkpoint)
-        pure
-            ArmedV1
-                { adCheckpoint = adCheckpoint
-                , adHunterPkh = hunter
-                , adDeadline = deadline
-                }
+    fromBuiltinData (BuiltinData (Constr tag [checkpoint, B hunter, I deadline]))
+        | tag == 0 = decoded ArmedV1
+        | tag == 1 = decoded ArmedV2
+      where
+        decoded construct = do
+            inner <- fromBuiltinData (BuiltinData checkpoint)
+            pure (construct inner hunter deadline)
     fromBuiltinData _ = Nothing
 
 -- | ARMED datum well-formedness rejection reason.
@@ -140,10 +175,12 @@ data ArmedDatumError
     = HunterPkhWidth
     deriving stock (Show, Eq)
 
--- | The recorded hunter must be an exact 28-byte Cardano key hash.
+{- | The recorded hunter must be an exact 28-byte Cardano key hash.  Both
+versions are held to the same rule; there is no relaxed successor.
+-}
 armedDatumWellFormed :: ArmedDatum -> Either ArmedDatumError ()
-armedDatumWellFormed ArmedV1{..} =
-    unless (BS.length adHunterPkh == 28) (Left HunterPkhWidth)
+armedDatumWellFormed armed =
+    unless (BS.length (armedHunter armed) == 28) (Left HunterPkhWidth)
 
 -- | Raw ledger endpoint inclusivity. It is preserved, never normalized.
 data Inclusivity

@@ -187,13 +187,22 @@ fn changed_witness_source() -> AuthorizedBoardDatum {
   )
 }
 
-fn legacy_datum() -> BoardDatumV1 {
+fn legacy_datum_with(
+  key: ByteArray,
+  record: ByteArray,
+  signature: ByteArray,
+  owner_key_hash: VerificationKeyHash,
+) -> BoardDatumV1 {
   BoardDatumV1 {
-    witness_key,
-    endpoint_record,
-    endpoint_signature,
-    owner_key_hash: owner,
+    witness_key: key,
+    endpoint_record: record,
+    endpoint_signature: signature,
+    owner_key_hash,
   }
+}
+
+fn legacy_datum() -> BoardDatumV1 {
+  legacy_datum_with(witness_key, endpoint_record, endpoint_signature, owner)
 }
 
 fn marker_value(policy_id: PolicyId, name: ByteArray, lovelace: Int) -> Value {
@@ -214,13 +223,21 @@ fn authorized_output(
   }
 }
 
-fn legacy_output() -> Output {
+fn legacy_output_with(
+  datum: BoardDatumV1,
+  name: ByteArray,
+  lovelace: Int,
+) -> Output {
   Output {
     address: from_script(legacy_policy),
-    value: marker_value(legacy_policy, witness_key, deposit),
-    datum: InlineDatum(legacy_datum()),
+    value: marker_value(legacy_policy, name, lovelace),
+    datum: InlineDatum(datum),
     reference_script: None,
   }
+}
+
+fn legacy_output() -> Output {
+  legacy_output_with(legacy_datum(), witness_key, deposit)
 }
 
 fn transition_mint(
@@ -384,6 +401,28 @@ fn legacy_tx(successor_name: ByteArray, include_source: Bool) -> Transaction {
     ],
     transition_mint(legacy_policy, target_policy, witness_key, successor_name),
     [owner],
+  )
+}
+
+fn legacy_continuity_tx(
+  source: BoardDatumV1,
+  source_deposit: Int,
+) -> Transaction {
+  legacy_tx_with(
+    source_ref(),
+    legacy_output_with(source, source.witness_key, source_deposit),
+    True,
+    [
+      ada_output(refund_address(), source_deposit),
+      authorized_output(target_policy, target_datum(), witness_key, deposit),
+    ],
+    transition_mint(
+      legacy_policy,
+      target_policy,
+      source.witness_key,
+      witness_key,
+    ),
+    [source.owner_key_hash],
   )
 }
 
@@ -758,6 +797,40 @@ test board_v0_bridge_accepts_same_name_successor() {
     refund_address(),
     legacy_tx(witness_key, True),
   )
+}
+
+test s254_2_board_legacy_migration_rejects_changed_witness() fail {
+  let changed_source = legacy_datum_with(
+    other_witness_key,
+    endpoint_record,
+    other_witness_endpoint_signature,
+    owner,
+  )
+  legacy_migrate_in(legacy_continuity_tx(changed_source, deposit))
+}
+
+test s254_2_board_legacy_migration_rejects_changed_content() fail {
+  let changed_source = legacy_datum_with(
+    witness_key,
+    other_endpoint_record,
+    other_endpoint_signature,
+    owner,
+  )
+  legacy_migrate_in(legacy_continuity_tx(changed_source, deposit))
+}
+
+test s254_2_board_legacy_migration_rejects_changed_owner() fail {
+  let changed_source = legacy_datum_with(
+    witness_key,
+    endpoint_record,
+    endpoint_signature,
+    new_owner,
+  )
+  legacy_migrate_in(legacy_continuity_tx(changed_source, deposit))
+}
+
+test s254_2_board_legacy_migration_rejects_changed_deposit() fail {
+  legacy_migrate_in(legacy_continuity_tx(legacy_datum(), deposit + 1))
 }
 
 test s254_2_board_legacy_refund_selects_spent_source_redeemer() {

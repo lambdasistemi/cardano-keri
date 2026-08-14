@@ -27,6 +27,7 @@ import Test.Hspec (
     describe,
     it,
     runIO,
+    shouldBe,
     shouldSatisfy,
  )
 import Test.Hspec.Core.Runner (
@@ -60,6 +61,30 @@ boardInventorySpec = do
                 sourceBoardInventory
                 successorBoardInventory
                 `shouldSatisfy` isRight
+
+        it "s254_2_board_expected_inventory_duplicate_identity_rejects" $
+            reconcileBoardMigration
+                (expectedPreprodBoardAids <> [witnessOneAid])
+                sourceBoardInventory
+                successorBoardInventory
+                `shouldBe` Left
+                    "expected witness identity appears more than once"
+
+        it "s254_2_board_source_inventory_extra_foreign_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                (sourceBoardInventory <> [boardRow plausibleForeignAid 4])
+                successorBoardInventory
+                `shouldBe` Left
+                    "source board inventory does not match the expected witnesses"
+
+        it "s254_2_board_successor_inventory_extra_foreign_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                (successorBoardInventory <> [successorRow plausibleForeignAid 4])
+                `shouldBe` Left
+                    "successor board inventory does not match the expected witnesses"
 
         it "s254_2_board_inventory_missing_row_rejects" $
             reconcileBoardMigration

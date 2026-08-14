@@ -632,15 +632,15 @@ reconcileBoardMigration expected sources successors = do
         Left "source board inventory does not match the expected witnesses"
     unless (Set.fromList expected == Map.keysSet successorByAid) $
         Left "successor board inventory does not match the expected witnesses"
-    traverse (reconcileOne sourceByAid successorByAid) expected
+    traverse
+        reconcileOne
+        (Map.elems $ Map.intersectionWith (,) sourceByAid successorByAid)
   where
-    reconcileOne sourceByAid successorByAid aid = do
-        source <- lookupAid "source" aid sourceByAid
-        successor <- lookupAid "successor" aid successorByAid
+    reconcileOne (source, successor) = do
         unless (boardRowContinuous source successor) $
             Left
                 ( "successor board row changed protected fields for "
-                    <> T.unpack aid
+                    <> T.unpack (boardAid source)
                 )
         pure (source, successor)
 
@@ -653,17 +653,6 @@ ensureUnique :: (Ord a) => String -> [a] -> Either String ()
 ensureUnique label values =
     unless (Set.size (Set.fromList values) == length values) $
         Left (label <> " appears more than once")
-
-lookupAid ::
-    String ->
-    Text ->
-    Map.Map Text BoardEntry ->
-    Either String BoardEntry
-lookupAid label aid entries =
-    maybe
-        (Left $ label <> " board inventory is missing " <> T.unpack aid)
-        Right
-        (Map.lookup aid entries)
 
 boardRowContinuous :: BoardEntry -> BoardEntry -> Bool
 boardRowContinuous source successor =

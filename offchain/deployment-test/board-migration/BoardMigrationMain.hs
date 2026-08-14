@@ -93,12 +93,25 @@ boardInventorySpec = do
                 (drop 1 successorBoardInventory)
                 `shouldSatisfy` isLeft
 
+        it "s254_2_board_source_inventory_duplicate_row_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                ( sourceOne
+                    { boardUrl = "https://attacker.invalid"
+                    }
+                    : sourceBoardInventory
+                )
+                successorBoardInventory
+                `shouldBe` Left
+                    "source board witness identity appears more than once"
+
         it "s254_2_board_inventory_duplicate_row_rejects" $
             reconcileBoardMigration
                 expectedPreprodBoardAids
                 sourceBoardInventory
                 (successorOne : successorBoardInventory)
-                `shouldSatisfy` isLeft
+                `shouldBe` Left
+                    "successor board witness identity appears more than once"
 
         it "s254_2_board_inventory_changed_row_rejects" $
             reconcileBoardMigration

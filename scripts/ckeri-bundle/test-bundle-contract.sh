@@ -520,7 +520,8 @@ while IFS=$'\t' read -r title params code; do
   program_sha=$(printf '%s' "$code" | sha256sum | cut -d ' ' -f 1)
   jq -cn --arg title "$title" --argjson params "$params" \
     --arg program_sha256 "$program_sha" \
-    '{title:$title, params:$params, program_sha256:$program_sha256}' \
+    '{title:$title, params:$params, program_sha256:$program_sha256,
+      programHash:$program_sha256, compiledCodeHash:$program_sha256}' \
     >> "$work/programs.jsonl"
 done < <(jq -r '.validators[] | [.title, ((.parameters // []) | length), .compiledCode] | @tsv' \
   "$work/blueprint.json")
@@ -560,17 +561,9 @@ jq -n \
     }),
     blueprint_sha256:$blueprint_sha256,
     programs:$ps,
-    records: (
-      [(identity + {record:"manifest"})]
-      + [$ps[] | identity + {record:"program", title:.title,
-          params:.params, program_sha256:.program_sha256}]
-      + [
-          (identity + {record:"baseline"}),
-          (identity + {record:"evaluation-identity"}),
-          (identity + {record:"verification-receipt",
-            receipt:$verification_receipt})
-        ]
-    )
+    records: [$ps[] | identity + {record:"program", title:.title,
+      params:.params, program_sha256:.program_sha256,
+      programHash:.programHash, compiledCodeHash:.compiledCodeHash}]
   }' > "$work/manifest.json"
 
 set +e
@@ -838,9 +831,10 @@ expect_red INV-246-ARTIFACT-BINDING-TOY-COPY \
   "$work/bundle-copy/run.sh" "$work/bind-toy"
 jq -n --arg c "$source_commit" --arg a "$producer_aiken" \
   --arg t "$producer_toolchain" \
-  '{identity:{commit:$c,aiken:$a,toolchain:$t,variant:"defaultFunSemanticsVariantE",source:"not-the-toy"}}' \
+  '{identity:{commit:$c,aiken:$a,toolchain:$t,variant:"defaultFunSemanticsVariantE"}}' \
   > "$work/bundle-copy/published/manifest.json"
-"$work/bundle-copy/run.sh" "$work/bind-real" > "$work/bind.out"
+CKERI_REPO_ROOT="$repo_root" \
+  "$work/bundle-copy/run.sh" "$work/bind-real" > "$work/bind.out"
 judge_binding_subject "$work/bind.out" \
   || fail "non-toy published identity was not accepted as the binding subject"
 

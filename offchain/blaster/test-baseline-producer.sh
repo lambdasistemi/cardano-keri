@@ -81,10 +81,10 @@ jq '.validators[0].parameters = ((.validators[0].parameters // []) + [{title:"mu
   || fail "INV-246-B3 parameter mutation did not move the produced parameter count"
 echo 'PRODUCER-MUTANT invariant=INV-246-B3 mutations=title,program-byte,parameters outcome=REFUTED'
 
-jq '([.validators[].compiledCode] | unique) as $codes |
-  .validators |= map(if .compiledCode == $codes[0] then .compiledCode = $codes[1] else . end)' \
+jq '.validators[0].compiledCode as $only |
+  .validators |= map(.compiledCode = $only)' \
   "$blueprint" > "$work/cardinality.json"
-expect_red INV-246-B3-cardinality 'computed program cardinality moved' \
+expect_red INV-246-B3-cardinality 'computed program cardinality is not greater than one' \
   "$generator" "$work/cardinality.json" "$work/cardinality-manifest.json"
 
 # B4: the version-derived value is a separately named input and cannot be used

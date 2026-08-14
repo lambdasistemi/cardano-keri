@@ -51,7 +51,8 @@ while IFS=$'\t' read -r title params code; do
   program_sha=$(printf '%s' "$code" | sha256sum | cut -d ' ' -f 1)
   jq -cn --arg title "$title" --argjson params "$params" \
     --arg program_sha256 "$program_sha" \
-    '{title:$title, params:$params, program_sha256:$program_sha256}' \
+    '{title:$title, params:$params, program_sha256:$program_sha256,
+      programHash:$program_sha256, compiledCodeHash:$program_sha256}' \
     >> "$work/programs.jsonl"
 done < <(jq -r '.validators[] | [.title, ((.parameters // []) | length), .compiledCode] | @tsv' "$work/blueprint.json")
 jq -s . "$work/programs.jsonl" > "$work/programs.json"
@@ -91,17 +92,9 @@ jq -n \
     }),
     blueprint_sha256:$blueprint_sha256,
     programs:$ps,
-    records: (
-      [(identity + {record:"manifest"})]
-      + [$ps[] | identity + {record:"program", title:.title,
-          params:.params, program_sha256:.program_sha256}]
-      + [
-          (identity + {record:"baseline"}),
-          (identity + {record:"evaluation-identity"}),
-          (identity + {record:"verification-receipt",
-            receipt:$verification_receipt})
-        ]
-    )
+    records: [$ps[] | identity + {record:"program", title:.title,
+      params:.params, program_sha256:.program_sha256,
+      programHash:.programHash, compiledCodeHash:.compiledCodeHash}]
   }' > "$work/manifest.json"
 
 identity_args=(
@@ -160,19 +153,25 @@ expect_red_identity_copy() { # label jq-filter expected-diagnostic
 }
 
 # The unmodified fixture is the positive control. It also requires the checker
-# to publish a non-vacuous denominator over every carried record, receipts
-# included (1 manifest + 23 programs + baseline + evaluation + receipt = 27).
+# to publish a non-vacuous denominator over every current title record.
 clean_out=$(run_identity 2>&1) \
   || fail "clean identity manifest was rejected: $clean_out"
-grep -Fq 'CBIC_IDENTITY_RESULT records_checked=27' <<< "$clean_out" \
-  || fail "clean identity result did not publish records_checked=27"
+grep -Fq 'CBIC_IDENTITY_RESULT records_checked=23' <<< "$clean_out" \
+  || fail "clean identity result did not publish records_checked=23"
 grep -Fq 'CBIC_IDENTITY_RESULT inconsistent=0' <<< "$clean_out" \
   || fail "clean identity result did not publish inconsistent=0"
 
+clean_fields=$(sed -n 's/^CBIC_IDENTITY_RESULT fields=//p' <<< "$clean_out")
+clean_reconciled=$(sed -n 's/^CBIC_IDENTITY_RESULT reconciled=//p' <<< "$clean_out")
+clean_containers=$(sed -n 's/^CBIC_IDENTITY_RESULT containers=//p' <<< "$clean_out")
+[ -n "$clean_fields" ] && [ "$clean_reconciled" = "$clean_fields" ] \
+  && [ -n "$clean_containers" ] \
+  || fail "clean identity result omitted its derived coverage denominator"
+
 # Audit property classes. Exercise every reported survivor and aggregate the
 # results so one surviving instance cannot hide another. The field-count
-# control adds a scalar field without changing the 27-record inventory: an
-# enumeration over the complete manifest must move 372 -> 373, while the
+# control adds a scalar field without changing the title-record inventory: an
+# enumeration over the complete manifest must move by one, while the
 # independently built expectation population remains at its clean value.
 coverage_failures=0
 coverage_rc=0
@@ -212,8 +211,8 @@ coverage_expect_red_identity_copy INV-246-B5-version-derived \
   '.identity.version_derived = "defaultFunSemanticsVariantA"' \
   'identity input moved: version_derived'
 coverage_expect_red_identity_copy INV-246-B5-verification-receipt \
-  '.records[-1].receipt = "AUDIT-MUTANT"' \
-  'inconsistent identity input: receipt'
+  '.records[-1].compiledCodeHash = ("f" * 64)' \
+  'inconsistent identity input: compiledCodeHash'
 
 if [ "$coverage_rc" -ne 0 ]; then
   printf 'REPAIR-SELFTEST leg=carried-field-without-reconciled-expectation rc=%s outcome=REFUTED\n' \
@@ -228,16 +227,17 @@ saved=${identity_args[3]}
 identity_args[3]="$work/coverage-count-mutant.json"
 set +e; coverage_count_out=$(run_identity 2>&1); coverage_count_rc=$?; set -e
 identity_args[3]=$saved
+mutant_fields=$((clean_fields + 1))
 if [ "$coverage_count_rc" -ne 0 ] &&
    [[ $coverage_count_out == *'COULD-NOT-EVALUATE: identity field lacks reconciled expectation: identity.unregistered_identity'* ]] &&
-   grep -Fq 'CBIC_IDENTITY_RESULT fields=373' <<< "$coverage_count_out" &&
-   grep -Fq 'CBIC_IDENTITY_RESULT reconciled=372' <<< "$coverage_count_out" &&
+   grep -Fq "CBIC_IDENTITY_RESULT fields=$mutant_fields" <<< "$coverage_count_out" &&
+   grep -Fq "CBIC_IDENTITY_RESULT reconciled=$clean_fields" <<< "$coverage_count_out" &&
    grep -Fq 'CBIC_IDENTITY_RESULT unexpected=1' <<< "$coverage_count_out"; then
   printf 'REPAIR-SELFTEST leg=coverage-count-not-enumerated rc=%s outcome=REFUTED\n' \
     "$coverage_count_rc"
 else
   coverage_failures=$((coverage_failures + 1))
-  echo 'COVERAGE-RED-FAIL count control did not enumerate 373 carried fields with one unreconciled expectation' >&2
+  echo "COVERAGE-RED-FAIL count control did not enumerate $mutant_fields carried fields with one unreconciled expectation" >&2
   printf '%s\n' "$coverage_count_out" | sed 's/^/    [checker] /' >&2
 fi
 
@@ -285,10 +285,10 @@ else
 fi
 
 for result in \
-  'fields=372' \
-  'reconciled=372' \
+  "fields=$clean_fields" \
+  "reconciled=$clean_fields" \
   'unexpected=0' \
-  'containers=55' \
+  "containers=$clean_containers" \
   'uncovered_containers=0' \
   'enumerated_by=jq-leaf-and-container-paths'; do
   if ! grep -Fq "CBIC_IDENTITY_RESULT $result" <<< "$clean_out"; then

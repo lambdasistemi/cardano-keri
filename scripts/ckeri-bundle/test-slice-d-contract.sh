@@ -221,7 +221,7 @@ check_reconciliation() {
   local manifest=$1 reconciliation=$2 scratch=$3
   [ -s "$manifest" ] && [ -s "$reconciliation" ] || return 2
   jq -er '
-    .records | length > 1
+    (.records | length) > 1
     and ([.records[] | (.title | type == "string" and length > 0)] | all)
     and ([.records[] | ((.compiledCodeHash // .programHash // "")
       | test("^[0-9a-f]{64}$"))] | all)

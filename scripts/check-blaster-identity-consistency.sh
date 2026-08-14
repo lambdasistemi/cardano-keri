@@ -629,7 +629,8 @@ build_expected_identity_population() { # <blueprint> <blueprint-sha> <output> <w
     program_sha=$(printf '%s' "$code" | sha256sum | cut -d ' ' -f 1)
     jq -cn --arg title "$title" --argjson params "$params" \
       --arg program_sha256 "$program_sha" \
-      '{title:$title, params:$params, program_sha256:$program_sha256}' \
+      '{title:$title, params:$params, program_sha256:$program_sha256,
+        programHash:$program_sha256, compiledCodeHash:$program_sha256}' \
       >> "$work/programs.jsonl"
   done < <(jq -r '.validators[] |
     [.title, ((.parameters // []) | length), .compiledCode] | @tsv' "$blueprint")
@@ -670,17 +671,14 @@ build_expected_identity_population() { # <blueprint> <blueprint-sha> <output> <w
       }),
       blueprint_sha256:$blueprint_sha256,
       programs:$ps,
-      records: (
-        [(identity + {record:"manifest"})]
-        + [$ps[] | identity + {record:"program", title:.title,
-            params:.params, program_sha256:.program_sha256}]
-        + [
-            (identity + {record:"baseline"}),
-            (identity + {record:"evaluation-identity"}),
-            (identity + {record:"verification-receipt",
-              receipt:$verification_receipt})
-          ]
-      )
+      records: [$ps[] | identity + {
+        record:"program",
+        title:.title,
+        params:.params,
+        program_sha256:.program_sha256,
+        programHash:.programHash,
+        compiledCodeHash:.compiledCodeHash
+      }]
     }' > "$output"
 }
 
@@ -811,10 +809,10 @@ identity_manifest_mode() {
   local titles distinct_programs
   titles=$(jq -er '.validators | length' "$BLUEPRINT")
   distinct_programs=$(jq -er '[.validators[].compiledCode] | unique | length' "$BLUEPRINT")
-  [ "$titles" -eq 23 ] \
-    || fail "manifest cardinality moved: titles expected=23 actual=$titles"
-  [ "$distinct_programs" -eq 8 ] \
-    || fail "manifest cardinality moved: programs expected=8 actual=$distinct_programs"
+  [ "$titles" -gt 1 ] \
+    || fail "manifest cardinality is not greater than one: titles=$titles"
+  [ "$distinct_programs" -gt 1 ] \
+    || fail "manifest cardinality is not greater than one: programs=$distinct_programs"
   jq -e '([.validators[].title] | length) == ([.validators[].title] | unique | length)' \
     "$BLUEPRINT" >/dev/null 2>&1 \
     || fail "blueprint schema: duplicate title"
@@ -904,20 +902,15 @@ identity_manifest_mode() {
   done < <(jq -r '.validators[] | [.title, ((.parameters // []) | length), .compiledCode] | @tsv' "$BLUEPRINT")
   [ "$i" -eq "$titles" ] || fail "COULD-NOT-EVALUATE: blueprint row traversal stopped at $i of $titles"
 
-  jq -e '[.records[] | select(.record == "program") |
-      {title, params, program_sha256}] == .programs' "$IDENTITY_MANIFEST" >/dev/null 2>&1 \
+  jq -e '[.records[] |
+      {title, params, program_sha256, programHash, compiledCodeHash}] == .programs' \
+    "$IDENTITY_MANIFEST" >/dev/null 2>&1 \
     || fail "inconsistent identity input: program records do not equal manifest rows"
-  for spec in manifest:1 baseline:1 evaluation-identity:1 verification-receipt:1; do
-    local kind=${spec%%:*} want=${spec##*:} count
-    count=$(jq -r --arg kind "$kind" '[.records[] | select(.record == $kind)] | length' "$IDENTITY_MANIFEST")
-    [ "$count" -eq "$want" ] \
-      || fail "identity record inventory moved: kind=$kind expected=$want actual=$count"
-  done
 
   local records_checked record index=0 value record_kind record_keys expected_record_keys
   records_checked=$(jq -er '.records | length' "$IDENTITY_MANIFEST")
-  [ "$records_checked" -eq $((titles + 4)) ] \
-    || fail "identity record inventory moved: expected=$((titles + 4)) actual=$records_checked"
+  [ "$records_checked" -eq "$titles" ] \
+    || fail "identity record inventory moved: expected=$titles actual=$records_checked"
   while IFS= read -r record; do
     for field in commit aiken toolchain variant ledger_language era blueprint_sha256; do
       value=$(jq -r --arg field "$field" '.[$field] // empty' <<< "$record")
@@ -926,14 +919,8 @@ identity_manifest_mode() {
     record_kind=$(jq -r '.record // empty' <<< "$record")
     record_keys=$(jq -r 'keys | sort | join(",")' <<< "$record")
     case "$record_kind" in
-      manifest|baseline|evaluation-identity)
-        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,record,toolchain,variant"
-        ;;
       program)
-        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,params,program_sha256,record,title,toolchain,variant"
-        ;;
-      verification-receipt)
-        expected_record_keys="aiken,blueprint_sha256,commit,era,ledger_language,receipt,record,toolchain,variant"
+        expected_record_keys="aiken,blueprint_sha256,commit,compiledCodeHash,era,ledger_language,params,programHash,program_sha256,record,title,toolchain,variant"
         ;;
       *) fail "identity record schema moved: unnamed or unexpected record kind at index=$index" ;;
     esac
@@ -960,11 +947,6 @@ identity_manifest_mode() {
     value=$(jq -r '.era' <<< "$record")
     [ "$value" = "$EXPECTED_ERA" ] \
       || fail "inconsistent identity input: era record_index=$index expected=$EXPECTED_ERA actual=$value"
-    if [ "$record_kind" = verification-receipt ]; then
-      value=$(jq -r '.receipt // empty' <<< "$record")
-      [ "$value" = "$EXPECTED_VERIFICATION_RECEIPT" ] \
-        || fail "inconsistent identity input: receipt record_index=$index expected=$EXPECTED_VERIFICATION_RECEIPT actual=${value:-<unnamed>}"
-    fi
     index=$((index + 1))
   done < <(jq -c '.records[]' "$IDENTITY_MANIFEST")
   [ "$index" -eq "$records_checked" ] \

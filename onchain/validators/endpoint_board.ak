@@ -21,13 +21,13 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano/address.{Script, from_script}
+use cardano/address.{Script, from_script, from_verification_key}
 use cardano/assets.{
   PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
 }
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, find_input,
-  placeholder,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Spend, Transaction,
+  find_input, placeholder,
 }
 use cardano_keri/endpoint_board_authorization.{
   AuthorizedBoardDatum, BoardNonce, datum_is_authentic, nonce_names,
@@ -35,9 +35,10 @@ use cardano_keri/endpoint_board_authorization.{
 }
 use cardano_keri/endpoint_board_migration
 use cardano_keri/endpoint_board_types.{
-  BoardAction, BoardMintRedeemer, Burn, LegacyMigrateIn, MigrateIn, MigrateOut,
-  Post, Retire, Update,
+  BoardAction, BoardDatumV1, BoardMintRedeemer, Burn, LegacyMigrateIn, MigrateIn,
+  MigrateOut, Post, Retire, Update,
 }
+use cardano_keri/migration/types.{Board, MigrationTarget}
 
 fn exact_marker_value(
   value,
@@ -246,6 +247,12 @@ const s254_2_endpoint_signature: ByteArray =
 const s254_2_owner: ByteArray =
   #"11111111111111111111111111111111111111111111111111111111"
 
+const s254_2_refund_owner: ByteArray =
+  #"22222222222222222222222222222222222222222222222222222222"
+
+const s254_2_legacy_policy: PolicyId =
+  #"54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
+
 const s254_2_source_authorization_signature: ByteArray =
   #"9f6fc1ede2a56451d479fa7939d11a002488ed0796fac74c3ef9151bc373304dc8311bcc6bbc6b4e94a08e81a4a25c47934dd7c7757d3eb8a16793513f508d07"
 
@@ -310,6 +317,57 @@ fn s254_2_seam_tx() -> Transaction {
   }
 }
 
+fn s254_2_legacy_datum() -> BoardDatumV1 {
+  BoardDatumV1 {
+    witness_key: s254_2_witness_key,
+    endpoint_record: s254_2_endpoint_record,
+    endpoint_signature: s254_2_endpoint_signature,
+    owner_key_hash: s254_2_owner,
+  }
+}
+
+fn s254_2_refund_address() {
+  from_verification_key(s254_2_refund_owner)
+}
+
+fn s254_2_legacy_tx() -> Transaction {
+  let source_redeemer: Data = Retire { refund_address: s254_2_refund_address() }
+  Transaction {
+    ..placeholder,
+    inputs: [
+      Input {
+        output_reference: s254_2_source_ref(),
+        output: Output {
+          address: from_script(s254_2_legacy_policy),
+          value: from_lovelace(4_000_000)
+            |> merge(from_asset(s254_2_legacy_policy, s254_2_witness_key, 1)),
+          datum: InlineDatum(s254_2_legacy_datum()),
+          reference_script: None,
+        },
+      },
+    ],
+    outputs: [
+      Output {
+        address: s254_2_refund_address(),
+        value: from_lovelace(4_000_000),
+        datum: NoDatum,
+        reference_script: None,
+      },
+      s254_2_seam_output(
+        s254_2_target_policy,
+        s254_2_seam_datum(
+          s254_2_source_tx_id,
+          s254_2_target_authorization_signature,
+        ),
+      ),
+    ],
+    mint: from_asset(s254_2_legacy_policy, s254_2_witness_key, -1)
+      |> merge(from_asset(s254_2_target_policy, s254_2_witness_key, 1)),
+    extra_signatories: [s254_2_owner],
+    redeemers: [Pair(Spend(s254_2_source_ref()), source_redeemer)],
+  }
+}
+
 test board_validator_accepts_applied_predecessor_policy() {
   endpoint_board.mint(
     s254_2_source_policy,
@@ -325,5 +383,39 @@ test s254_2_board_validator_rejects_foreign_predecessor_policy() fail {
     MigrateIn { source_ref: s254_2_source_ref() },
     s254_2_target_policy,
     s254_2_seam_tx(),
+  )
+}
+
+test s254_2_board_validator_migrate_out_uses_spent_reference() {
+  endpoint_board.spend(
+    s254_2_foreign_policy,
+    Some(
+      s254_2_seam_datum(
+        #"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+        s254_2_source_authorization_signature,
+      ),
+    ),
+    MigrateOut {
+      target: MigrationTarget {
+        target_policy: s254_2_target_policy,
+        target_role: Board,
+        target_address: from_script(s254_2_target_policy),
+        legacy_refund_address: None,
+      },
+    },
+    s254_2_source_ref(),
+    s254_2_seam_tx(),
+  )
+}
+
+test s254_2_board_validator_legacy_migrate_in_forwards_refund_address() {
+  endpoint_board.mint(
+    s254_2_source_policy,
+    LegacyMigrateIn {
+      source_ref: s254_2_source_ref(),
+      refund_address: s254_2_refund_address(),
+    },
+    s254_2_target_policy,
+    s254_2_legacy_tx(),
   )
 }

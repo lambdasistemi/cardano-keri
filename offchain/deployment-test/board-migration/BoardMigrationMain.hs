@@ -79,10 +79,54 @@ boardInventorySpec = do
             reconcileBoardMigration
                 expectedPreprodBoardAids
                 sourceBoardInventory
-                ( changedFirst
+                ( sourceOne
                     { boardUrl = "https://attacker.invalid"
                     }
-                    : drop 1 successorBoardInventory
+                    : drop 1 sourceBoardInventory
+                )
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_changed_witness_key_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( sourceOne
+                    { boardWitnessKey = BS.replicate 32 0x7f
+                    }
+                    : drop 1 sourceBoardInventory
+                )
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_changed_scheme_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( sourceOne
+                    { boardScheme = "http"
+                    }
+                    : drop 1 sourceBoardInventory
+                )
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_changed_lovelace_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( sourceOne
+                    { boardLovelace = 4_000_001
+                    }
+                    : drop 1 sourceBoardInventory
+                )
+                `shouldSatisfy` isLeft
+
+        it "s254_2_board_inventory_changed_owner_key_hash_rejects" $
+            reconcileBoardMigration
+                expectedPreprodBoardAids
+                sourceBoardInventory
+                ( sourceOne
+                    { boardOwnerKeyHash = BS.replicate 28 0x44
+                    }
+                    : drop 1 sourceBoardInventory
                 )
                 `shouldSatisfy` isLeft
 
@@ -94,9 +138,6 @@ boardInventorySpec = do
                     : drop 1 successorBoardInventory
                 )
                 `shouldSatisfy` isLeft
-  where
-    changedFirst = successorOne
-
 newtype WitnessAnchor = WitnessAnchor {witnessAnchorAid :: Text}
 
 instance FromJSON WitnessAnchor where
@@ -139,6 +180,9 @@ successorBoardInventory = zipWith successorRow fixturePreprodBoardAids [1 ..]
 
 successorOne :: BoardEntry
 successorOne = successorRow witnessOneAid 1
+
+sourceOne :: BoardEntry
+sourceOne = boardRow witnessOneAid 1
 
 successorRow :: Text -> Int -> BoardEntry
 successorRow aid marker =

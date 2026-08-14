@@ -566,6 +566,18 @@ test s254_2_board_migration_rejects_duplicate_successor() fail {
   migrate_in(source_policy, invalid)
 }
 
+test s254_2_board_permanent_migration_rejects_wrong_successor_address() fail {
+  let misplaced_successor = Output {
+    ..authorized_output(target_policy, target_datum(), witness_key, deposit),
+    address: from_script(other_policy),
+  }
+  let invalid = Transaction {
+    ..honest_permanent_tx(),
+    outputs: [misplaced_successor],
+  }
+  migrate_in(source_policy, invalid)
+}
+
 test s254_2_board_migration_rejects_zero_deposit() fail {
   migrate_in_at(
     source_policy,
@@ -746,6 +758,22 @@ test board_v0_bridge_accepts_same_name_successor() {
     refund_address(),
     legacy_tx(witness_key, True),
   )
+}
+
+test s254_2_board_legacy_refund_selects_spent_source_redeemer() {
+  let base = legacy_tx(witness_key, True)
+  let decoy_redeemer: Data = Retire {
+    refund_address: from_script(other_policy),
+  }
+  let source_redeemer: Data = Retire { refund_address: refund_address() }
+  let with_decoy = Transaction {
+    ..base,
+    redeemers: [
+      Pair(Spend(out_ref(foreign_source_tx_id, 7)), decoy_redeemer),
+      Pair(Spend(source_ref()), source_redeemer),
+    ],
+  }
+  legacy_migrate_in(with_decoy)
 }
 
 test s254_2_board_v0_retire_burn_bridge_same_name_successor() fail {

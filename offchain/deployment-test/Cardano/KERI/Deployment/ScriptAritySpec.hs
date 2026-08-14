@@ -1097,6 +1097,17 @@ entitlementSpecPath :: FilePath
 entitlementSpecPath =
     "offchain/deployment-test/Cardano/KERI/Deployment/BountyEntitlementSpec.hs"
 
+{- | The checkpoint E2E driver, which applies the #271 commitment parameters to
+deploy that program on a throwaway devnet (#280).
+
+Like 'entitlementSpecPath' it DRIVES the stable production applier as a test:
+it publishes no manifest, address or release identity, so it is excluded rather
+than declared beside 'cageBuilderPath'.  The
+@checkpoint-e2e-exclusion-removed@ leg proves that exclusion load-bearing.
+-}
+checkpointE2EDriverPath :: FilePath
+checkpointE2EDriverPath = "offchain/e2e/CheckpointTxBuilder.hs"
+
 {- | One census row: a module, an identifier, and how many times that identifier
 occurs in that module's syntax tree.
 
@@ -1133,11 +1144,13 @@ builder is hand-declared because it is the one production applier outside that
 directory, and a hand-declared path is guarded twice: it must exist, and the
 discovery sweep independently fails if any other module mentions an applier.
 
-The exclusions are this module, which necessarily names every applier, and
-'BountyEntitlementSpec', which drives production appliers as a test.
-Leaving this module inside the horizon would make the control a census of
-itself.  Each exclusion is proved load-bearing by its own falsification
-leg.
+The three exclusions are this module, which necessarily names every applier;
+'BountyEntitlementSpec', which drives production appliers as a test; and the
+checkpoint E2E driver, which drives one on a throwaway devnet.  Leaving this
+module inside the horizon would make the control a census of itself, and
+leaving either test driver in the discovery sweep would report a harness
+exercising the production applier as an undeclared application surface.  Each
+exclusion is proved load-bearing by its own falsification leg.
 -}
 defaultScanConfig :: FilePath -> ScanConfig
 defaultScanConfig root =
@@ -1148,6 +1161,7 @@ defaultScanConfig root =
         , scanExclusions =
             [ "offchain/deployment-test/Cardano/KERI/Deployment/ScriptAritySpec.hs"
             , entitlementSpecPath
+            , checkpointE2EDriverPath
             ]
         }
 
@@ -1753,6 +1767,16 @@ selfTestLegs =
                     { scanExclusions =
                         filter
                             (/= entitlementSpecPath)
+                            (scanExclusions config)
+                    }
+            )
+    , SelfTestLeg "checkpoint-e2e-exclusion-removed" $ \_ config ->
+        pure
+            ( Right
+                config
+                    { scanExclusions =
+                        filter
+                            (/= checkpointE2EDriverPath)
                             (scanExclusions config)
                     }
             )

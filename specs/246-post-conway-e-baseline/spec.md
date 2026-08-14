@@ -83,3 +83,40 @@ Applied/deployed script hashes (W-04), the P0-01..P0-13 security theorems
 themselves (#247, #248), the P0-14 production-reaching mutation sweep (#249),
 and release publication (#250). This ticket makes those possible and is not
 allowed to pre-empt them.
+
+## Reduced baseline — rescope of 2026-08-14 (Slice D)
+
+Operator rescope (`SERIAL-RESCOPE-2026-08-14`, NOTE-026/027/028) reduces this
+ticket. #246 no longer owns global shell-instrument closure. It owns the exact
+rebased post-Conway Variant-E identity and the complete **current compiled**
+denominator that the one-program theorem tickets (#247…#287) bind.
+
+Rebased onto `origin/main` `ae99e35e6aee577ccfc61a62f8a72f6067c1154b`;
+baseline candidate `34c4b628f0d3dc5f26700830a2570eb85a948303`.
+
+### Disposition of Slice C
+
+Slice C is **preserved as rejected historical evidence**. It is not repaired a
+third time and not converted to green. Its twelve `KILLED` rows and its four
+surviving `BLOCKING` rows stand in `campaign-ledger.md` as the record. Of the
+four survivors, exactly one is retained here as the non-negotiable minimum
+(`INV-246-D1`, below); duplicate-key closure, claim-record closure and
+filesystem-namespace hardening become focused follow-ups and **cannot expand
+#246 again**. `T246-C1`…`T246-C12` therefore remain unchecked: they belonged to
+a slice that was never accepted.
+
+### Invariants
+
+| ID | Severity | Observable truth |
+|---|---|---|
+| `INV-246-D1` | **BLOCKING** | Every element of the frozen identity — `COMMIT`, `TOOLCHAIN` (including the Aiken version), `VARIANT` — is compared against a **producer output**: the flake's own evaluation or an independently authenticated producer record. Never editable prose, never a value read from the bytes under test. |
+| `INV-246-D2` | **BLOCKING** | The published denominator is the **complete current compiled** set — every blueprint title and every distinct `compiledCode` in the built artifact — derived from the built blueprint, never from a source scan. A source count is a lead and is labelled as one. |
+| `INV-246-D3` | **BLOCKING** | The variant is named explicitly and is exactly `defaultFunSemanticsVariantE` (PlutusV3, post-Conway). `defaultFunSemanticsVariantC` is version-derived and cannot stand in for it. A record naming no variant is `COULD-NOT-EVALUATE`, which is RED. |
+| `INV-246-D4` | **BLOCKING** | The prior 23-title / 8-program inventory is **reconciled, not forced**: every prior title and program is accounted for as carried, changed, or newly added, and each addition is named. The old count is an input to the reconciliation, never a target for the new output. |
+| `INV-246-D5` | ADVISORY | The bundle's known limitations are published honestly, naming what it does **not** establish — including the three follow-up classes split out above. Owner and follow-up ID required for each. |
+
+### Out of scope
+
+Validator theorem execution; universal shell-level namespace or parser closure;
+`cage.mpfCage` formal coverage; any repair of the four rejected Slice-C rows
+beyond `INV-246-D1`.

@@ -182,3 +182,20 @@ dispatch.
   accepted: a deliberately omitted declared artifact goes RED (T246-C8) **and**
   an empty or unreadable inventory goes RED. Falsifying only the interesting
   branch is how the two states stay indistinguishable (R-05c, R-11).
+
+## Slice D — reduced rebased baseline (rescope 2026-08-14)
+
+- [ ] T246-D1 — Every frozen identity element compared against a producer
+  output; the standalone path fails closed rather than deriving an expectation
+  from prose (`INV-246-D1`).
+- [ ] T246-D2 — The complete current compiled denominator published from the
+  built blueprint: every title, every distinct `compiledCode`, each with its
+  hash (`INV-246-D2`).
+- [ ] T246-D3 — The variant named explicitly as
+  `defaultFunSemanticsVariantE`; an unnamed variant is RED (`INV-246-D3`).
+- [ ] T246-D4 — The prior 23/8 inventory reconciled row by row as carried,
+  changed, or added, with each addition named (`INV-246-D4`).
+- [ ] T246-D5 — Known limitations published with a named owner and filed
+  follow-up ID for each (`INV-246-D5`).
+- [ ] T246-D6 — The three additive-union rebase resolutions in
+  `offchain/flake.nix` inspected and owned, not inherited silently.

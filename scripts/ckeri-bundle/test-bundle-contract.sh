@@ -610,8 +610,18 @@ fi
 # the contract fails until every one is rejected for a named reason.
 # ---------------------------------------------------------------------------
 source_commit=$(git -C "$repo_root" rev-parse HEAD)
-jq -n --arg c "$source_commit" \
-  '{identity:{commit:$c,aiken:"1.1.23",toolchain:"aiken=1.1.23",variant:"defaultFunSemanticsVariantE"}}' \
+lock=$repo_root/offchain/flake.lock
+docs=$repo_root/docs/architecture/blaster-tractability.md
+producer_aiken=$(sed -n 's/^| Aiken | `\([^`]*\)`.*/\1/p' "$docs" | head -1)
+[ -n "$producer_aiken" ] \
+  || fail "producer aiken missing from trust-base table"
+lean_rev=$(jq -er '.nodes.leanBlaster.locked.rev' "$lock")
+plc_rev=$(jq -er '.nodes.plutusCoreBlaster.locked.rev' "$lock")
+led_rev=$(jq -er '.nodes.cardanoLedgerApiBlaster.locked.rev' "$lock")
+producer_toolchain="aiken=${producer_aiken};lean-blaster=${lean_rev};plutus-core-blaster=${plc_rev};cardano-ledger-api-blaster=${led_rev}"
+jq -n --arg c "$source_commit" --arg a "$producer_aiken" \
+  --arg t "$producer_toolchain" \
+  '{identity:{commit:$c,aiken:$a,toolchain:$t,variant:"defaultFunSemanticsVariantE"}}' \
   > "$work/pub-clean.json"
 jq '.identity.variant="defaultFunSemanticsVariantA"' \
   "$work/pub-clean.json" > "$work/pub-variant-a.json"
@@ -619,6 +629,18 @@ jq '.identity.commit="0000000000000000000000000000000000000000"' \
   "$work/pub-clean.json" > "$work/pub-zero-commit.json"
 sed '0,/"commit"[[:space:]]*:/s//"commit":"0000000000000000000000000000000000000000","commit":/' \
   "$work/pub-clean.json" > "$work/pub-dup-commit.json"
+jq '.identity.toolchain += ";auditor-mutant=unique-substitution"' \
+  "$work/pub-clean.json" > "$work/pub-sub-toolchain.json"
+jq '.identity.aiken += ";auditor-mutant=unique-substitution"' \
+  "$work/pub-clean.json" > "$work/pub-sub-aiken.json"
+sed '0,/"commit"[[:space:]]*:/s//"\\u0063ommit":"0000000000000000000000000000000000000000","commit":/' \
+  "$work/pub-clean.json" > "$work/pub-escaped-commit.json"
+cat > "$work/claims-cne.txt" <<'EOF'
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE outcome=COULD-NOT-EVALUATE
+EOF
+cat > "$work/claims-no-counterexample.txt" <<'EOF'
+CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE outcome=NO-COUNTEREXAMPLE-FOUND
+EOF
 cat > "$work/claims-mismatch-identity.txt" <<'EOF'
 CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantA outcome=REFUTED
 CLAIM id=p0-spend kind=spend variant=defaultFunSemanticsVariantE coverage=parsed-document outcome=ESTABLISHED
@@ -673,6 +695,21 @@ assert_shipped_red INV-246-ARTIFACT-CHECK-BINDING-substituted-commit \
 assert_shipped_red INV-246-PUBLISHED-ARTIFACT-CLOSURE-duplicate-commit \
   'second conforming parse differs' \
   "$bundle_dir/check-published-bytes.sh" "$work/pub-dup-commit.json"
+assert_shipped_red INV-246-ARTIFACT-CHECK-BINDING-substituted-toolchain \
+  'published identity toolchain is not the producer binding' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-sub-toolchain.json"
+assert_shipped_red INV-246-ARTIFACT-CHECK-BINDING-substituted-aiken \
+  'published identity aiken is not the producer binding' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-sub-aiken.json"
+assert_shipped_red INV-246-PUBLISHED-ARTIFACT-CLOSURE-escaped-commit \
+  'second conforming parse differs' \
+  "$bundle_dir/check-published-bytes.sh" "$work/pub-escaped-commit.json"
+assert_shipped_red INV-246-C3-claim-could-not-evaluate \
+  'COULD-NOT-EVALUATE' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-cne.txt"
+assert_shipped_red INV-246-C3-claim-no-counterexample-found \
+  'outside the closed three-outcome domain' \
+  "$bundle_dir/check-claim-schema.sh" "$work/claims-no-counterexample.txt"
 
 set +e
 iso_out=$(bash -c \
@@ -690,6 +727,29 @@ elif [[ $iso_out != *'inherited'* && $iso_out != *'forbidden root'* ]]; then
 else
   printf 'RED-PROOF invariant=INV-246-C9-descriptor-alias rc=%s outcome=REFUTED\n' \
     "$iso_rc"
+fi
+
+mkdir -p "$work/bind-alias"
+set +e
+bind_out=$(unshare --user --map-root-user --mount bash -c '
+    set -euo pipefail
+    mount --bind "$1" "$2"
+    [ "$(stat -c %d:%i "$1")" = "$(stat -c %d:%i "$2")" ]
+    "$3" --forbid "$1" -- bash -c '\''test -r "$1/$2"'\'' _ "$2" "$4"
+  ' _ "$repo_root" "$work/bind-alias" "$bundle_dir/isolate-run.sh" \
+  scripts/ckeri-bundle/isolate-run.sh 2>&1)
+bind_rc=$?
+set -e
+if [ "$bind_rc" -eq 0 ]; then
+  printf 'STILL-GREEN invariant=INV-246-C9-preexisting-bind-alias production accepted bind alias\n' >&2
+  still_green=$((still_green + 1))
+elif [[ $bind_out != *'alias'* && $bind_out != *'forbidden'* && $bind_out != *'inode'* ]]; then
+  printf 'STILL-GREEN invariant=INV-246-C9-preexisting-bind-alias rejected without naming the alias: %s\n' \
+    "$bind_out" >&2
+  still_green=$((still_green + 1))
+else
+  printf 'RED-PROOF invariant=INV-246-C9-preexisting-bind-alias rc=%s outcome=REFUTED\n' \
+    "$bind_rc"
 fi
 
 if grep -Fq 'repro/src/scripts/ckeri-bundle/published' \
@@ -776,8 +836,9 @@ cp "$work/bundle-copy/fixtures/clean-identity.json" \
 expect_red INV-246-ARTIFACT-BINDING-TOY-COPY \
   'toy fixture, not published identity bytes' \
   "$work/bundle-copy/run.sh" "$work/bind-toy"
-jq -n --arg c "$source_commit" \
-  '{identity:{commit:$c,aiken:"1.1.23",toolchain:"aiken=1.1.23",variant:"defaultFunSemanticsVariantE",source:"not-the-toy"}}' \
+jq -n --arg c "$source_commit" --arg a "$producer_aiken" \
+  --arg t "$producer_toolchain" \
+  '{identity:{commit:$c,aiken:$a,toolchain:$t,variant:"defaultFunSemanticsVariantE",source:"not-the-toy"}}' \
   > "$work/bundle-copy/published/manifest.json"
 "$work/bundle-copy/run.sh" "$work/bind-real" > "$work/bind.out"
 judge_binding_subject "$work/bind.out" \

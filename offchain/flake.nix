@@ -2286,6 +2286,12 @@
                   export CKERI_EXPECTED_COMMIT=${
                     pkgs.lib.escapeShellArg baselineSourceCommit
                   }
+                  export CKERI_EXPECTED_AIKEN=${
+                    pkgs.lib.escapeShellArg validatingAikenVersion
+                  }
+                  export CKERI_EXPECTED_TOOLCHAIN=${
+                    pkgs.lib.escapeShellArg baselineToolchain
+                  }
                   export CKERI_PUBLISHED_MANIFEST="$identity_manifest"
                   bash "$c_work/check-claim-schema.sh" \
                     "$c_work/claims/schema-fixture.txt"

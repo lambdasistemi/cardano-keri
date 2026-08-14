@@ -16,6 +16,7 @@ established_unbounded=0
 advance_n=0
 advance_wrong_variant=0
 missing_required=0
+invalid_outcome=0
 purposes=""
 refuted_keys=" "
 
@@ -64,6 +65,16 @@ while IFS= read -r line || [ -n "${line:-}" ]; do
         established_unbounded=$((established_unbounded + 1))
       fi
       ;;
+    COULD-NOT-EVALUATE)
+      invalid_outcome=$((invalid_outcome + 1))
+      echo "CLAIM outcome is COULD-NOT-EVALUATE (always RED): id=$claim_id" >&2
+      ;;
+    "")
+      ;;
+    *)
+      invalid_outcome=$((invalid_outcome + 1))
+      echo "CLAIM outcome is outside the closed three-outcome domain: outcome=$outcome id=$claim_id" >&2
+      ;;
   esac
   if [ "$kind" = advance ]; then
     advance_n=$((advance_n + 1))
@@ -88,7 +99,8 @@ schema_outcome=ESTABLISHED
 if [ "$claims_n" -eq 0 ] || [ "$without_falsifier" -ne 0 ] \
   || [ "$established_unbounded" -ne 0 ] \
   || [ "$advance_wrong_variant" -ne 0 ] \
-  || [ "$missing_required" -ne 0 ]; then
+  || [ "$missing_required" -ne 0 ] \
+  || [ "$invalid_outcome" -ne 0 ]; then
   schema_outcome=REFUTED
 fi
 if [ "$advance_n" -gt 0 ] && [ "$distinct" -lt 2 ]; then
@@ -99,6 +111,10 @@ echo "AUDIT-ADVANCE-RECORDS count=$advance_n distinct_purposes=$distinct instrum
 
 if [ "$claims_n" -eq 0 ]; then
   echo "MEASUREMENT-FAILED: no claims examined" >&2
+  exit 1
+fi
+if [ "$invalid_outcome" -ne 0 ]; then
+  echo "CLAIM outcome outside the closed three-outcome domain: count=$invalid_outcome" >&2
   exit 1
 fi
 if [ "$missing_required" -ne 0 ]; then

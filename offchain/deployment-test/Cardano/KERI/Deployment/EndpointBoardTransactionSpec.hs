@@ -7,12 +7,37 @@ Description : #181 Slice 3 in-process endpoint-board migration proof
 -}
 module Cardano.KERI.Deployment.EndpointBoardTransactionSpec (spec) where
 
+import Cardano.Crypto.DSIGN (
+    SignKeyDSIGN,
+    deriveVerKeyDSIGN,
+    genKeyDSIGN,
+    rawSerialiseSigDSIGN,
+    rawSerialiseVerKeyDSIGN,
+    signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (
     hashFromBytes,
     hashFromStringAsHex,
     hashToBytes,
  )
+import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.KERI.Deployment.EndpointBoard (
+    AuthorizedBoardDatum (..),
+    BoardAuthorization (..),
+    BoardEntry (..),
+    BoardNonce (..),
+    EndpointRecord (..),
+    authorizedBoardDatumBytes,
+    authorizedBoardDatumData,
+    boardAuthorizationBytes,
+    reconstructBoardAuthorization,
+ )
 import Cardano.KERI.Deployment.EndpointBoardTransaction (
+    AuthorizedBoardPostPlan (..),
+    AuthorizedBoardUpdatePlan (..),
+    BoardAuthorizationError (..),
+    BoardAuthorizationPayload (..),
     BoardConfig (..),
     BoardError (..),
     BoardObservationTimeout (..),
@@ -20,7 +45,14 @@ import Cardano.KERI.Deployment.EndpointBoardTransaction (
     BoardResult (..),
     BoardRetirePlan (..),
     BoardUpdatePlan (..),
+    ResolvedBoardTarget (..),
+    attachBoardAuthorization,
     awaitBoard,
+    mkAuthorizedBoardPostPlan,
+    mkAuthorizedBoardUpdatePlan,
+    mkBoardAuthorizationPayload,
+    runAuthorizedBoardPostTransaction,
+    runAuthorizedBoardUpdateTransaction,
     runBoardPostTransaction,
     runBoardRetireTransaction,
     runBoardUpdateTransaction,
@@ -98,9 +130,15 @@ import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Codec.Binary.Bech32 qualified as Bech32
 import Data.Aeson (Value, object, (.=))
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteArray.Encoding (
+    Base (Base16),
+    convertFromBase,
+    convertToBase,
+ )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
+import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Map.Strict qualified as Map
@@ -263,6 +301,10 @@ spec = describe "in-process endpoint-board transactions" $ do
         result `shouldBe` Left (BoardObservationTimeout disagreeingId)
 
     boundedCollateralSpec
+
+    boardAuthorizationProducerSpec
+
+    authorizedBoardPlannerSpec
 
 -- ---------------------------------------------------------------------------
 -- #232 bounded phase-2 collateral loss
@@ -580,3 +622,473 @@ inlineDatum txOut =
             let LedgerData.Data datum = LedgerData.binaryDataToData binaryDatum
              in datum
         other -> error ("expected inline datum, got " <> show other)
+
+-- ---------------------------------------------------------------
+-- #253 S253-1 producer boundary: payload out, signature in, no key
+-- ---------------------------------------------------------------
+
+{- | The witness's private key never appears in this module's production
+counterpart. A producer emits bytes, an external signer returns 64 bytes,
+and attachment refuses anything that does not verify.
+
+The golden constants are the same independently derived vectors asserted
+from Aiken and from 'Cardano.KERI.Deployment.EndpointBoardSpec'.
+-}
+boardAuthorizationProducerSpec :: Spec
+boardAuthorizationProducerSpec =
+    describe "board authorization producer" $ do
+        it "emits exactly the frozen signable bytes" $ do
+            payload <- expectPayload
+            boardPayloadSignableBytes payload
+                `shouldBe` frozenAuthorizationBytes
+
+        it "shows the signer the typed fields those bytes encode" $ do
+            payload <- expectPayload
+            boardPayloadAuthorization payload
+                `shouldBe` BoardAuthorization
+                    { boardAuthDomain =
+                        "cardano-keri/endpoint-board/authorization"
+                    , boardAuthPolicyId = frozenPolicyBytes
+                    , boardAuthWitnessKey = frozenWitnessKey
+                    , boardAuthEndpointRecord = frozenRecord
+                    , boardAuthOwnerKeyHash = frozenOwner
+                    , boardAuthNonce = frozenNonce
+                    }
+            boardPayloadEndpointSignature payload
+                `shouldBe` frozenEndpointSignature
+
+        it "refuses malformed material before anything is signed" $ do
+            let cases =
+                    [ mkPayload "not hex" frozenRecordValue frozenOwner frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointWitnessKey = BS.take 31 frozenWitnessKey}
+                        frozenOwner
+                        frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointEventBytes = ""}
+                        frozenOwner
+                        frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue{endpointSignature = BS.take 63 frozenEndpointSignature}
+                        frozenOwner
+                        frozenNonce
+                    , mkPayload frozenPolicy frozenRecordValue (BS.replicate 27 0x33) frozenNonce
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue
+                        frozenOwner
+                        (BoardNonce (BS.replicate 31 0x11) 0)
+                    , mkPayload
+                        frozenPolicy
+                        frozenRecordValue
+                        frozenOwner
+                        (BoardNonce (BS.replicate 32 0x11) (-1))
+                    ]
+            cases `shouldSatisfy` all isLeft
+
+        it "refuses a signature of the wrong width" $ do
+            payload <- expectPayload
+            attachBoardAuthorization
+                payload
+                (BS.take 63 frozenAuthorizationSignature)
+                `shouldBe` Left
+                    (BoardAuthorizationFieldWidth "authorization signature" 63)
+
+        it "refuses a genuine signature by a foreign signer" $ do
+            payload <- expectPayload
+            attachBoardAuthorization payload frozenForeignSignature
+                `shouldBe` Left BoardAuthorizationSignatureRejected
+
+        it "attaches a verified signature as the frozen authorized datum" $ do
+            payload <- expectPayload
+            datum <-
+                either
+                    (fail . show)
+                    pure
+                    (attachBoardAuthorization payload frozenAuthorizationSignature)
+            authorizedBoardDatumBytes datum
+                `shouldBe` frozenAuthorizedDatumBytes
+            authorizedSignature datum
+                `shouldBe` frozenAuthorizationSignature
+
+mkPayload ::
+    Text ->
+    EndpointRecord ->
+    ByteString ->
+    BoardNonce ->
+    Either BoardAuthorizationError BoardAuthorizationPayload
+mkPayload = mkBoardAuthorizationPayload
+
+expectPayload :: IO BoardAuthorizationPayload
+expectPayload =
+    either
+        (fail . show)
+        pure
+        (mkPayload frozenPolicy frozenRecordValue frozenOwner frozenNonce)
+
+boardHex :: ByteString -> ByteString
+boardHex encoded =
+    case convertFromBase Base16 encoded of
+        Right bytes -> bytes
+        Left err ->
+            error ("EndpointBoardTransactionSpec: bad vector hex: " <> err)
+
+frozenPolicy :: Text
+frozenPolicy = "54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c"
+
+frozenPolicyBytes :: ByteString
+frozenPolicyBytes = boardHex (TE.encodeUtf8 frozenPolicy)
+
+frozenWitnessKey :: ByteString
+frozenWitnessKey =
+    boardHex "d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7afe125f54729"
+
+frozenOwner :: ByteString
+frozenOwner = BS.replicate 28 0x33
+
+frozenRecord :: ByteString
+frozenRecord = "loc/scheme-vector-1"
+
+frozenNonce :: BoardNonce
+frozenNonce = BoardNonce (BS.replicate 32 0x11) 0
+
+frozenRecordValue :: EndpointRecord
+frozenRecordValue =
+    EndpointRecord
+        { endpointEventBytes = frozenRecord
+        , endpointSignature = frozenEndpointSignature
+        , endpointWitnessKey = frozenWitnessKey
+        , endpointAid = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+        , endpointScheme = "https"
+        , endpointUrl = "https://witness-test.example/"
+        }
+
+frozenEndpointSignature :: ByteString
+frozenEndpointSignature =
+    boardHex
+        "1a809536db02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6\
+        \989038e9ebbd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05"
+
+frozenAuthorizationBytes :: ByteString
+frozenAuthorizationBytes =
+    boardHex
+        "d8799f582963617264616e6f2d6b6572692f656e64706f696e742d626f617264\
+        \2f617574686f72697a6174696f6e581c54494f8a1b2930241b7b9fa010f61f2c\
+        \f6307daabfab69efbf91210c5820d9fcc94b4685d4ba2987c3cd42c6a6068a6d\
+        \d4d240206fa657f7afe125f54729536c6f632f736368656d652d766563746f72\
+        \2d31581c33333333333333333333333333333333333333333333333333333333\
+        \d8799f5820111111111111111111111111111111111111111111111111111111\
+        \111111111100ffff"
+
+frozenAuthorizationSignature :: ByteString
+frozenAuthorizationSignature =
+    boardHex
+        "61c8bf526ed993529bf86bfde5f962396a363c7f927e6f8953e606e98e77b021\
+        \3b49fbbb0008f757fabfe00113c383c27377c51e310fc818091a0632abba8006"
+
+frozenForeignSignature :: ByteString
+frozenForeignSignature =
+    boardHex
+        "8eeaee81b6110a87c0737157c8ba317947b7aa1d4b23ec340ab679456f9f9716\
+        \08488ead6d22d4dd1b0bf4a52081e1aa6913f0bba5e02c0c8718404ffd9b6b07"
+
+frozenAuthorizedDatumBytes :: ByteString
+frozenAuthorizedDatumBytes =
+    boardHex
+        "d8799f5820d9fcc94b4685d4ba2987c3cd42c6a6068a6dd4d240206fa657f7af\
+        \e125f54729536c6f632f736368656d652d766563746f722d3158401a809536db\
+        \02202b8170a43cf531bc98cc3e478c7c7c8955d30505d2487fbba6989038e9eb\
+        \bd79721d45766b6517e97021e7a8043670f84a18ff1198fd7a7c05581c333333\
+        \33333333333333333333333333333333333333333333333333d8799f58201111\
+        \11111111111111111111111111111111111111111111111111111111111100ff\
+        \584061c8bf526ed993529bf86bfde5f962396a363c7f927e6f8953e606e98e77\
+        \b0213b49fbbb0008f757fabfe00113c383c27377c51e310fc818091a0632abba\
+        \8006ff"
+
+-- ---------------------------------------------------------------
+-- #253 S253-2 additive authorized-target planners
+-- ---------------------------------------------------------------
+
+{- | T253-S2-06. These planners are additive. The deployed-policy
+'runBoardPostTransaction' and 'runBoardUpdateTransaction' proofs at the top of
+this module are untouched and still pass, which is the compatibility half of
+the task; what is new is here.
+
+The property that matters: a Post must consume the exact output reference the
+witness signed, and funding selection must not be able to substitute or drop
+it. An Update's successor must carry the exact out-ref being spent, so one
+authorization blesses one successor of one predecessor.
+-}
+authorizedBoardPlannerSpec :: Spec
+authorizedBoardPlannerSpec = describe "authorized board planners" $ do
+    it "names the exact signed nonce and the six-field datum" $ do
+        plan <- expectPostPlan
+        authorizedPostNonceReference plan `shouldBe` renderTxIn nonceTxIn
+        authorizedPostPolicy plan `shouldBe` scriptHashText boardScriptHash
+        authorizedPostAssetName plan `shouldBe` hexText authorizedWitness
+        authorizedPostDepositLovelace plan `shouldBe` 2_000_000
+        authorizedPostDatum plan
+            `shouldBe` plutusDataJson
+                (authorizedBoardDatumData authorizedPostDatumValue)
+
+    it "refuses a post whose supplied input is not the signed nonce" $
+        mkAuthorizedBoardPostPlan
+            resolvedTarget
+            (renderAddr fundingAddr)
+            2_000_000
+            (stubTxIn 31)
+            authorizedPostDatumValue
+            `shouldSatisfy` isLeft
+
+    it "refuses a post whose owner address is not the signed owner" $
+        mkAuthorizedBoardPostPlan
+            resolvedTarget
+            (renderAddr changeAddr)
+            2_000_000
+            nonceTxIn
+            authorizedPostDatumValue
+            `shouldSatisfy` isLeft
+
+    it "refuses a post datum authorized under another policy" $
+        -- A genuine, correctly shaped, correctly signed authorization — for a
+        -- different applied board policy.
+        mkAuthorizedBoardPostPlan
+            resolvedTarget
+            (renderAddr fundingAddr)
+            2_000_000
+            nonceTxIn
+            (signedDatum foreignPolicyBytes (txInNonce nonceTxIn) ownerBytes)
+            `shouldSatisfy` isLeft
+
+    it "consumes the exact nonce input and emits the authorized datum" $ do
+        plan <- expectPostPlan
+        (result, tx, order) <- capture $ \runtime ->
+            runAuthorizedBoardPostTransaction
+                (boardConfig runtime)
+                plan
+                nonceInput
+                fundingInputs
+        BoardResult txId <- either (fail . show) pure result
+        let body = tx ^. bodyTxL
+            MultiAsset minted = body ^. mintTxBodyL
+        body ^. inputsTxBodyL
+            `shouldBe` Set.fromList [stubTxIn 1, nonceTxIn]
+        minted
+            `shouldBe` Map.singleton
+                (PolicyID boardScriptHash)
+                (Map.singleton authorizedAssetName 1)
+        case [ output
+             | output <- toList (body ^. outputsTxBodyL)
+             , output ^. addrTxOutL == markerAddr
+             ] of
+            [marker] ->
+                inlineDatum marker
+                    `shouldBe` authorizedBoardDatumData authorizedPostDatumValue
+            other ->
+                fail ("expected one marker output, got " <> show (length other))
+        assertTerminal tx txId order
+
+    it "refuses to run when the supplied nonce input is not the plan's" $ do
+        plan <- expectPostPlan
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        result <-
+            runAuthorizedBoardPostTransaction
+                (boardConfig runtime)
+                plan
+                (stubTxIn 31, plainTxOut 100_000_000)
+                fundingInputs
+        result `shouldSatisfy` isPlanFailure
+        readIORef signedRef >>= (`shouldBe` Nothing)
+
+    it "refuses to run when the nonce is also offered as funding" $ do
+        -- Funding selection must not be able to reach the nonce output: if it
+        -- could, the one output the witness authorized could be spent as
+        -- change instead of as the record's nonce.
+        plan <- expectPostPlan
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        result <-
+            runAuthorizedBoardPostTransaction
+                (boardConfig runtime)
+                plan
+                nonceInput
+                (fundingInputs <> [nonceInput])
+        result `shouldSatisfy` isPlanFailure
+        readIORef signedRef >>= (`shouldBe` Nothing)
+
+    it "derives the update nonce from the spent board record" $ do
+        plan <- expectUpdatePlan
+        authorizedUpdateSpentReference plan `shouldBe` renderTxIn boardTxIn
+        authorizedUpdateOwnerKeyHash plan `shouldBe` hexText ownerBytes
+        authorizedUpdateDatum plan
+            `shouldBe` plutusDataJson
+                (authorizedBoardDatumData authorizedSuccessorValue)
+
+    it "refuses a pre-signed successor bound to another out-ref" $
+        mkAuthorizedBoardUpdatePlan
+            resolvedTarget
+            (renderAddr fundingAddr)
+            authorizedEntry
+            -- genuinely signed, but for the Post nonce rather than the exact
+            -- board out-ref being spent
+            authorizedPostDatumValue
+            `shouldSatisfy` isLeft
+
+    it "spends the board record, requires the owner, and mints nothing" $ do
+        plan <- expectUpdatePlan
+        (result, tx, order) <- capture $ \runtime ->
+            runAuthorizedBoardUpdateTransaction
+                (boardConfig runtime)
+                plan
+                fundingInputs
+                authorizedBoardInput
+        BoardResult txId <- either (fail . show) pure result
+        let body = tx ^. bodyTxL
+        body ^. inputsTxBodyL `shouldBe` Set.fromList [stubTxIn 1, boardTxIn]
+        body ^. mintTxBodyL `shouldBe` mempty
+        body ^. reqSignerHashesTxBodyL `shouldBe` Set.singleton ownerKeyHash
+        case [ output
+             | output <- toList (body ^. outputsTxBodyL)
+             , output ^. addrTxOutL == markerAddr
+             ] of
+            [marker] ->
+                inlineDatum marker
+                    `shouldBe` authorizedBoardDatumData authorizedSuccessorValue
+            other ->
+                fail ("expected one successor output, got " <> show (length other))
+        assertTerminal tx txId order
+
+expectPostPlan :: IO AuthorizedBoardPostPlan
+expectPostPlan =
+    either
+        (fail . show)
+        pure
+        ( mkAuthorizedBoardPostPlan
+            resolvedTarget
+            (renderAddr fundingAddr)
+            2_000_000
+            nonceTxIn
+            authorizedPostDatumValue
+        )
+
+expectUpdatePlan :: IO AuthorizedBoardUpdatePlan
+expectUpdatePlan =
+    either
+        (fail . show)
+        pure
+        ( mkAuthorizedBoardUpdatePlan
+            resolvedTarget
+            (renderAddr fundingAddr)
+            authorizedEntry
+            authorizedSuccessorValue
+        )
+
+resolvedTarget :: ResolvedBoardTarget
+resolvedTarget =
+    ResolvedBoardTarget
+        { resolvedTargetPolicyId = scriptHashText boardScriptHash
+        , resolvedTargetAddress = renderAddr markerAddr
+        , resolvedTargetReference = renderTxIn boardReference
+        }
+
+targetPolicyBytes, foreignPolicyBytes :: ByteString
+targetPolicyBytes = boardHex (TE.encodeUtf8 $ scriptHashText boardScriptHash)
+foreignPolicyBytes = BS.replicate 28 0x5a
+
+nonceTxIn :: TxIn
+nonceTxIn = stubTxIn 30
+
+nonceInput :: (TxIn, TxOut ConwayEra)
+nonceInput = (nonceTxIn, plainTxOut 100_000_000)
+
+txInNonce :: TxIn -> BoardNonce
+txInNonce (TxIn txid (TxIx index)) =
+    BoardNonce
+        (hashToBytes . extractHash $ unTxId txid)
+        (fromIntegral index)
+
+{- | A witness key whose secret this module holds, so it can produce genuine
+authorizations over the synthetic target policy. The production module never
+sees a private key; this is test material only.
+-}
+authorizedSignKey :: SignKeyDSIGN Ed25519DSIGN
+authorizedSignKey =
+    genKeyDSIGN . mkSeedFromBytes $
+        boardHex
+            "5323531f0000000000000000000000000000000000000000000000000000abcd"
+
+authorizedWitness :: ByteString
+authorizedWitness =
+    rawSerialiseVerKeyDSIGN (deriveVerKeyDSIGN authorizedSignKey)
+
+signAuthorized :: ByteString -> ByteString
+signAuthorized message =
+    rawSerialiseSigDSIGN (signDSIGN () message authorizedSignKey)
+
+authorizedRecord :: ByteString
+authorizedRecord = "loc/scheme-authorized-planner"
+
+-- | A complete, genuinely signed authorized datum for the given binding.
+signedDatum :: ByteString -> BoardNonce -> ByteString -> AuthorizedBoardDatum
+signedDatum policyBytes nonce ownerHash =
+    unsigned
+        { authorizedSignature =
+            signAuthorized . boardAuthorizationBytes $
+                reconstructBoardAuthorization policyBytes unsigned
+        }
+  where
+    unsigned =
+        AuthorizedBoardDatum
+            { authorizedWitnessKey = authorizedWitness
+            , authorizedEndpointRecord = authorizedRecord
+            , authorizedEndpointSignature = signAuthorized authorizedRecord
+            , authorizedOwnerKeyHash = ownerHash
+            , authorizedNonce = nonce
+            , authorizedSignature = BS.replicate 64 0x00
+            }
+
+authorizedPostDatumValue, authorizedSuccessorValue :: AuthorizedBoardDatum
+authorizedPostDatumValue =
+    signedDatum targetPolicyBytes (txInNonce nonceTxIn) ownerBytes
+authorizedSuccessorValue =
+    signedDatum targetPolicyBytes (txInNonce boardTxIn) ownerBytes
+
+authorizedAssetName :: AssetName
+authorizedAssetName = AssetName (SBS.toShort authorizedWitness)
+
+authorizedBoardInput :: (TxIn, TxOut ConwayEra)
+authorizedBoardInput =
+    ( boardTxIn
+    , mkBasicTxOut
+        markerAddr
+        ( MaryValue
+            (Coin 2_000_000)
+            ( MultiAsset $
+                Map.singleton
+                    (PolicyID boardScriptHash)
+                    (Map.singleton authorizedAssetName 1)
+            )
+        )
+    )
+
+authorizedEntry :: BoardEntry
+authorizedEntry =
+    BoardEntry
+        { boardWitnessKey = authorizedWitness
+        , boardAid = "BCZT7to0flgH8Kb98kiOkexEJYNQcyhuldaS__c5QaLI"
+        , boardScheme = "https"
+        , boardUrl = "https://witness-test.example/"
+        , boardTxId = txIdText boardTxIn
+        , boardIndex = 0
+        , boardLovelace = 2_000_000
+        , boardOwnerKeyHash = ownerBytes
+        }
+
+txIdText :: TxIn -> Text
+txIdText (TxIn txid _) = renderTxId txid

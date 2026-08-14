@@ -16,6 +16,28 @@ module Cardano.KERI.Deployment.EndpointBoard (
     watchabilityGrade,
     missingBoardWitnesses,
     renderWatchability,
+
+    -- * Board datum protocol (#253 DAT-253-LEGACY-DATUM/DAT-253-AUTHORIZED-DATUM)
+    LegacyBoardDatum (..),
+    AuthorizedBoardDatum (..),
+    BoardNonce (..),
+    BoardDecodeError (..),
+    decodeLegacyBoardDatum,
+    decodeAuthorizedBoardDatum,
+    renderBoardDecodeError,
+    legacyBoardDatumData,
+    legacyBoardDatumBytes,
+    authorizedBoardDatumData,
+    authorizedBoardDatumBytes,
+
+    -- * Canonical authorization (#253 DAT-253-AUTHORIZATION)
+    BoardAuthorization (..),
+    boardAuthorizationDomain,
+    reconstructBoardAuthorization,
+    boardAuthorizationBytes,
+    verifyBoardAuthorization,
+    verifyBoardEndpointSignature,
+    boardDatumIsAuthentic,
 ) where
 
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
@@ -23,6 +45,7 @@ import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
  )
+import Cardano.KERI.AID.Checkpoint.Datum (canonicalCbor)
 import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Cardano.KERI.ChainQuery (
     BoardEntry (..),
@@ -38,6 +61,7 @@ import Data.Aeson (
     (.:),
     (.:?),
  )
+import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (
     Base (Base16),
     convertFromBase,
@@ -55,6 +79,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Word (Word8)
 import PlutusCore.Data (Data (..))
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (ToData (..))
 
 data EndpointRecord = EndpointRecord
     { endpointEventBytes :: !ByteString
@@ -65,6 +91,318 @@ data EndpointRecord = EndpointRecord
     , endpointUrl :: !Text
     }
     deriving stock (Show, Eq)
+
+{- | The one-use ledger output reference bound into an authorization.
+
+Wire shape: @Constr 0 [B nonce_tx_id, I nonce_output_index]@.
+-}
+data BoardNonce = BoardNonce
+    { boardNonceTxId :: !ByteString
+    , boardNonceOutputIndex :: !Integer
+    }
+    deriving stock (Show, Eq)
+
+{- | The frozen #165 board datum: @Constr 0@ with exactly four fields.
+
+Accepted only as historical data or a migration source. It is never emitted,
+and never promoted as though it carried an authorization.
+-}
+data LegacyBoardDatum = LegacyBoardDatum
+    { legacyWitnessKey :: !ByteString
+    , legacyEndpointRecord :: !ByteString
+    , legacyEndpointSignature :: !ByteString
+    , legacyOwnerKeyHash :: !ByteString
+    }
+    deriving stock (Show, Eq)
+
+{- | The authorized target datum: @Constr 0@ with exactly six fields.
+
+The shape is released protocol data shared byte-for-byte with the Aiken
+surface. It carries no sequence, no version tag and no stored origin: it is
+told apart from the frozen legacy shape by field count alone, and the release
+it belongs to is identified by the applied policy hash.
+-}
+data AuthorizedBoardDatum = AuthorizedBoardDatum
+    { authorizedWitnessKey :: !ByteString
+    , authorizedEndpointRecord :: !ByteString
+    , authorizedEndpointSignature :: !ByteString
+    , authorizedOwnerKeyHash :: !ByteString
+    , authorizedNonce :: !BoardNonce
+    , authorizedSignature :: !ByteString
+    }
+    deriving stock (Show, Eq)
+
+-- | Why a candidate inline datum is not the board datum it was read as.
+data BoardDecodeError
+    = -- | The constructor index is not 0.
+      BoardUnknownConstructor !Integer
+    | -- | Constructor 0 with a field count belonging to no board shape.
+      BoardWrongFieldCount !Int
+    | -- | A field is present but not of its protocol type.
+      BoardFieldNotWellTyped !Int
+    | -- | The datum is not a constructor at all.
+      BoardNotAConstructor
+    | {- | Well-shaped six-field data whose authorization does not verify
+      under the applied policy it was read against.
+      -}
+      BoardAuthorizationRejected
+    deriving stock (Show, Eq)
+
+{- | The canonical signed authorization message (@Constr 0@, six fields).
+
+Every field here is covered by the authorization signature; anything absent
+from this record is not something the witness agreed to.
+-}
+data BoardAuthorization = BoardAuthorization
+    { boardAuthDomain :: !ByteString
+    , boardAuthPolicyId :: !ByteString
+    , boardAuthWitnessKey :: !ByteString
+    , boardAuthEndpointRecord :: !ByteString
+    , boardAuthOwnerKeyHash :: !ByteString
+    , boardAuthNonce :: !BoardNonce
+    }
+    deriving stock (Show, Eq)
+
+instance ToData BoardNonce where
+    toBuiltinData nonce =
+        BuiltinData $
+            Constr
+                0
+                [ B (boardNonceTxId nonce)
+                , I (boardNonceOutputIndex nonce)
+                ]
+
+instance ToData LegacyBoardDatum where
+    toBuiltinData datum =
+        BuiltinData $
+            Constr
+                0
+                [ B (legacyWitnessKey datum)
+                , B (legacyEndpointRecord datum)
+                , B (legacyEndpointSignature datum)
+                , B (legacyOwnerKeyHash datum)
+                ]
+
+instance ToData AuthorizedBoardDatum where
+    toBuiltinData datum =
+        BuiltinData $
+            Constr
+                0
+                [ B (authorizedWitnessKey datum)
+                , B (authorizedEndpointRecord datum)
+                , B (authorizedEndpointSignature datum)
+                , B (authorizedOwnerKeyHash datum)
+                , rawData (authorizedNonce datum)
+                , B (authorizedSignature datum)
+                ]
+
+instance ToData BoardAuthorization where
+    toBuiltinData authorization =
+        BuiltinData $
+            Constr
+                0
+                [ B (boardAuthDomain authorization)
+                , B (boardAuthPolicyId authorization)
+                , B (boardAuthWitnessKey authorization)
+                , B (boardAuthEndpointRecord authorization)
+                , B (boardAuthOwnerKeyHash authorization)
+                , rawData (boardAuthNonce authorization)
+                ]
+
+rawData :: (ToData a) => a -> Data
+rawData value = let BuiltinData raw = toBuiltinData value in raw
+
+{- | Domain separator for the board authorization message.
+
+It is stable and unversioned: releases are told apart by applied policy hash
+and exact structural shape, never by a string inside the signed message. No
+other cardano-keri message can be replayed as a board authorization.
+-}
+boardAuthorizationDomain :: ByteString
+boardAuthorizationDomain =
+    TE.encodeUtf8 "cardano-keri/endpoint-board/authorization"
+
+-- | The exact wire 'Data' of a frozen legacy board datum.
+legacyBoardDatumData :: LegacyBoardDatum -> Data
+legacyBoardDatumData = rawData
+
+-- | Canonical Plutus Data CBOR of a frozen legacy board datum.
+legacyBoardDatumBytes :: LegacyBoardDatum -> ByteString
+legacyBoardDatumBytes = canonicalCbor
+
+-- | The exact wire 'Data' of an authorized board datum.
+authorizedBoardDatumData :: AuthorizedBoardDatum -> Data
+authorizedBoardDatumData = rawData
+
+-- | Canonical Plutus Data CBOR of an authorized board datum.
+authorizedBoardDatumBytes :: AuthorizedBoardDatum -> ByteString
+authorizedBoardDatumBytes = canonicalCbor
+
+{- | FUN-253-DECODE-LEGACY: read the frozen four-field shape.
+
+Six-field data is not silently truncated into a legacy record: the field
+count is exact.
+-}
+decodeLegacyBoardDatum :: Data -> Either BoardDecodeError LegacyBoardDatum
+decodeLegacyBoardDatum = \case
+    Constr 0 [f0, f1, f2, f3] ->
+        LegacyBoardDatum
+            <$> bytesAt 0 f0
+            <*> bytesAt 1 f1
+            <*> bytesAt 2 f2
+            <*> bytesAt 3 f3
+    Constr 0 fields -> Left (BoardWrongFieldCount (length fields))
+    Constr other _ -> Left (BoardUnknownConstructor other)
+    _ -> Left BoardNotAConstructor
+
+{- | FUN-253-DECODE-AUTHORIZED: read the six-field shape under one applied
+policy, and refuse it unless the witness authorization verifies under exactly
+that policy.
+
+The policy id is the caller's own applied identity, so the same bytes that
+authenticate under their own release do not authenticate under another.
+-}
+decodeAuthorizedBoardDatum ::
+    ByteString ->
+    Data ->
+    Either BoardDecodeError AuthorizedBoardDatum
+decodeAuthorizedBoardDatum policyId = \case
+    Constr 0 [f0, f1, f2, f3, f4, f5] -> do
+        datum <-
+            AuthorizedBoardDatum
+                <$> bytesAt 0 f0
+                <*> bytesAt 1 f1
+                <*> bytesAt 2 f2
+                <*> bytesAt 3 f3
+                <*> nonceAt 4 f4
+                <*> bytesAt 5 f5
+        unless (verifyBoardAuthorization policyId datum) $
+            Left BoardAuthorizationRejected
+        pure datum
+    Constr 0 fields -> Left (BoardWrongFieldCount (length fields))
+    Constr other _ -> Left (BoardUnknownConstructor other)
+    _ -> Left BoardNotAConstructor
+
+bytesAt :: Int -> Data -> Either BoardDecodeError ByteString
+bytesAt index = \case
+    B bytes -> Right bytes
+    _ -> Left (BoardFieldNotWellTyped index)
+
+nonceAt :: Int -> Data -> Either BoardDecodeError BoardNonce
+nonceAt index = \case
+    Constr 0 [B txId, I outputIndex] -> Right (BoardNonce txId outputIndex)
+    _ -> Left (BoardFieldNotWellTyped index)
+
+-- | A human-readable rendering of a decode rejection.
+renderBoardDecodeError :: BoardDecodeError -> String
+renderBoardDecodeError = \case
+    BoardUnknownConstructor index ->
+        "board datum constructor "
+            <> show index
+            <> " is not a supported board shape"
+    BoardWrongFieldCount count ->
+        "board datum constructor 0 has "
+            <> show count
+            <> " fields, which is neither the frozen legacy shape nor the \
+               \authorized shape"
+    BoardFieldNotWellTyped index ->
+        "board datum field "
+            <> show index
+            <> " is not of its protocol type"
+    BoardNotAConstructor -> "inline datum is not a board datum constructor"
+    BoardAuthorizationRejected ->
+        "authorized board datum is not signed by its witness under this \
+        \applied policy"
+
+{- | FUN-253-AUTH-RECONSTRUCT: rebuild the signed message from a trusted
+policy id and a typed authorized datum, never from a caller-supplied preimage.
+-}
+reconstructBoardAuthorization ::
+    ByteString ->
+    AuthorizedBoardDatum ->
+    BoardAuthorization
+reconstructBoardAuthorization policyId datum =
+    BoardAuthorization
+        { boardAuthDomain = boardAuthorizationDomain
+        , boardAuthPolicyId = policyId
+        , boardAuthWitnessKey = authorizedWitnessKey datum
+        , boardAuthEndpointRecord = authorizedEndpointRecord datum
+        , boardAuthOwnerKeyHash = authorizedOwnerKeyHash datum
+        , boardAuthNonce = authorizedNonce datum
+        }
+
+{- | FUN-253-AUTH-BYTES: canonical Plutus Data CBOR of the authorization —
+the same bytes Aiken @cbor.serialise@ emits for the same value.
+-}
+boardAuthorizationBytes :: BoardAuthorization -> ByteString
+boardAuthorizationBytes = canonicalCbor
+
+-- | FUN-253-AUTH-VERIFY: the witness authorized exactly this bound record.
+verifyBoardAuthorization :: ByteString -> AuthorizedBoardDatum -> Bool
+verifyBoardAuthorization policyId datum =
+    BS.length (authorizedWitnessKey datum) == witnessKeyWidth
+        && BS.length (authorizedSignature datum) == signatureWidth
+        && verifyEd25519
+            (authorizedWitnessKey datum)
+            ( boardAuthorizationBytes $
+                reconstructBoardAuthorization policyId datum
+            )
+            (authorizedSignature datum)
+
+{- | The independent #165 endpoint signature over the raw KERI record bytes.
+
+Neither signature replaces the other: one proves the endpoint bytes are the
+witness's, the other proves the witness accepted this Cardano binding.
+-}
+verifyBoardEndpointSignature :: AuthorizedBoardDatum -> Bool
+verifyBoardEndpointSignature datum =
+    BS.length (authorizedWitnessKey datum) == witnessKeyWidth
+        && BS.length (authorizedEndpointSignature datum) == signatureWidth
+        && verifyEd25519
+            (authorizedWitnessKey datum)
+            (authorizedEndpointRecord datum)
+            (authorizedEndpointSignature datum)
+
+{- | Every byte-level rule for an authorized datum: widths, a non-negative
+nonce index, the expected witness key, and BOTH witness signatures.
+-}
+boardDatumIsAuthentic ::
+    ByteString -> ByteString -> AuthorizedBoardDatum -> Bool
+boardDatumIsAuthentic expectedKey policyId datum =
+    and
+        [ BS.length expectedKey == witnessKeyWidth
+        , authorizedWitnessKey datum == expectedKey
+        , not (BS.null $ authorizedEndpointRecord datum)
+        , BS.length (authorizedEndpointSignature datum) == signatureWidth
+        , BS.length (authorizedOwnerKeyHash datum) == ownerKeyHashWidth
+        , BS.length (boardNonceTxId $ authorizedNonce datum) == nonceTxIdWidth
+        , boardNonceOutputIndex (authorizedNonce datum) >= 0
+        , -- Both, independently: neither signature stands in for the other.
+          verifyBoardEndpointSignature datum
+        , verifyBoardAuthorization policyId datum
+        ]
+
+witnessKeyWidth, signatureWidth, ownerKeyHashWidth, nonceTxIdWidth :: Int
+witnessKeyWidth = 32
+signatureWidth = 64
+ownerKeyHashWidth = 28
+nonceTxIdWidth = 32
+
+{- | The two field counts that select a board shape.
+
+They are exported nowhere and used in exactly one place each, but they are
+named because the whole release discrimination rests on them being different.
+-}
+legacyFieldCount, authorizedFieldCount :: Int
+legacyFieldCount = 4
+authorizedFieldCount = 6
+
+-- | Why some inline datum is not a board datum of either shape.
+boardShapeError :: Data -> BoardDecodeError
+boardShapeError = \case
+    Constr 0 fields -> BoardWrongFieldCount (length fields)
+    Constr other _ -> BoardUnknownConstructor other
+    _ -> BoardNotAConstructor
 
 data ReplyEvent = ReplyEvent
     { replyVersion :: !Text
@@ -162,11 +500,55 @@ resolveBoardCatalog policy markerAddress =
                     (Left "output has no inline datum")
                     plutusDataFromJson
                     (chainAssetInlineDatum output)
+            -- Both releases are constructor 0, so the decoder is selected by
+            -- exact field count. Registry-backed selection by applied policy
+            -- hash is T253-S3-03 and is deliberately not done here; see
+            -- INV-253-R05 for the honest limit of the structural choice.
             (datumKey, eventBytes, signature, owner) <-
                 case datumValue of
-                    Constr 0 [B key, B event, B sig, B ownerKeyHash] ->
-                        pure (key, event, sig, ownerKeyHash)
-                    _ -> Left "inline datum is not frozen BoardDatumV1"
+                    Constr 0 fields
+                        | length fields == legacyFieldCount -> do
+                            legacy <-
+                                first
+                                    renderBoardDecodeError
+                                    (decodeLegacyBoardDatum datumValue)
+                            pure
+                                ( legacyWitnessKey legacy
+                                , legacyEndpointRecord legacy
+                                , legacyEndpointSignature legacy
+                                , legacyOwnerKeyHash legacy
+                                )
+                        | length fields == authorizedFieldCount -> do
+                            -- An authorized record is promoted only when the
+                            -- witness signed both the endpoint bytes and this
+                            -- exact Cardano binding of them under this policy.
+                            policyId <- decodeBoardPolicyId policy
+                            current <-
+                                first
+                                    renderBoardDecodeError
+                                    ( decodeAuthorizedBoardDatum
+                                        policyId
+                                        datumValue
+                                    )
+                            unless
+                                ( boardDatumIsAuthentic
+                                    markerKey
+                                    policyId
+                                    current
+                                )
+                                $ Left
+                                    "authorized datum is not authenticated by \
+                                    \both witness signatures"
+                            pure
+                                ( authorizedWitnessKey current
+                                , authorizedEndpointRecord current
+                                , authorizedEndpointSignature current
+                                , authorizedOwnerKeyHash current
+                                )
+                    _ ->
+                        Left
+                            . renderBoardDecodeError
+                            $ boardShapeError datumValue
             unless (BS.length datumKey == 32 && datumKey == markerKey) $
                 Left "datum witness key does not match the marker asset name"
             unless (BS.length owner == 28) $
@@ -409,6 +791,18 @@ decodeDigest token =
         Right (SelfAddressing digest, trailing)
             | BS.null trailing -> pure digest
         _ -> Left "endpoint d is not one complete E-code digest"
+
+-- | The board policy id a locator names, as raw ledger hash bytes.
+decodeBoardPolicyId :: Text -> Either String ByteString
+decodeBoardPolicyId encoded = do
+    bytes <-
+        either
+            (const $ Left "board policy id is not hexadecimal")
+            pure
+            (convertFromBase Base16 $ TE.encodeUtf8 encoded)
+    unless (BS.length bytes == ownerKeyHashWidth) $
+        Left "board policy id is not a 28-byte script hash"
+    pure bytes
 
 decodeMarkerName :: Text -> Either String ByteString
 decodeMarkerName assetName = do

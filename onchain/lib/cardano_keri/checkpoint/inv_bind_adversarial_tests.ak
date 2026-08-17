@@ -215,7 +215,7 @@ fn count_legacy_accepts() -> Int {
 
 test inv_bind_adversarial_census() {
   expect count_legacy_accepts() == 8
-  fail @"INV-BIND-CAN-FAIL fixtures=8 legacy_accepts=8 wrong_reason=0"
+  trace @"INV-BIND-CAN-FAIL fixtures=8 legacy_accepts=8 wrong_reason=0" False
 }
 
 test inv_bind_adversarial_fx291_grind_dip() {

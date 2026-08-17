@@ -103,7 +103,7 @@ buildRows = do
             dip <- grindReg meta "FX291-GRIND-DIP"
             drt <- grindAdv meta "FX291-GRIND-DRT"
             icp <- reg2key baseFx
-            let malformed =
+            let malformedRows =
                     [ versionSize icp
                     , trailing icp
                     , duplicate icp
@@ -111,7 +111,7 @@ buildRows = do
                     , delimiter icp
                     , unknown icp
                     ]
-            Right (dip : drt : malformed)
+            Right (dip : drt : malformedRows)
     case rows of
         Left err -> fail err
         Right xs -> pure xs

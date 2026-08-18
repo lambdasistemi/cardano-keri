@@ -2497,7 +2497,6 @@ loadRotateStoryFixture = do
                 inceptionReceipts
     rotation <- either fail pure (atKey "rot" family)
     rotationKed <- either fail pure (atKey "ked" rotation)
-    offsets <- either fail pure (atKey "offsets" family)
     raw <- either fail pure (textAt "raw_hex" rotation >>= decodeHex)
     currentKeys <-
         either fail pure $
@@ -2564,17 +2563,6 @@ loadRotateStoryFixture = do
                         >>= decodeHex
                         <&> genKeyDSIGN . mkSeedFromBytes
                 )
-    offset key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerAt key value)
-    offsetsAt key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerArrayAt key value)
-
 loadFreezeStoryFixture :: IO FreezeStoryFixture
 loadFreezeStoryFixture = do
     path <- getDataFileName "test/keri-fixtures/fixtures/freeze_story.json"
@@ -2685,7 +2673,6 @@ rotateStoryFrom ::
 rotateStoryFrom registration prior record rotationSigners currentSigners = do
     event <- atKey "event" record
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
     nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
@@ -2725,20 +2712,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
             , rsRotationSigners = rotationSigners
             , rsCurrentSigners = currentSigners
             }
-  where
-    intOffset key value =
-        fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerAt key value)
-    intOffsets key value =
-        map fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerArrayAt key value)
-
 seedSignersAt ::
     Text ->
     Value ->

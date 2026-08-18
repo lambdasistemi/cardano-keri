@@ -227,8 +227,8 @@ expectedFromKed ked raw variant = do
     b <- optionalAsciiList ked "b"
     br <- optionalAsciiList ked "br"
     ba <- optionalAsciiList ked "ba"
-    prior <- optionalAscii ked "p"
-    di <- optionalAscii ked "di"
+    prior <- optionalAsciiOrRaw ked raw "p"
+    di <- optionalAsciiOrRaw ked raw "di"
     Right
         ExpectedProjection
             { epVariant = variant
@@ -407,10 +407,31 @@ textAsciiList v k =
     map (BS.pack . map (fromIntegral . fromEnum) . T.unpack)
         <$> textArrayField v k
 
-optionalAscii :: Value -> Text -> Either String (Maybe ByteString)
-optionalAscii v k = case lookupKey k v of
-    Nothing -> Right Nothing
-    Just _ -> Just <$> textAscii v k
+{- | Use ked when present; otherwise the quoted value in the same
+raw event. Independent of 'decodeEstablishmentEvent', so a wrong
+decoded @p@\/@di@ still mismatches.
+-}
+optionalAsciiOrRaw
+    :: Value
+    -> ByteString
+    -> Text
+    -> Either String (Maybe ByteString)
+optionalAsciiOrRaw ked raw key = case lookupKey key ked of
+    Just _ -> Just <$> textAscii ked key
+    Nothing -> Right (quotedFieldFromRaw raw key)
+
+quotedFieldFromRaw :: ByteString -> Text -> Maybe ByteString
+quotedFieldFromRaw raw key =
+    let needle =
+            "\""
+                <> BS.pack (map (fromIntegral . fromEnum) (T.unpack key))
+                <> "\":\""
+     in do
+            start <- findSub needle raw
+            let rest = BS.drop (start + BS.length needle) raw
+            end <- BS.elemIndex 0x22 rest
+            let value = BS.take end rest
+            if BS.null value then Nothing else Just value
 
 optionalAsciiList :: Value -> Text -> Either String [ByteString]
 optionalAsciiList v k = case lookupKey k v of

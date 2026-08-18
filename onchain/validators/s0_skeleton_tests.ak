@@ -99,6 +99,19 @@ fn flip_i_span(raw: ByteArray) -> ByteArray {
     |> bytearray.concat(bytearray.drop(raw, at + 1))
 }
 
+// Offset of the `"s"` sequence-number digit: outside both 44-char SAID
+// spans [40, 84) and [91, 135).
+const honest2_off_seq: Int = 142
+
+// `"s":"0"` becomes `"s":"1"`. Length, both offsets and both qb64 AID
+// spans are untouched, so every staging conjunct except the Blake3 SAID
+// relationship stays satisfiable on the result.
+fn flip_seq_digit(raw: ByteArray) -> ByteArray {
+  bytearray.take(raw, honest2_off_seq)
+    |> bytearray.concat(#"31")
+    |> bytearray.concat(bytearray.drop(raw, honest2_off_seq + 1))
+}
+
 fn empty_proof(key: ByteArray) -> HistoricalProof {
   HistoricalProof {
     key,
@@ -375,6 +388,30 @@ test reject_s0_staging_oversize() fail {
   let raw = honest2_bytes
     |> bytearray.concat(honest2_bytes)
     |> bytearray.concat(honest2_bytes)
+  let name = proof_token_name(raw, honest2_aid)
+  let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
+  s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: raw,
+      cesr_aid: honest2_aid,
+      off_i: honest2_off_i,
+      off_d: honest2_off_d,
+    },
+    policy,
+    tx,
+  )
+}
+
+// The isolating case. `reject_s0_staging_said` and
+// `reject_s0_staging_oversize` both die at an earlier conjunct, so neither
+// notices if `blake3.verify` stops verifying. Here the only relevant
+// invalidity is the Blake3 SAID relationship: one byte outside both SAID
+// spans is changed, so length, AID length, both offsets, both qb64 spans
+// and the pair-bound mint identity all still hold. Replacing that one call
+// with a constant makes this case, and only this case, go red - which is
+// what `scripts/s0/check-reachability.sh self-test` proves on every run.
+test reject_s0_staging_blake3() fail {
+  let raw = flip_seq_digit(honest2_bytes)
   let name = proof_token_name(raw, honest2_aid)
   let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
   s0_staging_proof_token.s0_staging_proof_token.mint(

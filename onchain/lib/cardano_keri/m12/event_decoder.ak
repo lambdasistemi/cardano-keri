@@ -1,8 +1,20 @@
-//// S0 port of the released INV-BIND bytes-only establishment decoder.
+//// S0 port of the INV-BIND bytes-only establishment decoder from
+//// sibling #291. That work is UNMERGED and PENDING: it exists only as
+//// proven commits on `feat/291-inv-bind` and is not on `main`.
 ////
 //// Source: cardano-keri@d57e4354ac03cca9f64165e762626bd2a279e944
+//// (`fix(291): remove obsolete integer array helper`), which descends
+//// from 7f49dd8b64dbbc9a10d08f257c8b1e39dcf0dddb
+//// (`fix(291): restore p/di parity from event bytes`), file
 //// `onchain/lib/cardano_keri/checkpoint/event_decoder.ak`. Copied into
-//// the owned M12 namespace so S0 does not edit legacy M1 files.
+//// the owned M12 namespace so S0 does not edit legacy M1 files. The
+//// copy is faithful: the whole textual difference is `aiken fmt` line
+//// wrapping and record-field punning, with no semantic edit.
+////
+//// Because the dependency is unmerged, the measured `append` and
+//// `cursor` rows in specs/m11-s0-size-failfast/SIZE-REPORT.md are
+//// measurements of code `main` does not yet have. If #291 changes
+//// before it lands, both rows must be remeasured.
 ////
 //// #291 bytes-only total parse of one KERI establishment event.
 //// Derives variant, protected values, and SAID blanking from complete

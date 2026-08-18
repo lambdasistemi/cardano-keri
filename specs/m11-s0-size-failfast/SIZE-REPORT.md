@@ -12,8 +12,8 @@ Every row and verdict is size-only; transaction-fit unproven.
 
 ## Source and blueprint identity
 
-- Measured source commit: `21e1b56beb0a55aefe6ace9106bd661bccbbec54`
-- owned-source sha256: `c03f2b16510aecd154f428ee8c85869d598fed70f62256e834cf9b88e0ba6fde`
+- Measured source commit: `02c486e6d0ff0c5f6458bd4744095ed47de03ee4`
+- owned-source sha256: `5279713ea56a91c38d5dd2f884145939131636f20ea7339d6ecbd979ce7cf5a9`
 - blueprint sha256: `58ca022c2865fcc22d2463a14cda17041568cb921a0c9c2a85b1dc9ceed41cdb`
 - reproduction command:
 

@@ -110,6 +110,21 @@ transaction is an artifact of this skeleton decomposition, not a
 released essential invariant. A second role-bound token or a cursor
 derived from append could decouple it. No such redesign is authorized.
 
+Read-only M1 observation, not an S0 Tx-B witness choice:
+`ESTABLISHED-WITNESS-PATTERN=REFERENCE`. Existing deploy/register
+paths fetch manifest script hashes, require proof/checkpoint/lifecycle
+reference UTxOs, put them in `referenceInputs`, and leave inline
+`scriptTxWitsL` empty when those UTxOs are present
+(`offchain/write-composition/Cardano/KERI/Deployment/CLI.hs:2034-2053`,
+`offchain/deployment/Cardano/KERI/Deployment/Registration.hs:437-474`,
+`offchain/deployment-test/Cardano/KERI/Deployment/RegistrationSpec.hs:768-770`,
+`offchain/e2e/CheckpointTxBuilder.hs:2942,2951-2952`). That makes the
+likely future branch a `maxRefScriptSizePerTx` + fee-tier cost
+question. It does not select S0 Tx-B witnesses and proves no fit.
+
+S2 handoff name: `S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE`. This is a
+named S2 contract, not an unfinished S0 acceptance item.
+
 Caveat remains `size-only; transaction-fit unproven`.
 
 ## Machine rows
@@ -125,5 +140,7 @@ S0-ROW member=reference_cursor_consumer title=s0_reference_cursor_consumer.s0_re
 S0-CO-RESIDENCY tx=TxA-premint members=staging_proof_token bytes=8757 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
 S0-CO-RESIDENCY tx=TxB-staged-event members=append+cursor+staging_proof_token bytes=25617 witness_mode=UNSPECIFIED verdict=UNRESOLVED sum=25617 caveat="size-only; transaction-fit unproven"
 S0-CO-RESIDENCY tx=TxB-fully-witnessed-premium members=append+cursor+staging_proof_token+maintenance_escrow bytes=26448 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
+S0-ESTABLISHED-WITNESS-PATTERN=REFERENCE scope=M1-only not=S0-TxB
+S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE status=named-not-s0-closer witness_mode=UNSPECIFIED sum=25617
 
 ```

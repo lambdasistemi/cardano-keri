@@ -103,6 +103,9 @@ Per-script PASS does not discharge co-residency. Tx B staged-event requires
 Tx-B builder, so INLINE vs REFERENCE is unchosen. Inline would be fatal
 against 16,384; a referenced comparison is not invented here. The
 single-token burn coupling is a skeleton artifact, not a released
-invariant. NOTE-006 FAIL is superseded. Caveat: size-only;
+invariant. NOTE-006 FAIL is superseded.
+`ESTABLISHED-WITNESS-PATTERN=REFERENCE` is an M1-only observation and
+does not select S0 Tx-B witnesses. Named S2 handoff:
+`S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE`. Caveat: size-only;
 transaction-fit unproven.
 

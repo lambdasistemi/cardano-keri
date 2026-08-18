@@ -53,8 +53,10 @@ reference input and invokes the library predicate.
   cursor rather than execute them. Sum 25,617 B is
   `CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED`: no S0 Tx-B
   builder chooses inline vs reference. NOTE-006 FAIL is superseded.
-  Single-token burn coupling is a skeleton artifact. The per-script
-  gate cannot discharge this. No new decomposition without a ruling.
+  Single-token burn coupling is a skeleton artifact. M1 established
+  pattern is REFERENCE; that does not select S0 Tx-B witnesses.
+  Named S2 handoff: `S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE`. The
+  per-script gate cannot discharge this. No new decomposition.
 - M1 artifacts are read-only inputs. S2 behavior, preprod, mainnet, release,
   push, PR, issue, and authenticated GitHub mutation are forbidden.
 

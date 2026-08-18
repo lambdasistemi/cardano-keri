@@ -34,5 +34,7 @@ Artifact ceiling: 4,000 bytes / 100 lines.
   covering S0-I01 through S0-I10.
 - [ ] **S0-T11** Run the frozen gate against the exact accepted local commit,
   verify a clean tree, and hand every redesign member and residual caveat to the
-  milestone owner. Per-script green does not discharge Tx-B
-  `CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25617`.
+  milestone owner. Carry named S2 handoff
+  `S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE`
+  (`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25617`).
+  M1 `ESTABLISHED-WITNESS-PATTERN=REFERENCE` does not close it.

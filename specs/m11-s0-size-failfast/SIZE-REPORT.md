@@ -12,8 +12,8 @@ Trace level: `silent`
 
 ## Source and blueprint identity
 
-Measured source commit: `a7d555cdd20aca8479606273040d104e1910c843`
-- owned-source sha256: `85d9a39bb88a9112396b1cae52c8d39da769a3fb3f2727895341ff5bf0e8b5a3`
+Measured source commit: `058f57b67307f1f3d1f8f4d42c650564b6ab7302`
+- owned-source sha256: `8b590b4beb446b1d7af5bbac8b2a9adf910c358bc3a30da2c6011584635e9be2`
 - blueprint sha256: `e599e455d96ad851ba08750f4593c363b7aaedb8f50a2af3d088c9746501124f`
 - reproduction command:
 
@@ -26,6 +26,30 @@ scripts/s0/measure-family.sh verify \
 ```
 
 Runtime evidence directories are not the committed identity.
+
+## Unmerged dependency (#291)
+
+The `append` and `cursor` rows measure code that `main` does not have.
+
+`onchain/lib/cardano_keri/m12/event_decoder.ak` is a copy of the INV-BIND
+bytes-only establishment decoder from sibling **#291**, which is **unmerged
+and pending**: it exists only on `feat/291-inv-bind` as
+`7f49dd8b64dbbc9a10d08f257c8b1e39dcf0dddb` (`fix(291): restore p/di parity
+from event bytes`) and its descendant
+`d57e4354ac03cca9f64165e762626bd2a279e944` (`fix(291): remove obsolete
+integer array helper`). Neither commit is an ancestor of `main`
+(`77e392dd33f62f50a7b5cc5b5fd9214a507244bb` at the time of writing). The copy
+is faithful: the whole textual difference from the #291 file is `aiken fmt`
+line wrapping and record-field punning, with no semantic edit.
+
+Consequences, stated so a successor does not inherit a wrong fact:
+
+- `append` 8,471 B and `cursor` 8,389 B are measurements of the #291 decoder,
+  not of anything released;
+- if #291 changes before it lands, both rows — and every co-residency sum
+  derived from them — must be remeasured;
+- nothing in this repository re-derives the copy from #291 or re-checks its
+  merge status, so this disclosure is the only control on that dependency.
 
 ## Title mapping
 
@@ -65,6 +89,9 @@ Percentages are truncated display values from integer arithmetic
 - `g1_c4_input_393` and `g1_c4_input_966` are excluded (known broken
   SAID/offset fixtures). The 1024-byte boundary fact may be cited.
 - Two transactions make `size-only; transaction-fit unproven` more load-bearing, not less.
+- The `append` and `cursor` rows depend on unmerged #291 (`7f49dd8b`,
+  `d57e4354`, not on `main`). See "Unmerged dependency (#291)": both rows
+  must be remeasured if #291 changes before landing.
 - Per-script gate green does not discharge co-residency. Frozen gate
   v2 is expected to remain green on the seven rows and cannot see this
   finding. NOTE-006's `CO-RESIDENCY-FAIL` is superseded as premature.
@@ -92,9 +119,9 @@ exist.
 Bare structural sum of already-measured rows (not a fit measurement):
 
 - append + cursor + staging_proof_token = 25,617 B
-- 158.79% of 16,133; headroom -9,484 B
+- 158.78% of 16,133; headroom -9,484 B
 - 156.35% of 16,384; headroom -9,233 B
-- with maintenance_escrow: 26,448 B, 163.94% / 161.43%
+- with maintenance_escrow: 26,448 B, 163.93% / 161.42%
 
 `CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25617`
 

@@ -763,14 +763,6 @@ intField value k = note (k <> " missing or not an integer") $ do
         Number s -> Just (truncate s)
         _ -> Nothing
 
-intArrayField :: Value -> Text -> Either String [Integer]
-intArrayField value k = do
-    elems <- arrayField value k
-    traverse asInt elems
-  where
-    asInt (Number s) = Right (truncate s)
-    asInt _ = Left (T.unpack k <> ": element is not an integer")
-
 arrayField :: Value -> Text -> Either String [Value]
 arrayField value k = note (k <> " missing or not an array") $ do
     field <- lookupKey k value
@@ -988,9 +980,6 @@ renderThreshold (Weighted clauses) =
 
 byteList :: [ByteString] -> String
 byteList xs = "[" <> intercalate ", " (map hexLit xs) <> "]"
-
-intList :: [Int] -> String
-intList xs = "[" <> intercalate ", " (map show xs) <> "]"
 
 sigLits :: [(Int, ByteString)] -> String
 sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"

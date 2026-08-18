@@ -83,7 +83,7 @@ pub fn decode_said_preimage(raw: ByteArray) -> EventDecodeVerdict {
   decode_establishment_event(raw)
 }
 
-fn check_version(n: Int, v: ByteArray) -> Result<Void, EventDecodeError> {
+fn check_version(n: Int, v: ByteArray) -> Result<Int, EventDecodeError> {
   if bytearray.length(v) != 17 {
     Err(ErrVersionPrefix)
   } else if bytearray.take(v, 10) != "KERI10JSON" {
@@ -93,7 +93,7 @@ fn check_version(n: Int, v: ByteArray) -> Result<Void, EventDecodeError> {
   } else {
     when parse_hex6(bytearray.take(bytearray.drop(v, 10), 6)) is {
       Err(e) -> Err(e)
-      Ok(size) -> if size == n { Ok(void) } else { Err(ErrVersionSize) }
+      Ok(size) -> if size == n { Ok(size) } else { Err(ErrVersionSize) }
     }
   }
 }

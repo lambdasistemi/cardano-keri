@@ -26,6 +26,11 @@ pub type EventDecodeError {
   ErrTrailing
 }
 
+type ParseResult<a> {
+  Ok(a)
+  Err(EventDecodeError)
+}
+
 /// Protected raw spellings from a successful total parse.
 pub type DecodedEstablishmentEvent {
   variant: EventVariant,
@@ -83,7 +88,7 @@ pub fn decode_said_preimage(raw: ByteArray) -> EventDecodeVerdict {
   decode_establishment_event(raw)
 }
 
-fn check_version(n: Int, v: ByteArray) -> Result<Int, EventDecodeError> {
+fn check_version(n: Int, v: ByteArray) -> ParseResult<Int> {
   if bytearray.length(v) != 17 {
     Err(ErrVersionPrefix)
   } else if bytearray.take(v, 10) != "KERI10JSON" {
@@ -98,11 +103,11 @@ fn check_version(n: Int, v: ByteArray) -> Result<Int, EventDecodeError> {
   }
 }
 
-fn parse_hex6(bs: ByteArray) -> Result<Int, EventDecodeError> {
+fn parse_hex6(bs: ByteArray) -> ParseResult<Int> {
   hex_acc(bs, 0, 0)
 }
 
-fn hex_acc(bs: ByteArray, i: Int, acc: Int) -> Result<Int, EventDecodeError> {
+fn hex_acc(bs: ByteArray, i: Int, acc: Int) -> ParseResult<Int> {
   if i == 6 {
     Ok(acc)
   } else {
@@ -125,7 +130,7 @@ fn hex_digit(c: Int) -> Option<Int> {
 
 fn parse_object(
   raw: ByteArray,
-) -> Result<List<(ByteArray, ByteArray, Int)>, EventDecodeError> {
+) -> ParseResult<List<(ByteArray, ByteArray, Int)>> {
   let n = bytearray.length(raw)
   if n < 2 || byte_at(raw, 0) != 123 || byte_at(raw, n - 1) != 125 {
     Err(ErrFraming)
@@ -146,7 +151,7 @@ fn parse_fields(
   raw: ByteArray,
   i: Int,
   acc: List<(ByteArray, ByteArray, Int)>,
-) -> Result<(List<(ByteArray, ByteArray, Int)>, Int), EventDecodeError> {
+) -> ParseResult<(List<(ByteArray, ByteArray, Int)>, Int)> {
   if byte_at(raw, i) == 125 {
     Ok((acc, i))
   } else {
@@ -177,7 +182,7 @@ fn parse_fields(
 fn parse_string(
   raw: ByteArray,
   i: Int,
-) -> Result<(ByteArray, Int), EventDecodeError> {
+) -> ParseResult<(ByteArray, Int)> {
   if byte_at(raw, i) != 34 {
     Err(ErrFraming)
   } else {
@@ -189,7 +194,7 @@ fn scan_string(
   raw: ByteArray,
   j: Int,
   start: Int,
-) -> Result<(ByteArray, Int), EventDecodeError> {
+) -> ParseResult<(ByteArray, Int)> {
   if j >= bytearray.length(raw) {
     Err(ErrFraming)
   } else if byte_at(raw, j) == 92 {
@@ -204,7 +209,7 @@ fn scan_string(
 fn parse_value(
   raw: ByteArray,
   i: Int,
-) -> Result<(ByteArray, Int, Int), EventDecodeError> {
+) -> ParseResult<(ByteArray, Int, Int)> {
   if byte_at(raw, i) == 34 {
     when parse_string(raw, i) is {
       Err(e) -> Err(e)
@@ -225,7 +230,7 @@ fn skip_array(
   j: Int,
   depth: Int,
   in_str: Bool,
-) -> Result<Int, EventDecodeError> {
+) -> ParseResult<Int> {
   if j >= bytearray.length(raw) {
     Err(ErrFraming)
   } else if in_str && byte_at(raw, j) == 92 {
@@ -330,7 +335,7 @@ fn finish(
   }
 }
 
-fn parse_type(t: ByteArray) -> Result<EventVariant, EventDecodeError> {
+fn parse_type(t: ByteArray) -> ParseResult<EventVariant> {
   if t == "icp" {
     Ok(VariantIcp)
   } else if t == "dip" {
@@ -366,7 +371,7 @@ fn field_names(
 fn req(
   name: ByteArray,
   fs: List<(ByteArray, ByteArray, Int)>,
-) -> Result<ByteArray, EventDecodeError> {
+) -> ParseResult<ByteArray> {
   when list.filter(fs, fn(f) { f.1st == name }) is {
     [(_, v, _)] -> Ok(v)
     _ -> Err(ErrFieldOrder)
@@ -376,7 +381,7 @@ fn req(
 fn req_list(
   name: ByteArray,
   fs: List<(ByteArray, ByteArray, Int)>,
-) -> Result<List<ByteArray>, EventDecodeError> {
+) -> ParseResult<List<ByteArray>> {
   when req(name, fs) is {
     Err(e) -> Err(e)
     Ok(raw) -> parse_string_array(raw)
@@ -386,7 +391,7 @@ fn req_list(
 fn start_of(
   name: ByteArray,
   fs: List<(ByteArray, ByteArray, Int)>,
-) -> Result<Int, EventDecodeError> {
+) -> ParseResult<Int> {
   when list.filter(fs, fn(f) { f.1st == name }) is {
     [(_, _, s)] -> Ok(s)
     _ -> Err(ErrFieldOrder)
@@ -452,7 +457,7 @@ fn list_of_rot(
 
 fn parse_string_array(
   raw: ByteArray,
-) -> Result<List<ByteArray>, EventDecodeError> {
+) -> ParseResult<List<ByteArray>> {
   let n = bytearray.length(raw)
   if n < 2 || byte_at(raw, 0) != 91 || byte_at(raw, n - 1) != 93 {
     Err(ErrValueShape)
@@ -468,7 +473,7 @@ fn scan_arr(
   i: Int,
   end: Int,
   acc: List<ByteArray>,
-) -> Result<List<ByteArray>, EventDecodeError> {
+) -> ParseResult<List<ByteArray>> {
   if i >= end {
     Ok(list.reverse(acc))
   } else {

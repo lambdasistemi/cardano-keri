@@ -223,11 +223,11 @@ Every row and verdict is ${CAVEAT}.
 - path: \`${aiken}\`
 - version: \`${aiken_version}\`
 - sha256: \`${tool_sha}\`
-- Trace level: \`${TRACE_LEVEL}\`
+Trace level: \`${TRACE_LEVEL}\`
 
 ## Source and blueprint identity
 
-- Measured source commit: \`${source_commit}\`
+Measured source commit: \`${source_commit}\`
 - owned-source sha256: \`${source_sha}\`
 - blueprint sha256: \`${blueprint_sha}\`
 - reproduction command:

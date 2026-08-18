@@ -183,6 +183,7 @@ skipArray raw i = do
     require (at raw i == 0x5b) ErrFraming
     go (i + 1) 1 False
   where
+    go :: Int -> Int -> Bool -> Either EventDecodeError Int
     go j depth inStr
         | j >= BS.length raw = Left ErrFraming
         | inStr && at raw j == 0x5c = Left ErrFraming

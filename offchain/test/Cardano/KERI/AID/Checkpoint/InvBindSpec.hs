@@ -437,7 +437,9 @@ findCompactArray raw key =
                     Just (BS.take (end - i + 1) (BS.drop i raw))
                 else Nothing
   where
+    findMatching :: Int -> Maybe Int
     findMatching i = go (i + 1) 1 False
+    go :: Int -> Int -> Bool -> Maybe Int
     go j depth inStr
         | j >= BS.length raw = Nothing
         | inStr && at raw j == 0x22 = go (j + 1) depth False

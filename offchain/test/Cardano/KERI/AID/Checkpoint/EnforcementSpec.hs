@@ -397,7 +397,7 @@ freezeSetup fx witKey = do
     pure (tip, ev)
 
 {- | Build the ratified enforcement wire evidence and its decoded counterpart
-from one fixture event. Offsets are generator-owned oracle output.
+from one fixture event.
 -}
 wireSetup ::
     Value ->
@@ -406,8 +406,6 @@ wireSetup ::
     Maybe Text ->
     Either String (ByteString, EnforcementEvidence, EventEvidence)
 wireSetup fx evKey ctrlKey witKey = do
-    ev <- note (evKey <> " missing") (lookupKey evKey fx)
-    offsets <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
     decoded <- evidenceFrom fx evKey ctrlKey witKey
     pure
         ( eeCesrAid decoded

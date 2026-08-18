@@ -79,15 +79,6 @@ fn grind_drt_datum() -> CheckpointDatumV1 {
 fn grind_dip_evidence() -> RegistrationEvidence {
   RegistrationEvidence {
     event_bytes: grind_dip_bytes,
-    off_t: 237,
-    off_i: 91,
-    off_s: 142,
-    off_k: [160],
-    off_kt: 151,
-    off_n: [222],
-    off_nt: 213,
-    off_b: [],
-    off_bt: 275,
     ctrl_sigs: [(0, grind_dip_sig)],
     wit_receipts: [],
   }
@@ -96,16 +87,6 @@ fn grind_dip_evidence() -> RegistrationEvidence {
 fn grind_drt_evidence() -> AdvanceEvidence {
   AdvanceEvidence {
     event_bytes: grind_drt_bytes,
-    off_t: 59,
-    off_i: 91,
-    off_s: 142,
-    off_k: [211],
-    off_kt: 202,
-    off_n: [273],
-    off_nt: 264,
-    off_br: [],
-    off_ba: [],
-    off_bt: 326,
     wit_cut: [],
     wit_add: [],
     ctrl_sigs: [(0, grind_drt_sig)],
@@ -172,8 +153,6 @@ fn reordered_evidence() -> RegistrationEvidence {
   RegistrationEvidence {
     ..vec.pos_2key_evidence,
     event_bytes: reordered_bytes,
-    off_t: 132,
-    off_i: 81,
   }
 }
 
@@ -214,8 +193,8 @@ fn count_legacy_accepts() -> Int {
 }
 
 test inv_bind_adversarial_census() {
-  expect count_legacy_accepts() == 8
-  trace @"INV-BIND-CAN-FAIL fixtures=8 legacy_accepts=8 wrong_reason=0" False
+  expect count_legacy_accepts() == 0
+  trace @"INV-BIND-ADVERSARIAL fixtures=8 rejected=8" True
 }
 
 test inv_bind_adversarial_fx291_grind_dip() {

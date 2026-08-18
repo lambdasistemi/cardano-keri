@@ -14,8 +14,11 @@ use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/message.{next_key_digest, qb64_aid, qb64_verkey}
+use cardano_keri/checkpoint/event_decoder.{
+  DecodeErr, DecodeOk, VariantRot, decode_establishment_event,
+}
 use cardano_keri/checkpoint/registration.{
-  respell_hex, respell_threshold, slice_matches,
+  respell_hex, respell_threshold,
 }
 use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 
@@ -28,15 +31,6 @@ use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 /// `said_blank` and no SAID recomputation.
 pub type EnforcementEvidence {
   event_bytes: ByteArray,
-  off_t: Int,
-  off_i: Int,
-  off_s: Int,
-  off_d: Int,
-  off_k: List<Int>,
-  off_kt: Int,
-  off_n: List<Int>,
-  off_nt: Int,
-  off_bt: Int,
   native_sn: Int,
   said: ByteArray,
   revealed_keys: List<ByteArray>,
@@ -78,85 +72,51 @@ pub fn bind_enforcement_evidence(
   let event_len = bytearray.length(evidence.event_bytes)
   if event_len < 1 || event_len > 1024 {
     EnforcementBindingInvalid(EE0EventBytesLength)
-  } else if !slice_matches(evidence.event_bytes, evidence.off_t, "rot") {
-    EnforcementBindingInvalid(EE1EventTypeMismatch)
-  } else if !slice_matches(evidence.event_bytes, evidence.off_i, qb64_aid(aid)) {
-    EnforcementBindingInvalid(EE2AidMismatch)
-  } else if !slice_matches(
-    evidence.event_bytes,
-    evidence.off_s,
-    respell_hex(evidence.native_sn),
-  ) {
-    EnforcementBindingInvalid(EE3SequenceMismatch)
-  } else if bytearray.length(evidence.said) != 32 || !slice_matches(
-    evidence.event_bytes,
-    evidence.off_d,
-    qb64_aid(evidence.said),
-  ) {
-    EnforcementBindingInvalid(EE4SaidMismatch)
-  } else if !slices_match(
-    evidence.event_bytes,
-    evidence.off_k,
-    list.map(evidence.revealed_keys, qb64_verkey),
-  ) {
-    EnforcementBindingInvalid(EE5RevealedKeysMismatch)
-  } else if !slice_matches(
-    evidence.event_bytes,
-    evidence.off_kt,
-    respell_threshold(evidence.cur_threshold),
-  ) {
-    EnforcementBindingInvalid(EE6CurThresholdMismatch)
-  } else if !slices_match(
-    evidence.event_bytes,
-    evidence.off_n,
-    list.map(evidence.next_keys, qb64_aid),
-  ) {
-    EnforcementBindingInvalid(EE7NextKeysMismatch)
-  } else if !slice_matches(
-    evidence.event_bytes,
-    evidence.off_nt,
-    respell_threshold(evidence.next_threshold),
-  ) {
-    EnforcementBindingInvalid(EE8NextThresholdMismatch)
-  } else if !slice_matches(
-    evidence.event_bytes,
-    evidence.off_bt,
-    respell_hex(evidence.toad),
-  ) {
-    EnforcementBindingInvalid(EE9ToadMismatch)
   } else {
-    EnforcementBindingValid(
-      EventEvidence {
-        event_bytes: evidence.event_bytes,
-        t: "rot",
-        native_sn: evidence.native_sn,
-        cesr_aid: aid,
-        said: evidence.said,
-        revealed_keys: evidence.revealed_keys,
-        next_keys: evidence.next_keys,
-        cur_threshold: evidence.cur_threshold,
-        next_threshold: evidence.next_threshold,
-        witnesses: [],
-        toad: evidence.toad,
-        ctrl_sigs: evidence.ctrl_sigs,
-        wit_sigs: evidence.wit_sigs,
-      },
-    )
+    when decode_establishment_event(evidence.event_bytes) is {
+      DecodeErr(_) -> EnforcementBindingInvalid(EE1EventTypeMismatch)
+      DecodeOk(ev) ->
+        if ev.variant != VariantRot {
+          EnforcementBindingInvalid(EE1EventTypeMismatch)
+        } else if ev.aid != qb64_aid(aid) {
+          EnforcementBindingInvalid(EE2AidMismatch)
+        } else if ev.seq != respell_hex(evidence.native_sn) {
+          EnforcementBindingInvalid(EE3SequenceMismatch)
+        } else if bytearray.length(evidence.said) != 32 || ev.said != qb64_aid(
+          evidence.said,
+        ) {
+          EnforcementBindingInvalid(EE4SaidMismatch)
+        } else if ev.k != list.map(evidence.revealed_keys, qb64_verkey) {
+          EnforcementBindingInvalid(EE5RevealedKeysMismatch)
+        } else if ev.kt != respell_threshold(evidence.cur_threshold) {
+          EnforcementBindingInvalid(EE6CurThresholdMismatch)
+        } else if ev.n != list.map(evidence.next_keys, qb64_aid) {
+          EnforcementBindingInvalid(EE7NextKeysMismatch)
+        } else if ev.nt != respell_threshold(evidence.next_threshold) {
+          EnforcementBindingInvalid(EE8NextThresholdMismatch)
+        } else if ev.bt != respell_hex(evidence.toad) {
+          EnforcementBindingInvalid(EE9ToadMismatch)
+        } else {
+          EnforcementBindingValid(
+            EventEvidence {
+              event_bytes: evidence.event_bytes,
+              t: "rot",
+              native_sn: evidence.native_sn,
+              cesr_aid: aid,
+              said: evidence.said,
+              revealed_keys: evidence.revealed_keys,
+              next_keys: evidence.next_keys,
+              cur_threshold: evidence.cur_threshold,
+              next_threshold: evidence.next_threshold,
+              witnesses: [],
+              toad: evidence.toad,
+              ctrl_sigs: evidence.ctrl_sigs,
+              wit_sigs: evidence.wit_sigs,
+            },
+          )
+        }
+    }
   }
-}
-
-fn slices_match(
-  raw: ByteArray,
-  offsets: List<Int>,
-  expected: List<ByteArray>,
-) -> Bool {
-  list.length(offsets) == list.length(expected) && list.all(
-    list.zip(offsets, expected),
-    fn(pair) {
-      let (offset, bytes) = pair
-      slice_matches(raw, offset, bytes)
-    },
-  )
 }
 
 // ---------------------------------------------------------

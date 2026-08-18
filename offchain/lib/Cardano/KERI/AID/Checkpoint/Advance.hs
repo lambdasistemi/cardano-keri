@@ -39,6 +39,11 @@ import Cardano.KERI.AID.CESR (
     qb64Aid,
     qb64Verkey,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    DecodedEstablishmentEvent (..),
+    EventVariant (..),
+    decodeEstablishmentEvent,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     Verkey,
@@ -69,7 +74,6 @@ import Data.Bifunctor (
 import Data.ByteString (
     ByteString,
  )
-import Data.ByteString qualified as BS
 import Data.IntSet qualified as IntSet
 
 -- ---------------------------------------------------------
@@ -89,33 +93,13 @@ witness set (@new_set@, W3) and sign 'aeEventBytes' exactly (O1).
 -}
 data AdvanceEvidence = AdvanceEvidence
     { aeEventBytes :: !ByteString
-    -- ^ the full keripy @rot@ serialization (@serder.raw@)
-    , aeOffT :: !Int
-    -- ^ offset of the event-type value (@t@)
-    , aeOffI :: !Int
-    -- ^ offset of the 44-char qb64 AID (@i@)
-    , aeOffS :: !Int
-    -- ^ offset of the hex sequence-number value (@s@)
-    , aeOffK :: ![Int]
-    -- ^ offsets of the 44-char qb64 @k@ entries
-    , aeOffKt :: !Int
-    -- ^ offset of the @kt@ JSON value
-    , aeOffN :: ![Int]
-    -- ^ offsets of the 44-char qb64 @n@ entries
-    , aeOffNt :: !Int
-    -- ^ offset of the @nt@ JSON value
-    , aeOffBr :: ![Int]
-    -- ^ offsets of the 44-char qb64 @br@ (witness cut) entries
-    , aeOffBa :: ![Int]
-    -- ^ offsets of the 44-char qb64 @ba@ (witness add) entries
-    , aeOffBt :: !Int
-    -- ^ offset of the @bt@ JSON value
+    -- ^ the full keripy rotation serialization
     , aeWitCut :: ![Verkey]
     -- ^ KERI @br@ — raw verkeys cut, in event order
     , aeWitAdd :: ![Verkey]
     -- ^ KERI @ba@ — raw verkeys added, in event order
     , aeCtrlSigs :: ![(Int, ByteString)]
-    -- ^ @(index into new_cur_keys, sig over event_bytes)@ (#219)
+    -- ^ @(index into new_cur_keys, sig over event_bytes)@
     , aeWitReceipts :: ![(Int, ByteString)]
     -- ^ @(index into the derived new_set, sig over event_bytes)@
     }
@@ -218,39 +202,39 @@ eventBinding ::
     AdvanceEvidence ->
     Either AdvanceEventError ()
 eventBinding new e = do
-    unless (slice (aeOffT e) "rot") (Left AE1EventTypeMismatch)
+    decoded <-
+        either (const (Left AE1EventTypeMismatch)) Right $
+            decodeEstablishmentEvent (aeEventBytes e)
     unless
-        (slice (aeOffI e) (qb64Aid (cdCesrAid new)))
+        (deeVariant decoded == VariantRot)
+        (Left AE1EventTypeMismatch)
+    unless
+        (deeAid decoded == qb64Aid (cdCesrAid new))
         (Left AE2AidMismatch)
     unless
-        (slice (aeOffS e) (respellHex (cdNativeSn new)))
+        (deeSeq decoded == respellHex (cdNativeSn new))
         (Left AE3SequenceMismatch)
     unless
-        (slices (aeOffK e) (map qb64Verkey (cdCurKeys new)))
+        (deeK decoded == map qb64Verkey (cdCurKeys new))
         (Left AE4CurKeysMismatch)
     unless
-        (slice (aeOffKt e) (respellThreshold (cdCurThreshold new)))
+        (deeKt decoded == respellThreshold (cdCurThreshold new))
         (Left AE5CurThresholdMismatch)
     unless
-        (slices (aeOffN e) (map qb64Aid (cdNextKeys new)))
+        (deeN decoded == map qb64Aid (cdNextKeys new))
         (Left AE6NextKeysMismatch)
     unless
-        (slice (aeOffNt e) (respellThreshold (cdNextThreshold new)))
+        (deeNt decoded == respellThreshold (cdNextThreshold new))
         (Left AE7NextThresholdMismatch)
     unless
-        (slices (aeOffBr e) (map qb64WitnessVerkey (aeWitCut e)))
+        (deeBr decoded == map qb64WitnessVerkey (aeWitCut e))
         (Left AE8WitCutMismatch)
     unless
-        (slices (aeOffBa e) (map qb64WitnessVerkey (aeWitAdd e)))
+        (deeBa decoded == map qb64WitnessVerkey (aeWitAdd e))
         (Left AE9WitAddMismatch)
     unless
-        (slice (aeOffBt e) (respellHex (cdToad new)))
+        (deeBt decoded == respellHex (cdToad new))
         (Left AE10ToadMismatch)
-  where
-    slice = sliceMatches (aeEventBytes e)
-    slices offs expected =
-        length offs == length expected
-            && and (zipWith slice offs expected)
 
 -- ---------------------------------------------------------
 -- The advance predicate
@@ -334,17 +318,6 @@ advancePredicate sc new e = do
 -- ---------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------
-
-{- | Does the slice of @raw@ at @off@ equal @expected@?
-Bounds-checked: an out-of-range span never matches.
--}
-sliceMatches :: ByteString -> Int -> ByteString -> Bool
-sliceMatches raw off expected =
-    off >= 0
-        && off + n <= BS.length raw
-        && BS.take n (BS.drop off raw) == expected
-  where
-    n = BS.length expected
 
 -- | Total safe list indexing.
 atMay :: [a] -> Int -> Maybe a

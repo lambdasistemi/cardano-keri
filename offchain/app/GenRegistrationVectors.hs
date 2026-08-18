@@ -182,16 +182,6 @@ regCase fx key = do
     kt <- thresholdField ked "kt"
     nt <- thresholdField ked "nt"
     bt <- hexIntField ked "bt"
-    offs <- note (key <> ".offsets missing") (lookupKey "offsets" sub)
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offB <- offList offs "b"
     eventSigs <- sigList sub "event_sigs"
     receipts <- optionalSigList sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
@@ -214,23 +204,11 @@ regCase fx key = do
             , rcEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = eventSigs
                     , reWitReceipts = receipts
                     }
             , rcOldMessageSigs = obsoleteSigs
             }
-  where
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- ---------------------------------------------------------
 -- Scenarios (mirror the S2 RegistrationSpec families)
@@ -355,13 +333,16 @@ buildScenarios wit wgt dip drt r2k r7k =
             (rcEvidence wit)
             (Left E2AidMismatch)
     , sc
-        "e3_off_s_at_t"
-        "off_s pointed at t -> E3"
+        "e3_trailing"
+        "trailing byte -> E1"
         ctx0
         (rcDatum wit)
         funded
-        (rcEvidence wit){reOffS = reOffT (rcEvidence wit)}
-        (Left E3SequenceMismatch)
+        (rcEvidence wit)
+            { reEventBytes =
+                reEventBytes (rcEvidence wit) <> "!"
+            }
+        (Left E1EventTypeMismatch)
     , let d =
             (rcDatum wit)
                 { cdCurKeys = take 2 (cdCurKeys (rcDatum wgt))
@@ -619,98 +600,15 @@ buildScenarios wit wgt dip drt r2k r7k =
         (boundary - 1)
         (rcEvidence wit)
         (Left R8DepositBelowMinimum)
-    , sc
-        "mis_off_i_shift"
-        "misdirection: off_i shifted by one -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = reOffI (rcEvidence wit) + 1}
-        (Left E2AidMismatch)
-    , let k0 = first1 (reOffK (rcEvidence wit))
-       in sc
-            "mis_overlap_k"
-            "misdirection: overlapping spans off_k[1]=off_k[0]+1 -> E4"
-            ctx0
-            (rcDatum wit)
-            funded
-            (rcEvidence wit){reOffK = [k0, k0 + 1]}
-            (Left E4CurKeysMismatch)
-    , sc
-        "mis_k_into_n"
-        "misdirection: off_k pointed into n (D vs E code) -> E4"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffK = reOffN (rcEvidence wit)}
-        (Left E4CurKeysMismatch)
-    , sc
-        "mis_k_into_b"
-        "misdirection: off_k pointed into b (D vs B code) -> E4"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffK = take 2 (reOffB (rcEvidence wit))}
-        (Left E4CurKeysMismatch)
-    , sc
-        "mis_i_at_k"
-        "misdirection: off_i pointed at a k entry (E vs D code) -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = first1 (reOffK (rcEvidence wit))}
-        (Left E2AidMismatch)
-    , sc
-        "mis_b_at_k"
-        "misdirection: off_b pointed at k entries (B vs D code) -> E8"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit)
-            { reOffB =
-                reOffK (rcEvidence wit)
-                    <> drop 2 (reOffB (rcEvidence wit))
-            }
-        (Left E8WitnessesMismatch)
-    , sc
-        "mis_trunc_i"
-        "misdirection: off_i at the byte tail (truncated) -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = BS.length (rcRaw wit) - 10}
-        (Left E2AidMismatch)
-    , let k0 = first1 (reOffK (rcEvidence wit))
-       in sc
-            "mis_trunc_k"
-            "misdirection: last off_k at the tail (truncated) -> E4"
-            ctx0
-            (rcDatum wit)
-            funded
-            (rcEvidence wit)
-                { reOffK = [k0, BS.length (rcRaw wit) - 20]
-                }
-            (Left E4CurKeysMismatch)
-    , sc
-        "mis_neg_i"
-        "misdirection: negative off_i -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = -1}
-        (Left E2AidMismatch)
     , let k0raw = first1 (cdCurKeys (rcDatum wit))
-          k0off = first1 (reOffK (rcEvidence wit))
           d = (rcDatum wit){cdCurKeys = [k0raw, k0raw]}
        in sc
             "mis_dup_k"
-            "misdirection: duplicated offsets duplicate the key -> R4 F18"
+            "duplicated current keys -> R4 F18"
             ctx0
             d
             funded
             (rcEvidence wit)
-                { reOffK = [k0off, k0off]
-                }
             ( Left
                 ( R4InceptionInvalid
                     ( InceptionIllFormed
@@ -1027,15 +925,6 @@ renderEvidence e =
         <> intercalate
             ", "
             [ "event_bytes: " <> hexLit (reEventBytes e)
-            , "off_t: " <> show (reOffT e)
-            , "off_i: " <> show (reOffI e)
-            , "off_s: " <> show (reOffS e)
-            , "off_k: " <> intList (reOffK e)
-            , "off_kt: " <> show (reOffKt e)
-            , "off_n: " <> intList (reOffN e)
-            , "off_nt: " <> show (reOffNt e)
-            , "off_b: " <> intList (reOffB e)
-            , "off_bt: " <> show (reOffBt e)
             , "ctrl_sigs: " <> sigLits (reCtrlSigs e)
             , "wit_receipts: " <> sigLits (reWitReceipts e)
             ]

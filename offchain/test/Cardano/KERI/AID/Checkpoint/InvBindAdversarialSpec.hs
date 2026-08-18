@@ -32,8 +32,6 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
     decodeHex,
     digestRaw,
-    intArrayField,
-    intField,
     loadFixture,
     lookupKey,
     note,
@@ -86,6 +84,7 @@ spec :: Spec
 spec = describe "#291 INV-BIND adversarial" $ do
     rows <- runIO buildRows
     runIO $ putStrLn (renderCanFail rows)
+    runIO $ putStrLn (renderAdversarial rows)
     mapM_ rejectExample rows
 
 -- | One @it@ that requires the crafted event to be rejected.
@@ -125,14 +124,7 @@ grindReg meta key = do
     cur <- decodeHex =<< textField sub "current_key_hex"
     nxt <- decodeHex =<< textField sub "next_digest_hex"
     sig <- decodeHex =<< textField sub "sig_hex"
-    forged <- fromIntegral <$> intField sub "forged_off_t"
-    offs <- require "offsets" sub
-    ev <-
-        regEvidence
-            raw
-            forged
-            offs
-            [(0, sig)]
+    let ev = regEvidence raw [(0, sig)]
     let d =
             genesis
                 aid
@@ -153,9 +145,7 @@ grindAdv meta key = do
     cur <- decodeHex =<< textField sub "current_key_hex"
     nxt <- decodeHex =<< textField sub "next_digest_hex"
     sig <- decodeHex =<< textField sub "sig_hex"
-    forged <- fromIntegral <$> intField sub "forged_off_t"
-    offs <- require "offsets" sub
-    ev <- advEvidence raw forged offs [(0, sig)]
+    let ev = advEvidence raw [(0, sig)]
     let d =
             ( genesis
                 aid
@@ -196,10 +186,8 @@ reg2key fx = do
     aid <- digestRaw =<< textField ked "i"
     ks <- traverse verkeyRaw =<< textArrayField ked "k"
     ns <- traverse digestRaw =<< textArrayField ked "n"
-    offs <- require "offsets" sub
-    offT <- fromIntegral <$> intField offs "t"
     ctrls <- loadControllers sub
-    evidence <- regEvidence raw offT offs []
+    let evidence = regEvidence raw []
     let d =
             genesis
                 aid
@@ -268,11 +256,7 @@ reordered meta b =
                 "FX291-REORDERED"
                 b
                 raw
-                ( (ibEvidence b)
-                    { reOffT = 132
-                    , reOffI = 81
-                    }
-                )
+                (ibEvidence b)
         Left _ ->
             Row "FX291-REORDERED" WrongReason
   where
@@ -419,75 +403,31 @@ genesis aid cur kt nxt nt =
         , cdNativeSn = 0
         }
 
--- | Registration evidence from offsets; @off_t@ is supplied separately.
+-- | Registration evidence for a crafted event.
 regEvidence
     :: ByteString
-    -> Int
-    -> Value
     -> [(Int, ByteString)]
-    -> Either String RegistrationEvidence
-regEvidence raw offT offs sigs = do
-    offI <- fromIntegral <$> intField offs "i"
-    offS <- fromIntegral <$> intField offs "s"
-    offKt <- fromIntegral <$> intField offs "kt"
-    offNt <- fromIntegral <$> intField offs "nt"
-    offBt <- fromIntegral <$> intField offs "bt"
-    offK <- map fromIntegral <$> intArrayField offs "k"
-    offN <- map fromIntegral <$> intArrayField offs "n"
-    offB <- offBList
-    pure
-        RegistrationEvidence
-            { reEventBytes = raw
-            , reOffT = offT
-            , reOffI = offI
-            , reOffS = offS
-            , reOffK = offK
-            , reOffKt = offKt
-            , reOffN = offN
-            , reOffNt = offNt
-            , reOffB = offB
-            , reOffBt = offBt
-            , reCtrlSigs = sigs
-            , reWitReceipts = []
-            }
-  where
-    offBList = case intArrayField offs "b" of
-        Right xs -> Right (map fromIntegral xs)
-        Left _ -> Right []
+    -> RegistrationEvidence
+regEvidence raw sigs =
+    RegistrationEvidence
+        { reEventBytes = raw
+        , reCtrlSigs = sigs
+        , reWitReceipts = []
+        }
 
--- | Advance evidence from the sealed @drt@ offsets.
+-- | Advance evidence for a crafted rotation-family event.
 advEvidence
     :: ByteString
-    -> Int
-    -> Value
     -> [(Int, ByteString)]
-    -> Either String AdvanceEvidence
-advEvidence raw offT offs sigs = do
-    offI <- fromIntegral <$> intField offs "i"
-    offS <- fromIntegral <$> intField offs "s"
-    offKt <- fromIntegral <$> intField offs "kt"
-    offNt <- fromIntegral <$> intField offs "nt"
-    offBt <- fromIntegral <$> intField offs "bt"
-    offK <- map fromIntegral <$> intArrayField offs "k"
-    offN <- map fromIntegral <$> intArrayField offs "n"
-    pure
-        AdvanceEvidence
-            { aeEventBytes = raw
-            , aeOffT = offT
-            , aeOffI = offI
-            , aeOffS = offS
-            , aeOffK = offK
-            , aeOffKt = offKt
-            , aeOffN = offN
-            , aeOffNt = offNt
-            , aeOffBr = []
-            , aeOffBa = []
-            , aeOffBt = offBt
-            , aeWitCut = []
-            , aeWitAdd = []
-            , aeCtrlSigs = sigs
-            , aeWitReceipts = []
-            }
+    -> AdvanceEvidence
+advEvidence raw sigs =
+    AdvanceEvidence
+        { aeEventBytes = raw
+        , aeWitCut = []
+        , aeWitAdd = []
+        , aeCtrlSigs = sigs
+        , aeWitReceipts = []
+        }
 
 -- | Require an object field.
 require :: Text -> Value -> Either String Value
@@ -519,3 +459,11 @@ renderCanFail rows =
         <> show (count WrongReason)
   where
     count obs = length (filter ((== obs) . rowObservation) rows)
+
+-- | GREEN adversarial census over the same eight rows.
+renderAdversarial :: [Row] -> String
+renderAdversarial rows =
+    "INV-BIND-ADVERSARIAL fixtures="
+        <> show (length rows)
+        <> " rejected="
+        <> show (length (filter ((== Rejected) . rowObservation) rows))

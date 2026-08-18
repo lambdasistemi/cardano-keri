@@ -446,23 +446,14 @@ renderScenario (name, doc, tip, evidence, offsets) =
         , "pub const " <> name <> "_evidence: EventEvidence = " <> renderEvidence evidence
         , ""
         ]
-        <> maybe "" (renderWire name) offsets
+        <> maybe "" (const (renderWire name)) offsets
 
-renderWire :: String -> EnforcementOffsets -> String
-renderWire name offsets =
+renderWire :: String -> String
+renderWire name =
     unlines
         [ "pub const " <> name <> "_wire: EnforcementEvidence ="
         , "  EnforcementEvidence {"
         , "    event_bytes: " <> evidence <> ".event_bytes,"
-        , "    off_t: " <> show (eoT offsets) <> ","
-        , "    off_i: " <> show (eoI offsets) <> ","
-        , "    off_s: " <> show (eoS offsets) <> ","
-        , "    off_d: " <> show (eoD offsets) <> ","
-        , "    off_k: " <> intList (eoK offsets) <> ","
-        , "    off_kt: " <> show (eoKt offsets) <> ","
-        , "    off_n: " <> intList (eoN offsets) <> ","
-        , "    off_nt: " <> show (eoNt offsets) <> ","
-        , "    off_bt: " <> show (eoBt offsets) <> ","
         , "    native_sn: " <> evidence <> ".native_sn,"
         , "    said: " <> evidence <> ".said,"
         , "    revealed_keys: " <> evidence <> ".revealed_keys,"
@@ -527,9 +518,6 @@ renderThreshold (Weighted clauses) =
 
 byteList :: [ByteString] -> String
 byteList xs = "[" <> intercalate ", " (map hexLit xs) <> "]"
-
-intList :: [Int] -> String
-intList xs = "[" <> intercalate ", " (map show xs) <> "]"
 
 sigLits :: [(Int, ByteString)] -> String
 sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"

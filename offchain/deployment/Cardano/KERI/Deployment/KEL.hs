@@ -27,6 +27,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     datumWellFormed,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    decodeSaidPreimage,
+ )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
  )
@@ -181,34 +184,18 @@ parseInceptionExport stream = do
         parseAttachments attachments
     when (null controllerSignatures) $
         Left "KEL inception has no controller indexed signatures"
-    let offD = scalarOffset raw "d" (eventDigest event)
-        offI = scalarOffset raw "i" (eventAid event)
-    digestOffset <- offD
-    aidOffset <- offI
-    unless (blake3Hash (blankSaid raw digestOffset aidOffset) == aid) $
+    preimage <-
+        either (const $ Left "KEL inception failed total parse") Right $
+            decodeSaidPreimage raw
+    unless (blake3Hash preimage == aid) $
         Left "KEL inception SAID does not bind the exact event bytes"
-    evidence <-
-        RegistrationEvidence
-            raw
-            <$> scalarOffset raw "t" (eventType event)
-            <*> pure aidOffset
-            <*> scalarOffset raw "s" (eventSequence event)
-            <*> traverse (arrayOffset raw "k") (eventCurrentKeys event)
-            <*> thresholdOffset
-                raw
-                "kt"
-                (eventCurrentThreshold event)
-                (thresholdSpelling $ eventCurrentThreshold event)
-            <*> traverse (arrayOffset raw "n") (eventNextKeys event)
-            <*> thresholdOffset
-                raw
-                "nt"
-                (eventNextThreshold event)
-                (thresholdSpelling $ eventNextThreshold event)
-            <*> traverse (arrayOffset raw "b") (eventWitnesses event)
-            <*> scalarOffset raw "bt" (eventToad event)
-            <*> pure controllerSignatures
-            <*> pure witnessReceipts
+    let digestOffset = 40
+    let evidence =
+            RegistrationEvidence
+                { reEventBytes = raw
+                , reCtrlSigs = controllerSignatures
+                , reWitReceipts = witnessReceipts
+                }
     let datum =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -334,31 +321,14 @@ parseRotationExport stream = do
     digestOffset <- scalarOffset raw "d" (rotationDigest event)
     unless (blake3Hash (blankDigest raw digestOffset) == digest) $
         Left "KEL rotation SAID does not bind the exact event bytes"
-    evidence <-
-        AdvanceEvidence
-            raw
-            <$> scalarOffset raw "t" (rotationType event)
-            <*> scalarOffset raw "i" (rotationEventAid event)
-            <*> scalarOffset raw "s" (rotationSequence event)
-            <*> traverse (arrayOffset raw "k") (rotationCurrentKeys event)
-            <*> thresholdOffset
-                raw
-                "kt"
-                (rotationCurrentThreshold event)
-                (thresholdSpelling $ rotationCurrentThreshold event)
-            <*> traverse (arrayOffset raw "n") (rotationNextKeys event)
-            <*> thresholdOffset
-                raw
-                "nt"
-                (rotationNextThreshold event)
-                (thresholdSpelling $ rotationNextThreshold event)
-            <*> traverse (arrayOffset raw "br") (rotationWitnessCuts event)
-            <*> traverse (arrayOffset raw "ba") (rotationWitnessAdds event)
-            <*> scalarOffset raw "bt" (rotationToad event)
-            <*> pure witnessCuts
-            <*> pure witnessAdds
-            <*> pure []
-            <*> pure witnessReceipts
+    let evidence =
+            AdvanceEvidence
+                { aeEventBytes = raw
+                , aeWitCut = witnessCuts
+                , aeWitAdd = witnessAdds
+                , aeCtrlSigs = []
+                , aeWitReceipts = witnessReceipts
+                }
     pure
         RotationExport
             { rotationAid = rotationEventAid event

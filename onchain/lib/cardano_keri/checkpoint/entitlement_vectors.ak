@@ -113,32 +113,14 @@ pub const golden_armed_v2: ByteArray =
 pub const mut_ev_event_bytes: ByteArray =
   #"712428be23c31fe0b98309476e8573c3143459990eab481da4ee5feb381db1fb"
 
-pub const mut_ev_off_t: ByteArray =
-  #"6910d8fb3bfcb962763b69222f4ce3fdca97057ba595b536c6e8f127e311271c"
 
-pub const mut_ev_off_i: ByteArray =
-  #"7a642ab946080afff6cf66f520a9ebb2f4d6fcf605296ebe5721a17f16e5f6bd"
 
-pub const mut_ev_off_s: ByteArray =
-  #"3759a84dcf314e432a8248e08a2f569dca5fe27062204f329a76cbb9e76e8fb4"
 
-pub const mut_ev_off_d: ByteArray =
-  #"cd8098fe5f665f4ffe7f4e7152eb7f249f3493f4955869f9b48888f87f1ee674"
 
-pub const mut_ev_off_k: ByteArray =
-  #"6e571fa43d0d8b1ae02adfa014902a37aef878db2c5bc338837ed68d59251b4d"
 
-pub const mut_ev_off_kt: ByteArray =
-  #"9292442d3f1932f55de5dd1a7b55dbbb1c8c72c7c74659d503319a7149333b36"
 
-pub const mut_ev_off_n: ByteArray =
-  #"d5ce89e4d487d8f5af08aea0b76c819a609f52cad651446ac6e71d6841b141d7"
 
-pub const mut_ev_off_nt: ByteArray =
-  #"35a7540dbc7aadec4b198299541dab0400b6b950d057b0e5be56831a9e9b198c"
 
-pub const mut_ev_off_bt: ByteArray =
-  #"e99159deb5f83dea1ebd8fa7cb862dbdfedf9e1e9557504cf629f13f62768ab3"
 
 pub const mut_ev_native_sn: ByteArray =
   #"d2599c2d72b05c7fbe85fddd8a2651f7096747a25e4ac888cf5acfc58897753a"

@@ -30,40 +30,17 @@ use aiken/primitive/bytearray
 use cardano/assets.{AssetName, PolicyId, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/blake3
+use cardano_keri/checkpoint/event_decoder.{
+  DecodeOk, VariantIcp, decode_establishment_event,
+}
 use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/checkpoint/registration.{proof_token_name, slice_matches}
+use cardano_keri/checkpoint/registration.{proof_token_name}
 
-/// keripy's SAID dressing for one 44-char qb64 span: `"#"` × 44.
-const dummy_span: ByteArray = "############################################"
-
-/// The Tx-A redeemer: the FINAL keripy `icp` serialization, the raw
-/// 32-byte AID digest, and the offsets of the 44-char `i` and `d` value
-/// spans inside it (keripy's field order `v,t,d,i,...` is fixed, so the
-/// `d` span always precedes the `i` span — H1 encodes that ordering).
+/// The Tx-A redeemer: exact event bytes and the raw 32-byte CESR AID.
+/// SAID blanking is derived by the total parser.
 pub type HashProofRedeemer {
   input_bytes: ByteArray,
   cesr_aid: ByteArray,
-  off_i: Int,
-  off_d: Int,
-}
-
-/// `input_bytes` with both 44-char spans overwritten by `"#"` × 44 — the
-/// SAID blank the AID digest was computed over. Callers must have checked
-/// `0 <= off_d`, `off_d + 44 <= off_i`, `off_i + 44 <= len` (H1).
-pub fn splice_dummies(
-  input_bytes: ByteArray,
-  off_i: Int,
-  off_d: Int,
-) -> ByteArray {
-  bytearray.take(input_bytes, off_d)
-    |> bytearray.concat(dummy_span)
-    |> bytearray.concat(
-        input_bytes
-          |> bytearray.drop(off_d + 44)
-          |> bytearray.take(off_i - off_d - 44),
-      )
-    |> bytearray.concat(dummy_span)
-    |> bytearray.concat(bytearray.drop(input_bytes, off_i + 44))
 }
 
 // A non-empty mint map whose entries are all strictly negative — the H4
@@ -84,20 +61,14 @@ validator hash_proof {
       // (the redeemer content is ignored).
       True
     } else {
-      let HashProofRedeemer { input_bytes, cesr_aid, off_i, off_d } = redeemer
-      // H1 — one blake3 chunk, 32-byte AID, spans disjoint (d before i,
-      // keripy field order) and inside the input.
-      let len = bytearray.length(input_bytes)
-      expect len <= 1024
+      let HashProofRedeemer { input_bytes, cesr_aid } = redeemer
       expect bytearray.length(cesr_aid) == 32
-      expect 0 <= off_d && off_d + 44 <= off_i && off_i + 44 <= len
-      // H2a — both spans hold the qb64 of the claimed AID (an `icp` is
-      // self-addressing: d == i).
+      expect DecodeOk(ev) = decode_establishment_event(input_bytes)
+      expect ev.variant == VariantIcp
       let expected_span = qb64_aid(cesr_aid)
-      expect slice_matches(input_bytes, off_d, expected_span)
-      expect slice_matches(input_bytes, off_i, expected_span)
-      // H2b — the SAID binding: blake3 over the dummy-spliced blank.
-      expect blake3.verify(splice_dummies(input_bytes, off_i, off_d), cesr_aid)
+      expect ev.said == expected_span
+      expect ev.aid == expected_span
+      expect blake3.verify(ev.said_preimage, cesr_aid)
       // H3 — exactly one entry under this policy: the pair-binding name
       // over the FINAL bytes at quantity one (full-map inspection).
       expect [Pair(minted_name, minted_qty)] = entries

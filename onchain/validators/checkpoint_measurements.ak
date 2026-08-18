@@ -291,15 +291,6 @@ const tx_advance_from_frozen: Transaction =
 const honest2_freeze_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: enf_vec.honest2_freeze_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [211, 258],
-    off_kt: 202,
-    off_n: [320, 367],
-    off_nt: 311,
-    off_bt: 420,
     native_sn: enf_vec.honest2_freeze_evidence.native_sn,
     said: enf_vec.honest2_freeze_evidence.said,
     revealed_keys: enf_vec.honest2_freeze_evidence.revealed_keys,
@@ -314,15 +305,6 @@ const honest2_freeze_wire: EnforcementEvidence =
 const honest7_freeze_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: enf_vec.honest7_freeze_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [227, 274, 321],
-    off_kt: 201,
-    off_n: [423, 470, 517, 564, 611, 658, 705],
-    off_nt: 373,
-    off_bt: 758,
     native_sn: enf_vec.honest7_freeze_evidence.native_sn,
     said: enf_vec.honest7_freeze_evidence.said,
     revealed_keys: enf_vec.honest7_freeze_evidence.revealed_keys,

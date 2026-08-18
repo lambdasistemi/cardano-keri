@@ -171,9 +171,6 @@ data AdvCase = AdvCase
     , acIcpKeys :: [ByteString]
     , acEventRawCtrlSigs :: [(Int, ByteString)]
     , acOldWitnessSigners :: [(ByteString, SignKeyDSIGN Ed25519DSIGN)]
-    , acOffP :: Int
-    , acOffD :: Int
-    , acOffA :: Int
     }
 
 -- | Build the 'AdvCase' of a sub-fixture.
@@ -197,33 +194,12 @@ loadAdvCase doc key = do
     rotNext <- traverse digestRaw =<< textArrayField rotKed "n"
     rotNextThr <- thresholdField rotKed "nt"
     toad <- hexIntField rotKed "bt"
-    offs <- field sub "offsets"
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offBr <- offList offs "br"
-    offBa <- offList offs "ba"
     seeds <- field sub "signer_seeds"
     rotSigners <- map mkSigner <$> seedList seeds "rotation_current"
     icpSigners <- map mkSigner <$> seedList seeds "inception_current"
     oldWitSigners <- map mkSigner <$> seedList seeds "witness_outgoing"
     eventRawCtrlSigs <- sigList sub "rot_sigs"
     honestReceipts <- sigList sub "rot_witness_receipts"
-    offP <- off offs "p"
-    saidText <- textField rot "said"
-    offD <-
-        note
-            "d offset not found in raw bytes"
-            (findSubstring (TE.encodeUtf8 saidText) raw)
-    offA <-
-        note
-            "a offset not found in raw bytes"
-            (fmap (+ 5) (findSubstring "\"a\":[" raw))
     let survivors = filter (`notElem` cuts) oldWitnesses
         newSet = survivors <> adds
         asset = deriveAidAssetName aid
@@ -256,16 +232,6 @@ loadAdvCase doc key = do
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = offT
-                , aeOffI = offI
-                , aeOffS = offS
-                , aeOffK = offK
-                , aeOffKt = offKt
-                , aeOffN = offN
-                , aeOffNt = offNt
-                , aeOffBr = offBr
-                , aeOffBa = offBa
-                , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = eventRawCtrlSigs
@@ -285,14 +251,9 @@ loadAdvCase doc key = do
             , acIcpKeys = icpKeys
             , acEventRawCtrlSigs = eventRawCtrlSigs
             , acOldWitnessSigners = zip oldWitnesses oldWitSigners
-            , acOffP = offP
-            , acOffD = offD
-            , acOffA = offA
             }
   where
     field v k = note (k <> " missing") (lookupKey k v)
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- | An Ed25519 signing key from a 32-byte exported seed.
 mkSigner :: ByteString -> SignKeyDSIGN Ed25519DSIGN
@@ -326,17 +287,6 @@ flipByte bs = case BS.uncons bs of
 first1 :: [a] -> a
 first1 (x : _) = x
 first1 [] = error "fixture list unexpectedly empty"
-
--- | The offset of the first occurrence of @needle@ in @haystack@, if any.
-findSubstring :: ByteString -> ByteString -> Maybe Int
-findSubstring needle haystack = go 0
-  where
-    n = BS.length needle
-    go i
-        | i + n > BS.length haystack = Nothing
-        | needle `BS.isPrefixOf` BS.drop i haystack = Just i
-        | otherwise = go (i + 1)
-
 -- ---------------------------------------------------------
 -- Scenarios (mirror the S4 AdvanceSpec families)
 -- ---------------------------------------------------------
@@ -390,163 +340,7 @@ buildScenarios w2 w7 keep down =
         (acSpent down)
         (acCreated down)
         (acEvidence down)
-        (Right ())
-    , -- ---------------------------------------------------------
-      -- V6: AE1-AE10 event-binding negatives (one per axis)
-      -- ---------------------------------------------------------
-      sc
-        "ae1_off_t_at_i"
-        "AE1: off_t pointed at i -> AE1EventTypeMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffT = aeOffI (acEvidence w2)}
-        (Left (AdvEventBinding AE1EventTypeMismatch))
-    , sc
-        "ae2_off_i_shift"
-        "AE2: off_i shifted by one -> AE2AidMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffI = aeOffI (acEvidence w2) + 1}
-        (Left (AdvEventBinding AE2AidMismatch))
-    , sc
-        "ae3_off_s_at_t"
-        "AE3: off_s pointed at t -> AE3SequenceMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffS = aeOffT (acEvidence w2)}
-        (Left (AdvEventBinding AE3SequenceMismatch))
-    , let k0 = first1 (aeOffK (acEvidence w2))
-       in sc
-            "ae4_overlap_k"
-            "AE4: overlapping off_k spans -> AE4CurKeysMismatch"
-            (acSpent w2)
-            (acCreated w2)
-            (acEvidence w2){aeOffK = [k0, k0 + 1]}
-            (Left (AdvEventBinding AE4CurKeysMismatch))
-    , sc
-        "ae5_off_kt_at_bt"
-        "AE5: off_kt pointed at bt -> AE5CurThresholdMismatch"
-        (acSpent w7)
-        (acCreated w7)
-        (acEvidence w7){aeOffKt = aeOffBt (acEvidence w7)}
-        (Left (AdvEventBinding AE5CurThresholdMismatch))
-    , sc
-        "ae6_off_n_at_k"
-        "AE6: off_n pointed at off_k (E vs D code) -> AE6NextKeysMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffN = aeOffK (acEvidence w2)}
-        (Left (AdvEventBinding AE6NextKeysMismatch))
-    , sc
-        "ae7_off_nt_at_kt"
-        "AE7: off_nt pointed at kt -> AE7NextThresholdMismatch"
-        (acSpent w7)
-        (acCreated w7)
-        (acEvidence w7){aeOffNt = aeOffKt (acEvidence w7)}
-        (Left (AdvEventBinding AE7NextThresholdMismatch))
-    , sc
-        "ae8_off_br_at_ba"
-        "AE8: off_br pointed at ba -> AE8WitCutMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBr = aeOffBa (acEvidence w2)}
-        (Left (AdvEventBinding AE8WitCutMismatch))
-    , sc
-        "ae9_off_ba_at_br"
-        "AE9: off_ba pointed at br -> AE9WitAddMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBa = aeOffBr (acEvidence w2)}
-        (Left (AdvEventBinding AE9WitAddMismatch))
-    , sc
-        "ae10_off_bt_at_kt"
-        "AE10: off_bt pointed at kt -> AE10ToadMismatch"
-        (acSpent w7)
-        (acCreated w7)
-        (acEvidence w7){aeOffBt = aeOffKt (acEvidence w7)}
-        (Left (AdvEventBinding AE10ToadMismatch))
-    , -- ---------------------------------------------------------
-      -- A-001 condition 1: the offset-misdirection family
-      -- ---------------------------------------------------------
-      sc
-        "mis_trunc_i"
-        "truncated slice: off_i at the byte tail -> AE2"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffI = BS.length (acRaw w2) - 10}
-        (Left (AdvEventBinding AE2AidMismatch))
-    , sc
-        "mis_neg_i"
-        "negative offset rejected -> AE2"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffI = -1}
-        (Left (AdvEventBinding AE2AidMismatch))
-    , let k0 = first1 (aeOffK (acEvidence w2))
-       in sc
-            "mis_dup_k"
-            "duplicated off_k entries -> AE4"
-            (acSpent w2)
-            (acCreated w2)
-            (acEvidence w2){aeOffK = [k0, k0]}
-            (Left (AdvEventBinding AE4CurKeysMismatch))
-    , sc
-        "mis_br_into_k"
-        "off_br pointed into off_k (B vs D code) -> AE8"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBr = take 1 (aeOffK (acEvidence w2))}
-        (Left (AdvEventBinding AE8WitCutMismatch))
-    , sc
-        "mis_short_k"
-        "shortened off_k (1 of 2) -> AE4CurKeysMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffK = take 1 (aeOffK (acEvidence w2))}
-        (Left (AdvEventBinding AE4CurKeysMismatch))
-    , sc
-        "mis_short_n"
-        "shortened off_n (1 of 2) -> AE6NextKeysMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffN = take 1 (aeOffN (acEvidence w2))}
-        (Left (AdvEventBinding AE6NextKeysMismatch))
-    , sc
-        "mis_empty_br"
-        "emptied off_br (0 of 1) -> AE8WitCutMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBr = []}
-        (Left (AdvEventBinding AE8WitCutMismatch))
-    , sc
-        "mis_empty_ba"
-        "emptied off_ba (0 of 1) -> AE9WitAddMismatch"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBa = []}
-        (Left (AdvEventBinding AE9WitAddMismatch))
-    , sc
-        "mis_t_into_p"
-        "off_t redirected into the unchecked p region -> AE1"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffT = acOffP w2}
-        (Left (AdvEventBinding AE1EventTypeMismatch))
-    , sc
-        "mis_kt_into_d"
-        "off_kt redirected into the unchecked d region -> AE5"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffKt = acOffD w2}
-        (Left (AdvEventBinding AE5CurThresholdMismatch))
-    , sc
-        "mis_bt_into_a"
-        "off_bt redirected into the unchecked a region -> AE10"
-        (acSpent w2)
-        (acCreated w2)
-        (acEvidence w2){aeOffBt = acOffA w2}
-        (Left (AdvEventBinding AE10ToadMismatch))
-    , -- ---------------------------------------------------------
+        (Right ())    , -- ---------------------------------------------------------
       -- V5: controller-evidence negatives (folded into eq6)
       -- ---------------------------------------------------------
       let (_, sig) = first1 (aeCtrlSigs (acEvidence w2))
@@ -867,14 +661,6 @@ intField value k = note (k <> " missing or not an integer") $ do
         Number s -> Just (truncate s)
         _ -> Nothing
 
-intArrayField :: Value -> Text -> Either String [Integer]
-intArrayField value k = do
-    elems <- arrayField value k
-    traverse asInt elems
-  where
-    asInt (Number s) = Right (truncate s)
-    asInt _ = Left (T.unpack k <> ": element is not an integer")
-
 arrayField :: Value -> Text -> Either String [Value]
 arrayField value k = note (k <> " missing or not an array") $ do
     fld <- lookupKey k value
@@ -996,16 +782,6 @@ renderEvidence e =
         <> intercalate
             ", "
             [ "event_bytes: " <> hexLit (aeEventBytes e)
-            , "off_t: " <> show (aeOffT e)
-            , "off_i: " <> show (aeOffI e)
-            , "off_s: " <> show (aeOffS e)
-            , "off_k: " <> intList (aeOffK e)
-            , "off_kt: " <> show (aeOffKt e)
-            , "off_n: " <> intList (aeOffN e)
-            , "off_nt: " <> show (aeOffNt e)
-            , "off_br: " <> intList (aeOffBr e)
-            , "off_ba: " <> intList (aeOffBa e)
-            , "off_bt: " <> show (aeOffBt e)
             , "wit_cut: " <> byteList (aeWitCut e)
             , "wit_add: " <> byteList (aeWitAdd e)
             , "ctrl_sigs: " <> sigLits (aeCtrlSigs e)

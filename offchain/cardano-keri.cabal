@@ -71,6 +71,7 @@ library
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
+    Cardano.KERI.AID.Checkpoint.EventDecoder
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.LifecycleModel
     Cardano.KERI.AID.Checkpoint.Message
@@ -947,6 +948,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.InvBindAdversarialSpec
+    Cardano.KERI.AID.Checkpoint.InvBindSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.LifecycleModelSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec

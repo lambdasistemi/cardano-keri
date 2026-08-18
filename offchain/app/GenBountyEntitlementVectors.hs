@@ -225,15 +225,6 @@ evidence :: EnforcementEvidence
 evidence =
     EnforcementEvidence
         { eneEventBytes = eventBytes
-        , eneOffT = 1
-        , eneOffI = 2
-        , eneOffS = 3
-        , eneOffD = 4
-        , eneOffK = [5]
-        , eneOffKt = 6
-        , eneOffN = [7]
-        , eneOffNt = 8
-        , eneOffBt = 9
         , eneNativeSn = 10
         , eneSaid = said
         , eneRevealedKeys = [verkey]
@@ -283,15 +274,6 @@ set in which any two of them — or any one and the honest digest — collide.
 evidenceMutants :: [(String, EnforcementEvidence)]
 evidenceMutants =
     [ ("event_bytes", evidence{eneEventBytes = flipLast eventBytes})
-    , ("off_t", evidence{eneOffT = 11})
-    , ("off_i", evidence{eneOffI = 12})
-    , ("off_s", evidence{eneOffS = 13})
-    , ("off_d", evidence{eneOffD = 14})
-    , ("off_k", evidence{eneOffK = [15]})
-    , ("off_kt", evidence{eneOffKt = 16})
-    , ("off_n", evidence{eneOffN = [17]})
-    , ("off_nt", evidence{eneOffNt = 18})
-    , ("off_bt", evidence{eneOffBt = 19})
     , ("native_sn", evidence{eneNativeSn = 20})
     , ("said", evidence{eneSaid = flipLast said})
     , ("revealed_keys", evidence{eneRevealedKeys = [flipLast verkey]})

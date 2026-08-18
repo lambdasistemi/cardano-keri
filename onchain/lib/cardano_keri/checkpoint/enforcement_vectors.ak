@@ -65,15 +65,6 @@ pub const fork_convict_evidence: EventEvidence =
 pub const fork_convict_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: fork_convict_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [211],
-    off_kt: 202,
-    off_n: [273],
-    off_nt: 264,
-    off_bt: 326,
     native_sn: fork_convict_evidence.native_sn,
     said: fork_convict_evidence.said,
     revealed_keys: fork_convict_evidence.revealed_keys,
@@ -139,15 +130,6 @@ pub const fork_witnessed_convict_evidence: EventEvidence =
 pub const fork_witnessed_convict_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: fork_witnessed_convict_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [211],
-    off_kt: 202,
-    off_n: [273],
-    off_nt: 264,
-    off_bt: 326,
     native_sn: fork_witnessed_convict_evidence.native_sn,
     said: fork_witnessed_convict_evidence.said,
     revealed_keys: fork_witnessed_convict_evidence.revealed_keys,
@@ -213,15 +195,6 @@ pub const fork_witnessed_honest_evidence: EventEvidence =
 pub const fork_witnessed_honest_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: fork_witnessed_honest_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [211],
-    off_kt: 202,
-    off_n: [273],
-    off_nt: 264,
-    off_bt: 326,
     native_sn: fork_witnessed_honest_evidence.native_sn,
     said: fork_witnessed_honest_evidence.said,
     revealed_keys: fork_witnessed_honest_evidence.revealed_keys,
@@ -391,15 +364,6 @@ pub const lag_freeze_evidence: EventEvidence =
 pub const lag_freeze_wire: EnforcementEvidence =
   EnforcementEvidence {
     event_bytes: lag_freeze_evidence.event_bytes,
-    off_t: 30,
-    off_i: 91,
-    off_s: 142,
-    off_d: 40,
-    off_k: [211],
-    off_kt: 202,
-    off_n: [273],
-    off_nt: 264,
-    off_bt: 326,
     native_sn: lag_freeze_evidence.native_sn,
     said: lag_freeze_evidence.said,
     revealed_keys: lag_freeze_evidence.revealed_keys,

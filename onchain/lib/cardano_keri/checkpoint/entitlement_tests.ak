@@ -943,15 +943,6 @@ test entitlement_evidence_digest_separates_payloads() {
 fn parity_evidence() -> EnforcementEvidence {
   EnforcementEvidence {
     event_bytes: ev.event_bytes,
-    off_t: 1,
-    off_i: 2,
-    off_s: 3,
-    off_d: 4,
-    off_k: [5],
-    off_kt: 6,
-    off_n: [7],
-    off_nt: 8,
-    off_bt: 9,
     native_sn: 10,
     said: ev.said,
     revealed_keys: [ev.verkey],
@@ -992,15 +983,6 @@ test entitlement_vectors_every_evidence_field_agrees() {
   let flipped_signature = ev.controller_signature |> flip_last
   and {
     digest_of(EnforcementEvidence { ..base, event_bytes: flipped_event }) == ev.mut_ev_event_bytes,
-    digest_of(EnforcementEvidence { ..base, off_t: 11 }) == ev.mut_ev_off_t,
-    digest_of(EnforcementEvidence { ..base, off_i: 12 }) == ev.mut_ev_off_i,
-    digest_of(EnforcementEvidence { ..base, off_s: 13 }) == ev.mut_ev_off_s,
-    digest_of(EnforcementEvidence { ..base, off_d: 14 }) == ev.mut_ev_off_d,
-    digest_of(EnforcementEvidence { ..base, off_k: [15] }) == ev.mut_ev_off_k,
-    digest_of(EnforcementEvidence { ..base, off_kt: 16 }) == ev.mut_ev_off_kt,
-    digest_of(EnforcementEvidence { ..base, off_n: [17] }) == ev.mut_ev_off_n,
-    digest_of(EnforcementEvidence { ..base, off_nt: 18 }) == ev.mut_ev_off_nt,
-    digest_of(EnforcementEvidence { ..base, off_bt: 19 }) == ev.mut_ev_off_bt,
     digest_of(EnforcementEvidence { ..base, native_sn: 20 }) == ev.mut_ev_native_sn,
     digest_of(EnforcementEvidence { ..base, said: flipped_said }) == ev.mut_ev_said,
     digest_of(EnforcementEvidence { ..base, revealed_keys: [flipped_verkey] }) == ev.mut_ev_revealed_keys,
@@ -1022,15 +1004,6 @@ test entitlement_vectors_every_evidence_field_agrees() {
 test entitlement_vectors_mutant_digests_are_distinct() {
   let mutants = [
     ev.mut_ev_event_bytes,
-    ev.mut_ev_off_t,
-    ev.mut_ev_off_i,
-    ev.mut_ev_off_s,
-    ev.mut_ev_off_d,
-    ev.mut_ev_off_k,
-    ev.mut_ev_off_kt,
-    ev.mut_ev_off_n,
-    ev.mut_ev_off_nt,
-    ev.mut_ev_off_bt,
     ev.mut_ev_native_sn,
     ev.mut_ev_said,
     ev.mut_ev_revealed_keys,

@@ -52,8 +52,6 @@ const honest2_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: honest2_bytes,
     cesr_aid: honest2_aid,
-    off_i: honest2_off_i,
-    off_d: honest2_off_d,
   }
 
 const honest2_name: ByteArray = proof_token_name(honest2_bytes, honest2_aid)
@@ -80,8 +78,6 @@ const witnessed_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: vec.pos_witnessed_evidence.event_bytes,
     cesr_aid: vec.pos_witnessed_datum.cesr_aid,
-    off_i: vec.pos_witnessed_evidence.off_i,
-    off_d: witnessed_off_d,
   }
 
 // ---------------------------------------------------------------------
@@ -101,8 +97,6 @@ const boundary_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: boundary_bytes,
     cesr_aid: boundary_aid,
-    off_i: 61,
-    off_d: 9,
   }
 
 const boundary_name: ByteArray = proof_token_name(boundary_bytes, boundary_aid)
@@ -121,8 +115,6 @@ const oversize_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: oversize_bytes,
     cesr_aid: oversize_aid,
-    off_i: 91,
-    off_d: 40,
   }
 
 // ---------------------------------------------------------------------
@@ -138,7 +130,7 @@ fn mint_only(name: ByteArray, qty: Int) -> Transaction {
 /// Redeemer content is ignored on the burn branch; an all-zero one keeps
 /// that claim honest in every burn test.
 const burn_redeemer: HashProofRedeemer =
-  HashProofRedeemer { input_bytes: #"", cesr_aid: #"", off_i: 0, off_d: 0 }
+  HashProofRedeemer { input_bytes: #"", cesr_aid: #"" }
 
 // ---------------------------------------------------------------------
 // honest mints (H1-H3) — the three size tiers
@@ -198,20 +190,26 @@ test reject_oversize_1271b() fail {
   )
 }
 
-/// off_i = 60 overlaps the off_d = 40 span (40 + 44 > 60).
-test reject_overlapping_spans() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_i: 60 }
+test reject_empty_input_bytes() fail {
+  let redeemer = HashProofRedeemer { ..honest2_redeemer, input_bytes: #"" }
   hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
 }
 
-/// off_i = 1000 runs past the 393 B input.
-test reject_out_of_range_span() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_i: 1000 }
+test reject_trailing_byte() fail {
+  let redeemer =
+    HashProofRedeemer {
+      ..honest2_redeemer,
+      input_bytes: bytearray.concat(honest2_bytes, "!"),
+    }
   hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
 }
 
-test reject_negative_off_d() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_d: -1 }
+test reject_non_icp_prefix() fail {
+  let redeemer =
+    HashProofRedeemer {
+      input_bytes: #"7b2276223a224b45524931304a534f4e3030303135665f222c2274223a22646970",
+      cesr_aid: honest2_aid,
+    }
   hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
 }
 
@@ -255,9 +253,12 @@ test reject_wrong_aid() fail {
   )
 }
 
-/// Both spans point one byte off the genuine content -> H2a.
-test reject_wrong_span_offsets() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_d: 41, off_i: 92 }
+test reject_reordered_framing() fail {
+  let redeemer =
+    HashProofRedeemer {
+      ..honest2_redeemer,
+      input_bytes: bytearray.concat(bytearray.drop(honest2_bytes, 1), "{"),
+    }
   hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
 }
 

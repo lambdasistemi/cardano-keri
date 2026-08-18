@@ -265,12 +265,10 @@ mkRegistrationPlan manifest escrow inception = do
                         0
                         [ B (reEventBytes evidence)
                         , B (cdCesrAid datum)
-                        , I (fromIntegral $ reOffI evidence)
-                        , I (fromIntegral $ inceptionDigestOffset inception)
                         ]
             , planCheckpointRedeemer = plutusDataJson (Constr 0 [])
             , planProofBurnRedeemer =
-                plutusDataJson (Constr 0 [B "", B "", I 0, I 0])
+                plutusDataJson (Constr 0 [B "", B ""])
             , planObserverRedeemer =
                 plutusDataJson $
                     registerObserverRedeemerData

@@ -38,6 +38,7 @@ module CheckpointTxBuilder (
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
     productionRegisterSeizeScenario,
+    invBindMalformedFramingScenario,
     buildArmTx,
     buildAdvanceTx,
     buildClaimTx,
@@ -114,6 +115,9 @@ import Cardano.KERI.AID.Checkpoint.FreezeBond (
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
     deriveAidAssetName,
+ )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    decodeSaidPreimage,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
@@ -2199,6 +2203,93 @@ expectProductionScriptRejection env label tx = do
                                     , rejectionCostModelEntries = 0
                                     }
 
+{- | One malformed hash-proof mint of FX291-GRIND-DIP. The bytes-only
+redeemer carries no spans; structural type rejection happens before a
+proof token can be created.
+-}
+invBindMalformedFramingScenario :: CheckpointEnv -> IO ()
+invBindMalformedFramingScenario env = do
+    fixture <- loadGrindDipFixture
+    before <-
+        withinSecs 30 "query wallet before INV-BIND live rejection" $
+            queryUTxOs (envProvider env) (envOwner env)
+    let beforeIns = Set.fromList (map fst before)
+        beforeCheckpoint = countPolicyAssets (envCheckpointPolicy env) before
+        beforeProof = countPolicyAssets (envHashProofPolicy env) before
+    tx <-
+        withinSecs 90 "build malformed hash-proof mint" $
+            buildHashProofMintTx env fixture
+    _ <-
+        expectProductionScriptRejection
+            env
+            "malformed KERI framing envelope"
+            tx
+    after <-
+        withinSecs 30 "query wallet after INV-BIND live rejection" $
+            queryUTxOs (envProvider env) (envOwner env)
+    let afterIns = Set.fromList (map fst after)
+        afterCheckpoint = countPolicyAssets (envCheckpointPolicy env) after
+        afterProof = countPolicyAssets (envHashProofPolicy env) after
+        fundingUnspent = if beforeIns == afterIns then 1 else 0 :: Int
+        checkpointDelta = afterCheckpoint - beforeCheckpoint
+        proofDelta = afterProof - beforeProof
+    putStrLn $
+        "INV-BIND-LIVE submitted=1 rejected=1 funding_unspent="
+            <> show fundingUnspent
+            <> " checkpoint_delta="
+            <> show checkpointDelta
+            <> " proof_token_delta="
+            <> show proofDelta
+    unless
+        (fundingUnspent == 1 && checkpointDelta == 0 && proofDelta == 0)
+        ( fail
+            "INV-BIND live rejection changed funding or product-state counts"
+        )
+
+loadGrindDipFixture :: IO RegistrationFixture
+loadGrindDipFixture = do
+    path <-
+        getDataFileName
+            "test/keri-fixtures/fixtures/inv_bind_adversarial.json"
+    root <- eitherDecodeFileStrict path >>= either fail pure
+    sub <- either fail pure (atKey "FX291-GRIND-DIP" root)
+    raw <- either fail pure (textAt "raw_hex" sub >>= decodeHex)
+    aid <- either fail pure (textAt "aid_hex" sub >>= decodeHex)
+    let datum =
+            CheckpointDatumV1
+                { cdCesrAid = aid
+                , cdCurKeys = []
+                , cdCurThreshold = Unweighted 1
+                , cdNextKeys = []
+                , cdNextThreshold = Unweighted 1
+                , cdWitnesses = []
+                , cdToad = 0
+                , cdSeq = 0
+                , cdNativeSn = 0
+                }
+    pure
+        RegistrationFixture
+            { rfDatum = datum
+            , rfEvidence =
+                RegistrationEvidence
+                    { reEventBytes = raw
+                    , reCtrlSigs = []
+                    , reWitReceipts = []
+                    }
+            , rfRaw = raw
+            , rfAid = aid
+            , rfProofName = proofTokenName raw aid
+            }
+
+countPolicyAssets :: PolicyID -> [(TxIn, TxOut ConwayEra)] -> Int
+countPolicyAssets policy =
+    length . filter (policyPresent policy . snd)
+
+policyPresent :: PolicyID -> TxOut ConwayEra -> Bool
+policyPresent policy output =
+    case output ^. valueTxOutL of
+        MaryValue _ (MultiAsset assets) -> Map.member policy assets
+
 expectOldCostHashProofRejection ::
     CheckpointEnv -> Int -> ConwayTx -> IO RejectionEvidence
 expectOldCostHashProofRejection env costModelEntries tx = do
@@ -2282,8 +2373,6 @@ data RegistrationFixture = RegistrationFixture
     , rfEvidence :: !RegistrationEvidence
     , rfRaw :: !ByteString
     , rfAid :: !ByteString
-    , rfOffI :: !Integer
-    , rfOffD :: !Integer
     , rfProofName :: !ByteString
     }
 
@@ -2452,16 +2541,6 @@ loadRotateStoryFixture = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = fromInteger (offset "t" offsets)
-                , aeOffI = fromInteger (offset "i" offsets)
-                , aeOffS = fromInteger (offset "s" offsets)
-                , aeOffK = map fromInteger (offsetsAt "k" offsets)
-                , aeOffKt = fromInteger (offset "kt" offsets)
-                , aeOffN = map fromInteger (offsetsAt "n" offsets)
-                , aeOffNt = fromInteger (offset "nt" offsets)
-                , aeOffBr = map fromInteger (offsetsAt "br" offsets)
-                , aeOffBa = map fromInteger (offsetsAt "ba" offsets)
-                , aeOffBt = fromInteger (offset "bt" offsets)
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -2633,16 +2712,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = intOffset "t" offsets
-                , aeOffI = intOffset "i" offsets
-                , aeOffS = intOffset "s" offsets
-                , aeOffK = intOffsets "k" offsets
-                , aeOffKt = intOffset "kt" offsets
-                , aeOffN = intOffsets "n" offsets
-                , aeOffNt = intOffset "nt" offsets
-                , aeOffBr = intOffsets "br" offsets
-                , aeOffBa = intOffsets "ba" offsets
-                , aeOffBt = intOffset "bt" offsets
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -2775,7 +2844,6 @@ registrationFixtureFrom ::
     Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String RegistrationFixture
 registrationFixtureFrom event signatures receipts = do
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     aid <- textAt "pre" event >>= digestRaw
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
@@ -2784,16 +2852,6 @@ registrationFixtureFrom event signatures receipts = do
     currentThreshold <- thresholdAt "kt" ked
     nextThreshold <- thresholdAt "nt" ked
     toad <- hexIntegerAt "bt" ked
-    offT <- integerAt "t" offsets
-    offI <- integerAt "i" offsets
-    offS <- integerAt "s" offsets
-    offK <- integerArrayAt "k" offsets
-    offKt <- integerAt "kt" offsets
-    offN <- integerArrayAt "n" offsets
-    offNt <- integerAt "nt" offsets
-    offB <- integerArrayAt "b" offsets
-    offBt <- integerAt "bt" offsets
-    offD <- eventSaidOffset event
     let datum =
             CheckpointDatumV1
                 { cdCesrAid = aid
@@ -2809,15 +2867,6 @@ registrationFixtureFrom event signatures receipts = do
         evidence =
             RegistrationEvidence
                 { reEventBytes = raw
-                , reOffT = fromInteger offT
-                , reOffI = fromInteger offI
-                , reOffS = fromInteger offS
-                , reOffK = map fromInteger offK
-                , reOffKt = fromInteger offKt
-                , reOffN = map fromInteger offN
-                , reOffNt = fromInteger offNt
-                , reOffB = map fromInteger offB
-                , reOffBt = fromInteger offBt
                 , reCtrlSigs = signatures
                 , reWitReceipts = receipts
                 }
@@ -2827,15 +2876,12 @@ registrationFixtureFrom event signatures receipts = do
             , rfEvidence = evidence
             , rfRaw = raw
             , rfAid = aid
-            , rfOffI = offI
-            , rfOffD = offD
             , rfProofName = proofTokenName raw aid
             }
 
 enforcementEvidenceFrom :: Value -> [(Int, ByteString)] -> Either String EnforcementEvidence
 enforcementEvidenceFrom event signatures = do
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     said <- textAt "said" event >>= digestRaw
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
@@ -2844,34 +2890,19 @@ enforcementEvidenceFrom event signatures = do
     nextThreshold <- thresholdAt "nt" ked
     toad <- hexIntegerAt "bt" ked
     nativeSn <- hexIntegerAt "s" ked
-    (EnforcementEvidence raw . fromInteger <$> integerAt "t" offsets)
-        <*> (fromInteger <$> integerAt "i" offsets)
-        <*> (fromInteger <$> integerAt "s" offsets)
-        <*> (fromInteger <$> integerAt "d" offsets)
-        <*> (map fromInteger <$> integerArrayAt "k" offsets)
-        <*> (fromInteger <$> integerAt "kt" offsets)
-        <*> (map fromInteger <$> integerArrayAt "n" offsets)
-        <*> (fromInteger <$> integerAt "nt" offsets)
-        <*> (fromInteger <$> integerAt "bt" offsets)
-        <*> pure nativeSn
-        <*> pure said
-        <*> pure currentKeys
-        <*> pure nextKeys
-        <*> pure currentThreshold
-        <*> pure nextThreshold
-        <*> pure toad
-        <*> pure signatures
-        <*> pure []
-
-eventSaidOffset :: Value -> Either String Integer
-eventSaidOffset event = do
-    raw <- textAt "raw_hex" event >>= decodeHex
-    said <- textAt "said" event
-    let needle = Text.encodeUtf8 said
-    maybe
-        (Left "event SAID not found in raw serialization")
-        (Right . fromIntegral)
-        (findSubsequence needle raw)
+    pure
+        EnforcementEvidence
+            { eneEventBytes = raw
+            , eneNativeSn = nativeSn
+            , eneSaid = said
+            , eneRevealedKeys = currentKeys
+            , eneNextKeys = nextKeys
+            , eneCurThreshold = currentThreshold
+            , eneNextThreshold = nextThreshold
+            , eneToad = toad
+            , eneCtrlSigs = signatures
+            , eneWitSigs = []
+            }
 
 {- | The long-lived #116 enforcement fixtures intentionally preserve their
 original raw KERI events without an offsets envelope.  Re-derive the exact
@@ -2988,15 +3019,9 @@ buildHashProofMintTx env fixture = do
 
 saidBlank :: RegistrationFixture -> ByteString
 saidBlank fixture =
-    BS.take offD raw
-        <> B8.replicate 44 '#'
-        <> BS.take (offI - offD - 44) (BS.drop (offD + 44) raw)
-        <> B8.replicate 44 '#'
-        <> BS.drop (offI + 44) raw
-  where
-    raw = rfRaw fixture
-    offI = fromInteger (rfOffI fixture)
-    offD = fromInteger (rfOffD fixture)
+    case decodeSaidPreimage (rfRaw fixture) of
+        Right pre -> pre
+        Left _ -> rfRaw fixture
 
 buildRegisterTxWith ::
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
@@ -5176,16 +5201,6 @@ dummyAdvanceEvidence :: AdvanceEvidence
 dummyAdvanceEvidence =
     AdvanceEvidence
         { aeEventBytes = "{}"
-        , aeOffT = 0
-        , aeOffI = 0
-        , aeOffS = 0
-        , aeOffK = []
-        , aeOffKt = 0
-        , aeOffN = []
-        , aeOffNt = 0
-        , aeOffBr = []
-        , aeOffBa = []
-        , aeOffBt = 0
         , aeWitCut = []
         , aeWitAdd = []
         , aeCtrlSigs = []
@@ -5198,12 +5213,10 @@ hashProofRedeemerData fixture =
         0
         [ B (rfRaw fixture)
         , B (rfAid fixture)
-        , I (rfOffI fixture)
-        , I (rfOffD fixture)
         ]
 
 hashProofBurnRedeemerData :: PLC.Data
-hashProofBurnRedeemerData = Constr 0 [B "", B "", I 0, I 0]
+hashProofBurnRedeemerData = Constr 0 [B "", B ""]
 
 registerRedeemerData :: PLC.Data
 registerRedeemerData = Constr 0 []
@@ -5242,16 +5255,6 @@ advanceEvidenceData AdvanceEvidence{..} =
     Constr
         0
         [ B aeEventBytes
-        , I (fromIntegral aeOffT)
-        , I (fromIntegral aeOffI)
-        , I (fromIntegral aeOffS)
-        , intListData aeOffK
-        , I (fromIntegral aeOffKt)
-        , intListData aeOffN
-        , I (fromIntegral aeOffNt)
-        , intListData aeOffBr
-        , intListData aeOffBa
-        , I (fromIntegral aeOffBt)
         , List (map B aeWitCut)
         , List (map B aeWitAdd)
         , signatureListData aeCtrlSigs
@@ -5268,12 +5271,9 @@ second thing to keep in step with a hash.
 enforcementEvidenceData :: EnforcementEvidence -> PLC.Data
 enforcementEvidenceData = asPlcData
 
-intListData :: (Integral a) => [a] -> PLC.Data
-intListData = List . map (I . fromIntegral)
-
 signatureListData :: [(Int, ByteString)] -> PLC.Data
 signatureListData =
-    List . map (\(index, signature) -> Constr 0 [I (fromIntegral index), B signature])
+    List . map (\(index, signature) -> List [I (fromIntegral index), B signature])
 
 ledgerData :: PLC.Data -> Ledger.Data ConwayEra
 ledgerData = Ledger.Data

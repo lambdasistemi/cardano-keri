@@ -32,7 +32,7 @@ use cardano_keri/checkpoint/registration.{
   R7WitnessQuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
   RegistrationInvalid, RegistrationValid, RegistrationVerdict, proof_token_name,
   qb64_witness_verkey, registration_deposit_floor, registration_predicate,
-  respell_hex, respell_threshold, slice_matches, valid_registration_deposit,
+  respell_hex, respell_threshold, valid_registration_deposit,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/threshold.{
@@ -124,24 +124,14 @@ test respell_threshold_unity_weight() {
 }
 
 test respell_weighted_kt_parity() {
-  let respelled = respell_threshold(vec.pos_weighted_datum.cur_threshold)
-  let e = vec.pos_weighted_evidence
-  respelled == vec.weighted_kt_respell && slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respelled,
-  )
+  respell_threshold(vec.pos_weighted_datum.cur_threshold) == vec.weighted_kt_respell
 }
 
-// The witnessed fixture's kt/nt/bt slices ARE the re-spellings.
 test respell_slices_witnessed() {
-  let e = vec.pos_witnessed_evidence
   let d = vec.pos_witnessed_datum
-  slice_matches(e.event_bytes, e.off_kt, respell_threshold(d.cur_threshold)) && slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(d.next_threshold),
-  ) && slice_matches(e.event_bytes, e.off_bt, respell_hex(d.toad))
+  respell_threshold(d.cur_threshold) == "2" && respell_threshold(
+    d.next_threshold,
+  ) == "2" && respell_hex(d.toad) == "2"
 }
 
 // ---------------------------------------------------------
@@ -158,29 +148,14 @@ test witness_qb64_parity() {
   )
 }
 
-fn all_witness_slices(
-  bytes: ByteArray,
-  offs: List<Int>,
-  wits: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> wits == []
-    [o, ..os] ->
-      when wits is {
-        [] -> False
-        [w, ..ws] ->
-          slice_matches(bytes, o, qb64_witness_verkey(w)) && all_witness_slices(
-            bytes,
-            os,
-            ws,
-          )
-      }
-  }
-}
-
 test witness_qb64_is_event_slice() {
-  let e = vec.pos_witnessed_evidence
-  all_witness_slices(e.event_bytes, e.off_b, vec.pos_witnessed_datum.witnesses)
+  list.all(
+    vec.witnessed_witness_qb64,
+    fn(p) {
+      let (raw, qb64) = p
+      qb64_witness_verkey(raw) == qb64
+    },
+  )
 }
 
 // ---------------------------------------------------------
@@ -318,14 +293,14 @@ test e2_crossed_aid_rejects() {
   )
 }
 
-test e3_off_s_at_t_rejects() {
+test e3_trailing_rejects() {
   parity(
-    vec.e3_off_s_at_t_ctx,
-    vec.e3_off_s_at_t_datum,
-    vec.e3_off_s_at_t_lovelace,
-    vec.e3_off_s_at_t_evidence,
-    vec.e3_off_s_at_t_verdict,
-    RegistrationInvalid(E3SequenceMismatch),
+    vec.e3_trailing_ctx,
+    vec.e3_trailing_datum,
+    vec.e3_trailing_lovelace,
+    vec.e3_trailing_evidence,
+    vec.e3_trailing_verdict,
+    RegistrationInvalid(E1EventTypeMismatch),
   )
 }
 
@@ -767,109 +742,6 @@ test r8_deposit_short_rejects() {
 // ---------------------------------------------------------
 // Verdict parity: the A-001 offset-misdirection family
 // ---------------------------------------------------------
-
-test mis_off_i_shift_rejects() {
-  parity(
-    vec.mis_off_i_shift_ctx,
-    vec.mis_off_i_shift_datum,
-    vec.mis_off_i_shift_lovelace,
-    vec.mis_off_i_shift_evidence,
-    vec.mis_off_i_shift_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-test mis_overlap_k_rejects() {
-  parity(
-    vec.mis_overlap_k_ctx,
-    vec.mis_overlap_k_datum,
-    vec.mis_overlap_k_lovelace,
-    vec.mis_overlap_k_evidence,
-    vec.mis_overlap_k_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
-// D-code expected bytes vs E-code n entries: prefix confusion fails.
-test mis_k_into_n_rejects() {
-  parity(
-    vec.mis_k_into_n_ctx,
-    vec.mis_k_into_n_datum,
-    vec.mis_k_into_n_lovelace,
-    vec.mis_k_into_n_evidence,
-    vec.mis_k_into_n_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
-// D-code expected bytes vs B-code b entries: prefix confusion fails.
-test mis_k_into_b_rejects() {
-  parity(
-    vec.mis_k_into_b_ctx,
-    vec.mis_k_into_b_datum,
-    vec.mis_k_into_b_lovelace,
-    vec.mis_k_into_b_evidence,
-    vec.mis_k_into_b_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
-// E-code expected bytes vs a D-code k entry: prefix confusion fails.
-test mis_i_at_k_rejects() {
-  parity(
-    vec.mis_i_at_k_ctx,
-    vec.mis_i_at_k_datum,
-    vec.mis_i_at_k_lovelace,
-    vec.mis_i_at_k_evidence,
-    vec.mis_i_at_k_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-// B-code expected bytes vs D-code k entries: prefix confusion fails.
-test mis_b_at_k_rejects() {
-  parity(
-    vec.mis_b_at_k_ctx,
-    vec.mis_b_at_k_datum,
-    vec.mis_b_at_k_lovelace,
-    vec.mis_b_at_k_evidence,
-    vec.mis_b_at_k_verdict,
-    RegistrationInvalid(E8WitnessesMismatch),
-  )
-}
-
-test mis_trunc_i_rejects() {
-  parity(
-    vec.mis_trunc_i_ctx,
-    vec.mis_trunc_i_datum,
-    vec.mis_trunc_i_lovelace,
-    vec.mis_trunc_i_evidence,
-    vec.mis_trunc_i_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-test mis_trunc_k_rejects() {
-  parity(
-    vec.mis_trunc_k_ctx,
-    vec.mis_trunc_k_datum,
-    vec.mis_trunc_k_lovelace,
-    vec.mis_trunc_k_evidence,
-    vec.mis_trunc_k_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
-test mis_neg_i_rejects() {
-  parity(
-    vec.mis_neg_i_ctx,
-    vec.mis_neg_i_datum,
-    vec.mis_neg_i_lovelace,
-    vec.mis_neg_i_evidence,
-    vec.mis_neg_i_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
 
 // Duplicated offsets force a duplicate datum key: slips past E4 only to
 // fail R4's F18 rule 2 (the A-001 misdirection collapse argument).

@@ -28,6 +28,10 @@ use cardano_keri/base64url
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV1, DatumError, DatumInvalid, DatumValid, datum_well_formed,
 }
+use cardano_keri/checkpoint/event_decoder.{
+  DecodeErr, DecodeOk, DecodedEstablishmentEvent, VariantIcp,
+  decode_establishment_event,
+}
 use cardano_keri/checkpoint/message.{qb64_aid, qb64_verkey}
 use cardano_keri/checkpoint/threshold.{
   Threshold, Unweighted, Weight, Weighted, evaluate,
@@ -57,23 +61,11 @@ pub fn valid_registration_deposit(d_reg: Int) -> Bool {
 // Registration evidence (mirrors the S2 `RegistrationEvidence`)
 // ---------------------------------------------------------
 
-/// The `Register` redeemer evidence: the full keripy `icp` serialization,
-/// per-field value offsets into it (the generator's offset convention:
-/// first byte of the value content between the quotes; a weighted
-/// `kt`/`nt` offset points at the opening `[` of the full compact-JSON
-/// array), controller signatures, and witness receipts. Both signature
-/// families authenticate the exact `event_bytes`.
+/// The `Register` redeemer evidence: exact event bytes plus controller
+/// and witness signatures. Field boundaries come only from
+/// `decode_establishment_event`.
 pub type RegistrationEvidence {
   event_bytes: ByteArray,
-  off_t: Int,
-  off_i: Int,
-  off_s: Int,
-  off_k: List<Int>,
-  off_kt: Int,
-  off_n: List<Int>,
-  off_nt: Int,
-  off_b: List<Int>,
-  off_bt: Int,
   ctrl_sigs: List<(Int, ByteArray)>,
   wit_receipts: List<(Int, ByteArray)>,
 }
@@ -301,55 +293,35 @@ pub type RegistrationVerdict {
   RegistrationInvalid(RegistrationError)
 }
 
-/// R6 — the E1-E9 event-binding slice set. Every expected value is
-/// computed from the datum (derivation-code-prefixed qb64 or exact
-/// re-spelling); the prover's offsets only locate it. A slice is checked
-/// bounds-first, so a truncated (tail) or negative offset fails its
-/// field's check like any mismatch.
+/// R6 — bind a decoded `icp` to the genesis datum.
 pub fn event_binding(
   d: CheckpointDatumV1,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {
-  if !slice_matches(e.event_bytes, e.off_t, "icp") {
-    RegistrationInvalid(E1EventTypeMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_i, qb64_aid(d.cesr_aid)) {
-    RegistrationInvalid(E2AidMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_s, "0") {
-    RegistrationInvalid(E3SequenceMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_k,
-    list.map(d.cur_keys, qb64_verkey),
-  ) {
-    RegistrationInvalid(E4CurKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respell_threshold(d.cur_threshold),
-  ) {
-    RegistrationInvalid(E5CurThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_n,
-    list.map(d.next_keys, qb64_aid),
-  ) {
-    RegistrationInvalid(E6NextKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(d.next_threshold),
-  ) {
-    RegistrationInvalid(E7NextThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_b,
-    list.map(d.witnesses, qb64_witness_verkey),
-  ) {
-    RegistrationInvalid(E8WitnessesMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_bt, respell_hex(d.toad)) {
-    RegistrationInvalid(E9ToadMismatch)
-  } else {
-    RegistrationValid
+  when decode_establishment_event(e.event_bytes) is {
+    DecodeErr(_) -> RegistrationInvalid(E1EventTypeMismatch)
+    DecodeOk(ev) ->
+      if ev.variant != VariantIcp {
+        RegistrationInvalid(E1EventTypeMismatch)
+      } else if ev.aid != qb64_aid(d.cesr_aid) {
+        RegistrationInvalid(E2AidMismatch)
+      } else if ev.seq != "0" {
+        RegistrationInvalid(E3SequenceMismatch)
+      } else if ev.k != list.map(d.cur_keys, qb64_verkey) {
+        RegistrationInvalid(E4CurKeysMismatch)
+      } else if ev.kt != respell_threshold(d.cur_threshold) {
+        RegistrationInvalid(E5CurThresholdMismatch)
+      } else if ev.n != list.map(d.next_keys, qb64_aid) {
+        RegistrationInvalid(E6NextKeysMismatch)
+      } else if ev.nt != respell_threshold(d.next_threshold) {
+        RegistrationInvalid(E7NextThresholdMismatch)
+      } else if ev.b != list.map(d.witnesses, qb64_witness_verkey) {
+        RegistrationInvalid(E8WitnessesMismatch)
+      } else if ev.bt != respell_hex(d.toad) {
+        RegistrationInvalid(E9ToadMismatch)
+      } else {
+        RegistrationValid
+      }
   }
 }
 
@@ -421,33 +393,6 @@ pub fn registration_predicate(
 // ---------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------
-
-/// Does the slice of `raw` at `off` equal `expected`? Bounds-checked: an
-/// out-of-range span never matches (mirrors the S2 `sliceMatches`).
-pub fn slice_matches(raw: ByteArray, off: Int, expected: ByteArray) -> Bool {
-  let n = bytearray.length(expected)
-  off >= 0 && off + n <= bytearray.length(raw) && bytearray.take(
-    bytearray.drop(raw, off),
-    n,
-  ) == expected
-}
-
-// Offset-count equality + slice equality at every offset (the E4/E6/E8
-// list form; mirrors the S2 `slices`).
-fn slices_match(
-  raw: ByteArray,
-  offs: List<Int>,
-  expected: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> expected == []
-    [o, ..os] ->
-      when expected is {
-        [] -> False
-        [x, ..xs] -> slice_matches(raw, o, x) && slices_match(raw, os, xs)
-      }
-  }
-}
 
 // The positions whose `(idx, sig)` verifies with `keys[idx]` over `msg`
 // (the enforcement-layer helper shape; `evaluate` dedups positions).

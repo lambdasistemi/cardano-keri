@@ -46,6 +46,11 @@ module Cardano.KERI.AID.Checkpoint.Enforcement (
 import Cardano.KERI.AID.Blake3.Checkpoint (
     blake3Hash,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    DecodedEstablishmentEvent (..),
+    EventVariant (..),
+    decodeEstablishmentEvent,
+ )
 import Cardano.KERI.AID.CESR (
     qb64Aid,
     qb64Verkey,
@@ -102,15 +107,6 @@ deliberately no @said_blank@ and no SAID recomputation.
 -}
 data EnforcementEvidence = EnforcementEvidence
     { eneEventBytes :: !ByteString
-    , eneOffT :: !Int
-    , eneOffI :: !Int
-    , eneOffS :: !Int
-    , eneOffD :: !Int
-    , eneOffK :: ![Int]
-    , eneOffKt :: !Int
-    , eneOffN :: ![Int]
-    , eneOffNt :: !Int
-    , eneOffBt :: !Int
     , eneNativeSn :: !Integer
     , eneSaid :: !ByteString
     , eneRevealedKeys :: ![Verkey]
@@ -123,7 +119,7 @@ data EnforcementEvidence = EnforcementEvidence
     }
     deriving stock (Show, Eq)
 
-{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 10 fields.
 
 The encoder lives here, beside the type whose wire shape it is, because #254
 S254-E made it load-bearing beyond transaction building: the canonical
@@ -138,15 +134,6 @@ instance ToData EnforcementEvidence where
             Constr
                 0
                 [ B eneEventBytes
-                , I (fromIntegral eneOffT)
-                , I (fromIntegral eneOffI)
-                , I (fromIntegral eneOffS)
-                , I (fromIntegral eneOffD)
-                , evidenceIntList eneOffK
-                , I (fromIntegral eneOffKt)
-                , evidenceIntList eneOffN
-                , I (fromIntegral eneOffNt)
-                , I (fromIntegral eneOffBt)
                 , I eneNativeSn
                 , B eneSaid
                 , List (map B eneRevealedKeys)
@@ -160,9 +147,6 @@ instance ToData EnforcementEvidence where
 
 evidenceData :: (ToData a) => a -> Data
 evidenceData value = let BuiltinData dat = toBuiltinData value in dat
-
-evidenceIntList :: (Integral a) => [a] -> Data
-evidenceIntList = List . map (I . fromIntegral)
 
 -- | Aiken tuples are Data lists, not record-shaped constructors.
 evidenceSignatureList :: [(Int, ByteString)] -> Data
@@ -197,35 +181,36 @@ bindEnforcementEvidence ::
 bindEnforcementEvidence aid e = do
     let raw = eneEventBytes e
         n = BS.length raw
-        slice = sliceMatches raw
-        slices offs expected =
-            length offs == length expected
-                && and (zipWith slice offs expected)
     unless (n >= 1 && n <= 1024) (Left EE0EventBytesLength)
-    unless (slice (eneOffT e) "rot") (Left EE1EventTypeMismatch)
-    unless (slice (eneOffI e) (qb64Aid aid)) (Left EE2AidMismatch)
+    decoded <-
+        either (const (Left EE1EventTypeMismatch)) Right $
+            decodeEstablishmentEvent raw
     unless
-        (slice (eneOffS e) (respellHex (eneNativeSn e)))
+        (deeVariant decoded == VariantRot)
+        (Left EE1EventTypeMismatch)
+    unless (deeAid decoded == qb64Aid aid) (Left EE2AidMismatch)
+    unless
+        (deeSeq decoded == respellHex (eneNativeSn e))
         (Left EE3SequenceMismatch)
     unless
         ( BS.length (eneSaid e) == 32
-            && slice (eneOffD e) (qb64Aid (eneSaid e))
+            && deeSaid decoded == qb64Aid (eneSaid e)
         )
         (Left EE4SaidMismatch)
     unless
-        (slices (eneOffK e) (map qb64Verkey (eneRevealedKeys e)))
+        (deeK decoded == map qb64Verkey (eneRevealedKeys e))
         (Left EE5RevealedKeysMismatch)
     unless
-        (slice (eneOffKt e) (respellThreshold (eneCurThreshold e)))
+        (deeKt decoded == respellThreshold (eneCurThreshold e))
         (Left EE6CurThresholdMismatch)
     unless
-        (slices (eneOffN e) (map qb64Aid (eneNextKeys e)))
+        (deeN decoded == map qb64Aid (eneNextKeys e))
         (Left EE7NextKeysMismatch)
     unless
-        (slice (eneOffNt e) (respellThreshold (eneNextThreshold e)))
+        (deeNt decoded == respellThreshold (eneNextThreshold e))
         (Left EE8NextThresholdMismatch)
     unless
-        (slice (eneOffBt e) (respellHex (eneToad e)))
+        (deeBt decoded == respellHex (eneToad e))
         (Left EE9ToadMismatch)
     pure
         EventEvidence
@@ -243,14 +228,6 @@ bindEnforcementEvidence aid e = do
             , eeCtrlSigs = eneCtrlSigs e
             , eeWitSigs = eneWitSigs e
             }
-
--- | Bounds-checked exact byte slice comparison.
-sliceMatches :: ByteString -> Int -> ByteString -> Bool
-sliceMatches raw off expected =
-    off >= 0
-        && BS.length expected <= BS.length raw
-        && off <= BS.length raw - BS.length expected
-        && BS.take (BS.length expected) (BS.drop off raw) == expected
 
 -- ---------------------------------------------------------
 -- Decoded event evidence

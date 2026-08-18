@@ -127,15 +127,6 @@ this list rather than written down.
 evidenceMutants :: [(String, EnforcementEvidence)]
 evidenceMutants =
     [ ("event_bytes", perturbedEvidence)
-    , ("off_t", evidence{eneOffT = eneOffT evidence + 1})
-    , ("off_i", evidence{eneOffI = eneOffI evidence + 1})
-    , ("off_s", evidence{eneOffS = eneOffS evidence + 1})
-    , ("off_d", evidence{eneOffD = eneOffD evidence + 1})
-    , ("off_k", evidence{eneOffK = [99]})
-    , ("off_kt", evidence{eneOffKt = eneOffKt evidence + 1})
-    , ("off_n", evidence{eneOffN = [98]})
-    , ("off_nt", evidence{eneOffNt = eneOffNt evidence + 1})
-    , ("off_bt", evidence{eneOffBt = eneOffBt evidence + 1})
     , ("native_sn", evidence{eneNativeSn = eneNativeSn evidence + 1})
     , ("said", evidence{eneSaid = flipLast said})
     , ("revealed_keys", evidence{eneRevealedKeys = [flipLast verkey]})
@@ -627,15 +618,6 @@ evidence :: EnforcementEvidence
 evidence =
     EnforcementEvidence
         { eneEventBytes = eventBytes
-        , eneOffT = 1
-        , eneOffI = 2
-        , eneOffS = 3
-        , eneOffD = 4
-        , eneOffK = [5]
-        , eneOffKt = 6
-        , eneOffN = [7]
-        , eneOffNt = 8
-        , eneOffBt = 9
         , eneNativeSn = 10
         , eneSaid = said
         , eneRevealedKeys = [verkey]

@@ -37,15 +37,6 @@ evidence :: RegistrationEvidence
 evidence =
     RegistrationEvidence
         { reEventBytes = "icp"
-        , reOffT = 1
-        , reOffI = 2
-        , reOffS = 3
-        , reOffK = [4]
-        , reOffKt = 5
-        , reOffN = [6]
-        , reOffNt = 7
-        , reOffB = [8]
-        , reOffBt = 9
         , reCtrlSigs = [(0, BS.replicate 64 0xa1)]
         , reWitReceipts = [(1, BS.replicate 64 0xb1)]
         }
@@ -54,16 +45,6 @@ advanceEvidence :: AdvanceEvidence
 advanceEvidence =
     AdvanceEvidence
         { aeEventBytes = "rot"
-        , aeOffT = 1
-        , aeOffI = 2
-        , aeOffS = 3
-        , aeOffK = [4]
-        , aeOffKt = 5
-        , aeOffN = [6]
-        , aeOffNt = 7
-        , aeOffBr = [8]
-        , aeOffBa = [9]
-        , aeOffBt = 10
         , aeWitCut = ["cut"]
         , aeWitAdd = ["add"]
         , aeCtrlSigs = [(0, BS.replicate 64 0xc1)]
@@ -74,15 +55,6 @@ freezeEvidence :: EnforcementEvidence
 freezeEvidence =
     EnforcementEvidence
         { eneEventBytes = "rot-2-conflict"
-        , eneOffT = 1
-        , eneOffI = 2
-        , eneOffS = 3
-        , eneOffD = 4
-        , eneOffK = [5, 6]
-        , eneOffKt = 7
-        , eneOffN = [8, 9]
-        , eneOffNt = 10
-        , eneOffBt = 11
         , eneNativeSn = 2
         , eneSaid = BS.replicate 32 0xa2
         , eneRevealedKeys = [BS.replicate 32 0xb2, BS.replicate 32 0xb3]
@@ -124,15 +96,6 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "icp"
-                , I 1
-                , I 2
-                , I 3
-                , List [I 4]
-                , I 5
-                , List [I 6]
-                , I 7
-                , List [I 8]
-                , I 9
                 , List [List [I 0, B (BS.replicate 64 0xa1)]]
                 , List [List [I 1, B (BS.replicate 64 0xb1)]]
                 ]
@@ -207,16 +170,6 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "rot"
-                , I 1
-                , I 2
-                , I 3
-                , List [I 4]
-                , I 5
-                , List [I 6]
-                , I 7
-                , List [I 8]
-                , List [I 9]
-                , I 10
                 , List [B "cut"]
                 , List [B "add"]
                 , List [List [I 0, B (BS.replicate 64 0xc1)]]
@@ -274,15 +227,6 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "rot-2-conflict"
-                , I 1
-                , I 2
-                , I 3
-                , I 4
-                , List [I 5, I 6]
-                , I 7
-                , List [I 8, I 9]
-                , I 10
-                , I 11
                 , I 2
                 , B (BS.replicate 32 0xa2)
                 , List [B (BS.replicate 32 0xb2), B (BS.replicate 32 0xb3)]

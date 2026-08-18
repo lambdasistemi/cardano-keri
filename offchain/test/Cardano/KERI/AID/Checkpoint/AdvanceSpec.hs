@@ -34,7 +34,6 @@ import Cardano.Crypto.DSIGN (
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Checkpoint.Advance (
-    AdvanceEventError (..),
     AdvanceEvidence (..),
     AdvancePredicateError (..),
     advancePredicate,
@@ -49,7 +48,6 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
     decodeHex,
     digestRaw,
-    intArrayField,
     intField,
     loadFixture,
     lookupKey,
@@ -75,7 +73,6 @@ import Data.Char (isDigit)
 import Data.Foldable (toList)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Test.Hspec (
     Expectation,
     Spec,
@@ -181,12 +178,6 @@ data AdvCase = AdvCase
     -- ^ The bundle's own KERI signatures over @event_raw@ (@rot_sigs@).
     , acOldWitnessSigners :: [(ByteString, SignKeyDSIGN Ed25519DSIGN)]
     -- ^ @(raw verkey, signer)@ for every outgoing witness, in old order.
-    , acOffP :: Int
-    -- ^ Offset of the unchecked @p@ (prior-event SAID) region.
-    , acOffD :: Int
-    -- ^ Offset of the unchecked @d@ (this event's own SAID) region.
-    , acOffA :: Int
-    -- ^ Offset of the unchecked @a@ (anchored seals) region.
     }
 
 -- | Build the 'AdvCase' of a sub-fixture.
@@ -210,33 +201,12 @@ advCase doc key = do
     rotNext <- traverse digestRaw =<< textArrayField rotKed "n"
     rotNextThr <- thresholdOf rotKed "nt"
     toad <- parseHexInt =<< textField rotKed "bt"
-    offs <- field sub "offsets"
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offBr <- offList offs "br"
-    offBa <- offList offs "ba"
     seeds <- field sub "signer_seeds"
     rotSigners <- map mkSigner <$> seedList seeds "rotation_current"
     icpSigners <- map mkSigner <$> seedList seeds "inception_current"
     oldWitSigners <- map mkSigner <$> seedList seeds "witness_outgoing"
     eventRawCtrlSigs <- indexedSigs sub "rot_sigs"
     honestReceipts <- indexedSigs sub "rot_witness_receipts"
-    offP <- off offs "p"
-    saidText <- textField rot "said"
-    offD <-
-        note
-            "d offset not found in raw bytes"
-            (findSubstring (TE.encodeUtf8 saidText) raw)
-    offA <-
-        note
-            "a offset not found in raw bytes"
-            (fmap (+ 5) (findSubstring "\"a\":[" raw))
     let survivors = filter (`notElem` cuts) oldWitnesses
         newSet = survivors <> adds
         asset = deriveAidAssetName aid
@@ -269,16 +239,6 @@ advCase doc key = do
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = offT
-                , aeOffI = offI
-                , aeOffS = offS
-                , aeOffK = offK
-                , aeOffKt = offKt
-                , aeOffN = offN
-                , aeOffNt = offNt
-                , aeOffBr = offBr
-                , aeOffBa = offBa
-                , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = eventRawCtrlSigs
@@ -298,14 +258,9 @@ advCase doc key = do
             , acIcpKeys = icpKeys
             , acEventRawCtrlSigs = eventRawCtrlSigs
             , acOldWitnessSigners = zip oldWitnesses oldWitSigners
-            , acOffP = offP
-            , acOffD = offD
-            , acOffA = offA
             }
   where
     field v k = note (k <> " missing") (lookupKey k v)
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- | Run a check against a built fixture case, failing on load error.
 withCase :: Value -> Text -> (AdvCase -> Expectation) -> Expectation
@@ -375,16 +330,6 @@ first1 :: [a] -> a
 first1 (x : _) = x
 first1 [] = error "fixture list unexpectedly empty"
 
--- | The offset of the first occurrence of @needle@ in @haystack@, if any.
-findSubstring :: ByteString -> ByteString -> Maybe Int
-findSubstring needle haystack = go 0
-  where
-    n = BS.length needle
-    go i
-        | i + n > BS.length haystack = Nothing
-        | needle `BS.isPrefixOf` BS.drop i haystack = Just i
-        | otherwise = go (i + 1)
-
 -- ---------------------------------------------------------------
 -- The spec
 -- ---------------------------------------------------------------
@@ -394,8 +339,6 @@ spec =
     describe "Advance - #115 S4 pure predicate (keripy oracle)" $
         beforeAll (loadFixture "advance.json") $ do
             positives
-            eventBindingNegatives
-            misdirectionFamily
             controllerEvidenceNegatives
             permissionlessHoldsAndAntiReplay
             deltaMalformations
@@ -424,144 +367,6 @@ positives =
                 cdWitnesses (acCreated c) `shouldBe` []
                 cdToad (acCreated c) `shouldBe` 0
                 aeWitReceipts (acEvidence c) `shouldSatisfy` null
-
--- ---------------------------------------------------------------
--- V6: AE1-AE10 event-binding negatives (one per axis)
--- ---------------------------------------------------------------
-
-eventBindingNegatives :: SpecWith Value
-eventBindingNegatives =
-    describe "V6: AE1-AE10 event-binding negatives (one per axis)" $ do
-        it "AE1: off_t pointed at i -> AE1EventTypeMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffT = aeOffI (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE1EventTypeMismatch)
-        it "AE2: off_i shifted by one -> AE2AidMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffI = aeOffI (acEvidence c) + 1}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "AE3: off_s pointed at t -> AE3SequenceMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffS = aeOffT (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE3SequenceMismatch)
-        it "AE4: overlapping off_k spans -> AE4CurKeysMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c -> do
-                let k0 = first1 (aeOffK (acEvidence c))
-                runAdvWith c (acEvidence c){aeOffK = [k0, k0 + 1]}
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "AE5: off_kt pointed at bt -> AE5CurThresholdMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffKt = aeOffBt (acEvidence c)}
-                    `shouldBe` Left
-                        (AdvEventBinding AE5CurThresholdMismatch)
-        it
-            "AE6: off_n pointed at off_k (E vs D code) -> AE6NextKeysMismatch"
-            $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffN = aeOffK (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE6NextKeysMismatch)
-        it "AE7: off_nt pointed at kt -> AE7NextThresholdMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffNt = aeOffKt (acEvidence c)}
-                    `shouldBe` Left
-                        (AdvEventBinding AE7NextThresholdMismatch)
-        it "AE8: off_br pointed at ba -> AE8WitCutMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBr = aeOffBa (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "AE9: off_ba pointed at br -> AE9WitAddMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBa = aeOffBr (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE9WitAddMismatch)
-        it "AE10: off_bt pointed at kt -> AE10ToadMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBt = aeOffKt (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE10ToadMismatch)
-
--- ---------------------------------------------------------------
--- A-001 condition 1: the offset-misdirection family
--- ---------------------------------------------------------------
-
-misdirectionFamily :: SpecWith Value
-misdirectionFamily =
-    describe "A-001 offset-misdirection family (acceptance gate)" $ do
-        it "truncated slice: off_i at the byte tail -> AE2" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffI = BS.length (acRaw c) - 10}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "negative offset rejected -> AE2" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffI = -1}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "duplicated off_k entries -> AE4" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c -> do
-                let k0 = first1 (aeOffK (acEvidence c))
-                runAdvWith c (acEvidence c){aeOffK = [k0, k0]}
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "off_br pointed into off_k (B vs D code) -> AE8" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffBr = take 1 (aeOffK (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "shortened off_k (1 of 2) -> AE4CurKeysMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffK = take 1 (aeOffK (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "shortened off_n (1 of 2) -> AE6NextKeysMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffN = take 1 (aeOffN (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE6NextKeysMismatch)
-        it "emptied off_br (0 of 1) -> AE8WitCutMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBr = []}
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "emptied off_ba (0 of 1) -> AE9WitAddMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBa = []}
-                    `shouldBe` Left (AdvEventBinding AE9WitAddMismatch)
-        it "off_t redirected into the unchecked p region -> AE1" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffT = acOffP c}
-                    `shouldBe` Left (AdvEventBinding AE1EventTypeMismatch)
-        it "off_kt redirected into the unchecked d region -> AE5" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffKt = acOffD c}
-                    `shouldBe` Left
-                        (AdvEventBinding AE5CurThresholdMismatch)
-        it "off_bt redirected into the unchecked a region -> AE10" $
-            \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBt = acOffA c}
-                    `shouldBe` Left (AdvEventBinding AE10ToadMismatch)
 
 -- ---------------------------------------------------------------
 -- V5: controller-evidence negatives (folded into eq6 by advanceEqualities)

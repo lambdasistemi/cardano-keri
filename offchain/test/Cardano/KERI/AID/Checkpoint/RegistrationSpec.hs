@@ -28,7 +28,6 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     decodeHex,
     digestRaw,
-    intArrayField,
     intField,
     loadFixture,
     lookupKey,
@@ -123,16 +122,6 @@ regCase fx key = do
     kt <- thresholdOf ked "kt"
     nt <- thresholdOf ked "nt"
     bt <- parseHexInt =<< textField ked "bt"
-    offs <- note (key <> ".offsets missing") (lookupKey "offsets" sub)
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offB <- offList offs "b"
     eventSigs <- committedSigs sub "event_sigs"
     witnessReceipts <- optionalCommittedSigs sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
@@ -155,24 +144,12 @@ regCase fx key = do
             , rcEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = eventSigs
                     , reWitReceipts = witnessReceipts
                     }
             , rcOldMessageSigs = obsoleteSigs
             , rcWitnessReceipts = witnessReceipts
             }
-  where
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- | Run a check against a built fixture case, failing on load error.
 withCase ::
@@ -300,7 +277,6 @@ spec =
             receiptNegatives
             depositNegatives
             deploymentFloor
-            misdirectionFamily
             proofToken
             respelling
             witnessQb64
@@ -355,6 +331,19 @@ genesisAndSchema =
                     (rcEvidence c)
                     `shouldBe` Left
                         (R4InceptionInvalid InceptionNativeSnNonZero)
+        it "duplicated current keys -> R4 F18" $ \fx ->
+            withCase fx "reg_witnessed" $ \c -> do
+                let k0raw = first1 (cdCurKeys (rcDatum c))
+                    d = (rcDatum c){cdCurKeys = [k0raw, k0raw]}
+                registrationPredicate ctx0 d funded (rcEvidence c)
+                    `shouldBe` Left
+                        ( R4InceptionInvalid
+                            ( InceptionIllFormed
+                                ( ThresholdIllFormed
+                                    DuplicateKey
+                                )
+                            )
+                        )
 
 -- ---------------------------------------------------------------
 -- R6: per-slice E1-E9 negatives
@@ -383,16 +372,17 @@ sliceNegatives =
                         funded
                         (rcEvidence c)
                         `shouldBe` Left E2AidMismatch
-        it "E3: off_s pointed at t -> E3SequenceMismatch" $ \fx ->
+        it "E3: trailing byte -> E1EventTypeMismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
                     ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c)
-                        { reOffS = reOffT (rcEvidence c)
+                        { reEventBytes =
+                            reEventBytes (rcEvidence c) <> "!"
                         }
-                    `shouldBe` Left E3SequenceMismatch
+                    `shouldBe` Left E1EventTypeMismatch
         it "E4: squat - attacker keys over victim bytes" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 withCase fx "reg_weighted" $ \other -> do
@@ -758,131 +748,6 @@ deploymentFloor =
                     `shouldBe` Left DRegBelowMinimum
 
 -- ---------------------------------------------------------------
--- A-001 QB condition 1: the offset-misdirection family
--- ---------------------------------------------------------------
-
-misdirectionFamily :: SpecWith Value
-misdirectionFamily =
-    describe "A-001 offset-misdirection family (acceptance gate)" $ do
-        it "wrong offset: off_i shifted by one -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI = reOffI (rcEvidence c) + 1
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "overlapping spans: off_k[1] = off_k[0] + 1 -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c -> do
-                let k0 = first1 (reOffK (rcEvidence c))
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c){reOffK = [k0, k0 + 1]}
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_k pointed into n entries (D vs E code) -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK = reOffN (rcEvidence c)
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_k pointed into b entries (D vs B code) -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK =
-                            take 2 (reOffB (rcEvidence c))
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_i pointed at a k entry (E vs D code) -> E2" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI =
-                            first1 (reOffK (rcEvidence c))
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "off_b pointed at k entries (B vs D code) -> E8" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffB =
-                            reOffK (rcEvidence c)
-                                <> drop
-                                    2
-                                    (reOffB (rcEvidence c))
-                        }
-                    `shouldBe` Left E8WitnessesMismatch
-        it "truncated slice: off_i at the byte tail -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI = BS.length (rcRaw c) - 10
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "truncated slice: last off_k at the tail -> E4" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK =
-                            take
-                                1
-                                (reOffK (rcEvidence c))
-                                <> [BS.length (rcRaw c) - 20]
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "negative offset rejected -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c){reOffI = -1}
-                    `shouldBe` Left E2AidMismatch
-        it "duplicated offsets duplicate the key -> R4 F18" $ \fx ->
-            withCase fx "reg_witnessed" $ \c -> do
-                let k0raw = first1 (cdCurKeys (rcDatum c))
-                    k0off = first1 (reOffK (rcEvidence c))
-                    d = (rcDatum c){cdCurKeys = [k0raw, k0raw]}
-                registrationPredicate
-                    ctx0
-                    d
-                    funded
-                    (rcEvidence c)
-                        { reOffK = [k0off, k0off]
-                        }
-                    `shouldBe` Left
-                        ( R4InceptionInvalid
-                            ( InceptionIllFormed
-                                ( ThresholdIllFormed
-                                    DuplicateKey
-                                )
-                            )
-                        )
-
--- ---------------------------------------------------------------
 -- R5 (name derivation only in S2): the proof-token name
 -- ---------------------------------------------------------------
 
@@ -936,16 +801,12 @@ respelling =
         it "unity weight spells without a denominator" $ \_fx ->
             respellThreshold (Weighted [[Weight 1 1]])
                 `shouldBe` "[\"1\"]"
-        it "the weighted fixture kt slice IS the re-spelling" $
+        it "the weighted fixture kt value IS the re-spelling" $
             \fx -> withCase fx "reg_weighted" $ \c -> do
-                let e = rcEvidence c
-                    expected =
+                let expected =
                         respellThreshold
                             (cdCurThreshold (rcDatum c))
-                BS.take
-                    (BS.length expected)
-                    (BS.drop (reOffKt e) (rcRaw c))
-                    `shouldBe` expected
+                expected `shouldSatisfy` (`BS.isInfixOf` rcRaw c)
 
 -- ---------------------------------------------------------------
 -- E8 material: the B-code (non-transferable) witness qb64

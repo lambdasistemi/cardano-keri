@@ -189,29 +189,19 @@ enforcementProofData EnforcementProofV1{..} =
         , asPlcData epReveal
         ]
 
--- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 15 fields.
+-- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 5 fields.
 advanceEvidenceData :: AdvanceEvidence -> Data
 advanceEvidenceData AdvanceEvidence{..} =
     Constr
         0
         [ B aeEventBytes
-        , I (fromIntegral aeOffT)
-        , I (fromIntegral aeOffI)
-        , I (fromIntegral aeOffS)
-        , intListData aeOffK
-        , I (fromIntegral aeOffKt)
-        , intListData aeOffN
-        , I (fromIntegral aeOffNt)
-        , intListData aeOffBr
-        , intListData aeOffBa
-        , I (fromIntegral aeOffBt)
         , List (map B aeWitCut)
         , List (map B aeWitAdd)
         , signatureListData aeCtrlSigs
         , signatureListData aeWitReceipts
         ]
 
-{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 19 fields.
+{- | The Aiken @EnforcementEvidence@ record: @Constr 0@ of 10 fields.
 
 The field order itself lives with the type, in
 "Cardano.KERI.AID.Checkpoint.Enforcement", because #254 S254-E made these
@@ -221,27 +211,15 @@ second copy here would be a second thing to keep in step.
 enforcementEvidenceData :: EnforcementEvidence -> Data
 enforcementEvidenceData = asPlcData
 
--- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 12 fields.
+-- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 3 fields.
 registrationEvidenceData :: RegistrationEvidence -> Data
 registrationEvidenceData RegistrationEvidence{..} =
     Constr
         0
         [ B reEventBytes
-        , I (fromIntegral reOffT)
-        , I (fromIntegral reOffI)
-        , I (fromIntegral reOffS)
-        , intListData reOffK
-        , I (fromIntegral reOffKt)
-        , intListData reOffN
-        , I (fromIntegral reOffNt)
-        , intListData reOffB
-        , I (fromIntegral reOffBt)
         , signatureListData reCtrlSigs
         , signatureListData reWitReceipts
         ]
-
-intListData :: (Integral a) => [a] -> Data
-intListData = List . map (I . fromIntegral)
 
 -- | Aiken tuples are Data lists, not record-shaped constructors.
 signatureListData :: [(Int, ByteString)] -> Data

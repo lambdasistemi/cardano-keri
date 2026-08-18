@@ -70,6 +70,11 @@ import Cardano.KERI.AID.CESR (
     qb64Aid,
     qb64Verkey,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    DecodedEstablishmentEvent (..),
+    EventVariant (..),
+    decodeEstablishmentEvent,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     CheckpointDatumV1 (..),
@@ -134,36 +139,13 @@ validRegistrationDeposit dReg = dReg >= registrationDepositFloor
 -- Registration evidence
 -- ---------------------------------------------------------
 
-{- | The @Register@ redeemer evidence: the full keripy @icp@
-serialization, per-field value offsets into it (the generator's
-offset convention: first byte of the value content between the
-quotes; a weighted @kt@\/@nt@ offset points at the opening @[@ of
-the full compact-JSON array), and the controller signatures.
-
-'reCtrlSigs' index into the datum's @cur_keys@ and 'reWitReceipts'
-index into its witnesses. Both authenticate exact 'reEventBytes'.
+{- | The @Register@ redeemer evidence: exact event bytes plus
+controller and witness signatures. Field boundaries come only from
+'decodeEstablishmentEvent'.
 -}
 data RegistrationEvidence = RegistrationEvidence
     { reEventBytes :: !ByteString
-    -- ^ the full keripy @icp@ serialization (@serder.raw@)
-    , reOffT :: !Int
-    -- ^ offset of the event-type value (@t@)
-    , reOffI :: !Int
-    -- ^ offset of the 44-char qb64 AID (@i@)
-    , reOffS :: !Int
-    -- ^ offset of the hex sequence-number value (@s@)
-    , reOffK :: ![Int]
-    -- ^ offsets of the 44-char qb64 @k@ entries
-    , reOffKt :: !Int
-    -- ^ offset of the @kt@ JSON value
-    , reOffN :: ![Int]
-    -- ^ offsets of the 44-char qb64 @n@ entries
-    , reOffNt :: !Int
-    -- ^ offset of the @nt@ JSON value
-    , reOffB :: ![Int]
-    -- ^ offsets of the 44-char qb64 @b@ entries
-    , reOffBt :: !Int
-    -- ^ offset of the @bt@ JSON value
+    -- ^ the full keripy establishment serialization
     , reCtrlSigs :: ![(Int, ByteString)]
     -- ^ @(index into cur_keys, signature over event_bytes)@
     , reWitReceipts :: ![(Int, ByteString)]
@@ -288,8 +270,8 @@ data RegistrationError
       @native_sn@, F18 + rule 14).
       -}
       R4InceptionInvalid InceptionError
-    | {- | E1: the @t@ slice is not @\"icp\"@ (@dip@\/@drt@\/@rot@
-      all reject here; the verified slice feeds R4's event type).
+    | {- | E1: the event is not a structurally decoded @icp@
+      (decode failure or a non-icp variant).
       -}
       E1EventTypeMismatch
     | -- | E2: the @i@ slice is not the datum AID's E-code qb64.
@@ -330,45 +312,42 @@ data RegistrationError
       R8DepositBelowMinimum
     deriving stock (Show, Eq)
 
-{- | R6 — the E1-E9 event-binding slice set. Every expected value
-is computed from the datum (derivation-code-prefixed qb64 or exact
-re-spelling); the prover's offsets only locate it. A slice is
-checked bounds-first, so a truncated (tail) or negative offset
-fails its field's check like any mismatch.
+{- | R6 — bind a decoded @icp@ to the genesis datum. Decode errors
+and non-icp variants reject as 'E1EventTypeMismatch'.
 -}
 eventBinding ::
     CheckpointDatumV1 ->
     RegistrationEvidence ->
     Either RegistrationError ()
 eventBinding d e = do
-    unless (slice (reOffT e) "icp") (Left E1EventTypeMismatch)
+    decoded <-
+        first (const E1EventTypeMismatch) $
+            decodeEstablishmentEvent (reEventBytes e)
     unless
-        (slice (reOffI e) (qb64Aid (cdCesrAid d)))
+        (deeVariant decoded == VariantIcp)
+        (Left E1EventTypeMismatch)
+    unless
+        (deeAid decoded == qb64Aid (cdCesrAid d))
         (Left E2AidMismatch)
-    unless (slice (reOffS e) "0") (Left E3SequenceMismatch)
+    unless (deeSeq decoded == "0") (Left E3SequenceMismatch)
     unless
-        (slices (reOffK e) (map qb64Verkey (cdCurKeys d)))
+        (deeK decoded == map qb64Verkey (cdCurKeys d))
         (Left E4CurKeysMismatch)
     unless
-        (slice (reOffKt e) (respellThreshold (cdCurThreshold d)))
+        (deeKt decoded == respellThreshold (cdCurThreshold d))
         (Left E5CurThresholdMismatch)
     unless
-        (slices (reOffN e) (map qb64Aid (cdNextKeys d)))
+        (deeN decoded == map qb64Aid (cdNextKeys d))
         (Left E6NextKeysMismatch)
     unless
-        (slice (reOffNt e) (respellThreshold (cdNextThreshold d)))
+        (deeNt decoded == respellThreshold (cdNextThreshold d))
         (Left E7NextThresholdMismatch)
     unless
-        (slices (reOffB e) (map qb64WitnessVerkey (cdWitnesses d)))
+        (deeB decoded == map qb64WitnessVerkey (cdWitnesses d))
         (Left E8WitnessesMismatch)
     unless
-        (slice (reOffBt e) (respellHex (cdToad d)))
+        (deeBt decoded == respellHex (cdToad d))
         (Left E9ToadMismatch)
-  where
-    slice = sliceMatches (reEventBytes e)
-    slices offs expected =
-        length offs == length expected
-            && and (zipWith slice offs expected)
 
 {- | The pure registration predicate: R3, R6 (E1-E9), R4, R7, R8,
 in order. R6 precedes R4 because E1's verified @t@ slice is what
@@ -427,17 +406,6 @@ registrationPredicate ctx d lovelace e = do
 -- ---------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------
-
-{- | Does the slice of @raw@ at @off@ equal @expected@?
-Bounds-checked: an out-of-range span never matches.
--}
-sliceMatches :: ByteString -> Int -> ByteString -> Bool
-sliceMatches raw off expected =
-    off >= 0
-        && off + n <= BS.length raw
-        && BS.take n (BS.drop off raw) == expected
-  where
-    n = BS.length expected
 
 -- | Total safe list indexing.
 atMay :: [a] -> Int -> Maybe a

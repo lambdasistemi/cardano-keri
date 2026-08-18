@@ -99,16 +99,10 @@ spec =
                 aeWitReceipts (rotationEvidence parsed) `shouldSatisfyLength` 3
                 aeWitCut (rotationEvidence parsed) `shouldSatisfyLength` 0
                 aeWitAdd (rotationEvidence parsed) `shouldSatisfyLength` 0
-                fieldAt
-                    (aeEventBytes $ rotationEvidence parsed)
-                    (aeOffT $ rotationEvidence parsed)
-                    3
+                BS.take 3
+                    ( BS.drop 30 (aeEventBytes $ rotationEvidence parsed)
+                    )
                     `shouldBe` "rot"
-                fieldAt
-                    (aeEventBytes $ rotationEvidence parsed)
-                    (aeOffI $ rotationEvidence parsed)
-                    44
-                    `shouldBe` "EDujsIfURabzXyyBulukdlPkG_BX9d4px6VEQFMd33zT"
 
             it "decodes bare indexed CESR controller-signature lines" $ do
                 path <-

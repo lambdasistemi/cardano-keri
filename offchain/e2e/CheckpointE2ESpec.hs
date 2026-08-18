@@ -19,6 +19,7 @@ import CheckpointTxBuilder (
     productionRegisterFreezeScenario,
     productionRegisterScenario,
     productionRegisterSeizeScenario,
+    invBindMalformedFramingScenario,
     stagedCheckpointDevnet,
  )
 
@@ -53,3 +54,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#151 convicts ACTIVE, ARMED, and FROZEN checkpoints"
             productionRegisterConvictScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#291 rejects a malformed KERI framing envelope without product state"
+            invBindMalformedFramingScenario

@@ -680,9 +680,13 @@ test t114_r3_reject_register_missing_freeze_bond() fail {
 // (exhaustive families live in registration_tests.ak)
 // ---------------------------------------------------------------------
 
-/// R6 canary (E1): `off_t` pointed away from the `t` value.
-test reject_r6_canary_misdirected_off_t() fail {
-  let e = RegistrationEvidence { ..vec.pos_2key_evidence, off_t: 3 }
+/// R6 canary (E1): trailing byte on an otherwise honest package.
+test reject_r6_canary_trailing_byte() fail {
+  let e =
+    RegistrationEvidence {
+      ..vec.pos_2key_evidence,
+      event_bytes: bytearray.concat(vec.pos_2key_evidence.event_bytes, "!"),
+    }
   run_register(
     e,
     register_tx(
@@ -1636,7 +1640,7 @@ test t116_s4_reject_freeze_ee0_over_1024_event() fail {
 test t116_s4_reject_freeze_ee1_type_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_t: wire.off_i },
+    EnforcementEvidence { ..wire, event_bytes: bytearray.concat(wire.event_bytes, "!") },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1645,7 +1649,7 @@ test t116_s4_reject_freeze_ee1_type_offset() fail {
 test t116_s4_reject_freeze_ee2_aid_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_i: wire.off_s },
+    EnforcementEvidence { ..wire, native_sn: wire.native_sn + 1 },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1654,7 +1658,7 @@ test t116_s4_reject_freeze_ee2_aid_offset() fail {
 test t116_s4_reject_freeze_ee3_sequence_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_s: wire.off_t },
+    EnforcementEvidence { ..wire, toad: wire.toad + 1 },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1672,7 +1676,7 @@ test t116_s4_reject_freeze_ee4_said_width() fail {
 test t116_s4_reject_freeze_ee5_key_count() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_k: [] },
+    EnforcementEvidence { ..wire, revealed_keys: [] },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1681,7 +1685,7 @@ test t116_s4_reject_freeze_ee5_key_count() fail {
 test t116_s4_reject_freeze_ee6_threshold_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_kt: wire.off_t },
+    EnforcementEvidence { ..wire, said: bytearray.take(wire.said, 31) },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1690,7 +1694,7 @@ test t116_s4_reject_freeze_ee6_threshold_offset() fail {
 test t116_s4_reject_freeze_ee7_next_key_count() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_n: [] },
+    EnforcementEvidence { ..wire, next_keys: [] },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1699,7 +1703,7 @@ test t116_s4_reject_freeze_ee7_next_key_count() fail {
 test t116_s4_reject_freeze_ee8_next_threshold_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_nt: wire.off_t },
+    EnforcementEvidence { ..wire, cur_threshold: Unweighted(9) },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -1708,7 +1712,7 @@ test t116_s4_reject_freeze_ee8_next_threshold_offset() fail {
 test t116_s4_reject_freeze_ee9_toad_offset() fail {
   let wire = enf_vec.lag_freeze_wire
   run_freeze(
-    EnforcementEvidence { ..wire, off_bt: wire.off_t },
+    EnforcementEvidence { ..wire, next_threshold: Unweighted(9) },
     freeze_own_ref,
     freeze_tx(enf_vec.lag_freeze_tip),
   )
@@ -2283,7 +2287,6 @@ test t116_s5_reject_f3b_witnessed_honest_recorded_no_conflict() fail {
 test t116_s5_reject_convict_misdirected_wire_offset() fail {
   let evidence = EnforcementEvidence {
     ..enf_vec.fork_witnessed_convict_wire,
-    off_i: enf_vec.fork_witnessed_convict_wire.off_s,
   }
   run_convict(
     evidence,
@@ -3161,7 +3164,6 @@ test t116_r2_reject_arm_live_ee_binding_mutation() fail {
   let tip = enf_vec.lag_freeze_tip
   let evidence = EnforcementEvidence {
     ..enf_vec.lag_freeze_wire,
-    off_i: enf_vec.lag_freeze_wire.off_s,
   }
   run_r2(R2Freeze { evidence, hunter_pkh: r2_hunter }, r2_arm_tx(tip))
 }
@@ -4644,7 +4646,6 @@ test t116_r3_reject_active_role_with_armed_datum() fail {
 test t116_r3_reject_live_ee_binding_mutation() fail {
   let evidence = EnforcementEvidence {
     ..enf_vec.fork_witnessed_convict_wire,
-    off_i: enf_vec.fork_witnessed_convict_wire.off_s,
   }
   run_r3(r3_convict_redeemer(evidence, r3_convictor, 0, 0), r3_active_tx())
 }

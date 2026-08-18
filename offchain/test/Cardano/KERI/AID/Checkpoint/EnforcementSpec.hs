@@ -114,49 +114,27 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                     bindEnforcementEvidence aid wire{eneEventBytes = BS.replicate 1025 0}
                         `shouldBe` Left EE0EventBytesLength
 
-        it "EE1-EE9: rejects each misdirected scalar/list offset axis in order" $
+        it "EE1/EE3/EE4/EE5/EE9: rejects decode failure and unbound semantic fields" $
             withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
                 \(aid, wire, _) -> do
-                    bindEnforcementEvidence aid wire{eneOffT = eneOffI wire}
-                        `shouldBe` Left EE1EventTypeMismatch
-                    bindEnforcementEvidence aid wire{eneOffI = eneOffS wire}
-                        `shouldBe` Left EE2AidMismatch
-                    bindEnforcementEvidence aid wire{eneOffS = eneOffT wire}
-                        `shouldBe` Left EE3SequenceMismatch
-                    bindEnforcementEvidence aid wire{eneOffD = eneOffI wire}
-                        `shouldBe` Left EE4SaidMismatch
-                    bindEnforcementEvidence aid wire{eneOffK = eneOffN wire}
-                        `shouldBe` Left EE5RevealedKeysMismatch
-                    bindEnforcementEvidence aid wire{eneOffKt = eneOffBt wire}
-                        `shouldBe` Left EE6CurThresholdMismatch
-                    bindEnforcementEvidence aid wire{eneOffN = eneOffK wire}
-                        `shouldBe` Left EE7NextKeysMismatch
-                    bindEnforcementEvidence aid wire{eneOffNt = eneOffBt wire}
-                        `shouldBe` Left EE8NextThresholdMismatch
-                    bindEnforcementEvidence aid wire{eneOffBt = eneOffT wire}
-                        `shouldBe` Left EE9ToadMismatch
-
-        it "EE2/EE5/EE7: rejects negative, truncated, and count-mismatched spans" $
-            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
-                \(aid, wire, _) -> do
-                    bindEnforcementEvidence aid wire{eneOffI = -1}
-                        `shouldBe` Left EE2AidMismatch
                     bindEnforcementEvidence
                         aid
-                        wire{eneOffI = BS.length (eneEventBytes wire) - 1}
-                        `shouldBe` Left EE2AidMismatch
-                    bindEnforcementEvidence aid wire{eneOffK = []}
+                        wire{eneEventBytes = eneEventBytes wire <> "!"}
+                        `shouldBe` Left EE1EventTypeMismatch
+                    bindEnforcementEvidence
+                        aid
+                        wire{eneNativeSn = eneNativeSn wire + 1}
+                        `shouldBe` Left EE3SequenceMismatch
+                    bindEnforcementEvidence
+                        aid
+                        wire{eneSaid = BS.take 31 (eneSaid wire)}
+                        `shouldBe` Left EE4SaidMismatch
+                    bindEnforcementEvidence aid wire{eneRevealedKeys = []}
                         `shouldBe` Left EE5RevealedKeysMismatch
-                    bindEnforcementEvidence aid wire{eneOffN = eneOffN wire <> [-1]}
-                        `shouldBe` Left EE7NextKeysMismatch
-
-        it "EE4: rejects a non-32-byte said and a wrong d slice" $
-            withBuilt (wireSetup fork "rot_conflict" "rot_conflict_sigs" Nothing) $
-                \(aid, wire, _) -> do
-                    bindEnforcementEvidence aid wire{eneSaid = BS.take 31 (eneSaid wire)}
-                        `shouldBe` Left EE4SaidMismatch
-                    bindEnforcementEvidence aid wire{eneOffD = eneOffI wire}
-                        `shouldBe` Left EE4SaidMismatch
+                    bindEnforcementEvidence
+                        aid
+                        wire{eneToad = eneToad wire + 1}
+                        `shouldBe` Left EE9ToadMismatch
 
     describe "convict" $ do
         -- fork: rot_conflict double-signs the rot_recorded tip (VALID conviction).
@@ -431,28 +409,10 @@ wireSetup fx evKey ctrlKey witKey = do
     ev <- note (evKey <> " missing") (lookupKey evKey fx)
     offsets <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
     decoded <- evidenceFrom fx evKey ctrlKey witKey
-    offT <- intField offsets "t"
-    offI <- intField offsets "i"
-    offS <- intField offsets "s"
-    offD <- intField offsets "d"
-    offK <- intArrayField offsets "k"
-    offKt <- intField offsets "kt"
-    offN <- intArrayField offsets "n"
-    offNt <- intField offsets "nt"
-    offBt <- intField offsets "bt"
     pure
         ( eeCesrAid decoded
         , EnforcementEvidence
             { eneEventBytes = eeEventBytes decoded
-            , eneOffT = fromInteger offT
-            , eneOffI = fromInteger offI
-            , eneOffS = fromInteger offS
-            , eneOffD = fromInteger offD
-            , eneOffK = map fromInteger offK
-            , eneOffKt = fromInteger offKt
-            , eneOffN = map fromInteger offN
-            , eneOffNt = fromInteger offNt
-            , eneOffBt = fromInteger offBt
             , eneNativeSn = eeNativeSn decoded
             , eneSaid = eeSaid decoded
             , eneRevealedKeys = eeRevealedKeys decoded

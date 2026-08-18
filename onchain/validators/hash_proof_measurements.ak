@@ -49,8 +49,6 @@ const honest2_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: honest2_bytes,
     cesr_aid: honest2_aid,
-    off_i: 91,
-    off_d: 40,
   }
 
 // ---------------------------------------------------------------------
@@ -68,8 +66,6 @@ const geda_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: geda_bytes,
     cesr_aid: geda_aid,
-    off_i: 61,
-    off_d: 9,
   }
 
 // ---------------------------------------------------------------------
@@ -87,8 +83,6 @@ const boundary_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: boundary_bytes,
     cesr_aid: boundary_aid,
-    off_i: 61,
-    off_d: 9,
   }
 
 // ---------------------------------------------------------------------

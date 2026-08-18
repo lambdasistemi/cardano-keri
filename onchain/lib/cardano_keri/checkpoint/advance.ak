@@ -23,8 +23,11 @@ use cardano_keri/checkpoint/message.{
   AdvanceError, AdvanceInvalid, AdvanceValid, RevealedSuccessorSigners,
   SpentCheckpoint, advance_equalities, qb64_aid, qb64_verkey,
 }
+use cardano_keri/checkpoint/event_decoder.{
+  DecodeErr, DecodeOk, VariantRot, decode_establishment_event,
+}
 use cardano_keri/checkpoint/registration.{
-  qb64_witness_verkey, respell_hex, respell_threshold, slice_matches,
+  qb64_witness_verkey, respell_hex, respell_threshold,
 }
 
 // ---------------------------------------------------------
@@ -44,16 +47,6 @@ use cardano_keri/checkpoint/registration.{
 /// and eq7-pinned) and sign `event_bytes` exactly (O1).
 pub type AdvanceEvidence {
   event_bytes: ByteArray,
-  off_t: Int,
-  off_i: Int,
-  off_s: Int,
-  off_k: List<Int>,
-  off_kt: Int,
-  off_n: List<Int>,
-  off_nt: Int,
-  off_br: List<Int>,
-  off_ba: List<Int>,
-  off_bt: Int,
   wit_cut: List<ByteArray>,
   wit_add: List<ByteArray>,
   ctrl_sigs: List<(Int, ByteArray)>,
@@ -112,68 +105,31 @@ pub fn event_binding(
   new: CheckpointDatumV1,
   e: AdvanceEvidence,
 ) -> AdvanceEventVerdict {
-  if !slice_matches(e.event_bytes, e.off_t, "rot") {
-    AdvanceEventInvalid(AE1EventTypeMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_i, qb64_aid(new.cesr_aid)) {
-    AdvanceEventInvalid(AE2AidMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_s, respell_hex(new.native_sn)) {
-    AdvanceEventInvalid(AE3SequenceMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_k,
-    list.map(new.cur_keys, qb64_verkey),
-  ) {
-    AdvanceEventInvalid(AE4CurKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respell_threshold(new.cur_threshold),
-  ) {
-    AdvanceEventInvalid(AE5CurThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_n,
-    list.map(new.next_keys, qb64_aid),
-  ) {
-    AdvanceEventInvalid(AE6NextKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(new.next_threshold),
-  ) {
-    AdvanceEventInvalid(AE7NextThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_br,
-    list.map(e.wit_cut, qb64_witness_verkey),
-  ) {
-    AdvanceEventInvalid(AE8WitCutMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_ba,
-    list.map(e.wit_add, qb64_witness_verkey),
-  ) {
-    AdvanceEventInvalid(AE9WitAddMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_bt, respell_hex(new.toad)) {
-    AdvanceEventInvalid(AE10ToadMismatch)
-  } else {
-    AdvanceEventValid
-  }
-}
-
-// Offset-count equality + slice equality at every offset (the AE4/AE6/
-// AE8/AE9 list form; mirrors the S4 Haskell `slices`).
-fn slices_match(
-  raw: ByteArray,
-  offs: List<Int>,
-  expected: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> expected == []
-    [o, ..os] ->
-      when expected is {
-        [] -> False
-        [x, ..xs] -> slice_matches(raw, o, x) && slices_match(raw, os, xs)
+  when decode_establishment_event(e.event_bytes) is {
+    DecodeErr(_) -> AdvanceEventInvalid(AE1EventTypeMismatch)
+    DecodeOk(ev) ->
+      if ev.variant != VariantRot {
+        AdvanceEventInvalid(AE1EventTypeMismatch)
+      } else if ev.aid != qb64_aid(new.cesr_aid) {
+        AdvanceEventInvalid(AE2AidMismatch)
+      } else if ev.seq != respell_hex(new.native_sn) {
+        AdvanceEventInvalid(AE3SequenceMismatch)
+      } else if ev.k != list.map(new.cur_keys, qb64_verkey) {
+        AdvanceEventInvalid(AE4CurKeysMismatch)
+      } else if ev.kt != respell_threshold(new.cur_threshold) {
+        AdvanceEventInvalid(AE5CurThresholdMismatch)
+      } else if ev.n != list.map(new.next_keys, qb64_aid) {
+        AdvanceEventInvalid(AE6NextKeysMismatch)
+      } else if ev.nt != respell_threshold(new.next_threshold) {
+        AdvanceEventInvalid(AE7NextThresholdMismatch)
+      } else if ev.br != list.map(e.wit_cut, qb64_witness_verkey) {
+        AdvanceEventInvalid(AE8WitCutMismatch)
+      } else if ev.ba != list.map(e.wit_add, qb64_witness_verkey) {
+        AdvanceEventInvalid(AE9WitAddMismatch)
+      } else if ev.bt != respell_hex(new.toad) {
+        AdvanceEventInvalid(AE10ToadMismatch)
+      } else {
+        AdvanceEventValid
       }
   }
 }

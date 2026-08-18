@@ -66,60 +66,36 @@ test ee0_rejects_empty_and_over_1024_event_bytes() {
   )
 }
 
-test ee1_to_ee9_reject_every_misdirected_offset_axis() {
+test ee_semantic_fields_reject_when_unbound() {
   let wire = vec.fork_convict_wire
+  let aid = vec.fork_convict_tip.cesr_aid
   bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_t: wire.off_i },
+    aid,
+    EnforcementEvidence { ..wire, event_bytes: bytearray.concat(wire.event_bytes, "!") },
   ) == EnforcementBindingInvalid(EE1EventTypeMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_i: wire.off_s },
-  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_s: wire.off_t },
+    aid,
+    EnforcementEvidence { ..wire, native_sn: wire.native_sn + 1 },
   ) == EnforcementBindingInvalid(EE3SequenceMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_d: wire.off_i },
+    aid,
+    EnforcementEvidence { ..wire, said: bytearray.take(wire.said, 31) },
   ) == EnforcementBindingInvalid(EE4SaidMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_k: wire.off_n },
+    aid,
+    EnforcementEvidence { ..wire, revealed_keys: [] },
   ) == EnforcementBindingInvalid(EE5RevealedKeysMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_kt: wire.off_bt },
-  ) == EnforcementBindingInvalid(EE6CurThresholdMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_n: wire.off_k },
-  ) == EnforcementBindingInvalid(EE7NextKeysMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_nt: wire.off_bt },
-  ) == EnforcementBindingInvalid(EE8NextThresholdMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_bt: wire.off_t },
+    aid,
+    EnforcementEvidence { ..wire, toad: wire.toad + 1 },
   ) == EnforcementBindingInvalid(EE9ToadMismatch)
 }
 
-test malformed_spans_counts_and_d_reject_at_their_binding_axis() {
+test malformed_semantic_counts_reject_at_their_binding_axis() {
   let wire = vec.fork_convict_wire
-  expect Some(off_n0) = list.at(wire.off_n, 0)
   bind_enforcement_evidence(
     vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_i: -1 },
-  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence {
-      ..wire,
-      off_i: bytearray.length(wire.event_bytes) - 1,
-    },
-  ) == EnforcementBindingInvalid(EE2AidMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_k: [] },
-  ) == EnforcementBindingInvalid(EE5RevealedKeysMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, off_n: [off_n0, -1] },
+    EnforcementEvidence { ..wire, next_keys: [] },
   ) == EnforcementBindingInvalid(EE7NextKeysMismatch) && bind_enforcement_evidence(
-    vec.fork_convict_tip.cesr_aid,
-    EnforcementEvidence { ..wire, said: bytearray.take(wire.said, 31) },
-  ) == EnforcementBindingInvalid(EE4SaidMismatch)
+    #"00",
+    wire,
+  ) == EnforcementBindingInvalid(EE2AidMismatch)
 }
 
 // ---------------------------------------------------------

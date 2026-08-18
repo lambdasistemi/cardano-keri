@@ -47,6 +47,14 @@ reference input and invokes the library predicate.
   harness, and report live in the repository.
 - Tx-A inherits the 1024-byte premint cap; 1049-byte 8-key icp is refused
   before append. Do not reuse `g1_c4_input_393` / `g1_c4_input_966`.
+- Co-residency: Tx A = staging_proof_token mint; Tx B staged event =
+  append + cursor + staging_proof_token burn; fully-witnessed premium
+  adds maintenance_escrow. Lineage/consumer paths reference record or
+  cursor rather than execute them. Sum 25,617 B is
+  `CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED`: no S0 Tx-B
+  builder chooses inline vs reference. NOTE-006 FAIL is superseded.
+  Single-token burn coupling is a skeleton artifact. The per-script
+  gate cannot discharge this. No new decomposition without a ruling.
 - M1 artifacts are read-only inputs. S2 behavior, preprod, mainnet, release,
   push, PR, issue, and authenticated GitHub mutation are forbidden.
 

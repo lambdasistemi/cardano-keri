@@ -97,3 +97,12 @@ control is recorded with non-zero exit, the real control and measurement exit
 zero, and the final source is a clean local commit. No push or GitHub mutation
 is part of acceptance.
 
+Per-script PASS does not discharge co-residency. Tx B staged-event requires
+`append` + `cursor` + `staging_proof_token` together. Sum 25,617 B.
+`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25617`: S0 has no
+Tx-B builder, so INLINE vs REFERENCE is unchosen. Inline would be fatal
+against 16,384; a referenced comparison is not invented here. The
+single-token burn coupling is a skeleton artifact, not a released
+invariant. NOTE-006 FAIL is superseded. Caveat: size-only;
+transaction-fit unproven.
+

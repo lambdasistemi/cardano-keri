@@ -211,38 +211,12 @@ evidenceFrom fx evKey ctrlKey witKey = do
             }
 
 data EnforcementOffsets = EnforcementOffsets
-    { eoT :: !Int
-    , eoI :: !Int
-    , eoS :: !Int
-    , eoD :: !Int
-    , eoK :: ![Int]
-    , eoKt :: !Int
-    , eoN :: ![Int]
-    , eoNt :: !Int
-    , eoBt :: !Int
-    }
 
 offsetsFrom :: Value -> Text -> Either String EnforcementOffsets
 offsetsFrom fx evKey = do
     ev <- note (evKey <> " missing") (lookupKey evKey fx)
-    offsets <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
-    EnforcementOffsets
-        <$> intAt "t" offsets
-        <*> intAt "i" offsets
-        <*> intAt "s" offsets
-        <*> intAt "d" offsets
-        <*> intsAt "k" offsets
-        <*> intAt "kt" offsets
-        <*> intsAt "n" offsets
-        <*> intAt "nt" offsets
-        <*> intAt "bt" offsets
-  where
-    intAt key value = fromInteger <$> intField value key
-    intsAt key value = do
-        entries <- arrayField value key
-        traverse asInt entries
-    asInt (Number n) = Right (truncate n)
-    asInt _ = Left "offset array element is not an integer"
+    _ <- note (evKey <> ".offsets missing") (lookupKey "offsets" ev)
+    pure EnforcementOffsets
 
 -- ---------------------------------------------------------
 -- Fixture decoding (KERI ked -> typed fields), mirrors EnforcementSpec

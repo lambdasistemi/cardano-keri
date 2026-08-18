@@ -601,82 +601,12 @@ scalarOffset raw field value = do
         Left (T.unpack field <> " value does not match event bytes")
     pure offset
 
-arrayOffset :: ByteString -> Text -> Text -> Either String Int
-arrayOffset raw field value = do
-    let prefix = TE.encodeUtf8 ("\"" <> field <> "\":[")
-        needle = TE.encodeUtf8 ("\"" <> value <> "\"")
-    start <- findBytes (T.unpack field <> " array") prefix raw
-    relative <-
-        findBytes
-            (T.unpack field <> " array value")
-            needle
-            (BS.drop start raw)
-    pure (start + relative + 1)
-
-thresholdOffset ::
-    ByteString ->
-    Text ->
-    Threshold ->
-    ByteString ->
-    Either String Int
-thresholdOffset raw field threshold spelling =
-    case threshold of
-        Unweighted _ ->
-            scalarOffset raw field (TE.decodeUtf8 spelling)
-        Weighted _ -> do
-            let prefix = TE.encodeUtf8 ("\"" <> field <> "\":")
-            start <- findBytes (T.unpack field <> " field") prefix raw
-            let offset = start + BS.length prefix
-            unless (spelling `BS.isPrefixOf` BS.drop offset raw) $
-                Left (T.unpack field <> " threshold does not match event bytes")
-            pure offset
-
-thresholdSpelling :: Threshold -> ByteString
-thresholdSpelling = \case
-    Unweighted value -> B8.pack (showHex value)
-    Weighted [clause] -> renderClause clause
-    Weighted clauses ->
-        "[" <> BS.intercalate "," (map renderClause clauses) <> "]"
-  where
-    renderClause weights =
-        "["
-            <> BS.intercalate
-                ","
-                (map (quote . renderWeight) weights)
-            <> "]"
-    renderWeight (Weight numerator 1) = B8.pack (show numerator)
-    renderWeight (Weight numerator denominator) =
-        B8.pack (show numerator <> "/" <> show denominator)
-    quote value = "\"" <> value <> "\""
-
-showHex :: Integer -> String
-showHex value
-    | value < 16 = [hexDigit value]
-    | otherwise =
-        showHex (value `div` 16) <> [hexDigit (value `mod` 16)]
-  where
-    hexDigit digit
-        | digit < 10 =
-            toEnum (fromEnum '0' + fromIntegral digit)
-        | otherwise =
-            toEnum (fromEnum 'a' + fromIntegral digit - 10)
-
 findBytes :: String -> ByteString -> ByteString -> Either String Int
 findBytes label needle haystack =
     let (before, match) = BS.breakSubstring needle haystack
      in if BS.null match
             then Left (label <> " not found")
             else pure (BS.length before)
-
-blankSaid :: ByteString -> Int -> Int -> ByteString
-blankSaid raw digestOffset aidOffset =
-    BS.take digestOffset raw
-        <> B8.replicate 44 '#'
-        <> BS.take
-            (aidOffset - digestOffset - 44)
-            (BS.drop (digestOffset + 44) raw)
-        <> B8.replicate 44 '#'
-        <> BS.drop (aidOffset + 44) raw
 
 blankDigest :: ByteString -> Int -> ByteString
 blankDigest raw digestOffset =

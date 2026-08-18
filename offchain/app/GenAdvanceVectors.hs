@@ -849,9 +849,6 @@ renderThreshold (Weighted clauses) =
 byteList :: [ByteString] -> String
 byteList xs = "[" <> intercalate ", " (map hexLit xs) <> "]"
 
-intList :: [Int] -> String
-intList xs = "[" <> intercalate ", " (map show xs) <> "]"
-
 sigLits :: [(Int, ByteString)] -> String
 sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"
   where

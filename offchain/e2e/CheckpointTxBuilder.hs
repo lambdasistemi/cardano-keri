@@ -5360,12 +5360,6 @@ textArrayAt key value = atKey key value >>= arrayValues >>= traverse asText
     asText (String textValue) = Right textValue
     asText _ = Left (Text.unpack key <> " contains a non-text value")
 
-integerArrayAt :: Text -> Value -> Either String [Integer]
-integerArrayAt key value = atKey key value >>= arrayValues >>= traverse asInteger
-  where
-    asInteger (Number number) = Right (truncate number)
-    asInteger _ = Left (Text.unpack key <> " contains a non-integer value")
-
 arrayValues :: Value -> Either String [Value]
 arrayValues (Array values) = Right (toList values)
 arrayValues _ = Left "expected an array"

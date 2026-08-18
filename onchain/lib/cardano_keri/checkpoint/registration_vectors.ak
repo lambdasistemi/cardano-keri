@@ -1661,7 +1661,7 @@ pub const r7_wrong_controller_keys_evidence: RegistrationEvidence =
 pub const r7_wrong_controller_keys_verdict: RegistrationVerdict =
   RegistrationInvalid(R7QuorumUnsatisfied)
 
-/// controller signatures crossed onto different event bytes -> R7
+/// controller signatures crossed onto different event bytes -> E1EventTypeMismatch
 pub const r7_crossed_event_bytes_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
@@ -1716,7 +1716,7 @@ pub const r7_crossed_event_bytes_evidence: RegistrationEvidence =
   }
 
 pub const r7_crossed_event_bytes_verdict: RegistrationVerdict =
-  RegistrationInvalid(R7QuorumUnsatisfied)
+  RegistrationInvalid(E1EventTypeMismatch)
 
 /// witnessed inception without receipts -> witness R7
 pub const r7_receipts_empty_ctx: DeploymentContext =
@@ -2210,52 +2210,7 @@ pub const r8_deposit_short_evidence: RegistrationEvidence =
 pub const r8_deposit_short_verdict: RegistrationVerdict =
   RegistrationInvalid(R8DepositBelowMinimum)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/// misdirection: duplicated offsets duplicate the key -> R4 F18
+/// duplicated current keys -> E4CurKeysMismatch
 pub const mis_dup_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
@@ -2310,6 +2265,4 @@ pub const mis_dup_k_evidence: RegistrationEvidence =
   }
 
 pub const mis_dup_k_verdict: RegistrationVerdict =
-  RegistrationInvalid(
-    R4InceptionInvalid(InceptionIllFormed(ThresholdIllFormed(DuplicateKey))),
-  )
+  RegistrationInvalid(E4CurKeysMismatch)

@@ -500,12 +500,12 @@ buildScenarios wit wgt dip drt r2k r7k =
         (Left R7QuorumUnsatisfied)
     , sc
         "r7_crossed_event_bytes"
-        "controller signatures crossed onto different event bytes -> R7"
+        "controller signatures crossed onto different event bytes -> E1EventTypeMismatch"
         ctx0
         (rcDatum wit)
         funded
         (rcEvidence wit){reEventBytes = flipLast (rcRaw wit)}
-        (Left R7QuorumUnsatisfied)
+        (Left E1EventTypeMismatch)
     , sc
         "r7_receipts_empty"
         "witnessed inception without receipts -> witness R7"
@@ -604,18 +604,12 @@ buildScenarios wit wgt dip drt r2k r7k =
           d = (rcDatum wit){cdCurKeys = [k0raw, k0raw]}
        in sc
             "mis_dup_k"
-            "duplicated current keys -> R4 F18"
+            "duplicated current keys -> E4CurKeysMismatch"
             ctx0
             d
             funded
             (rcEvidence wit)
-            ( Left
-                ( R4InceptionInvalid
-                    ( InceptionIllFormed
-                        (ThresholdIllFormed DuplicateKey)
-                    )
-                )
-            )
+            (Left E4CurKeysMismatch)
     ]
   where
     sc = Scenario

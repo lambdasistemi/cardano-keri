@@ -22,7 +22,6 @@ module Cardano.KERI.AID.Checkpoint.RegistrationSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
-    DatumError (..),
     blake2b_256,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -51,7 +50,6 @@ import Cardano.KERI.AID.Checkpoint.Registration (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
-    ThresholdError (..),
     Weight (..),
  )
 import Data.Aeson (Value (..))
@@ -331,19 +329,12 @@ genesisAndSchema =
                     (rcEvidence c)
                     `shouldBe` Left
                         (R4InceptionInvalid InceptionNativeSnNonZero)
-        it "duplicated current keys -> R4 F18" $ \fx ->
+        it "duplicated current keys -> E4CurKeysMismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c -> do
                 let k0raw = first1 (cdCurKeys (rcDatum c))
                     d = (rcDatum c){cdCurKeys = [k0raw, k0raw]}
                 registrationPredicate ctx0 d funded (rcEvidence c)
-                    `shouldBe` Left
-                        ( R4InceptionInvalid
-                            ( InceptionIllFormed
-                                ( ThresholdIllFormed
-                                    DuplicateKey
-                                )
-                            )
-                        )
+                    `shouldBe` Left E4CurKeysMismatch
 
 -- ---------------------------------------------------------------
 -- R6: per-slice E1-E9 negatives
@@ -609,14 +600,14 @@ signatureNegatives =
                                 }
                             `shouldBe` Left R7QuorumUnsatisfied
                     _ -> expectationFailure "expected two controller signatures"
-        it "controller signatures crossed onto different event bytes -> R7" $ \fx ->
+        it "controller signatures crossed onto different event bytes -> E1EventTypeMismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 registrationPredicate
                     ctx0
                     (rcDatum c)
                     funded
                     (rcEvidence c){reEventBytes = flipLast (rcRaw c)}
-                    `shouldBe` Left R7QuorumUnsatisfied
+                    `shouldBe` Left E1EventTypeMismatch
 
 -- ---------------------------------------------------------------
 -- Witness receipts over exact event bytes

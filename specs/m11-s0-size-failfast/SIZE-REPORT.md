@@ -8,12 +8,12 @@ Every row and verdict is size-only; transaction-fit unproven.
 - path: `/nix/store/zk3s76mjwcb5fz099d6dq02c684bg8wn-aiken-1.1.23/bin/aiken`
 - version: `aiken v1.1.23+unknown`
 - sha256: `c248f991a51176fe9e7b1c08b47939a1c55be3c1aebe3ca544d546640360e689`
-- Trace level: `silent`
+Trace level: `silent`
 
 ## Source and blueprint identity
 
-- Measured source commit: `02c486e6d0ff0c5f6458bd4744095ed47de03ee4`
-- owned-source sha256: `5279713ea56a91c38d5dd2f884145939131636f20ea7339d6ecbd979ce7cf5a9`
+Measured source commit: `37c00f7b24e5d2a0d3a5f32c6bedb408eb77c78a`
+- owned-source sha256: `b76a8144f75a9ea26d3e50c1356a8141ecb8cf69c04d1340450f7527104f56f5`
 - blueprint sha256: `58ca022c2865fcc22d2463a14cda17041568cb921a0c9c2a85b1dc9ceed41cdb`
 - reproduction command:
 

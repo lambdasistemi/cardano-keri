@@ -142,9 +142,6 @@ loadRotation name = do
         pure
         (parseRotationExport bytes)
 
-fieldAt :: BS.ByteString -> Int -> Int -> BS.ByteString
-fieldAt bytes offset size = BS.take size (BS.drop offset bytes)
-
 predicateAccepts :: InceptionExport -> IO ()
 predicateAccepts parsed =
     registrationPredicate

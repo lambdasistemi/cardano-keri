@@ -9,6 +9,8 @@ source "$here/token.sh"
 EXPECTED_TOOL_SHA=c248f991a51176fe9e7b1c08b47939a1c55be3c1aebe3ca544d546640360e689
 REQUIRED_TESTS=(
   accept_s0_append
+  reject_s0_append_said
+  reject_s0_append_aid
   reject_s0_append_proof
   accept_s0_cursor
   reject_s0_cursor_proof
@@ -18,6 +20,7 @@ REQUIRED_TESTS=(
   reject_s0_escrow_grade
   accept_s0_staging
   reject_s0_staging_said
+  reject_s0_staging_oversize
   accept_s0_predicates
   reject_s0_predicates_keys
   accept_s0_reference
@@ -81,13 +84,23 @@ for name in "${REQUIRED_TESTS[@]}"; do
     exit 34
   fi
 done
+if command grep -Eq 'g1_c4_input_393|g1_c4_input_966' "$tests"; then
+  printf 'S0-REACH-FAIL reused-broken-g1-c4-fixture\n' >&2
+  exit 34
+fi
 
 write_hollow() {
   local dest=$1
   cat >"$dest/s0_append.ak" <<'EOF'
+use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
-use cardano_keri/m12/types.{HistoricalProof, ParsedEvent, RecordState}
-pub type AppendRedeemer { event: ParsedEvent, proof: HistoricalProof }
+use cardano_keri/m12/types.{HistoricalProof, RecordState}
+pub type AppendRedeemer {
+  raw_event: ByteArray,
+  cesr_aid: ByteArray,
+  proof_policy: PolicyId,
+  proof: HistoricalProof,
+}
 validator s0_append {
   spend(
     _d: Option<RecordState>,
@@ -99,9 +112,15 @@ validator s0_append {
 }
 EOF
   cat >"$dest/s0_cursor.ak" <<'EOF'
+use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
-use cardano_keri/m12/types.{CursorState, HistoricalProof, ParsedEvent}
-pub type CursorRedeemer { event: ParsedEvent, proof: HistoricalProof }
+use cardano_keri/m12/types.{CursorState, HistoricalProof}
+pub type CursorRedeemer {
+  raw_event: ByteArray,
+  cesr_aid: ByteArray,
+  proof_policy: PolicyId,
+  proof: HistoricalProof,
+}
 validator s0_cursor {
   spend(
     _d: Option<CursorState>,
@@ -143,8 +162,12 @@ EOF
   cat >"$dest/s0_staging_proof_token.ak" <<'EOF'
 use cardano/assets.{PolicyId}
 use cardano/transaction.{Transaction}
-use cardano_keri/m12/types.{ParsedEvent}
-pub type StagingRedeemer { raw_event: ByteArray, claimed: ParsedEvent }
+pub type StagingRedeemer {
+  raw_event: ByteArray,
+  cesr_aid: ByteArray,
+  off_i: Int,
+  off_d: Int,
+}
 validator s0_staging_proof_token {
   mint(_r: StagingRedeemer, _p: PolicyId, _t: Transaction) { True }
   else(_x) { fail }
@@ -202,8 +225,13 @@ if [[ "$mode" == self-test ]]; then
     printf 'S0-REACH-FAIL hollow-handlers-accepted\n' >&2
     exit 35
   fi
-  if ! command grep -Fq '7 failed' "$evidence_dir/hollow-aiken-check.log"; then
-    printf 'S0-REACH-FAIL hollow-did-not-fail-reject-tests\n' >&2
+  reject_n=0
+  for name in "${REQUIRED_TESTS[@]}"; do
+    [[ "$name" == reject_* ]] && reject_n=$((reject_n + 1))
+  done
+  if ! command grep -Fq "${reject_n} failed" "$evidence_dir/hollow-aiken-check.log"; then
+    printf 'S0-REACH-FAIL hollow-did-not-fail-reject-tests expected=%s\n' \
+      "$reject_n" >&2
     exit 35
   fi
   printf 'S0-REACH-SELF-TEST-PASS hollow_exit=%s\n' "$hollow_rc"

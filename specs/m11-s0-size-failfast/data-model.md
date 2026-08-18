@@ -24,4 +24,11 @@ These are minimal measurement shapes, not frozen production schemas.
 - Headroom may be negative; it is never clamped to zero.
 - Percentages are presentation values. Threshold classification uses integer
   bytes and the exact rational comparison, not rounded display text.
+- Tx-A inherits the released 1024-byte premint cap. An 8-key 1,049-byte
+  inception is refused there and never reaches append. Extending Blake3
+  domain is out of S0.
+- `g1_c4_input_393` and `g1_c4_input_966` are excluded: known broken SAID
+  fixtures, not green controls.
+- Cited G1 coupling 15,155,350 mem / 7,631,646,035 CPU is a two-transaction
+  sum of heaviest role instances, not a per-tx limit or headroom.
 

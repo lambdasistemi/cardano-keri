@@ -1,11 +1,13 @@
 //// S0 cursor derivation (S0-F03 / S0-M03).
 ////
-//// Consumes a staging-bound parsed token plus a historical proof.
+//// Tx-B: total-parse + proof-token burn + historical proof.
 
 use aiken/crypto.{blake2b_256}
 use aiken/merkle_patricia_forestry as mpf
 use aiken/merkle_patricia_forestry.{root}
 use aiken/primitive/bytearray
+use cardano/assets.{PolicyId}
+use cardano/transaction.{Transaction}
 use cardano_keri/m12/record.{bind_parsed_event}
 use cardano_keri/m12/types.{
   Abandoned, CursorState, Established, EventKind, FullyWitnessed,
@@ -31,17 +33,20 @@ fn grade_of(event: ParsedEvent) {
   }
 }
 
-/// S0-F03 — derive every cursor field from a bound token + history proof.
+/// S0-F03 — derive every cursor field after parse + token burn.
 pub fn derive_cursor(
   old: CursorState,
-  event: ParsedEvent,
+  raw_event: ByteArray,
+  cesr_aid: ByteArray,
+  proof_policy: PolicyId,
   proof: HistoricalProof,
   now: Int,
+  tx: Transaction,
 ) -> Option<CursorState> {
   if now < old.last_moved_slot {
     None
   } else {
-    when bind_parsed_event(event.raw, event) is {
+    when bind_parsed_event(raw_event, cesr_aid, proof_policy, tx) is {
       None -> None
       Some(parsed) -> {
         let new_keys = blake2b_256(parsed.key_material)

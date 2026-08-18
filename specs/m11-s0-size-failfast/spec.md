@@ -24,6 +24,11 @@ The measured family has exactly seven members:
 consumer predicate library into its own program. It is not evidence that an
 Aiken library has an independent ledger script identity.
 
+Staging is the Tx-A premint (inherited 1024-byte Blake3 SAID + pair token).
+Append and cursor are Tx-B: they total-parse, bind decoded SAID/AID to that
+digest, and burn the matching token. Script size below 16,384 still does
+not prove either transaction fits.
+
 ## Requirements
 
 - **S0-R01 Separate programs.** The blueprint contains exactly one uniquely

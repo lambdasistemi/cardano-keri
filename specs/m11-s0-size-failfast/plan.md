@@ -8,7 +8,9 @@ Create a measurement-only Aiken family under a new namespace. Shared types and
 small reusable operations live in library modules; the blueprint exposes seven
 separate validators so compiled code is independently observable.
 
-The skeleton boundary is the cost-bearing surface, not complete S2 behavior.
+Staging is Tx-A (1024-byte Blake3 SAID premint + burn). Append/cursor are
+Tx-B (total-parse + token burn + transition). The skeleton boundary is the
+cost-bearing surface, not complete S2 behavior.
 Each role must retain the representative parsing, cryptographic/proof,
 transaction-context, and state-transition operations listed in the modules
 model. Explicit comments identify obligations, while the independent audit
@@ -43,6 +45,8 @@ reference input and invokes the library predicate.
 - Redesign trigger: strictly greater than 80% of 16,133 bytes.
 - Runtime evidence lives under `/tmp/ms-keri-11/s0-owner/`; reproducible source,
   harness, and report live in the repository.
+- Tx-A inherits the 1024-byte premint cap; 1049-byte 8-key icp is refused
+  before append. Do not reuse `g1_c4_input_393` / `g1_c4_input_966`.
 - M1 artifacts are read-only inputs. S2 behavior, preprod, mainnet, release,
   push, PR, issue, and authenticated GitHub mutation are forbidden.
 

@@ -21,8 +21,12 @@ S0-F01-defined	onchain/lib/cardano_keri/m12/record.ak	pub[[:space:]]+fn[[:space:
 S0-F02-defined	onchain/lib/cardano_keri/m12/record.ak	pub[[:space:]]+fn[[:space:]]+apply_record_append[[:space:]]*\(
 S0-M02-authenticated-map	onchain/lib/cardano_keri/m12/record.ak	mpf\.(insert|update)|merkle_patricia_forestry.*(insert|update)
 S0-M02-event-binding	onchain/lib/cardano_keri/m12/record.ak	(said|blake2b_256|sha2_256|verify)
+S0-M02-parse	onchain/lib/cardano_keri/m12/record.ak	decode_establishment_event[[:space:]]*\(
+S0-M02-said-bind	onchain/lib/cardano_keri/m12/record.ak	qb64_aid[[:space:]]*\(
+S0-M02-token	onchain/lib/cardano_keri/m12/record.ak	consume_and_burn_proof[[:space:]]*\(
 S0-F03-defined	onchain/lib/cardano_keri/m12/cursor.ak	pub[[:space:]]+fn[[:space:]]+derive_cursor[[:space:]]*\(
 S0-M03-history-proof	onchain/lib/cardano_keri/m12/cursor.ak	(proof|mpf\.|including|from_root)
+S0-M03-token	onchain/lib/cardano_keri/m12/cursor.ak	bind_parsed_event[[:space:]]*\(
 S0-F04-defined	onchain/lib/cardano_keri/m12/lineage.ak	pub[[:space:]]+fn[[:space:]]+validate_lineage_transition[[:space:]]*\(
 S0-M04-context	onchain/lib/cardano_keri/m12/lineage.ak	(inputs|reference_inputs|validity_range|OutputReference)
 S0-M04-roots	onchain/lib/cardano_keri/m12/lineage.ak	(event_root|occupancy_root)
@@ -30,7 +34,7 @@ S0-M04-flags	onchain/lib/cardano_keri/m12/lineage.ak	(closed|cursor)
 S0-F05-defined	onchain/lib/cardano_keri/m12/escrow.ak	pub[[:space:]]+fn[[:space:]]+validate_escrow_transition[[:space:]]*\(
 S0-M05-value-time	onchain/lib/cardano_keri/m12/escrow.ak	(outputs|validity_range|Value|lovelace)
 S0-F06-defined	onchain/lib/cardano_keri/m12/staging.ak	pub[[:space:]]+fn[[:space:]]+validate_staging_token[[:space:]]*\(
-S0-M06-decoder	onchain/lib/cardano_keri/m12/staging.ak	decode_establishment_event[[:space:]]*\(
+S0-M06-bound	onchain/lib/cardano_keri/m12/staging.ak	1024
 S0-M06-said	onchain/lib/cardano_keri/m12/staging.ak	blake3\.verify[[:space:]]*\(
 S0-M06-token-binding	onchain/lib/cardano_keri/m12/staging.ak	(mint|outputs|PolicyId|AssetName)
 S0-F07-defined	onchain/lib/cardano_keri/m12/consumer_predicates.ak	pub[[:space:]]+fn[[:space:]]+cursor_policy_allows[[:space:]]*\(

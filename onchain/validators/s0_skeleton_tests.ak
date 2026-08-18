@@ -13,9 +13,10 @@ use cardano/assets.{from_asset, from_lovelace, merge}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use cardano_keri/m12/proof_token.{proof_token_name}
 use cardano_keri/m12/types.{
   CursorPolicy, CursorState, EscrowState, Established, FullyWitnessed, Genesis,
-  HistoricalProof, Inception, ParsedEvent, RecordState, Service, Unwitnessed,
+  HistoricalProof, RecordState, Service, Unwitnessed,
 }
 use s0_append.{AppendRedeemer}
 use s0_consumer_predicates.{PredicateRedeemer}
@@ -46,6 +47,10 @@ const honest2_aid: ByteArray =
 const honest2_wrong_aid: ByteArray =
   #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e4"
 
+const honest2_off_d: Int = 40
+
+const honest2_off_i: Int = 91
+
 const self_ref: OutputReference =
   OutputReference { transaction_id: zeros32, output_index: 0 }
 
@@ -62,17 +67,36 @@ fn tx_now(now: Int) -> Transaction {
   Transaction { ..placeholder, validity_range: interval.between(now, now + 10) }
 }
 
-fn bound_event(said: ByteArray) -> ParsedEvent {
-  ParsedEvent {
-    raw: honest2_bytes,
-    kind: Inception,
-    sequence: 1,
-    said,
-    key_material: #"2222222222222222222222222222222222222222222222222222222222222222",
-    threshold: 1,
-    witness_count: 0,
-    receipt_count: 0,
+fn burn_tx_for(raw: ByteArray, aid: ByteArray, now: Int) -> Transaction {
+  let name = proof_token_name(raw, aid)
+  let held = merge(from_lovelace(2_000_000), from_asset(policy, name, 1))
+  Transaction {
+    ..placeholder,
+    inputs: [
+      Input {
+        output_reference: self_ref,
+        output: Output {
+          address: from_verification_key(vk),
+          value: held,
+          datum: NoDatum,
+          reference_script: None,
+        },
+      },
+    ],
+    mint: from_asset(policy, name, -1),
+    validity_range: interval.between(now, now + 10),
   }
+}
+
+fn burn_tx(now: Int) -> Transaction {
+  burn_tx_for(honest2_bytes, honest2_aid, now)
+}
+
+fn flip_i_span(raw: ByteArray) -> ByteArray {
+  let at = honest2_off_i + 43
+  bytearray.take(raw, at)
+    |> bytearray.concat(#"30")
+    |> bytearray.concat(bytearray.drop(raw, at + 1))
 }
 
 fn empty_proof(key: ByteArray) -> HistoricalProof {
@@ -113,12 +137,55 @@ test accept_s0_append() {
     occupancy_root: zeros32,
     event_count: 0,
   }
-  let event = bound_event(ones32)
   s0_append.s0_append.spend(
     Some(old),
-    AppendRedeemer { event, proof: empty_proof(#"01") },
+    AppendRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      proof_policy: policy,
+      proof: empty_proof(#"01"),
+    },
     self_ref,
-    tx_now(1),
+    burn_tx(1),
+  )
+}
+
+test reject_s0_append_said() fail {
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  s0_append.s0_append.spend(
+    Some(old),
+    AppendRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_wrong_aid,
+      proof_policy: policy,
+      proof: empty_proof(#"01"),
+    },
+    self_ref,
+    burn_tx_for(honest2_bytes, honest2_wrong_aid, 1),
+  )
+}
+
+test reject_s0_append_aid() fail {
+  let raw = flip_i_span(honest2_bytes)
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  s0_append.s0_append.spend(
+    Some(old),
+    AppendRedeemer {
+      raw_event: raw,
+      cesr_aid: honest2_aid,
+      proof_policy: policy,
+      proof: empty_proof(#"01"),
+    },
+    self_ref,
+    burn_tx_for(raw, honest2_aid, 1),
   )
 }
 
@@ -128,12 +195,16 @@ test reject_s0_append_proof() fail {
     occupancy_root: zeros32,
     event_count: 0,
   }
-  let event = bound_event(ones32)
   s0_append.s0_append.spend(
     Some(old),
-    AppendRedeemer { event, proof: empty_proof(#"01") },
+    AppendRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      proof_policy: policy,
+      proof: empty_proof(#"01"),
+    },
     self_ref,
-    tx_now(1),
+    burn_tx(1),
   )
 }
 
@@ -151,7 +222,6 @@ test accept_s0_cursor() {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let event = bound_event(ones32)
   let proof = HistoricalProof {
     key,
     location: key,
@@ -160,9 +230,14 @@ test accept_s0_cursor() {
   }
   s0_cursor.s0_cursor.spend(
     Some(old),
-    CursorRedeemer { event, proof },
+    CursorRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      proof_policy: policy,
+      proof,
+    },
     self_ref,
-    tx_now(10),
+    burn_tx(10),
   )
 }
 
@@ -174,7 +249,6 @@ test reject_s0_cursor_proof() fail {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let event = bound_event(ones32)
   let proof = HistoricalProof {
     key: #"01",
     location: #"01",
@@ -183,9 +257,14 @@ test reject_s0_cursor_proof() fail {
   }
   s0_cursor.s0_cursor.spend(
     Some(old),
-    CursorRedeemer { event, proof },
+    CursorRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      proof_policy: policy,
+      proof,
+    },
     self_ref,
-    tx_now(10),
+    burn_tx(10),
   )
 }
 
@@ -263,50 +342,48 @@ test reject_s0_escrow_grade() fail {
 // ---------------------------------------------------------------------
 
 test accept_s0_staging() {
-  let claimed = bound_event(honest2_aid)
-  let claimed = ParsedEvent { ..claimed, raw: honest2_bytes, said: honest2_aid }
-  let minted = from_asset(policy, honest2_aid, 1)
-  let tx = Transaction {
-    ..placeholder,
-    mint: minted,
-    outputs: [
-      Output {
-        address: from_verification_key(vk),
-        value: merge(from_lovelace(2_000_000), minted),
-        datum: NoDatum,
-        reference_script: None,
-      },
-    ],
-  }
+  let name = proof_token_name(honest2_bytes, honest2_aid)
+  let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
   s0_staging_proof_token.s0_staging_proof_token.mint(
-    StagingRedeemer { raw_event: honest2_bytes, claimed },
+    StagingRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      off_i: honest2_off_i,
+      off_d: honest2_off_d,
+    },
     policy,
     tx,
   )
 }
 
 test reject_s0_staging_said() fail {
-  let claimed = bound_event(honest2_wrong_aid)
-  let claimed = ParsedEvent {
-    ..claimed,
-    raw: honest2_bytes,
-    said: honest2_wrong_aid,
-  }
-  let minted = from_asset(policy, honest2_wrong_aid, 1)
-  let tx = Transaction {
-    ..placeholder,
-    mint: minted,
-    outputs: [
-      Output {
-        address: from_verification_key(vk),
-        value: merge(from_lovelace(2_000_000), minted),
-        datum: NoDatum,
-        reference_script: None,
-      },
-    ],
-  }
+  let name = proof_token_name(honest2_bytes, honest2_wrong_aid)
+  let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
   s0_staging_proof_token.s0_staging_proof_token.mint(
-    StagingRedeemer { raw_event: honest2_bytes, claimed },
+    StagingRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_wrong_aid,
+      off_i: honest2_off_i,
+      off_d: honest2_off_d,
+    },
+    policy,
+    tx,
+  )
+}
+
+test reject_s0_staging_oversize() fail {
+  let raw = honest2_bytes
+    |> bytearray.concat(honest2_bytes)
+    |> bytearray.concat(honest2_bytes)
+  let name = proof_token_name(raw, honest2_aid)
+  let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
+  s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: raw,
+      cesr_aid: honest2_aid,
+      off_i: honest2_off_i,
+      off_d: honest2_off_d,
+    },
     policy,
     tx,
   )

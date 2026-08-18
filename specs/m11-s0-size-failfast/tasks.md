@@ -14,7 +14,7 @@ Artifact ceiling: 4,000 bytes / 100 lines.
 - [ ] **S0-T03** Add minimal shared measurement types and reachable role
   operations.
 - [ ] **S0-T04** Add seven separately compiled member programs with the honest
-  surfaces in S0-M02 through S0-M09.
+  two-transaction surfaces in S0-M02 through S0-M09.
 - [ ] **S0-T05** Add the permanent source-to-obligation anti-stub manifest and
   control.
 

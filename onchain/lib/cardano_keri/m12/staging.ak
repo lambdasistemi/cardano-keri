@@ -1,86 +1,43 @@
-//// S0 staging / proof-token surface (S0-F06 / S0-M06).
+//// S0-F06 / S0-M06 — Tx-A proof-token policy.
 ////
-//// Total-parses event bytes with the inherited INV-BIND decoder and
-//// binds the KERI Blake3-256 SAID before minting the proof token.
+//// Owns the bounded (<= 1024 B) KERI Blake3 SAID proof and the pair-bound
+//// mint. Burning is always permitted so Tx-B can consume the token.
 
 use aiken/collection/dict
-use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/assets.{AssetName, PolicyId, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/blake3
 use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/m12/event_decoder.{
-  DecodeOk, DecodedEstablishmentEvent, VariantIcp, VariantRot,
-  decode_establishment_event,
-}
-use cardano_keri/m12/types.{Inception, Interaction, ParsedEvent, Rotation}
-
-fn kind_of(ev: DecodedEstablishmentEvent) {
-  when ev.variant is {
-    VariantIcp -> Inception
-    VariantRot -> Rotation
-    _ -> Interaction
-  }
+use cardano_keri/m12/proof_token.{
+  all_burns, proof_token_name, slice_matches, splice_dummies,
 }
 
-fn bound_event(raw: ByteArray, digest: ByteArray) -> Option<ParsedEvent> {
-  if bytearray.length(digest) != 32 {
-    None
-  } else {
-    when decode_establishment_event(raw) is {
-      DecodeOk(ev) ->
-        if ev.said != qb64_aid(digest) {
-          None
-        } else if ev.aid != qb64_aid(digest) && ev.variant == VariantIcp {
-          None
-        } else if !blake3.verify(ev.said_preimage, digest) {
-          None
-        } else {
-          let key = when ev.k is {
-            [first, ..] -> first
-            [] -> digest
-          }
-          Some(
-            ParsedEvent {
-              raw,
-              kind: kind_of(ev),
-              sequence: bytearray.length(ev.seq),
-              said: digest,
-              key_material: key,
-              threshold: bytearray.length(ev.kt),
-              witness_count: list.length(ev.b),
-              receipt_count: list.length(ev.b),
-            },
-          )
-        }
-      _ -> None
-    }
-  }
-}
-
-/// S0-F06 — inherited bytes-only parse, Blake3 SAID, then token identity.
+/// S0-F06 — Blake3 SAID + mint identity, or an all-burn mint map.
 pub fn validate_staging_token(
   raw_event: ByteArray,
-  claimed: ParsedEvent,
+  cesr_aid: ByteArray,
+  off_i: Int,
+  off_d: Int,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
-  when bound_event(raw_event, claimed.said) is {
-    None -> False
-    Some(parsed) -> {
-      let name: AssetName = parsed.said
-      and {
-        claimed.raw == raw_event,
-        claimed.said == parsed.said,
-        dict.to_pairs(tokens(tx.mint, policy_id)) == [Pair(name, 1)],
-        list.any(
-          tx.outputs,
-          fn(out) {
-            dict.to_pairs(tokens(out.value, policy_id)) == [Pair(name, 1)]
-          },
-        ),
-      }
+  let entries = dict.to_pairs(tokens(tx.mint, policy_id))
+  if all_burns(entries) {
+    True
+  } else {
+    let len = bytearray.length(raw_event)
+    and {
+      len >= 1,
+      len <= 1024,
+      bytearray.length(cesr_aid) == 32,
+      0 <= off_d,
+      off_d + 44 <= off_i,
+      off_i + 44 <= len,
+      slice_matches(raw_event, off_d, qb64_aid(cesr_aid)),
+      slice_matches(raw_event, off_i, qb64_aid(cesr_aid)),
+      blake3.verify(splice_dummies(raw_event, off_i, off_d), cesr_aid),
+      entries == [Pair(proof_token_name(raw_event, cesr_aid), 1)],
     }
   }
 }

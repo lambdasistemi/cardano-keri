@@ -7,12 +7,12 @@ and reachability from the measured programs are fixed.
 
 | ID | Function | Signature-level contract |
 |---|---|---|
-| S0-F01 | `bind_parsed_event` | `(raw_event: ByteArray, claimed: ParsedEvent) -> Option<ParsedEvent>`; total and bytes-anchored |
-| S0-F02 | `apply_record_append` | `(old: RecordState, event: ParsedEvent, proof: HistoricalProof) -> Option<RecordState>`; returns a derived changed state |
-| S0-F03 | `derive_cursor` | `(old: CursorState, event: ParsedEvent, proof: HistoricalProof, now: Int) -> Option<CursorState>`; derives every cursor field |
+| S0-F01 | `bind_parsed_event` | `(raw_event, cesr_aid, proof_policy, tx) -> Option<ParsedEvent>`; total-parse, decoded SAID/AID equals digest, token burn |
+| S0-F02 | `apply_record_append` | `(old, raw_event, cesr_aid, proof_policy, proof, tx) -> Option<RecordState>`; derived changed state |
+| S0-F03 | `derive_cursor` | `(old, raw_event, cesr_aid, proof_policy, proof, now, tx) -> Option<CursorState>`; derives every cursor field |
 | S0-F04 | `validate_lineage_transition` | `(old: Option<LineageState>, action: LineageAction, tx: Transaction) -> Bool`; exercises genesis, predecessor presence/juvenility, or marker close surface |
 | S0-F05 | `validate_escrow_transition` | `(old: EscrowState, action: EscrowAction, grade: EvidenceGrade, tx: Transaction) -> Bool`; exercises service and notice-close surface |
-| S0-F06 | `validate_staging_token` | `(raw_event: ByteArray, claimed: ParsedEvent, policy_id: PolicyId, tx: Transaction) -> Bool`; requires successful binding and token identity/output checks |
+| S0-F06 | `validate_staging_token` | `(raw_event, cesr_aid, off_i, off_d, policy_id, tx) -> Bool`; 1024-byte cap, Blake3 SAID, pair mint or all-burn |
 | S0-F07 | `cursor_policy_allows` | `(policy: CursorPolicy, cursor: CursorState, now: Int) -> Bool`; result depends on keys, state, grade, and freshness |
 | S0-F08 | `validate_reference_consumer` | `(policy: CursorPolicy, expected_lineage: PolicyId, tx: Transaction) -> Bool`; obtains cursor-like reference data and delegates to S0-F07 |
 | S0-F09 | `measure_blueprint` | `(blueprint_path: Path, source_commit: Hash, compiler: EvidenceIdentity) -> List<MeasurementRow>`; exactly seven deterministic rows |

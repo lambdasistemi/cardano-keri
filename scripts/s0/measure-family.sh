@@ -280,6 +280,17 @@ Percentages are truncated display values from integer arithmetic
 \`bytes * 10000 / ceiling\`. Threshold uses integer bytes:
 \`>= ${REDESIGN_AT}\` is \`REDESIGN\`. Headroom is signed and not clamped.
 
+## Residuals
+
+- Tx-A inherits the released 1024-byte premint cap. A 1,049-byte 8-key
+  inception is refused at premint and never reaches append.
+- G1 coupling 15,155,350 mem / 7,631,646,035 CPU is a two-transaction sum
+  of the heaviest measured role instances: not a per-transaction limit,
+  not headroom, not one AID's coupling. Per-role budgets remain S2.
+- \`g1_c4_input_393\` and \`g1_c4_input_966\` are excluded (known broken
+  SAID/offset fixtures). The 1024-byte boundary fact may be cited.
+- Two transactions make \`${CAVEAT}\` more load-bearing, not less.
+
 ## Machine rows
 
 \`\`\`

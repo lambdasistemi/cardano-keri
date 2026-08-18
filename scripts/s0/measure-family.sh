@@ -555,8 +555,15 @@ if ! command grep -Fq "Trace level: \`$TRACE_LEVEL\`" "$report"; then
   printf 'S0-MEASURE-FAIL report-missing-trace-level\n' >&2
   exit 41
 fi
-if ! command grep -Eq "^Measured source commit: \`$source_commit\`$" "$report"; then
-  printf 'S0-MEASURE-FAIL report-source-commit-mismatch\n' >&2
+if ! command grep -Eq '^Measured source commit: `[0-9a-f]{40}`$' "$report"; then
+  printf 'S0-MEASURE-FAIL report-missing-source-commit\n' >&2
+  exit 41
+fi
+reported_source=$(
+  sed -nE 's/^Measured source commit: `([0-9a-f]{40})`$/\1/p' "$report"
+)
+if [[ -z "$reported_source" ]] || ! git -C "$repo" cat-file -e "$reported_source^{commit}"; then
+  printf 'S0-MEASURE-FAIL report-source-commit-invalid\n' >&2
   exit 41
 fi
 

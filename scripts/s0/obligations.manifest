@@ -1,32 +1,37 @@
 # S0 source-to-obligation manifest (S0-F10 / S0-I03 / S0-T05)
 # Fields are TAB-separated: obligation, relative path, ERE pattern.
 # Patterns are matched after // comment lines are stripped.
-S0-M02-handler	onchain/validators/s0_append.ak	validator[[:space:]]+s0_append|apply_record_append[[:space:]]*\(
+# Supplementary completeness map only — reachability is check-reachability.sh.
+S0-M01-types	onchain/lib/cardano_keri/m12/types.ak	pub[[:space:]]+type[[:space:]]+ParsedEvent
+S0-M02-handler	onchain/validators/s0_append.ak	validator[[:space:]]+s0_append
 S0-M02-reachability	onchain/validators/s0_append.ak	apply_record_append[[:space:]]*\(
-S0-M03-handler	onchain/validators/s0_cursor.ak	validator[[:space:]]+s0_cursor|derive_cursor[[:space:]]*\(
+S0-M03-handler	onchain/validators/s0_cursor.ak	validator[[:space:]]+s0_cursor
 S0-M03-reachability	onchain/validators/s0_cursor.ak	derive_cursor[[:space:]]*\(
-S0-M04-handler	onchain/validators/s0_lineage.ak	validator[[:space:]]+s0_lineage|validate_lineage_transition[[:space:]]*\(
+S0-M04-handler	onchain/validators/s0_lineage.ak	validator[[:space:]]+s0_lineage
 S0-M04-reachability	onchain/validators/s0_lineage.ak	validate_lineage_transition[[:space:]]*\(
-S0-M05-handler	onchain/validators/s0_maintenance_escrow.ak	validator[[:space:]]+s0_maintenance_escrow|validate_escrow_transition[[:space:]]*\(
+S0-M05-handler	onchain/validators/s0_maintenance_escrow.ak	validator[[:space:]]+s0_maintenance_escrow
 S0-M05-reachability	onchain/validators/s0_maintenance_escrow.ak	validate_escrow_transition[[:space:]]*\(
-S0-M06-handler	onchain/validators/s0_staging_proof_token.ak	validator[[:space:]]+s0_staging_proof_token|validate_staging_token[[:space:]]*\(
+S0-M06-handler	onchain/validators/s0_staging_proof_token.ak	validator[[:space:]]+s0_staging_proof_token
 S0-M06-reachability	onchain/validators/s0_staging_proof_token.ak	validate_staging_token[[:space:]]*\(
-S0-M08-handler	onchain/validators/s0_consumer_predicates.ak	validator[[:space:]]+s0_consumer_predicates|cursor_policy_allows[[:space:]]*\(
+S0-M08-handler	onchain/validators/s0_consumer_predicates.ak	validator[[:space:]]+s0_consumer_predicates
 S0-M08-reachability	onchain/validators/s0_consumer_predicates.ak	cursor_policy_allows[[:space:]]*\(
-S0-M09-handler	onchain/validators/s0_reference_cursor_consumer.ak	validator[[:space:]]+s0_reference_cursor_consumer|validate_reference_consumer[[:space:]]*\(
+S0-M09-handler	onchain/validators/s0_reference_cursor_consumer.ak	validator[[:space:]]+s0_reference_cursor_consumer
 S0-M09-reachability	onchain/validators/s0_reference_cursor_consumer.ak	validate_reference_consumer[[:space:]]*\(
 S0-F01-defined	onchain/lib/cardano_keri/m12/record.ak	pub[[:space:]]+fn[[:space:]]+bind_parsed_event[[:space:]]*\(
 S0-F02-defined	onchain/lib/cardano_keri/m12/record.ak	pub[[:space:]]+fn[[:space:]]+apply_record_append[[:space:]]*\(
 S0-M02-authenticated-map	onchain/lib/cardano_keri/m12/record.ak	mpf\.(insert|update)|merkle_patricia_forestry.*(insert|update)
-S0-M02-event-binding	onchain/lib/cardano_keri/m12/record.ak	(blake2b_256|sha2_256|verify)
+S0-M02-event-binding	onchain/lib/cardano_keri/m12/record.ak	(said|blake2b_256|sha2_256|verify)
 S0-F03-defined	onchain/lib/cardano_keri/m12/cursor.ak	pub[[:space:]]+fn[[:space:]]+derive_cursor[[:space:]]*\(
 S0-M03-history-proof	onchain/lib/cardano_keri/m12/cursor.ak	(proof|mpf\.|including|from_root)
 S0-F04-defined	onchain/lib/cardano_keri/m12/lineage.ak	pub[[:space:]]+fn[[:space:]]+validate_lineage_transition[[:space:]]*\(
 S0-M04-context	onchain/lib/cardano_keri/m12/lineage.ak	(inputs|reference_inputs|validity_range|OutputReference)
+S0-M04-roots	onchain/lib/cardano_keri/m12/lineage.ak	(event_root|occupancy_root)
+S0-M04-flags	onchain/lib/cardano_keri/m12/lineage.ak	(closed|cursor)
 S0-F05-defined	onchain/lib/cardano_keri/m12/escrow.ak	pub[[:space:]]+fn[[:space:]]+validate_escrow_transition[[:space:]]*\(
 S0-M05-value-time	onchain/lib/cardano_keri/m12/escrow.ak	(outputs|validity_range|Value|lovelace)
 S0-F06-defined	onchain/lib/cardano_keri/m12/staging.ak	pub[[:space:]]+fn[[:space:]]+validate_staging_token[[:space:]]*\(
-S0-M06-parser-binding	onchain/lib/cardano_keri/m12/staging.ak	bind_parsed_event[[:space:]]*\(
+S0-M06-decoder	onchain/lib/cardano_keri/m12/staging.ak	decode_establishment_event[[:space:]]*\(
+S0-M06-said	onchain/lib/cardano_keri/m12/staging.ak	blake3\.verify[[:space:]]*\(
 S0-M06-token-binding	onchain/lib/cardano_keri/m12/staging.ak	(mint|outputs|PolicyId|AssetName)
 S0-F07-defined	onchain/lib/cardano_keri/m12/consumer_predicates.ak	pub[[:space:]]+fn[[:space:]]+cursor_policy_allows[[:space:]]*\(
 S0-M07-keys	onchain/lib/cardano_keri/m12/consumer_predicates.ak	(keys_digest|accepted_keys)
@@ -36,3 +41,5 @@ S0-M07-freshness	onchain/lib/cardano_keri/m12/consumer_predicates.ak	(last_moved
 S0-F08-defined	onchain/lib/cardano_keri/m12/reference_consumer.ak	pub[[:space:]]+fn[[:space:]]+validate_reference_consumer[[:space:]]*\(
 S0-M09-reference-data	onchain/lib/cardano_keri/m12/reference_consumer.ak	(reference_inputs|InlineDatum|datum)
 S0-M09-policy-call	onchain/lib/cardano_keri/m12/reference_consumer.ak	cursor_policy_allows[[:space:]]*\(
+S0-M10-harness	scripts/s0/measure-family.sh	S0-MEASURE
+S0-M11-control	scripts/s0/check-reachability.sh	S0-REACH

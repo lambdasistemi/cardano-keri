@@ -1,4 +1,6 @@
 //// S0 cursor derivation (S0-F03 / S0-M03).
+////
+//// Consumes a staging-bound parsed token plus a historical proof.
 
 use aiken/crypto.{blake2b_256}
 use aiken/merkle_patricia_forestry as mpf
@@ -29,7 +31,7 @@ fn grade_of(event: ParsedEvent) {
   }
 }
 
-/// S0-F03 — derive every cursor field from parsed data + history proof.
+/// S0-F03 — derive every cursor field from a bound token + history proof.
 pub fn derive_cursor(
   old: CursorState,
   event: ParsedEvent,

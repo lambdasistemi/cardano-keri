@@ -1,82 +1,29 @@
-//// S0 record helpers: bytes-anchored bind + append transition (S0-F01,
+//// S0 record helpers: staging-bound token identity + append (S0-F01,
 //// S0-F02, S0-M02).
+////
+//// After the staged parser-policy split, append consumes a token whose
+//// SAID was already bound by the staging member. It does not reparse
+//// raw KERI bytes.
 
 use aiken/crypto.{blake2b_256}
 use aiken/merkle_patricia_forestry as mpf
 use aiken/merkle_patricia_forestry.{root}
 use aiken/primitive/bytearray
-use cardano_keri/m12/types.{
-  HistoricalProof, Inception, Interaction, ParsedEvent, RecordState, Rotation,
-}
+use cardano_keri/m12/types.{HistoricalProof, ParsedEvent, RecordState}
 
-/// Bytes-only parse of the measurement event layout.
-///
-/// Layout (minimum 70 bytes): kind, sequence, 32-byte keys, threshold,
-/// witness count, receipt count, then remaining payload. SAID is
-/// `blake2b_256(raw)`.
-pub fn parse_event_bytes(raw: ByteArray) -> Option<ParsedEvent> {
-  let len = bytearray.length(raw)
-  if len < 70 {
-    None
-  } else {
-    let kind = when bytearray.at(raw, 0) is {
-      0 -> Some(Inception)
-      1 -> Some(Rotation)
-      2 -> Some(Interaction)
-      _ -> None
-    }
-    when kind is {
-      None -> None
-      Some(event_kind) -> {
-        let sequence = bytearray.at(raw, 1)
-        let key_material = raw |> bytearray.drop(2) |> bytearray.take(32)
-        let threshold = bytearray.at(raw, 34)
-        let witness_count = bytearray.at(raw, 35)
-        let receipt_count = bytearray.at(raw, 36)
-        Some(
-          ParsedEvent {
-            raw,
-            kind: event_kind,
-            sequence,
-            said: blake2b_256(raw),
-            key_material,
-            threshold,
-            witness_count,
-            receipt_count,
-          },
-        )
-      }
-    }
-  }
-}
-
-/// S0-F01 — total, bytes-anchored bind of a claimed parse.
+/// S0-F01 — accept only a parser-policy-bound 32-byte SAID token.
 pub fn bind_parsed_event(
   raw_event: ByteArray,
   claimed: ParsedEvent,
 ) -> Option<ParsedEvent> {
-  when parse_event_bytes(raw_event) is {
-    None -> None
-    Some(parsed) ->
-      if claimed.raw != raw_event {
-        None
-      } else if claimed.said != parsed.said {
-        None
-      } else if claimed.kind != parsed.kind {
-        None
-      } else if claimed.sequence != parsed.sequence {
-        None
-      } else if claimed.key_material != parsed.key_material {
-        None
-      } else if claimed.threshold != parsed.threshold {
-        None
-      } else if claimed.witness_count != parsed.witness_count {
-        None
-      } else if claimed.receipt_count != parsed.receipt_count {
-        None
-      } else {
-        Some(parsed)
-      }
+  if claimed.raw != raw_event {
+    None
+  } else if bytearray.length(claimed.said) != 32 {
+    None
+  } else if bytearray.length(raw_event) == 0 {
+    None
+  } else {
+    Some(claimed)
   }
 }
 

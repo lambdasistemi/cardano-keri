@@ -148,6 +148,7 @@ library deployment
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , cardano-tx-tools:tx-sign-core
     , containers
@@ -175,6 +176,7 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoardTransaction
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.LiveRuntime
+    Cardano.KERI.Deployment.M12TxB
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
@@ -406,6 +408,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
+    Cardano.KERI.Deployment.M12TxBSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec

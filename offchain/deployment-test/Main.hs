@@ -8,6 +8,7 @@ import Cardano.KERI.Deployment.CloseSpec qualified as CloseSpec
 import Cardano.KERI.Deployment.EndpointBoardSpec qualified as EndpointBoardSpec
 import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as EndpointBoardTransactionSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
+import Cardano.KERI.Deployment.M12TxBSpec qualified as M12TxBSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
@@ -54,6 +55,7 @@ suite = hspec $ do
     EndpointBoardSpec.spec
     EndpointBoardTransactionSpec.spec
     KELSpec.spec
+    M12TxBSpec.spec
     ManifestSpec.spec
     CheckpointMigrationSpec.spec
     BountyEntitlementSpec.spec

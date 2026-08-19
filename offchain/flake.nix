@@ -546,6 +546,15 @@
           keriBoardBlueprintPath =
             "${inputs.deployPreprod}/endpoint-board-blueprint.json";
 
+          # M11 S2W repair: these accepted repository artifacts live outside
+          # the offchain Cabal source. Bind their immutable store paths into
+          # both deployment-test execution surfaces instead of relying on a
+          # repository working directory, which a runCommand does not have.
+          witnessModeReportPath =
+            ../specs/m11-s2-witness-mode/WITNESS-MODE-REPORT.md;
+          txBManifestPath = ../specs/m11-s2-witness-mode/txb-manifest.json;
+          measureFamilyScriptPath = ../scripts/s0/measure-family.sh;
+
           # #266 MOD-266-COMPILER-SURFACE. The packaged counterpart of the
           # dev-shell bindings above: the compiler environment the public-surface
           # guard runs its GHC session in. `local-write-path-check` executes the
@@ -1139,6 +1148,9 @@
               text = ''
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
+                export KERI_WITNESS_MODE_REPORT="${witnessModeReportPath}"
+                export KERI_TXB_MANIFEST="${txBManifestPath}"
+                export KERI_MEASURE_FAMILY_SCRIPT="${measureFamilyScriptPath}"
                 # #263: the recovered deployed board artifact, distinct from
                 # the source-built checkpoint blueprint above.
                 export KERI_BOARD_BLUEPRINT="${inputs.deployPreprod}/endpoint-board-blueprint.json"
@@ -1146,7 +1158,11 @@
               '';
             };
             deploymentTestsCheck =
-              pkgs.runCommand "deployment-tests-check" { } ''
+              pkgs.runCommand "deployment-tests-check" {
+                nativeBuildInputs = [ pkgs.glibcLocales ];
+                LANG = "C.UTF-8";
+                LC_ALL = "C.UTF-8";
+              } ''
                 ${deploymentTestsRunner}/bin/deployment-tests
                 touch "$out"
               '';
@@ -2140,6 +2156,9 @@
             # permanent runners set, or a fixture would pass under one
             # command and fail under the other.
             KERI_BOARD_BLUEPRINT = keriBoardBlueprintPath;
+            KERI_WITNESS_MODE_REPORT = witnessModeReportPath;
+            KERI_TXB_MANIFEST = txBManifestPath;
+            KERI_MEASURE_FAMILY_SCRIPT = measureFamilyScriptPath;
           });
         };
     };

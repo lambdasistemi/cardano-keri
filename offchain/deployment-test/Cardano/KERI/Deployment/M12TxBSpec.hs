@@ -83,8 +83,7 @@ import Data.Text qualified as T
 import Data.Word (Word8)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data qualified as PLC
-import System.Directory (doesFileExist, getCurrentDirectory)
-import System.FilePath (takeDirectory, (</>))
+import System.Environment (getEnv)
 import Test.Hspec
 
 spec :: Spec
@@ -312,7 +311,7 @@ provenanceSpec = describe "manifest provenance" $ do
                         `shouldContain` ["size-only; transaction-fit unproven"]
 
     it "keeps the committed report explicit about both controls and limits" $ do
-        report <- readRepoFile "specs/m11-s2-witness-mode/WITNESS-MODE-REPORT.md"
+        report <- readBoundFile "KERI_WITNESS_MODE_REPORT"
         report `shouldContain` "REFERENCE"
         report `shouldContain` "INLINE"
         report `shouldContain` "maxRefScriptSizePerTx"
@@ -325,7 +324,7 @@ provenanceSpec = describe "manifest provenance" $ do
     it "keeps the committed manifest on the pinned protocol and fee table" $ do
         bytes <-
             BS.readFile
-                =<< repoFile "specs/m11-s2-witness-mode/txb-manifest.json"
+                =<< getEnv "KERI_TXB_MANIFEST"
         case Aeson.eitherDecodeStrict bytes of
             Left err -> expectationFailure err
             Right value -> protocolDocument value
@@ -333,7 +332,7 @@ provenanceSpec = describe "manifest provenance" $ do
 contentPinSpec :: Spec
 contentPinSpec = describe "Aiken binary content pin" $ do
     it "preserves EXPECTED_TOOL_SHA and rejects a different binary digest" $ do
-        script <- readRepoFile "scripts/s0/measure-family.sh"
+        script <- readBoundFile "KERI_MEASURE_FAMILY_SCRIPT"
         script `shouldContain` "EXPECTED_TOOL_SHA="
         script `shouldContain` "toolchain-hash"
         let expected = expectedToolSha script
@@ -630,21 +629,5 @@ expectedToolSha contents =
   where
     prefix = "EXPECTED_TOOL_SHA="
 
-readRepoFile :: FilePath -> IO String
-readRepoFile rel = readFile =<< repoFile rel
-
-repoFile :: FilePath -> IO FilePath
-repoFile rel = do
-    cwd <- getCurrentDirectory
-    go cwd
-  where
-    go dir = do
-        let candidate = dir </> rel
-        exists <- doesFileExist candidate
-        if exists
-            then pure candidate
-            else do
-                let parent = takeDirectory dir
-                if parent == dir
-                    then fail ("missing repository file " <> rel)
-                    else go parent
+readBoundFile :: String -> IO String
+readBoundFile binding = readFile =<< getEnv binding

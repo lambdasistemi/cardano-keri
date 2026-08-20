@@ -807,7 +807,20 @@ groupBoundaries =
             \evidence executes it from the frozen baseline with Lean-supplied \
             \parameters and publishes no identity"
         )
+    , ("s0_append.s0_append", Unapplied s0MeasurementBoundary)
+    , ("s0_consumer_predicates.s0_consumer_predicates", Unapplied s0MeasurementBoundary)
+    , ("s0_cursor.s0_cursor", Unapplied s0MeasurementBoundary)
+    , ("s0_lineage.s0_lineage", Unapplied s0MeasurementBoundary)
+    , ("s0_maintenance_escrow.s0_maintenance_escrow", Unapplied s0MeasurementBoundary)
+    , ("s0_reference_cursor_consumer.s0_reference_cursor_consumer", Unapplied s0MeasurementBoundary)
+    , ("s0_staging_proof_token.s0_staging_proof_token", Unapplied s0MeasurementBoundary)
     ]
+
+-- | S0 groups are measured raw skeletons, not published deployment identities.
+s0MeasurementBoundary :: Text
+s0MeasurementBoundary =
+    "M1.2 S0 measurement-only skeleton: no production application site or \
+    \published deployment identity"
 
 {- | Every name an 'AppliedBy' row declares.
 

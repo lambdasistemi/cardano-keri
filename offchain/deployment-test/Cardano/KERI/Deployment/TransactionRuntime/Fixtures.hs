@@ -69,9 +69,14 @@ import Cardano.Ledger.Api.Tx.Out (
     getMinCoinTxOut,
     valueTxOutL,
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (
+    NonNegativeInterval,
+    StrictMaybe (SJust, SNothing),
+    boundRational,
+ )
 import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), compactCoinOrError)
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, mkCostModel, mkCostModels)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -80,6 +85,8 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Data.Int (Int64)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Ratio ((%))
 import Data.Set qualified as Set
 import Data.Word (Word16)
 import GHC.Stack (HasCallStack)
@@ -105,6 +112,7 @@ testPParams =
             & ppCollateralPercentageL .~ 150
             & ppMaxCollateralInputsL .~ 3
             & ppCostModelsL .~ testCostModels
+            & ppMinFeeRefScriptCostPerByteL .~ pinnedMinFeeRefScriptCost
 
 {- | Fail closed if the fixture's lifecycle-certificate oracle becomes
 degenerate. This guard deliberately reads the completed fixture rather than
@@ -120,6 +128,13 @@ requireNonZeroKeyDeposit pparams =
             error $
                 "Fixtures.testPParams: ppKeyDepositL must be positive, got "
                     <> show deposit
+
+-- | Pinned Conway genesis reference-script base price: 44 lovelace per byte.
+pinnedMinFeeRefScriptCost :: NonNegativeInterval
+pinnedMinFeeRefScriptCost =
+    fromMaybe
+        (error "Fixtures: 44 is not a NonNegativeInterval")
+        (boundRational (44 % 1))
 
 -- ---------------------------------------------------------------------------
 -- #232 bounded-collateral proof oracle

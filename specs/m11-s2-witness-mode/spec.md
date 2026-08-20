@@ -68,13 +68,13 @@ later, separately gated slices. Also out: any Surface-C mutation, any push/PR/me
 | S2W-I9 | open residuals stay visible | A3-F1 or the F1 residual missing, or F1 marked anything but OPEN |
 | S2W-I10 | both bound commits are ancestors and then-current `origin/main` is integrated | either ancestry check failing, or `origin/main` drift at final |
 
-Enforcement: `s2w-no-b-v1.1`, frozen, sha256
-`f1fb04664637faa7997334d7a6dafbd0373798c7daf72b55acdee6bf1be1f12d`. `S2W-I3` is enforced by the
+Enforcement: `s2w-no-b-v1.2`, frozen, sha256
+`2317cddbdf24cbaf1c712da877ffc131bef3e13e7044e97587be8c79fe467b66`. `S2W-I3` is enforced by the
 gate for both `.protocol` and the candidate-declared envelope limit.
 
 ## Observable success
 
-`s2w-no-b-v1.1 --full` exits 0 on a candidate whose ancestry carries both bound commits and
+`s2w-no-b-v1.2 --full` exits 0 on a candidate whose ancestry carries both bound commits and
 then-current `origin/main`, with the focused suite green, both named examples present, and full CI
 green — followed by a fresh independent audit and milestone acceptance.
 

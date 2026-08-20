@@ -1,7 +1,7 @@
 # Data model — S2 witness-mode
 
 Fields, relationships, validation and state invariants. The manifest is the machine-checked
-contract; `s2w-no-b-v1.1` reads exactly these fields.
+contract; `s2w-no-b-v1.2` reads exactly these fields.
 
 ## `txb-manifest.json`
 

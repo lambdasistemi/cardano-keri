@@ -57,10 +57,10 @@ self audit. `draft=NONE`.
 
 ## Gate
 
-`s2w-no-b-v1.1`, frozen.
+`s2w-no-b-v1.2`, frozen.
 
-- gate sha256 `f1fb04664637faa7997334d7a6dafbd0373798c7daf72b55acdee6bf1be1f12d`
-- inputs sha256 `383161e0b8138e69fbf13d2995c143233b95c4a7fd00be681c55f3b7603857bc`
+- gate sha256 `2317cddbdf24cbaf1c712da877ffc131bef3e13e7044e97587be8c79fe467b66`
+- inputs sha256 `cc2b63f3dd2f53d0e0071e91eaa46a28eb38cddc35bf51c20a3c9689c3aa40be`
 - falsification: 58 assertions, 42 kills over 40 distinct causes, 16 positive controls, 0 defects
 - pre-implementation RED, then post-integration RED advancing to the next unmet obligation
 

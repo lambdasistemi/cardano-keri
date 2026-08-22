@@ -1,0 +1,46 @@
+# clause_id	module_id	contract_phrase	obligation_id
+S0-M01-types	S0-M01	Typed fields sufficient to make each required operation reachable	S0-M01-types
+S0-M02-decode	S0-M02	Decode raw event via bytes-only total parse	S0-M02-parse
+S0-M02-bind	S0-M02	bind event identity	S0-M02-event-binding
+S0-M02-token	S0-M02	consume and burn matching proof token	S0-M02-token
+S0-M02-said-bind	S0-M02	decoded SAID/AID equals proof digest	S0-M02-said-bind
+S0-M02-map	S0-M02	verify an authenticated-map proof/update	S0-M02-authenticated-map
+S0-M02-derive	S0-M02	derive a changed root/occupancy result	S0-F02-defined
+S0-M02-fn	S0-M02	bind_parsed_event	S0-F01-defined
+S0-M02-handler	S0-M02	append validator handler	S0-M02-handler
+S0-M02-reach	S0-M02	append handler reaches apply_record_append	S0-M02-reachability
+S0-M03-consume	S0-M03	Consume parsed transition data plus historical proof	S0-M03-history-proof
+S0-M03-token	S0-M03	consume and burn matching proof token	S0-M03-token
+S0-M03-derive	S0-M03	compute changed keys/state/grade/slot fields	S0-F03-defined
+S0-M03-handler	S0-M03	cursor validator handler	S0-M03-handler
+S0-M03-reach	S0-M03	cursor handler reaches derive_cursor	S0-M03-reachability
+S0-M04-context	S0-M04	Inspect transaction purpose/time	S0-M04-context
+S0-M04-bind	S0-M04	bind genesis identity or predecessor presence	S0-F04-defined
+S0-M04-roots	S0-M04	derive inherited/final roots	S0-M04-roots
+S0-M04-flags	S0-M04	derive flags	S0-M04-flags
+S0-M04-handler	S0-M04	lineage validator handler	S0-M04-handler
+S0-M04-reach	S0-M04	lineage handler reaches validate_lineage_transition	S0-M04-reachability
+S0-M05-decode	S0-M05	Decode grade and value/time context	S0-M05-value-time
+S0-M05-premium	S0-M05	compute premium/residue conditions	S0-F05-defined
+S0-M05-handler	S0-M05	escrow validator handler	S0-M05-handler
+S0-M05-reach	S0-M05	escrow handler reaches validate_escrow_transition	S0-M05-reachability
+S0-M06-bound	S0-M06	inherited 1024-byte Tx-A premint cap	S0-M06-bound
+S0-M06-said	S0-M06	bounded KERI Blake3 SAID proof	S0-M06-said
+S0-M06-fn	S0-M06	staging validate function	S0-F06-defined
+S0-M06-token	S0-M06	bind proof-token identity/output	S0-M06-token-binding
+S0-M06-handler	S0-M06	staging validator handler	S0-M06-handler
+S0-M06-reach	S0-M06	staging handler reaches validate_staging_token	S0-M06-reachability
+S0-M07-keys	S0-M07	Evaluate keys	S0-M07-keys
+S0-M07-state	S0-M07	Evaluate KERI state	S0-M07-state
+S0-M07-grade	S0-M07	Evaluate evidence grade	S0-M07-grade
+S0-M07-fresh	S0-M07	Evaluate freshness	S0-M07-freshness
+S0-M07-fn	S0-M07	predicate function	S0-F07-defined
+S0-M08-handler	S0-M08	predicate measurement validator	S0-M08-handler
+S0-M08-reach	S0-M08	Reach the complete S0-M07 predicate	S0-M08-reachability
+S0-M09-fn	S0-M09	reference consumer function	S0-F08-defined
+S0-M09-ref	S0-M09	Select/decode cursor-like reference data	S0-M09-reference-data
+S0-M09-call	S0-M09	call S0-M07 before authorizing	S0-M09-policy-call
+S0-M09-handler	S0-M09	reference consumer handler	S0-M09-handler
+S0-M09-reach	S0-M09	reference handler reaches validate_reference_consumer	S0-M09-reachability
+S0-M10-harness	S0-M10	measurement harness	S0-M10-harness
+S0-M11-control	S0-M11	anti-stub / reachability control	S0-M11-control

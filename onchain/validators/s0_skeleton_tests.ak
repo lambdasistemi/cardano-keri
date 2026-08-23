@@ -13,9 +13,11 @@ use cardano/assets.{from_asset, from_lovelace, merge}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use cardano_keri/blake3
+use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/m12/event_decoder.{DecodeOk, decode_establishment_event}
 use cardano_keri/m12/event_key.{event_key_of}
-use cardano_keri/m12/proof_token.{proof_token_name}
+use cardano_keri/m12/proof_token.{dummy_span, proof_token_name}
 use cardano_keri/m12/record.{apply_record_append, bind_parsed_event}
 use cardano_keri/m12/types.{
   CursorPolicy, CursorState, EscrowState, Established, FullyWitnessed, Genesis,
@@ -64,10 +66,23 @@ const rot_off_d: Int = 40
 
 const rot_off_i: Int = 91
 
-const rot_rival_said: ByteArray = "ECIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi"
+const rot_k_flip_at: Int = 254
 
-const rot_rival_aid: ByteArray =
-  #"2222222222222222222222222222222222222222222222222222222222222222"
+fn flip_byte(raw: ByteArray, at: Int) -> ByteArray {
+  bytearray.take(raw, at)
+    |> bytearray.concat(#"30")
+    |> bytearray.concat(bytearray.drop(raw, at + 1))
+}
+
+fn splice_span(raw: ByteArray, off: Int, span: ByteArray) -> ByteArray {
+  bytearray.take(raw, off)
+    |> bytearray.concat(span)
+    |> bytearray.concat(bytearray.drop(raw, off + 44))
+}
+
+fn rival_digest(raw: ByteArray) -> ByteArray {
+  blake3.hash(splice_span(flip_byte(raw, rot_k_flip_at), rot_off_d, dummy_span))
+}
 
 const honest2_off_d: Int = 40
 
@@ -274,16 +289,17 @@ test staging_accepts_distinct_i_and_d() {
 
 test present_prior_rivals_cross_staging_and_append() {
   expect DecodeOk(ev1) = decode_establishment_event(rot_bytes)
-  // RED: d-only substitution. Staging of event two must fail blake3
-  // until GREEN supplies a genuinely rival dressed preimage.
-  let rot2 = bytearray.take(rot_bytes, rot_off_d)
-    |> bytearray.concat(rot_rival_said)
-    |> bytearray.concat(bytearray.drop(rot_bytes, rot_off_d + 44))
+  let rot2_aid = rival_digest(rot_bytes)
+  let rot2 = splice_span(
+    flip_byte(rot_bytes, rot_k_flip_at),
+    rot_off_d,
+    qb64_aid(rot2_aid),
+  )
   expect DecodeOk(ev2) = decode_establishment_event(rot2)
   expect Some(key_one) = event_key_of(ev1)
   expect Some(key_two) = event_key_of(ev2)
   let name1 = proof_token_name(rot_bytes, rot_aid)
-  let name2 = proof_token_name(rot2, rot_rival_aid)
+  let name2 = proof_token_name(rot2, rot2_aid)
   let staged1 = s0_staging_proof_token.s0_staging_proof_token.mint(
     StagingRedeemer {
       raw_event: rot_bytes,
@@ -297,7 +313,7 @@ test present_prior_rivals_cross_staging_and_append() {
   let staged2 = s0_staging_proof_token.s0_staging_proof_token.mint(
     StagingRedeemer {
       raw_event: rot2,
-      cesr_aid: rot_rival_aid,
+      cesr_aid: rot2_aid,
       off_i: rot_off_i,
       off_d: rot_off_d,
     },
@@ -332,26 +348,21 @@ test present_prior_rivals_cross_staging_and_append() {
     Leaf { skip: 0, key: blake2b_256(key_one), value: blake2b_256(rot_aid) },
   ]
   let proof_for_one = [
-    Leaf {
-      skip: 0,
-      key: blake2b_256(key_two),
-      value: blake2b_256(rot_rival_aid),
-    },
+    Leaf { skip: 0, key: blake2b_256(key_two), value: blake2b_256(rot2_aid) },
   ]
   let appended2 = s0_append.s0_append.spend(
     policy,
     Some(first),
     AppendRedeemer {
       raw_event: rot2,
-      cesr_aid: rot_rival_aid,
+      cesr_aid: rot2_aid,
       proof: HistoricalProof { proof: proof_for_two },
     },
     self_ref,
-    burn_tx_for(rot2, rot_rival_aid, 1),
+    burn_tx_for(rot2, rot2_aid, 1),
   )
-  let both =
-    mpf.insert(empty, key_one, rot_aid, [])
-      |> mpf.insert(key_two, rot_rival_aid, proof_for_two)
+  let both = mpf.insert(empty, key_one, rot_aid, [])
+    |> mpf.insert(key_two, rot2_aid, proof_for_two)
   and {
     staged1,
     staged2,
@@ -364,14 +375,9 @@ test present_prior_rivals_cross_staging_and_append() {
       policy,
       burn_tx_for(rot_bytes, rot_aid, 1),
     ) != None,
-    bind_parsed_event(
-      rot2,
-      rot_rival_aid,
-      policy,
-      burn_tx_for(rot2, rot_rival_aid, 1),
-    ) != None,
+    bind_parsed_event(rot2, rot2_aid, policy, burn_tx_for(rot2, rot2_aid, 1)) != None,
     mpf.has(both, key_one, rot_aid, proof_for_one),
-    mpf.has(both, key_two, rot_rival_aid, proof_for_two),
+    mpf.has(both, key_two, rot2_aid, proof_for_two),
   }
 }
 

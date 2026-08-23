@@ -130,21 +130,37 @@ fi
 assert_compiled "$work/c0-output" \
   KeriBlaster.Alpha KeriBlaster.Omega KeriBlaster
 
-# C1: manufacture the lexical-order defect rather than relying on today's
-# tracked module names.
+# C1: manufacture a transitive lexical-order defect rather than relying on
+# today's tracked module names. The three-module chain distinguishes a real
+# topological order from local heuristics such as import count or filename.
 mkdir -p "$work/c1/KeriBlaster" "$work/c1-output"
 cat <<'LEAN' >"$work/c1/KeriBlaster/Alpha.lean"
-import KeriBlaster.Omega
+import KeriBlaster.Beta
 def alphaValue : Nat := 1
 LEAN
-cat <<'LEAN' >"$work/c1/KeriBlaster/Omega.lean"
-def omegaValue : Nat := 2
+cat <<'LEAN' >"$work/c1/KeriBlaster/Beta.lean"
+import KeriBlaster.Gamma
+def betaValue : Nat := 2
+LEAN
+cat <<'LEAN' >"$work/c1/KeriBlaster/Gamma.lean"
+def gammaValue : Nat := 3
 LEAN
 cat <<'LEAN' >"$work/c1/KeriBlaster.lean"
 import KeriBlaster.Alpha
-import KeriBlaster.Omega
+import KeriBlaster.Beta
+import KeriBlaster.Gamma
 LEAN
-lexical_order="$(printf '%s\n' KeriBlaster.Alpha KeriBlaster.Omega \
+c1_chain=(KeriBlaster.Gamma KeriBlaster.Beta KeriBlaster.Alpha)
+chain_depth=${#c1_chain[@]}
+for (( chain_index = 1; chain_index < chain_depth; chain_index++ )); do
+  prerequisite="${c1_chain[$((chain_index - 1))]}"
+  importer="${c1_chain[$chain_index]}"
+  importer_file="${importer#KeriBlaster.}"
+  grep -Fxq "import $prerequisite" "$work/c1/KeriBlaster/$importer_file.lean" \
+    || fail "C1 fixture does not realize chain edge $prerequisite -> $importer"
+done
+lexical_order="$(printf '%s\n' \
+  KeriBlaster.Alpha KeriBlaster.Beta KeriBlaster.Gamma \
   | LC_ALL=C sort | paste -sd, -)"
 lexical_violations="$(count_violations "$work/c1" "$lexical_order")"
 (( lexical_violations > 0 )) \
@@ -152,20 +168,28 @@ lexical_violations="$(count_violations "$work/c1" "$lexical_order")"
 if ! timeout 120 "$elaborator" \
     "$build_root" "$work/c1" "$artifact_root" "$work/c1-output" \
     "$work/c1/KeriBlaster/Alpha.lean" \
-    "$work/c1/KeriBlaster/Omega.lean" \
+    "$work/c1/KeriBlaster/Beta.lean" \
+    "$work/c1/KeriBlaster/Gamma.lean" \
     "$work/c1/KeriBlaster.lean" \
     >"$work/c1.stdout" 2>"$work/c1.stderr"; then
   cat "$work/c1.stderr" >&2
   fail 'C1 elaborator rejected the dependent-sorts-first fixture'
 fi
-c1_order="$(extract_order "$work/c1.stderr" 2)"
+c1_order="$(extract_order "$work/c1.stderr" 3)"
 derived_violations="$(count_violations "$work/c1" "$c1_order")"
 (( derived_violations == 0 )) \
   || fail "C1 derived order retains $derived_violations dependency violations"
+gamma_position="$(position_of "$c1_order" KeriBlaster.Gamma)"
+beta_position="$(position_of "$c1_order" KeriBlaster.Beta)"
+alpha_position="$(position_of "$c1_order" KeriBlaster.Alpha)"
+(( gamma_position < beta_position && beta_position < alpha_position )) \
+  || fail "C1 derived order violates chain Gamma -> Beta -> Alpha: $c1_order"
+(( gamma_position < alpha_position )) \
+  || fail "C1 derived order violates transitive precedence Gamma -> Alpha: $c1_order"
 assert_compiled "$work/c1-output" \
-  KeriBlaster.Alpha KeriBlaster.Omega KeriBlaster
+  KeriBlaster.Alpha KeriBlaster.Beta KeriBlaster.Gamma KeriBlaster
 printf '%s\n' \
-  "RED-PROOF invariant=INV-289-ORDER-DERIVED mutation=synthetic-dependent-sorts-first lexical_violations=$lexical_violations derived_violations=$derived_violations outcome=REFUTED"
+  "RED-PROOF invariant=INV-289-ORDER-DERIVED mutation=synthetic-dependent-sorts-first lexical_violations=$lexical_violations derived_violations=$derived_violations chain_depth=$chain_depth outcome=REFUTED"
 
 # A fake compiler makes "before any elaboration" directly observable for C2
 # and C3. Any attempted invocation leaves a marker and fails the control.
@@ -330,4 +354,4 @@ tracked_violations="$(count_violations "$source_root" "$tracked_order")"
 assert_compiled "$work/tracked-output" KeriBlaster
 
 printf 'PASS: elaboration order derived from declared imports over %d synthetic and %d tracked modules\n' \
-  11 "$tracked_count"
+  12 "$tracked_count"

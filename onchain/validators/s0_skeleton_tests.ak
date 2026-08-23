@@ -274,15 +274,17 @@ test staging_accepts_distinct_i_and_d() {
 
 test present_prior_rivals_cross_staging_and_append() {
   expect DecodeOk(ev1) = decode_establishment_event(rot_bytes)
+  // RED: d-only substitution. Staging of event two must fail blake3
+  // until GREEN supplies a genuinely rival dressed preimage.
   let rot2 = bytearray.take(rot_bytes, rot_off_d)
     |> bytearray.concat(rot_rival_said)
     |> bytearray.concat(bytearray.drop(rot_bytes, rot_off_d + 44))
   expect DecodeOk(ev2) = decode_establishment_event(rot2)
   expect Some(key_one) = event_key_of(ev1)
   expect Some(key_two) = event_key_of(ev2)
-  let name = proof_token_name(rot_bytes, rot_aid)
-  let minted = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
-  let staged = s0_staging_proof_token.s0_staging_proof_token.mint(
+  let name1 = proof_token_name(rot_bytes, rot_aid)
+  let name2 = proof_token_name(rot2, rot_rival_aid)
+  let staged1 = s0_staging_proof_token.s0_staging_proof_token.mint(
     StagingRedeemer {
       raw_event: rot_bytes,
       cesr_aid: rot_aid,
@@ -290,14 +292,24 @@ test present_prior_rivals_cross_staging_and_append() {
       off_d: rot_off_d,
     },
     policy,
-    minted,
+    Transaction { ..placeholder, mint: from_asset(policy, name1, 1) },
+  )
+  let staged2 = s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: rot2,
+      cesr_aid: rot_rival_aid,
+      off_i: rot_off_i,
+      off_d: rot_off_d,
+    },
+    policy,
+    Transaction { ..placeholder, mint: from_asset(policy, name2, 1) },
   )
   let old = RecordState {
     event_root: root(empty),
     occupancy_root: zeros32,
     event_count: 0,
   }
-  let appended = s0_append.s0_append.spend(
+  let appended1 = s0_append.s0_append.spend(
     policy,
     Some(old),
     AppendRedeemer {
@@ -319,17 +331,32 @@ test present_prior_rivals_cross_staging_and_append() {
   let proof_for_two = [
     Leaf { skip: 0, key: blake2b_256(key_one), value: blake2b_256(rot_aid) },
   ]
-  expect Some(both) = apply_record_append(
-    first,
-    rot2,
-    rot_rival_aid,
+  let proof_for_one = [
+    Leaf {
+      skip: 0,
+      key: blake2b_256(key_two),
+      value: blake2b_256(rot_rival_aid),
+    },
+  ]
+  let appended2 = s0_append.s0_append.spend(
     policy,
-    HistoricalProof { proof: proof_for_two },
+    Some(first),
+    AppendRedeemer {
+      raw_event: rot2,
+      cesr_aid: rot_rival_aid,
+      proof: HistoricalProof { proof: proof_for_two },
+    },
+    self_ref,
     burn_tx_for(rot2, rot_rival_aid, 1),
   )
+  let both =
+    mpf.insert(empty, key_one, rot_aid, [])
+      |> mpf.insert(key_two, rot_rival_aid, proof_for_two)
   and {
-    staged,
-    appended,
+    staged1,
+    staged2,
+    appended1,
+    appended2,
     key_one != key_two,
     bind_parsed_event(
       rot_bytes,
@@ -337,7 +364,14 @@ test present_prior_rivals_cross_staging_and_append() {
       policy,
       burn_tx_for(rot_bytes, rot_aid, 1),
     ) != None,
-    both.event_count == 2,
+    bind_parsed_event(
+      rot2,
+      rot_rival_aid,
+      policy,
+      burn_tx_for(rot2, rot_rival_aid, 1),
+    ) != None,
+    mpf.has(both, key_one, rot_aid, proof_for_one),
+    mpf.has(both, key_two, rot_rival_aid, proof_for_two),
   }
 }
 

@@ -12,9 +12,9 @@ Trace level: `silent`
 
 ## Source and blueprint identity
 
-Measured source commit: `36ece431f452eb45f2ede61876e76f290d12b48a`
-- owned-source sha256: `c84385c1a76b61d251329c7314333baa16055e18cb2a7beef6d8b54717c10f42`
-- blueprint sha256: `b95f5b11e4c2fcd4b4897e6d3cc83cafc3afd13c03b1339dd25c9390353ccf81`
+Measured source commit: `ecddbdff68725e704aad7caa890f6909ae0342b9`
+- owned-source sha256: `2ec8f66884482b1cac988587242588fcd8e9e16266952c8a2ee98ffb8241583c`
+- blueprint sha256: `83aa0525c30e8713dff6c67ca54c657193e0eb59b2f396a2449288f711526beb`
 - reproduction command:
 
 ```
@@ -71,7 +71,7 @@ Consequences, stated so a successor does not inherit a wrong fact:
 | cursor | `s0_cursor.s0_cursor.spend` | 7212 | 44.70 | 8921 | 44.01 | 9172 | PASS | size-only; transaction-fit unproven |
 | lineage | `s0_lineage.s0_lineage.spend` | 2078 | 12.88 | 14055 | 12.68 | 14306 | PASS | size-only; transaction-fit unproven |
 | maintenance_escrow | `s0_maintenance_escrow.s0_maintenance_escrow.spend` | 831 | 5.15 | 15302 | 5.07 | 15553 | PASS | size-only; transaction-fit unproven |
-| staging_proof_token | `s0_staging_proof_token.s0_staging_proof_token.mint` | 9006 | 55.82 | 7127 | 54.96 | 7378 | PASS | size-only; transaction-fit unproven |
+| staging_proof_token | `s0_staging_proof_token.s0_staging_proof_token.mint` | 9248 | 57.32 | 6885 | 56.44 | 7136 | PASS | size-only; transaction-fit unproven |
 | consumer_predicates | `s0_consumer_predicates.s0_consumer_predicates.spend` | 699 | 4.33 | 15434 | 4.26 | 15685 | PASS | size-only; transaction-fit unproven |
 | reference_cursor_consumer | `s0_reference_cursor_consumer.s0_reference_cursor_consumer.spend` | 1389 | 8.60 | 14744 | 8.47 | 14995 | PASS | size-only; transaction-fit unproven |
 
@@ -119,14 +119,14 @@ exist.
 
 Bare structural sum of already-measured rows (not a fit measurement):
 
-- append + cursor + staging_proof_token = 25,716 B
-- 159.39% of 16,133; headroom -9,583 B
-- 156.95% of 16,384; headroom -9,332 B
-- with maintenance_escrow: 26,547 B, 164.55% / 162.03%
+- append + cursor + staging_proof_token = 25,958 B
+- 160.90% of 16,133; headroom -9,825 B
+- 158.43% of 16,384; headroom -9,574 B
+- with maintenance_escrow: 26,789 B, 166.05% / 163.50%
 
-`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25716`
+`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25958`
 
-- If inline, 25,716 B is fatal against the 16,384-byte transaction-body
+- If inline, 25,958 B is fatal against the 16,384-byte transaction-body
   limit.
 - If referenced, the body limit is not the binding comparison; the next
   row would be live pinned `maxRefScriptSizePerTx` plus the tiered
@@ -162,13 +162,13 @@ S0-ROW member=append title=s0_append.s0_append.spend bytes=9498 reference_pct=58
 S0-ROW member=cursor title=s0_cursor.s0_cursor.spend bytes=7212 reference_pct=44.70 reference_headroom=8921 tx_pct=44.01 tx_headroom=9172 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=lineage title=s0_lineage.s0_lineage.spend bytes=2078 reference_pct=12.88 reference_headroom=14055 tx_pct=12.68 tx_headroom=14306 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=maintenance_escrow title=s0_maintenance_escrow.s0_maintenance_escrow.spend bytes=831 reference_pct=5.15 reference_headroom=15302 tx_pct=5.07 tx_headroom=15553 threshold=PASS caveat="size-only; transaction-fit unproven"
-S0-ROW member=staging_proof_token title=s0_staging_proof_token.s0_staging_proof_token.mint bytes=9006 reference_pct=55.82 reference_headroom=7127 tx_pct=54.96 tx_headroom=7378 threshold=PASS caveat="size-only; transaction-fit unproven"
+S0-ROW member=staging_proof_token title=s0_staging_proof_token.s0_staging_proof_token.mint bytes=9248 reference_pct=57.32 reference_headroom=6885 tx_pct=56.44 tx_headroom=7136 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=consumer_predicates title=s0_consumer_predicates.s0_consumer_predicates.spend bytes=699 reference_pct=4.33 reference_headroom=15434 tx_pct=4.26 tx_headroom=15685 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=reference_cursor_consumer title=s0_reference_cursor_consumer.s0_reference_cursor_consumer.spend bytes=1389 reference_pct=8.60 reference_headroom=14744 tx_pct=8.47 tx_headroom=14995 threshold=PASS caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxA-premint members=staging_proof_token bytes=9006 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxB-staged-event members=append+cursor+staging_proof_token bytes=25716 witness_mode=UNSPECIFIED verdict=UNRESOLVED sum=25716 caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxB-fully-witnessed-premium members=append+cursor+staging_proof_token+maintenance_escrow bytes=26547 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxA-premint members=staging_proof_token bytes=9248 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxB-staged-event members=append+cursor+staging_proof_token bytes=25958 witness_mode=UNSPECIFIED verdict=UNRESOLVED sum=25958 caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxB-fully-witnessed-premium members=append+cursor+staging_proof_token+maintenance_escrow bytes=26789 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
 S0-ESTABLISHED-WITNESS-PATTERN=REFERENCE scope=M1-only not=S0-TxB
-S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE status=named-not-s0-closer witness_mode=UNSPECIFIED sum=25716
+S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE status=named-not-s0-closer witness_mode=UNSPECIFIED sum=25958
 
 ```

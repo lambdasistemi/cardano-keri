@@ -12,9 +12,9 @@ Trace level: `silent`
 
 ## Source and blueprint identity
 
-Measured source commit: `058f57b67307f1f3d1f8f4d42c650564b6ab7302`
-- owned-source sha256: `8b590b4beb446b1d7af5bbac8b2a9adf910c358bc3a30da2c6011584635e9be2`
-- blueprint sha256: `e599e455d96ad851ba08750f4593c363b7aaedb8f50a2af3d088c9746501124f`
+Measured source commit: `97e7f749b31f18348865793f70b63bc7bd103829`
+- owned-source sha256: `32331f2324705b00e566165707d74e2aaa68b81c15568df23e0613129206c145`
+- blueprint sha256: `b95f5b11e4c2fcd4b4897e6d3cc83cafc3afd13c03b1339dd25c9390353ccf81`
 - reproduction command:
 
 ```
@@ -44,7 +44,7 @@ line wrapping and record-field punning, with no semantic edit.
 
 Consequences, stated so a successor does not inherit a wrong fact:
 
-- `append` 8,471 B and `cursor` 8,389 B are measurements of the #291 decoder,
+- `append` 9,498 B and `cursor` 7,212 B are measurements of the #291 decoder,
   not of anything released;
 - if #291 changes before it lands, both rows — and every co-residency sum
   derived from them — must be remeasured;
@@ -67,11 +67,11 @@ Consequences, stated so a successor does not inherit a wrong fact:
 
 | member | title | bytes | ref % | ref headroom | tx % | tx headroom | threshold | caveat |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| append | `s0_append.s0_append.spend` | 8471 | 52.50 | 7662 | 51.70 | 7913 | PASS | size-only; transaction-fit unproven |
-| cursor | `s0_cursor.s0_cursor.spend` | 8389 | 51.99 | 7744 | 51.20 | 7995 | PASS | size-only; transaction-fit unproven |
+| append | `s0_append.s0_append.spend` | 9498 | 58.87 | 6635 | 57.97 | 6886 | PASS | size-only; transaction-fit unproven |
+| cursor | `s0_cursor.s0_cursor.spend` | 7212 | 44.70 | 8921 | 44.01 | 9172 | PASS | size-only; transaction-fit unproven |
 | lineage | `s0_lineage.s0_lineage.spend` | 2078 | 12.88 | 14055 | 12.68 | 14306 | PASS | size-only; transaction-fit unproven |
 | maintenance_escrow | `s0_maintenance_escrow.s0_maintenance_escrow.spend` | 831 | 5.15 | 15302 | 5.07 | 15553 | PASS | size-only; transaction-fit unproven |
-| staging_proof_token | `s0_staging_proof_token.s0_staging_proof_token.mint` | 8757 | 54.28 | 7376 | 53.44 | 7627 | PASS | size-only; transaction-fit unproven |
+| staging_proof_token | `s0_staging_proof_token.s0_staging_proof_token.mint` | 9006 | 55.82 | 7127 | 54.96 | 7378 | PASS | size-only; transaction-fit unproven |
 | consumer_predicates | `s0_consumer_predicates.s0_consumer_predicates.spend` | 699 | 4.33 | 15434 | 4.26 | 15685 | PASS | size-only; transaction-fit unproven |
 | reference_cursor_consumer | `s0_reference_cursor_consumer.s0_reference_cursor_consumer.spend` | 1389 | 8.60 | 14744 | 8.47 | 14995 | PASS | size-only; transaction-fit unproven |
 
@@ -96,6 +96,7 @@ Percentages are truncated display values from integer arithmetic
   v2 is expected to remain green on the seven rows and cannot see this
   finding. NOTE-006's `CO-RESIDENCY-FAIL` is superseded as premature.
   No further decomposition without a milestone ruling.
+- R1-APPEND-REMEASURE member=append title=s0_append.s0_append.spend bytes=9498 source_blob=ed65217e1d63a4c8430d3529e9f261601a191edc caveat="size-only; transaction-fit unproven"
 
 ## Co-residency
 
@@ -118,14 +119,14 @@ exist.
 
 Bare structural sum of already-measured rows (not a fit measurement):
 
-- append + cursor + staging_proof_token = 25,617 B
-- 158.78% of 16,133; headroom -9,484 B
-- 156.35% of 16,384; headroom -9,233 B
-- with maintenance_escrow: 26,448 B, 163.93% / 161.42%
+- append + cursor + staging_proof_token = 25,716 B
+- 159.39% of 16,133; headroom -9,583 B
+- 156.95% of 16,384; headroom -9,332 B
+- with maintenance_escrow: 26,547 B, 164.55% / 162.03%
 
-`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25617`
+`CO-RESIDENCY-UNRESOLVED witness_mode=UNSPECIFIED sum=25716`
 
-- If inline, 25,617 B is fatal against the 16,384-byte transaction-body
+- If inline, 25,716 B is fatal against the 16,384-byte transaction-body
   limit.
 - If referenced, the body limit is not the binding comparison; the next
   row would be live pinned `maxRefScriptSizePerTx` plus the tiered
@@ -157,17 +158,17 @@ Caveat remains `size-only; transaction-fit unproven`.
 ## Machine rows
 
 ```
-S0-ROW member=append title=s0_append.s0_append.spend bytes=8471 reference_pct=52.50 reference_headroom=7662 tx_pct=51.70 tx_headroom=7913 threshold=PASS caveat="size-only; transaction-fit unproven"
-S0-ROW member=cursor title=s0_cursor.s0_cursor.spend bytes=8389 reference_pct=51.99 reference_headroom=7744 tx_pct=51.20 tx_headroom=7995 threshold=PASS caveat="size-only; transaction-fit unproven"
+S0-ROW member=append title=s0_append.s0_append.spend bytes=9498 reference_pct=58.87 reference_headroom=6635 tx_pct=57.97 tx_headroom=6886 threshold=PASS caveat="size-only; transaction-fit unproven"
+S0-ROW member=cursor title=s0_cursor.s0_cursor.spend bytes=7212 reference_pct=44.70 reference_headroom=8921 tx_pct=44.01 tx_headroom=9172 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=lineage title=s0_lineage.s0_lineage.spend bytes=2078 reference_pct=12.88 reference_headroom=14055 tx_pct=12.68 tx_headroom=14306 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=maintenance_escrow title=s0_maintenance_escrow.s0_maintenance_escrow.spend bytes=831 reference_pct=5.15 reference_headroom=15302 tx_pct=5.07 tx_headroom=15553 threshold=PASS caveat="size-only; transaction-fit unproven"
-S0-ROW member=staging_proof_token title=s0_staging_proof_token.s0_staging_proof_token.mint bytes=8757 reference_pct=54.28 reference_headroom=7376 tx_pct=53.44 tx_headroom=7627 threshold=PASS caveat="size-only; transaction-fit unproven"
+S0-ROW member=staging_proof_token title=s0_staging_proof_token.s0_staging_proof_token.mint bytes=9006 reference_pct=55.82 reference_headroom=7127 tx_pct=54.96 tx_headroom=7378 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=consumer_predicates title=s0_consumer_predicates.s0_consumer_predicates.spend bytes=699 reference_pct=4.33 reference_headroom=15434 tx_pct=4.26 tx_headroom=15685 threshold=PASS caveat="size-only; transaction-fit unproven"
 S0-ROW member=reference_cursor_consumer title=s0_reference_cursor_consumer.s0_reference_cursor_consumer.spend bytes=1389 reference_pct=8.60 reference_headroom=14744 tx_pct=8.47 tx_headroom=14995 threshold=PASS caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxA-premint members=staging_proof_token bytes=8757 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxB-staged-event members=append+cursor+staging_proof_token bytes=25617 witness_mode=UNSPECIFIED verdict=UNRESOLVED sum=25617 caveat="size-only; transaction-fit unproven"
-S0-CO-RESIDENCY tx=TxB-fully-witnessed-premium members=append+cursor+staging_proof_token+maintenance_escrow bytes=26448 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxA-premint members=staging_proof_token bytes=9006 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxB-staged-event members=append+cursor+staging_proof_token bytes=25716 witness_mode=UNSPECIFIED verdict=UNRESOLVED sum=25716 caveat="size-only; transaction-fit unproven"
+S0-CO-RESIDENCY tx=TxB-fully-witnessed-premium members=append+cursor+staging_proof_token+maintenance_escrow bytes=26547 witness_mode=UNSPECIFIED verdict=UNRESOLVED caveat="size-only; transaction-fit unproven"
 S0-ESTABLISHED-WITNESS-PATTERN=REFERENCE scope=M1-only not=S0-TxB
-S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE status=named-not-s0-closer witness_mode=UNSPECIFIED sum=25617
+S2-HANDOFF-CO-RESIDENCY-WITNESS-MODE status=named-not-s0-closer witness_mode=UNSPECIFIED sum=25716
 
 ```

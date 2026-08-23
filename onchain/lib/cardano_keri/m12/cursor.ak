@@ -3,9 +3,6 @@
 //// Tx-B: total-parse + proof-token burn + historical proof.
 
 use aiken/crypto.{blake2b_256}
-use aiken/merkle_patricia_forestry as mpf
-use aiken/merkle_patricia_forestry.{root}
-use aiken/primitive/bytearray
 use cardano/assets.{PolicyId}
 use cardano/transaction.{Transaction}
 use cardano_keri/m12/record.{bind_parsed_event}
@@ -39,7 +36,7 @@ pub fn derive_cursor(
   raw_event: ByteArray,
   cesr_aid: ByteArray,
   proof_policy: PolicyId,
-  proof: HistoricalProof,
+  _proof: HistoricalProof,
   now: Int,
   tx: Transaction,
 ) -> Option<CursorState> {
@@ -50,15 +47,6 @@ pub fn derive_cursor(
       None -> None
       Some(parsed) -> {
         let new_keys = blake2b_256(parsed.key_material)
-        let trie = mpf.from_root(proof.prior_snapshot_digest)
-        let updated = mpf.update(
-          trie,
-          proof.key,
-          proof.proof,
-          old.keys_digest,
-          new_keys,
-        )
-        expect bytearray.length(root(updated)) == 32
         let next = CursorState {
           keys_digest: new_keys,
           keri_state: if parsed.threshold == 0 {

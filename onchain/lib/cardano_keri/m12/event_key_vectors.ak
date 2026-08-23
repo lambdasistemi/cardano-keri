@@ -113,20 +113,8 @@ test event_key_of_rejects_prior_constructor_mismatch() {
 }
 
 test rival_saids_at_one_location_coexist() {
-  let key_one =
-    event_key(
-      aid_code_D,
-      16,
-      Some(prior_said),
-      rival_said_one,
-    )
-  let key_two =
-    event_key(
-      aid_code_D,
-      16,
-      Some(prior_said),
-      rival_said_two,
-    )
+  let key_one = event_key(aid_code_D, 16, Some(prior_said), rival_said_one)
+  let key_two = event_key(aid_code_D, 16, Some(prior_said), rival_said_two)
   if key_one == key_two {
     False
   } else {
@@ -144,9 +132,8 @@ test rival_saids_at_one_location_coexist() {
         value: blake2b_256(rival_said_two),
       },
     ]
-    let both =
-      mpf.insert(empty, key_one, rival_said_one, [])
-        |> mpf.insert(key_two, rival_said_two, proof_for_two)
+    let both = mpf.insert(empty, key_one, rival_said_one, [])
+      |> mpf.insert(key_two, rival_said_two, proof_for_two)
     and {
       key_one == expected_prior_present_code_D,
       key_two == expected_rival_two,

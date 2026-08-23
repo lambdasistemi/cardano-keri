@@ -115,13 +115,8 @@ fn flip_seq_digit(raw: ByteArray) -> ByteArray {
     |> bytearray.concat(bytearray.drop(raw, honest2_off_seq + 1))
 }
 
-fn empty_proof(key: ByteArray) -> HistoricalProof {
-  HistoricalProof {
-    key,
-    location: key,
-    proof: [],
-    prior_snapshot_digest: root(empty),
-  }
+fn empty_proof() -> HistoricalProof {
+  HistoricalProof { proof: [] }
 }
 
 fn good_cursor() -> CursorState {
@@ -159,7 +154,7 @@ test accept_s0_append() {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
       proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(1),
@@ -178,7 +173,7 @@ test reject_s0_append_said() fail {
       raw_event: honest2_bytes,
       cesr_aid: honest2_wrong_aid,
       proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx_for(honest2_bytes, honest2_wrong_aid, 1),
@@ -198,7 +193,7 @@ test reject_s0_append_aid() fail {
       raw_event: raw,
       cesr_aid: honest2_aid,
       proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx_for(raw, honest2_aid, 1),
@@ -217,7 +212,7 @@ test reject_s0_append_proof() fail {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
       proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(1),
@@ -232,15 +227,14 @@ test submitter_chosen_proof_key_is_rejected() {
   }
   expect DecodeOk(ev) = decode_establishment_event(honest2_bytes)
   expect Some(derived) = event_key_of(ev)
-  expect Some(got) =
-    apply_record_append(
-      old,
-      honest2_bytes,
-      honest2_aid,
-      policy,
-      empty_proof(#"01"),
-      burn_tx(1),
-    )
+  expect Some(got) = apply_record_append(
+    old,
+    honest2_bytes,
+    honest2_aid,
+    policy,
+    empty_proof(),
+    burn_tx(1),
+  )
   got.event_root == root(mpf.insert(empty, derived, honest2_aid, []))
 }
 
@@ -249,8 +243,6 @@ test submitter_chosen_proof_key_is_rejected() {
 // ---------------------------------------------------------------------
 
 test accept_s0_cursor() {
-  let key = #"01"
-  let prior = root(mpf.insert(empty, key, ones32, []))
   let old = CursorState {
     keys_digest: ones32,
     keri_state: Established,
@@ -258,19 +250,13 @@ test accept_s0_cursor() {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let proof = HistoricalProof {
-    key,
-    location: key,
-    proof: [],
-    prior_snapshot_digest: prior,
-  }
   s0_cursor.s0_cursor.spend(
     Some(old),
     CursorRedeemer {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
       proof_policy: policy,
-      proof,
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(10),
@@ -278,6 +264,8 @@ test accept_s0_cursor() {
 }
 
 test reject_s0_cursor_proof() fail {
+  // R1 removes cursor authority from proof fields. The frozen S0 name
+  // now rejects by breaking the proof-token/event binding instead.
   let old = CursorState {
     keys_digest: ones32,
     keri_state: Established,
@@ -285,22 +273,16 @@ test reject_s0_cursor_proof() fail {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let proof = HistoricalProof {
-    key: #"01",
-    location: #"01",
-    proof: [],
-    prior_snapshot_digest: zeros32,
-  }
   s0_cursor.s0_cursor.spend(
     Some(old),
     CursorRedeemer {
       raw_event: honest2_bytes,
-      cesr_aid: honest2_aid,
+      cesr_aid: honest2_wrong_aid,
       proof_policy: policy,
-      proof,
+      proof: empty_proof(),
     },
     self_ref,
-    burn_tx(10),
+    burn_tx_for(honest2_bytes, honest2_wrong_aid, 10),
   )
 }
 

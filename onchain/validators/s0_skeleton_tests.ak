@@ -282,34 +282,32 @@ test present_prior_rivals_cross_staging_and_append() {
   expect Some(key_two) = event_key_of(ev2)
   let name = proof_token_name(rot_bytes, rot_aid)
   let minted = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
-  expect
-    s0_staging_proof_token.s0_staging_proof_token.mint(
-      StagingRedeemer {
-        raw_event: rot_bytes,
-        cesr_aid: rot_aid,
-        off_i: rot_off_i,
-        off_d: rot_off_d,
-      },
-      policy,
-      minted,
-    )
+  let staged = s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: rot_bytes,
+      cesr_aid: rot_aid,
+      off_i: rot_off_i,
+      off_d: rot_off_d,
+    },
+    policy,
+    minted,
+  )
   let old = RecordState {
     event_root: root(empty),
     occupancy_root: zeros32,
     event_count: 0,
   }
-  expect
-    s0_append.s0_append.spend(
-      policy,
-      Some(old),
-      AppendRedeemer {
-        raw_event: rot_bytes,
-        cesr_aid: rot_aid,
-        proof: empty_proof(),
-      },
-      self_ref,
-      burn_tx_for(rot_bytes, rot_aid, 1),
-    )
+  let appended = s0_append.s0_append.spend(
+    policy,
+    Some(old),
+    AppendRedeemer {
+      raw_event: rot_bytes,
+      cesr_aid: rot_aid,
+      proof: empty_proof(),
+    },
+    self_ref,
+    burn_tx_for(rot_bytes, rot_aid, 1),
+  )
   expect Some(first) = apply_record_append(
     old,
     rot_bytes,
@@ -330,6 +328,8 @@ test present_prior_rivals_cross_staging_and_append() {
     burn_tx_for(rot2, rot_rival_aid, 1),
   )
   and {
+    staged,
+    appended,
     key_one != key_two,
     bind_parsed_event(
       rot_bytes,

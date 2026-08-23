@@ -152,6 +152,8 @@ import KeriBlaster.Gamma
 LEAN
 c1_chain=(KeriBlaster.Gamma KeriBlaster.Beta KeriBlaster.Alpha)
 chain_depth=${#c1_chain[@]}
+(( chain_depth >= 3 )) \
+  || fail "C1 fixture chain depth $chain_depth is below required floor 3"
 for (( chain_index = 1; chain_index < chain_depth; chain_index++ )); do
   prerequisite="${c1_chain[$((chain_index - 1))]}"
   importer="${c1_chain[$chain_index]}"
@@ -189,7 +191,7 @@ alpha_position="$(position_of "$c1_order" KeriBlaster.Alpha)"
 assert_compiled "$work/c1-output" \
   KeriBlaster.Alpha KeriBlaster.Beta KeriBlaster.Gamma KeriBlaster
 printf '%s\n' \
-  "RED-PROOF invariant=INV-289-ORDER-DERIVED mutation=synthetic-dependent-sorts-first lexical_violations=$lexical_violations derived_violations=$derived_violations chain_depth=$chain_depth outcome=REFUTED"
+  "RED-PROOF invariant=INV-289-ORDER-DERIVED mutation=synthetic-dependent-sorts-first lexical_violations=$lexical_violations derived_violations=$derived_violations outcome=REFUTED chain_depth=$chain_depth"
 
 # A fake compiler makes "before any elaboration" directly observable for C2
 # and C3. Any attempted invocation leaves a marker and fails the control.

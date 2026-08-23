@@ -18,7 +18,12 @@ paths=(
   onchain/lib/cardano_keri/m12/record.ak
   onchain/lib/cardano_keri/m12/cursor.ak
   onchain/lib/cardano_keri/m12/types.ak
+  onchain/lib/cardano_keri/m12/staging.ak
+  onchain/validators/s0_append.ak
+  onchain/validators/s0_staging_proof_token.ak
   onchain/validators/s0_skeleton_tests.ak
+  onchain/validators/checkpoint_observer.ak
+  specs/m11-s0-size-failfast/SIZE-REPORT.md
   scripts/r1/mandate-bundle-v2.sh
   specs/m11-r1-event-key/spec.md
   specs/m11-r1-event-key/plan.md

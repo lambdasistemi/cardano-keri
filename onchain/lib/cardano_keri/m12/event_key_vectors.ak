@@ -12,8 +12,6 @@ use cardano_keri/m12/event_decoder.{
 }
 use cardano_keri/m12/event_key.{event_key, event_key_of}
 
-pub const supported_derivation_codes: List<ByteArray> = ["D", "E"]
-
 const aid_code_E: ByteArray = "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 const aid_code_D: ByteArray = "DAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"

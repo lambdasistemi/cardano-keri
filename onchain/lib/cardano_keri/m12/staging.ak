@@ -2,10 +2,13 @@
 ////
 //// Owns the bounded (<= 1024 B) KERI Blake3 SAID proof and the pair-bound
 //// mint. Burning is always permitted so Tx-B can consume the token.
+////
+//// Recomputed `d` is bound to `cesr_aid`. Qualified `i` is an independent
+//// canonical span and need not equal `d` (ordinary rot/drt).
 
 use aiken/collection/dict
 use aiken/primitive/bytearray
-use cardano/assets.{AssetName, PolicyId, tokens}
+use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/blake3
 use cardano_keri/checkpoint/message.{qb64_aid}
@@ -35,9 +38,41 @@ pub fn validate_staging_token(
       off_d + 44 <= off_i,
       off_i + 44 <= len,
       slice_matches(raw_event, off_d, qb64_aid(cesr_aid)),
-      slice_matches(raw_event, off_i, qb64_aid(cesr_aid)),
+      canonical_qualified_aid_slice(raw_event, off_i),
       blake3.verify(splice_dummies(raw_event, off_i, off_d), cesr_aid),
       entries == [Pair(proof_token_name(raw_event, cesr_aid), 1)],
+    }
+  }
+}
+
+fn canonical_qualified_aid_slice(raw: ByteArray, off: Int) -> Bool {
+  off >= 0 && off + 44 <= bytearray.length(raw) && is_canonical_aid(
+    bytearray.take(bytearray.drop(raw, off), 44),
+  )
+}
+
+fn is_canonical_aid(value: ByteArray) -> Bool {
+  if bytearray.length(value) != 44 {
+    False
+  } else {
+    let code = bytearray.at(value, 0)
+    let second = bytearray.at(value, 1)
+    (code == 69 || code == 68) && second >= 65 && second <= 80 && base64url_tail(
+      value,
+      1,
+    )
+  }
+}
+
+fn base64url_tail(value: ByteArray, offset: Int) -> Bool {
+  if offset == bytearray.length(value) {
+    True
+  } else {
+    let c = bytearray.at(value, offset)
+    if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c >= 48 && c <= 57 || c == 45 || c == 95 {
+      base64url_tail(value, offset + 1)
+    } else {
+      False
     }
   }
 }

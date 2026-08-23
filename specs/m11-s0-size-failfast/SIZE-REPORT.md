@@ -12,8 +12,8 @@ Trace level: `silent`
 
 ## Source and blueprint identity
 
-Measured source commit: `97e7f749b31f18348865793f70b63bc7bd103829`
-- owned-source sha256: `32331f2324705b00e566165707d74e2aaa68b81c15568df23e0613129206c145`
+Measured source commit: `36ece431f452eb45f2ede61876e76f290d12b48a`
+- owned-source sha256: `c84385c1a76b61d251329c7314333baa16055e18cb2a7beef6d8b54717c10f42`
 - blueprint sha256: `b95f5b11e4c2fcd4b4897e6d3cc83cafc3afd13c03b1339dd25c9390353ccf81`
 - reproduction command:
 

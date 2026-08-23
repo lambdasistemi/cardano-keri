@@ -25,4 +25,4 @@ a2c17b3d19e1e376765fc2df4eff056a3eed0389f7366344566d50dc0370f0c9	100644	specs/m1
 83c2c0f1864d13a7122e83be70c23a06770ac130378161a652f6927204955d6f	100644	specs/m11-r1-event-key/functions-model.md
 16716d4846af0c9b6165f96e31b4fbff7b0c565abf9a4a743d6ac63454879840	100644	specs/m11-r1-event-key/tasks.md
 b7ecc2662c88a98f263bee4357291a353989c93c114317d8b4d748490dc854b1	100644	specs/m11-r1-event-key/event-key-vectors-v2.tsv
-1999b3bb17bc03e72f329ce662d6f7d805584e2497e675cc6c09ca2ea2baafb9	100644	specs/m11-r1-event-key/flake-input-declaration-v2.tsv
+d55d8dbd2c7122f7f2f0215a40c268be0f52b93b9fe0fc0cdda10682c70dd365	100644	specs/m11-r1-event-key/flake-input-declaration-v2.tsv

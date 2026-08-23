@@ -13,7 +13,10 @@ use cardano/assets.{from_asset, from_lovelace, merge}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use cardano_keri/m12/event_decoder.{DecodeOk, decode_establishment_event}
+use cardano_keri/m12/event_key.{event_key_of}
 use cardano_keri/m12/proof_token.{proof_token_name}
+use cardano_keri/m12/record.{apply_record_append}
 use cardano_keri/m12/types.{
   CursorPolicy, CursorState, EscrowState, Established, FullyWitnessed, Genesis,
   HistoricalProof, RecordState, Service, Unwitnessed,
@@ -219,6 +222,26 @@ test reject_s0_append_proof() fail {
     self_ref,
     burn_tx(1),
   )
+}
+
+test submitter_chosen_proof_key_is_rejected() {
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  expect DecodeOk(ev) = decode_establishment_event(honest2_bytes)
+  expect Some(derived) = event_key_of(ev)
+  expect Some(got) =
+    apply_record_append(
+      old,
+      honest2_bytes,
+      honest2_aid,
+      policy,
+      empty_proof(#"01"),
+      burn_tx(1),
+    )
+  got.event_root == root(mpf.insert(empty, derived, honest2_aid, []))
 }
 
 // ---------------------------------------------------------------------

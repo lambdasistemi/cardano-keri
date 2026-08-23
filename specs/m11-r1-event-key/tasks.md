@@ -23,3 +23,14 @@ auditor passes the exact candidate.
   non-onchain flake-input declaration required by the frozen gate.
 - [ ] **T010** Produce a clean local candidate, compact invariant receipt, and
   frozen handoff; run only separately authorized build and CI legs.
+- [ ] **T011** Close F1 with a deployment-fixed append proof policy following
+  the existing `checkpoint_observer` precedent and a permanent caller-policy
+  negative property.
+- [ ] **T012** Close F2 with distinct staging `i`/`d` handling and a
+  present-prior rival proof crossing raw decode, staging, provenance, binding,
+  and append; its name scan is not acceptance evidence, so completion requires
+  the authorized v4 full mutation and Aiken-check legs on the exact candidate.
+- [ ] **T013** Close F3 with manifest-derived accepted-code coverage and prove
+  the future-code-plus-dead-string negative control goes RED.
+- [ ] **T014** Re-measure the parameterized append member, supersede its stale
+  S0 size row with exact source identity, and retain the size-only caveat.

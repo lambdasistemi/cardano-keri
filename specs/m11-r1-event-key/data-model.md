@@ -10,6 +10,9 @@
 | R1-D06 | Golden vector row | label, qualified inputs, integer sequence, prior variant, expected 32-byte key, accepted classification | expected bytes are independent data; accepted rows cover all supported codes and both prior variants |
 | R1-D07 | Measured-source manifest | path, blob identity, mode, measurement required by the frozen gate | exactly equals the gate-owned source set and committed recipe output |
 | R1-D08 | Flake-input declaration | every changed non-onchain path with its classification | complete over the candidate diff; no unclassified input |
+| R1-D09 | Trusted staging policy | one `PolicyId` applied to `s0_append` at deployment | absent from `AppendRedeemer`; the caller cannot choose proof provenance |
+| R1-D10 | Staging identity spans | qualified `i` span and qualified recomputed `d` span in one raw event | spans are independently meaningful; ordinary rotations need not have `i == d` |
+| R1-D11 | Affected size row | append title, bytes, source identity, thresholds, and caveat | measured after parameterization; supersedes only the stale append row |
 
 ## Record relationship
 

@@ -27,10 +27,17 @@ auditor passes the exact candidate.
   the existing `checkpoint_observer` precedent and a permanent caller-policy
   negative property.
 - [ ] **T012** Close F2 with distinct staging `i`/`d` handling and a
-  present-prior rival proof crossing raw decode, staging, provenance, binding,
-  and append; its name scan is not acceptance evidence, so completion requires
-  the authorized v4 full mutation and Aiken-check legs on the exact candidate.
+  present-prior rival proof where both events independently cross raw decode,
+  staging, provenance, binding, and validator append, both MPF entries are
+  independently retrieved, and the dressed sources are genuinely rival; a
+  lower-helper shortcut or `d`-only source change is not acceptance evidence.
 - [ ] **T013** Close F3 with manifest-derived accepted-code coverage and prove
   the future-code-plus-dead-string negative control goes RED.
 - [ ] **T014** Re-measure the parameterized append member, supersede its stale
   S0 size row with exact source identity, and retain the size-only caveat.
+- [ ] **T015** Preserve the carried KILLED evidence for R1-I02--I06/I10 and
+  terminally audit every remaining row over the full `84e3b715..candidate`
+  delta; prior green receipts are context only.
+- [ ] **T016** Preflight every gate, wrapper, and audit instrument with visible
+  normal cleanup, body-failure cleanup, and seeded teardown failure before its
+  semantic verdict is trusted.

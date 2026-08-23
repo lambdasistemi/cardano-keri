@@ -8,6 +8,17 @@ After submission-1 audit findings F1--F3 were accepted by A-007, R1 expands
 to the existing trusted-policy and staging boundary. The post-change gate is
 `r1-event-key-v4`; v2/v3 remain immutable evidence for the rejected world.
 
+## Re-cut campaign binding
+
+The R1 re-cut mandate, SHA-256
+`d8eab8949b0ef3a5d0a32f78f4566f6109b7157d7e9866f93d94d7c34fe5fc20`,
+continues forward from published candidate
+`8aa1de397d044ec40b62ecf16adf51eaa0795288`. Semantic acceptance covers the
+complete `84e3b715..candidate` delta; no prior unjudged GREEN is acceptance
+credit. R1-I02--I06 and R1-I10 retain their KILLED evidence. All other rows
+remain unresolved, and F1--F3 remain open until this campaign receives a
+terminal semantic audit.
+
 ## Outcome
 
 An authenticated event occupies the MPF slot derived only from its verified
@@ -55,6 +66,13 @@ integer decoded from canonical lowercase hexadecimal event text.
 - **R1-R12** Re-measure the compiled `s0_append.s0_append.spend` member after
   parameterization and update S0's size report with the new measured source
   identity and the continuing `size-only; transaction-fit unproven` caveat.
+- **R1-R13** The rival-event proof independently stages and invokes the
+  validator for each event, never substitutes a lower append helper, retrieves
+  both resulting MPF entries independently, and changes enough of the dressed
+  source that the second preimage is genuinely rival rather than `d`-only.
+- **R1-R14** Every campaign instrument used as evidence demonstrates before
+  semantic use that both its normal cleanup and a seeded cleanup/exit failure
+  are observable. A teardown failure invalidates the instrument verdict.
 
 ## Invariants
 
@@ -73,17 +91,19 @@ integer decoded from canonical lowercase hexadecimal event text.
 | R1-I11 | ADVISORY | candidate source and build surfaces are reproducibly bound and measured | recipe, source manifest, flake declaration, receipt, or CI mirror drifts |
 | R1-I12 | BLOCKING | no out-of-authority semantic decision enters product code | implementation invents policy outside A-019 §2 |
 | R1-I13 | BLOCKING | `s0_append` consumes one deployment-fixed trusted staging policy | a redeemer/caller selects the policy whose burn authenticates the event |
-| R1-I14 | BLOCKING | ordinary present-prior rivals cross staging and the complete record-append path with distinct qualified `i` and recomputed `d` | a constants-only MPF proof bypasses production or staging requires `i == d` |
+| R1-I14 | BLOCKING | each of two ordinary present-prior rivals independently crosses staging and the validator append boundary, both entries are independently retrieved, and their dressed preimages are genuinely rival | event two bypasses staging or validator append, uses a lower append helper, lacks its own retrieval, or changes only `d` in an otherwise shared dressed source |
 | R1-I15 | BLOCKING | supported-code coverage is in bijection with accepted rows in the committed vector manifest | arbitrary source text or a dead list can satisfy coverage |
 | R1-I16 | BLOCKING | the affected S0 append size row is freshly measured from the accepted parameterized source and discloses its caveat | the pre-parameterization 8,471-byte row is retained or presented as current |
 
 ## Observable acceptance
 
-The exact frozen v4 gate must accept the committed candidate, and a fresh
-Codex-family auditor must report every blocking invariant satisfied. The gate
-must remain independently falsifiable by its sealed controls. Full realization
-and CI are acceptance requirements but may run only after their separate
-capacity and runner authorizations.
+The inherited frozen v6 gate and the re-cut wrapper must accept the committed
+candidate, and a fresh Codex auditor must semantically report the full
+`84e3b715..candidate` delta with every blocking invariant terminally satisfied.
+The gate and every auxiliary instrument must remain independently falsifiable,
+including cleanup/exit behavior. Full realization and CI are acceptance
+requirements but may run only after their separate capacity and runner
+authorizations.
 
 A-008 binds one known limit: v4's free F2 boundary-name scan is a placeholder,
 not proof that the path executes. R1-I14 remains unverified, and R1 cannot be

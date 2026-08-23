@@ -57,7 +57,7 @@ fn is_canonical_aid(value: ByteArray) -> Bool {
   } else {
     let code = bytearray.at(value, 0)
     let second = bytearray.at(value, 1)
-    (code == 69 || code == 68) && second >= 65 && second <= 80 && base64url_tail(
+    ( code == 69 || code == 68 ) && second >= 65 && second <= 80 && base64url_tail(
       value,
       1,
     )

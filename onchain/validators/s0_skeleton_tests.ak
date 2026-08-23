@@ -274,17 +274,15 @@ test staging_accepts_distinct_i_and_d() {
 
 test present_prior_rivals_cross_staging_and_append() {
   expect DecodeOk(ev1) = decode_establishment_event(rot_bytes)
-  let rot2 =
-    bytearray.take(rot_bytes, rot_off_d)
-      |> bytearray.concat(rot_rival_said)
-      |> bytearray.concat(bytearray.drop(rot_bytes, rot_off_d + 44))
+  let rot2 = bytearray.take(rot_bytes, rot_off_d)
+    |> bytearray.concat(rot_rival_said)
+    |> bytearray.concat(bytearray.drop(rot_bytes, rot_off_d + 44))
   expect DecodeOk(ev2) = decode_establishment_event(rot2)
   expect Some(key_one) = event_key_of(ev1)
   expect Some(key_two) = event_key_of(ev2)
   let name = proof_token_name(rot_bytes, rot_aid)
-  let minted =
-    Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
-  expect True =
+  let minted = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
+  expect
     s0_staging_proof_token.s0_staging_proof_token.mint(
       StagingRedeemer {
         raw_event: rot_bytes,
@@ -300,7 +298,7 @@ test present_prior_rivals_cross_staging_and_append() {
     occupancy_root: zeros32,
     event_count: 0,
   }
-  expect True =
+  expect
     s0_append.s0_append.spend(
       policy,
       Some(old),
@@ -312,34 +310,33 @@ test present_prior_rivals_cross_staging_and_append() {
       self_ref,
       burn_tx_for(rot_bytes, rot_aid, 1),
     )
-  expect Some(first) =
-    apply_record_append(
-      old,
+  expect Some(first) = apply_record_append(
+    old,
+    rot_bytes,
+    rot_aid,
+    policy,
+    empty_proof(),
+    burn_tx_for(rot_bytes, rot_aid, 1),
+  )
+  let proof_for_two = [
+    Leaf { skip: 0, key: blake2b_256(key_one), value: blake2b_256(rot_aid) },
+  ]
+  expect Some(both) = apply_record_append(
+    first,
+    rot2,
+    rot_rival_aid,
+    policy,
+    HistoricalProof { proof: proof_for_two },
+    burn_tx_for(rot2, rot_rival_aid, 1),
+  )
+  and {
+    key_one != key_two,
+    bind_parsed_event(
       rot_bytes,
       rot_aid,
       policy,
-      empty_proof(),
       burn_tx_for(rot_bytes, rot_aid, 1),
-    )
-  let proof_for_two = [
-    Leaf {
-      skip: 0,
-      key: blake2b_256(key_one),
-      value: blake2b_256(rot_aid),
-    },
-  ]
-  expect Some(both) =
-    apply_record_append(
-      first,
-      rot2,
-      rot_rival_aid,
-      policy,
-      HistoricalProof { proof: proof_for_two },
-      burn_tx_for(rot2, rot_rival_aid, 1),
-    )
-  and {
-    key_one != key_two,
-    bind_parsed_event(rot_bytes, rot_aid, policy, burn_tx_for(rot_bytes, rot_aid, 1)) != None,
+    ) != None,
     both.event_count == 2,
   }
 }

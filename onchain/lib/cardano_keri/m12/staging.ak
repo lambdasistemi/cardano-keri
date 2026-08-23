@@ -15,10 +15,6 @@ use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/blake3
 use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/m12/event_decoder.{
-  DecodeOk, EventVariant, VariantDip, VariantDrt, VariantIcp, VariantRot,
-  decode_establishment_event,
-}
 use cardano_keri/m12/proof_token.{
   all_burns, dummy_span, proof_token_name, slice_matches, splice_dummies,
 }
@@ -36,50 +32,58 @@ pub fn validate_staging_token(
   if all_burns(entries) {
     True
   } else {
-    when decode_establishment_event(raw_event) is {
-      DecodeOk(ev) -> and {
-          bytearray.length(raw_event) >= 1,
-          bytearray.length(raw_event) <= 1024,
-          bytearray.length(cesr_aid) == 32,
-          0 <= off_d,
-          off_d + 44 <= off_i,
-          off_i + 44 <= bytearray.length(raw_event),
-          slice_matches(raw_event, off_d, qb64_aid(cesr_aid)),
-          canonical_qualified_aid_slice(raw_event, off_i),
-          slice_matches(raw_event, off_i, ev.aid),
-          self_addressing_i_holds(ev.variant, raw_event, off_i, cesr_aid),
-          blake3.verify(
-            dress_said_preimage(raw_event, ev.variant, off_i, off_d),
-            cesr_aid,
-          ),
-          entries == [Pair(proof_token_name(raw_event, cesr_aid), 1)],
-        }
-      _ -> False
+    let len = bytearray.length(raw_event)
+    let ilk = establishment_ilk(raw_event)
+    and {
+      len >= 1,
+      len <= 1024,
+      bytearray.length(cesr_aid) == 32,
+      0 <= off_d,
+      off_d + 44 <= off_i,
+      off_i + 44 <= len,
+      slice_matches(raw_event, off_d, qb64_aid(cesr_aid)),
+      canonical_qualified_aid_slice(raw_event, off_i),
+      self_addressing_i_holds(ilk, raw_event, off_i, cesr_aid),
+      blake3.verify(dress_said_preimage(raw_event, ilk, off_i, off_d), cesr_aid),
+      entries == [Pair(proof_token_name(raw_event, cesr_aid), 1)],
     }
   }
 }
 
+/// CESR JSON `t` value after the fixed 17-char `v` field.
+fn establishment_ilk(raw: ByteArray) -> ByteArray {
+  if bytearray.length(raw) < 33 {
+    #""
+  } else {
+    bytearray.take(bytearray.drop(raw, 30), 3)
+  }
+}
+
 fn self_addressing_i_holds(
-  variant: EventVariant,
+  ilk: ByteArray,
   raw: ByteArray,
   off_i: Int,
   cesr_aid: ByteArray,
 ) -> Bool {
-  when variant is {
-    VariantIcp | VariantDip -> slice_matches(raw, off_i, qb64_aid(cesr_aid))
-    VariantRot | VariantDrt -> True
+  if ilk == "icp" || ilk == "dip" {
+    slice_matches(raw, off_i, qb64_aid(cesr_aid))
+  } else {
+    True
   }
 }
 
 fn dress_said_preimage(
   raw: ByteArray,
-  variant: EventVariant,
+  ilk: ByteArray,
   off_i: Int,
   off_d: Int,
 ) -> ByteArray {
-  when variant is {
-    VariantIcp | VariantDip -> splice_dummies(raw, off_i, off_d)
-    VariantRot | VariantDrt -> splice_dummy_d(raw, off_d)
+  if ilk == "icp" || ilk == "dip" {
+    splice_dummies(raw, off_i, off_d)
+  } else if ilk == "rot" || ilk == "drt" {
+    splice_dummy_d(raw, off_d)
+  } else {
+    #""
   }
 }
 

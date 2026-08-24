@@ -50,7 +50,7 @@ permanent checks and supplies the gate-owned reproducibility artifacts.
   a present-prior path witness and permanent finding-class properties.
 - Reproducibility: `scripts/r1/mandate-bundle-v2.sh` and additional files below
   `specs/m11-r1-event-key/` that the gate requires, plus the affected append
-  row in `specs/m11-s0-size-failfast/SIZE-REPORT.md`.
+  row in `specs/m11-s0-size-failfast/SIZE-CONTRACTS.md`.
 - Planning: the six files in this directory are ticket-owner-owned and
   read-only to implementation workers.
 - Forbidden: dependency/flake/CI edits, decoder edits, R2–R4 semantics, gate

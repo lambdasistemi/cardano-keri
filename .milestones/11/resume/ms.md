@@ -29,7 +29,7 @@ questions, answers, briefs and evidence go under
 
 ## Your exact next action
 
-**The gate contradiction is RULED and the lane is executing.** `Q-MS12-004` was decided by the
+**PARKED — OMNIA PAUSA 2026-08-24T14:20Z, human operator.** Start nothing. Only a later written RELEASE naming that order resumes anything; silence is not authority. `Q-MS12-004` was decided by the
 operator directly on 2026-08-24T12:43Z, because the project owner's seat was frozen on an
 interactive dialog and could not answer. A level was skipped; it is recorded as an exception.
 Do not restart anything — the lane is mid-slice.

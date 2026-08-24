@@ -1588,3 +1588,19 @@ granted work is impossible rather than merely harder. The alternative the lane n
 refused: weakening the check to ignore the new file would convert an explicitly measured
 committed-tree input into an unregistered exception. Declaring a file you deliberately added is
 the check working; excusing it is the check dying.
+
+### Parked under OMNIA PAUSA (2026-08-24T14:20Z)
+
+In flight at the stop: v8 **draft, unfrozen**, items 1–2 repaired, composition question open
+upward; build six **granted and unspent**; remote surface frozen per `A-MS12-006`; `main`
+untouched at `84e3b715…`. Gates v4/v5/v6/v7 all retained byte-identical as defect witnesses.
+
+Two findings carried into the pause. **The push breach**: this desk authorized a withheld push
+minutes before the ruling withholding it arrived; `main` was never touched, no merge occurred,
+and the cause became a standing contract — *a fence check is bound to a surface, not to a
+moment*. **The composition contradiction**: v7 composes two oracles demanding the presence and
+the absence of the same marker in the same file, so no tree can satisfy it; found by desk-side
+derivation after the lane's self-test stopped short of the inherited oracles, and before the one
+authorized build was spent.
+
+Releases only on a later written `RELEASE` naming the pause order.

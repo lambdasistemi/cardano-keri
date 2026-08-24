@@ -29,7 +29,10 @@ questions, answers, briefs and evidence go under
 
 ## Your exact next action
 
-**You are parked on `Q-MS12-004` and so is the lane. Do not restart anything.**
+**The gate contradiction is RULED and the lane is executing.** `Q-MS12-004` was decided by the
+operator directly on 2026-08-24T12:43Z, because the project owner's seat was frozen on an
+interactive dialog and could not answer. A level was skipped; it is recorded as an exception.
+Do not restart anything — the lane is mid-slice.
 
 When the project owner rules:
 

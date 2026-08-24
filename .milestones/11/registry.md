@@ -326,3 +326,45 @@ parties:    offchain flake, repo-root artifact owners
 invariant:  repo-root artifacts arrive as declared flake inputs, never
             ../ path literals
 enforced:   NONE — advisory A3; hazard with stated limit
+
+contract:   S0 size-report provenance scope ↔ what can actually move a size
+parties:    scripts/s0/measure-family.sh (enforces), every S0 family commit
+            (constrained), specs/m11-s0-size-failfast/SIZE-REPORT.md (the record)
+invariant:  the report's owned-source hash should cover exactly the inputs that
+            can change the sizes the report blesses — no more
+enforced:   OVER-BROAD, opened 2026-08-24. The hash covers
+            onchain/validators/s0_skeleton_tests.ak, a test module proven unable
+            to move the sizes: build 4's drift was that file alone and the
+            compiled blueprint was byte-identical. Consequence: EVERY future
+            test-only commit to this family stales the report and costs one real
+            build to re-bless numbers that did not move, because measure and
+            verify both run aiken build unconditionally.
+            NOT fixed inside the R1 repair, deliberately — narrowing the hash
+            while a candidate is failing it re-authors the acceptance criterion
+            around that candidate. Separate ticket AFTER R1 lands.
+            HONEST LIMIT, carried verbatim into that ticket: a byte-identical
+            blueprint proves this file did not affect compiled output FOR THIS
+            DIFF. It is not a theorem that a validators/ file never can, and the
+            follow-up owes that distinction a real check rather than inheriting
+            this inference.
+
+contract:   SIZE-REPORT.md ownership ↔ the frozen gate's append-remeasurement check
+parties:    scripts/s0/measure-family.sh (generates and OVERWRITES the file),
+            hand-authored accepted contracts (live in the same file),
+            r1-event-key-v4.sh check_size_report (consumes the hand-authored half)
+invariant:  no acceptance check may require content inside a file that a generator
+            in the same pipeline overwrites without emitting it
+enforced:   VIOLATED, found 2026-08-24. check_size_report builds
+            "R1-APPEND-REMEASURE ... source_blob=<current append blob>" and requires
+            it inside SIZE-REPORT.md; the generator emits that string ZERO times.
+            Counts verified at the desk: base 1, regenerated 0, generator 0.
+            Consequence: the frozen gate is UNSATISFIABLE for any candidate --
+            regenerate and check_size_report dies, do not regenerate and the
+            measure leg dies on the stale owned-source hash, move the marker to a
+            sibling and it dies identically because the check greps only that path.
+            Invisible until now because build 4 died at the earlier leg before this
+            check ran. Remedy filed as Q-MS12-004: version the gate so the check
+            reads the new owning file, prove it can fail in both directions, and
+            RETAIN frozen v4 as a defect witness rather than deleting it.
+            Related: the desk withdrew its own "a perfect candidate can pass the
+            frozen gate" assertion on this evidence.

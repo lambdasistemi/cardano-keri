@@ -13,8 +13,9 @@ the vacuous pass and is not accepted.
 is in force for every external word.
 
 Desk: session `keri-m12`, singleton window `cardano-keri-ms11-decomposed-record-cursor`,
-pane `%6656` (successor, Claude Fable session resident in the operator conversation), runtime root `/tmp/ms-keri-11`, home repo `/code/cardano-keri`.
-Parent: cardano-keri project owner, pane `%6429`, runtime `/tmp/projects/cardano-keri`.
+pane `%21` (restored 2026-08-24; every pre-restore pane ID in older records is void — the tmux server was replaced), runtime root `/tmp/machine/session-restore-20260824/keri-m12/ms11-desk`, home repo `/code/cardano-keri`.
+Parent: cardano-keri project owner, pane `%32`, runtime `/tmp/machine/session-restore-20260824/0-projects/cardano-keri`.
+`/tmp/ms-keri-11` is PRESERVED READ-ONLY recovery evidence: read it freely, write no new bytes into it.
 
 ---
 
@@ -1446,3 +1447,116 @@ the verified mode rule, and the gate stack carry as tools. Budget two builds,
 explicitly not a reset. PR #305 retained as draft evidence, unmodified; the CI
 runner request withdrawn before the machine spent anything on an unshippable
 candidate.
+
+---
+
+## Restore, release, and the first RED the gate got right (2026-08-24)
+
+**Host restore.** The session was rebuilt on 2026-08-24 after the machine-wide pause.
+Every pane identity in the pause receipt and in the lane resume files is **void** — the
+tmux server was replaced. Desk `%21`; R1 ticket owner `%22` (Codex, gpt-5.6-sol high);
+commit owner `%23` (Grok 4.6, terminal); auditor `%24` (Codex, terminal). All four
+journalled `START` then `PARKED` from their own live runtime roots under
+`/tmp/machine/session-restore-20260824/keri-m12/`. File artifacts were unaffected and
+stayed the control record throughout.
+
+**Release.** `RELEASE-2026-08-24-keri-m12`
+(`23fae1ba1f8d8044708d95a8fb87d29ed359a4e8cbc5dc5fe41e549a020e0cdc`) reached the desk
+through the project owner at 09:17Z. It covers this session only; `keri-ms8-blaster`
+stays parked. The first product action was a ruling, before any build.
+
+### `Q-R1-RECUT-006` ruled — `CANDIDATE-INCOMPLETE`, gate correct
+
+Answer `fcace81e73e377a97f57f15001a60d6dc92334c7b1cf424ca8becb3dd3d12a61`.
+
+Build 4 stopped RED at leg `append-remeasure` (exit 41). It is **neither** an instrument
+failure **nor** a size regression:
+
+- all seven members measured `PASS`; worst case `append` at 58.87% of the reference
+  ceiling with 6,635 bytes of headroom;
+- the leg's receipt published intact — `bytes=1305 lines=8
+  evidence_sha256=f6608266…`, matching the file on disk — which is the exact
+  discriminator against build 3, whose signature was a bare `mv: cannot stat` with no
+  evidence file at all. `A-R1-RECUT-004` does **not** extend to this failure;
+- the failing check is `scripts/s0/measure-family.sh:562` in `verify` mode against
+  committed `specs/m11-s0-size-failfast/SIZE-REPORT.md`: does the report record the
+  source tree it describes? It answered no.
+
+### What the zero-build diagnosis found, and what the desk re-derived
+
+`R1-DIAG-A` was scoped with a falsification leg first — recompute the hash and **refute
+the classification** if it matches. It did not match. Every number was then re-derived at
+the desk rather than relayed:
+
+| claim | desk-verified |
+|---|---|
+| candidate owned-source hash | `fd34bf5cc4af2748953c4651e4c8b7435eb430d635d979777cc75bfca2c0ac53` |
+| report-recorded owned-source hash | `2ec8f66884482b1cac988587242588fcd8e9e16266952c8a2ee98ffb8241583c` at `ecddbdff` |
+| drift inside the hashed set | exactly `onchain/validators/s0_skeleton_tests.ak`, `+61/−21` |
+| compiled blueprint | `83aa0525c30e…` — **byte-identical** to the report's record |
+
+The report was **not** hand-edited: all three identity lines moved together as one tool
+regeneration at `8aa1de3`, and the two later commits — `98ebe21` (the RED bundle) and
+`4bc8dad` (its GREEN proof) — staled it. **A test-only commit invalidated a size report
+whose sizes did not move.** Nobody was careless and nothing was faked.
+
+### The build
+
+Ceiling raised **4 → 5, charged, not a reset**, by the project owner
+(`5bdaac264fd8b69d4c6426d01d616cd920269c095c85eda5c3e169e4f8457761`) on the desk's ask —
+the desk did not self-grant it. Exactly one tool-owned `measure-family.sh measure` from
+`4bc8dad9`; spent at execution; a failed or aborted invocation still spends it. Seven
+fences bind: no retry; legs 5–7 **not** covered; `/nix/store` re-measured in exact bytes
+immediately before the realizing command; the token interlock followed exactly or the lane
+**stops and asks** rather than improvising or assuming free disk is permission;
+report-only delta; fresh family-distinct audit; **do not touch the gate**.
+
+The governing test, kept for reuse: *could a perfect candidate pass the current frozen
+gate?* Yes — once the report records the source tree it describes, line 562 passes on its
+own terms. So there is no case for a re-cut, a v5, or a narrowed hash. **The gate is the
+one thing in this campaign that worked**, and it is the first RED in this lane where the
+instrument was right and the candidate was incomplete.
+
+### Standing invariant
+
+`SIZE-REPORT.md` is **regenerated by the tool or not at all**. A hand-written hash line is
+rejected on sight: the hash exists to be derived independently from the tree, and typing it
+in converts the only provenance check the report has into a check that cannot fail. This
+lane already shipped that artifact once — the F2 suite that passed while the second event
+never crossed the validator.
+
+### The fifth build, and the contradiction it bought (2026-08-24T10:02–10:16Z)
+
+The build ran once, exited 0, tokens in and out in order, store `574706749440` →
+`571764736000`. Ledger **5/5**. The provenance repair **worked**: the regenerated report
+carries `fd34bf5c…` and `4bc8dad9`, and its blueprint and toolchain hashes came back
+byte-identical to the base report — the rebuild was deterministic.
+
+The same run exposed two defects the campaign could not have found without spending it.
+
+**1. The generator destroys accepted content.** `write_report` emits a fixed template, so
+regenerating truncates `SIZE-REPORT.md` from 174 lines to 80, deleting 94 hand-authored lines
+it can never re-emit. Desk-verified counts for every named section: base ≥1, regenerated 0,
+**generator 0**. Commit `26bea88` had deliberately relanded that material on 2026-08-22 after
+`1fc77ad` reverted it, and it holds the only control disclosing that the measured `append` and
+`cursor` rows depend on unmerged `#291`. The fresh commit owner withheld its commit. Correct.
+
+**2. The frozen gate is unsatisfiable.** `r1-event-key-v4.sh:205-213` `check_size_report`
+builds `R1-APPEND-REMEASURE … source_blob=<current append blob>` and requires it *inside*
+`SIZE-REPORT.md`; the generator emits it zero times. Chain live: `r1-recut-v4.sh:154` → `v6:9`
+→ `v5:9` → `v4`. Regenerate and the check dies; don't and the measure leg dies on the stale
+hash; move the marker to a sibling and it dies identically, because the check greps only that
+path. **No candidate can pass.** The desk had asserted the opposite in `A-001` fence 7 and has
+**withdrawn** that assertion.
+
+**A reporting defect, disclosed rather than buried.** The lane's question carried two
+confabulated hashes, each sharing the true value's first eight hex characters. The probable
+proximate cause was the desk's own ellipsis-truncated hashes, which left a child needing
+sixty-four characters with a truncated source. Corrected from the tool-written evidence;
+nothing had been decided on them. Standing rule now: never abbreviate a hash a child may need
+to reproduce, and cite hashes by reading the artifact, never from prose.
+
+**Open:** `Q-MS12-004` (supersedes `Q-MS12-003`) — a zero-build re-cut that preserves the
+generated bytes, moves the accepted content to an authorized sibling, regenerates the manifest
+from its canonical recipe, corrects one planning reference, and versions the gate while
+retaining frozen v4 as a defect witness.

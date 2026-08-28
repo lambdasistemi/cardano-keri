@@ -1061,8 +1061,8 @@
             aikenMerklePatriciaForestry = aikenPkgSource {
               owner = "aiken-lang";
               repo = "merkle-patricia-forestry";
-              rev = "v2.0.0";
-              hash = "sha256-uHVQxA1dYDuPbH+pf6SkGNBF7nBlDXdULrPFkfUDjzU=";
+              rev = "v2.1.0";
+              hash = "sha256-c+ZM1bvR0Zpuz5hCB+F6VWfDThagBHxgoNWHvEUQT/4=";
             };
             # Mirrors the `[[packages]]` records `aiken build` itself writes
             # into `build/packages/packages.toml` on a real fetch — aiken
@@ -1084,7 +1084,7 @@
 
               [[packages]]
               name = "aiken-lang/merkle-patricia-forestry"
-              version = "v2.0.0"
+              version = "v2.1.0"
               requirements = []
               source = "github"
             '';

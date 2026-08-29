@@ -181,7 +181,7 @@ On top of L1–L4:
       witness set meeting its current weighted keys/threshold, with exactly one
       current checkpoint at the **ACTIVE** role address — plus OOR
       non-revocation (L2 TEL) linking it to the fixed LE. ARMED, FROZEN,
-      TOMBSTONE, missing, duplicated, and stale candidates reject. The honest
+      missing, duplicated, and stale candidates reject. The honest
       default for institutional risk:
       each transition is a fresh attestation; a `delta = 0` rotation of the
       acting AID stales any authorization bound to a prior sequence (⇒ re-sign),

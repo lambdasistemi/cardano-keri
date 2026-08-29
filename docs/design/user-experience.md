@@ -26,8 +26,7 @@ The UI should distinguish:
 | One ACTIVE checkpoint | Current Cardano key state is available |
 | ARMED | A witnessed challenge is open; do not authorize an action |
 | FROZEN | The response window expired; do not authorize an action |
-| TOMBSTONE | This checkpoint was convicted; never authorize it |
-| No candidate | No usable checkpoint is visible |
+| No candidate | No usable checkpoint is visible — including after a conviction burned the token, and before any later re-registration |
 | Multiple ACTIVE candidates | Ambiguous registration; fail closed |
 | Stale outref | The checkpoint changed; refresh and rebuild |
 

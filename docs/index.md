@@ -40,7 +40,7 @@ token instead of permanently binding themselves to one key.
 - [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,
   and Veridian.
 - [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) —
-  ACTIVE, ARMED, FROZEN, TOMBSTONE, the delay bond, and the divergence bond.
+  ACTIVE, ARMED, FROZEN, conviction, the delay bond, and the divergence bond.
 - [Observer architecture](architecture/observer-architecture.md) — thin
   checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3
   premint fact token.

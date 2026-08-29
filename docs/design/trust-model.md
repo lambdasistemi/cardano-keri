@@ -50,8 +50,9 @@ insufficient.
 ### Lifecycle role fails closed
 
 Only a checkpoint at the bare ACTIVE role address is usable as current
-authority. ARMED, FROZEN, and TOMBSTONE use distinct script roles and must be
-rejected by a consumer.
+authority. ARMED and FROZEN use distinct script roles and must be rejected by
+a consumer. Conviction leaves no role at all: the token is burned, so the
+consumer meets the no-checkpoint case instead of a status it must interpret.
 
 The settled Freeze story moves ACTIVE to ARMED as soon as a hunter supplies a
 witnessed conflict ahead of the current tip. It pays nothing immediately and
@@ -88,7 +89,7 @@ checkpoint minimum ADA + D_reg + B
   ClaimFreeze will pay it to the recorded hunter, and thaw will re-post it.
 - `D_reg`, about 1000 ADA in the reference deployment, is the **divergence
   bond**. It polices truth. A fully witnessed irreconcilable conflict will
-  make it fund Convict payouts and a terminal TOMBSTONE.
+  make it fund Convict payouts and burn the checkpoint token.
 
 The numbers are deployment parameters, not universal economic constants.
 Ordinary lag cannot take `D_reg`, and Freeze alone cannot prove dishonesty.
@@ -109,8 +110,9 @@ the repository.
 | Real three-of-seven identity | No settled vertical evidence | [#139](https://github.com/lambdasistemi/cardano-keri/issues/139) and following stories |
 | Full vLEI credential authorization | Not part of the identity checkpoint story | Later roadmap layers |
 
-FROZEN and TOMBSTONE describe the target state machine. They are not claims
-that the current small story can create those outputs.
+FROZEN describes the target state machine. It is not a claim that the current
+small story can create that output. Conviction produces no checkpoint output at
+all.
 
 ## Advance-totality
 
@@ -187,12 +189,33 @@ A consumer must fail closed unless it resolves exactly one accepted ACTIVE
 checkpoint. Duplicate registration is expensive self-harm or a donation: the
 event fixes the controller keys, while the registrant funds `D_reg+B`.
 
+### Current-key theft
+
+Pre-rotation stops an attacker holding only the current keys from taking the
+identity **forward**: they cannot rotate, so they cannot advance the checkpoint
+or replace the committed successor.
+
+It does not stop them from using the identity **now**. Until a rotation
+settles, the stolen keys are the current authority, and no validator can tell
+them from the owner:
+
+- an application that resolves authorization against the ACTIVE checkpoint's
+  current weighted key state will accept them;
+- `Close` is a current-controller operation, so the escrow can be sent to an
+  address the attacker chooses; and
+- interaction (`ixn`) events they sign are not projected at all in V1, so the
+  credentials they anchor are an off-chain harm the chain does not see.
+
+The remedy is rotation, which supersedes an interaction at the same sequence
+and invalidates authorizations bound to the previous checkpoint — but it is not
+retroactive. [Compromise of the current keys](key-compromise.md) works this
+case through in full.
+
 ### Next-key theft
 
-Pre-rotation protects against theft of current keys. It does not solve theft of
-the committed successor private keys or total loss of all current and reserve
-keys. Those are KERI key-management and recovery problems outside the current
-independent-AID protocol.
+Theft of the committed successor private keys, or total loss of all current and
+reserve keys, is not solved here. Those are KERI key-management and recovery
+problems outside the current independent-AID protocol.
 
 ### Discovery lag
 
@@ -216,6 +239,9 @@ evidence.
 | Register public inception with attacker keys | Reject because projected keys and signed event disagree |
 | Activate a Cardano-first rotation without witness acceptance | Reject because incoming witness receipts are insufficient |
 | Rotate with stolen current keys only | Reject because committed successor keys and dual thresholds do not match |
+| Authorize a value operation with stolen current keys | **No rejection is available** — those keys are the current authority. See [Current-key theft](#current-key-theft) |
+| Close the checkpoint with stolen current keys | **No rejection is available** — Close is a current-controller operation |
+| Anchor a forged credential in an interaction (`ixn`) event | Not projected: V1 admits establishment events only. The harm is off-chain; a rotation supersedes the interaction |
 | Freeze with invalid, under-signed, or under-witnessed evidence | Reject in the enforcement observer |
 | Replay a resolved old Freeze proof | Reject because the proof is not ahead of the new tip |
 | Use ARMED as current authority | Consumer rejects by role address |

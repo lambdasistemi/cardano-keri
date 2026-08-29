@@ -15,7 +15,10 @@ The lifecycle has four named states:
   still thaw it.
 - **Convicted** — a fully witnessed irreconcilable conflict burned the
   checkpoint token. There is no surviving checkpoint state; the transaction is
-  the terminal record.
+  the permanent record. Conviction is a **penalty and a permanent record, not
+  the end of the identity**: it terminates this checkpoint lineage, not the
+  KERI AID, and a genuine inception proof may register the same AID again. See
+  [Re-registration after conviction](../user/conviction.md#re-registration-after-conviction).
 
 Only ACTIVE is accepted by a consumer. The other addresses are a structural
 fail-closed boundary: a consumer does not need to interpret a status flag in
@@ -59,6 +62,15 @@ already determined:
 | Thaw | Anyone may relay and fund it | An ordinary valid Advance plus a fresh delay bond |
 | Convict | Anyone holding the proof | A fully witnessed irreconcilable conflict; the transaction cannot invent guilt |
 | Close | The current controller threshold | A signed Close message binds the spent checkpoint and refund address |
+
+Two things that table does not say, and that readers reliably assume:
+
+- **An Advance is a rotation.** Non-establishment KERI events never touch the
+  checkpoint: interaction (`ixn`) events are not admitted in V1, so nothing
+  they anchor is projected onto Cardano.
+- **Close is authorized by the current controller keys alone.** Whoever holds
+  those keys can retire the checkpoint and direct the whole escrow. See
+  [Compromise of the current keys](../design/key-compromise.md).
 
 ## Two bonds, two failures
 
@@ -127,8 +139,12 @@ Convict accepts a witnessed conflict from any live state:
 - every successful path burns the AID token and creates no checkpoint-role
   successor.
 
-The exact payouts and burn-only terminal record are described in
-[Convicting a witnessed fork](../user/conviction.md).
+The exact payouts and the burn-only record are described in
+[Convicting a witnessed fork](../user/conviction.md). There is deliberately no
+surviving TOMBSTONE output to discover: an unspendable checkpoint would retain
+value while serving no protocol purpose. An application therefore observes a
+spent outref and an absent AID token, not a terminal role — and, because the
+AID may later re-register, absence is not permanent either.
 
 ## Advance-totality
 

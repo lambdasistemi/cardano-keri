@@ -13,7 +13,7 @@ ever back operators with a valid Legal Entity vLEI.
     a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
     asset_name)` lookup** (candidate outref for liveness only, re-validated against the
     ledger). "Active" means exactly one current checkpoint at the **ACTIVE**
-    role address. ARMED, FROZEN, TOMBSTONE, missing, duplicated, and stale
+    role address. ARMED, FROZEN, missing, duplicated, and stale
     candidates fail closed; there is no separate shared freeze registry. A
     `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so an owner signature
     made under the prior sequence is **stale** and must be **re-signed** by the current

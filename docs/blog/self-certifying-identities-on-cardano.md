@@ -175,16 +175,17 @@ stateDiagram-v2
     ARMED --> ACTIVE : response Advance before deadline
     ARMED --> FROZEN : ClaimFreeze after deadline (#138)
     FROZEN --> ACTIVE : thaw Advance + new B (#138)
-    ACTIVE --> TOMBSTONE : Convict witnessed fork (#151)
-    ARMED --> TOMBSTONE : Convict (#151)
-    FROZEN --> TOMBSTONE : Convict (#151)
+    ACTIVE --> [*] : Convict witnessed fork (#151)
+    ARMED --> [*] : Convict (#151)
+    FROZEN --> [*] : Convict (#151)
 ```
 
 Only the first four transitions in that diagram have settled small-identity
 stories. Claim/thaw is issue
-[#138](https://github.com/lambdasistemi/cardano-keri/issues/138), and
-Convict/TOMBSTONE is issue
-[#151](https://github.com/lambdasistemi/cardano-keri/issues/151).
+[#138](https://github.com/lambdasistemi/cardano-keri/issues/138), and Convict
+is issue [#151](https://github.com/lambdasistemi/cardano-keri/issues/151).
+Convict burns the token and leaves no successor output at all — there is no
+tombstone state to observe, and the same AID may later register again.
 
 ## One old proof cannot freeze forever
 

@@ -129,7 +129,7 @@ provide the Aiken verifier that walks the chain. The steps span two planes:
     **Lifecycle / freeze are not caller-supplied flags.** The
     `CheckpointDatum` carries the AID/sequence binding and current weighted key
     state. The token's role address carries the lifecycle. A consumer accepts
-    only the current **ACTIVE** checkpoint; ARMED, FROZEN, TOMBSTONE, missing,
+    only the current **ACTIVE** checkpoint; ARMED, FROZEN, missing,
     duplicated, or stale candidates all reject. There is no separate shared
     freeze registry.
 
@@ -172,7 +172,7 @@ trade: the **acting entity's** signature(s) meeting the weighted threshold of th
 current keys in its **sovereign per-AID checkpoint** (read as a CIP-31 reference
 input); that exactly one referenced checkpoint is the **current ACTIVE UTxO in
 the accepted lineage**; and non-revocation across the credential chain's issuer
-TELs. ARMED, FROZEN, TOMBSTONE, missing, duplicated, or stale candidates fail
+TELs. ARMED, FROZEN, missing, duplicated, or stale candidates fail
 closed. Lifecycle is enforced by the checkpoint's role address and lineage,
 not by a separate shared registry.
 

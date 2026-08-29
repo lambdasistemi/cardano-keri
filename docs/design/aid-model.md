@@ -163,8 +163,9 @@ controlled by the same event, creating ambiguity and donating the escrow.
 ## Role and identity
 
 The datum does not carry a caller-selectable lifecycle status. ACTIVE, ARMED,
-FROZEN, and TOMBSTONE are distinguished by script role addresses around the
-same AID-derived token.
+and FROZEN are distinguished by script role addresses around the same
+AID-derived token. Conviction has no role address: it burns the token, so a
+consumer meets an absent checkpoint rather than a terminal status.
 
 The token identifies the checkpoint lineage. The role determines whether a
 consumer may use it. Only ACTIVE is acceptable.
@@ -176,6 +177,10 @@ cover:
 
 - delegated inception and delegated rotation;
 - KERI recovery and superseding events;
+- non-establishment events: interaction (`ixn`) events are not projected, so
+  anything they anchor — credential issuance and revocation in particular — is
+  invisible to the checkpoint (see
+  [Compromise of the current keys](key-compromise.md));
 - a production-size inception beyond the current single-proof boundary;
 - post-quantum controller keys; or
 - automatic discovery of unseen KERI events.
@@ -191,4 +196,5 @@ V1.
 - [Identity operations](../architecture/identity-ops.md)
 - [Observer architecture](../architecture/observer-architecture.md)
 - [Trust model](trust-model.md)
+- [Compromise of the current keys](key-compromise.md)
 - [Story ladder](../story-ladder.md)

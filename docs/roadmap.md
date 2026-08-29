@@ -34,8 +34,8 @@ production transaction limits. They also expose the current constraint:
    proves thaw by an ordinary Advance that re-posts `B`.
 2. [Convict a small identity — #151](https://github.com/lambdasistemi/cardano-keri/issues/151)
    is planned. It opens Convict from ACTIVE, ARMED, and FROZEN for a fully
-   witnessed irreconcilable fork, proves protected payouts, and leaves the
-   terminal TOMBSTONE.
+   witnessed irreconcilable fork, proves protected payouts, and burns the
+   checkpoint token without leaving a successor output.
 
 Until those stories settle, Claim/thaw and Convict remain unavailable through
 the small production-story checkpoint.

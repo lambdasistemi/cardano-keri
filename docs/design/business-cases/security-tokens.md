@@ -14,7 +14,7 @@ policy preference.
     inline `CheckpointDatum`, read as a **CIP-31 reference input** and discovered by a
     **generic exact-asset `(policy_id, asset_name)` lookup** (candidate outref for liveness
     only, re-validated against the ledger). "Active" means exactly one current
-    checkpoint at the **ACTIVE** role address. ARMED, FROZEN, TOMBSTONE,
+    checkpoint at the **ACTIVE** role address. ARMED, FROZEN,
     missing, duplicated, and stale candidates fail closed; there is no
     separate shared freeze registry. A `delta = 0` rotation (`seq + 1`)
     **consumes** the checkpoint UTxO, so any

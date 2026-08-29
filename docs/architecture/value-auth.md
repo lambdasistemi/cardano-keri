@@ -40,8 +40,15 @@ Every other case fails closed:
 - FROZEN.
 
 A convicted identity is not a further role to reject. Conviction burns the AID
-token, so the terminal edge leaves nothing to resolve and the application meets
-the first case above — no checkpoint.
+token, so it leaves nothing to resolve and the application meets the first case
+above — no checkpoint.
+
+Conviction is a penalty and a permanent record, not the end of the identity.
+The protocol keeps no global "convicted forever" flag, so a genuine inception
+proof may register the same AID again and present a fresh ACTIVE checkpoint. An
+application must not cache "convicted once, absent forever": it should resolve
+the current candidate each time and apply its own history policy to the earlier
+conviction transaction, which stays an immutable fact on chain.
 
 There is no identity-root inclusion proof and no separate Freeze-registry
 absence proof. Freeze changes the sovereign checkpoint's own role address.
@@ -152,6 +159,26 @@ input.
 A future FROZEN output follows the same fail-closed rule. Conviction produces
 no output to resolve at all: the token is burned, so the application meets the
 no-checkpoint case rather than a role it must recognise.
+
+## Compromised controller keys
+
+Every check on this page answers *"do the current controllers of this AID
+authorize this operation?"*. An attacker holding the current KERI signing keys
+answers it correctly, and no validator can separate them from the owner.
+
+That is the intended boundary, not a defect in the checks: identity
+authorization is only as strong as the controller's key custody. Two
+consequences an integrator must plan for:
+
+- **Rotation is the remedy, and it is not retroactive.** Once a rotation
+  settles, authorizations bound to the previous checkpoint input are stale, but
+  a transaction that already settled under the old ACTIVE checkpoint stands.
+- **Freshness policy is load-bearing.** The narrower the accepted checkpoint
+  age, the smaller the window a stolen key can be used in.
+
+[Compromise of the current keys](../design/key-compromise.md) states the full
+case, including why an interaction event is an off-chain instrument and never
+touches the checkpoint.
 
 ## Credential-gated actions
 

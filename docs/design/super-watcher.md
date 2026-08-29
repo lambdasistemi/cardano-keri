@@ -57,7 +57,7 @@ The two bonds give later watcher actions precise conditions:
   `ClaimFreeze`, but exactly `B` goes to the hunter recorded in the ARMED
   datum. This is [#138](https://github.com/lambdasistemi/cardano-keri/issues/138).
 - A fully witnessed irreconcilable fork may trigger Convict and its protected
-  payouts, leaving TOMBSTONE. This is
+  payouts, burning the checkpoint token. This is
   [#151](https://github.com/lambdasistemi/cardano-keri/issues/151).
 
 Neither payment is live in the small production-story wire today. Routine

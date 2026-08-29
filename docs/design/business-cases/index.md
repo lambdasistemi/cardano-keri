@@ -30,7 +30,7 @@
     KEL/ACDC admission may still gate protocol *eligibility*, but it never selects the current
     checkpoint identity. Lifecycle is structural: the checkpoint token moves
     among role addresses, and a consumer accepts only the current **ACTIVE**
-    role. ARMED, FROZEN, TOMBSTONE, missing, duplicated, and stale candidates
+    role. ARMED, FROZEN, missing, duplicated, and stale candidates
     fail closed; there is no separate shared freeze registry. The
     **factored-core "list-shaped, threshold-capable KeyState" (item 1) remains
     the current weighted key state**; only its physical store moves from a

@@ -10,6 +10,13 @@ Start with a registered identity from
 journey uses five current and next KERI keys, threshold two, three witnesses,
 and witness threshold two.
 
+!!! tip "When in doubt, rotate — never interact"
+    A rotation supersedes an interaction event at the same sequence, because it
+    proves possession of pre-committed keys. An interaction event only contests
+    one. A controller who responds to any suspicion by rotating can never
+    create an unresolvable conflict on their own history. See
+    [Compromise of the current keys](../design/key-compromise.md).
+
 ## Rotate and export with KLI
 
 Rotate in the controller's ordinary KLI environment and wait for the witness

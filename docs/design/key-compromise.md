@@ -77,6 +77,15 @@ reconstruct it, and deliberately does not substitute for it:
 What the chain adds is not a better tie-break. It is a **censorship-resistant
 publication path** for evidence that witnesses would otherwise suppress.
 
+This is why the duplicity fact and the tip are reported separately, and why
+neither is a judgement. A consumer cannot demand evidence it does not know
+exists, so the permanent duplicity fact is the trigger that makes "show me the
+competing branches" an enforceable requirement rather than a hope. Verifying
+that a presenter has produced *all* of them needs the record to commit to what
+occupies each location, not merely to prove that individual events are present
+— an enumeration requirement the current skeleton's running-hash occupancy
+does not yet meet.
+
 !!! info "Status"
     The multi-branch record and its cursor are stated as requirements in
     [#300](https://github.com/lambdasistemi/cardano-keri/issues/300) and are
@@ -114,9 +123,12 @@ Rotation is **not retroactive**:
 - a relying party that already accepted a credential anchored by the superseded
   `ixn` loses it when recovery discards that branch; and
 - in the target record, *"has this identity ever been duplicitous"* is a
-  permanent, unerasable fact that coexists with a recovered current tip. How a
-  consumer weighs an ever-duplicitous-but-recovered identity is deliberately
-  **left to that consumer** and is still open.
+  permanent, unerasable fact. The tip resolves in the ordinary way and the
+  chain issues no verdict about the history behind it — it does not pronounce
+  an identity recovered. That permanent fact is what tells a consumer there is
+  something to ask for: it can then **require the presenter to produce the
+  competing branches** and judge them under its own policy. Which policy is
+  deliberately left to that consumer.
 
 **Operator rule: when in doubt, rotate — never interact.** Rotation supersedes;
 interaction contests. A controller who always rotates can never create the

@@ -115,6 +115,27 @@ jobs:
           nixpkgs#jq
           --command bash scripts/check-flake-lock-guard.sh
 
+  release-scripts:
+    name: Release scripts (changelog + planner)
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      # The release scripts had three defects that shipped a malformed,
+      # four-week-stale 0.4.1 changelog and let one forgotten release PR
+      # block every later release while reporting SUCCESS (#218). The
+      # fixture suites existed but nothing ran them, so nothing caught it.
+      - name: Release script fixture suites
+        run: >-
+          nix shell
+          nixpkgs#bash
+          nixpkgs#coreutils
+          nixpkgs#gnugrep
+          nixpkgs#gnused
+          nixpkgs#git
+          --command bash -c 'scripts/release/test-changelog && scripts/release/test-plan && scripts/release/test-next-version'
+
   onchain:
     name: Onchain (Aiken)
     runs-on: nixos

@@ -82,7 +82,7 @@ stub_gh() {
 case "$1" in
   pr)
     case "$2" in
-      list)   echo "0" ;;
+      list)   : ;;
       create) echo "https://github.com/test/test/pull/1" ;;
     esac
     ;;
@@ -195,6 +195,74 @@ if echo "$output" | grep -q "next version=0.1.0"; then
   pass "seed: no tags + stale 0.0.0 → computes 0.1.0"
 else
   fail "seed: no tags + stale 0.0.0: unexpected output: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+# stub_gh_open_pr <workdir> <createdAt>
+# gh stub that reports ONE open release PR with the given creation date.
+stub_gh_open_pr() {
+  local workdir="$1" created="$2"
+  mkdir -p "$workdir/bin"
+  cat > "$workdir/bin/gh" <<GHSTUB
+#!/usr/bin/env bash
+case "\$1" in
+  pr)
+    case "\$2" in
+      list)   printf '245\t${created}\n' ;;
+      create) echo "https://github.com/test/test/pull/1" ;;
+    esac
+    ;;
+esac
+GHSTUB
+  chmod +x "$workdir/bin/gh"
+}
+
+# 10. #218: an open release PR must NOT produce a silent green run.
+#     A FRESH one is tolerated, but the run has to say so visibly.
+workdir="$(mktemp -d)"; bare="$(mktemp -d)/origin.git"
+git init -q --bare "$bare"
+setup_repo "$workdir" "$bare"
+stub_gh_open_pr "$workdir" "$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)"
+
+set +e
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)"
+rc=$?
+set -e
+
+if [[ $rc -eq 0 ]] && grep -q '::warning::' <<<"$output"; then
+  pass "#218: fresh open release PR → exit 0 WITH a visible warning"
+else
+  fail "#218: fresh open release PR → rc=$rc, no ::warning:: annotation: $output"
+fi
+
+if grep -q '245' <<<"$output"; then
+  pass "#218: warning names the blocking PR number"
+else
+  fail "#218: warning does not name the blocking PR: $output"
+fi
+rm -rf "$workdir" "$(dirname "$bare")"
+
+# 11. #218: a STALE open release PR must turn the run RED, not green.
+workdir="$(mktemp -d)"; bare="$(mktemp -d)/origin.git"
+git init -q --bare "$bare"
+setup_repo "$workdir" "$bare"
+stub_gh_open_pr "$workdir" "$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+
+set +e
+output="$(cd "$workdir" && PATH="$workdir/bin:$PATH" scripts/release/plan 2>&1)"
+rc=$?
+set -e
+
+if [[ $rc -ne 0 ]]; then
+  pass "#218: 30-day-old release PR → run FAILS instead of reporting success"
+else
+  fail "#218: 30-day-old release PR still exited 0 (the original bug): $output"
+fi
+
+if grep -q '::error::' <<<"$output"; then
+  pass "#218: stale release PR emits an error annotation"
+else
+  fail "#218: stale release PR emits no ::error:: annotation: $output"
 fi
 rm -rf "$workdir" "$(dirname "$bare")"
 

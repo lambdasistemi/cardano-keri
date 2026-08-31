@@ -12,6 +12,7 @@ use cardano_keri/m12/event_decoder.{
   DecodeOk, DecodedEstablishmentEvent, VariantDip, VariantIcp, VariantRot,
   decode_establishment_event,
 }
+use cardano_keri/m12/event_key.{event_key_of, event_sequence_of}
 use cardano_keri/m12/proof_token.{consume_and_burn_proof}
 use cardano_keri/m12/types.{
   HistoricalProof, Inception, Interaction, ParsedEvent, RecordState, Rotation,
@@ -37,20 +38,27 @@ fn event_from_decode(
   raw: ByteArray,
   cesr_aid: ByteArray,
   ev: DecodedEstablishmentEvent,
-) -> ParsedEvent {
+) -> Option<ParsedEvent> {
   let key = when ev.k is {
     [first, ..] -> first
     [] -> cesr_aid
   }
-  ParsedEvent {
-    raw,
-    kind: kind_of(ev),
-    sequence: bytearray.length(ev.seq),
-    said: cesr_aid,
-    key_material: key,
-    threshold: bytearray.length(ev.kt),
-    witness_count: list.length(ev.b),
-    receipt_count: list.length(ev.b),
+  when (event_key_of(ev), event_sequence_of(ev)) is {
+    (Some(derived_key), Some(sequence)) ->
+      Some(
+        ParsedEvent {
+          raw,
+          kind: kind_of(ev),
+          sequence,
+          said: cesr_aid,
+          event_key: derived_key,
+          key_material: key,
+          threshold: bytearray.length(ev.kt),
+          witness_count: list.length(ev.b),
+          receipt_count: list.length(ev.b),
+        },
+      )
+    _ -> None
   }
 }
 
@@ -69,7 +77,7 @@ pub fn bind_parsed_event(
     when decode_establishment_event(raw_event) is {
       DecodeOk(ev) ->
         if said_matches(ev, cesr_aid) {
-          Some(event_from_decode(raw_event, cesr_aid, ev))
+          event_from_decode(raw_event, cesr_aid, ev)
         } else {
           None
         }
@@ -91,7 +99,7 @@ pub fn apply_record_append(
     None -> None
     Some(parsed) -> {
       let trie = mpf.from_root(old.event_root)
-      let updated = mpf.insert(trie, proof.key, parsed.said, proof.proof)
+      let updated = mpf.insert(trie, parsed.event_key, parsed.said, proof.proof)
       Some(
         RecordState {
           event_root: root(updated),

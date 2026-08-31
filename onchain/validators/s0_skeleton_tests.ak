@@ -6,14 +6,19 @@
 use aiken/crypto.{blake2b_256}
 use aiken/interval
 use aiken/merkle_patricia_forestry as mpf
-use aiken/merkle_patricia_forestry.{empty, root}
+use aiken/merkle_patricia_forestry.{Leaf, empty, root}
 use aiken/primitive/bytearray
 use cardano/address.{from_verification_key}
 use cardano/assets.{from_asset, from_lovelace, merge}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
-use cardano_keri/m12/proof_token.{proof_token_name}
+use cardano_keri/blake3
+use cardano_keri/checkpoint/message.{qb64_aid}
+use cardano_keri/m12/event_decoder.{DecodeOk, decode_establishment_event}
+use cardano_keri/m12/event_key.{event_key_of}
+use cardano_keri/m12/proof_token.{dummy_span, proof_token_name}
+use cardano_keri/m12/record.{apply_record_append, bind_parsed_event}
 use cardano_keri/m12/types.{
   CursorPolicy, CursorState, EscrowState, Established, FullyWitnessed, Genesis,
   HistoricalProof, RecordState, Service, Unwitnessed,
@@ -46,6 +51,38 @@ const honest2_aid: ByteArray =
 
 const honest2_wrong_aid: ByteArray =
   #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e4"
+
+const other_policy: ByteArray =
+  #"5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b"
+
+// Present-prior rotation from kli-export-2-of-5-rotation.cesr.
+const rot_bytes: ByteArray =
+  #"7b2276223a224b45524931304a534f4e3030303264385f222c2274223a22726f74222c2264223a22454f6366476e6e484e597568556e497946483672536856546a4a525255664d333752364a42582d51794a7a62222c2269223a224544756a734966555261627a58797942756c756b646c506b475f4258396434707836564551464d6433337a54222c2273223a2231222c2270223a224544756a734966555261627a58797942756c756b646c506b475f4258396434707836564551464d6433337a54222c226b74223a2232222c226b223a5b22444e6d5031713845436154584e7245376c6461412d44537277486f2d73315a494a44435f6858563765636e31222c22444670506e4e6a4c4b2d5f63776b4b4279326479585568526132444e66705a6970537431496b446f58742d41222c224441304536455a6230672d6832554a626d6b785854356349674f3359336a7062636b536b4c496b4d4d366876222c22444d424943505f644c33646d716450444e58477a68462d4e59487a5474453734546557375351796155754972222c22444b45584a39766878422d316c71696c6b6a71354c4b443270464e385a4138696f5266563251776338664633225d2c226e74223a2232222c226e223a5b22454e7479386c35696d6b4d493642625f4c314368377869516865646333557277637667595377584158713378222c224545624d674c384d7044306b416572745553445139716c41774469596f324859634855374c753830734e5861222c22454f533461527a794c6c642d5579434638687a327336326e6871754f4574664c385837313959775043516946222c22454877486e726543515a41764b5572726849584244764a7a61414b3051534f624849656b45796a4777326144222c2245466f6f5f65686a35794e39393174594964693069574235383276307177583559464d6f4a54495667497030225d2c226274223a2232222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d"
+
+const rot_aid: ByteArray =
+  #"e71f1a79c7358ba1527232147eab4a15538c945151f337ed1e89057f90c89cdb"
+
+const rot_off_d: Int = 40
+
+const rot_off_i: Int = 91
+
+const rot_k_flip_at: Int = 254
+
+fn flip_byte(raw: ByteArray, at: Int) -> ByteArray {
+  bytearray.take(raw, at)
+    |> bytearray.concat(#"30")
+    |> bytearray.concat(bytearray.drop(raw, at + 1))
+}
+
+fn splice_span(raw: ByteArray, off: Int, span: ByteArray) -> ByteArray {
+  bytearray.take(raw, off)
+    |> bytearray.concat(span)
+    |> bytearray.concat(bytearray.drop(raw, off + 44))
+}
+
+fn rival_digest(raw: ByteArray) -> ByteArray {
+  blake3.hash(splice_span(flip_byte(raw, rot_k_flip_at), rot_off_d, dummy_span))
+}
 
 const honest2_off_d: Int = 40
 
@@ -112,13 +149,8 @@ fn flip_seq_digit(raw: ByteArray) -> ByteArray {
     |> bytearray.concat(bytearray.drop(raw, honest2_off_seq + 1))
 }
 
-fn empty_proof(key: ByteArray) -> HistoricalProof {
-  HistoricalProof {
-    key,
-    location: key,
-    proof: [],
-    prior_snapshot_digest: root(empty),
-  }
+fn empty_proof() -> HistoricalProof {
+  HistoricalProof { proof: [] }
 }
 
 fn good_cursor() -> CursorState {
@@ -151,12 +183,12 @@ test accept_s0_append() {
     event_count: 0,
   }
   s0_append.s0_append.spend(
+    policy,
     Some(old),
     AppendRedeemer {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
-      proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(1),
@@ -170,12 +202,12 @@ test reject_s0_append_said() fail {
     event_count: 0,
   }
   s0_append.s0_append.spend(
+    policy,
     Some(old),
     AppendRedeemer {
       raw_event: honest2_bytes,
       cesr_aid: honest2_wrong_aid,
-      proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx_for(honest2_bytes, honest2_wrong_aid, 1),
@@ -190,12 +222,12 @@ test reject_s0_append_aid() fail {
     event_count: 0,
   }
   s0_append.s0_append.spend(
+    policy,
     Some(old),
     AppendRedeemer {
       raw_event: raw,
       cesr_aid: honest2_aid,
-      proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx_for(raw, honest2_aid, 1),
@@ -209,16 +241,163 @@ test reject_s0_append_proof() fail {
     event_count: 0,
   }
   s0_append.s0_append.spend(
+    policy,
     Some(old),
     AppendRedeemer {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
-      proof_policy: policy,
-      proof: empty_proof(#"01"),
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(1),
   )
+}
+
+test reject_submitter_chosen_proof_policy() fail {
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  s0_append.s0_append.spend(
+    other_policy,
+    Some(old),
+    AppendRedeemer {
+      raw_event: honest2_bytes,
+      cesr_aid: honest2_aid,
+      proof: empty_proof(),
+    },
+    self_ref,
+    burn_tx(1),
+  )
+}
+
+test staging_accepts_distinct_i_and_d() {
+  let name = proof_token_name(rot_bytes, rot_aid)
+  let tx = Transaction { ..placeholder, mint: from_asset(policy, name, 1) }
+  s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: rot_bytes,
+      cesr_aid: rot_aid,
+      off_i: rot_off_i,
+      off_d: rot_off_d,
+    },
+    policy,
+    tx,
+  )
+}
+
+test present_prior_rivals_cross_staging_and_append() {
+  expect DecodeOk(ev1) = decode_establishment_event(rot_bytes)
+  let rot2_aid = rival_digest(rot_bytes)
+  let rot2 = splice_span(
+    flip_byte(rot_bytes, rot_k_flip_at),
+    rot_off_d,
+    qb64_aid(rot2_aid),
+  )
+  expect DecodeOk(ev2) = decode_establishment_event(rot2)
+  expect Some(key_one) = event_key_of(ev1)
+  expect Some(key_two) = event_key_of(ev2)
+  let name1 = proof_token_name(rot_bytes, rot_aid)
+  let name2 = proof_token_name(rot2, rot2_aid)
+  let staged1 = s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: rot_bytes,
+      cesr_aid: rot_aid,
+      off_i: rot_off_i,
+      off_d: rot_off_d,
+    },
+    policy,
+    Transaction { ..placeholder, mint: from_asset(policy, name1, 1) },
+  )
+  let staged2 = s0_staging_proof_token.s0_staging_proof_token.mint(
+    StagingRedeemer {
+      raw_event: rot2,
+      cesr_aid: rot2_aid,
+      off_i: rot_off_i,
+      off_d: rot_off_d,
+    },
+    policy,
+    Transaction { ..placeholder, mint: from_asset(policy, name2, 1) },
+  )
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  let appended1 = s0_append.s0_append.spend(
+    policy,
+    Some(old),
+    AppendRedeemer {
+      raw_event: rot_bytes,
+      cesr_aid: rot_aid,
+      proof: empty_proof(),
+    },
+    self_ref,
+    burn_tx_for(rot_bytes, rot_aid, 1),
+  )
+  expect Some(first) = apply_record_append(
+    old,
+    rot_bytes,
+    rot_aid,
+    policy,
+    empty_proof(),
+    burn_tx_for(rot_bytes, rot_aid, 1),
+  )
+  let proof_for_two = [
+    Leaf { skip: 0, key: blake2b_256(key_one), value: blake2b_256(rot_aid) },
+  ]
+  let proof_for_one = [
+    Leaf { skip: 0, key: blake2b_256(key_two), value: blake2b_256(rot2_aid) },
+  ]
+  let appended2 = s0_append.s0_append.spend(
+    policy,
+    Some(first),
+    AppendRedeemer {
+      raw_event: rot2,
+      cesr_aid: rot2_aid,
+      proof: HistoricalProof { proof: proof_for_two },
+    },
+    self_ref,
+    burn_tx_for(rot2, rot2_aid, 1),
+  )
+  let both = mpf.insert(empty, key_one, rot_aid, [])
+    |> mpf.insert(key_two, rot2_aid, proof_for_two)
+  and {
+    staged1,
+    staged2,
+    appended1,
+    appended2,
+    key_one != key_two,
+    bind_parsed_event(
+      rot_bytes,
+      rot_aid,
+      policy,
+      burn_tx_for(rot_bytes, rot_aid, 1),
+    ) != None,
+    bind_parsed_event(rot2, rot2_aid, policy, burn_tx_for(rot2, rot2_aid, 1)) != None,
+    mpf.has(both, key_one, rot_aid, proof_for_one),
+    mpf.has(both, key_two, rot2_aid, proof_for_two),
+  }
+}
+
+test submitter_chosen_proof_key_is_rejected() {
+  let old = RecordState {
+    event_root: root(empty),
+    occupancy_root: zeros32,
+    event_count: 0,
+  }
+  expect DecodeOk(ev) = decode_establishment_event(honest2_bytes)
+  expect Some(derived) = event_key_of(ev)
+  expect Some(got) = apply_record_append(
+    old,
+    honest2_bytes,
+    honest2_aid,
+    policy,
+    empty_proof(),
+    burn_tx(1),
+  )
+  got.event_root == root(mpf.insert(empty, derived, honest2_aid, []))
 }
 
 // ---------------------------------------------------------------------
@@ -226,8 +405,6 @@ test reject_s0_append_proof() fail {
 // ---------------------------------------------------------------------
 
 test accept_s0_cursor() {
-  let key = #"01"
-  let prior = root(mpf.insert(empty, key, ones32, []))
   let old = CursorState {
     keys_digest: ones32,
     keri_state: Established,
@@ -235,19 +412,13 @@ test accept_s0_cursor() {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let proof = HistoricalProof {
-    key,
-    location: key,
-    proof: [],
-    prior_snapshot_digest: prior,
-  }
   s0_cursor.s0_cursor.spend(
     Some(old),
     CursorRedeemer {
       raw_event: honest2_bytes,
       cesr_aid: honest2_aid,
       proof_policy: policy,
-      proof,
+      proof: empty_proof(),
     },
     self_ref,
     burn_tx(10),
@@ -255,6 +426,8 @@ test accept_s0_cursor() {
 }
 
 test reject_s0_cursor_proof() fail {
+  // R1 removes cursor authority from proof fields. The frozen S0 name
+  // now rejects by breaking the proof-token/event binding instead.
   let old = CursorState {
     keys_digest: ones32,
     keri_state: Established,
@@ -262,22 +435,16 @@ test reject_s0_cursor_proof() fail {
     last_moved_slot: 1,
     registration_slot: 1,
   }
-  let proof = HistoricalProof {
-    key: #"01",
-    location: #"01",
-    proof: [],
-    prior_snapshot_digest: zeros32,
-  }
   s0_cursor.s0_cursor.spend(
     Some(old),
     CursorRedeemer {
       raw_event: honest2_bytes,
-      cesr_aid: honest2_aid,
+      cesr_aid: honest2_wrong_aid,
       proof_policy: policy,
-      proof,
+      proof: empty_proof(),
     },
     self_ref,
-    burn_tx(10),
+    burn_tx_for(honest2_bytes, honest2_wrong_aid, 10),
   )
 }
 

@@ -18,6 +18,7 @@ pub type ParsedEvent {
   kind: EventKind,
   sequence: Int,
   said: ByteArray,
+  event_key: ByteArray,
   key_material: ByteArray,
   threshold: Int,
   witness_count: Int,
@@ -56,10 +57,7 @@ pub type CursorState {
 
 /// S0-D04 — authenticated historical proof input.
 pub type HistoricalProof {
-  key: ByteArray,
-  location: ByteArray,
   proof: Proof,
-  prior_snapshot_digest: ByteArray,
 }
 
 /// S0-D05 — lineage thread state.

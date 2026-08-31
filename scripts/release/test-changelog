@@ -134,6 +134,122 @@ else
 fi
 rm -rf "$workdir"
 
+# 5. SCOPED conventional commits must have the whole "type(scope):" prefix
+#    stripped. The old character-class strip ate only "fix(" and left
+#    "cli): ..." in the changelog. Regression for the 0.4.1 release PR.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "scoped" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix(cli): name missing query manifest inputs"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+if grep -q '^- name missing query manifest inputs' "$workdir/CHANGELOG.md"; then
+  pass "scoped fix(cli): → scope prefix fully stripped"
+else
+  fail "scoped fix(cli): → mangled entry: $(grep -m1 '^- ' "$workdir/CHANGELOG.md" || echo NONE)"
+fi
+
+if grep -q '^- cli)' "$workdir/CHANGELOG.md"; then
+  fail "scoped fix(cli): → leftover 'cli)' present in CHANGELOG.md"
+else
+  pass "scoped fix(cli): → no leftover 'cli)' fragment"
+fi
+rm -rf "$workdir"
+
+# 6. Scoped docs() and a breaking-change marker "!" are stripped too.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "d" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "docs(spec): record deploy checkout input"
+echo "b" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "feat(api)!: drop the legacy endpoint"
+
+(cd "$workdir" && scripts/release/changelog add 0.2.0)
+
+if grep -q '^- record deploy checkout input' "$workdir/CHANGELOG.md"; then
+  pass "scoped docs(spec): → prefix fully stripped"
+else
+  fail "scoped docs(spec): → mangled: $(grep -m1 '^- .*deploy' "$workdir/CHANGELOG.md" || echo NONE)"
+fi
+
+if grep -q '^- drop the legacy endpoint' "$workdir/CHANGELOG.md"; then
+  pass "breaking feat(api)!: → prefix and ! stripped"
+else
+  fail "breaking feat(api)!: → mangled: $(grep -m1 '^- .*legacy' "$workdir/CHANGELOG.md" || echo NONE)"
+fi
+rm -rf "$workdir"
+
+# 7. A non-v tag nearer than the last v* tag must NOT truncate the range.
+#    'changelog add' used bare `git describe --tags`; 'plan' uses
+#    `--match v*`. The repo carries non-v tags (ms11/..., m8/..., etc.).
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "one" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: first fix after the release"
+# a non-version tag lands on top of that commit, as an evidence/mandate tag would
+git -C "$workdir" tag "evidence/some-mandate"
+echo "two" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: second fix after the release"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+if grep -q '^- first fix after the release' "$workdir/CHANGELOG.md"; then
+  pass "non-v tag does not truncate the changelog range"
+else
+  fail "non-v tag TRUNCATED the range — 'first fix after the release' missing"
+fi
+rm -rf "$workdir"
+
+# 8. fixup! commits must not be harvested as real "fix" entries.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "f" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fixup! something half-finished"
+echo "g" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "fix: a real fix"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+if grep -q 'something half-finished' "$workdir/CHANGELOG.md"; then
+  fail "fixup! commit leaked into the changelog"
+else
+  pass "fixup! commit excluded from the changelog"
+fi
+rm -rf "$workdir"
+
+# 9. perf and refactor both map to "Changed" — emit ONE heading, not two.
+workdir="$(mktemp -d)"
+setup_repo "$workdir"
+
+echo "p" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "perf: speed up the lookup"
+echo "r" >> "$workdir/file.txt"
+git -C "$workdir" add .
+git -C "$workdir" commit -q -m "refactor: tidy the module"
+
+(cd "$workdir" && scripts/release/changelog add 0.1.1)
+
+changed_headings="$(grep -c '^### Changed' "$workdir/CHANGELOG.md" || true)"
+if [[ "$changed_headings" -eq 1 ]]; then
+  pass "perf + refactor → exactly one ### Changed heading"
+else
+  fail "perf + refactor → $changed_headings ### Changed headings (want 1)"
+fi
+rm -rf "$workdir"
+
 echo ""
 if [[ $FAIL -ne 0 ]]; then
   echo "changelog tests: FAILED" >&2

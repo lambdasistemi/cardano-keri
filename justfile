@@ -744,5 +744,12 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-onchain ci-blake3 mpf-proof-check ci-offchain
+ci: check-flake-lock-guard ci-release-scripts ci-onchain ci-blake3 mpf-proof-check ci-offchain
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
+
+# Release script fixture suites — changelog generation, planner control flow,
+# and version selection. Same executables CI runs.
+ci-release-scripts:
+    ./scripts/release/test-changelog
+    ./scripts/release/test-plan
+    ./scripts/release/test-next-version

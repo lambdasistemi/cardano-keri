@@ -57,7 +57,13 @@ EOF
     fi
 
     # Gather conventional-commit entries since the last tag (or all history).
-    last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+    # Gather conventional-commit entries since the last RELEASE tag.
+    # --match 'v*' matters: this repo also carries mandate/evidence tags
+    # (ms11/..., m8/..., deploy/...). A bare `git describe --tags` picks the
+    # nearest tag of ANY kind and silently truncates the range, dropping
+    # entries with no error. scripts/release/plan already matches 'v*';
+    # these two must agree.
+    last_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
     if [[ -n "$last_tag" ]]; then
       range="${last_tag}..HEAD"
     else
@@ -66,18 +72,30 @@ EOF
 
     section_file="$(mktemp /tmp/changelog-section-XXXXXX)"
 
+    # One heading per LABEL, so perf and refactor share a single "Changed"
+    # heading instead of emitting it twice.
     {
       echo "## ${version}"
       echo ""
-      # Group by type
-      for type_label in "feat:Added" "fix:Fixed" "perf:Changed" "refactor:Changed" "docs:Documentation" "test:Testing" "chore:Maintenance"; do
-        prefix="${type_label%%:*}"
-        label="${type_label##*:}"
-        entries="$(git log --oneline --no-merges --grep="^${prefix}" "$range" 2>/dev/null \
-          | sed 's/^[a-f0-9]* //' \
-          | sed "s/^${prefix}[(:]*//" \
-          | sed 's/^)//' \
-          | sed 's/^ *//' || true)"
+      for group in "Added:feat" "Fixed:fix" "Changed:perf refactor" \
+                   "Documentation:docs" "Testing:test" "Maintenance:chore"; do
+        label="${group%%:*}"
+        prefixes="${group##*:}"
+        entries=""
+        for prefix in $prefixes; do
+          # Anchor on the full conventional-commit form so `fixup!` is not
+          # harvested as a `fix`, and strip `type`, `(scope)` and `!` whole —
+          # a character class stops at the first scope character and leaves
+          # "cli): ..." behind.
+          found="$(git log --oneline --no-merges -E \
+                     --grep="^${prefix}(\([^)]*\))?!?:" "$range" 2>/dev/null \
+                   | sed 's/^[a-f0-9]* //' \
+                   | sed -E "s/^${prefix}(\([^)]*\))?!?: *//" || true)"
+          if [[ -n "$found" ]]; then
+            entries+="${found}"$'\n'
+          fi
+        done
+        entries="$(printf '%s' "$entries" | sed '/^[[:space:]]*$/d')"
         if [[ -n "$entries" ]]; then
           echo "### ${label}"
           echo ""

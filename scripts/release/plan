@@ -31,7 +31,31 @@ has_any_tag="$(git tag -l 'v*' | head -1 || true)"
 echo "release/plan: cabal version=$current_version"
 
 # ── Open release PR? ──────────────────────────────────────────────────
-if gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/null | grep -qv '^0$'; then
+# #218: this path used to `exit 0` in silence, so one forgotten release PR
+# blocked every subsequent release while the workflow reported SUCCESS on
+# every push to main. Always annotate the run; fail once the PR is
+# demonstrably stale, so a stuck release line goes red instead of green.
+stale_days="${RELEASE_PR_STALE_DAYS:-3}"
+open_pr="$(gh pr list --head "$branch" --state open \
+             --json number,createdAt --jq '.[] | "\(.number)\t\(.createdAt)"' \
+             2>/dev/null | head -1 || true)"
+
+if [[ -n "$open_pr" ]]; then
+  pr_number="${open_pr%%	*}"
+  pr_created="${open_pr#*	}"
+  age_days=0
+  if created_epoch="$(date -u -d "$pr_created" +%s 2>/dev/null)"; then
+    age_days=$(( ( $(date -u +%s) - created_epoch ) / 86400 ))
+  fi
+  msg="open release PR #${pr_number} on ${branch} is ${age_days}d old and blocks every new release PR"
+  echo "::warning::release/plan: ${msg}"
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    echo "- release/plan: ${msg}" >> "$GITHUB_STEP_SUMMARY"
+  fi
+  if (( age_days >= stale_days )); then
+    echo "::error::release/plan: ${msg} — over the ${stale_days}d staleness threshold; merge or close it"
+    exit 1
+  fi
   echo "release/plan: open PR from $branch exists — waiting for merge"
   exit 0
 fi

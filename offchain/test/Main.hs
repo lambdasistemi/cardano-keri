@@ -2,6 +2,7 @@ module Main (main) where
 
 import Cardano.KERI.AID.Blake3.CheckpointSpec qualified as CheckpointSpec
 import Cardano.KERI.AID.CESRSpec qualified as CESRSpec
+import Cardano.KERI.AID.Cage.MpfProofMirrorSpec qualified as MpfProofMirrorSpec
 import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec qualified as AdvanceFixturesSpec
@@ -30,6 +31,7 @@ main = hspec $ do
     Ed25519Spec.spec
     CESRSpec.spec
     TypesSpec.spec
+    MpfProofMirrorSpec.spec
     SignSpec.spec
     ThresholdSpec.spec
     AdvanceFixturesSpec.spec

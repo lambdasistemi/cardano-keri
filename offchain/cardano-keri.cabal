@@ -934,6 +934,7 @@ test-suite unit-tests
 
   other-modules:
     Cardano.KERI.AID.Blake3.CheckpointSpec
+    Cardano.KERI.AID.Cage.MpfProofMirrorSpec
     Cardano.KERI.AID.Cage.SignSpec
     Cardano.KERI.AID.Cage.TypesSpec
     Cardano.KERI.AID.CESRSpec

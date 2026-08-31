@@ -562,6 +562,61 @@ measure-enforcement:
 measure-hash-proof:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
+# #307 T307-004: focused fail-closed MPF proof-verification regressions.
+# Selects each frozen gate-fixture test (leaf fork + terminal fork)
+# individually and requires exactly that one test to run and pass. Proves
+# the active cached MPF package exposes `pub fn miss(` (the v2.1.0
+# surface) and that the cache metadata resolves v2.1.0. Fails closed on a
+# zero-match or wrong-title selection, any test failure, or a compilation
+# failure (empty JSON; rerun the aiken invocation in a TTY for errors).
+mpf-proof-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    results="$(mktemp -d)"
+    trap 'rm -rf "$results"' EXIT
+    cd onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#jq --command bash -euo pipefail -c '
+      results="$1"
+      assert_case() {
+        expected="$1"
+        out="$results/$expected.json"
+        set +e
+        aiken check -m "$expected" >"$out" 2>"$out.err"
+        rc=$?
+        set -e
+        if ! test -s "$out"; then
+          echo "mpf-proof-check: empty JSON for $expected; compilation likely failed - rerun the aiken invocation in a TTY for diagnostics" >&2
+          exit 1
+        fi
+        if ! jq -e --arg expected "$expected" '\''
+          [.modules[].tests[] | select(.title == $expected)] as $selected
+          | if ($selected | length) != 1 then
+              error("mpf-proof-check: " + $expected + " selected " + ($selected | length | tostring) + " tests, expected exactly 1")
+            elif $selected[0].status != "pass" then
+              error("mpf-proof-check: " + $expected + " failed: " + ($selected[0].assertion // "-") + " " + (($selected[0].traces // []) | join(" | ")))
+            else
+              $selected
+            end
+        '\'' "$out" >/dev/null; then
+          echo "mpf-proof-check: $expected did not pass (aiken rc=$rc)" >&2
+          exit 1
+        fi
+        echo "mpf-proof-check: $expected pass"
+      }
+      assert_case leaf_fork_common_prefix
+      assert_case terminal_fork_non_empty_prefix
+      cache_pkg="build/packages/aiken-lang-merkle-patricia-forestry/lib/aiken/merkle-patricia-forestry.ak"
+      if ! grep -Fq "pub fn miss(" "$cache_pkg"; then
+        echo "mpf-proof-check: cached MPF package does not expose pub fn miss( (v2.1.0 surface absent)" >&2
+        exit 1
+      fi
+      if ! grep -Eq "version = \"v2\.1\.0\"" build/packages/packages.toml; then
+        echo "mpf-proof-check: cache metadata packages.toml does not resolve v2.1.0" >&2
+        exit 1
+      fi
+      echo "mpf-proof-check: 2/2 fixture tests pass; miss() surface present; cache resolves v2.1.0"
+    ' _ "$results"
+
 # Measure and mechanically gate the nine checkpoint ACCEPT paths: the six
 # inherited #116 rows plus the three #114 Register contexts. Every row must
 # pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
@@ -689,5 +744,5 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-onchain ci-blake3 ci-offchain
+ci: check-flake-lock-guard ci-onchain ci-blake3 mpf-proof-check ci-offchain
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged

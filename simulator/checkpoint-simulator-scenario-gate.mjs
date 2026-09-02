@@ -54,95 +54,11 @@ const HTML = argPath('--html') || join(HERE, 'checkpoint-simulator.html');
 const SCENARIOS = argPath('--scenarios') || join(HERE, 'checkpoint-simulator-scenarios');
 const BUILD = join(HERE, 'checkpoint-simulator-build.mjs');
 
-const clone = x => JSON.parse(JSON.stringify(x));
-
-/* --- expectation matching --------------------------------------------- */
-
-// partial match: every key of `want` must equal in `got` (deep, canonical)
-function matches(core, got, want) {
-  if (want === null || typeof want !== 'object' || Array.isArray(want))
-    return core.canon(got) === core.canon(want);
-  if (got === null || typeof got !== 'object') return false;
-  return Object.keys(want).every(k => matches(core, got[k], want[k]));
-}
-
-function flowMatches(core, got, want) {
-  // a flow expectation names the non-default fields; the rest must be default
-  const full = Object.assign({ dregIn: 0, bIn: 0, poolIn: 0, refund: null, hunter: null, convictor: null }, want);
-  return core.canon(got) === core.canon(full);
-}
-
-/* --- one scenario ------------------------------------------------------- */
+/* --- one scenario: the core's own checker (shared with the page's selftest) --- */
 
 function runScenario(core, sc, file) {
-  const problems = [];
-  const asserted = new Set();
-  const exhibitedIds = new Set();
-  let session = core.newSession(sc.params);
-  let stepsRun = 0;
-  sc.steps.forEach((st, i) => {
-    const where = `${file} step ${i}`;
-    const saved = session.params;
-    if (st.params) session = core.withParams(session, st.params); // this step only
-    if (st.seed !== undefined) session = core.seed(session, st.seed);
-    if (st.evidence) {
-      for (const r of st.evidence.remove || []) session = core.removeEvidence(session, r);
-      for (const r of st.evidence.add || []) session = core.addEvidence(session, r);
-    }
-    const ex = st.expect || {};
-    if (st.action === undefined) {
-      const mv = core.setSlot(session, st.slot);
-      if (!mv.ok) { problems.push(`${where}: slot ${st.slot} refused: ${mv.reason}`); return; }
-      session = mv.session;
-    } else {
-      const out = core.attempt(session, st.action, st.slot);
-      session = out.session;
-      const rec = out.record;
-      stepsRun++;
-      if (ex.ok !== undefined && rec.ok !== ex.ok)
-        problems.push(`${where}: expected ok=${ex.ok}, got ok=${rec.ok}` +
-          (rec.ok ? '' : ` (${rec.reason})`));
-      if (ex.reason !== undefined) {
-        asserted.add(ex.reason);
-        if (rec.reason !== ex.reason)
-          problems.push(`${where}: expected reason «${ex.reason}», got «${rec.reason}»`);
-      }
-      if (rec.ok && ex.live !== undefined) {
-        const l = rec.state && rec.state.present ? rec.state.present.l : null;
-        if (!l || !matches(core, l, ex.live))
-          problems.push(`${where}: live datum mismatch — expected ⊇ ${JSON.stringify(ex.live)} got ${JSON.stringify(l)}`);
-      }
-      if (rec.ok && ex.state !== undefined && core.canon(rec.state) !== core.canon(ex.state))
-        problems.push(`${where}: state mismatch — expected ${core.canon(ex.state)} got ${core.canon(rec.state)}`);
-      if (rec.ok && ex.flow !== undefined && !flowMatches(core, rec.flow, ex.flow))
-        problems.push(`${where}: flow mismatch — expected ${core.canon(ex.flow)} got ${core.canon(rec.flow)}`);
-      // every theorem must hold on every step; exhibited set must match
-      const th = rec.theorems;
-      const failing = Object.keys(th).filter(id => !th[id].holds);
-      if (failing.length)
-        problems.push(`${where}: theorem VIOLATED: ${failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · ')}`);
-      const exhibited = Object.keys(th).filter(id => th[id].exhibited).sort();
-      exhibited.forEach(id => exhibitedIds.add(id));
-      if (ex.exhibits !== undefined) {
-        const want = ex.exhibits.slice().sort();
-        if (JSON.stringify(exhibited) !== JSON.stringify(want))
-          problems.push(`${where}: exhibits mismatch — expected [${want}] got [${exhibited}]`);
-      }
-      // every refusal has an explanation in story vocabulary
-      if (!rec.ok) {
-        const text = core.explain(rec, session);
-        if (typeof text !== 'string' || text.length < 12)
-          problems.push(`${where}: refusal «${rec.reason}» has no explanation`);
-      }
-    }
-    if (st.params) session = core.withParams(session, saved);
-    if (ex.verdict !== undefined) {
-      const v = core.consumable(session.params, session.now, session.state);
-      if (v.verdict !== ex.verdict)
-        problems.push(`${where}: verdict mismatch — expected «${ex.verdict}» got «${v.verdict}»`);
-    }
-  });
-  return { problems, asserted, exhibitedIds, stepsRun };
+  const r = core.checkScenario(sc, file);
+  return { problems: r.problems, asserted: new Set(r.asserted), exhibitedIds: new Set(r.exhibited), stepsRun: r.stepsRun };
 }
 
 /* --- page smoke under the minimal DOM ---------------------------------- */
@@ -188,19 +104,27 @@ function pageSmoke(core, html) {
   const verdictText = ($('#verdict') || {}).textContent || '';
   if (!/freeze bond/i.test(verdictText)) problems.push(`after story 3 the verdict says «${verdictText.slice(0, 80)}», expected the freeze bond conjunct`);
 
-  // theorem ledger: the page's own rows agree with the core on this play
+  // theorem ledger: on the last accepted step (the freeze) the page's rows light T15
+  const okChips = doc.querySelectorAll('#history-strip .hist-chip.ok');
+  if (!okChips.length) problems.push('no accepted chip in the history strip');
+  else okChips[okChips.length - 1].dispatchEvent(win.makeEvent('click'));
   const lit = doc.querySelectorAll('#ledger .thm.lit').map(e => e.dataset.id).sort();
-  if (!lit.includes('T15')) problems.push(`ledger after the freeze lights [${lit}], expected T15 among them`);
+  if (!lit.includes('T15')) problems.push(`ledger on the freeze step lights [${lit}], expected T15 among them`);
+  if (!/frozen/i.test(($('#state-name') || {}).textContent || '')) problems.push('the last accepted chip does not show Frozen');
+  while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
   const broken = doc.querySelectorAll('#ledger .thm.broken');
   if (broken.length) problems.push('ledger shows broken rows: ' + broken.map(e => e.dataset.id).join(','));
 
-  // the history strip goes back
-  const prev = $('#hist-prev');
-  if (!prev) problems.push('no #hist-prev control');
+  // the history strip goes back: one step back stays Frozen (the last story step only reads), the start is Absent
+  const prev = $('#hist-prev'), first = $('#hist-first');
+  if (!prev || !first) problems.push('no #hist-prev / #hist-first controls');
   else {
     prev.dispatchEvent(win.makeEvent('click'));
-    const now = ($('#state-name') || {}).textContent || '';
-    if (/frozen/i.test(now)) problems.push('stepping back did not change the shown state');
+    const back1 = ($('#state-name') || {}).textContent || '';
+    if (!/frozen/i.test(back1)) problems.push(`one step back the ladder shows «${back1}», expected Frozen`);
+    first.dispatchEvent(win.makeEvent('click'));
+    const start = ($('#state-name') || {}).textContent || '';
+    if (!/absent/i.test(start)) problems.push(`at the start the ladder shows «${start}», expected Absent`);
   }
 
   // free play: reset, register, evidence rows, slot control

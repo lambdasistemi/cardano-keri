@@ -166,6 +166,7 @@ class Element extends Node {
     return this.getAttribute('value') || '';
   }
   set value(v) {
+    if (this.localName === 'option') { this.setAttribute('value', String(v)); return; }
     this._value = String(v);
     if (this.localName === 'select') {
       const o = this.options;

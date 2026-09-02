@@ -575,10 +575,122 @@ function theoremReport(before, after, rec) {
 }
 /* @@CORE:theorems:END@@ */
 
+/* @@CORE:suite@@ */
+// ---- the executable suite: scenarios and the Lean corpus ---------------------
+// Shared by the gates (Node) and the page's ?selftest=1 (browser): one
+// implementation of "does this scenario play as written" and "does the
+// Lean corpus replay through this core".
+function matchesPartial(got, want) {
+  if (want === null || typeof want !== 'object' || Array.isArray(want)) return canon(got) === canon(want);
+  if (got === null || typeof got !== 'object') return false;
+  return Object.keys(want).every(k => matchesPartial(got[k], want[k]));
+}
+// checkScenario(scenario, label) → {problems, stepsRun, asserted, exhibited, timeline}
+// timeline: one entry per scenario step with the session after it and the record (if any)
+function checkScenario(sc, label) {
+  const problems = [], asserted = [], exhibited = new Set(), timeline = [];
+  let session = newSession(sc.params), stepsRun = 0;
+  (sc.steps || []).forEach((st, i) => {
+    const where = label + ' step ' + i;
+    const saved = session.params;
+    if (st.params) session = withParams(session, st.params);
+    if (st.seed !== undefined) session = seed(session, st.seed);
+    if (st.evidence) {
+      for (const r of st.evidence.remove || []) session = removeEvidence(session, r);
+      for (const r of st.evidence.add || []) session = addEvidence(session, r);
+    }
+    const ex = st.expect || {};
+    let record = null;
+    if (st.action === undefined) {
+      const mv = setSlot(session, st.slot);
+      if (!mv.ok) problems.push(where + ': slot ' + st.slot + ' refused: ' + mv.reason);
+      else session = mv.session;
+    } else {
+      const out = attempt(session, st.action, st.slot);
+      session = out.session; record = out.record; stepsRun++;
+      if (ex.ok !== undefined && record.ok !== ex.ok)
+        problems.push(where + ': expected ok=' + ex.ok + ', got ok=' + record.ok + (record.ok ? '' : ' (' + record.reason + ')'));
+      if (ex.reason !== undefined) { asserted.push(ex.reason); if (record.reason !== ex.reason) problems.push(where + ': expected reason «' + ex.reason + '», got «' + record.reason + '»'); }
+      if (record.ok && ex.live !== undefined) {
+        const l = liveOf(record.state);
+        if (!l || !matchesPartial(l, ex.live)) problems.push(where + ': live datum mismatch — expected ⊇ ' + JSON.stringify(ex.live) + ' got ' + JSON.stringify(l));
+      }
+      if (record.ok && ex.state !== undefined && canon(record.state) !== canon(ex.state)) problems.push(where + ': state mismatch — expected ' + canon(ex.state) + ' got ' + canon(record.state));
+      if (record.ok && ex.flow !== undefined && canon(record.flow) !== canon(flow(ex.flow))) problems.push(where + ': flow mismatch — expected ' + canon(flow(ex.flow)) + ' got ' + canon(record.flow));
+      const th = record.theorems;
+      const failing = Object.keys(th).filter(id => !th[id].holds);
+      if (failing.length) problems.push(where + ': theorem VIOLATED: ' + failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · '));
+      const shown = Object.keys(th).filter(id => th[id].exhibited).sort();
+      shown.forEach(id => exhibited.add(id));
+      if (ex.exhibits !== undefined) {
+        const want = ex.exhibits.slice().sort();
+        if (JSON.stringify(shown) !== JSON.stringify(want)) problems.push(where + ': exhibits mismatch — expected [' + want + '] got [' + shown + ']');
+      }
+      if (!record.ok) { const text = explain(record, session); if (typeof text !== 'string' || text.length < 12) problems.push(where + ': refusal «' + record.reason + '» has no explanation'); }
+    }
+    if (st.params) session = withParams(session, saved);
+    if (ex.verdict !== undefined) {
+      const v = consumable(session.params, session.now, session.state);
+      if (v.verdict !== ex.verdict) problems.push(where + ': verdict mismatch — expected «' + ex.verdict + '» got «' + v.verdict + '»');
+    }
+    timeline.push({ step: st, session, record });
+  });
+  return { problems, stepsRun, asserted, exhibited: [...exhibited], timeline };
+}
+// checkCorpus(corpus) → {applied, refused, cons, theoremChecks, reasons}: every
+// step of the Lean corpus (applied and refused) must agree with step(); every
+// applied step must satisfy every theorem
+function checkCorpus(corpus) {
+  const reasons = [];
+  let applied = 0, refused = 0, theoremChecks = 0, cons = 0;
+  const p = corpus.params;
+  const pv = validateParams(p); if (pv) reasons.push('corpus params invalid: ' + pv);
+  const envOf = env => { let s = newSession(p); for (const k of EV_KINDS) for (const row of env[k] || []) s = addEvidence(s, { [k]: row }); return s; };
+  const compare = (where, env, now, input, action, want) => {
+    const got = step(p, env, action, now, input);
+    if (want === null) { if (got.ok) reasons.push(where + ': Lean refused, the core applied'); else refused++; return null; }
+    if (!got.ok) { reasons.push(where + ': Lean applied, the core refused (' + got.reason + ')'); return null; }
+    if (canon(got.flow) !== canon(want.flow)) reasons.push(where + ': flow differs — lean=' + canon(want.flow) + ' core=' + canon(got.flow));
+    if (canon(got.state) !== canon(want.state)) reasons.push(where + ': post-state differs — lean=' + canon(want.state) + ' core=' + canon(got.state));
+    applied++; return got;
+  };
+  const theorems = (where, session, action, now) => {
+    const out = attempt(session, action, now); theoremChecks++;
+    const th = out.record.theorems; const failing = Object.keys(th).filter(id => !th[id].holds);
+    if (failing.length) reasons.push(where + ': theorem VIOLATED: ' + failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · '));
+    return out.session;
+  };
+  for (const tr of corpus.traces || []) {
+    let session = envOf(tr.env); let s = tr.initial;
+    if (canon(s) !== canon('absent')) reasons.push('trace ' + tr.name + ': initial state is not absent');
+    (tr.steps || []).forEach((st, i) => {
+      const where = 'trace ' + tr.name + ' step ' + i;
+      if (canon(st.input) !== canon(s)) reasons.push(where + ': input discontinuous');
+      compare(where, session.env, st.now, st.input, st.action, st.result);
+      session = theorems(where, session, st.action, st.now);
+      s = st.result ? st.result.state : s;
+    });
+  }
+  const g = corpus.grid;
+  if (!g || !Array.isArray(g.cells) || !g.cells.length) reasons.push('grid missing or empty');
+  else {
+    for (const c of g.cells) {
+      const input = g.states[c.s], action = g.actions[c.a], env = g.envs[c.e];
+      const where = 'grid cell s=' + c.s + ' a=' + c.a + ' e=' + c.e;
+      compare(where, env, g.now, input, action, c.result);
+      if (c.result) { let session = envOf(env); if (stateKind(input) !== 'absent') session = seed(session, input); theorems(where, session, action, g.now); }
+    }
+    for (const c of g.consumable || []) { const v = consumable(p, c.now, g.states[c.s]); cons++; if (v.ok !== c.consumable) reasons.push('consumable probe s=' + c.s + ' now=' + c.now + ': lean=' + c.consumable + ' core=' + v.ok); }
+  }
+  return { applied, refused, cons, theoremChecks, reasons };
+}
+/* @@CORE:suite:END@@ */
+
 export {
   canon, isNat, REASONS, VERDICTS, validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
   EV_KINDS, emptyEnv, envHas, envAdd, envRemove, envUnion, stateKind, liveOf, present, payment, flow, held, paid,
   validateState, step, consumable, consumableEver, replay, poisonAfter, poisonSinceLastRotation,
   newSession, withParams, addEvidence, removeEvidence, seed, setSlot, attempt, heldSoFar,
   CAST, whoAddr, STATE_WORDS, stateWord, VERDICT_WORDS, explain, THEOREMS, theoremReport,
+  matchesPartial, checkScenario, checkCorpus,
 };

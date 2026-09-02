@@ -47,6 +47,7 @@ nav:
   - Why Cardano: why-cardano.md
   - Story Ladder: story-ladder.md
   - Checkpoint Simulator: simulator/index.html
+  - Registry Simulator: simulator/registry/index.html
   - Roadmap: roadmap.md
   - Identity on Cardano:
       - Presentation: identity-on-cardano/index.html
@@ -87,6 +88,7 @@ nav:
       - Super Watcher: design/super-watcher.md
       - vLEI Bridge: design/vlei.md
       - Regulated DeFi Gate: design/defi-gate.md
+      - The Registry as an MPFS Instance: design/registry-as-mpfs.md
   - Business Cases:
       - Comparison & Factored Core: design/business-cases/index.md
       - Regulated DeFi: design/business-cases/regulated-defi.md

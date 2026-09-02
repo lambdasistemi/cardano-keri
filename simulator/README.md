@@ -32,11 +32,11 @@ the story's words.
 | `checkpoint-simulator.html` | the page; the core's slices are inlined between `@@CORE:<id>@@` markers, the scenarios between `@@SCENARIOS@@`, the Lean corpus (with its sha256) between `@@CORPUS@@`. |
 | `checkpoint-simulator-build.mjs` | regenerates the page from the core, the scenarios and the corpus, and writes `docs/simulator/index.html`; `--check` reds on any drift. |
 | `checkpoint-simulator-scenarios/` | one JSON per story (1–15): params, evidence decisions, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits. |
-| `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core with the Lean corpus as T7's oracle; every theorem on every step; every refusal reason asserted; exact Nat at every boundary; a multi-AID system generator (T8 on every transition); the story reconciliation and the distinctive-clause matrix (`--matrix`, `--clauses-md`); build drift; a page smoke under a minimal DOM including `?selftest=1`. `--selftest` proves it can fail eleven ways. |
+| `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core with the Lean corpus as T7's oracle; every theorem on every step; every refusal reason asserted; exact Nat at every real entry point; a multi-AID system generator (T8 on every transition); the story reconciliation against the Lean's declaration spans and the distinctive-clause matrix (`--matrix`, `--clauses-md`); build drift; a page smoke under a minimal DOM including `?selftest=1`. `--selftest` proves it can fail twenty ways. |
 | `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim: seeded traces, the boundary grid, and the Lean's own verdict on every step of the fifteen scenarios (the T7 oracle). |
-| `checkpoint-simulator-clauses.json` | every "chain checks" clause of every story reconciled with the Lean (guard with file:line and token, omission, overrule) and the distinctive clauses each scenario must exercise. |
+| `checkpoint-simulator-clauses.json` | every "chain checks" clause of every story reconciled with the Lean (guard or overrule anchored inside a Lean declaration with a semantic tie, omission with its note) and the distinctive clauses each scenario must exercise. |
 | `M1-STORIES.md` | the fifteen stories, verbatim, which the gate reads to extract the clauses. |
-| `checkpoint-simulator-trace-gate.mjs` | runs the Lean driver fresh, compares by sha256 with the corpus embedded in the page, replays every step (applied and refused) through the core and the page's inlined core, checks every theorem on every applied step. `--selftest` proves it can fail. |
+| `checkpoint-simulator-trace-gate.mjs` | builds the driver's Lean imports (`lake build`), runs the Lean driver fresh, compares by sha256 with the corpus embedded in the page, replays every step (applied and refused) through the core and the page's inlined core, checks every theorem on every applied step. `--selftest` proves it can fail, cold included. |
 | `checkpoint-simulator-minidom.mjs` | the minimal DOM the gates drive the page with (parser, selectors, events, values, a recording canvas). Not jsdom: what the page uses and it lacks throws. |
 | `../lean/CheckpointTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over seeded traces, a boundary grid (every guarded comparison at −1 / = / +1, every action from every state, two evidence oracles) and every step of the scenario files, and prints JSON via `ToJson` instances. |
 
@@ -46,7 +46,7 @@ the story's words.
 node --check simulator/checkpoint-simulator-core.mjs
 node simulator/checkpoint-simulator-build.mjs --check
 node simulator/checkpoint-simulator-scenario-gate.mjs
-node simulator/checkpoint-simulator-trace-gate.mjs      # runs Lean via nix shell nixpkgs#lean4
+node simulator/checkpoint-simulator-trace-gate.mjs      # builds and runs Lean via nix shell nixpkgs#lean4 (see the prerequisite below)
 nix develop 'github:paolino/dev-assets?dir=mkdocs' --quiet -c mkdocs build --strict --site-dir /tmp/sim-site
 ```
 
@@ -60,15 +60,52 @@ node simulator/checkpoint-simulator-build.mjs
 Negative controls, each RED for its intended reason, then GREEN:
 
 ```sh
-node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation, flipped guard, lying property, broken control, rounding at 2^53, wrong transition (T7), registry drop (T8), W read (T9), dropped clause, wrong anchor, dropped distinctive step
-node simulator/checkpoint-simulator-trace-gate.mjs --selftest      # mutated post-state, emptied corpus, mutated sha, flipped guard
+node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation, flipped guard, lying property, broken control, rounding at 2^53, step / replay / consumable / corpus verifier with its boundary removed, wrong transition (T7), registry drop (T8), W read (T9), dropped clause, the auditor's unrelated-declaration survivor, same text on another constructor, text outside the declaration, step through another constructor, clause absent from the story, a Lean guard hypothesis renamed, dropped distinctive step
+node simulator/checkpoint-simulator-trace-gate.mjs --selftest      # mutated post-state, emptied corpus, mutated sha, flipped guard, then the cold control (a copy of lean/ without .lake fails with the build step removed and is byte-identical with it)
 ```
+
+### Prerequisite of the trace gate
+
+The trace gate runs the Lean driver with `lake env lean`, which resolves
+`import CardanoKeri.Checkpoint` only from built `.olean` files under the
+ignored `lean/.lake/`. The gate therefore runs `lake build` on the modules
+the driver imports before the driver (a no-op when the build is current, a
+few seconds from a fresh clone or worktree), through `nix shell
+nixpkgs#lean4`. Nothing has to be built by hand; if the build fails the gate
+prints the exact command to run from `lean/` to see why.
 
 ## Numbers
 
 A Lean `Nat` is unbounded; this simulator represents it exactly up to
-2^53 − 1 and refuses by name (`invalid-nat`) anything else at every boundary,
-including an arithmetic result beyond the bound. Nothing is ever rounded.
+2^53 − 1 and refuses by name (`invalid-nat`, with the offending field)
+anything else at every entry point that takes a state or an evidence table —
+`step`, `replay`, the system step `attempt`, the consumer predicate
+`consumable`, the corpus verifier `checkCorpus` — before anything is
+evaluated: the complete state (every datum or tombstone field) and the
+complete table (every row of every predicate, consulted or not) are checked
+first, in the order params, slot, action, state, evidence. A shape that is
+not one of the four Lean states is `invalid-state`; a table that is not the
+four predicates with their arities is `invalid-evidence`; the consumer's
+verdict on such input is the refusal itself. An arithmetic result beyond the
+bound is refused too. Nothing is ever rounded.
+
+## The reconciliation table
+
+`checkpoint-simulator-clauses.json` classifies every "chain checks" clause of
+every story as a guard (the Lean decides it), an omission (the Lean does not
+model it) or an overrule (the Lean decides differently). A guard or overrule
+row names a Lean declaration — a `Step` constructor, `consumableState`,
+`SysStep.register`, `Trace.cons` or a theorem — optionally its guard
+hypothesis, the exact text that entails the clause, and one semantic tie to
+what decides it: a refusal name (the core's `LEAN_GUARDS` table binds every
+refusal name to the constructor and binder that refuse it), a consumer
+verdict (bound to its conjunct of `consumableState`), or a step of the
+story's own scenario (whose constructor is derived from the record). The
+scenario gate parses the Lean into declaration and constructor spans and
+requires the text inside the span (inside the binder when named), the tie to
+hold, every clause to occur in its story, and every guard hypothesis of every
+`Step` constructor to be claimed by exactly one refusal name (or by the
+paid/unpaid split). `--clauses-md` renders the table.
 
 ## The theorem ledger
 

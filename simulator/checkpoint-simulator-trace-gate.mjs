@@ -4,8 +4,11 @@
  * verifier for the Lean trace corpus embedded in checkpoint-simulator.html.
  *
  * Fresh on every run it:
- *   1. runs the committed lean/CheckpointTraceDriver.lean in the repository's
- *      Lean environment (the durable producer; its JSON is disposable);
+ *   1. builds the repository modules the driver imports (`lake build
+ *      CardanoKeri.Checkpoint`, a no-op when .lake/ is current, so a fresh
+ *      clone or worktree with no ignored build output works) and runs the
+ *      committed lean/CheckpointTraceDriver.lean in the repository's Lean
+ *      environment (the durable producer; its JSON is disposable);
  *   2. requires valid JSON with the expected schema, nonempty traces and a
  *      nonempty grid;
  *   3. extracts the embedded LEAN_CORPUS fixture and its stated sha256 from
@@ -29,10 +32,12 @@
  * --selftest proves the gate can fail: a mutated post-state in a scratch copy
  * of the embedded corpus, an emptied embedded corpus, a mutated stated sha,
  * and a core with a guard flipped (freeze without a short pool) — each RED
- * for its intended reason — then production GREEN.
+ * for its intended reason; then the cold control: a scratch copy of lean/
+ * without .lake fails with the build step removed and, with it, produces
+ * byte-identical output — then production GREEN.
  */
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -47,9 +52,28 @@ const CORE = join(HERE, 'checkpoint-simulator-core.mjs');
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 const SCHEMA = 'cardano-keri.checkpoint-trace';
 
-function runDriver() {
-  return execFileSync('nix', ['shell', 'nixpkgs#lean4', '-c', 'lake', 'env', 'lean', 'CheckpointTraceDriver.lean'],
-    { cwd: LEAN, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
+const DRIVER = 'CheckpointTraceDriver.lean';
+const lake = (args, cwd) => execFileSync('nix', ['shell', 'nixpkgs#lean4', '-c', 'lake', ...args],
+  { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
+// the repository modules the driver imports (its `import` lines minus Lean's
+// own): `lake env lean` resolves them only from built .olean files
+function driverImports(leanDir) {
+  return readFileSync(join(leanDir, DRIVER), 'utf8').split('\n').map(l => l.match(/^import\s+(\S+)/)).filter(Boolean)
+    .map(m => m[1]).filter(m => !/^(Lean|Init|Std|Lake)(\.|$)/.test(m));
+}
+// runDriver(opts) → the driver's stdout. Builds the imported modules first
+// (`lake build CardanoKeri.Checkpoint`), so the gate works from a fresh clone
+// or worktree with no ignored .lake/; opts.build === false skips that step
+// (the selftest's cold control proves the step is load-bearing).
+function runDriver(opts = {}) {
+  const leanDir = opts.leanDir || LEAN;
+  const mods = driverImports(leanDir);
+  if (!mods.length) throw new Error(`${DRIVER} imports no repository module`);
+  if (opts.build !== false) {
+    try { lake(['build', ...mods], leanDir); }
+    catch (e) { throw new Error(`lake build ${mods.join(' ')} failed — run \`cd lean && nix shell nixpkgs#lean4 -c lake build ${mods.join(' ')}\` to see why: ` + (String(e.stdout || '') + String(e.stderr || '')).slice(-600)); }
+  }
+  return lake(['env', 'lean', DRIVER], leanDir);
 }
 
 function extractEmbedded(doc) {
@@ -170,9 +194,25 @@ async function selftest(work) {
     if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 600)}`); return 1; }
     console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n')[0].slice(0, 140)}`);
   }
+  // the cold control: a scratch copy of lean/ without .lake — with the build step
+  // removed the driver cannot resolve its imports; with it, the output is
+  // byte-identical to the warm run
+  // (the driver also reads ../simulator/checkpoint-simulator-scenarios, so the
+  // copy keeps the repository layout: <work>/repo/lean and <work>/repo/simulator)
+  const cold = join(work, 'repo', 'lean');
+  cpSync(LEAN, cold, { recursive: true, filter: src => !/[\\/]\.lake([\\/]|$)/.test(src) });
+  cpSync(join(HERE, 'checkpoint-simulator-scenarios'), join(work, 'repo', 'simulator', 'checkpoint-simulator-scenarios'), { recursive: true });
+  let coldFail = null;
+  try { runDriver({ leanDir: cold, build: false }); } catch (e) { coldFail = String(e.stdout || '') + String(e.stderr || '') + String(e.message || ''); }
+  if (coldFail === null) { console.error('SELFTEST RED: the cold copy ran the driver with the build step removed (is .lake really absent from the copy?)'); return 1; }
+  if (!/unknown module prefix|No directory 'CardanoKeri'|CardanoKeri\.olean/.test(coldFail)) { console.error('SELFTEST RED: the cold copy failed for the wrong reason:\n' + coldFail.slice(0, 600)); return 1; }
+  console.log(`negative control «cold copy of lean/ without .lake, build step removed»: RED as expected — ${coldFail.split('\n')[0].slice(0, 140)}`);
+  const coldRaw = runDriver({ leanDir: cold });
+  if (sha256(coldRaw) !== sha256(freshRaw)) { console.error('SELFTEST RED: the cold copy built and ran, but its output differs from the warm run'); return 1; }
+  console.log(`cold control GREEN: lake build ${driverImports(cold).join(' ')} then the driver, from a copy with no .lake — output sha ${sha256(coldRaw).slice(0, 12)}… identical to the warm run`);
   const green = await runGate({ freshRaw });
   if (!green.ok) { console.error('SELFTEST RED: production does not return GREEN:\n' + green.reasons.join('\n')); return 1; }
-  report(green, 'selftest GREEN: 4 negative controls RED for the expected reason; ');
+  report(green, 'selftest GREEN: 4 negative controls RED for the expected reason, the cold control RED without the build and GREEN with it; ');
   return 0;
 }
 

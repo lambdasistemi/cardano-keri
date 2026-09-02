@@ -67,7 +67,7 @@ const SCENARIOS = argPath('--scenarios') || join(HERE, 'checkpoint-simulator-sce
 const CLAUSES = argPath('--clauses') || join(HERE, 'checkpoint-simulator-clauses.json');
 const CORPUS = join(HERE, 'checkpoint-simulator-corpus.json');
 const STORIES = join(HERE, 'M1-STORIES.md');
-const LEAN_ROOT = join(HERE, '..');
+const LEAN_ROOT = argPath('--lean-root') || join(HERE, '..');
 const BUILD = join(HERE, 'checkpoint-simulator-build.mjs');
 
 /* --- one scenario: the core's own checker (shared with the page's selftest) --- */
@@ -292,6 +292,60 @@ function checkSystem(core, corpus) {
   return { problems, transitions, accepted, refused, t8Shown, nonRegisterShown, asserted };
 }
 
+/* --- the Lean source, by declaration span ------------------------------- */
+
+// leanSpans(files) → Map name → {file, from, to, text}: every top-level
+// declaration (theorem/def/inductive/structure/abbrev/instance) runs from its
+// line to the line before the next column-0 declaration, doc comment, section
+// or `end`; every constructor of an inductive (`  | name`) is `Inductive.name`
+// and runs to the line before the next constructor or its doc comment. Doc
+// comments are not part of a span: an anchor must be code.
+const TOP = /^(theorem|def|inductive|structure|abbrev|instance)\s+([^\s(:{]+)/;
+const TOP_END = /^(theorem|def|inductive|structure|abbrev|instance|namespace|end|open|section|\/-|#)/;
+function leanSpans(files) {
+  const spans = new Map();
+  for (const [file, text] of Object.entries(files)) {
+    const lines = text.split('\n');
+    const put = (name, from, to) => spans.set(name, { file, from: from + 1, to: to + 1, text: lines.slice(from, to + 1).join('\n') });
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(TOP);
+      if (!m) continue;
+      let j = i + 1;
+      while (j < lines.length && !TOP_END.test(lines[j])) j++;
+      put(m[2], i, j - 1);
+      if (m[1] === 'inductive') {
+        let c = -1, cname = null;
+        const close = k => { if (c >= 0) put(m[2] + '.' + cname, c, k); };
+        for (let k = i + 1; k <= j - 1; k++) {
+          const cm = lines[k].match(/^  \| (\S+)/);
+          if (cm) { close(k - 1); c = k; cname = cm[1]; }
+          else if (/^  \/--/.test(lines[k])) { close(k - 1); c = -1; }
+        }
+        close(j - 1);
+      }
+      i = j - 1;
+    }
+  }
+  return spans;
+}
+// binders(span) → {name: typeText} for every `(name : type)` binder in a span
+function binders(span) {
+  const out = {};
+  const re = /\(([A-Za-z_][A-Za-z0-9_']*)\s*:\s*/g;
+  let m;
+  while ((m = re.exec(span.text))) {
+    let depth = 1, k = re.lastIndex;
+    while (k < span.text.length && depth) { if (span.text[k] === '(') depth++; else if (span.text[k] === ')') depth--; k++; }
+    out[m[1]] = span.text.slice(re.lastIndex, k - 1).replace(/\s+/g, ' ').trim();
+  }
+  // structure fields: `  name : type` lines (Params.hD : 0 < D)
+  for (const line of span.text.split('\n')) { const f = line.match(/^  ([A-Za-z_][A-Za-z0-9_']*)\s*:\s*(.+)$/); if (f && out[f[1]] === undefined) out[f[1]] = f[2].trim(); }
+  return out;
+}
+const squash = s => String(s).replace(/\s+/g, ' ');
+const within = (hay, needle) => squash(hay).includes(squash(needle));
+const where = span => `${span.file}:${span.from}-${span.to}`;
+
 /* --- story reconciliation ---------------------------------------------- */
 
 const LABELS = { default: ['The chain checks', 'The predicate', 'Fails closed', 'What limits it'], 13: ['Action'], 14: ['*'], 15: ['Today', 'Direction (D-027, not yet ruled)'] };
@@ -323,82 +377,174 @@ function extractStoryClauses(md) {
   return res;
 }
 
-function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines) {
+// does a scenario timeline entry match a clause's `match` (the distinctive vocabulary)?
+function recordMatches(core, m, t) {
+  const r = t.record; if (!r) return false;
+  const params = t.session.params;
+  const dd = (r.action && typeof r.action === 'object') ? r.action[r.kind] : {};
+  const lp = core.liveOf(r.pre), lq = core.liveOf(r.state);
+  const fl = r.flow || core.flow({});
+  return [
+    m.ok === undefined || r.ok === m.ok,
+    m.kind === undefined || r.kind === m.kind,
+    m.reason === undefined || r.reason === m.reason,
+    m.op === undefined || dd.op === m.op,
+    m.preWord === undefined || core.stateWord(params, r.pre) === m.preWord,
+    !m.prePoisoned || (lp && lp.poisoned === true),
+    !m.refundNull || dd["refund'"] === null,
+    !m.refundUnchanged || (lp && lq && lp.refundTo === lq.refundTo),
+    !m.refundChanged || (lp && lq && lp.refundTo !== lq.refundTo),
+    !m.hunterPool || (r.ok && fl.hunter && fl.hunter.pool > 0),
+    !m.noFlow || (r.ok && core.canon(fl) === core.canon(core.flow({}))),
+    !m.refundToAlice || (r.ok && fl.refund && fl.refund.addr === 1),
+    !m.bornAtUnchanged || (lp && lq && lp.bornAt === lq.bornAt),
+  ].every(Boolean);
+}
+function findStep(core, story, m, scenarioTimelines) {
+  for (const [file, tl] of Object.entries(scenarioTimelines)) {
+    if (Number(file.match(/^(\d+)/)[1]) !== story) continue;
+    for (let i = 0; i < tl.length; i++) if (recordMatches(core, m, tl[i])) return { file, step: i, record: tl[i].record };
+  }
+  return null;
+}
+
+// the refusal names against the Lean: every claim exists with its text inside
+// the constructor (and inside the named binder), every `h`-binder of every
+// Step constructor is claimed exactly once, every theorem named exists
+function checkGuardTable(core, spans) {
+  const problems = [];
+  const claimed = new Map(); // 'decl/hyp' → reason
+  const claim = (decl, hyp, by, text) => {
+    const span = spans.get(decl);
+    if (!span) { problems.push(`guard table: ${by} names ${decl}, which is not a declaration of the Lean`); return; }
+    if (hyp) {
+      const b = binders(span)[hyp];
+      if (b === undefined) problems.push(`guard table: ${by} names ${decl}/${hyp}, but ${decl} (${where(span)}) has no binder ${hyp}`);
+      else if (text && !within(b, text)) problems.push(`guard table: ${decl}/${hyp} is «${b}», not «${text}» (${by})`);
+      const key = decl + '/' + hyp;
+      if (claimed.has(key) && claimed.get(key) !== by) problems.push(`guard table: ${key} is claimed by both ${claimed.get(key)} and ${by}`);
+      claimed.set(key, by);
+    } else if (text && !within(span.text, text)) problems.push(`guard table: «${text}» is not inside ${decl} (${where(span)}) (${by})`);
+  };
+  for (const reason of core.REASONS) {
+    const g = core.LEAN_GUARDS[reason];
+    if (!g) { problems.push(`guard table: refusal ${reason} has no entry (which Lean guard is it?)`); continue; }
+    for (const decl of g.decls) {
+      if (g.hyp) claim(decl, g.hyp, reason, g.text);
+      else if (g.hyps) for (const [h, t] of g.hyps) claim(decl, h, reason, t);
+      else claim(decl, null, reason, g.text);
+    }
+    if (g.theorem && !spans.has(g.theorem)) problems.push(`guard table: ${reason} names theorem ${g.theorem}, which does not exist`);
+  }
+  for (const reason of Object.keys(core.LEAN_GUARDS)) if (!core.REASONS.includes(reason)) problems.push(`guard table: ${reason} is not a refusal the core can produce`);
+  for (const s of core.LEAN_SPLITS) claim(s.decl, s.hyp, 'split ' + s.hyp, s.text);
+  // every guard hypothesis of every Step constructor is claimed
+  let hyps = 0;
+  for (const [name, span] of spans) {
+    if (!name.startsWith('Step.')) continue;
+    for (const h of Object.keys(binders(span))) {
+      if (!/^h/.test(h)) continue;
+      hyps++;
+      if (!claimed.has(name + '/' + h)) problems.push(`guard table: ${name}/${h} (${where(span)}) is a guard the refusal names do not claim`);
+    }
+  }
+  if (!hyps) problems.push('guard table: no Step constructor with a guard hypothesis found in the Lean (parser broken?)');
+  return { problems, hyps, claimed };
+}
+
+function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) {
   const problems = [];
   const clauses = clausesDoc.clauses || [];
+  const files = {};
+  for (const f of ['lean/CardanoKeri/Checkpoint.lean', 'lean/CardanoKeri/CheckpointGoals.lean']) {
+    try { files[f] = readFileSync(join(leanRoot, f), 'utf8'); } catch (e) { problems.push(`cannot read ${f}: ${e.message}`); }
+  }
+  const spans = leanSpans(files);
+  const gt = checkGuardTable(core, spans);
+  problems.push(...gt.problems);
   const byStory = {};
   for (const c of clauses) (byStory[c.story] = byStory[c.story] || []).push(c);
-  // every clause is classified and anchored
-  const leanCache = {};
+  const theoremGroup = decl => core.THEOREMS.find(t => t.lean.includes(decl));
+  // every guard / overrule row: a declaration, the exact text inside its span
+  // (inside the named binder), and one semantic tie to what decides the clause
+  let anchored = 0;
   for (const c of clauses) {
-    if (!['guard', 'omission', 'overrule'].includes(c.class)) problems.push(`story ${c.story} clause «${c.clause}»: unknown class ${c.class}`);
-    if (c.class === 'guard' || c.class === 'overrule') {
-      const m = (c.ref || '').match(/^(lean\/[^:]+):(\d+)$/);
-      if (!m) { problems.push(`story ${c.story} clause «${c.clause}»: guard without a file:line ref`); continue; }
-      if (!leanCache[m[1]]) { try { leanCache[m[1]] = readFileSync(join(LEAN_ROOT, m[1]), 'utf8').split('\n'); } catch (e) { leanCache[m[1]] = []; } }
-      const line = leanCache[m[1]][Number(m[2]) - 1];
-      if (line === undefined) problems.push(`story ${c.story} clause «${c.clause}»: ${c.ref} does not exist`);
-      else if (!c.token || !line.includes(c.token)) problems.push(`story ${c.story} clause «${c.clause}»: ${c.ref} does not contain «${c.token}» (line: ${(line || '').trim().slice(0, 80)})`);
-      if (c.reason && !core.REASONS.includes(c.reason)) problems.push(`story ${c.story} clause «${c.clause}»: unknown reason ${c.reason}`);
-      if (c.verdict && !core.VERDICTS.includes(c.verdict)) problems.push(`story ${c.story} clause «${c.clause}»: unknown verdict ${c.verdict}`);
-    } else if (!c.note) problems.push(`story ${c.story} clause «${c.clause}»: an omission needs a note`);
+    const tag = `story ${c.story} clause «${c.clause}»`;
+    if (!['guard', 'omission', 'overrule'].includes(c.class)) { problems.push(`${tag}: unknown class ${c.class}`); continue; }
+    if (c.class === 'omission') { if (!c.note) problems.push(`${tag}: an omission needs a note`); if (c.decl || c.reason || c.verdict || c.match) problems.push(`${tag}: an omission anchors nothing`); continue; }
+    if (c.ref || c.token) problems.push(`${tag}: file:line anchors are gone; name a declaration (decl) and its text`);
+    if (!c.decl || !c.text) { problems.push(`${tag}: a ${c.class} row names a Lean declaration (decl) and the exact text (text) that entails it`); continue; }
+    const span = spans.get(c.decl);
+    if (!span) { problems.push(`${tag}: ${c.decl} is not a declaration of the Lean`); continue; }
+    if (c.hyp) {
+      const b = binders(span)[c.hyp];
+      if (b === undefined) { problems.push(`${tag}: ${c.decl} (${where(span)}) has no binder ${c.hyp}`); continue; }
+      if (!within(b, c.text)) { problems.push(`${tag}: «${c.text}» is not inside ${c.decl}/${c.hyp} : «${b}»`); continue; }
+    } else if (!within(span.text, c.text)) { problems.push(`${tag}: «${c.text}» is not inside ${c.decl} (${where(span)})`); continue; }
+    const ties = ['reason', 'verdict', 'match'].filter(k => c[k] !== undefined);
+    if (ties.length !== 1) { problems.push(`${tag}: a ${c.class} row carries exactly one tie (reason, verdict or match), has ${ties.length ? ties.join('+') : 'none'}`); continue; }
+    if (c.reason !== undefined) {
+      const g = core.LEAN_GUARDS[c.reason];
+      if (!g) { problems.push(`${tag}: unknown reason ${c.reason}`); continue; }
+      if (!g.decls.includes(c.decl)) { problems.push(`${tag}: ${c.reason} is decided by ${g.decls.join(' / ') || 'the simulator, not the Lean'}, not by ${c.decl}`); continue; }
+      const hyps = g.hyp ? [g.hyp] : (g.hyps || []).map(x => x[0]);
+      if (c.hyp && !hyps.includes(c.hyp)) { problems.push(`${tag}: ${c.reason} is the guard ${hyps.join('/')}, not ${c.hyp}`); continue; }
+    } else if (c.verdict !== undefined) {
+      const conj = core.VERDICT_CONJUNCTS[c.verdict];
+      if (!conj) { problems.push(`${tag}: ${c.verdict} is not a conjunct verdict`); continue; }
+      if (c.decl !== 'consumableState') { problems.push(`${tag}: verdict ${c.verdict} is decided by consumableState, not by ${c.decl}`); continue; }
+      if (!conj.some(x => squash(x) === squash(c.text))) { problems.push(`${tag}: «${c.text}» is not the conjunct of ${c.verdict} (${conj.join(' / ')})`); continue; }
+    } else {
+      const hit = findStep(core, c.story, c.match, scenarioTimelines);
+      if (!hit) { problems.push(`${tag}: no step of story ${c.story}'s scenario matches ${JSON.stringify(c.match)}`); continue; }
+      const grp = theoremGroup(c.decl);
+      if (c.decl.startsWith('Step.')) {
+        const ctor = hit.record.ok ? core.constructorOf(hit.record) : null;
+        const decided = hit.record.ok ? [ctor] : ((core.LEAN_GUARDS[hit.record.reason] || {}).decls || []);
+        if (!decided.includes(c.decl)) { problems.push(`${tag}: ${hit.file} step ${hit.step} goes through ${decided.join(' / ') || 'no constructor'}, not ${c.decl}`); continue; }
+      } else if (grp) {
+        const th = hit.record.theorems[grp.id];
+        if (!th || !th.exhibited || !th.holds) { problems.push(`${tag}: ${hit.file} step ${hit.step} does not exhibit ${grp.id} (${c.decl})`); continue; }
+      } else { problems.push(`${tag}: a match tie needs a Step constructor or a theorem, not ${c.decl}`); continue; }
+    }
+    anchored++;
   }
-  // every extracted fragment of the stories is covered by the clauses
+  // every extracted fragment of the stories is covered by the clauses (longest
+  // clause first, so "not poisoned" is taken before "poisoned"), and every
+  // clause of the table occurs in its story
   const extracted = extractStoryClauses(storiesMd);
   let fragments = 0;
+  const seen = new Set();
   for (let n = 1; n <= 15; n++) {
     const bs = extracted[n] || [];
     if (!bs.length) { problems.push(`story ${n}: no "chain checks" bullet found in M1-STORIES.md`); continue; }
-    const cs = byStory[n] || [];
+    const cs = [...new Set((byStory[n] || []).map(c => c.clause))].sort((a, b) => b.length - a.length);
     for (const b of bs) {
       let rest = b.text;
-      for (const c of cs) { const i = rest.indexOf(c.clause); if (i >= 0) { rest = rest.slice(0, i) + ' ' + rest.slice(i + c.clause.length); fragments++; } }
+      for (const cl of cs) { const i = rest.indexOf(cl); if (i >= 0) { rest = rest.slice(0, i) + ' ' + rest.slice(i + cl.length); fragments++; seen.add(n + ' ' + cl); } }
       const leftover = rest.replace(/[\s;:.,()—]/g, '');
       if (leftover.length) problems.push(`story ${n}: unclassified fragment in «${b.label}»: «${rest.trim().replace(/\s+/g, ' ').slice(0, 120)}»`);
     }
     if (!cs.length) problems.push(`story ${n}: no clauses in the reconciliation table`);
   }
+  for (const c of clauses) if (!seen.has(c.story + ' ' + c.clause)) problems.push(`story ${c.story} clause «${c.clause}» does not occur in the story's checked bullets`);
   // distinctive clauses: each names a scenario step that exercises it
   const matrix = [];
   for (const d of clausesDoc.distinctive || []) {
-    const m = d.match || {};
-    let hit = null;
-    for (const [file, tl] of Object.entries(scenarioTimelines)) {
-      if (Number(file.match(/^(\d+)/)[1]) !== d.story) continue;
-      tl.forEach((t, i) => {
-        if (hit) return;
-        const r = t.record; if (!r) return;
-        const params = t.session.params;
-        const dd = (r.action && typeof r.action === 'object') ? r.action[r.kind] : {};
-        const lp = core.liveOf(r.pre), lq = core.liveOf(r.state);
-        const fl = r.flow || core.flow({});
-        const checks = [
-          m.ok === undefined || r.ok === m.ok,
-          m.kind === undefined || r.kind === m.kind,
-          m.reason === undefined || r.reason === m.reason,
-          m.op === undefined || dd.op === m.op,
-          m.preWord === undefined || core.stateWord(params, r.pre) === m.preWord,
-          !m.prePoisoned || (lp && lp.poisoned === true),
-          !m.refundNull || dd["refund'"] === null,
-          !m.refundUnchanged || (lp && lq && lp.refundTo === lq.refundTo),
-          !m.refundChanged || (lp && lq && lp.refundTo !== lq.refundTo),
-          !m.hunterPool || (r.ok && fl.hunter && fl.hunter.pool > 0),
-          !m.noFlow || (r.ok && core.canon(fl) === core.canon(core.flow({}))),
-          !m.refundToAlice || (r.ok && fl.refund && fl.refund.addr === 1),
-          !m.bornAtUnchanged || (lp && lq && lp.bornAt === lq.bornAt),
-        ];
-        if (checks.every(Boolean)) hit = { file, step: i };
-      });
-    }
-    matrix.push({ id: d.id, story: d.story, clause: d.clause, hit });
+    const hit = findStep(core, d.story, d.match || {}, scenarioTimelines);
+    matrix.push({ id: d.id, story: d.story, clause: d.clause, hit: hit ? { file: hit.file, step: hit.step } : null });
     if (!hit) problems.push(`distinctive clause «${d.id}» (story ${d.story}: ${d.clause}) is not exercised by any scenario step`);
   }
-  return { problems, clauses: clauses.length, fragments, matrix };
+  return { problems, clauses: clauses.length, anchored, fragments, matrix, hyps: gt.hyps };
 }
 
 function clausesMarkdown(clausesDoc) {
-  const lines = ['| story | clause | class | anchor | reason / verdict | note |', '|---|---|---|---|---|---|'];
-  for (const c of clausesDoc.clauses) lines.push(`| ${c.story} | ${c.clause.replace(/\|/g, '\\|')} | ${c.class} | ${c.ref ? c.ref + ' `' + c.token + '`' : ''} | ${c.reason || c.verdict || ''} | ${(c.note || '').replace(/\|/g, '\\|')} |`);
+  const lines = ['| story | clause | class | Lean declaration | text | tie | note |', '|---|---|---|---|---|---|---|'];
+  const esc = s => String(s === undefined ? '' : s).replace(/\|/g, '\\|');
+  for (const c of clausesDoc.clauses) {
+    const tie = c.reason ? 'reason ' + c.reason : c.verdict ? 'verdict ' + c.verdict : c.match ? 'step ' + JSON.stringify(c.match) : '';
+    lines.push(`| ${c.story} | ${esc(c.clause)} | ${c.class} | ${c.decl ? esc(c.decl + (c.hyp ? '/' + c.hyp : '')) : ''} | ${c.text ? '`' + esc(c.text) + '`' : ''} | ${esc(tie)} | ${esc(c.note)} |`);
+  }
   return lines.join('\n');
 }
 
@@ -529,6 +675,7 @@ function pageSmoke(core, html) {
 /* --- the suite ------------------------------------------------------------ */
 
 async function runSuite(opts) {
+  opts = { ...opts, leanRoot: opts.leanRoot || LEAN_ROOT };
   const core = await import(pathToFileURL(opts.core || CORE).href + '?t=' + Date.now() + Math.random());
   const rows = [], problems = [];
   let corpus = null;
@@ -577,8 +724,8 @@ async function runSuite(opts) {
   let clausesDoc = null;
   try { clausesDoc = core.parseJsonExact(readFileSync(opts.clauses || CLAUSES, 'utf8')); } catch (e) { problems.push('clauses table unreadable: ' + e.message); }
   if (clausesDoc) {
-    const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines);
-    rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.fragments} story fragments classified; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
+    const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines, opts.leanRoot || LEAN_ROOT);
+    rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.anchored} anchored inside a Lean declaration with a semantic tie, ${cl.fragments} story fragments classified; ${cl.hyps} Step guard hypotheses all claimed by a refusal name; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
     problems.push(...cl.problems);
     if (opts.printMatrix) for (const m of cl.matrix) console.log(`  ${m.hit ? '✓' : '✗'}  ${m.id.padEnd(32)} story ${String(m.story).padStart(2)}  ${m.hit ? m.hit.file + ' step ' + m.hit.step : '—'}  ${m.clause}`);
   }
@@ -619,6 +766,7 @@ async function selftest(work) {
   };
   const scenariosCopy = (edit) => { const d = join(work, 'sc-' + Math.random().toString(36).slice(2)); mkdirSync(d, { recursive: true }); cpSync(SCENARIOS, d, { recursive: true }); edit(d); return d; };
   const topUp = "const pool2 = natAdd(l.pool, a.topUp.x); if (pool2 === null) return refuse('invalid-nat', 'pool');";
+  const withClauses = (name, edit) => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); edit(j); const p = join(work, name); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; };
   const controls = [
     { name: 'scenario with a flipped expectation', expect: /expected ok=false, got ok=true/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[3].expect.ok = false; sc.steps[3].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
@@ -647,8 +795,18 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-t9', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + (p.W === 2 ? 1 : 0)); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
     { name: 'a story clause dropped from the reconciliation table', expect: /unclassified fragment/,
       make: () => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); j.clauses = j.clauses.filter(c => !(c.story === 1 && /inception parses/.test(c.clause))); const p = join(work, 'clauses-m.json'); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; } },
-    { name: 'a guard anchor whose line no longer holds its token', expect: /does not contain/,
-      make: () => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)).token = 'hpool : l.pool > p.P'; const p = join(work, 'clauses-m2.json'); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; } },
+    { name: "the auditor's survivor: the inception clause re-anchored to Action.actor, an existing but unrelated declaration", expect: /story 1 clause «the inception parses and self-addresses»: .*not Action\.actor/,
+      make: () => withClauses('clauses-survivor.json', j => { const c = j.clauses.find(c => c.story === 1 && /inception parses/.test(c.clause)); Object.assign(c, { class: 'guard', decl: 'Action.actor', text: '| .register .. => .anyone', match: { ok: true, kind: 'register' } }); delete c.note; }) },
+    { name: 'a reason row re-anchored to another constructor that carries the same text (hpool → rotateKeepUnpaid/hnopay)', expect: /pool-covers-premium is decided by Step\.freeze, not by Step\.rotateKeepUnpaid/,
+      make: () => withClauses('clauses-hnopay.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.decl = 'Step.rotateKeepUnpaid'; c.hyp = 'hnopay'; }) },
+    { name: 'a text that exists in the file but outside the named declaration', expect: /«env\.quorum l\.epoch = true» is not inside Step\.freeze/,
+      make: () => withClauses('clauses-outside.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); delete c.hyp; c.text = 'env.quorum l.epoch = true'; }) },
+    { name: 'a step tie whose scenario step goes through another constructor', expect: /goes through Step\.freeze, not Step\.rotateKeepPaid/,
+      make: () => withClauses('clauses-ctor.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.decl = 'Step.rotateKeepPaid'; c.text = 'hunter := some { addr := payee, pool := p.P }'; }) },
+    { name: 'a clause the story does not contain', expect: /clause «that the pool is below `Q`» does not occur in the story/,
+      make: () => withClauses('clauses-absent.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.clause = 'that the pool is below `Q`'; }) },
+    { name: 'a Step guard hypothesis renamed in the Lean (scratch copy: hpool → hpoolx) that no refusal name claims', expect: /Step\.freeze\/hpoolx .* is a guard the refusal names do not claim|Step\.freeze .* has no binder hpool/,
+      make: () => { const root = join(work, 'lean-root'); mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true }); for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) { let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8'); if (f === 'Checkpoint.lean') { if (!s.includes('(hpool : l.pool < p.P)')) throw new Error('selftest: hpool binder not found'); s = s.replace('(hpool : l.pool < p.P)', '(hpoolx : l.pool < p.P)'); } writeFileSync(join(root, 'lean', 'CardanoKeri', f), s); } return { leanRoot: root, skipBuild: true }; } },
     { name: 'a distinctive scenario step dropped (conviction from a poisoned state)', expect: /distinctive clause «convict-from-poisoned».*not exercised/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '09-cora-convicts.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps.splice(1, 1); sc.steps.forEach(s => { delete s.expect.exhibits; delete s.expect.verdict; }); writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
   ];

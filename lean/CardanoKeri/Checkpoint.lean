@@ -392,8 +392,6 @@ def replay (p : Params) (env : Env) : Slot → State → List (Slot × Action) �
 def Reachable (p : Params) (env : Env) (s : State) : Prop :=
   ∃ t es, Trace p env t .absent es s
 
-/-- Was the last epoch-relevant action a poison? Register and rotate open an
-epoch; poison marks it. Scanned from the end of the list. -/
 /-- The poison bit after a list of actions, starting from `b`: register and
 rotate open an epoch (clear), poison marks it, everything else keeps it. -/
 def poisonAfter : Bool → List (Slot × Action) → Bool

@@ -197,6 +197,15 @@ function pageSmoke(core, html) {
   if (!canvas) problems.push('no #value-chart canvas');
   else if (!canvas.__ctx || canvas.__ctx.calls < 10) problems.push('the value chart drew nothing');
   if (win.__errors && win.__errors.length) problems.push('page raised during play: ' + win.__errors.map(String).join(' | '));
+  // the page's own ?selftest=1 must run and PASS
+  try {
+    const w2 = createWindow(html, { search: '?selftest=1' });
+    if (w2.__errors.length) problems.push('selftest page raised: ' + w2.__errors.map(String).join(' | '));
+    const title = w2.document.title;
+    const pre = (w2.document.querySelector('#selftest-out') || {}).textContent || '';
+    if (!/^PASS/.test(title) || /^FAIL/m.test(pre)) problems.push('the page selftest does not PASS: ' + title + ' — ' + pre.split('\n').filter(l => /^FAIL/.test(l)).join(' | '));
+    if (!/Lean corpus/.test(pre)) problems.push('the page selftest did not replay the Lean corpus');
+  } catch (e) { problems.push('selftest page failed to load: ' + (e && e.message)); }
   return { problems };
 }
 

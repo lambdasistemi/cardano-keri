@@ -1269,8 +1269,8 @@ function renderChart() {
     ctx.strokeStyle = col('--line-2'); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(left, y1 + .5); ctx.lineTo(W - right, y1 + .5); ctx.stroke();
     ctx.fillStyle = col('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, left - 6, y0 + 8); ctx.fillText(String(max), left - 6, y(max));
-    ctx.fillText('0', left - 6, y1);
+    ctx.fillText(String(max), left - 6, y(max)); ctx.fillText('0', left - 6, y1);
+    ctx.textAlign = 'left'; ctx.fillStyle = col(cv); ctx.fillText(label, left + 4, y0 + 6);
     // area + step line
     const c = col(cv);
     ctx.beginPath(); ctx.moveTo(x(0), y1);
@@ -1387,10 +1387,12 @@ function runSelftest() {
     playStory(3);
     while (!$('hist-next').disabled) $('hist-next').click();
     const frozen = /frozen/i.test($('state-name').textContent);
+    const okChips = $('history-strip').querySelectorAll('.hist-chip.ok');
+    okChips[okChips.length - 1].click();   // the freeze: the last accepted step
     const lit = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
-    const ok = frozen && lit.includes('T15');
+    const ok = frozen && lit.includes('T15') && /frozen/i.test($('state-name').textContent);
     if (!ok) fails++;
-    out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}) with T15 lit (${lit.join(' ')})`);
+    out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}); on its last accepted step the ledger lights ${lit.join(' ')}`);
     startFresh(); render();
   } catch (e) { fails++; out.push('FAIL  controls: ' + (e && e.message)); }
   out.push(fails ? `FAIL  ${fails} item(s) failed` : `PASS  all ${SCENARIOS.length + 2} items`);

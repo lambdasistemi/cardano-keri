@@ -90,6 +90,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T15",
@@ -116,6 +117,7 @@
         "reason": "no-quorum",
         "verdict": "dreg-missing",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -130,6 +132,7 @@
         "reason": "no-quorum",
         "verdict": "dreg-missing",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -160,6 +163,7 @@
         "reason": "freeze-bond-missing",
         "verdict": "dreg-missing",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -186,9 +190,63 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T10",
           "T14"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "mallory",
+      "say": "Suppose Mallory also holds the keys the rotation just installed (epoch 1). She can poison the parked checkpoint: it was already unconsumable, and Alice’s next rotation clears it. She gains nothing.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              1
+            ]
+          }
+        ]
+      },
+      "action": "poison",
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 1,
+          "poisoned": true,
+          "dreg": 0,
+          "b": 0,
+          "pool": 3
+        },
+        "flow": {},
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T1",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9",
+          "T10"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "mallory",
+      "say": "And now her close is refused: poisoned. Had she closed first, the token would have burned for nothing paid (story 10 shows it): the Lean permits that; this story did not consider it.",
+      "action": "close",
+      "expect": {
+        "ok": false,
+        "reason": "poisoned",
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T4",
+          "T7",
+          "T9"
         ]
       }
     }

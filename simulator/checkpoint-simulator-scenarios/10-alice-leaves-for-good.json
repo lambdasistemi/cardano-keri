@@ -57,6 +57,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T10"
         ]
@@ -73,6 +74,7 @@
         "verdict": "poisoned",
         "exhibits": [
           "T4",
+          "T7",
           "T9"
         ]
       }
@@ -116,6 +118,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T16"
@@ -152,6 +155,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T10",
           "T16"
@@ -173,6 +177,7 @@
         "reason": "gone-terminal",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9"
         ]
@@ -192,8 +197,60 @@
         "reason": "gone-terminal",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "mallory",
+      "say": "Suppose instead the checkpoint was parked (story 5) and Mallory holds the keys of its current epoch. Close is enabled: nothing is paid, the token burns, the AID is gone forever. The Lean permits this; story 5 did not consider it.",
+      "seed": {
+        "present": {
+          "l": {
+            "sn": 1,
+            "epoch": 1,
+            "poisoned": false,
+            "bornAt": 0,
+            "refundTo": 1,
+            "dreg": 0,
+            "b": 0,
+            "pool": 0
+          }
+        }
+      },
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              1
+            ]
+          }
+        ]
+      },
+      "action": "close",
+      "expect": {
+        "ok": true,
+        "state": "gone",
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 0,
+            "b": 0,
+            "pool": 0
+          }
+        },
+        "verdict": "not-present",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9",
+          "T10",
+          "T16"
         ]
       }
     }

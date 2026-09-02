@@ -70,6 +70,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T15",
@@ -132,6 +133,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T10",
           "T15"
@@ -188,6 +190,7 @@
         "reason": "bond-over-full",
         "verdict": "dreg-missing",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }

@@ -69,6 +69,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T16"
@@ -92,6 +93,7 @@
         "reason": "no-witnessed-rotation",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -136,6 +138,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T15",
           "T16"
@@ -157,6 +160,7 @@
         "reason": "freeze-bond-missing",
         "verdict": "b-missing",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }

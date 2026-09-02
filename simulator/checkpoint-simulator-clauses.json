@@ -1,0 +1,802 @@
+{
+  "about": "Every 'chain checks' clause of every story in M1-STORIES.md, reconciled with the Lean. class: guard (a constructor hypothesis or definition, file:line, with the token the line must contain), omission (the Lean does not model it; the simulator says so), overrule (the Lean decides differently; the simulator follows the Lean). The scenario gate extracts the clauses from M1-STORIES.md and fails when one is missing here, when a guard anchor does not contain its token, or when a distinctive clause has no exercising scenario step.",
+  "clauses": [
+    {
+      "story": 1,
+      "clause": "the inception parses and self-addresses",
+      "class": "omission",
+      "note": "register (Checkpoint.lean:232) carries no inception and no validation predicate; the registrant's bytes are not modelled. The Env has no predicate for it either."
+    },
+    {
+      "story": 1,
+      "clause": "the AID is absent from the registry, and is inserted — this is the only way the token can ever be minted",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:426",
+      "token": "habs : aid ∉ s.registered",
+      "reason": "aid-already-registered"
+    },
+    {
+      "story": 1,
+      "clause": "both bonds are present",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:234",
+      "token": "dregIn := p.D, bIn := p.B",
+      "note": "the registration flow brings exactly D and B; a transaction bringing less is not a Step at all."
+    },
+    {
+      "story": 2,
+      "clause": "signatures at the current threshold over the rotation bytes",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation",
+      "note": "one predicate stands for the three cryptographic checks of the advance (Env.rotationTo doc, Checkpoint.lean:76-80)."
+    },
+    {
+      "story": 2,
+      "clause": "revealed keys match the pre-committed digests at the next threshold",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 2,
+      "clause": "receipts from at least `toad` of the new witness set",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 2,
+      "clause": "sequence strictly greater",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hsn : l.sn < sn'",
+      "reason": "sequence-not-later"
+    },
+    {
+      "story": 2,
+      "clause": "Then it pays `P` from the pool to Hal",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:242",
+      "token": "hpay : p.P ≤ l.pool",
+      "note": "paid when the pool covers P (rotateKeepPaid); otherwise the rotation lands unpaid (rotateKeepUnpaid, Checkpoint.lean:252): payment is never a gate."
+    },
+    {
+      "story": 3,
+      "clause": "exactly the advance predicate on the presented rotation",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:288",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 3,
+      "clause": "that the pool is below `P`",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:289",
+      "token": "hpool : l.pool < p.P",
+      "reason": "pool-covers-premium"
+    },
+    {
+      "story": 3,
+      "clause": "that the checkpoint is not poisoned (already unconsumable, nothing to freeze)",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:289",
+      "token": "hclean : l.poisoned = false",
+      "reason": "poisoned"
+    },
+    {
+      "story": 3,
+      "clause": "Then it pays `B` to Hal and leaves the datum untouched",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:291",
+      "token": "hunter := some { addr := payee, b := p.B }",
+      "note": "the freeze also needs the freeze bond present (hb : l.b = p.B, Checkpoint.lean:289; refusal freeze-bond-missing), which the story states only as its 'after'."
+    },
+    {
+      "story": 4,
+      "clause": "the advance predicate",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:270",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 4,
+      "clause": "that both bonds are full on the output",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:277",
+      "token": "dreg := p.D, b := p.B",
+      "note": "the depositing rotation's output holds exactly D and B (rotateDeposit); the guard hd/hb (Checkpoint.lean:272) refuses a datum already above full (bond-over-full)."
+    },
+    {
+      "story": 5,
+      "clause": "the advance predicate",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:261",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 5,
+      "clause": "then it pays `D_reg + B + pool` to the refund address",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:264",
+      "token": "refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }"
+    },
+    {
+      "story": 6,
+      "clause": "the advance predicate",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:270",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation"
+    },
+    {
+      "story": 6,
+      "clause": "both bonds full on the output",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:277",
+      "token": "dreg := p.D, b := p.B"
+    },
+    {
+      "story": 7,
+      "clause": "signatures at the current threshold — one stolen member key of a multisig cannot poison",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:281",
+      "token": "hq : env.quorum l.epoch = true",
+      "reason": "no-quorum",
+      "note": "the threshold itself is inside Env.quorum; a single member key is not modelled (Checkpoint.lean:86-87)."
+    },
+    {
+      "story": 7,
+      "clause": "that the epoch is not already poisoned",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:281",
+      "token": "hclean : l.poisoned = false",
+      "reason": "already-poisoned"
+    },
+    {
+      "story": 8,
+      "clause": "the signature over the new address at the new threshold by the keys the rotation reveals",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:241",
+      "token": "hauth : refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true",
+      "reason": "refund-not-authorized"
+    },
+    {
+      "story": 8,
+      "clause": "A relayer submitting her public rotation without that signature leaves the address unchanged",
+      "class": "overrule",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:241",
+      "token": "hauth : refund'.all",
+      "note": "a rotation that names an unauthorized address is refused whole (hauth fails), not landed with the old address; a rotation naming no address (refund' = none) lands and keeps it. Story 8's scenario plays both."
+    },
+    {
+      "story": 9,
+      "clause": "the second rotation is at the tip's sequence",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:300",
+      "token": "hdup : env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
+    },
+    {
+      "story": 9,
+      "clause": "reveals the same keys the tip holds",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:300",
+      "token": "hdup : env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof",
+      "note": "one predicate stands for the whole duplicity check (Env.duplicityAt doc, Checkpoint.lean:88-91)."
+    },
+    {
+      "story": 9,
+      "clause": "is signed at the current threshold",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:300",
+      "token": "hdup : env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
+    },
+    {
+      "story": 9,
+      "clause": "carries receipts from at least `toad` of the tip's witnesses",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:300",
+      "token": "hdup : env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
+    },
+    {
+      "story": 9,
+      "clause": "and differs from the accepted one",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:300",
+      "token": "hdup : env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
+    },
+    {
+      "story": 9,
+      "clause": "No history needed: the revealed keys are the current keys",
+      "class": "omission",
+      "note": "the model has no key material; the epoch counter stands for the current keys, and duplicityAt is asked at (epoch, sn) only."
+    },
+    {
+      "story": 10,
+      "clause": "signatures at the current threshold",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:309",
+      "token": "hq : env.quorum l.epoch = true",
+      "reason": "no-quorum"
+    },
+    {
+      "story": 10,
+      "clause": "not poisoned",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:309",
+      "token": "hclean : l.poisoned = false",
+      "reason": "poisoned"
+    },
+    {
+      "story": 10,
+      "clause": "Then it pays everything to the refund address and burns the token",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:311",
+      "token": "refund := some { addr := l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }"
+    },
+    {
+      "story": 11,
+      "clause": "present",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "| .present l =>",
+      "verdict": "not-present"
+    },
+    {
+      "story": 11,
+      "clause": "`D_reg` full",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.dreg = p.D",
+      "verdict": "dreg-missing"
+    },
+    {
+      "story": 11,
+      "clause": "`B` full",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.b = p.B",
+      "verdict": "b-missing"
+    },
+    {
+      "story": 11,
+      "clause": "not poisoned",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.poisoned = false",
+      "verdict": "poisoned"
+    },
+    {
+      "story": 11,
+      "clause": "born at least `W` slots ago",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.bornAt + p.W ≤ now",
+      "verdict": "juvenile"
+    },
+    {
+      "story": 11,
+      "clause": "the signature on the payment satisfies the current threshold",
+      "class": "omission",
+      "note": "the consumer's own threshold check on its transaction is outside this machine (Checkpoint.lean:221-223)."
+    },
+    {
+      "story": 11,
+      "clause": "Later, when validity ships: within `valid_until`",
+      "class": "omission",
+      "note": "validity (D-027, A11) is reserved in the datum and not modelled (Checkpoint.lean:32-34)."
+    },
+    {
+      "story": 11,
+      "clause": "on: absent, unbonded, frozen, poisoned, juvenile, convicted, gone",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:226",
+      "token": "| _ => False",
+      "note": "every non-present state is False; each present failure names its conjunct (story 11's scenario walks all seven)."
+    },
+    {
+      "story": 12,
+      "clause": "the checkpoint is juvenile for `W` slots",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.bornAt + p.W ≤ now",
+      "verdict": "juvenile"
+    },
+    {
+      "story": 12,
+      "clause": "anyone can advance it onward with Alice's later public rotations",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:131",
+      "token": "| .register .. => .anyone",
+      "note": "the actor of a rotation is the next keys (Action.actor, Checkpoint.lean:132); whoever submits is not modelled, so any submitter with the public rotation lands it."
+    },
+    {
+      "story": 12,
+      "clause": "the moment that happens, Mallory's bonds answer to Alice's keys (story 8)",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:241",
+      "token": "hauth : refund'.all"
+    },
+    {
+      "story": 12,
+      "clause": "It can happen once per AID, ever",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:426",
+      "token": "habs : aid ∉ s.registered",
+      "reason": "already-present",
+      "note": "for one AID the state guard (present / gone / convicted) refuses first; the registry guard is the system-level reason (aid-already-registered), exercised by the gate's multi-AID generator."
+    },
+    {
+      "story": 13,
+      "clause": "add value to the pool; the datum is untouched; no signature",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:295",
+      "token": "Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x })"
+    },
+    {
+      "story": 14,
+      "clause": "the first advance wins and is paid",
+      "class": "overrule",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "note": "no UTxO in the model: the second advance fails because the state moved and its evidence no longer matches (no-witnessed-rotation)."
+    },
+    {
+      "story": 14,
+      "clause": "the first freeze wins `B`",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:289",
+      "token": "hb : l.b = p.B",
+      "reason": "freeze-bond-missing"
+    },
+    {
+      "story": 15,
+      "clause": "her checkpoint stays consumable as long as it is bonded and no rotation is missing",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:225",
+      "token": "l.bornAt + p.W ≤ now",
+      "note": "consumableState has no upper bound on age; only the state-side conjuncts count."
+    },
+    {
+      "story": 15,
+      "clause": "a validity Alice renews by re-signing with her current keys",
+      "class": "omission",
+      "note": "D-027 direction, not ruled; the fields are reserved in the datum and absent from the model (Checkpoint.lean:32-34)."
+    },
+    {
+      "story": 14,
+      "clause": "the second fails on the spent input",
+      "class": "overrule",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:240",
+      "token": "hev : env.rotationTo l.epoch l.sn sn' = true",
+      "note": "no UTxO in the model: the second advance fails because the state moved and its evidence no longer matches (no-witnessed-rotation)."
+    },
+    {
+      "story": 14,
+      "clause": "Both see the rotation",
+      "class": "omission",
+      "note": "hunters, watchers and timing are not modelled; evidence is a table."
+    },
+    {
+      "story": 14,
+      "clause": "If the pool covers `P`",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:242",
+      "token": "hpay : p.P ≤ l.pool"
+    },
+    {
+      "story": 14,
+      "clause": "If it does not",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:289",
+      "token": "hpool : l.pool < p.P"
+    },
+    {
+      "story": 14,
+      "clause": "the second finds nothing to take",
+      "class": "guard",
+      "ref": "lean/CardanoKeri/Checkpoint.lean:289",
+      "token": "hb : l.b = p.B",
+      "reason": "freeze-bond-missing"
+    },
+    {
+      "story": 15,
+      "clause": "Nothing on chain says she is gone",
+      "class": "omission",
+      "note": "no age, no liveness signal in the datum; consumableState reads bornAt only for juvenility."
+    },
+    {
+      "story": 15,
+      "clause": "no next-key reveal",
+      "class": "omission",
+      "note": "D-027 direction; not in the model."
+    },
+    {
+      "story": 15,
+      "clause": "if it lapses, only a rotation brings the checkpoint back",
+      "class": "omission",
+      "note": "D-027 direction; not in the model."
+    },
+    {
+      "story": 15,
+      "clause": "The fields are reserved in the datum now",
+      "class": "omission",
+      "note": "reserved fields are not in Live (Checkpoint.lean:140-157)."
+    }
+  ],
+  "distinctive": [
+    {
+      "id": "register-brings-both-bonds",
+      "story": 1,
+      "clause": "registration brings D and B and a first pool",
+      "match": {
+        "ok": true,
+        "kind": "register"
+      }
+    },
+    {
+      "id": "paid-advance",
+      "story": 2,
+      "clause": "a keep rotation with the pool covering P pays P to the payee",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "hunterPool": true
+      }
+    },
+    {
+      "id": "unpaid-advance",
+      "story": 4,
+      "clause": "a keep rotation with a short pool lands unpaid: payment is never a gate",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "noFlow": true
+      }
+    },
+    {
+      "id": "freeze-takes-B",
+      "story": 3,
+      "clause": "a freeze pays B to the hunter and leaves the datum",
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      }
+    },
+    {
+      "id": "frozen-keep",
+      "story": 4,
+      "clause": "a keep rotation from a frozen state lands and stays frozen",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "frozen-withdraw",
+      "story": 4,
+      "clause": "a withdraw rotation from a frozen state pays what is held and parks",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "withdraw",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "unfreeze-by-deposit",
+      "story": 4,
+      "clause": "a depositing rotation from a frozen state restores both bonds and restarts juvenility",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "pause-by-withdraw",
+      "story": 5,
+      "clause": "a withdraw rotation from a live state pays D + B + pool to the refund address",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "withdraw",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "paused-poison-accepted",
+      "story": 5,
+      "clause": "the current-epoch quorum can poison a paused checkpoint (accepted; gains nothing)",
+      "match": {
+        "ok": true,
+        "kind": "poison",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-close-accepted",
+      "story": 10,
+      "clause": "the current-epoch quorum can close a paused checkpoint: zero paid, token burned",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-retired-quorum-refused",
+      "story": 5,
+      "clause": "keys of a retired epoch cannot close or poison a paused checkpoint",
+      "match": {
+        "ok": false,
+        "reason": "no-quorum",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-freeze-refused",
+      "story": 5,
+      "clause": "a paused checkpoint cannot be frozen: no freeze bond to take",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "freeze-bond-missing",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "resurrect-by-deposit",
+      "story": 6,
+      "clause": "a depositing rotation from a paused state brings both bonds back",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "poison-then-rotate-clears",
+      "story": 7,
+      "clause": "a rotation from a poisoned state clears the poison",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "poisoned-close-refused",
+      "story": 7,
+      "clause": "close is disabled while poisoned",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "poisoned"
+      }
+    },
+    {
+      "id": "poisoned-freeze-refused",
+      "story": 7,
+      "clause": "a poisoned checkpoint cannot be frozen",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "poisoned"
+      }
+    },
+    {
+      "id": "second-poison-refused",
+      "story": 7,
+      "clause": "the poison is declared once per epoch",
+      "match": {
+        "ok": false,
+        "kind": "poison",
+        "reason": "already-poisoned"
+      }
+    },
+    {
+      "id": "refund-unauthorized-refused",
+      "story": 8,
+      "clause": "a rotation naming an address the new keys did not sign is refused",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "reason": "refund-not-authorized"
+      }
+    },
+    {
+      "id": "refund-null-preserved",
+      "story": 8,
+      "clause": "a rotation naming no address lands and keeps the refund address",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundNull": true,
+        "refundUnchanged": true
+      }
+    },
+    {
+      "id": "refund-moved-by-new-keys",
+      "story": 8,
+      "clause": "a rotation whose new keys signed the address moves it",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundChanged": true
+      }
+    },
+    {
+      "id": "convict-from-poisoned",
+      "story": 9,
+      "clause": "conviction is enabled from a poisoned state",
+      "match": {
+        "ok": true,
+        "kind": "convict",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "convict-without-proof-refused",
+      "story": 9,
+      "clause": "no duplicity proof, no conviction",
+      "match": {
+        "ok": false,
+        "kind": "convict",
+        "reason": "no-duplicity-proof"
+      }
+    },
+    {
+      "id": "convicted-terminal",
+      "story": 9,
+      "clause": "nothing leaves Convicted",
+      "match": {
+        "ok": false,
+        "reason": "convicted-terminal"
+      }
+    },
+    {
+      "id": "close-pays-refund-address",
+      "story": 10,
+      "clause": "close pays everything to the refund address in the datum, whoever closes",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "gone-terminal",
+      "story": 10,
+      "clause": "nothing leaves Gone; the AID cannot be registered again",
+      "match": {
+        "ok": false,
+        "reason": "gone-terminal"
+      }
+    },
+    {
+      "id": "stale-registration-donation",
+      "story": 8,
+      "clause": "a stranger's registration ends up paying Alice",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "refundToAlice": true
+      }
+    },
+    {
+      "id": "topup-keeps-juvenility",
+      "story": 13,
+      "clause": "a top-up leaves bornAt untouched",
+      "match": {
+        "ok": true,
+        "kind": "topUp",
+        "bornAtUnchanged": true
+      }
+    },
+    {
+      "id": "topup-invalid-nat",
+      "story": 13,
+      "clause": "a non-Nat amount is refused by name",
+      "match": {
+        "ok": false,
+        "kind": "topUp",
+        "reason": "invalid-nat"
+      }
+    },
+    {
+      "id": "race-second-advance",
+      "story": 14,
+      "clause": "the second advance finds its evidence no longer matching",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "reason": "no-witnessed-rotation",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "race-second-freeze",
+      "story": 14,
+      "clause": "the second freeze finds nothing to take",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "freeze-bond-missing",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "slot-regression",
+      "story": 14,
+      "clause": "the chain does not go backwards",
+      "match": {
+        "ok": false,
+        "reason": "slot-regression"
+      }
+    },
+    {
+      "id": "absent-needs-register",
+      "story": 1,
+      "clause": "nothing but a registration from Absent",
+      "match": {
+        "ok": false,
+        "reason": "absent-needs-register"
+      }
+    },
+    {
+      "id": "mint-once",
+      "story": 12,
+      "clause": "a second registration of the same AID is refused",
+      "match": {
+        "ok": false,
+        "kind": "register",
+        "reason": "already-present"
+      }
+    },
+    {
+      "id": "unknown-redeemer",
+      "story": 12,
+      "clause": "an unknown redeemer is refused by name",
+      "match": {
+        "ok": false,
+        "reason": "invalid-action"
+      }
+    },
+    {
+      "id": "zero-bond-params",
+      "story": 1,
+      "clause": "a deployment with a zero bond is refused",
+      "match": {
+        "ok": false,
+        "reason": "invalid-params"
+      }
+    },
+    {
+      "id": "bond-over-full-seeded",
+      "story": 6,
+      "clause": "a datum above full is refused by the depositing rotation (seeded, unreachable)",
+      "match": {
+        "ok": false,
+        "reason": "bond-over-full"
+      }
+    }
+  ]
+}

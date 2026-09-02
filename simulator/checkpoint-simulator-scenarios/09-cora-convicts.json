@@ -1,7 +1,7 @@
 {
   "story": 9,
   "title": "Cora convicts",
-  "goal": "As Cora, holding two of Alice's rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.",
+  "goal": "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.",
   "params": {
     "D": 1000,
     "B": 5,
@@ -33,8 +33,40 @@
     },
     {
       "slot": 12,
+      "who": "alice",
+      "say": "Alice has poisoned the epoch (Mallory has the keys). A conviction does not care which state the checkpoint is in.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              0
+            ]
+          }
+        ]
+      },
+      "action": "poison",
+      "expect": {
+        "ok": true,
+        "live": {
+          "poisoned": true
+        },
+        "verdict": "poisoned",
+        "exhibits": [
+          "T1",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9",
+          "T10"
+        ]
+      }
+    },
+    {
+      "slot": 12,
       "who": "cora",
-      "say": "Without a second receipted rotation at the tip's sequence there is no conviction.",
+      "say": "Without a second receipted rotation at the tip’s sequence there is no conviction.",
       "action": {
         "convict": {
           "payee": 3
@@ -43,8 +75,9 @@
       "expect": {
         "ok": false,
         "reason": "no-duplicity-proof",
-        "verdict": "consumable",
+        "verdict": "poisoned",
         "exhibits": [
+          "T7",
           "T9",
           "T12"
         ]
@@ -53,7 +86,7 @@
     {
       "slot": 12,
       "who": "cora",
-      "say": "Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice's witnesses. Convicted: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).",
+      "say": "Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice’s witnesses. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).",
       "evidence": {
         "add": [
           {
@@ -94,9 +127,11 @@
         },
         "verdict": "not-present",
         "exhibits": [
+          "T4",
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T12",
           "T16"
@@ -131,6 +166,7 @@
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9",
           "T12"
@@ -141,21 +177,13 @@
       "slot": 12,
       "who": "alice",
       "say": "No close, ever.",
-      "evidence": {
-        "add": [
-          {
-            "quorum": [
-              0
-            ]
-          }
-        ]
-      },
       "action": "close",
       "expect": {
         "ok": false,
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9",
           "T12"
@@ -176,6 +204,7 @@
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9",
           "T12"

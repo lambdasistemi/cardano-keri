@@ -65,6 +65,7 @@
         "reason": "pool-covers-premium",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -109,6 +110,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T16"
@@ -132,6 +134,7 @@
         "reason": "no-witnessed-rotation",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
@@ -164,6 +167,7 @@
         "reason": "sequence-not-later",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }

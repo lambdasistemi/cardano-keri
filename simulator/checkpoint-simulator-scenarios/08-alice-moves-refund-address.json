@@ -12,7 +12,7 @@
     {
       "slot": 0,
       "who": "friend",
-      "say": "A stranger registered Alice's checkpoint with his own refund address (6).",
+      "say": "A stranger registered Alice’s checkpoint with his own refund address (6).",
       "action": {
         "register": {
           "refund": 6,
@@ -37,7 +37,7 @@
     {
       "slot": 12,
       "who": "hal",
-      "say": "Alice rotates on KERI. A relayer submits her public rotation asking to move the refund address to Alice's: the new keys did not sign the address, so the whole rotation is refused as submitted.",
+      "say": "Alice rotates on KERI. A relayer submits her public rotation asking to move the refund address to Alice’s: the new keys did not sign the address, so the rotation is refused as submitted.",
       "evidence": {
         "add": [
           {
@@ -62,30 +62,21 @@
         "reason": "refund-not-authorized",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T9"
         ]
       }
     },
     {
       "slot": 12,
-      "who": "alice",
-      "say": "Alice's new keys (epoch 1) sign the new refund address along with the rotation. The address moves.",
-      "evidence": {
-        "add": [
-          {
-            "refundAuthorized": [
-              1,
-              1
-            ]
-          }
-        ]
-      },
+      "who": "hal",
+      "say": "The same relayer submits the rotation with no address at all: it lands, and the refund address stays the stranger’s.",
       "action": {
         "rotate": {
           "sn'": 1,
           "op": "keep",
           "payee": 2,
-          "refund'": 1
+          "refund'": null
         }
       },
       "expect": {
@@ -93,7 +84,7 @@
         "live": {
           "sn": 1,
           "epoch": 1,
-          "refundTo": 1,
+          "refundTo": 6,
           "dreg": 1000,
           "b": 5,
           "pool": 8
@@ -114,6 +105,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T14",
           "T16"
@@ -123,12 +115,74 @@
     {
       "slot": 12,
       "who": "alice",
-      "say": "At close the stranger's bonds go to Alice: a stale registration is a donation.",
+      "say": "At her next rotation Alice’s new keys (epoch 2) sign her address along with the rotation. The address moves.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          },
+          {
+            "refundAuthorized": [
+              2,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 2,
+          "op": "keep",
+          "payee": 1,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 2,
+          "epoch": 2,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 6
+        },
+        "flow": {
+          "hunter": {
+            "addr": 1,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "At close the stranger’s bonds go to Alice: a stale registration is a donation.",
       "evidence": {
         "add": [
           {
             "quorum": [
-              1
+              2
             ]
           }
         ]
@@ -142,7 +196,7 @@
             "addr": 1,
             "dreg": 1000,
             "b": 5,
-            "pool": 8
+            "pool": 6
           }
         },
         "verdict": "not-present",
@@ -150,6 +204,7 @@
           "T5",
           "T6",
           "T7",
+          "T8",
           "T9",
           "T10",
           "T16"

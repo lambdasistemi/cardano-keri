@@ -23,6 +23,7 @@
         "reason": "absent-needs-register",
         "verdict": "not-present",
         "exhibits": [
+          "T7",
           "T8",
           "T9"
         ]
@@ -122,6 +123,7 @@
         "reason": "already-present",
         "verdict": "consumable",
         "exhibits": [
+          "T7",
           "T8",
           "T9"
         ]

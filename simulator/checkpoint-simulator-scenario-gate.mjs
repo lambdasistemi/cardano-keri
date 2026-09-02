@@ -174,10 +174,21 @@ function checkExactNat(core, corpus) {
       mutate(c => { const st = c.traces[0].steps.find(s => core.stateKind(s.input) === 'present'); st.input.present.l.sn = v; }, 'trace 0 input sn', 'sn');
       mutate(c => { const st = c.stories[0].steps.find(s => core.stateKind(s.input) === 'present'); st.input.present.l.bornAt = v; }, 'story cell input bornAt', 'bornAt');
       mutate(c => { c.stories[0].steps[0].env.rotationTo = [[0, 0, v]]; }, 'story cell env rotationTo[0][2]', 'rotationTo[0][2]');
+      // results, not only inputs: a Lean-side post-state or flow beyond the bound is a refusal, not a parity difference
+      const applied = corpus.grid.cells.find(c => c.result && core.stateKind(c.result.state) === 'present');
+      mutate(c => { c.grid.cells.find(x => x.s === applied.s && x.a === applied.a && x.e === applied.e).result.state.present.l.pool = v; }, 'grid cell result state pool', 'pool');
+      mutate(c => { c.grid.cells.find(x => x.s === applied.s && x.a === applied.a && x.e === applied.e).result.flow.poolIn = v; }, 'grid cell result flow poolIn', 'poolIn');
+      mutate(c => { const st = c.traces[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.b = v; }, 'trace result state b', 'b');
+      mutate(c => { const st = c.stories[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.dreg = v; }, 'story cell result state dreg', 'dreg');
+      mutate(c => { c.grid.actions[0] = { topUp: { x: v } }; }, 'grid action x', 'x');
+      mutate(c => { c.grid.now = v; }, 'grid now', 'now');
     }
   }
   // ---- shapes that are not a state / not a table are refused by name too
-  const shapes = [[{ bogus: 1 }, 'state'], [null, 'state'], ['absentt', 'state'], [{ present: { l: null } }, 'l'], [{ present: { l: { ...live().present.l, poisoned: 'no' } } }, 'poisoned'],
+  // exactly one Lean constructor, nothing beside it, nothing extra inside its wrapper
+  const shapes = [[{ bogus: 1 }, 'bogus'], [null, 'state'], ['absentt', 'state'], [{}, 'state'], [{ present: { l: null } }, 'l'], [{ present: { l: { ...live().present.l, poisoned: 'no' } } }, 'poisoned'],
+    [{ ...live(), extra: true }, 'extra'], [{ ...live(), convicted: { epoch: 1, sn: 1, convictedAt: 1 } }, 'convicted'], [{ present: { l: live().present.l, extra: true } }, 'present.extra'],
+    [{ convicted: { epoch: 1, sn: 1, convictedAt: 1 }, present: { l: live().present.l } }, 'present'], [{ present: 'l' }, 'present'], [{ convicted: [1, 1, 1] }, 'convicted'],
     [{ present: { l: { ...live().present.l, extra: 1 } } }, 'extra'], [{ convicted: { epoch: 1, sn: 1, convictedAt: 1, extra: 0 } }, 'extra']];
   for (const [st, field] of shapes) {
     refusal(`step on non-state ${core.canon(st)}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-state', field);
@@ -785,6 +796,10 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-replay-boundary', [["  const sv = validateState(state); if (sv) return refuse(null, sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(null, ev.reason, ev.field);\n", ""]]), skipBuild: true }) },
     { name: 'consumable reads a non-state (verdict on a 2^53 bornAt)', expect: /consumable on a live state with bornAt=9007199254740992: expected verdict invalid-nat\/bornAt, got/,
       make: () => ({ core: mutant('m-consumable-boundary', [["  const sv = validateState(state); if (sv) return refused(sv.reason, sv.field);\n  const l = liveOf(state);", "  const l = liveOf(state);"]]), skipBuild: true }) },
+    { name: 'the state boundary accepts two constructors at once and strangers beside one', expect: /step on non-state .*"convicted".*"present".*: expected invalid-state\/convicted, got ok/,
+      make: () => ({ core: mutant('m-state-ctor', [["  const stranger = keys.find(x => !STATE_CTORS.includes(x));\n  if (stranger !== undefined) return bad('invalid-state', stranger, `${stranger} is not a constructor of State`);\n  if (keys.length !== 1) return bad('invalid-state', keys.length ? keys[1] : 'state', keys.length ? `${keys[0]} and ${keys[1]} at once: a state is one constructor` : 'unknown state shape');\n  const k = keys[0];", "  const k = keys.find(x => STATE_CTORS.includes(x)) || 'state';"]]), skipBuild: true }) },
+    { name: 'the trace verifier validates inputs only, so a Lean-side result beyond the bound is a parity difference', expect: /checkCorpus on a corpus with grid cell result state pool=9007199254740992: no invalid-nat\/pool reason/,
+      make: () => ({ core: mutant('m-corpus-results', [["  const badResult = (where, r) => { if (r === null) return false;", "  const badResult = (where, r) => { if (true) return false;"]]), skipBuild: true }) },
     { name: 'the trace verifier replays a corrupted corpus cell without refusing it by name', expect: /checkCorpus on a corpus with grid state \d+ pool=9007199254740992(: no invalid-nat\/pool reason| threw instead of refusing)/,
       make: () => ({ core: mutant('m-corpus-boundary', [["  if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };\n", "  reasons.length = 0;\n"]]), skipBuild: true }) },
     { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7 \(.*differs from Lean/,

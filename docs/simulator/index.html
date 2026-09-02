@@ -538,12 +538,22 @@ const LIVE_FIELDS = [...LIVE_NATS, 'poisoned'];
 // validateState(s) → null | {reason, field, message}: the complete state — one
 // of the four Lean shapes, every Nat field a Nat, the poison bit a boolean,
 // no field the Lean does not have — checked before anything reads it
+const STATE_CTORS = ['present', 'convicted'];
 function validateState(s) {
   const bad = (reason, field, message) => ({ reason, field, message });
-  const k = stateKind(s);
-  if (!k) return bad('invalid-state', 'state', 'unknown state shape');
+  if (s === 'absent' || s === 'gone') return null;
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return bad('invalid-state', 'state', 'unknown state shape');
+  // exactly one constructor, and nothing beside it
+  const keys = Object.keys(s);
+  const stranger = keys.find(x => !STATE_CTORS.includes(x));
+  if (stranger !== undefined) return bad('invalid-state', stranger, `${stranger} is not a constructor of State`);
+  if (keys.length !== 1) return bad('invalid-state', keys.length ? keys[1] : 'state', keys.length ? `${keys[0]} and ${keys[1]} at once: a state is one constructor` : 'unknown state shape');
+  const k = keys[0];
   if (k === 'present') {
-    const l = s.present.l;
+    const w = s.present;
+    if (!w || typeof w !== 'object' || Array.isArray(w)) return bad('invalid-state', 'present', 'present without a datum');
+    for (const f of Object.keys(w)) if (f !== 'l') return bad('invalid-state', 'present.' + f, `present.${f} is not a field of present (only l)`);
+    const l = w.l;
     if (!l || typeof l !== 'object' || Array.isArray(l)) return bad('invalid-state', 'l', 'present without a datum');
     for (const f of LIVE_NATS) if (!isNat(l[f])) return bad('invalid-nat', f, `${f} is not a non-negative integer`);
     if (typeof l.poisoned !== 'boolean') return bad('invalid-state', 'poisoned', 'poisoned is not a boolean');
@@ -554,6 +564,24 @@ function validateState(s) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return bad('invalid-state', 'convicted', 'convicted without a tombstone');
     for (const f of ['epoch', 'sn', 'convictedAt']) if (!isNat(c[f])) return bad('invalid-nat', f, `${f} is not a non-negative integer`);
     for (const f of Object.keys(c)) if (!['epoch', 'sn', 'convictedAt'].includes(f)) return bad('invalid-state', f, `${f} is not a field of the tombstone`);
+  }
+  return null;
+}
+
+// validateFlow(f) → null | {reason, field, message}: the complete Lean Flow —
+// three Nat inflows and three optional payments of four Nats, nothing else
+const FLOW_NATS = ['dregIn', 'bIn', 'poolIn'], FLOW_PAYS = ['refund', 'hunter', 'convictor'], PAY_FIELDS = ['addr', 'dreg', 'b', 'pool'];
+function validateFlow(f) {
+  const bad = (reason, field, message) => ({ reason, field, message });
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return bad('invalid-flow', 'flow', 'not a flow');
+  for (const k of Object.keys(f)) if (!FLOW_NATS.includes(k) && !FLOW_PAYS.includes(k)) return bad('invalid-flow', k, `${k} is not a field of Flow`);
+  for (const k of FLOW_NATS) if (!isNat(f[k])) return bad('invalid-nat', k, `${k} is not a non-negative integer`);
+  for (const k of FLOW_PAYS) {
+    const q = f[k];
+    if (q === null || q === undefined) continue;
+    if (typeof q !== 'object' || Array.isArray(q)) return bad('invalid-flow', k, `${k} is not a payment or null`);
+    for (const pf of Object.keys(q)) if (!PAY_FIELDS.includes(pf)) return bad('invalid-flow', k + '.' + pf, `${k}.${pf} is not a field of Payment`);
+    for (const pf of PAY_FIELDS) if (!isNat(q[pf])) return bad('invalid-nat', k + '.' + pf, `${k}.${pf} is not a non-negative integer`);
   }
   return null;
 }
@@ -1164,11 +1192,30 @@ function checkCorpus(corpus) {
   // the boundary first: every state and every evidence table the corpus carries
   // is validated by name before any cell is replayed; a corrupted one is a
   // refusal of the verifier, whatever the Lean said about that cell
+  // — inputs and results alike: every state, evidence table, action, slot,
+  // flow and result the corpus carries, before any comparison
   const badState = (where, s) => { const b = validateState(s); if (b) reasons.push(where + ': ' + b.reason + ' ' + b.field + ' (' + b.message + ')'); return !!b; };
   const badEnv = (where, e) => { const b = validateEnv(e); if (b) reasons.push(where + ': ' + b.reason + ' ' + b.field + ' (' + b.message + ')'); return !!b; };
-  for (const tr of corpus.traces || []) { badEnv('trace ' + tr.name + ' env', tr.env); (tr.steps || []).forEach((st, i) => badState('trace ' + tr.name + ' step ' + i + ' input', st.input)); }
-  if (corpus.grid) { (corpus.grid.states || []).forEach((s, i) => badState('grid state ' + i, s)); (corpus.grid.envs || []).forEach((e, i) => badEnv('grid env ' + i, e)); }
-  for (const sc of corpus.stories || []) for (const st of sc.steps || []) { const where = 'story ' + sc.story + ' step ' + st.index; badState(where + ' input', st.input); badEnv(where + ' env', st.env); }
+  const badFlow = (where, f) => { const b = validateFlow(f); if (b) reasons.push(where + ': ' + b.reason + ' ' + b.field + ' (' + b.message + ')'); return !!b; };
+  const badSlot = (where, n) => { if (isNat(n)) return false; reasons.push(where + ': invalid-nat now (not a non-negative integer)'); return true; };
+  const badAction = (where, a) => { const n = normalizeAction(a); if (n.ok) return false; reasons.push(where + ': ' + n.reason + ' ' + n.field); return true; };
+  const badResult = (where, r) => { if (r === null) return false; if (!r || typeof r !== 'object' || Array.isArray(r) || Object.keys(r).length !== 2 || !('flow' in r) || !('state' in r)) { reasons.push(where + ': invalid-result (a result is null or exactly {flow, state})'); return true; } const f = badFlow(where + ' flow', r.flow); return badState(where + ' state', r.state) || f; };
+  for (const tr of corpus.traces || []) {
+    badEnv('trace ' + tr.name + ' env', tr.env);
+    (tr.steps || []).forEach((st, i) => { const w = 'trace ' + tr.name + ' step ' + i; badSlot(w, st.now); badState(w + ' input', st.input); badAction(w + ' action', st.action); badResult(w + ' result', st.result); });
+  }
+  if (corpus.grid) {
+    const g = corpus.grid;
+    badSlot('grid now', g.now);
+    (g.states || []).forEach((s, i) => badState('grid state ' + i, s)); (g.envs || []).forEach((e, i) => badEnv('grid env ' + i, e)); (g.actions || []).forEach((a, i) => badAction('grid action ' + i, a));
+    (g.cells || []).forEach(c => badResult('grid cell s=' + c.s + ' a=' + c.a + ' e=' + c.e + ' result', c.result));
+    (g.consumable || []).forEach(c => badSlot('consumable probe s=' + c.s, c.now));
+  }
+  for (const sc of corpus.stories || []) for (const st of sc.steps || []) {
+    const where = 'story ' + sc.story + ' step ' + st.index;
+    const pv2 = validateParams(st.params); if (pv2) reasons.push(where + ': invalid-params ' + pv2);
+    badSlot(where, st.now); badState(where + ' input', st.input); badEnv(where + ' env', st.env); badAction(where + ' action', st.action); badResult(where + ' result', st.result);
+  }
   if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };
   const envOf = env => { let s = newSession(p, { corpus }); for (const k of EV_KINDS) for (const row of env[k] || []) s = addEvidence(s, { [k]: row }); return s; };
   const compare = (where, env, now, input, action, want) => {

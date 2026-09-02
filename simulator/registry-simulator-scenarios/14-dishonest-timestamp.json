@@ -1,0 +1,12 @@
+{
+  "id": 14, "slug": "dishonest-timestamp", "story": "A request dated in the future",
+  "narrative": "Mallory writes submitted_at = 100 at slot 0. The validators never compare it with the creating transaction, so the request is in phase 1 for a hundred slots — and rejectable at once, because a future timestamp is dishonest by definition. Sam rejects it immediately.",
+  "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
+  "actors": { "4": "Mallory", "6": "Sam (sweeper)" },
+  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "steps": [
+    { "now": 0, "actor": "anyone", "as": "Mallory", "action": { "contribute": { "aid": 11, "owner": 4, "submittedAt": 100 } }, "expect": { "ok": true } },
+    { "now": 1, "actor": "anyone", "as": "Sam", "action": { "fold": { "folder": 6, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "reject" }] } }, "expect": { "ok": true, "flow": { "refunds": [{ "addr": 4, "value": 1000 }], "tips": { "addr": 6, "value": 2 } } }, "exhibits": ["R9", "R10"], "note": "A process at slot 1 would also have been accepted: a future timestamp is both processable and rejectable, as on chain. The folder decides." }
+  ],
+  "expectFinal": { "gen": 1, "plugin": 7, "root": [], "live": [], "tomb": [], "requests": [], "nextReq": 1 }
+}

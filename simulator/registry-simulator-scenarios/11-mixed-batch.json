@@ -1,0 +1,14 @@
+{
+  "id": 11, "slug": "mixed-batch", "story": "One fold processes Bob and rejects Alice",
+  "narrative": "Alice's request has expired; Bob's is fresh. One fold does both: Bob's row and token, Bob's bond locked, Alice's bond refunded, two tips to Hal.",
+  "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
+  "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)" },
+  "env": { "inception": [11, 12], "quorum": [], "duplicity": [] },
+  "steps": [
+    { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
+    { "now": 15, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 15 } }, "expect": { "ok": true } },
+    { "now": 20, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 1, "do": "process" }, { "id": 0, "do": "reject" }] } },
+      "expect": { "ok": true, "flow": { "locked": [{ "aid": 12, "value": 1000 }], "refunds": [{ "addr": 1, "value": 1000 }], "tips": { "addr": 3, "value": 4 } } }, "exhibits": ["R11", "R10", "R1"] }
+  ],
+  "expectFinal": { "gen": 1, "plugin": 7, "root": [12], "live": [12], "tomb": [], "requests": [], "nextReq": 2 }
+}

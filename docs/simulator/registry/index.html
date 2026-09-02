@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The registry — an MPFS instance, played against the Lean</title>
+<style>
+:root {
+  --bg:#f3f4f1; --panel:#fffefa; --ink:#1f2320; --mut:#6b7268; --line:#d9dcd3;
+  --ok:#1f7a45; --okbg:#e3f2e8; --bad:#b03a2c; --badbg:#f8e6e2; --accent:#3d5c6b;
+  --chip:#e9ece5; --card:#f9faf5; --bar:#e4e7de; --barfill:#5f7f8f; --warn:#8a5f0f; --warnbg:#f7ecd4;
+}
+html[data-theme="dark"] {
+  --bg:#161917; --panel:#1e2320; --ink:#e6e9e2; --mut:#9aa295; --line:#363d38;
+  --ok:#5bcb8c; --okbg:#1c3325; --bad:#e67a6b; --badbg:#3a221e; --accent:#8fb6c8;
+  --chip:#2a302c; --card:#22282425; --bar:#30372f; --barfill:#8fb6c8; --warn:#d9b25c; --warnbg:#332a12;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display:flex; flex-wrap:wrap; gap:.6rem; align-items:baseline;
+  padding:.7rem 1rem; border-bottom:1px solid var(--line); }
+header h1 { font-size:1.05rem; margin:0; }
+header .sub { color:var(--mut); font-size:.8rem; }
+header .spacer { flex:1; }
+button, select, input { font:inherit; color:inherit; }
+button { cursor:pointer; border:1px solid var(--line); background:var(--panel);
+  border-radius:7px; padding:.28rem .6rem; }
+button:hover { border-color:var(--accent); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+button.primary { background:var(--accent); border-color:var(--accent); color:var(--bg); }
+button.ghost { background:transparent; }
+main { display:grid; grid-template-columns: minmax(360px,1.15fr) minmax(300px,.85fr);
+  gap:.8rem; padding:.8rem; align-items:start; }
+@media (max-width: 920px){ main { grid-template-columns:1fr; } }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:.7rem .8rem; margin-bottom:.8rem; }
+.card h2 { font-size:.85rem; margin:.1rem 0 .5rem; color:var(--mut);
+  text-transform:uppercase; letter-spacing:.06em; }
+.badge { display:inline-block; padding:.12rem .5rem; border-radius:6px;
+  font-weight:700; font-size:.76rem; letter-spacing:.04em; }
+.badge.live { background:var(--okbg); color:var(--ok); }
+.badge.tomb { background:var(--badbg); color:var(--bad); }
+.badge.p1 { background:var(--okbg); color:var(--ok); }
+.badge.p2 { background:var(--warnbg); color:var(--warn); }
+.badge.p3, .badge.future { background:var(--badbg); color:var(--bad); }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:.15rem .8rem; font-size:.85rem; }
+.kv dt { color:var(--mut); } .kv dd { margin:0; font-family:ui-monospace,monospace; }
+table.t { border-collapse:collapse; width:100%; font-size:.82rem; }
+table.t td, table.t th { border-bottom:1px solid var(--line); padding:.2rem .4rem; text-align:left; vertical-align:top; }
+table.t th { color:var(--mut); font-weight:600; }
+.mono { font-family:ui-monospace,monospace; }
+.verdict { border-radius:9px; padding:.5rem .7rem; margin-top:.5rem; font-size:.88rem; }
+.verdict.yes { background:var(--okbg); color:var(--ok); }
+.verdict.no { background:var(--badbg); color:var(--bad); }
+#scenariobar { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center;
+  padding:.6rem 1rem; border-bottom:1px solid var(--line); background:var(--card); }
+#scenariobar select { max-width:26rem; }
+#storybox { padding:.3rem 1rem .5rem; background:var(--card); border-bottom:1px solid var(--line);
+  font-size:.88rem; color:var(--mut); }
+#storybox b { color:var(--ink); }
+.cast { display:grid; gap:.4rem; }
+.cast .who { border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem;
+  background:var(--card); font-size:.82rem; }
+.cast .who b { display:block; }
+.acts { display:grid; gap:.5rem; }
+.act { border:1px solid var(--line); border-radius:8px; padding:.45rem .55rem; background:var(--card); }
+.act h3 { margin:0 0 .3rem; font-size:.85rem; }
+.act .auth { color:var(--mut); font-size:.75rem; display:block; }
+.act .row { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin-top:.3rem; }
+.act input, .act select { border:1px solid var(--line); background:var(--panel);
+  border-radius:6px; padding:.2rem .35rem; }
+.act input[type="number"] { width:5.5rem; }
+.whyline { font-size:.82rem; color:var(--bad); margin-top:.3rem; }
+.okline { font-size:.82rem; color:var(--ok); margin-top:.3rem; }
+.hint { color:var(--mut); font-size:.78rem; margin-top:.25rem; }
+#evidence table { border-collapse:collapse; font-size:.8rem; width:100%; }
+#evidence td, #evidence th { border:1px solid var(--line); padding:.12rem .35rem; text-align:left; }
+#evidence th { color:var(--mut); font-weight:600; }
+#evidence .add { display:flex; gap:.35rem; margin-top:.3rem; align-items:center; flex-wrap:wrap; }
+#evidence input { width:5rem; border:1px solid var(--line); background:var(--panel); border-radius:6px; padding:.15rem .3rem; }
+#strip { border-top:1px solid var(--line); background:var(--card); padding:.5rem 1rem; }
+#strip .nav { display:flex; gap:.4rem; align-items:center; margin-bottom:.35rem; }
+#strip .rail { display:flex; gap:.35rem; overflow-x:auto; padding-bottom:.25rem; }
+#strip .chip2 { border:1px solid var(--line); background:var(--panel); border-radius:7px;
+  padding:.15rem .5rem; font-size:.78rem; white-space:nowrap; cursor:pointer; }
+#strip .chip2.ok { border-color:var(--ok); } #strip .chip2.bad { border-color:var(--bad); }
+#strip .chip2.cur { box-shadow:0 0 0 2px var(--accent); }
+#detail { font-size:.85rem; margin-top:.35rem; }
+#ledger td.lit { color:var(--ok); font-weight:700; }
+#ledger td.na { color:var(--mut); }
+#ledger td.red { color:var(--bad); font-weight:700; }
+.bars { display:grid; gap:.35rem; margin-top:.4rem; }
+.bar-row { display:grid; grid-template-columns: 11rem 1fr 7rem; gap:.5rem; align-items:center; font-size:.8rem; }
+.bar { background:var(--bar); border-radius:5px; height:.8rem; position:relative; overflow:hidden; }
+.bar > i { position:absolute; inset:0 auto 0 0; background:var(--barfill); display:block; }
+footer { padding:.8rem 1rem; color:var(--mut); font-size:.8rem; }
+footer h2 { font-size:.8rem; color:var(--ink); text-transform:uppercase; letter-spacing:.06em; }
+footer li { margin-bottom:.3rem; }
+.selftest table { border-collapse:collapse; width:100%; font-size:.85rem; }
+.selftest td, .selftest th { border:1px solid var(--line); padding:.2rem .45rem; text-align:left; }
+.pass { color:var(--ok); font-weight:700; } .fail { color:var(--bad); font-weight:700; }
+.batch { display:grid; gap:.25rem; margin-top:.3rem; font-size:.82rem; }
+.batch label { display:flex; gap:.4rem; align-items:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The registry</h1>
+  <span class="sub">one UTxO holding the root of every AID — requests that never contend, folds that race — played against the machine of <span class="mono">Registry.lean</span></span>
+  <span class="spacer"></span>
+  <span class="sub mono" id="paramchip"></span>
+  <span class="sub">slot <b class="mono" id="slot">0</b></span>
+  <button type="button" id="slot-1" title="one slot forward">+1</button>
+  <button type="button" id="slot-10" title="ten slots forward">+10</button>
+  <button type="button" id="btn-theme" class="ghost" title="light / dark">◐</button>
+</header>
+<div id="scenariobar">
+  <label for="sc-pick">story</label>
+  <select id="sc-pick"><option value="">— free play —</option></select>
+  <button type="button" id="sc-step" class="primary" disabled>next step ▸</button>
+  <button type="button" id="sc-all" disabled>play all ▸▸</button>
+  <button type="button" id="sc-reset" disabled>⟲ restart story</button>
+  <button type="button" id="sc-exit" class="ghost" hidden>leave story</button>
+  <span class="sub" id="sc-count"></span>
+</div>
+<div id="storybox" hidden></div>
+<main id="main">
+  <section>
+    <div class="card" id="card-registry">
+      <h2>The registry UTxO</h2>
+      <dl class="kv" id="registry"></dl>
+      <div class="hint">A fold spends this UTxO at its current generation; a stale generation is the transaction failing on a spent input, at no cost. Requests, retracts and convictions never touch it.</div>
+    </div>
+    <div class="card" id="card-checkpoints">
+      <h2>Checkpoints <span class="sub" id="ck-count"></span></h2>
+      <div id="checkpoints"></div>
+    </div>
+    <div class="card" id="card-inbox">
+      <h2>The inbox <span class="sub" id="inbox-count"></span></h2>
+      <div id="inbox"></div>
+      <div class="hint">Phase 1: a fold may process. Phase 2: only the owner may retract. Phase 3 (or a future timestamp): anyone may reject.</div>
+    </div>
+    <div class="card" id="card-value">
+      <h2>Value <span class="sub">who holds what, by component</span></h2>
+      <div class="bars" id="bars"></div>
+    </div>
+  </section>
+  <section>
+    <div class="card">
+      <h2>Cast</h2>
+      <div class="cast" id="cast"></div>
+    </div>
+    <div class="card" id="evidence">
+      <h2>Evidence <span class="sub">what the plugin and the policy would verify — you decide</span></h2>
+      <div id="evbody"></div>
+    </div>
+    <div class="card">
+      <h2>Actions</h2>
+      <div class="acts" id="actions"></div>
+      <div class="whyline" id="whyline" hidden></div>
+      <div class="okline" id="okline" hidden></div>
+    </div>
+  </section>
+</main>
+<div id="strip">
+  <div class="nav">
+    <button type="button" id="h-first" title="first attempt">⏮</button>
+    <button type="button" id="h-prev" title="one attempt back">‹</button>
+    <button type="button" id="h-next" title="one attempt forward">›</button>
+    <button type="button" id="h-last" title="latest">⏭</button>
+    <span class="sub" id="h-pos"></span>
+    <span class="spacer"></span>
+    <button type="button" id="h-clear" class="ghost">clear history</button>
+  </div>
+  <div class="rail" id="rail"></div>
+  <div id="detail"><span class="sub">nothing attempted yet — pick a story, or act in free play</span></div>
+</div>
+<section class="card" style="margin:0 .8rem .8rem" id="card-ledger">
+  <h2>Ledger theorems <span class="sub">R1–R12 of RegistryGoals.lean, checked on every step; a row lights when the step exhibits it</span></h2>
+  <table class="t" id="ledger"></table>
+</section>
+<footer>
+  <h2>What this page is</h2>
+  <ul>
+    <li>A JavaScript transcription of <span class="mono">stepFn</span> and <span class="mono">replay</span> from <span class="mono">lean/CardanoKeri/Registry.lean</span>, embedded byte-for-byte from <span class="mono">simulator/registry-simulator-core.mjs</span>. The fifteen stories and the Lean corpus below are embedded too; <span class="mono">?selftest=1</span> replays all of it through this page's own core.</li>
+    <li>The embedded corpus is emitted by <span class="mono">lean/RegistryTraceDriver.lean</span> from <span class="mono">stepFn</span> itself via <span class="mono">ToJson</span>; <span class="mono">registry-simulator-trace-gate.mjs</span> re-runs Lean, compares by sha256 and replays every cell here: <span class="mono" id="proof-sha"></span>.</li>
+    <li>Modelled: requests as inbox UTxOs; a permissionless fold at a named generation with process and reject; retract in phase 2; close deleting the row with the burn; convict keeping the row with the tombstone; the plugin pinned; value as bonds locked or refunded, tips per request. Not modelled: cryptography (evidence is a table), the checkpoint's own life (rotations, poison — that is the checkpoint simulator), UTxO mechanics beyond the registry's generation, the ledger's fee.</li>
+    <li id="pf-params"></li>
+  </ul>
+</footer>
+<script>
+/* @@CORE:constants@@ */
+const SCHEMA = 'cardano-keri.registry.trace';
+const VERSION = 1;
+
+/* Refusal reasons, named after the guard that failed, in the Lean's own
+   conjunction order. */
+const REASONS = {
+  INVALID_PARAMS: 'invalid-params',
+  INVALID_NAT: 'invalid-nat',
+  INVALID_STATE: 'invalid-state',
+  INVALID_ACTION: 'invalid-action',
+  INVALID_EVIDENCE: 'invalid-evidence',
+  UNKNOWN_REQUEST: 'unknown-request',       // lookup = none (retract, or a batch entry — including one the same batch consumed)
+  NOT_IN_PHASE_2: 'not-in-phase-2',         // retract outside phase 2
+  STALE_GENERATION: 'stale-generation',     // fold names a generation other than the registry's
+  PLUGIN_NOT_PINNED: 'plugin-not-pinned',   // fold re-creates the cage with another plugin
+  EMPTY_FOLD: 'empty-fold',                 // batch = []
+  NOT_IN_PHASE_1: 'not-in-phase-1',         // process outside phase 1
+  BAD_INCEPTION: 'bad-inception',           // env.inception false
+  ALREADY_REGISTERED: 'already-registered', // the AID is in the root: the absence proof fails
+  NOT_REJECTABLE: 'not-rejectable',         // reject before phase 3 with an honest timestamp
+  NO_LIVE_TOKEN: 'no-live-token',           // close / convict without a live token
+  NO_QUORUM: 'no-quorum',                   // close without the current quorum
+  NO_DUPLICITY_PROOF: 'no-duplicity-proof', // convict without a proof
+};
+
+/* Which Lean declaration and binder refuses with each reason. */
+const LEAN_GUARDS = {
+  'unknown-request': { decl: 'stepFn / applyBatch', text: 'lookup … = none' },
+  'not-in-phase-2': { decl: 'stepFn (retract)', text: 'if inPhase2 p r now' },
+  'stale-generation': { decl: 'stepFn (fold)', text: 'g = s.gen' },
+  'plugin-not-pinned': { decl: 'stepFn (fold)', text: 'pl = s.plugin' },
+  'empty-fold': { decl: 'stepFn (fold)', text: 'batch ≠ []' },
+  'not-in-phase-1': { decl: 'applyBatch (process)', text: 'inPhase1 p r now' },
+  'bad-inception': { decl: 'applyBatch (process)', text: 'env.inception r.aid = true' },
+  'already-registered': { decl: 'applyBatch (process)', text: 'r.aid ∉ acc.root' },
+  'not-rejectable': { decl: 'applyBatch (reject)', text: 'rejectable p r now' },
+  'no-live-token': { decl: 'stepFn (close / convict)', text: 'aid ∈ s.live' },
+  'no-quorum': { decl: 'stepFn (close)', text: 'env.quorum aid = true' },
+  'no-duplicity-proof': { decl: 'stepFn (convict)', text: 'env.duplicity aid = true' },
+};
+/* @@CORE:constants:END@@ */
+
+/* @@CORE:machine@@ */
+/* --- exact Nat -----------------------------------------------------------
+   A Lean `Nat` is unbounded; this core represents it exactly up to 2^53 − 1
+   and refuses by name anything else, before evaluating anything. */
+const MAX_NAT = Number.MAX_SAFE_INTEGER;
+function isNat(x) { return typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= MAX_NAT; }
+const refuse = (reason, field) => ({ ok: false, reason, field });
+
+function validateParams(p) {
+  if (!p || typeof p !== 'object') return refuse(REASONS.INVALID_PARAMS, 'params');
+  for (const k of ['D', 'tip', 'process', 'retract'])
+    if (!isNat(p[k])) return refuse(REASONS.INVALID_NAT, k);
+  if (!(p.D > 0)) return refuse(REASONS.INVALID_PARAMS, 'D must be positive');
+  if (!(p.process > 0)) return refuse(REASONS.INVALID_PARAMS, 'process must be positive');
+  if (!(p.retract > 0)) return refuse(REASONS.INVALID_PARAMS, 'retract must be positive');
+  return null;
+}
+
+function validateNatList(l, field) {
+  if (!Array.isArray(l)) return refuse(REASONS.INVALID_STATE, field);
+  for (let i = 0; i < l.length; i++) if (!isNat(l[i])) return refuse(REASONS.INVALID_NAT, `${field}[${i}]`);
+  return null;
+}
+
+/* A state is exactly the seven fields of `Sys`; each request exactly four. */
+function validateState(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return refuse(REASONS.INVALID_STATE, 'state');
+  const keys = ['gen', 'plugin', 'root', 'live', 'tomb', 'requests', 'nextReq'];
+  for (const k of Object.keys(s)) if (!keys.includes(k)) return refuse(REASONS.INVALID_STATE, k);
+  for (const k of ['gen', 'plugin', 'nextReq']) if (!isNat(s[k])) return refuse(REASONS.INVALID_NAT, k);
+  for (const k of ['root', 'live', 'tomb']) { const e = validateNatList(s[k], k); if (e) return e; }
+  if (!Array.isArray(s.requests)) return refuse(REASONS.INVALID_STATE, 'requests');
+  for (let i = 0; i < s.requests.length; i++) {
+    const r = s.requests[i];
+    if (!r || typeof r !== 'object') return refuse(REASONS.INVALID_STATE, `requests[${i}]`);
+    for (const k of Object.keys(r)) if (!['id', 'aid', 'owner', 'submittedAt'].includes(k)) return refuse(REASONS.INVALID_STATE, `requests[${i}].${k}`);
+    for (const k of ['id', 'aid', 'owner', 'submittedAt']) if (!isNat(r[k])) return refuse(REASONS.INVALID_NAT, `requests[${i}].${k}`);
+  }
+  return null;
+}
+
+/* An evidence table is exactly the three predicates, each a list of AIDs. */
+function validateEnv(t) {
+  if (!t || typeof t !== 'object' || Array.isArray(t)) return refuse(REASONS.INVALID_EVIDENCE, 'env');
+  for (const k of Object.keys(t)) if (!['inception', 'quorum', 'duplicity'].includes(k)) return refuse(REASONS.INVALID_EVIDENCE, k);
+  for (const k of ['inception', 'quorum', 'duplicity']) {
+    if (t[k] === undefined) continue;
+    if (!Array.isArray(t[k])) return refuse(REASONS.INVALID_EVIDENCE, k);
+    for (let i = 0; i < t[k].length; i++) if (!isNat(t[k][i])) return refuse(REASONS.INVALID_NAT, `${k}[${i}]`);
+  }
+  return null;
+}
+
+function validateAction(a) {
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return refuse(REASONS.INVALID_ACTION, 'action');
+  const tags = Object.keys(a);
+  if (tags.length !== 1) return refuse(REASONS.INVALID_ACTION, 'action');
+  const tag = tags[0], b = a[tag];
+  if (!b || typeof b !== 'object') return refuse(REASONS.INVALID_ACTION, tag);
+  const need = (fields) => {
+    for (const k of Object.keys(b)) if (!fields.includes(k)) return refuse(REASONS.INVALID_ACTION, `${tag}.${k}`);
+    for (const k of fields) if (k !== 'batch' && !isNat(b[k])) return refuse(REASONS.INVALID_NAT, `${tag}.${k}`);
+    return null;
+  };
+  switch (tag) {
+    case 'contribute': return need(['aid', 'owner', 'submittedAt']);
+    case 'retract': return need(['req']);
+    case 'close': case 'convict': return need(['aid']);
+    case 'fold': {
+      const e = need(['folder', 'gen', 'plugin', 'batch']); if (e) return e;
+      if (!Array.isArray(b.batch)) return refuse(REASONS.INVALID_ACTION, 'fold.batch');
+      for (let i = 0; i < b.batch.length; i++) {
+        const x = b.batch[i];
+        if (!x || typeof x !== 'object') return refuse(REASONS.INVALID_ACTION, `fold.batch[${i}]`);
+        for (const k of Object.keys(x)) if (!['id', 'do'].includes(k)) return refuse(REASONS.INVALID_ACTION, `fold.batch[${i}].${k}`);
+        if (!isNat(x.id)) return refuse(REASONS.INVALID_NAT, `fold.batch[${i}].id`);
+        if (x.do !== 'process' && x.do !== 'reject') return refuse(REASONS.INVALID_ACTION, `fold.batch[${i}].do`);
+      }
+      return null;
+    }
+    default: return refuse(REASONS.INVALID_ACTION, tag);
+  }
+}
+
+/* --- Env: the three evidence predicates ---------------------------------- */
+function emptyEnv() { return { inception: [], quorum: [], duplicity: [] }; }
+function envFromTables(t) {
+  const has = (k, aid) => Array.isArray(t[k]) && t[k].includes(aid);
+  return {
+    inception: aid => has('inception', aid),
+    quorum: aid => has('quorum', aid),
+    duplicity: aid => has('duplicity', aid),
+  };
+}
+
+/* --- Action.actor (Registry.lean) ---------------------------------------- */
+function actionActor(a) {
+  if (!a || typeof a !== 'object') return null;
+  if ('contribute' in a || 'fold' in a) return 'anyone';
+  if ('retract' in a) return 'owner';
+  if ('close' in a) return 'current-quorum';
+  if ('convict' in a) return 'proof';
+  return null;
+}
+function actionTag(a) { return a && typeof a === 'object' ? Object.keys(a)[0] : null; }
+
+/* --- phases (Registry.lean: inPhase1, inPhase2, rejectable) --------------- */
+function inPhase1(p, r, now) { return now < r.submittedAt + p.process; }
+function inPhase2(p, r, now) { return r.submittedAt + p.process <= now && now < r.submittedAt + p.process + p.retract; }
+function rejectable(p, r, now) { return r.submittedAt + p.process + p.retract <= now || now < r.submittedAt; }
+function phaseOf(p, r, now) {
+  if (now < r.submittedAt) return 'future';
+  if (inPhase1(p, r, now)) return 'phase-1';
+  if (inPhase2(p, r, now)) return 'phase-2';
+  return 'phase-3';
+}
+
+/* --- the inbox (lookup, remove) ------------------------------------------ */
+function lookup(rs, id) { const x = rs.find(r => r.id === id); return x ? x : null; }
+function remove(rs, id) { return rs.filter(r => r.id !== id); }
+
+/* --- applyBatch: the transcription of `applyBatch` -----------------------
+   Threads root, live, requests, locked, refunds through the batch in order;
+   returns { ok:false, reason, at } naming the entry that refused. */
+function applyBatch(p, env, now, acc0, batch) {
+  let acc = { root: acc0.root.slice(), live: acc0.live.slice(), requests: acc0.requests.slice(),
+              locked: acc0.locked.slice(), refunds: acc0.refunds.slice() };
+  for (let i = 0; i < batch.length; i++) {
+    const { id, do: fa } = batch[i];
+    const r = lookup(acc.requests, id);
+    if (!r) return { ok: false, reason: REASONS.UNKNOWN_REQUEST, at: i };
+    if (fa === 'process') {
+      if (!inPhase1(p, r, now)) return { ok: false, reason: REASONS.NOT_IN_PHASE_1, at: i };
+      if (env.inception(r.aid) !== true) return { ok: false, reason: REASONS.BAD_INCEPTION, at: i };
+      if (acc.root.includes(r.aid)) return { ok: false, reason: REASONS.ALREADY_REGISTERED, at: i };
+      acc = { root: [r.aid, ...acc.root], live: [r.aid, ...acc.live], requests: remove(acc.requests, id),
+              locked: [...acc.locked, { aid: r.aid, value: p.D }], refunds: acc.refunds };
+    } else {
+      if (!rejectable(p, r, now)) return { ok: false, reason: REASONS.NOT_REJECTABLE, at: i };
+      acc = { ...acc, requests: remove(acc.requests, id), refunds: [...acc.refunds, { addr: r.owner, value: p.D }] };
+    }
+  }
+  return { ok: true, acc };
+}
+
+function flow(o) { return { deposited: 0, locked: [], refunds: [], tips: null, ...o }; }
+
+/* --- step: the transcription of `stepFn` --------------------------------- */
+function step(params, envTable, action, now, state) {
+  const ep = validateParams(params); if (ep) return ep;
+  if (!isNat(now)) return refuse(REASONS.INVALID_NAT, 'now');
+  const ea = validateAction(action); if (ea) return ea;
+  const es = validateState(state); if (es) return es;
+  const ee = validateEnv(envTable); if (ee) return ee;
+  const env = envFromTables(envTable);
+  const s = state, p = params, a = action;
+  if ('contribute' in a) {
+    const { aid, owner, submittedAt } = a.contribute;
+    return { ok: true, flow: flow({ deposited: p.D + p.tip }),
+             state: { ...s, requests: [{ id: s.nextReq, aid, owner, submittedAt }, ...s.requests], nextReq: s.nextReq + 1 } };
+  }
+  if ('retract' in a) {
+    const r = lookup(s.requests, a.retract.req);
+    if (!r) return refuse(REASONS.UNKNOWN_REQUEST);
+    if (!inPhase2(p, r, now)) return refuse(REASONS.NOT_IN_PHASE_2);
+    return { ok: true, flow: flow({ refunds: [{ addr: r.owner, value: p.D + p.tip }] }),
+             state: { ...s, requests: remove(s.requests, a.retract.req) } };
+  }
+  if ('fold' in a) {
+    const { folder, gen, plugin, batch } = a.fold;
+    if (!(gen === s.gen)) return refuse(REASONS.STALE_GENERATION);
+    if (!(plugin === s.plugin)) return refuse(REASONS.PLUGIN_NOT_PINNED);
+    if (!(batch.length > 0)) return refuse(REASONS.EMPTY_FOLD);
+    const r = applyBatch(p, env, now, { root: s.root, live: s.live, requests: s.requests, locked: [], refunds: [] }, batch);
+    if (!r.ok) return { ok: false, reason: r.reason, at: r.at };
+    return { ok: true,
+             flow: flow({ locked: r.acc.locked, refunds: r.acc.refunds, tips: { addr: folder, value: batch.length * p.tip } }),
+             state: { ...s, gen: s.gen + 1, root: r.acc.root, live: r.acc.live, requests: r.acc.requests } };
+  }
+  if ('close' in a) {
+    const { aid } = a.close;
+    if (!s.live.includes(aid)) return refuse(REASONS.NO_LIVE_TOKEN);
+    if (env.quorum(aid) !== true) return refuse(REASONS.NO_QUORUM);
+    return { ok: true, flow: flow({}),
+             state: { ...s, gen: s.gen + 1, root: eraseFirst(s.root, aid), live: eraseFirst(s.live, aid) } };
+  }
+  if ('convict' in a) {
+    const { aid } = a.convict;
+    if (!s.live.includes(aid)) return refuse(REASONS.NO_LIVE_TOKEN);
+    if (env.duplicity(aid) !== true) return refuse(REASONS.NO_DUPLICITY_PROOF);
+    return { ok: true, flow: flow({}),
+             state: { ...s, live: eraseFirst(s.live, aid), tomb: [aid, ...s.tomb] } };
+  }
+  return refuse(REASONS.INVALID_ACTION, 'action');
+}
+/* List.erase: the first occurrence. */
+function eraseFirst(l, x) { const i = l.indexOf(x); return i < 0 ? l.slice() : [...l.slice(0, i), ...l.slice(i + 1)]; }
+
+/* --- replay: the transcription of `replay` ------------------------------- */
+function replay(params, envTable, t0, state, steps) {
+  if (!isNat(t0)) return refuse(REASONS.INVALID_NAT, 't0');
+  if (!Array.isArray(steps)) return refuse(REASONS.INVALID_ACTION, 'list');
+  let t = t0, s = state;
+  for (let i = 0; i < steps.length; i++) {
+    const e = steps[i];
+    if (!Array.isArray(e) || e.length !== 2) return refuse(REASONS.INVALID_ACTION, `list[${i}]`);
+    const [t2, action] = e;
+    if (!isNat(t2)) return refuse(REASONS.INVALID_NAT, 'slot');
+    if (!(t <= t2)) return { ok: false, at: i, reason: 'slot-decreased' };
+    const r = step(params, envTable, action, t2, s);
+    if (!r.ok) return { ok: false, at: i, reason: r.reason, field: r.field };
+    s = r.state; t = t2;
+  }
+  return { ok: true, state: s };
+}
+
+/* --- initial system (Sys.init) ------------------------------------------- */
+function initSys(plugin) { return { gen: 0, plugin, root: [], live: [], tomb: [], requests: [], nextReq: 0 }; }
+/* @@CORE:machine:END@@ */
+
+/* @@CORE:theorems@@ */
+/* --- R1–R12 as executable properties over one step record ----------------
+   A record is { before, action, now, result } where result is the value of
+   `step`. Each property returns 'holds' (antecedent held and the claim was
+   verified), 'n/a' (antecedent did not hold), or 'fails' with a message. */
+const nodup = l => new Set(l).size === l.length;
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const foldOf = a => (a && a.fold) || null;
+const reqOf = (s, id) => lookup(s.requests, id);
+
+const THEOREMS = [
+  { id: 'R1', title: 'row if and only if token', lean: 'R1_row_iff_token',
+    check: ({ result }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const s = result.state;
+      for (const aid of s.root) if (!s.live.includes(aid) && !s.tomb.includes(aid)) return { v: 'fails', why: `row ${aid} without a token` };
+      for (const aid of [...s.live, ...s.tomb]) if (!s.root.includes(aid)) return { v: 'fails', why: `token ${aid} without a row` };
+      return { v: 'holds' };
+    } },
+  { id: 'R1c', title: 'a registered AID cannot be processed again (mint-once)', lean: 'R1_registered_refused',
+    check: ({ before, action, result }) => {
+      const f = foldOf(action); if (!f || f.gen !== before.gen || f.plugin !== before.plugin) return { v: 'n/a' };
+      const hit = f.batch.find(x => x.do === 'process' && reqOf(before, x.id) && before.root.includes(reqOf(before, x.id).aid));
+      if (!hit) return { v: 'n/a' };
+      return result.ok ? { v: 'fails', why: `processed a registered AID` } : { v: 'holds' };
+    } },
+  { id: 'R2', title: 'at most one live checkpoint per AID; a tombstone is never live', lean: 'R2_one_live_checkpoint, R2_tomb_not_live',
+    check: ({ result }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const s = result.state;
+      if (!nodup(s.live)) return { v: 'fails', why: 'two live checkpoints for one AID' };
+      for (const aid of s.tomb) if (s.live.includes(aid)) return { v: 'fails', why: `AID ${aid} both live and convicted` };
+      return { v: 'holds' };
+    } },
+  { id: 'R3', title: 'conviction is permanent', lean: 'R3_tomb_permanent, R3_convicted_never_processed, R3_convicted_not_closable',
+    check: ({ before, action, result }) => {
+      if (result.ok) {
+        for (const aid of before.tomb) if (!result.state.tomb.includes(aid)) return { v: 'fails', why: `tombstone ${aid} removed` };
+        return before.tomb.length ? { v: 'holds' } : { v: 'n/a' };
+      }
+      if (action.close && before.tomb.includes(action.close.aid)) return { v: 'holds' };
+      const f = foldOf(action);
+      if (f && f.gen === before.gen && f.plugin === before.plugin &&
+          f.batch.some(x => x.do === 'process' && reqOf(before, x.id) && before.tomb.includes(reqOf(before, x.id).aid))) return { v: 'holds' };
+      return { v: 'n/a' };
+    } },
+  { id: 'R4', title: 'close deletes the row; a closed AID may return', lean: 'R4_close_deletes_row, R4_reregistrable',
+    check: ({ before, action, result }) => {
+      if (action.close && result.ok) {
+        const aid = action.close.aid;
+        if (result.state.root.includes(aid) || result.state.live.includes(aid)) return { v: 'fails', why: 'row or token survived the close' };
+        return { v: 'holds' };
+      }
+      const f = foldOf(action);
+      if (f && result.ok && f.batch.some(x => x.do === 'process' && reqOf(before, x.id) && !before.root.includes(reqOf(before, x.id).aid)))
+        return { v: 'holds' };
+      return { v: 'n/a' };
+    } },
+  { id: 'R5', title: 'the plugin is pinned', lean: 'R5_plugin_pinned',
+    check: ({ before, action, result }) => {
+      if (result.ok) return result.state.plugin === before.plugin ? { v: 'holds' } : { v: 'fails', why: 'plugin changed' };
+      const f = foldOf(action);
+      if (f && f.gen === before.gen && f.plugin !== before.plugin) return result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds' } : { v: 'fails', why: `refused for ${result.reason}` };
+      return { v: 'n/a' };
+    } },
+  { id: 'R6', title: 'the generation moves exactly on registry spends; requests never contend', lean: 'R6_gen_step, R6_requests_never_contend, R6_spend_is_fold_or_close, R6_fold_advances',
+    check: ({ before, action, result }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const s = result.state, tag = actionTag(action);
+      if (tag === 'fold' || tag === 'close') return s.gen === before.gen + 1 ? { v: 'holds' } : { v: 'fails', why: 'registry spend without a generation step' };
+      if (s.gen !== before.gen) return { v: 'fails', why: `${tag} moved the generation` };
+      if (tag === 'contribute' || tag === 'retract')
+        if (!same(s.root, before.root) || !same(s.live, before.live) || !same(s.tomb, before.tomb)) return { v: 'fails', why: `${tag} touched the registry` };
+      return { v: 'holds' };
+    } },
+  { id: 'R7', title: 'a stale fold is refused with no state change; one fold per generation', lean: 'R7_stale_fold_refused, R7_one_fold_per_generation',
+    check: ({ before, action, result }) => {
+      const f = foldOf(action); if (!f || f.gen === before.gen) return { v: 'n/a' };
+      return !result.ok && result.reason === REASONS.STALE_GENERATION ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'stale fold applied' : `refused for ${result.reason}` };
+    } },
+  { id: 'R8', title: 'an empty fold is refused', lean: 'R8_empty_fold_refused, R8_plugin_swap_refused',
+    check: ({ before, action, result }) => {
+      const f = foldOf(action); if (!f || f.gen !== before.gen || f.plugin !== before.plugin || f.batch.length) return { v: 'n/a' };
+      return !result.ok && result.reason === REASONS.EMPTY_FOLD ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'empty fold applied' : `refused for ${result.reason}` };
+    } },
+  { id: 'R9', title: 'requester exit: retract in phase 2, rejection by anyone when rejectable, neither elsewhere', lean: 'R9_retract_enabled, R9_retract_needs_phase2, R9_reject_enabled, R9_reject_needs_rejectable, R9_process_needs_phase1',
+    check: ({ before, action, now, result, params }) => {
+      if (action.retract) {
+        const r = reqOf(before, action.retract.req); if (!r) return { v: 'n/a' };
+        const want = inPhase2(params, r, now);
+        if (want !== result.ok) return { v: 'fails', why: want ? 'retract refused in phase 2' : 'retract applied outside phase 2' };
+        if (!want && result.reason !== REASONS.NOT_IN_PHASE_2) return { v: 'fails', why: `refused for ${result.reason}` };
+        return { v: 'holds' };
+      }
+      const f = foldOf(action);
+      if (f && f.gen === before.gen && f.plugin === before.plugin && f.batch.length === 1) {
+        const x = f.batch[0], r = reqOf(before, x.id); if (!r) return { v: 'n/a' };
+        if (x.do === 'reject') {
+          const want = rejectable(params, r, now);
+          if (want !== result.ok) return { v: 'fails', why: want ? 'reject refused when rejectable' : 'reject applied when not rejectable' };
+          if (!want && result.reason !== REASONS.NOT_REJECTABLE) return { v: 'fails', why: `refused for ${result.reason}` };
+          return { v: 'holds' };
+        }
+        if (!inPhase1(params, r, now)) return !result.ok && result.reason === REASONS.NOT_IN_PHASE_1 ? { v: 'holds' } : { v: 'fails', why: 'process outside phase 1' };
+      }
+      return { v: 'n/a' };
+    } },
+  { id: 'R10', title: 'the phases are exclusive', lean: 'R10_phase1_phase2_exclusive, R10_phase2_reject_exclusive, R10_honest_phase1_reject_exclusive',
+    check: ({ before, now, params }) => {
+      if (!before.requests.length) return { v: 'n/a' };
+      for (const r of before.requests) {
+        const p1 = inPhase1(params, r, now), p2 = inPhase2(params, r, now), rj = rejectable(params, r, now);
+        if (p1 && p2) return { v: 'fails', why: `request ${r.id} in phases 1 and 2` };
+        if (p2 && rj) return { v: 'fails', why: `request ${r.id} in phase 2 and rejectable` };
+        if (r.submittedAt <= now && p1 && rj) return { v: 'fails', why: `honest request ${r.id} in phase 1 and rejectable` };
+      }
+      return { v: 'holds' };
+    } },
+  { id: 'R11', title: 'value: bonds lock or refund exactly, tips are tip per request, refunds go to request owners', lean: 'R11_fold_value, R11_retract_value, R11_contribute_value, R11_token_edges_move_no_value',
+    check: ({ before, action, result, params }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const fl = result.flow, tag = actionTag(action);
+      if (tag === 'fold') {
+        const f = action.fold;
+        if (fl.locked.some(x => x.value !== params.D)) return { v: 'fails', why: 'a lock is not D' };
+        for (const x of fl.refunds) {
+          if (x.value !== params.D) return { v: 'fails', why: 'a refund is not D' };
+          if (!before.requests.some(r => r.owner === x.addr)) return { v: 'fails', why: `refund to ${x.addr}, not a request owner` };
+        }
+        if (!fl.tips || fl.tips.addr !== f.folder || fl.tips.value !== f.batch.length * params.tip) return { v: 'fails', why: 'tips are not tip per request to the folder' };
+        if (fl.locked.length + fl.refunds.length !== f.batch.length) return { v: 'fails', why: 'a request unaccounted for' };
+        if (fl.deposited !== 0) return { v: 'fails', why: 'a fold deposited' };
+        return { v: 'holds' };
+      }
+      if (tag === 'retract') {
+        const r = reqOf(before, action.retract.req);
+        return same(fl, flow({ refunds: [{ addr: r.owner, value: params.D + params.tip }] })) ? { v: 'holds' } : { v: 'fails', why: 'retract did not return D + tip to the owner' };
+      }
+      if (tag === 'contribute') return same(fl, flow({ deposited: params.D + params.tip })) ? { v: 'holds' } : { v: 'fails', why: 'contribute did not deposit D + tip' };
+      return same(fl, flow({})) ? { v: 'holds' } : { v: 'fails', why: `${tag} moved request value` };
+    } },
+  { id: 'R12', title: 'a row leaves the root only by close, enters only by fold', lean: 'R12_row_leaves_only_by_close, R12_row_enters_only_by_fold',
+    check: ({ before, action, result }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const s = result.state, tag = actionTag(action);
+      for (const aid of before.root) if (!s.root.includes(aid) && !(tag === 'close' && action.close.aid === aid)) return { v: 'fails', why: `row ${aid} left by ${tag}` };
+      for (const aid of s.root) if (!before.root.includes(aid) && tag !== 'fold') return { v: 'fails', why: `row ${aid} entered by ${tag}` };
+      return same(s.root, before.root) ? { v: 'n/a' } : { v: 'holds' };
+    } },
+];
+
+function checkTheorems(rec) {
+  const out = {};
+  for (const t of THEOREMS) {
+    try { out[t.id] = t.check(rec); } catch (e) { out[t.id] = { v: 'fails', why: `threw: ${e.message}` }; }
+  }
+  return out;
+}
+/* @@CORE:theorems:END@@ */
+
+/* @@CORE:verify@@ */
+/* --- canonical JSON ------------------------------------------------------ */
+function canonicalJson(x) {
+  if (Array.isArray(x)) return '[' + x.map(canonicalJson).join(',') + ']';
+  if (x !== null && typeof x === 'object') {
+    const ks = Object.keys(x).filter(k => x[k] !== undefined).sort();
+    return '{' + ks.map(k => JSON.stringify(k) + ':' + canonicalJson(x[k])).join(',') + '}';
+  }
+  return JSON.stringify(x);
+}
+const sameJson = (a, b) => canonicalJson(a) === canonicalJson(b);
+function normFlow(f) { return flow(f || {}); }
+
+/* --- the scenario checker (shared by the gate and the page's ?selftest) --
+   A scenario is declarative data: params, plugin, evidence table, actors,
+   steps { now, action, expect: { ok, reason?, flow?, state? }, exhibits? },
+   expectFinal. `corpus` (optional) supplies the Lean's own verdict for every
+   story step: parity is checked when a cell exists. */
+function checkScenario(sc, file, corpus) {
+  const problems = [], asserted = [], exhibited = [], timeline = [];
+  const fail = m => problems.push(`${sc && sc.slug ? sc.slug : file}: ${m}`);
+  if (!sc || typeof sc.id !== 'number' || !sc.slug || !sc.story) { fail('bad header'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
+  if (validateParams(sc.params)) { fail('bad params'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
+  if (!Array.isArray(sc.steps) || !sc.steps.length) { fail('no steps'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
+  const env = sc.env || emptyEnv();
+  let s = sc.initial || initSys(isNat(sc.plugin) ? sc.plugin : 7);
+  let t = 0;
+  const cells = corpus && corpus.stories ? (corpus.stories.find(x => x.id === sc.id) || {}).steps : null;
+  for (let i = 0; i < sc.steps.length; i++) {
+    const st = sc.steps[i];
+    if (!isNat(st.now) || !(t <= st.now)) { fail(`step ${i}: slot not non-decreasing`); break; }
+    t = st.now;
+    if (st.actor !== undefined && actionActor(st.action) !== st.actor) fail(`step ${i}: actor «${st.actor}» ≠ ${actionActor(st.action)}`);
+    const r = step(sc.params, env, st.action, st.now, s);
+    const exp = st.expect || { ok: true };
+    const rec = { before: s, action: st.action, now: st.now, result: r, params: sc.params };
+    const th = checkTheorems(rec);
+    for (const id of Object.keys(th)) if (th[id].v === 'fails') fail(`step ${i}: theorem ${id} fails — ${th[id].why}`);
+    for (const id of st.exhibits || []) {
+      if (!THEOREMS.some(x => x.id === id)) { fail(`step ${i}: unknown theorem ${id}`); continue; }
+      if (th[id].v !== 'holds') fail(`step ${i}: claims to exhibit ${id} but it is ${th[id].v}`);
+      else exhibited.push(id);
+    }
+    if (cells) {
+      const c = cells[i];
+      if (!c) fail(`step ${i}: no Lean cell`);
+      else {
+        if ((c.result !== null) !== r.ok) fail(`step ${i}: Lean ${c.result ? 'applied' : 'refused'}, core ${r.ok ? 'applied' : 'refused'}`);
+        else if (r.ok && (!sameJson(normFlow(c.result.flow), normFlow(r.flow)) || !sameJson(c.result.state, r.state))) fail(`step ${i}: Lean and core disagree on the result`);
+        if (!sameJson(c.input, s) || !sameJson(c.action, st.action) || c.now !== st.now) fail(`step ${i}: Lean cell input differs from the story's`);
+      }
+    }
+    timeline.push({ i, now: st.now, action: st.action, result: r, theorems: th });
+    if (!r.ok && exp.ok !== false) { fail(`step ${i}: refused (${r.reason}${r.field ? '/' + r.field : ''}), expected applied`); break; }
+    if (r.ok && exp.ok === false) { fail(`step ${i}: applied, expected refusal ${exp.reason || ''}`); break; }
+    if (!r.ok) {
+      if (exp.reason && exp.reason !== r.reason) { fail(`step ${i}: refused ${r.reason}, expected ${exp.reason}`); break; }
+      if (exp.reason) asserted.push(exp.reason);
+      continue;
+    }
+    if (exp.flow !== undefined && !sameJson(normFlow(exp.flow), normFlow(r.flow))) { fail(`step ${i}: flow ${canonicalJson(normFlow(r.flow))} ≠ expected ${canonicalJson(normFlow(exp.flow))}`); break; }
+    if (exp.state !== undefined && !sameJson(exp.state, r.state)) { fail(`step ${i}: state ${canonicalJson(r.state)} ≠ expected ${canonicalJson(exp.state)}`); break; }
+    s = r.state;
+  }
+  if (!problems.length && sc.expectFinal !== undefined && !sameJson(sc.expectFinal, s)) fail(`final state ${canonicalJson(s)} ≠ expected ${canonicalJson(sc.expectFinal)}`);
+  return { problems, asserted, exhibited, stepsRun: timeline.length, timeline, final: s };
+}
+
+/* --- the corpus checker ----------------------------------------------------
+   The Lean driver emits { schema, version, params, traces:[{name, plugin,
+   env, initial, steps:[{now, input, action, result}]}], grid:{now, plugin,
+   states, actions, envs, cells:[{s,a,e,result}]}, stories:[{id, steps:[…]}]
+   }. Every cell is replayed through `step`; applied cells must match flow
+   and post-state, refused cells must be refused; theorems are checked on
+   every applied cell. */
+function checkCorpus(doc) {
+  const reasons = [];
+  let cells = 0, applied = 0, refused = 0;
+  const one = (label, params, envT, now, input, action, result) => {
+    cells++;
+    const r = step(params, envT, action, now, input);
+    if (!r.ok && r.reason && r.reason.startsWith('invalid')) { reasons.push(`${label}: ${r.reason}/${r.field}`); return; }
+    if ((result !== null) !== r.ok) { reasons.push(`${label}: Lean ${result ? 'applied' : 'refused'}, core ${r.ok ? 'applied' : 'refused (' + r.reason + ')'}`); return; }
+    if (r.ok) {
+      applied++;
+      if (!sameJson(normFlow(result.flow), normFlow(r.flow))) reasons.push(`${label}: flow mismatch`);
+      if (!sameJson(result.state, r.state)) reasons.push(`${label}: post-state mismatch`);
+      const th = checkTheorems({ before: input, action, now, result: r, params });
+      for (const id of Object.keys(th)) if (th[id].v === 'fails') reasons.push(`${label}: theorem ${id} fails — ${th[id].why}`);
+    } else refused++;
+  };
+  if (!doc || doc.schema !== SCHEMA) reasons.push(`schema: expected ${SCHEMA}`);
+  if (!doc || doc.version !== VERSION) reasons.push(`version: expected ${VERSION}`);
+  if (!doc || validateParams(doc.params)) reasons.push('params: invalid');
+  if (reasons.length) return { ok: false, reasons, cells, applied, refused };
+  const P = doc.params;
+  if (!Array.isArray(doc.traces) || !doc.traces.length) reasons.push('traces: none');
+  for (const tr of doc.traces || []) {
+    let prev = tr.initial;
+    (tr.steps || []).forEach((st, i) => {
+      if (!sameJson(st.input, prev)) reasons.push(`trace ${tr.name} step ${i}: input ≠ previous state`);
+      one(`trace ${tr.name} step ${i}`, P, tr.env, st.now, st.input, st.action, st.result);
+      prev = st.result ? st.result.state : st.input;
+    });
+    if (!(tr.steps || []).length) reasons.push(`trace ${tr.name}: no steps`);
+  }
+  const g = doc.grid;
+  if (!g || !Array.isArray(g.cells) || !g.cells.length) reasons.push('grid: none');
+  else for (const c of g.cells) one(`grid s${c.s} a${c.a} e${c.e}`, P, g.envs[c.e], g.now, g.states[c.s], g.actions[c.a], c.result);
+  if (!Array.isArray(doc.stories) || !doc.stories.length) reasons.push('stories: none');
+  for (const sc of doc.stories || []) (sc.steps || []).forEach((st, i) => one(`story ${sc.id} step ${i}`, sc.params || P, st.env || sc.env, st.now, st.input, st.action, st.result));
+  return { ok: reasons.length === 0, reasons, cells, applied, refused };
+}
+/* @@CORE:verify:END@@ */
+
+/* @@SCENARIOS@@ */
+const SCENARIOS = [{"id":1,"slug":"alice-requests","story":"Alice posts a request","narrative":"Anyone holding Alice's public inception creates a request UTxO at the cage: her AID, her refund address as owner, the bond and the tip. Nothing contends; the registry is untouched.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (sweeper)"},"env":{"inception":[11,12],"quorum":[11,12],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true,"flow":{"deposited":1002},"state":{"gen":0,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[{"id":0,"aid":11,"owner":1,"submittedAt":0}],"nextReq":1}},"exhibits":["R6","R11"],"note":"The registry generation is still 0: a request never spends the cage."}],"expectFinal":{"gen":0,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[{"id":0,"aid":11,"owner":1,"submittedAt":0}],"nextReq":1}},{"id":2,"slug":"hal-folds","story":"Hal folds it and is paid the tip","narrative":"Hal spends the registry at generation 0 with a batch of one: Alice's request is in phase 1, her inception verifies, her AID is absent from the root. The row is inserted, the token minted, the bond locked into her checkpoint, the tip paid to Hal.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":3,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true,"flow":{"locked":[{"aid":11,"value":1000}],"tips":{"addr":3,"value":2}}},"exhibits":["R1","R4","R6","R11","R12"]},{"now":4,"actor":"current-quorum","as":"Mallory — closing Alice's checkpoint without her keys","action":{"close":{"aid":11}},"expect":{"ok":false,"reason":"no-quorum"}}],"expectFinal":{"gen":1,"plugin":7,"root":[11],"live":[11],"tomb":[],"requests":[],"nextReq":1}},{"id":3,"slug":"folders-race","story":"Two folders race","narrative":"Alice and Bob both post requests. Hal and Mallory each build a fold against generation 0. Hal's lands: both are registered in one transaction. Mallory's is refused as stale — on chain it fails on the spent input at no cost — and when she rebuilds against generation 1 there is nothing left to fold.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory"},"env":{"inception":[11,12],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":0,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"expect":{"ok":true}},{"now":2,"actor":"anyone","as":"Hal — first fold","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"},{"id":1,"do":"process"}]}},"expect":{"ok":true,"flow":{"locked":[{"aid":11,"value":1000},{"aid":12,"value":1000}],"tips":{"addr":3,"value":4}}},"exhibits":["R1","R2","R6","R11"]},{"now":2,"actor":"anyone","as":"Mallory — the same fold, one block later","action":{"fold":{"folder":4,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"},{"id":1,"do":"process"}]}},"expect":{"ok":false,"reason":"stale-generation"},"exhibits":["R7"],"note":"Both requesters were served by Hal's fold; Mallory lost only the tips."},{"now":3,"actor":"anyone","as":"Mallory — rebuilt against generation 1","action":{"fold":{"folder":4,"gen":1,"plugin":7,"batch":[]}},"expect":{"ok":false,"reason":"empty-fold"},"exhibits":["R8"]}],"expectFinal":{"gen":1,"plugin":7,"root":[12,11],"live":[12,11],"tomb":[],"requests":[],"nextReq":2}},{"id":4,"slug":"duplicate-registration","story":"Mallory registers Alice's AID again","narrative":"With Alice registered, Mallory posts a request for the same AID. No fold can process it: the absence proof fails against a root that holds the row. Her request sits until phase 3, when anyone rejects it and her bond goes back to her.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)","4":"Mallory","6":"Sam (sweeper)"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true}},{"now":5,"actor":"anyone","as":"Mallory","action":{"contribute":{"aid":11,"owner":4,"submittedAt":5}},"expect":{"ok":true}},{"now":6,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":1,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":false,"reason":"already-registered"},"exhibits":["R1c"]},{"now":25,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":1,"plugin":7,"batch":[{"id":1,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":4,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R9","R11"]}],"expectFinal":{"gen":2,"plugin":7,"root":[11],"live":[11],"tomb":[],"requests":[],"nextReq":2}},{"id":5,"slug":"alice-retracts","story":"Nobody folds; Alice retracts in phase 2","narrative":"Phase 1 passes with no fold. In phase 2 Alice spends her own request back: bond and tip return to her, and the registry is never touched. Before phase 2 the retract is refused; after it the request is gone.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":3,"actor":"owner","as":"Alice — too early","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"not-in-phase-2"},"exhibits":["R9","R10"]},{"now":12,"actor":"owner","as":"Alice","action":{"retract":{"req":0}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1002}]}},"exhibits":["R6","R9","R11"]},{"now":12,"actor":"owner","as":"Alice — again","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"unknown-request"}}],"expectFinal":{"gen":0,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},{"id":6,"slug":"permissionless-sweep","story":"Nobody folds and Alice missed phase 2; Sam sweeps","narrative":"The request passed phase 2 unretracted. Under an owner-keyed cage it would now be stranded; here anyone can reject it: Sam spends the registry with a batch of one reject, Alice's bond goes back to her, Sam takes the tip.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","6":"Sam (sweeper)"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":25,"actor":"owner","as":"Alice — too late to retract","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"not-in-phase-2"},"exhibits":["R9"]},{"now":25,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R9","R11","R6"]}],"expectFinal":{"gen":1,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},{"id":7,"slug":"empty-fold","story":"An empty fold is refused","narrative":"A fold with no request would re-create the registry unchanged for the price of a fee, moving its generation and invalidating every fold built against it. It is refused; the real fold then lands.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)","4":"Mallory"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Mallory — churning the cage","action":{"fold":{"folder":4,"gen":0,"plugin":7,"batch":[]}},"expect":{"ok":false,"reason":"empty-fold"},"exhibits":["R8"]},{"now":2,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true},"exhibits":["R6"]}],"expectFinal":{"gen":1,"plugin":7,"root":[11],"live":[11],"tomb":[],"requests":[],"nextReq":1}},{"id":8,"slug":"plugin-swap","story":"A fold that swaps the plugin is refused","narrative":"Mallory folds Alice's request correctly but re-creates the cage with plugin 8, an always-true script she controls. The plugin is pinned: refused.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","4":"Mallory"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Mallory","action":{"fold":{"folder":4,"gen":0,"plugin":8,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":false,"reason":"plugin-not-pinned"},"exhibits":["R5"]}],"expectFinal":{"gen":0,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[{"id":0,"aid":11,"owner":1,"submittedAt":0}],"nextReq":1}},{"id":9,"slug":"close-then-return","story":"Alice closes and later returns","narrative":"Alice's current keys close her checkpoint: the token is burned and, in the same transaction, the row is deleted from the registry. Her AID is absent again, so a fresh request can be processed: she is back with a new checkpoint.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)"},"env":{"inception":[11],"quorum":[11],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true}},{"now":4,"actor":"proof","as":"Cora — convicting Alice without a proof","action":{"convict":{"aid":11}},"expect":{"ok":false,"reason":"no-duplicity-proof"}},{"now":5,"actor":"current-quorum","as":"Alice","action":{"close":{"aid":11}},"expect":{"ok":true,"state":{"gen":2,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},"exhibits":["R4","R6","R12","R11"]},{"now":6,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":6}},"expect":{"ok":true}},{"now":7,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":2,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":true},"exhibits":["R4","R1","R2"]}],"expectFinal":{"gen":3,"plugin":7,"root":[11],"live":[11],"tomb":[],"requests":[],"nextReq":2}},{"id":10,"slug":"convict-never-returns","story":"Cora convicts Bob; Bob can never return","narrative":"Cora presents a duplicity proof: Bob's token becomes a tombstone, the row stays and the registry is not spent. A new request for Bob's AID can never be processed — the row is there — and the tombstone cannot be closed. The request is rejected in phase 3 and Bob's bond returns.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"2":"Bob","3":"Hal (folder)","5":"Cora (convictor)","6":"Sam (sweeper)"},"env":{"inception":[12],"quorum":[12],"duplicity":[12]},"steps":[{"now":0,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true}},{"now":5,"actor":"proof","as":"Cora","action":{"convict":{"aid":12}},"expect":{"ok":true,"state":{"gen":1,"plugin":7,"root":[12],"live":[],"tomb":[12],"requests":[],"nextReq":1}},"exhibits":["R1","R2","R6","R11"]},{"now":6,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":6}},"expect":{"ok":true}},{"now":7,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":1,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":false,"reason":"already-registered"},"exhibits":["R3","R1c"]},{"now":8,"actor":"current-quorum","as":"Bob — closing the tombstone","action":{"close":{"aid":12}},"expect":{"ok":false,"reason":"no-live-token"},"exhibits":["R3"]},{"now":26,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":1,"plugin":7,"batch":[{"id":1,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":2,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R3","R9"]}],"expectFinal":{"gen":2,"plugin":7,"root":[12],"live":[],"tomb":[12],"requests":[],"nextReq":2}},{"id":11,"slug":"mixed-batch","story":"One fold processes Bob and rejects Alice","narrative":"Alice's request has expired; Bob's is fresh. One fold does both: Bob's row and token, Bob's bond locked, Alice's bond refunded, two tips to Hal.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","2":"Bob","3":"Hal (folder)"},"env":{"inception":[11,12],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":15,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":15}},"expect":{"ok":true}},{"now":20,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":1,"do":"process"},{"id":0,"do":"reject"}]}},"expect":{"ok":true,"flow":{"locked":[{"aid":12,"value":1000}],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":3,"value":4}}},"exhibits":["R11","R10","R1"]}],"expectFinal":{"gen":1,"plugin":7,"root":[12],"live":[12],"tomb":[],"requests":[],"nextReq":2}},{"id":12,"slug":"phase-refusals","story":"The phases refuse what they should","narrative":"A reject in phase 1 is refused: the request is not rejectable yet. A process in phase 2 is refused: phase 1 is over. Only the retract window is open in between.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)","6":"Sam (sweeper)"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":5,"actor":"anyone","as":"Sam — rejecting in phase 1","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":false,"reason":"not-rejectable"},"exhibits":["R9","R10"]},{"now":12,"actor":"anyone","as":"Hal — processing in phase 2","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":false,"reason":"not-in-phase-1"},"exhibits":["R9","R10"]},{"now":12,"actor":"owner","as":"Alice","action":{"retract":{"req":0}},"expect":{"ok":true},"exhibits":["R9"]}],"expectFinal":{"gen":0,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},{"id":13,"slug":"bad-inception","story":"A request whose inception does not verify","narrative":"Carol's request carries inception bytes that do not self-address to her AID, or receipts below the inception's own threshold. The plugin refuses the process; the request is rejectable in phase 3 and her bond returns.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Carol","3":"Hal (folder)","6":"Sam (sweeper)"},"env":{"inception":[11,12],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Carol","action":{"contribute":{"aid":13,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":false,"reason":"bad-inception"}},{"now":25,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R9","R11"]}],"expectFinal":{"gen":1,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},{"id":14,"slug":"dishonest-timestamp","story":"A request dated in the future","narrative":"Mallory writes submitted_at = 100 at slot 0. The validators never compare it with the creating transaction, so the request is in phase 1 for a hundred slots — and rejectable at once, because a future timestamp is dishonest by definition. Sam rejects it immediately.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"4":"Mallory","6":"Sam (sweeper)"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Mallory","action":{"contribute":{"aid":11,"owner":4,"submittedAt":100}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":4,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R9","R10"],"note":"A process at slot 1 would also have been accepted: a future timestamp is both processable and rejectable, as on chain. The folder decides."}],"expectFinal":{"gen":1,"plugin":7,"root":[],"live":[],"tomb":[],"requests":[],"nextReq":1}},{"id":15,"slug":"batch-names-a-request-twice","story":"A batch that names one request twice","narrative":"A fold lists Alice's request twice. The first entry consumes it; the second finds nothing in the inbox and the whole fold is refused — a batch cannot mint twice from one request. The honest fold then lands.","params":{"D":1000,"tip":2,"process":10,"retract":10},"plugin":7,"actors":{"1":"Alice","3":"Hal (folder)","4":"Mallory"},"env":{"inception":[11],"quorum":[],"duplicity":[]},"steps":[{"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"expect":{"ok":true}},{"now":1,"actor":"anyone","as":"Mallory","action":{"fold":{"folder":4,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"},{"id":0,"do":"process"}]}},"expect":{"ok":false,"reason":"unknown-request"}},{"now":2,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true},"exhibits":["R2","R1"]}],"expectFinal":{"gen":1,"plugin":7,"root":[11],"live":[11],"tomb":[],"requests":[],"nextReq":1}}];
+/* @@SCENARIOS:END@@ */
+
+/* @@CORPUS@@ */
+const REGISTRY_LEAN_TRACES_V1 = {"grid":{"actions":[{"contribute":{"aid":11,"owner":1,"submittedAt":20}},{"retract":{"req":0}},{"retract":{"req":1}},{"retract":{"req":2}},{"retract":{"req":3}},{"retract":{"req":4}},{"retract":{"req":5}},{"retract":{"req":6}},{"fold":{"batch":[],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},{"fold":{"batch":[],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":0,"plugin":8}},{"fold":{"batch":[],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":1,"plugin":7}},{"fold":{"batch":[],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":1,"plugin":8}},{"fold":{"batch":[],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":2,"plugin":7}},{"fold":{"batch":[],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":2}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":3}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":5}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":6}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":0}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":1}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":2}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"reject","id":3}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":0},{"do":"reject","id":2}],"folder":3,"gen":2,"plugin":8}},{"fold":{"batch":[{"do":"process","id":4},{"do":"process","id":0}],"folder":3,"gen":2,"plugin":8}},{"close":{"aid":11}},{"close":{"aid":12}},{"close":{"aid":13}},{"convict":{"aid":11}},{"convict":{"aid":12}},{"convict":{"aid":13}}],"cells":[{"a":0,"e":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":20}],"root":[],"tomb":[]}},"s":0},{"a":0,"e":1,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":20}],"root":[],"tomb":[]}},"s":0},{"a":1,"e":0,"result":null,"s":0},{"a":1,"e":1,"result":null,"s":0},{"a":2,"e":0,"result":null,"s":0},{"a":2,"e":1,"result":null,"s":0},{"a":3,"e":0,"result":null,"s":0},{"a":3,"e":1,"result":null,"s":0},{"a":4,"e":0,"result":null,"s":0},{"a":4,"e":1,"result":null,"s":0},{"a":5,"e":0,"result":null,"s":0},{"a":5,"e":1,"result":null,"s":0},{"a":6,"e":0,"result":null,"s":0},{"a":6,"e":1,"result":null,"s":0},{"a":7,"e":0,"result":null,"s":0},{"a":7,"e":1,"result":null,"s":0},{"a":8,"e":0,"result":null,"s":0},{"a":8,"e":1,"result":null,"s":0},{"a":9,"e":0,"result":null,"s":0},{"a":9,"e":1,"result":null,"s":0},{"a":10,"e":0,"result":null,"s":0},{"a":10,"e":1,"result":null,"s":0},{"a":11,"e":0,"result":null,"s":0},{"a":11,"e":1,"result":null,"s":0},{"a":12,"e":0,"result":null,"s":0},{"a":12,"e":1,"result":null,"s":0},{"a":13,"e":0,"result":null,"s":0},{"a":13,"e":1,"result":null,"s":0},{"a":14,"e":0,"result":null,"s":0},{"a":14,"e":1,"result":null,"s":0},{"a":15,"e":0,"result":null,"s":0},{"a":15,"e":1,"result":null,"s":0},{"a":16,"e":0,"result":null,"s":0},{"a":16,"e":1,"result":null,"s":0},{"a":17,"e":0,"result":null,"s":0},{"a":17,"e":1,"result":null,"s":0},{"a":18,"e":0,"result":null,"s":0},{"a":18,"e":1,"result":null,"s":0},{"a":19,"e":0,"result":null,"s":0},{"a":19,"e":1,"result":null,"s":0},{"a":20,"e":0,"result":null,"s":0},{"a":20,"e":1,"result":null,"s":0},{"a":21,"e":0,"result":null,"s":0},{"a":21,"e":1,"result":null,"s":0},{"a":22,"e":0,"result":null,"s":0},{"a":22,"e":1,"result":null,"s":0},{"a":23,"e":0,"result":null,"s":0},{"a":23,"e":1,"result":null,"s":0},{"a":24,"e":0,"result":null,"s":0},{"a":24,"e":1,"result":null,"s":0},{"a":25,"e":0,"result":null,"s":0},{"a":25,"e":1,"result":null,"s":0},{"a":26,"e":0,"result":null,"s":0},{"a":26,"e":1,"result":null,"s":0},{"a":27,"e":0,"result":null,"s":0},{"a":27,"e":1,"result":null,"s":0},{"a":28,"e":0,"result":null,"s":0},{"a":28,"e":1,"result":null,"s":0},{"a":29,"e":0,"result":null,"s":0},{"a":29,"e":1,"result":null,"s":0},{"a":30,"e":0,"result":null,"s":0},{"a":30,"e":1,"result":null,"s":0},{"a":31,"e":0,"result":null,"s":0},{"a":31,"e":1,"result":null,"s":0},{"a":32,"e":0,"result":null,"s":0},{"a":32,"e":1,"result":null,"s":0},{"a":33,"e":0,"result":null,"s":0},{"a":33,"e":1,"result":null,"s":0},{"a":34,"e":0,"result":null,"s":0},{"a":34,"e":1,"result":null,"s":0},{"a":35,"e":0,"result":null,"s":0},{"a":35,"e":1,"result":null,"s":0},{"a":36,"e":0,"result":null,"s":0},{"a":36,"e":1,"result":null,"s":0},{"a":37,"e":0,"result":null,"s":0},{"a":37,"e":1,"result":null,"s":0},{"a":38,"e":0,"result":null,"s":0},{"a":38,"e":1,"result":null,"s":0},{"a":39,"e":0,"result":null,"s":0},{"a":39,"e":1,"result":null,"s":0},{"a":40,"e":0,"result":null,"s":0},{"a":40,"e":1,"result":null,"s":0},{"a":41,"e":0,"result":null,"s":0},{"a":41,"e":1,"result":null,"s":0},{"a":42,"e":0,"result":null,"s":0},{"a":42,"e":1,"result":null,"s":0},{"a":43,"e":0,"result":null,"s":0},{"a":43,"e":1,"result":null,"s":0},{"a":44,"e":0,"result":null,"s":0},{"a":44,"e":1,"result":null,"s":0},{"a":45,"e":0,"result":null,"s":0},{"a":45,"e":1,"result":null,"s":0},{"a":46,"e":0,"result":null,"s":0},{"a":46,"e":1,"result":null,"s":0},{"a":47,"e":0,"result":null,"s":0},{"a":47,"e":1,"result":null,"s":0},{"a":48,"e":0,"result":null,"s":0},{"a":48,"e":1,"result":null,"s":0},{"a":49,"e":0,"result":null,"s":0},{"a":49,"e":1,"result":null,"s":0},{"a":50,"e":0,"result":null,"s":0},{"a":50,"e":1,"result":null,"s":0},{"a":51,"e":0,"result":null,"s":0},{"a":51,"e":1,"result":null,"s":0},{"a":52,"e":0,"result":null,"s":0},{"a":52,"e":1,"result":null,"s":0},{"a":53,"e":0,"result":null,"s":0},{"a":53,"e":1,"result":null,"s":0},{"a":54,"e":0,"result":null,"s":0},{"a":54,"e":1,"result":null,"s":0},{"a":55,"e":0,"result":null,"s":0},{"a":55,"e":1,"result":null,"s":0},{"a":56,"e":0,"result":null,"s":0},{"a":56,"e":1,"result":null,"s":0},{"a":57,"e":0,"result":null,"s":0},{"a":57,"e":1,"result":null,"s":0},{"a":58,"e":0,"result":null,"s":0},{"a":58,"e":1,"result":null,"s":0},{"a":59,"e":0,"result":null,"s":0},{"a":59,"e":1,"result":null,"s":0},{"a":60,"e":0,"result":null,"s":0},{"a":60,"e":1,"result":null,"s":0},{"a":61,"e":0,"result":null,"s":0},{"a":61,"e":1,"result":null,"s":0},{"a":62,"e":0,"result":null,"s":0},{"a":62,"e":1,"result":null,"s":0},{"a":63,"e":0,"result":null,"s":0},{"a":63,"e":1,"result":null,"s":0},{"a":64,"e":0,"result":null,"s":0},{"a":64,"e":1,"result":null,"s":0},{"a":65,"e":0,"result":null,"s":0},{"a":65,"e":1,"result":null,"s":0},{"a":66,"e":0,"result":null,"s":0},{"a":66,"e":1,"result":null,"s":0},{"a":67,"e":0,"result":null,"s":0},{"a":67,"e":1,"result":null,"s":0},{"a":68,"e":0,"result":null,"s":0},{"a":68,"e":1,"result":null,"s":0},{"a":69,"e":0,"result":null,"s":0},{"a":69,"e":1,"result":null,"s":0},{"a":70,"e":0,"result":null,"s":0},{"a":70,"e":1,"result":null,"s":0},{"a":71,"e":0,"result":null,"s":0},{"a":71,"e":1,"result":null,"s":0},{"a":72,"e":0,"result":null,"s":0},{"a":72,"e":1,"result":null,"s":0},{"a":73,"e":0,"result":null,"s":0},{"a":73,"e":1,"result":null,"s":0},{"a":74,"e":0,"result":null,"s":0},{"a":74,"e":1,"result":null,"s":0},{"a":75,"e":0,"result":null,"s":0},{"a":75,"e":1,"result":null,"s":0},{"a":76,"e":0,"result":null,"s":0},{"a":76,"e":1,"result":null,"s":0},{"a":77,"e":0,"result":null,"s":0},{"a":77,"e":1,"result":null,"s":0},{"a":78,"e":0,"result":null,"s":0},{"a":78,"e":1,"result":null,"s":0},{"a":79,"e":0,"result":null,"s":0},{"a":79,"e":1,"result":null,"s":0},{"a":80,"e":0,"result":null,"s":0},{"a":80,"e":1,"result":null,"s":0},{"a":81,"e":0,"result":null,"s":0},{"a":81,"e":1,"result":null,"s":0},{"a":82,"e":0,"result":null,"s":0},{"a":82,"e":1,"result":null,"s":0},{"a":83,"e":0,"result":null,"s":0},{"a":83,"e":1,"result":null,"s":0},{"a":84,"e":0,"result":null,"s":0},{"a":84,"e":1,"result":null,"s":0},{"a":85,"e":0,"result":null,"s":0},{"a":85,"e":1,"result":null,"s":0},{"a":86,"e":0,"result":null,"s":0},{"a":86,"e":1,"result":null,"s":0},{"a":87,"e":0,"result":null,"s":0},{"a":87,"e":1,"result":null,"s":0},{"a":88,"e":0,"result":null,"s":0},{"a":88,"e":1,"result":null,"s":0},{"a":89,"e":0,"result":null,"s":0},{"a":89,"e":1,"result":null,"s":0},{"a":90,"e":0,"result":null,"s":0},{"a":90,"e":1,"result":null,"s":0},{"a":91,"e":0,"result":null,"s":0},{"a":91,"e":1,"result":null,"s":0},{"a":92,"e":0,"result":null,"s":0},{"a":92,"e":1,"result":null,"s":0},{"a":93,"e":0,"result":null,"s":0},{"a":93,"e":1,"result":null,"s":0},{"a":94,"e":0,"result":null,"s":0},{"a":94,"e":1,"result":null,"s":0},{"a":95,"e":0,"result":null,"s":0},{"a":95,"e":1,"result":null,"s":0},{"a":96,"e":0,"result":null,"s":0},{"a":96,"e":1,"result":null,"s":0},{"a":97,"e":0,"result":null,"s":0},{"a":97,"e":1,"result":null,"s":0},{"a":98,"e":0,"result":null,"s":0},{"a":98,"e":1,"result":null,"s":0},{"a":99,"e":0,"result":null,"s":0},{"a":99,"e":1,"result":null,"s":0},{"a":100,"e":0,"result":null,"s":0},{"a":100,"e":1,"result":null,"s":0},{"a":101,"e":0,"result":null,"s":0},{"a":101,"e":1,"result":null,"s":0},{"a":102,"e":0,"result":null,"s":0},{"a":102,"e":1,"result":null,"s":0},{"a":103,"e":0,"result":null,"s":0},{"a":103,"e":1,"result":null,"s":0},{"a":0,"e":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[12],"nextReq":7,"plugin":7,"requests":[{"aid":11,"id":6,"owner":1,"submittedAt":20},{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":0,"e":1,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[12],"nextReq":7,"plugin":7,"requests":[{"aid":11,"id":6,"owner":1,"submittedAt":20},{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":1,"e":0,"result":null,"s":1},{"a":1,"e":1,"result":null,"s":1},{"a":2,"e":0,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1002}],"tips":null},"state":{"gen":1,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":2,"e":1,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1002}],"tips":null},"state":{"gen":1,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":3,"e":0,"result":null,"s":1},{"a":3,"e":1,"result":null,"s":1},{"a":4,"e":0,"result":null,"s":1},{"a":4,"e":1,"result":null,"s":1},{"a":5,"e":0,"result":null,"s":1},{"a":5,"e":1,"result":null,"s":1},{"a":6,"e":0,"result":null,"s":1},{"a":6,"e":1,"result":null,"s":1},{"a":7,"e":0,"result":null,"s":1},{"a":7,"e":1,"result":null,"s":1},{"a":8,"e":0,"result":null,"s":1},{"a":8,"e":1,"result":null,"s":1},{"a":9,"e":0,"result":null,"s":1},{"a":9,"e":1,"result":null,"s":1},{"a":10,"e":0,"result":null,"s":1},{"a":10,"e":1,"result":null,"s":1},{"a":11,"e":0,"result":null,"s":1},{"a":11,"e":1,"result":null,"s":1},{"a":12,"e":0,"result":null,"s":1},{"a":12,"e":1,"result":null,"s":1},{"a":13,"e":0,"result":null,"s":1},{"a":13,"e":1,"result":null,"s":1},{"a":14,"e":0,"result":null,"s":1},{"a":14,"e":1,"result":null,"s":1},{"a":15,"e":0,"result":null,"s":1},{"a":15,"e":1,"result":null,"s":1},{"a":16,"e":0,"result":null,"s":1},{"a":16,"e":1,"result":null,"s":1},{"a":17,"e":0,"result":null,"s":1},{"a":17,"e":1,"result":null,"s":1},{"a":18,"e":0,"result":null,"s":1},{"a":18,"e":1,"result":null,"s":1},{"a":19,"e":0,"result":null,"s":1},{"a":19,"e":1,"result":null,"s":1},{"a":20,"e":0,"result":null,"s":1},{"a":20,"e":1,"result":null,"s":1},{"a":21,"e":0,"result":null,"s":1},{"a":21,"e":1,"result":null,"s":1},{"a":22,"e":0,"result":null,"s":1},{"a":22,"e":1,"result":null,"s":1},{"a":23,"e":0,"result":null,"s":1},{"a":23,"e":1,"result":null,"s":1},{"a":24,"e":0,"result":null,"s":1},{"a":24,"e":1,"result":null,"s":1},{"a":25,"e":0,"result":null,"s":1},{"a":25,"e":1,"result":null,"s":1},{"a":26,"e":0,"result":null,"s":1},{"a":26,"e":1,"result":null,"s":1},{"a":27,"e":0,"result":null,"s":1},{"a":27,"e":1,"result":null,"s":1},{"a":28,"e":0,"result":null,"s":1},{"a":28,"e":1,"result":null,"s":1},{"a":29,"e":0,"result":null,"s":1},{"a":29,"e":1,"result":null,"s":1},{"a":30,"e":0,"result":null,"s":1},{"a":30,"e":1,"result":null,"s":1},{"a":31,"e":0,"result":null,"s":1},{"a":31,"e":1,"result":null,"s":1},{"a":32,"e":0,"result":null,"s":1},{"a":32,"e":1,"result":null,"s":1},{"a":33,"e":0,"result":null,"s":1},{"a":33,"e":1,"result":null,"s":1},{"a":34,"e":0,"result":null,"s":1},{"a":34,"e":1,"result":null,"s":1},{"a":35,"e":0,"result":null,"s":1},{"a":35,"e":1,"result":null,"s":1},{"a":36,"e":0,"result":null,"s":1},{"a":36,"e":1,"result":null,"s":1},{"a":37,"e":0,"result":null,"s":1},{"a":37,"e":1,"result":null,"s":1},{"a":38,"e":0,"result":null,"s":1},{"a":38,"e":1,"result":null,"s":1},{"a":39,"e":0,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[11,12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[11,12,13],"tomb":[13]}},"s":1},{"a":39,"e":1,"result":null,"s":1},{"a":40,"e":0,"result":null,"s":1},{"a":40,"e":1,"result":null,"s":1},{"a":41,"e":0,"result":null,"s":1},{"a":41,"e":1,"result":null,"s":1},{"a":42,"e":0,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[11,12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[11,12,13],"tomb":[13]}},"s":1},{"a":42,"e":1,"result":null,"s":1},{"a":43,"e":0,"result":null,"s":1},{"a":43,"e":1,"result":null,"s":1},{"a":44,"e":0,"result":null,"s":1},{"a":44,"e":1,"result":null,"s":1},{"a":45,"e":0,"result":null,"s":1},{"a":45,"e":1,"result":null,"s":1},{"a":46,"e":0,"result":null,"s":1},{"a":46,"e":1,"result":null,"s":1},{"a":47,"e":0,"result":null,"s":1},{"a":47,"e":1,"result":null,"s":1},{"a":48,"e":0,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":48,"e":1,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":49,"e":0,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":4,"value":1000}],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":49,"e":1,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":4,"value":1000}],"tips":{"addr":3,"value":2}},"state":{"gen":2,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}},"s":1},{"a":50,"e":0,"result":null,"s":1},{"a":50,"e":1,"result":null,"s":1},{"a":51,"e":0,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":3,"value":4}},"state":{"gen":2,"live":[11,12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[11,12,13],"tomb":[13]}},"s":1},{"a":51,"e":1,"result":null,"s":1},{"a":52,"e":0,"result":null,"s":1},{"a":52,"e":1,"result":null,"s":1},{"a":53,"e":0,"result":null,"s":1},{"a":53,"e":1,"result":null,"s":1},{"a":54,"e":0,"result":null,"s":1},{"a":54,"e":1,"result":null,"s":1},{"a":55,"e":0,"result":null,"s":1},{"a":55,"e":1,"result":null,"s":1},{"a":56,"e":0,"result":null,"s":1},{"a":56,"e":1,"result":null,"s":1},{"a":57,"e":0,"result":null,"s":1},{"a":57,"e":1,"result":null,"s":1},{"a":58,"e":0,"result":null,"s":1},{"a":58,"e":1,"result":null,"s":1},{"a":59,"e":0,"result":null,"s":1},{"a":59,"e":1,"result":null,"s":1},{"a":60,"e":0,"result":null,"s":1},{"a":60,"e":1,"result":null,"s":1},{"a":61,"e":0,"result":null,"s":1},{"a":61,"e":1,"result":null,"s":1},{"a":62,"e":0,"result":null,"s":1},{"a":62,"e":1,"result":null,"s":1},{"a":63,"e":0,"result":null,"s":1},{"a":63,"e":1,"result":null,"s":1},{"a":64,"e":0,"result":null,"s":1},{"a":64,"e":1,"result":null,"s":1},{"a":65,"e":0,"result":null,"s":1},{"a":65,"e":1,"result":null,"s":1},{"a":66,"e":0,"result":null,"s":1},{"a":66,"e":1,"result":null,"s":1},{"a":67,"e":0,"result":null,"s":1},{"a":67,"e":1,"result":null,"s":1},{"a":68,"e":0,"result":null,"s":1},{"a":68,"e":1,"result":null,"s":1},{"a":69,"e":0,"result":null,"s":1},{"a":69,"e":1,"result":null,"s":1},{"a":70,"e":0,"result":null,"s":1},{"a":70,"e":1,"result":null,"s":1},{"a":71,"e":0,"result":null,"s":1},{"a":71,"e":1,"result":null,"s":1},{"a":72,"e":0,"result":null,"s":1},{"a":72,"e":1,"result":null,"s":1},{"a":73,"e":0,"result":null,"s":1},{"a":73,"e":1,"result":null,"s":1},{"a":74,"e":0,"result":null,"s":1},{"a":74,"e":1,"result":null,"s":1},{"a":75,"e":0,"result":null,"s":1},{"a":75,"e":1,"result":null,"s":1},{"a":76,"e":0,"result":null,"s":1},{"a":76,"e":1,"result":null,"s":1},{"a":77,"e":0,"result":null,"s":1},{"a":77,"e":1,"result":null,"s":1},{"a":78,"e":0,"result":null,"s":1},{"a":78,"e":1,"result":null,"s":1},{"a":79,"e":0,"result":null,"s":1},{"a":79,"e":1,"result":null,"s":1},{"a":80,"e":0,"result":null,"s":1},{"a":80,"e":1,"result":null,"s":1},{"a":81,"e":0,"result":null,"s":1},{"a":81,"e":1,"result":null,"s":1},{"a":82,"e":0,"result":null,"s":1},{"a":82,"e":1,"result":null,"s":1},{"a":83,"e":0,"result":null,"s":1},{"a":83,"e":1,"result":null,"s":1},{"a":84,"e":0,"result":null,"s":1},{"a":84,"e":1,"result":null,"s":1},{"a":85,"e":0,"result":null,"s":1},{"a":85,"e":1,"result":null,"s":1},{"a":86,"e":0,"result":null,"s":1},{"a":86,"e":1,"result":null,"s":1},{"a":87,"e":0,"result":null,"s":1},{"a":87,"e":1,"result":null,"s":1},{"a":88,"e":0,"result":null,"s":1},{"a":88,"e":1,"result":null,"s":1},{"a":89,"e":0,"result":null,"s":1},{"a":89,"e":1,"result":null,"s":1},{"a":90,"e":0,"result":null,"s":1},{"a":90,"e":1,"result":null,"s":1},{"a":91,"e":0,"result":null,"s":1},{"a":91,"e":1,"result":null,"s":1},{"a":92,"e":0,"result":null,"s":1},{"a":92,"e":1,"result":null,"s":1},{"a":93,"e":0,"result":null,"s":1},{"a":93,"e":1,"result":null,"s":1},{"a":94,"e":0,"result":null,"s":1},{"a":94,"e":1,"result":null,"s":1},{"a":95,"e":0,"result":null,"s":1},{"a":95,"e":1,"result":null,"s":1},{"a":96,"e":0,"result":null,"s":1},{"a":96,"e":1,"result":null,"s":1},{"a":97,"e":0,"result":null,"s":1},{"a":97,"e":1,"result":null,"s":1},{"a":98,"e":0,"result":null,"s":1},{"a":98,"e":1,"result":null,"s":1},{"a":99,"e":0,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":2,"live":[],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[13],"tomb":[13]}},"s":1},{"a":99,"e":1,"result":null,"s":1},{"a":100,"e":0,"result":null,"s":1},{"a":100,"e":1,"result":null,"s":1},{"a":101,"e":0,"result":null,"s":1},{"a":101,"e":1,"result":null,"s":1},{"a":102,"e":0,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[12,13]}},"s":1},{"a":102,"e":1,"result":null,"s":1},{"a":103,"e":0,"result":null,"s":1},{"a":103,"e":1,"result":null,"s":1}],"envs":[{"duplicity":[11,12,13],"inception":[11,12,13],"quorum":[11,12,13]},{"duplicity":[],"inception":[],"quorum":[]}],"now":20,"plugin":7,"states":[{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},{"gen":1,"live":[12],"nextReq":6,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":15},{"aid":11,"id":1,"owner":1,"submittedAt":5},{"aid":11,"id":2,"owner":1,"submittedAt":0},{"aid":11,"id":3,"owner":4,"submittedAt":100},{"aid":12,"id":4,"owner":2,"submittedAt":15},{"aid":13,"id":5,"owner":2,"submittedAt":15}],"root":[12,13],"tomb":[13]}]},"params":{"D":1000,"process":10,"retract":10,"tip":2},"schema":"cardano-keri.registry.trace","stories":[{"env":{"duplicity":[],"inception":[11,12],"quorum":[11,12]},"id":1,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":2,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":3,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}},{"action":{"close":{"aid":11}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":4,"result":null}]},{"env":{"duplicity":[],"inception":[11,12],"quorum":[]},"id":3,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":0},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":1}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":0},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":2,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000},{"aid":12,"value":1000}],"refunds":[],"tips":{"addr":3,"value":4}},"state":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":1}],"folder":4,"gen":0,"plugin":7}},"input":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]},"now":2,"result":null},{"action":{"fold":{"batch":[],"folder":4,"gen":1,"plugin":7}},"input":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]},"now":3,"result":null}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":4,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}},{"action":{"contribute":{"aid":11,"owner":4,"submittedAt":5}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":5,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[11],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":4,"submittedAt":5}],"root":[11],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":1,"plugin":7}},"input":{"gen":1,"live":[11],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":4,"submittedAt":5}],"root":[11],"tomb":[]},"now":6,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":1,"plugin":7}},"input":{"gen":1,"live":[11],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":4,"submittedAt":5}],"root":[11],"tomb":[]},"now":25,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":4,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":2,"live":[11],"nextReq":2,"plugin":7,"requests":[],"root":[11],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":5,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":3,"result":null},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1002}],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":12,"result":null}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":6,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":25,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":25,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":7,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[],"folder":4,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":null},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":2,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":8,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":4,"gen":0,"plugin":8}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":null}]},{"env":{"duplicity":[],"inception":[11],"quorum":[11]},"id":9,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}},{"action":{"convict":{"aid":11}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":4,"result":null},{"action":{"close":{"aid":11}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":5,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":2,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}},{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":6}},"input":{"gen":2,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":6,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":6}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":2,"plugin":7}},"input":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":6}],"root":[],"tomb":[]},"now":7,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":3,"live":[11],"nextReq":2,"plugin":7,"requests":[],"root":[11],"tomb":[]}}}]},{"env":{"duplicity":[12],"inception":[12],"quorum":[12]},"id":10,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":12,"id":0,"owner":2,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":12,"id":0,"owner":2,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[{"aid":12,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[12],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[]}}},{"action":{"convict":{"aid":12}},"input":{"gen":1,"live":[12],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[]},"now":5,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[12]}}},{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":6}},"input":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[12]},"now":6,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]}}},{"action":{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":7,"result":null},{"action":{"close":{"aid":12}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":8,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":26,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":2,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[],"root":[12],"tomb":[12]}}}]},{"env":{"duplicity":[],"inception":[11,12],"quorum":[]},"id":11,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":15}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":15,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":15},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":1},{"do":"reject","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":15},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":20,"result":{"flow":{"deposited":0,"locked":[{"aid":12,"value":1000}],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":3,"value":4}},"state":{"gen":1,"live":[12],"nextReq":2,"plugin":7,"requests":[],"root":[12],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":12,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":5,"result":null},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":null},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1002}],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11,12],"quorum":[]},"id":13,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":13,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":13,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":13,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":13,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":25,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":14,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":4,"submittedAt":100}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":4,"submittedAt":100}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":4,"submittedAt":100}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":4,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"id":15,"params":{"D":1000,"process":10,"retract":10,"tip":2},"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":0}],"folder":4,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":null},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":2,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}}]}],"traces":[{"env":{"duplicity":[],"inception":[11],"quorum":[]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"register","plugin":7,"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":3,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":3,"result":null}]},{"env":{"duplicity":[],"inception":[11,12],"quorum":[]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"race","plugin":7,"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":0},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":1}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":0},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":2,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000},{"aid":12,"value":1000}],"refunds":[],"tips":{"addr":3,"value":4}},"state":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0},{"do":"process","id":1}],"folder":4,"gen":0,"plugin":7}},"input":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]},"now":2,"result":null},{"action":{"fold":{"batch":[],"folder":4,"gen":1,"plugin":7}},"input":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]},"now":3,"result":null},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":4,"gen":1,"plugin":8}},"input":{"gen":1,"live":[12,11],"nextReq":2,"plugin":7,"requests":[],"root":[12,11],"tomb":[]},"now":3,"result":null}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"retract-and-sweep","plugin":7,"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":3,"result":null},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1002}],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}},{"action":{"retract":{"req":0}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":12,"result":null},{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":12}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":12}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":12}],"root":[],"tomb":[]},"now":25,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":12}],"root":[],"tomb":[]},"now":33,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[11]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"close-and-return","plugin":7,"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]}}},{"action":{"convict":{"aid":11}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":4,"result":null},{"action":{"close":{"aid":11}},"input":{"gen":1,"live":[11],"nextReq":1,"plugin":7,"requests":[],"root":[11],"tomb":[]},"now":5,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":2,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]}}},{"action":{"close":{"aid":11}},"input":{"gen":2,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":5,"result":null},{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":6}},"input":{"gen":2,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":6,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":6}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":2,"plugin":7}},"input":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":1,"submittedAt":6}],"root":[],"tomb":[]},"now":7,"result":{"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":3,"live":[11],"nextReq":2,"plugin":7,"requests":[],"root":[11],"tomb":[]}}}]},{"env":{"duplicity":[12],"inception":[12],"quorum":[12]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"convict","plugin":7,"steps":[{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":12,"id":0,"owner":2,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":12,"id":0,"owner":2,"submittedAt":0}],"root":[],"tomb":[]},"now":1,"result":{"flow":{"deposited":0,"locked":[{"aid":12,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2}},"state":{"gen":1,"live":[12],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[]}}},{"action":{"convict":{"aid":12}},"input":{"gen":1,"live":[12],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[]},"now":5,"result":{"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[12]}}},{"action":{"convict":{"aid":12}},"input":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[12]},"now":5,"result":null},{"action":{"contribute":{"aid":12,"owner":2,"submittedAt":6}},"input":{"gen":1,"live":[],"nextReq":1,"plugin":7,"requests":[],"root":[12],"tomb":[12]},"now":6,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]}}},{"action":{"fold":{"batch":[{"do":"process","id":1}],"folder":3,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":7,"result":null},{"action":{"close":{"aid":12}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":8,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":12,"id":1,"owner":2,"submittedAt":6}],"root":[12],"tomb":[12]},"now":26,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":2,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[],"root":[12],"tomb":[12]}}}]},{"env":{"duplicity":[],"inception":[11],"quorum":[]},"initial":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"name":"phases","plugin":7,"steps":[{"action":{"contribute":{"aid":11,"owner":1,"submittedAt":0}},"input":{"gen":0,"live":[],"nextReq":0,"plugin":7,"requests":[],"root":[],"tomb":[]},"now":0,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":5,"result":null},{"action":{"fold":{"batch":[{"do":"process","id":0}],"folder":3,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":null},{"action":{"contribute":{"aid":11,"owner":4,"submittedAt":100}},"input":{"gen":0,"live":[],"nextReq":1,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null},"state":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":4,"submittedAt":100},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":1}],"folder":6,"gen":0,"plugin":7}},"input":{"gen":0,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":1,"owner":4,"submittedAt":100},{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":4,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]}}},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":12,"result":null},{"action":{"fold":{"batch":[{"do":"reject","id":0}],"folder":6,"gen":1,"plugin":7}},"input":{"gen":1,"live":[],"nextReq":2,"plugin":7,"requests":[{"aid":11,"id":0,"owner":1,"submittedAt":0}],"root":[],"tomb":[]},"now":20,"result":{"flow":{"deposited":0,"locked":[],"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}},"state":{"gen":2,"live":[],"nextReq":2,"plugin":7,"requests":[],"root":[],"tomb":[]}}}]}],"version":1};
+const REGISTRY_LEAN_TRACES_SHA256 = 'd1dd37b2ce8ae99365a20fea9ca3507508a881fb230bbef8dd0c23ec1e94a698';
+/* @@CORPUS:END@@ */
+
+/* ===================== the page (not part of the machine) ===================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DEFAULT_PARAMS = { D: 1000, tip: 2, process: 10, retract: 10 };
+const DEFAULT_PLUGIN = 7;
+const DEFAULT_ACTORS = { '1': 'Alice', '2': 'Bob', '3': 'Hal (folder)', '4': 'Mallory', '5': 'Cora (convictor)', '6': 'Sam (sweeper)' };
+const AUTHNAME = { 'anyone': 'anyone', 'owner': 'the request owner', 'current-quorum': 'the checkpoint’s current quorum', 'proof': 'a duplicity proof' };
+
+/* --- session: the state, the evidence, the slot, the history ---------------- */
+function newSession(params, plugin, actors, env) {
+  return { params, plugin, actors, env: env || emptyEnv(), now: 0, state: initSys(plugin),
+           history: [], cursor: -1, ledger: {}, flows: [] };
+}
+let S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
+let story = null; // { sc, i }
+
+function attempt(action, as) {
+  const r = step(S.params, S.env, action, S.now, S.state);
+  const rec = { now: S.now, action, result: r, before: S.state, as: as || '', params: S.params };
+  rec.theorems = checkTheorems(rec);
+  for (const id of Object.keys(rec.theorems)) if (rec.theorems[id].v === 'holds') S.ledger[id] = (S.ledger[id] || 0) + 1;
+  S.history.push(rec);
+  S.cursor = S.history.length - 1;
+  if (r.ok) { S.state = r.state; S.flows.push({ now: S.now, action, flow: r.flow, before: rec.before }); }
+  return rec;
+}
+
+/* --- rendering ----------------------------------------------------------------- */
+function actorName(a) { return (S.actors && S.actors[String(a)]) || `address ${a}`; }
+function tag(a) { return actionTag(a); }
+function describeAction(a) {
+  const t = tag(a), b = a[t];
+  switch (t) {
+    case 'contribute': return `request: AID ${b.aid}, owner ${actorName(b.owner)}, submitted_at ${b.submittedAt}`;
+    case 'fold': return `fold by ${actorName(b.folder)} at generation ${b.gen}, plugin ${b.plugin}: ` + (b.batch.length ? b.batch.map(x => `${x.do} #${x.id}`).join(', ') : 'empty batch');
+    case 'retract': return `retract request #${b.req}`;
+    case 'close': return `close AID ${b.aid}`;
+    case 'convict': return `convict AID ${b.aid}`;
+  }
+  return t;
+}
+function describeFlow(f) {
+  const parts = [];
+  if (f.deposited) parts.push(`${f.deposited} deposited into the request`);
+  for (const l of f.locked) parts.push(`${l.value} locked into checkpoint ${l.aid}`);
+  for (const r of f.refunds) parts.push(`${r.value} back to ${actorName(r.addr)}`);
+  if (f.tips) parts.push(`${f.tips.value} in tips to ${actorName(f.tips.addr)}`);
+  return parts.length ? parts.join('; ') : 'no value moves';
+}
+const REASON_WORDS = {
+  'unknown-request': 'that request is not in the inbox (or the batch already consumed it)',
+  'not-in-phase-2': 'only phase 2 lets the owner retract',
+  'stale-generation': 'the registry has moved on: this fold spends a generation that is already spent',
+  'plugin-not-pinned': 'the cage must be re-created with the same plugin',
+  'empty-fold': 'a fold must process or reject at least one request',
+  'not-in-phase-1': 'phase 1 is over for that request',
+  'bad-inception': 'the inception evidence does not verify for that AID',
+  'already-registered': 'that AID is in the root: the absence proof fails',
+  'not-rejectable': 'that request is not rejectable yet',
+  'no-live-token': 'that AID has no live checkpoint',
+  'no-quorum': 'the current keys did not sign the close',
+  'no-duplicity-proof': 'no duplicity proof was presented',
+};
+function whyText(r) {
+  const w = REASON_WORDS[r.reason] || r.reason;
+  return `refused — ${r.reason}${r.field ? ' (' + r.field + ')' : ''}${r.at !== undefined ? ' at batch entry ' + r.at : ''}: ${w}`;
+}
+
+function viewState() { // the state shown: the cursor's post-state
+  if (S.cursor < 0) return S.state;
+  const rec = S.history[S.cursor];
+  return rec.result.ok ? rec.result.state : rec.before;
+}
+function viewNow() { return S.cursor < 0 ? S.now : S.history[S.cursor].now; }
+
+function render() {
+  const st = viewState(), now = viewNow(), p = S.params;
+  $('slot').textContent = S.now;
+  $('paramchip').textContent = `D=${p.D} tip=${p.tip} process=${p.process} retract=${p.retract} plugin=${S.plugin}`;
+  $('pf-params').textContent = `Parameters: bond D = ${p.D}, tip = ${p.tip}, process_time = ${p.process}, retract_time = ${p.retract} slots; plugin ${S.plugin}. In the Lean, 0 < D, 0 < process and 0 < retract are structural.`;
+  $('registry').innerHTML = `<dt>generation</dt><dd>${st.gen}</dd><dt>plugin</dt><dd>${st.plugin}</dd><dt>root</dt><dd>${st.root.length ? st.root.map(a => `AID ${a}`).join(', ') : '∅ (empty)'}</dd><dt>next request id</dt><dd>${st.nextReq}</dd>`;
+  const cks = [...st.live.map(a => ({ aid: a, k: 'live' })), ...st.tomb.map(a => ({ aid: a, k: 'tomb' }))].sort((x, y) => x.aid - y.aid);
+  $('ck-count').textContent = `${st.live.length} live, ${st.tomb.length} convicted`;
+  $('checkpoints').innerHTML = cks.length
+    ? `<table class="t"><tr><th>AID</th><th>token</th><th>row</th><th>bond held</th></tr>` + cks.map(c => `<tr><td class="mono">${c.aid}</td><td><span class="badge ${c.k}">${c.k === 'live' ? 'LIVE' : 'TOMBSTONE'}</span></td><td>${st.root.includes(c.aid) ? 'in the root' : '<b class="fail">missing</b>'}</td><td class="mono">${c.k === 'live' ? p.D : 0}</td></tr>`).join('') + '</table>'
+    : '<span class="sub">no checkpoint yet</span>';
+  $('inbox-count').textContent = `${st.requests.length} pending`;
+  $('inbox').innerHTML = st.requests.length
+    ? `<table class="t"><tr><th>#</th><th>AID</th><th>owner</th><th>submitted_at</th><th>at slot ${now}</th><th>holds</th></tr>` + st.requests.slice().sort((a, b) => a.id - b.id).map(r => {
+        const ph = phaseOf(p, r, now);
+        const cls = ph === 'phase-1' ? 'p1' : ph === 'phase-2' ? 'p2' : ph === 'phase-3' ? 'p3' : 'future';
+        return `<tr><td class="mono">${r.id}</td><td class="mono">${r.aid}</td><td>${esc(actorName(r.owner))}</td><td class="mono">${r.submittedAt}</td><td><span class="badge ${cls}">${ph}${ph === 'future' ? ' (rejectable)' : ''}</span></td><td class="mono">${p.D + p.tip}</td></tr>`;
+      }).join('') + '</table>'
+    : '<span class="sub">empty</span>';
+  renderValue(st, p);
+  renderCast();
+  renderEvidence();
+  renderActions(st, now);
+  renderHistory();
+  renderLedger();
+}
+
+function renderValue(st, p) {
+  const held = {};
+  const add = (who, comp, v) => { held[who] = held[who] || {}; held[who][comp] = (held[who][comp] || 0) + v; };
+  for (const r of st.requests) add(`inbox (request #${r.id}, ${actorName(r.owner)})`, 'bond + tip', p.D + p.tip);
+  for (const a of st.live) add(`checkpoint ${a}`, 'bond', p.D);
+  const upto = S.cursor < 0 ? S.flows.length : S.flows.filter(f => S.history.indexOf(S.history.find(h => h.action === f.action && h.now === f.now)) <= S.cursor).length;
+  for (const f of S.flows.slice(0, upto)) {
+    for (const r of f.flow.refunds) add(actorName(r.addr), 'refunded', r.value);
+    if (f.flow.tips) add(actorName(f.flow.tips.addr), 'tips', f.flow.tips.value);
+  }
+  const rows = [];
+  for (const who of Object.keys(held)) for (const comp of Object.keys(held[who])) rows.push({ who, comp, v: held[who][comp] });
+  const max = Math.max(1, ...rows.map(r => r.v));
+  $('bars').innerHTML = rows.length ? rows.map(r => `<div class="bar-row"><span>${esc(r.who)}</span><div class="bar"><i style="width:${Math.round(100 * r.v / max)}%"></i></div><span class="mono">${r.v} ${esc(r.comp)}</span></div>`).join('') : '<span class="sub">nothing held yet</span>';
+}
+
+function renderCast() {
+  $('cast').innerHTML = Object.keys(S.actors).map(k => `<div class="who"><b>${esc(S.actors[k])}</b><span>address ${k}</span></div>`).join('');
+}
+
+function renderEvidence() {
+  const aids = new Set([...S.env.inception, ...S.env.quorum, ...S.env.duplicity, ...viewState().root, ...viewState().requests.map(r => r.aid)]);
+  const list = [...aids].sort((a, b) => a - b);
+  const cell = (k, aid) => `<td><label><input type="checkbox" data-ev="${k}" data-aid="${aid}"${S.env[k].includes(aid) ? ' checked' : ''}> ${S.env[k].includes(aid) ? 'yes' : 'no'}</label></td>`;
+  $('evbody').innerHTML =
+    `<table><tr><th>AID</th><th>inception verifies</th><th>current quorum signs</th><th>duplicity proof</th></tr>` +
+    list.map(aid => `<tr><td class="mono">${aid}</td>${cell('inception', aid)}${cell('quorum', aid)}${cell('duplicity', aid)}</tr>`).join('') +
+    `</table><div class="add">AID <input id="ev-aid" type="number" min="0" value="13"> <button type="button" id="ev-add">add a row</button></div>` +
+    `<div class="hint">Each column is one Env predicate of Registry.lean: <span class="mono">inception</span> (the #114 rule: the bytes self-address, signatures and receipts at the inception's own thresholds), <span class="mono">quorum</span> (the current keys sign the close), <span class="mono">duplicity</span> (a verified proof against the tip). The machine only ever applies them.</div>`;
+  for (const cb of $('evbody').querySelectorAll('input[type="checkbox"]')) cb.addEventListener('change', () => {
+    const k = cb.getAttribute('data-ev'), aid = Number(cb.getAttribute('data-aid'));
+    const l = S.env[k].filter(x => x !== aid); if (cb.checked) l.push(aid); S.env = { ...S.env, [k]: l.sort((a, b) => a - b) };
+    render();
+  });
+  $('ev-add').addEventListener('click', () => { const aid = Number($('ev-aid').value); if (isNat(aid)) { S.env = { ...S.env, inception: [...new Set([...S.env.inception, aid])].sort((a, b) => a - b) }; render(); } });
+}
+
+function addrOptions(sel) { return Object.keys(S.actors).map(k => `<option value="${k}"${Number(k) === sel ? ' selected' : ''}>${esc(S.actors[k])}</option>`).join(''); }
+
+function renderActions(st, now) {
+  const form = (id, title, auth, body, hint) => `<div class="act" data-act="${id}"><h3>${title}<span class="auth">by ${esc(auth)}</span></h3><div class="row">${body}</div>${hint ? `<div class="hint">${hint}</div>` : ''}<div class="row"><button type="button" class="primary" data-go="${id}">submit</button></div></div>`;
+  const reqOptions = st.requests.slice().sort((a, b) => a.id - b.id).map(r => `<option value="${r.id}">#${r.id} — AID ${r.aid}, ${esc(actorName(r.owner))}, ${phaseOf(S.params, r, now)}</option>`).join('');
+  const aidOptions = [...new Set([...st.live, ...st.tomb, ...st.requests.map(r => r.aid), 11, 12, 13])].sort((a, b) => a - b).map(a => `<option value="${a}">AID ${a}${st.live.includes(a) ? ' (live)' : st.tomb.includes(a) ? ' (convicted)' : ''}</option>`).join('');
+  $('actions').innerHTML =
+    form('contribute', 'post a request', AUTHNAME.anyone,
+      `AID <input id="a-c-aid" type="number" min="0" value="11"> owner <select id="a-c-owner">${addrOptions(1)}</select> submitted_at <input id="a-c-t" type="number" min="0" value="${now}">`,
+      'brings D + tip into the inbox; the registry is not touched') +
+    form('fold', 'fold the registry', AUTHNAME.anyone,
+      `folder <select id="a-f-folder">${addrOptions(3)}</select> generation <input id="a-f-gen" type="number" min="0" value="${st.gen}"> plugin <input id="a-f-plugin" type="number" min="0" value="${st.plugin}">` +
+      `<div class="batch">${st.requests.length ? st.requests.slice().sort((a, b) => a.id - b.id).map(r => `<label><select data-batch="${r.id}"><option value="">leave</option><option value="process">process</option><option value="reject">reject</option></select> #${r.id} — AID ${r.aid}, ${esc(actorName(r.owner))}, ${phaseOf(S.params, r, now)}</label>`).join('') : '<span class="sub">no request to fold</span>'}</div>`,
+      'spends the registry at the named generation; processes need phase 1, inception evidence and absence; rejects need phase 3 or a future timestamp; tips go to the folder') +
+    form('retract', 'retract a request', AUTHNAME.owner, `request <select id="a-r-req">${reqOptions || '<option value="">none</option>'}</select>`, 'phase 2 only; returns D + tip; the registry is not touched') +
+    form('close', 'close a checkpoint', AUTHNAME['current-quorum'], `<select id="a-cl-aid">${aidOptions}</select>`, 'burns the token and deletes the row in the same transaction') +
+    form('convict', 'convict a checkpoint', AUTHNAME.proof, `<select id="a-cv-aid">${aidOptions}</select>`, 'the token becomes a tombstone; the row stays; the registry is not spent');
+  for (const b of $('actions').querySelectorAll('button[data-go]')) b.addEventListener('click', () => submitForm(b.getAttribute('data-go')));
+}
+
+function readForm(id) {
+  const n = x => Number($(x).value);
+  switch (id) {
+    case 'contribute': return { contribute: { aid: n('a-c-aid'), owner: n('a-c-owner'), submittedAt: n('a-c-t') } };
+    case 'fold': {
+      const batch = [];
+      for (const sel of $('actions').querySelectorAll('select[data-batch]')) if (sel.value) batch.push({ id: Number(sel.getAttribute('data-batch')), do: sel.value });
+      return { fold: { folder: n('a-f-folder'), gen: n('a-f-gen'), plugin: n('a-f-plugin'), batch } };
+    }
+    case 'retract': return { retract: { req: n('a-r-req') } };
+    case 'close': return { close: { aid: n('a-cl-aid') } };
+    case 'convict': return { convict: { aid: n('a-cv-aid') } };
+  }
+  return null;
+}
+function submitForm(id) {
+  if (story) return;
+  const a = readForm(id);
+  const rec = attempt(a, 'you');
+  showOutcome(rec);
+  render();
+}
+function showOutcome(rec) {
+  const r = rec.result;
+  $('whyline').hidden = r.ok; $('okline').hidden = !r.ok;
+  if (r.ok) $('okline').textContent = `applied — ${describeFlow(r.flow)}`;
+  else $('whyline').textContent = whyText(r);
+}
+
+function renderHistory() {
+  $('rail').innerHTML = S.history.map((h, i) => `<span class="chip2 ${h.result.ok ? 'ok' : 'bad'}${i === S.cursor ? ' cur' : ''}" data-i="${i}">${i + 1} · slot ${h.now} · ${tag(h.action)}${h.result.ok ? '' : ' ✗'}</span>`).join('');
+  for (const c of $('rail').querySelectorAll('.chip2')) c.addEventListener('click', () => { S.cursor = Number(c.getAttribute('data-i')); render(); });
+  $('h-pos').textContent = S.history.length ? `${S.cursor + 1} / ${S.history.length}${S.cursor === S.history.length - 1 ? ' (latest)' : ' (time travel)'}` : '';
+  if (S.cursor >= 0) {
+    const h = S.history[S.cursor];
+    const lit = Object.keys(h.theorems).filter(k => h.theorems[k].v === 'holds');
+    $('detail').innerHTML = `<b>${esc(h.as || '')}</b> at slot ${h.now}: ${esc(describeAction(h.action))}<br>` +
+      (h.result.ok ? `<span class="pass">applied</span> — ${esc(describeFlow(h.result.flow))}` : `<span class="fail">${esc(whyText(h.result))}</span>`) +
+      (lit.length ? `<br><span class="sub">exhibits ${lit.join(', ')}</span>` : '');
+  } else $('detail').innerHTML = '<span class="sub">nothing attempted yet — pick a story, or act in free play</span>';
+  const n = S.history.length;
+  $('h-first').disabled = $('h-prev').disabled = !(S.cursor > 0);
+  $('h-next').disabled = $('h-last').disabled = !(S.cursor >= 0 && S.cursor < n - 1);
+}
+
+function renderLedger() {
+  const cur = S.cursor >= 0 ? S.history[S.cursor].theorems : {};
+  $('ledger').innerHTML = `<tr><th>id</th><th>claim</th><th>Lean</th><th>this step</th><th>exhibited</th></tr>` +
+    THEOREMS.map(t => { const v = cur[t.id] ? cur[t.id].v : 'n/a';
+      const cls = v === 'holds' ? 'lit' : v === 'fails' ? 'red' : 'na';
+      return `<tr><td class="mono">${t.id}</td><td>${esc(t.title)}</td><td class="mono">${esc(t.lean)}</td><td class="${cls}">${v === 'holds' ? '● holds' : v === 'fails' ? '✗ FAILS: ' + esc(cur[t.id].why) : '○ n/a'}</td><td class="mono">${S.ledger[t.id] || 0}×</td></tr>`; }).join('');
+}
+
+/* --- stories -------------------------------------------------------------------- */
+function loadStory(sc) {
+  story = { sc, i: 0 };
+  S = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || DEFAULT_ACTORS, { ...emptyEnv(), ...(sc.env || {}) });
+  $('storybox').hidden = false;
+  $('storybox').innerHTML = `<b>${sc.id}. ${esc(sc.story)}</b> — ${esc(sc.narrative || '')}`;
+  $('sc-exit').hidden = false;
+  updateStoryButtons();
+  $('whyline').hidden = $('okline').hidden = true;
+  render();
+}
+function storyStep() {
+  if (!story) return false;
+  const st = story.sc.steps[story.i]; if (!st) return false;
+  S.now = st.now;
+  const rec = attempt(st.action, st.as || st.actor);
+  const exp = st.expect || { ok: true };
+  rec.expected = exp;
+  if ((exp.ok !== false) !== rec.result.ok || (exp.ok === false && exp.reason && exp.reason !== rec.result.reason)) rec.mismatch = true;
+  story.i++;
+  showOutcome(rec);
+  if (st.note) $('detail').setAttribute('data-note', st.note);
+  updateStoryButtons();
+  render();
+  if (st.note) $('detail').innerHTML += `<br><span class="sub">${esc(st.note)}</span>`;
+  if (rec.mismatch) $('detail').innerHTML += `<br><span class="fail">the story expected ${exp.ok === false ? 'a refusal ' + (exp.reason || '') : 'the step to apply'} — the machine disagrees</span>`;
+  return true;
+}
+function updateStoryButtons() {
+  const done = !story || story.i >= story.sc.steps.length;
+  $('sc-step').disabled = done; $('sc-all').disabled = done; $('sc-reset').disabled = !story;
+  $('sc-count').textContent = story ? `step ${Math.min(story.i, story.sc.steps.length)} of ${story.sc.steps.length}${done ? ' — done' : ''}` : '';
+}
+function leaveStory() {
+  story = null;
+  $('storybox').hidden = true; $('sc-exit').hidden = true; $('sc-pick').value = '';
+  S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
+  updateStoryButtons(); render();
+}
+
+/* --- wiring -------------------------------------------------------------------- */
+function setTheme(t) { document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('registry-sim-theme', t); } catch (e) {} }
+function init() {
+  let t = null; try { t = localStorage.getItem('registry-sim-theme'); } catch (e) {}
+  setTheme(t || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('btn-theme').addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+  $('proof-sha').textContent = REGISTRY_LEAN_TRACES_SHA256 ? `sha256 ${REGISTRY_LEAN_TRACES_SHA256}` : 'no corpus embedded';
+  for (const sc of SCENARIOS) { const o = document.createElement('option'); o.value = String(sc.id); o.textContent = `${sc.id}. ${sc.story}`; $('sc-pick').appendChild(o); }
+  $('sc-pick').addEventListener('change', () => { const sc = SCENARIOS.find(x => String(x.id) === $('sc-pick').value); if (sc) loadStory(sc); else leaveStory(); });
+  $('sc-step').addEventListener('click', () => storyStep());
+  $('sc-all').addEventListener('click', () => { while (storyStep()) {} });
+  $('sc-reset').addEventListener('click', () => { if (story) loadStory(story.sc); });
+  $('sc-exit').addEventListener('click', leaveStory);
+  $('slot-1').addEventListener('click', () => { if (story) return; S.now += 1; S.cursor = S.history.length - 1; render(); });
+  $('slot-10').addEventListener('click', () => { if (story) return; S.now += 10; S.cursor = S.history.length - 1; render(); });
+  $('h-first').addEventListener('click', () => { S.cursor = 0; render(); });
+  $('h-prev').addEventListener('click', () => { S.cursor = Math.max(0, S.cursor - 1); render(); });
+  $('h-next').addEventListener('click', () => { S.cursor = Math.min(S.history.length - 1, S.cursor + 1); render(); });
+  $('h-last').addEventListener('click', () => { S.cursor = S.history.length - 1; render(); });
+  $('h-clear').addEventListener('click', () => { S.history = []; S.cursor = -1; S.ledger = {}; S.flows = []; render(); });
+  render();
+}
+
+/* --- ?selftest=1: replay everything embedded through this page's own core ----- */
+function selftest() {
+  const rows = [];
+  let allOk = true;
+  for (const sc of SCENARIOS) {
+    const r = checkScenario(sc, `story ${sc.id}`, REGISTRY_LEAN_TRACES_V1);
+    const ok = r.problems.length === 0; allOk = allOk && ok;
+    rows.push({ what: `story ${sc.id} — ${sc.story}`, ok, detail: ok ? `${r.stepsRun} steps, exhibits ${[...new Set(r.exhibited)].join(' ')}` : r.problems.join(' | ') });
+  }
+  if (REGISTRY_LEAN_TRACES_V1) {
+    const c = checkCorpus(REGISTRY_LEAN_TRACES_V1);
+    allOk = allOk && c.ok;
+    rows.push({ what: 'Lean corpus replayed through this page', ok: c.ok, detail: c.ok ? `${c.cells} cells (${c.applied} applied, ${c.refused} refused) agree with stepFn` : c.reasons.slice(0, 5).join(' | ') });
+  } else { allOk = false; rows.push({ what: 'Lean corpus', ok: false, detail: 'none embedded' }); }
+  const exhibited = new Set(); for (const sc of SCENARIOS) for (const st of sc.steps) for (const id of st.exhibits || []) exhibited.add(id);
+  const missing = THEOREMS.map(t => t.id).filter(id => !exhibited.has(id));
+  rows.push({ what: 'every theorem exhibited by some story', ok: missing.length === 0, detail: missing.length ? 'missing ' + missing.join(', ') : THEOREMS.map(t => t.id).join(' ') });
+  allOk = allOk && missing.length === 0;
+  document.title = (allOk ? 'PASS' : 'FAIL') + ' — registry simulator selftest';
+  $('main').innerHTML = `<section class="selftest"><div class="card"><h2>Self-test: ${allOk ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}</h2><table><tr><th>item</th><th>result</th><th>detail</th></tr>` +
+    rows.map(r => `<tr><td>${esc(r.what)}</td><td class="${r.ok ? 'pass' : 'fail'}">${r.ok ? 'PASS' : 'FAIL'}</td><td>${esc(r.detail)}</td></tr>`).join('') + '</table></div></section>';
+  window.__selftest = { ok: allOk, rows };
+  return allOk;
+}
+
+if (new URLSearchParams(window.location.search).get('selftest')) { selftest(); } else { init(); }
+window.__registrySim = { get session() { return S; }, attempt, loadStory, storyStep, leaveStory, selftest, render };
+</script>
+</body>
+</html>

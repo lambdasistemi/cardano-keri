@@ -1,0 +1,13 @@
+{
+  "id": 1, "slug": "alice-requests", "story": "Alice posts a request",
+  "narrative": "Anyone holding Alice's public inception creates a request UTxO at the cage: her AID, her refund address as owner, the bond and the tip. Nothing contends; the registry is untouched.",
+  "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
+  "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)", "4": "Mallory", "5": "Cora (convictor)", "6": "Sam (sweeper)" },
+  "env": { "inception": [11, 12], "quorum": [11, 12], "duplicity": [] },
+  "steps": [
+    { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } },
+      "expect": { "ok": true, "flow": { "deposited": 1002 }, "state": { "gen": 0, "plugin": 7, "root": [], "live": [], "tomb": [], "requests": [{ "id": 0, "aid": 11, "owner": 1, "submittedAt": 0 }], "nextReq": 1 } },
+      "exhibits": ["R6", "R11"], "note": "The registry generation is still 0: a request never spends the cage." }
+  ],
+  "expectFinal": { "gen": 0, "plugin": 7, "root": [], "live": [], "tomb": [], "requests": [{ "id": 0, "aid": 11, "owner": 1, "submittedAt": 0 }], "nextReq": 1 }
+}

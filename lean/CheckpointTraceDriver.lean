@@ -30,7 +30,7 @@ states at `bornAt + W − 1 / = / + 1` so the two transcriptions (Lean-side
 and JavaScript-side) at least agree by hash.
 -/
 
-open Lean (ToJson toJson Json)
+open Lean (ToJson toJson Json FromJson fromJson?)
 open CardanoKeri.Checkpoint
 
 deriving instance Lean.ToJson for BondOp
@@ -39,10 +39,26 @@ deriving instance Lean.ToJson for Live
 deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
 deriving instance Lean.ToJson for Flow
+deriving instance Lean.FromJson for BondOp
+deriving instance Lean.FromJson for Action
+deriving instance Lean.FromJson for Live
+deriving instance Lean.FromJson for State
 
 /-- `Params` carries two proofs, so its instance is written by hand. -/
 instance : ToJson Params where
   toJson p := Json.mkObj [("D", toJson p.D), ("B", toJson p.B), ("P", toJson p.P), ("W", toJson p.W)]
+
+/-- `Params` from JSON, with the two positivity proofs decided at parse time:
+a deployment with a zero bond has no `Params` and therefore no Lean cell. -/
+def paramsOfJson (j : Json) : Except String Params := do
+  let D ← j.getObjValAs? Nat "D"
+  let B ← j.getObjValAs? Nat "B"
+  let P ← j.getObjValAs? Nat "P"
+  let W ← j.getObjValAs? Nat "W"
+  if hD : 0 < D then
+    if hB : 0 < B then pure { D, B, P, W, hD, hB }
+    else throw "B must be positive"
+  else throw "D must be positive"
 
 /-- Finite decision tables standing for the four evidence predicates. -/
 structure EnvTable where
@@ -63,6 +79,39 @@ instance : ToJson EnvTable where
     ("refundAuthorized", toJson (t.refundAuthorized.map fun (e, a) => [e, a])),
     ("quorum", toJson (t.quorum.map fun e => [e])),
     ("duplicityAt", toJson (t.duplicityAt.map fun (e, sn) => [e, sn]))]
+
+/-- An evidence row `{kind: [args]}` of a scenario file, added to or removed from a table. -/
+def EnvTable.applyRow (t : EnvTable) (add : Bool) (row : Json) : Except String EnvTable := do
+  let upd {α} [BEq α] (l : List α) (x : α) : List α := if add then (if l.contains x then l else l ++ [x]) else l.filter (· != x)
+  let nats (v : Json) : Except String (List Nat) := fromJson? v
+  match row.getObjVal? "rotationTo" with
+  | .ok v =>
+    let l ← nats v
+    match l with
+    | [e, sn, sn'] => pure { t with rotationTo := upd t.rotationTo (e, sn, sn') }
+    | _ => throw "rotationTo row needs three numbers"
+  | .error _ =>
+  match row.getObjVal? "refundAuthorized" with
+  | .ok v =>
+    let l ← nats v
+    match l with
+    | [e, a] => pure { t with refundAuthorized := upd t.refundAuthorized (e, a) }
+    | _ => throw "refundAuthorized row needs two numbers"
+  | .error _ =>
+  match row.getObjVal? "quorum" with
+  | .ok v =>
+    let l ← nats v
+    match l with
+    | [e] => pure { t with quorum := upd t.quorum e }
+    | _ => throw "quorum row needs one number"
+  | .error _ =>
+  match row.getObjVal? "duplicityAt" with
+  | .ok v =>
+    let l ← nats v
+    match l with
+    | [e, sn] => pure { t with duplicityAt := upd t.duplicityAt (e, sn) }
+    | _ => throw "duplicityAt row needs two numbers"
+  | .error _ => throw "unknown evidence row"
 
 /-- The deployment used everywhere: `D` = 1000, `B` = 5, `P` = 2, `W` = 10. -/
 def params : Params := { D := 1000, B := 5, P := 2, W := 10, hD := by decide, hB := by decide }
@@ -179,7 +228,84 @@ def gridJson (p : Params) : Json :=
   Json.mkObj [("now", toJson now), ("states", toJson states), ("actions", toJson gridActions),
     ("envs", toJson (gridEnvs.map (·.2))), ("cells", Json.arr cells.toArray), ("consumable", Json.arr cons.toArray)]
 
-#eval IO.println (Json.mkObj [
-  ("schema", "cardano-keri.checkpoint-trace"), ("version", (1 : Nat)), ("params", toJson params),
-  ("traces", Json.arr (seeds.map (traceJson params)).toArray),
-  ("grid", gridJson params)]).compress
+/-! ## Story cells: Lean's verdict on every step of the fifteen scenario files
+
+The scenario files are the simulator's; the driver folds each one exactly as
+the JavaScript session does (per-step params, seeds, evidence rows, the slot
+guard) and asks `stepFn` at every action. A step whose parameters cannot be a
+`Params` (a zero bond) or whose slot goes backwards has no cell: the Lean has
+nothing to say there, and the simulator's T7 is not shown on it. -/
+
+structure StoryFold where
+  params : Params
+  env : EnvTable
+  state : State
+  now : Slot
+  cells : List Json
+
+def storyStep (f : StoryFold) (idx : Nat) (st : Json) : Except String StoryFold := do
+  let slot ← st.getObjValAs? Nat "slot"
+  -- this step's parameters: an override applies to this step only
+  let stepParams : Option Params := match st.getObjVal? "params" with
+    | .ok pj => (paramsOfJson pj).toOption
+    | .error _ => some f.params
+  let state := match st.getObjVal? "seed" with
+    | .ok sj => match (fromJson? sj : Except String State) with | .ok s => s | .error _ => f.state
+    | .error _ => f.state
+  let mut env := f.env
+  match st.getObjVal? "evidence" with
+  | .ok ev =>
+    match ev.getObjVal? "remove" with
+    | .ok (Json.arr rows) => for r in rows do env ← env.applyRow false r
+    | _ => pure ()
+    match ev.getObjVal? "add" with
+    | .ok (Json.arr rows) => for r in rows do env ← env.applyRow true r
+    | _ => pure ()
+  | .error _ => pure ()
+  match st.getObjVal? "action" with
+  | .error _ =>
+    pure { f with env, state, now := if f.now ≤ slot then slot else f.now }
+  | .ok aj =>
+    if slot < f.now then pure { f with env, state }   -- slot regression: no cell, nothing moves
+    else
+      match (fromJson? aj : Except String Action), stepParams with
+      | .error _, _ => pure { f with env, state, now := slot }   -- not a Lean Action (unknown redeemer, non-Nat field): no cell
+      | .ok _, none => pure { f with env, state, now := slot }   -- no Params: no cell
+      | .ok action, some p =>
+        let (j, state') := stepJson p env.toEnv slot state action
+        let cell := Json.mkObj [("index", toJson idx), ("params", toJson p), ("env", toJson env),
+          ("now", toJson slot), ("input", toJson state), ("action", toJson action),
+          ("result", (j.getObjVal? "result").toOption.getD Json.null)]
+        pure { f with env, state := state', now := slot, cells := f.cells ++ [cell] }
+
+def storyJson (sc : Json) : Except String Json := do
+  let story ← sc.getObjValAs? Nat "story"
+  let p ← paramsOfJson (← sc.getObjVal? "params")
+  let steps ← (← sc.getObjVal? "steps").getArr?
+  let mut f : StoryFold := ⟨p, ⟨[], [], [], []⟩, .absent, 0, []⟩
+  let mut i := 0
+  for st in steps do
+    f ← storyStep f i st
+    i := i + 1
+  pure (Json.mkObj [("story", toJson story), ("steps", Json.arr f.cells.toArray)])
+
+def readScenarios : IO (List Json) := do
+  let dir : System.FilePath := "../simulator/checkpoint-simulator-scenarios"
+  let entries ← dir.readDir
+  let names := (entries.map (·.fileName)).filter (·.endsWith ".json") |>.qsort (· < ·)
+  names.toList.mapM fun n => do
+    let txt ← IO.FS.readFile (dir / System.FilePath.mk n)
+    match Json.parse txt with
+    | .ok j => pure j
+    | .error e => throw (IO.userError s!"{n}: {e}")
+
+#eval do
+  let scs ← readScenarios
+  let stories ← scs.mapM fun sc => match storyJson sc with
+    | .ok j => pure j
+    | .error e => throw (IO.userError s!"story fold failed: {e}")
+  IO.println (Json.mkObj [
+    ("schema", "cardano-keri.checkpoint-trace"), ("version", (1 : Nat)), ("params", toJson params),
+    ("traces", Json.arr (seeds.map (traceJson params)).toArray),
+    ("grid", gridJson params),
+    ("stories", Json.arr stories.toArray)]).compress

@@ -1,0 +1,51 @@
+{
+  "id": 13,
+  "slug": "top-up",
+  "story": "Anyone tops up the pool",
+  "narrative": "A friend of Alice adds value to the pool; the datum is untouched; no signature. Hunters have a reason to serve her again.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [],
+    "refundAuthorized": [],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 1 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "anyone",
+      "as": "a friend of Alice",
+      "action": { "topUp": { "x": 4 } },
+      "expect": { "ok": true, "flow": { "poolIn": 4 } },
+      "note": "Pool 1 + 4 = 5 ≥ P: hunters can be paid again. sn, epoch, bornAt, bonds: untouched."
+    },
+    {
+      "now": 6,
+      "actor": "current-quorum",
+      "as": "Alice's key holders",
+      "action": { "poison": {} },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 7,
+      "actor": "anyone",
+      "as": "the same friend, anyway",
+      "action": { "topUp": { "x": 1 } },
+      "expect": { "ok": true },
+      "note": "Top-up is permissionless even while poisoned — the state table offers it in every live sub-state."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 0, "epoch": 0, "poisoned": true, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 6 } },
+  "checks": [
+    { "kind": "consumable", "now": 100, "expect": false, "failing": ["poisoned"] }
+  ]
+}

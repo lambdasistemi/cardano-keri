@@ -1,0 +1,53 @@
+{
+  "id": 4,
+  "slug": "unfreeze",
+  "story": "Alice unfreezes",
+  "narrative": "Alice lands the rotation from story 3 herself with deposit, bringing B back; the checkpoint is juvenile again for W slots; a friend tops up the pool.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 1 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "proof",
+      "as": "Hal freezes (story 3)",
+      "action": { "freeze": { "sn": 1, "payee": 2 } },
+      "expect": { "ok": true },
+      "note": "B taken; the rotation to sn 1 is still unapplied on chain."
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "Alice, landing her own rotation",
+      "action": { "rotate": { "sn": 1, "op": "deposit", "payee": 2, "refund": null } },
+      "expect": { "ok": true, "flow": { "dregIn": 0, "bIn": 5 } },
+      "note": "The same rotation Hal presented, now as a deposit: the freeze bond comes back, the pool pays nobody (pool 1 < P). Juvenility resets."
+    },
+    {
+      "now": 12,
+      "actor": "anyone",
+      "as": "a friend of Alice",
+      "action": { "topUp": { "x": 3 } },
+      "expect": { "ok": true },
+      "note": "Hal sees a pool worth landing rotations for again."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 1, "epoch": 1, "poisoned": false, "bornAt": 10, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 4 } },
+  "checks": [
+    { "kind": "consumable", "now": 19, "expect": false, "failing": ["juvenile"] },
+    { "kind": "consumable", "now": 20, "expect": true }
+  ]
+}

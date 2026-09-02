@@ -1,0 +1,53 @@
+{
+  "id": 8,
+  "slug": "refund-move",
+  "story": "Alice moves her refund address",
+  "narrative": "At a rotation, the new keys sign the new refund address; a relayer submitting her public rotation without that signature leaves the address unchanged. A stale registration becomes a donation.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory", "5": "the stranger who registered" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true], [1, 1, 2, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "the stranger",
+      "action": { "register": { "refund": 5, "pool0": 5 } },
+      "expect": { "ok": true },
+      "note": "The refund address is the stranger's — for now."
+    },
+    {
+      "now": 5,
+      "actor": "next-keys",
+      "as": "Alice's new keys, signing the new address with the rotation",
+      "action": { "rotate": { "sn": 1, "op": "keep", "payee": 2, "refund": 1 } },
+      "expect": { "ok": true },
+      "note": "The signature over the new address at the new threshold by the keys the rotation reveals: refundTo becomes Alice's."
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "a relayer, submitting the public rotation with someone else's address",
+      "action": { "rotate": { "sn": 2, "op": "keep", "payee": 2, "refund": 4 } },
+      "expect": { "ok": false, "reason": "refund-not-authorized" },
+      "note": "The relayer has the public rotation but no signature from Alice's epoch-2 keys over address 4. Refused."
+    },
+    {
+      "now": 12,
+      "actor": "next-keys",
+      "as": "the relayer, on public data only",
+      "action": { "rotate": { "sn": 2, "op": "keep", "payee": 2, "refund": null } },
+      "expect": { "ok": true },
+      "note": "Without the signature the address is simply left unchanged."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 2, "epoch": 2, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 1 } },
+  "checks": [
+    { "kind": "consumable", "now": 22, "expect": true }
+  ]
+}

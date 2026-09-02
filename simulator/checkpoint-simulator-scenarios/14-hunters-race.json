@@ -1,0 +1,74 @@
+{
+  "id": 14,
+  "slug": "hunters-race",
+  "story": "Two hunters race",
+  "narrative": "If the pool covers P, the first advance wins and is paid, the second fails on the spent input; if it does not, the first freeze wins B, the second finds nothing to take.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true], [1, 1, 2, true], [2, 2, 2, true]],
+    "refundAuthorized": [[1, 1, true], [2, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 1 } },
+      "expect": { "ok": true },
+      "note": "Pool 1 < P: the freeze race."
+    },
+    {
+      "now": 5,
+      "actor": "proof",
+      "as": "Hal — first freeze",
+      "action": { "freeze": { "sn": 1, "payee": 2 } },
+      "expect": { "ok": true, "flow": { "hunter": { "addr": 2, "b": 5 } } }
+    },
+    {
+      "now": 6,
+      "actor": "proof",
+      "as": "Mallory — second freeze",
+      "action": { "freeze": { "sn": 1, "payee": 4 } },
+      "expect": { "ok": false, "reason": "freeze-bond-missing" },
+      "note": "She finds nothing to take: B is already gone. (The rotation is also no longer pending, but the guard order names the bond first after the spent evidence — on chain her transaction fails on the spent input either way.)"
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "Alice, unfreezing (story 4)",
+      "action": { "rotate": { "sn": 1, "op": "deposit", "payee": 2, "refund": null } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 12,
+      "actor": "anyone",
+      "as": "a friend",
+      "action": { "topUp": { "x": 3 } },
+      "expect": { "ok": true },
+      "note": "Pool 1 + 3 = 4 ≥ P: the paid race."
+    },
+    {
+      "now": 15,
+      "actor": "next-keys",
+      "as": "Hal, landing Alice's next rotation — first advance",
+      "action": { "rotate": { "sn": 2, "op": "keep", "payee": 2, "refund": null } },
+      "expect": { "ok": true, "flow": { "hunter": { "addr": 2, "pool": 2 } } }
+    },
+    {
+      "now": 16,
+      "actor": "next-keys",
+      "as": "Mallory, landing the same rotation — second advance",
+      "action": { "rotate": { "sn": 2, "op": "keep", "payee": 4, "refund": null } },
+      "expect": { "ok": false, "reason": "sequence-not-greater" },
+      "note": "She presents a rotation at the tip's epoch and sequence — refused: the checkpoint already reflects sn 2. On chain her transaction fails on the spent input either way."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 2, "epoch": 2, "poisoned": false, "bornAt": 10, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 2 } },
+  "checks": [
+    { "kind": "consumable", "now": 20, "expect": true }
+  ]
+}

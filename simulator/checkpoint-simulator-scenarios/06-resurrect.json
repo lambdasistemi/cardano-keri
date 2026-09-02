@@ -1,0 +1,44 @@
+{
+  "id": 6,
+  "slug": "resurrect",
+  "story": "Alice comes back",
+  "narrative": "A rotation with deposit brings D_reg and B back; born now, juvenile for W slots, then consumable. There is no replay: the state never left the chain.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true], [1, 1, 2, true]],
+    "refundAuthorized": [[1, 1, true], [2, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 7 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "next-keys",
+      "as": "Alice, rotating to pause (story 5)",
+      "action": { "rotate": { "sn": 1, "op": "withdraw", "payee": 2, "refund": null } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "Alice, rotating to come back",
+      "action": { "rotate": { "sn": 2, "op": "deposit", "payee": 2, "refund": null } },
+      "expect": { "ok": true, "flow": { "dregIn": 1000, "bIn": 5 } },
+      "note": "Both bonds restored to full; juvenility resets."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 2, "epoch": 2, "poisoned": false, "bornAt": 10, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 0 } },
+  "checks": [
+    { "kind": "consumable", "now": 19, "expect": false, "failing": ["juvenile"] },
+    { "kind": "consumable", "now": 20, "expect": true }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": 1,
+  "slug": "register",
+  "story": "Alice's identity appears on Cardano",
+  "narrative": "Anyone holding Alice's public inception registers her checkpoint; the registry inserts once ever, both bonds are present, and the checkpoint is juvenile for W slots.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory", "5": "the stranger who registers" },
+  "env": { "rotationTo": [], "refundAuthorized": [], "quorum": [], "duplicityAt": [] },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "the stranger, paying",
+      "action": { "register": { "refund": 5, "pool0": 3 } },
+      "expect": {
+        "ok": true,
+        "flow": { "dregIn": 1000, "bIn": 5, "poolIn": 3 }
+      },
+      "note": "The inception is public, so registration is permissionless; the refund address is the registrant's — until Alice's first rotation moves it (story 8)."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 0, "epoch": 0, "poisoned": false, "bornAt": 0, "refundTo": 5, "dreg": 1000, "b": 5, "pool": 3 } },
+  "checks": [
+    { "kind": "consumable", "now": 5, "expect": false, "failing": ["juvenile"] },
+    { "kind": "consumable", "now": 10, "expect": true }
+  ]
+}

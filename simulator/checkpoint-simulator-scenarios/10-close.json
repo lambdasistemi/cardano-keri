@@ -1,0 +1,44 @@
+{
+  "id": 10,
+  "slug": "close",
+  "story": "Alice leaves for good",
+  "narrative": "The current quorum closes: everything is paid to the refund address — the closer chooses when, never where — and the token is burned. The registry row stays, so this AID can never return.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [],
+    "refundAuthorized": [],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 3 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "current-quorum",
+      "as": "Alice's key holders",
+      "action": { "close": {} },
+      "expect": { "ok": true, "flow": { "refund": { "addr": 1, "dreg": 1000, "b": 5, "pool": 3 } } },
+      "note": "Mallory, with stolen current keys, would get nothing: the money goes to Alice's refund address, and Alice could have blocked the close by poisoning first (story 7)."
+    },
+    {
+      "now": 6,
+      "actor": "anyone",
+      "as": "whoever — even with the inception",
+      "action": { "register": { "refund": 1, "pool0": 3 } },
+      "expect": { "ok": false, "reason": "not-absent" },
+      "note": "Mint-once: the registry row stays, so this AID can never be registered on Cardano again."
+    }
+  ],
+  "expectFinal": "gone",
+  "checks": [
+    { "kind": "consumable", "now": 100, "expect": false, "failing": ["not-present"] }
+  ]
+}

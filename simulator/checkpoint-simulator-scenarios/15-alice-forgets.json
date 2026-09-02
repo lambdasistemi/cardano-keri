@@ -1,0 +1,38 @@
+{
+  "id": 15,
+  "slug": "alice-forgets",
+  "story": "Alice goes quiet for a year",
+  "narrative": "Today nothing on chain says she is gone: her checkpoint stays consumable as long as it is bonded and no rotation is missing. Validity (D-027) is reserved in the datum and not modelled.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [],
+    "refundAuthorized": [],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 3 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 500,
+      "actor": "anyone",
+      "as": "a friend, paying for her maintenance",
+      "action": { "topUp": { "x": 2 } },
+      "expect": { "ok": true },
+      "note": "Half a year of quiet; the datum is untouched and no signature was needed."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 0, "epoch": 0, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 5 } },
+  "checks": [
+    { "kind": "consumable", "now": 1000, "expect": true },
+    { "kind": "consumable", "now": 1000000, "expect": true },
+    { "kind": "consumable", "now": 1000001, "expect": true }
+  ]
+}

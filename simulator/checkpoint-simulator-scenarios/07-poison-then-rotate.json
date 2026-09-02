@@ -1,0 +1,61 @@
+{
+  "id": 7,
+  "slug": "poison-then-rotate",
+  "story": "Mallory steals the current keys; Alice poisons, then rotates",
+  "narrative": "The current quorum poisons the epoch: consumers stop trusting it now, close is disabled, and the only way out is a rotation — which clears the poison, because it was local to the retired keys.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 3 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "current-quorum",
+      "as": "Alice's key holders (kli sign)",
+      "action": { "poison": {} },
+      "expect": { "ok": true },
+      "note": "Signatures at the current threshold — one stolen member key cannot poison. Touches no value."
+    },
+    {
+      "now": 6,
+      "actor": "current-quorum",
+      "as": "the same key holders, trying again",
+      "action": { "poison": {} },
+      "expect": { "ok": false, "reason": "already-poisoned" },
+      "note": "Enabled only once per epoch."
+    },
+    {
+      "now": 7,
+      "actor": "current-quorum",
+      "as": "Mallory, with the stolen keys",
+      "action": { "close": {} },
+      "expect": { "ok": false, "reason": "poisoned" },
+      "note": "Close is disabled while poisoned, so Mallory cannot take the bonds."
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "Alice, rotating past the theft",
+      "action": { "rotate": { "sn": 1, "op": "keep", "payee": 2, "refund": null } },
+      "expect": { "ok": true },
+      "note": "The poison clears: it was local to the keys she just retired. If Mallory also holds the next keys, KERI's own rule controls — the chain follows KERI."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 1, "epoch": 1, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 1 } },
+  "checks": [
+    { "kind": "consumable", "now": 8, "expect": false, "failing": ["juvenile"] },
+    { "kind": "consumable", "now": 20, "expect": true }
+  ]
+}

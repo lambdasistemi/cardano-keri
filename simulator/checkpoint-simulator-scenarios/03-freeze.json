@@ -1,0 +1,37 @@
+{
+  "id": 3,
+  "slug": "freeze",
+  "story": "The pool runs dry, so Hal freezes her instead",
+  "narrative": "Alice's pool cannot pay P; Hal presents the same evidence he would use to advance, but as a freeze: he takes the freeze bond B and the datum stays on its old keys.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true]],
+    "refundAuthorized": [],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 1 } },
+      "expect": { "ok": true },
+      "note": "Pool 1 < P 2: nothing to land rotations for."
+    },
+    {
+      "now": 5,
+      "actor": "proof",
+      "as": "Hal, presenting the later witnessed rotation",
+      "action": { "freeze": { "sn": 1, "payee": 2 } },
+      "expect": { "ok": true, "flow": { "hunter": { "addr": 2, "b": 5 } } },
+      "note": "Exactly the advance predicate on the presented rotation, pool < P, not poisoned. The datum is untouched: the old keys stay. B is what frozen means."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 0, "epoch": 0, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 0, "pool": 1 } },
+  "checks": [
+    { "kind": "consumable", "now": 100, "expect": false, "failing": ["freeze-bond-missing"] }
+  ]
+}

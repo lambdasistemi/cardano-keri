@@ -1,0 +1,54 @@
+{
+  "id": 11,
+  "slug": "treasury-reads",
+  "story": "The treasury reads Alice's checkpoint",
+  "narrative": "The treasury accepts a payment only if the checkpoint is present, both bonds full, unpoisoned, past juvenility — and fails closed on frozen and poisoned. The threshold signature on the payment itself is the consumer's own check, outside this machine.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true], [1, 1, 2, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true], [1, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 3 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "next-keys",
+      "as": "Alice (landed by Hal)",
+      "action": { "rotate": { "sn": 1, "op": "keep", "payee": 2, "refund": null } },
+      "expect": { "ok": true },
+      "note": "bornAt stays 0: a keeping rotation does not reset juvenility."
+    },
+    {
+      "now": 20,
+      "actor": "proof",
+      "as": "Hal, after a friend drains the pool by landing rotations",
+      "action": { "freeze": { "sn": 2, "payee": 2 } },
+      "expect": { "ok": true },
+      "note": "Pool is 1 < P now; frozen means B missing — fails closed for the treasury."
+    },
+    {
+      "now": 25,
+      "actor": "current-quorum",
+      "as": "Alice's key holders",
+      "action": { "poison": {} },
+      "expect": { "ok": true },
+      "note": "Poisoned fails closed too."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 1, "epoch": 1, "poisoned": true, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 0, "pool": 1 } },
+  "checks": [
+    { "kind": "consumable", "now": 5, "expect": false, "failing": ["freeze-bond-missing", "poisoned", "juvenile"] },
+    { "kind": "consumable", "now": 10, "expect": false, "failing": ["freeze-bond-missing", "poisoned"] },
+    { "kind": "consumable", "now": 26, "expect": false, "failing": ["freeze-bond-missing", "poisoned"] }
+  ]
+}

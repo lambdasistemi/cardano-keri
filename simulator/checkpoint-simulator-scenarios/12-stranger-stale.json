@@ -1,0 +1,46 @@
+{
+  "id": 12,
+  "slug": "stranger-stale",
+  "story": "A stranger registers Alice at a stale epoch",
+  "narrative": "Mallory, holding keys Alice retired long ago, registers her AID herself and stops advancing. Anyone can advance it onward with Alice's later public rotations — and then Mallory's bonds answer to Alice's keys.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Mallory, registering Alice's stale inception",
+      "action": { "register": { "refund": 4, "pool0": 3 } },
+      "expect": { "ok": true },
+      "note": "It can happen once per AID, ever — advance is permissionless; the chain cannot tell the owner from a relayer."
+    },
+    {
+      "now": 6,
+      "actor": "anyone",
+      "as": "Mallory, trying again",
+      "action": { "register": { "refund": 4, "pool0": 3 } },
+      "expect": { "ok": false, "reason": "not-absent" },
+      "note": "Mint-once holds even against the stale registrar."
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "Alice's later public rotation, landed by Hal",
+      "action": { "rotate": { "sn": 1, "op": "keep", "payee": 2, "refund": 1 } },
+      "expect": { "ok": true },
+      "note": "Anyone can advance the checkpoint onward with Alice's later public rotations; the moment that happens, the refund address — and at close, Mallory's bonds — answer to Alice. A stale registration is a donation."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 1, "epoch": 1, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 1000, "b": 5, "pool": 1 } },
+  "checks": [
+    { "kind": "consumable", "now": 11, "expect": true },
+    { "kind": "consumable", "now": 21, "expect": true }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": 5,
+  "slug": "pause",
+  "story": "Alice goes away",
+  "narrative": "A rotation with withdraw pays D_reg + B + pool to the refund address; the state stays on chain, unbonded — that is what paused means. Mallory's stolen epoch-0 keys can do nothing.",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [[0, 0, 1, true]],
+    "refundAuthorized": [[1, 1, true]],
+    "quorum": [[0, true]],
+    "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 7 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "next-keys",
+      "as": "Alice, rotating to pause",
+      "action": { "rotate": { "sn": 1, "op": "withdraw", "payee": 2, "refund": null } },
+      "expect": { "ok": true, "flow": { "refund": { "addr": 1, "dreg": 1000, "b": 5, "pool": 7 } } },
+      "note": "Everything to the refund address; the rotation itself is the authorization."
+    },
+    {
+      "now": 6,
+      "actor": "current-quorum",
+      "as": "Mallory, holding Alice's old epoch-0 keys",
+      "action": { "poison": {} },
+      "expect": { "ok": false, "reason": "no-quorum" },
+      "note": "The parked checkpoint answers only to a rotation: the epoch has moved on, and the old keys are no longer the current quorum."
+    }
+  ],
+  "expectFinal": { "present": { "sn": 1, "epoch": 1, "poisoned": false, "bornAt": 0, "refundTo": 1, "dreg": 0, "b": 0, "pool": 0 } },
+  "checks": [
+    { "kind": "consumable", "now": 1000, "expect": false, "failing": ["conviction-bond-not-full", "freeze-bond-missing"] }
+  ]
+}

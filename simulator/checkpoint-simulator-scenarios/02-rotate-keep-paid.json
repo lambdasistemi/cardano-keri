@@ -1,0 +1,102 @@
+{
+ "id": 2,
+ "slug": "rotate-keep-paid",
+ "story": "Alice rotates, Hal lands it, Hal is paid",
+ "narrative": "Alice runs kli rotate; her witnesses receipt it; Hal's watcher lands it with keep, naming himself payee — the pool pays the premium P.",
+ "params": {
+  "D": 1000,
+  "B": 5,
+  "P": 2,
+  "W": 10
+ },
+ "actors": {
+  "1": "Alice's refund address",
+  "2": "Hal",
+  "3": "Cora",
+  "4": "Mallory"
+ },
+ "env": {
+  "rotationTo": [
+   [
+    0,
+    0,
+    1,
+    true
+   ]
+  ],
+  "refundAuthorized": [
+   [
+    1,
+    1,
+    true
+   ]
+  ],
+  "quorum": [
+   [
+    0,
+    true
+   ]
+  ],
+  "duplicityAt": []
+ },
+ "initial": "absent",
+ "steps": [
+  {
+   "now": 0,
+   "actor": "anyone",
+   "as": "Alice (via anyone — the inception is public)",
+   "action": {
+    "register": {
+     "refund": 1,
+     "pool0": 5
+    }
+   },
+   "expect": {
+    "ok": true
+   },
+   "note": "Present, bonded, pool 5 ≥ P."
+  },
+  {
+   "now": 5,
+   "actor": "next-keys",
+   "as": "Alice's next keys, landed by Hal",
+   "action": {
+    "rotate": {
+     "sn": 1,
+     "op": "keep",
+     "payee": 2,
+     "refund": null
+    }
+   },
+   "expect": {
+    "ok": true,
+    "flow": {
+     "hunter": {
+      "addr": 2,
+      "pool": 2
+     }
+    }
+   },
+   "note": "Next epoch, poison cleared, P to Hal from the pool; bonds untouched; refund address unchanged (a relayer on public data cannot move it)."
+  }
+ ],
+ "expectFinal": {
+  "present": {
+   "sn": 1,
+   "epoch": 1,
+   "poisoned": false,
+   "bornAt": 0,
+   "refundTo": 1,
+   "dreg": 1000,
+   "b": 5,
+   "pool": 3
+  }
+ },
+ "checks": [
+  {
+   "kind": "consumable",
+   "now": 15,
+   "expect": true
+  }
+ ]
+}

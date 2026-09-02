@@ -1,0 +1,50 @@
+{
+  "id": 9,
+  "slug": "convict",
+  "story": "Cora convicts",
+  "narrative": "Cora holds two of Alice's rotations at the same sequence, both receipted: the proof ends the identity on chain. D_reg goes to Cora in full; B and the pool go back to the refund address (modelling assumption).",
+  "params": { "D": 1000, "B": 5, "P": 2, "W": 10 },
+  "actors": { "1": "Alice's refund address", "2": "Hal", "3": "Cora", "4": "Mallory" },
+  "env": {
+    "rotationTo": [],
+    "refundAuthorized": [],
+    "quorum": [[0, true]],
+    "duplicityAt": [[0, 0, true]]
+  },
+  "initial": "absent",
+  "steps": [
+    {
+      "now": 0,
+      "actor": "anyone",
+      "as": "Alice",
+      "action": { "register": { "refund": 1, "pool0": 6 } },
+      "expect": { "ok": true }
+    },
+    {
+      "now": 5,
+      "actor": "proof",
+      "as": "Cora, presenting the second rotation",
+      "action": { "convict": { "payee": 3 } },
+      "expect": {
+        "ok": true,
+        "flow": {
+          "refund": { "addr": 1, "b": 5, "pool": 6 },
+          "convictor": { "addr": 3, "dreg": 1000 }
+        }
+      },
+      "note": "No history needed: the second rotation is at the tip's sequence and reveals the current keys. Convicted is terminal — no rotation, no poison, no close, ever."
+    },
+    {
+      "now": 10,
+      "actor": "next-keys",
+      "as": "anyone, trying to go on",
+      "action": { "rotate": { "sn": 1, "op": "keep", "payee": 2, "refund": null } },
+      "expect": { "ok": false, "reason": "not-present" },
+      "note": "No KERI event un-duplicates an identifier, so the chain invents no recovery."
+    }
+  ],
+  "expectFinal": { "convicted": { "epoch": 0, "sn": 0, "convictedAt": 5 } },
+  "checks": [
+    { "kind": "consumable", "now": 100, "expect": false, "failing": ["not-present"] }
+  ]
+}

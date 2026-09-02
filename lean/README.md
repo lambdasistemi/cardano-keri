@@ -220,3 +220,15 @@ encodes the defensible reading of each):
   `absent`, and permissionless re-registration reopens the churn cycle; it is
   excluded exactly as capability-holder self-churn is (Q-L02), so the RATIFIED
   `j ≤ i + 4` holds for an ongoing, un-reaped replay.
+
+## The registry machine (#316)
+
+`CardanoKeri/Registry.lean` models the AID registry of D-024 as a cage of
+cardano-mpfs-onchain on the plugin path: requests as inbox UTxOs, a
+permissionless fold at a named generation, retract, close (row deleted with
+the burn), convict (tombstone kept, row stays); one executable `stepFn`,
+`replay`, `Reach` and the invariant `Inv`. `CardanoKeri/RegistryGoals.lean`
+proves R1–R12 (49 declarations, no `sorry`, standard axioms only); the
+mutation campaign is `REGISTRY-MUTANTS.md`; the design note is
+`docs/design/registry-as-mpfs.md`. `RegistryTraceDriver.lean` is the corpus
+producer for `simulator/registry-simulator.html`.

@@ -1,0 +1,2900 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The M1 checkpoint — play the fifteen stories</title>
+<style>
+:root {
+  --bg:#f4f2ec; --panel:#fffdf7; --ink:#232019; --mut:#6e675a; --line:#ddd6c6;
+  --ok:#1c7d43; --okbg:#e4f3e9; --bad:#b3372b; --badbg:#f9e7e4; --accent:#7a5c1e;
+  --chip:#efe9da; --card:#fbf8ef; --bar:#e7e0cd; --barfill:#8a7a45;
+}
+html[data-theme="dark"] {
+  --bg:#171a17; --panel:#1f241f; --ink:#e8e4d8; --mut:#a09a89; --line:#3a4038;
+  --ok:#57c98a; --okbg:#1d3327; --bad:#e5796b; --badbg:#3a221e; --accent:#d8b96a;
+  --chip:#2a2f28; --card:#232823; --bar:#31382f; --barfill:#b7a25e;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display:flex; flex-wrap:wrap; gap:.6rem; align-items:baseline;
+  padding:.7rem 1rem; border-bottom:1px solid var(--line); }
+header h1 { font-size:1.05rem; margin:0; }
+header .sub { color:var(--mut); font-size:.8rem; }
+header .spacer { flex:1; }
+button, select, input { font:inherit; color:inherit; }
+button { cursor:pointer; border:1px solid var(--line); background:var(--panel);
+  border-radius:7px; padding:.28rem .6rem; }
+button:hover { border-color:var(--accent); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+button.primary { background:var(--accent); border-color:var(--accent); color:var(--bg); }
+button.ghost { background:transparent; }
+main { display:grid; grid-template-columns: minmax(340px,1.1fr) minmax(300px,.9fr);
+  gap:.8rem; padding:.8rem; align-items:start; }
+@media (max-width: 900px){ main { grid-template-columns:1fr; } }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:.7rem .8rem; margin-bottom:.8rem; }
+.card h2 { font-size:.85rem; margin:.1rem 0 .5rem; color:var(--mut);
+  text-transform:uppercase; letter-spacing:.06em; }
+.badge { display:inline-block; padding:.15rem .55rem; border-radius:6px;
+  font-weight:700; font-size:.8rem; letter-spacing:.05em; }
+.badge.absent { background:var(--chip); } .badge.live { background:var(--okbg); color:var(--ok); }
+.badge.poisoned { background:var(--badbg); color:var(--bad); }
+.badge.paused, .badge.frozen { background:#efe4c8; color:#7a5c1e; }
+html[data-theme="dark"] .badge.paused, html[data-theme="dark"] .badge.frozen { background:#3a3325; }
+.badge.convicted, .badge.gone { background:var(--badbg); color:var(--bad); }
+.badge.nothing { background:var(--chip); }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:.15rem .8rem; font-size:.85rem; }
+.kv dt { color:var(--mut); } .kv dd { margin:0; font-family:ui-monospace,monospace; }
+.bars { margin-top:.55rem; display:grid; gap:.4rem; }
+.bar-row { display:grid; grid-template-columns: 9.5rem 1fr 6.5rem; gap:.5rem;
+  align-items:center; font-size:.8rem; }
+.bar { background:var(--bar); border-radius:5px; height:.85rem; position:relative; overflow:hidden; }
+.bar > i { position:absolute; inset:0 auto 0 0; background:var(--barfill); display:block; }
+.bar > em { position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--bad); }
+.verdict { border-radius:9px; padding:.55rem .7rem; margin-top:.6rem; font-size:.9rem; }
+.verdict.yes { background:var(--okbg); color:var(--ok); }
+.verdict.no { background:var(--badbg); color:var(--bad); }
+.verdict ul { margin:.3rem 0 0; padding-left:1.1rem; }
+#scenariobar { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center;
+  padding:.6rem 1rem; border-bottom:1px solid var(--line); background:var(--card); }
+#scenariobar select { max-width:24rem; }
+#storybox { padding:0 1rem .4rem; background:var(--card); border-bottom:1px solid var(--line);
+  font-size:.88rem; color:var(--mut); }
+#storybox b { color:var(--ink); }
+.cast { display:grid; gap:.45rem; }
+.cast .who { border:1px solid var(--line); border-radius:8px; padding:.4rem .55rem;
+  background:var(--card); font-size:.84rem; cursor:pointer; }
+.cast .who b { display:block; }
+.cast .who span { color:var(--mut); }
+.cast .who.hot { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.acts { display:grid; gap:.5rem; }
+.act { border:1px solid var(--line); border-radius:8px; padding:.45rem .55rem; background:var(--card); }
+.act h3 { margin:0 0 .3rem; font-size:.85rem; }
+.act .auth { color:var(--mut); font-size:.75rem; display:block; }
+.act .row { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin-top:.3rem; }
+.act input, .act select { border:1px solid var(--line); background:var(--panel);
+  border-radius:6px; padding:.2rem .35rem; }
+.act input[type="number"] { width:5.5rem; }
+.whyline { font-size:.8rem; color:var(--bad); margin-top:.3rem; }
+.hint { color:var(--mut); font-size:.78rem; margin-top:.25rem; }
+#evidence .grp { margin-bottom:.5rem; }
+#evidence .grp h3 { font-size:.8rem; margin:.2rem 0; }
+#evidence table { border-collapse:collapse; font-size:.8rem; width:100%; }
+#evidence td, #evidence th { border:1px solid var(--line); padding:.12rem .35rem; text-align:left; }
+#evidence th { color:var(--mut); font-weight:600; }
+#evidence .add { display:flex; gap:.35rem; margin-top:.25rem; align-items:center; flex-wrap:wrap; }
+#evidence input { width:4.5rem; border:1px solid var(--line); background:var(--panel);
+  border-radius:6px; padding:.15rem .3rem; }
+#strip { border-top:1px solid var(--line); background:var(--card); padding:.5rem 1rem; }
+#strip .nav { display:flex; gap:.4rem; align-items:center; margin-bottom:.35rem; }
+#strip .rail { display:flex; gap:.35rem; overflow-x:auto; padding-bottom:.25rem; }
+#strip .chip2 { border:1px solid var(--line); background:var(--panel); border-radius:7px;
+  padding:.15rem .5rem; font-size:.78rem; white-space:nowrap; cursor:pointer; }
+#strip .chip2.ok { border-color:var(--ok); } #strip .chip2.bad { border-color:var(--bad); }
+#strip .chip2.cur { box-shadow:0 0 0 2px var(--accent); }
+#detail { font-size:.85rem; margin-top:.35rem; }
+#detail .mono { font-family:ui-monospace,monospace; }
+footer { padding:.8rem 1rem; color:var(--mut); font-size:.8rem; }
+footer h2 { font-size:.8rem; color:var(--ink); text-transform:uppercase; letter-spacing:.06em; }
+footer li { margin-bottom:.3rem; }
+.mono { font-family:ui-monospace,monospace; }
+.selftest table { border-collapse:collapse; width:100%; font-size:.85rem; }
+.selftest td, .selftest th { border:1px solid var(--line); padding:.2rem .45rem; text-align:left; }
+.pass { color:var(--ok); font-weight:700; } .fail { color:var(--bad); font-weight:700; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The M1 checkpoint</h1>
+  <span class="sub">one UTxO per identity — three sums of money that never mix — play the fifteen stories against the machine the Lean model defines</span>
+  <span class="spacer"></span>
+  <span class="sub mono" id="paramchip"></span>
+  <button type="button" id="btn-theme" class="ghost" title="light / dark">◐</button>
+  <a href="?selftest=1" class="sub">selftest</a>
+</header>
+
+<div id="scenariobar">
+  <b class="sub">Stories</b>
+  <select id="sc-pick"><option value="">— free play —</option></select>
+  <button type="button" id="sc-step" class="primary" disabled>next step ▸</button>
+  <button type="button" id="sc-all" disabled>play all ▸▸</button>
+  <button type="button" id="sc-reset" disabled>⟲ restart story</button>
+  <button type="button" id="sc-exit" class="ghost" hidden>leave story</button>
+  <span class="sub" id="sc-count"></span>
+</div>
+<div id="storybox" hidden></div>
+
+<main id="main">
+  <section>
+    <div class="card" id="card-checkpoint">
+      <h2>The checkpoint <span id="statedesc" class="sub"></span></h2>
+      <div><span class="badge nothing" id="statebadge">ABSENT</span></div>
+      <dl class="kv" id="datum"></dl>
+      <div class="bars" id="bars"></div>
+      <div class="verdict no" id="verdict"></div>
+    </div>
+    <div class="card" id="evidence">
+      <h2>Evidence <span class="sub">the four checks the validator makes over the data the transaction presents — decided by the story or by you, never by the machine</span></h2>
+      <div id="evbody"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>The cast</h2>
+      <div class="cast" id="cast"></div>
+    </div>
+    <div class="card">
+      <h2>Actions <span class="sub" id="clock"></span></h2>
+      <div class="acts" id="actions"></div>
+      <div class="whyline" id="whyline" hidden></div>
+    </div>
+  </section>
+</main>
+
+<div id="strip">
+  <div class="nav">
+    <button type="button" id="h-first" title="first attempt">⏮</button>
+    <button type="button" id="h-prev" title="one attempt back">‹</button>
+    <button type="button" id="h-next" title="one attempt forward">›</button>
+    <button type="button" id="h-last" title="latest">⏭</button>
+    <span class="sub" id="h-pos"></span>
+    <span class="spacer"></span>
+    <button type="button" id="h-clear" class="ghost">clear history</button>
+  </div>
+  <div class="rail" id="rail"></div>
+  <div id="detail"><span class="sub">nothing attempted yet — pick a story, or act in free play</span></div>
+</div>
+
+<footer>
+  <h2>Manifesto delle prove</h2>
+  <ul>
+    <li>The machine on this page is <b>one transcription</b> of <span class="mono">CardanoKeri.Checkpoint.stepFn</span>: same actions, same guards in the same order, same flows, same refusals — and where Lean returns <span class="mono">none</span>, this page names the reason. The page embeds the core byte-for-byte (<span class="mono">checkpoint-simulator-build.mjs</span>); <span class="mono">checkpoint-simulator-scenario-gate.mjs</span> goes red when the embedded copy drifts.</li>
+    <li>The embedded corpus below is emitted by <span class="mono">lean/CheckpointTraceDriver.lean</span> from <span class="mono">stepFn</span> itself, via <span class="mono">ToJson</span>. <span class="mono">checkpoint-simulator-trace-gate.mjs</span> re-runs Lean, compares by sha256, and replays every step through this page's JavaScript: <span class="mono" id="proof-sha">stated sha256 shown at load</span>.</li>
+    <li><b>Modelling assumptions</b> (from <span class="mono">Checkpoint.lean</span>, D-034): a freeze is <b>not</b> enabled from a poisoned state; a conviction sends the freeze bond and the pool to the refund address while the conviction bond goes to the convictor.</li>
+    <li>Consumability here is the state-side conjuncts only: both bonds full, not poisoned, past juvenility. The consumer's own threshold signature on its payment — and validity (D-027, A11), reserved in the datum — are outside this machine.</li>
+    <li>Parameters D_reg = <span id="pf-D"></span>, B = <span id="pf-B"></span>, P = <span id="pf-P"></span>, W = <span id="pf-W"></span>. Both bonds are positive: a zero bond would make “bond missing” indistinguishable from “bond full”.</li>
+  </ul>
+</footer>
+
+<script>
+/* @@CORE:constants@@ */
+const SCHEMA = 'cardano-keri.checkpoint.trace';
+const VERSION = 1;
+
+/* Refusal reasons, named after the guard that failed. `stepFn` returns
+   `none`; the simulator always says WHY, naming the first failing conjunct
+   in the constructor's own order. */
+const REASONS = {
+  INVALID_PARAMS: 'invalid-params',         // 0 < D and 0 < B are structural in Lean
+  NOT_ABSENT: 'not-absent',                 // register on a non-absent state
+  NOT_PRESENT: 'not-present',               // any action on absent/convicted/gone
+  NO_WITNESSED_ROTATION: 'no-witnessed-rotation',   // rotationTo false
+  SEQUENCE_NOT_GREATER: 'sequence-not-greater',     // sn' ≤ sn
+  REFUND_NOT_AUTHORIZED: 'refund-not-authorized',   // new keys did not sign the address
+  BONDS_OVERFULL: 'bonds-overfull',         // deposit guard dreg ≤ D ∧ b ≤ B
+  NO_QUORUM: 'no-quorum',                   // quorum false (poison, close)
+  ALREADY_POISONED: 'already-poisoned',     // poison twice in one epoch
+  POOL_COVERS_PREMIUM: 'pool-covers-premium',       // freeze needs pool < P
+  FREEZE_BOND_MISSING: 'freeze-bond-missing',       // freeze needs b = B
+  POISONED: 'poisoned',                     // freeze/close from a poisoned state
+  NO_DUPLICITY_PROOF: 'no-duplicity-proof', // convict without duplicityAt
+};
+/* @@CORE:constants:END@@ */
+
+/* @@CORE:machine@@ */
+/* --- Params -------------------------------------------------------------
+   Deployment parameters. In Lean, `Params` carries proofs `0 < D`, `0 < B`
+   — invalid params are unrepresentable there. Here they are refused by
+   name, and `validParams` lets the page gate input before calling. */
+function validParams(p) {
+  return !!p && Number.isInteger(p.D) && p.D > 0
+    && Number.isInteger(p.B) && p.B > 0
+    && Number.isInteger(p.P) && Number.isInteger(p.W);
+}
+
+/* --- Env: the four evidence predicates ----------------------------------
+   In the model each predicate stands for a cryptographic check over data
+   the transaction presents (Checkpoint.lean, `Env`). The simulator never
+   decides them: `envFromTables` builds the predicates from explicit
+   decision tables (a row not listed is false), so a scenario — or a person
+   at the evidence panel — decides the evidence, never the core. */
+function envFromTables(t) {
+  const key = a => a.join('|');
+  const rot = new Map((t.rotationTo || []).map(r => [key(r.slice(0, 3)), r[3] === true]));
+  const ref = new Map((t.refundAuthorized || []).map(r => [key(r.slice(0, 2)), r[2] === true]));
+  const quo = new Map((t.quorum || []).map(r => [String(r[0]), r[1] === true]));
+  const dup = new Map((t.duplicityAt || []).map(r => [key(r.slice(0, 2)), r[2] === true]));
+  return {
+    rotationTo: (e, sn, sn2) => rot.get(key([e, sn, sn2])) === true,
+    refundAuthorized: (e, a) => ref.get(key([e, a])) === true,
+    quorum: e => quo.get(String(e)) === true,
+    duplicityAt: (e, sn) => dup.get(key([e, sn])) === true,
+  };
+}
+
+/* --- Action.actor (Checkpoint.lean) -------------------------------------- */
+function actionActor(a) {
+  if (!a || typeof a !== 'object') return null;
+  if ('register' in a) return 'anyone';
+  if ('rotate' in a) return 'next-keys';
+  if ('freeze' in a) return 'proof';
+  if ('topUp' in a) return 'anyone';
+  if ('convict' in a) return 'proof';
+  if ('poison' in a || 'close' in a) return 'current-quorum';
+  return null;
+}
+
+/* Which action tags the state's shape can carry at all (T8d: registration
+   is the only step from `absent`; terminal states have no edges). The page
+   uses this to offer only structurally possible controls. */
+function stateAllows(state, tag) {
+  if (tag === 'register') return typeof state === 'string' && state === 'absent';
+  return typeof state === 'object' && state !== null && 'present' in state;
+}
+
+/* --- Flow/payment constructors with the Lean defaults -------------------- */
+function payment(addr, dreg, b, pool) { return { addr, dreg: dreg || 0, b: b || 0, pool: pool || 0 }; }
+function flow(o) {
+  return { dregIn: 0, bIn: 0, poolIn: 0, refund: null, hunter: null, convictor: null, ...o };
+}
+function presentOf(state, reason) {
+  if (typeof state === 'object' && state !== null && 'present' in state) return state.present;
+  throw new Error(reason);
+}
+
+/* --- step: the transcription of `stepFn` ---------------------------------
+   Guard conjunctions are tested in the constructor's own order, so the
+   named reason is the FIRST failing conjunct, exactly as the Lean `if … ∧ …
+   ∧ … then some … else none` refuses. */
+function step(params, env, action, now, state) {
+  if (!validParams(params)) return { ok: false, reason: REASONS.INVALID_PARAMS };
+  const a = action;
+  if (a === null || typeof a !== 'object') return { ok: false, reason: REASONS.NOT_PRESENT };
+  if ('poison' in a) {
+    if (!stateAllows(state, 'poison')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    if (env.quorum(l.epoch) !== true) return { ok: false, reason: REASONS.NO_QUORUM };
+    if (l.poisoned !== false) return { ok: false, reason: REASONS.ALREADY_POISONED };
+    return { ok: true, flow: flow({}), state: { present: { ...l, poisoned: true } } };
+  }
+  if ('close' in a) {
+    if (!stateAllows(state, 'close')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    if (env.quorum(l.epoch) !== true) return { ok: false, reason: REASONS.NO_QUORUM };
+    if (l.poisoned !== false) return { ok: false, reason: REASONS.POISONED };
+    return {
+      ok: true,
+      flow: flow({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }),
+      state: 'gone',
+    };
+  }
+  if ('register' in a) {
+    const { refund, pool0 } = a.register;
+    if (!stateAllows(state, 'register')) return { ok: false, reason: REASONS.NOT_ABSENT };
+    return {
+      ok: true,
+      flow: flow({ dregIn: params.D, bIn: params.B, poolIn: pool0 }),
+      state: { present: { sn: 0, epoch: 0, poisoned: false, bornAt: now,
+                          refundTo: refund, dreg: params.D, b: params.B, pool: pool0 } },
+    };
+  }
+  if ('rotate' in a) {
+    if (!stateAllows(state, 'rotate')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    const { sn, op, payee, refund } = a.rotate;
+    /* env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ refund'.all … */
+    if (env.rotationTo(l.epoch, l.sn, sn) !== true)
+      return { ok: false, reason: REASONS.NO_WITNESSED_ROTATION };
+    if (!(l.sn < sn)) return { ok: false, reason: REASONS.SEQUENCE_NOT_GREATER };
+    if (!(refund === null || refund === undefined
+          ? true
+          : env.refundAuthorized(l.epoch + 1, refund) === true))
+      return { ok: false, reason: REASONS.REFUND_NOT_AUTHORIZED };
+    const r2 = (refund === null || refund === undefined) ? l.refundTo : refund;
+    if (op === 'keep') {
+      if (params.P <= l.pool)
+        return { ok: true,
+                 flow: flow({ hunter: payment(payee, 0, 0, params.P) }),
+                 state: { present: { ...l, sn, epoch: l.epoch + 1, poisoned: false,
+                                     refundTo: r2, pool: l.pool - params.P } } };
+      /* payment is never a gate (T14): the rotation lands, nothing is paid */
+      return { ok: true,
+               flow: flow({}),
+               state: { present: { ...l, sn, epoch: l.epoch + 1, poisoned: false,
+                                   refundTo: r2 } } };
+    }
+    if (op === 'withdraw') {
+      return { ok: true,
+               flow: flow({ refund: payment(r2, l.dreg, l.b, l.pool) }),
+               state: { present: { ...l, sn, epoch: l.epoch + 1, poisoned: false,
+                                   refundTo: r2, dreg: 0, b: 0, pool: 0 } } };
+    }
+    if (op === 'deposit') {
+      if (!(l.dreg <= params.D && l.b <= params.B))
+        return { ok: false, reason: REASONS.BONDS_OVERFULL };
+      return { ok: true,
+               flow: flow({ dregIn: params.D - l.dreg, bIn: params.B - l.b }),
+               state: { present: { ...l, sn, epoch: l.epoch + 1, poisoned: false,
+                                   bornAt: now, refundTo: r2,
+                                   dreg: params.D, b: params.B } } };
+    }
+    return { ok: false, reason: REASONS.NOT_PRESENT };
+  }
+  if ('freeze' in a) {
+    if (!stateAllows(state, 'freeze')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    const { sn, payee } = a.freeze;
+    /* rotationTo ∧ sn' > sn ∧ pool < P ∧ b = B ∧ poisoned = false.
+       The last conjunct is a modelling assumption of D-034: a freeze is not
+       enabled from a poisoned state. */
+    if (env.rotationTo(l.epoch, l.sn, sn) !== true)
+      return { ok: false, reason: REASONS.NO_WITNESSED_ROTATION };
+    if (!(l.sn < sn)) return { ok: false, reason: REASONS.SEQUENCE_NOT_GREATER };
+    if (!(l.pool < params.P)) return { ok: false, reason: REASONS.POOL_COVERS_PREMIUM };
+    if (!(l.b === params.B)) return { ok: false, reason: REASONS.FREEZE_BOND_MISSING };
+    if (l.poisoned !== false) return { ok: false, reason: REASONS.POISONED };
+    return { ok: true,
+             flow: flow({ hunter: payment(payee, 0, params.B, 0) }),
+             state: { present: { ...l, b: 0 } } };
+  }
+  if ('topUp' in a) {
+    if (!stateAllows(state, 'topUp')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    return { ok: true,
+             flow: flow({ poolIn: a.topUp.x }),
+             state: { present: { ...l, pool: l.pool + a.topUp.x } } };
+  }
+  if ('convict' in a) {
+    if (!stateAllows(state, 'convict')) return { ok: false, reason: REASONS.NOT_PRESENT };
+    const l = presentOf(state, REASONS.NOT_PRESENT);
+    if (env.duplicityAt(l.epoch, l.sn) !== true)
+      return { ok: false, reason: REASONS.NO_DUPLICITY_PROOF };
+    return { ok: true,
+             flow: flow({ refund: payment(l.refundTo, 0, l.b, l.pool),
+                          convictor: payment(a.convict.payee, l.dreg, 0, 0) }),
+             state: { convicted: { epoch: l.epoch, sn: l.sn, convictedAt: now } } };
+  }
+  return { ok: false, reason: REASONS.NOT_PRESENT };
+}
+
+/* --- replay: the transcription of `replay` --------------------------------
+   Timestamped actions at non-decreasing slots; the first refusal (or a
+   decreasing slot) fails the whole trace. */
+function replay(params, env, now, state, steps) {
+  let t = now, s = state;
+  for (let i = 0; i < steps.length; i++) {
+    const { now: t2, action } = steps[i];
+    if (!(t <= t2)) return { ok: false, at: i, reason: 'slot-decreased' };
+    const r = step(params, env, action, t2, s);
+    if (!r.ok) return { ok: false, at: i, reason: r.reason };
+    s = r.state;
+    t = t2;
+  }
+  return { ok: true, state: s };
+}
+
+/* --- consumableState ------------------------------------------------------
+   The state-side conjuncts of what a consumer accepts (the treasury). The
+   consumer's own threshold check, and validity once A11 ships, are outside
+   this machine. Failures are named, in the conjuncts' order. */
+function consumableState(params, now, state) {
+  const failures = [];
+  if (!(typeof state === 'object' && state !== null && 'present' in state))
+    return { consumable: false, failures: ['not-present'] };
+  const l = state.present;
+  if (!(l.dreg === params.D)) failures.push('conviction-bond-not-full');
+  if (!(l.b === params.B)) failures.push('freeze-bond-missing');
+  if (!(l.poisoned === false)) failures.push('poisoned');
+  if (!(l.bornAt + params.W <= now)) failures.push('juvenile');
+  return { consumable: failures.length === 0, failures };
+}
+/* @@CORE:machine:END@@ */
+
+/* @@CORE:verify@@ */
+/* --- canonical JSON: structural equality that ignores key order ---------- */
+function canonicalJson(x) {
+  if (Array.isArray(x)) return '[' + x.map(canonicalJson).join(',') + ']';
+  if (x !== null && typeof x === 'object') {
+    const ks = Object.keys(x).filter(k => x[k] !== undefined).sort();
+    return '{' + ks.map(k => JSON.stringify(k) + ':' + canonicalJson(x[k])).join(',') + '}';
+  }
+  return JSON.stringify(x);
+}
+
+/* Fill the Lean defaults so terse expectations compare equal to full wire
+   shapes: Flow's missing payments are `null`, a Payment's missing
+   components are 0, a state's missing `present` fields do not exist. */
+function normPayment(p) {
+  if (p === null || p === undefined) return null;
+  return { addr: p.addr, dreg: p.dreg || 0, b: p.b || 0, pool: p.pool || 0 };
+}
+function normFlow(f) {
+  const g = f || {};
+  return { dregIn: g.dregIn || 0, bIn: g.bIn || 0, poolIn: g.poolIn || 0,
+           refund: normPayment(g.refund), hunter: normPayment(g.hunter),
+           convictor: normPayment(g.convictor) };
+}
+const sameJson = (a, b) => canonicalJson(a) === canonicalJson(b);
+
+/* --- trace-envelope verifier ----------------------------------------------
+   The committed Lean driver (`lean/CheckpointTraceDriver.lean`) emits
+   {schema, version, traces: {name: {params, env, initial, steps}}} where
+   every step carries {now, action, before, flow, after}. This verifier
+   checks envelope shape, continuity, slot monotonicity, and that THIS
+   core's `step` reproduces every flow and post-state from the envelope's
+   own params and evidence tables — Lean output replayed through the page's
+   one transcription. */
+function verifyTracesDoc(doc) {
+  const errors = [];
+  if (!doc || doc.schema !== SCHEMA) errors.push(`schema: expected ${SCHEMA}`);
+  if (!doc || doc.version !== VERSION) errors.push(`version: expected ${VERSION}`);
+  const names = doc && doc.traces && typeof doc.traces === 'object'
+    ? Object.keys(doc.traces) : [];
+  if (!names.length) errors.push('traces: none');
+  let steps = 0;
+  for (const name of names) {
+    const env0 = doc.traces[name];
+    const label = `trace ${name}`;
+    if (!env0.params || !validParams(env0.params)) { errors.push(`${label}: bad params`); continue; }
+    if (!Array.isArray(env0.steps) || !env0.steps.length) { errors.push(`${label}: no steps`); continue; }
+    const env = envFromTables(env0.env || {});
+    let prev = env0.initial;
+    for (let i = 0; i < env0.steps.length; i++) {
+      const st = env0.steps[i];
+      steps++;
+      if (prev !== undefined && !sameJson(st.before, prev)) {
+        errors.push(`${label} step ${i}: before ≠ previous after`);
+        break;
+      }
+      if (i > 0 && !(env0.steps[i - 1].now <= st.now)) {
+        errors.push(`${label} step ${i}: slot decreased`);
+        break;
+      }
+      const r = step(env0.params, env, st.action, st.now, st.before);
+      if (!r.ok) { errors.push(`${label} step ${i}: refused (${r.reason})`); break; }
+      if (!sameJson(normFlow(r.flow), normFlow(st.flow))) {
+        errors.push(`${label} step ${i}: flow mismatch — core=${canonicalJson(normFlow(r.flow)).slice(0, 160)} driver=${canonicalJson(normFlow(st.flow)).slice(0, 160)}`);
+        break;
+      }
+      if (!sameJson(r.state, st.after)) {
+        errors.push(`${label} step ${i}: after mismatch — core=${canonicalJson(r.state).slice(0, 160)} driver=${canonicalJson(st.after).slice(0, 160)}`);
+        break;
+      }
+      prev = st.after;
+    }
+  }
+  return { ok: errors.length === 0, traces: names.length, steps, errors };
+}
+
+/* --- scenario verifier -----------------------------------------------------
+   A scenario is declarative data: initial params, evidence tables, an
+   action list with slots and actors, expected per-step results (refusals
+   carry their named reason), an expected final state, and consumer checks.
+   Used by the scenario gate AND by the page's ?selftest — one
+   implementation, no second transcription of the expectations. */
+function verifyScenario(sc) {
+  const lines = [];
+  const fail = m => { lines.push(m); return { ok: false, lines }; };
+  if (!sc || typeof sc.id !== 'number' || !sc.slug || !sc.story) return fail('scenario: bad header');
+  if (!validParams(sc.params)) return fail(`${sc.slug}: bad params`);
+  if (!Array.isArray(sc.steps) || !sc.steps.length) return fail(`${sc.slug}: no steps`);
+  const env = envFromTables(sc.env || {});
+  let s = sc.initial === undefined ? 'absent' : sc.initial;
+  let t = -Infinity;
+  let accepted = 0, refused = 0;
+  for (let i = 0; i < sc.steps.length; i++) {
+    const st = sc.steps[i];
+    if (typeof st.now !== 'number' || !(t <= st.now)) return fail(`${sc.slug} step ${i}: slot not non-decreasing`);
+    t = st.now;
+    if (actionActor(st.action) !== st.actor)
+      lines.push(`${sc.slug} step ${i}: actor «${st.actor}» ≠ ${actionActor(st.action)} (display only)`);
+    const r = step(sc.params, env, st.action, st.now, s);
+    const exp = st.expect || { ok: true };
+    if (!r.ok && !(exp.ok === false)) return fail(`${sc.slug} step ${i}: refused (${r.reason}), expected applied`);
+    if (r.ok && exp.ok === false) return fail(`${sc.slug} step ${i}: applied, expected refusal`);
+    if (!r.ok && exp.ok === false) {
+      if (exp.reason && r.reason !== exp.reason)
+        return fail(`${sc.slug} step ${i}: refused ${r.reason}, expected ${exp.reason}`);
+      refused++;
+      lines.push(`${sc.slug} step ${i}: refused (${r.reason}) as expected`);
+      continue;
+    }
+    if (exp.flow !== undefined && !sameJson(normFlow(r.flow), normFlow(exp.flow)))
+      return fail(`${sc.slug} step ${i}: flow ${canonicalJson(normFlow(r.flow))} ≠ expected ${canonicalJson(normFlow(exp.flow))}`);
+    accepted++;
+    lines.push(`${sc.slug} step ${i}: applied`);
+    s = r.state;
+  }
+  if (sc.expectFinal !== undefined && !sameJson(s, sc.expectFinal))
+    return fail(`${sc.slug}: final state ${canonicalJson(s)} ≠ expected ${canonicalJson(sc.expectFinal)}`);
+  for (const c of sc.checks || []) {
+    if (c.kind !== 'consumable') return fail(`${sc.slug}: unknown check kind ${c.kind}`);
+    const v = consumableState(sc.params, c.now, s);
+    if (v.consumable !== c.expect)
+      return fail(`${sc.slug}: consumable@${c.now} = ${v.consumable}, expected ${c.expect}`);
+    if (Array.isArray(c.failing) && canonicalJson(v.failures) !== canonicalJson(c.failing))
+      return fail(`${sc.slug}: failures@${c.now} = ${canonicalJson(v.failures)} ≠ expected ${canonicalJson(c.failing)}`);
+    lines.push(`${sc.slug}: consumable@${c.now} = ${v.consumable}` +
+      (v.failures.length ? ` (${v.failures.join(', ')})` : ''));
+  }
+  if (!accepted && !refused) return fail(`${sc.slug}: no steps ran`);
+  return { ok: true, lines, accepted, refused };
+}
+
+function verifyScenariosAll(scenarios) {
+  const results = (scenarios || []).map(sc => ({ sc, r: verifyScenario(sc) }));
+  return { ok: results.every(x => x.r.ok), results };
+}
+/* @@CORE:verify:END@@ */
+
+const SCENARIOS = /* @@SCENARIOS@@ */
+[
+ {
+  "id": 1,
+  "slug": "register",
+  "story": "Alice's identity appears on Cardano",
+  "narrative": "Anyone holding Alice's public inception registers her checkpoint; the registry inserts once ever, both bonds are present, and the checkpoint is juvenile for W slots.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory",
+   "5": "the stranger who registers"
+  },
+  "env": {
+   "rotationTo": [],
+   "refundAuthorized": [],
+   "quorum": [],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "the stranger, paying",
+    "action": {
+     "register": {
+      "refund": 5,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "dregIn": 1000,
+      "bIn": 5,
+      "poolIn": 3
+     }
+    },
+    "note": "The inception is public, so registration is permissionless; the refund address is the registrant's — until Alice's first rotation moves it (story 8)."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 0,
+    "epoch": 0,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 5,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 3
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 5,
+    "expect": false,
+    "failing": [
+     "juvenile"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 10,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "slug": "rotate-keep-paid",
+  "story": "Alice rotates, Hal lands it, Hal is paid",
+  "narrative": "Alice runs kli rotate; her witnesses receipt it; Hal's watcher lands it with keep, naming himself payee — the pool pays the premium P.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice (via anyone — the inception is public)",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 5
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Present, bonded, pool 5 ≥ P."
+   },
+   {
+    "now": 5,
+    "actor": "next-keys",
+    "as": "Alice's next keys, landed by Hal",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "hunter": {
+       "addr": 2,
+       "pool": 2
+      }
+     }
+    },
+    "note": "Next epoch, poison cleared, P to Hal from the pool; bonds untouched; refund address unchanged (a relayer on public data cannot move it)."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 3
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 15,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "slug": "freeze",
+  "story": "The pool runs dry, so Hal freezes her instead",
+  "narrative": "Alice's pool cannot pay P; Hal presents the same evidence he would use to advance, but as a freeze: he takes the freeze bond B and the datum stays on its old keys.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Pool 1 < P 2: nothing to land rotations for."
+   },
+   {
+    "now": 5,
+    "actor": "proof",
+    "as": "Hal, presenting the later witnessed rotation",
+    "action": {
+     "freeze": {
+      "sn": 1,
+      "payee": 2
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "hunter": {
+       "addr": 2,
+       "b": 5
+      }
+     }
+    },
+    "note": "Exactly the advance predicate on the presented rotation, pool < P, not poisoned. The datum is untouched: the old keys stay. B is what frozen means."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 0,
+    "epoch": 0,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 0,
+    "pool": 1
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 100,
+    "expect": false,
+    "failing": [
+     "freeze-bond-missing"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "slug": "unfreeze",
+  "story": "Alice unfreezes",
+  "narrative": "Alice lands the rotation from story 3 herself with deposit, bringing B back; the checkpoint is juvenile again for W slots; a friend tops up the pool.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "proof",
+    "as": "Hal freezes (story 3)",
+    "action": {
+     "freeze": {
+      "sn": 1,
+      "payee": 2
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "B taken; the rotation to sn 1 is still unapplied on chain."
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "Alice, landing her own rotation",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "deposit",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "dregIn": 0,
+      "bIn": 5
+     }
+    },
+    "note": "The same rotation Hal presented, now as a deposit: the freeze bond comes back, the pool pays nobody (pool 1 < P). Juvenility resets."
+   },
+   {
+    "now": 12,
+    "actor": "anyone",
+    "as": "a friend of Alice",
+    "action": {
+     "topUp": {
+      "x": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Hal sees a pool worth landing rotations for again."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": false,
+    "bornAt": 10,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 4
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 19,
+    "expect": false,
+    "failing": [
+     "juvenile"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 20,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "slug": "pause",
+  "story": "Alice goes away",
+  "narrative": "A rotation with withdraw pays D_reg + B + pool to the refund address; the state stays on chain, unbonded — that is what paused means. Mallory's stolen epoch-0 keys can do nothing.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 7
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "next-keys",
+    "as": "Alice, rotating to pause",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "withdraw",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "refund": {
+       "addr": 1,
+       "dreg": 1000,
+       "b": 5,
+       "pool": 7
+      }
+     }
+    },
+    "note": "Everything to the refund address; the rotation itself is the authorization."
+   },
+   {
+    "now": 6,
+    "actor": "current-quorum",
+    "as": "Mallory, holding Alice's old epoch-0 keys",
+    "action": {
+     "poison": {}
+    },
+    "expect": {
+     "ok": false,
+     "reason": "no-quorum"
+    },
+    "note": "The parked checkpoint answers only to a rotation: the epoch has moved on, and the old keys are no longer the current quorum."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 0,
+    "b": 0,
+    "pool": 0
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 1000,
+    "expect": false,
+    "failing": [
+     "conviction-bond-not-full",
+     "freeze-bond-missing"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "slug": "resurrect",
+  "story": "Alice comes back",
+  "narrative": "A rotation with deposit brings D_reg and B back; born now, juvenile for W slots, then consumable. There is no replay: the state never left the chain.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ],
+    [
+     1,
+     1,
+     2,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 7
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "next-keys",
+    "as": "Alice, rotating to pause (story 5)",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "withdraw",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "Alice, rotating to come back",
+    "action": {
+     "rotate": {
+      "sn": 2,
+      "op": "deposit",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "dregIn": 1000,
+      "bIn": 5
+     }
+    },
+    "note": "Both bonds restored to full; juvenility resets."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 2,
+    "epoch": 2,
+    "poisoned": false,
+    "bornAt": 10,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 0
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 19,
+    "expect": false,
+    "failing": [
+     "juvenile"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 20,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 7,
+  "slug": "poison-then-rotate",
+  "story": "Mallory steals the current keys; Alice poisons, then rotates",
+  "narrative": "The current quorum poisons the epoch: consumers stop trusting it now, close is disabled, and the only way out is a rotation — which clears the poison, because it was local to the retired keys.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "current-quorum",
+    "as": "Alice's key holders (kli sign)",
+    "action": {
+     "poison": {}
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Signatures at the current threshold — one stolen member key cannot poison. Touches no value."
+   },
+   {
+    "now": 6,
+    "actor": "current-quorum",
+    "as": "the same key holders, trying again",
+    "action": {
+     "poison": {}
+    },
+    "expect": {
+     "ok": false,
+     "reason": "already-poisoned"
+    },
+    "note": "Enabled only once per epoch."
+   },
+   {
+    "now": 7,
+    "actor": "current-quorum",
+    "as": "Mallory, with the stolen keys",
+    "action": {
+     "close": {}
+    },
+    "expect": {
+     "ok": false,
+     "reason": "poisoned"
+    },
+    "note": "Close is disabled while poisoned, so Mallory cannot take the bonds."
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "Alice, rotating past the theft",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "The poison clears: it was local to the keys she just retired. If Mallory also holds the next keys, KERI's own rule controls — the chain follows KERI."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 1
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 8,
+    "expect": false,
+    "failing": [
+     "juvenile"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 20,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 8,
+  "slug": "refund-move",
+  "story": "Alice moves her refund address",
+  "narrative": "At a rotation, the new keys sign the new refund address; a relayer submitting her public rotation without that signature leaves the address unchanged. A stale registration becomes a donation.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory",
+   "5": "the stranger who registered"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ],
+    [
+     1,
+     1,
+     2,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "the stranger",
+    "action": {
+     "register": {
+      "refund": 5,
+      "pool0": 5
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "The refund address is the stranger's — for now."
+   },
+   {
+    "now": 5,
+    "actor": "next-keys",
+    "as": "Alice's new keys, signing the new address with the rotation",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "The signature over the new address at the new threshold by the keys the rotation reveals: refundTo becomes Alice's."
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "a relayer, submitting the public rotation with someone else's address",
+    "action": {
+     "rotate": {
+      "sn": 2,
+      "op": "keep",
+      "payee": 2,
+      "refund": 4
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "refund-not-authorized"
+    },
+    "note": "The relayer has the public rotation but no signature from Alice's epoch-2 keys over address 4. Refused."
+   },
+   {
+    "now": 12,
+    "actor": "next-keys",
+    "as": "the relayer, on public data only",
+    "action": {
+     "rotate": {
+      "sn": 2,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Without the signature the address is simply left unchanged."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 2,
+    "epoch": 2,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 1
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 22,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 9,
+  "slug": "convict",
+  "story": "Cora convicts",
+  "narrative": "Cora holds two of Alice's rotations at the same sequence, both receipted: the proof ends the identity on chain. D_reg goes to Cora in full; B and the pool go back to the refund address (modelling assumption).",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [],
+   "refundAuthorized": [],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": [
+    [
+     0,
+     0,
+     true
+    ]
+   ]
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 6
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "proof",
+    "as": "Cora, presenting the second rotation",
+    "action": {
+     "convict": {
+      "payee": 3
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "refund": {
+       "addr": 1,
+       "b": 5,
+       "pool": 6
+      },
+      "convictor": {
+       "addr": 3,
+       "dreg": 1000
+      }
+     }
+    },
+    "note": "No history needed: the second rotation is at the tip's sequence and reveals the current keys. Convicted is terminal — no rotation, no poison, no close, ever."
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "anyone, trying to go on",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "not-present"
+    },
+    "note": "No KERI event un-duplicates an identifier, so the chain invents no recovery."
+   }
+  ],
+  "expectFinal": {
+   "convicted": {
+    "epoch": 0,
+    "sn": 0,
+    "convictedAt": 5
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 100,
+    "expect": false,
+    "failing": [
+     "not-present"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 10,
+  "slug": "close",
+  "story": "Alice leaves for good",
+  "narrative": "The current quorum closes: everything is paid to the refund address — the closer chooses when, never where — and the token is burned. The registry row stays, so this AID can never return.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [],
+   "refundAuthorized": [],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "current-quorum",
+    "as": "Alice's key holders",
+    "action": {
+     "close": {}
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "refund": {
+       "addr": 1,
+       "dreg": 1000,
+       "b": 5,
+       "pool": 3
+      }
+     }
+    },
+    "note": "Mallory, with stolen current keys, would get nothing: the money goes to Alice's refund address, and Alice could have blocked the close by poisoning first (story 7)."
+   },
+   {
+    "now": 6,
+    "actor": "anyone",
+    "as": "whoever — even with the inception",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "not-absent"
+    },
+    "note": "Mint-once: the registry row stays, so this AID can never be registered on Cardano again."
+   }
+  ],
+  "expectFinal": "gone",
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 100,
+    "expect": false,
+    "failing": [
+     "not-present"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "slug": "treasury-reads",
+  "story": "The treasury reads Alice's checkpoint",
+  "narrative": "The treasury accepts a payment only if the checkpoint is present, both bonds full, unpoisoned, past juvenility — and fails closed on frozen and poisoned. The threshold signature on the payment itself is the consumer's own check, outside this machine.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ],
+    [
+     1,
+     1,
+     2,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ],
+    [
+     1,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "next-keys",
+    "as": "Alice (landed by Hal)",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "bornAt stays 0: a keeping rotation does not reset juvenility."
+   },
+   {
+    "now": 20,
+    "actor": "proof",
+    "as": "Hal, after a friend drains the pool by landing rotations",
+    "action": {
+     "freeze": {
+      "sn": 2,
+      "payee": 2
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Pool is 1 < P now; frozen means B missing — fails closed for the treasury."
+   },
+   {
+    "now": 25,
+    "actor": "current-quorum",
+    "as": "Alice's key holders",
+    "action": {
+     "poison": {}
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Poisoned fails closed too."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": true,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 0,
+    "pool": 1
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 5,
+    "expect": false,
+    "failing": [
+     "freeze-bond-missing",
+     "poisoned",
+     "juvenile"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 10,
+    "expect": false,
+    "failing": [
+     "freeze-bond-missing",
+     "poisoned"
+    ]
+   },
+   {
+    "kind": "consumable",
+    "now": 26,
+    "expect": false,
+    "failing": [
+     "freeze-bond-missing",
+     "poisoned"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 12,
+  "slug": "stranger-stale",
+  "story": "A stranger registers Alice at a stale epoch",
+  "narrative": "Mallory, holding keys Alice retired long ago, registers her AID herself and stops advancing. Anyone can advance it onward with Alice's later public rotations — and then Mallory's bonds answer to Alice's keys.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Mallory, registering Alice's stale inception",
+    "action": {
+     "register": {
+      "refund": 4,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "It can happen once per AID, ever — advance is permissionless; the chain cannot tell the owner from a relayer."
+   },
+   {
+    "now": 6,
+    "actor": "anyone",
+    "as": "Mallory, trying again",
+    "action": {
+     "register": {
+      "refund": 4,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "not-absent"
+    },
+    "note": "Mint-once holds even against the stale registrar."
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "Alice's later public rotation, landed by Hal",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "keep",
+      "payee": 2,
+      "refund": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Anyone can advance the checkpoint onward with Alice's later public rotations; the moment that happens, the refund address — and at close, Mallory's bonds — answer to Alice. A stale registration is a donation."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 1,
+    "epoch": 1,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 1
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 11,
+    "expect": true
+   },
+   {
+    "kind": "consumable",
+    "now": 21,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 13,
+  "slug": "top-up",
+  "story": "Anyone tops up the pool",
+  "narrative": "A friend of Alice adds value to the pool; the datum is untouched; no signature. Hunters have a reason to serve her again.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [],
+   "refundAuthorized": [],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 5,
+    "actor": "anyone",
+    "as": "a friend of Alice",
+    "action": {
+     "topUp": {
+      "x": 4
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "poolIn": 4
+     }
+    },
+    "note": "Pool 1 + 4 = 5 ≥ P: hunters can be paid again. sn, epoch, bornAt, bonds: untouched."
+   },
+   {
+    "now": 6,
+    "actor": "current-quorum",
+    "as": "Alice's key holders",
+    "action": {
+     "poison": {}
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 7,
+    "actor": "anyone",
+    "as": "the same friend, anyway",
+    "action": {
+     "topUp": {
+      "x": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Top-up is permissionless even while poisoned — the state table offers it in every live sub-state."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 0,
+    "epoch": 0,
+    "poisoned": true,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 6
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 100,
+    "expect": false,
+    "failing": [
+     "poisoned"
+    ]
+   }
+  ]
+ },
+ {
+  "id": 14,
+  "slug": "hunters-race",
+  "story": "Two hunters race",
+  "narrative": "If the pool covers P, the first advance wins and is paid, the second fails on the spent input; if it does not, the first freeze wins B, the second finds nothing to take.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [
+    [
+     0,
+     0,
+     1,
+     true
+    ],
+    [
+     1,
+     1,
+     2,
+     true
+    ],
+    [
+     2,
+     2,
+     2,
+     true
+    ]
+   ],
+   "refundAuthorized": [
+    [
+     1,
+     1,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 1
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Pool 1 < P: the freeze race."
+   },
+   {
+    "now": 5,
+    "actor": "proof",
+    "as": "Hal — first freeze",
+    "action": {
+     "freeze": {
+      "sn": 1,
+      "payee": 2
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "hunter": {
+       "addr": 2,
+       "b": 5
+      }
+     }
+    }
+   },
+   {
+    "now": 6,
+    "actor": "proof",
+    "as": "Mallory — second freeze",
+    "action": {
+     "freeze": {
+      "sn": 1,
+      "payee": 4
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "freeze-bond-missing"
+    },
+    "note": "She finds nothing to take: B is already gone. (The rotation is also no longer pending, but the guard order names the bond first after the spent evidence — on chain her transaction fails on the spent input either way.)"
+   },
+   {
+    "now": 10,
+    "actor": "next-keys",
+    "as": "Alice, unfreezing (story 4)",
+    "action": {
+     "rotate": {
+      "sn": 1,
+      "op": "deposit",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 12,
+    "actor": "anyone",
+    "as": "a friend",
+    "action": {
+     "topUp": {
+      "x": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Pool 1 + 3 = 4 ≥ P: the paid race."
+   },
+   {
+    "now": 15,
+    "actor": "next-keys",
+    "as": "Hal, landing Alice's next rotation — first advance",
+    "action": {
+     "rotate": {
+      "sn": 2,
+      "op": "keep",
+      "payee": 2,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": true,
+     "flow": {
+      "hunter": {
+       "addr": 2,
+       "pool": 2
+      }
+     }
+    }
+   },
+   {
+    "now": 16,
+    "actor": "next-keys",
+    "as": "Mallory, landing the same rotation — second advance",
+    "action": {
+     "rotate": {
+      "sn": 2,
+      "op": "keep",
+      "payee": 4,
+      "refund": null
+     }
+    },
+    "expect": {
+     "ok": false,
+     "reason": "sequence-not-greater"
+    },
+    "note": "She presents a rotation at the tip's epoch and sequence — refused: the checkpoint already reflects sn 2. On chain her transaction fails on the spent input either way."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 2,
+    "epoch": 2,
+    "poisoned": false,
+    "bornAt": 10,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 2
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 20,
+    "expect": true
+   }
+  ]
+ },
+ {
+  "id": 15,
+  "slug": "alice-forgets",
+  "story": "Alice goes quiet for a year",
+  "narrative": "Today nothing on chain says she is gone: her checkpoint stays consumable as long as it is bonded and no rotation is missing. Validity (D-027) is reserved in the datum and not modelled.",
+  "params": {
+   "D": 1000,
+   "B": 5,
+   "P": 2,
+   "W": 10
+  },
+  "actors": {
+   "1": "Alice's refund address",
+   "2": "Hal",
+   "3": "Cora",
+   "4": "Mallory"
+  },
+  "env": {
+   "rotationTo": [],
+   "refundAuthorized": [],
+   "quorum": [
+    [
+     0,
+     true
+    ]
+   ],
+   "duplicityAt": []
+  },
+  "initial": "absent",
+  "steps": [
+   {
+    "now": 0,
+    "actor": "anyone",
+    "as": "Alice",
+    "action": {
+     "register": {
+      "refund": 1,
+      "pool0": 3
+     }
+    },
+    "expect": {
+     "ok": true
+    }
+   },
+   {
+    "now": 500,
+    "actor": "anyone",
+    "as": "a friend, paying for her maintenance",
+    "action": {
+     "topUp": {
+      "x": 2
+     }
+    },
+    "expect": {
+     "ok": true
+    },
+    "note": "Half a year of quiet; the datum is untouched and no signature was needed."
+   }
+  ],
+  "expectFinal": {
+   "present": {
+    "sn": 0,
+    "epoch": 0,
+    "poisoned": false,
+    "bornAt": 0,
+    "refundTo": 1,
+    "dreg": 1000,
+    "b": 5,
+    "pool": 5
+   }
+  },
+  "checks": [
+   {
+    "kind": "consumable",
+    "now": 1000,
+    "expect": true
+   },
+   {
+    "kind": "consumable",
+    "now": 1000000,
+    "expect": true
+   },
+   {
+    "kind": "consumable",
+    "now": 1000001,
+    "expect": true
+   }
+  ]
+ }
+]
+/* @@SCENARIOS:END@@ */;
+
+/* Frozen corpus of lean/CheckpointTraceDriver.lean (v1 envelopes).
+   Raw output sha256:
+   fd2164dee1f580319ff2e5432c96f43139bed78bd8727b65e102b683bd75d6b7 */
+const CHECKPOINT_LEAN_TRACES_V1 = {"schema":"cardano-keri.checkpoint.trace","traces":{"close":{"env":{"duplicityAt":[],"quorum":[[0,true]],"refundAuthorized":[],"rotationTo":[]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":3,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":3,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":3,"refund":null},"now":0},{"action":{"close":{}},"after":"gone","before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":3,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":1,"b":5,"dreg":1000,"pool":3}},"now":5}]},"convict":{"env":{"duplicityAt":[[0,0,true]],"quorum":[[0,true]],"refundAuthorized":[],"rotationTo":[]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":6,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":6,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":6,"refund":null},"now":0},{"action":{"convict":{"payee":3}},"after":{"convicted":{"convictedAt":5,"epoch":0,"sn":0}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":6,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":{"addr":3,"b":0,"dreg":1000,"pool":0},"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":1,"b":5,"dreg":0,"pool":6}},"now":5}]},"freeze-unfreeze":{"env":{"duplicityAt":[],"quorum":[[0,true]],"refundAuthorized":[[1,1,true]],"rotationTo":[[0,0,1,true]]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":1,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":1,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":1,"refund":null},"now":0},{"action":{"freeze":{"payee":2,"sn":1}},"after":{"present":{"b":0,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":1,"refundTo":1,"sn":0}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":1,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":2,"b":5,"dreg":0,"pool":0},"poolIn":0,"refund":null},"now":5},{"action":{"rotate":{"op":"deposit","payee":2,"refund":1,"sn":1}},"after":{"present":{"b":5,"bornAt":10,"dreg":1000,"epoch":1,"poisoned":false,"pool":1,"refundTo":1,"sn":1}},"before":{"present":{"b":0,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":1,"refundTo":1,"sn":0}},"flow":{"bIn":5,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":null},"now":10},{"action":{"topUp":{"x":3}},"after":{"present":{"b":5,"bornAt":10,"dreg":1000,"epoch":1,"poisoned":false,"pool":4,"refundTo":1,"sn":1}},"before":{"present":{"b":5,"bornAt":10,"dreg":1000,"epoch":1,"poisoned":false,"pool":1,"refundTo":1,"sn":1}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":3,"refund":null},"now":12}]},"happy-path":{"env":{"duplicityAt":[],"quorum":[[0,true]],"refundAuthorized":[[1,1,true]],"rotationTo":[[0,0,1,true]]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":5,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":5,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":5,"refund":null},"now":0},{"action":{"rotate":{"op":"keep","payee":2,"refund":1,"sn":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":1,"poisoned":false,"pool":3,"refundTo":1,"sn":1}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":5,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":2,"b":0,"dreg":0,"pool":2},"poolIn":0,"refund":null},"now":5},{"action":{"topUp":{"x":4}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":1,"poisoned":false,"pool":7,"refundTo":1,"sn":1}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":1,"poisoned":false,"pool":3,"refundTo":1,"sn":1}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":4,"refund":null},"now":7}]},"pause-resurrect":{"env":{"duplicityAt":[],"quorum":[[0,true]],"refundAuthorized":[[1,1,true],[2,1,true]],"rotationTo":[[0,0,1,true],[1,1,2,true]]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":7,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":7,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":7,"refund":null},"now":0},{"action":{"rotate":{"op":"withdraw","payee":2,"refund":1,"sn":1}},"after":{"present":{"b":0,"bornAt":0,"dreg":0,"epoch":1,"poisoned":false,"pool":0,"refundTo":1,"sn":1}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":7,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":1,"b":5,"dreg":1000,"pool":7}},"now":5},{"action":{"rotate":{"op":"deposit","payee":2,"refund":null,"sn":2}},"after":{"present":{"b":5,"bornAt":10,"dreg":1000,"epoch":2,"poisoned":false,"pool":0,"refundTo":1,"sn":2}},"before":{"present":{"b":0,"bornAt":0,"dreg":0,"epoch":1,"poisoned":false,"pool":0,"refundTo":1,"sn":1}},"flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":0,"refund":null},"now":10}]},"poison-then-rotate":{"env":{"duplicityAt":[],"quorum":[[0,true]],"refundAuthorized":[[1,1,true]],"rotationTo":[[0,0,1,true]]},"initial":"absent","params":{"B":5,"D":1000,"P":2,"W":10},"steps":[{"action":{"register":{"pool0":3,"refund":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":3,"refundTo":1,"sn":0}},"before":"absent","flow":{"bIn":5,"convictor":null,"dregIn":1000,"hunter":null,"poolIn":3,"refund":null},"now":0},{"action":{"poison":{}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":true,"pool":3,"refundTo":1,"sn":0}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":false,"pool":3,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":null},"now":5},{"action":{"rotate":{"op":"keep","payee":2,"refund":null,"sn":1}},"after":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":1,"poisoned":false,"pool":1,"refundTo":1,"sn":1}},"before":{"present":{"b":5,"bornAt":0,"dreg":1000,"epoch":0,"poisoned":true,"pool":3,"refundTo":1,"sn":0}},"flow":{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":2,"b":0,"dreg":0,"pool":2},"poolIn":0,"refund":null},"now":10}]}},"version":1};
+
+const CK = { SCHEMA, VERSION, REASONS, validParams, envFromTables, actionActor,
+  stateAllows, step, replay, consumableState, canonicalJson, normFlow,
+  verifyTracesDoc, verifyScenario, verifyScenariosAll, SCENARIOS,
+  LEAN_TRACES: CHECKPOINT_LEAN_TRACES_V1 };
+
+/* ------------------------------------------------------------------ */
+/* The page. Everything below renders and collects input; every        */
+/* decision about the machine comes from CK above.                     */
+/* ------------------------------------------------------------------ */
+
+const REASON_WORDS = {
+  'invalid-params': 'D_reg and B must both be positive — a zero bond would make “bond missing” indistinguishable from “bond full”.',
+  'not-absent': 'This AID already has a row: registration is mint-once, once ever.',
+  'not-present': 'Nothing to act on: the checkpoint is not on chain, or is terminal.',
+  'no-witnessed-rotation': 'No witnessed rotation for the current epoch and sequence is presented. Add the evidence, or wait for Alice to rotate.',
+  'sequence-not-greater': 'The checkpoint already reflects that sequence: sn must strictly increase (T1 — no rollback).',
+  'refund-not-authorized': 'The new keys did not sign that refund address — a relayer on public data cannot move it.',
+  'bonds-overfull': 'A deposit restores exactly to full: the bonds held must not exceed D_reg and B.',
+  'no-quorum': 'The current keys of this epoch did not sign. If the epoch moved on, the old keys are no longer the quorum.',
+  'already-poisoned': 'This epoch is already poisoned: once per epoch.',
+  'pool-covers-premium': 'The pool covers the premium — there is nothing to freeze. Land the rotation as an advance instead.',
+  'freeze-bond-missing': 'The freeze bond is already gone (frozen, or paused): nothing to take.',
+  'poisoned': 'This epoch is poisoned: close is disabled, and a freeze would hit someone already down. Only a rotation gets out.',
+  'no-duplicity-proof': 'No second rotation at this sequence: conviction needs a duplicity proof (two rotations, one sn).',
+};
+
+const CAST = [
+  { id: 'alice', name: 'Alice', desc: 'the owner — rotates with kli, never touches Cardano except to put money in. Her next keys authorize rotations; her current key holders (the quorum) can poison and close.', acts: ['rotate', 'poison', 'close'] },
+  { id: 'hal', name: 'Hal', desc: 'a hunter — lands Alice’s rotations for the premium P; when the pool cannot pay, he freezes her and takes B.', acts: ['rotate', 'freeze'] },
+  { id: 'treasury', name: 'the treasury', desc: 'a consumer — not an actor. Reads the checkpoint as a reference input and shows the verdict below.', acts: [] },
+  { id: 'cora', name: 'Cora', desc: 'a convictor — holds two of Alice’s rotations at the same sequence, both receipted. She ends identities and takes D_reg.', acts: ['convict'] },
+  { id: 'mallory', name: 'Mallory', desc: 'a thief — sometimes she has Alice’s current keys, sometimes the next ones too. Let her try anything; watch what the machine lets her take (nothing).', acts: ['poison', 'close', 'freeze', 'convict'] },
+  { id: 'anyone', name: 'anyone', desc: 'whoever relays a public event, tops up a pool, or registers a public inception.', acts: ['register', 'topUp'] },
+];
+
+const ADDRS = { 1: 'Alice’s address', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'a stranger' };
+const aname = a => ADDRS[a] || ('address ' + a);
+const AUTHNAME = { 'anyone': 'anyone — no signature needed',
+  'next-keys': 'Alice’s next keys (a witnessed rotation)',
+  'current-quorum': 'Alice’s current key holders, at the threshold',
+  'proof': 'a proof holder — the evidence is the authorization' };
+
+const S = {
+  params: { D: 1000, B: 5, P: 2, W: 10 },
+  tables: { rotationTo: [], refundAuthorized: [], quorum: [], duplicityAt: [] },
+  now: 0,
+  state: 'absent',
+  history: [],          /* {now, actor, as, action, before, result} */
+  cursor: 0,            /* view position: 0 = nothing yet, h = after last */
+  scenario: null,       /* {sc, idx, results: []} */
+  readOnly: false,
+  hotCast: null,
+};
+
+const env = () => CK.envFromTables(S.tables);
+const $ = id => document.getElementById(id);
+const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const comp = k => k === 'dreg' ? 'D_reg' : k === 'b' ? 'B' : 'pool';
+const isPres = st => typeof st === 'object' && st !== null && 'present' in st;
+const isConv = st => typeof st === 'object' && st !== null && 'convicted' in st;
+
+/* ---------- checkpoint card ---------- */
+
+function stateLabel(st) {
+  if (st === 'absent') return { cls: 'nothing', name: 'ABSENT', desc: 'nothing on chain for this AID' };
+  if (st === 'gone') return { cls: 'gone', name: 'GONE', desc: 'token burned; the registry row stays; this AID cannot return' };
+  if (isConv(st)) return { cls: 'convicted', name: 'CONVICTED', desc: 'terminal — no rotation, no poison, no close, ever' };
+  const l = st.present;
+  if (l.poisoned) return { cls: 'poisoned', name: 'POISONED', desc: 'consumers stopped trusting this epoch; only a rotation gets out' };
+  if (l.dreg < S.params.D) return { cls: 'paused', name: 'PAUSED', desc: 'unbonded — the money went home; only a depositing rotation wakes it' };
+  if (l.b < S.params.B) return { cls: 'frozen', name: 'FROZEN', desc: 'the freeze bond is gone — that is what frozen means' };
+  return { cls: 'live', name: 'LIVE', desc: 'on chain and (past juvenility) consumable' };
+}
+
+function bar(k, v, full, mark) {
+  const pct = full > 0 ? Math.max(0, Math.min(100, 100 * v / full)) : 0;
+  const markHtml = (mark !== undefined && full > 0 && mark < full)
+    ? `<em style="left:${100 * mark / full}%"></em>` : '';
+  const note = k === 'pool' ? `tops up; pays P=${S.params.P} per landed rotation` : 'never a fee source';
+  return `<div class="bar-row"><span>${k === 'dreg' ? 'D_reg conviction bond' : k === 'b' ? 'B freeze bond' : 'pool (advance funds)'}:</span>` +
+    `<div class="bar"><i style="width:${pct}%"></i>${markHtml}</div>` +
+    `<span class="mono">${v} / ${full}${k === 'pool' ? ' (P=' + S.params.P + ')' : ''}</span></div>`;
+}
+
+function renderCheckpoint() {
+  const st = viewState();
+  const lb = stateLabel(st);
+  const badge = $('statebadge');
+  badge.textContent = lb.name;
+  badge.className = 'badge ' + lb.cls;
+  $('statedesc').textContent = '— ' + lb.desc;
+  let rows;
+  if (isPres(st)) {
+    const l = st.present;
+    rows = [['sn (sequence)', l.sn], ['epoch', l.epoch], ['poisoned', l.poisoned ? 'yes — this epoch' : 'no'],
+      ['born at (slot)', l.bornAt], ['refund address', aname(l.refundTo)],
+      ['juvenility', l.bornAt + S.params.W <= S.now ? `past (W=${S.params.W})` : `${S.params.W - (S.now - l.bornAt)} slot(s) to go`]];
+  } else if (isConv(st)) {
+    rows = [['epoch', st.convicted.epoch], ['sn (sequence)', st.convicted.sn], ['convicted at (slot)', st.convicted.convictedAt]];
+  } else {
+    rows = [['datum', st === 'absent' ? '— nothing yet' : '— token burned, row stays']];
+  }
+  $('datum').innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join('');
+  if (isPres(st)) {
+    const l = st.present;
+    $('bars').innerHTML = bar('dreg', l.dreg, S.params.D) + bar('b', l.b, S.params.B) + bar('pool', l.pool, Math.max(S.params.P * 3, l.pool, 1), S.params.P);
+  } else if (isConv(st)) {
+    $('bars').innerHTML = bar('dreg', 0, S.params.D) + bar('b', 0, S.params.B) + bar('pool', 0, Math.max(S.params.P * 3, 1), S.params.P);
+  } else {
+    $('bars').innerHTML = '';
+  }
+  const v = CK.consumableState(S.params, S.now, st);
+  const words = {
+    'conviction-bond-not-full': 'the conviction bond is not full',
+    'freeze-bond-missing': 'the freeze bond is missing',
+    'poisoned': 'the epoch is poisoned',
+    'juvenile': 'juvenile — not yet W slots old',
+    'not-present': 'no checkpoint to read (absent, convicted or gone)',
+  };
+  $('verdict').className = 'verdict ' + (v.consumable ? 'yes' : 'no');
+  $('verdict').innerHTML = v.consumable
+    ? '<b>✓ the treasury would accept a payment</b> (if its own signature check on the payment passes — that check is the consumer’s, outside this machine)'
+    : '<b>✗ unconsumable — fails closed</b><ul>' +
+      v.failures.map(f => `<li>${words[f] || f}</li>`).join('') + '</ul>';
+  $('paramchip').textContent = `D_reg=${S.params.D} B=${S.params.B} P=${S.params.P} W=${S.params.W}`;
+  $('clock').textContent = `— now = slot ${S.now}`;
+  $('pf-D').textContent = S.params.D; $('pf-B').textContent = S.params.B;
+  $('pf-P').textContent = S.params.P; $('pf-W').textContent = S.params.W;
+}
+
+/* ---------- evidence panel ---------- */
+
+function renderEvidence() {
+  const t = S.tables;
+  const rowsOf = (title, hint, rows, cells, addForm) => {
+    const body = rows.map((r, i) => `<tr><td>${cells(r)}</td><td><button type="button" class="ghost" data-evdel="${title}:${i}" ${S.readOnly ? 'disabled' : ''}>✕</button></td></tr>`).join('');
+    return `<div class="grp"><h3>${title}</h3><div class="hint">${hint}</div>` +
+      `<table><tbody>${body || ''}</tbody></table>${S.readOnly ? '' : addForm}</div>`;
+  };
+  $('evbody').innerHTML =
+    rowsOf('witnessed rotation', 'rotationTo(epoch, sn → sn′): a valid witnessed rotation was presented — signatures at the threshold, revealed keys matching the commitments, receipts at toad.',
+      t.rotationTo, r => `epoch <b>${r[0]}</b>: sn ${r[1]} → <b>${r[2]}</b>`,
+      `<div class="add">epoch <input id="ev-r-e" type="number" min="0" value="0"> sn <input id="ev-r-s" type="number" min="0" value="0"> → sn′ <input id="ev-r-s2" type="number" min="1" value="1"> <button type="button" id="ev-r-add">present it</button></div>`) +
+    rowsOf('refund authorized', 'refundAuthorized(epoch, address): the keys of that epoch signed the refund address at their threshold (D-032).',
+      t.refundAuthorized, r => `epoch <b>${r[0]}</b> signed ${aname(r[1])}`,
+      `<div class="add">epoch <input id="ev-f-e" type="number" min="0" value="1"> address <select id="ev-f-a">${addrOptions(1)}</select> <button type="button" id="ev-f-add">sign it</button></div>`) +
+    rowsOf('quorum signed', 'quorum(epoch): the current keys of that epoch signed the Cardano-side preimage — poison and close need this (D-023).',
+      t.quorum, r => `epoch <b>${r[0]}</b> quorum: signed`,
+      `<div class="add">epoch <input id="ev-q-e" type="number" min="0" value="0"> <button type="button" id="ev-q-add">sign it</button></div>`) +
+    rowsOf('duplicity proof', 'duplicityAt(epoch, sn): a second rotation at that sequence, revealing the same keys, both receipted — Cora’s evidence (D-030).',
+      t.duplicityAt, r => `epoch <b>${r[0]}</b>: second rotation at sn <b>${r[1]}</b>`,
+      `<div class="add">epoch <input id="ev-d-e" type="number" min="0" value="0"> at sn <input id="ev-d-s" type="number" min="0" value="0"> <button type="button" id="ev-d-add">hold it</button></div>`);
+  if (!S.readOnly) {
+    const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+    on('ev-r-add', () => { S.tables.rotationTo.push([num('ev-r-e'), num('ev-r-s'), num('ev-r-s2'), true]); renderAll(); });
+    on('ev-f-add', () => { S.tables.refundAuthorized.push([num('ev-f-e'), num('ev-f-a'), true]); renderAll(); });
+    on('ev-q-add', () => { S.tables.quorum.push([num('ev-q-e'), true]); renderAll(); });
+    on('ev-d-add', () => { S.tables.duplicityAt.push([num('ev-d-e'), num('ev-d-s'), true]); renderAll(); });
+  }
+  document.querySelectorAll('[data-evdel]').forEach(b => b.addEventListener('click', () => {
+    const [g, i] = b.getAttribute('data-evdel').split(':');
+    S.tables[g].splice(Number(i), 1); renderAll();
+  }));
+}
+
+const addrOptions = sel => Object.entries(ADDRS).map(([id, n]) =>
+  `<option value="${id}" ${Number(id) === sel ? 'selected' : ''}>${esc(n)}</option>`).join('');
+const num = id => Number($(id).value || 0);
+
+/* ---------- actions ---------- */
+
+function renderActions() {
+  const st = viewState();
+  const can = tag => CK.stateAllows(st, tag);
+  const snNext = isPres(st) ? st.present.sn + 1 : 1;
+  const blocked = S.cursor !== S.history.length
+    ? 'time travelling — press ⏭ to return to the present before acting'
+    : null;
+  const form = (tag, title, auth, inner, enabled) =>
+    `<div class="act" data-act="${tag}"><h3>${title}<span class="auth">${auth}</span></h3>` +
+    `<div class="row">${inner}<button type="button" class="primary" data-do="${tag}" ${(enabled && can(tag) && !blocked) ? '' : 'disabled'}>submit</button></div>` +
+    (!can(tag) ? `<div class="hint">not offered in this state: ${esc(stateLabel(st).name.toLowerCase())}.</div>` :
+     blocked ? `<div class="hint">${blocked}</div>` : '') +
+    `</div>`;
+  $('actions').innerHTML =
+    form('register', 'register', AUTHNAME['anyone'],
+      `refund to <select id="a-reg-r">${addrOptions(1)}</select> initial pool <input id="a-reg-p" type="number" min="0" value="3">`, true) +
+    form('rotate', 'rotate', AUTHNAME['next-keys'],
+      `to sn′ <input id="a-rot-sn" type="number" min="1" value="${snNext}"> ` +
+      `<select id="a-rot-op"><option value="keep">keep (advance)</option><option value="withdraw">withdraw (pause)</option><option value="deposit">deposit (resurrect / unfreeze)</option></select> ` +
+      `payee <select id="a-rot-pay">${addrOptions(2)}</select> ` +
+      `<label><input type="checkbox" id="a-rot-hasr"> new keys sign a new refund address</label> ` +
+      `<select id="a-rot-r" disabled>${addrOptions(1)}</select>`, true) +
+    form('poison', 'poison', AUTHNAME['current-quorum'], `<span class="hint">declare this epoch untrustworthy — once per epoch, touches no value</span>`, true) +
+    form('freeze', 'freeze', AUTHNAME['proof'],
+      `presented rotation to sn′ <input id="a-fr-sn" type="number" min="1" value="${snNext}"> bounty to <select id="a-fr-pay">${addrOptions(2)}</select> ` +
+      `<span class="hint">needs pool &lt; P=${S.params.P} and B full; the datum is untouched (the old keys stay)</span>`, true) +
+    form('topUp', 'top-up', AUTHNAME['anyone'], `<input id="a-tu-x" type="number" min="0" value="2"> to the pool`, true) +
+    form('convict', 'convict', AUTHNAME['proof'],
+      `payee <select id="a-cv-pay">${addrOptions(3)}</select> <span class="hint">needs a duplicity proof at the tip’s (epoch, sn)</span>`, true) +
+    form('close', 'close', AUTHNAME['current-quorum'], `<span class="hint">everything to the refund address — the closer chooses when, never where</span>`, true);
+  document.querySelectorAll('[data-do]').forEach(b => b.addEventListener('click', () => doAction(b.getAttribute('data-do'))));
+  const hasr = $('a-rot-hasr'), rsel = $('a-rot-r');
+  if (hasr) hasr.addEventListener('change', () => { rsel.disabled = !hasr.checked; });
+  renderCastHot();
+}
+
+function collectAction(tag) {
+  switch (tag) {
+    case 'register': return { register: { refund: num('a-reg-r') === 0 ? 5 : num('a-reg-r'), pool0: Math.max(0, num('a-reg-p')) } };
+    case 'rotate': return { rotate: { sn: Math.max(0, num('a-rot-sn')), op: $('a-rot-op').value,
+      payee: num('a-rot-pay'), refund: $('a-rot-hasr').checked ? num('a-rot-r') : null } };
+    case 'freeze': return { freeze: { sn: Math.max(0, num('a-fr-sn')), payee: num('a-fr-pay') } };
+    case 'topUp': return { topUp: { x: Math.max(0, num('a-tu-x')) } };
+    case 'convict': return { convict: { payee: num('a-cv-pay') } };
+    case 'poison': return { poison: {} };
+    case 'close': return { close: {} };
+  }
+}
+
+function actorOf(tag) {
+  return CK.actionActor(collectAction(tag));
+}
+
+function showWhy(msg, isBad) {
+  const w = $('whyline');
+  w.hidden = false;
+  w.style.color = isBad ? 'var(--bad)' : 'var(--ok)';
+  w.textContent = msg;
+}
+
+function doAction(tag, opts) {
+  opts = opts || {};
+  const action = opts.action || collectAction(tag);
+  const actor = opts.actor || actorOf(tag);
+  const as = opts.as || '';
+  const before = S.state;
+  const result = CK.step(S.params, env(), action, S.now, before);
+  S.history.push({ now: S.now, actor, as, action, before, result });
+  if (result.ok) S.state = result.state;
+  S.cursor = S.history.length;
+  if (!opts.quiet) {
+    if (result.ok) showWhy(formatAttempt(action, S.now, result), false);
+    else showWhy(`Refused — ${result.reason}. ${REASON_WORDS[result.reason] || ''}`, true);
+  }
+  if (S.scenario) scenarioRecord(result);
+  renderAll();
+}
+
+function paymentLine(kind, p) {
+  const who = kind === 'refund' ? `refund address (${aname(p.addr)})`
+    : kind === 'hunter' ? `the payee (${aname(p.addr)})` : `the convictor (${aname(p.addr)})`;
+  const parts = [];
+  if (p.dreg) parts.push(`D_reg ${p.dreg}`);
+  if (p.b) parts.push(`B ${p.b}`);
+  if (p.pool) parts.push(`pool ${p.pool}`);
+  return `paid to ${who}: ${parts.length ? parts.join(' + ') : 'nothing'}`;
+}
+
+function actionWords(a) {
+  if (a.register) return `register (refund to ${aname(a.register.refund)}, pool₀ ${a.register.pool0})`;
+  if (a.rotate) return `rotate to sn ${a.rotate.sn}, ${a.rotate.op}` +
+    (a.rotate.refund !== null ? `, new refund ${aname(a.rotate.refund)}` : '') + `, payee ${aname(a.rotate.payee)}`;
+  if (a.freeze) return `freeze on the rotation to sn ${a.freeze.sn}, bounty to ${aname(a.freeze.payee)}`;
+  if (a.topUp) return `top up the pool by ${a.topUp.x}`;
+  if (a.convict) return `convict, payee ${aname(a.convict.payee)}`;
+  if (a.poison) return 'poison this epoch';
+  if (a.close) return 'close';
+  return '?';
+}
+
+function formatAttempt(action, now, result) {
+  const f = CK.normFlow(result.flow);
+  const ins = [];
+  if (f.dregIn) ins.push(`D_reg ${f.dregIn}`);
+  if (f.bIn) ins.push(`B ${f.bIn}`);
+  if (f.poolIn) ins.push(`pool ${f.poolIn}`);
+  const lines = [`Accepted at slot ${now}: ${actionWords(action)}.`];
+  if (ins.length) lines.push('Brought in: ' + ins.join(' + ') + '.');
+  if (f.refund) lines.push(paymentLine('refund', f.refund) + '.');
+  if (f.hunter) lines.push(paymentLine('hunter', f.hunter) + '.');
+  if (f.convictor) lines.push(paymentLine('convictor', f.convictor) + '.');
+  if (!ins.length && !f.refund && !f.hunter && !f.convictor) lines.push('No value moved.');
+  return lines.join(' ');
+}
+
+/* ---------- cast ---------- */
+
+function renderCast() {
+  $('cast').innerHTML = CAST.map(c =>
+    `<div class="who" data-cast="${c.id}" tabindex="0"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></div>`).join('');
+  document.querySelectorAll('[data-cast]').forEach(el => el.addEventListener('click', () => {
+    S.hotCast = S.hotCast === el.getAttribute('data-cast') ? null : el.getAttribute('data-cast');
+    renderCastHot();
+  }));
+}
+
+function renderCastHot() {
+  document.querySelectorAll('[data-cast]').forEach(el =>
+    el.classList.toggle('hot', el.getAttribute('data-cast') === S.hotCast));
+  document.querySelectorAll('[data-act]').forEach(el => {
+    const c = CAST.find(x => x.id === S.hotCast);
+    el.style.outline = (c && c.acts.includes(el.getAttribute('data-act'))) ? '2px solid var(--accent)' : '';
+  });
+}
+
+/* ---------- history strip ---------- */
+
+function viewState() {
+  if (S.cursor === 0) return S.history.length ? S.history[0].before : S.state;
+  if (S.cursor >= S.history.length) return S.state;
+  const h = S.history[S.cursor];
+  return h ? h.before : S.state;
+}
+
+function renderHistory() {
+  const short = h => {
+    if (h.result.ok) {
+      const f = CK.normFlow(h.result.flow);
+      const out = f.refund ? '→ refund' : f.hunter ? '→ payee' : f.convictor ? '→ convictor' : '';
+      return `✓ ${Object.keys(h.action)[0] || h.action}${out}`;
+    }
+    return `✗ ${Object.keys(h.action)[0] || h.action}: ${h.result.reason}`;
+  };
+  $('rail').innerHTML = S.history.map((h, i) =>
+    `<button type="button" class="chip2 ${h.result.ok ? 'ok' : 'bad'} ${i + 1 === S.cursor ? 'cur' : ''}" data-h="${i + 1}">${esc(short(h))} <span class="sub">@${h.now}</span></button>`).join('');
+  document.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => {
+    S.cursor = Number(b.getAttribute('data-h')); renderAll();
+  }));
+  $('h-pos').textContent = S.history.length
+    ? `attempt ${S.cursor} / ${S.history.length} — the card shows the state the selected attempt saw`
+    : '';
+  $('h-first').disabled = $('h-prev').disabled = S.cursor === 0;
+  $('h-next').disabled = $('h-last').disabled = S.cursor === S.history.length;
+  const d = $('detail');
+  if (!S.history.length) { d.innerHTML = '<span class="sub">nothing attempted yet — pick a story, or act in free play</span>'; return; }
+  if (S.cursor === 0) { d.innerHTML = '<span class="sub">before the first attempt. ⏭ to return to the present.</span>'; return; }
+  const h = S.history[S.cursor - 1];
+  const who = (h.as ? h.as : h.actor) + (h.as ? ` [${h.actor}]` : '');
+  if (h.result.ok) {
+    d.innerHTML = `<b>✓ @${h.now} — ${esc(who)}:</b> ${esc(formatAttempt(h.action, h.now, h.result))} ` +
+      `<span class="mono sub">state → ${esc(JSON.stringify(h.result.state)).slice(0, 140)}</span>`;
+  } else {
+    d.innerHTML = `<b>✗ @${h.now} — ${esc(who)} tried:</b> ${esc(actionWords(h.action))}. ` +
+      `<b>Refused: ${esc(h.result.reason)}</b> — ${esc(REASON_WORDS[h.result.reason] || '')}`;
+  }
+}
+
+/* ---------- scenarios ---------- */
+
+function renderScenarioBar() {
+  const sel = $('sc-pick');
+  if (!sel.options.length) {
+    sel.innerHTML = '<option value="">— free play —</option>' + SCENARIOS.map(sc =>
+      `<option value="${sc.id}">${String(sc.id).padStart(2, '0')} · ${esc(sc.story)}</option>`).join('');
+    sel.addEventListener('change', () => {
+      const id = Number(sel.value);
+      if (id) startScenario(id); else exitScenario();
+    });
+  }
+  const inSc = !!S.scenario;
+  $('sc-step').disabled = !inSc || S.scenario.idx >= S.scenario.sc.steps.length;
+  $('sc-all').disabled = !inSc || S.scenario.idx >= S.scenario.sc.steps.length;
+  $('sc-reset').disabled = !inSc;
+  $('sc-exit').hidden = !inSc;
+  $('sc-count').textContent = inSc
+    ? `step ${Math.min(S.scenario.idx + 1, S.scenario.sc.steps.length)} / ${S.scenario.sc.steps.length}`
+    : '';
+}
+
+function startScenario(id) {
+  const sc = SCENARIOS.find(x => x.id === id);
+  if (!sc) return;
+  S.params = { ...sc.params };
+  S.tables = JSON.parse(JSON.stringify(sc.env || {}));
+  S.state = sc.initial || 'absent';
+  S.now = sc.steps.length ? sc.steps[0].now : 0;
+  S.history = []; S.cursor = 0;
+  S.readOnly = true;
+  S.scenario = { sc, idx: 0, results: [] };
+  $('storybox').hidden = false;
+  renderStory();
+  renderAll();
+}
+
+function renderStory() {
+  const { sc, idx } = S.scenario;
+  const step = sc.steps[idx];
+  const lines = [`<b>Story ${sc.id} — ${esc(sc.story)}.</b> ${esc(sc.narrative)}`];
+  if (step) {
+    lines.push(`<div style="margin-top:.3rem">Next: <b>${esc(step.as || step.actor)}</b> at slot ${step.now} — ` +
+      `${esc(actionWords(step.action))}. ${esc(step.note || '')}` +
+      (step.expect && step.expect.ok === false ? ` <b>(the story says this must be refused: ${esc(step.expect.reason)})</b>` : '') + '</div>');
+  } else {
+    const okAll = S.scenario.results.every(r => r.ok);
+    const checks = (sc.checks || []).map(c => {
+      const v = CK.consumableState(S.params, c.now, S.state);
+      const ok = v.consumable === c.expect &&
+        (!Array.isArray(c.failing) || CK.canonicalJson(v.failures) === CK.canonicalJson(c.failing));
+      return { ok, text: `consumable@${c.now} = ${v.consumable}${v.failures.length ? ' (' + v.failures.join(', ') + ')' : ''}` };
+    });
+    const finOk = sc.expectFinal === undefined ||
+      CK.canonicalJson(S.state) === CK.canonicalJson(sc.expectFinal);
+    lines.push(`<div style="margin-top:.35rem">${okAll && finOk && checks.every(c => c.ok)
+      ? '<b class="pass">✓ story played out as the Lean machine says</b>'
+      : '<b class="fail">✗ the story and the machine disagree — this would be a defect</b>'}`);
+    lines.push('<ul style="margin:.2rem 0 .1rem; padding-left:1.1rem">' +
+      `<li>final state ${finOk ? 'as expected' : '≠ expected'}</li>` +
+      checks.map(c => `<li class="${c.ok ? 'pass' : 'fail'}">${esc(c.text)}</li>`).join('') + '</ul></div>');
+  }
+  $('storybox').innerHTML = lines.join('');
+}
+
+function scenarioRecord(result) {
+  const { sc, idx } = S.scenario;
+  const step = sc.steps[idx];
+  if (!step) return;
+  let ok;
+  if (!result.ok) ok = step.expect && step.expect.ok === false &&
+    (!step.expect.reason || step.expect.reason === result.reason);
+  else {
+    ok = !(step.expect && step.expect.ok === false);
+    if (ok && step.expect && step.expect.flow !== undefined)
+      ok = CK.canonicalJson(CK.normFlow(result.flow)) === CK.canonicalJson(CK.normFlow(step.expect.flow));
+  }
+  S.scenario.results.push({ ok });
+  S.scenario.idx++;
+  renderStory();
+}
+
+function exitScenario() {
+  S.scenario = null; S.readOnly = false;
+  $('storybox').hidden = true;
+  $('sc-pick').value = '';
+  renderAll();
+}
+
+/* ---------- selftest ---------- */
+
+function runSelftest() {
+  const sc = CK.verifyScenariosAll(SCENARIOS);
+  const lean = CK.verifyTracesDoc(CHECKPOINT_LEAN_TRACES_V1);
+  const rows = sc.results.map(({ sc: s, r }) =>
+    `<tr><td>${s.id}</td><td>${esc(s.story)}</td><td class="${r.ok ? 'pass' : 'fail'}">${r.ok ? 'PASS' : 'FAIL'}</td>` +
+    `<td>${esc(r.ok ? `${r.accepted} applied, ${r.refused} refused` : r.lines.filter(l => !/: applied$/.test(l)).join(' | '))}</td></tr>`).join('');
+  $('main').innerHTML = `<section class="selftest"><div class="card">
+    <h2>Selftest — every scenario, replayed through this page's own core</h2>
+    <table><tr><th>#</th><th>story</th><th></th><th>detail</th></tr>${rows}</table>
+    <p class="${lean.ok ? 'pass' : 'fail'}" style="margin-top:.6rem">Lean trace corpus (embedded): ${lean.ok ? 'PASS' : 'FAIL'} — ${lean.traces} envelopes, ${lean.steps} steps replayed through the page's transcription.</p>
+    <p class="sub">The browser selftest proves the embedded copies are self-consistent. The gates go further: <span class="mono">checkpoint-simulator-scenario-gate.mjs</span> re-runs the same scenarios against the core module and proves the page's embedded copy has not drifted; <span class="mono">checkpoint-simulator-trace-gate.mjs</span> re-runs Lean itself and compares by sha256.</p>
+    <p><a href="?">← back to the simulator</a></p>
+    </div></section>`;
+}
+
+/* ---------- plumbing ---------- */
+
+function renderAll() {
+  renderCheckpoint();
+  renderEvidence();
+  renderActions();
+  renderHistory();
+  renderScenarioBar();
+}
+
+function setNow(n) { S.now = Math.max(0, n); renderAll(); }
+
+function boot() {
+  $('btn-theme').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') ||
+      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('ck-theme', next); } catch (e) {}
+  });
+  try {
+    const saved = typeof localStorage !== 'undefined' && localStorage ? localStorage.getItem('ck-theme') : null;
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.setAttribute('data-theme', 'dark');
+  } catch (e) {}
+  $('h-first').addEventListener('click', () => { S.cursor = 0; renderAll(); });
+  $('h-prev').addEventListener('click', () => { S.cursor = Math.max(0, S.cursor - 1); renderAll(); });
+  $('h-next').addEventListener('click', () => { S.cursor = Math.min(S.history.length, S.cursor + 1); renderAll(); });
+  $('h-last').addEventListener('click', () => { S.cursor = S.history.length; renderAll(); });
+  $('h-clear').addEventListener('click', () => { exitScenario(); S.history = []; S.cursor = 0; S.state = 'absent'; S.tables = { rotationTo: [], refundAuthorized: [], quorum: [], duplicityAt: [] }; S.now = 0; renderAll(); });
+  $('sc-step').addEventListener('click', () => {
+    if (!S.scenario) return;
+    const step = S.scenario.sc.steps[S.scenario.idx];
+    if (!step) return;
+    S.now = step.now;
+    doAction(null, { action: step.action, actor: step.actor, as: step.as || step.actor });
+  });
+  $('sc-all').addEventListener('click', () => {
+    if (!S.scenario) return;
+    let guard = 64;
+    while (S.scenario && S.scenario.idx < S.scenario.sc.steps.length && guard--) {
+      const step = S.scenario.sc.steps[S.scenario.idx];
+      S.now = step.now;
+      doAction(null, { action: step.action, actor: step.actor, as: step.as || step.actor, quiet: true });
+    }
+  });
+  $('sc-reset').addEventListener('click', () => { if (S.scenario) startScenario(S.scenario.sc.id); });
+  $('sc-exit').addEventListener('click', exitScenario);
+  renderCast();
+  const q = new URLSearchParams((typeof location !== 'undefined' && location.search) || '');
+  if (q.get('selftest')) { runSelftest(); return; }
+  const story = Number(q.get('story'));
+  if (story) { $('sc-pick').value = String(story); startScenario(story); return; }
+  renderAll();
+}
+
+if (typeof document !== 'undefined' && document.getElementById) boot();
+window.CK = CK;
+</script>
+</body>
+</html>

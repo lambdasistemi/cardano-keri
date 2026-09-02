@@ -3,3 +3,5 @@ import CardanoKeri.Invariants
 import CardanoKeri.Goals
 import CardanoKeri.Checkpoint
 import CardanoKeri.CheckpointGoals
+import CardanoKeri.Registry
+import CardanoKeri.RegistryGoals

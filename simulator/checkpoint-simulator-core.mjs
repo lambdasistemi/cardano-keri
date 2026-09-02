@@ -80,13 +80,74 @@ function parseJsonExact(text) {
 // ---- refusal reasons: the conjuncts of stepFn, in the order it states them
 // (the Lean returns `none` without a name; the naming is the simulator's)
 const REASONS = [
-  'invalid-params', 'invalid-nat', 'invalid-action',
+  'invalid-params', 'invalid-nat', 'invalid-action', 'invalid-state', 'invalid-evidence',
   'gone-terminal', 'convicted-terminal', 'absent-needs-register', 'already-present',
   'no-witnessed-rotation', 'sequence-not-later', 'refund-not-authorized', 'bond-over-full',
   'no-quorum', 'already-poisoned', 'poisoned', 'pool-covers-premium', 'freeze-bond-missing',
   'no-duplicity-proof', 'slot-regression', 'aid-already-registered',
 ];
-const VERDICTS = ['consumable', 'not-present', 'dreg-missing', 'b-missing', 'poisoned', 'juvenile'];
+// the consumer's verdicts; the last three are boundary refusals (a consumer
+// reading a non-state or under non-params decides nothing)
+const VERDICTS = ['consumable', 'not-present', 'dreg-missing', 'b-missing', 'poisoned', 'juvenile', 'invalid-params', 'invalid-nat', 'invalid-state'];
+
+// ---- the Lean guards behind the refusal names ------------------------------
+// Each refusal name stands for the hypothesis binder(s) of the `Step`
+// constructors it refuses on (Checkpoint.lean), or for the absence of any
+// constructor (stepFn's fall-through, made exact by T7). The scenario gate
+// reconciles this table with the Lean source: every `h`-binder of every Step
+// constructor must be claimed here (or by SPLITS), and every claim must exist
+// with its text inside that constructor. The naming is the simulator's; the
+// binders are the Lean's.
+const ROTATES = ['Step.rotateKeepPaid', 'Step.rotateKeepUnpaid', 'Step.rotateWithdraw', 'Step.rotateDeposit'];
+const LEAN_GUARDS = {
+  'no-witnessed-rotation': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hev', text: "env.rotationTo l.epoch l.sn sn' = true" },
+  'sequence-not-later': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hsn', text: "l.sn < sn'" },
+  'refund-not-authorized': { decls: ROTATES, hyp: 'hauth', text: "refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true" },
+  'bond-over-full': { decls: ['Step.rotateDeposit'], hyps: [['hd', 'l.dreg ≤ p.D'], ['hb', 'l.b ≤ p.B']] },
+  'no-quorum': { decls: ['Step.poison', 'Step.close'], hyp: 'hq', text: 'env.quorum l.epoch = true' },
+  'already-poisoned': { decls: ['Step.poison'], hyp: 'hclean', text: 'l.poisoned = false' },
+  'poisoned': { decls: ['Step.freeze', 'Step.close'], hyp: 'hclean', text: 'l.poisoned = false' },
+  'pool-covers-premium': { decls: ['Step.freeze'], hyp: 'hpool', text: 'l.pool < p.P' },
+  'freeze-bond-missing': { decls: ['Step.freeze'], hyp: 'hb', text: 'l.b = p.B' },
+  'no-duplicity-proof': { decls: ['Step.convict'], hyp: 'hdup', text: 'env.duplicityAt l.epoch l.sn = true' },
+  'aid-already-registered': { decls: ['SysStep.register'], hyp: 'habs', text: 'aid ∉ s.registered' },
+  'slot-regression': { decls: ['Trace.cons'], hyp: 'hle', text: "t ≤ t'" },
+  // no constructor has the (action, state): stepFn's fall-through, the theorem names it
+  'gone-terminal': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T8_gone_terminal' },
+  'convicted-terminal': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T12_convicted_terminal' },
+  'absent-needs-register': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T8_absent_only_registers' },
+  'already-present': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T8_present_implies_registered' },
+  // the two proof fields of Params
+  'invalid-params': { decls: ['Params'], hyps: [['hD', '0 < D'], ['hB', '0 < B']] },
+  // the simulator's own boundary (a Lean Nat is unbounded; a Lean value has its type)
+  'invalid-nat': { decls: [] }, 'invalid-action': { decls: [] }, 'invalid-state': { decls: [] }, 'invalid-evidence': { decls: [] },
+};
+// guard hypotheses that are not refusals: the paid / unpaid split of a keep rotation
+const LEAN_SPLITS = [
+  { decl: 'Step.rotateKeepPaid', hyp: 'hpay', text: 'p.P ≤ l.pool' },
+  { decl: 'Step.rotateKeepUnpaid', hyp: 'hnopay', text: 'l.pool < p.P' },
+];
+// the conjunct of consumableState each verdict names
+const VERDICT_CONJUNCTS = {
+  'not-present': ['| .present l =>', '| _ => False'], 'dreg-missing': ['l.dreg = p.D'], 'b-missing': ['l.b = p.B'],
+  poisoned: ['l.poisoned = false'], juvenile: ['l.bornAt + p.W ≤ now'],
+};
+// the Step constructor an accepted record went through (the paid/unpaid split is
+// visible in the flow), or null for a refused / non-transition record
+function constructorOf(rec) {
+  if (!rec || !rec.ok) return null;
+  const d = (rec.action && typeof rec.action === 'object') ? rec.action[rec.kind] : {};
+  switch (rec.kind) {
+    case 'register': return 'Step.register';
+    case 'rotate': return d.op === 'withdraw' ? 'Step.rotateWithdraw' : d.op === 'deposit' ? 'Step.rotateDeposit' : (rec.flow && rec.flow.hunter ? 'Step.rotateKeepPaid' : 'Step.rotateKeepUnpaid');
+    case 'poison': return 'Step.poison';
+    case 'freeze': return 'Step.freeze';
+    case 'topUp': return 'Step.topUp';
+    case 'convict': return 'Step.convict';
+    case 'close': return 'Step.close';
+  }
+  return null;
+}
 
 // ---- Params: D B P W with 0 < D and 0 < B (the two proof fields) -----------
 let validatingParams = false;   // the T9 trap lets W be read only here
@@ -163,7 +224,27 @@ function actorOf(a) {
 
 // ---- Env: decision tables ----------------------------------------------------
 const EV_KINDS = ['rotationTo', 'refundAuthorized', 'quorum', 'duplicityAt'];
+const EV_ARITY = { rotationTo: 3, refundAuthorized: 2, quorum: 1, duplicityAt: 2 };
 const emptyEnv = () => ({ rotationTo: [], refundAuthorized: [], quorum: [], duplicityAt: [] });
+// validateEnv(env) → null | {reason, field, message}: the complete table — exactly
+// the four Lean predicates (a missing one is empty), every row of the right
+// arity, every entry a Nat — checked before any predicate is consulted
+function validateEnv(env) {
+  const bad = (reason, field, message) => ({ reason, field, message });
+  if (!env || typeof env !== 'object' || Array.isArray(env)) return bad('invalid-evidence', 'env', 'the evidence is not a table');
+  for (const k of Object.keys(env)) if (!EV_KINDS.includes(k)) return bad('invalid-evidence', k, `${k} is not one of the four evidence predicates`);
+  for (const k of EV_KINDS) {
+    const rows = env[k];
+    if (rows === undefined) continue;
+    if (!Array.isArray(rows)) return bad('invalid-evidence', k, `${k} is not a list of rows`);
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!Array.isArray(r) || r.length !== EV_ARITY[k]) return bad('invalid-evidence', `${k}[${i}]`, `${k}[${i}] is not a row of ${EV_ARITY[k]}`);
+      for (let j = 0; j < r.length; j++) if (!isNat(r[j])) return bad('invalid-nat', `${k}[${i}][${j}]`, `${k}[${i}][${j}] is not a non-negative integer`);
+    }
+  }
+  return null;
+}
 const envHas = (env, kind, args) => (env[kind] || []).some(r => canon(r) === canon(args));
 const envRotationTo = (env, e, sn, sn2) => envHas(env, 'rotationTo', [e, sn, sn2]);
 const envRefundAuthorized = (env, e, a) => envHas(env, 'refundAuthorized', [e, a]);
@@ -172,7 +253,7 @@ const envDuplicityAt = (env, e, sn) => envHas(env, 'duplicityAt', [e, sn]);
 // a row is {kind:[args]}; returns the env with the row added / removed
 function envAdd(env, row) {
   const [kind] = Object.keys(row); const args = row[kind];
-  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || !args.every(isNat)) throw new Error('bad evidence row ' + JSON.stringify(row));
+  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(isNat)) throw new Error('bad evidence row ' + JSON.stringify(row));
   if (envHas(env, kind, args)) return env;
   return { ...env, [kind]: [...env[kind], args] };
 }
@@ -197,25 +278,44 @@ const held = s => { const l = liveOf(s); return l ? { dreg: l.dreg, b: l.b, pool
 // Payment?.dreg etc.
 const paid = q => (q ? { dreg: q.dreg, b: q.b, pool: q.pool } : { dreg: 0, b: 0, pool: 0 });
 
+const LIVE_NATS = ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool'];
+const LIVE_FIELDS = [...LIVE_NATS, 'poisoned'];
+// validateState(s) → null | {reason, field, message}: the complete state — one
+// of the four Lean shapes, every Nat field a Nat, the poison bit a boolean,
+// no field the Lean does not have — checked before anything reads it
 function validateState(s) {
+  const bad = (reason, field, message) => ({ reason, field, message });
   const k = stateKind(s);
-  if (!k) return 'unknown state shape';
+  if (!k) return bad('invalid-state', 'state', 'unknown state shape');
   if (k === 'present') {
     const l = s.present.l;
-    for (const f of ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool']) if (!isNat(l[f])) return `${f} is not a non-negative integer`;
-    if (typeof l.poisoned !== 'boolean') return 'poisoned is not a boolean';
+    if (!l || typeof l !== 'object' || Array.isArray(l)) return bad('invalid-state', 'l', 'present without a datum');
+    for (const f of LIVE_NATS) if (!isNat(l[f])) return bad('invalid-nat', f, `${f} is not a non-negative integer`);
+    if (typeof l.poisoned !== 'boolean') return bad('invalid-state', 'poisoned', 'poisoned is not a boolean');
+    for (const f of Object.keys(l)) if (!LIVE_FIELDS.includes(f)) return bad('invalid-state', f, `${f} is not a field of the datum`);
   }
-  if (k === 'convicted') for (const f of ['epoch', 'sn', 'convictedAt']) if (!isNat(s.convicted[f])) return `${f} is not a non-negative integer`;
+  if (k === 'convicted') {
+    const c = s.convicted;
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return bad('invalid-state', 'convicted', 'convicted without a tombstone');
+    for (const f of ['epoch', 'sn', 'convictedAt']) if (!isNat(c[f])) return bad('invalid-nat', f, `${f} is not a non-negative integer`);
+    for (const f of Object.keys(c)) if (!['epoch', 'sn', 'convictedAt'].includes(f)) return bad('invalid-state', f, `${f} is not a field of the tombstone`);
+  }
   return null;
 }
 
 // ---- stepFn ----------------------------------------------------------------
 // step(params, env, action, now, state) → {ok:true, kind, flow, state} | {ok:false, reason, field?}
+// The boundary, in this order and before anything is evaluated: params, slot,
+// action, the complete state, the complete evidence table. Each refuses by
+// name (`invalid-params` / `invalid-nat` / `invalid-action` / `invalid-state`
+// / `invalid-evidence`) with the offending field.
 function step(p, env, action, now, state) {
   const refuse = (reason, field) => (field ? { ok: false, reason, field } : { ok: false, reason });
   const pv = validateParams(p); if (pv) return refuse('invalid-params', pv);
   if (!isNat(now)) return refuse('invalid-nat', 'now');
   const na = normalizeAction(action); if (!na.ok) return refuse(na.reason, na.field);
+  const sv = validateState(state); if (sv) return refuse(sv.reason, sv.field);
+  const ev = validateEnv(env); if (ev) return refuse(ev.reason, ev.field);
   const a = na.action, kind = na.kind;
   const some = (f, s) => ({ ok: true, kind, flow: flow(f), state: s });
   const sk = stateKind(state);
@@ -281,6 +381,11 @@ function step(p, env, action, now, state) {
 // ---- consumableState -------------------------------------------------------
 // the state-side conjuncts, in the Lean's order; the first failing one names the verdict
 function consumable(p, now, state) {
+  // the boundary first: a consumer reading a non-state, or under non-params, decides nothing
+  const refused = (verdict, field) => ({ ok: false, verdict, field, failing: [verdict], conjuncts: {} });
+  const pv = validateParams(p); if (pv) return refused('invalid-params', pv);
+  if (!isNat(now)) return refused('invalid-nat', 'now');
+  const sv = validateState(state); if (sv) return refused(sv.reason, sv.field);
   const l = liveOf(state);
   const conjuncts = {
     present: !!l,
@@ -306,12 +411,23 @@ const consumableEver = (p, s) => { const l = liveOf(s); return !!l && l.dreg ===
 // replay(params, env, t0, state, [[slot, action], …]) mirrors the Lean: refuses a
 // decreasing slot or a refused step; returns the final state on success
 function replay(p, env, t0, state, list) {
+  // the boundary first, even for an empty list: params, origin slot, the complete
+  // origin state, the complete evidence table (at: null = before any step)
+  const refuse = (at, reason, field) => (field ? { ok: false, at, reason, field } : { ok: false, at, reason });
+  const pv = validateParams(p); if (pv) return refuse(null, 'invalid-params', pv);
+  if (!isNat(t0)) return refuse(null, 'invalid-nat', 't0');
+  const sv = validateState(state); if (sv) return refuse(null, sv.reason, sv.field);
+  const ev = validateEnv(env); if (ev) return refuse(null, ev.reason, ev.field);
+  if (!Array.isArray(list)) return refuse(null, 'invalid-action', 'list');
   let t = t0, s = state;
   for (let i = 0; i < list.length; i++) {
-    const [t2, a] = list[i];
-    if (!(t <= t2)) return { ok: false, at: i, reason: 'slot-regression' };
+    const e = list[i];
+    if (!Array.isArray(e) || e.length !== 2) return refuse(i, 'invalid-action', `list[${i}]`);
+    const [t2, a] = e;
+    if (!isNat(t2)) return refuse(i, 'invalid-nat', 'slot');
+    if (!(t <= t2)) return refuse(i, 'slot-regression');
     const r = step(p, env, a, t2, s);
-    if (!r.ok) return { ok: false, at: i, reason: r.reason };
+    if (!r.ok) return refuse(i, r.reason, r.field);
     t = t2; s = r.state;
   }
   return { ok: true, state: s };
@@ -346,7 +462,7 @@ const stateOfAid = (s, aid) => (aid === s.aid ? s.state : (s.others[aid] !== und
 const allAids = s => [...new Set([s.aid, ...Object.keys(s.others).map(Number), ...s.registry])];
 // seed another AID's state (a system-level fixture); registers it if not absent
 function seedOther(s, aid, state) {
-  const bad = validateState(state); if (bad) throw new Error('seedOther: ' + bad);
+  const bad = validateState(state); if (bad) throw new Error('seedOther: ' + bad.reason + ' ' + bad.message);
   if (aid === s.aid) return seed(s, state);
   const registry = stateKind(state) !== 'absent' && !s.registry.includes(aid) ? [...s.registry, aid] : s.registry;
   return { ...s, others: { ...s.others, [aid]: state }, registry };
@@ -356,7 +472,7 @@ const addEvidence = (s, row) => ({ ...s, env: envAdd(s.env, row), envAll: envAdd
 const removeEvidence = (s, row) => ({ ...s, env: envRemove(s.env, row) });
 // a seeded state starts a new origin for the fold theorems
 function seed(s, state) {
-  const bad = validateState(state); if (bad) throw new Error('seed: ' + bad);
+  const bad = validateState(state); if (bad) throw new Error('seed: ' + bad.reason + ' ' + bad.message);
   const registry = stateKind(state) !== 'absent' && !s.registry.includes(s.aid) ? [...s.registry, s.aid] : s.registry;
   return { ...s, state, origin: state, originSlot: s.now, history: [], registry };
 }
@@ -444,6 +560,9 @@ const VERDICT_WORDS = {
   'b-missing': 'Not consumable: the freeze bond is missing (frozen).',
   poisoned: 'Not consumable: the current keys are declared poisoned.',
   juvenile: 'Not consumable yet: juvenile, born too recently.',
+  'invalid-params': 'Nothing to read: the deployment parameters are not a valid Params (both bonds positive, whole numbers).',
+  'invalid-nat': 'Nothing to read: a field that must be a non-negative whole number at most 2^53 − 1 is not.',
+  'invalid-state': 'Nothing to read: this is not a checkpoint state.',
 };
 // every refusal in the story's words, with the numbers that decided it
 function explain(rec, s) {
@@ -457,6 +576,8 @@ function explain(rec, s) {
       : `"${rec.field}" must be a non-negative whole number at most 2^53 − 1: lovelace, slots and sequence numbers do not go negative, fractional or beyond what is represented exactly.`;
     case 'aid-already-registered': return 'This AID is in the registry already: the token is minted once, ever, whatever its state.';
     case 'invalid-action': return 'The validator does not know this redeemer; only register, rotate, poison, freeze, top-up, convict and close exist.';
+    case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its eight datum fields, Convicted with its tombstone, or Gone. Nothing is evaluated on a non-state.`;
+    case 'invalid-evidence': return `"${rec.field}" is not part of an evidence table: the four predicates (witnessed rotation, refund authorization, quorum, duplicity) as rows of 3, 2, 1 and 2 whole numbers. Nothing is evaluated under a non-table.`;
     case 'gone-terminal': return 'Gone is terminal: the token was burned and the registry row stays, so this AID can never be registered on Cardano again.';
     case 'convicted-terminal': return 'Convicted is terminal: no rotation, no poison, no close, ever. No KERI event un-duplicates an identifier.';
     case 'absent-needs-register': return 'Nothing is on chain for this AID. The only thing that can happen first is a registration.';
@@ -572,6 +693,9 @@ function theoremReport(before, after, rec) {
   const pp = stateKind(pre) === 'present' && stateKind(post) === 'present';
   const a = rec.action, d = (a && typeof a === 'object') ? a[Object.keys(a)[0]] : {};
   const f = rec.flow;
+  // the step crossed the boundary: everything it read is a Lean value (the
+  // theorems quantify over Lean values only, so a boundary refusal exhibits none)
+  const boundaryOk = !validateParams(p) && !validateEnv(env) && !validateState(pre) && isNat(rec.slot) && normalizeAction(a).ok;
   const out = {};
   const put = (id, exhibited, checks) => {
     const notes = exhibited ? checks().filter(c => !c[0]).map(c => c[1]) : [];
@@ -599,13 +723,13 @@ function theoremReport(before, after, rec) {
   ]);
   // T4: from a poisoned state
   const quorumOrFreeze = actor === 'currentQuorum' || kind === 'freeze';
-  put('T4', !!lp && lp.poisoned && (ok || quorumOrFreeze), () => [
+  put('T4', boundaryOk && !!lp && lp.poisoned && (ok || quorumOrFreeze), () => [
     [!ok || !quorumOrFreeze, 'the current quorum acted, or a freeze landed, on a poisoned checkpoint'],
     [!ok || actor === 'nextKeys' || !consumableEver(p, post), 'a non-rotation made a poisoned checkpoint consumable'],
   ]);
   // T5: totality — the evidence antecedent held ⇒ the step is accepted
   let ante = false;
-  if (rec.stepped && stateKind(pre) === 'present') {
+  if (boundaryOk && rec.stepped && stateKind(pre) === 'present') {
     const l = lp;
     if (kind === 'rotate') ante = envRotationTo(env, l.epoch, l.sn, d["sn'"]) && l.sn < d["sn'"] &&
       (d["refund'"] === null || d["refund'"] === undefined || envRefundAuthorized(env, l.epoch + 1, d["refund'"])) &&
@@ -615,9 +739,7 @@ function theoremReport(before, after, rec) {
     else if (kind === 'convict') ante = envDuplicityAt(env, l.epoch, l.sn);
     else if (kind === 'close') ante = envQuorum(env, l.epoch) && !l.poisoned;
     else if (kind === 'topUp') ante = true;
-    if (ante && validateParams(p)) ante = false;
-    if (ante && !normalizeAction(a).ok) ante = false;
-  } else if (rec.stepped && stateKind(pre) === 'absent' && kind === 'register' && !validateParams(p) && normalizeAction(a).ok) ante = true;
+  } else if (boundaryOk && rec.stepped && stateKind(pre) === 'absent' && kind === 'register') ante = true;
   put('T5', ante, () => [[ok, 'evidence held but the step was refused: ' + rec.reason]]);
   // T6: value
   if (ok) {
@@ -639,7 +761,7 @@ function theoremReport(before, after, rec) {
   // T7: parity with the Lean — the step has a cell in the embedded corpus and the
   // core's verdict, flow and post-state equal Lean's (both directions of
   // T7_step_iff_stepFn); plus the fold (T7_trace_iff_replay) on accepted steps
-  const cell = rec.stepped ? leanCell(before.corpus, p, rec.slot, pre, a, env) : undefined;
+  const cell = rec.stepped && boundaryOk ? leanCell(before.corpus, p, rec.slot, pre, a, env) : undefined;
   if (cell !== undefined) {
     put('T7', true, () => [
       [(cell.result === null) === !ok, 'Lean ' + (cell.result === null ? 'refuses' : 'applies') + ' this step (' + cell.where + '), the core ' + (ok ? 'applied' : 'refused: ' + rec.reason)],
@@ -655,7 +777,7 @@ function theoremReport(before, after, rec) {
   // non-absent AID registered), terminals, absent-only-registers, mint-once
   put('T8', ok || preK === 'gone' || preK === 'convicted' || preK === 'absent' || kind === 'register', () => [
     [!(preK === 'gone' || preK === 'convicted') || !ok, 'a step left a terminal state'],
-    [preK !== 'absent' || (ok === (kind === 'register' && rec.stepped && !before.registry.includes(rec.aid) && !validateParams(p) && normalizeAction(a).ok)), 'from absent, something other than a registration happened, or a registration was refused without cause'],
+    [preK !== 'absent' || (ok === (kind === 'register' && rec.stepped && !before.registry.includes(rec.aid) && boundaryOk)), 'from absent, something other than a registration happened, or a registration was refused without cause'],
     [kind !== 'register' || !ok || (preK === 'absent' && !before.registry.includes(rec.aid)), 'a registration landed on a non-absent or already registered AID'],
     [before.registry.every(x => after.registry.includes(x)), 'the registry lost an AID (T8_registry_monotone)'],
     [new Set(after.registry).size === after.registry.length, 'registry holds a duplicate (T8_registry_nodup)'],
@@ -678,16 +800,16 @@ function theoremReport(before, after, rec) {
     ]);
   } else put('T9', false, () => []);
   // T10: bonds missing, or the current quorum acted
-  const missing = !!lp && (lp.dreg !== p.D || lp.b !== p.B);
+  const missing = boundaryOk && !!lp && (lp.dreg !== p.D || lp.b !== p.B);
   put('T10', ok && ((missing) || actor === 'currentQuorum'), () => [
     [!missing || actor === 'nextKeys' || !consumableEver(p, post), 'someone but the next keys made an unbonded checkpoint consumable'],
     [!missing || !consumableEver(p, post) || (kind === 'rotate' && d.op === 'deposit' && lq && lq.dreg === p.D && lq.b === p.B && lq.bornAt === rec.slot), 'consumability restored other than by a depositing rotation with restarted juvenility'],
     [actor !== 'currentQuorum' || !consumableEver(p, post), 'the current quorum produced a consumable state'],
   ]);
   // T12: conviction
-  put('T12', kind === 'convict' || preK === 'convicted', () => [
+  put('T12', (kind === 'convict' && boundaryOk) || preK === 'convicted', () => [
     [preK !== 'convicted' || !ok, 'a step left Convicted'],
-    [kind !== 'convict' || preK !== 'present' || !rec.stepped || (ok === envDuplicityAt(env, lp.epoch, lp.sn)), 'conviction accepted without a proof, or refused with one'],
+    [kind !== 'convict' || preK !== 'present' || !rec.stepped || !boundaryOk || (ok === envDuplicityAt(env, lp.epoch, lp.sn)), 'conviction accepted without a proof, or refused with one'],
     [kind !== 'convict' || !ok || eq(post, { convicted: { epoch: lp.epoch, sn: lp.sn, convictedAt: rec.slot } }), 'the tombstone does not record the tip and the slot'],
     [kind !== 'convict' || !ok || eq(f, flow({ refund: payment(lp.refundTo, 0, lp.b, lp.pool), convictor: payment(d.payee, lp.dreg, 0, 0) })), 'the conviction flow is not exactly D to the convictor and the rest to the refund address'],
   ]);
@@ -733,7 +855,11 @@ function checkScenario(sc, label, corpus) {
     const where = label + ' step ' + i;
     const saved = session.params;
     if (st.params) session = withParams(session, st.params);
-    if (st.seed !== undefined) session = seed(session, st.seed);
+    if (st.seed !== undefined) {
+      const bad = validateState(st.seed);
+      if (bad) { problems.push(where + ': seed refused: ' + bad.reason + ' ' + bad.message); timeline.push({ step: st, session, record: null }); return; }
+      session = seed(session, st.seed);
+    }
     if (st.evidence) {
       for (const r of st.evidence.remove || []) session = removeEvidence(session, r);
       for (const r of st.evidence.add || []) session = addEvidence(session, r);
@@ -784,6 +910,15 @@ function checkCorpus(corpus) {
   let applied = 0, refused = 0, theoremChecks = 0, cons = 0;
   const p = corpus.params;
   const pv = validateParams(p); if (pv) reasons.push('corpus params invalid: ' + pv);
+  // the boundary first: every state and every evidence table the corpus carries
+  // is validated by name before any cell is replayed; a corrupted one is a
+  // refusal of the verifier, whatever the Lean said about that cell
+  const badState = (where, s) => { const b = validateState(s); if (b) reasons.push(where + ': ' + b.reason + ' ' + b.field + ' (' + b.message + ')'); return !!b; };
+  const badEnv = (where, e) => { const b = validateEnv(e); if (b) reasons.push(where + ': ' + b.reason + ' ' + b.field + ' (' + b.message + ')'); return !!b; };
+  for (const tr of corpus.traces || []) { badEnv('trace ' + tr.name + ' env', tr.env); (tr.steps || []).forEach((st, i) => badState('trace ' + tr.name + ' step ' + i + ' input', st.input)); }
+  if (corpus.grid) { (corpus.grid.states || []).forEach((s, i) => badState('grid state ' + i, s)); (corpus.grid.envs || []).forEach((e, i) => badEnv('grid env ' + i, e)); }
+  for (const sc of corpus.stories || []) for (const st of sc.steps || []) { const where = 'story ' + sc.story + ' step ' + st.index; badState(where + ' input', st.input); badEnv(where + ' env', st.env); }
+  if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };
   const envOf = env => { let s = newSession(p, { corpus }); for (const k of EV_KINDS) for (const row of env[k] || []) s = addEvidence(s, { [k]: row }); return s; };
   const compare = (where, env, now, input, action, want) => {
     const got = step(p, env, action, now, input);
@@ -837,9 +972,10 @@ function checkCorpus(corpus) {
 /* @@CORE:suite:END@@ */
 
 export {
-  canon, isNat, REASONS, VERDICTS, validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
-  EV_KINDS, emptyEnv, envHas, envAdd, envRemove, envUnion, stateKind, liveOf, present, payment, flow, held, paid,
-  validateState, step, consumable, consumableEver, replay, poisonAfter, poisonSinceLastRotation,
+  canon, isNat, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
+  validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
+  EV_KINDS, EV_ARITY, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, stateKind, liveOf, present, payment, flow, held, paid,
+  LIVE_NATS, validateState, step, consumable, consumableEver, replay, poisonAfter, poisonSinceLastRotation,
   newSession, withParams, addEvidence, removeEvidence, seed, seedOther, stateOfAid, allAids, setSlot, attempt, heldSoFar,
   MAX_NAT, natAdd, parseNat, lossyJsonNumbers, parseJsonExact, evidenceBits, cellKey, leanCell,
   CAST, whoAddr, STATE_WORDS, stateWord, VERDICT_WORDS, explain, THEOREMS, theoremReport,

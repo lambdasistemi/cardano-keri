@@ -79,11 +79,30 @@ function runScenario(core, sc, file, corpus) {
 
 /* --- exact Nat ------------------------------------------------------------ */
 
-function checkExactNat(core) {
-  const problems = [];
+function checkExactNat(core, corpus) {
+  const problems = [], asserted = new Set();
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const bads = [2 ** 53, 2 ** 53 + 2, 2 ** 60, -1, 1.5, '5', NaN, Infinity, null, undefined, true];
   const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, bornAt: 0, refundTo: 7, dreg: 10, b: 5, pool: 4, ...over } } });
+  const LIVE = ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool'];
+  const EV_SHAPES = { rotationTo: [1, 1, 2], refundAuthorized: [2, 7], quorum: [1], duplicityAt: [1, 1] };
+  // an action that consults each predicate from live(), and one that consults none
+  const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, refundAuthorized: { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": 7 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1 } } };
+  const NOP = { topUp: { x: 0 } };
+  const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
+  const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
+  // the entry point must refuse by name, with the offending field, before evaluating anything
+  // an entry point that throws on a corrupted input has not refused it by name
+  const call = thunk => { try { return thunk(); } catch (e) { return { ok: false, reason: 'THREW', verdict: 'THREW', field: String(e && e.message).slice(0, 80) }; } };
+  const refusal = (what, thunk, reason, field) => {
+    const r = call(thunk);
+    if (r.ok || r.reason !== reason || r.field !== field) problems.push(`${what}: expected ${reason}/${field}, got ${got(r)}`);
+    else asserted.add(reason);
+  };
+  const verdict = (what, thunk, want, field) => {
+    const v = call(thunk);
+    if (v.ok || v.verdict !== want || v.field !== field) problems.push(`${what}: expected verdict ${want}/${field}, got ${v.ok ? 'consumable' : v.verdict + '/' + v.field}`);
+  };
   for (const v of bads) {
     const tag = typeof v === 'string' ? JSON.stringify(v) : String(v);
     if (core.isNat(v)) problems.push(`isNat accepts ${tag}`);
@@ -98,16 +117,90 @@ function checkExactNat(core) {
       const r = core.step(P, core.emptyEnv(), a, 1, a.register ? 'absent' : live());
       if (r.ok || r.reason !== 'invalid-nat') problems.push(`step ${JSON.stringify(a)} not refused invalid-nat`);
     }
-    for (const f of ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool']) if (core.validateState(live({ [f]: v })) === null) problems.push(`state accepts ${f}=${tag}`);
-    if (core.validateState({ convicted: { epoch: 1, sn: 1, convictedAt: v } }) === null) problems.push(`convicted state accepts convictedAt=${tag}`);
     let threw = false; try { core.envAdd(core.emptyEnv(), { rotationTo: [1, 1, v] }); } catch (e) { threw = true; }
     if (!threw) problems.push(`evidence row accepts ${tag}`);
     const s = core.newSession(P);
     if (core.setSlot(s, v).ok) problems.push(`setSlot accepts ${tag}`);
-    const at = core.attempt(s, { register: { refund: 1, pool0: 1 } }, v).record;
-    if (at.ok || at.reason !== 'invalid-nat' || at.field !== 'slot') problems.push(`attempt at slot ${tag} not refused invalid-nat/slot`);
-    if (core.step(P, core.emptyEnv(), { topUp: { x: 1 } }, v, live()).ok) problems.push(`step accepts now=${tag}`);
+    refusal(`attempt at slot ${tag}`, () => core.attempt(s, { register: { refund: 1, pool0: 1 } }, v).record, 'invalid-nat', 'slot');
+    refusal(`step at now=${tag}`, () => core.step(P, core.emptyEnv(), NOP, v, live()), 'invalid-nat', 'now');
+    refusal(`replay from t0=${tag}`, () => core.replay(P, okEnv, v, live(), []), 'invalid-nat', 't0');
+    refusal(`replay of a step at slot ${tag}`, () => core.replay(P, okEnv, 0, live(), [[v, NOP]]), 'invalid-nat', 'slot');
+    verdict(`consumable at now=${tag}`, () => core.consumable(P, v, live()), 'invalid-nat', 'now');
+    // ---- the real boundary: every entry point that takes a state refuses a
+    // live datum with one corrupted field, whatever the action would have done
+    for (const f of LIVE) {
+      const st = live({ [f]: v });
+      refusal(`step topUp 0 on a live state with ${f}=${tag}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-nat', f);
+      refusal(`step poison on a live state with ${f}=${tag}`, () => core.step(P, okEnv, 'poison', 1, st), 'invalid-nat', f);
+      refusal(`replay from a live state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, st, [[1, NOP]]), 'invalid-nat', f);
+      refusal(`replay with no steps from a live state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, st, []), 'invalid-nat', f);
+      verdict(`consumable on a live state with ${f}=${tag}`, () => core.consumable(P, 5, st), 'invalid-nat', f);
+      // the system step, on the played AID and on another AID
+      refusal(`attempt topUp 0 on the played AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: st, registry: [1] }, NOP, 0).record, 'invalid-nat', f);
+      refusal(`attempt topUp 0 on AID 2 with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), others: { 2: st }, registry: [2] }, NOP, 0, 2).record, 'invalid-nat', f);
+    }
+    for (const f of ['epoch', 'sn', 'convictedAt']) {
+      const conv = { convicted: { epoch: 1, sn: 1, convictedAt: 1, [f]: v } };
+      refusal(`step close on a convicted state with ${f}=${tag} (before convicted-terminal)`, () => core.step(P, okEnv, 'close', 1, conv), 'invalid-nat', f);
+      refusal(`replay with no steps from a convicted state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, conv, []), 'invalid-nat', f);
+      verdict(`consumable on a convicted state with ${f}=${tag}`, () => core.consumable(P, 5, conv), 'invalid-nat', f);
+      refusal(`attempt close on a convicted AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: conv, registry: [1] }, 'close', 0).record, 'invalid-nat', f);
+    }
+    // ---- every entry point that takes an evidence table refuses a corrupted
+    // entry of any predicate, whether or not the action consults it
+    for (const k of Object.keys(EV_SHAPES)) for (let j = 0; j < EV_SHAPES[k].length; j++) {
+      const row = EV_SHAPES[k].slice(); row[j] = v;
+      const env = { ...core.emptyEnv(), [k]: [row] };
+      const field = `${k}[0][${j}]`;
+      refusal(`step topUp 0 (consults nothing) with evidence ${field}=${tag}`, () => core.step(P, env, NOP, 1, live()), 'invalid-nat', field);
+      refusal(`step ${core.canon(CONSULTING[k])} (consults ${k}) with evidence ${field}=${tag}`, () => core.step(P, env, CONSULTING[k], 1, live()), 'invalid-nat', field);
+      refusal(`register from absent with evidence ${field}=${tag}`, () => core.step(P, env, { register: { refund: 1, pool0: 1 } }, 1, 'absent'), 'invalid-nat', field);
+      refusal(`replay with evidence ${field}=${tag}`, () => core.replay(P, env, 0, live(), [[1, NOP]]), 'invalid-nat', field);
+      refusal(`replay with no steps with evidence ${field}=${tag}`, () => core.replay(P, env, 0, live(), []), 'invalid-nat', field);
+      refusal(`attempt topUp 0 with session evidence ${field}=${tag}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-nat', field);
+    }
+    // ---- the trace verifier: a corpus carrying a corrupted state or table is refused by name
+    if (corpus) {
+      const mutate = (edit, what, field) => {
+        const c2 = structuredClone(corpus); edit(c2);
+        let rs;
+        try { rs = core.checkCorpus(c2).reasons; } catch (e) { problems.push(`checkCorpus on a corpus with ${what}=${tag} threw instead of refusing by name: ${e.message}`); return; }
+        if (!rs.some(r => r.includes('invalid-nat') && r.includes(field))) problems.push(`checkCorpus on a corpus with ${what}=${tag}: no invalid-nat/${field} reason among ${rs.length} (${rs.slice(0, 2).join(' | ')})`);
+      };
+      const si = corpus.grid.states.findIndex(s => core.stateKind(s) === 'present');
+      mutate(c => { c.grid.states[si].present.l.pool = v; }, `grid state ${si} pool`, 'pool');
+      mutate(c => { c.grid.envs[0].duplicityAt = [[1, v]]; }, 'grid env 0 duplicityAt[0][1]', 'duplicityAt[0][1]');
+      mutate(c => { c.traces[0].env.quorum = [[v]]; }, 'trace 0 quorum[0][0]', 'quorum[0][0]');
+      mutate(c => { const st = c.traces[0].steps.find(s => core.stateKind(s.input) === 'present'); st.input.present.l.sn = v; }, 'trace 0 input sn', 'sn');
+      mutate(c => { const st = c.stories[0].steps.find(s => core.stateKind(s.input) === 'present'); st.input.present.l.bornAt = v; }, 'story cell input bornAt', 'bornAt');
+      mutate(c => { c.stories[0].steps[0].env.rotationTo = [[0, 0, v]]; }, 'story cell env rotationTo[0][2]', 'rotationTo[0][2]');
+    }
   }
+  // ---- shapes that are not a state / not a table are refused by name too
+  const shapes = [[{ bogus: 1 }, 'state'], [null, 'state'], ['absentt', 'state'], [{ present: { l: null } }, 'l'], [{ present: { l: { ...live().present.l, poisoned: 'no' } } }, 'poisoned'],
+    [{ present: { l: { ...live().present.l, extra: 1 } } }, 'extra'], [{ convicted: { epoch: 1, sn: 1, convictedAt: 1, extra: 0 } }, 'extra']];
+  for (const [st, field] of shapes) {
+    refusal(`step on non-state ${core.canon(st)}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-state', field);
+    refusal(`replay from non-state ${core.canon(st)}`, () => core.replay(P, okEnv, 0, st, []), 'invalid-state', field);
+    verdict(`consumable on non-state ${core.canon(st)}`, () => core.consumable(P, 5, st), 'invalid-state', field);
+    refusal(`attempt on non-state ${core.canon(st)}`, () => core.attempt({ ...core.newSession(P), state: st, registry: [1] }, NOP, 0).record, 'invalid-state', field);
+  }
+  const tables = [[null, 'env'], [[], 'env'], [{ ...core.emptyEnv(), bogus: [] }, 'bogus'], [{ ...core.emptyEnv(), quorum: 'x' }, 'quorum'],
+    [{ ...core.emptyEnv(), quorum: [[1, 2]] }, 'quorum[0]'], [{ ...core.emptyEnv(), rotationTo: [[1, 1]] }, 'rotationTo[0]'], [{ ...core.emptyEnv(), duplicityAt: [1] }, 'duplicityAt[0]']];
+  for (const [env, field] of tables) {
+    refusal(`step under non-table ${core.canon(env)}`, () => core.step(P, env, NOP, 1, live()), 'invalid-evidence', field);
+    refusal(`register under non-table ${core.canon(env)}`, () => core.step(P, env, { register: { refund: 1, pool0: 1 } }, 1, 'absent'), 'invalid-evidence', field);
+    refusal(`replay under non-table ${core.canon(env)}`, () => core.replay(P, env, 0, live(), []), 'invalid-evidence', field);
+    refusal(`attempt under non-table ${core.canon(env)}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-evidence', field);
+  }
+  refusal('replay of a non-list', () => core.replay(P, okEnv, 0, live(), 'x'), 'invalid-action', 'list');
+  refusal('replay of a non-pair entry', () => core.replay(P, okEnv, 0, live(), [[1, NOP, 2]]), 'invalid-action', 'list[0]');
+  verdict('consumable under a zero bond', () => core.consumable({ ...P, D: 0 }, 5, live()), 'invalid-params', 'D must be positive');
+  // a boundary refusal exhibits no theorem: T5 / T8 / T12 must not read a non-state as a refused-with-evidence step
+  const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1 } }, 0).record;
+  const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
+  if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
+  if (Object.keys(brec.theorems).some(id => id !== 'T9' && brec.theorems[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.theorems).filter(id => brec.theorems[id].exhibited).join(','));
   // arithmetic at the bound: refused by name, never rounded
   const M = core.MAX_NAT;
   const hp = { D: 1, B: 1, P: 0, W: 0 };
@@ -135,7 +228,7 @@ function checkExactNat(core) {
   if (!thrown) problems.push('parseJsonExact accepted a lossy literal');
   for (const [s, want] of [['9007199254740992', null], ['9007199254740991', M], ['-1', null], ['1e3', null], ['1.0', null], ['', null], ['12', 12], ['007', 7], ['99999999999999999999', null]])
     if (core.parseNat(s) !== want) problems.push(`parseNat(${JSON.stringify(s)}) = ${core.parseNat(s)}, expected ${want}`);
-  return { problems, boundaries: bads.length };
+  return { problems, boundaries: bads.length, asserted };
 }
 
 /* --- the system level: several AIDs, random actions, every theorem ------ */
@@ -459,8 +552,9 @@ async function runSuite(opts) {
   }
   for (let n = 1; n <= 15; n++) if (!stories.has(n)) problems.push(`story ${n} has no scenario`);
   // exact Nat
-  const nat = checkExactNat(core);
-  rows.push({ item: `exact Nat: ${nat.boundaries} non-Nat values refused at every boundary; 2^53 arithmetic refused, never rounded`, ok: !nat.problems.length });
+  const nat = checkExactNat(core, corpus);
+  nat.asserted.forEach(x => asserted.add(x));
+  rows.push({ item: `exact Nat: ${nat.boundaries} non-Nat values refused by name at every real entry point (step, replay, attempt, consumable, checkCorpus); 2^53 arithmetic refused, never rounded`, ok: !nat.problems.length });
   problems.push(...nat.problems);
   // the system level
   const sys = checkSystem(core, corpus);
@@ -537,6 +631,14 @@ async function selftest(work) {
     { name: 'core that rounds at 2^53 (isNat relaxed, sum unguarded)', expect: /isNat accepts 9007199254740992|accepted a top-up .* T6\/T14 flagged|precision/,
       make: () => ({ core: mutant('m-nat', [["const isNat = v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;", "const isNat = v => typeof v === 'number' && Number.isInteger(v) && v >= 0;"],
         ['const natAdd = (a, b) => { const s = a + b; return isNat(s) && BigInt(a) + BigInt(b) === BigInt(s) ? s : null; };', 'const natAdd = (a, b) => a + b;']]), skipBuild: true }) },
+    { name: 'step skips the state and evidence validation (the helper stays; the real boundary is open)', expect: /step topUp 0 on a live state with sn=9007199254740992: expected invalid-nat\/sn, got ok/,
+      make: () => ({ core: mutant('m-step-boundary', [["  const sv = validateState(state); if (sv) return refuse(sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(ev.reason, ev.field);\n  const a = na.action, kind = na.kind;", "  const a = na.action, kind = na.kind;"]]), skipBuild: true }) },
+    { name: 'replay skips its own boundary (a corrupted origin with no steps passes)', expect: /replay with no steps from a live state with sn=9007199254740992: expected invalid-nat\/sn, got ok/,
+      make: () => ({ core: mutant('m-replay-boundary', [["  const sv = validateState(state); if (sv) return refuse(null, sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(null, ev.reason, ev.field);\n", ""]]), skipBuild: true }) },
+    { name: 'consumable reads a non-state (verdict on a 2^53 bornAt)', expect: /consumable on a live state with bornAt=9007199254740992: expected verdict invalid-nat\/bornAt, got/,
+      make: () => ({ core: mutant('m-consumable-boundary', [["  const sv = validateState(state); if (sv) return refused(sv.reason, sv.field);\n  const l = liveOf(state);", "  const l = liveOf(state);"]]), skipBuild: true }) },
+    { name: 'the trace verifier replays a corrupted corpus cell without refusing it by name', expect: /checkCorpus on a corpus with grid state \d+ pool=9007199254740992(: no invalid-nat\/pool reason| threw instead of refusing)/,
+      make: () => ({ core: mutant('m-corpus-boundary', [["  if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };\n", "  reasons.length = 0;\n"]]), skipBuild: true }) },
     { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7 \(.*differs from Lean/,
       make: () => ({ core: mutant('m-t7', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + 1); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
     { name: 'registry drops an unrelated AID (T8 must red on the system generator)', expect: /theorem VIOLATED: .*T8 \(.*registry lost an AID|T8 \(.*registry changed/,

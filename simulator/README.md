@@ -32,11 +32,13 @@ the story's words.
 | `checkpoint-simulator.html` | the page; the core's slices are inlined between `@@CORE:<id>@@` markers, the scenarios between `@@SCENARIOS@@`, the Lean corpus (with its sha256) between `@@CORPUS@@`. |
 | `checkpoint-simulator-build.mjs` | regenerates the page from the core, the scenarios and the corpus, and writes `docs/simulator/index.html`; `--check` reds on any drift. |
 | `checkpoint-simulator-scenarios/` | one JSON per story (1–15): params, evidence decisions, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits. |
-| `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core and the page; every theorem on every step; every refusal reason asserted by some story; build drift; a page smoke under a minimal DOM. `--selftest` proves it can fail. |
-| `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim (seeded traces and the boundary grid). |
+| `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core with the Lean corpus as T7's oracle; every theorem on every step; every refusal reason asserted; exact Nat at every boundary; a multi-AID system generator (T8 on every transition); the story reconciliation and the distinctive-clause matrix (`--matrix`, `--clauses-md`); build drift; a page smoke under a minimal DOM including `?selftest=1`. `--selftest` proves it can fail eleven ways. |
+| `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim: seeded traces, the boundary grid, and the Lean's own verdict on every step of the fifteen scenarios (the T7 oracle). |
+| `checkpoint-simulator-clauses.json` | every "chain checks" clause of every story reconciled with the Lean (guard with file:line and token, omission, overrule) and the distinctive clauses each scenario must exercise. |
+| `M1-STORIES.md` | the fifteen stories, verbatim, which the gate reads to extract the clauses. |
 | `checkpoint-simulator-trace-gate.mjs` | runs the Lean driver fresh, compares by sha256 with the corpus embedded in the page, replays every step (applied and refused) through the core and the page's inlined core, checks every theorem on every applied step. `--selftest` proves it can fail. |
 | `checkpoint-simulator-minidom.mjs` | the minimal DOM the gates drive the page with (parser, selectors, events, values, a recording canvas). Not jsdom: what the page uses and it lacks throws. |
-| `../lean/CheckpointTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over seeded traces and a boundary grid (every guarded comparison at −1 / = / +1, every action from every state, two evidence oracles) and prints JSON via `ToJson` instances. |
+| `../lean/CheckpointTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over seeded traces, a boundary grid (every guarded comparison at −1 / = / +1, every action from every state, two evidence oracles) and every step of the scenario files, and prints JSON via `ToJson` instances. |
 
 ## Run the gates
 
@@ -58,9 +60,23 @@ node simulator/checkpoint-simulator-build.mjs
 Negative controls, each RED for its intended reason, then GREEN:
 
 ```sh
-node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation, flipped guard, lying property, broken control
+node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation, flipped guard, lying property, broken control, rounding at 2^53, wrong transition (T7), registry drop (T8), W read (T9), dropped clause, wrong anchor, dropped distinctive step
 node simulator/checkpoint-simulator-trace-gate.mjs --selftest      # mutated post-state, emptied corpus, mutated sha, flipped guard
 ```
+
+## Numbers
+
+A Lean `Nat` is unbounded; this simulator represents it exactly up to
+2^53 − 1 and refuses by name (`invalid-nat`) anything else at every boundary,
+including an arithmetic result beyond the bound. Nothing is ever rounded.
+
+## The theorem ledger
+
+Each row lights when the step shows the theorem (its antecedent held) and is
+checked on every step regardless. T7 is parity with the Lean: a step is
+compared with the Lean's own verdict for it when the embedded corpus has a
+cell (every story step, the grid, the seeded traces); with no cell it is not
+shown and the row says so.
 
 ## What is modelled
 

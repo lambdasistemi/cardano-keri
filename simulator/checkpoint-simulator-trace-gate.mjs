@@ -76,10 +76,14 @@ async function runGate(opts) {
   }
   const freshSha = sha256(freshRaw);
   let fresh;
+  const lossy = (await import(pathToFileURL(opts.core || CORE).href + '?l=' + Date.now())).lossyJsonNumbers(freshRaw);
+  if (lossy.length) return { ok: false, reasons: ['driver output has number literals beyond 2^53 − 1: ' + lossy.slice(0, 3).join(', ')] };
   try { fresh = JSON.parse(freshRaw); } catch (e) { return { ok: false, reasons: ['driver output is not valid JSON'] }; }
   if (fresh.schema !== SCHEMA || fresh.version !== 1) reasons.push('driver output has the wrong schema/version');
   if (!Array.isArray(fresh.traces) || !fresh.traces.length || fresh.traces.some(t => !t.steps || !t.steps.length))
     reasons.push('fresh corpus has no traces or a trace without steps');
+  if (!Array.isArray(fresh.stories) || fresh.stories.length !== 15 || fresh.stories.some(s => !s.steps || !s.steps.length))
+    reasons.push('fresh corpus has no story cells for all fifteen stories');
   // embedded fixture and stated sha
   let emb;
   try { emb = extractEmbedded(doc); } catch (e) { return { ok: false, reasons: [...reasons, e.message] }; }
@@ -104,6 +108,7 @@ async function runGate(opts) {
             }
         }
         if (JSON.stringify(a.grid) !== JSON.stringify(b.grid)) { reasons.push('grid: fresh and embedded differ'); break outer; }
+        if (JSON.stringify(a.stories) !== JSON.stringify(b.stories)) { reasons.push('story cells: fresh and embedded differ'); break outer; }
       }
     }
   }
@@ -127,11 +132,11 @@ async function runGate(opts) {
   } catch (e) { reasons.push('page execution failed: ' + (e && e.stack || e)); }
   if (reasons.length) return { ok: false, reasons };
   return { ok: true, freshSha, traces: fresh.traces.length, applied: rp.applied, refused: rp.refused,
-    theoremChecks: rp.theoremChecks, cons: rp.cons, pageSteps, cells: fresh.grid.cells.length };
+    theoremChecks: rp.theoremChecks, cons: rp.cons, pageSteps, cells: fresh.grid.cells.length, storyCells: rp.storyCells || 0 };
 }
 
 function report(r, prefix) {
-  console.log((prefix || '') + `GREEN: Lean regeneration identical (sha ${r.freshSha.slice(0, 12)}…); ${r.traces} traces + ${r.cells} grid cells replayed through the core: ` +
+  console.log((prefix || '') + `GREEN: Lean regeneration identical (sha ${r.freshSha.slice(0, 12)}…); ${r.traces} traces + ${r.cells} grid cells + ${r.storyCells} story cells replayed through the core: ` +
     `${r.applied} applied, ${r.refused} refused, ${r.theoremChecks} theorem reports all holding, ${r.cons} consumability probes agree; ` +
     `${r.pageSteps} steps replayed through the page's inlined core`);
 }

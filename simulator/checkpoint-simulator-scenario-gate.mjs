@@ -5,60 +5,308 @@
  *
  * Fresh on every run:
  *   1. imports the core module (the same file whose slices the build
- *      script inlines byte-for-byte into the page; step 4 proves that);
+ *      script inlines byte-for-byte into the page; step 7 proves that) and
+ *      the Lean corpus (parsed refusing lossy number literals);
  *   2. loads every scenario in checkpoint-simulator-scenarios/ — exactly the
  *      fifteen stories, each replayed step by step through the core's
- *      session: refusal reasons, post-states, flows, the consumer verdict
- *      and the set of theorems each step exhibits are compared with the
- *      scenario's expectations, and EVERY theorem property T1–T16 must hold
- *      on every step (exhibited or not);
+ *      session with the corpus as T7's oracle: refusal reasons, post-states,
+ *      flows, the consumer verdict and the set of theorems each step exhibits
+ *      are compared with the scenario's expectations, and EVERY theorem
+ *      property must hold on every step (exhibited or not);
  *   3. requires every refusal reason the core can produce to be asserted
- *      by at least one scenario step, and every reason to have a
- *      story-vocabulary explanation;
- *   4. runs checkpoint-simulator-build.mjs --check (a stale or forked
+ *      by a scenario step or by the system generator, and every reason to
+ *      have a story-vocabulary explanation;
+ *   4. exact Nat: every boundary (params, actions, states, evidence, slots,
+ *      JSON, UI parsing) refuses by name anything that is not a safe
+ *      non-negative integer, and arithmetic at and beyond 2^53 is refused
+ *      rather than rounded — a core that rounds must redden T6/T14;
+ *   5. the system level: a seeded generator drives several AIDs through
+ *      random actions and evidence; every theorem holds on every transition
+ *      and T8 (registry inclusion, no duplicates, state membership) is
+ *      exhibited on every accepted transition;
+ *   6. the story reconciliation: every "chain checks" clause extracted from
+ *      M1-STORIES.md is classified in checkpoint-simulator-clauses.json as a
+ *      Lean guard (whose file:line contains its token), an omission, or an
+ *      overrule; an unclassified fragment is RED; every distinctive clause
+ *      names a scenario step that exercises it (the coverage matrix);
+ *   7. runs checkpoint-simulator-build.mjs --check (a stale or forked
  *      inlined copy, or a stale docs/ copy, is RED);
- *   5. loads the page under a minimal DOM with real event/value semantics
+ *   8. loads the page under a minimal DOM with real event/value semantics
  *      (checkpoint-simulator-minidom.mjs) and drives the controls it
- *      asserts: the page loads without error, the picker lists fifteen
- *      stories, selecting one plays it to the end, evidence rows can be
- *      added and removed, the slot control changes the consumer verdict,
- *      the page's own theorem ledger agrees with the core, and the page
- *      makes no network reference;
- *   6. prints a table and exits non-zero on anything.
+ *      asserts, then loads it with ?selftest=1 and requires PASS;
+ *   9. prints a table and exits non-zero on anything.
  *
  * Usage:
- *   node simulator/checkpoint-simulator-scenario-gate.mjs             # production
- *   node simulator/checkpoint-simulator-scenario-gate.mjs --selftest  # negative controls
+ *   node simulator/checkpoint-simulator-scenario-gate.mjs               # production
+ *   node simulator/checkpoint-simulator-scenario-gate.mjs --matrix      # also print the coverage matrix
+ *   node simulator/checkpoint-simulator-scenario-gate.mjs --selftest    # negative controls
+ *   node simulator/checkpoint-simulator-scenario-gate.mjs --clauses-md  # print the reconciliation table
  *
  * --selftest proves the gate can fail for the right reason: a scenario
- * with a flipped expectation, a core with a guard flipped (close while
- * poisoned), a core with a theorem property seeded to lie, and a page with
- * the picker removed — each RED for its intended reason — then GREEN.
+ * with a flipped expectation; a guard flipped in the core (close while
+ * poisoned); a lying T6 property; a page without its picker; a core that
+ * rounds at 2^53; a wrong top-up transition that T7 must catch against the
+ * Lean cell; a registry that drops an unrelated AID (T8); a transition that
+ * reads W (T9); a clause dropped from the reconciliation; a guard anchor
+ * whose line no longer holds its token; a distinctive scenario step
+ * dropped — each RED for its intended reason — then GREEN.
  */
 
-import { readFileSync, writeFileSync, readdirSync, mkdtempSync, mkdirSync,
-  rmSync, cpSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, mkdtempSync, mkdirSync, rmSync, cpSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, basename } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createWindow } from './checkpoint-simulator-minidom.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const argPath = flag => {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null;
-};
+const argPath = flag => { const i = process.argv.indexOf(flag); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null; };
 const CORE = argPath('--core') || join(HERE, 'checkpoint-simulator-core.mjs');
 const HTML = argPath('--html') || join(HERE, 'checkpoint-simulator.html');
 const SCENARIOS = argPath('--scenarios') || join(HERE, 'checkpoint-simulator-scenarios');
+const CLAUSES = argPath('--clauses') || join(HERE, 'checkpoint-simulator-clauses.json');
+const CORPUS = join(HERE, 'checkpoint-simulator-corpus.json');
+const STORIES = join(HERE, 'M1-STORIES.md');
+const LEAN_ROOT = join(HERE, '..');
 const BUILD = join(HERE, 'checkpoint-simulator-build.mjs');
 
 /* --- one scenario: the core's own checker (shared with the page's selftest) --- */
 
-function runScenario(core, sc, file) {
-  const r = core.checkScenario(sc, file);
-  return { problems: r.problems, asserted: new Set(r.asserted), exhibitedIds: new Set(r.exhibited), stepsRun: r.stepsRun };
+function runScenario(core, sc, file, corpus) {
+  const r = core.checkScenario(sc, file, corpus);
+  return { problems: r.problems, asserted: new Set(r.asserted), exhibitedIds: new Set(r.exhibited), stepsRun: r.stepsRun, timeline: r.timeline };
+}
+
+/* --- exact Nat ------------------------------------------------------------ */
+
+function checkExactNat(core) {
+  const problems = [];
+  const P = { D: 10, B: 5, P: 2, W: 3 };
+  const bads = [2 ** 53, 2 ** 53 + 2, 2 ** 60, -1, 1.5, '5', NaN, Infinity, null, undefined, true];
+  const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, bornAt: 0, refundTo: 7, dreg: 10, b: 5, pool: 4, ...over } } });
+  for (const v of bads) {
+    const tag = typeof v === 'string' ? JSON.stringify(v) : String(v);
+    if (core.isNat(v)) problems.push(`isNat accepts ${tag}`);
+    for (const k of ['D', 'B', 'P', 'W']) if (core.validateParams({ ...P, [k]: v }) === null) problems.push(`params accept ${k}=${tag}`);
+    const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1, "refund'": null } },
+      { rotate: { "sn'": 2, op: 'keep', payee: v, "refund'": null } }, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": v } }, { freeze: { "sn'": v, payee: 1 } },
+      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }];
+    for (const a of actions) {
+      if (a.rotate && a.rotate["sn'"] === 2 && a.rotate.payee === 1 && (v === null || v === undefined)) continue; // refund' null / absent means none
+      const n = core.normalizeAction(a);
+      if (n.ok || n.reason !== 'invalid-nat') problems.push(`action ${JSON.stringify(a)} not refused invalid-nat (got ${n.ok ? 'ok' : n.reason})`);
+      const r = core.step(P, core.emptyEnv(), a, 1, a.register ? 'absent' : live());
+      if (r.ok || r.reason !== 'invalid-nat') problems.push(`step ${JSON.stringify(a)} not refused invalid-nat`);
+    }
+    for (const f of ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool']) if (core.validateState(live({ [f]: v })) === null) problems.push(`state accepts ${f}=${tag}`);
+    if (core.validateState({ convicted: { epoch: 1, sn: 1, convictedAt: v } }) === null) problems.push(`convicted state accepts convictedAt=${tag}`);
+    let threw = false; try { core.envAdd(core.emptyEnv(), { rotationTo: [1, 1, v] }); } catch (e) { threw = true; }
+    if (!threw) problems.push(`evidence row accepts ${tag}`);
+    const s = core.newSession(P);
+    if (core.setSlot(s, v).ok) problems.push(`setSlot accepts ${tag}`);
+    const at = core.attempt(s, { register: { refund: 1, pool0: 1 } }, v).record;
+    if (at.ok || at.reason !== 'invalid-nat' || at.field !== 'slot') problems.push(`attempt at slot ${tag} not refused invalid-nat/slot`);
+    if (core.step(P, core.emptyEnv(), { topUp: { x: 1 } }, v, live()).ok) problems.push(`step accepts now=${tag}`);
+  }
+  // arithmetic at the bound: refused by name, never rounded
+  const M = core.MAX_NAT;
+  const hp = { D: 1, B: 1, P: 0, W: 0 };
+  const top = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ dreg: 1, b: 1, pool: M }));
+  if (top.ok || top.reason !== 'invalid-nat' || top.field !== 'pool') problems.push('topUp 1 on a pool of 2^53 − 1 was not refused invalid-nat/pool: ' + JSON.stringify(top));
+  const top2 = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ dreg: 1, b: 1, pool: M - 1 }));
+  if (!top2.ok || top2.state.present.l.pool !== M) problems.push('topUp 1 on a pool of 2^53 − 2 did not give 2^53 − 1 exactly');
+  const env = core.envAdd(core.emptyEnv(), { rotationTo: [M, 1, 2] });
+  const rot = core.step(hp, env, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, 0, live({ dreg: 1, b: 1, epoch: M }));
+  if (rot.ok || rot.reason !== 'invalid-nat' || rot.field !== 'epoch') problems.push('rotation from epoch 2^53 − 1 was not refused invalid-nat/epoch: ' + JSON.stringify(rot));
+  if (core.natAdd(M, 1) !== null || core.natAdd(M - 1, 1) !== M || core.natAdd(2 ** 52, 2 ** 52) !== null) problems.push('natAdd is not exact at the bound');
+  // a state beyond the bound forced past validation: the step must refuse, and if a
+  // core ever applied it the theorem checkers must see the lost increment
+  const huge = 2 ** 53;
+  const forced = { ...core.newSession(hp), state: live({ dreg: 1, b: 1, pool: huge }) };
+  const fr = core.attempt(forced, { topUp: { x: 1 } }, 0).record;
+  if (fr.ok) {
+    problems.push(`a pool of 2^53 accepted a top-up (pool after: ${fr.state.present.l.pool})` +
+      (fr.theorems.T6.holds && fr.theorems.T14.holds ? ' and T6/T14 did not notice the precision loss' : ' — T6/T14 flagged it: ' + [...fr.theorems.T6.notes, ...fr.theorems.T14.notes].join('; ')));
+  } else if (fr.reason !== 'invalid-nat') problems.push('a pool of 2^53 was refused for a reason other than invalid-nat: ' + fr.reason);
+  // JSON and UI parsing
+  if (!core.lossyJsonNumbers('[9007199254740993, {"a": 18014398509481985}]').length) problems.push('lossyJsonNumbers misses integers beyond 2^53');
+  if (core.lossyJsonNumbers('[9007199254740991, -5, 2.5, 0, "x 99999999999999999999"]').length) problems.push('lossyJsonNumbers flags exact literals or strings');
+  let thrown = false; try { core.parseJsonExact('{"x": 9007199254740993}'); } catch (e) { thrown = true; }
+  if (!thrown) problems.push('parseJsonExact accepted a lossy literal');
+  for (const [s, want] of [['9007199254740992', null], ['9007199254740991', M], ['-1', null], ['1e3', null], ['1.0', null], ['', null], ['12', 12], ['007', 7], ['99999999999999999999', null]])
+    if (core.parseNat(s) !== want) problems.push(`parseNat(${JSON.stringify(s)}) = ${core.parseNat(s)}, expected ${want}`);
+  return { problems, boundaries: bads.length };
+}
+
+/* --- the system level: several AIDs, random actions, every theorem ------ */
+
+function prng(seed) { let x = seed >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
+
+function checkSystem(core, corpus) {
+  const problems = [];
+  const P = { D: 1000, B: 5, P: 2, W: 10 };
+  const asserted = new Set();
+  let accepted = 0, refused = 0, t8Shown = 0, nonRegisterShown = 0, transitions = 0, distinctRegistered = 0;
+  for (let run = 0; run < 24; run++) {
+    const rnd = prng(0x9e3779b9 + run * 7919);
+    const pick = arr => arr[Math.floor(rnd() * arr.length)];
+    let s = core.newSession(P, { corpus });
+    let slot = 0;
+    for (let i = 0; i < 40; i++) {
+      const aid = pick([1, 2, 3, 4]);
+      const st = core.stateOfAid(s, aid);
+      const l = core.liveOf(st);
+      const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
+      // evidence arrives at random, for this AID's current epoch and sequence
+      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { refundAuthorized: [e + 1, 1] }, { rotationTo: [e, sn, sn + 2] }]));
+      if (rnd() < 0.1) for (const k of core.EV_KINDS) for (const row of s.env[k].slice()) if (rnd() < 0.3) s = core.removeEvidence(s, { [k]: row });
+      let action;
+      if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
+      else action = pick([
+        { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]), "refund'": pick([null, null, 1, 9]) } },
+        'poison', 'close', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
+        { register: { refund: 6, pool0: 1 } },
+      ]);
+      slot += Math.floor(rnd() * 4);
+      const out = core.attempt(s, action, slot, aid);
+      s = out.session;
+      const rec = out.record;
+      transitions++;
+      if (rec.ok) accepted++; else { refused++; asserted.add(rec.reason); }
+      const th = rec.theorems;
+      const failing = Object.keys(th).filter(id => !th[id].holds);
+      if (failing.length) problems.push(`system run ${run} step ${i} (aid ${aid}, ${core.canon(action)}): theorem VIOLATED: ` + failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · '));
+      if (rec.ok) {
+        if (!th.T8.exhibited) problems.push(`system run ${run} step ${i}: accepted transition does not exhibit T8`);
+        else { t8Shown++; if (rec.kind !== 'register') nonRegisterShown++; }
+      }
+      if (problems.length > 12) return { problems, transitions };
+    }
+    // the registry equals the set of AIDs ever registered in this run, no duplicates
+    const everRegistered = new Set(s.records.filter(r => r.ok && r.kind === 'register').map(r => r.aid));
+    if (s.registry.length !== everRegistered.size || ![...everRegistered].every(a => s.registry.includes(a))) problems.push(`system run ${run}: registry ${JSON.stringify(s.registry)} ≠ AIDs registered ${JSON.stringify([...everRegistered])}`);
+    distinctRegistered += everRegistered.size;
+    // a corrupted registry (an absent AID listed) refuses that AID's registration by name
+    const corrupted = { ...s, registry: [...s.registry, 9] };
+    const cr = core.attempt(corrupted, { register: { refund: 1, pool0: 1 } }, slot, 9).record;
+    if (cr.ok || cr.reason !== 'aid-already-registered') problems.push(`system run ${run}: registration of a listed-but-absent AID not refused aid-already-registered (got ${cr.ok ? 'ok' : cr.reason})`);
+    asserted.add('aid-already-registered');
+    if (!cr.theorems.T8.exhibited || !cr.theorems.T8.holds) problems.push(`system run ${run}: the refused re-registration does not exhibit T8 holding`);
+  }
+  if (accepted < 200) problems.push(`system generator accepted only ${accepted} transitions`);
+  if (nonRegisterShown < 100) problems.push(`system generator exhibited T8 on only ${nonRegisterShown} non-registration transitions`);
+  if (distinctRegistered < 48) problems.push(`system generator registered only ${distinctRegistered} AIDs over the runs`);
+  return { problems, transitions, accepted, refused, t8Shown, nonRegisterShown, asserted };
+}
+
+/* --- story reconciliation ---------------------------------------------- */
+
+const LABELS = { default: ['The chain checks', 'The predicate', 'Fails closed', 'What limits it'], 13: ['Action'], 14: ['*'], 15: ['Today', 'Direction (D-027, not yet ruled)'] };
+
+function extractStoryClauses(md) {
+  const out = {}; // story → [{label, text}]
+  let story = null, bullets = [];
+  const flush = () => { if (story !== null) out[story] = bullets; };
+  for (const raw of md.split('\n')) {
+    const h = raw.match(/^## (\d+)\. /);
+    if (h) { flush(); story = Number(h[1]); bullets = []; continue; }
+    if (/^## /.test(raw) || /^---/.test(raw)) { flush(); story = null; continue; }
+    if (story === null) continue;
+    if (/^- /.test(raw)) bullets.push(raw.slice(2));
+    else if (/^  \S/.test(raw) && bullets.length) bullets[bullets.length - 1] += ' ' + raw.trim();
+  }
+  flush();
+  const res = {};
+  for (const [st, bs] of Object.entries(out)) {
+    const labels = LABELS[st] || LABELS.default;
+    res[st] = [];
+    for (const b of bs) {
+      const text = b.replace(/\s+/g, ' ').trim();
+      if (labels.includes('*')) { res[st].push({ label: '*', text }); continue; }
+      const m = text.match(/^\*\*([^*]+)\*\*:?\s*(.*)$/) || text.match(/^(Today|Direction \(D-027, not yet ruled\)):\s*(.*)$/);
+      if (m && labels.includes(m[1])) res[st].push({ label: m[1], text: m[2] });
+    }
+  }
+  return res;
+}
+
+function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines) {
+  const problems = [];
+  const clauses = clausesDoc.clauses || [];
+  const byStory = {};
+  for (const c of clauses) (byStory[c.story] = byStory[c.story] || []).push(c);
+  // every clause is classified and anchored
+  const leanCache = {};
+  for (const c of clauses) {
+    if (!['guard', 'omission', 'overrule'].includes(c.class)) problems.push(`story ${c.story} clause «${c.clause}»: unknown class ${c.class}`);
+    if (c.class === 'guard' || c.class === 'overrule') {
+      const m = (c.ref || '').match(/^(lean\/[^:]+):(\d+)$/);
+      if (!m) { problems.push(`story ${c.story} clause «${c.clause}»: guard without a file:line ref`); continue; }
+      if (!leanCache[m[1]]) { try { leanCache[m[1]] = readFileSync(join(LEAN_ROOT, m[1]), 'utf8').split('\n'); } catch (e) { leanCache[m[1]] = []; } }
+      const line = leanCache[m[1]][Number(m[2]) - 1];
+      if (line === undefined) problems.push(`story ${c.story} clause «${c.clause}»: ${c.ref} does not exist`);
+      else if (!c.token || !line.includes(c.token)) problems.push(`story ${c.story} clause «${c.clause}»: ${c.ref} does not contain «${c.token}» (line: ${(line || '').trim().slice(0, 80)})`);
+      if (c.reason && !core.REASONS.includes(c.reason)) problems.push(`story ${c.story} clause «${c.clause}»: unknown reason ${c.reason}`);
+      if (c.verdict && !core.VERDICTS.includes(c.verdict)) problems.push(`story ${c.story} clause «${c.clause}»: unknown verdict ${c.verdict}`);
+    } else if (!c.note) problems.push(`story ${c.story} clause «${c.clause}»: an omission needs a note`);
+  }
+  // every extracted fragment of the stories is covered by the clauses
+  const extracted = extractStoryClauses(storiesMd);
+  let fragments = 0;
+  for (let n = 1; n <= 15; n++) {
+    const bs = extracted[n] || [];
+    if (!bs.length) { problems.push(`story ${n}: no "chain checks" bullet found in M1-STORIES.md`); continue; }
+    const cs = byStory[n] || [];
+    for (const b of bs) {
+      let rest = b.text;
+      for (const c of cs) { const i = rest.indexOf(c.clause); if (i >= 0) { rest = rest.slice(0, i) + ' ' + rest.slice(i + c.clause.length); fragments++; } }
+      const leftover = rest.replace(/[\s;:.,()—]/g, '');
+      if (leftover.length) problems.push(`story ${n}: unclassified fragment in «${b.label}»: «${rest.trim().replace(/\s+/g, ' ').slice(0, 120)}»`);
+    }
+    if (!cs.length) problems.push(`story ${n}: no clauses in the reconciliation table`);
+  }
+  // distinctive clauses: each names a scenario step that exercises it
+  const matrix = [];
+  for (const d of clausesDoc.distinctive || []) {
+    const m = d.match || {};
+    let hit = null;
+    for (const [file, tl] of Object.entries(scenarioTimelines)) {
+      if (Number(file.match(/^(\d+)/)[1]) !== d.story) continue;
+      tl.forEach((t, i) => {
+        if (hit) return;
+        const r = t.record; if (!r) return;
+        const params = t.session.params;
+        const dd = (r.action && typeof r.action === 'object') ? r.action[r.kind] : {};
+        const lp = core.liveOf(r.pre), lq = core.liveOf(r.state);
+        const fl = r.flow || core.flow({});
+        const checks = [
+          m.ok === undefined || r.ok === m.ok,
+          m.kind === undefined || r.kind === m.kind,
+          m.reason === undefined || r.reason === m.reason,
+          m.op === undefined || dd.op === m.op,
+          m.preWord === undefined || core.stateWord(params, r.pre) === m.preWord,
+          !m.prePoisoned || (lp && lp.poisoned === true),
+          !m.refundNull || dd["refund'"] === null,
+          !m.refundUnchanged || (lp && lq && lp.refundTo === lq.refundTo),
+          !m.refundChanged || (lp && lq && lp.refundTo !== lq.refundTo),
+          !m.hunterPool || (r.ok && fl.hunter && fl.hunter.pool > 0),
+          !m.noFlow || (r.ok && core.canon(fl) === core.canon(core.flow({}))),
+          !m.refundToAlice || (r.ok && fl.refund && fl.refund.addr === 1),
+          !m.bornAtUnchanged || (lp && lq && lp.bornAt === lq.bornAt),
+        ];
+        if (checks.every(Boolean)) hit = { file, step: i };
+      });
+    }
+    matrix.push({ id: d.id, story: d.story, clause: d.clause, hit });
+    if (!hit) problems.push(`distinctive clause «${d.id}» (story ${d.story}: ${d.clause}) is not exercised by any scenario step`);
+  }
+  return { problems, clauses: clauses.length, fragments, matrix };
+}
+
+function clausesMarkdown(clausesDoc) {
+  const lines = ['| story | clause | class | anchor | reason / verdict | note |', '|---|---|---|---|---|---|'];
+  for (const c of clausesDoc.clauses) lines.push(`| ${c.story} | ${c.clause.replace(/\|/g, '\\|')} | ${c.class} | ${c.ref ? c.ref + ' `' + c.token + '`' : ''} | ${c.reason || c.verdict || ''} | ${(c.note || '').replace(/\|/g, '\\|')} |`);
+  return lines.join('\n');
 }
 
 /* --- page smoke under the minimal DOM ---------------------------------- */
@@ -66,31 +314,19 @@ function runScenario(core, sc, file) {
 function pageSmoke(core, html) {
   const problems = [];
   let win;
-  try {
-    win = createWindow(html, { search: '' });
-  } catch (e) {
-    return { problems: ['page failed to load: ' + (e && e.stack || e)] };
-  }
+  try { win = createWindow(html, { search: '' }); }
+  catch (e) { return { problems: ['page failed to load: ' + (e && e.stack || e)] }; }
   const doc = win.document;
   const $ = sel => doc.querySelector(sel);
   const errs = win.__errors || [];
   if (errs.length) problems.push('page raised on load: ' + errs.map(String).join(' | '));
-
-  // no network reference
   const net = html.match(/\b(src|href)\s*=\s*"(https?:)?\/\//g);
   if (net) problems.push('page references the network: ' + net.slice(0, 3).join(', '));
-
-  // picker lists fifteen stories
   const picker = $('#story-picker');
   if (!picker) { problems.push('no #story-picker'); return { problems }; }
   const opts = picker.querySelectorAll('option').filter(o => o.value !== '');
   if (opts.length !== 15) problems.push(`picker lists ${opts.length} stories, expected 15`);
-
-  // selecting one plays it: pick story 3 and step to the end
-  const pick = n => {
-    picker.value = String(n);
-    picker.dispatchEvent(win.makeEvent('change'));
-  };
+  const pick = n => { picker.value = String(n); picker.dispatchEvent(win.makeEvent('change')); };
   pick(3);
   const next = $('#hist-next');
   if (!next) problems.push('no #hist-next control');
@@ -103,19 +339,16 @@ function pageSmoke(core, html) {
   if (!/frozen/i.test(stateName)) problems.push(`after story 3 the ladder shows «${stateName}», expected Frozen`);
   const verdictText = ($('#verdict') || {}).textContent || '';
   if (!/freeze bond/i.test(verdictText)) problems.push(`after story 3 the verdict says «${verdictText.slice(0, 80)}», expected the freeze bond conjunct`);
-
-  // theorem ledger: on the last accepted step (the freeze) the page's rows light T15
   const okChips = doc.querySelectorAll('#history-strip .hist-chip.ok');
   if (!okChips.length) problems.push('no accepted chip in the history strip');
   else okChips[okChips.length - 1].dispatchEvent(win.makeEvent('click'));
   const lit = doc.querySelectorAll('#ledger .thm.lit').map(e => e.dataset.id).sort();
   if (!lit.includes('T15')) problems.push(`ledger on the freeze step lights [${lit}], expected T15 among them`);
+  if (!lit.includes('T7')) problems.push(`ledger on the freeze step lights [${lit}], expected T7 (a Lean story cell exists)`);
   if (!/frozen/i.test(($('#state-name') || {}).textContent || '')) problems.push('the last accepted chip does not show Frozen');
   while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
   const broken = doc.querySelectorAll('#ledger .thm.broken');
   if (broken.length) problems.push('ledger shows broken rows: ' + broken.map(e => e.dataset.id).join(','));
-
-  // the history strip goes back: one step back stays Frozen (the last story step only reads), the start is Absent
   const prev = $('#hist-prev'), first = $('#hist-first');
   if (!prev || !first) problems.push('no #hist-prev / #hist-first controls');
   else {
@@ -126,13 +359,11 @@ function pageSmoke(core, html) {
     const start = ($('#state-name') || {}).textContent || '';
     if (!/absent/i.test(start)) problems.push(`at the start the ladder shows «${start}», expected Absent`);
   }
-
   // free play: reset, register, evidence rows, slot control
   const reset = $('#btn-reset');
   if (!reset) problems.push('no #btn-reset'); else reset.dispatchEvent(win.makeEvent('click'));
   const actorBtn = doc.querySelector('.actor[data-actor="anyone"]');
-  if (!actorBtn) problems.push('no anyone actor chip');
-  else actorBtn.dispatchEvent(win.makeEvent('click'));
+  if (!actorBtn) problems.push('no anyone actor chip'); else actorBtn.dispatchEvent(win.makeEvent('click'));
   const regBtn = doc.querySelector('.act[data-kind="register"]');
   if (!regBtn) problems.push('no register action for anyone');
   else if (regBtn.disabled) problems.push('register is disabled on an absent checkpoint');
@@ -141,34 +372,30 @@ function pageSmoke(core, html) {
   if (goBtn) goBtn.dispatchEvent(win.makeEvent('click'));
   const v0 = ($('#verdict') || {}).textContent || '';
   if (!/juvenile|young|born/i.test(v0)) problems.push(`after register the verdict says «${v0.slice(0, 80)}», expected juvenile`);
-
-  // slot control changes the verdict
   const slotInput = $('#slot-input');
   if (!slotInput) problems.push('no #slot-input');
   else {
-    slotInput.value = '10';
-    slotInput.dispatchEvent(win.makeEvent('change'));
+    slotInput.value = '10'; slotInput.dispatchEvent(win.makeEvent('change'));
     const v1 = ($('#verdict') || {}).textContent || '';
-    if (!/consumable/i.test(v1) || /not consumable/i.test(v1))
-      problems.push(`after moving the slot to 10 the verdict says «${v1.slice(0, 80)}», expected consumable`);
-    // moving backwards is refused
-    slotInput.value = '3';
-    slotInput.dispatchEvent(win.makeEvent('change'));
+    if (!/consumable/i.test(v1) || /not consumable/i.test(v1)) problems.push(`after moving the slot to 10 the verdict says «${v1.slice(0, 80)}», expected consumable`);
+    slotInput.value = '3'; slotInput.dispatchEvent(win.makeEvent('change'));
     if (($('#slot-now') || {}).textContent !== '10') problems.push('the slot control went backwards');
+    slotInput.value = '9007199254740992'; slotInput.dispatchEvent(win.makeEvent('change'));
+    if (($('#slot-now') || {}).textContent !== '10') problems.push('the slot control accepted 2^53');
+    slotInput.value = '1e3'; slotInput.dispatchEvent(win.makeEvent('change'));
+    if (($('#slot-now') || {}).textContent !== '10') problems.push('the slot control accepted an exponent literal');
   }
-
-  // evidence rows can be added and removed
-  const evKind = $('#ev-kind');
-  const evAdd = $('#ev-add');
+  const evKind = $('#ev-kind'), evAdd = $('#ev-add');
   if (!evKind || !evAdd) problems.push('no evidence controls');
   else {
-    evKind.value = 'rotationTo';
-    evKind.dispatchEvent(win.makeEvent('change'));
-    $('#ev-a').value = '0'; $('#ev-b').value = '0'; $('#ev-c').value = '1';
+    evKind.value = 'rotationTo'; evKind.dispatchEvent(win.makeEvent('change'));
+    $('#ev-a').value = '0'; $('#ev-b').value = '0'; $('#ev-c').value = '9007199254740992';
+    evAdd.dispatchEvent(win.makeEvent('click'));
+    if (doc.querySelectorAll('#ev-rows .ev-row').length !== 0) problems.push('an evidence row with 2^53 was accepted');
+    $('#ev-c').value = '1';
     evAdd.dispatchEvent(win.makeEvent('click'));
     const rows = doc.querySelectorAll('#ev-rows .ev-row');
     if (rows.length !== 1) problems.push(`evidence rows after add: ${rows.length}, expected 1`);
-    // Hal can now land the rotation
     const hal = doc.querySelector('.actor[data-actor="hal"]');
     if (hal) hal.dispatchEvent(win.makeEvent('click'));
     const rot = doc.querySelector('.act[data-kind="rotate"]');
@@ -184,7 +411,6 @@ function pageSmoke(core, html) {
       if (rot2 && !/witness/i.test(rot2.title)) problems.push('disabled rotate does not explain the missing witnessed rotation: ' + rot2.title);
     }
   }
-  // theme toggle exists and flips
   const theme = $('#btn-theme');
   if (!theme) problems.push('no #btn-theme');
   else {
@@ -192,12 +418,10 @@ function pageSmoke(core, html) {
     theme.dispatchEvent(win.makeEvent('click'));
     if ((doc.documentElement.dataset.theme || '') === before) problems.push('theme toggle did nothing');
   }
-  // the chart drew
   const canvas = $('#value-chart');
   if (!canvas) problems.push('no #value-chart canvas');
   else if (!canvas.__ctx || canvas.__ctx.calls < 10) problems.push('the value chart drew nothing');
   if (win.__errors && win.__errors.length) problems.push('page raised during play: ' + win.__errors.map(String).join(' | '));
-  // the page's own ?selftest=1 must run and PASS
   try {
     const w2 = createWindow(html, { search: '?selftest=1' });
     if (w2.__errors.length) problems.push('selftest page raised: ' + w2.__errors.map(String).join(' | '));
@@ -212,62 +436,71 @@ function pageSmoke(core, html) {
 /* --- the suite ------------------------------------------------------------ */
 
 async function runSuite(opts) {
-  const core = await import(pathToFileURL(opts.core || CORE).href + '?t=' + Date.now());
-  const rows = [];
-  const problems = [];
+  const core = await import(pathToFileURL(opts.core || CORE).href + '?t=' + Date.now() + Math.random());
+  const rows = [], problems = [];
+  let corpus = null;
+  try { corpus = core.parseJsonExact(readFileSync(CORPUS, 'utf8')); } catch (e) { problems.push('corpus unreadable or lossy: ' + e.message); }
   const files = readdirSync(opts.scenarios || SCENARIOS).filter(f => f.endsWith('.json')).sort();
   if (files.length !== 15) problems.push(`scenario files: ${files.length}, expected 15`);
-  const asserted = new Set();
-  const stories = new Set();
+  const asserted = new Set(), stories = new Set(), timelines = {};
   let steps = 0;
   for (const f of files) {
     let sc;
-    try { sc = JSON.parse(readFileSync(join(opts.scenarios || SCENARIOS, f), 'utf8')); }
-    catch (e) { problems.push(`${f}: unreadable: ${e.message}`); continue; }
+    try { sc = core.parseJsonExact(readFileSync(join(opts.scenarios || SCENARIOS, f), 'utf8')); }
+    catch (e) { problems.push(`${f}: unreadable or lossy: ${e.message}`); continue; }
     if (!Number.isInteger(sc.story) || stories.has(sc.story)) problems.push(`${f}: story number missing or duplicated`);
     stories.add(sc.story);
     if (!Array.isArray(sc.steps) || !sc.steps.length) { problems.push(`${f}: no steps`); continue; }
-    const r = runScenario(core, sc, f);
+    const r = runScenario(core, sc, f, corpus);
     r.asserted.forEach(x => asserted.add(x));
-    steps += r.stepsRun;
-    rows.push({ item: `story ${String(sc.story).padStart(2)} ${sc.title}`, steps: r.stepsRun,
-      exhibits: [...r.exhibitedIds].length, ok: !r.problems.length });
+    steps += r.stepsRun; timelines[f] = r.timeline;
+    rows.push({ item: `story ${String(sc.story).padStart(2)} ${sc.title}`, steps: r.stepsRun, exhibits: r.exhibitedIds.size, ok: !r.problems.length });
     problems.push(...r.problems);
   }
   for (let n = 1; n <= 15; n++) if (!stories.has(n)) problems.push(`story ${n} has no scenario`);
+  // exact Nat
+  const nat = checkExactNat(core);
+  rows.push({ item: `exact Nat: ${nat.boundaries} non-Nat values refused at every boundary; 2^53 arithmetic refused, never rounded`, ok: !nat.problems.length });
+  problems.push(...nat.problems);
+  // the system level
+  const sys = checkSystem(core, corpus);
+  (sys.asserted || new Set()).forEach(x => asserted.add(x));
+  rows.push({ item: `system: ${sys.transitions} multi-AID transitions (${sys.accepted || 0} accepted, T8 shown on ${sys.t8Shown || 0}, ${sys.nonRegisterShown || 0} non-registration)`, ok: !sys.problems.length });
+  problems.push(...sys.problems);
   // reason coverage
   const missing = core.REASONS.filter(r => !asserted.has(r));
   rows.push({ item: `refusal reasons asserted ${asserted.size}/${core.REASONS.length}`, ok: !missing.length });
-  if (missing.length) problems.push('refusal reasons never asserted by a scenario: ' + missing.join(', '));
+  if (missing.length) problems.push('refusal reasons never asserted: ' + missing.join(', '));
   const unknown = [...asserted].filter(r => !core.REASONS.includes(r));
   if (unknown.length) problems.push('scenarios assert reasons the core cannot produce: ' + unknown.join(', '));
-  // every reason explains itself
-  const dumb = core.REASONS.filter(r => typeof core.explain({ ok: false, reason: r, action: 'close', pre: 'absent' }, core.newSession({ D: 1, B: 1, P: 1, W: 1 })) !== 'string');
+  const dumb = core.REASONS.filter(r => typeof core.explain({ ok: false, reason: r, action: 'close', pre: 'absent', field: 'x', slot: 0, now: 0 }, core.newSession({ D: 1, B: 1, P: 1, W: 1 })) !== 'string');
   if (dumb.length) problems.push('reasons without explanation: ' + dumb.join(', '));
-  // every theorem in the ledger has a plain statement and lean names
   const bare = core.THEOREMS.filter(t => !t.plain || !t.lean || !t.lean.length);
   if (bare.length) problems.push('theorems without plain statement or Lean names: ' + bare.map(t => t.id).join(', '));
   rows.push({ item: `theorem groups ${core.THEOREMS.length} (T11, T13 absent from the Lean)`, ok: core.THEOREMS.length === 14 });
   if (core.THEOREMS.length !== 14) problems.push(`theorem groups: ${core.THEOREMS.length}, expected 14`);
-
+  // reconciliation
+  let clausesDoc = null;
+  try { clausesDoc = core.parseJsonExact(readFileSync(opts.clauses || CLAUSES, 'utf8')); } catch (e) { problems.push('clauses table unreadable: ' + e.message); }
+  if (clausesDoc) {
+    const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines);
+    rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.fragments} story fragments classified; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
+    problems.push(...cl.problems);
+    if (opts.printMatrix) for (const m of cl.matrix) console.log(`  ${m.hit ? '✓' : '✗'}  ${m.id.padEnd(32)} story ${String(m.story).padStart(2)}  ${m.hit ? m.hit.file + ' step ' + m.hit.step : '—'}  ${m.clause}`);
+  }
   // build --check
   if (!opts.skipBuild) {
     try {
-      execFileSync(process.execPath, [BUILD, '--check', ...(opts.html ? ['--html', opts.html] : []),
-        ...(opts.core ? ['--core', opts.core] : [])], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      execFileSync(process.execPath, [BUILD, '--check', ...(opts.html ? ['--html', opts.html] : []), ...(opts.core ? ['--core', opts.core] : [])], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
       rows.push({ item: 'build --check (core slices, scenarios, corpus, docs copy)', ok: true });
-    } catch (e) {
-      rows.push({ item: 'build --check', ok: false });
-      problems.push('build --check RED: ' + String(e.stdout || '').trim() + ' ' + String(e.stderr || '').trim());
-    }
+    } catch (e) { rows.push({ item: 'build --check', ok: false }); problems.push('build --check RED: ' + String(e.stdout || '').trim() + ' ' + String(e.stderr || '').trim()); }
   }
   // page smoke
   let html;
-  try { html = readFileSync(opts.html || HTML, 'utf8'); }
-  catch (e) { problems.push('page unreadable: ' + e.message); }
+  try { html = readFileSync(opts.html || HTML, 'utf8'); } catch (e) { problems.push('page unreadable: ' + e.message); }
   if (html) {
     const s = pageSmoke(core, html);
-    rows.push({ item: 'page smoke (minimal DOM: picker, play, evidence, slot, ledger, theme, chart)', ok: !s.problems.length });
+    rows.push({ item: 'page smoke (minimal DOM: picker, play, evidence, slot, ledger, theme, chart, ?selftest=1)', ok: !s.problems.length });
     problems.push(...s.problems);
   }
   return { rows, problems, steps };
@@ -275,90 +508,72 @@ async function runSuite(opts) {
 
 function printTable(r) {
   const w = Math.max(...r.rows.map(x => x.item.length));
-  for (const row of r.rows)
-    console.log(`${row.ok ? 'PASS' : 'FAIL'}  ${row.item.padEnd(w)}` +
-      (row.steps !== undefined ? `  steps=${row.steps} exhibits=${row.exhibits}` : ''));
-  console.log(`${r.problems.length ? 'RED' : 'GREEN'}: ${r.rows.length} items, ${r.steps} story steps replayed` +
-    (r.problems.length ? `, ${r.problems.length} problems` : ''));
+  for (const row of r.rows) console.log(`${row.ok ? 'PASS' : 'FAIL'}  ${row.item.padEnd(w)}` + (row.steps !== undefined ? `  steps=${row.steps} exhibits=${row.exhibits}` : ''));
+  console.log(`${r.problems.length ? 'RED' : 'GREEN'}: ${r.rows.length} items, ${r.steps} story steps replayed` + (r.problems.length ? `, ${r.problems.length} problems` : ''));
   r.problems.forEach(p => console.error(' - ' + p));
 }
 
-/* --- selftest: four negative axes, then GREEN ------------------------------ */
+/* --- selftest: negative controls, then GREEN ---------------------------- */
 
 async function selftest(work) {
   const coreText = readFileSync(CORE, 'utf8');
   const htmlText = readFileSync(HTML, 'utf8');
+  const mutant = (name, edits) => {
+    let t = coreText;
+    for (const [needle, repl] of edits) { if (!t.includes(needle)) throw new Error(`selftest ${name}: needle not found: ${needle.slice(0, 60)}`); t = t.replace(needle, repl); }
+    const p = join(work, name + '.mjs'); writeFileSync(p, t); return p;
+  };
+  const scenariosCopy = (edit) => { const d = join(work, 'sc-' + Math.random().toString(36).slice(2)); mkdirSync(d, { recursive: true }); cpSync(SCENARIOS, d, { recursive: true }); edit(d); return d; };
+  const topUp = "const pool2 = natAdd(l.pool, a.topUp.x); if (pool2 === null) return refuse('invalid-nat', 'pool');";
   const controls = [
-    {
-      name: 'scenario with a flipped expectation',
-      expect: /expected ok=false, got ok=true/,
-      make: () => {
-        const d = join(work, 'sc1'); mkdirSync(d, { recursive: true });
-        cpSync(SCENARIOS, d, { recursive: true });
-        const f = join(d, '02-hal-lands-and-is-paid.json');
-        const sc = JSON.parse(readFileSync(f, 'utf8'));
-        sc.steps[3].expect.ok = false; sc.steps[3].expect.reason = 'no-quorum';
-        writeFileSync(f, JSON.stringify(sc));
-        return { scenarios: d, skipBuild: true };
-      },
-    },
-    {
-      name: 'core guard flipped: close enabled while poisoned',
-      expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T16|T4/,
-      make: () => {
-        const p = join(work, 'core-m1.mjs');
-        const needle = "if (state.present.l.poisoned) return refuse('poisoned');\n      return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');";
-        if (!coreText.includes(needle)) throw new Error('selftest: close guard needle not found in core');
-        writeFileSync(p, coreText.replace(needle, "return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');"));
-        return { core: p, skipBuild: true };
-      },
-    },
-    {
-      name: 'theorem property seeded to lie: T6 conservation on the pool',
-      expect: /theorem VIOLATED: .*T6/,
-      make: () => {
-        const p = join(work, 'core-m2.mjs');
-        const needle = 'const poolOk = held(pre).pool + f.poolIn ===';
-        if (!coreText.includes(needle)) throw new Error('selftest: T6 needle not found in core');
-        writeFileSync(p, coreText.replace(needle, 'const poolOk = held(pre).pool + f.poolIn + 1 ==='));
-        return { core: p, skipBuild: true };
-      },
-    },
-    {
-      name: 'page with the story picker removed',
-      expect: /no #story-picker|picker lists/,
-      make: () => {
-        const p = join(work, 'page-m1.html');
-        writeFileSync(p, htmlText.replace('id="story-picker"', 'id="story-pickr"'));
-        return { html: p, skipBuild: true };
-      },
-    },
+    { name: 'scenario with a flipped expectation', expect: /expected ok=false, got ok=true/,
+      make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[3].expect.ok = false; sc.steps[3].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
+    { name: 'core guard flipped: close enabled while poisoned', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(16|4|7)/,
+      make: () => ({ core: mutant('m-close', [["if (state.present.l.poisoned) return refuse('poisoned');\n      return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');", "return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');"]]), skipBuild: true }) },
+    { name: 'theorem property seeded to lie: T6 conservation on the pool', expect: /theorem VIOLATED: .*T6/,
+      make: () => ({ core: mutant('m-t6', [['const poolOk = big(held(pre).pool) + big(f.poolIn) ===', 'const poolOk = big(held(pre).pool) + big(f.poolIn) + 1n ===']]), skipBuild: true }) },
+    { name: 'page with the story picker removed', expect: /no #story-picker|picker lists|page raised on load/,
+      make: () => { const p = join(work, 'page-m1.html'); writeFileSync(p, htmlText.replace('id="story-picker"', 'id="story-pickr"')); return { html: p, skipBuild: true }; } },
+    { name: 'core that rounds at 2^53 (isNat relaxed, sum unguarded)', expect: /isNat accepts 9007199254740992|accepted a top-up .* T6\/T14 flagged|precision/,
+      make: () => ({ core: mutant('m-nat', [["const isNat = v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;", "const isNat = v => typeof v === 'number' && Number.isInteger(v) && v >= 0;"],
+        ['const natAdd = (a, b) => { const s = a + b; return isNat(s) && BigInt(a) + BigInt(b) === BigInt(s) ? s : null; };', 'const natAdd = (a, b) => a + b;']]), skipBuild: true }) },
+    { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7 \(.*differs from Lean/,
+      make: () => ({ core: mutant('m-t7', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + 1); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
+    { name: 'registry drops an unrelated AID (T8 must red on the system generator)', expect: /theorem VIOLATED: .*T8 \(.*registry lost an AID|T8 \(.*registry changed/,
+      make: () => ({ core: mutant('m-t8', [["const registry = res.ok && kind === 'register' ? [...s.registry, aid] : s.registry;", "const registry = res.ok && kind === 'register' ? [...s.registry, aid] : (res.ok ? [aid] : s.registry);"]]), skipBuild: true }) },
+    { name: 'transition that reads W (differs at W = 2; T9 must red)', expect: /theorem VIOLATED: .*T9 \(the transition read W/,
+      make: () => ({ core: mutant('m-t9', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + (p.W === 2 ? 1 : 0)); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
+    { name: 'a story clause dropped from the reconciliation table', expect: /unclassified fragment/,
+      make: () => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); j.clauses = j.clauses.filter(c => !(c.story === 1 && /inception parses/.test(c.clause))); const p = join(work, 'clauses-m.json'); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; } },
+    { name: 'a guard anchor whose line no longer holds its token', expect: /does not contain/,
+      make: () => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)).token = 'hpool : l.pool > p.P'; const p = join(work, 'clauses-m2.json'); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; } },
+    { name: 'a distinctive scenario step dropped (conviction from a poisoned state)', expect: /distinctive clause «convict-from-poisoned».*not exercised/,
+      make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '09-cora-convicts.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps.splice(1, 1); sc.steps.forEach(s => { delete s.expect.exhibits; delete s.expect.verdict; }); writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
   ];
   for (const c of controls) {
     const opts = c.make();
     const r = await runSuite(opts);
     if (!r.problems.length) { console.error(`SELFTEST RED: control «${c.name}» ACCEPTED by the gate`); return 1; }
     const text = r.problems.join('\n');
-    if (!c.expect.test(text)) {
-      console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 600)}`);
-      return 1;
-    }
-    console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n')[0].slice(0, 140)}`);
+    if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 900)}`); return 1; }
+    console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n').find(l => c.expect.test(l)).slice(0, 160)}`);
   }
   const green = await runSuite({});
   printTable(green);
   if (green.problems.length) { console.error('SELFTEST RED: production does not return GREEN'); return 1; }
-  console.log('selftest GREEN: 4 negative controls RED for the expected reason, then production GREEN');
+  console.log(`selftest GREEN: ${controls.length} negative controls RED for the expected reason, then production GREEN`);
   return 0;
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-scenario-gate-'));
 let code = 1;
 try {
-  if (process.argv.includes('--selftest')) code = await selftest(work);
+  if (process.argv.includes('--clauses-md')) {
+    console.log(clausesMarkdown(JSON.parse(readFileSync(CLAUSES, 'utf8')))); code = 0;
+  } else if (process.argv.includes('--selftest')) code = await selftest(work);
   else {
-    const r = await runSuite({ core: argPath('--core'), html: argPath('--html'), scenarios: argPath('--scenarios'),
-      skipBuild: process.argv.includes('--skip-build') });
+    const r = await runSuite({ core: argPath('--core'), html: argPath('--html'), scenarios: argPath('--scenarios'), clauses: argPath('--clauses'),
+      skipBuild: process.argv.includes('--skip-build'), printMatrix: process.argv.includes('--matrix') });
     printTable(r);
     code = r.problems.length ? 1 : 0;
   }

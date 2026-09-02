@@ -1,0 +1,160 @@
+{
+  "story": 8,
+  "title": "Alice moves her refund address",
+  "goal": "As Alice, I want the money to come back to me and not to whoever registered my checkpoint.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "friend",
+      "say": "A stranger registered Alice's checkpoint with his own refund address (6).",
+      "action": {
+        "register": {
+          "refund": 6,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "refundTo": 6
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Alice rotates on KERI. A relayer submits her public rotation asking to move the refund address to Alice's: the new keys did not sign the address, so the whole rotation is refused as submitted.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "refund-not-authorized",
+        "verdict": "consumable",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice's new keys (epoch 1) sign the new refund address along with the rotation. The address moves.",
+      "evidence": {
+        "add": [
+          {
+            "refundAuthorized": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 8
+        },
+        "flow": {
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "At close the stranger's bonds go to Alice: a stale registration is a donation.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              1
+            ]
+          }
+        ]
+      },
+      "action": "close",
+      "expect": {
+        "ok": true,
+        "state": "gone",
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 1000,
+            "b": 5,
+            "pool": 8
+          }
+        },
+        "verdict": "not-present",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T10",
+          "T16"
+        ]
+      }
+    }
+  ]
+}

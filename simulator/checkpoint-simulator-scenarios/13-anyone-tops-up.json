@@ -1,0 +1,155 @@
+{
+  "story": 13,
+  "title": "Anyone tops up the pool",
+  "goal": "As a friend of Alice, I want to pay for her maintenance.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered with an empty pool.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 0
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "pool": 0
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 3,
+      "who": "friend",
+      "say": "A friend adds 7 to the pool. The datum is untouched; no signature; juvenility is not restarted.",
+      "action": {
+        "topUp": {
+          "x": 7
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "bornAt": 0,
+          "pool": 7,
+          "sn": 0,
+          "epoch": 0
+        },
+        "flow": {
+          "poolIn": 7
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14"
+        ]
+      }
+    },
+    {
+      "slot": 3,
+      "who": "friend",
+      "say": "A negative amount is not lovelace: refused by name.",
+      "action": {
+        "topUp": {
+          "x": -5
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid-nat",
+        "verdict": "juvenile",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 3,
+      "who": "friend",
+      "say": "Neither is a fraction.",
+      "action": {
+        "topUp": {
+          "x": 2.5
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid-nat",
+        "verdict": "juvenile",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hunters now have a reason to serve her.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "pool": 5
+        },
+        "flow": {
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    }
+  ]
+}

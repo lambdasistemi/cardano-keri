@@ -1,0 +1,221 @@
+{
+  "story": 12,
+  "title": "A stranger registers Alice at a stale epoch",
+  "goal": "As Mallory, holding keys Alice retired long ago, I register her AID myself and stop advancing at my epoch.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "mallory",
+      "say": "Mallory registers Alice's public inception, naming her own refund address (4).",
+      "action": {
+        "register": {
+          "refund": 4,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "refundTo": 4
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 0,
+      "who": "mallory",
+      "say": "Alice's rotation 1 is public. Mallory advances to the epoch whose keys she holds, paying herself the premium.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 4,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 1,
+          "pool": 8,
+          "refundTo": 4
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 0,
+      "who": "mallory",
+      "say": "It can happen once per AID, ever.",
+      "action": {
+        "register": {
+          "refund": 4,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "already-present",
+        "verdict": "juvenile",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 5,
+      "who": "treasury",
+      "say": "Juvenile for W slots: nobody consumes it yet.",
+      "expect": {
+        "verdict": "juvenile"
+      }
+    },
+    {
+      "slot": 5,
+      "who": "hal",
+      "say": "Anyone advances it onward with Alice's later public rotation.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 2,
+          "op": "keep",
+          "payee": 2,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 2,
+          "pool": 6
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 5,
+      "who": "alice",
+      "say": "The moment Alice's keys sign a refund address at a rotation, Mallory's bonds answer to Alice.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              2,
+              2,
+              3
+            ]
+          },
+          {
+            "refundAuthorized": [
+              3,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 3,
+          "op": "keep",
+          "payee": 1,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 3,
+          "refundTo": 1,
+          "pool": 4
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 5,
+      "who": "mallory",
+      "say": "A redeemer the validator does not know is refused by name.",
+      "action": {
+        "steal": {
+          "everything": true
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid-action",
+        "verdict": "juvenile",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    }
+  ]
+}

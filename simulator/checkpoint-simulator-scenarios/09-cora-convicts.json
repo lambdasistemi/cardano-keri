@@ -1,0 +1,186 @@
+{
+  "story": 9,
+  "title": "Cora convicts",
+  "goal": "As Cora, holding two of Alice's rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered, bonded.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "cora",
+      "say": "Without a second receipted rotation at the tip's sequence there is no conviction.",
+      "action": {
+        "convict": {
+          "payee": 3
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "no-duplicity-proof",
+        "verdict": "consumable",
+        "exhibits": [
+          "T9",
+          "T12"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "cora",
+      "say": "Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice's witnesses. Convicted: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).",
+      "evidence": {
+        "add": [
+          {
+            "duplicityAt": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "action": {
+        "convict": {
+          "payee": 3
+        }
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "convicted": {
+            "epoch": 0,
+            "sn": 0,
+            "convictedAt": 12
+          }
+        },
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 0,
+            "b": 5,
+            "pool": 10
+          },
+          "convictor": {
+            "addr": 3,
+            "dreg": 1000,
+            "b": 0,
+            "pool": 0
+          }
+        },
+        "verdict": "not-present",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T12",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "No rotation, ever.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "deposit",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "convicted-terminal",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9",
+          "T12"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "No close, ever.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              0
+            ]
+          }
+        ]
+      },
+      "action": "close",
+      "expect": {
+        "ok": false,
+        "reason": "convicted-terminal",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9",
+          "T12"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "friend",
+      "say": "Not even a top-up.",
+      "action": {
+        "topUp": {
+          "x": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "convicted-terminal",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9",
+          "T12"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "story": 10,
+  "title": "Alice leaves for good",
+  "goal": "As Alice, I want my identity off Cardano and my money back.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered, bonded, pool of 10.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Mallory has stolen the current keys. Alice blocks the close itself by poisoning first.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              0
+            ]
+          }
+        ]
+      },
+      "action": "poison",
+      "expect": {
+        "ok": true,
+        "live": {
+          "poisoned": true
+        },
+        "verdict": "poisoned",
+        "exhibits": [
+          "T1",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T10"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "mallory",
+      "say": "Mallory's close is refused: poisoned.",
+      "action": "close",
+      "expect": {
+        "ok": false,
+        "reason": "poisoned",
+        "verdict": "poisoned",
+        "exhibits": [
+          "T4",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "Alice rotates to fresh keys; the poison clears.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 1,
+          "poisoned": false,
+          "pool": 8
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "mallory",
+      "say": "Suppose Mallory also stole the new keys and closes. The token burns, but every lovelace goes to Alice's refund address: the closer chooses when, never where.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              1
+            ]
+          }
+        ]
+      },
+      "action": "close",
+      "expect": {
+        "ok": true,
+        "state": "gone",
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 1000,
+            "b": 5,
+            "pool": 8
+          }
+        },
+        "verdict": "not-present",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T10",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "friend",
+      "say": "The registry row stays: this AID can never be registered on Cardano again.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "gone-terminal",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "friend",
+      "say": "Nothing else is possible either.",
+      "action": {
+        "topUp": {
+          "x": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "gone-terminal",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    }
+  ]
+}

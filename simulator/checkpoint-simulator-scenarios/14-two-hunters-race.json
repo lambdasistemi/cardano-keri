@@ -1,0 +1,181 @@
+{
+  "story": 14,
+  "title": "Two hunters race",
+  "goal": "Both hunters see the rotation. If the pool covers P, the first advance wins and is paid; the second fails on the spent input. If it does not, the first freeze wins B; the second finds nothing to take.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered with a pool of 3: one premium and a little.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 3
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Alice rotates. Hal lands it first and is paid.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 1,
+          "sn": 1,
+          "pool": 1
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "rival",
+      "say": "The rival's advance finds the input spent: the checkpoint is already at epoch 1, sequence 1, and his evidence names epoch 0.",
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 7,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "no-witnessed-rotation",
+        "verdict": "consumable",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "hal",
+      "say": "Alice rotates again; the pool (1) no longer covers P. Hal freezes first and takes B.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          }
+        ]
+      },
+      "action": {
+        "freeze": {
+          "sn'": 2,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "b": 0
+        },
+        "flow": {
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 5,
+            "pool": 0
+          }
+        },
+        "verdict": "b-missing",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T15",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "rival",
+      "say": "The rival's freeze finds nothing to take.",
+      "action": {
+        "freeze": {
+          "sn'": 2,
+          "payee": 7
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "freeze-bond-missing",
+        "verdict": "b-missing",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 19,
+      "who": "rival",
+      "say": "A transaction dated before the last accepted one is refused: the chain does not go backwards.",
+      "action": {
+        "topUp": {
+          "x": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "slot-regression",
+        "verdict": "b-missing",
+        "exhibits": []
+      }
+    }
+  ]
+}

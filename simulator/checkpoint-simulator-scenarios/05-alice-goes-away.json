@@ -1,0 +1,196 @@
+{
+  "story": 5,
+  "title": "Alice goes away",
+  "goal": "As Alice, I want to park my identity and take my money out, so that nobody consumes it while I am gone and nobody can wake it but me.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered, bonded, pool of 10.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice rotates on KERI with her next keys; her witnesses receipt it.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "She lands the rotation with withdraw. The chain pays the conviction bond, the freeze bond and the pool to her refund address; the state stays on chain, unbonded.",
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "withdraw",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "poisoned": false,
+          "bornAt": 0,
+          "refundTo": 1,
+          "dreg": 0,
+          "b": 0,
+          "pool": 0
+        },
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 1000,
+            "b": 5,
+            "pool": 10
+          }
+        },
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14",
+          "T15",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "mallory",
+      "say": "Mallory holds the keys Alice just retired. The quorum she can sign is epoch 0; the parked checkpoint is at epoch 1. Closing is refused.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              0
+            ]
+          }
+        ]
+      },
+      "action": "close",
+      "expect": {
+        "ok": false,
+        "reason": "no-quorum",
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "mallory",
+      "say": "So is poisoning.",
+      "action": "poison",
+      "expect": {
+        "ok": false,
+        "reason": "no-quorum",
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hal, holding a later witnessed rotation, cannot freeze a parked checkpoint: there is no freeze bond to take.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          }
+        ]
+      },
+      "action": {
+        "freeze": {
+          "sn'": 2,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "freeze-bond-missing",
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "friend",
+      "say": "The pool is still open to anyone, but a pool on an unbonded checkpoint buys no consumability.",
+      "action": {
+        "topUp": {
+          "x": 3
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "dreg": 0,
+          "b": 0,
+          "pool": 3
+        },
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T10",
+          "T14"
+        ]
+      }
+    }
+  ]
+}

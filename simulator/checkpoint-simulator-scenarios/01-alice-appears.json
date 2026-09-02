@@ -1,0 +1,131 @@
+{
+  "story": 1,
+  "title": "Alice's identity appears on Cardano",
+  "goal": "As anyone holding Alice's public inception, I want to register her checkpoint, so that Cardano contracts can read her key state.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "friend",
+      "say": "Nothing is on chain for this AID. Money cannot be added to a checkpoint that does not exist.",
+      "action": {
+        "topUp": {
+          "x": 3
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "absent-needs-register",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 0,
+      "who": "friend",
+      "say": "A deployment with a zero conviction bond is refused before anything else: 'bond missing' would be indistinguishable from 'bond full'.",
+      "params": {
+        "D": 0,
+        "B": 5,
+        "P": 2,
+        "W": 10
+      },
+      "action": {
+        "register": {
+          "refund": 6,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid-params",
+        "verdict": "not-present",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 0,
+      "who": "friend",
+      "say": "A friend registers Alice's public inception, bringing both bonds and a first pool, and names his own refund address.",
+      "action": {
+        "register": {
+          "refund": 6,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 0,
+          "epoch": 0,
+          "poisoned": false,
+          "bornAt": 0,
+          "refundTo": 6,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 10
+        },
+        "flow": {
+          "dregIn": 1000,
+          "bIn": 5,
+          "poolIn": 10
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 9,
+      "who": "treasury",
+      "say": "Nine slots later the checkpoint is still juvenile: born at slot 0, the window W is 10.",
+      "expect": {
+        "verdict": "juvenile"
+      }
+    },
+    {
+      "slot": 10,
+      "who": "treasury",
+      "say": "At slot 10 the treasury accepts it: both bonds full, not poisoned, past juvenility.",
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 10,
+      "who": "friend",
+      "say": "Registering the same AID again is refused: the token is minted once, ever.",
+      "action": {
+        "register": {
+          "refund": 6,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "already-present",
+        "verdict": "consumable",
+        "exhibits": [
+          "T8",
+          "T9"
+        ]
+      }
+    }
+  ]
+}

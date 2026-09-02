@@ -1,0 +1,123 @@
+{
+  "story": 3,
+  "title": "The pool runs dry, so Hal freezes her instead",
+  "goal": "As Hal, when Alice's pool cannot pay me, I want to take the freeze bond and freeze her checkpoint on its old keys, so that no consumer trusts a stale key state and Alice comes back to pay.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered with a pool of 1: below the premium P = 2.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice rotates on KERI; her witnesses receipt it. The checkpoint has not seen it.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hal submits the same evidence he would use to advance, but as a freeze. The chain pays B to Hal and leaves the datum as it is: the old keys stay.",
+      "action": {
+        "freeze": {
+          "sn'": 1,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 0,
+          "epoch": 0,
+          "poisoned": false,
+          "bornAt": 0,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 0,
+          "pool": 1
+        },
+        "flow": {
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 5,
+            "pool": 0
+          }
+        },
+        "verdict": "b-missing",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T15",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "A second freeze finds nothing to take.",
+      "action": {
+        "freeze": {
+          "sn'": 1,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "freeze-bond-missing",
+        "verdict": "b-missing",
+        "exhibits": [
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "treasury",
+      "say": "Alice sees her identity refused by the treasury and learns why: the freeze bond is missing. The conviction bond was never touched.",
+      "expect": {
+        "verdict": "b-missing"
+      }
+    }
+  ]
+}

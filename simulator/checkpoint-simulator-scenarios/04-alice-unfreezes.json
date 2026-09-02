@@ -1,0 +1,161 @@
+{
+  "story": 4,
+  "title": "Alice unfreezes",
+  "goal": "As Alice, I want my checkpoint back in service, so I land my rotation myself, put the freeze bond back, and top up the pool.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered with a short pool.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T5",
+          "T6",
+          "T7",
+          "T8",
+          "T9"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice rotates on KERI.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hal freezes her (story 3).",
+      "action": {
+        "freeze": {
+          "sn'": 1,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "b": 0,
+          "pool": 1
+        },
+        "verdict": "b-missing",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T15",
+          "T16"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "Alice lands the rotation herself with deposit, bringing the freeze bond back. Both bonds are full on the output; she is born again at slot 20.",
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "deposit",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "poisoned": false,
+          "bornAt": 20,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 1
+        },
+        "flow": {
+          "dregIn": 0,
+          "bIn": 5
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T2",
+          "T3",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T10",
+          "T15"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "The pool is separate: Alice adds 20 to it. Adding to the pool does not restart juvenility.",
+      "action": {
+        "topUp": {
+          "x": 20
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "bornAt": 20,
+          "pool": 21
+        },
+        "flow": {
+          "poolIn": 20
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T1",
+          "T5",
+          "T6",
+          "T7",
+          "T9",
+          "T14"
+        ]
+      }
+    },
+    {
+      "slot": 30,
+      "who": "hal",
+      "say": "Ten slots later the checkpoint is consumable again, and Hal sees a pool worth landing rotations for.",
+      "expect": {
+        "verdict": "consumable"
+      }
+    }
+  ]
+}

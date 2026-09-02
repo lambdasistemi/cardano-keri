@@ -353,6 +353,36 @@ function binders(span) {
   for (const line of span.text.split('\n')) { const f = line.match(/^  ([A-Za-z_][A-Za-z0-9_']*)\s*:\s*(.+)$/); if (f && out[f[1]] === undefined) out[f[1]] = f[2].trim(); }
   return out;
 }
+// groups(text) → the balanced groups and words of a Lean expression
+function groups(text) {
+  const out = []; let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if ('({⟨'.includes(ch)) {
+      let depth = 0, j = i;
+      for (; j < text.length; j++) { if ('({⟨'.includes(text[j])) depth++; else if (')}⟩'.includes(text[j])) { depth--; if (!depth) break; } }
+      out.push(text.slice(i, j + 1)); i = j + 1;
+    } else { let j = i; while (j < text.length && !/\s/.test(text[j]) && !'({⟨'.includes(text[j])) j++; out.push(text.slice(i, j)); i = j; }
+  }
+  return out;
+}
+// constructorParts(span) → {action, input, flow, post, postUpdates} for a Step
+// constructor (`Step p env (action) now (input) {flow} (post)`), {input, post}
+// for a SysStep constructor, null otherwise; postUpdates lists the datum
+// fields a `{ l with … }` post-state sets
+function constructorParts(span) {
+  const m = span.text.match(/^\s*(Step|SysStep) p env /m);
+  if (!m) return null;
+  const g = groups(span.text.slice(m.index));
+  if (m[1] === 'Step') {
+    const [, , , action, , input, flow, post] = g;
+    const sp = squash(post || '');
+    const upd = /^\(\.present \{ l with /.test(sp) ? [...sp.slice(sp.indexOf(' with ') + 6).matchAll(/([A-Za-z_][A-Za-z0-9_']*)\s*:=/g)].map(x => x[1]) : null;
+    return { action: action || null, input: input || null, flow: flow && flow.startsWith('{') ? flow : null, post: post || null, postUpdates: upd };
+  }
+  return { action: null, input: g[3] || null, flow: null, post: g[4] || null, postUpdates: null };
+}
 const squash = s => String(s).replace(/\s+/g, ' ');
 const within = (hay, needle) => squash(hay).includes(squash(needle));
 const where = span => `${span.file}:${span.from}-${span.to}`;
@@ -476,47 +506,97 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
   const byStory = {};
   for (const c of clauses) (byStory[c.story] = byStory[c.story] || []).push(c);
   const theoremGroup = decl => core.THEOREMS.find(t => t.lean.includes(decl));
-  // every guard / overrule row: a declaration, the exact text inside its span
-  // (inside the named binder), and one semantic tie to what decides the clause
+  // the parts of a constructor: the conclusion `Step p env (action) now (input)
+  // {flow} (post)` split into balanced groups; a claim's text must sit in the
+  // part its kind names (a guard in a hypothesis binder, a payment in the flow
+  // at the field that pays it, a post-state claim in the post-state expression)
+  const KINDS = ['guard', 'refusal', 'payment', 'post-state', 'no-guard', 'verdict'];
+  const TIES_OF = { guard: ['reason', 'match'], refusal: ['reason'], payment: ['match'], 'post-state': ['match'], 'no-guard': ['match'], verdict: ['verdict'] };
+  const FLOW_FIELD = /^(dregIn|bIn|poolIn|refund|hunter|convictor)\s*:=/;
   let anchored = 0;
   for (const c of clauses) {
     const tag = `story ${c.story} clause «${c.clause}»`;
-    if (!['guard', 'omission', 'overrule'].includes(c.class)) { problems.push(`${tag}: unknown class ${c.class}`); continue; }
-    if (c.class === 'omission') { if (!c.note) problems.push(`${tag}: an omission needs a note`); if (c.decl || c.reason || c.verdict || c.match) problems.push(`${tag}: an omission anchors nothing`); continue; }
-    if (c.ref || c.token) problems.push(`${tag}: file:line anchors are gone; name a declaration (decl) and its text`);
-    if (!c.decl || !c.text) { problems.push(`${tag}: a ${c.class} row names a Lean declaration (decl) and the exact text (text) that entails it`); continue; }
+    const fail = msg => problems.push(`${tag}: ${msg}`);
+    if (!['guard', 'omission', 'overrule'].includes(c.class)) { fail(`unknown class ${c.class}`); continue; }
+    if (c.class === 'omission') { if (!c.note) fail('an omission needs a note'); if (c.decl || c.reason || c.verdict || c.match || c.kind) fail('an omission anchors nothing'); continue; }
+    if (c.ref || c.token) fail('file:line anchors are gone; name a declaration (decl) and its text');
+    if (!c.decl || !c.text) { fail(`a ${c.class} row names a Lean declaration (decl) and the exact text (text) that entails it`); continue; }
     const span = spans.get(c.decl);
-    if (!span) { problems.push(`${tag}: ${c.decl} is not a declaration of the Lean`); continue; }
-    if (c.hyp) {
-      const b = binders(span)[c.hyp];
-      if (b === undefined) { problems.push(`${tag}: ${c.decl} (${where(span)}) has no binder ${c.hyp}`); continue; }
-      if (!within(b, c.text)) { problems.push(`${tag}: «${c.text}» is not inside ${c.decl}/${c.hyp} : «${b}»`); continue; }
-    } else if (!within(span.text, c.text)) { problems.push(`${tag}: «${c.text}» is not inside ${c.decl} (${where(span)})`); continue; }
+    if (!span) { fail(`${c.decl} is not a declaration of the Lean`); continue; }
     const ties = ['reason', 'verdict', 'match'].filter(k => c[k] !== undefined);
-    if (ties.length !== 1) { problems.push(`${tag}: a ${c.class} row carries exactly one tie (reason, verdict or match), has ${ties.length ? ties.join('+') : 'none'}`); continue; }
-    if (c.reason !== undefined) {
+    if (ties.length !== 1) { fail(`a ${c.class} row carries exactly one tie (reason, verdict or match), has ${ties.length ? ties.join('+') : 'none'}`); continue; }
+    const tie = ties[0];
+    // 0. the declaration decides the clause's tie at all
+    if (tie === 'match' && !(c.decl.startsWith('Step.') || c.decl.startsWith('SysStep.') || theoremGroup(c.decl))) { fail(`a match tie needs a Step constructor, a SysStep constructor or a theorem, not ${c.decl}`); continue; }
+    if (tie === 'reason') {
       const g = core.LEAN_GUARDS[c.reason];
-      if (!g) { problems.push(`${tag}: unknown reason ${c.reason}`); continue; }
-      if (!g.decls.includes(c.decl)) { problems.push(`${tag}: ${c.reason} is decided by ${g.decls.join(' / ') || 'the simulator, not the Lean'}, not by ${c.decl}`); continue; }
+      if (!g) { fail(`unknown reason ${c.reason}`); continue; }
+      if (!g.decls.includes(c.decl)) { fail(`${c.reason} is decided by ${g.decls.join(' / ') || 'the simulator, not the Lean'}, not by ${c.decl}`); continue; }
+    }
+    if (tie === 'verdict' && c.decl !== 'consumableState') { fail(`a verdict claim lives in consumableState, not ${c.decl}`); continue; }
+    if (!KINDS.includes(c.kind)) { fail(`a ${c.class} row names its claim kind (${KINDS.join(' / ')}), has ${c.kind}`); continue; }
+    if (!TIES_OF[c.kind].includes(tie)) { fail(`a ${c.kind} claim ties by ${TIES_OF[c.kind].join(' or ')}, not by ${tie}`); continue; }
+    const b = binders(span), parts = constructorParts(span);
+    // 1. the text sits in the part its kind names
+    let flowField = null, ok = true;
+    if (c.kind === 'guard' || c.kind === 'refusal') {
+      if (!c.hyp) { fail(`a ${c.kind} claim names the hypothesis (hyp) it lives in`); ok = false; }
+      else if (b[c.hyp] === undefined) { fail(`${c.decl} (${where(span)}) has no binder ${c.hyp}`); ok = false; }
+      else if (!within(b[c.hyp], c.text)) { fail(`«${c.text}» is not inside ${c.decl}/${c.hyp} : «${b[c.hyp]}»`); ok = false; }
+    } else if (c.kind === 'payment') {
+      if (!parts || parts.flow === null) { fail(`${c.decl} has no flow record for a payment claim`); ok = false; }
+      else if (!within(parts.flow, c.text)) { fail(`«${c.text}» is not inside the flow of ${c.decl} : «${squash(parts.flow)}»`); ok = false; }
+      else { const m = squash(c.text).match(FLOW_FIELD); if (!m) { fail(`a payment claim's text starts at the flow field that pays it (dregIn / bIn / poolIn / refund / hunter / convictor): «${c.text}»`); ok = false; } else flowField = m[1]; }
+    } else if (c.kind === 'post-state') {
+      if (!parts || parts.post === null) { fail(`${c.decl} has no post-state for a post-state claim`); ok = false; }
+      else if (!within(parts.post, c.text)) { fail(`«${c.text}» is not inside the post-state of ${c.decl} : «${squash(parts.post)}»`); ok = false; }
+      else if (c.updates !== undefined) {
+        if (!parts.postUpdates) { fail(`the post-state of ${c.decl} is not «{ l with … }», it carries no untouched-except claim`); ok = false; }
+        else { const want = [...c.updates].sort().join(','), got = [...parts.postUpdates].sort().join(','); if (want !== got) { fail(`the post-state of ${c.decl} updates ${got || 'nothing'}, the claim says ${want || 'nothing'}`); ok = false; } }
+      }
+    } else if (c.kind === 'no-guard') {
+      const hs = Object.keys(b).filter(h => /^h/.test(h));
+      if (hs.length) { fail(`${c.decl} has the guard hypotheses ${hs.join(', ')}; a no-guard claim needs none`); ok = false; }
+      else if (!parts || !within(parts.action, c.text)) { fail(`«${c.text}» is not the action of ${c.decl}`); ok = false; }
+    } else if (c.kind === 'verdict') {
+      if (c.decl !== 'consumableState') { fail(`a verdict claim lives in consumableState, not ${c.decl}`); ok = false; }
+      else if (!within(span.text, c.text)) { fail(`«${c.text}» is not inside consumableState`); ok = false; }
+    }
+    if (!ok) continue;
+    // 2. the tie agrees with what decides the clause
+    if (tie === 'reason') {
+      const g = core.LEAN_GUARDS[c.reason];
       const hyps = g.hyp ? [g.hyp] : (g.hyps || []).map(x => x[0]);
-      if (c.hyp && !hyps.includes(c.hyp)) { problems.push(`${tag}: ${c.reason} is the guard ${hyps.join('/')}, not ${c.hyp}`); continue; }
-    } else if (c.verdict !== undefined) {
+      if (!hyps.includes(c.hyp)) { fail(`${c.reason} is the guard ${hyps.join('/')}, not ${c.hyp}`); continue; }
+      if (c.kind === 'refusal' && !findStep(core, c.story, { ok: false, reason: c.reason }, scenarioTimelines)) { fail(`no step of story ${c.story}'s scenario is refused ${c.reason}`); continue; }
+    } else if (tie === 'verdict') {
       const conj = core.VERDICT_CONJUNCTS[c.verdict];
-      if (!conj) { problems.push(`${tag}: ${c.verdict} is not a conjunct verdict`); continue; }
-      if (c.decl !== 'consumableState') { problems.push(`${tag}: verdict ${c.verdict} is decided by consumableState, not by ${c.decl}`); continue; }
-      if (!conj.some(x => squash(x) === squash(c.text))) { problems.push(`${tag}: «${c.text}» is not the conjunct of ${c.verdict} (${conj.join(' / ')})`); continue; }
+      if (!conj) { fail(`${c.verdict} is not a conjunct verdict`); continue; }
+      if (!conj.some(x => squash(x) === squash(c.text))) { fail(`«${c.text}» is not the conjunct of ${c.verdict} (${conj.join(' / ')})`); continue; }
     } else {
       const hit = findStep(core, c.story, c.match, scenarioTimelines);
-      if (!hit) { problems.push(`${tag}: no step of story ${c.story}'s scenario matches ${JSON.stringify(c.match)}`); continue; }
-      const grp = theoremGroup(c.decl);
+      if (!hit) { fail(`no step of story ${c.story}'s scenario matches ${JSON.stringify(c.match)}`); continue; }
+      const rec = hit.record, grp = theoremGroup(c.decl);
       if (c.decl.startsWith('Step.')) {
-        const ctor = hit.record.ok ? core.constructorOf(hit.record) : null;
-        const decided = hit.record.ok ? [ctor] : ((core.LEAN_GUARDS[hit.record.reason] || {}).decls || []);
-        if (!decided.includes(c.decl)) { problems.push(`${tag}: ${hit.file} step ${hit.step} goes through ${decided.join(' / ') || 'no constructor'}, not ${c.decl}`); continue; }
-      } else if (grp) {
-        const th = hit.record.theorems[grp.id];
-        if (!th || !th.exhibited || !th.holds) { problems.push(`${tag}: ${hit.file} step ${hit.step} does not exhibit ${grp.id} (${c.decl})`); continue; }
-      } else { problems.push(`${tag}: a match tie needs a Step constructor or a theorem, not ${c.decl}`); continue; }
+        const decided = rec.ok ? [core.constructorOf(rec)] : ((core.LEAN_GUARDS[rec.reason] || {}).decls || []);
+        if (!decided.includes(c.decl)) { fail(`${hit.file} step ${hit.step} goes through ${decided.join(' / ') || 'no constructor'}, not ${c.decl}`); continue; }
+      } else if (c.decl.startsWith('SysStep.')) {
+        const sys = rec.ok && rec.kind === 'register' ? 'SysStep.register' : rec.ok ? 'SysStep.other' : null;
+        if (sys !== c.decl) { fail(`${hit.file} step ${hit.step} is ${sys || 'no system step'}, not ${c.decl}`); continue; }
+      } else {
+        const th = rec.theorems[grp.id];
+        if (!th || !th.exhibited || !th.holds) { fail(`${hit.file} step ${hit.step} does not exhibit ${grp.id} (${c.decl})`); continue; }
+      }
+      if (c.kind === 'payment') {
+        const v = (rec.flow || {})[flowField]; const paid = typeof v === 'number' ? v > 0 : !!v;
+        if (!paid) { fail(`${hit.file} step ${hit.step} pays nothing through ${flowField}`); continue; }
+      }
+      if (c.kind === 'post-state' && c.updates !== undefined) {
+        const lp = core.liveOf(rec.pre), lq = core.liveOf(rec.state);
+        if (!lp || !lq) { fail(`${hit.file} step ${hit.step} is not a present → present step; an untouched-except claim needs one`); continue; }
+        const outside = [...core.LIVE_NATS, 'poisoned'].filter(k => lp[k] !== lq[k] && !c.updates.includes(k));
+        if (outside.length) { fail(`${hit.file} step ${hit.step} changes ${outside.join(', ')}, outside the claimed updates ${c.updates.join(', ')}`); continue; }
+      }
     }
     anchored++;
   }
@@ -550,11 +630,11 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
 }
 
 function clausesMarkdown(clausesDoc) {
-  const lines = ['| story | clause | class | Lean declaration | text | tie | note |', '|---|---|---|---|---|---|---|'];
+  const lines = ['| story | clause | class | kind | Lean declaration | text | tie | note |', '|---|---|---|---|---|---|---|---|'];
   const esc = s => String(s === undefined ? '' : s).replace(/\|/g, '\\|');
   for (const c of clausesDoc.clauses) {
     const tie = c.reason ? 'reason ' + c.reason : c.verdict ? 'verdict ' + c.verdict : c.match ? 'step ' + JSON.stringify(c.match) : '';
-    lines.push(`| ${c.story} | ${esc(c.clause)} | ${c.class} | ${c.decl ? esc(c.decl + (c.hyp ? '/' + c.hyp : '')) : ''} | ${c.text ? '`' + esc(c.text) + '`' : ''} | ${esc(tie)} | ${esc(c.note)} |`);
+    lines.push(`| ${c.story} | ${esc(c.clause)} | ${c.class} | ${esc(c.kind)} | ${c.decl ? esc(c.decl + (c.hyp ? '/' + c.hyp : '')) : ''} | ${c.text ? '`' + esc(c.text) + '`' : ''} | ${esc(tie)} | ${esc(c.note)} |`);
   }
   return lines.join('\n');
 }
@@ -736,7 +816,7 @@ async function runSuite(opts) {
   try { clausesDoc = core.parseJsonExact(readFileSync(opts.clauses || CLAUSES, 'utf8')); } catch (e) { problems.push('clauses table unreadable: ' + e.message); }
   if (clausesDoc) {
     const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines, opts.leanRoot || LEAN_ROOT);
-    rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.anchored} anchored inside a Lean declaration with a semantic tie, ${cl.fragments} story fragments classified; ${cl.hyps} Step guard hypotheses all claimed by a refusal name; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
+    rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.anchored} atomic claims anchored in the part of a Lean declaration their kind names, with a semantic tie, ${cl.fragments} story fragments classified; ${cl.hyps} Step guard hypotheses all claimed by a refusal name; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
     problems.push(...cl.problems);
     if (opts.printMatrix) for (const m of cl.matrix) console.log(`  ${m.hit ? '✓' : '✗'}  ${m.id.padEnd(32)} story ${String(m.story).padStart(2)}  ${m.hit ? m.hit.file + ' step ' + m.hit.step : '—'}  ${m.clause}`);
   }
@@ -814,8 +894,20 @@ async function selftest(work) {
       make: () => withClauses('clauses-survivor.json', j => { const c = j.clauses.find(c => c.story === 1 && /inception parses/.test(c.clause)); Object.assign(c, { class: 'guard', decl: 'Action.actor', text: '| .register .. => .anyone', match: { ok: true, kind: 'register' } }); delete c.note; }) },
     { name: 'a reason row re-anchored to another constructor that carries the same text (hpool → rotateKeepUnpaid/hnopay)', expect: /pool-covers-premium is decided by Step\.freeze, not by Step\.rotateKeepUnpaid/,
       make: () => withClauses('clauses-hnopay.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.decl = 'Step.rotateKeepUnpaid'; c.hyp = 'hnopay'; }) },
-    { name: 'a text that exists in the file but outside the named declaration', expect: /«env\.quorum l\.epoch = true» is not inside Step\.freeze/,
-      make: () => withClauses('clauses-outside.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); delete c.hyp; c.text = 'env.quorum l.epoch = true'; }) },
+    { name: 'a text that exists in the file but outside the named hypothesis', expect: /«env\.quorum l\.epoch = true» is not inside Step\.freeze\/hpool/,
+      make: () => withClauses('clauses-outside.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.text = 'env.quorum l.epoch = true'; }) },
+    { name: "the auditor's survivor: story 3's payment claim re-tied to the post-state text inside the same Step.freeze", expect: /story 3 clause «Then it pays `B` to Hal»: «\(\.present \{ l with b := 0 \}\)» is not inside the flow of Step\.freeze/,
+      make: () => withClauses('clauses-survivor-2.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.text = '(.present { l with b := 0 })'; }) },
+    { name: 'a payment claim whose text is in the flow but does not start at a paying field', expect: /a payment claim's text starts at the flow field that pays it/,
+      make: () => withClauses('clauses-payfield.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.text = 'b := p.B'; }) },
+    { name: 'an untouched-except claim naming the wrong field (story 3: the freeze updates b, the claim says pool)', expect: /the post-state of Step\.freeze updates b, the claim says pool/,
+      make: () => withClauses('clauses-updates.json', j => { const c = j.clauses.find(c => c.story === 3 && /leaves the datum untouched/.test(c.clause)); c.updates = ['pool']; }) },
+    { name: 'a guard claim moved out of its hypothesis into the flow', expect: /a guard claim names the hypothesis \(hyp\) it lives in/,
+      make: () => withClauses('clauses-guard-flow.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); delete c.hyp; c.text = 'hunter := some { addr := payee, b := p.B }'; }) },
+    { name: 'a refusal claim whose story never refuses for that reason', expect: /no step of story 3's scenario is refused pool-covers-premium/,
+      make: () => withClauses('clauses-refusal.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.kind = 'refusal'; }) },
+    { name: 'a payment claim tied by a refusal name instead of a step', expect: /a payment claim ties by match, not by reason/,
+      make: () => withClauses('clauses-kind-tie.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); delete c.match; c.reason = 'freeze-bond-missing'; }) },
     { name: 'a step tie whose scenario step goes through another constructor', expect: /goes through Step\.freeze, not Step\.rotateKeepPaid/,
       make: () => withClauses('clauses-ctor.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.decl = 'Step.rotateKeepPaid'; c.text = 'hunter := some { addr := payee, pool := p.P }'; }) },
     { name: 'a clause the story does not contain', expect: /clause «that the pool is below `Q`» does not occur in the story/,

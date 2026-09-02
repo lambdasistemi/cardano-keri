@@ -92,20 +92,28 @@ bound is refused too. Nothing is ever rounded.
 ## The reconciliation table
 
 `checkpoint-simulator-clauses.json` classifies every "chain checks" clause of
-every story as a guard (the Lean decides it), an omission (the Lean does not
-model it) or an overrule (the Lean decides differently). A guard or overrule
-row names a Lean declaration — a `Step` constructor, `consumableState`,
-`SysStep.register`, `Trace.cons` or a theorem — optionally its guard
-hypothesis, the exact text that entails the clause, and one semantic tie to
-what decides it: a refusal name (the core's `LEAN_GUARDS` table binds every
-refusal name to the constructor and binder that refuse it), a consumer
-verdict (bound to its conjunct of `consumableState`), or a step of the
-story's own scenario (whose constructor is derived from the record). The
-scenario gate parses the Lean into declaration and constructor spans and
-requires the text inside the span (inside the binder when named), the tie to
-hold, every clause to occur in its story, and every guard hypothesis of every
-`Step` constructor to be claimed by exactly one refusal name (or by the
-paid/unpaid split). `--clauses-md` renders the table.
+every story, split into atomic claims, as a guard (the Lean decides it), an
+omission (the Lean does not model it) or an overrule (the Lean decides
+differently). A guard or overrule row is one claim of one kind — `guard` (a
+hypothesis the transition requires), `refusal` (the clause states a
+refusal), `payment` (a flow field pays it), `post-state` (the resulting
+state, optionally `updates`: the only datum fields it sets), `no-guard` (the
+constructor has no hypothesis), `verdict` (a conjunct of `consumableState`)
+— and names a Lean declaration (a `Step` constructor, `consumableState`,
+`SysStep.register`, `Trace.cons` or a theorem), the hypothesis for a guard or
+refusal, the exact text that entails the claim, and one semantic tie: a
+refusal name (the core's `LEAN_GUARDS` table binds every refusal name to the
+constructor and binder that refuse it; a refusal claim's story must also be
+refused for it), a consumer verdict (bound to its conjunct), or a step of
+the story's own scenario (whose constructor is derived from the record; a
+payment's step must pay through the named field, an `updates` claim's step
+must change nothing else). The scenario gate parses the Lean into declaration
+and constructor spans, splits each constructor's conclusion into its
+hypotheses, flow record and post-state, and requires the text inside the
+part its kind names, the tie to hold, every clause to occur in its story,
+and every guard hypothesis of every `Step` constructor to be claimed by
+exactly one refusal name (or by the paid/unpaid split). `--clauses-md`
+renders the table.
 
 ## The theorem ledger
 

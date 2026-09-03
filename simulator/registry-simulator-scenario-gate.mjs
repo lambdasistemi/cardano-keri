@@ -635,7 +635,7 @@ async function selftest() {
   await control('page-record-without-evidence', dir => edit(join(dir, 'registry-simulator.html'), "const record = { now: slot, action, before: s.state, params: s.params, env: s.env };", "const record = { now: slot, action, before: s.state, params: s.params, env: undefined };"), /lamp R1d fails on the page — threw|core slice\(s\) stale or forked: session/);
   await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "title: 'go there', onclick: () => goTo(cid) },", "title: 'go there', onclick: () => {} },"), /tree: the fork did not play to its refusal/);
   await control('dead-scene', dir => edit(join(dir, 'registry-simulator.html'), "  clear(svg).append(...parts);\n}\n\n/* ---- the fx layer", "  clear(svg);\n}\n\n/* ---- the fx layer"), /scene: fewer than 12 entities drawn|the scene draws/);
-  await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) goTo(nx); });", "$('hist-next').addEventListener('click', () => {});"), /did not reach the end of the trunk|no story step applied/);
+  await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) { goTo(nx); followScene(); } });", "$('hist-next').addEventListener('click', () => {});"), /did not reach the end of the trunk|no story step applied/);
   rmSync(tmp, { recursive: true, force: true });
   for (const c of controls) console.log(`${c.red ? 'RED (intended)' : 'CONTROL FAILED'}  ${c.name} — ${c.why}`);
   const all = controls.every(c => c.red);

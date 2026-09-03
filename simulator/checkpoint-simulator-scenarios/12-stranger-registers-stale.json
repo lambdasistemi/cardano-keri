@@ -166,8 +166,9 @@
             ]
           },
           {
-            "refundAuthorized": [
+            "intentAuthorized": [
               3,
+              "keep",
               1
             ]
           }

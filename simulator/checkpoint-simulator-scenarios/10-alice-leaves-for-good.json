@@ -53,30 +53,38 @@
         "verdict": "poisoned",
         "exhibits": [
           "T1",
+          "T10",
           "T3",
+          "T4",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T10"
+          "T9"
         ]
       }
     },
     {
       "slot": 12,
       "who": "mallory",
-      "say": "Mallory's close is refused: poisoned.",
-      "action": "close",
+      "say": "Mallory's close is refused — not because of the poison (D-036 lets a close land poisoned) but because a close is a witnessed rotation by the next keys, which she cannot produce.",
+      "action": {
+        "close": {
+          "sn'": 1,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": false,
-        "reason": "poisoned",
+        "reason": "no-witnessed-rotation",
         "verdict": "poisoned",
         "exhibits": [
-          "T4",
           "T7",
           "T9"
         ]
+      },
+      "evidence": {
+        "add": []
       }
     },
     {
@@ -128,20 +136,44 @@
     {
       "slot": 20,
       "who": "alice",
-      "say": "Alice's current key holders sign the close at threshold. The chain pays everything to the refund address in the datum and burns the token.",
+      "say": "Alice's next keys sign the close intent along with the rotation. The chain pays everything to the refund address and burns the token; the registry leaf keeps the tombstone (epoch 2, sequence 2).",
       "evidence": {
         "add": [
           {
             "quorum": [
               1
             ]
+          },
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          },
+          {
+            "intentAuthorized": [
+              2,
+              "close",
+              null
+            ]
           }
         ]
       },
-      "action": "close",
+      "action": {
+        "close": {
+          "sn'": 2,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": true,
-        "state": "gone",
+        "state": {
+          "closed": {
+            "epoch": 2,
+            "sn": 2
+          }
+        },
         "flow": {
           "refund": {
             "addr": 1,
@@ -152,8 +184,9 @@
         },
         "verdict": "not-present",
         "exhibits": [
-          "T10",
+          "T1",
           "T16",
+          "T2",
           "T5",
           "T6",
           "T7",
@@ -165,7 +198,7 @@
     {
       "slot": 20,
       "who": "friend",
-      "say": "The registry row stays: this AID can never be registered on Cardano again.",
+      "say": "A registration is refused: the registry leaf is closed, not absent. The AID is not gone for good — only a reopen, a witnessed rotation later than the tombstone, brings it back (D-036).",
       "action": {
         "register": {
           "refund": 1,
@@ -174,7 +207,7 @@
       },
       "expect": {
         "ok": false,
-        "reason": "gone-terminal",
+        "reason": "closed-needs-reopen",
         "verdict": "not-present",
         "exhibits": [
           "T7",
@@ -186,7 +219,7 @@
     {
       "slot": 20,
       "who": "friend",
-      "say": "Nothing else is possible either.",
+      "say": "Nothing else lands on a tombstone: no top-up, no rotation, no poison. Reopen or nothing.",
       "action": {
         "topUp": {
           "x": 1
@@ -194,7 +227,7 @@
       },
       "expect": {
         "ok": false,
-        "reason": "gone-terminal",
+        "reason": "closed-needs-reopen",
         "verdict": "not-present",
         "exhibits": [
           "T7",
@@ -220,13 +253,37 @@
                 "quorum": [
                   1
                 ]
+              },
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              },
+              {
+                "intentAuthorized": [
+                  2,
+                  "close",
+                  null
+                ]
               }
             ]
           },
-          "action": "close",
+          "action": {
+            "close": {
+              "sn'": 2,
+              "refund'": null
+            }
+          },
           "expect": {
             "ok": true,
-            "state": "gone",
+            "state": {
+              "closed": {
+                "epoch": 2,
+                "sn": 2
+              }
+            },
             "flow": {
               "refund": {
                 "addr": 1,
@@ -237,13 +294,14 @@
             },
             "verdict": "not-present",
             "exhibits": [
+              "T1",
+              "T16",
+              "T2",
               "T5",
               "T6",
               "T7",
               "T8",
-              "T9",
-              "T10",
-              "T16"
+              "T9"
             ]
           }
         },
@@ -259,13 +317,194 @@
           },
           "expect": {
             "ok": false,
-            "reason": "gone-terminal",
+            "reason": "closed-needs-reopen",
             "verdict": "not-present",
             "exhibits": [
               "T7",
               "T8",
               "T9"
             ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "relayer-close",
+      "at": 3,
+      "title": "A relayer with the public rotation tries to close",
+      "steps": [
+        {
+          "slot": 20,
+          "who": "hal",
+          "say": "Hal holds Alice's next public rotation. A close needs more than public data: the new keys must sign the close intent (D-038). Refused.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              }
+            ]
+          },
+          "action": {
+            "close": {
+              "sn'": 2,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "verdict": "consumable",
+            "exhibits": [
+              "T7",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 20,
+          "who": "hal",
+          "say": "A reopen on a live checkpoint is refused: only a closed tombstone reopens.",
+          "action": {
+            "reopen": {
+              "sn'": 2,
+              "refund": 2,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "reopen-needs-closed",
+            "verdict": "consumable",
+            "exhibits": [
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "reopen",
+      "at": 4,
+      "title": "Alice comes back: the tombstone is not terminal",
+      "steps": [
+        {
+          "slot": 30,
+          "who": "friend",
+          "say": "A registration is refused: the registry leaf is closed, not absent. Only a reopen brings this AID back.",
+          "action": {
+            "register": {
+              "refund": 1,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "closed-needs-reopen",
+            "verdict": "not-present",
+            "exhibits": [
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 30,
+          "who": "mallory",
+          "say": "A stale resurrection is refused: a reopen must present a rotation later than the tombstone’s sequence.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  2,
+                  2,
+                  2
+                ]
+              }
+            ]
+          },
+          "action": {
+            "reopen": {
+              "sn'": 2,
+              "refund": 4,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "sequence-not-later",
+            "verdict": "not-present",
+            "exhibits": [
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 30,
+          "who": "alice",
+          "say": "Alice rotates on KERI again; her witnesses receipt sequence 3. She reopens with fresh bonds: born again, juvenile, at the next epoch.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  2,
+                  2,
+                  3
+                ]
+              }
+            ]
+          },
+          "action": {
+            "reopen": {
+              "sn'": 3,
+              "refund": 1,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "sn": 3,
+              "epoch": 3,
+              "bornAt": 30,
+              "dreg": 1000,
+              "b": 5,
+              "pool": 10,
+              "refundTo": 1
+            },
+            "flow": {
+              "dregIn": 1000,
+              "bIn": 5,
+              "poolIn": 10
+            },
+            "verdict": "juvenile",
+            "exhibits": [
+              "T1",
+              "T10",
+              "T2",
+              "T3",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 40,
+          "who": "treasury",
+          "say": "Ten slots later the reopened checkpoint is consumable again.",
+          "expect": {
+            "verdict": "consumable"
           }
         }
       ]

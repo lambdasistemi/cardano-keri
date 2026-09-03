@@ -159,19 +159,27 @@ From the Lean's own statements (`Checkpoint.lean`, module comment and
 constructors):
 
 - states Absent, Present (live / poisoned / frozen / paused, read off the
-  datum), Convicted (terminal), Gone (terminal);
+  datum), Closed (the tombstone: epoch and sequence of the closing rotation;
+  not terminal, D-036), Convicted (the only terminal state);
 - actions register, rotate (keep / withdraw / deposit, payee, optional new
-  refund address), poison, freeze, top-up, convict, close — exactly the
-  redeemers of the validator family;
-- evidence as decidable predicates: a witnessed rotation, a refund address
-  signed by the new keys, the current quorum, a duplicity proof;
+  refund address), poison, freeze, top-up, convict, close (a witnessed
+  rotation that withdraws everything and burns, poisoned or not, D-036),
+  reopen (a witnessed rotation later than the tombstone, fresh bonds, born
+  again) — exactly the redeemers of the validator family;
+- evidence as decidable predicates: a witnessed rotation, the intent the
+  new keys signed — a bond option other than keep, a close, or a new refund
+  address, in one message (D-038: a relayer with public data lands a keep
+  and nothing else), the current quorum, a duplicity proof;
 - value as three addressed components — conviction bond `D`, freeze bond `B`,
   pool — that never mix; payments to the refund address, a hunter, a convictor;
 - the consumer's state-side check: both bonds full, not poisoned, born at
   least `W` slots ago;
 - the fold: the state is the replay of the accepted actions; a trace needs
   non-decreasing slots;
-- one incarnation per AID (the registry; one AID is played here).
+- one incarnation per AID: the registry as a map from AID to a leaf —
+  absent, live, closed, convicted — that follows the state; register needs
+  an absent leaf, reopen a closed one; rotate, poison, freeze and top-up
+  never touch it (D-037; the MPFS mechanics are outside the machine).
 
 ## What is not modelled
 

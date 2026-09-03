@@ -85,23 +85,34 @@
         "verdict": "dreg-missing",
         "exhibits": [
           "T1",
+          "T14",
+          "T15",
+          "T16",
           "T2",
           "T3",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T14",
-          "T15",
-          "T16"
+          "T9"
+        ]
+      },
+      "evidence": {
+        "add": [
+          {
+            "intentAuthorized": [
+              1,
+              "withdraw",
+              null
+            ]
+          }
         ]
       }
     },
     {
       "slot": 12,
       "who": "mallory",
-      "say": "Mallory holds the keys Alice just retired. The quorum she can sign is epoch 0; the parked checkpoint is at epoch 1. Closing is refused.",
+      "say": "Mallory holds the keys Alice just retired. Under D-036 a close is a witnessed rotation by the next keys, with the close intent signed by them; the retired keys cannot present one. Refused.",
       "evidence": {
         "add": [
           {
@@ -111,10 +122,15 @@
           }
         ]
       },
-      "action": "close",
+      "action": {
+        "close": {
+          "sn'": 2,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": false,
-        "reason": "no-quorum",
+        "reason": "no-witnessed-rotation",
         "verdict": "dreg-missing",
         "exhibits": [
           "T7",
@@ -231,30 +247,38 @@
             "verdict": "dreg-missing",
             "exhibits": [
               "T1",
+              "T10",
               "T3",
+              "T4",
               "T5",
               "T6",
               "T7",
               "T8",
-              "T9",
-              "T10"
+              "T9"
             ]
           }
         },
         {
           "slot": 12,
           "who": "mallory",
-          "say": "And now her close is refused: poisoned. Had she closed first, the token would have burned for nothing paid (story 10 shows it): the Lean permits that; this story did not consider it.",
-          "action": "close",
+          "say": "Her close is refused — not for the poison (D-036: a close is allowed poisoned, it is a rotation) but because a close is a witnessed rotation to a later sequence, which stolen current keys cannot produce.",
+          "action": {
+            "close": {
+              "sn'": 2,
+              "refund'": null
+            }
+          },
           "expect": {
             "ok": false,
-            "reason": "poisoned",
+            "reason": "no-witnessed-rotation",
             "verdict": "dreg-missing",
             "exhibits": [
-              "T4",
               "T7",
               "T9"
             ]
+          },
+          "evidence": {
+            "add": []
           }
         }
       ]
@@ -274,13 +298,37 @@
                 "quorum": [
                   1
                 ]
+              },
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              },
+              {
+                "intentAuthorized": [
+                  2,
+                  "close",
+                  null
+                ]
               }
             ]
           },
-          "action": "close",
+          "action": {
+            "close": {
+              "sn'": 2,
+              "refund'": null
+            }
+          },
           "expect": {
             "ok": true,
-            "state": "gone",
+            "state": {
+              "closed": {
+                "epoch": 2,
+                "sn": 2
+              }
+            },
             "flow": {
               "refund": {
                 "addr": 1,
@@ -291,8 +339,10 @@
             },
             "verdict": "not-present",
             "exhibits": [
+              "T1",
               "T10",
               "T16",
+              "T2",
               "T5",
               "T6",
               "T7",
@@ -321,33 +371,11 @@
             }
           },
           "expect": {
-            "ok": true,
-            "live": {
-              "dreg": 0,
-              "b": 0,
-              "pool": 0,
-              "epoch": 1
-            },
-            "flow": {
-              "refund": {
-                "addr": 1,
-                "dreg": 1000,
-                "b": 5,
-                "pool": 10
-              }
-            },
-            "verdict": "dreg-missing",
+            "ok": false,
+            "verdict": "consumable",
+            "reason": "intent-not-authorized",
             "exhibits": [
-              "T1",
-              "T14",
-              "T15",
-              "T16",
-              "T2",
-              "T3",
-              "T5",
-              "T6",
               "T7",
-              "T8",
               "T9"
             ]
           }

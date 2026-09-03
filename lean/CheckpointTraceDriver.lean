@@ -34,12 +34,14 @@ open Lean (ToJson toJson Json FromJson fromJson?)
 open CardanoKeri.Checkpoint
 
 deriving instance Lean.ToJson for BondOp
+deriving instance Lean.ToJson for Intent
 deriving instance Lean.ToJson for Action
 deriving instance Lean.ToJson for Live
 deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
 deriving instance Lean.ToJson for Flow
 deriving instance Lean.FromJson for BondOp
+deriving instance Lean.FromJson for Intent
 deriving instance Lean.FromJson for Action
 deriving instance Lean.FromJson for Live
 deriving instance Lean.FromJson for State
@@ -63,20 +65,21 @@ def paramsOfJson (j : Json) : Except String Params := do
 /-- Finite decision tables standing for the four evidence predicates. -/
 structure EnvTable where
   rotationTo : List (Nat × Nat × Nat)
-  refundAuthorized : List (Nat × Nat)
+  /-- `(e, intent, refund address or none)`: the keys of epoch `e` signed that intent message (D-038). -/
+  intentAuthorized : List (Nat × Intent × Option Nat)
   quorum : List Nat
   duplicityAt : List (Nat × Nat)
 
 def EnvTable.toEnv (t : EnvTable) : Env where
   rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
-  refundAuthorized := fun e a => t.refundAuthorized.contains (e, a)
+  intentAuthorized := fun e i r => t.intentAuthorized.contains (e, i, r)
   quorum := fun e => t.quorum.contains e
   duplicityAt := fun e sn => t.duplicityAt.contains (e, sn)
 
 instance : ToJson EnvTable where
   toJson t := Json.mkObj [
     ("rotationTo", toJson (t.rotationTo.map fun (e, sn, sn') => [e, sn, sn'])),
-    ("refundAuthorized", toJson (t.refundAuthorized.map fun (e, a) => [e, a])),
+    ("intentAuthorized", Json.arr (t.intentAuthorized.map fun (e, i, r) => Json.arr #[toJson e, toJson i, toJson r]).toArray),
     ("quorum", toJson (t.quorum.map fun e => [e])),
     ("duplicityAt", toJson (t.duplicityAt.map fun (e, sn) => [e, sn]))]
 
@@ -91,12 +94,15 @@ def EnvTable.applyRow (t : EnvTable) (add : Bool) (row : Json) : Except String E
     | [e, sn, sn'] => pure { t with rotationTo := upd t.rotationTo (e, sn, sn') }
     | _ => throw "rotationTo row needs three numbers"
   | .error _ =>
-  match row.getObjVal? "refundAuthorized" with
+  match row.getObjVal? "intentAuthorized" with
   | .ok v =>
-    let l ← nats v
-    match l with
-    | [e, a] => pure { t with refundAuthorized := upd t.refundAuthorized (e, a) }
-    | _ => throw "refundAuthorized row needs two numbers"
+    match v.getArr? with
+    | .ok #[ej, ij, rj] =>
+      let e : Nat ← fromJson? ej
+      let i : Intent ← fromJson? ij
+      let r : Option Nat ← if rj.isNull then pure none else (fromJson? rj : Except String Nat).map some
+      pure { t with intentAuthorized := upd t.intentAuthorized (e, i, r) }
+    | _ => throw "intentAuthorized row needs [epoch, intent, address or null]"
   | .error _ =>
   match row.getObjVal? "quorum" with
   | .ok v =>
@@ -143,32 +149,37 @@ structure Seed where
   env : EnvTable
   steps : List (Slot × Action)
 
-/-- Alice = 1, Hal = 2, Cora = 3, Mallory = 4, the treasury = 5, a friend = 6. -/
+/-- Alice = 1, Hal = 2, Cora = 3, Mallory = 4, the treasury = 5, the sponsor = 6. -/
 def seeds : List Seed := [
   { name := "happy-path",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], refundAuthorized := [(1, 1)], quorum := [], duplicityAt := [] },
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .keep, some 1)], quorum := [], duplicityAt := [] },
     steps := [(0, .register 6 10), (12, .rotate 1 .keep 2 (some 1)), (12, .rotate 1 .keep 2 none),
               (20, .topUp 5), (25, .rotate 2 .keep 2 none)] },
   { name := "freeze-then-unfreeze",
-    env := { rotationTo := [(0, 0, 1)], refundAuthorized := [], quorum := [], duplicityAt := [] },
+    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [(1, .deposit, none)], quorum := [], duplicityAt := [] },
     steps := [(0, .register 1 1), (12, .freeze 1 2), (12, .freeze 1 2), (20, .rotate 1 .deposit 1 none),
               (20, .topUp 20)] },
   { name := "pause-then-resurrect",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], refundAuthorized := [], quorum := [0], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .rotate 1 .withdraw 1 none), (12, .close), (12, .poison),
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .withdraw, none), (2, .deposit, none)], quorum := [0], duplicityAt := [] },
+    steps := [(0, .register 1 10), (12, .rotate 1 .withdraw 1 none), (12, .close 2 none), (12, .poison),
               (12, .freeze 2 2), (12, .topUp 3), (40, .rotate 2 .deposit 1 none)] },
-  { name := "poison-then-rotate",
-    env := { rotationTo := [(0, 0, 1)], refundAuthorized := [], quorum := [0], duplicityAt := [] },
-    steps := [(0, .register 1 1), (12, .poison), (12, .poison), (12, .close), (12, .freeze 1 2),
-              (12, .topUp 5), (12, .rotate 1 .keep 2 none), (12, .close)] },
+  { name := "poison-then-close-then-reopen",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close, none)], quorum := [0], duplicityAt := [] },
+    steps := [(0, .register 1 1), (12, .poison), (12, .poison), (12, .freeze 1 2), (12, .topUp 5),
+              (12, .close 1 none), (12, .topUp 1), (12, .rotate 2 .keep 2 none), (12, .reopen 1 1 5), (30, .reopen 2 1 5),
+              (30, .topUp 1)] },
   { name := "convict",
-    env := { rotationTo := [(0, 0, 1)], refundAuthorized := [], quorum := [0], duplicityAt := [(0, 0)] },
-    steps := [(0, .register 1 10), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close),
-              (12, .topUp 1), (12, .register 1 10)] },
-  { name := "close",
-    env := { rotationTo := [(0, 0, 1)], refundAuthorized := [(1, 1)], quorum := [0, 1], duplicityAt := [] },
-    steps := [(0, .register 6 10), (12, .poison), (12, .close), (20, .rotate 1 .keep 2 (some 1)), (20, .close),
-              (20, .register 1 10), (20, .topUp 1)] }
+    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0], duplicityAt := [(0, 0)] },
+    steps := [(0, .register 1 10), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 none),
+              (12, .topUp 1), (12, .register 1 10), (12, .reopen 1 1 10)] },
+  { name := "relayer-on-public-data",
+    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0, 1], duplicityAt := [] },
+    steps := [(0, .register 1 10), (12, .rotate 1 .withdraw 2 none), (12, .rotate 1 .deposit 2 none), (12, .close 1 none),
+              (12, .rotate 1 .keep 2 (some 9)), (12, .rotate 1 .keep 2 none), (12, .close 1 none)] },
+  { name := "close-then-reopen",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2), (2, 2, 3)], intentAuthorized := [(1, .close, some 1), (1, .keep, some 1)], quorum := [0, 1], duplicityAt := [] },
+    steps := [(0, .register 6 10), (12, .poison), (12, .close 1 (some 1)), (20, .reopen 1 1 10), (20, .reopen 2 1 10),
+              (20, .register 1 10), (20, .topUp 1), (20, .rotate 3 .keep 2 none)] }
 ]
 
 def traceJson (p : Params) (sd : Seed) : Json :=
@@ -192,21 +203,27 @@ def gridPresent (p : Params) : List State :=
           State.present ⟨1, 1, poisoned, 10, 1, dreg, b, pool⟩
 
 def gridStates (p : Params) : List State :=
-  [.absent, .gone, .convicted 1 1 10] ++ gridPresent p
+  [.absent, .closed 1 1, .convicted 1 1 10] ++ gridPresent p
 
 /-- Actions with their sequence at −1 / = / +1 of the datum's (1), every bond
-option, the refund option none / authorized (1) / unauthorized (9). -/
+option, the refund option none / authorized (1) / unauthorized (9); the close
+with the same sequences and refund options; the reopen at −1 / = / +1 of the
+tombstone's sequence (1). -/
 def gridActions : List Action :=
-  [.register 6 7, .poison, .topUp 5, .convict 3, .close] ++
+  [.register 6 7, .poison, .topUp 5, .convict 3] ++
   ([0, 1, 2].map fun sn' => Action.freeze sn' 2) ++
   ([0, 1, 2].flatMap fun sn' =>
     [BondOp.keep, .withdraw, .deposit].flatMap fun op =>
-      [none, some 1, some 9].map fun r => Action.rotate sn' op 2 r)
+      [none, some 1, some 9].map fun r => Action.rotate sn' op 2 r) ++
+  ([0, 1, 2].flatMap fun sn' => [none, some 1, some 9].map fun r => Action.close sn' r) ++
+  ([0, 1, 2].map fun sn' => Action.reopen sn' 1 7)
 
 /-- Two oracles: everything the grid can ask for, and nothing. -/
 def gridEnvs : List (String × EnvTable) :=
-  [("full", { rotationTo := [(1, 1, 0), (1, 1, 1), (1, 1, 2)], refundAuthorized := [(2, 1)], quorum := [1], duplicityAt := [(1, 1)] }),
-   ("none", { rotationTo := [], refundAuthorized := [], quorum := [], duplicityAt := [] })]
+  [("full", { rotationTo := [(1, 1, 0), (1, 1, 1), (1, 1, 2)],
+              intentAuthorized := [(2, .keep, some 1), (2, .withdraw, none), (2, .withdraw, some 1), (2, .deposit, none), (2, .deposit, some 1), (2, .close, none), (2, .close, some 1)],
+              quorum := [1], duplicityAt := [(1, 1)] }),
+   ("none", { rotationTo := [], intentAuthorized := [], quorum := [], duplicityAt := [] })]
 
 /-- The grid at slot 20, as cells referencing the state, action and env
 tables by index; a refused cell has `result: null`. -/

@@ -58,13 +58,14 @@
         "verdict": "poisoned",
         "exhibits": [
           "T1",
+          "T10",
           "T3",
+          "T4",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T10"
+          "T9"
         ]
       }
     },
@@ -119,16 +120,24 @@
     {
       "slot": 12,
       "who": "mallory",
-      "say": "Mallory's stolen keys are epoch 0; the checkpoint is at epoch 1. They are good for nothing on chain.",
-      "action": "close",
+      "say": "Mallory's stolen keys are the retired epoch's. A close is a witnessed rotation by the next keys (D-036); she has none. Her keys are good for nothing on chain.",
+      "action": {
+        "close": {
+          "sn'": 2,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": false,
-        "reason": "no-quorum",
+        "reason": "no-witnessed-rotation",
         "verdict": "consumable",
         "exhibits": [
           "T7",
           "T9"
         ]
+      },
+      "evidence": {
+        "add": []
       }
     }
   ],
@@ -157,17 +166,24 @@
         {
           "slot": 12,
           "who": "mallory",
-          "say": "Mallory, with the stolen current keys, tries to close and take the bonds: close is disabled while poisoned.",
-          "action": "close",
+          "say": "Mallory, with the stolen current keys, tries to close and take the bonds. Under D-036 the poison is no longer what stops her: a close is a witnessed rotation by the next keys, and she cannot present one.",
+          "action": {
+            "close": {
+              "sn'": 1,
+              "refund'": null
+            }
+          },
           "expect": {
             "ok": false,
-            "reason": "poisoned",
+            "reason": "no-witnessed-rotation",
             "verdict": "poisoned",
             "exhibits": [
-              "T4",
               "T7",
               "T9"
             ]
+          },
+          "evidence": {
+            "add": []
           }
         },
         {

@@ -59,7 +59,7 @@
       },
       "expect": {
         "ok": false,
-        "reason": "refund-not-authorized",
+        "reason": "intent-not-authorized",
         "verdict": "consumable",
         "exhibits": [
           "T7",
@@ -126,8 +126,9 @@
             ]
           },
           {
-            "refundAuthorized": [
+            "intentAuthorized": [
               2,
+              "keep",
               1
             ]
           }
@@ -184,13 +185,37 @@
             "quorum": [
               2
             ]
+          },
+          {
+            "rotationTo": [
+              2,
+              2,
+              3
+            ]
+          },
+          {
+            "intentAuthorized": [
+              3,
+              "close",
+              null
+            ]
           }
         ]
       },
-      "action": "close",
+      "action": {
+        "close": {
+          "sn'": 3,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": true,
-        "state": "gone",
+        "state": {
+          "closed": {
+            "epoch": 3,
+            "sn": 3
+          }
+        },
         "flow": {
           "refund": {
             "addr": 1,
@@ -201,13 +226,14 @@
         },
         "verdict": "not-present",
         "exhibits": [
+          "T1",
+          "T16",
+          "T2",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T10",
-          "T16"
+          "T9"
         ]
       }
     }

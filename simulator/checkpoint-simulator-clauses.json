@@ -14,7 +14,7 @@
       "kind": "guard",
       "decl": "SysStep.register",
       "hyp": "habs",
-      "text": "aid ∉ s.registered",
+      "text": "s.leaves aid = .absent",
       "reason": "aid-already-registered"
     },
     {
@@ -23,12 +23,12 @@
       "class": "guard",
       "kind": "post-state",
       "decl": "SysStep.register",
-      "text": "registered := aid :: s.registered",
+      "text": "s.set aid st'",
       "match": {
         "ok": true,
         "kind": "register"
       },
-      "note": "SysStep.other leaves the registry alone."
+      "note": "Sys.set moves the leaf with the state (State.leaf); SysStep.other leaves the registry alone for rotate, poison, freeze and top-up (T8_edges_leave_the_leaf)."
     },
     {
       "story": 1,
@@ -37,7 +37,7 @@
       "kind": "guard",
       "decl": "SysStep.register",
       "hyp": "habs",
-      "text": "aid ∉ s.registered",
+      "text": "s.leaves aid = .absent",
       "reason": "aid-already-registered",
       "note": "registration is the only SysStep that touches the registry, and it needs the AID absent from it; every non-absent AID is registered (T8_present_implies_registered), so a second minting is refused for the rest of the AID's life."
     },
@@ -290,8 +290,8 @@
       "kind": "guard",
       "decl": "Step.rotateKeepPaid",
       "hyp": "hauth",
-      "text": "refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true",
-      "reason": "refund-not-authorized"
+      "text": "env.intentOk (l.epoch + 1) .keep refund' = true",
+      "reason": "intent-not-authorized"
     },
     {
       "story": 8,
@@ -300,9 +300,9 @@
       "kind": "refusal",
       "decl": "Step.rotateKeepPaid",
       "hyp": "hauth",
-      "text": "refund'.all",
-      "reason": "refund-not-authorized",
-      "note": "a rotation that names an unauthorized address is refused whole (hauth fails), not landed with the old address; a rotation naming no address (refund' = none) lands and keeps it (refund'.getD l.refundTo). Story 8's scenario plays both."
+      "text": "env.intentOk (l.epoch + 1)",
+      "reason": "intent-not-authorized",
+      "note": "a rotation that names an address the new keys did not sign in the intent message is refused whole (hauth fails), not landed with the old address; a rotation naming no address needs no signature and keeps it. Story 8's scenario plays both (D-032, D-038)."
     },
     {
       "story": 9,
@@ -364,22 +364,24 @@
     {
       "story": 10,
       "clause": "signatures at the current threshold",
-      "class": "guard",
+      "class": "overrule",
       "kind": "guard",
       "decl": "Step.close",
-      "hyp": "hq",
-      "text": "env.quorum l.epoch = true",
-      "reason": "no-quorum"
+      "hyp": "hev",
+      "text": "env.rotationTo l.epoch l.sn sn' = true",
+      "reason": "no-witnessed-rotation",
+      "note": "D-036: a close is a witnessed rotation by the next keys, not a signature by the current ones; Mallory with the current keys is refused no-witnessed-rotation."
     },
     {
       "story": 10,
       "clause": "not poisoned",
-      "class": "guard",
-      "kind": "guard",
+      "class": "overrule",
+      "kind": "refusal",
       "decl": "Step.close",
-      "hyp": "hclean",
-      "text": "l.poisoned = false",
-      "reason": "poisoned"
+      "hyp": "hauth",
+      "text": "env.intentOk (l.epoch + 1) .close refund' = true",
+      "reason": "intent-not-authorized",
+      "note": "D-036: a close lands poisoned or not; what it needs is the new keys' signed close intent (D-038), which a relayer with the public rotation does not have."
     },
     {
       "story": 10,
@@ -387,7 +389,7 @@
       "class": "guard",
       "kind": "payment",
       "decl": "Step.close",
-      "text": "refund := some { addr := l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
+      "text": "refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
       "match": {
         "ok": true,
         "kind": "close",
@@ -400,13 +402,13 @@
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.close",
-      "text": ".gone",
+      "text": ".closed (l.epoch + 1) sn'",
       "match": {
         "ok": true,
         "kind": "close",
         "preWord": "live"
       },
-      "note": "Gone is terminal (T8_gone_terminal); the registry row stays."
+      "note": "the tombstone keeps the epoch the closing rotation opened and its sequence; not terminal (D-036): a later witnessed rotation reopens it."
     },
     {
       "story": 11,
@@ -551,13 +553,13 @@
       "kind": "guard",
       "decl": "Step.rotateKeepPaid",
       "hyp": "hauth",
-      "text": "env.refundAuthorized (l.epoch + 1) r",
+      "text": "env.intentOk (l.epoch + 1) .keep refund'",
       "match": {
         "ok": true,
         "kind": "rotate",
         "refundChanged": true
       },
-      "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can authorize one (hauth), and close and withdrawal pay there (Step.close, Step.rotateWithdraw)."
+      "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can sign a new one in the intent message (hauth, D-038), and close and withdrawal pay there (Step.close, Step.rotateWithdraw)."
     },
     {
       "story": 12,
@@ -566,9 +568,9 @@
       "kind": "guard",
       "decl": "SysStep.register",
       "hyp": "habs",
-      "text": "aid ∉ s.registered",
+      "text": "s.leaves aid = .absent",
       "reason": "aid-already-registered",
-      "note": "for one AID the state guard (present / gone / convicted) refuses first (already-present, as scenario 12 plays it); the registry guard is the system-level reason, exercised by the gate's multi-AID generator."
+      "note": "for one AID the state guard (present / closed / convicted) refuses first (already-present, as scenario 12 plays it); the leaf guard is the system-level reason, exercised by the gate's multi-AID generator."
     },
     {
       "story": 13,
@@ -847,7 +849,7 @@
     {
       "id": "paused-close-accepted",
       "story": 5,
-      "clause": "the current-epoch quorum can close a paused checkpoint: zero paid, token burned",
+      "clause": "the next keys can close a paused checkpoint: zero paid, token burned",
       "match": {
         "ok": true,
         "kind": "close",
@@ -899,11 +901,11 @@
     {
       "id": "poisoned-close-refused",
       "story": 7,
-      "clause": "close is disabled while poisoned",
+      "clause": "a close needs the next keys’ rotation, poisoned or not: stolen current keys cannot close",
       "match": {
         "ok": false,
         "kind": "close",
-        "reason": "poisoned"
+        "reason": "no-witnessed-rotation"
       }
     },
     {
@@ -933,7 +935,7 @@
       "match": {
         "ok": false,
         "kind": "rotate",
-        "reason": "refund-not-authorized"
+        "reason": "intent-not-authorized"
       }
     },
     {
@@ -989,7 +991,7 @@
     {
       "id": "close-pays-refund-address",
       "story": 10,
-      "clause": "close pays everything to the refund address in the datum, whoever closes",
+      "clause": "a close by the next keys pays everything to the refund address in the datum, poisoned or not",
       "match": {
         "ok": true,
         "kind": "close",
@@ -997,12 +999,12 @@
       }
     },
     {
-      "id": "gone-terminal",
+      "id": "closed-needs-reopen",
       "story": 10,
-      "clause": "nothing leaves Gone; the AID cannot be registered again",
+      "clause": "nothing but a reopen leaves Closed",
       "match": {
         "ok": false,
-        "reason": "gone-terminal"
+        "reason": "closed-needs-reopen"
       }
     },
     {
@@ -1110,6 +1112,57 @@
       "match": {
         "ok": false,
         "reason": "bond-over-full"
+      }
+    },
+    {
+      "id": "reopen-later-rotation",
+      "story": 10,
+      "clause": "a witnessed rotation later than the tombstone reopens it with fresh bonds, juvenile",
+      "match": {
+        "ok": true,
+        "kind": "reopen"
+      }
+    },
+    {
+      "id": "stale-reopen-refused",
+      "story": 10,
+      "clause": "a reopen at the tombstone’s sequence or earlier is refused",
+      "match": {
+        "ok": false,
+        "kind": "reopen",
+        "reason": "sequence-not-later"
+      }
+    },
+    {
+      "id": "relayer-close-refused",
+      "story": 10,
+      "clause": "a relayer with the public rotation but no signed intent cannot close",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "intent-not-authorized"
+      }
+    },
+    {
+      "id": "stranger-withdraw-refused",
+      "story": 5,
+      "clause": "a stranger cannot park Alice with her public rotation (D-038)",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "op": "withdraw",
+        "reason": "intent-not-authorized"
+      }
+    },
+    {
+      "id": "stranger-deposit-refused",
+      "story": 13,
+      "clause": "a stranger cannot reset Alice’s age with a zero-value deposit (D-038)",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "op": "deposit",
+        "reason": "intent-not-authorized"
       }
     }
   ]

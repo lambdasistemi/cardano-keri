@@ -53,13 +53,14 @@
         "verdict": "poisoned",
         "exhibits": [
           "T1",
+          "T10",
           "T3",
+          "T4",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T10"
+          "T9"
         ]
       }
     },
@@ -107,14 +108,15 @@
         },
         "verdict": "not-present",
         "exhibits": [
+          "T1",
+          "T12",
+          "T16",
           "T4",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T12",
-          "T16"
+          "T9"
         ]
       }
     },
@@ -157,7 +159,12 @@
       "slot": 12,
       "who": "alice",
       "say": "No close, ever.",
-      "action": "close",
+      "action": {
+        "close": {
+          "sn'": 1,
+          "refund'": null
+        }
+      },
       "expect": {
         "ok": false,
         "reason": "convicted-terminal",
@@ -168,6 +175,9 @@
           "T9",
           "T12"
         ]
+      },
+      "evidence": {
+        "add": []
       }
     },
     {

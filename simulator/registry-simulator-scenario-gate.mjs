@@ -49,9 +49,278 @@ const SCEN_DIR = argPath('--scenarios') || join(HERE, 'registry-simulator-scenar
 const CORPUS = argPath('--corpus') || join(HERE, 'registry-simulator-corpus.json');
 const BUILD = join(HERE, 'registry-simulator-build.mjs');
 const DOCS = argPath('--docs') || join(HERE, '..', 'docs', 'simulator', 'registry', 'index.html');
+const CLAUSES = argPath('--clauses') || join(HERE, 'registry-simulator-clauses.json');
+const STORIES_MD = argPath('--stories') || join(HERE, 'REGISTRY-STORIES.md');
+const LEAN_ROOT = argPath('--lean-root') || join(HERE, '..');
 const N_STORIES = 15;
 
-async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, corpusPath = CORPUS, docs = DOCS, quiet = false } = {}) {
+/* --- the Lean source, by declaration span and arm --------------------------- */
+
+// leanSpans(files) → Map name → {file, from, to, text, lines}: every top-level
+// declaration runs from its line to the line before the next column-0
+// declaration, doc comment, section or `end`. Doc comments are not part of a
+// span: an anchor must be code.
+const TOP = /^(theorem|def|inductive|structure|abbrev|instance)\s+([^\s(:{]+)/;
+const TOP_END = /^(theorem|def|inductive|structure|abbrev|instance|namespace|end|open|section|\/-|#)/;
+function leanSpans(files) {
+  const spans = new Map();
+  for (const [file, text] of Object.entries(files)) {
+    const lines = text.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(TOP);
+      if (!m) continue;
+      let j = i + 1;
+      while (j < lines.length && !TOP_END.test(lines[j])) j++;
+      spans.set(m[2], { file, from: i + 1, to: j, text: lines.slice(i, j).join('\n'), lines: lines.slice(i, j) });
+      i = j - 1;
+    }
+  }
+  return spans;
+}
+const squash = x => String(x).replace(/\s+/g, ' ').trim();
+const within = (hay, needle) => squash(hay).includes(squash(needle));
+const where = span => `${span.file}:${span.from}-${span.to}`;
+const indentOf = l => l.match(/^\s*/)[0].length;
+// the arms of a declaration that matches on the action or the op: the `| .name`
+// lines at the least indentation; an arm runs to the next arm or the end
+function armsOf(span) {
+  const arms = [];
+  let min = Infinity;
+  // the least-indented `| ` lines of the declaration; they are arms only when they match on a constructor (`| .name`)
+  span.lines.forEach(l => { const m = l.match(/^(\s*)\| /); if (m && m[1].length < min) min = m[1].length; });
+  span.lines.forEach((l, i) => { const m = l.match(/^(\s*)\| \.([A-Za-z]+)/); if (m && m[1].length === min) arms.push({ name: '.' + m[2], at: i }); });
+  return arms.map((a, k) => ({ name: a.name, from: a.at, to: k + 1 < arms.length ? arms[k + 1].at - 1 : span.lines.length - 1, lines: span.lines.slice(a.at, (k + 1 < arms.length ? arms[k + 1].at : span.lines.length)) }));
+}
+function armSpan(span, arm) { if (!arm) return { lines: span.lines, text: span.text, name: null }; const a = armsOf(span).find(x => x.name === arm); return a ? { ...a, text: a.lines.join('\n') } : null; }
+// the parts of an arm: the conditions (every if-conjunct and every accepting
+// match pattern) and the result (from the accepting `some` to the end)
+function splitConjuncts(cond) { const out = []; let depth = 0, cur = ''; for (const ch of cond) { if ('([{⟨'.includes(ch)) depth++; if (')]}⟩'.includes(ch)) depth--; if (ch === '∧' && depth === 0) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out.map(squash).filter(Boolean); }
+function partsOf(lines) {
+  const cond = [], patterns = [], result = [];
+  for (const l of lines) {
+    const ifm = l.match(/\bif (.*) then\b/); if (ifm) cond.push(...splitConjuncts(ifm[1]));
+    const pm = l.match(/^\s*\| (.*?) =>\s*(.*)$/);
+    if (pm && !/^none\s*$/.test(pm[2])) patterns.push(pm[1]);
+    if ((/\bsome\b/.test(l) || /\blet\b.*:= \{/.test(l)) && !/=>\s*none/.test(l) && !/^\s*\| /.test(l)) result.push(l);
+    else if (result.length && !/^\s*\| /.test(l) && !/\bif .* then\b/.test(l) && !/^\s*else/.test(l) && !/\bmatch\b/.test(l)) result.push(l);
+  }
+  return { cond, patterns, result: result.join('\n') };
+}
+// every decision site of a declaration on the path from stepFn: an if-conjunct
+// (by arm) or the accepting pattern of a match with a `=> none` arm
+function decisionSites(name, span) {
+  const arms = armsOf(span);
+  const sites = [];
+  const scan = (lines, arm) => {
+    lines.forEach((l, i) => {
+      const ifm = l.match(/\bif (.*) then\b/); if (ifm) for (const c of splitConjuncts(ifm[1])) sites.push({ decl: name, arm, text: c, kind: 'if' });
+      const nm = l.match(/^(\s*)\| (.*?) =>\s*none\s*$/);
+      if (nm) {
+        const ind = nm[1].length; const sib = [];
+        for (let j = i - 1; j >= 0; j--) { const t = lines[j]; if (indentOf(t) < ind && /\bmatch\b/.test(t)) break; const pm = t.match(/^(\s*)\| (.*?) =>/); if (pm && pm[1].length === ind && !/=>\s*none\s*$/.test(t)) sib.unshift(pm[2]); if (pm && pm[1].length === ind && /=>\s*none\s*$/.test(t)) break; }
+        for (let j = i + 1; j < lines.length; j++) { const t = lines[j]; if (indentOf(t) < ind) break; const pm = t.match(/^(\s*)\| (.*?) =>/); if (pm && pm[1].length === ind) { if (!/=>\s*none\s*$/.test(t)) sib.push(pm[2]); else break; } }
+        for (const p of sib) sites.push({ decl: name, arm, text: squash(p), kind: 'match' });
+      }
+    });
+  };
+  if (arms.length) for (const a of arms) scan(a.lines, a.name); else scan(span.lines, null);
+  return sites;
+}
+const PATH = ['stepFn', 'applyBatch', 'processOne', 'processBody', 'rejectOne', 'replay'];
+const siteKey = x => `${x.decl}${x.arm ? ' ' + x.arm : ''} «${squash(x.text)}»`;
+
+// the guard table both ways: every claimed site exists with its text in its
+// declaration and arm; every decision site of the Lean is claimed by exactly
+// one reason, or shared (declared), or a pass-through (declared)
+function checkGuardTable(core, spans) {
+  const problems = [];
+  const claimed = new Map();
+  const claim = (x, by) => { const k = siteKey(x); if (!claimed.has(k)) claimed.set(k, []); claimed.get(k).push(by); };
+  for (const reason of Object.values(core.REASONS)) {
+    const g = core.LEAN_GUARDS[reason];
+    if (!g) { problems.push(`guard table: refusal ${reason} has no entry (which Lean guard is it?)`); continue; }
+    for (const x of g.sites || []) {
+      const span = spans.get(x.decl);
+      if (!span) { problems.push(`guard table: ${reason} names ${x.decl}, which is not a declaration of the Lean`); continue; }
+      const a = armSpan(span, x.arm);
+      if (!a) { problems.push(`guard table: ${reason} names ${x.decl} ${x.arm}, which is not an arm of it (${where(span)})`); continue; }
+      if (!within(a.text, x.text)) { problems.push(`guard table: «${x.text}» is not inside ${x.decl}${x.arm ? ' ' + x.arm : ''} (${where(span)}) (${reason})`); continue; }
+      if (g.decider && !within(x.text, g.decider.replace(/^Op\./, ''))) problems.push(`guard table: ${reason}'s site «${x.text}» does not call its decider ${g.decider}`);
+      claim(x, reason);
+    }
+    for (const [decl, hyp, text] of g.hyps || []) {
+      const span = spans.get(decl);
+      if (!span) { problems.push(`guard table: ${reason} names ${decl}, not a declaration`); continue; }
+      const f = span.lines.find(l => l.startsWith('  ' + hyp + ' :'));
+      if (!f) problems.push(`guard table: ${decl} has no field ${hyp} (${reason})`);
+      else if (!within(f, text)) problems.push(`guard table: ${decl}.${hyp} is «${squash(f)}», not «${text}» (${reason})`);
+      claim({ decl, arm: null, text: hyp }, reason);
+    }
+    if (g.decider && !spans.has(g.decider) && g.decider !== 'lookup') problems.push(`guard table: ${reason} names decider ${g.decider}, not a declaration`);
+  }
+  for (const reason of Object.keys(core.LEAN_GUARDS)) if (!Object.values(core.REASONS).includes(reason)) problems.push(`guard table: ${reason} is not a refusal the core can produce`);
+  const shared = new Map(core.LEAN_SHARED_SITES.map(x => [siteKey(x), x.by]));
+  const pass = new Set(core.LEAN_PASSTHROUGH.map(siteKey));
+  let n = 0;
+  for (const name of PATH) {
+    const span = spans.get(name);
+    if (!span) { problems.push(`guard table: ${name} is not a declaration of the Lean`); continue; }
+    for (const x of decisionSites(name, span)) {
+      n++;
+      const k = siteKey(x), by = claimed.get(k) || [];
+      if (pass.has(k)) { if (by.length) problems.push(`guard table: ${k} is a pass-through and is also claimed by ${by.join(', ')}`); continue; }
+      if (!by.length) problems.push(`guard table: ${k} (${where(span)}) is a decision site of the Lean no refusal name claims`);
+      else if (by.length > 1 && !(shared.has(k) && shared.get(k).slice().sort().join() === by.slice().sort().join())) problems.push(`guard table: ${k} is claimed by ${by.join(' and ')} and not declared shared`);
+    }
+  }
+  for (const [k] of shared) if (!(claimed.get(k) || []).length) problems.push(`guard table: shared site ${k} does not exist`);
+  for (const k of pass) { const decl = k.split(' ')[0]; const span = spans.get(decl); if (!span || !decisionSites(decl, span).some(x => siteKey(x) === k)) problems.push(`guard table: pass-through ${k} is not a decision site of the Lean`); }
+  const paramsSpan = spans.get('Params');
+  if (paramsSpan) for (const l of paramsSpan.lines) { const f = l.match(/^  (h[A-Za-z]*)\s*:/); if (f && !claimed.has(siteKey({ decl: 'Params', arm: null, text: f[1] }))) problems.push(`guard table: Params.${f[1]} is a proof field no refusal name claims`); }
+  if (!n) problems.push('guard table: no decision site found on the path from stepFn (parser broken?)');
+  return { problems, sites: n, claimed };
+}
+
+/* --- story reconciliation ---------------------------------------------- */
+const LABELS = ['The chain checks', 'Money', 'Refused'];
+function extractStoryClauses(md) {
+  const out = {};
+  let story = null;
+  for (const raw of md.split('\n')) {
+    const h = raw.match(/^## (\d+)\. /);
+    if (h) { story = Number(h[1]); out[story] = []; continue; }
+    if (/^## /.test(raw)) { story = null; continue; }
+    if (story === null) continue;
+    const m = raw.match(/^- \*\*([^*]+)\*\*:\s*(.*)$/);
+    if (m && LABELS.includes(m[1])) out[story].push({ label: m[1], text: m[2].replace(/\s+/g, ' ').trim() });
+  }
+  return out;
+}
+function opsOfStep(core, rec) {
+  const f = rec.action.fold; if (!f) return { process: [], reject: [] };
+  const v = core.batchView(rec.params, rec.env, rec.now, rec.before, f.batch);
+  return { process: v.filter(x => x.r && x.fa === 'process').map(x => '.' + core.opTag(x.r.op)), reject: v.filter(x => x.r && x.fa === 'reject').map(() => 'reject') };
+}
+function findStep(m, timelines) {
+  const tl = m.branch ? (timelines.forkTimelines || {})[m.branch] : timelines.timeline;
+  if (!tl) return null;
+  return tl[m.step] || null;
+}
+function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) {
+  const problems = [];
+  const clauses = clausesDoc.clauses || [];
+  const files = {};
+  for (const f of ['lean/CardanoKeri/Registry.lean', 'lean/CardanoKeri/RegistryGoals.lean']) {
+    try { files[f] = readFileSync(join(leanRoot, f), 'utf8'); } catch (e) { problems.push(`cannot read ${f}: ${e.message}`); }
+  }
+  const spans = leanSpans(files);
+  const gt = checkGuardTable(core, spans);
+  problems.push(...gt.problems);
+  const theoremGroup = decl => core.THEOREMS.find(t => t.lean.split(/,\s*/).includes(decl));
+  const KINDS = ['guard', 'refusal', 'payment', 'post-state', 'no-guard', 'verdict'];
+  let anchored = 0;
+  for (const c of clauses) {
+    const tag = `story ${c.story} clause «${c.clause}»`;
+    if (!['guard', 'omission', 'overrule'].includes(c.class)) { problems.push(`${tag}: unknown class ${c.class}`); continue; }
+    if (c.class === 'omission') { if (!c.note) problems.push(`${tag}: an omission needs a note`); if (c.decl || c.reason || c.match) problems.push(`${tag}: an omission anchors nothing`); continue; }
+    if (!c.decl || !c.text || !c.kind) { problems.push(`${tag}: a ${c.class} row names a Lean declaration (decl), its kind and the exact text (text)`); continue; }
+    if (!KINDS.includes(c.kind)) { problems.push(`${tag}: unknown kind ${c.kind}`); continue; }
+    const span = spans.get(c.decl);
+    if (!span) { problems.push(`${tag}: ${c.decl} is not a declaration of the Lean`); continue; }
+    const isTheorem = /^theorem /.test(span.lines[0]);
+    if ((c.kind === 'verdict') !== isTheorem) { problems.push(`${tag}: kind verdict is for a theorem, ${c.decl} is ${isTheorem ? 'one' : 'not one'}`); continue; }
+    const a = armSpan(span, c.arm);
+    if (!a) { problems.push(`${tag}: ${c.decl} has no arm ${c.arm} (${where(span)})`); continue; }
+    if (c.arm === undefined && armsOf(span).length && !isTheorem && PATH.includes(c.decl)) { problems.push(`${tag}: ${c.decl} matches on arms; name the arm`); continue; }
+    if (!within(a.text, c.text)) { problems.push(`${tag}: «${c.text}» is not inside ${c.decl}${c.arm ? ' ' + c.arm : ''} (${where(span)})`); continue; }
+    if (PATH.includes(c.decl)) {
+      const parts = partsOf(a.lines);
+      if (c.kind === 'guard' || c.kind === 'refusal') { if (!parts.cond.some(x => x === squash(c.text)) && !parts.patterns.some(x => within(x, c.text))) { problems.push(`${tag}: «${c.text}» is not a condition of ${c.decl}${c.arm ? ' ' + c.arm : ''} (conditions: ${[...parts.cond, ...parts.patterns].join(' / ')})`); continue; } }
+      else if (c.kind === 'payment' || c.kind === 'post-state') { if (!within(parts.result, c.text)) { problems.push(`${tag}: «${c.text}» is not in the result of ${c.decl}${c.arm ? ' ' + c.arm : ''}`); continue; } }
+      else if (c.kind === 'no-guard') { if (!a.lines[0] || !within(a.lines[0], c.text) || /\bif\b/.test(a.lines[0])) { problems.push(`${tag}: a no-guard row names the arm's pattern line`); continue; } }
+    }
+    if (c.kind === 'post-state' && c.updates) {
+      const sets = [...squash(partsOf(a.lines).result).matchAll(/\b([A-Za-z]+) :=/g)].map(x => x[1]).filter(k => !['deposited', 'refunds', 'tips', 'premium', 'intoRequest', 'locked'].includes(k));
+      const want = [...new Set(sets)].sort().join(','), have = c.updates.slice().sort().join(',');
+      if (want !== have) { problems.push(`${tag}: updates ${have} but the arm's with sets ${want}`); continue; }
+    }
+    const ties = ['reason', 'match'].filter(k => c[k] !== undefined);
+    if (ties.length !== 1) { problems.push(`${tag}: a ${c.class} row carries exactly one tie (reason or match), has ${ties.length ? ties.join('+') : 'none'}`); continue; }
+    if (c.reason !== undefined) {
+      const g = core.LEAN_GUARDS[c.reason];
+      if (!g) { problems.push(`${tag}: unknown reason ${c.reason}`); continue; }
+      const hit = (g.sites || []).find(x => x.decl === c.decl && (x.arm || null) === (c.arm || null) && squash(x.text) === squash(c.text));
+      const viaDecider = g.decider === c.decl && within(span.text, c.text);
+      if (!hit && !viaDecider) { problems.push(`${tag}: ${c.reason} is decided at ${(g.sites || []).map(siteKey).join(' / ') || 'the simulator, not the Lean'}${g.decider ? ' via ' + g.decider : ''}, not by «${c.text}» in ${c.decl}${c.arm ? ' ' + c.arm : ''}`); continue; }
+    } else {
+      const tls = scenarioTimelines[c.story];
+      const rec = tls ? findStep(c.match, tls) : null;
+      if (!rec) { problems.push(`${tag}: story ${c.story} has no step ${JSON.stringify(c.match)}`); continue; }
+      if (c.match.ok !== undefined && rec.result.ok !== c.match.ok) { problems.push(`${tag}: step ${JSON.stringify(c.match)} is ${rec.result.ok ? 'applied' : 'refused'}`); continue; }
+      const kind = core.actionTag(rec.action);
+      if (isTheorem) {
+        const grp = theoremGroup(c.decl);
+        if (!grp) { problems.push(`${tag}: ${c.decl} is in no executable property's list`); continue; }
+        const th = rec.theorems[grp.id];
+        if (!th || th.v !== 'holds') { problems.push(`${tag}: step ${JSON.stringify(c.match)} does not exhibit ${grp.id} (${c.decl})`); continue; }
+      } else if (c.decl === 'stepFn') {
+        if ('.' + kind !== c.arm) { problems.push(`${tag}: step ${JSON.stringify(c.match)} goes through .${kind}, not ${c.arm}`); continue; }
+      } else if (c.decl === 'processBody') {
+        if (kind !== 'fold' || !opsOfStep(core, rec).process.includes(c.arm)) { problems.push(`${tag}: step ${JSON.stringify(c.match)} does not process a ${c.arm} request`); continue; }
+      } else if (c.decl === 'processOne') {
+        if (kind !== 'fold' || !opsOfStep(core, rec).process.length) { problems.push(`${tag}: step ${JSON.stringify(c.match)} processes nothing`); continue; }
+      } else if (c.decl === 'rejectOne' || c.decl === 'rejectable') {
+        if (kind !== 'fold' || !opsOfStep(core, rec).reject.length) { problems.push(`${tag}: step ${JSON.stringify(c.match)} rejects nothing`); continue; }
+      } else if (c.decl === 'applyBatch') {
+        if (kind !== 'fold') { problems.push(`${tag}: step ${JSON.stringify(c.match)} is not a fold`); continue; }
+      } else if (c.decl === 'reapable') {
+        if (kind !== 'reap') { problems.push(`${tag}: step ${JSON.stringify(c.match)} is not a reap`); continue; }
+      } else if (c.decl === 'inPhase2') {
+        if (kind !== 'retract') { problems.push(`${tag}: step ${JSON.stringify(c.match)} is not a retract`); continue; }
+      } else { problems.push(`${tag}: a match tie needs an arm of the step, a fold body, a decider or a theorem, not ${c.decl}`); continue; }
+      if (c.kind === 'post-state' && c.updates && rec.result.ok) {
+        const changed = Object.keys(rec.before).filter(k => JSON.stringify(rec.before[k]) !== JSON.stringify(rec.result.state[k])).sort().join(',');
+        if (changed !== c.updates.slice().sort().join(',')) { problems.push(`${tag}: the step changed ${changed || 'nothing'}, the row says ${c.updates.join(',')}`); continue; }
+      }
+      if (c.kind === 'payment' && rec.result.ok) {
+        const fl = rec.result.flow, field = (c.text.match(/^(deposited|locked|refunds|tips|premium|intoRequest)\b/) || [])[1];
+        const paid = field === 'deposited' || field === 'intoRequest' ? fl[field] > 0 : field === 'tips' || field === 'premium' ? fl[field] !== null : field ? fl[field].length > 0 : false;
+        if (!paid) { problems.push(`${tag}: step ${JSON.stringify(c.match)} pays nothing through ${field || 'that field'}`); continue; }
+      }
+    }
+    anchored++;
+  }
+  const extracted = extractStoryClauses(storiesMd);
+  const byStory = {};
+  for (const c of clauses) (byStory[c.story] = byStory[c.story] || []).push(c);
+  let fragments = 0;
+  const seen = new Set();
+  for (let n = 1; n <= N_STORIES; n++) {
+    const bs = extracted[n] || [];
+    if (!bs.length) { problems.push(`story ${n}: no labelled bullet (${LABELS.join(' / ')}) found in REGISTRY-STORIES.md`); continue; }
+    const cs = [...new Set((byStory[n] || []).map(c => c.clause))].sort((a, b) => b.length - a.length);
+    for (const b of bs) {
+      let rest = b.text;
+      for (const cl of cs) { let i; while ((i = rest.indexOf(cl)) >= 0) { rest = rest.slice(0, i) + ' ' + rest.slice(i + cl.length); fragments++; seen.add(n + ' ' + cl); } }
+      const leftover = rest.replace(/[\s;:.,()—]/g, '');
+      if (leftover.length) problems.push(`story ${n}: unclassified fragment in «${b.label}»: «${rest.trim().replace(/\s+/g, ' ').slice(0, 120)}»`);
+    }
+    if (!cs.length) problems.push(`story ${n}: no clauses in the reconciliation table`);
+  }
+  for (const c of clauses) if (!seen.has(c.story + ' ' + c.clause)) problems.push(`story ${c.story} clause «${c.clause}» does not occur in the story's labelled bullets`);
+  return { problems, clauses: clauses.length, anchored, fragments, sites: gt.sites, omissions: clauses.filter(c => c.class === 'omission').length };
+}
+function clausesMarkdown(clausesDoc) {
+  const lines = ['| story | clause | class | kind | Lean | text | tie | note |', '|---|---|---|---|---|---|---|---|'];
+  const esc = x => String(x === undefined ? '' : x).replace(/\|/g, '\\|');
+  for (const c of clausesDoc.clauses) {
+    const tie = c.reason ? 'reason ' + c.reason : c.match ? 'step ' + JSON.stringify(c.match) : '';
+    lines.push(`| ${c.story} | ${esc(c.clause)} | ${c.class} | ${esc(c.kind)} | ${c.decl ? esc(c.decl + (c.arm ? ' ' + c.arm : '')) : ''} | ${c.text ? '\`' + esc(c.text) + '\`' : ''} | ${esc(tie)} | ${esc(c.note)} |`);
+  }
+  return lines.join('\n');
+}
+
+async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, corpusPath = CORPUS, docs = DOCS, clausesPath = CLAUSES, storiesMd = STORIES_MD, leanRoot = LEAN_ROOT, quiet = false } = {}) {
   const core = await import(pathToFileURL(corePath).href + '?t=' + Date.now());
   const corpus = JSON.parse(readFileSync(corpusPath, 'utf8'));
   const rows = [], problems = [];
@@ -60,11 +329,12 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
   // 1–2. the stories through the core, with the Lean corpus as oracle
   const files = readdirSync(scenDir).filter(f => f.endsWith('.json')).sort();
   const exhibited = new Set(), asserted = new Set(); let steps = 0, forks = 0, forkSteps = 0;
-  const ids = [];
+  const ids = [], timelines = {};
   for (const f of files) {
     const sc = JSON.parse(readFileSync(join(scenDir, f), 'utf8'));
     ids.push(sc.id);
     const r = core.checkScenario(sc, f, corpus);
+    timelines[sc.id] = r;
     steps += r.stepsRun; r.exhibited.forEach(x => exhibited.add(x)); r.asserted.forEach(x => asserted.add(x));
     const nf = Object.keys(r.forkTimelines || {}).length; forks += nf; forkSteps += Object.values(r.forkTimelines || {}).reduce((n, t) => n + t.length, 0);
     row(`story ${sc.id} ${sc.slug}`, r.problems.length === 0, r.problems.length ? r.problems.join(' | ') : `${r.stepsRun} steps${nf ? `, ${nf} branch${nf > 1 ? 'es' : ''}` : ''}`);
@@ -77,7 +347,8 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
   // from genesis (a go-request exists only while its leaf is active; a
   // dormant leaf never has a checkpoint). No story can assert them.
   const UNREACHABLE = ['checkpoint-exists', 'not-active'];
-  const missingR = Object.values(core.REASONS).filter(r => !r.startsWith('invalid') && !UNREACHABLE.includes(r) && !asserted.has(r));
+  const REPLAY_ONLY = ['slot-decreased']; // a refusal of replay, not of step: no story step can assert it
+  const missingR = Object.values(core.REASONS).filter(r => !r.startsWith('invalid') && !UNREACHABLE.includes(r) && !REPLAY_ONLY.includes(r) && !asserted.has(r));
   row('every reachable refusal reason asserted by some story', missingR.length === 0, missingR.length ? 'missing ' + missingR.join(', ') : `${asserted.size} reasons; ${UNREACHABLE.join(', ')} unreachable by Inv`);
   const corpusForks = (corpus.stories || []).reduce((n, sc) => n + (sc.forks || []).length, 0);
   row('the corpus is the fifteen stories with their forks, six traces and the grid', Array.isArray(corpus.stories) && corpus.stories.length === N_STORIES && corpusForks === forks && corpus.traces.length === 6 && corpus.grid.cells.length > 0, `${(corpus.stories || []).length} stories, ${corpusForks} forks, ${(corpus.traces || []).length} traces, ${corpus.grid ? corpus.grid.cells.length : 0} grid cells`);
@@ -193,6 +464,14 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
     row('every executable property reds on a fabricated violation', errs.length === 0, errs.length ? errs.join(' | ') : `${Object.keys(V).length} fabricated records, each refused by its lamp; R10 by the phases-overlap mutant`);
   }
 
+  // 3c. the stories' clauses against the Lean, and the guard table both ways
+  {
+    let cl = null;
+    try { cl = checkClauses(core, JSON.parse(readFileSync(clausesPath, 'utf8')), readFileSync(storiesMd, 'utf8'), timelines, leanRoot); }
+    catch (e) { row('every clause of every story reconciled with the Lean', false, 'checker crashed: ' + e.stack.split('\n').slice(0, 3).join(' « ')); }
+    if (cl) row('every clause of every story reconciled with the Lean; every decision site of the Lean claimed by a refusal name', cl.problems.length === 0, cl.problems.length ? cl.problems.slice(0, 14).join(' | ') : `${cl.clauses} clauses (${cl.anchored} anchored, ${cl.omissions} omissions), ${cl.fragments} fragments, ${cl.sites} decision sites on the path from stepFn`);
+  }
+
   // 4. build drift
   let buildOut = '';
   try { buildOut = execFileSync(process.execPath, [BUILD, '--check', '--html', html, '--core', corePath, '--scenarios', scenDir, '--corpus', corpusPath, '--docs', docs], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); row('generated page and published copy are current', true, buildOut); }
@@ -303,11 +582,13 @@ async function selftest() {
   const controls = [];
   const control = async (name, mutate, expectRe) => {
     const dir = join(tmp, name); mkdirSync(dir);
-    for (const f of ['registry-simulator-core.mjs', 'registry-simulator.html', 'registry-simulator-corpus.json', 'checkpoint-simulator-minidom.mjs', 'registry-simulator-build.mjs']) cpSync(join(HERE, f), join(dir, f));
+    for (const f of ['registry-simulator-core.mjs', 'registry-simulator.html', 'registry-simulator-corpus.json', 'checkpoint-simulator-minidom.mjs', 'registry-simulator-build.mjs', 'registry-simulator-clauses.json', 'REGISTRY-STORIES.md']) cpSync(join(HERE, f), join(dir, f));
     cpSync(SCEN_DIR, join(dir, 'scenarios'), { recursive: true });
     cpSync(DOCS, join(dir, 'index.html'));
+    mkdirSync(join(dir, 'lean', 'CardanoKeri'), { recursive: true });
+    for (const f of ['Registry.lean', 'RegistryGoals.lean']) cpSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), join(dir, 'lean', 'CardanoKeri', f));
     mutate(dir);
-    const r = await run({ core: join(dir, 'registry-simulator-core.mjs'), html: join(dir, 'registry-simulator.html'), scenDir: join(dir, 'scenarios'), corpusPath: join(dir, 'registry-simulator-corpus.json'), docs: join(dir, 'index.html'), quiet: true });
+    const r = await run({ core: join(dir, 'registry-simulator-core.mjs'), html: join(dir, 'registry-simulator.html'), scenDir: join(dir, 'scenarios'), corpusPath: join(dir, 'registry-simulator-corpus.json'), docs: join(dir, 'index.html'), clausesPath: join(dir, 'registry-simulator-clauses.json'), storiesMd: join(dir, 'REGISTRY-STORIES.md'), leanRoot: dir, quiet: true });
     const red = !r.ok && r.problems.some(p => expectRe.test(p));
     controls.push({ name, red, why: red ? r.problems.find(p => expectRe.test(p)) : (r.ok ? 'stayed GREEN' : 'RED for another reason: ' + r.problems[0]) });
   };
@@ -320,6 +601,14 @@ async function selftest() {
   await control('overflow-unchecked', dir => edit(join(dir, 'registry-simulator-core.mjs'), 'const r = a + b; if (r > MAX_NAT) throw new NatOverflow(field); return r;', 'return a + b;'), /nextReq at the bound, contribute: got applied/);
   await control('lamp-that-cannot-go-red', dir => edit(join(dir, 'registry-simulator-core.mjs'), "      if (result.ok) {\n        const s = result.state;\n        if (lookupCkpt(s.ckpts, aid) !== null)", "      if (false) {\n        const s = result.state;\n        if (lookupCkpt(s.ckpts, aid) !== null)"), /R13 says holds on a fabricated violation/);
   await control('phases-overlap', dir => edit(join(dir, 'registry-simulator-core.mjs'), 'function inPhase2(p, r, now) { return phase1End(p, r) <= now && now < phase2End(p, r); }', 'function inPhase2(p, r, now) { return now < phase2End(p, r); }'), /theorem R10 fails/);
+  // the three survivors of the checkpoint audit, then the story and the Lean side
+  await control('clause-re-anchored-to-an-unrelated-declaration', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"clause":"a witnessed rotation from the recorded key state","class":"guard","kind":"guard","decl":"processBody","arm":".revive","text":"env.rotationFrom r.aid k = true"', '"clause":"a witnessed rotation from the recorded key state","class":"guard","kind":"guard","decl":"stepFn","arm":".pause","text":"env.rotationFrom aid k = true"'), /goes through \.fold, not \.pause/);
+  await control('clause-same-text-on-another-arm', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"clause":"a revive needs a dormant leaf","class":"guard","kind":"guard","decl":"processBody","arm":".revive"', '"clause":"a revive needs a dormant leaf","class":"guard","kind":"guard","decl":"processBody","arm":".convict"'), /does not process a \.convict request/);
+  await control('clause-wrong-but-existing-text', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"clause":"a registration whose inception does not verify is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".register","text":"env.inception r.aid = true"', '"clause":"a registration whose inception does not verify is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".register","text":"lookup acc.leaves r.aid = none"'), /bad-inception is decided at .* not by «lookup acc.leaves r.aid = none»/);
+  await control('clause-missing-from-the-story', dir => edit(join(dir, 'REGISTRY-STORIES.md'), 'the plugin is pinned; the request is in phase 1;', 'the request is in phase 1;'), /clause «the plugin is pinned» does not occur/);
+  await control('story-fragment-unclassified', dir => edit(join(dir, 'REGISTRY-STORIES.md'), '- **Money**: the bond is locked into the checkpoint;', '- **Money**: the bond is locked into the checkpoint; the fee is paid by the folder;'), /unclassified fragment/);
+  await control('lean-conjunct-edited', dir => edit(join(dir, 'lean', 'CardanoKeri', 'Registry.lean'), 'if g = s.gen ∧ pl = s.plugin ∧ batch ≠ [] then', 'if g = s.gen ∧ pl = s.plugin ∧ batch.length ≠ 0 then'), /«batch ≠ \[\]» is not inside stepFn \.fold|decision site of the Lean no refusal name claims/);
+  await control('lean-guard-unclaimed', dir => edit(join(dir, 'registry-simulator-core.mjs'), "'already-tombstone': { sites: [site('stepFn', '.convictCkpt', 'st ≠ .tomb')] },", "'already-tombstone': { sites: [] },"), /stepFn \.convictCkpt «st ≠ \.tomb».*no refusal name claims/);
   await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "b.addEventListener('click', () => goTo(it.branch, it.to));", "b.addEventListener('click', () => {});"), /tree: the continuation did not switch to the fork/);
   await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('sc-all').addEventListener('click', () => { while (storyStep()) {} });", "$('sc-all').addEventListener('click', () => {});"), /play all did not finish/);
   rmSync(tmp, { recursive: true, force: true });
@@ -330,6 +619,7 @@ async function selftest() {
 }
 
 const main = async () => {
+  if (process.argv.includes('--clauses-md')) { console.log(clausesMarkdown(JSON.parse(readFileSync(CLAUSES, 'utf8')))); process.exit(0); }
   if (process.argv.includes('--selftest')) {
     const ok = await selftest();
     if (!ok) process.exit(1);

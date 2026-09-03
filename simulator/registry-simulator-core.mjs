@@ -73,32 +73,58 @@ const REASONS = {
   NOT_LIVE: 'not-live',                     // pause: the checkpoint is not live
   NOT_PARKED: 'not-parked',                 // resume: the checkpoint is not parked
   ALREADY_TOMB: 'already-tombstone',        // convictCkpt on a tombstone
+  SLOT_DECREASED: 'slot-decreased',         // replay: a trace whose slots go backwards
 };
 
-/* Which Lean declaration and binder refuses with each reason. */
+/* The decision sites of the Lean that refuse with each reason. The machine is
+   functional (stepFn alone; Reach is defined from it), so a site is a
+   declaration, the arm it sits in, and the guard text: one conjunct of an
+   `if … then`, or the accepting pattern of a `match` whose other arm is
+   `=> none`. The scenario gate checks each site exists in the Lean with that
+   text, and — the other way — that every conjunct and every refusing arm on
+   the path from stepFn is claimed by a reason, shared, or a pass-through. */
+const site = (decl, arm, text) => ({ decl, arm, text });
 const LEAN_GUARDS = {
-  'not-postable': { decl: 'stepFn (contribute)', text: 'op.userPostable = true' },
-  'unknown-request': { decl: 'stepFn / applyBatch', text: 'lookup … = none' },
-  'not-in-phase-2': { decl: 'stepFn (retract)', text: 'inPhase2 p r now' },
-  'stale-generation': { decl: 'stepFn (fold)', text: 'g = s.gen' },
-  'plugin-not-pinned': { decl: 'stepFn (fold)', text: 'pl = s.plugin' },
-  'empty-fold': { decl: 'stepFn (fold)', text: 'batch ≠ []' },
-  'not-in-phase-1': { decl: 'processOne', text: 'inPhase1 p r now' },
-  'bad-inception': { decl: 'processBody (register)', text: 'env.inception r.aid = true' },
-  'already-registered': { decl: 'processBody (register)', text: 'lookup acc.leaves r.aid = none' },
-  'not-dormant': { decl: 'processBody (revive / convict)', text: 'some (.dormant k)' },
-  'no-rotation': { decl: 'processBody (revive) / stepFn (pause, resume)', text: 'env.rotationFrom aid k = true' },
-  'checkpoint-exists': { decl: 'processBody (revive)', text: 'lookup acc.ckpts r.aid = none' },
-  'not-active': { decl: 'processBody (goDormant / goConvicted)', text: 'some (.active _)' },
-  'no-duplicity-proof': { decl: 'processBody (convict) / stepFn (convictCkpt)', text: 'env.duplicity aid k = true' },
-  'not-rejectable': { decl: 'rejectOne', text: 'rejectable p r now' },
-  'go-not-rejectable': { decl: 'rejectOne', text: 'r.op.userPostable = true' },
-  'no-checkpoint': { decl: 'stepFn (reap / pause / resume / convictCkpt)', text: 'lookup s.ckpts aid = some c' },
-  'not-reapable': { decl: 'stepFn (reap)', text: 'reapable p env now aid c' },
-  'not-live': { decl: 'stepFn (pause)', text: 'some ⟨tok, k, .live⟩' },
-  'not-parked': { decl: 'stepFn (resume)', text: 'some ⟨tok, k, .parked _⟩' },
-  'already-tombstone': { decl: 'stepFn (convictCkpt)', text: 'st ≠ .tomb' },
+  'not-postable': { sites: [site('stepFn', '.contribute', 'op.userPostable = true')], decider: 'Op.userPostable' },
+  'unknown-request': { sites: [site('stepFn', '.retract', 'some r'), site('applyBatch', null, 'some r')] },
+  'not-in-phase-2': { sites: [site('stepFn', '.retract', 'inPhase2 p r now')], decider: 'inPhase2' },
+  'stale-generation': { sites: [site('stepFn', '.fold', 'g = s.gen')] },
+  'plugin-not-pinned': { sites: [site('stepFn', '.fold', 'pl = s.plugin')] },
+  'empty-fold': { sites: [site('stepFn', '.fold', 'batch ≠ []')] },
+  'not-in-phase-1': { sites: [site('processOne', null, 'inPhase1 p r now')], decider: 'inPhase1' },
+  'bad-inception': { sites: [site('processBody', '.register', 'env.inception r.aid = true')] },
+  'already-registered': { sites: [site('processBody', '.register', 'lookup acc.leaves r.aid = none')] },
+  'not-dormant': { sites: [site('processBody', '.revive', 'some (.dormant k)'), site('processBody', '.convict', 'some (.dormant k)')] },
+  'no-rotation': { sites: [site('processBody', '.revive', 'env.rotationFrom r.aid k = true'), site('stepFn', '.pause', 'env.rotationFrom aid k = true'), site('stepFn', '.resume', 'env.rotationFrom aid k = true')] },
+  'checkpoint-exists': { sites: [site('processBody', '.revive', 'lookup acc.ckpts r.aid = none')] },
+  'not-active': { sites: [site('processBody', '.goDormant', 'some (.active _)'), site('processBody', '.goConvicted', 'some (.active _)')] },
+  'no-duplicity-proof': { sites: [site('processBody', '.convict', 'env.duplicity r.aid k = true'), site('stepFn', '.convictCkpt', 'env.duplicity aid k = true')] },
+  'not-rejectable': { sites: [site('rejectOne', null, 'rejectable p r now')], decider: 'rejectable' },
+  'go-not-rejectable': { sites: [site('rejectOne', null, 'r.op.userPostable = true')], decider: 'Op.userPostable' },
+  'no-checkpoint': { sites: [site('stepFn', '.reap', 'some c'), site('stepFn', '.pause', 'some ⟨tok, k, .live⟩'), site('stepFn', '.resume', 'some ⟨tok, k, .parked _⟩'), site('stepFn', '.convictCkpt', 'some ⟨tok, k, st⟩')] },
+  'not-reapable': { sites: [site('stepFn', '.reap', 'reapable p env now aid c')], decider: 'reapable' },
+  'not-live': { sites: [site('stepFn', '.pause', 'some ⟨tok, k, .live⟩')] },
+  'not-parked': { sites: [site('stepFn', '.resume', 'some ⟨tok, k, .parked _⟩')] },
+  'already-tombstone': { sites: [site('stepFn', '.convictCkpt', 'st ≠ .tomb')] },
+  'slot-decreased': { sites: [site('replay', null, "t ≤ t'")] },
+  'invalid-params': { sites: [], hyps: [['Params', 'hD', '0 < D'], ['Params', 'hProcess', '0 < process'], ['Params', 'hRetract', '0 < retract'], ['Params', 'hFund', 'Mr + tip ≤ Mc']] },
+  'invalid-nat': { sites: [], boundary: true },     // the transcription's bound on Nat; no Lean guard
+  'invalid-state': { sites: [], boundary: true },   // a value that is not a Lean Sys
+  'invalid-action': { sites: [], boundary: true },  // a value that is not a Lean Action
+  'invalid-evidence': { sites: [], boundary: true }, // a table that is not an EnvTable
 };
+/* One Lean pattern, two names: the core names the missing checkpoint before
+   the wrong state, as its lookup comes first in the transcription. */
+const LEAN_SHARED_SITES = [
+  { decl: 'stepFn', arm: '.pause', text: 'some ⟨tok, k, .live⟩', by: ['no-checkpoint', 'not-live'] },
+  { decl: 'stepFn', arm: '.resume', text: 'some ⟨tok, k, .parked _⟩', by: ['no-checkpoint', 'not-parked'] },
+];
+/* Refusing arms that carry an inner refusal through, not guards of their own. */
+const LEAN_PASSTHROUGH = [
+  { decl: 'stepFn', arm: '.fold', text: 'some acc', note: "the batch's own refusal" },
+  { decl: 'applyBatch', arm: null, text: "some acc''", note: "the element's own refusal (processOne / rejectOne)" },
+  { decl: 'replay', arm: null, text: "some (_, s')", note: "the step's own refusal" },
+];
 /* @@CORE:constants:END@@ */
 
 /* @@CORE:machine@@ */
@@ -460,7 +486,7 @@ function replay(params, envTable, t0, state, steps) {
     if (!Array.isArray(e) || e.length !== 2) return refuse(REASONS.INVALID_ACTION, `list[${i}]`);
     const [t2, action] = e;
     if (!isNat(t2)) return refuse(REASONS.INVALID_NAT, 'slot');
-    if (!(t <= t2)) return { ok: false, at: i, reason: 'slot-decreased' };
+    if (!(t <= t2)) return { ok: false, at: i, reason: REASONS.SLOT_DECREASED };
     const r = step(params, envTable, action, t2, s);
     if (!r.ok) return { ok: false, at: i, reason: r.reason, field: r.field };
     s = r.state; t = t2;
@@ -643,7 +669,7 @@ const THEOREMS = [
       }
       return { v: 'holds' };
     } },
-  { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state — a checkpoint, or a dormant AID at any position of a batch', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof, R14_convict_in_batch_needs_proof',
+  { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state — a checkpoint, or a dormant AID at any position of a batch', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof, R14_convict_in_batch_needs_proof, R14_convict_at_position',
     check: ({ before, action, now, result, params, env }) => {
       const has = (aid, k) => !!(env && Array.isArray(env.duplicity) && env.duplicity.some(r => r[0] === aid && r[1] === k));
       if (action.convictCkpt) {
@@ -723,7 +749,7 @@ function checkScenario(sc, file, corpus) {
           if (!sameJson(c.input, s) || !sameJson(c.action, st.action) || c.now !== st.now) fail(`${tag}: Lean cell input differs from the story's`);
         }
       }
-      tl.push({ i, now: st.now, action: st.action, result: r, theorems: th, branch: label ? label.replace(/\W+$/, '') : 'trunk' });
+      tl.push({ i, now: st.now, action: st.action, before: s, params: sc.params, env, result: r, theorems: th, branch: label ? label.replace(/\W+$/, '') : 'trunk' });
       if (!r.ok && exp.ok !== false) { fail(`${tag}: refused (${r.reason}${r.field ? '/' + r.field : ''}), expected applied`); break; }
       if (r.ok && exp.ok === false) { fail(`${tag}: applied, expected refusal ${exp.reason || ''}`); break; }
       if (!r.ok) {
@@ -806,7 +832,7 @@ function checkCorpus(doc) {
 }
 /* @@CORE:verify:END@@ */
 
-export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, MAX_NAT, isNat, validateParams, validateState, validateEnv,
+export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, LEAN_SHARED_SITES, LEAN_PASSTHROUGH, MAX_NAT, isNat, validateParams, validateState, validateEnv,
          validateAction, emptyEnv, envFromTables, userPostable, opBond, opTag, statusTag, ckTag, actionActor,
          actionTag, inPhase1, inPhase2, rejectable, phaseOf, lookupReq, lookupLeaf, lookupCkpt, removeReq,
          removeCkpt, setLeaf, processBody, processOne, rejectOne, applyBatch, batchView, flow, reapableReason, goOp, step,

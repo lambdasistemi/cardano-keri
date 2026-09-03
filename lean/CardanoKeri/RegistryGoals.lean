@@ -329,7 +329,7 @@ theorem goIn_cons_go {rs : List (ReqId × Request)} {id : ReqId} {r : Request}
 structure AccInv (p : Params) (n : ReqId) (acc : Acc) : Prop where
   ckptActive : ∀ aid c, lookup acc.ckpts aid = some c → ∃ tok, lookup acc.leaves aid = some (.active tok)
   activeCkpt : ∀ aid tok, lookup acc.leaves aid = some (.active tok) →
-    (∃ c, lookup acc.ckpts aid = some c) ∨ goIn acc.requests aid
+    (∃ c, lookup acc.ckpts aid = some c ∧ c.token = tok) ∨ goIn acc.requests aid
   goNoCkpt : ∀ aid, goIn acc.requests aid → lookup acc.ckpts aid = none
   goActive : ∀ aid, goIn acc.requests aid → ∃ tok, lookup acc.leaves aid = some (.active tok)
   goUnique : ∀ x y, x ∈ acc.requests → y ∈ acc.requests → x.2.op.userPostable = false →
@@ -458,7 +458,7 @@ theorem processOne_inv (p : Params) (env : Env) (now : Slot) {n : ReqId} {acc : 
           activeCkpt := by
             intro a tok h
             by_cases ha : a = aid
-            · subst ha; exact Or.inl ⟨_, lookup_cons_self⟩
+            · subst ha; rw [lookup_cons_self] at h; cases h; exact Or.inl ⟨_, lookup_cons_self, rfl⟩
             · rw [lookup_cons_ne (Ne.symm ha)] at h ⊢
               rcases hi.activeCkpt a tok h with h | h
               · exact Or.inl h
@@ -513,7 +513,7 @@ theorem processOne_inv (p : Params) (env : Env) (now : Slot) {n : ReqId} {acc : 
             activeCkpt := by
               intro a tok h
               by_cases ha : a = aid
-              · subst ha; exact Or.inl ⟨_, lookup_cons_self⟩
+              · subst ha; rw [lookup_setLeaf_self hne] at h; cases h; exact Or.inl ⟨_, lookup_cons_self, rfl⟩
               · rw [lookup_setLeaf_ne ha] at h
                 rw [lookup_cons_ne (Ne.symm ha)]
                 rcases hi.activeCkpt a tok h with h | h
@@ -684,7 +684,7 @@ theorem inv_of_accInv {p : Params} {n : ReqId} {acc : Acc} (hi : AccInv p n acc)
 
 /-- Replacing the checkpoint of an AID that has one keeps the invariant. -/
 theorem inv_replace_ckpt {p : Params} {s : Sys} (hi : Inv p s) {aid : AID} {c c' : Ckpt}
-    (hc : lookup s.ckpts aid = some c) :
+    (hc : lookup s.ckpts aid = some c) (htok : c'.token = c.token) :
     Inv p { s with ckpts := (aid, c') :: remove s.ckpts aid } := by
   exact {
     ckptActive := by
@@ -696,7 +696,11 @@ theorem inv_replace_ckpt {p : Params} {s : Sys} (hi : Inv p s) {aid : AID} {c c'
     activeCkpt := by
       intro a tok h
       by_cases ha : a = aid
-      · subst ha; exact Or.inl ⟨c', lookup_cons_self⟩
+      · subst ha
+        rcases hi.activeCkpt a tok h with ⟨d, hd, hdt⟩ | hg
+        · rw [hc] at hd; cases hd
+          exact Or.inl ⟨c', lookup_cons_self, by rw [htok, hdt]⟩
+        · have := hi.goNoCkpt a hg; rw [hc] at this; cases this
       · rcases hi.activeCkpt a tok h with h | h
         · rw [lookup_cons_ne (Ne.symm ha), lookup_remove_ne ha]; exact Or.inl h
         · exact Or.inr h
@@ -869,7 +873,7 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} (hnow : now 
       split at hs
       · simp only [Option.some.injEq, Prod.mk.injEq] at hs
         obtain ⟨_, rfl⟩ := hs
-        exact inv_replace_ckpt hi hc
+        exact inv_replace_ckpt hi hc rfl
       · cases hs
     · cases hs
   | resume aid =>
@@ -879,7 +883,7 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} (hnow : now 
       split at hs
       · simp only [Option.some.injEq, Prod.mk.injEq] at hs
         obtain ⟨_, rfl⟩ := hs
-        exact inv_replace_ckpt hi hc
+        exact inv_replace_ckpt hi hc rfl
       · cases hs
     · cases hs
   | convictCkpt aid =>
@@ -889,7 +893,7 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} (hnow : now 
       split at hs
       · simp only [Option.some.injEq, Prod.mk.injEq] at hs
         obtain ⟨_, rfl⟩ := hs
-        exact inv_replace_ckpt hi hc
+        exact inv_replace_ckpt hi hc rfl
       · cases hs
     · cases hs
 
@@ -1218,7 +1222,7 @@ theorem R1_ckpt_implies_active (p : Params) (env : Env) {s : Sys} (h : ReachFar 
 /-- **R1b.** An active leaf has its checkpoint, or a go-request is pending. -/
 theorem R1_active_ckpt_or_go (p : Params) (env : Env) {s : Sys} (h : ReachFar p env s) (aid : AID)
     {tok : Token} (hl : lookup s.leaves aid = some (.active tok)) :
-    (∃ c, lookup s.ckpts aid = some c) ∨ goPending s aid :=
+    (∃ c, lookup s.ckpts aid = some c ∧ c.token = tok) ∨ goPending s aid :=
   (reach_inv p env h).activeCkpt aid tok hl
 
 /-- **R1c.** A dormant or convicted leaf has no checkpoint. -/

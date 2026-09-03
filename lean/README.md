@@ -229,8 +229,10 @@ leaves active / dormant / convicted, checkpoints live / parked / tombstone,
 requests as inbox UTxOs, a permissionless fold at a named generation, the
 reap of a bondless checkpoint into a permanent go-request, revival by a
 rotation from the recorded key state; one executable `stepFn`, `replay`,
-`ReachFar` and the invariant `Inv`. `CardanoKeri/RegistryGoals.lean` proves
-R1–R14; `CardanoKeri/Cage.lean` is the generic mpfs cage (authorization mode,
+`ReachFar` and the invariant `Inv` (an active leaf's token is the token of its
+checkpoint). `CardanoKeri/RegistryGoals.lean` proves R1–R14, R14 at any
+position of any batch against the accumulator the fold reached
+(`R14_convict_at_position`); `CardanoKeri/Cage.lean` is the generic mpfs cage (authorization mode,
 plugin, value mode) with the registry as its delegated instantiation and the
 divergence from the cage as shipped as theorems; `CardanoKeri/Samaritan.lean`
 proves the reaper never loses. No `sorry`, standard axioms only. The

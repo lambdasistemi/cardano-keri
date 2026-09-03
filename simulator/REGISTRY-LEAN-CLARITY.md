@@ -25,7 +25,7 @@ list of what the law left open. Dates are 2026 unless said.
 | id | fact in the Lean | what it means | proposed | status |
 |---|---|---|---|---|
 | Q-R1 | `Checkpoint.lean:305–312` (base branch, PR 315): `.close` takes a present checkpoint to `.gone` under quorum; `Registry.lean` has no edge for it | after a registration, an owner who closes leaves an active leaf with neither checkpoint nor go-request: `Inv.activeCkpt` (`Registry.lean:459`) does not hold of the pair of machines | under the ruling "the permissionless version cannot be closed" (2026-09-03), `close` leaves the checkpoint machine and becomes park + reap; a checkpoint's only exits are reap and tombstone | audit blocker 1; the change is on the base branch, not in this PR |
-| Q-R2 | `Inv` (`Registry.lean:455–470`) binds an active leaf to *some* checkpoint, not to the checkpoint carrying *that* token | an `Inv`-satisfying state may have leaf `active 0` and checkpoint token 1; reachable states do not, but the theorem is not stated | strengthen `activeCkpt` to `∃ c, lookup s.ckpts aid = some c ∧ c.token = tok` (or a go-request) — see the "token binding" section below for what was done | audit major 2 |
+| Q-R2 | `Inv` bound an active leaf to *some* checkpoint, not to the checkpoint carrying *that* token | an `Inv`-satisfying state could have leaf `active 0` and checkpoint token 1 | `activeCkpt` strengthened to name the token — see "Token binding" below | audit major 2; **closed** |
 | Q-R3 | `stepFn .retract` checks the request id and the phase; no signer | anyone may retract another's request in phase 2; the refund still goes to the recorded owner, so it is a cancellation, not a theft; `validators/request.ak:91` on cardano-mpfs-onchain main requires the owner's signature | add a `signer` to `.retract` and the guard `signer = r.owner`, or keep the machine signer-free and record the omission (the stories mark it as an omission today) | audit major 3; a design ruling: the machine has no signer anywhere else |
 | Q-R4 | `rejectable` holds when `now < submittedAt`; a go-request dated `far` is therefore rejectable by the cage; safety is the plugin veto `r.op.userPostable = true` in `rejectOne` | on cardano-mpfs-onchain main (`state.ak:113–121`) `Rejected` has no plugin veto: a go-request would be rejectable and its key state lost; the model depends on #102 | keep; the design note now says so | audit major 4 |
 | Q-R5 | `Sys` has `plugin` but no owner / stake-script field | R5 proves the plugin pinned, not the owner pin #100 asks for; `types.ak:197–201` on main lets the owner change | add the fields when #100 lands upstream; until then the design note lists it | audit major 7 |
@@ -40,12 +40,17 @@ list of what the law left open. Dates are 2026 unless said.
 | design note, samaritan | "nobody reaps" as a consequence of the tip bound | `samaritan_never_loses` counts the go-request's eventual refund; it is a conditional, eventual accounting, not a per-transaction guarantee | the note now states the condition |
 | design note, cage | "`refundAll` as `validModify` does today" | `validModify` on main checks an aggregate refund range less fee and n·tip, ignores the action tail past the requests, and accepts an empty Modify | the note lists the three divergences (audit majors 5, 6) |
 
-## Token binding (Q-R2), what was done
+## Token binding (Q-R2), done
 
-See `lean/CardanoKeri/Registry.lean` `Inv` and `RegistryGoals.lean` after this
-record's date: if `activeCkpt` names the token, the row above is closed and
-`R1_active_ckpt_or_go` says so; if it still reads "some checkpoint", the
-strengthening was not done in this PR and the row stays open.
+`Inv.activeCkpt` (and `AccInv.activeCkpt` on the fold's accumulator) now reads
+`(∃ c, lookup s.ckpts aid = some c ∧ c.token = tok) ∨ goPending s aid`:
+an active leaf's token is the token of its checkpoint. `inv_replace_ckpt`
+takes `c'.token = c.token` (pause, resume and a checkpoint conviction keep the
+token); registration and revival mint the leaf's token into the checkpoint by
+construction. `R1_active_ckpt_or_go` states it; the executable R1 checks it
+on every applied step and reds on a leaf whose checkpoint carries another
+token. The audit's countermodel (leaf `active 0`, checkpoint token 1) no
+longer satisfies `Inv`. Q-R2 is closed.
 
 ## What the gates do not establish
 

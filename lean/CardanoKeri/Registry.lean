@@ -455,9 +455,10 @@ without duplicates. -/
 structure Inv (p : Params) (s : Sys) : Prop where
   /-- A checkpoint exists only for an AID whose leaf is active. -/
   ckptActive : ∀ aid c, lookup s.ckpts aid = some c → ∃ tok, lookup s.leaves aid = some (.active tok)
-  /-- An active leaf has its checkpoint, or a go-request is pending for it. -/
+  /-- An active leaf has the checkpoint carrying its token, or a go-request is
+  pending for it: the leaf's token is the indirection. -/
   activeCkpt : ∀ aid tok, lookup s.leaves aid = some (.active tok) →
-    (∃ c, lookup s.ckpts aid = some c) ∨ goPending s aid
+    (∃ c, lookup s.ckpts aid = some c ∧ c.token = tok) ∨ goPending s aid
   /-- While a go-request is pending there is no checkpoint. -/
   goNoCkpt : ∀ aid, goPending s aid → lookup s.ckpts aid = none
   /-- While a go-request is pending the leaf is active. -/

@@ -507,13 +507,17 @@ const reqOf = (s, id) => lookupReq(s.requests, id);
 const isFoldNow = (f, before) => f && f.gen === before.gen && f.plugin === before.plugin;
 
 const THEOREMS = [
-  { id: 'R1', title: 'leaf and checkpoint: a checkpoint implies an active leaf; an active leaf has its checkpoint or a pending go-request; dormant and convicted leaves have none', lean: 'R1_ckpt_implies_active, R1_active_ckpt_or_go, R1_not_active_no_ckpt',
+  { id: 'R1', title: 'leaf and checkpoint: a checkpoint implies an active leaf; an active leaf has the checkpoint carrying its token or a pending go-request; dormant and convicted leaves have none', lean: 'R1_ckpt_implies_active, R1_active_ckpt_or_go, R1_not_active_no_ckpt',
     check: ({ result }) => {
       if (!result.ok) return { v: 'n/a' };
       const s = result.state;
       for (const c of s.ckpts) { const l = lookupLeaf(s.leaves, c.aid); if (!l || statusTag(l) !== 'active') return { v: 'fails', why: `checkpoint ${c.aid} without an active leaf` }; }
       for (const l of s.leaves) {
-        if (statusTag(l.status) === 'active' && !lookupCkpt(s.ckpts, l.aid) && !goPending(s, l.aid)) return { v: 'fails', why: `active leaf ${l.aid} with neither checkpoint nor go-request` };
+        if (statusTag(l.status) === 'active') {
+          const c = lookupCkpt(s.ckpts, l.aid);
+          if (!c && !goPending(s, l.aid)) return { v: 'fails', why: `active leaf ${l.aid} with neither checkpoint nor go-request` };
+          if (c && c.token !== l.status.active) return { v: 'fails', why: `active leaf ${l.aid} says token ${l.status.active}, its checkpoint carries ${c.token}` };
+        }
         if (statusTag(l.status) !== 'active' && lookupCkpt(s.ckpts, l.aid)) return { v: 'fails', why: `${statusTag(l.status)} leaf ${l.aid} with a checkpoint` };
       }
       return s.leaves.length ? { v: 'holds' } : { v: 'n/a' };

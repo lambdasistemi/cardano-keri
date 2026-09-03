@@ -207,9 +207,15 @@ build's handoffs.
 
 A second page on the same pattern for the AID registry as an MPFS instance:
 the machine of `lean/CardanoKeri/Registry.lean`, the theorems R1–R14 of
-`lean/CardanoKeri/RegistryGoals.lean`, fifteen stories
-(`REGISTRY-STORIES.md`), and two gates that keep the transcription honest
-against the Lean. The design note is `docs/design/registry-as-mpfs.md`; the
+`lean/CardanoKeri/RegistryGoals.lean`, fifteen stories told as trees
+(`REGISTRY-STORIES.md`, a trunk and the branches where an attempt is refused
+or the world differs), their clauses reconciled with the Lean
+(`registry-simulator-clauses.json`), the clarity record of what the Lean left
+open (`REGISTRY-LEAN-CLARITY.md`), and two gates that keep the transcription
+honest against the Lean. The shape follows the `simulate-lean-state-machine`
+skill; this suite is its functional-machine instance (no `Step` relation:
+`stepFn` is the machine, its `if` conjuncts and refusing `match` arms are the
+decision sites). The design note is `docs/design/registry-as-mpfs.md`; the
 generic cage and the permissioning divergence are `lean/CardanoKeri/Cage.lean`;
 the reaper's economics are `lean/CardanoKeri/Samaritan.lean`.
 
@@ -221,7 +227,9 @@ the reaper's economics are `lean/CardanoKeri/Samaritan.lean`.
   network request; light and dark theme; `?selftest=1` replays the fifteen
   stories and the embedded Lean corpus through the page's own core.
 
-Pick a story and step through it, or play freely: post requests (register,
+Pick a story: the play is drawn as a tree (✓ applied, ✗ refused; a ⋔ branch
+departs where it starts; click a node to go there) and *what can happen next*
+lists the continuations — the next step, or a branch. Or play freely: post requests (register,
 revive, convict a dormant AID), decide the evidence (inceptions, witnessed
 rotations from a key state, duplicity proofs against a key state, the owner's
 quorum), move the slot, build a fold by choosing what to do with each pending
@@ -232,14 +240,16 @@ refusal is named after the Lean guard that refused it, in the story's words.
 
 | file | role |
 |---|---|
-| `registry-simulator-core.mjs` | the pure core: `step` (= `stepFn`), `processBody`, `rejectOne`, `applyBatch`, `reapableReason`, `replay`, the phases, R1–R14 as executable properties, the scenario and corpus checkers |
+| `registry-simulator-core.mjs` | the pure core: `step` (= `stepFn`), `processBody`, `rejectOne`, `applyBatch`, `batchView` (what each position of a batch saw), `reapableReason`, `replay`, the phases, exact Nat on inputs and results, the guard table (`LEAN_GUARDS`: refusal name → decision sites of the Lean), R1–R14 as executable properties over the accumulator, the scenario (tree) and corpus checkers |
 | `registry-simulator.html` | the page; core slices between `@@CORE:<id>@@`, stories between `@@SCENARIOS@@`, the Lean corpus with its sha256 between `@@CORPUS@@` |
 | `registry-simulator-build.mjs` | regenerates the page and `docs/simulator/registry/index.html`; `--check` reds on any drift |
-| `registry-simulator-scenarios/` | one JSON per story (1–15): params, plugin, evidence table, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits |
-| `registry-simulator-scenario-gate.mjs` | every story through the core with the Lean corpus as the parity oracle; every theorem on every step; every reachable refusal reason asserted (two guards are unreachable by `Inv` and exempted by name); exact Nat and shapes at every entry point; build drift; the page under the minimal DOM (selftest, every story, free play through register, pause and reap). `--selftest` proves five ways it can fail |
-| `registry-simulator-corpus.json` | the output of `lean/RegistryTraceDriver.lean`, verbatim: six seeded traces, the boundary grid, the Lean's verdict on every step of the fifteen stories (739 cells) |
-| `registry-simulator-trace-gate.mjs` | builds and runs the Lean driver fresh, compares by sha256 with the committed corpus and the embedded copy, replays every cell through the core and the page's inlined core. `--selftest` proves four ways it can fail |
-| `REGISTRY-STORIES.md` | the fifteen stories |
+| `registry-simulator-scenarios/` | one JSON per story (1–15): params, plugin, evidence table, a trunk of steps and `forks` (`id`, `at`, `title`, an optional `env` of its own, steps), expected results per step including refusal reasons and flows, the theorems each step exhibits |
+| `registry-simulator-clauses.json` | the reconciliation table: 103 atomic claims over the stories' labelled bullets, each a Lean declaration, arm, exact text, kind (guard / refusal / payment / post-state / no-guard / verdict) and one tie (a refusal name, or a step of the story); one omission (the retract's signer) |
+| `REGISTRY-LEAN-CLARITY.md` | what the Lean left open and what was decided (D-R1…), the questions escalated with their evidence (Q-R1…), the prose that disagreed with the definitions and how it was fixed |
+| `registry-simulator-scenario-gate.mjs` | every branch of every story through the core with the Lean corpus as the parity oracle; every property on every step; every reachable refusal reason asserted (two guards are unreachable by `Inv` and exempted by name); exact Nat and shapes at every entry point and every successor, sum and product at the bound; a fabricated violation per lamp; the clauses against the Lean's declaration spans and the guard table both ways (every decision site on the path from `stepFn` claimed); build drift; the page under the minimal DOM (selftest, every story, a branch taken through the tree, free play). `--selftest` proves seventeen ways it can fail; `--clauses-md` prints the table |
+| `registry-simulator-corpus.json` | the output of `lean/RegistryTraceDriver.lean`, verbatim: six seeded traces, the boundary grid, the Lean's verdict on every step of the fifteen stories and their thirteen forks (759 cells) |
+| `registry-simulator-trace-gate.mjs` | builds the driver's imports and runs the Lean driver fresh, compares by sha256 with the committed corpus and the embedded copy, replays every cell through the core and the page's inlined core. `--selftest` proves five ways it can fail, then the cold control: a copy of `lean/` without `.lake` fails with the build step removed and is byte-identical with it |
+| `REGISTRY-STORIES.md` | the fifteen stories, each with its labelled bullets (the checked prose) and its branches |
 | `../lean/RegistryTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over the seeds, the grid and the scenario files and prints JSON via `ToJson` |
 
 ## Run the gates

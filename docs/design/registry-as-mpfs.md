@@ -85,14 +85,14 @@ reaping early).
 
 `Inv` (`Registry.lean`), proved reachable-preserved before the end of time
 (`inv_init`, `inv_step`, `reach_inv` over `ReachFar`): a checkpoint exists only
-for an active leaf; an active leaf has its checkpoint or a pending
-go-request; while a go-request is pending there is no checkpoint and the
+for an active leaf; an active leaf has the checkpoint carrying its token, or a
+pending go-request (the token is the indirection: `activeCkpt` names it); while a go-request is pending there is no checkpoint and the
 leaf is active; at most one go-request per AID; a go-request is dated `far`;
 one checkpoint, one leaf per AID; unique request identifiers.
 
 | id | claim | Lean |
 |---|---|---|
-| R1 | leaf and checkpoint: a checkpoint implies an active leaf; an active leaf has its checkpoint or a go-request; dormant and convicted leaves have none; a registered AID cannot be registered again, ever | `R1_ckpt_implies_active`, `R1_active_ckpt_or_go`, `R1_not_active_no_ckpt`, `R1_registered_refused` |
+| R1 | leaf and checkpoint: a checkpoint implies an active leaf; an active leaf has the checkpoint carrying its token or a go-request; dormant and convicted leaves have none; a registered AID cannot be registered again, ever, at any position of a batch | `R1_ckpt_implies_active`, `R1_active_ckpt_or_go`, `R1_not_active_no_ckpt`, `R1_registered_refused` |
 | R2 | at most one checkpoint, one leaf, one go-request per AID | `R2_one_ckpt_per_aid`, `R2_one_leaf_per_aid`, `R2_one_go_per_aid` |
 | R3 | a convicted leaf never changes; a convicted AID is never registered again | `R3_convicted_permanent`, `R3_convicted_never_registered` |
 | R4 | a leaf never leaves the root | `R4_leaf_permanent` |
@@ -105,7 +105,7 @@ one checkpoint, one leaf per AID; unique request identifiers.
 | R11 | value: a processed go-request refunds `Mr` to the reaper; a reap splits exactly `Mc`; the reap is a `Samaritan.Reap`; requests deposit and retracts return bond plus tip; the checkpoint edges move no request value | `R11_go_refunds_reaper`, `R11_reap_flow`, `R11_reap_is_samaritan`, `R11_samaritan_never_loses`, `R11_contribute_value`, `R11_retract_value`, `R11_ckpt_edges_move_no_value` |
 | R12 | a leaf enters and changes only by a fold | `R12_leaf_enters_only_by_fold`, `R12_leaf_changes_only_by_fold` |
 | R13 | the reap: never a bonded checkpoint; a tombstone at once; a parked checkpoint by a stranger only after the grace window, by the owner at any time | `R13_live_never_reaped`, `R13_tomb_reaped`, `R13_parked_needs_grace`, `R13_parked_after_grace`, `R13_owner_reaps_early` |
-| R14 | every conviction needs a duplicity proof | `R14_convictCkpt_needs_proof`, `R14_convict_dormant_needs_proof` |
+| R14 | every conviction needs a duplicity proof against the recorded key state — of a checkpoint, of a dormant AID in a singleton batch, and at any position of any batch against the accumulator the fold reached | `R14_convictCkpt_needs_proof`, `R14_convict_dormant_needs_proof`, `R14_convict_in_batch_needs_proof`, `R14_convict_at_position` |
 
 All theorems build with no `sorry` on `propext` and `Quot.sound` only. The
 mutation campaign is `lean/REGISTRY-MUTANTS.md`.
@@ -118,8 +118,18 @@ returns `Mr` to the reaper and the tip to the folder. `reap_conserves`,
 `reaper_recovers`, `samaritan_never_loses` (`tip + fReap ≤ Mc` suffices),
 `self_folding_reaper_never_loses`, `fold_conserves`, and the converse
 `unprofitable_when_tip_too_high`. `R11_reap_is_samaritan` binds the machine's
-reap to that model. Consequence for deployment: the registry cage's tip must
-sit below a checkpoint's min-ADA minus a fee, or nobody reaps.
+reap to that model — its two numeric outputs, the premium and what goes into
+the go-request. What the theorems say, exactly: the reaper's position is
+whole *after* the go-request is folded (`samaritan_never_loses` counts
+`(fold r).toOwner`), under `tip + fReap ≤ Mc`; it is an eventual, conditional
+accounting, not a per-transaction guarantee. With the story values
+(`Mc` 4, `Mr` 1, `tip` 2, a reap fee of 2) the reaper receives 1 at the reap
+and is down 1 until the fold returns `Mr`. Fee funding, the receipt token that
+carries the reap's evidence into the go-request, and the identity of the
+reaper across the two transactions are outside both theorems. Consequence
+for deployment, as a design statement rather than a theorem: the registry
+cage's tip must sit below a checkpoint's min-ADA minus the reap fee, or the
+reap is unprofitable and parked checkpoints stay.
 
 ## Pluggability and the permissioning divergence (`Cage.lean`)
 
@@ -127,8 +137,34 @@ The cage as mpfs ships it is parameterised by what the epic changes:
 `AuthMode` (owner-keyed; owner and hook, #79 as shipped; delegated, the
 hook alone), `Plugin` (`Plugin.registry` with body `processBody`;
 `Plugin.trivial`, the shipped `staking.ak` that applies the leaf operation
-with no evidence and no checkpoint), and `ValueMode` (`refundAll` as
-`validModify` does today; `delegatedRouting`, #101).
+with no evidence and no checkpoint), and `ValueMode` (`refundAll`, an
+idealised reading of today's `validModify`; `delegatedRouting`, #101).
+
+Where the cage model is an idealisation of `validators/state.ak` on
+cardano-mpfs-onchain main, and not the code (audit of 2026-09-03):
+
+- **Refunds.** `refundAll` returns each processed request's exact bond to its
+  owner and pays the tip to the folder. `validModify` checks an aggregate
+  refund range, less the transaction fee and `n × tip`; `sumRefunds` does not
+  read each owner's input amount, and no check names the folder as the tip's
+  recipient. `refundAll_never_locks` is therefore true of the model's
+  `routeValue`, not a statement about `validModify`.
+- **Batch cardinality.** The model consumes an exact non-empty batch of named
+  request identifiers. `validModify` discards the tail of its action list
+  (`let (expectedNewRoot, _, …)`) and returns true when no request input
+  matched, so an empty `Modify` and surplus actions validate today; the
+  rejection of the empty fold is #100.
+- **The owner pin.** `Sys` carries the plugin and nothing else the cage is
+  parameterised by; `R5` proves the plugin pinned. Today's `types.ak` lets a
+  `Modify` change the owner; #100 pins owner and hook together, and the
+  model will carry both fields when it lands.
+- **Rejection of a go-request.** `rejectable` holds for a request dated in
+  the future — a go-request dated `far` is rejectable *by the cage*; what
+  saves its key state is the plugin veto in `rejectOne`
+  (`r.op.userPostable = true`). On main, `Rejected` has no plugin veto
+  (`state.ak` 113–121): the go-request is safe only once #102 gives the
+  plugin a say on `Rejected`. `R9_go_never_rejected` is a theorem of the
+  model with that veto.
 
 - `delegated_is_registry`: under replace semantics with the keri plugin and
   delegated routing, the cage *is* `Registry.stepFn` for every transaction
@@ -173,6 +209,20 @@ grace window and the min-ADA split are the checkpoint validator's reap edge.
   a revive while a checkpoint exists (`checkpoint-exists`), a go-request on a
   leaf that is not active (`not-active`). The scenario gate exempts them by
   name.
+- **The checkpoint machine's `close`.** `Checkpoint.lean` on the base branch
+  (PR 315) still lets the quorum close a present checkpoint to `gone`; this
+  registry has no edge for it, so under the pair of machines an owner who
+  closes leaves an active leaf with neither checkpoint nor go-request, and
+  `Inv.activeCkpt` does not hold of the pair. The ruling of 2026-09-03 is
+  that the permissionless registry cannot be closed: `close` leaves the
+  checkpoint machine and becomes park + reap. That change belongs to the
+  checkpoint's own slice; until it lands the two models are not composable
+  on that edge (clarity record Q-R1).
+- **The retract's signer.** `stepFn` checks a retract by request id and
+  phase only; `request.ak` on mpfs main requires the owner's signature. In
+  the model a stranger can cancel a request in phase 2 — the refund still
+  goes to the recorded owner (Q-R3, a ruling pending: the machine has no
+  signer anywhere else).
 - **Cryptography**: evidence is a table. **The checkpoint's rotations that
   keep it live, its bonds beyond one abstract `D`, poison**: the checkpoint
   machine. **Ordering among folders**: first arrival at the slot leader; the

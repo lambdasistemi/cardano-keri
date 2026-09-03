@@ -434,7 +434,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
     const registered = S({ gen: 1, leaves: [leaf(11, { active: 0 })], ckpts: [ck(11, 0, 0, 'live')], nextReq: 1, nextToken: 1 });
     const fold1 = { fold: { folder: 3, gen: 0, plugin: 7, batch: [{ id: 0, do: 'process' }] } };
     const V = {
-      R1: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { dormant: 0 })] }) },
+      R1: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { active: 1 })] }) },
       R1d: { before: { ...registered, requests: [req(1, 11, 4, 5, 'register')], nextReq: 2 }, action: { fold: { folder: 3, gen: 1, plugin: 7, batch: [{ id: 1, do: 'process' }] } }, now: 6, result: okr(registered, { locked: [{ aid: 11, value: 1000 }], tips: { addr: 3, value: 2 } }) },
       R2: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { active: 0 }), leaf(11, { active: 0 })] }) },
       R3: { before: S({ leaves: [leaf(11, 'convicted')] }), action: { pause: { aid: 11 } }, now: 5, result: okr(S({ leaves: [leaf(11, { active: 0 })] })) },

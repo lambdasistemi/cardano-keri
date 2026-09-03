@@ -1,3 +1,5 @@
 import CardanoKeri.Lifecycle
 import CardanoKeri.Invariants
 import CardanoKeri.Goals
+import CardanoKeri.Checkpoint
+import CardanoKeri.CheckpointGoals

@@ -263,6 +263,7 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
         if (!grp) { problems.push(`${tag}: ${c.decl} is in no executable property's list`); continue; }
         const th = rec.theorems[grp.id];
         if (!th || th.v !== 'holds') { problems.push(`${tag}: step ${JSON.stringify(c.match)} does not exhibit ${grp.id} (${c.decl})`); continue; }
+        if (!Array.isArray(th.by) || !th.by.includes(c.decl)) { problems.push(`${tag}: step ${JSON.stringify(c.match)} exhibits ${grp.id} through ${(th.by || []).join(', ') || 'no named theorem'}, not ${c.decl}`); continue; }
       } else if (c.decl === 'stepFn') {
         if ('.' + kind !== c.arm) { problems.push(`${tag}: step ${JSON.stringify(c.match)} goes through .${kind}, not ${c.arm}`); continue; }
       } else if (c.decl === 'processBody') {
@@ -283,6 +284,7 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
         if (changed !== c.updates.slice().sort().join(',')) { problems.push(`${tag}: the step changed ${changed || 'nothing'}, the row says ${c.updates.join(',')}`); continue; }
       }
       if (c.kind === 'payment' && rec.result.ok) {
+        if (!/^(deposited|locked|refunds|tips|premium|intoRequest) := \S/.test(c.text)) { problems.push(`${tag}: a payment row names the full assignment «field := expression», not «${c.text}»`); continue; }
         const fl = rec.result.flow, field = (c.text.match(/^(deposited|locked|refunds|tips|premium|intoRequest)\b/) || [])[1];
         const paid = field === 'deposited' || field === 'intoRequest' ? fl[field] > 0 : field === 'tips' || field === 'premium' ? fl[field] !== null : field ? fl[field].length > 0 : false;
         if (!paid) { problems.push(`${tag}: step ${JSON.stringify(c.match)} pays nothing through ${field || 'that field'}`); continue; }
@@ -437,31 +439,37 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       R1: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { active: 1 })] }) },
       R1d: { before: { ...registered, requests: [req(1, 11, 4, 5, 'register')], nextReq: 2 }, action: { fold: { folder: 3, gen: 1, plugin: 7, batch: [{ id: 1, do: 'process' }] } }, now: 6, result: okr(registered, { locked: [{ aid: 11, value: 1000 }], tips: { addr: 3, value: 2 } }) },
       R2: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { active: 0 }), leaf(11, { active: 0 })] }) },
-      R3: { before: S({ leaves: [leaf(11, 'convicted')] }), action: { pause: { aid: 11 } }, now: 5, result: okr(S({ leaves: [leaf(11, { active: 0 })] })) },
+      R3: [{ before: S({ leaves: [leaf(11, 'convicted')] }), action: { pause: { aid: 11 } }, now: 5, result: okr(S({ leaves: [leaf(11, { active: 0 })] })) },
+           { before: S({ leaves: [leaf(11, 'convicted')], requests: [req(0, 11, 1, 0, 'register')], nextReq: 1 }), env: { ...E, inception: [11] }, action: fold1, now: 1, result: okr(S({ gen: 1, leaves: [leaf(11, { active: 0 })], ckpts: [ck(11, 0, 0, 'live')], nextReq: 1, nextToken: 1 }), { locked: [{ aid: 11, value: 1000 }], tips: { addr: 3, value: 2 } }) }],
       R4: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, leaves: [] }) },
       R5: { before: registered, action: { pause: { aid: 11 } }, now: 5, result: okr({ ...registered, plugin: 8 }) },
       R6: { before: registered, action: { contribute: { aid: 12, owner: 2, submittedAt: 5, op: 'register' } }, now: 5, result: okr({ ...registered, gen: 2 }, { deposited: 1002 }) },
       R7: { before: registered, action: { fold: { folder: 3, gen: 0, plugin: 7, batch: [{ id: 0, do: 'process' }] } }, now: 5, result: okr(registered) },
       R8: { before: registered, action: { fold: { folder: 3, gen: 1, plugin: 7, batch: [] } }, now: 5, result: okr({ ...registered, gen: 2 }) },
       R9: { before: S({ requests: [req(0, 11, 1, 0, 'register')], nextReq: 1 }), action: { retract: { req: 0 } }, now: 3, result: okr(S({ nextReq: 1 }), { refunds: [{ addr: 1, value: 1002 }] }) },
-      R11: { before: S({ requests: [req(0, 11, 1, 0, 'register')], nextReq: 1 }), action: fold1, now: 1, result: okr(registered, { refunds: [{ addr: 1, value: 1000 }], tips: { addr: 3, value: 2 } }) },
+      R11: { before: S({ requests: [req(0, 11, 1, 0, 'register')], nextReq: 1 }), env: { ...E, inception: [11] }, action: fold1, now: 1, result: okr(registered, { refunds: [{ addr: 1, value: 1000 }], tips: { addr: 3, value: 2 } }) },
       R12: { before: registered, action: { contribute: { aid: 12, owner: 2, submittedAt: 5, op: 'register' } }, now: 5, result: okr({ ...registered, leaves: [leaf(11, { active: 0 }), leaf(12, { active: 1 })] }, { deposited: 1002 }) },
       R13: { before: { ...registered, ckpts: [ck(11, 0, 1, { parked: 5 })] }, action: { reap: { reaper: 6, aid: 11 } }, now: 20, result: okr({ ...registered, ckpts: [ck(11, 0, 1, { parked: 5 })] }, { premium: { addr: 6, value: 1 }, intoRequest: 3 }) },
       R14: { before: registered, action: { convictCkpt: { aid: 11 } }, now: 5, result: okr({ ...registered, ckpts: [ck(11, 0, 0, 'tomb')] }) },
     };
     const errs = [], noControl = [];
+    let nV = 0;
     for (const t of core.THEOREMS) {
-      const v = V[t.id];
-      if (!v) { noControl.push(t.id); continue; }
-      const rec = { params: P, env: E, ...v };
-      let out; try { out = t.check(rec); } catch (e) { out = { v: 'threw', why: e.message }; }
-      if (!out || out.v !== 'fails') errs.push(`${t.id} says ${out ? out.v : 'nothing'} on a fabricated violation`);
+      const vs = V[t.id];
+      if (!vs) { noControl.push(t.id); continue; }
+      for (const v of Array.isArray(vs) ? vs : [vs]) {
+        nV++;
+        const rec = { params: P, env: E, ...v };
+        let out; try { out = t.check(rec); } catch (e) { out = { v: 'threw', why: e.message }; }
+        if (!out || out.v !== 'fails') errs.push(`${t.id} says ${out ? out.v : 'nothing'} on a fabricated violation`);
+        else if (/an applied fold has a failing position|threw/.test(out.why || '')) errs.push(`${t.id}'s fabricated record never reaches its violation (${out.why})`);
+      }
     }
     // R10 is structural (the phase functions are exclusive on every request of the
     // record): no record can lie to it; the phases-overlap mutant of --selftest reds it.
     const allowed = ['R10'];
     for (const id of noControl) if (!allowed.includes(id)) errs.push(`no fabricated violation for ${id}`);
-    row('every executable property reds on a fabricated violation', errs.length === 0, errs.length ? errs.join(' | ') : `${Object.keys(V).length} fabricated records, each refused by its lamp; R10 by the phases-overlap mutant`);
+    row('every executable property reds on a fabricated violation', errs.length === 0, errs.length ? errs.join(' | ') : `${nV} fabricated records, each refused by its lamp for the violation it carries; R10 by the phases-overlap mutant`);
   }
 
   // 3c. the stories' clauses against the Lean, and the guard table both ways
@@ -475,7 +483,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
   // 4. build drift
   let buildOut = '';
   try { buildOut = execFileSync(process.execPath, [BUILD, '--check', '--html', html, '--core', corePath, '--scenarios', scenDir, '--corpus', corpusPath, '--docs', docs], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); row('generated page and published copy are current', true, buildOut); }
-  catch (e) { row('generated page and published copy are current', false, (e.stderr || e.stdout || String(e)).trim()); }
+  catch (e) { row('generated page and published copy are current', false, ((e.stdout || '') + (e.stderr || '') + (!e.stdout && !e.stderr ? String(e) : '')).trim().replace(/\s+/g, ' ')); }
 
   // 5. the page under the minimal DOM
   {
@@ -498,6 +506,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
         $('sc-step').click(); $('sc-all').click();
         const s = w.__registrySim.session;
         mismatches += s.history.filter(h => h.mismatch).length; applied += s.history.filter(h => h.result.ok).length;
+        for (const h of s.history) { for (const [id, t] of Object.entries(h.theorems)) if (t.v === 'fails') errs.push(`story ${o.value}: lamp ${id} fails on the page — ${t.why}`); if (!h.lean || !h.lean.found) errs.push(`story ${o.value}: a story step has no Lean cell on the page`); else if (!h.lean.agrees) errs.push(`story ${o.value}: the page disagrees with its Lean cell — ${h.lean.why}`); }
         if (!$('sc-step').disabled) errs.push(`story ${o.value}: play all did not finish`);
         $('sc-reset').click();
         if (w.__registrySim.session.history.length) errs.push(`story ${o.value}: restart kept history`);
@@ -558,6 +567,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       const st = s.history[s.history.length - 1];
       if (st.result.ok || st.result.reason !== 'stale-generation') errs.push(`free play: stale fold not refused (${st.result.ok ? 'applied' : st.result.reason})`);
       if ($('whyline').hidden || !/stale-generation/.test($('whyline').textContent)) errs.push('free play: refusal not shown');
+      if (!/T7/.test($('ledger').innerHTML) || !/no Lean cell for this step|the Lean.s cell for this step agrees/.test($('detail').innerHTML)) errs.push('free play: the step does not say whether the Lean has a cell for it');
       if (Number($('slot').textContent) !== 10) errs.push('slot control');
       $('h-first').click(); if (w.__registrySim.session.cursor !== 0) errs.push('history first');
       $('h-next').click(); $('h-last').click(); $('h-prev').click(); $('h-clear').click();
@@ -609,6 +619,11 @@ async function selftest() {
   await control('story-fragment-unclassified', dir => edit(join(dir, 'REGISTRY-STORIES.md'), '- **Money**: the bond is locked into the checkpoint;', '- **Money**: the bond is locked into the checkpoint; the fee is paid by the folder;'), /unclassified fragment/);
   await control('lean-conjunct-edited', dir => edit(join(dir, 'lean', 'CardanoKeri', 'Registry.lean'), 'if g = s.gen ∧ pl = s.plugin ∧ batch ≠ [] then', 'if g = s.gen ∧ pl = s.plugin ∧ batch.length ≠ 0 then'), /«batch ≠ \[\]» is not inside stepFn \.fold|decision site of the Lean no refusal name claims/);
   await control('lean-guard-unclaimed', dir => edit(join(dir, 'registry-simulator-core.mjs'), "'already-tombstone': { sites: [site('stepFn', '.convictCkpt', 'st ≠ .tomb')] },", "'already-tombstone': { sites: [] },"), /stepFn \.convictCkpt «st ≠ \.tomb».*no refusal name claims/);
+  await control('story-file-removed', dir => rmSync(join(dir, 'scenarios', '15-batch-and-timestamps.json')), /exactly the fifteen stories/);
+  await control('refusal-never-asserted', dir => edit(join(dir, 'scenarios', '12-cora-convicts-bob.json'), '"expect":{"ok":false,"reason":"already-tombstone"}', '"expect":{"ok":false}'), /every reachable refusal reason asserted.*missing already-tombstone/);
+  await control('verdict-retied-within-the-group', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"decl":"R3_convicted_permanent","text":"lookup s\'.leaves aid = some .convicted"', '"decl":"R3_convicted_never_registered","text":"stepFn p env (.fold folder s.gen s.plugin batch) now s = none"'), /exhibits R3 through R3_convicted_permanent, not R3_convicted_never_registered/);
+  await control('payment-text-truncated', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"text":"locked := acc.locked ++ [(r.aid, p.D)]","match":{"step":1}', '"text":"locked","match":{"step":1}'), /a payment row names the full assignment/);
+  await control('page-record-without-evidence', dir => edit(join(dir, 'registry-simulator.html'), "as: as || '', params: S.params, env: S.env };", "as: as || '', params: S.params };"), /lamp R1d fails on the page — threw/);
   await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "b.addEventListener('click', () => goTo(it.branch, it.to));", "b.addEventListener('click', () => {});"), /tree: the continuation did not switch to the fork/);
   await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('sc-all').addEventListener('click', () => { while (storyStep()) {} });", "$('sc-all').addEventListener('click', () => {});"), /play all did not finish/);
   rmSync(tmp, { recursive: true, force: true });

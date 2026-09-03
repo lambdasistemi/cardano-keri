@@ -41,6 +41,9 @@ both caught by the strengthened invariant.
 | M21 | a registration mints a checkpoint with another token than the leaf's | `processOne_inv` (activeCkpt) |
 | M22 | a pause changes the checkpoint's token | `inv_step` (activeCkpt via `inv_replace_ckpt`) |
 
+Not mutated on its own: `applyBatch_append` is a lemma about the fold's
+shape, not a guard; M9 exercises it through `R14_convict_at_position`.
+
 Raw log (the `[RegistryGoals:…]` lists are the failing lines):
 
 ```

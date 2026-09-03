@@ -4,13 +4,13 @@
   "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
   "env": {"inception":[11]},
   "steps": [
-    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
     {"now":5,"actor":"anyone","as":"Sam — rejecting in phase 1","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":false,"reason":"not-rejectable"},"exhibits":["R9","R10"]},
     {"now":25,"actor":"owner","as":"Alice — too late to retract","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"not-in-phase-2"},"exhibits":["R9"]},
     {"now":25,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1000}],"tips":{"addr":6,"value":2}}},"exhibits":["R9","R11","R6"]}
   ],
   "forks": [
-    { "id": "alice-in-time", "at": 2, "title": "Alice retracts in phase 2 after all",
+    { "id": "alice-in-time", "at": 2, "title": "Alice retracts in phase 2 after all", "expectFinal": {"gen":0,"plugin":7,"leaves":[],"ckpts":[],"requests":[],"nextReq":1,"nextToken":0},
       "steps": [
         {"now":12,"actor":"owner","as":"Alice","action":{"retract":{"req":0}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1002}]}},"exhibits":["R9","R11"]},
         {"now":25,"actor":"anyone","as":"Sam — nothing left to sweep","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":false,"reason":"unknown-request"}}

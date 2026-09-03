@@ -7,7 +7,7 @@
     {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002}},"exhibits":["R6","R11"],"note":"The generation is still 0: a request never spends the cage."}
   ],
   "forks": [
-    { "id": "mallory-go", "at": 1, "title": "Mallory posts a go-request by hand",
+    { "id": "mallory-go", "at": 1, "title": "Mallory posts a go-request by hand", "expectFinal": {"gen":0,"plugin":7,"leaves":[],"ckpts":[],"requests":[{"id":0,"aid":11,"owner":1,"submittedAt":0,"op":"register"}],"nextReq":1,"nextToken":0},
       "steps": [
         {"now":0,"actor":"anyone","as":"Mallory — posting a go-request by hand","action":{"contribute":{"aid":11,"owner":4,"submittedAt":0,"op":"goConvicted"}},"expect":{"ok":false,"reason":"not-postable"},"note":"Only a reap of a bondless checkpoint creates a go-request."}
       ] }

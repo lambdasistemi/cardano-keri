@@ -22,6 +22,9 @@ list of what the law left open. Dates are 2026 unless said.
 | D-R6 | a property about a batch element | reads the accumulator the element saw (`batchView`), never the pre-state; the Lean twin is `R14_convict_in_batch_needs_proof` (any accumulator) and `R14_convict_at_position` (any position of an applied batch) | audit finding 9 |
 | D-R7 | the values, the cast, the addresses | D 1000, tip 2, Mc 4, Mr 1, process 10, retract 10, W 5, far 10⁹, plugin 7; Alice 1, Bob 2, Hal 3, Mallory 4, Cora 5, Sam 6; AIDs 11–13 | the stories |
 | D-R8 | a story's refused attempts and what-ifs | branches (`forks`) from a trunk state, folded by the driver as `f<id>.<i>` cells; a fork may bring its own evidence table (another world) | skill rule; audit finding 13 (two narratives claimed cases no step played) |
+| D-R10 | what a payment clause proves | a payment row names the full assignment `field := expression` inside the arm's result and the matched step must pay through that field; the *amount* is not read off the prose — the exact flow every position owes is what R11 checks on every applied step, and a verdict row names the theorem the step instantiated (`by`) | audit 2, finding 4 |
+| D-R11 | T7 in free play | every page record carries the evidence table and looks its step up in the embedded corpus (stories, traces, the grid); the ledger's T7 row says "agrees", "disagrees" or "no Lean cell for this step — parity not shown"; a story step always has its cell | audit 2, findings 2 and 3 |
+| D-R12 | sessions | the page keeps one mutable session and rebuilds a path by reload and replay (`goTo`); the skill's core-owned immutable sessions are not implemented — a departure, recorded, not a defect the gates can see | audit 2, note 11 |
 | D-R9 | who may fold, reap, register | nobody signs: `stepFn` has no submitter, the page's cast are stakeholders and `actor` on a step is a label the gate checks against `actionActor`, never an authorization | Registry.lean (`Actor` is derived) |
 
 ## Questions escalated (Q), rulings pending
@@ -40,9 +43,31 @@ list of what the law left open. Dates are 2026 unless said.
 |---|---|---|---|
 | story 11 narrative | "the leaf is active(1) again" | Bob took token 1; the revive mints token 2 | narrative corrected; the branch "Mallory's revive carries no rotation from key state 1" plays the case the old text claimed |
 | story 13 narrative | "a conviction request without the proof is refused" | no step played it | branches "the go-request and the conviction in one fold" and "the same fold without the proof" |
-| `REGISTRY-STORIES.md` (phases) | "a go-request is … never rejectable" | `rejectable` holds for it; `rejectOne`'s plugin veto refuses | the words say "the plugin refuses to reject it" |
+| `REGISTRY-STORIES.md` (phases), the page's inbox hint | "a go-request is … never rejectable" | `rejectable` holds for it; `rejectOne`'s plugin veto refuses | both now say the cage would reject it and the plugin refuses (the first fix reached story 14 only; audit 2 found the two remaining sites) |
+| story 7 narrative | "the real fold then lands" | no fold lands; Alice retracts in phase 2 | narrative corrected |
+| story 15 narrative | "in phase 1 for a hundred slots" | `inPhase1` holds at slots 0–109 for `submitted_at` 100 and `process` 10 | "until slot 110" |
 | design note, samaritan | "nobody reaps" as a consequence of the tip bound | `samaritan_never_loses` counts the go-request's eventual refund; it is a conditional, eventual accounting, not a per-transaction guarantee | the note now states the condition |
 | design note, cage | "`refundAll` as `validModify` does today" | `validModify` on main checks an aggregate refund range less fee and n·tip, ignores the action tail past the requests, and accepts an empty Modify | the note lists the three divergences (audit majors 5, 6) |
+
+## The second audit (Codex, max, 2026-09-03 evening)
+
+On the folded tree: 1 blocker, 5 majors, 3 minors, 2 notes. Folded: the
+fork-drift control's message (the nested build's stdout and stderr are kept;
+five more controls: a story file removed, a refusal never asserted, a verdict
+retied within its group, a payment text truncated, a page record without the
+evidence; the trace gate's schema/version control); the page record carries
+the evidence (three lamps threw on every fold in free play and the smoke did
+not look); T7 in free play (D-R11); verdict rows tied to the theorem the step
+instantiated and payment rows to the full assignment (D-R10); R3 reds on an
+applied re-registration of a convicted AID and the R11 fixture reaches its
+wrong refund; strict validation at every entry (`replay` with an empty list,
+every evidence table present, no stranger parameter, corpus results validated
+and compared exactly); the boundary grid at slots 19, 20, 21 with the phase
+ends, the grace end and the genesis generation triad at −1 / = / +1 (3000
+cells); story 7 and 15 narratives; the "never rejectable" wording on the
+page and in the stories; mobile overflow. Recorded: D-R12 (sessions); the
+mutation record does not mutate `applyBatch_append` on its own (it is a
+lemma, not a guard; M9 exercises it through `R14_convict_at_position`).
 
 ## Token binding (Q-R2), done
 

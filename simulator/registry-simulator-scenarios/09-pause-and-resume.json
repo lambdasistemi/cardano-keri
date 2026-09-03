@@ -4,19 +4,19 @@
   "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
   "env": {"inception":[11],"rotationFrom":[[11,0],[11,1]]},
   "steps": [
-    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
-    {"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true}},
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2},"premium":null,"intoRequest":0}}},
     {"now":4,"actor":"next-keys","as":"Alice — resuming a live checkpoint","action":{"resume":{"aid":11}},"expect":{"ok":false,"reason":"not-parked"}},
-    {"now":5,"actor":"next-keys","as":"Alice","action":{"pause":{"aid":11}},"expect":{"ok":true,"state":{"gen":1,"plugin":7,"leaves":[{"aid":11,"status":{"active":0}}],"ckpts":[{"aid":11,"ckpt":{"token":0,"k":1,"st":{"parked":5}}}],"requests":[],"nextReq":1,"nextToken":1}},"exhibits":["R6","R11","R1"]},
+    {"now":5,"actor":"next-keys","as":"Alice","action":{"pause":{"aid":11}},"expect":{"ok":true,"state":{"gen":1,"plugin":7,"leaves":[{"aid":11,"status":{"active":0}}],"ckpts":[{"aid":11,"ckpt":{"token":0,"k":1,"st":{"parked":5}}}],"requests":[],"nextReq":1,"nextToken":1},"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}},"exhibits":["R6","R11","R1"]},
     {"now":6,"actor":"next-keys","as":"Alice — pausing a parked checkpoint","action":{"pause":{"aid":11}},"expect":{"ok":false,"reason":"not-live"}},
-    {"now":7,"actor":"next-keys","as":"Alice","action":{"resume":{"aid":11}},"expect":{"ok":true},"exhibits":["R6","R1"]},
+    {"now":7,"actor":"next-keys","as":"Alice","action":{"resume":{"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}},"exhibits":["R6","R1"]},
     {"now":8,"actor":"next-keys","as":"Alice — pausing again without a rotation from k=2","action":{"pause":{"aid":11}},"expect":{"ok":false,"reason":"no-rotation"}},
     {"now":8,"actor":"proof","as":"Cora — convicting Alice without a proof","action":{"convictCkpt":{"aid":11}},"expect":{"ok":false,"reason":"no-duplicity-proof"},"exhibits":["R14"]}
   ],
   "forks": [
-    { "id": "convicted-while-parked", "at": 4, "title": "Cora convicts the parked checkpoint", "env": {"inception":[11],"rotationFrom":[[11,0],[11,1]],"duplicity":[[11,1]]},
+    { "id": "convicted-while-parked", "at": 4, "title": "Cora convicts the parked checkpoint", "env": {"inception":[11],"rotationFrom":[[11,0],[11,1]],"duplicity":[[11,1]]}, "expectFinal": {"gen":1,"plugin":7,"leaves":[{"aid":11,"status":{"active":0}}],"ckpts":[],"requests":[{"id":1,"aid":11,"owner":6,"submittedAt":1000000000,"op":"goConvicted"}],"nextReq":2,"nextToken":1},
       "steps": [
-        {"now":6,"actor":"proof","as":"Cora — a proof against key state 1","action":{"convictCkpt":{"aid":11}},"expect":{"ok":true},"exhibits":["R6","R11"]},
+        {"now":6,"actor":"proof","as":"Cora — a proof against key state 1","action":{"convictCkpt":{"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}},"exhibits":["R6","R11"]},
         {"now":7,"actor":"next-keys","as":"Alice — resuming a tombstone","action":{"resume":{"aid":11}},"expect":{"ok":false,"reason":"not-parked"}},
         {"now":7,"actor":"anyone","as":"Sam — a tombstone is reaped at once","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":true,"flow":{"premium":{"addr":6,"value":1},"intoRequest":3}},"exhibits":["R13","R11"]}
       ] }

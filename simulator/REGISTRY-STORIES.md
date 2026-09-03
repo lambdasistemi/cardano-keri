@@ -42,7 +42,8 @@ against both.
 - **phases** — from `submitted_at`: phase 1 for `process_time` slots (a fold
   may process), phase 2 for `retract_time` slots (only the owner may
   retract), phase 3 after (anyone may reject). A go-request is dated at the
-  end of time: never phase 2, never rejectable, only processed.
+  end of time: never phase 2; the cage would reject it (a future timestamp is
+  rejectable) but the plugin refuses; only processed.
 
 Deployment values used by every story: `D` = 1000, `tip` = 2, checkpoint
 min-ADA `Mc` = 4, request min-ADA `Mr` = 1, `process_time` = 10,
@@ -115,7 +116,7 @@ Branches: ⋔ Alice retracts in phase 2 after all.
 
 ## 7. An empty fold is refused
 
-A fold with no request would re-create the registry unchanged for the price of a fee, moving its generation and invalidating every fold built against it. It is refused; the real fold then lands. A process in phase 2 is refused too.
+A fold with no request would re-create the registry unchanged for the price of a fee, moving its generation and invalidating every fold built against it. It is refused. A process in phase 2 is refused too; nobody folds in phase 1, and Alice retracts in phase 2.
 
 - **The chain checks**: a retract in phase 2 applies.
 - **Refused**: an empty batch is refused; a process outside phase 1 is refused.
@@ -189,7 +190,7 @@ Mallory reaps Alice's parked checkpoint and then tries to make the key state dis
 
 ## 15. A batch that names a request twice, and a request dated in the future
 
-A fold lists Alice's request twice: the first entry consumes it, the second finds nothing, the whole fold is refused. Mallory writes submitted_at = 100 at slot 0: in phase 1 for a hundred slots and rejectable at once, because a future timestamp is dishonest by definition; Sam rejects it.
+A fold lists Alice's request twice: the first entry consumes it, the second finds nothing, the whole fold is refused. Mallory writes submitted_at = 100 at slot 0: in phase 1 until slot 110 and rejectable at once, because a future timestamp is dishonest by definition; Sam rejects it.
 
 Branches: ⋔ Sam rejects Alice's honest request too.
 

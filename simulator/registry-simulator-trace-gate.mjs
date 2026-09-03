@@ -125,6 +125,7 @@ async function selftest(fresh) {
     const f = join(d, 'registry-simulator.html'); const t = readFileSync(f, 'utf8'); const e = embedded(t);
     writeFileSync(f, t.replace(e.raw, mutatedText).replace(`REGISTRY_LEAN_TRACES_SHA256 = '${e.sha}'`, `REGISTRY_LEAN_TRACES_SHA256 = '${sha256(mutatedText)}'`));
   }, /replays through the core module.*post-state mismatch/);
+  await control('schema-version-mutated', JSON.stringify({ ...doc, version: 3 }), () => {}, /schema and version/);
   await control('emptied-corpus', JSON.stringify({ ...doc, traces: [], grid: { cells: [] }, stories: [] }), () => {}, /six traces, a grid, fifteen stories/);
   await control('forks-dropped-from-the-corpus', JSON.stringify({ ...doc, stories: doc.stories.map(sc => ({ ...sc, forks: [] })) }), () => {}, /fifteen stories with their forks|fresh output equals the committed/);
   await control('mutated-stated-sha', fresh, d => { const f = join(d, 'registry-simulator.html'); writeFileSync(f, readFileSync(f, 'utf8').replace(/REGISTRY_LEAN_TRACES_SHA256 = '([0-9a-f])/, (m, c) => `REGISTRY_LEAN_TRACES_SHA256 = '${c === '0' ? '1' : '0'}`)); }, /stated sha256/);
@@ -154,7 +155,7 @@ const main = async () => {
   catch (e) { console.error(`RED: the Lean driver did not run — from lean/: nix shell nixpkgs#lean4 -c lake build CardanoKeri.Registry && nix shell nixpkgs#lean4 -c lake env lean ${DRIVER}\n${(e.stderr || e.message || '').toString().slice(0, 2000)}`); process.exit(1); }
   if (process.argv.includes('--selftest')) {
     const ok = await selftest(fresh);
-    console.log(ok ? 'controls: 5 negative controls red for the intended reason; the cold copy red without the build and byte-identical with it' : 'controls: some did not behave as intended');
+    console.log(ok ? 'controls: 6 negative controls red for the intended reason; the cold copy red without the build and byte-identical with it' : 'controls: some did not behave as intended');
     if (!ok) process.exit(1);
   }
   const r = await check({ fresh });

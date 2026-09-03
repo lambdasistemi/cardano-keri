@@ -141,7 +141,8 @@ const succ = (a, field) => add(a, 1, field);
 const mul = (a, b, field) => { const r = a * b; if (r > MAX_NAT || !Number.isSafeInteger(r)) throw new NatOverflow(field); return r; };
 
 function validateParams(p) {
-  if (!p || typeof p !== 'object') return refuse(REASONS.INVALID_PARAMS, 'params');
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return refuse(REASONS.INVALID_PARAMS, 'params');
+  for (const k of Object.keys(p)) if (!['D', 'tip', 'Mc', 'Mr', 'process', 'retract', 'W', 'far'].includes(k)) return refuse(REASONS.INVALID_PARAMS, k);
   for (const k of ['D', 'tip', 'Mc', 'Mr', 'process', 'retract', 'W', 'far'])
     if (!isNat(p[k])) return refuse(REASONS.INVALID_NAT, k);
   if (!(p.D > 0)) return refuse(REASONS.INVALID_PARAMS, 'D must be positive');
@@ -208,8 +209,7 @@ function validateEnv(t) {
   const shapes = { inception: 1, rotationFrom: 2, duplicity: 2, quorum: 1 };
   for (const k of Object.keys(t)) if (!(k in shapes)) return refuse(REASONS.INVALID_EVIDENCE, k);
   for (const k of Object.keys(shapes)) {
-    if (t[k] === undefined) continue;
-    if (!Array.isArray(t[k])) return refuse(REASONS.INVALID_EVIDENCE, k);
+    if (!Array.isArray(t[k])) return refuse(REASONS.INVALID_EVIDENCE, k); // every table, whether or not the action consults it
     for (let i = 0; i < t[k].length; i++) {
       const row = t[k][i];
       if (shapes[k] === 1) { if (!isNat(row)) return refuse(REASONS.INVALID_NAT, `${k}[${i}]`); continue; }
@@ -217,6 +217,21 @@ function validateEnv(t) {
       for (let j = 0; j < 2; j++) if (!isNat(row[j])) return refuse(REASONS.INVALID_NAT, `${k}[${i}][${j}]`);
     }
   }
+  return null;
+}
+/* A Flow of the Lean: exactly the six fields, every amount a Nat. */
+function validateFlow(f) {
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return refuse(REASONS.INVALID_STATE, 'flow');
+  const keys = ['deposited', 'locked', 'refunds', 'tips', 'premium', 'intoRequest'];
+  for (const k of Object.keys(f)) if (!keys.includes(k)) return refuse(REASONS.INVALID_STATE, `flow.${k}`);
+  for (const k of keys) if (f[k] === undefined) return refuse(REASONS.INVALID_STATE, `flow.${k}`);
+  for (const k of ['deposited', 'intoRequest']) if (!isNat(f[k])) return refuse(REASONS.INVALID_NAT, `flow.${k}`);
+  const pair = (x, field, key) => { if (!x || typeof x !== 'object' || Object.keys(x).length !== 2 || !isNat(x[key]) || !isNat(x.value)) return refuse(REASONS.INVALID_NAT, field); return null; };
+  if (!Array.isArray(f.locked)) return refuse(REASONS.INVALID_STATE, 'flow.locked');
+  for (let i = 0; i < f.locked.length; i++) { const e = pair(f.locked[i], `flow.locked[${i}]`, 'aid'); if (e) return e; }
+  if (!Array.isArray(f.refunds)) return refuse(REASONS.INVALID_STATE, 'flow.refunds');
+  for (let i = 0; i < f.refunds.length; i++) { const e = pair(f.refunds[i], `flow.refunds[${i}]`, 'addr'); if (e) return e; }
+  for (const k of ['tips', 'premium']) if (f[k] !== null) { const e = pair(f[k], `flow.${k}`, 'addr'); if (e) return e; }
   return null;
 }
 function validateAction(a) {
@@ -478,7 +493,10 @@ function stepBody(params, envTable, action, now, state) {
 
 /* --- replay ---------------------------------------------------------------- */
 function replay(params, envTable, t0, state, steps) {
+  const ep = validateParams(params); if (ep) return ep;
   if (!isNat(t0)) return refuse(REASONS.INVALID_NAT, 't0');
+  const es = validateState(state); if (es) return es;
+  const ee = validateEnv(envTable); if (ee) return ee;
   if (!Array.isArray(steps)) return refuse(REASONS.INVALID_ACTION, 'list');
   let t = t0, s = state;
   for (let i = 0; i < steps.length; i++) {
@@ -520,14 +538,18 @@ const THEOREMS = [
         }
         if (statusTag(l.status) !== 'active' && lookupCkpt(s.ckpts, l.aid)) return { v: 'fails', why: `${statusTag(l.status)} leaf ${l.aid} with a checkpoint` };
       }
-      return s.leaves.length ? { v: 'holds' } : { v: 'n/a' };
+      if (!s.leaves.length) return { v: 'n/a' };
+      const by = ['R1_active_ckpt_or_go'];
+      if (s.ckpts.length) by.push('R1_ckpt_implies_active');
+      if (s.leaves.some(l => statusTag(l.status) !== 'active')) by.push('R1_not_active_no_ckpt');
+      return { v: 'holds', by };
     } },
   { id: 'R1d', title: 'a registered AID cannot be registered again (mint-once, ever) — at any position of a batch', lean: 'R1_registered_refused',
     check: ({ before, action, now, result, params, env }) => {
       const f = foldOf(action); if (!isFoldNow(f, before)) return { v: 'n/a' };
       const hit = batchView(params, env, now, before, f.batch).find(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) !== null);
       if (!hit) return { v: 'n/a' };
-      return result.ok ? { v: 'fails', why: 'registered an AID that has a leaf' } : { v: 'holds' };
+      return result.ok ? { v: 'fails', why: 'registered an AID that has a leaf' } : { v: 'holds', by: ['R1_registered_refused'] };
     } },
   { id: 'R2', title: 'at most one checkpoint, one leaf, one go-request per AID', lean: 'R2_one_ckpt_per_aid, R2_one_leaf_per_aid, R2_one_go_per_aid',
     check: ({ result }) => {
@@ -536,51 +558,57 @@ const THEOREMS = [
       if (!nodup(s.ckpts.map(c => c.aid))) return { v: 'fails', why: 'two checkpoints for one AID' };
       if (!nodup(s.leaves.map(l => l.aid))) return { v: 'fails', why: 'two leaves for one AID' };
       if (!nodup(s.requests.filter(r => !userPostable(r.op)).map(r => r.aid))) return { v: 'fails', why: 'two go-requests for one AID' };
-      return s.leaves.length ? { v: 'holds' } : { v: 'n/a' };
+      if (!s.leaves.length) return { v: 'n/a' };
+      const by = ['R2_one_leaf_per_aid'];
+      if (s.ckpts.length) by.push('R2_one_ckpt_per_aid');
+      if (s.requests.some(r => !userPostable(r.op))) by.push('R2_one_go_per_aid');
+      return { v: 'holds', by };
     } },
   { id: 'R3', title: 'conviction is permanent: a convicted leaf never changes and the AID is never registered again', lean: 'R3_convicted_permanent, R3_convicted_never_registered',
     check: ({ before, action, now, result, params, env }) => {
       const conv = before.leaves.filter(l => l.status === 'convicted').map(l => l.aid);
       if (result.ok) {
         for (const aid of conv) if (lookupLeaf(result.state.leaves, aid) !== 'convicted') return { v: 'fails', why: `convicted leaf ${aid} changed` };
-        return conv.length ? { v: 'holds' } : { v: 'n/a' };
+        const f0 = foldOf(action);
+        if (isFoldNow(f0, before) && batchView(params, env, now, before, f0.batch).some(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) === 'convicted')) return { v: 'fails', why: 'a convicted AID was registered again' };
+        return conv.length ? { v: 'holds', by: ['R3_convicted_permanent'] } : { v: 'n/a' };
       }
       const f = foldOf(action);
-      if (isFoldNow(f, before) && batchView(params, env, now, before, f.batch).some(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) === 'convicted')) return { v: 'holds' };
+      if (isFoldNow(f, before) && batchView(params, env, now, before, f.batch).some(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) === 'convicted')) return { v: 'holds', by: ['R3_convicted_never_registered'] };
       return { v: 'n/a' };
     } },
   { id: 'R4', title: 'leaves are permanent: a leaf never leaves the root', lean: 'R4_leaf_permanent',
     check: ({ before, result }) => {
       if (!result.ok) return { v: 'n/a' };
       for (const l of before.leaves) if (lookupLeaf(result.state.leaves, l.aid) === null) return { v: 'fails', why: `leaf ${l.aid} left the root` };
-      return before.leaves.length ? { v: 'holds' } : { v: 'n/a' };
+      return before.leaves.length ? { v: 'holds', by: ['R4_leaf_permanent'] } : { v: 'n/a' };
     } },
   { id: 'R5', title: 'the plugin is pinned', lean: 'R5_plugin_pinned',
     check: ({ before, action, result }) => {
-      if (result.ok) return result.state.plugin === before.plugin ? { v: 'holds' } : { v: 'fails', why: 'plugin changed' };
+      if (result.ok) return result.state.plugin === before.plugin ? { v: 'holds', by: ['R5_plugin_pinned'] } : { v: 'fails', why: 'plugin changed' };
       const f = foldOf(action);
-      if (f && f.gen === before.gen && f.plugin !== before.plugin) return result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds' } : { v: 'fails', why: `refused for ${result.reason}` };
+      if (f && f.gen === before.gen && f.plugin !== before.plugin) return result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds', by: ['R5_plugin_pinned'] } : { v: 'fails', why: `refused for ${result.reason}` };
       return { v: 'n/a' };
     } },
   { id: 'R6', title: 'the generation moves exactly on the fold; contribute, retract, reap, pause, resume and a checkpoint conviction never write the registry', lean: 'R6_gen_step, R6_registry_untouched, R6_fold_advances',
     check: ({ before, action, result }) => {
       if (!result.ok) return { v: 'n/a' };
       const s = result.state, tag = actionTag(action);
-      if (tag === 'fold') return s.gen === before.gen + 1 ? { v: 'holds' } : { v: 'fails', why: 'fold without a generation step' };
+      if (tag === 'fold') return s.gen === before.gen + 1 ? { v: 'holds', by: ['R6_gen_step', 'R6_fold_advances'] } : { v: 'fails', why: 'fold without a generation step' };
       if (s.gen !== before.gen || s.plugin !== before.plugin || !same(s.leaves, before.leaves)) return { v: 'fails', why: `${tag} wrote the registry` };
-      return { v: 'holds' };
+      return { v: 'holds', by: ['R6_gen_step', 'R6_registry_untouched'] };
     } },
   { id: 'R7', title: 'a stale fold is refused with no state change; one fold per generation', lean: 'R7_stale_fold_refused, R7_one_fold_per_generation',
     check: ({ before, action, result }) => {
       const f = foldOf(action); if (!f || f.gen === before.gen) return { v: 'n/a' };
-      return !result.ok && result.reason === REASONS.STALE_GENERATION ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'stale fold applied' : `refused for ${result.reason}` };
+      return !result.ok && result.reason === REASONS.STALE_GENERATION ? { v: 'holds', by: ['R7_stale_fold_refused', 'R7_one_fold_per_generation'] } : { v: 'fails', why: result.ok ? 'stale fold applied' : `refused for ${result.reason}` };
     } },
   { id: 'R8', title: 'an empty fold is refused; a fold that re-creates the cage with another plugin is refused', lean: 'R8_empty_fold_refused, R8_plugin_swap_refused',
     check: ({ before, action, result }) => {
       const f = foldOf(action); if (!f || f.gen !== before.gen) return { v: 'n/a' };
-      if (f.plugin !== before.plugin) return !result.ok && result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'plugin swap applied' : `refused for ${result.reason}` };
+      if (f.plugin !== before.plugin) return !result.ok && result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds', by: ['R8_plugin_swap_refused'] } : { v: 'fails', why: result.ok ? 'plugin swap applied' : `refused for ${result.reason}` };
       if (f.batch.length) return { v: 'n/a' };
-      return !result.ok && result.reason === REASONS.EMPTY_FOLD ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'empty fold applied' : `refused for ${result.reason}` };
+      return !result.ok && result.reason === REASONS.EMPTY_FOLD ? { v: 'holds', by: ['R8_empty_fold_refused'] } : { v: 'fails', why: result.ok ? 'empty fold applied' : `refused for ${result.reason}` };
     } },
   { id: 'R9', title: 'requester exit: a posted request retracts in phase 2 and is rejected when rejectable; a go-request is never retracted and never rejected, so k is never lost', lean: 'R9_retract_enabled, R9_retract_needs_phase2, R9_reject_enabled, R9_reject_needs_rejectable, R9_go_never_retracted, R9_go_never_rejected',
     check: ({ before, action, now, result, params }) => {
@@ -589,17 +617,17 @@ const THEOREMS = [
         const want = inPhase2(params, r, now) && (userPostable(r.op) || now >= params.far);
         if (!userPostable(r.op) && now < params.far && result.ok) return { v: 'fails', why: 'a go-request was retracted' };
         if (want !== result.ok) return { v: 'fails', why: want ? 'retract refused in phase 2' : 'retract applied outside phase 2' };
-        return { v: 'holds' };
+        return { v: 'holds', by: !userPostable(r.op) ? ['R9_go_never_retracted', 'R9_retract_needs_phase2'] : want ? ['R9_retract_enabled'] : ['R9_retract_needs_phase2'] };
       }
       const f = foldOf(action);
       if (isFoldNow(f, before)) {
         const go = f.batch.find(x => x.do === 'reject' && reqOf(before, x.id) && !userPostable(reqOf(before, x.id).op));
-        if (go) return !result.ok ? { v: 'holds' } : { v: 'fails', why: 'a go-request was rejected' };
+        if (go) return !result.ok ? { v: 'holds', by: ['R9_go_never_rejected'] } : { v: 'fails', why: 'a go-request was rejected' };
         if (f.batch.length === 1 && f.batch[0].do === 'reject') {
           const r = reqOf(before, f.batch[0].id); if (!r) return { v: 'n/a' };
           const want = rejectable(params, r, now);
           if (want !== result.ok) return { v: 'fails', why: want ? 'reject refused when rejectable' : 'reject applied when not rejectable' };
-          return { v: 'holds' };
+          return { v: 'holds', by: want ? ['R9_reject_enabled'] : ['R9_reject_needs_rejectable'] };
         }
       }
       return { v: 'n/a' };
@@ -613,7 +641,7 @@ const THEOREMS = [
         if (p2 && rj) return { v: 'fails', why: `request ${r.id} in phase 2 and rejectable` };
         if (r.submittedAt <= now && p1 && rj) return { v: 'fails', why: `honest request ${r.id} in phase 1 and rejectable` };
       }
-      return { v: 'holds' };
+      return { v: 'holds', by: ['R10_phase1_phase2_exclusive', 'R10_phase2_reject_exclusive', 'R10_honest_phase1_reject_exclusive'] };
     } },
   { id: 'R11', title: 'value: D locked per registration or revival; bonds refunded to request owners; tips per request; a go-request refunds its min-ADA to the reaper; a reap moves exactly the checkpoint min-ADA', lean: 'R11_go_refunds_reaper, R11_reap_flow, R11_reap_is_samaritan, R11_samaritan_never_loses, R11_contribute_value, R11_retract_value, R11_ckpt_edges_move_no_value',
     check: ({ before, action, now, result, params, env }) => {
@@ -635,26 +663,31 @@ const THEOREMS = [
         if (!same(fl.refunds, refunds)) return { v: 'fails', why: `refunds ${JSON.stringify(fl.refunds)}, owed ${JSON.stringify(refunds)}` };
         if (!fl.tips || fl.tips.addr !== f.folder || B(fl.tips.value) !== B(f.batch.length) * B(params.tip)) return { v: 'fails', why: 'tips are not tip per request to the folder' };
         if (fl.deposited !== 0 || fl.premium !== null || fl.intoRequest !== 0) return { v: 'fails', why: 'a fold moved value it does not own' };
-        return { v: 'holds' };
+        const goProcessed = batchView(params, env, now, before, f.batch).some(v => v.r && v.fa === 'process' && !userPostable(v.r.op));
+        return { v: 'holds', by: goProcessed ? ['R11_go_refunds_reaper'] : ['R11_reap_flow'] };
       }
       if (tag === 'reap') {
         const ok = fl.premium && fl.premium.addr === action.reap.reaper && B(fl.premium.value) === B(params.Mc) - B(params.Mr) - B(params.tip) && B(fl.intoRequest) === B(params.Mr) + B(params.tip) && B(fl.premium.value) + B(fl.intoRequest) === B(params.Mc)
           && fl.deposited === 0 && fl.locked.length === 0 && fl.refunds.length === 0 && fl.tips === null;
-        return ok ? { v: 'holds' } : { v: 'fails', why: 'the reap does not split exactly Mc' };
+        return ok ? { v: 'holds', by: ['R11_reap_flow', 'R11_reap_is_samaritan', 'R11_samaritan_never_loses'] } : { v: 'fails', why: 'the reap does not split exactly Mc' };
       }
       if (tag === 'retract') {
         const r = reqOf(before, action.retract.req);
-        return same(fl, flow({ refunds: [{ addr: r.owner, value: opBond(params, r.op) + params.tip }] })) ? { v: 'holds' } : { v: 'fails', why: 'retract did not return bond + tip' };
+        return same(fl, flow({ refunds: [{ addr: r.owner, value: opBond(params, r.op) + params.tip }] })) ? { v: 'holds', by: ['R11_retract_value'] } : { v: 'fails', why: 'retract did not return bond + tip' };
       }
-      if (tag === 'contribute') return same(fl, flow({ deposited: opBond(params, action.contribute.op) + params.tip })) ? { v: 'holds' } : { v: 'fails', why: 'contribute did not deposit bond + tip' };
-      return same(fl, flow({})) ? { v: 'holds' } : { v: 'fails', why: `${tag} moved request value` };
+      if (tag === 'contribute') return same(fl, flow({ deposited: opBond(params, action.contribute.op) + params.tip })) ? { v: 'holds', by: ['R11_contribute_value'] } : { v: 'fails', why: 'contribute did not deposit bond + tip' };
+      return same(fl, flow({})) ? { v: 'holds', by: ['R11_ckpt_edges_move_no_value'] } : { v: 'fails', why: `${tag} moved request value` };
     } },
   { id: 'R12', title: 'a leaf enters and changes only by a fold', lean: 'R12_leaf_enters_only_by_fold, R12_leaf_changes_only_by_fold',
     check: ({ before, action, result }) => {
       if (!result.ok) return { v: 'n/a' };
       const tag = actionTag(action);
       if (!same(result.state.leaves, before.leaves) && tag !== 'fold') return { v: 'fails', why: `leaves changed by ${tag}` };
-      return tag === 'fold' && !same(result.state.leaves, before.leaves) ? { v: 'holds' } : { v: 'n/a' };
+      if (tag !== 'fold' || same(result.state.leaves, before.leaves)) return { v: 'n/a' };
+      const by = [];
+      if (result.state.leaves.some(l => lookupLeaf(before.leaves, l.aid) === null)) by.push('R12_leaf_enters_only_by_fold');
+      if (before.leaves.some(l => !same(lookupLeaf(result.state.leaves, l.aid), l.status))) by.push('R12_leaf_changes_only_by_fold');
+      return { v: 'holds', by };
     } },
   { id: 'R13', title: 'the reap: never a bonded checkpoint; a tombstone at once; a parked checkpoint by a stranger only after the grace window, by the owner at any time', lean: 'R13_live_never_reaped, R13_tomb_reaped, R13_parked_needs_grace, R13_parked_after_grace, R13_owner_reaps_early',
     check: ({ before, action, now, result, params, env }) => {
@@ -671,25 +704,53 @@ const THEOREMS = [
         if (!go || go.owner !== reaper || go.submittedAt !== params.far || !same(go.op, goOp(c))) return { v: 'fails', why: 'the reap did not post the go-request it owes (owner reaper, dated far, go → ' + JSON.stringify(goOp(c)) + ')' };
         if (!same(s.leaves, before.leaves) || s.gen !== before.gen) return { v: 'fails', why: 'a reap wrote the registry' };
       }
-      return { v: 'holds' };
+      const owner = env && Array.isArray(env.quorum) && env.quorum.includes(aid);
+      const by = t === 'live' ? ['R13_live_never_reaped'] : t === 'tomb' ? ['R13_tomb_reaped'] : (BigInt(c.st.parked) + BigInt(params.W) <= BigInt(now)) ? ['R13_parked_after_grace'] : owner ? ['R13_owner_reaps_early'] : ['R13_parked_needs_grace'];
+      return { v: 'holds', by };
     } },
   { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state — a checkpoint, or a dormant AID at any position of a batch', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof, R14_convict_in_batch_needs_proof, R14_convict_at_position',
     check: ({ before, action, now, result, params, env }) => {
       const has = (aid, k) => !!(env && Array.isArray(env.duplicity) && env.duplicity.some(r => r[0] === aid && r[1] === k));
       if (action.convictCkpt) {
         const c = lookupCkpt(before.ckpts, action.convictCkpt.aid); if (!c || ckTag(c.st) === 'tomb') return { v: 'n/a' };
-        if (!has(action.convictCkpt.aid, c.k)) return result.ok ? { v: 'fails', why: 'a checkpoint was convicted without a proof' } : { v: 'holds' };
+        if (!has(action.convictCkpt.aid, c.k)) return result.ok ? { v: 'fails', why: 'a checkpoint was convicted without a proof' } : { v: 'holds', by: ['R14_convictCkpt_needs_proof'] };
         return { v: 'n/a' };
       }
       const f = foldOf(action); if (!isFoldNow(f, before)) return { v: 'n/a' };
       for (const v of batchView(params, env, now, before, f.batch)) {
         if (!v.r || v.fa !== 'process' || opTag(v.r.op) !== 'convict') continue;
         const leaf = lookupLeaf(v.acc.leaves, v.r.aid); if (!leaf || statusTag(leaf) !== 'dormant') continue;
-        if (!has(v.r.aid, leaf.dormant)) return result.ok ? { v: 'fails', why: 'a dormant AID was convicted without a proof' } : { v: 'holds' };
+        if (!has(v.r.aid, leaf.dormant)) return result.ok ? { v: 'fails', why: 'a dormant AID was convicted without a proof' } : { v: 'holds', by: v.i === 0 && f.batch.length === 1 ? ['R14_convict_dormant_needs_proof', 'R14_convict_in_batch_needs_proof'] : ['R14_convict_in_batch_needs_proof', 'R14_convict_at_position'] };
       }
       return { v: 'n/a' };
     } },
 ];
+
+/* T7 for any step: look the step up in the Lean corpus — a story cell, a trace
+   step or a grid cell with the same params, evidence, slot, input state and
+   action — and compare the verdict, the flow and the post-state. No cell,
+   no parity claim: the caller says so. */
+function findLeanCell(doc, params, envTable, now, state, action) {
+  if (!doc) return { found: false };
+  const E = { ...emptyEnv(), ...(envTable || {}) };
+  const hit = (cellParams, cellEnv, cellNow, cellInput, cellAction) =>
+    sameJson(cellParams, params) && sameJson({ ...emptyEnv(), ...(cellEnv || {}) }, E) && cellNow === now && sameJson(cellInput, state) && sameJson(cellAction, action);
+  const agree = (cell, r) => {
+    const found = { found: true, cell };
+    if ((cell.result !== null) !== r.ok) return { ...found, agrees: false, why: `Lean ${cell.result ? 'applied' : 'refused'}, the page ${r.ok ? 'applied' : 'refused'}` };
+    if (r.ok && (!sameJson(cell.result.flow, r.flow) || !sameJson(cell.result.state, r.state))) return { ...found, agrees: false, why: 'the flow or the post-state differs' };
+    return { ...found, agrees: true };
+  };
+  const r = step(params, E, action, now, state);
+  for (const sc of doc.stories || []) {
+    for (const c of sc.steps || []) if (hit(sc.params || doc.params, sc.env, c.now, c.input, c.action)) return agree(c, r);
+    for (const fk of sc.forks || []) for (const c of fk.steps || []) if (hit(sc.params || doc.params, fk.env || sc.env, c.now, c.input, c.action)) return agree(c, r);
+  }
+  for (const tr of doc.traces || []) for (const c of tr.steps || []) if (hit(doc.params, tr.env, c.now, c.input, c.action)) return agree(c, r);
+  const g = doc.grid;
+  if (g) for (const c of g.cells || []) if (hit(doc.params, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a])) return agree(c, r);
+  return { found: false };
+}
 
 function checkTheorems(rec) {
   const out = {};
@@ -803,7 +864,9 @@ function checkCorpus(doc) {
     if ((result !== null) !== r.ok) { reasons.push(`${label}: Lean ${result ? 'applied' : 'refused'}, core ${r.ok ? 'applied' : 'refused (' + r.reason + ')'}`); return; }
     if (r.ok) {
       applied++;
-      if (!sameJson(normFlow(result.flow), normFlow(r.flow))) reasons.push(`${label}: flow mismatch`);
+      const ef = validateFlow(result.flow); if (ef) { reasons.push(`${label}: result flow ${ef.reason}/${ef.field}`); return; }
+      const es = validateState(result.state); if (es) { reasons.push(`${label}: result state ${es.reason}/${es.field}`); return; }
+      if (!sameJson(result.flow, r.flow)) reasons.push(`${label}: flow mismatch`);
       if (!sameJson(result.state, r.state)) reasons.push(`${label}: post-state mismatch`);
       const th = checkTheorems({ before: input, action, now, result: r, params, env: envTable });
       for (const id of Object.keys(th)) if (th[id].v === 'fails') reasons.push(`${label}: theorem ${id} fails — ${th[id].why}`);
@@ -826,7 +889,7 @@ function checkCorpus(doc) {
   }
   const g = doc.grid;
   if (!g || !Array.isArray(g.cells) || !g.cells.length) reasons.push('grid: none');
-  else for (const c of g.cells) one(`grid s${c.s} a${c.a} e${c.e}`, P, g.envs[c.e], g.now, g.states[c.s], g.actions[c.a], c.result);
+  else for (const c of g.cells) one(`grid s${c.s} a${c.a} e${c.e}${c.now !== undefined ? ' t' + c.now : ''}`, P, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a], c.result);
   if (!Array.isArray(doc.stories) || !doc.stories.length) reasons.push('stories: none');
   for (const sc of doc.stories || []) {
     (sc.steps || []).forEach((st, i) => one(`story ${sc.id} step ${i}`, sc.params || P, sc.env, st.now, st.input, st.action, st.result));
@@ -836,7 +899,7 @@ function checkCorpus(doc) {
 }
 /* @@CORE:verify:END@@ */
 
-export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, LEAN_SHARED_SITES, LEAN_PASSTHROUGH, MAX_NAT, isNat, validateParams, validateState, validateEnv,
+export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, LEAN_SHARED_SITES, LEAN_PASSTHROUGH, MAX_NAT, isNat, validateParams, validateState, validateEnv, validateFlow, findLeanCell,
          validateAction, emptyEnv, envFromTables, userPostable, opBond, opTag, statusTag, ckTag, actionActor,
          actionTag, inPhase1, inPhase2, rejectable, phaseOf, lookupReq, lookupLeaf, lookupCkpt, removeReq,
          removeCkpt, setLeaf, processBody, processOne, rejectOne, applyBatch, batchView, flow, reapableReason, goOp, step,

@@ -264,12 +264,18 @@ def traceJson (p : Params) (sd : Seed) : Json :=
 
 def enumL (l : List α) : List (Nat × α) := (List.range l.length).zip l
 
-/-! ## The boundary grid, at slot 20 -/
+/-! ## The boundary grid, at slots 19, 20 and 21
+
+Every guarded comparison of the machine at −1 / = / +1: request 10 (submitted
+at 10) ends phase 1 at 20, request 2 (submitted at 0) ends phase 2 at 20, the
+checkpoint of 13 (parked at 15) leaves its grace window at 20; the fold names
+generations 0…4 against a registry at 0 and at 3; every action from every
+state, under two evidence tables. -/
 
 /-- Genesis, and a system with a leaf of every status, a checkpoint of every
 state, and a request of every op in every phase. AIDs: 11 active with a live
 checkpoint; 12 active with a parked checkpoint since 12 (grace ends at 17);
-13 active with a parked checkpoint since 16 (grace ends at 21); 14 active
+13 active with a parked checkpoint since 15 (grace ends at 20); 14 active
 with a tombstone; 15 active with a pending go-request; 16 dormant; 17
 convicted. -/
 def gridStates : List Sys :=
@@ -277,22 +283,22 @@ def gridStates : List Sys :=
    { gen := 3, plugin := 7,
      leaves := [(11, .active 0), (12, .active 1), (13, .active 2), (14, .active 3), (15, .active 4),
                 (16, .dormant 5), (17, .convicted)],
-     ckpts := [(11, ⟨0, 0, .live⟩), (12, ⟨1, 1, .parked 12⟩), (13, ⟨2, 1, .parked 16⟩), (14, ⟨3, 0, .tomb⟩)],
+     ckpts := [(11, ⟨0, 0, .live⟩), (12, ⟨1, 1, .parked 12⟩), (13, ⟨2, 1, .parked 15⟩), (14, ⟨3, 0, .tomb⟩)],
      requests := [(0, ⟨18, 1, 15, .register⟩), (1, ⟨18, 1, 5, .register⟩), (2, ⟨18, 1, 0, .register⟩),
                   (3, ⟨18, 4, 100, .register⟩), (4, ⟨11, 2, 15, .register⟩), (5, ⟨16, 1, 15, .revive⟩),
                   (6, ⟨16, 5, 15, .convict⟩), (7, ⟨15, 6, 1000000000, .goDormant 3⟩), (8, ⟨17, 1, 15, .revive⟩),
-                  (9, ⟨11, 1, 15, .revive⟩)],
-     nextReq := 10, nextToken := 5 }]
+                  (9, ⟨11, 1, 15, .revive⟩), (10, ⟨18, 1, 10, .register⟩)],
+     nextReq := 11, nextToken := 5 }]
 
 def gridBatches : List (List (ReqId × FoldAction)) :=
-  [[]] ++ ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map fun i => [(i, FoldAction.process)]) ++
-  ([0, 1, 2, 3, 7].map fun i => [(i, FoldAction.reject)]) ++
+  [[]] ++ ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map fun i => [(i, FoldAction.process)]) ++
+  ([0, 1, 2, 3, 7, 10].map fun i => [(i, FoldAction.reject)]) ++
   [[(0, .process), (0, .process)], [(0, .process), (2, .reject)], [(5, .process), (6, .process)]]
 
 def gridActions : List Action :=
   ([Op.register, .revive, .convict, .goConvicted, .goDormant 1].map fun op => Action.contribute 18 1 20 op) ++
-  ([0, 1, 2, 3, 7, 10].map fun i => Action.retract i) ++
-  ([2, 3, 4].flatMap fun g => [7, 8].flatMap fun pl => gridBatches.map fun b => Action.fold 3 g pl b) ++
+  ([0, 1, 2, 3, 7, 10, 11].map fun i => Action.retract i) ++
+  ([0, 1, 2, 3, 4].flatMap fun g => [7, 8].flatMap fun pl => gridBatches.map fun b => Action.fold 3 g pl b) ++
   ([11, 12, 13, 14, 15, 16].map fun a => Action.reap 6 a) ++
   ([11, 12, 14, 16].map fun a => Action.pause a) ++
   ([11, 12, 14, 16].map fun a => Action.resume a) ++
@@ -303,17 +309,20 @@ def gridEnvs : List EnvTable :=
     [11, 12, 13, 14]⟩,
    ⟨[], [], [], []⟩]
 
+def gridNows : List Slot := [19, 20, 21]
+
 def gridJson (p : Params) : Json :=
-  let now : Slot := 20
   let cells : List Json :=
-    (enumL gridStates).flatMap fun (si, s) =>
-      (enumL gridActions).flatMap fun (ai, a) =>
-        (enumL gridEnvs).map fun (ei, t) =>
-          let (j, _) := cellJson p t.toEnv now s a
-          Json.mkObj [("s", toJson si), ("a", toJson ai), ("e", toJson ei),
-            ("result", (j.getObjVal? "result").toOption.getD Json.null)]
-  Json.mkObj [("now", toJson now), ("plugin", toJson (7 : Nat)), ("states", toJson gridStates),
-    ("actions", toJson gridActions), ("envs", toJson gridEnvs), ("cells", Json.arr cells.toArray)]
+    gridNows.flatMap fun now =>
+      (enumL gridStates).flatMap fun (si, s) =>
+        (enumL gridActions).flatMap fun (ai, a) =>
+          (enumL gridEnvs).map fun (ei, t) =>
+            let (j, _) := cellJson p t.toEnv now s a
+            Json.mkObj [("s", toJson si), ("a", toJson ai), ("e", toJson ei), ("now", toJson now),
+              ("result", (j.getObjVal? "result").toOption.getD Json.null)]
+  Json.mkObj [("now", toJson (20 : Slot)), ("nows", toJson gridNows), ("plugin", toJson (7 : Nat)),
+    ("states", toJson gridStates), ("actions", toJson gridActions), ("envs", toJson gridEnvs),
+    ("cells", Json.arr cells.toArray)]
 
 /-! ## Story cells -/
 

@@ -259,6 +259,8 @@
   #tree .node.here circle { stroke: var(--accent); stroke-width: 3.5; }
   #tree .node.here text { fill: var(--accent); font-weight: 700; }
   #tree .node .who { font-size: 9px; }
+  #tree .node .verb { font-size: 9.5px; fill: var(--ink); }
+  #tree .node.no .verb { fill: var(--bad); }
   #tree .fork { fill: var(--warn); font-size: 12px; }
   /* where we are */
   #where { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--accent-bg); font-size: .9rem; }
@@ -1973,8 +1975,8 @@ function treeLayout() {
 function renderTree() {
   const svg = $('tree');
   const { col, row, rows, cols } = treeLayout();
-  const dx = 46, dy = 34, x0 = 24, y0 = 22;
-  const W = x0 * 2 + (cols - 1) * dx, H = y0 * 2 + (rows - 1) * dy + 12;
+  const dx = 74, dy = 44, x0 = 36, y0 = 22;
+  const W = x0 * 2 + (cols - 1) * dx, H = y0 * 2 + (rows - 1) * dy + 22;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
   const X = id => x0 + col[id] * dx, Y = id => y0 + row[id] * dy;
   const onPath = new Set(currentPath());
@@ -1988,10 +1990,11 @@ function renderTree() {
   for (const n of app.nodes) {
     const cls = ['node', n.record ? (n.record.ok ? 'ok' : 'no') : n.kind, n.id === app.cursor ? 'here' : ''].join(' ');
     const g = s('g', { class: cls, dataset: { node: n.id }, transform: `translate(${X(n.id)},${Y(n.id)})`, role: 'button', tabindex: 0, onclick: () => goTo(n.id) });
-    g.append(s('title', {}, (n.who ? n.who + ': ' : '') + (n.say || '')));
+    g.append(s('title', {}, (n.who ? n.who + ' — ' + nodeVerb(n) + '\n' : '') + (n.say || '')));
     g.append(s('circle', { r: 8 }));
     g.append(s('text', { y: 3.5 }, n.id === 0 ? '·' : (n.record ? (n.record.ok ? '✓' : '✗') : (n.kind === 'time' ? '⏱' : '≡'))));
     g.append(s('text', { class: 'who', y: 20 }, n.id === 0 ? 'start' : shortWho(n.who)));
+    if (n.id !== 0) g.append(s('text', { class: 'verb', y: 31 }, nodeVerb(n)));
     if (n.children.length > 1) g.append(s('text', { class: 'fork', x: 12, y: -8 }, '⋔'));
     parts.push(g);
   }
@@ -2015,6 +2018,21 @@ function needsOf(action) {
   if (k === 'rotate' || k === 'freeze' || k === 'reopen') return { cls: 'public', text: k === 'reopen' ? 'a public rotation later than the tombstone' : 'a public witnessed rotation' };
   if (k === 'convict') return { cls: 'public', text: 'a public duplicity proof' };
   return { cls: 'public', text: 'no signature' };
+}
+// what happened on the edge into a node, in one or two words: the action (with
+// the bond option of a rotation), the slot time moved to, the evidence presented
+const EV_VERB = { rotationTo: 'rotation', intentAuthorized: 'intent', quorum: 'quorum', duplicityAt: 'duplicity' };
+function nodeVerb(n) {
+  if (n.record) {
+    const a = n.record.action, k = actionKind(a), d = (a && typeof a === 'object') ? a[k] : {};
+    const v = k === 'rotate' ? (d.op === 'keep' ? 'rotate' : 'rotate·' + d.op) : k === 'topUp' ? 'top-up' : k;
+    return v;
+  }
+  if (n.kind === 'time') return 'slot ' + n.session.now;
+  if (n.evRow) { const k = Object.keys(n.evRow)[0]; return (n.removed ? '− ' : '') + (EV_VERB[k] || k); }
+  if (n.step && n.step.seed !== undefined) return 'seed';
+  if (n.step && n.step.params) return 'params';
+  return n.kind === 'origin' ? 'start' : 'note';
 }
 const shortWho = w => ({ 'A sponsor': 'sponsor', 'A rival hunter': 'rival', 'The treasury': 'treasury', Anyone: 'anyone', Time: 'time', You: 'you' }[w] || (w || '').split(' ')[0].slice(0, 8));
 function renderPlaybar() {
@@ -2353,7 +2371,7 @@ function playStory(n) {
   app.story = sc;
   newTree(newSession(sc.params, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.');
   const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who, say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''),
-    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'), evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
+    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'), step: t.step, evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
   const trunkIds = [0];
   let pid = 0;
   for (const t of r.timeline) { pid = addChild(pid, entry(t)); trunkIds.push(pid); }

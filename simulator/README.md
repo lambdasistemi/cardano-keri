@@ -19,8 +19,10 @@ transcription honest against the Lean itself.
 
 The page reads top-down as where we are and what can happen next. First the
 play: the tree of it, drawn (every step a node — ✓ accepted, ✗ refused, ⏱ a
-slot move, ≡ evidence — every branch a line, ⋔ at a fork, the ring on the
-current step; click a node to jump there), the play bar, one strip with the
+slot move, ≡ evidence — labelled with the actor and what they did: `Alice
+register`, `Mallory close`, `Alice rotate·withdraw`, `treasury slot 40` — every
+branch a line, ⋔ at a fork, the ring on the current step; click a node to jump
+there), the play bar, one strip with the
 state word, the keys, the treasury's verdict and the three sums, and the
 narration of the current step. Then the main panel, what can happen next:
 the story's continuations from here (the one › will take marked, the other

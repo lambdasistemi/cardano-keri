@@ -190,7 +190,7 @@ If two witnessed rotations exist at one sequence — the same current keys
 revealed, each with receipts from at least `toad` of the witnesses — that is not
 a suspicion, it is duplicity, and anyone holding both can prove it on chain. The
 identity becomes `Convicted`, terminally, and the convictor takes `D_reg`. See
-[Identity operations](../architecture/identity-ops.md#convict--new-shape-in-the-m1-return).
+[Identity operations](../architecture/identity-ops.md#convict-new-shape-in-the-m1-return).
 
 The distinction from the poison is exact and worth keeping: a controller
 *declaration* is epoch-local, because the controller can be superseded; a

@@ -3,13 +3,12 @@
   "narrative": "Hal spends the registry at generation 0 with a batch of one: Alice's request is in phase 1, her inception verifies, her AID is absent from the root. The row is inserted, the token minted, the bond locked into her checkpoint, the tip paid to Hal.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "3": "Hal (folder)" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 3, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }] } },
       "expect": { "ok": true, "flow": { "locked": [{ "aid": 11, "value": 1000 }], "tips": { "addr": 3, "value": 2 } } },
-      "exhibits": ["R1", "R4", "R6", "R11", "R12"] },
-    { "now": 4, "actor": "current-quorum", "as": "Mallory — closing Alice's checkpoint without her keys", "action": { "close": { "aid": 11 } }, "expect": { "ok": false, "reason": "no-quorum" } }
+      "exhibits": ["R1", "R6", "R11", "R12"] }
   ],
   "expectFinal": { "gen": 1, "plugin": 7, "root": [11], "live": [11], "tomb": [], "requests": [], "nextReq": 1 }
 }

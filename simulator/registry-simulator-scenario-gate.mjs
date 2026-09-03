@@ -192,7 +192,7 @@ async function selftest() {
     controls.push({ name, red, why: red ? r.problems.find(p => expectRe.test(p)) : (r.ok ? 'stayed GREEN' : 'RED for another reason: ' + r.problems[0]) });
   };
   const edit = (f, from, to) => { const t = readFileSync(f, 'utf8'); if (!t.includes(from)) throw new Error(`control edit: ${from} not found in ${f}`); writeFileSync(f, t.replace(from, to)); };
-  await control('flipped-expectation', dir => edit(join(dir, 'scenarios', '02-hal-folds.json'), '"reason": "no-quorum"', '"reason": "no-live-token"'), /story 2 .*refused no-quorum, expected no-live-token/);
+  await control('flipped-expectation', dir => edit(join(dir, 'scenarios', '04-duplicate-registration.json'), '"reason": "already-registered"', '"reason": "not-in-phase-1"'), /story 4 .*refused already-registered, expected not-in-phase-1/);
   await control('forked-embedded-slice', dir => edit(join(dir, 'registry-simulator.html'), "if (!(batch.length > 0)) return refuse(REASONS.EMPTY_FOLD);", "if (!(batch.length > 0)) return refuse(REASONS.EMPTY_FOLD); /* forked */"), /stale or forked/);
   await control('flipped-guard-absence-proof', dir => { edit(join(dir, 'registry-simulator-core.mjs'), 'if (acc.root.includes(r.aid)) return { ok: false, reason: REASONS.ALREADY_REGISTERED, at: i };', '/* mutant: absence proof removed */'); }, /story 4 .*|story 10 .*|Lean corpus replays/);
   await control('lying-theorem-never-fires', dir => edit(join(dir, 'registry-simulator-core.mjs'), "const f = foldOf(action); if (!f || f.gen === before.gen) return { v: 'n/a' };", "const f = foldOf(action); return { v: 'n/a' };"), /claims to exhibit R7 but it is n\/a/);

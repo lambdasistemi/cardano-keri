@@ -3,7 +3,7 @@
   "narrative": "The request passed phase 2 unretracted. Under an owner-keyed cage it would now be stranded; here anyone can reject it: Sam spends the registry with a batch of one reject, Alice's bond goes back to her, Sam takes the tip.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "6": "Sam (sweeper)" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 25, "actor": "owner", "as": "Alice — too late to retract", "action": { "retract": { "req": 0 } }, "expect": { "ok": false, "reason": "not-in-phase-2" }, "exhibits": ["R9"] },

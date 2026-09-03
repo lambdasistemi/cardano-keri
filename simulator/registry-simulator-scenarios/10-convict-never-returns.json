@@ -1,9 +1,9 @@
 {
   "id": 10, "slug": "convict-never-returns", "story": "Cora convicts Bob; Bob can never return",
-  "narrative": "Cora presents a duplicity proof: Bob's token becomes a tombstone, the row stays and the registry is not spent. A new request for Bob's AID can never be processed — the row is there — and the tombstone cannot be closed. The request is rejected in phase 3 and Bob's bond returns.",
+  "narrative": "Cora presents a duplicity proof: Bob's token becomes a tombstone, the row stays and the registry is not spent. A new request for Bob's AID can never be processed — the row is there. A conviction needs a live token, so an unregistered AID cannot be convicted. The request is rejected in phase 3 and Bob's bond returns.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "2": "Bob", "3": "Hal (folder)", "5": "Cora (convictor)", "6": "Sam (sweeper)" },
-  "env": { "inception": [12], "quorum": [12], "duplicity": [12] },
+  "env": { "inception": [12], "duplicity": [12] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 1, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": true } },
@@ -11,7 +11,7 @@
       "expect": { "ok": true, "state": { "gen": 1, "plugin": 7, "root": [12], "live": [], "tomb": [12], "requests": [], "nextReq": 1 } }, "exhibits": ["R1", "R2", "R6", "R11"] },
     { "now": 6, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 6 } }, "expect": { "ok": true } },
     { "now": 7, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 1, "plugin": 7, "batch": [{ "id": 1, "do": "process" }] } }, "expect": { "ok": false, "reason": "already-registered" }, "exhibits": ["R3", "R1c"] },
-    { "now": 8, "actor": "current-quorum", "as": "Bob — closing the tombstone", "action": { "close": { "aid": 12 } }, "expect": { "ok": false, "reason": "no-live-token" }, "exhibits": ["R3"] },
+    { "now": 8, "actor": "proof", "as": "Cora — convicting an AID that has no checkpoint", "action": { "convict": { "aid": 11 } }, "expect": { "ok": false, "reason": "no-live-token" } },
     { "now": 26, "actor": "anyone", "as": "Sam", "action": { "fold": { "folder": 6, "gen": 1, "plugin": 7, "batch": [{ "id": 1, "do": "reject" }] } },
       "expect": { "ok": true, "flow": { "refunds": [{ "addr": 2, "value": 1000 }], "tips": { "addr": 6, "value": 2 } } }, "exhibits": ["R3", "R9"] }
   ],

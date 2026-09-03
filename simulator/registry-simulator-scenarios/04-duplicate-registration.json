@@ -3,7 +3,7 @@
   "narrative": "With Alice registered, Mallory posts a request for the same AID. No fold can process it: the absence proof fails against a root that holds the row. Her request sits until phase 3, when anyone rejects it and her bond goes back to her.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "3": "Hal (folder)", "4": "Mallory", "6": "Sam (sweeper)" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 1, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": true } },

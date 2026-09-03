@@ -3,7 +3,7 @@
   "narrative": "Mallory folds Alice's request correctly but re-creates the cage with plugin 8, an always-true script she controls. The plugin is pinned: refused.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "4": "Mallory" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 1, "actor": "anyone", "as": "Mallory", "action": { "fold": { "folder": 4, "gen": 0, "plugin": 8, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": false, "reason": "plugin-not-pinned" }, "exhibits": ["R5"] }

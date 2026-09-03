@@ -17,12 +17,14 @@ cardano-mpfs-onchain on the plugin path (cardano-foundation/cardano-mpfs-onchain
   plugin is pinned;
 * a **retract** (phase 2, the owner) returns everything and leaves the
   registry alone;
-* a **close** burns the live token and deletes the row, spending the registry;
 * a **convict** turns the live token into a tombstone and leaves the row.
 
-The design under test is *row if and only if token*: an AID is in the root
-exactly when it has a live token or a tombstone. A closed AID may therefore
-return; a convicted one never can, because nothing burns a tombstone.
+There is no close: the permissionless registry cannot be left (ruling of
+2026-09-03). A row, once inserted, is permanent — D-024's "once ever per
+AID" — and a token is live or a tombstone for the rest of the chain's life.
+Leaving the checkpoint's economy is the checkpoint machine's pause, which
+touches no token. The invariant is *row if and only if token*: an AID is in
+the root exactly when it has a live token or a tombstone.
 
 The checkpoint's own life (rotations, bonds, poison) is the machine of
 `CardanoKeri.Checkpoint`; here a checkpoint is only its token: absent, live,
@@ -87,8 +89,6 @@ structure Env where
   and carry controller signatures and receipts at the inception's own
   thresholds (the #114 rule), so the checkpoint policy may mint. -/
   inception : AID → Bool
-  /-- `quorum aid`: the current keys of `aid`'s checkpoint signed the close. -/
-  quorum : AID → Bool
   /-- `duplicity aid`: a verified duplicity proof against `aid`'s checkpoint
   tip was presented (D-030). -/
   duplicity : AID → Bool
@@ -135,12 +135,11 @@ def Sys.init (plugin : Script) : Sys :=
 inductive Actor where
   | anyone
   | owner
-  | currentQuorum
   | proof
   deriving DecidableEq, Repr
 
-/-- The actions: the redeemers of the cage family and the checkpoint edges
-that touch a token. -/
+/-- The actions: the redeemers of the cage family and the one checkpoint edge
+that touches a token. -/
 inductive Action where
   /-- Create a request UTxO. `submittedAt` is the requester's claim. -/
   | contribute (aid : AID) (owner : Addr) (submittedAt : Slot)
@@ -149,8 +148,6 @@ inductive Action where
   | fold (folder : Addr) (gen : Gen) (plugin : Script) (batch : List (ReqId × FoldAction))
   /-- The owner takes a request back in phase 2. -/
   | retract (req : ReqId)
-  /-- The current quorum closes the checkpoint: token burned, row deleted. -/
-  | close (aid : AID)
   /-- A duplicity proof convicts the checkpoint: token kept as a tombstone. -/
   | convict (aid : AID)
   deriving Repr, DecidableEq
@@ -160,7 +157,6 @@ def Action.actor : Action → Actor
   | .contribute .. => .anyone
   | .fold .. => .anyone
   | .retract .. => .owner
-  | .close .. => .currentQuorum
   | .convict .. => .proof
 
 /-- Value movements of one transition. -/
@@ -274,10 +270,6 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) : Option
                   tips := some (folder, batch.length * p.tip) },
                 { s with gen := s.gen + 1, root := acc.root, live := acc.live,
                          requests := acc.requests })
-      else none
-  | .close aid =>
-      if aid ∈ s.live ∧ env.quorum aid = true then
-        some ({}, { s with gen := s.gen + 1, root := s.root.erase aid, live := s.live.erase aid })
       else none
   | .convict aid =>
       if aid ∈ s.live ∧ env.duplicity aid = true then

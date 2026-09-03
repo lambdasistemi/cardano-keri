@@ -29,10 +29,10 @@
  *               requests:[{ id, aid, owner, submittedAt }], nextReq }
  *   action := { contribute: { aid, owner, submittedAt } }
  *           | { fold: { folder, gen, plugin, batch:[{ id, do }] } }   do: "process" | "reject"
- *           | { retract: { req } } | { close: { aid } } | { convict: { aid } }
+ *           | { retract: { req } } | { convict: { aid } }
  *   flow   := { deposited, locked:[{ aid, value }], refunds:[{ addr, value }],
  *               tips: null | { addr, value } }
- *   env    := { inception:[aid], quorum:[aid], duplicity:[aid] }   (a table; absent = false)
+ *   env    := { inception:[aid], duplicity:[aid] }   (a table; absent = false)
  */
 
 /* @@CORE:constants@@ */
@@ -56,8 +56,7 @@ const REASONS = {
   BAD_INCEPTION: 'bad-inception',           // env.inception false
   ALREADY_REGISTERED: 'already-registered', // the AID is in the root: the absence proof fails
   NOT_REJECTABLE: 'not-rejectable',         // reject before phase 3 with an honest timestamp
-  NO_LIVE_TOKEN: 'no-live-token',           // close / convict without a live token
-  NO_QUORUM: 'no-quorum',                   // close without the current quorum
+  NO_LIVE_TOKEN: 'no-live-token',           // convict without a live token
   NO_DUPLICITY_PROOF: 'no-duplicity-proof', // convict without a proof
 };
 
@@ -72,8 +71,7 @@ const LEAN_GUARDS = {
   'bad-inception': { decl: 'applyBatch (process)', text: 'env.inception r.aid = true' },
   'already-registered': { decl: 'applyBatch (process)', text: 'r.aid ∉ acc.root' },
   'not-rejectable': { decl: 'applyBatch (reject)', text: 'rejectable p r now' },
-  'no-live-token': { decl: 'stepFn (close / convict)', text: 'aid ∈ s.live' },
-  'no-quorum': { decl: 'stepFn (close)', text: 'env.quorum aid = true' },
+  'no-live-token': { decl: 'stepFn (convict)', text: 'aid ∈ s.live' },
   'no-duplicity-proof': { decl: 'stepFn (convict)', text: 'env.duplicity aid = true' },
 };
 /* @@CORE:constants:END@@ */
@@ -122,8 +120,8 @@ function validateState(s) {
 /* An evidence table is exactly the three predicates, each a list of AIDs. */
 function validateEnv(t) {
   if (!t || typeof t !== 'object' || Array.isArray(t)) return refuse(REASONS.INVALID_EVIDENCE, 'env');
-  for (const k of Object.keys(t)) if (!['inception', 'quorum', 'duplicity'].includes(k)) return refuse(REASONS.INVALID_EVIDENCE, k);
-  for (const k of ['inception', 'quorum', 'duplicity']) {
+  for (const k of Object.keys(t)) if (!['inception', 'duplicity'].includes(k)) return refuse(REASONS.INVALID_EVIDENCE, k);
+  for (const k of ['inception', 'duplicity']) {
     if (t[k] === undefined) continue;
     if (!Array.isArray(t[k])) return refuse(REASONS.INVALID_EVIDENCE, k);
     for (let i = 0; i < t[k].length; i++) if (!isNat(t[k][i])) return refuse(REASONS.INVALID_NAT, `${k}[${i}]`);
@@ -145,7 +143,7 @@ function validateAction(a) {
   switch (tag) {
     case 'contribute': return need(['aid', 'owner', 'submittedAt']);
     case 'retract': return need(['req']);
-    case 'close': case 'convict': return need(['aid']);
+    case 'convict': return need(['aid']);
     case 'fold': {
       const e = need(['folder', 'gen', 'plugin', 'batch']); if (e) return e;
       if (!Array.isArray(b.batch)) return refuse(REASONS.INVALID_ACTION, 'fold.batch');
@@ -163,12 +161,11 @@ function validateAction(a) {
 }
 
 /* --- Env: the three evidence predicates ---------------------------------- */
-function emptyEnv() { return { inception: [], quorum: [], duplicity: [] }; }
+function emptyEnv() { return { inception: [], duplicity: [] }; }
 function envFromTables(t) {
   const has = (k, aid) => Array.isArray(t[k]) && t[k].includes(aid);
   return {
     inception: aid => has('inception', aid),
-    quorum: aid => has('quorum', aid),
     duplicity: aid => has('duplicity', aid),
   };
 }
@@ -178,7 +175,6 @@ function actionActor(a) {
   if (!a || typeof a !== 'object') return null;
   if ('contribute' in a || 'fold' in a) return 'anyone';
   if ('retract' in a) return 'owner';
-  if ('close' in a) return 'current-quorum';
   if ('convict' in a) return 'proof';
   return null;
 }
@@ -257,13 +253,6 @@ function step(params, envTable, action, now, state) {
              flow: flow({ locked: r.acc.locked, refunds: r.acc.refunds, tips: { addr: folder, value: batch.length * p.tip } }),
              state: { ...s, gen: s.gen + 1, root: r.acc.root, live: r.acc.live, requests: r.acc.requests } };
   }
-  if ('close' in a) {
-    const { aid } = a.close;
-    if (!s.live.includes(aid)) return refuse(REASONS.NO_LIVE_TOKEN);
-    if (env.quorum(aid) !== true) return refuse(REASONS.NO_QUORUM);
-    return { ok: true, flow: flow({}),
-             state: { ...s, gen: s.gen + 1, root: eraseFirst(s.root, aid), live: eraseFirst(s.live, aid) } };
-  }
   if ('convict' in a) {
     const { aid } = a.convict;
     if (!s.live.includes(aid)) return refuse(REASONS.NO_LIVE_TOKEN);
@@ -332,29 +321,24 @@ const THEOREMS = [
       for (const aid of s.tomb) if (s.live.includes(aid)) return { v: 'fails', why: `AID ${aid} both live and convicted` };
       return { v: 'holds' };
     } },
-  { id: 'R3', title: 'conviction is permanent', lean: 'R3_tomb_permanent, R3_convicted_never_processed, R3_convicted_not_closable',
+  { id: 'R3', title: 'conviction is permanent', lean: 'R3_tomb_permanent, R3_convicted_never_processed',
     check: ({ before, action, result }) => {
       if (result.ok) {
         for (const aid of before.tomb) if (!result.state.tomb.includes(aid)) return { v: 'fails', why: `tombstone ${aid} removed` };
         return before.tomb.length ? { v: 'holds' } : { v: 'n/a' };
       }
-      if (action.close && before.tomb.includes(action.close.aid)) return { v: 'holds' };
       const f = foldOf(action);
       if (f && f.gen === before.gen && f.plugin === before.plugin &&
           f.batch.some(x => x.do === 'process' && reqOf(before, x.id) && before.tomb.includes(reqOf(before, x.id).aid))) return { v: 'holds' };
       return { v: 'n/a' };
     } },
-  { id: 'R4', title: 'close deletes the row; a closed AID may return', lean: 'R4_close_deletes_row, R4_reregistrable',
-    check: ({ before, action, result }) => {
-      if (action.close && result.ok) {
-        const aid = action.close.aid;
-        if (result.state.root.includes(aid) || result.state.live.includes(aid)) return { v: 'fails', why: 'row or token survived the close' };
-        return { v: 'holds' };
-      }
-      const f = foldOf(action);
-      if (f && result.ok && f.batch.some(x => x.do === 'process' && reqOf(before, x.id) && !before.root.includes(reqOf(before, x.id).aid)))
-        return { v: 'holds' };
-      return { v: 'n/a' };
+  { id: 'R4', title: 'registration is permanent: rows never leave, a live token ends only as a tombstone', lean: 'R4_row_permanent, R4_token_permanent, R4_never_again',
+    check: ({ before, result }) => {
+      if (!result.ok) return { v: 'n/a' };
+      const s = result.state;
+      for (const aid of before.root) if (!s.root.includes(aid)) return { v: 'fails', why: `row  left the root` };
+      for (const aid of before.live) if (!s.live.includes(aid) && !s.tomb.includes(aid)) return { v: 'fails', why: `token  vanished` };
+      return before.root.length ? { v: 'holds' } : { v: 'n/a' };
     } },
   { id: 'R5', title: 'the plugin is pinned', lean: 'R5_plugin_pinned',
     check: ({ before, action, result }) => {
@@ -363,11 +347,11 @@ const THEOREMS = [
       if (f && f.gen === before.gen && f.plugin !== before.plugin) return result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds' } : { v: 'fails', why: `refused for ${result.reason}` };
       return { v: 'n/a' };
     } },
-  { id: 'R6', title: 'the generation moves exactly on registry spends; requests never contend', lean: 'R6_gen_step, R6_requests_never_contend, R6_spend_is_fold_or_close, R6_fold_advances',
+  { id: 'R6', title: 'the generation moves exactly on the fold; requests, retracts and convictions never touch the registry', lean: 'R6_gen_step, R6_requests_never_contend, R6_spend_is_fold, R6_fold_advances',
     check: ({ before, action, result }) => {
       if (!result.ok) return { v: 'n/a' };
       const s = result.state, tag = actionTag(action);
-      if (tag === 'fold' || tag === 'close') return s.gen === before.gen + 1 ? { v: 'holds' } : { v: 'fails', why: 'registry spend without a generation step' };
+      if (tag === 'fold') return s.gen === before.gen + 1 ? { v: 'holds' } : { v: 'fails', why: 'registry spend without a generation step' };
       if (s.gen !== before.gen) return { v: 'fails', why: `${tag} moved the generation` };
       if (tag === 'contribute' || tag === 'retract')
         if (!same(s.root, before.root) || !same(s.live, before.live) || !same(s.tomb, before.tomb)) return { v: 'fails', why: `${tag} touched the registry` };
@@ -416,7 +400,7 @@ const THEOREMS = [
       }
       return { v: 'holds' };
     } },
-  { id: 'R11', title: 'value: bonds lock or refund exactly, tips are tip per request, refunds go to request owners', lean: 'R11_fold_value, R11_retract_value, R11_contribute_value, R11_token_edges_move_no_value',
+  { id: 'R11', title: 'value: bonds lock or refund exactly, tips are tip per request, refunds go to request owners', lean: 'R11_fold_value, R11_retract_value, R11_contribute_value, R11_convict_moves_no_value',
     check: ({ before, action, result, params }) => {
       if (!result.ok) return { v: 'n/a' };
       const fl = result.flow, tag = actionTag(action);
@@ -439,11 +423,10 @@ const THEOREMS = [
       if (tag === 'contribute') return same(fl, flow({ deposited: params.D + params.tip })) ? { v: 'holds' } : { v: 'fails', why: 'contribute did not deposit D + tip' };
       return same(fl, flow({})) ? { v: 'holds' } : { v: 'fails', why: `${tag} moved request value` };
     } },
-  { id: 'R12', title: 'a row leaves the root only by close, enters only by fold', lean: 'R12_row_leaves_only_by_close, R12_row_enters_only_by_fold',
+  { id: 'R12', title: 'a row enters the root only by a fold', lean: 'R12_row_enters_only_by_fold',
     check: ({ before, action, result }) => {
       if (!result.ok) return { v: 'n/a' };
       const s = result.state, tag = actionTag(action);
-      for (const aid of before.root) if (!s.root.includes(aid) && !(tag === 'close' && action.close.aid === aid)) return { v: 'fails', why: `row ${aid} left by ${tag}` };
       for (const aid of s.root) if (!before.root.includes(aid) && tag !== 'fold') return { v: 'fails', why: `row ${aid} entered by ${tag}` };
       return same(s.root, before.root) ? { v: 'n/a' } : { v: 'holds' };
     } },

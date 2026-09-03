@@ -70,7 +70,6 @@ instance : ToJson Action where
          ("batch", Json.arr (batch.map fun (id, fa) =>
             Json.mkObj [("id", toJson id), ("do", foldActionJson fa)]).toArray)])]
     | .retract id => Json.mkObj [("retract", Json.mkObj [("req", toJson id)])]
-    | .close aid => Json.mkObj [("close", Json.mkObj [("aid", toJson aid)])]
     | .convict aid => Json.mkObj [("convict", Json.mkObj [("aid", toJson aid)])]
 
 instance : ToJson Flow where
@@ -84,17 +83,14 @@ instance : ToJson Flow where
 /-- An evidence table: the AIDs for which each predicate holds. -/
 structure EnvTable where
   inception : List AID
-  quorum : List AID
   duplicity : List AID
 
 def EnvTable.toEnv (t : EnvTable) : Env :=
   { inception := fun a => t.inception.contains a,
-    quorum := fun a => t.quorum.contains a,
     duplicity := fun a => t.duplicity.contains a }
 
 instance : ToJson EnvTable where
-  toJson t := Json.mkObj [("inception", toJson t.inception), ("quorum", toJson t.quorum),
-                          ("duplicity", toJson t.duplicity)]
+  toJson t := Json.mkObj [("inception", toJson t.inception), ("duplicity", toJson t.duplicity)]
 
 /-! ## Parsing the scenario files -/
 
@@ -104,7 +100,7 @@ def envOfJson (j : Json) : Except String EnvTable := do
   let get (k : String) : Except String (List Nat) := match j.getObjVal? k with
     | .ok v => natList v
     | .error _ => pure []
-  pure ⟨← get "inception", ← get "quorum", ← get "duplicity"⟩
+  pure ⟨← get "inception", ← get "duplicity"⟩
 
 def paramsOfJson (j : Json) : Except String Params := do
   let D ← j.getObjValAs? Nat "D"
@@ -138,9 +134,6 @@ def actionOfJson (j : Json) : Except String Action := do
   | .error _ =>
   match j.getObjVal? "retract" with
   | .ok r => pure (.retract (← r.getObjValAs? Nat "req"))
-  | .error _ =>
-  match j.getObjVal? "close" with
-  | .ok c => pure (.close (← c.getObjValAs? Nat "aid"))
   | .error _ =>
   match j.getObjVal? "convict" with
   | .ok c => pure (.convict (← c.getObjValAs? Nat "aid"))
@@ -176,28 +169,28 @@ structure Seed where
 /-- Alice = 1, Bob = 2, Hal = 3, Mallory = 4, Cora = 5, Sam = 6; AIDs 11, 12, 13; plugin 7. -/
 def seeds : List Seed := [
   { name := "register",
-    env := ⟨[11], [], []⟩,
+    env := ⟨[11], []⟩,
     steps := [(0, .contribute 11 1 0), (3, .fold 3 0 7 [(0, .process)]), (3, .fold 3 0 7 [(0, .process)])] },
   { name := "race",
-    env := ⟨[11, 12], [], []⟩,
+    env := ⟨[11, 12], []⟩,
     steps := [(0, .contribute 11 1 0), (0, .contribute 12 2 0),
               (2, .fold 3 0 7 [(0, .process), (1, .process)]),
               (2, .fold 4 0 7 [(0, .process), (1, .process)]), (3, .fold 4 1 7 []), (3, .fold 4 1 8 [(0, .process)])] },
   { name := "retract-and-sweep",
-    env := ⟨[11], [], []⟩,
+    env := ⟨[11], []⟩,
     steps := [(0, .contribute 11 1 0), (3, .retract 0), (12, .retract 0), (12, .retract 0),
               (12, .contribute 11 1 12), (25, .fold 6 0 7 [(1, .reject)]), (33, .fold 6 0 7 [(1, .reject)])] },
-  { name := "close-and-return",
-    env := ⟨[11], [11], []⟩,
-    steps := [(0, .contribute 11 1 0), (1, .fold 3 0 7 [(0, .process)]), (4, .convict 11), (5, .close 11),
-              (5, .close 11), (6, .contribute 11 1 6), (7, .fold 3 2 7 [(1, .process)])] },
+  { name := "forever",
+    env := ⟨[11], []⟩,
+    steps := [(0, .contribute 11 1 0), (1, .fold 3 0 7 [(0, .process)]), (4, .convict 11),
+              (6, .contribute 11 1 6), (7, .fold 3 1 7 [(1, .process)]), (26, .fold 6 1 7 [(1, .reject)])] },
   { name := "convict",
-    env := ⟨[12], [12], [12]⟩,
+    env := ⟨[12], [12]⟩,
     steps := [(0, .contribute 12 2 0), (1, .fold 3 0 7 [(0, .process)]), (5, .convict 12), (5, .convict 12),
-              (6, .contribute 12 2 6), (7, .fold 3 1 7 [(1, .process)]), (8, .close 12),
+              (6, .contribute 12 2 6), (7, .fold 3 1 7 [(1, .process)]), (8, .convict 11),
               (26, .fold 6 1 7 [(1, .reject)])] },
   { name := "phases",
-    env := ⟨[11], [], []⟩,
+    env := ⟨[11], []⟩,
     steps := [(0, .contribute 11 1 0), (5, .fold 6 0 7 [(0, .reject)]), (12, .fold 3 0 7 [(0, .process)]),
               (12, .contribute 11 4 100), (12, .fold 6 0 7 [(1, .reject)]), (12, .fold 6 1 7 [(0, .reject)]),
               (20, .fold 6 1 7 [(0, .reject)])] }
@@ -229,17 +222,16 @@ def gridBatches : List (List (ReqId × FoldAction)) :=
 
 /-- Every action shape at every guard's −1 / = / +1: generations 0, 1, 2
 against a registry at 1; plugins 7 and 8; every batch; every request
-identifier for retract including an unknown one; close and convict on a
-pending, a live and a convicted AID. -/
+identifier for retract including an unknown one; convict on a pending, a
+live and a convicted AID. -/
 def gridActions : List Action :=
   [.contribute 11 1 20] ++
   ([0, 1, 2, 3, 4, 5, 6].map fun i => Action.retract i) ++
   ([0, 1, 2].flatMap fun g => [7, 8].flatMap fun pl => gridBatches.map fun b => Action.fold 3 g pl b) ++
-  ([11, 12, 13].map fun a => Action.close a) ++
   ([11, 12, 13].map fun a => Action.convict a)
 
 def gridEnvs : List EnvTable :=
-  [⟨[11, 12, 13], [11, 12, 13], [11, 12, 13]⟩, ⟨[], [], []⟩]
+  [⟨[11, 12, 13], [11, 12, 13]⟩, ⟨[], []⟩]
 
 def gridJson (p : Params) : Json :=
   let now : Slot := 20

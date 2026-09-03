@@ -3,7 +3,7 @@
   "narrative": "Alice and Bob both post requests. Hal and Mallory each build a fold against generation 0. Hal's lands: both are registered in one transaction. Mallory's is refused as stale — on chain it fails on the spent input at no cost — and when she rebuilds against generation 1 there is nothing left to fold.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)", "4": "Mallory" },
-  "env": { "inception": [11, 12], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11, 12], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 0, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 0 } }, "expect": { "ok": true } },

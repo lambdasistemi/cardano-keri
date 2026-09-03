@@ -13,11 +13,11 @@ Numbering:
 * R2 — at most one live checkpoint per AID; a tombstone is never live.
 * R3 — conviction is permanent: the tombstone stays and the AID is never
   processed again.
-* R4 — a closed AID may return: close deletes the row, and a fresh request
-  can then be processed.
+* R4 — registration is permanent: a row never leaves the root, a live token
+  ends only as a tombstone.
 * R5 — the plugin is pinned.
-* R6 — the generation moves exactly on registry spends; requests and
-  retracts never contend; conviction does not spend the registry.
+* R6 — the generation moves exactly on the fold; requests, retracts and
+  convictions never touch the registry.
 * R7 — a stale fold is refused with no state change; one fold per generation.
 * R8 — an empty fold and a plugin swap are refused.
 * R9 — requester exit: retract is enabled in phase 2, rejection by anyone
@@ -25,7 +25,7 @@ Numbering:
 * R10 — the phases are exclusive.
 * R11 — value: bonds lock or refund exactly, tips are `tip` per request,
   refunds go to request owners only.
-* R12 — the root changes only by fold (insert) and close (delete).
+* R12 — a row enters the root only by a fold.
 -/
 
 namespace CardanoKeri.Registry
@@ -461,37 +461,6 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys} {f
           reqNodup := ha.reqNodup
           reqBelowNext := ha.reqBelowNext }
     · cases hs
-  | close aid =>
-    simp only [stepFn] at hs
-    split at hs
-    · rename_i hc
-      obtain ⟨hlive, _⟩ := hc
-      simp only [Option.some.injEq, Prod.mk.injEq] at hs
-      obtain ⟨_, rfl⟩ := hs
-      exact {
-        rowIffToken := by
-          intro a
-          simp only
-          rw [hi.rootNodup.mem_erase_iff, hi.liveNodup.mem_erase_iff]
-          have e := hi.rowIffToken a
-          constructor
-          · rintro ⟨hne, hr⟩
-            rcases e.1 hr with h | h
-            · exact Or.inl ⟨hne, h⟩
-            · exact Or.inr h
-          · rintro (⟨hne, hl⟩ | ht)
-            · exact ⟨hne, e.2 (Or.inl hl)⟩
-            · refine ⟨?_, e.2 (Or.inr ht)⟩
-              intro heq
-              subst heq
-              exact hi.tombNotLive a ht hlive
-        liveNodup := hi.liveNodup.erase aid
-        tombNodup := hi.tombNodup
-        tombNotLive := fun a ha hm => hi.tombNotLive a ha (List.mem_of_mem_erase hm)
-        rootNodup := hi.rootNodup.erase aid
-        reqNodup := hi.reqNodup
-        reqBelowNext := hi.reqBelowNext }
-    · cases hs
   | convict aid =>
     simp only [stepFn] at hs
     split at hs
@@ -592,40 +561,57 @@ theorem R3_convicted_never_processed (p : Params) (env : Env) (now : Slot) {s : 
     stepFn p env (.fold folder s.gen s.plugin batch) now s = none :=
   R1_registered_refused p env now s folder batch hm hl ((R1_row_iff_token p env h r.aid).2 (Or.inr ht))
 
-/-- **R3c.** A convicted AID cannot be closed: its token is not live. -/
-theorem R3_convicted_not_closable (p : Params) (env : Env) (now : Slot) {s : Sys}
-    (h : Reach p env s) (aid : AID) (ht : aid ∈ s.tomb) :
-    stepFn p env (.close aid) now s = none := by
-  have := R2_tomb_not_live p env h aid ht
-  simp [stepFn, this]
+/-! ## R4 — registration is permanent -/
 
-/-! ## R4 — a closed AID may return -/
+/-- **R4a.** No step removes a row. -/
+theorem R4_row_permanent (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys} {f : Flow}
+    {s' : Sys} (hs : stepFn p env a now s = some (f, s')) (aid : AID) (hin : aid ∈ s.root) :
+    aid ∈ s'.root := by
+  cases a with
+  | contribute aid' owner t => unstep hs; exact hin
+  | retract id => unstep hs; exact hin
+  | fold folder g pl batch =>
+    simp only [stepFn] at hs
+    split at hs
+    · split at hs
+      · cases hs
+      · rename_i acc hacc
+        simp only [Option.some.injEq, Prod.mk.injEq] at hs; obtain ⟨_, rfl⟩ := hs
+        exact applyBatch_root_mono p env now hacc aid hin
+    · cases hs
+  | convict aid' => unstep hs; exact hin
 
-/-- **R4a.** Close deletes the row. -/
-theorem R4_close_deletes_row (p : Params) (env : Env) {now : Slot} {s : Sys} (h : Reach p env s)
-    {aid : AID} {f : Flow} {s' : Sys} (hs : stepFn p env (.close aid) now s = some (f, s')) :
-    aid ∉ s'.root ∧ aid ∉ s'.live := by
-  simp only [stepFn] at hs
-  split at hs
-  · simp only [Option.some.injEq, Prod.mk.injEq] at hs
-    obtain ⟨_, rfl⟩ := hs
-    exact ⟨(reach_inv p env h).rootNodup.not_mem_erase, (reach_inv p env h).liveNodup.not_mem_erase⟩
-  · cases hs
+/-- **R4b.** A live token ends only as a tombstone: no step makes an AID
+tokenless again. -/
+theorem R4_token_permanent (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys} {f : Flow}
+    {s' : Sys} (hs : stepFn p env a now s = some (f, s')) (aid : AID) (hin : aid ∈ s.live) :
+    aid ∈ s'.live ∨ aid ∈ s'.tomb := by
+  cases a with
+  | contribute aid' owner t => unstep hs; exact Or.inl hin
+  | retract id => unstep hs; exact Or.inl hin
+  | fold folder g pl batch =>
+    simp only [stepFn] at hs
+    split at hs
+    · split at hs
+      · cases hs
+      · rename_i acc hacc
+        simp only [Option.some.injEq, Prod.mk.injEq] at hs; obtain ⟨_, rfl⟩ := hs
+        exact Or.inl (applyBatch_live_mono p env now hacc aid hin)
+    · cases hs
+  | convict aid' =>
+    unstep hs
+    by_cases h : aid = aid'
+    · subst h; exact Or.inr (List.mem_cons.2 (Or.inl rfl))
+    · exact Or.inl ((List.mem_erase_of_ne h).2 hin)
 
-/-- **R4b.** An AID absent from the root with a pending request in phase 1
-and valid inception evidence can be processed by anyone at the current
-generation, and is then live and registered. -/
-theorem R4_reregistrable (p : Params) (env : Env) (now : Slot) (s : Sys) (folder : Addr)
-    {id : ReqId} {r : Request} (hl : lookup s.requests id = some r) (habs : r.aid ∉ s.root)
-    (h1 : inPhase1 p r now) (hev : env.inception r.aid = true) :
-    ∃ f s', stepFn p env (.fold folder s.gen s.plugin [(id, .process)]) now s = some (f, s') ∧
-      r.aid ∈ s'.live ∧ r.aid ∈ s'.root := by
-  refine ⟨{ locked := [(r.aid, p.D)], tips := some (folder, 1 * p.tip) },
-    { s with gen := s.gen + 1, root := r.aid :: s.root, live := r.aid :: s.live,
-             requests := remove s.requests id }, ?_, ?_, ?_⟩
-  · simp [stepFn, applyBatch, hl, h1, hev, habs]
-  · exact List.mem_cons.2 (Or.inl rfl)
-  · exact List.mem_cons.2 (Or.inl rfl)
+/-- **R4c.** A registered AID can never be registered again, by anyone:
+the row is permanent (R4a) and the absence proof fails (R1c). -/
+theorem R4_never_again (p : Params) (env : Env) (now : Slot) {s : Sys} (h : Reach p env s)
+    (folder : Addr) (batch : List (ReqId × FoldAction)) {id : ReqId} {r : Request}
+    (hm : (id, .process) ∈ batch) (hl : lookup s.requests id = some r)
+    (ht : r.aid ∈ s.live ∨ r.aid ∈ s.tomb) :
+    stepFn p env (.fold folder s.gen s.plugin batch) now s = none :=
+  R1_registered_refused p env now s folder batch hm hl ((R1_row_iff_token p env h r.aid).2 ht)
 
 /-! ## R5 — the plugin is pinned -/
 
@@ -660,27 +646,20 @@ theorem R6_requests_never_contend (p : Params) (env : Env) {a : Action} {now : S
         exact ⟨rfl, rfl, rfl, rfl⟩
       · cases hs
 
-/-- **R6c.** Only a fold or a close spends the registry. -/
-theorem R6_spend_is_fold_or_close (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys}
+/-- **R6c.** Only a fold spends the registry. -/
+theorem R6_spend_is_fold (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys}
     {f : Flow} {s' : Sys} (hs : stepFn p env a now s = some (f, s')) (hg : s'.gen ≠ s.gen) :
-    (∃ folder g pl batch, a = .fold folder g pl batch) ∨ ∃ aid, a = .close aid := by
+    ∃ folder g pl batch, a = .fold folder g pl batch := by
   cases a with
   | contribute aid owner t =>
     exact absurd (R6_requests_never_contend p env hs (Or.inl ⟨aid, owner, t, rfl⟩)).1 hg
   | retract id =>
     exact absurd (R6_requests_never_contend p env hs (Or.inr ⟨id, rfl⟩)).1 hg
-  | fold folder g pl batch => exact Or.inl ⟨folder, g, pl, batch, rfl⟩
-  | close aid => exact Or.inr ⟨aid, rfl⟩
-  | convict aid =>
-    simp only [stepFn] at hs
-    split at hs
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hs
-      obtain ⟨_, rfl⟩ := hs
-      exact absurd rfl hg
-    · cases hs
+  | fold folder g pl batch => exact ⟨folder, g, pl, batch, rfl⟩
+  | convict aid => unstep hs; exact absurd rfl hg
 
-/-- **R6d.** A fold and a close each spend the registry: the generation
-advances by exactly one. -/
+/-- **R6d.** A fold spends the registry: the generation advances by exactly
+one. -/
 theorem R6_fold_advances (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow} {s' : Sys}
     {folder : Addr} {g : Gen} {pl : Script} {batch : List (ReqId × FoldAction)}
     (hs : stepFn p env (.fold folder g pl batch) now s = some (f, s')) : s'.gen = s.gen + 1 := by
@@ -843,43 +822,12 @@ theorem R11_contribute_value (p : Params) (env : Env) {now : Slot} {s : Sys} {f 
   obtain ⟨rfl, _⟩ := hs
   exact ⟨rfl, rfl, rfl, rfl⟩
 
-/-- **R11d.** Close and convict move no request value. -/
-theorem R11_token_edges_move_no_value (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow}
-    {s' : Sys} {a : Action} (hs : stepFn p env a now s = some (f, s'))
-    (ha : (∃ aid, a = .close aid) ∨ ∃ aid, a = .convict aid) : f = {} := by
-  rcases ha with ⟨aid, rfl⟩ | ⟨aid, rfl⟩ <;> unstep hs <;> rfl
+/-- **R11d.** A conviction moves no request value. -/
+theorem R11_convict_moves_no_value (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow}
+    {s' : Sys} {aid : AID} (hs : stepFn p env (.convict aid) now s = some (f, s')) : f = {} := by
+  unstep hs; rfl
 
-/-! ## R12 — the root changes only by fold and close -/
-
-/-- **R12a.** A row leaves the root only by closing that AID. -/
-theorem R12_row_leaves_only_by_close (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys}
-    {f : Flow} {s' : Sys} (hs : stepFn p env a now s = some (f, s')) (aid : AID)
-    (hin : aid ∈ s.root) (hout : aid ∉ s'.root) : a = .close aid := by
-  cases a with
-  | contribute aid' owner t =>
-    have := R6_requests_never_contend p env hs (Or.inl ⟨aid', owner, t, rfl⟩)
-    rw [this.2.1] at hout; exact absurd hin hout
-  | retract id =>
-    have := R6_requests_never_contend p env hs (Or.inr ⟨id, rfl⟩)
-    rw [this.2.1] at hout; exact absurd hin hout
-  | fold folder g pl batch =>
-    simp only [stepFn] at hs
-    split at hs
-    · split at hs
-      · cases hs
-      · rename_i acc hacc
-        simp only [Option.some.injEq, Prod.mk.injEq] at hs
-        obtain ⟨_, rfl⟩ := hs
-        exact absurd (applyBatch_root_mono p env now hacc aid hin) hout
-    · cases hs
-  | close aid' =>
-    unstep hs
-    by_cases h : aid = aid'
-    · subst h; rfl
-    · exact absurd ((List.mem_erase_of_ne h).2 hin) hout
-  | convict aid' =>
-    unstep hs
-    exact absurd hin hout
+/-! ## R12 — a row enters the root only by a fold -/
 
 /-- **R12b.** A row enters the root only by a fold. -/
 theorem R12_row_enters_only_by_fold (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys}
@@ -893,17 +841,18 @@ theorem R12_row_enters_only_by_fold (p : Params) (env : Env) {a : Action} {now :
     have := R6_requests_never_contend p env hs (Or.inr ⟨id, rfl⟩)
     rw [this.2.1] at hin; exact absurd hin hout
   | fold folder g pl batch => exact ⟨folder, g, pl, batch, rfl⟩
-  | close aid' =>
-    simp only [stepFn] at hs
-    split at hs
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hs; obtain ⟨_, rfl⟩ := hs
-      exact absurd (List.mem_of_mem_erase hin) hout
-    · cases hs
-  | convict aid' =>
-    simp only [stepFn] at hs
-    split at hs
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hs; obtain ⟨_, rfl⟩ := hs
-      exact absurd hin hout
-    · cases hs
+  | convict aid' => unstep hs; exact absurd hin hout
+
+/-! ## R6e — conviction is a checkpoint edge, not a cage action -/
+
+/-- **R6e.** A conviction touches no field of the cage: not the generation,
+not the plugin, not the root, not the inbox. The registry needs no on-chain
+code for it; the tombstone is the checkpoint's token (D-030), and the row
+stays because nothing may delete it. -/
+theorem R6_convict_touches_no_cage_field (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow}
+    {s' : Sys} {aid : AID} (hs : stepFn p env (.convict aid) now s = some (f, s')) :
+    s'.gen = s.gen ∧ s'.plugin = s.plugin ∧ s'.root = s.root ∧ s'.requests = s.requests ∧
+      s'.nextReq = s.nextReq := by
+  unstep hs; exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 end CardanoKeri.Registry

@@ -3,7 +3,7 @@
   "narrative": "A fold lists Alice's request twice. The first entry consumes it; the second finds nothing in the inbox and the whole fold is refused — a batch cannot mint twice from one request. The honest fold then lands.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "3": "Hal (folder)", "4": "Mallory" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 1, "actor": "anyone", "as": "Mallory", "action": { "fold": { "folder": 4, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }, { "id": 0, "do": "process" }] } }, "expect": { "ok": false, "reason": "unknown-request" } },

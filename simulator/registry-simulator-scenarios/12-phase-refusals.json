@@ -3,7 +3,7 @@
   "narrative": "A reject in phase 1 is refused: the request is not rejectable yet. A process in phase 2 is refused: phase 1 is over. Only the retract window is open in between.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Alice", "3": "Hal (folder)", "6": "Sam (sweeper)" },
-  "env": { "inception": [11], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 5, "actor": "anyone", "as": "Sam — rejecting in phase 1", "action": { "fold": { "folder": 6, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "reject" }] } }, "expect": { "ok": false, "reason": "not-rejectable" }, "exhibits": ["R9", "R10"] },

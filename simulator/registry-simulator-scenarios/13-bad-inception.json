@@ -3,7 +3,7 @@
   "narrative": "Carol's request carries inception bytes that do not self-address to her AID, or receipts below the inception's own threshold. The plugin refuses the process; the request is rejectable in phase 3 and her bond returns.",
   "params": { "D": 1000, "tip": 2, "process": 10, "retract": 10 }, "plugin": 7,
   "actors": { "1": "Carol", "3": "Hal (folder)", "6": "Sam (sweeper)" },
-  "env": { "inception": [11, 12], "quorum": [], "duplicity": [] },
+  "env": { "inception": [11, 12], "duplicity": [] },
   "steps": [
     { "now": 0, "actor": "anyone", "as": "Carol", "action": { "contribute": { "aid": 13, "owner": 1, "submittedAt": 0 } }, "expect": { "ok": true } },
     { "now": 1, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": false, "reason": "bad-inception" } },

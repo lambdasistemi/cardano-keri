@@ -2,14 +2,14 @@
 # The M1 return: the checkpoint machine
 
 Abstract model of what the on-chain validator family admits under the design
-ruled on 2026-09-02 (project decisions D-022 … D-034; plan
-`AUDIT-M1-RETURN`, Phase 0.2). It replaces the freeze/bond/convict/reap
+ruled on 2026-09-02 and 2026-09-03 (project decisions D-022 … D-038; plan
+`AUDIT-M1-RETURN`, Phase 0.2 and 0.4). It replaces the freeze/bond/convict/reap
 machine of `Lifecycle.lean`, which is retired with the enforcement economy in
 Phase 1; both coexist on this branch so the retirement is a reviewed
 deletion.
 
-Second cut, after the independent statement audit of 2026-09-02
-(`handoffs/lean-audit/FINDINGS-codex-statement-audit.md`):
+Third cut, the second Lean slice (D-036, D-037, D-038), after the simulator's
+escalation Q-001:
 
 * the evidence a transition needs is a **guard on the constructor**, not a
   label — an `Env` of decidable predicates stands for the cryptographic
@@ -22,10 +22,27 @@ Second cut, after the independent statement audit of 2026-09-02
   theorems;
 * a **functional step** `stepFn` mirrors the relation, so the fold theorem
   (T7) and the simulator's transcription have one executable source;
-* the parameters carry `0 < D` and `0 < B`, closing the zero-bond defect.
+* the parameters carry `0 < D` and `0 < B`, closing the zero-bond defect;
+* **D-038**: every bond option other than `keep`, and every new refund
+  address, is authorized by the keys of the epoch the rotation opens — one
+  signed message carrying the intent and the address; absent means keep and
+  unchanged. A relayer on public data can land a rotation, never park, age
+  or close the owner;
+* **D-036**: close is a witnessed rotation that withdraws everything and
+  burns the UTxO, poisoned or not, authorized like any other intent by the
+  new keys; the result is `closed (epoch, sn)`, a tombstone that is **not
+  terminal**: a later witnessed rotation reopens it with fresh bonds and a
+  fresh juvenility window. Conviction is the only terminal state;
+* **D-037**: the registry is a map from AID to a leaf — absent, live,
+  closed (epoch, sn), convicted. `live` means the checkpoint UTxO exists.
+  Register, reopen, close and convict change the leaf; rotate, poison,
+  freeze and top-up never touch it. Only the leaf map the machine sees is
+  modelled here; the MPFS request mechanics that land leaf changes (batches,
+  appliers, tips, windows) are the registry's own work and are outside this
+  machine — the leaf map is the interface the registry will provide.
 
 No cryptography. Keys are abstracted to an epoch counter: a rotation opens
-the next epoch. Two open details of D-034 are fixed here as modelling
+the next epoch. Two details of D-034 stay fixed here as modelling
 assumptions, documented on the constructor: a freeze is not enabled from a
 poisoned state, and conviction sends the freeze bond and the pool to the
 refund address while the conviction bond goes to the convictor. Validity
@@ -68,6 +85,29 @@ structure Params where
   hD : 0 < D
   hB : 0 < B
 
+/-- The bond option a rotation carries (D-033). -/
+inductive BondOp where
+  | keep
+  | withdraw
+  | deposit
+  deriving DecidableEq, Repr
+
+/-- What the new keys sign along with the refund address (D-038): the bond
+option of a rotation, or the close. `keep` with no new address is the empty
+message and needs no signature. -/
+inductive Intent where
+  | keep
+  | withdraw
+  | deposit
+  | close
+  deriving DecidableEq, Repr
+
+/-- The intent of a bond option. -/
+def BondOp.intent : BondOp → Intent
+  | .keep => .keep
+  | .withdraw => .withdraw
+  | .deposit => .deposit
+
 /-- The evidence the validator verifies, abstracted at the KEL boundary. Each
 predicate stands for a cryptographic check over data the transaction
 presents; the model does not care how it is decided, only that the
@@ -77,18 +117,29 @@ structure Env where
   epoch `e`, sequence `sn`, to sequence `sn'` was presented — signatures at
   the current threshold over the rotation bytes, revealed keys matching the
   pre-committed digests at the next threshold, receipts at `toad` from the
-  new witness set. The advance predicate; also the freeze evidence (D-034). -/
+  new witness set. The advance predicate; also the freeze evidence (D-034),
+  the close evidence (D-036) and, from a closed tombstone, the reopen
+  evidence: a witnessed rotation path from the closed sequence to `sn'`
+  (several off-chain rotations collapse into one predicate). -/
   rotationTo : Epoch → Seq → Seq → Bool
-  /-- `refundAuthorized e a`: the keys of epoch `e` signed refund address `a`
-  at their threshold (D-032). -/
-  refundAuthorized : Epoch → Addr → Bool
+  /-- `intentAuthorized e i r`: the keys of epoch `e` signed, at their
+  threshold, one message carrying the intent `i` and the refund address `r`
+  (`none`: unchanged) (D-032, D-038). -/
+  intentAuthorized : Epoch → Intent → Option Addr → Bool
   /-- `quorum e`: the current keys of epoch `e` signed the Cardano-side
-  preimage at their threshold (poison, close; D-023). -/
+  preimage at their threshold (poison; D-023). -/
   quorum : Epoch → Bool
   /-- `duplicityAt e sn`: a second rotation at sequence `sn`, revealing the
   keys of epoch `e`, signed at the current threshold and receipted at `toad`
   by the tip's witnesses, differing from the accepted one (D-030). -/
   duplicityAt : Epoch → Seq → Bool
+
+/-- The intent guard: `keep` with no new address needs nothing; every other
+intent, and every new address, needs the signed message (D-038). -/
+def Env.intentOk (env : Env) (e : Epoch) (i : Intent) (r : Option Addr) : Bool :=
+  match i, r with
+  | .keep, none => true
+  | i, r => env.intentAuthorized e i r
 
 /-- Who authorizes a transition; derived from the action. -/
 inductive Actor where
@@ -98,13 +149,6 @@ inductive Actor where
   | anyone
   deriving DecidableEq, Repr
 
-/-- The bond option a rotation carries (D-033). -/
-inductive BondOp where
-  | keep
-  | withdraw
-  | deposit
-  deriving DecidableEq, Repr
-
 /-- The actions: exactly the redeemers of the validator family, with the
 data each carries. -/
 inductive Action where
@@ -112,7 +156,8 @@ inductive Action where
   and brings the initial pool. -/
   | register (refund : Addr) (pool0 : Value)
   /-- Land a rotation to `sn'` with a bond option, naming a payee for the
-  premium and optionally a new refund address for the new keys to authorize. -/
+  premium and optionally a new refund address; the option and the address
+  are one message the new keys sign (D-038). -/
   | rotate (sn' : Seq) (op : BondOp) (payee : Addr) (refund' : Option Addr)
   /-- The current quorum's poison declaration. -/
   | poison
@@ -122,8 +167,14 @@ inductive Action where
   | topUp (x : Value)
   /-- Present a duplicity proof; the convictor names a payee. -/
   | convict (payee : Addr)
-  /-- The current quorum's close. -/
-  | close
+  /-- Close: a witnessed rotation to `sn'` that withdraws everything to the
+  refund address (optionally a new one the new keys authorized) and burns
+  the UTxO (D-036). -/
+  | close (sn' : Seq) (refund' : Option Addr)
+  /-- Reopen a closed tombstone with a witnessed rotation later than it,
+  fresh bonds, a first pool and a refund address chosen by whoever pays
+  (D-036). -/
+  | reopen (sn' : Seq) (refund : Addr) (pool0 : Value)
   deriving Repr
 
 /-- The actor an action needs. -/
@@ -134,7 +185,8 @@ def Action.actor : Action → Actor
   | .freeze .. => .proof
   | .topUp .. => .anyone
   | .convict .. => .proof
-  | .close => .currentQuorum
+  | .close .. => .nextKeys
+  | .reopen .. => .anyone
 
 /-- The datum plus the value of a present checkpoint. -/
 structure Live where
@@ -144,9 +196,9 @@ structure Live where
   epoch : Epoch
   /-- The declared poison bit, local to the current keys (D-022). -/
   poisoned : Bool
-  /-- Slot of the last bonding: register or a depositing rotation (juvenility, A9). -/
+  /-- Slot of the last bonding: register, reopen or a depositing rotation (juvenility, A9). -/
   bornAt : Slot
-  /-- Where the bonds go at close (D-032). -/
+  /-- Where the bonds go at withdraw and close (D-032). -/
   refundTo : Addr
   /-- Conviction bond currently held: `p.D` or `0`. -/
   dreg : Value
@@ -165,9 +217,18 @@ inductive State where
   /-- Terminal (D-030): the tombstone keeps epoch, sequence and the slot of
   the conviction; no transition leaves it. -/
   | convicted (epoch : Epoch) (sn : Seq) (convictedAt : Slot)
-  /-- Terminal (D-028): closed; the token is burned, the registry row stays. -/
-  | gone
+  /-- Closed (D-036): the UTxO is burned; the registry leaf keeps the epoch
+  the closing rotation opened and its sequence. Not terminal: a witnessed
+  rotation later than `sn` reopens it. -/
+  | closed (epoch : Epoch) (sn : Seq)
   deriving Repr, DecidableEq
+
+/-- The sequence a state records, when it records one. -/
+def State.sn? : State → Option Seq
+  | .present l => some l.sn
+  | .convicted _ sn _ => some sn
+  | .closed _ sn => some sn
+  | .absent => none
 
 /-- One payment line: an address and how much of each component it receives. -/
 structure Payment where
@@ -235,10 +296,10 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         (.present ⟨0, 0, false, now, refund, p.D, p.B, pool0⟩)
   /-- A rotation that keeps the bonds, when the pool covers the premium:
   next epoch, poison cleared, refund address moved only if the new keys
-  authorized it, `P` to the payee (D-033, D-034, D-032). -/
+  authorized it, `P` to the payee (D-033, D-034, D-032, D-038). -/
   | rotateKeepPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true)
+      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hpay : p.P ≤ l.pool) :
       Step p env (.rotate sn' .keep payee refund') now (.present l)
         { hunter := some { addr := payee, pool := p.P } }
@@ -248,27 +309,28 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
   paid; payment is never a gate (T14). -/
   | rotateKeepUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true)
+      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hnopay : l.pool < p.P) :
       Step p env (.rotate sn' .keep payee refund') now (.present l)
         {}
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
                            refundTo := refund'.getD l.refundTo })
   /-- A rotation that withdraws everything to the refund address it results
-  in: the pause (D-033). Available from either poisoned state; the rotation
-  is the authorization. -/
+  in: the pause (D-033). Available from either poisoned state; the new keys
+  sign the intent (D-038). -/
   | rotateWithdraw {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true) :
+      (hauth : env.intentOk (l.epoch + 1) .withdraw refund' = true) :
       Step p env (.rotate sn' .withdraw payee refund') now (.present l)
         { refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool } }
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
                            refundTo := refund'.getD l.refundTo, dreg := 0, b := 0, pool := 0 })
   /-- A rotation that restores both bonds to full: resurrection from a pause,
-  unfreeze after a freeze (D-026, D-034). Resets juvenility. -/
+  unfreeze after a freeze (D-026, D-034). Resets juvenility. The new keys
+  sign the intent (D-038). -/
   | rotateDeposit {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true)
+      (hauth : env.intentOk (l.epoch + 1) .deposit refund' = true)
       (hd : l.dreg ≤ p.D) (hb : l.b ≤ p.B) :
       Step p env (.rotate sn' .deposit payee refund') now (.present l)
         { dregIn := p.D - l.dreg, bIn := p.B - l.b }
@@ -302,14 +364,28 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         { refund := some { addr := l.refundTo, b := l.b, pool := l.pool },
           convictor := some { addr := payee, dreg := l.dreg } }
         (.convicted l.epoch l.sn now)
-  /-- Close (D-028, D-032): the current quorum, unpoisoned only; everything
-  goes to the refund address in the datum — the closer chooses when, never
-  where. -/
-  | close {l : Live} (now : Slot)
-      (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :
-      Step p env .close now (.present l)
-        { refund := some { addr := l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool } }
-        .gone
+  /-- Close (D-036, D-032, D-038): a witnessed rotation to `sn'`, poisoned or
+  not, whose new keys signed the close intent (and the new refund address,
+  if any); everything goes to the refund address it results in — the closer
+  chooses when, never where — and the UTxO is burned. The tombstone keeps the
+  epoch the rotation opened and its sequence. -/
+  | close {l : Live} (now : Slot) (sn' : Seq) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hauth : env.intentOk (l.epoch + 1) .close refund' = true) :
+      Step p env (.close sn' refund') now (.present l)
+        { refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool } }
+        (.closed (l.epoch + 1) sn')
+  /-- Reopen (D-036): from a closed tombstone, a witnessed rotation path later
+  than the closed sequence, fresh bonds and a first pool bring the checkpoint
+  back at the next epoch, juvenile, with the refund address whoever pays
+  chose (as at registration: the owner moves it at her next rotation). A
+  rotation at the closed sequence or earlier cannot reopen: no stale
+  resurrection. -/
+  | reopen {e : Epoch} {sn : Seq} (now : Slot) (sn' : Seq) (refund : Addr) (pool0 : Value)
+      (hev : env.rotationTo e sn sn' = true) (hsn : sn < sn') :
+      Step p env (.reopen sn' refund pool0) now (.closed e sn)
+        { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+        (.present ⟨sn', e + 1, false, now, refund, p.D, p.B, pool0⟩)
 
 /-! ## The functional step: one executable source for the relation, the
 fold theorem and the simulator's transcription -/
@@ -323,7 +399,7 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
             .present ⟨0, 0, false, now, refund, p.D, p.B, pool0⟩)
   | .rotate sn' op payee refund', .present l =>
       if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-         refund'.all (fun r => env.refundAuthorized (l.epoch + 1) r) = true then
+         env.intentOk (l.epoch + 1) op.intent refund' = true then
         let r' := refund'.getD l.refundTo
         match op with
         | .keep =>
@@ -362,10 +438,16 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
                 convictor := some { addr := payee, dreg := l.dreg } },
               .convicted l.epoch l.sn now)
       else none
-  | .close, .present l =>
-      if env.quorum l.epoch = true ∧ l.poisoned = false then
-        some ({ refund := some { addr := l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool } },
-              .gone)
+  | .close sn' refund', .present l =>
+      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+         env.intentOk (l.epoch + 1) .close refund' = true then
+        some ({ refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool } },
+              .closed (l.epoch + 1) sn')
+      else none
+  | .reopen sn' refund pool0, .closed e sn =>
+      if env.rotationTo e sn sn' = true ∧ sn < sn' then
+        some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },
+              .present ⟨sn', e + 1, false, now, refund, p.D, p.B, pool0⟩)
       else none
   | _, _ => none
 
@@ -392,42 +474,81 @@ def replay (p : Params) (env : Env) : Slot → State → List (Slot × Action) �
 def Reachable (p : Params) (env : Env) (s : State) : Prop :=
   ∃ t es, Trace p env t .absent es s
 
-/-- The poison bit after a list of actions, starting from `b`: register and
-rotate open an epoch (clear), poison marks it, everything else keeps it. -/
+/-- The poison bit after a list of actions, starting from `b`: register,
+rotate and reopen open an epoch (clear), poison marks it, everything else
+keeps it. -/
 def poisonAfter : Bool → List (Slot × Action) → Bool
   | b, [] => b
   | _, (_, .poison) :: rest => poisonAfter true rest
   | _, (_, .rotate ..) :: rest => poisonAfter false rest
   | _, (_, .register ..) :: rest => poisonAfter false rest
+  | _, (_, .reopen ..) :: rest => poisonAfter false rest
   | b, _ :: rest => poisonAfter b rest
 
 /-- Was the last epoch-relevant action a poison? -/
 def poisonSinceLastRotation (es : List (Slot × Action)) : Bool :=
   poisonAfter false es
 
-/-! ## The system level: one incarnation per AID, ever (D-024) -/
+/-! ## The system level: the registry leaf, one per AID (D-036, D-037) -/
 
-/-- The registry of every AID ever registered, and each AID's state. -/
+/-- The registry leaf of an AID: what the registry records about the
+identity. `live` means the checkpoint UTxO exists; every key-state fact
+lives in the UTxO. Only `convicted` is terminal. -/
+inductive Leaf where
+  | absent
+  | live
+  | closed (epoch : Epoch) (sn : Seq)
+  | convicted
+  deriving DecidableEq, Repr
+
+/-- The leaf a state projects to. -/
+def State.leaf : State → Leaf
+  | .absent => .absent
+  | .present _ => .live
+  | .closed e sn => .closed e sn
+  | .convicted .. => .convicted
+
+/-- The system: the registry as a map from AID to leaf, and each AID's
+state. The registry's concrete form (an MPFS trie, its requests, batches,
+appliers and windows) is outside this machine; the leaf map is the interface
+it provides. -/
 structure Sys where
-  registered : List AID
+  leaves : AID → Leaf
   states : AID → State
 
-/-- Initial system: nothing registered, everything absent. -/
-def Sys.init : Sys := ⟨[], fun _ => .absent⟩
+/-- Initial system: no leaf, everything absent. -/
+def Sys.init : Sys := ⟨fun _ => .absent, fun _ => .absent⟩
 
-/-- Update one AID's state. -/
+/-- Update one AID's state; its leaf follows the state. -/
 def Sys.set (s : Sys) (aid : AID) (st : State) : Sys :=
-  { s with states := fun a => if a = aid then st else s.states a }
+  { leaves := fun a => if a = aid then st.leaf else s.leaves a,
+    states := fun a => if a = aid then st else s.states a }
 
-/-- System transitions: registration inserts into the registry with an
-absence proof (mint-once); every other action leaves the registry alone. -/
+/-- Does the action change the leaf? Register, reopen, close and convict do;
+rotate, poison, freeze and top-up never touch the registry. -/
+def Action.touchesLeaf : Action → Bool
+  | .register .. => true
+  | .reopen .. => true
+  | .close .. => true
+  | .convict .. => true
+  | _ => false
+
+/-- System transitions: a registration needs the absence proof (no leaf), a
+reopen the presence proof of the closed leaf; every other action is a step
+on the AID's state, and the leaf follows. -/
 inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop
   | register {s : Sys} {aid : AID} {now : Slot} {refund : Addr} {pool0 : Value} {f : Flow} {st' : State}
-      (habs : aid ∉ s.registered)
+      (habs : s.leaves aid = .absent)
       (hstep : Step p env (.register refund pool0) now (s.states aid) f st') :
-      SysStep p env s { registered := aid :: s.registered, states := (s.set aid st').states }
+      SysStep p env s (s.set aid st')
+  | reopen {s : Sys} {aid : AID} {now : Slot} {sn' : Seq} {refund : Addr} {pool0 : Value} {f : Flow} {st' : State}
+      {e : Epoch} {sn : Seq}
+      (hclosed : s.leaves aid = .closed e sn)
+      (hstep : Step p env (.reopen sn' refund pool0) now (s.states aid) f st') :
+      SysStep p env s (s.set aid st')
   | other {s : Sys} {aid : AID} {a : Action} {now : Slot} {f : Flow} {st' : State}
       (hnotreg : ∀ refund pool0, a ≠ .register refund pool0)
+      (hnotreopen : ∀ sn' refund pool0, a ≠ .reopen sn' refund pool0)
       (hstep : Step p env a now (s.states aid) f st') :
       SysStep p env s (s.set aid st')
 

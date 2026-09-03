@@ -236,8 +236,12 @@ move the machine would accept from here by stakeholder — each with what the
 transaction must carry — and the refused ones folded with their reasons), the
 scene (KERI, the registry with its leaves, the inbox, the checkpoints, the
 cage, the readers and payees; every step plays on it, forward or in reverse),
-the theorem lamps, and the drawers (evidence by hand, the registry in numbers,
-value over the play, who holds what, what this is). Or play freely: post requests (register,
+the theorem lamps (★ on the ones shown in this run), and the drawers (evidence
+by hand, the registry in numbers, value over the play, who holds what, what
+this is). ▶ plays a story to its punchline and holds; "what fails after ›"
+walks the coda; in story mode the next actor and their one move glow and the
+other cards fold. A ★ Challenge in the picker plays the same machine with a
+goal. Or play freely: post requests (register,
 revive, convict a dormant AID), decide the evidence (inceptions, witnessed
 rotations from a key state, duplicity proofs against a key state, the owner's
 quorum), move the slot, build a fold by choosing what to do with each pending

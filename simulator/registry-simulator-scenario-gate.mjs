@@ -498,10 +498,16 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       const w = createWindow(doc, {});
       const d = w.document, $ = id => d.getElementById(id), RS = w.RS;
       if (w.__errors.length) errs.push('init threw: ' + w.__errors.map(e => e.message).join(' | '));
-      const opts = [...$('story-picker').options].slice(1);
+      const opts = [...$('story-picker').options].slice(1).filter(o => !/^c:/.test(o.value));
       if (opts.length !== N_STORIES) errs.push(`picker has ${opts.length} stories`);
       if (!RS.app.story || RS.app.story.id !== 1) errs.push('the first screen is not story 1');
-      if (!$('pots-dl').children.length || !$('ladder').querySelector('.rung.on')) errs.push('glossary: no rows or no lit rung');
+      if (!$('pots-dl').children.length || !$('hub').querySelector('.room.on')) errs.push('glossary: no rows or no lit room');
+      if (RS.app.punch === null || !d.querySelector('#tree .node.punch .star')) errs.push('story 1: no punchline marked in the tree');
+      if (!d.querySelector('#next-moves .mover.spot') || !d.querySelector('#next-moves .act.glow, #next-moves .ev-quick.glow')) errs.push('story mode: no spotlit actor or glowing move for the story’s next step');
+      if (!d.querySelector('#next-moves .mover.folded') || !$('unfold')) errs.push('story mode: the other cards are not folded with a show-all');
+      else { $('unfold').click(); if (d.querySelector('#next-moves .mover.folded')) errs.push('story mode: show-all did not unfold'); }
+      if (!/discovered in this run/.test($('found').textContent)) errs.push('lamps: no discovered counter');
+      if (!d.querySelector('#story-picker option[value="c:register"]')) errs.push('picker: no challenge entry');
       let mismatches = 0, applied = 0;
       for (const o of opts) {
         $('story-picker').value = o.value; $('story-picker').dispatchEvent(new w.Event('change'));
@@ -557,10 +563,17 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       if (!last.record || !last.record.result.ok || !last.record.result.flow.premium) errs.push(`free play: reap refused after the grace window (${last.record ? last.record.result.reason : 'no record'})`);
       if (!RS.cur().state.requests.some(r => !core.userPostable(r.op))) errs.push('free play: no go-request after the reap');
       if (!/The Lean was not asked about this exact step|the Lean.s own verdict on this exact state and move agrees/.test($('narration').textContent)) errs.push('free play: the step does not say whether the Lean has a cell for it');
-      const staleBtn = d.querySelector('#refused-list .act[data-actor="mallory"][data-kind="fold"]');
-      if (!d.querySelector('#refused-list .refused-row .why')) errs.push('refused moves: the reasons are not written out');
-      if (!staleBtn || !/stale-generation|refused/.test(staleBtn.title)) errs.push('free play: Mallory’s stale fold is not among the refused moves with its reason');
+      if (!d.querySelector('#refused-list .refused-row .why') || !d.querySelector('#refused-list .refused-row .who')) errs.push('refused moves: the reasons are not written out, grouped by reason');
+      if (!/stale-generation/.test($('refused-list').textContent)) errs.push('free play: Mallory’s stale fold is not among the refused moves with its reason');
+      if (!d.querySelector('#next-moves .inv-lbl')) errs.push('moves: no inventory / moves labels');
       if (!d.querySelector('#where .state') || !/generation 1/.test($('where').textContent)) errs.push('where: the strip does not show generation 1');
+      // the challenge: the same machine, a goal, a win
+      $('story-picker').value = 'c:register'; $('story-picker').dispatchEvent(new w.Event('change'));
+      if (!RS.app.challenge || $('challenge').hidden || !/not yet/.test($('challenge').textContent)) errs.push('challenge: did not start');
+      move('mallory', 'contribute', /register Alice/); move('hal', 'fold', /fold the inbox/);
+      if (!RS.app.challenge || !RS.app.challenge.won() || !/what it bought you/.test($('challenge').textContent)) errs.push('challenge: registering AID 11 by Mallory’s request did not win');
+      if (!d.querySelector('#ledger .thm.seen')) errs.push('lamps: no ★ on a lamp shown in this run');
+      $('btn-reset').click();
       // the evidence drawer: a checkbox row adds evidence as a node
       const cb = d.querySelector('input[data-ev="duplicity"][data-aid="11"][data-k="1"]'); if (!cb) errs.push('evidence drawer: no duplicity checkbox for AID 11 at k 1'); else { const before = RS.app.nodes.length; cb.checked = true; cb.dispatchEvent(new w.Event('change')); if (RS.app.nodes.length !== before + 1 || !core.evHas(RS.cur().env, 'duplicity', [11, 1])) errs.push('evidence drawer: the checkbox did not add a row'); }
       // play controls, scrubber, theme
@@ -573,7 +586,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       if ($('scene').querySelectorAll('[data-obj]').length < 12) errs.push('scene: fewer than 12 entities drawn');
       if (w.__errors.length) errs.push('page threw: ' + w.__errors.map(e => e.message).join(' | '));
     } catch (e) { errs.push('page smoke: ' + e.message); }
-    row('the page plays every story, switches a branch through the tree, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories through the picker with every lamp and Lean cell, a fork taken and a trunk node taken back, free play by stakeholder (request, fold, pause, reap, a stale fold refused), the evidence drawer, the play bar, the scene, theme');
+    row('the page plays every story, switches a branch through the tree, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories through the picker with every lamp and Lean cell, the punchline marked, the spotlight and the folded cards, a fork taken and a trunk node taken back, free play by stakeholder (request, fold, pause, reap, a stale fold refused with its reason grouped), the challenge won, the evidence drawer, the play bar, the scene, theme');
   }
 
   if (!quiet) {

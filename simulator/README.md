@@ -17,12 +17,31 @@ transcription honest against the Lean itself.
   theorem on every replayed step; it prints PASS/FAIL per item and puts the
   verdict in the tab title.
 
-Pick a story from the picker and step through it with ⏮ ‹ › ⏭; or play
-freely: choose an actor, add evidence (a witnessed rotation, a quorum
-signature, a duplicity proof — the validator's cryptographic checks,
-abstracted to a table you decide), move the slot forward, submit an action.
-Every action the machine would refuse is offered disabled with the reason in
-the story's words.
+The page is one scene: KERI on the left (Alice with the epoch of her keys,
+her witnesses, Cora, Mallory, anyone), the Cardano UTxO in the middle (the
+token, the datum, the three coin piles D / B / pool, the juvenility bar, the
+registry, the validator and the tray of evidence presented), the readers and
+payees on the right (Hal, a rival hunter, the treasury reading the checkpoint
+with its verdict lamp, the wallets that receive payments). Every step plays
+on it: the transaction flies from the actor to the validator and gets its
+✓ or ✗ with the reason, the rotation arrives from the witnesses, coins move
+from piles to wallets exactly as the flow record says, the datum pulses, a
+poison drops its ☠, a freeze lifts the freeze bond out, a conviction turns
+the token into a tombstone, a close burns it, a slot move turns the clock.
+
+A story is a tree: its trunk and the branches it implies (`forks` in the
+scenario file). ‹ goes back one step and plays the step in reverse; › goes
+forward along the branch last taken; ⇤ ⇥ jump to the start and to the end
+of the branch; the scrubber runs over the current branch; ▶ plays it; the
+⋔ chips switch branch at a fork; ← → and space do the same from the
+keyboard. Free play forks the same way: an action taken from a step that
+already has a continuation opens a sibling branch instead of erasing the
+future. Choose an actor (click one on the scene or in the Act drawer), add
+evidence (a witnessed rotation, a quorum signature, a duplicity proof — the
+validator's cryptographic checks, abstracted to a table you decide), move the
+slot forward, submit an action. Every action the machine would refuse is
+offered disabled with the reason in the story's words. The numbers, the
+value chart and the balances live in drawers under the theorem lamps.
 
 ## Files
 

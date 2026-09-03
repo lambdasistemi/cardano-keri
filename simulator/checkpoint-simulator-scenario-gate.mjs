@@ -743,6 +743,28 @@ function pageSmoke(core, html) {
       if (rot2 && !/witness/i.test(rot2.title)) problems.push('disabled rotate does not explain the missing witnessed rotation: ' + rot2.title);
     }
   }
+  // the scene: every entity drawn, the fx layer present; the tree: story 5's fork offers three branches, a chip switches to one
+  const entities = doc.querySelectorAll('#scene [data-obj]');
+  if (entities.length < 14) problems.push(`the scene draws ${entities.length} entities, expected the cast, the checkpoint, the validator, the tray, the registry, the treasury and the clock`);
+  if (!$('#scene #fx')) problems.push('the scene has no fx layer');
+  for (const id of ['btn-play', 'scrub', 'branches']) if (!$('#' + id)) problems.push('no #' + id);
+  pick(5);
+  guard = 0; while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
+  if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('story 5 played to its trunk leaf does not end Paused');
+  const scrub = $('#scrub');
+  if (scrub && Number(scrub.max) < 6) problems.push('the scrubber does not span the branch: max ' + scrub.max);
+  let bchips = doc.querySelectorAll('#branches .branch');
+  if (bchips.length < 3) problems.push(`story 5 at its leaf shows ${bchips.length} branch chips, expected the fork's three (found above the leaf)`);
+  else {
+    bchips[bchips.length - 1].dispatchEvent(win.makeEvent('click'));
+    if (!/gone/i.test(($('#state-name') || {}).textContent || '')) problems.push('switching to the close branch does not end Gone: ' + (($('#state-name') || {}).textContent || ''));
+    bchips = doc.querySelectorAll('#branches .branch');
+    if (!bchips.some(c => c.classList.contains('on'))) problems.push('no branch chip is marked as the one taken');
+    prev.dispatchEvent(win.makeEvent('click'));
+    if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('one step back from the close branch is not the parked state');
+    next.dispatchEvent(win.makeEvent('click'));
+    if (!/gone/i.test(($('#state-name') || {}).textContent || '')) problems.push('› after ‹ does not follow the branch last taken');
+  }
   const theme = $('#btn-theme');
   if (!theme) problems.push('no #btn-theme');
   else {
@@ -834,7 +856,7 @@ async function runSuite(opts) {
   try { html = readFileSync(opts.html || HTML, 'utf8'); } catch (e) { problems.push('page unreadable: ' + e.message); }
   if (html) {
     const s = pageSmoke(core, html);
-    rows.push({ item: 'page smoke (minimal DOM: picker, play, evidence, slot, ledger, theme, chart, ?selftest=1)', ok: !s.problems.length });
+    rows.push({ item: 'page smoke (minimal DOM: picker, play, scene, branches, scrubber, evidence, slot, lamps, theme, chart, ?selftest=1)', ok: !s.problems.length });
     problems.push(...s.problems);
   }
   return { rows, problems, steps };
@@ -862,11 +884,13 @@ async function selftest(work) {
   const withClauses = (name, edit) => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); edit(j); const p = join(work, name); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; };
   const controls = [
     { name: 'scenario with a flipped expectation', expect: /expected ok=false, got ok=true/,
-      make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[3].expect.ok = false; sc.steps[3].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
+      make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[2].expect.ok = false; sc.steps[2].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
     { name: 'core guard flipped: close enabled while poisoned', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(16|4|7)/,
       make: () => ({ core: mutant('m-close', [["if (state.present.l.poisoned) return refuse('poisoned');\n      return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');", "return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');"]]), skipBuild: true }) },
     { name: 'theorem property seeded to lie: T6 conservation on the pool', expect: /theorem VIOLATED: .*T6/,
       make: () => ({ core: mutant('m-t6', [['const poolOk = big(held(pre).pool) + big(f.poolIn) ===', 'const poolOk = big(held(pre).pool) + big(f.poolIn) + 1n ===']]), skipBuild: true }) },
+    { name: 'page with its scene removed', expect: /the scene draws 0 entities|page raised on load|no fx layer/,
+      make: () => { const p = join(work, 'page-m2.html'); writeFileSync(p, htmlText.replace('<svg id="scene"', '<svg id="scen"')); return { html: p, skipBuild: true }; } },
     { name: 'page with the story picker removed', expect: /no #story-picker|picker lists|page raised on load/,
       make: () => { const p = join(work, 'page-m1.html'); writeFileSync(p, htmlText.replace('id="story-picker"', 'id="story-pickr"')); return { html: p, skipBuild: true }; } },
     { name: 'core that rounds at 2^53 (isNat relaxed, sum unguarded)', expect: /isNat accepts 9007199254740992|accepted a top-up .* T6\/T14 flagged|precision/,

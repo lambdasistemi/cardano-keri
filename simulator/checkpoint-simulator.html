@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Checkpoint</title>
-<meta name="description" content="Play the M1 checkpoint machine of cardano-keri: fifteen stories, the theorems T1–T16 checked on every step, transcribed from the Lean.">
+<meta name="description" content="Play the M1 checkpoint machine of cardano-keri: fifteen stories as trees of plays, every entity drawn, every flow animated, the theorems T1–T16 checked on every step, transcribed from Checkpoint.lean.">
 <style>
   :root {
     --bg: #f2f3ef; --card: #ffffff; --ink: #1d2528; --muted: #5c6a6e; --line: #d8ddd5; --line-2: #eceee8;
     --accent: #0f6e8c; --on-accent: #ffffff; --accent-bg: #e3f0f4;
     --ok: #1f7a4d; --ok-bg: #e6f4ec; --bad: #b3261e; --bad-bg: #fbeae8; --warn: #8a5a00; --warn-bg: #fff3d6;
     --dreg: #6a4c93; --b: #2a9d8f; --pool: #d98c1f; --chip: #e9eeee; --lit: #fff1bf; --lit-ink: #5a4300;
+    --keri: #f7f1e6; --chain: #e9f1f4; --readers: #eef3ea; --scene-ink: #2b3438; --paper: #fffdf7; --poison: #7b2cbf;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     color-scheme: light;
@@ -21,6 +22,7 @@
       --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
       --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
       --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+      --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
       color-scheme: dark;
     }
   }
@@ -29,22 +31,22 @@
     --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
     --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
     --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+    --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html { font-size: 15px; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.4; }
   .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .92em; }
-  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   button { font: inherit; color: inherit; cursor: pointer; }
   button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   input, select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
   input[type=number] { width: 6.5em; font-family: var(--mono); }
   a { color: var(--accent); }
 
-  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); padding: 8px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
-  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 1.25rem; letter-spacing: .01em; }
-  header h1 small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: .72rem; letter-spacing: .02em; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); padding: 7px 14px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 1.2rem; letter-spacing: .01em; }
+  header h1 small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: .7rem; letter-spacing: .02em; }
   .slotbar { display: flex; align-items: center; gap: 6px; font-size: .86rem; }
   .slotbar b { font-family: var(--mono); font-size: 1.05rem; min-width: 2ch; }
   .hbtns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
@@ -52,30 +54,108 @@
   .ghost:hover { border-color: var(--accent); color: var(--accent); }
   .ghost.danger:hover { border-color: var(--bad); color: var(--bad); }
   .tiny { font-size: .74rem; color: var(--muted); }
-
-  main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; padding: 14px; max-width: 1480px; margin: 0 auto; }
-  @media (max-width: 980px) { main { grid-template-columns: 1fr; padding: 8px; } }
-  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-  .card h2 { margin: 0 0 8px; font-size: .95rem; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .card h2 small { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 400; font-size: .72rem; }
-  .empty { color: var(--muted); font-style: italic; font-size: .84rem; }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
-  /* story */
-  #story-picker { max-width: 100%; }
-  .goal { font-family: var(--serif); font-style: italic; margin: 6px 0 8px; color: var(--ink); }
-  .strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
-  .strip .nav { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 2px 8px; font-size: .85rem; }
-  .strip .nav:disabled { color: var(--muted); opacity: .5; cursor: default; }
-  #history-strip { display: flex; gap: 4px; flex-wrap: wrap; }
-  .hist-chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: .74rem; font-family: var(--mono); }
+  main { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 1240px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+  .card h2 { margin: 0 0 8px; font-size: .95rem; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card h2 small, summary small { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 400; font-size: .72rem; }
+  .empty { color: var(--muted); font-style: italic; font-size: .84rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* the stage */
+  .stagebar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  #story-picker { max-width: 100%; font-size: .9rem; }
+  .goal { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: .9rem; }
+  #scene { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 560; border-radius: 8px; background: var(--paper); border: 1px solid var(--line-2); }
+  #scene text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--scene-ink); font-size: 12px; }
+  #scene .region { fill: var(--keri); stroke: none; }
+  #scene .region.chain { fill: var(--chain); }
+  #scene .region.readers { fill: var(--readers); }
+  #scene .rlbl { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; fill: var(--muted); }
+  #scene .avatar { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .actor.on .avatar { stroke: var(--accent); stroke-width: 3; }
+  #scene .actor.acting .avatar { stroke: var(--warn); stroke-width: 3; }
+  #scene .actor { cursor: pointer; }
+  #scene .nm { font-weight: 700; font-size: 13px; text-anchor: middle; }
+  #scene .role { font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #scene .badge { font-family: var(--mono); font-size: 10px; text-anchor: middle; fill: var(--accent); }
+  #scene .wit { fill: var(--card); stroke: var(--line); }
+  #scene .witlbl { font-size: 9px; text-anchor: middle; fill: var(--muted); }
+  #scene .utxo { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .utxo.poisoned { stroke: var(--poison); }
+  #scene .utxo.absent { stroke-dasharray: 6 4; fill: none; }
+  #scene .utxo.gone { stroke-dasharray: 2 4; opacity: .55; }
+  #scene .token { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
+  #scene .token.absent { fill: none; stroke: var(--line); stroke-dasharray: 5 3; }
+  #scene .token.gone { fill: none; stroke: var(--muted); opacity: .5; }
+  #scene .token.convicted { fill: var(--bad-bg); stroke: var(--bad); }
+  #scene .tk { font-family: var(--mono); font-size: 11px; text-anchor: middle; }
+  #scene .datum-k { font-size: 10px; fill: var(--muted); }
+  #scene .datum-v { font-family: var(--mono); font-size: 12px; }
+  #scene .state-word { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  #scene .state-word.poisoned { fill: var(--poison); }
+  #scene .coin { stroke: var(--card); stroke-width: 1; }
+  #scene .coin.dreg { fill: var(--dreg); } #scene .coin.b { fill: var(--b); } #scene .coin.pool { fill: var(--pool); }
+  #scene .pile-lbl { font-size: 10px; text-anchor: middle; fill: var(--muted); }
+  #scene .pile-amt { font-family: var(--mono); font-size: 12px; text-anchor: middle; font-weight: 700; }
+  #scene .pile-amt.dreg { fill: var(--dreg); } #scene .pile-amt.b { fill: var(--b); } #scene .pile-amt.pool { fill: var(--pool); }
+  #scene .track { fill: var(--line-2); }
+  #scene .fill { fill: var(--accent); }
+  #scene .fill.done { fill: var(--ok); }
+  #scene .validator { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .tray { fill: var(--card); stroke: var(--line); stroke-dasharray: 4 3; }
+  #scene .receipt { fill: var(--chip); stroke: var(--b); }
+  #scene .receipt-t { font-family: var(--mono); font-size: 9.5px; }
+  #scene .registry { fill: var(--card); stroke: var(--line); }
+  #scene .bank { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .lamp.ok { fill: var(--ok); } #scene .lamp.no { fill: var(--bad); }
+  #scene .beam { stroke: var(--muted); stroke-dasharray: 3 5; stroke-width: 1.5; fill: none; }
+  #scene .beam.ok { stroke: var(--ok); } #scene .beam.no { stroke: var(--bad); }
+  #scene .wallet { fill: var(--card); stroke: var(--line); }
+  #scene .wallet.refund { stroke: var(--accent); stroke-width: 2; }
+  #scene .wallet-t { font-size: 10px; }
+  #scene .wallet-n { font-family: var(--mono); font-size: 10px; text-anchor: end; }
+  #scene .clock { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .clock-t { font-family: var(--mono); font-size: 13px; text-anchor: middle; font-weight: 700; }
+  #scene .hint { font-size: 10px; fill: var(--muted); }
+  /* fx */
+  #scene .fx-card { fill: var(--paper); stroke: var(--scene-ink); stroke-width: 1.2; }
+  #scene .fx-card.rewind { opacity: .55; }
+  #scene .fx-t { font-family: var(--mono); font-size: 10px; text-anchor: middle; }
+  #scene .fx-coin { stroke: var(--card); stroke-width: 1; }
+  #scene .fx-coin.rewind { opacity: .55; }
+  #scene .fx-mark { font-size: 26px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-mark.ok { fill: var(--ok); } #scene .fx-mark.no { fill: var(--bad); }
+  #scene .fx-float { font-size: 12px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-scroll { fill: var(--keri); stroke: var(--warn); stroke-width: 1.2; }
+  #scene .fx-skull { font-size: 22px; text-anchor: middle; }
+  #scene .pulse { animation: pulse .7s ease-out 1; }
+  #scene .pulse-bad { animation: pulseBad .7s ease-out 1; }
+  @keyframes pulse { 0% { filter: drop-shadow(0 0 0 var(--accent)); } 50% { filter: drop-shadow(0 0 10px var(--accent)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @keyframes pulseBad { 0% { filter: drop-shadow(0 0 0 var(--bad)); } 50% { filter: drop-shadow(0 0 10px var(--bad)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @media (prefers-reduced-motion: reduce) { #scene .pulse, #scene .pulse-bad { animation: none; } }
+
+  /* the play bar */
+  #playbar { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  #playbar .nav { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 3px 9px; font-size: .95rem; min-width: 2.2em; }
+  #playbar .nav:disabled { color: var(--muted); opacity: .5; cursor: default; }
+  #playbar .nav.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  #scrub { flex: 1; min-width: 160px; accent-color: var(--accent); }
+  #pos { font-family: var(--mono); font-size: .8rem; color: var(--muted); min-width: 5ch; text-align: right; }
+  #branches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  #branches .lbl { margin-right: 4px; }
+  .branch { border: 1px solid var(--warn); background: var(--warn-bg); color: var(--warn); border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
+  .branch.on { background: var(--warn); color: var(--card); }
+  #history-strip { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .hist-chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: .72rem; font-family: var(--mono); }
   .hist-chip.ok { border-color: var(--ok); }
   .hist-chip.no { border-color: var(--bad); color: var(--bad); }
   .hist-chip.here { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-  .say { border-left: 3px solid var(--accent); padding: 6px 10px; margin: 6px 0; background: var(--accent-bg); border-radius: 0 8px 8px 0; font-size: .9rem; }
-  .say .who { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .hist-chip.fork::after { content: ' ⋔'; color: var(--warn); }
+  #narration { margin-top: 8px; }
+  .say { border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--accent-bg); border-radius: 0 8px 8px 0; font-size: .9rem; }
+  .say .who { font-weight: 700; font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
   .result { margin-top: 6px; padding: 6px 10px; border-radius: 8px; font-size: .86rem; }
   .result.ok { background: var(--ok-bg); color: var(--ok); }
   .result.no { background: var(--bad-bg); color: var(--bad); }
@@ -83,33 +163,31 @@
   .exh { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
   .tchip { font-family: var(--mono); font-size: .72rem; background: var(--lit); color: var(--lit-ink); border-radius: 5px; padding: 0 5px; }
 
-  /* checkpoint card */
-  .ladder { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
-  .rung { border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: .8rem; color: var(--muted); background: var(--card); }
-  .rung.term { border-style: dashed; }
-  .rung.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; box-shadow: 0 0 0 4px var(--accent-bg); }
-  .arrow { color: var(--muted); font-size: .8rem; }
-  #state-name { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; }
-  .datum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin: 8px 0; }
-  .datum div { border-top: 1px solid var(--line-2); padding-top: 3px; }
-  .datum .v { font-family: var(--mono); font-size: 1rem; }
-  .bars { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
-  .bar { display: grid; grid-template-columns: 9.5em 1fr 5.5em; gap: 8px; align-items: center; font-size: .84rem; }
-  .bar .track { height: 12px; background: var(--line-2); border-radius: 6px; overflow: hidden; position: relative; }
-  .bar .fill { height: 100%; border-radius: 6px; }
-  .bar.dreg .fill { background: var(--dreg); } .bar.b .fill { background: var(--b); } .bar.pool .fill { background: var(--pool); }
-  .bar .n { text-align: right; font-family: var(--mono); }
-  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
-  .sw.dreg { background: var(--dreg); } .sw.b { background: var(--b); } .sw.pool { background: var(--pool); }
-  #verdict { padding: 8px 10px; border-radius: 8px; font-size: .9rem; margin-top: 6px; }
-  #verdict.ok { background: var(--ok-bg); color: var(--ok); }
-  #verdict.no { background: var(--bad-bg); color: var(--bad); }
-  .conj { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
-  .conj span { font-size: .72rem; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; background: var(--card); color: var(--ink); }
-  .conj span.yes { border-color: var(--ok); color: var(--ok); }
-  .conj span.nope { border-color: var(--bad); color: var(--bad); }
+  /* the lamps */
+  #ledger { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .thm { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem; background: var(--card); }
+  .thm summary { display: flex; gap: 6px; align-items: center; cursor: pointer; list-style: none; }
+  .thm summary::-webkit-details-marker { display: none; }
+  .thm .id { font-family: var(--mono); font-weight: 700; min-width: 3ch; }
+  .thm .ttl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thm .st { font-size: .68rem; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .thm.lit { background: var(--lit); border-color: var(--warn); }
+  .thm.lit .st { color: var(--lit-ink); }
+  .thm.broken { background: var(--bad-bg); border-color: var(--bad); }
+  .thm .body { margin-top: 6px; color: var(--ink); font-size: .8rem; white-space: normal; }
+  .thm .lean { font-family: var(--mono); font-size: .7rem; color: var(--muted); margin-top: 4px; word-break: break-word; }
+  .thm[open] { grid-column: 1 / -1; }
 
-  /* cast */
+  /* drawers */
+  .drawers { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+  details.card > summary { cursor: pointer; font-family: var(--serif); font-weight: 600; font-size: .95rem; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: '▸'; color: var(--muted); font-family: system-ui; }
+  details.card[open] > summary::before { content: '▾'; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  details.card.wide { grid-column: 1 / -1; }
+
+  /* actions */
   .actors { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
   .actor { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 4px 12px; font-size: .84rem; }
   .actor.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -125,13 +203,10 @@
   #act-form .fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
   #act-form label { display: flex; flex-direction: column; gap: 2px; font-size: .74rem; color: var(--muted); }
   #act-why { margin-top: 6px; font-size: .84rem; }
-  #act-why.no { color: var(--bad); }
-  #act-why.ok { color: var(--ok); }
+  #act-why.no { color: var(--bad); } #act-why.ok { color: var(--ok); }
   .primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; font-weight: 600; }
   .primary:disabled { opacity: .45; cursor: default; }
-
-  /* evidence */
-  .ev-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; }
+  .ev-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
   .ev-form label { display: flex; flex-direction: column; font-size: .72rem; color: var(--muted); gap: 2px; }
   #ev-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
   .ev-row { display: flex; gap: 8px; align-items: center; font-size: .84rem; border: 1px solid var(--line); border-radius: 7px; padding: 3px 8px; }
@@ -139,34 +214,38 @@
   .ev-rm { margin-left: auto; border: none; background: none; color: var(--muted); font-size: .9rem; }
   .ev-rm:hover { color: var(--bad); }
 
-  /* chart */
-  #value-chart { display: block; width: 100%; height: 260px; }
-
-  /* theorem ledger */
-  #ledger { display: flex; flex-direction: column; gap: 4px; }
-  .thm { border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: .84rem; }
-  .thm summary { display: flex; gap: 8px; align-items: center; cursor: pointer; list-style: none; }
-  .thm summary::-webkit-details-marker { display: none; }
-  .thm .id { font-family: var(--mono); font-weight: 700; min-width: 3ch; }
-  .thm .st { margin-left: auto; font-size: .72rem; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
-  .thm.lit { background: var(--lit); border-color: var(--warn); }
-  .thm.lit .st { color: var(--lit-ink); }
-  .thm.broken { background: var(--bad-bg); border-color: var(--bad); }
-  .thm .body { margin-top: 6px; color: var(--ink); font-size: .82rem; }
-  .thm .lean { font-family: var(--mono); font-size: .72rem; color: var(--muted); margin-top: 4px; word-break: break-word; }
-
-  /* money */
+  /* the numbers */
+  .ladder { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+  .rung { border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; font-size: .78rem; color: var(--muted); background: var(--card); }
+  .rung.term { border-style: dashed; }
+  .rung.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .arrow { color: var(--muted); font-size: .8rem; }
+  #state-name { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+  .datum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin: 8px 0; }
+  .datum div { border-top: 1px solid var(--line-2); padding-top: 3px; }
+  .datum .v { font-family: var(--mono); font-size: 1rem; }
+  .bars { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+  .bar { display: grid; grid-template-columns: 9.5em 1fr 5.5em; gap: 8px; align-items: center; font-size: .84rem; }
+  .bar .track { height: 12px; background: var(--line-2); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar .fill { height: 100%; border-radius: 6px; }
+  .bar.dreg .fill { background: var(--dreg); } .bar.b .fill { background: var(--b); } .bar.pool .fill { background: var(--pool); }
+  .bar .n { text-align: right; font-family: var(--mono); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  .sw.dreg { background: var(--dreg); } .sw.b { background: var(--b); } .sw.pool { background: var(--pool); }
+  #verdict { padding: 8px 10px; border-radius: 8px; font-size: .9rem; margin-top: 6px; }
+  #verdict.ok { background: var(--ok-bg); color: var(--ok); } #verdict.no { background: var(--bad-bg); color: var(--bad); }
+  .conj { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .conj span { font-size: .72rem; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; }
+  .conj span.yes { border-color: var(--ok); color: var(--ok); } .conj span.nope { border-color: var(--bad); color: var(--bad); }
+  #value-chart { display: block; width: 100%; height: 240px; }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
   th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line-2); }
   td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .flows { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: .8rem; }
   .flow { display: flex; gap: 8px; flex-wrap: wrap; }
   .flow .i { font-family: var(--mono); color: var(--muted); min-width: 3ch; }
-  .in { color: var(--ok); } .out { color: var(--warn); }
-
-  #selftest-out { white-space: pre-wrap; font-family: var(--mono); font-size: .78rem; background: var(--card); border: 1px solid var(--line); margin: 14px; padding: 10px; border-radius: 8px; }
   .about p { font-size: .84rem; margin: 4px 0; }
-  @media (prefers-reduced-motion: no-preference) { .rung.on { transition: box-shadow .2s ease; } }
+  #selftest-out { white-space: pre-wrap; font-family: var(--mono); font-size: .78rem; background: var(--card); border: 1px solid var(--line); margin: 14px; padding: 10px; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -184,42 +263,40 @@
     <button type="button" class="ghost danger" id="btn-reset" title="new session: nothing on chain">Reset</button>
   </div>
 </header>
-
 <main>
-  <section class="col" id="left">
-    <div class="card" id="story-card">
-      <h2>The stories <small>fifteen, from M1-STORIES.md · the Lean is the law</small></h2>
-      <div class="row">
-        <select id="story-picker" aria-label="pick a story"></select>
-      </div>
-      <div class="goal" id="story-goal"></div>
-      <div class="strip">
-        <button type="button" class="nav" id="hist-first" title="start">⏮</button>
-        <button type="button" class="nav" id="hist-prev" title="previous step">‹</button>
-        <button type="button" class="nav" id="hist-next" title="next step">›</button>
-        <button type="button" class="nav" id="hist-last" title="end">⏭</button>
-        <div id="history-strip"></div>
-      </div>
-      <div id="narration"></div>
+  <section class="card" id="stage">
+    <div class="stagebar">
+      <select id="story-picker" aria-label="pick a story"></select>
+      <span class="goal" id="story-goal"></span>
     </div>
-
-    <div class="card" id="checkpoint-card">
-      <h2>Alice's checkpoint <small>one UTxO: the datum, the token, three sums of money</small></h2>
-      <div class="ladder" id="ladder"></div>
-      <div id="state-name">Absent</div>
-      <div class="datum" id="datum"></div>
-      <div class="bars" id="bars"></div>
-      <div id="verdict"></div>
-      <div class="conj" id="conjuncts"></div>
+    <svg id="scene" viewBox="0 0 1000 560" role="group" aria-label="the scene: KERI, the Cardano checkpoint, the readers and payees"></svg>
+    <div id="playbar">
+      <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
+      <button type="button" class="nav" id="hist-prev" title="one step back (plays in reverse)">‹</button>
+      <button type="button" class="nav" id="btn-play" title="play the current branch">▶</button>
+      <button type="button" class="nav" id="hist-next" title="one step forward along the branch last taken">›</button>
+      <button type="button" class="nav" id="hist-last" title="the end of this branch">⇥</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="scrub the play">
+      <span id="pos">0 / 0</span>
     </div>
+    <div id="branches"></div>
+    <div id="history-strip"></div>
+    <div id="narration"></div>
+  </section>
 
-    <div class="card" id="cast-card">
-      <h2>The cast <small>who acts; the machine only knows next keys, current quorum, proof, anyone</small></h2>
+  <section class="card" id="lamps">
+    <h2>The theorems <small>T1–T16 of CheckpointGoals.lean · a lamp lights when this step shows it; every one is checked on every step · click to read</small></h2>
+    <div id="ledger"></div>
+  </section>
+
+  <section class="drawers">
+    <details class="card" id="act-drawer" open>
+      <summary>Act <small>pick who you are; KERI events are evidence, Cardano actions are transactions; a new action from a visited step opens a branch</small></summary>
       <div class="actors" id="actors"></div>
       <div class="blurb" id="actor-blurb"></div>
       <div class="lbl" id="keri-lbl">On KERI (evidence, not a transaction)</div>
       <div class="acts" id="keri-acts"></div>
-      <div class="lbl">On Cardano (a transaction)</div>
+      <div class="lbl">On Cardano</div>
       <div class="acts" id="chain-acts"></div>
       <div id="act-form" hidden>
         <div class="fields" id="act-fields"></div>
@@ -227,16 +304,13 @@
         <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
           <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
       </div>
-    </div>
-
-    <div class="card" id="evidence-card">
-      <h2>Evidence <small>the Env: what the validator would verify over the bytes; decided here by you</small></h2>
       <div class="ev-form">
+        <span class="lbl" style="width:100%">Evidence by hand — the Env: what the validator would verify over the bytes, decided by you</span>
         <label>kind <select id="ev-kind">
-          <option value="rotationTo">witnessed rotation (epoch, from sn, to sn')</option>
-          <option value="refundAuthorized">new keys signed a refund address (epoch, address)</option>
-          <option value="quorum">current keys signed at threshold (epoch)</option>
-          <option value="duplicityAt">second rotation at the tip (epoch, sn)</option>
+          <option value="rotationTo">witnessed rotation</option>
+          <option value="refundAuthorized">refund address signed by the new keys</option>
+          <option value="quorum">current quorum signed</option>
+          <option value="duplicityAt">duplicity proof</option>
         </select></label>
         <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
         <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
@@ -244,41 +318,39 @@
         <button type="button" class="ghost" id="ev-add">Add row</button>
       </div>
       <div id="ev-rows"></div>
-    </div>
-  </section>
+    </details>
 
-  <aside class="col" id="right">
-    <div class="card" id="chart-card">
-      <h2>Value over the play <small><span class="sw dreg"></span>conviction bond D <span class="sw b"></span>freeze bond B <span class="sw pool"></span>pool · arrows are flows</small></h2>
-      <canvas id="value-chart" width="640" height="260" role="img" aria-label="the three value components held by the checkpoint, step by step, with flows"></canvas>
-    </div>
+    <details class="card" id="numbers-drawer">
+      <summary>The checkpoint in numbers <small>the datum, the three sums, the treasury's verdict and its conjuncts</small></summary>
+      <div class="ladder" id="ladder"></div>
+      <div id="state-name">Absent</div>
+      <div class="datum" id="datum"></div>
+      <div class="bars" id="bars"></div>
+      <div id="verdict"></div>
+      <div class="conj" id="conjuncts"></div>
+    </details>
 
-    <div class="card" id="ledger-card">
-      <h2>The theorem ledger <small>T1–T16 of CheckpointGoals.lean; lit when this step shows it; every row checked on every step</small></h2>
-      <div id="ledger"></div>
-      <div class="tiny" style="margin-top:6px">T11 and T13 do not exist in the Lean: the numbering follows the plan's Phase 0 list and the audit merged them away. Fourteen groups, 45 theorems, no sorry.</div>
-    </div>
+    <details class="card wide" id="chart-drawer">
+      <summary>Value over the play <small><span class="sw dreg"></span>conviction bond D <span class="sw b"></span>freeze bond B <span class="sw pool"></span>pool · arrows are flows · the current branch</small></summary>
+      <canvas id="value-chart" width="640" height="240" role="img" aria-label="the three value components held by the checkpoint, step by step, with flows"></canvas>
+    </details>
 
-    <div class="card" id="money-card">
-      <h2>Who holds what <small>lovelace, by component; every payment named by the flow</small></h2>
+    <details class="card" id="money-drawer">
+      <summary>Who holds what <small>lovelace, by component; every payment named by the flow</small></summary>
       <div id="balances"></div>
       <div class="flows" id="flows"></div>
-    </div>
+    </details>
 
-    <div class="card about">
-      <h2>What this is <small>and is not</small></h2>
-      <p>A JavaScript transcription of <span class="mono">stepFn</span>, <span class="mono">replay</span> and <span class="mono">consumableState</span> from <span class="mono">lean/CardanoKeri/Checkpoint.lean</span>, inlined from one core file. The theorems are checked as executable properties on every step you play; the Lean proves them for every step there is.</p>
-      <p>Numbers are exact up to 2^53 − 1; the Lean's Nat is unbounded, so anything beyond is refused by name rather than rounded.</p>
-      <p>Not modelled, by the Lean's own statement: cryptography (evidence is a table you decide), validity (D-027, reserved in the datum), the consumer's own threshold check, UTxO mechanics, delegated identities. One AID is played; the registry row is kept for T8.</p>
-      <p><a href="?selftest=1">Run the self-test</a>: replays the fifteen stories and the embedded Lean corpus through this page's core and checks every theorem on every step.</p>
-    </div>
-  </aside>
+    <details class="card about" id="about-drawer">
+      <summary>What this is <small>and is not</small></summary>
+      <p>A transcription of <code>lean/CardanoKeri/Checkpoint.lean</code>: the states, the actions (exactly the redeemers), the evidence as a table of decisions, value as three components that never mix, the consumer's state-side check. The theorems of <code>CheckpointGoals.lean</code> run as properties on every step. Each story is a tree: the trunk and the branches the story implies; ‹ and › walk it as an editor walks its history, ⋔ chips switch branch.</p>
+      <p>Not here: cryptography (keys are an epoch counter; evidence is a row you decide), validity (D-027, reserved), the consumer's own threshold check, UTxO mechanics, delegation, record trees, hunter bounties. A Lean <code>Nat</code> is unbounded; this page represents it exactly up to 2^53 − 1 and refuses anything else by name.</p>
+    </details>
+  </section>
 </main>
 <pre id="selftest-out" hidden></pre>
 
 <script>
-'use strict';
-/* ===== the core, inlined verbatim from checkpoint-simulator-core.mjs ===== */
 /* @@CORE:model@@ */
 // ---- canonical JSON ---------------------------------------------------------
 function canon(x) {
@@ -1287,7 +1359,6 @@ function checkCorpus(corpus) {
 }
 /* @@CORE:suite:END@@ */
 
-/* ===== the fifteen stories and the Lean corpus, inlined by the build ===== */
 /* @@SCENARIOS@@ */
 const SCENARIOS = [{"story":1,"title":"Alice's identity appears on Cardano","goal":"As anyone holding Alice's public inception, I want to register her checkpoint, so that Cardano contracts can read her key state.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"friend","say":"Nothing is on chain for this AID. Money cannot be added to a checkpoint that does not exist.","action":{"topUp":{"x":3}},"expect":{"ok":false,"reason":"absent-needs-register","verdict":"not-present","exhibits":["T7","T8","T9"]}},{"slot":0,"who":"friend","say":"A deployment with a zero conviction bond is refused before anything else: 'bond missing' would be indistinguishable from 'bond full'.","params":{"D":0,"B":5,"P":2,"W":10},"action":{"register":{"refund":6,"pool0":10}},"expect":{"ok":false,"reason":"invalid-params","verdict":"not-present","exhibits":["T8","T9"]}},{"slot":0,"who":"friend","say":"A friend registers Alice's public inception, bringing both bonds and a first pool, and names his own refund address.","action":{"register":{"refund":6,"pool0":10}},"expect":{"ok":true,"live":{"sn":0,"epoch":0,"poisoned":false,"bornAt":0,"refundTo":6,"dreg":1000,"b":5,"pool":10},"flow":{"dregIn":1000,"bIn":5,"poolIn":10},"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":9,"who":"treasury","say":"Nine slots later the checkpoint is still juvenile: born at slot 0, the window W is 10.","expect":{"verdict":"juvenile"}},{"slot":10,"who":"treasury","say":"At slot 10 the treasury accepts it: both bonds full, not poisoned, past juvenility.","expect":{"verdict":"consumable"}},{"slot":10,"who":"friend","say":"Registering the same AID again is refused: the token is minted once, ever.","action":{"register":{"refund":6,"pool0":10}},"expect":{"ok":false,"reason":"already-present","verdict":"consumable","exhibits":["T7","T8","T9"]}}]},{"story":2,"title":"Alice rotates, Hal lands it, Hal is paid","goal":"As Hal, I want to land Alice's rotation the moment her witnesses receipt it, so that her checkpoint stays current and I earn the premium.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Alice's checkpoint is registered with her own refund address and a pool of 10.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice runs kli rotate; her witnesses receipt the rotation to sequence 1. That is evidence, not a transaction.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"expect":{"verdict":"consumable"}},{"slot":12,"who":"hal","say":"Hal submits the rotation as an advance with keep, naming himself payee. The chain pays P from the pool to Hal.","action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"sn":1,"epoch":1,"poisoned":false,"bornAt":0,"refundTo":1,"dreg":1000,"b":5,"pool":8},"flow":{"hunter":{"addr":2,"dreg":0,"b":0,"pool":2}},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":12,"who":"hal","say":"Landing it twice does nothing: the evidence names epoch 0 at sequence 0; the checkpoint is at epoch 1.","action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":false,"reason":"no-witnessed-rotation","verdict":"consumable","exhibits":["T7","T9"]}},{"slot":12,"who":"hal","say":"Suppose the witnesses even receipted a rotation from epoch 1, sequence 1, to sequence 1 (the same event again). It is not later: a checkpoint never rolls back or stands still on a rotation.","evidence":{"add":[{"rotationTo":[1,1,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":false,"reason":"sequence-not-later","verdict":"consumable","exhibits":["T7","T9"]}}],"forks":[{"id":"freeze","at":1,"title":"Hal tries to freeze her instead","steps":[{"slot":12,"who":"hal","say":"Hal cannot freeze her: the pool covers the premium.","action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":false,"reason":"pool-covers-premium","verdict":"consumable","exhibits":["T7","T9"]}}]}]},{"story":3,"title":"The pool runs dry, so Hal freezes her instead","goal":"As Hal, when Alice's pool cannot pay me, I want to take the freeze bond and freeze her checkpoint on its old keys, so that no consumer trusts a stale key state and Alice comes back to pay.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered with a pool of 1: below the premium P = 2.","action":{"register":{"refund":1,"pool0":1}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice rotates on KERI; her witnesses receipt it. The checkpoint has not seen it.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"expect":{"verdict":"consumable"}},{"slot":12,"who":"hal","say":"Hal submits the same evidence he would use to advance, but as a freeze. The chain pays B to Hal and leaves the datum as it is: the old keys stay.","action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":true,"live":{"sn":0,"epoch":0,"poisoned":false,"bornAt":0,"refundTo":1,"dreg":1000,"b":0,"pool":1},"flow":{"hunter":{"addr":2,"dreg":0,"b":5,"pool":0}},"verdict":"b-missing","exhibits":["T1","T5","T6","T7","T8","T9","T15","T16"]}},{"slot":12,"who":"hal","say":"A second freeze finds nothing to take.","action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":false,"reason":"freeze-bond-missing","verdict":"b-missing","exhibits":["T7","T9"]}},{"slot":12,"who":"treasury","say":"Alice sees her identity refused by the treasury and learns why: the freeze bond is missing. The conviction bond was never touched.","expect":{"verdict":"b-missing"}}]},{"story":4,"title":"Alice unfreezes","goal":"As Alice, I want my checkpoint back in service, so I land my rotation myself, put the freeze bond back, and top up the pool.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered with a short pool.","action":{"register":{"refund":1,"pool0":1}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice rotates on KERI.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"expect":{"verdict":"consumable"}},{"slot":12,"who":"hal","say":"Hal freezes her (story 3).","action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":true,"live":{"b":0,"pool":1},"verdict":"b-missing","exhibits":["T1","T5","T6","T7","T8","T9","T15","T16"]}},{"slot":20,"who":"alice","say":"Keep is enabled from a frozen state too: the rotation lands, unpaid because the pool is short, and the checkpoint stays frozen. The datum moves; the missing bond does not return.","action":{"rotate":{"sn'":1,"op":"keep","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"sn":1,"epoch":1,"poisoned":false,"bornAt":0,"dreg":1000,"b":0,"pool":1},"flow":{},"verdict":"b-missing","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":20,"who":"alice","say":"Alice rotates again and lands it herself with deposit, bringing the freeze bond back. Both bonds are full on the output; she is born again at slot 20.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"rotate":{"sn'":2,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"sn":2,"epoch":2,"poisoned":false,"bornAt":20,"refundTo":1,"dreg":1000,"b":5,"pool":1},"flow":{"dregIn":0,"bIn":5},"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T10","T15"]}},{"slot":20,"who":"alice","say":"The pool is separate: Alice adds 20 to it. Adding to the pool does not restart juvenility.","action":{"topUp":{"x":20}},"expect":{"ok":true,"live":{"bornAt":20,"pool":21},"flow":{"poolIn":20},"verdict":"juvenile","exhibits":["T1","T5","T6","T7","T8","T9","T14"]}},{"slot":30,"who":"hal","say":"Ten slots later the checkpoint is consumable again, and Hal sees a pool worth landing rotations for.","expect":{"verdict":"consumable"}}],"forks":[{"id":"withdraw","at":2,"title":"Alice withdraws instead of unfreezing","steps":[{"slot":20,"who":"alice","say":"Withdraw is enabled from a frozen state as well: Alice lands the same rotation with withdraw. The conviction bond and the pool she still holds go to her refund address; the freeze bond is already gone. Parked.","action":{"rotate":{"sn'":1,"op":"withdraw","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"dreg":0,"b":0,"pool":0,"epoch":1,"sn":1},"flow":{"refund":{"addr":1,"dreg":1000,"b":0,"pool":1}},"verdict":"dreg-missing","exhibits":["T1","T10","T14","T16","T2","T3","T5","T6","T7","T8","T9"]}}]}]},{"story":5,"title":"Alice goes away","goal":"As Alice, I want to park my identity and take my money out, so that nobody consumes it while I am gone and nobody can wake it but me.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded, pool of 10.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice rotates on KERI with her next keys; her witnesses receipt it.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"expect":{"verdict":"consumable"}},{"slot":12,"who":"alice","say":"She lands the rotation with withdraw. The chain pays the conviction bond, the freeze bond and the pool to her refund address; the state stays on chain, unbonded.","action":{"rotate":{"sn'":1,"op":"withdraw","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"sn":1,"epoch":1,"poisoned":false,"bornAt":0,"refundTo":1,"dreg":0,"b":0,"pool":0},"flow":{"refund":{"addr":1,"dreg":1000,"b":5,"pool":10}},"verdict":"dreg-missing","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T15","T16"]}},{"slot":12,"who":"mallory","say":"Mallory holds the keys Alice just retired. The quorum she can sign is epoch 0; the parked checkpoint is at epoch 1. Closing is refused.","evidence":{"add":[{"quorum":[0]}]},"action":"close","expect":{"ok":false,"reason":"no-quorum","verdict":"dreg-missing","exhibits":["T7","T9"]}},{"slot":12,"who":"mallory","say":"So is poisoning.","action":"poison","expect":{"ok":false,"reason":"no-quorum","verdict":"dreg-missing","exhibits":["T7","T9"]}},{"slot":12,"who":"hal","say":"Hal, holding a later witnessed rotation, cannot freeze a parked checkpoint: there is no freeze bond to take.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"freeze":{"sn'":2,"payee":2}},"expect":{"ok":false,"reason":"freeze-bond-missing","verdict":"dreg-missing","exhibits":["T7","T9"]}},{"slot":12,"who":"friend","say":"The pool is still open to anyone, but a pool on an unbonded checkpoint buys no consumability.","action":{"topUp":{"x":3}},"expect":{"ok":true,"live":{"dreg":0,"b":0,"pool":3},"verdict":"dreg-missing","exhibits":["T1","T5","T6","T7","T8","T9","T10","T14"]}}],"forks":[{"id":"newkeys","at":2,"title":"Mallory also holds the keys of the new epoch: she poisons","steps":[{"slot":12,"who":"mallory","say":"Suppose Mallory also holds the keys the rotation just installed (epoch 1). She can poison the parked checkpoint: it was already unconsumable, and Alice’s next rotation clears it. She gains nothing.","evidence":{"add":[{"quorum":[1]}]},"action":"poison","expect":{"ok":true,"live":{"epoch":1,"poisoned":true,"dreg":0,"b":0,"pool":0},"flow":{},"verdict":"dreg-missing","exhibits":["T1","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":12,"who":"mallory","say":"And now her close is refused: poisoned. Had she closed first, the token would have burned for nothing paid (story 10 shows it): the Lean permits that; this story did not consider it.","action":"close","expect":{"ok":false,"reason":"poisoned","verdict":"dreg-missing","exhibits":["T4","T7","T9"]}}]},{"id":"close","at":2,"title":"Mallory holds the new keys and closes first","steps":[{"slot":12,"who":"mallory","say":"Had she closed first, with the keys of the epoch the withdrawing rotation installed: the current quorum, unpoisoned. The chain pays zero to the refund address and burns the token; the AID is gone for good — the case story 5 did not consider.","evidence":{"add":[{"quorum":[1]}]},"action":"close","expect":{"ok":true,"state":"gone","flow":{"refund":{"addr":1,"dreg":0,"b":0,"pool":0}},"verdict":"not-present","exhibits":["T10","T16","T5","T6","T7","T8","T9"]}}]}]},{"story":6,"title":"Alice comes back","goal":"As Alice, I want my parked identity live again.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice rotates on KERI and parks (story 5).","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"withdraw","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"epoch":1,"dreg":0,"b":0,"pool":0},"verdict":"dreg-missing","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T15","T16"]}},{"slot":40,"who":"alice","say":"Much later Alice rotates again on KERI.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"expect":{"verdict":"dreg-missing"}},{"slot":40,"who":"alice","say":"She lands it with deposit, bringing both bonds back. Born again at slot 40, juvenile for W slots. There is no replay: the state never left the chain.","action":{"rotate":{"sn'":2,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"sn":2,"epoch":2,"poisoned":false,"bornAt":40,"refundTo":1,"dreg":1000,"b":5,"pool":0},"flow":{"dregIn":1000,"bIn":5},"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T10","T15"]}},{"slot":50,"who":"treasury","say":"Consumable again.","expect":{"verdict":"consumable"}},{"slot":50,"who":"alice","say":"Seeded, unreachable on chain: a datum claiming more than the conviction bond. The depositing rotation refuses it. No story reaches this state; the boundary grid does.","seed":{"present":{"l":{"sn":2,"epoch":2,"poisoned":false,"bornAt":40,"refundTo":1,"dreg":1001,"b":5,"pool":0}}},"evidence":{"add":[{"rotationTo":[2,2,3]}]},"action":{"rotate":{"sn'":3,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":false,"reason":"bond-over-full","verdict":"dreg-missing","exhibits":["T7","T9"]}}]},{"story":7,"title":"Mallory steals the current keys; Alice poisons, then rotates","goal":"As Alice, when my current keys are stolen, I want every consumer to stop trusting this epoch now, before I have managed to rotate.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded, with a short pool.","action":{"register":{"refund":1,"pool0":1}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Mallory has the current keys. Alice's key holders sign a poison declaration at the current threshold; anyone lands it. Consumers stop trusting this epoch now.","evidence":{"add":[{"quorum":[0]}]},"action":"poison","expect":{"ok":true,"live":{"epoch":0,"poisoned":true,"dreg":1000,"b":5,"pool":1},"flow":{},"verdict":"poisoned","exhibits":["T1","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":12,"who":"alice","say":"Alice rotates with her next keys. The poison clears: it was local to the keys she just retired. She lands it herself; the pool is short, so nobody is paid.","action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"sn":1,"epoch":1,"poisoned":false,"dreg":1000,"b":5,"pool":1},"flow":{},"verdict":"consumable","exhibits":["T1","T2","T3","T4","T5","T6","T7","T8","T9"]},"evidence":{"add":[{"rotationTo":[0,0,1]}]}},{"slot":12,"who":"mallory","say":"Mallory's stolen keys are epoch 0; the checkpoint is at epoch 1. They are good for nothing on chain.","action":"close","expect":{"ok":false,"reason":"no-quorum","verdict":"consumable","exhibits":["T7","T9"]}}],"forks":[{"id":"attempts","at":1,"title":"Mallory and Hal try everything on the poisoned checkpoint","steps":[{"slot":12,"who":"alice","say":"Poisoning twice in one epoch is refused.","action":"poison","expect":{"ok":false,"reason":"already-poisoned","verdict":"poisoned","exhibits":["T4","T7","T9"]}},{"slot":12,"who":"mallory","say":"Mallory, with the stolen current keys, tries to close and take the bonds: close is disabled while poisoned.","action":"close","expect":{"ok":false,"reason":"poisoned","verdict":"poisoned","exhibits":["T4","T7","T9"]}},{"slot":12,"who":"hal","say":"Hal holds a later witnessed rotation and the pool is short, but a poisoned checkpoint cannot be frozen: it is already unconsumable, nothing to freeze.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":false,"reason":"poisoned","verdict":"poisoned","exhibits":["T4","T7","T9"]}},{"slot":12,"who":"friend","say":"A top-up lands but changes nothing about trust: the poison stays.","action":{"topUp":{"x":5}},"expect":{"ok":true,"live":{"poisoned":true,"pool":6},"verdict":"poisoned","exhibits":["T1","T4","T5","T6","T7","T8","T9","T14"]}}]}]},{"story":8,"title":"Alice moves her refund address","goal":"As Alice, I want the money to come back to me and not to whoever registered my checkpoint.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"friend","say":"A stranger registered Alice’s checkpoint with his own refund address (6).","action":{"register":{"refund":6,"pool0":10}},"expect":{"ok":true,"live":{"refundTo":6},"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"hal","say":"Alice rotates on KERI. A relayer submits her public rotation asking to move the refund address to Alice’s: the new keys did not sign the address, so the rotation is refused as submitted.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":1}},"expect":{"ok":false,"reason":"refund-not-authorized","verdict":"consumable","exhibits":["T7","T9"]}},{"slot":12,"who":"hal","say":"The same relayer submits the rotation with no address at all: it lands, and the refund address stays the stranger’s.","action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"sn":1,"epoch":1,"refundTo":6,"dreg":1000,"b":5,"pool":8},"flow":{"hunter":{"addr":2,"dreg":0,"b":0,"pool":2}},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":12,"who":"alice","say":"At her next rotation Alice’s new keys (epoch 2) sign her address along with the rotation. The address moves.","evidence":{"add":[{"rotationTo":[1,1,2]},{"refundAuthorized":[2,1]}]},"action":{"rotate":{"sn'":2,"op":"keep","payee":1,"refund'":1}},"expect":{"ok":true,"live":{"sn":2,"epoch":2,"refundTo":1,"dreg":1000,"b":5,"pool":6},"flow":{"hunter":{"addr":1,"dreg":0,"b":0,"pool":2}},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":12,"who":"alice","say":"At close the stranger’s bonds go to Alice: a stale registration is a donation.","evidence":{"add":[{"quorum":[2]}]},"action":"close","expect":{"ok":true,"state":"gone","flow":{"refund":{"addr":1,"dreg":1000,"b":5,"pool":6}},"verdict":"not-present","exhibits":["T5","T6","T7","T8","T9","T10","T16"]}}]},{"story":9,"title":"Cora convicts","goal":"As Cora, holding two of Alice’s rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Alice has poisoned the epoch (Mallory has the keys). A conviction does not care which state the checkpoint is in.","evidence":{"add":[{"quorum":[0]}]},"action":"poison","expect":{"ok":true,"live":{"poisoned":true},"verdict":"poisoned","exhibits":["T1","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":12,"who":"cora","say":"Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice’s witnesses. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).","evidence":{"add":[{"duplicityAt":[0,0]}]},"action":{"convict":{"payee":3}},"expect":{"ok":true,"state":{"convicted":{"epoch":0,"sn":0,"convictedAt":12}},"flow":{"refund":{"addr":1,"dreg":0,"b":5,"pool":10},"convictor":{"addr":3,"dreg":1000,"b":0,"pool":0}},"verdict":"not-present","exhibits":["T4","T5","T6","T7","T8","T9","T12","T16"]}},{"slot":12,"who":"alice","say":"No rotation, ever.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":false,"reason":"convicted-terminal","verdict":"not-present","exhibits":["T7","T8","T9","T12"]}},{"slot":12,"who":"alice","say":"No close, ever.","action":"close","expect":{"ok":false,"reason":"convicted-terminal","verdict":"not-present","exhibits":["T7","T8","T9","T12"]}},{"slot":12,"who":"friend","say":"Not even a top-up.","action":{"topUp":{"x":1}},"expect":{"ok":false,"reason":"convicted-terminal","verdict":"not-present","exhibits":["T7","T8","T9","T12"]}}],"forks":[{"id":"noproof","at":1,"title":"Cora without the second rotation","steps":[{"slot":12,"who":"cora","say":"Without a second receipted rotation at the tip’s sequence there is no conviction.","action":{"convict":{"payee":3}},"expect":{"ok":false,"reason":"no-duplicity-proof","verdict":"poisoned","exhibits":["T7","T9","T12"]}}]}]},{"story":10,"title":"Alice leaves for good","goal":"As Alice, I want my identity off Cardano and my money back.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded, pool of 10.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"alice","say":"Mallory has stolen the current keys. Alice blocks the close itself by poisoning first.","evidence":{"add":[{"quorum":[0]}]},"action":"poison","expect":{"ok":true,"live":{"poisoned":true},"verdict":"poisoned","exhibits":["T1","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":12,"who":"mallory","say":"Mallory's close is refused: poisoned.","action":"close","expect":{"ok":false,"reason":"poisoned","verdict":"poisoned","exhibits":["T4","T7","T9"]}},{"slot":20,"who":"alice","say":"Alice rotates to fresh keys; the poison clears.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":1,"refund'":null}},"expect":{"ok":true,"live":{"epoch":1,"poisoned":false,"pool":8},"verdict":"consumable","exhibits":["T1","T2","T3","T4","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":20,"who":"alice","say":"Alice's current key holders sign the close at threshold. The chain pays everything to the refund address in the datum and burns the token.","evidence":{"add":[{"quorum":[1]}]},"action":"close","expect":{"ok":true,"state":"gone","flow":{"refund":{"addr":1,"dreg":1000,"b":5,"pool":8}},"verdict":"not-present","exhibits":["T10","T16","T5","T6","T7","T8","T9"]}},{"slot":20,"who":"friend","say":"The registry row stays: this AID can never be registered on Cardano again.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":false,"reason":"gone-terminal","verdict":"not-present","exhibits":["T7","T8","T9"]}},{"slot":20,"who":"friend","say":"Nothing else is possible either.","action":{"topUp":{"x":1}},"expect":{"ok":false,"reason":"gone-terminal","verdict":"not-present","exhibits":["T7","T8","T9"]}}],"forks":[{"id":"mallory","at":3,"title":"Mallory stole the new keys too and closes","steps":[{"slot":20,"who":"mallory","say":"Suppose Mallory also stole the new keys and closes. The token burns, but every lovelace goes to Alice's refund address: the closer chooses when, never where.","evidence":{"add":[{"quorum":[1]}]},"action":"close","expect":{"ok":true,"state":"gone","flow":{"refund":{"addr":1,"dreg":1000,"b":5,"pool":8}},"verdict":"not-present","exhibits":["T5","T6","T7","T8","T9","T10","T16"]}},{"slot":20,"who":"friend","say":"The registry row stays: this AID can never be registered on Cardano again.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":false,"reason":"gone-terminal","verdict":"not-present","exhibits":["T7","T8","T9"]}}]}]},{"story":11,"title":"The treasury reads Alice's checkpoint","goal":"As the treasury validator, I want to authorize a payment only if Alice's keys really are current, so I read her checkpoint as a reference input.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"treasury","say":"Absent: the treasury fails closed.","expect":{"verdict":"not-present"}},{"slot":0,"who":"alice","say":"Registered: juvenile for W slots.","action":{"register":{"refund":1,"pool0":1}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":10,"who":"treasury","say":"Born at 0, W = 10: consumable at slot 10.","expect":{"verdict":"consumable"}},{"slot":12,"who":"hal","say":"Frozen: the freeze bond is missing.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"freeze":{"sn'":1,"payee":2}},"expect":{"ok":true,"verdict":"b-missing","exhibits":["T1","T5","T6","T7","T8","T9","T15","T16"]}},{"slot":20,"who":"alice","say":"Unfrozen by a depositing rotation: juvenile again.","action":{"rotate":{"sn'":1,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T10","T15"]}},{"slot":30,"who":"treasury","say":"Consumable.","expect":{"verdict":"consumable"}},{"slot":30,"who":"alice","say":"Poisoned: fails closed.","evidence":{"add":[{"quorum":[1]}]},"action":"poison","expect":{"ok":true,"verdict":"poisoned","exhibits":["T1","T3","T5","T6","T7","T8","T9","T10"]}},{"slot":30,"who":"alice","say":"Unbonded by a withdrawing rotation: the conviction bond is missing.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"rotate":{"sn'":2,"op":"withdraw","payee":1,"refund'":null}},"expect":{"ok":true,"verdict":"dreg-missing","exhibits":["T1","T2","T3","T4","T5","T6","T7","T8","T9","T14","T15","T16"]}},{"slot":40,"who":"alice","say":"Bonded again: juvenile.","evidence":{"add":[{"rotationTo":[2,2,3]}]},"action":{"rotate":{"sn'":3,"op":"deposit","payee":1,"refund'":null}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T10","T15"]}},{"slot":50,"who":"treasury","say":"Consumable. What the treasury cannot know: whether Alice rotated on KERI an hour ago and no hunter has landed it yet. That is why the pool exists.","expect":{"verdict":"consumable"}},{"slot":50,"who":"cora","say":"Convicted: fails closed, forever.","evidence":{"add":[{"duplicityAt":[3,3]}]},"action":{"convict":{"payee":3}},"expect":{"ok":true,"verdict":"not-present","exhibits":["T5","T6","T7","T8","T9","T12","T16"]}}]},{"story":12,"title":"A stranger registers Alice at a stale epoch","goal":"As Mallory, holding keys Alice retired long ago, I register her AID myself and stop advancing at my epoch.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"mallory","say":"Mallory registers Alice's public inception, naming her own refund address (4).","action":{"register":{"refund":4,"pool0":10}},"expect":{"ok":true,"live":{"refundTo":4},"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":0,"who":"mallory","say":"Alice's rotation 1 is public. Mallory advances to the epoch whose keys she holds, paying herself the premium.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":4,"refund'":null}},"expect":{"ok":true,"live":{"epoch":1,"pool":8,"refundTo":4},"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":0,"who":"mallory","say":"It can happen once per AID, ever.","action":{"register":{"refund":4,"pool0":10}},"expect":{"ok":false,"reason":"already-present","verdict":"juvenile","exhibits":["T7","T8","T9"]}},{"slot":5,"who":"treasury","say":"Juvenile for W slots: nobody consumes it yet.","expect":{"verdict":"juvenile"}},{"slot":5,"who":"hal","say":"Anyone advances it onward with Alice's later public rotation.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"rotate":{"sn'":2,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"epoch":2,"pool":6},"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":5,"who":"alice","say":"The moment Alice's keys sign a refund address at a rotation, Mallory's bonds answer to Alice.","evidence":{"add":[{"rotationTo":[2,2,3]},{"refundAuthorized":[3,1]}]},"action":{"rotate":{"sn'":3,"op":"keep","payee":1,"refund'":1}},"expect":{"ok":true,"live":{"epoch":3,"refundTo":1,"pool":4},"verdict":"juvenile","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":5,"who":"mallory","say":"A redeemer the validator does not know is refused by name.","action":{"steal":{"everything":true}},"expect":{"ok":false,"reason":"invalid-action","verdict":"juvenile","exhibits":["T9"]}}],"forks":[{"id":"residual","at":2,"title":"Nobody lands her later rotations","steps":[{"slot":10,"who":"treasury","say":"Nobody lands Alice's later rotations. After W slots the treasury accepts Mallory's stale epoch: the residual story 12 states as a limit, the price of a permissionless advance.","expect":{"verdict":"consumable"}}]}]},{"story":13,"title":"Anyone tops up the pool","goal":"As a friend of Alice, I want to pay for her maintenance.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered with an empty pool.","action":{"register":{"refund":1,"pool0":0}},"expect":{"ok":true,"live":{"pool":0},"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":3,"who":"friend","say":"A friend adds 7 to the pool. The datum is untouched; no signature; juvenility is not restarted.","action":{"topUp":{"x":7}},"expect":{"ok":true,"live":{"bornAt":0,"pool":7,"sn":0,"epoch":0},"flow":{"poolIn":7},"verdict":"juvenile","exhibits":["T1","T5","T6","T7","T8","T9","T14"]}},{"slot":3,"who":"friend","say":"A negative amount is not lovelace: refused by name.","action":{"topUp":{"x":-5}},"expect":{"ok":false,"reason":"invalid-nat","verdict":"juvenile","exhibits":["T9"]}},{"slot":3,"who":"friend","say":"Neither is a fraction.","action":{"topUp":{"x":2.5}},"expect":{"ok":false,"reason":"invalid-nat","verdict":"juvenile","exhibits":["T9"]}},{"slot":12,"who":"hal","say":"Hunters now have a reason to serve her.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"pool":5},"flow":{"hunter":{"addr":2,"dreg":0,"b":0,"pool":2}},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}}]},{"story":14,"title":"Two hunters race","goal":"Both hunters see the rotation. If the pool covers P, the first advance wins and is paid; the second fails on the spent input. If it does not, the first freeze wins B; the second finds nothing to take.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered with a pool of 3: one premium and a little.","action":{"register":{"refund":1,"pool0":3}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":12,"who":"hal","say":"Alice rotates. Hal lands it first and is paid.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"epoch":1,"sn":1,"pool":1},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}},{"slot":12,"who":"rival","say":"The rival's advance finds the input spent: the checkpoint is already at epoch 1, sequence 1, and his evidence names epoch 0.","action":{"rotate":{"sn'":1,"op":"keep","payee":7,"refund'":null}},"expect":{"ok":false,"reason":"no-witnessed-rotation","verdict":"consumable","exhibits":["T7","T9"]}},{"slot":20,"who":"hal","say":"Alice rotates again; the pool (1) no longer covers P. Hal freezes first and takes B.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"freeze":{"sn'":2,"payee":2}},"expect":{"ok":true,"live":{"b":0},"flow":{"hunter":{"addr":2,"dreg":0,"b":5,"pool":0}},"verdict":"b-missing","exhibits":["T1","T5","T6","T7","T8","T9","T15","T16"]}},{"slot":20,"who":"rival","say":"The rival's freeze finds nothing to take.","action":{"freeze":{"sn'":2,"payee":7}},"expect":{"ok":false,"reason":"freeze-bond-missing","verdict":"b-missing","exhibits":["T7","T9"]}},{"slot":19,"who":"rival","say":"A transaction dated before the last accepted one is refused: the chain does not go backwards.","action":{"topUp":{"x":1}},"expect":{"ok":false,"reason":"slot-regression","verdict":"b-missing","exhibits":[]}}],"forks":[{"id":"topup","at":2,"title":"The rival tops up the pool and wins the next rotation","steps":[{"slot":12,"who":"rival","say":"The rival adds to the pool instead: now it covers the premium again.","action":{"topUp":{"x":5}},"expect":{"ok":true,"live":{"pool":6},"flow":{"poolIn":5},"verdict":"consumable","exhibits":["T1","T14","T5","T6","T7","T8","T9"]}},{"slot":20,"who":"rival","say":"Alice rotates again; the rival lands it first this time and is paid.","evidence":{"add":[{"rotationTo":[1,1,2]}]},"action":{"rotate":{"sn'":2,"op":"keep","payee":7,"refund'":null}},"expect":{"ok":true,"live":{"epoch":2,"sn":2,"pool":4},"flow":{"hunter":{"addr":7,"dreg":0,"b":0,"pool":2}},"verdict":"consumable","exhibits":["T1","T14","T16","T2","T3","T5","T6","T7","T8","T9"]}}]}]},{"story":15,"title":"Alice forgets","goal":"As Alice, I go quiet for a year.","params":{"D":1000,"B":5,"P":2,"W":10},"steps":[{"slot":0,"who":"alice","say":"Registered, bonded.","action":{"register":{"refund":1,"pool0":10}},"expect":{"ok":true,"verdict":"juvenile","exhibits":["T5","T6","T7","T8","T9"]}},{"slot":10,"who":"treasury","say":"Consumable.","expect":{"verdict":"consumable"}},{"slot":31536010,"who":"treasury","say":"A year of silence. Nothing on chain says she is gone: the checkpoint stays consumable as long as it is bonded and no rotation is missing.","expect":{"verdict":"consumable"}},{"slot":31536010,"who":"hal","say":"When she finally rotates, a hunter lands it as if no time had passed. Direction D-027 (a validity Alice renews) is not modelled here; the datum fields are reserved.","evidence":{"add":[{"rotationTo":[0,0,1]}]},"action":{"rotate":{"sn'":1,"op":"keep","payee":2,"refund'":null}},"expect":{"ok":true,"live":{"epoch":1,"pool":8,"bornAt":0},"verdict":"consumable","exhibits":["T1","T2","T3","T5","T6","T7","T8","T9","T14","T16"]}}]}];
 /* @@SCENARIOS:END@@ */
@@ -1296,65 +1367,111 @@ const LEAN_CORPUS = {"grid":{"actions":[{"register":{"pool0":7,"refund":6}},"poi
 const LEAN_CORPUS_SHA256 = 'ed148abbde45d800c38f0f50d8449fd0241a19f122e3b16d839aff4660bca8cc';
 /* @@CORPUS:END@@ */
 
-/* ===== the page ===== */
+/* ============================================================================
+   The page: a tree of plays over the core's immutable sessions, drawn as one
+   scene whose entities move when a step plays — forward or in reverse.
+   ============================================================================ */
 const DEFAULT_PARAMS = { D: 1000, B: 5, P: 2, W: 10 };
-const NAMES = { 1: 'Alice', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'the treasury', 6: 'a friend', 7: 'a rival hunter' };
+const NAMES = { 1: 'Alice', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'the treasury', 6: 'a friend', 7: 'the rival' };
 const nameOf = addr => NAMES[addr] || ('address ' + addr);
-const WHO = { alice: 'Alice', hal: 'Hal', cora: 'Cora', mallory: 'Mallory', treasury: 'The treasury', friend: 'A friend', rival: 'A rival hunter', anyone: 'Anyone' };
+const WHO = { alice: 'Alice', hal: 'Hal', cora: 'Cora', mallory: 'Mallory', treasury: 'The treasury', friend: 'A friend', rival: 'A rival hunter', anyone: 'Anyone', time: 'Time', you: 'You' };
 const ACTOR_ORDER = ['alice', 'hal', 'treasury', 'cora', 'mallory', 'anyone'];
 const RUNGS = [['absent', 'Absent'], ['live', 'Live'], ['poisoned', 'Poisoned'], ['frozen', 'Frozen'], ['paused', 'Paused'], ['convicted', 'Convicted'], ['gone', 'Gone']];
+const SVGNS = 'http://www.w3.org/2000/svg';
 
-// tiny DOM helper: h(tag, attrs, ...children)
+// tiny DOM helpers: h(tag, attrs, ...children) and its SVG twin
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === undefined || v === null || v === false) continue;
+    if (v === null || v === undefined || v === false) continue;
     if (k === 'class') el.className = v;
     else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else if (k === 'disabled' || k === 'hidden' || k === 'selected' || k === 'checked' || k === 'open') el[k] = !!v;
-    else if (k === 'value') el.value = v;
-    else el.setAttribute(k, v);
+    else if (k === 'hidden' || k === 'disabled' || k === 'selected' || k === 'open') { if (v) el.setAttribute(k, ''); el[k] = !!v; }
+    else el.setAttribute(k, String(v));
   }
   for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? String(c) : c);
+  return el;
+}
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.setAttribute('data-' + dk, dv);
+    else el.setAttribute(k, String(v));
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
   return el;
 }
 const $ = id => document.getElementById(id);
 const clear = el => { el.replaceChildren(); return el; };
 const fmt = n => String(n);
+const raf = cb => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : setTimeout(() => cb(Date.now()), 16));
+const nowMs = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
 
-/* ---- app state -------------------------------------------------------------- */
+/* ---- the tree of plays --------------------------------------------------------
+   A node is a session (immutable) plus the record that produced it. Children
+   are branches; `last` remembers the branch last taken, so › follows it. */
 const app = {
-  timeline: [],   // [{who, say, session, record, kind}]
+  nodes: [],      // [{id, parent, children, last, session, record, who, say, kind, branch}]
   cursor: 0,
   story: null,    // the scenario being played, or null
   actor: 'alice',
-  pending: null,  // {kind, offer, fields}
+  pending: null,  // {offer, action}
+  playing: null,  // interval id while ▶ runs
+  fx: [],         // running animations (cancelled on the next move)
 };
-const cur = () => app.timeline[app.cursor].session;
-function startFresh(params) {
-  app.timeline = [{ who: '', say: 'Nothing on chain for this AID.', session: newSession(params || DEFAULT_PARAMS, { corpus: LEAN_CORPUS }), record: null, kind: 'origin' }];
-  app.cursor = 0; app.story = null; app.pending = null;
+const node = id => app.nodes[id];
+const cur = () => node(app.cursor).session;
+function newTree(session, say) {
+  app.nodes = [{ id: 0, parent: null, children: [], last: null, session, record: null, who: '', say, kind: 'origin', branch: null }];
+  app.cursor = 0; app.pending = null; stopPlay();
 }
-function push(entry) {
-  app.timeline = app.timeline.slice(0, app.cursor + 1);
-  app.timeline.push(entry);
-  app.cursor = app.timeline.length - 1;
+function addChild(parentId, entry) {
+  const n = { id: app.nodes.length, parent: parentId, children: [], last: null, branch: null, ...entry };
+  app.nodes.push(n);
+  const p = node(parentId); p.children.push(n.id); p.last = n.id;
+  return n.id;
 }
-function withSession(session, who, say, record) {
-  push({ who, say, session, record: record || null, kind: 'free' });
+function pathTo(id) { const out = []; for (let n = id; n !== null; n = node(n).parent) out.unshift(n); return out; }
+function forwardPath(id) { const out = []; let n = node(id); while (n.children.length) { const c = n.last !== null ? n.last : n.children[0]; out.push(c); n = node(c); } return out; }
+const currentPath = () => [...pathTo(app.cursor), ...forwardPath(app.cursor)];
+const nextOf = id => { const n = node(id); return n.children.length ? (n.last !== null ? n.last : n.children[0]) : null; };
+const leafOf = id => { let n = id; for (;;) { const c = nextOf(n); if (c === null) return n; n = c; } };
+function branchLabel(id) {
+  const n = node(id);
+  if (n.branch) return n.branch.title;
+  if (n.record) return describeAction(n.record.action) + (n.record.ok ? '' : ' (refused)');
+  return n.say ? n.say.slice(0, 40) : 'step';
 }
+// go to a node: the path from the cursor up to the common ancestor plays in
+// reverse, the path down to the target plays forward; the branches taken are
+// remembered
+function goTo(id, opts) {
+  opts = opts || {};
+  if (id === app.cursor || !node(id)) return;
+  const a = pathTo(app.cursor), b = pathTo(id);
+  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const up = a.slice(i).reverse(), down = b.slice(i);
+  for (const n of down) { const p = node(n).parent; if (p !== null) node(p).last = n; }
+  app.cursor = id; app.pending = null;
+  render();
+  const edges = [...up.map(n => ({ node: n, dir: -1 })), ...down.map(n => ({ node: n, dir: 1 }))];
+  if (!opts.silent) playEdges(edges);
+}
+function pushNode(entry) { const id = addChild(app.cursor, entry); goTo(id); }
 
-/* ---- offers: what each actor can do now, dry-run through the core ----------- */
-function nextSn(s) {
-  const l = liveOf(s.state);
+/* ---- free play: what each actor can do now, dry-run through the core ------- */
+function nextSn(sn0) {
+  const l = liveOf(sn0.state);
   if (!l) return 1;
-  const cands = s.env.rotationTo.filter(r => r[0] === l.epoch && r[1] === l.sn && r[2] > l.sn).map(r => r[2]).sort((a, b) => a - b);
+  const cands = sn0.env.rotationTo.filter(r => r[0] === l.epoch && r[1] === l.sn && r[2] > l.sn).map(r => r[2]).sort((a, b) => a - b);
   return cands.length ? cands[0] : l.sn + 1;
 }
-function offersFor(actor, s) {
-  const l = liveOf(s.state);
-  const e = l ? l.epoch : 0, sn = l ? l.sn : 0, sn2 = nextSn(s);
+function offersFor(actor, sess) {
+  const l = liveOf(sess.state);
+  const e = l ? l.epoch : 0, sn = l ? l.sn : 0, sn2 = nextSn(sess);
   const keri = [], chain = [];
   const ev = (label, row, hint) => keri.push({ label, row, hint });
   const act = (kind, label, action) => chain.push({ kind, label, action });
@@ -1394,56 +1511,11 @@ function offersFor(actor, s) {
   }
   return { keri, chain };
 }
-function dryRun(s, action) {
-  const r = step(s.params, s.env, action, s.now, s.state);
+function dryRun(sess, action) {
+  const r = step(sess.params, sess.env, action, sess.now, sess.state);
   if (r.ok) return { ok: true, res: r };
-  const rec = { ok: false, reason: r.reason, field: r.field, kind: actionKind(action), action, pre: s.state, slot: s.now, now: s.now };
-  return { ok: false, res: r, why: explain(rec, s) };
-}
-
-/* ---- rendering --------------------------------------------------------------- */
-function render() {
-  renderHeader(); renderStory(); renderCheckpoint(); renderCast(); renderEvidence(); renderChart(); renderLedger(); renderMoney();
-}
-function renderHeader() {
-  const s = cur();
-  $('slot-now').textContent = fmt(s.now);
-  $('slot-input').value = fmt(s.now);
-  $('slot-plusw').textContent = '+W (' + s.params.W + ')';
-}
-function renderStory() {
-  const sel = $('story-picker');
-  if (!sel.options.length) {
-    sel.append(h('option', { value: '' }, 'free play — pick a story to replay it step by step'));
-    for (const sc of SCENARIOS) sel.append(h('option', { value: String(sc.story) }, sc.story + '. ' + sc.title));
-  }
-  sel.value = app.story ? String(app.story.story) : '';
-  $('story-goal').textContent = app.story ? app.story.goal : '';
-  const strip = clear($('history-strip'));
-  app.timeline.forEach((t, i) => {
-    const cls = ['hist-chip', i === app.cursor ? 'here' : '', t.record ? (t.record.ok ? 'ok' : 'no') : ''].join(' ').trim();
-    const mark = t.record ? (t.record.ok ? ' ✓' : ' ✗') : (i === 0 ? '' : ' ·');
-    strip.append(h('button', { type: 'button', class: cls, title: t.say || '', onclick: () => { app.cursor = i; app.pending = null; render(); } }, i === 0 ? 'start' : i + mark));
-  });
-  $('hist-first').disabled = app.cursor === 0;
-  $('hist-prev').disabled = app.cursor === 0;
-  $('hist-next').disabled = app.cursor >= app.timeline.length - 1;
-  $('hist-last').disabled = app.cursor >= app.timeline.length - 1;
-  const n = clear($('narration'));
-  const t = app.timeline[app.cursor];
-  if (t.say) n.append(h('div', { class: 'say' }, t.who ? h('div', { class: 'who' }, t.who) : null, h('div', {}, t.say)));
-  if (t.record) {
-    const r = t.record;
-    const box = h('div', { class: 'result ' + (r.ok ? 'ok' : 'no') });
-    box.append(h('b', {}, describeAction(r.action)), ' — ', r.ok ? 'accepted' : ('refused: ' + r.reason));
-    if (!r.ok) box.append(h('div', {}, explain(r, t.session)));
-    if (r.ok) box.append(h('div', {}, describeFlow(r.flow)));
-    const ex = Object.keys(r.theorems).filter(id => r.theorems[id].exhibited);
-    if (ex.length) box.append(h('div', { class: 'exh' }, 'shows: ', ex.map(id => h('span', { class: 'tchip' }, id))));
-    if (r.theorems.T7 && !r.theorems.T7.exhibited && r.theorems.T7.cell === null && r.stepped) box.append(h('div', { class: 'tiny' }, 'No Lean cell for this exact step: T7 (parity with the Lean) is not shown here. Story steps, the grid and the seeded traces have cells.'));
-    else if (r.theorems.T7 && r.theorems.T7.exhibited) box.append(h('div', { class: 'tiny' }, 'T7: the Lean’s own verdict on this step (' + r.theorems.T7.cell + ') agrees.'));
-    n.append(box);
-  }
+  const rec = { ok: false, reason: r.reason, field: r.field, kind: actionKind(action), action, pre: sess.state, slot: sess.now, now: sess.now };
+  return { ok: false, res: r, why: explain(rec, sess) };
 }
 function describeAction(a) {
   const k = actionKind(a); const d = (a && typeof a === 'object') ? a[k] : {};
@@ -1463,9 +1535,331 @@ function describeFlow(f) {
   pay(f.refund, 'refund address'); pay(f.hunter, 'hunter'); pay(f.convictor, 'convictor');
   return parts.length ? 'value: ' + parts.join('; ') : 'no value moved';
 }
+const actorOfNode = n => {
+  const w = n.who || '';
+  const key = Object.keys(WHO).find(k => WHO[k] === w) || (n.kind === 'free' || n.kind === 'evidence' ? app.actor : null);
+  return { friend: 'anyone', you: app.actor, time: null }[key] === undefined ? key : { friend: 'anyone', you: app.actor, time: null }[key];
+};
+
+/* ---- the scene ----------------------------------------------------------------
+   Every entity is a <g data-obj> placed by `layout`, so the fx layer can fly
+   things between them. */
+const layout = {
+  'actor:alice': { x: 130, y: 118 }, witnesses: { x: 130, y: 218 }, 'actor:cora': { x: 72, y: 340 }, 'actor:mallory': { x: 188, y: 340 }, 'actor:anyone': { x: 130, y: 462 },
+  token: { x: 372, y: 128 }, datum: { x: 540, y: 128 }, 'pile:dreg': { x: 372, y: 300 }, 'pile:b': { x: 470, y: 300 }, 'pile:pool': { x: 568, y: 300 },
+  validator: { x: 500, y: 412 }, tray: { x: 500, y: 500 }, registry: { x: 640, y: 300 }, clock: { x: 500, y: 40 },
+  'actor:hal': { x: 860, y: 118 }, 'actor:rival': { x: 940, y: 200 }, treasury: { x: 860, y: 268 }, wallets: { x: 860, y: 400 },
+};
+const walletPos = i => ({ x: 862, y: 372 + i * 44 });
+function hexagon(cx, cy, r) { const pts = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i - Math.PI / 6; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); } return pts.join(' '); }
+function balancesAlong(nodes) {
+  const bal = {};
+  for (const n of nodes) if (n.record && n.record.ok) for (const q of [n.record.flow.refund, n.record.flow.hunter, n.record.flow.convictor]) if (q) { bal[q.addr] = bal[q.addr] || { dreg: 0, b: 0, pool: 0 }; bal[q.addr].dreg += q.dreg; bal[q.addr].b += q.b; bal[q.addr].pool += q.pool; }
+  return bal;
+}
+function drawScene() {
+  const svg = $('scene');
+  const sess = cur(), p = sess.params, st = sess.state, l = liveOf(st), k = stateKind(st);
+  const here = node(app.cursor);
+  const acting = actorOfNode(here);
+  const parts = [];
+  // regions
+  parts.push(s('rect', { class: 'region', x: 10, y: 10, width: 250, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 24, y: 34 }, 'KERI · Alice’s identity'));
+  parts.push(s('rect', { class: 'region chain', x: 275, y: 10, width: 450, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 289, y: 34 }, 'Cardano · one UTxO'));
+  parts.push(s('rect', { class: 'region readers', x: 740, y: 10, width: 250, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 754, y: 34 }, 'readers & payees'));
+  // actors
+  const actor = (key, id, name, role, badge) => {
+    const q = layout[key];
+    const g = s('g', { class: 'actor' + (id === app.actor ? ' on' : '') + (id === acting ? ' acting' : ''), dataset: { obj: 'actor', id, key }, transform: `translate(${q.x},${q.y})`, role: 'button', tabindex: 0,
+      onclick: () => { if (ACTOR_ORDER.includes(id)) { app.actor = id; app.pending = null; $('act-drawer').open = true; render(); } } },
+      s('circle', { class: 'avatar', r: id === 'rival' ? 22 : 30 }),
+      s('text', { class: 'nm', y: 4 }, name),
+      s('text', { class: 'role', y: id === 'rival' ? 36 : 44 }, role));
+    if (badge) g.append(s('text', { class: 'badge', y: id === 'rival' ? 48 : 57 }, badge));
+    return g;
+  };
+  const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
+  parts.push(actor('actor:alice', 'alice', 'Alice', 'the owner', l ? `keys of epoch ${e} · sn ${sn}` : 'keys, no checkpoint'));
+  // witnesses
+  const wg = s('g', { dataset: { obj: 'witnesses', key: 'witnesses' }, transform: `translate(${layout.witnesses.x},${layout.witnesses.y})` });
+  [-56, 0, 56].forEach((dx, i) => { wg.append(s('circle', { class: 'wit', cx: dx, cy: 0, r: 13 }), s('text', { class: 'witlbl', x: dx, y: 4 }, 'W' + (i + 1))); });
+  wg.append(s('text', { class: 'witlbl', y: 30 }, 'her witnesses · receipts'));
+  parts.push(wg);
+  parts.push(actor('actor:cora', 'cora', 'Cora', 'a convictor', envHas(sess.env, 'duplicityAt', [e, sn]) ? 'holds two rotations' : ''));
+  const stole = envHas(sess.env, 'quorum', [e]);
+  parts.push(actor('actor:mallory', 'mallory', 'Mallory', 'a thief', stole && l ? `has the epoch-${e} keys` : ''));
+  parts.push(actor('actor:anyone', 'anyone', 'Anyone', 'relayer, friend', ''));
+  // the checkpoint UTxO
+  parts.push(s('rect', { class: 'utxo ' + (k === 'absent' ? 'absent' : k === 'gone' ? 'gone' : (l && l.poisoned ? 'poisoned' : '')), x: 320, y: 70, width: 360, height: 280, rx: 12 }));
+  const t = layout.token;
+  const tg = s('g', { dataset: { obj: 'token', key: 'token' } });
+  if (k === 'convicted') tg.append(s('rect', { class: 'token convicted', x: t.x - 26, y: t.y - 34, width: 52, height: 62, rx: 20 }), s('text', { class: 'tk', x: t.x, y: t.y - 4 }, '✝'), s('text', { class: 'tk', x: t.x, y: t.y + 14 }, 'AID ' + sess.aid));
+  else tg.append(s('polygon', { class: 'token ' + (k === 'absent' ? 'absent' : k === 'gone' ? 'gone' : ''), points: hexagon(t.x, t.y, 34) }), s('text', { class: 'tk', x: t.x, y: t.y + 4 }, k === 'absent' ? 'no token' : k === 'gone' ? 'burned' : 'AID ' + sess.aid));
+  tg.append(s('text', { class: 'hint', x: t.x, y: t.y + 52, 'text-anchor': 'middle' }, k === 'absent' ? 'minted once, ever' : k === 'gone' ? 'the registry row stays' : k === 'convicted' ? 'terminal' : 'the token'));
+  parts.push(tg);
+  // datum card
+  const dg = s('g', { dataset: { obj: 'datum', key: 'datum' } });
+  const word = stateWord(p, st);
+  dg.append(s('text', { class: 'state-word' + (word === 'poisoned' ? ' poisoned' : ''), x: 430, y: 108 }, STATE_WORDS[word] + (l && l.poisoned && word !== 'poisoned' ? ' · poisoned' : '')));
+  const kv = (x, y, key, val) => { dg.append(s('text', { class: 'datum-k', x, y }, key), s('text', { class: 'datum-v', x, y: y + 15 }, val)); };
+  if (l) {
+    kv(430, 128, 'sequence', l.sn); kv(500, 128, 'epoch (keys)', l.epoch); kv(580, 128, 'poisoned', l.poisoned ? '☠ yes' : 'no');
+    kv(430, 166, 'born at slot', l.bornAt); kv(500, 166, 'refund to', nameOf(l.refundTo));
+    // juvenility
+    const mature = l.bornAt + p.W <= sess.now;
+    const frac = Math.max(0, Math.min(1, (sess.now - l.bornAt) / Math.max(1, p.W)));
+    dg.append(s('rect', { class: 'track', x: 430, y: 200, width: 230, height: 8, rx: 4 }), s('rect', { class: 'fill' + (mature ? ' done' : ''), x: 430, y: 200, width: 230 * frac, height: 8, rx: 4 }),
+      s('text', { class: 'hint', x: 430, y: 222 }, mature ? `past juvenility (born ${l.bornAt}, W = ${p.W})` : `juvenile until slot ${l.bornAt + p.W} (born ${l.bornAt}, W = ${p.W})`));
+  } else if (k === 'convicted') {
+    const c = st.convicted; kv(430, 128, 'epoch', c.epoch); kv(500, 128, 'sequence', c.sn); kv(580, 128, 'convicted at slot', c.convictedAt); dg.append(s('text', { class: 'hint', x: 430, y: 165 }, 'the tombstone'));
+    dg.append(s('text', { class: 'hint', x: 430, y: 180 }, 'no rotation, no poison, no close, ever'));
+  } else if (k === 'gone') dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'closed: everything paid to the refund address, the token burned'));
+  else dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'nothing on chain for this AID: only a registration can happen'));
+  parts.push(dg);
+  // piles
+  const hd = held(st);
+  const pile = (key, cls, label, amount, full) => {
+    const q = layout[key];
+    const g = s('g', { dataset: { obj: 'pile', key }, transform: `translate(${q.x},${q.y})` });
+    const n = full ? (amount >= full ? 6 : amount > 0 ? 3 : 0) : Math.min(8, Math.ceil(amount / 2));
+    for (let i = 0; i < n; i++) g.append(s('ellipse', { class: 'coin ' + cls, cx: 0, cy: -i * 6, rx: 22, ry: 8 }));
+    if (!n) g.append(s('ellipse', { class: 'coin', cx: 0, cy: 0, rx: 22, ry: 8, fill: 'none', stroke: 'var(--line)', 'stroke-dasharray': '3 3' }));
+    g.append(s('text', { class: 'pile-amt ' + cls, y: 26 }, fmt(amount) + (full ? ' / ' + full : '')), s('text', { class: 'pile-lbl', y: 40 }, label));
+    return g;
+  };
+  parts.push(pile('pile:dreg', 'dreg', 'conviction bond D', hd.dreg, p.D), pile('pile:b', 'b', 'freeze bond B', hd.b, p.B), pile('pile:pool', 'pool', 'pool (premium P = ' + p.P + ')', hd.pool, 0));
+  // registry
+  const rg = s('g', { dataset: { obj: 'registry', key: 'registry' }, transform: `translate(${layout.registry.x},${layout.registry.y})` });
+  rg.append(s('rect', { class: 'registry', x: -28, y: -34, width: 62, height: 60, rx: 5 }), s('text', { class: 'hint', x: 3, y: -20, 'text-anchor': 'middle' }, 'registry'));
+  const regs = sess.registry.length ? sess.registry.map(a => 'AID ' + a) : ['—'];
+  regs.slice(0, 3).forEach((r, i) => rg.append(s('text', { class: 'datum-v', x: 3, y: -2 + i * 14, 'text-anchor': 'middle', 'font-size': 10 }, r)));
+  parts.push(rg);
+  // validator + tray
+  const v = layout.validator;
+  const vg = s('g', { dataset: { obj: 'validator', key: 'validator' }, transform: `translate(${v.x},${v.y})` });
+  vg.append(s('path', { class: 'validator', d: 'M -34 -26 L 34 -26 L 34 6 Q 34 22 0 30 Q -34 22 -34 6 Z' }), s('text', { x: 0, y: 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700 }, 'validator'));
+  vg.append(s('text', { class: 'hint', x: 0, y: 46, 'text-anchor': 'middle' }, 'admits exactly the Steps of Checkpoint.lean'));
+  parts.push(vg);
+  const tr = layout.tray;
+  const trg = s('g', { dataset: { obj: 'tray', key: 'tray' }, transform: `translate(${tr.x},${tr.y})` });
+  trg.append(s('rect', { class: 'tray', x: -170, y: -34, width: 340, height: 74, rx: 8 }), s('text', { class: 'hint', x: -162, y: -20 }, 'evidence presented (the Env): what the validator verifies over the bytes'));
+  const receipts = [];
+  const rw = { rotationTo: r => `rot e${r[0]} ${r[1]}→${r[2]}`, refundAuthorized: r => `e${r[0]} signs →${nameOf(r[1])}`, quorum: r => `quorum e${r[0]}`, duplicityAt: r => `dup e${r[0]} sn${r[1]}` };
+  for (const kd of EV_KINDS) for (const r of sess.env[kd]) receipts.push(rw[kd](r));
+  receipts.slice(0, 8).forEach((txt, i) => { const x = -162 + (i % 4) * 84, y = -8 + Math.floor(i / 4) * 22; trg.append(s('rect', { class: 'receipt', x, y, width: 78, height: 17, rx: 4 }), s('text', { class: 'receipt-t', x: x + 4, y: y + 12 }, txt.slice(0, 15))); });
+  if (receipts.length > 8) trg.append(s('text', { class: 'hint', x: 100, y: 34 }, '+' + (receipts.length - 8) + ' more'));
+  if (!receipts.length) trg.append(s('text', { class: 'hint', x: 0, y: 12, 'text-anchor': 'middle' }, 'nothing presented yet'));
+  parts.push(trg);
+  // clock
+  const c = layout.clock;
+  parts.push(s('g', { dataset: { obj: 'clock', key: 'clock' }, transform: `translate(${c.x},${c.y})` }, s('rect', { class: 'clock', x: -44, y: -16, width: 88, height: 30, rx: 15 }), s('text', { class: 'clock-t', y: 5 }, 'slot ' + sess.now)));
+  // readers & payees
+  parts.push(actor('actor:hal', 'hal', 'Hal', 'a hunter', ''));
+  parts.push(actor('actor:rival', 'rival', 'rival', 'another hunter', ''));
+  const verdict = consumable(p, sess.now, st);
+  const tg2 = s('g', { class: 'actor', dataset: { obj: 'treasury', id: 'treasury', key: 'treasury' }, transform: `translate(${layout.treasury.x},${layout.treasury.y})`, role: 'button', tabindex: 0,
+    onclick: () => { app.actor = 'treasury'; app.pending = null; $('numbers-drawer').open = true; render(); } });
+  tg2.append(s('rect', { class: 'bank', x: -60, y: -26, width: 120, height: 52, rx: 8 }), s('text', { class: 'nm', y: -4 }, 'The treasury'), s('text', { class: 'role', y: 12 }, 'reads the checkpoint'),
+    s('circle', { class: 'lamp ' + (verdict.ok ? 'ok' : 'no'), cx: 48, cy: -14, r: 6 }), s('text', { class: 'hint', y: 42, 'text-anchor': 'middle' }, verdict.ok ? 'consumable' : 'not consumable: ' + verdict.verdict));
+  parts.push(s('path', { class: 'beam ' + (verdict.ok ? 'ok' : 'no'), d: `M 680 200 C 740 200, 760 ${layout.treasury.y}, ${layout.treasury.x - 60} ${layout.treasury.y}` }));
+  parts.push(tg2);
+  // wallets: the refund address and every address paid so far
+  const bal = balancesAlong(pathTo(app.cursor).map(node));
+  const addrs = [...new Set([...(l ? [l.refundTo] : []), ...Object.keys(bal).map(Number)])].sort((a, b) => a - b).slice(0, 4);
+  addrs.forEach((addr, i) => {
+    const q = walletPos(i); layout['wallet:' + addr] = q;
+    const b = bal[addr] || { dreg: 0, b: 0, pool: 0 };
+    const g = s('g', { dataset: { obj: 'wallet', key: 'wallet:' + addr }, transform: `translate(${q.x},${q.y})` });
+    g.append(s('rect', { class: 'wallet' + (l && l.refundTo === addr ? ' refund' : ''), x: -116, y: -16, width: 232, height: 34, rx: 6 }),
+      s('text', { class: 'wallet-t', x: -110, y: -2 }, nameOf(addr) + (l && l.refundTo === addr ? ' · the refund address' : '')),
+      s('text', { class: 'wallet-n', x: 110, y: 12 }, `received D ${b.dreg} · B ${b.b} · pool ${b.pool}`));
+    parts.push(g);
+  });
+  if (!addrs.length) parts.push(s('text', { class: 'hint', x: 860, y: 376, 'text-anchor': 'middle' }, 'no payment yet · the refund address shows here'));
+  parts.push(s('g', { id: 'fx' }));
+  clear(svg).append(...parts);
+}
+
+/* ---- the fx layer: things that fly between entities ----------------------- */
+const fxLayer = () => { const sv = $('scene'); return sv ? sv.querySelector('#fx') : null; };
+function cancelFx() { for (const f of app.fx) f.cancel(); app.fx = []; }
+// animate(dur, frame, done): a frame gets u in [0,1]; a frozen clock ends it at once
+function animate(dur, frame, done) {
+  let cancelled = false, last = null;
+  const start = nowMs();
+  const f = { cancel: () => { cancelled = true; } };
+  app.fx.push(f);
+  const tick = () => {
+    if (cancelled) return;
+    const now = nowMs();
+    const frozen = last !== null && now === last; last = now;
+    const u = frozen ? 1 : Math.min(1, Math.max(0, (now - start) / dur));
+    frame(u);
+    if (u < 1) raf(tick); else { app.fx = app.fx.filter(x => x !== f); if (done) done(); }
+  };
+  raf(tick);
+}
+const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+const posOf = key => layout[key] || layout.validator;
+function fly(el, fromKey, toKey, opts) {
+  opts = opts || {};
+  const layer = fxLayer(); if (!layer) return;
+  const f = posOf(opts.dir < 0 ? toKey : fromKey), t = posOf(opts.dir < 0 ? fromKey : toKey);
+  layer.append(el);
+  animate(opts.dur || 700, u => {
+    const e = ease(u);
+    const x = f.x + (t.x - f.x) * e, y = f.y + (t.y - f.y) * e - (opts.arc === undefined ? 40 : opts.arc) * Math.sin(Math.PI * u);
+    el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+  }, () => { el.remove(); if (opts.done) opts.done(); });
+}
+function coin(cls, txt, rewind) { return s('g', { class: 'fx-coin' + (rewind ? ' rewind' : '') }, s('ellipse', { class: 'coin ' + cls, rx: 14, ry: 6 }), s('text', { class: 'fx-t', y: -10 }, txt)); }
+function card(txt, rewind) { return s('g', { class: 'fx-card' + (rewind ? ' rewind' : '') }, s('rect', { class: 'fx-card', x: -34, y: -12, width: 68, height: 24, rx: 4 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function scroll(txt, rewind) { return s('g', { class: rewind ? 'rewind' : '' }, s('rect', { class: 'fx-scroll', x: -30, y: -10, width: 60, height: 20, rx: 10 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function pulse(key, bad) {
+  const el = $('scene').querySelector(`[data-key="${key}"]`); if (!el) return;
+  el.classList.add(bad ? 'pulse-bad' : 'pulse'); setTimeout(() => el.classList.remove(bad ? 'pulse-bad' : 'pulse'), 800);
+}
+function floatText(key, txt, cls, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  const el = s('text', { class: 'fx-float ' + (cls || ''), x: q.x, y: q.y - 30 });
+  el.textContent = txt;
+  setTimeout(() => { layer.append(el); animate(1000, u => { el.setAttribute('y', q.y - 30 - 26 * u); el.setAttribute('opacity', String(1 - u * u)); }, () => el.remove()); }, delay || 0);
+}
+function mark(key, ok, txt, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  setTimeout(() => {
+    const el = s('text', { class: 'fx-mark ' + (ok ? 'ok' : 'no'), x: q.x, y: q.y - 36 }, ok ? '✓' : '✗');
+    layer.append(el);
+    animate(900, u => { el.setAttribute('transform', `translate(0,${(-18 * Math.sin(Math.PI * Math.min(1, u * 1.4))).toFixed(1)})`); el.setAttribute('opacity', String(u > .7 ? (1 - u) / .3 : 1)); }, () => el.remove());
+    if (txt) floatText(key, txt, ok ? 'ok' : 'no', 80);
+    pulse(key, !ok);
+  }, delay || 0);
+}
+// the fx of one edge: the node entered (dir 1) or left (dir −1)
+function edgeFx(n, dir, dur) {
+  const rewind = dir < 0;
+  const r = n.record;
+  const D = dur;
+  const parent = n.parent !== null ? node(n.parent) : null;
+  if (n.kind === 'time') { pulse('clock'); floatText('clock', (rewind ? '⟲ ' : '') + 'slot ' + n.session.now, '', 0); if (liveOf(n.session.state)) pulse('datum'); return; }
+  if (n.kind === 'evidence') {
+    const row = n.evRow; if (!row) { pulse('tray'); return; }
+    const kind = Object.keys(row)[0];
+    const from = kind === 'duplicityAt' ? 'actor:cora' : (kind === 'quorum' && n.who === WHO.mallory) ? 'actor:mallory' : 'witnesses';
+    const el = scroll({ rotationTo: 'rotation', refundAuthorized: 'signature', quorum: 'quorum', duplicityAt: 'proof' }[kind], rewind);
+    fly(el, from, 'tray', { dir, dur: D, done: () => pulse('tray') });
+    if (n.removed) floatText('tray', rewind ? '+ row' : '− row', '', 0);
+    return;
+  }
+  if (!r) return;
+  const actorKey = 'actor:' + (actorOfNode(n) || 'anyone');
+  const kind = r.kind;
+  const d = (r.action && typeof r.action === 'object') ? r.action[kind] : {};
+  const pre = liveOf(r.pre), post = liveOf(r.state);
+  const f = r.flow || {};
+  const tx = card({ register: 'register', rotate: 'rotate ' + (d.op || ''), poison: 'poison', freeze: 'freeze', topUp: 'top-up ' + (d.x !== undefined ? d.x : ''), convict: 'convict', close: 'close' }[kind] || 'tx', rewind);
+  // 1. the transaction reaches the validator; the rotation / proof it carries arrives from KERI
+  fly(tx, actorKey, 'validator', { dir, dur: D * .55, arc: 30, done: () => { if (!rewind) mark('validator', r.ok, r.ok ? null : r.reason, 0); } });
+  if (kind === 'rotate' || kind === 'freeze') fly(scroll('rotation → sn ' + d["sn'"], rewind), 'witnesses', kind === 'rotate' ? 'datum' : 'validator', { dir, dur: D * .55, arc: -30 });
+  if (kind === 'convict') fly(scroll('2nd rotation', rewind), 'actor:cora', 'validator', { dir, dur: D * .55, arc: -30 });
+  if (!r.ok) { if (rewind) setTimeout(() => pulse('validator', true), 0); return; }
+  const after = D * .5;
+  const pay = (cls, amount, fromKey, toKey, delay) => { if (!amount) return; setTimeout(() => fly(coin(cls, cls === 'dreg' ? 'D ' + amount : cls === 'b' ? 'B ' + amount : '+' + amount, rewind), fromKey, toKey, { dir, dur: D * .5 }), rewind ? 0 : delay); };
+  const payment = (q, delay) => { if (!q) return; pay('dreg', q.dreg, 'pile:dreg', 'wallet:' + q.addr, delay); pay('b', q.b, 'pile:b', 'wallet:' + q.addr, delay); pay('pool', q.pool, 'pile:pool', 'wallet:' + q.addr, delay); };
+  pay('dreg', f.dregIn, actorKey, 'pile:dreg', after); pay('b', f.bIn, actorKey, 'pile:b', after); pay('pool', f.poolIn, actorKey, 'pile:pool', after);
+  payment(f.refund, after); payment(f.hunter, after); payment(f.convictor, after);
+  setTimeout(() => {
+    if (kind === 'register') { pulse('token'); pulse('registry'); floatText('registry', rewind ? '− AID' : '+ AID ' + n.session.aid, 'ok', 0); }
+    if (kind === 'rotate') { pulse('datum'); floatText('datum', rewind ? 'keys back to epoch ' + (pre ? pre.epoch : '') : 'keys of epoch ' + (post ? post.epoch : ''), '', 0); if (pre && pre.poisoned && post && !post.poisoned) floatText('datum', rewind ? '☠ poison back' : 'poison cleared', 'ok', 300); }
+    if (kind === 'poison') { pulse('datum', true); const layer = fxLayer(); if (layer) { const q = layout.datum; const sk = s('text', { class: 'fx-skull', x: q.x, y: q.y + 8 }, rewind ? '☠ ⟲' : '☠'); layer.append(sk); animate(1200, u => sk.setAttribute('opacity', String(1 - u)), () => sk.remove()); } }
+    if (kind === 'freeze') { pulse('datum'); floatText('datum', rewind ? 'unfrozen ⟲' : 'frozen on the old keys', 'no', 0); }
+    if (kind === 'convict') { pulse('token', true); floatText('token', rewind ? 'tombstone ⟲' : 'convicted · terminal', 'no', 0); }
+    if (kind === 'close') { pulse('token', true); floatText('token', rewind ? 'token back ⟲' : 'burned · gone', 'no', 0); }
+    if (kind === 'topUp') pulse('pile:pool');
+    if (kind === 'rotate' && d.op === 'deposit') floatText('datum', rewind ? 'juvenility ⟲' : 'born again: juvenile', '', 300);
+  }, rewind ? 0 : after);
+}
+function playEdges(edges) {
+  cancelFx();
+  if (!edges.length) return;
+  const per = edges.length === 1 ? 800 : Math.max(220, Math.floor(1400 / edges.length));
+  edges.forEach((e, i) => setTimeout(() => { if (app.cursor !== edges[edges.length - 1].node) return; edgeFx(node(e.node), e.dir, per); }, i * per));
+}
+
+/* ---- rendering ---------------------------------------------------------------- */
+function render() {
+  renderHeader(); renderStoryBar(); drawScene(); renderPlaybar(); renderNarration(); renderLedger();
+  renderCast(); renderEvidence(); renderCheckpoint(); renderChart(); renderMoney();
+}
+function renderHeader() {
+  const sess = cur();
+  $('slot-now').textContent = fmt(sess.now);
+  $('slot-input').value = fmt(sess.now);
+  $('slot-plusw').textContent = '+W (' + sess.params.W + ')';
+}
+function renderStoryBar() {
+  const sel = $('story-picker');
+  if (!sel.options.length) {
+    sel.append(h('option', { value: '' }, 'free play — pick a story to play its tree'));
+    for (const sc of SCENARIOS) sel.append(h('option', { value: String(sc.story) }, sc.story + '. ' + sc.title + (sc.forks && sc.forks.length ? ' ⋔' : '')));
+  }
+  sel.value = app.story ? String(app.story.story) : '';
+  $('story-goal').textContent = app.story ? app.story.goal : 'Free play: pick who you are below, present evidence, move the slot, submit actions. Every accepted step is a node; a second action from the same node opens a branch.';
+}
+function renderPlaybar() {
+  const path = currentPath();
+  const idx = path.indexOf(app.cursor);
+  const here = node(app.cursor);
+  $('hist-first').disabled = app.cursor === 0;
+  $('hist-prev').disabled = here.parent === null;
+  $('hist-next').disabled = !here.children.length;
+  $('hist-last').disabled = !here.children.length;
+  const scrub = $('scrub'); scrub.max = String(path.length - 1); scrub.value = String(idx);
+  $('pos').textContent = idx + ' / ' + (path.length - 1);
+  $('btn-play').classList.toggle('on', !!app.playing);
+  $('btn-play').textContent = app.playing ? '❚❚' : '▶';
+  // branches: at a fork node, one chip per branch; otherwise the nearest fork above
+  const br = clear($('branches'));
+  let forkAt = app.cursor;
+  while (forkAt !== null && node(forkAt).children.length < 2) forkAt = node(forkAt).parent;
+  if (forkAt !== null) {
+    const fn = node(forkAt);
+    const onPath = new Set(path);
+    br.append(h('span', { class: 'lbl' }, forkAt === app.cursor ? '⋔ branches from here' : '⋔ branches at step ' + path.indexOf(forkAt)));
+    for (const cid of fn.children) br.append(h('button', { type: 'button', class: 'branch' + (onPath.has(cid) ? ' on' : ''), dataset: { branch: cid }, title: 'follow this branch',
+      onclick: () => { goTo(cid); } }, branchLabel(cid)));
+  }
+  // the history strip: the current path, chips
+  const strip = clear($('history-strip'));
+  path.forEach((id, i) => {
+    const n = node(id);
+    const cls = ['hist-chip', id === app.cursor ? 'here' : '', n.record ? (n.record.ok ? 'ok' : 'no') : '', n.children.length > 1 ? 'fork' : ''].join(' ').trim();
+    const markTxt = n.record ? (n.record.ok ? ' ✓' : ' ✗') : (i === 0 ? '' : ' ·');
+    strip.append(h('button', { type: 'button', class: cls, title: n.say || '', onclick: () => goTo(id) }, i === 0 ? 'start' : i + markTxt));
+  });
+}
+function renderNarration() {
+  const n = clear($('narration'));
+  const t = node(app.cursor);
+  if (t.say) n.append(h('div', { class: 'say' }, t.who ? h('div', { class: 'who' }, t.who + (t.branch ? ' · ⋔ ' + t.branch.title : '')) : null, h('div', {}, t.say)));
+  if (t.record) {
+    const r = t.record;
+    const box = h('div', { class: 'result ' + (r.ok ? 'ok' : 'no') });
+    box.append(h('b', {}, describeAction(r.action)), ' — ', r.ok ? 'accepted' : ('refused: ' + r.reason));
+    if (!r.ok) box.append(h('div', {}, explain(r, t.session)));
+    if (r.ok) box.append(h('div', {}, describeFlow(r.flow)));
+    const ex = Object.keys(r.theorems).filter(id => r.theorems[id].exhibited);
+    if (ex.length) box.append(h('div', { class: 'exh' }, 'shows: ', ex.map(id => h('span', { class: 'tchip' }, id))));
+    if (r.theorems.T7 && !r.theorems.T7.exhibited && r.theorems.T7.cell === null && r.stepped) box.append(h('div', { class: 'tiny' }, 'No Lean cell for this exact step: T7 (parity with the Lean) is not shown here.'));
+    else if (r.theorems.T7 && r.theorems.T7.exhibited) box.append(h('div', { class: 'tiny' }, 'T7: the Lean’s own verdict on this step (' + r.theorems.T7.cell + ') agrees.'));
+    n.append(box);
+  }
+}
 function renderCheckpoint() {
-  const s = cur(), p = s.params, l = liveOf(s.state);
-  const word = stateWord(p, s.state);
+  const sess = cur(), p = sess.params, l = liveOf(sess.state);
+  const word = stateWord(p, sess.state);
   const lad = clear($('ladder'));
   RUNGS.forEach(([k, label], i) => {
     if (i) lad.append(h('span', { class: 'arrow' }, '→'));
@@ -1474,20 +1868,17 @@ function renderCheckpoint() {
   $('state-name').textContent = STATE_WORDS[word];
   const dat = clear($('datum'));
   const cell = (k, v) => h('div', {}, h('div', { class: 'lbl' }, k), h('div', { class: 'v' }, v));
-  if (l) {
-    dat.append(cell('sequence', l.sn), cell('epoch', l.epoch), cell('poisoned', l.poisoned ? 'yes' : 'no'), cell('born at', l.bornAt), cell('refund to', nameOf(l.refundTo) + ' (' + l.refundTo + ')'));
-  } else if (stateKind(s.state) === 'convicted') {
-    const c = s.state.convicted;
-    dat.append(cell('tombstone epoch', c.epoch), cell('sequence', c.sn), cell('convicted at', c.convictedAt));
-  } else dat.append(cell('datum', stateKind(s.state) === 'gone' ? 'burned; the registry row stays' : 'none'));
+  if (l) dat.append(cell('sequence', l.sn), cell('epoch', l.epoch), cell('poisoned', l.poisoned ? 'yes' : 'no'), cell('born at', l.bornAt), cell('refund to', nameOf(l.refundTo) + ' (' + l.refundTo + ')'));
+  else if (stateKind(sess.state) === 'convicted') { const c = sess.state.convicted; dat.append(cell('tombstone epoch', c.epoch), cell('sequence', c.sn), cell('convicted at', c.convictedAt)); }
+  else dat.append(cell('datum', stateKind(sess.state) === 'gone' ? 'burned; the registry row stays' : 'none'));
   const bars = clear($('bars'));
   const bar = (cls, label, v, full) => bars.append(h('div', { class: 'bar ' + cls },
     h('span', {}, h('span', { class: 'sw ' + cls }), label),
     h('div', { class: 'track' }, h('div', { class: 'fill', style: 'width:' + (full ? Math.min(100, 100 * v / full) : (v ? 100 : 0)) + '%' })),
     h('span', { class: 'n' }, fmt(v) + (full ? ' / ' + full : ''))));
-  const held0 = held(s.state);
-  bar('dreg', 'conviction bond', held0.dreg, p.D); bar('b', 'freeze bond', held0.b, p.B); bar('pool', 'pool', held0.pool, 0);
-  const v = consumable(p, s.now, s.state);
+  const hd = held(sess.state);
+  bar('dreg', 'conviction bond', hd.dreg, p.D); bar('b', 'freeze bond', hd.b, p.B); bar('pool', 'pool', hd.pool, 0);
+  const v = consumable(p, sess.now, sess.state);
   const vd = $('verdict'); vd.className = v.ok ? 'ok' : 'no';
   vd.textContent = 'The treasury reads: ' + VERDICT_WORDS[v.verdict] + (v.verdict === 'juvenile' && l ? ` Consumable from slot ${l.bornAt + p.W}.` : '');
   const cj = clear($('conjuncts'));
@@ -1495,26 +1886,25 @@ function renderCheckpoint() {
   for (const k of Object.keys(v.conjuncts)) cj.append(h('span', { class: v.conjuncts[k] ? 'yes' : 'nope' }, (v.conjuncts[k] ? '✓ ' : '✗ ') + names[k]));
 }
 function renderCast() {
-  const s = cur();
+  const sess = cur();
   const act = clear($('actors'));
   for (const id of ACTOR_ORDER) {
     const c = CAST[id];
-    act.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, onclick: () => { app.actor = id; app.pending = null; render(); } },
-      c.name + ' · ' + c.role));
+    act.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
   }
   $('actor-blurb').textContent = CAST[app.actor].blurb + (CAST[app.actor].addr ? ` Address ${CAST[app.actor].addr}.` : '');
-  const off = offersFor(app.actor, s);
+  const off = offersFor(app.actor, sess);
   const ka = clear($('keri-acts'));
   $('keri-lbl').hidden = !off.keri.length;
   for (const k of off.keri) {
-    const have = envHas(s.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
-    ka.append(h('button', { type: 'button', class: 'ev-quick', title: k.hint, disabled: have || stateKind(s.state) === 'gone' || stateKind(s.state) === 'convicted',
-      onclick: () => { withSession(addEvidence(s, k.row), WHO[app.actor] || app.actor, k.label + '.', null); render(); } }, (have ? '✓ ' : '+ ') + k.label));
+    const have = envHas(sess.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
+    ka.append(h('button', { type: 'button', class: 'ev-quick', title: k.hint, disabled: have || stateKind(sess.state) === 'gone' || stateKind(sess.state) === 'convicted',
+      onclick: () => pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[app.actor] || app.actor, say: k.label + '.', kind: 'evidence', evRow: k.row }) }, (have ? '✓ ' : '+ ') + k.label));
   }
   const ca = clear($('chain-acts'));
-  if (!off.chain.length) ca.append(h('div', { class: 'empty' }, 'The treasury never spends the checkpoint; it reads it. Its verdict is on the card above.'));
+  if (!off.chain.length) ca.append(h('div', { class: 'empty' }, 'The treasury never spends the checkpoint; it reads it. Its verdict is the lamp on the scene and in the numbers.'));
   for (const o of off.chain) {
-    const d = dryRun(s, o.action);
+    const d = dryRun(sess, o.action);
     ca.append(h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : ''), dataset: { kind: o.kind }, disabled: !d.ok,
       title: d.ok ? 'the machine would accept this now' : d.why,
       onclick: () => { app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderCast(); } }, o.label));
@@ -1531,7 +1921,7 @@ function renderActForm() {
   const form = $('act-form');
   form.hidden = !app.pending;
   if (!app.pending) return;
-  const s = cur(), kind = app.pending.offer.kind, a = app.pending.action;
+  const sess = cur(), kind = app.pending.offer.kind, a = app.pending.action;
   const d = typeof a === 'object' ? a[kind] : {};
   const fields = clear($('act-fields'));
   for (const [f, label] of FIELDS[kind]) {
@@ -1541,35 +1931,32 @@ function renderActForm() {
       onchange: e => { const v = e.target.value.trim(); const n = parseNat(v); d[f] = v === '' ? (f === "refund'" ? null : '') : (n === null ? v : n); renderActForm(); } });
     fields.append(h('label', {}, label, input));
   }
-  const dr = dryRun(s, a);
+  const dr = dryRun(sess, a);
   const why = $('act-why'); why.className = dr.ok ? 'ok' : 'no';
   why.textContent = dr.ok ? ('Accepted now: ' + describeFlow(dr.res.flow) + '.') : dr.why;
   $('act-submit').disabled = !dr.ok;
 }
 function submitPending() {
   if (!app.pending) return;
-  const s = cur();
-  const out = attempt(s, app.pending.action, s.now);
-  withSession(out.session, WHO[app.actor] || app.actor, describeAction(app.pending.action) + ' at slot ' + s.now + '.', out.record);
+  const sess = cur();
+  const out = attempt(sess, app.pending.action, sess.now);
+  const action = app.pending.action;
   app.pending = null;
-  render();
+  pushNode({ session: out.session, record: out.record, who: WHO[app.actor] || app.actor, say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free' });
 }
 const EV_LABELS = { rotationTo: ['epoch', 'from sn', "to sn'"], refundAuthorized: ['epoch', 'address', null], quorum: ['epoch', null, null], duplicityAt: ['epoch', 'sn', null] };
 function renderEvidence() {
-  const s = cur();
+  const sess = cur();
   const kind = $('ev-kind').value;
   const labels = EV_LABELS[kind];
-  [['ev-la', 'ev-a'], ['ev-lb', 'ev-b'], ['ev-lc', 'ev-c']].forEach(([lid, iid], i) => {
-    const lab = $(lid); lab.hidden = !labels[i];
-    if (labels[i]) { lab.firstChild.textContent = labels[i] + ' '; }
-  });
+  [['ev-la', 'ev-a'], ['ev-lb', 'ev-b'], ['ev-lc', 'ev-c']].forEach(([lid], i) => { const lab = $(lid); lab.hidden = !labels[i]; if (labels[i]) lab.firstChild.textContent = labels[i] + ' '; });
   const rows = clear($('ev-rows'));
-  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, refundAuthorized: r => `keys of epoch ${r[0]} signed refund address ${r[1]} (${nameOf(r[1])})`, quorum: r => `current keys of epoch ${r[0]} signed at threshold`, duplicityAt: r => `second rotation at epoch ${r[0]}, sequence ${r[1]}` };
+  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, refundAuthorized: r => `keys of epoch ${r[0]} signed refund address ${r[1]} (${nameOf(r[1])})`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `duplicity at epoch ${r[0]}, sn ${r[1]}` };
   let n = 0;
-  for (const k of EV_KINDS) for (const r of s.env[k]) {
+  for (const k of EV_KINDS) for (const r of sess.env[k]) {
     n++;
     rows.append(h('div', { class: 'ev-row' }, h('span', { class: 'k' }, k), h('span', {}, words[k](r)),
-      h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => { withSession(removeEvidence(s, { [k]: r }), 'you', 'Evidence removed: ' + words[k](r) + '.', null); render(); } }, '✕')));
+      h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => pushNode({ session: removeEvidence(sess, { [k]: r }), record: null, who: 'You', say: 'Evidence removed: ' + words[k](r) + '.', kind: 'evidence', evRow: { [k]: r }, removed: true }) }, '✕')));
   }
   if (!n) rows.append(h('div', { class: 'empty' }, 'No evidence presented. Rotations, quorum signatures and duplicity proofs are rows here; the machine is enabled exactly when its row is present.'));
 }
@@ -1579,33 +1966,31 @@ function addEvidenceFromForm() {
   const n = EV_LABELS[kind].filter(Boolean).length;
   const args = vals.slice(0, n);
   if (!args.every(isNat)) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
-  const s = cur();
-  withSession(addEvidence(s, { [kind]: args }), 'you', `Evidence added: ${kind} ${JSON.stringify(args)}.`, null);
-  render();
+  const sess = cur();
+  pushNode({ session: addEvidence(sess, { [kind]: args }), record: null, who: 'You', say: `Evidence added: ${kind} ${JSON.stringify(args)}.`, kind: 'evidence', evRow: { [kind]: args } });
 }
 function moveSlot(target) {
-  const s = cur();
-  const mv = setSlot(s, target);
-  if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-regression' ? `slot ${target} is before ${s.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(s.now); return; }
+  const sess = cur();
+  const mv = setSlot(sess, target);
+  if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-regression' ? `slot ${target} is before ${sess.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(sess.now); return; }
   $('slot-msg').textContent = '';
-  if (target === s.now) return;
-  withSession(mv.session, 'time', `Slot ${target}.`, null);
-  render();
+  if (target === sess.now) return;
+  pushNode({ session: mv.session, record: null, who: 'Time', say: `Slot ${target}.`, kind: 'time' });
 }
 
-/* ---- the chart: three lanes, one per component, over the play -------------- */
+/* ---- the chart: three lanes over the current branch --------------------------- */
 function renderChart() {
   const canvas = $('value-chart');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const dpr = window.devicePixelRatio || 1;
-  const W = Math.max(320, canvas.clientWidth || 640), H = 260;
+  const W = Math.max(320, canvas.clientWidth || 640), H = 240;
   canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const css = getComputedStyle(document.documentElement);
   const col = v => (css.getPropertyValue(v) || '').trim() || '#888';
   ctx.clearRect(0, 0, W, H);
-  const tl = app.timeline, n = tl.length;
+  const path = currentPath(), tl = path.map(node), n = tl.length, cursorI = path.indexOf(app.cursor);
   const left = 46, right = 10, top = 8, laneGap = 8;
   const laneH = (H - top - 22 - 2 * laneGap) / 3;
   const x = i => left + (n > 1 ? (W - left - right) * i / (n - 1) : (W - left - right) / 2);
@@ -1618,13 +2003,11 @@ function renderChart() {
     const outs = tl.map(t => { if (!(t.record && t.record.ok)) return 0; const f = t.record.flow; return paid(f.refund)[key] + paid(f.hunter)[key] + paid(f.convictor)[key]; });
     const max = Math.max(1, ...vals, ...ins, ...outs);
     const y = v => y1 - (laneH - 12) * v / max;
-    // grid + label
     ctx.strokeStyle = col('--line-2'); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(left, y1 + .5); ctx.lineTo(W - right, y1 + .5); ctx.stroke();
     ctx.fillStyle = col('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     ctx.fillText(String(max), left - 6, y(max)); ctx.fillText('0', left - 6, y1);
     ctx.textAlign = 'left'; ctx.fillStyle = col(cv); ctx.fillText(label, left + 4, y0 + 6);
-    // area + step line
     const c = col(cv);
     ctx.beginPath(); ctx.moveTo(x(0), y1);
     for (let i = 0; i < n; i++) { ctx.lineTo(x(i), y(vals[i])); if (i + 1 < n) ctx.lineTo(x(i + 1), y(vals[i])); }
@@ -1633,17 +2016,14 @@ function renderChart() {
     ctx.beginPath(); ctx.strokeStyle = c; ctx.lineWidth = 2;
     for (let i = 0; i < n; i++) { if (i === 0) ctx.moveTo(x(i), y(vals[i])); else ctx.lineTo(x(i), y(vals[i - 1])); ctx.lineTo(x(i), y(vals[i])); }
     ctx.stroke();
-    // flows as arrows
     ctx.textAlign = 'center';
     for (let i = 0; i < n; i++) {
       if (ins[i]) { arrow(ctx, x(i), y1 - 2, y(ins[i]) - 2, col('--ok')); ctx.fillStyle = col('--ok'); ctx.fillText('+' + ins[i], x(i), y0 + 6); }
-      if (outs[i]) { arrow(ctx, x(i), y(vals[i - 1] !== undefined ? vals[i - 1] : 0) + 2, y1 - 2, col('--warn')); ctx.fillStyle = col('--warn'); ctx.fillText('−' + outs[i], x(i), y0 + 6 + (ins[i] ? 11 : 0)); }
+      if (outs[i]) { arrow(ctx, x(i), y(vals[i - 1] !== undefined ? vals[i - 1] : 0) + 2, y1 - 2, col('--warn')); ctx.fillStyle = col('--warn'); ctx.fillText('−' + outs[i], x(i), y0 + 6 + (ins[i] ? 10 : 0)); }
     }
-    // cursor
     ctx.strokeStyle = col('--accent'); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(x(app.cursor) + .5, y0); ctx.lineTo(x(app.cursor) + .5, y1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x(cursorI) + .5, y0); ctx.lineTo(x(cursorI) + .5, y1); ctx.stroke(); ctx.setLineDash([]);
   });
-  // x axis: slot labels
   ctx.fillStyle = col('--muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   const every = Math.max(1, Math.ceil(n / Math.max(4, Math.floor((W - left - right) / 44))));
   for (let i = 0; i < n; i += every) ctx.fillText('s' + tl[i].session.now, x(i), H - 16);
@@ -1656,18 +2036,18 @@ function arrow(ctx, x, yFrom, yTo, color) {
   ctx.beginPath(); ctx.moveTo(x, yTo); ctx.lineTo(x - 3, yTo - 5 * dir); ctx.lineTo(x + 3, yTo - 5 * dir); ctx.closePath(); ctx.fill();
 }
 
-/* ---- the theorem ledger -------------------------------------------------- */
-const MUTANTS = { T4: ['M1 close while poisoned', 'M4 second poison'], T6: ['M6 relayer moves refund', 'M8 freeze takes D'], T12: ['M7 convict without proof'], T14: ['M5 top-up resets juvenility'], T15: ['M2 freeze without short pool', 'M8 freeze takes D'], T16: ['M1 close while poisoned', 'M3 withdraw pays old refund', 'M8 freeze takes D'], T5: ['M6', 'M7', 'M1', 'M2', 'M4'], T7: ['every mutant'], T9: ['M1', 'M2', 'M4', 'M6', 'M7'] };
+/* ---- the theorem lamps ----------------------------------------------------- */
+const MUTANTS = { T4: ['M1 close while poisoned', 'M4 second poison'], T6: ['M6 relayer moves refund', 'M8 freeze takes D'], T12: ['M7 convict without proof'], T14: ['M5 top-up resets juvenility'], T15: ['M2 freeze without rotation', 'M3 freeze with pool ≥ P'], T16: ['M9 close pays the closer'] };
 function renderLedger() {
-  const s = cur();
+  const sess = cur();
   // the latest transition at or before the cursor: its theorems stay lit while the slot moves
   let t = null;
-  for (let i = app.cursor; i >= 0 && !t; i--) if (app.timeline[i].record) t = app.timeline[i];
-  const counts = heldSoFar(s);
+  for (let id = app.cursor; id !== null && !t; id = node(id).parent) if (node(id).record) t = node(id);
+  const counts = heldSoFar(sess);
   const led = $('ledger');
   if (!led.children.length) for (const th of THEOREMS) {
     led.append(h('details', { class: 'thm', dataset: { id: th.id } },
-      h('summary', {}, h('span', { class: 'id' }, th.id), h('span', {}, th.title), h('span', { class: 'st' })),
+      h('summary', {}, h('span', { class: 'id' }, th.id), h('span', { class: 'ttl' }, th.title), h('span', { class: 'st' })),
       h('div', { class: 'body' }, th.plain),
       h('div', { class: 'lean' }, 'Lean: ' + th.lean.join(', ') + (MUTANTS[th.id] ? ' · killed: ' + MUTANTS[th.id].join(', ') : ''))));
   }
@@ -1677,26 +2057,19 @@ function renderLedger() {
     el.classList.toggle('lit', !!(now && now.exhibited));
     el.classList.toggle('broken', c.broken > 0);
     const st = el.querySelector('.st');
-    st.textContent = c.broken ? `BROKEN ×${c.broken}` : (c.exhibited ? `held ${c.held}/${c.exhibited} shown` : 'not shown yet · held');
-    if (now && now.exhibited) st.textContent = (t === app.timeline[app.cursor] ? 'shown now · ' : 'shown by the last step · ') + st.textContent;
-    if (id === 'T7' && now && !now.exhibited && now.cell === null && now.notes.length) st.textContent = 'no Lean cell for this step · ' + st.textContent;
-    if (id === 'T7' && now && now.exhibited && now.cell) el.title = 'Lean cell: ' + now.cell; else if (id === 'T7') el.title = '';
+    st.textContent = c.broken ? `BROKEN ×${c.broken}` : (c.exhibited ? `${c.held}/${c.exhibited}` : '—');
+    el.title = (now && now.exhibited ? 'shown ' + (t.id === app.cursor ? 'now' : 'by the last step') + ' · ' : '') + (c.exhibited ? `held ${c.held} of ${c.exhibited} times shown on this branch` : 'not shown yet on this branch · held') + (id === 'T7' && now && now.cell ? ' · Lean cell: ' + now.cell : '');
   }
 }
 
 /* ---- money ---------------------------------------------------------------- */
 function renderMoney() {
-  const tl = app.timeline.slice(0, app.cursor + 1);
-  const s = cur();
-  const bal = {};
-  const add = (addr, q) => { if (!q) return; bal[addr] = bal[addr] || { dreg: 0, b: 0, pool: 0 }; bal[addr].dreg += q.dreg; bal[addr].b += q.b; bal[addr].pool += q.pool; };
+  const tl = pathTo(app.cursor).map(node);
+  const sess = cur();
+  const bal = balancesAlong(tl);
   const brought = { dreg: 0, b: 0, pool: 0 };
-  for (const t of tl) if (t.record && t.record.ok) {
-    const f = t.record.flow;
-    brought.dreg += f.dregIn; brought.b += f.bIn; brought.pool += f.poolIn;
-    for (const q of [f.refund, f.hunter, f.convictor]) if (q) add(q.addr, q);
-  }
-  const hd = held(s.state);
+  for (const t of tl) if (t.record && t.record.ok) { const f = t.record.flow; brought.dreg += f.dregIn; brought.b += f.bIn; brought.pool += f.poolIn; }
+  const hd = held(sess.state);
   const table = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'where'), h('th', { class: 'n' }, 'D'), h('th', { class: 'n' }, 'B'), h('th', { class: 'n' }, 'pool'))));
   const tb = h('tbody', {});
   tb.append(h('tr', {}, h('td', {}, 'the checkpoint holds'), h('td', { class: 'n' }, hd.dreg), h('td', { class: 'n' }, hd.b), h('td', { class: 'n' }, hd.pool)));
@@ -1709,17 +2082,38 @@ function renderMoney() {
   if (!fl.children.length) fl.append(h('div', { class: 'empty' }, 'No value has moved yet.'));
 }
 
-/* ---- story player ------------------------------------------------------------ */
+/* ---- the story player: a scenario becomes a tree ------------------------------ */
+function startFresh(params) {
+  newTree(newSession(params || DEFAULT_PARAMS, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID.');
+  app.story = null;
+}
 function playStory(n) {
   const sc = SCENARIOS.find(x => String(x.story) === String(n));
   if (!sc) { startFresh(); render(); return; }
   const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
   app.story = sc;
-  app.timeline = [{ who: '', say: 'Nothing on chain for this AID. Step through the story with › .', session: newSession(sc.params, { corpus: LEAN_CORPUS }), record: null, kind: 'origin' }];
-  r.timeline.forEach(t => app.timeline.push({ who: WHO[t.step.who] || t.step.who, say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''), session: t.session, record: t.record, kind: 'story' }));
+  newTree(newSession(sc.params, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.');
+  const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who, say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''),
+    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'), evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
+  const trunkIds = [0];
+  let pid = 0;
+  for (const t of r.timeline) { pid = addChild(pid, entry(t)); trunkIds.push(pid); }
+  for (const fk of r.forks) {
+    let fid = trunkIds[fk.at + 1];
+    fk.timeline.forEach((t, i) => { fid = addChild(fid, entry(t, i === 0 ? { branch: { id: fk.id, title: fk.title } } : {})); });
+  }
+  // the trunk is the branch taken by default
+  for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
   app.cursor = 0; app.pending = null;
-  if (r.problems.length) app.timeline[0].say = 'This story does not play as written: ' + r.problems.join(' · ');
+  if (r.problems.length) node(0).say = 'This story does not play as written: ' + r.problems.join(' · ');
   render();
+}
+function stopPlay() { if (app.playing) { clearInterval(app.playing); app.playing = null; } }
+function togglePlay() {
+  if (app.playing) { stopPlay(); renderPlaybar(); return; }
+  const tickPlay = () => { const nx = nextOf(app.cursor); if (nx === null) { stopPlay(); renderPlaybar(); return; } goTo(nx); };
+  app.playing = setInterval(tickPlay, 1500);
+  tickPlay();
 }
 
 /* ---- self-test ---------------------------------------------------------------- */
@@ -1730,27 +2124,37 @@ function runSelftest() {
     const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
     const ok = !r.problems.length;
     if (!ok) fails++;
-    out.push(`${ok ? 'PASS' : 'FAIL'}  story ${String(sc.story).padStart(2)} ${sc.title} — ${r.stepsRun} steps, theorems shown: ${r.exhibited.join(' ')}` + (ok ? '' : '\n      ' + r.problems.join('\n      ')));
+    out.push(`${ok ? 'PASS' : 'FAIL'}  story ${String(sc.story).padStart(2)} ${sc.title} — ${r.stepsRun} steps over ${1 + r.forks.length} branch(es), theorems shown: ${r.exhibited.join(' ')}` + (ok ? '' : '\n      ' + r.problems.join('\n      ')));
   }
   if (SCENARIOS.length !== 15) { fails++; out.push(`FAIL  ${SCENARIOS.length} stories embedded, expected 15`); }
   const c = checkCorpus(LEAN_CORPUS);
   const cok = !c.reasons.length && c.applied > 0 && c.refused > 0;
   if (!cok) fails++;
   out.push(`${cok ? 'PASS' : 'FAIL'}  Lean corpus (sha256 ${LEAN_CORPUS_SHA256.slice(0, 12)}…): ${c.applied} applied, ${c.refused} refused, ${c.cons} consumability probes, ${c.theoremChecks} theorem reports` + (cok ? '' : '\n      ' + c.reasons.slice(0, 10).join('\n      ')));
-  // drive the visible controls: story 3 to its end shows Frozen and lights T15
+  // drive the visible controls: story 3 to its end shows Frozen and lights T15; story 5's branches switch
   try {
     playStory(3);
     while (!$('hist-next').disabled) $('hist-next').click();
     const frozen = /frozen/i.test($('state-name').textContent);
     const okChips = $('history-strip').querySelectorAll('.hist-chip.ok');
-    okChips[okChips.length - 1].click();   // the freeze: the last accepted step
+    okChips[okChips.length - 1].click();
     const lit = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
-    const ok = frozen && lit.includes('T15') && /frozen/i.test($('state-name').textContent);
+    let ok = frozen && lit.includes('T15') && /frozen/i.test($('state-name').textContent);
+    out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}); on its last accepted step the lamps light ${lit.join(' ')}`);
     if (!ok) fails++;
-    out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}); on its last accepted step the ledger lights ${lit.join(' ')}`);
+    playStory(5);
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const chips = $('branches').querySelectorAll('.branch');
+    const trunkLeaf = $('state-name').textContent;
+    chips[chips.length - 1].click();
+    const branchState = $('state-name').textContent;
+    const scene = $('scene').querySelectorAll('[data-obj]').length;
+    ok = chips.length >= 3 && /paused/i.test(trunkLeaf) && /gone/i.test(branchState) && scene > 12;
+    out.push(`${ok ? 'PASS' : 'FAIL'}  tree: story 5 offers ${chips.length} branches from the parked state; trunk ends ${trunkLeaf}, the close branch ends ${branchState}; the scene draws ${scene} entities`);
+    if (!ok) fails++;
     startFresh(); render();
   } catch (e) { fails++; out.push('FAIL  controls: ' + (e && e.message)); }
-  out.push(fails ? `FAIL  ${fails} item(s) failed` : `PASS  all ${SCENARIOS.length + 2} items`);
+  out.push(fails ? `FAIL  ${fails} item(s) failed` : `PASS  all ${SCENARIOS.length + 3} items`);
   document.title = (fails ? 'FAIL' : 'PASS') + ' · The Checkpoint self-test';
   const pre = $('selftest-out'); pre.hidden = false; pre.textContent = out.join('\n');
   return { fails, out };
@@ -1771,23 +2175,33 @@ function toggleTheme() {
 }
 function wire() {
   $('story-picker').addEventListener('change', e => { if (e.target.value === '') { startFresh(); render(); } else playStory(e.target.value); });
-  $('hist-first').addEventListener('click', () => { app.cursor = 0; app.pending = null; render(); });
-  $('hist-prev').addEventListener('click', () => { if (app.cursor > 0) { app.cursor--; app.pending = null; render(); } });
-  $('hist-next').addEventListener('click', () => { if (app.cursor < app.timeline.length - 1) { app.cursor++; app.pending = null; render(); } });
-  $('hist-last').addEventListener('click', () => { app.cursor = app.timeline.length - 1; app.pending = null; render(); });
+  $('hist-first').addEventListener('click', () => goTo(0));
+  $('hist-prev').addEventListener('click', () => { const p = node(app.cursor).parent; if (p !== null) goTo(p); });
+  $('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) goTo(nx); });
+  $('hist-last').addEventListener('click', () => goTo(leafOf(app.cursor)));
+  $('btn-play').addEventListener('click', togglePlay);
+  $('scrub').addEventListener('input', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
+  $('scrub').addEventListener('change', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
   $('btn-reset').addEventListener('click', () => { startFresh(); render(); });
   $('btn-theme').addEventListener('click', toggleTheme);
   $('act-submit').addEventListener('click', submitPending);
   $('act-cancel').addEventListener('click', () => { app.pending = null; renderCast(); });
   $('ev-kind').addEventListener('change', renderEvidence);
   $('ev-add').addEventListener('click', addEvidenceFromForm);
-  $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); } else moveSlot(n); });
+  $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); return; } moveSlot(n); });
   $('slot-plus1').addEventListener('click', () => moveSlot(cur().now + 1));
   $('slot-plusw').addEventListener('click', () => moveSlot(cur().now + cur().params.W));
+  $('chart-drawer').addEventListener('toggle', renderChart);
   window.addEventListener('resize', renderChart);
+  document.addEventListener('keydown', e => {
+    if (e.target && /^(input|select|textarea)$/i.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') { $('hist-next').click(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { $('hist-prev').click(); e.preventDefault(); }
+    else if (e.key === ' ') { togglePlay(); e.preventDefault(); }
+  });
 }
 window.CK = { step, replay, consumable, attempt, newSession, addEvidence, removeEvidence, checkScenario, checkCorpus,
-  replayCorpus: checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, LEAN_CORPUS, LEAN_CORPUS_SHA256, app };
+  replayCorpus: checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, LEAN_CORPUS, LEAN_CORPUS_SHA256, app, goTo, playStory };
 initTheme();
 startFresh();
 wire();

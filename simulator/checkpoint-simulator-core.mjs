@@ -874,18 +874,21 @@ function matchesPartial(got, want) {
   if (got === null || typeof got !== 'object') return false;
   return Object.keys(want).every(k => matchesPartial(got[k], want[k]));
 }
-// checkScenario(scenario, label) → {problems, stepsRun, asserted, exhibited, timeline}
-// timeline: one entry per scenario step with the session after it and the record (if any)
+// checkScenario(scenario, label, corpus) → {problems, stepsRun, asserted, exhibited, timeline, forks}
+// timeline: one entry per trunk step with the session after it and the record (if
+// any); forks: [{id, at, title, timeline}], each replayed from the trunk session
+// after step `at` — a scenario is a tree, the trunk and its forks
 function checkScenario(sc, label, corpus) {
-  const problems = [], asserted = [], exhibited = new Set(), timeline = [];
-  let session = newSession(sc.params, { corpus: corpus || null }), stepsRun = 0;
-  (sc.steps || []).forEach((st, i) => {
-    const where = label + ' step ' + i;
+  const problems = [], asserted = [], exhibited = new Set();
+  let stepsRun = 0;
+  // one step of a branch: evidence, seed, params override, the action or the
+  // slot move, every expectation; returns the session after it and the record
+  const applyStep = (session, st, where) => {
     const saved = session.params;
     if (st.params) session = withParams(session, st.params);
     if (st.seed !== undefined) {
       const bad = validateState(st.seed);
-      if (bad) { problems.push(where + ': seed refused: ' + bad.reason + ' ' + bad.message); timeline.push({ step: st, session, record: null }); return; }
+      if (bad) { problems.push(where + ': seed refused: ' + bad.reason + ' ' + bad.message); return { session, record: null }; }
       session = seed(session, st.seed);
     }
     if (st.evidence) {
@@ -926,9 +929,24 @@ function checkScenario(sc, label, corpus) {
       const v = consumable(session.params, session.now, session.state);
       if (v.verdict !== ex.verdict) problems.push(where + ': verdict mismatch — expected «' + ex.verdict + '» got «' + v.verdict + '»');
     }
-    timeline.push({ step: st, session, record });
+    return { session, record };
+  };
+  const branch = (session, steps, where) => {
+    const timeline = [];
+    steps.forEach((st, i) => { const r = applyStep(session, st, where(i)); session = r.session; timeline.push({ step: st, session, record: r.record }); });
+    return timeline;
+  };
+  // the trunk, then every fork from the trunk session it departs from
+  const origin = newSession(sc.params, { corpus: corpus || null });
+  const timeline = branch(origin, sc.steps || [], i => label + ' step ' + i);
+  const forks = [];
+  (sc.forks || []).forEach((fk, k) => {
+    const at = fk.at;
+    if (!Number.isInteger(at) || at < 0 || at >= timeline.length) { problems.push(label + ' fork ' + (fk.id || k) + ': departs after trunk step ' + at + ', which does not exist'); return; }
+    if (!fk.id || !Array.isArray(fk.steps) || !fk.steps.length) { problems.push(label + ' fork ' + (fk.id || k) + ': needs an id and steps'); return; }
+    forks.push({ id: fk.id, at, title: fk.title || fk.id, timeline: branch(timeline[at].session, fk.steps, i => label + ' fork ' + fk.id + ' step ' + i) });
   });
-  return { problems, stepsRun, asserted, exhibited: [...exhibited], timeline };
+  return { problems, stepsRun, asserted, exhibited: [...exhibited], timeline, forks };
 }
 // checkCorpus(corpus) → {applied, refused, cons, theoremChecks, reasons}: every
 // step of the Lean corpus (applied and refused) must agree with step(); every

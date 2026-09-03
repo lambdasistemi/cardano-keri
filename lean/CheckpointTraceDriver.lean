@@ -243,7 +243,7 @@ structure StoryFold where
   now : Slot
   cells : List Json
 
-def storyStep (f : StoryFold) (idx : Nat) (st : Json) : Except String StoryFold := do
+def storyStep (f : StoryFold) (idx : Json) (st : Json) : Except String StoryFold := do
   let slot ← st.getObjValAs? Nat "slot"
   -- this step's parameters: an override applies to this step only
   let stepParams : Option Params := match st.getObjVal? "params" with
@@ -273,21 +273,42 @@ def storyStep (f : StoryFold) (idx : Nat) (st : Json) : Except String StoryFold 
       | .ok _, none => pure { f with env, state, now := slot }   -- no Params: no cell
       | .ok action, some p =>
         let (j, state') := stepJson p env.toEnv slot state action
-        let cell := Json.mkObj [("index", toJson idx), ("params", toJson p), ("env", toJson env),
+        let cell := Json.mkObj [("index", idx), ("params", toJson p), ("env", toJson env),
           ("now", toJson slot), ("input", toJson state), ("action", toJson action),
           ("result", (j.getObjVal? "result").toOption.getD Json.null)]
         pure { f with env, state := state', now := slot, cells := f.cells ++ [cell] }
 
+/-- Fold a branch: every step in order, indexed by `idx`. -/
+def foldSteps (f : StoryFold) (steps : List Json) (idx : Nat → Json) : Except String StoryFold := do
+  let mut f := f
+  let mut i := 0
+  for st in steps do
+    f ← storyStep f (idx i) st
+    i := i + 1
+  pure f
+
+/-- A scenario is a tree: the trunk (`steps`) and its forks (`forks`, each
+departing after trunk step `at`). Every branch is folded from the origin, so a
+fork's cells carry the trunk prefix's state; fork cells are indexed
+`f<id>.<i>`. -/
 def storyJson (sc : Json) : Except String Json := do
   let story ← sc.getObjValAs? Nat "story"
   let p ← paramsOfJson (← sc.getObjVal? "params")
   let steps ← (← sc.getObjVal? "steps").getArr?
-  let mut f : StoryFold := ⟨p, ⟨[], [], [], []⟩, .absent, 0, []⟩
-  let mut i := 0
-  for st in steps do
-    f ← storyStep f i st
-    i := i + 1
-  pure (Json.mkObj [("story", toJson story), ("steps", Json.arr f.cells.toArray)])
+  let init : StoryFold := ⟨p, ⟨[], [], [], []⟩, .absent, 0, []⟩
+  let trunk ← foldSteps init steps.toList (fun i => toJson i)
+  let forks := match sc.getObjVal? "forks" with
+    | .ok (Json.arr fs) => fs.toList
+    | _ => []
+  let mut cells := trunk.cells
+  for fk in forks do
+    let departsAfter ← fk.getObjValAs? Nat "at"
+    let fsteps ← (← fk.getObjVal? "steps").getArr?
+    let id := (fk.getObjValAs? String "id").toOption.getD "?"
+    let prefixFold ← foldSteps init (steps.toList.take (departsAfter + 1)) (fun i => toJson i)
+    let branch ← foldSteps { prefixFold with cells := [] } fsteps.toList (fun i => Json.str s!"f{id}.{i}")
+    cells := cells ++ branch.cells
+  pure (Json.mkObj [("story", toJson story), ("steps", Json.arr cells.toArray)])
 
 def readScenarios : IO (List Json) := do
   let dir : System.FilePath := "../simulator/checkpoint-simulator-scenarios"

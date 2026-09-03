@@ -53,26 +53,6 @@
     {
       "slot": 12,
       "who": "hal",
-      "say": "Hal cannot freeze her: the pool covers the premium.",
-      "action": {
-        "freeze": {
-          "sn'": 1,
-          "payee": 2
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "pool-covers-premium",
-        "verdict": "consumable",
-        "exhibits": [
-          "T7",
-          "T9"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "hal",
       "say": "Hal submits the rotation as an advance with keep, naming himself payee. The chain pays P from the pool to Hal.",
       "action": {
         "rotate": {
@@ -171,6 +151,35 @@
           "T9"
         ]
       }
+    }
+  ],
+  "forks": [
+    {
+      "id": "freeze",
+      "at": 1,
+      "title": "Hal tries to freeze her instead",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "hal",
+          "say": "Hal cannot freeze her: the pool covers the premium.",
+          "action": {
+            "freeze": {
+              "sn'": 1,
+              "payee": 2
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "pool-covers-premium",
+            "verdict": "consumable",
+            "exhibits": [
+              "T7",
+              "T9"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

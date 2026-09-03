@@ -71,99 +71,7 @@
     {
       "slot": 12,
       "who": "alice",
-      "say": "Poisoning twice in one epoch is refused.",
-      "action": "poison",
-      "expect": {
-        "ok": false,
-        "reason": "already-poisoned",
-        "verdict": "poisoned",
-        "exhibits": [
-          "T4",
-          "T7",
-          "T9"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "mallory",
-      "say": "Mallory, with the stolen current keys, tries to close and take the bonds: close is disabled while poisoned.",
-      "action": "close",
-      "expect": {
-        "ok": false,
-        "reason": "poisoned",
-        "verdict": "poisoned",
-        "exhibits": [
-          "T4",
-          "T7",
-          "T9"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "hal",
-      "say": "Hal holds a later witnessed rotation and the pool is short, but a poisoned checkpoint cannot be frozen: it is already unconsumable, nothing to freeze.",
-      "evidence": {
-        "add": [
-          {
-            "rotationTo": [
-              0,
-              0,
-              1
-            ]
-          }
-        ]
-      },
-      "action": {
-        "freeze": {
-          "sn'": 1,
-          "payee": 2
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "poisoned",
-        "verdict": "poisoned",
-        "exhibits": [
-          "T4",
-          "T7",
-          "T9"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "friend",
-      "say": "A top-up lands but changes nothing about trust: the poison stays.",
-      "action": {
-        "topUp": {
-          "x": 5
-        }
-      },
-      "expect": {
-        "ok": true,
-        "live": {
-          "poisoned": true,
-          "pool": 6
-        },
-        "verdict": "poisoned",
-        "exhibits": [
-          "T1",
-          "T4",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T14"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "alice",
-      "say": "Alice rotates with her next keys. The poison clears: it was local to the keys she just retired. Hal, or anyone, lands it and is paid.",
+      "say": "Alice rotates with her next keys. The poison clears: it was local to the keys she just retired. She lands it herself; the pool is short, so nobody is paid.",
       "action": {
         "rotate": {
           "sn'": 1,
@@ -180,16 +88,9 @@
           "poisoned": false,
           "dreg": 1000,
           "b": 5,
-          "pool": 4
+          "pool": 1
         },
-        "flow": {
-          "hunter": {
-            "addr": 2,
-            "dreg": 0,
-            "b": 0,
-            "pool": 2
-          }
-        },
+        "flow": {},
         "verdict": "consumable",
         "exhibits": [
           "T1",
@@ -200,9 +101,18 @@
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T14",
-          "T16"
+          "T9"
+        ]
+      },
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
         ]
       }
     },
@@ -220,6 +130,107 @@
           "T9"
         ]
       }
+    }
+  ],
+  "forks": [
+    {
+      "id": "attempts",
+      "at": 1,
+      "title": "Mallory and Hal try everything on the poisoned checkpoint",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "alice",
+          "say": "Poisoning twice in one epoch is refused.",
+          "action": "poison",
+          "expect": {
+            "ok": false,
+            "reason": "already-poisoned",
+            "verdict": "poisoned",
+            "exhibits": [
+              "T4",
+              "T7",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "mallory",
+          "say": "Mallory, with the stolen current keys, tries to close and take the bonds: close is disabled while poisoned.",
+          "action": "close",
+          "expect": {
+            "ok": false,
+            "reason": "poisoned",
+            "verdict": "poisoned",
+            "exhibits": [
+              "T4",
+              "T7",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "hal",
+          "say": "Hal holds a later witnessed rotation and the pool is short, but a poisoned checkpoint cannot be frozen: it is already unconsumable, nothing to freeze.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  0,
+                  0,
+                  1
+                ]
+              }
+            ]
+          },
+          "action": {
+            "freeze": {
+              "sn'": 1,
+              "payee": 2
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "poisoned",
+            "verdict": "poisoned",
+            "exhibits": [
+              "T4",
+              "T7",
+              "T9"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "friend",
+          "say": "A top-up lands but changes nothing about trust: the poison stays.",
+          "action": {
+            "topUp": {
+              "x": 5
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "poisoned": true,
+              "pool": 6
+            },
+            "verdict": "poisoned",
+            "exhibits": [
+              "T1",
+              "T4",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9",
+              "T14"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

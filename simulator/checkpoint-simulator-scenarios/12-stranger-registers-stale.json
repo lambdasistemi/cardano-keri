@@ -221,5 +221,22 @@
         ]
       }
     }
+  ],
+  "forks": [
+    {
+      "id": "residual",
+      "at": 2,
+      "title": "Nobody lands her later rotations",
+      "steps": [
+        {
+          "slot": 10,
+          "who": "treasury",
+          "say": "Nobody lands Alice's later rotations. After W slots the treasury accepts Mallory's stale epoch: the residual story 12 states as a limit, the price of a permissionless advance.",
+          "expect": {
+            "verdict": "consumable"
+          }
+        }
+      ]
+    }
   ]
 }

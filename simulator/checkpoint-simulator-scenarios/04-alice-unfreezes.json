@@ -208,76 +208,60 @@
       "expect": {
         "verdict": "consumable"
       }
-    },
+    }
+  ],
+  "forks": [
     {
-      "slot": 30,
-      "who": "alice",
-      "say": "Suppose she had been frozen again (seeded). Withdraw is enabled from a frozen state as well: the conviction bond and the pool leave to the refund address; the missing freeze bond is not owed. Then she is parked.",
-      "seed": {
-        "present": {
-          "l": {
-            "sn": 2,
-            "epoch": 2,
-            "poisoned": false,
-            "bornAt": 20,
-            "refundTo": 1,
-            "dreg": 1000,
-            "b": 0,
-            "pool": 21
-          }
-        }
-      },
-      "evidence": {
-        "add": [
-          {
-            "rotationTo": [
-              2,
-              2,
-              3
+      "id": "withdraw",
+      "at": 2,
+      "title": "Alice withdraws instead of unfreezing",
+      "steps": [
+        {
+          "slot": 20,
+          "who": "alice",
+          "say": "Withdraw is enabled from a frozen state as well: Alice lands the same rotation with withdraw. The conviction bond and the pool she still holds go to her refund address; the freeze bond is already gone. Parked.",
+          "action": {
+            "rotate": {
+              "sn'": 1,
+              "op": "withdraw",
+              "payee": 1,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "dreg": 0,
+              "b": 0,
+              "pool": 0,
+              "epoch": 1,
+              "sn": 1
+            },
+            "flow": {
+              "refund": {
+                "addr": 1,
+                "dreg": 1000,
+                "b": 0,
+                "pool": 1
+              }
+            },
+            "verdict": "dreg-missing",
+            "exhibits": [
+              "T1",
+              "T10",
+              "T14",
+              "T16",
+              "T2",
+              "T3",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9"
             ]
           }
-        ]
-      },
-      "action": {
-        "rotate": {
-          "sn'": 3,
-          "op": "withdraw",
-          "payee": 1,
-          "refund'": null
         }
-      },
-      "expect": {
-        "ok": true,
-        "live": {
-          "sn": 3,
-          "epoch": 3,
-          "dreg": 0,
-          "b": 0,
-          "pool": 0
-        },
-        "flow": {
-          "refund": {
-            "addr": 1,
-            "dreg": 1000,
-            "b": 0,
-            "pool": 21
-          }
-        },
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T1",
-          "T2",
-          "T3",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T10",
-          "T14",
-          "T16"
-        ]
-      }
+      ]
     }
   ]
 }

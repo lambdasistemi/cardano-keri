@@ -24,7 +24,10 @@
       "kind": "post-state",
       "decl": "SysStep.register",
       "text": "registered := aid :: s.registered",
-      "match": { "ok": true, "kind": "register" },
+      "match": {
+        "ok": true,
+        "kind": "register"
+      },
       "note": "SysStep.other leaves the registry alone."
     },
     {
@@ -45,7 +48,10 @@
       "kind": "payment",
       "decl": "Step.register",
       "text": "dregIn := p.D, bIn := p.B",
-      "match": { "ok": true, "kind": "register" },
+      "match": {
+        "ok": true,
+        "kind": "register"
+      },
       "note": "the registration flow brings exactly D and B; a transaction bringing less is not a Step at all."
     },
     {
@@ -96,7 +102,12 @@
       "kind": "payment",
       "decl": "Step.rotateKeepPaid",
       "text": "hunter := some { addr := payee, pool := p.P }",
-      "match": { "ok": true, "kind": "rotate", "op": "keep", "hunterPool": true },
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "hunterPool": true
+      },
       "note": "paid when the pool covers P (hpay : p.P ≤ l.pool); otherwise the rotation lands unpaid (Step.rotateKeepUnpaid, hnopay): payment is never a gate."
     },
     {
@@ -151,7 +162,10 @@
       "kind": "payment",
       "decl": "Step.freeze",
       "text": "hunter := some { addr := payee, b := p.B }",
-      "match": { "ok": true, "kind": "freeze" },
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      },
       "note": "the freeze also needs the bond present (hb : l.b = p.B; refusal freeze-bond-missing), which the story states only as its 'after'."
     },
     {
@@ -161,8 +175,13 @@
       "kind": "post-state",
       "decl": "Step.freeze",
       "text": "{ l with b := 0 }",
-      "updates": ["b"],
-      "match": { "ok": true, "kind": "freeze" },
+      "updates": [
+        "b"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      },
       "note": "Live is the datum plus the value held; the freeze sets only b (the freeze bond, value) and leaves sn, epoch, poisoned, bornAt, refundTo, dreg and pool as they were — the old keys stay."
     },
     {
@@ -182,7 +201,12 @@
       "kind": "post-state",
       "decl": "Step.rotateDeposit",
       "text": "dreg := p.D, b := p.B",
-      "match": { "ok": true, "kind": "rotate", "op": "deposit", "preWord": "frozen" },
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "frozen"
+      },
       "note": "the depositing rotation's output holds exactly D and B; the guards hd / hb refuse a datum already above full (bond-over-full)."
     },
     {
@@ -202,7 +226,12 @@
       "kind": "payment",
       "decl": "Step.rotateWithdraw",
       "text": "refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
-      "match": { "ok": true, "kind": "rotate", "op": "withdraw", "preWord": "live" }
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "withdraw",
+        "preWord": "live"
+      }
     },
     {
       "story": 6,
@@ -221,7 +250,12 @@
       "kind": "post-state",
       "decl": "Step.rotateDeposit",
       "text": "dreg := p.D, b := p.B",
-      "match": { "ok": true, "kind": "rotate", "op": "deposit", "preWord": "paused" }
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "paused"
+      }
     },
     {
       "story": 7,
@@ -354,7 +388,11 @@
       "kind": "payment",
       "decl": "Step.close",
       "text": "refund := some { addr := l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
-      "match": { "ok": true, "kind": "close", "preWord": "live" }
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live"
+      }
     },
     {
       "story": 10,
@@ -363,7 +401,11 @@
       "kind": "post-state",
       "decl": "Step.close",
       "text": ".gone",
-      "match": { "ok": true, "kind": "close", "preWord": "live" },
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live"
+      },
       "note": "Gone is terminal (T8_gone_terminal); the registry row stays."
     },
     {
@@ -510,7 +552,11 @@
       "decl": "Step.rotateKeepPaid",
       "hyp": "hauth",
       "text": "env.refundAuthorized (l.epoch + 1) r",
-      "match": { "ok": true, "kind": "rotate", "refundChanged": true },
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundChanged": true
+      },
       "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can authorize one (hauth), and close and withdrawal pay there (Step.close, Step.rotateWithdraw)."
     },
     {
@@ -531,7 +577,10 @@
       "kind": "payment",
       "decl": "Step.topUp",
       "text": "poolIn := x",
-      "match": { "ok": true, "kind": "topUp" }
+      "match": {
+        "ok": true,
+        "kind": "topUp"
+      }
     },
     {
       "story": 13,
@@ -540,8 +589,13 @@
       "kind": "post-state",
       "decl": "Step.topUp",
       "text": "{ l with pool := l.pool + x }",
-      "updates": ["pool"],
-      "match": { "ok": true, "kind": "topUp" },
+      "updates": [
+        "pool"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "topUp"
+      },
       "note": "only the pool (value) moves; sn, epoch, poisoned, bornAt, refundTo, dreg and b stay — juvenility is not restarted."
     },
     {
@@ -551,7 +605,10 @@
       "kind": "no-guard",
       "decl": "Step.topUp",
       "text": "(.topUp x)",
-      "match": { "ok": true, "kind": "topUp" },
+      "match": {
+        "ok": true,
+        "kind": "topUp"
+      },
       "note": "the constructor has no guard hypothesis: no evidence, no signature."
     },
     {
@@ -568,7 +625,12 @@
       "decl": "Step.rotateKeepPaid",
       "hyp": "hpay",
       "text": "p.P ≤ l.pool",
-      "match": { "ok": true, "kind": "rotate", "op": "keep", "hunterPool": true }
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "hunterPool": true
+      }
     },
     {
       "story": 14,
@@ -577,7 +639,12 @@
       "kind": "payment",
       "decl": "Step.rotateKeepPaid",
       "text": "hunter := some { addr := payee, pool := p.P }",
-      "match": { "ok": true, "kind": "rotate", "op": "keep", "hunterPool": true },
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "hunterPool": true
+      },
       "note": "no UTxO in the model: 'first' is whichever rotation the machine sees first; it lands paid."
     },
     {
@@ -599,7 +666,10 @@
       "decl": "Step.freeze",
       "hyp": "hpool",
       "text": "l.pool < p.P",
-      "match": { "ok": true, "kind": "freeze" }
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      }
     },
     {
       "story": 14,
@@ -608,7 +678,10 @@
       "kind": "payment",
       "decl": "Step.freeze",
       "text": "hunter := some { addr := payee, b := p.B }",
-      "match": { "ok": true, "kind": "freeze" }
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      }
     },
     {
       "story": 14,
@@ -677,41 +750,367 @@
     }
   ],
   "distinctive": [
-    { "id": "register-brings-both-bonds", "story": 1, "clause": "registration brings D and B and a first pool", "match": { "ok": true, "kind": "register" } },
-    { "id": "paid-advance", "story": 2, "clause": "a keep rotation with the pool covering P pays P to the payee", "match": { "ok": true, "kind": "rotate", "op": "keep", "hunterPool": true } },
-    { "id": "unpaid-advance", "story": 4, "clause": "a keep rotation with a short pool lands unpaid: payment is never a gate", "match": { "ok": true, "kind": "rotate", "op": "keep", "noFlow": true } },
-    { "id": "freeze-takes-B", "story": 3, "clause": "a freeze pays B to the hunter and leaves the datum", "match": { "ok": true, "kind": "freeze" } },
-    { "id": "frozen-keep", "story": 4, "clause": "a keep rotation from a frozen state lands and stays frozen", "match": { "ok": true, "kind": "rotate", "op": "keep", "preWord": "frozen" } },
-    { "id": "frozen-withdraw", "story": 4, "clause": "a withdraw rotation from a frozen state pays what is held and parks", "match": { "ok": true, "kind": "rotate", "op": "withdraw", "preWord": "frozen" } },
-    { "id": "unfreeze-by-deposit", "story": 4, "clause": "a depositing rotation from a frozen state restores both bonds and restarts juvenility", "match": { "ok": true, "kind": "rotate", "op": "deposit", "preWord": "frozen" } },
-    { "id": "pause-by-withdraw", "story": 5, "clause": "a withdraw rotation from a live state pays D + B + pool to the refund address", "match": { "ok": true, "kind": "rotate", "op": "withdraw", "preWord": "live" } },
-    { "id": "paused-poison-accepted", "story": 5, "clause": "the current-epoch quorum can poison a paused checkpoint (accepted; gains nothing)", "match": { "ok": true, "kind": "poison", "preWord": "paused" } },
-    { "id": "paused-close-accepted", "story": 10, "clause": "the current-epoch quorum can close a paused checkpoint: zero paid, token burned", "match": { "ok": true, "kind": "close", "preWord": "paused" } },
-    { "id": "paused-retired-quorum-refused", "story": 5, "clause": "keys of a retired epoch cannot close or poison a paused checkpoint", "match": { "ok": false, "reason": "no-quorum", "preWord": "paused" } },
-    { "id": "paused-freeze-refused", "story": 5, "clause": "a paused checkpoint cannot be frozen: no freeze bond to take", "match": { "ok": false, "kind": "freeze", "reason": "freeze-bond-missing", "preWord": "paused" } },
-    { "id": "resurrect-by-deposit", "story": 6, "clause": "a depositing rotation from a paused state brings both bonds back", "match": { "ok": true, "kind": "rotate", "op": "deposit", "preWord": "paused" } },
-    { "id": "poison-then-rotate-clears", "story": 7, "clause": "a rotation from a poisoned state clears the poison", "match": { "ok": true, "kind": "rotate", "prePoisoned": true } },
-    { "id": "poisoned-close-refused", "story": 7, "clause": "close is disabled while poisoned", "match": { "ok": false, "kind": "close", "reason": "poisoned" } },
-    { "id": "poisoned-freeze-refused", "story": 7, "clause": "a poisoned checkpoint cannot be frozen", "match": { "ok": false, "kind": "freeze", "reason": "poisoned" } },
-    { "id": "second-poison-refused", "story": 7, "clause": "the poison is declared once per epoch", "match": { "ok": false, "kind": "poison", "reason": "already-poisoned" } },
-    { "id": "refund-unauthorized-refused", "story": 8, "clause": "a rotation naming an address the new keys did not sign is refused", "match": { "ok": false, "kind": "rotate", "reason": "refund-not-authorized" } },
-    { "id": "refund-null-preserved", "story": 8, "clause": "a rotation naming no address lands and keeps the refund address", "match": { "ok": true, "kind": "rotate", "refundNull": true, "refundUnchanged": true } },
-    { "id": "refund-moved-by-new-keys", "story": 8, "clause": "a rotation whose new keys signed the address moves it", "match": { "ok": true, "kind": "rotate", "refundChanged": true } },
-    { "id": "convict-from-poisoned", "story": 9, "clause": "conviction is enabled from a poisoned state", "match": { "ok": true, "kind": "convict", "prePoisoned": true } },
-    { "id": "convict-without-proof-refused", "story": 9, "clause": "no duplicity proof, no conviction", "match": { "ok": false, "kind": "convict", "reason": "no-duplicity-proof" } },
-    { "id": "convicted-terminal", "story": 9, "clause": "nothing leaves Convicted", "match": { "ok": false, "reason": "convicted-terminal" } },
-    { "id": "close-pays-refund-address", "story": 10, "clause": "close pays everything to the refund address in the datum, whoever closes", "match": { "ok": true, "kind": "close", "preWord": "live" } },
-    { "id": "gone-terminal", "story": 10, "clause": "nothing leaves Gone; the AID cannot be registered again", "match": { "ok": false, "reason": "gone-terminal" } },
-    { "id": "stale-registration-donation", "story": 8, "clause": "a stranger's registration ends up paying Alice", "match": { "ok": true, "kind": "close", "refundToAlice": true } },
-    { "id": "topup-keeps-juvenility", "story": 13, "clause": "a top-up leaves bornAt untouched", "match": { "ok": true, "kind": "topUp", "bornAtUnchanged": true } },
-    { "id": "topup-invalid-nat", "story": 13, "clause": "a non-Nat amount is refused by name", "match": { "ok": false, "kind": "topUp", "reason": "invalid-nat" } },
-    { "id": "race-second-advance", "story": 14, "clause": "the second advance finds its evidence no longer matching", "match": { "ok": false, "kind": "rotate", "reason": "no-witnessed-rotation", "preWord": "live" } },
-    { "id": "race-second-freeze", "story": 14, "clause": "the second freeze finds nothing to take", "match": { "ok": false, "kind": "freeze", "reason": "freeze-bond-missing", "preWord": "frozen" } },
-    { "id": "slot-regression", "story": 14, "clause": "the chain does not go backwards", "match": { "ok": false, "reason": "slot-regression" } },
-    { "id": "absent-needs-register", "story": 1, "clause": "nothing but a registration from Absent", "match": { "ok": false, "reason": "absent-needs-register" } },
-    { "id": "mint-once", "story": 12, "clause": "a second registration of the same AID is refused", "match": { "ok": false, "kind": "register", "reason": "already-present" } },
-    { "id": "unknown-redeemer", "story": 12, "clause": "an unknown redeemer is refused by name", "match": { "ok": false, "reason": "invalid-action" } },
-    { "id": "zero-bond-params", "story": 1, "clause": "a deployment with a zero bond is refused", "match": { "ok": false, "reason": "invalid-params" } },
-    { "id": "bond-over-full-seeded", "story": 6, "clause": "a datum above full is refused by the depositing rotation (seeded, unreachable)", "match": { "ok": false, "reason": "bond-over-full" } }
+    {
+      "id": "register-brings-both-bonds",
+      "story": 1,
+      "clause": "registration brings D and B and a first pool",
+      "match": {
+        "ok": true,
+        "kind": "register"
+      }
+    },
+    {
+      "id": "paid-advance",
+      "story": 2,
+      "clause": "a keep rotation with the pool covering P pays P to the payee",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "hunterPool": true
+      }
+    },
+    {
+      "id": "unpaid-advance",
+      "story": 4,
+      "clause": "a keep rotation with a short pool lands unpaid: payment is never a gate",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "noFlow": true
+      }
+    },
+    {
+      "id": "freeze-takes-B",
+      "story": 3,
+      "clause": "a freeze pays B to the hunter and leaves the datum",
+      "match": {
+        "ok": true,
+        "kind": "freeze"
+      }
+    },
+    {
+      "id": "frozen-keep",
+      "story": 4,
+      "clause": "a keep rotation from a frozen state lands and stays frozen",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "frozen-withdraw",
+      "story": 4,
+      "clause": "a withdraw rotation from a frozen state pays what is held and parks",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "withdraw",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "unfreeze-by-deposit",
+      "story": 4,
+      "clause": "a depositing rotation from a frozen state restores both bonds and restarts juvenility",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "pause-by-withdraw",
+      "story": 5,
+      "clause": "a withdraw rotation from a live state pays D + B + pool to the refund address",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "withdraw",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "paused-poison-accepted",
+      "story": 5,
+      "clause": "the current-epoch quorum can poison a paused checkpoint (accepted; gains nothing)",
+      "match": {
+        "ok": true,
+        "kind": "poison",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-close-accepted",
+      "story": 5,
+      "clause": "the current-epoch quorum can close a paused checkpoint: zero paid, token burned",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-retired-quorum-refused",
+      "story": 5,
+      "clause": "keys of a retired epoch cannot close or poison a paused checkpoint",
+      "match": {
+        "ok": false,
+        "reason": "no-quorum",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "paused-freeze-refused",
+      "story": 5,
+      "clause": "a paused checkpoint cannot be frozen: no freeze bond to take",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "freeze-bond-missing",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "resurrect-by-deposit",
+      "story": 6,
+      "clause": "a depositing rotation from a paused state brings both bonds back",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "paused"
+      }
+    },
+    {
+      "id": "poison-then-rotate-clears",
+      "story": 7,
+      "clause": "a rotation from a poisoned state clears the poison",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "poisoned-close-refused",
+      "story": 7,
+      "clause": "close is disabled while poisoned",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "poisoned"
+      }
+    },
+    {
+      "id": "poisoned-freeze-refused",
+      "story": 7,
+      "clause": "a poisoned checkpoint cannot be frozen",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "poisoned"
+      }
+    },
+    {
+      "id": "second-poison-refused",
+      "story": 7,
+      "clause": "the poison is declared once per epoch",
+      "match": {
+        "ok": false,
+        "kind": "poison",
+        "reason": "already-poisoned"
+      }
+    },
+    {
+      "id": "refund-unauthorized-refused",
+      "story": 8,
+      "clause": "a rotation naming an address the new keys did not sign is refused",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "reason": "refund-not-authorized"
+      }
+    },
+    {
+      "id": "refund-null-preserved",
+      "story": 8,
+      "clause": "a rotation naming no address lands and keeps the refund address",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundNull": true,
+        "refundUnchanged": true
+      }
+    },
+    {
+      "id": "refund-moved-by-new-keys",
+      "story": 8,
+      "clause": "a rotation whose new keys signed the address moves it",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundChanged": true
+      }
+    },
+    {
+      "id": "convict-from-poisoned",
+      "story": 9,
+      "clause": "conviction is enabled from a poisoned state",
+      "match": {
+        "ok": true,
+        "kind": "convict",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "convict-without-proof-refused",
+      "story": 9,
+      "clause": "no duplicity proof, no conviction",
+      "match": {
+        "ok": false,
+        "kind": "convict",
+        "reason": "no-duplicity-proof"
+      }
+    },
+    {
+      "id": "convicted-terminal",
+      "story": 9,
+      "clause": "nothing leaves Convicted",
+      "match": {
+        "ok": false,
+        "reason": "convicted-terminal"
+      }
+    },
+    {
+      "id": "close-pays-refund-address",
+      "story": 10,
+      "clause": "close pays everything to the refund address in the datum, whoever closes",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "gone-terminal",
+      "story": 10,
+      "clause": "nothing leaves Gone; the AID cannot be registered again",
+      "match": {
+        "ok": false,
+        "reason": "gone-terminal"
+      }
+    },
+    {
+      "id": "stale-registration-donation",
+      "story": 8,
+      "clause": "a stranger's registration ends up paying Alice",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "refundToAlice": true
+      }
+    },
+    {
+      "id": "topup-keeps-juvenility",
+      "story": 13,
+      "clause": "a top-up leaves bornAt untouched",
+      "match": {
+        "ok": true,
+        "kind": "topUp",
+        "bornAtUnchanged": true
+      }
+    },
+    {
+      "id": "topup-invalid-nat",
+      "story": 13,
+      "clause": "a non-Nat amount is refused by name",
+      "match": {
+        "ok": false,
+        "kind": "topUp",
+        "reason": "invalid-nat"
+      }
+    },
+    {
+      "id": "race-second-advance",
+      "story": 14,
+      "clause": "the second advance finds its evidence no longer matching",
+      "match": {
+        "ok": false,
+        "kind": "rotate",
+        "reason": "no-witnessed-rotation",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "race-second-freeze",
+      "story": 14,
+      "clause": "the second freeze finds nothing to take",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "freeze-bond-missing",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "slot-regression",
+      "story": 14,
+      "clause": "the chain does not go backwards",
+      "match": {
+        "ok": false,
+        "reason": "slot-regression"
+      }
+    },
+    {
+      "id": "absent-needs-register",
+      "story": 1,
+      "clause": "nothing but a registration from Absent",
+      "match": {
+        "ok": false,
+        "reason": "absent-needs-register"
+      }
+    },
+    {
+      "id": "mint-once",
+      "story": 12,
+      "clause": "a second registration of the same AID is refused",
+      "match": {
+        "ok": false,
+        "kind": "register",
+        "reason": "already-present"
+      }
+    },
+    {
+      "id": "unknown-redeemer",
+      "story": 12,
+      "clause": "an unknown redeemer is refused by name",
+      "match": {
+        "ok": false,
+        "reason": "invalid-action"
+      }
+    },
+    {
+      "id": "zero-bond-params",
+      "story": 1,
+      "clause": "a deployment with a zero bond is refused",
+      "match": {
+        "ok": false,
+        "reason": "invalid-params"
+      }
+    },
+    {
+      "id": "bond-over-full-seeded",
+      "story": 6,
+      "clause": "a datum above full is refused by the depositing rotation (seeded, unreachable)",
+      "match": {
+        "ok": false,
+        "reason": "bond-over-full"
+      }
+    }
   ]
 }

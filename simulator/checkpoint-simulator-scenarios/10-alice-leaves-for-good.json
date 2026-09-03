@@ -127,8 +127,8 @@
     },
     {
       "slot": 20,
-      "who": "mallory",
-      "say": "Suppose Mallory also stole the new keys and closes. The token burns, but every lovelace goes to Alice's refund address: the closer chooses when, never where.",
+      "who": "alice",
+      "say": "Alice's current key holders sign the close at threshold. The chain pays everything to the refund address in the datum and burns the token.",
       "evidence": {
         "add": [
           {
@@ -152,13 +152,13 @@
         },
         "verdict": "not-present",
         "exhibits": [
+          "T10",
+          "T16",
           "T5",
           "T6",
           "T7",
           "T8",
-          "T9",
-          "T10",
-          "T16"
+          "T9"
         ]
       }
     },
@@ -202,57 +202,73 @@
           "T9"
         ]
       }
-    },
+    }
+  ],
+  "forks": [
     {
-      "slot": 20,
-      "who": "mallory",
-      "say": "Suppose instead the checkpoint was parked (story 5) and Mallory holds the keys of its current epoch. Close is enabled: nothing is paid, the token burns, the AID is gone forever. The Lean permits this; story 5 did not consider it.",
-      "seed": {
-        "present": {
-          "l": {
-            "sn": 1,
-            "epoch": 1,
-            "poisoned": false,
-            "bornAt": 0,
-            "refundTo": 1,
-            "dreg": 0,
-            "b": 0,
-            "pool": 0
-          }
-        }
-      },
-      "evidence": {
-        "add": [
-          {
-            "quorum": [
-              1
+      "id": "mallory",
+      "at": 3,
+      "title": "Mallory stole the new keys too and closes",
+      "steps": [
+        {
+          "slot": 20,
+          "who": "mallory",
+          "say": "Suppose Mallory also stole the new keys and closes. The token burns, but every lovelace goes to Alice's refund address: the closer chooses when, never where.",
+          "evidence": {
+            "add": [
+              {
+                "quorum": [
+                  1
+                ]
+              }
+            ]
+          },
+          "action": "close",
+          "expect": {
+            "ok": true,
+            "state": "gone",
+            "flow": {
+              "refund": {
+                "addr": 1,
+                "dreg": 1000,
+                "b": 5,
+                "pool": 8
+              }
+            },
+            "verdict": "not-present",
+            "exhibits": [
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9",
+              "T10",
+              "T16"
             ]
           }
-        ]
-      },
-      "action": "close",
-      "expect": {
-        "ok": true,
-        "state": "gone",
-        "flow": {
-          "refund": {
-            "addr": 1,
-            "dreg": 0,
-            "b": 0,
-            "pool": 0
-          }
         },
-        "verdict": "not-present",
-        "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T10",
-          "T16"
-        ]
-      }
+        {
+          "slot": 20,
+          "who": "friend",
+          "say": "The registry row stays: this AID can never be registered on Cardano again.",
+          "action": {
+            "register": {
+              "refund": 1,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "gone-terminal",
+            "verdict": "not-present",
+            "exhibits": [
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

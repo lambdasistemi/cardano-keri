@@ -74,7 +74,9 @@ const BUILD = join(HERE, 'checkpoint-simulator-build.mjs');
 
 function runScenario(core, sc, file, corpus) {
   const r = core.checkScenario(sc, file, corpus);
-  return { problems: r.problems, asserted: new Set(r.asserted), exhibitedIds: new Set(r.exhibited), stepsRun: r.stepsRun, timeline: r.timeline };
+  // the timeline searched for distinctive steps and clause ties spans every branch
+  const timeline = [...r.timeline, ...r.forks.flatMap(fk => fk.timeline.map(t => ({ ...t, fork: fk.id })))];
+  return { problems: r.problems, asserted: new Set(r.asserted), exhibitedIds: new Set(r.exhibited), stepsRun: r.stepsRun, timeline, forks: r.forks.length };
 }
 
 /* --- exact Nat ------------------------------------------------------------ */

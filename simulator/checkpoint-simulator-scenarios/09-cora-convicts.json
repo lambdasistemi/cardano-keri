@@ -66,26 +66,6 @@
     {
       "slot": 12,
       "who": "cora",
-      "say": "Without a second receipted rotation at the tip’s sequence there is no conviction.",
-      "action": {
-        "convict": {
-          "payee": 3
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "no-duplicity-proof",
-        "verdict": "poisoned",
-        "exhibits": [
-          "T7",
-          "T9",
-          "T12"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "cora",
       "say": "Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice’s witnesses. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).",
       "evidence": {
         "add": [
@@ -210,6 +190,35 @@
           "T12"
         ]
       }
+    }
+  ],
+  "forks": [
+    {
+      "id": "noproof",
+      "at": 1,
+      "title": "Cora without the second rotation",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "cora",
+          "say": "Without a second receipted rotation at the tip’s sequence there is no conviction.",
+          "action": {
+            "convict": {
+              "payee": 3
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "no-duplicity-proof",
+            "verdict": "poisoned",
+            "exhibits": [
+              "T7",
+              "T9",
+              "T12"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

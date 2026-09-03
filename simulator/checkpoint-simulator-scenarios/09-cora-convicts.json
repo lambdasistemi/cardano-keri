@@ -1,7 +1,7 @@
 {
   "story": 9,
   "title": "Cora convicts",
-  "goal": "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.",
+  "goal": "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by a threshold of her witnesses (KERI’s toad), I want to end this identity on chain and take its conviction bond.",
   "params": {
     "D": 1000,
     "B": 5,

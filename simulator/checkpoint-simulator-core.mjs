@@ -648,7 +648,7 @@ function explain(rec, s) {
   const p = s.params, a = rec.action;
   const l = liveOf(rec.pre) || { epoch: '?', sn: '?', pool: '?', b: '?', dreg: '?' };
   const k = actionKind(a);
-  const d = (a && typeof a === 'object') ? a[k] : {};
+  const d = (a && typeof a === 'object' && a[k] && typeof a[k] === 'object') ? a[k] : {};
   const c = rec.pre && rec.pre.closed ? rec.pre.closed : null;
   switch (rec.reason) {
     case 'invalid-params': return 'The deployment parameters are refused: both bonds must be positive, or "bond missing" could not be told from "bond full".';
@@ -740,7 +740,7 @@ const THEOREMS = [
 // of the evidence predicates stepFn consults for it; two Env tables that agree
 // on those are the same oracle for that step.
 function evidenceBits(env, state, action) {
-  const k = actionKind(action); const d = (action && typeof action === 'object') ? action[k] : {};
+  const k = actionKind(action); const d = (action && typeof action === 'object' && action[k] && typeof action[k] === 'object') ? action[k] : {};
   const l = liveOf(state);
   if (stateKind(state) === 'closed') return k === 'reopen' ? [envRotationTo(env, state.closed.epoch, state.closed.sn, d["sn'"])] : [];
   if (!l) return [];
@@ -873,7 +873,7 @@ function theoremReport(before, after, rec) {
       [!ok || rec.aid !== after.aid || (() => { const rp = replay(p, after.envAll, after.originSlot, after.origin, after.history); return rp.ok && eq(rp.state, post); })(), 'replay of the accepted actions does not reproduce the state'],
     ]);
     out.T7.cell = cell.where;
-  } else { put('T7', false, () => []); out.T7.cell = null; out.T7.notes = rec.stepped ? ['no Lean cell for this step: T7 not shown'] : []; }
+  } else { put('T7', false, () => []); out.T7.cell = null; out.T7.notes = rec.stepped ? ['the Lean was not asked about this exact step: T7 not shown'] : []; }
   // T8: the registry leaf on every system transition: it agrees with every state,
   // edges never touch it, it never returns to absent, a convicted leaf stays;
   // terminals and the only-step-from rules; mint-once on the leaf

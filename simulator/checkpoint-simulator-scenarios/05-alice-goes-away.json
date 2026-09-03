@@ -311,7 +311,7 @@
         {
           "slot": 12,
           "who": "rival",
-          "say": "Alice's rotation is public on her witnesses. A stranger lands it with withdraw: the bond option carries no signature, so the chain parks her — every lovelace to her refund address (T16), nothing to the stranger, and Alice is unconsumable until she re-deposits D + B and waits W slots again — the Lean allows this today; escalated as Q-001, ruling pending.",
+          "say": "Alice's rotation is public on her witnesses. A stranger lands it with withdraw: the bond option carries no signature, so the chain parks her — every lovelace to her refund address (T16), nothing to the stranger, and Alice is unconsumable until she re-deposits D + B and waits W slots again — the Lean allows this today; ruled out by D-038 on 2026-09-03 (every bond option other than keep is signed by the keys the rotation reveals), the Lean follows.",
           "action": {
             "rotate": {
               "sn'": 1,

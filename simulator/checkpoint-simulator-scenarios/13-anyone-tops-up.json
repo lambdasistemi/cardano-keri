@@ -182,7 +182,7 @@
         {
           "slot": 20,
           "who": "rival",
-          "say": "A stranger lands it with deposit on a checkpoint whose bonds are already full: it brings nothing (dregIn = bIn = 0) and still sets bornAt to now, so Alice is juvenile again for W slots, for the price of a fee — the Lean allows this today; escalated as Q-001, ruling pending.",
+          "say": "A stranger lands it with deposit on a checkpoint whose bonds are already full: it brings nothing (dregIn = bIn = 0) and still sets bornAt to now, so Alice is juvenile again for W slots, for the price of a fee — the Lean allows this today; ruled out by D-038 on 2026-09-03 (every bond option other than keep is signed by the keys the rotation reveals), the Lean follows.",
           "action": {
             "rotate": {
               "sn'": 2,

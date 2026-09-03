@@ -1,4 +1,5 @@
 import CardanoKeri.Registry
+import CardanoKeri.RegistryGoals
 
 /-!
 # The generic cage, its plugin, and the permissioning divergence
@@ -13,115 +14,131 @@ between today's cage and the one the registry needs is a set of theorems:
   the owner's signature (`stake_script = None`); the owner's signature *and*
   the hook's withdrawal (the `Some` branch as shipped — #79); the hook's
   withdrawal alone (#79 replace semantics, the epic's ask).
-* **`Plugin`** — what the hook checks per request beyond the cage's own
-  phase and inbox checks, and whether processing mints the checkpoint token.
-  `Plugin.registry` is the mint-coupled registry plugin (#102);
-  `Plugin.trivial` is `staking.ak` as shipped, which returns `True`.
+* **`Plugin`** — what the hook does with a request in phase 1 beyond the
+  cage's own checks, and whether it may veto a rejection. `Plugin.registry`
+  is the keri plugin (#102): its body is `CardanoKeri.Registry.processBody`,
+  the leaf transitions with their evidence and their coupled mints; it vetoes
+  the rejection of a go-request. `Plugin.trivial` is `staking.ak` as
+  shipped, which returns `True`: it applies the leaf operation the request
+  declares and nothing else — no evidence, no checkpoint — and vetoes nothing.
 * **`ValueMode`** — where a processed request's value goes: refunded to the
-  owner as `validModify` does today, or routed by the plugin into the new
-  checkpoint (#101).
+  owner as `validModify` does today (#101 not landed), or routed by the
+  plugin (into the checkpoint for a registration or a revival, back to the
+  reaper for a go-request).
 
 The cage's own checks — the inbox, the phases, the generation, the
 non-empty batch — are `CardanoKeri.Registry`'s and are shared.
 
 The theorems at the end are the divergence:
 
-* under the owner-keyed modes the owner inserts a row with no token and
-  swaps the plugin, so the registry invariant does not hold
-  (`owner_bypass_breaks_row_iff_token`, `owner_swaps_plugin`);
-* under owner-and-hook nobody but the owner can fold, so the registry is not
-  permissionless (`ownerAndHook_needs_owner`);
-* under the delegated mode with the registry plugin and delegated routing
-  the cage *is* `CardanoKeri.Registry.stepFn`, for every transaction that
-  ran the plugin, whoever signed it (`delegated_is_registry`,
-  `delegated_permissionless`), so every theorem of `RegistryGoals` holds of
-  it;
-* under `refundAll` no checkpoint is ever funded (`refundAll_never_locks`).
+* `delegated_is_registry`: under replace semantics, with the keri plugin and
+  delegated routing, the cage *is* `CardanoKeri.Registry.stepFn` for every
+  transaction that ran the plugin, whoever signed it; every theorem of
+  `RegistryGoals` holds of it, and `delegated_permissionless` says the
+  owner's signature is irrelevant;
+* `ownerKeyed_needs_owner`, `ownerAndHook_needs_owner`: on the shipped
+  paths nobody but the owner folds — not permissionless;
+* `owner_bypass_breaks_inv`: on the owner-keyed path the owner registers an
+  AID with no inception evidence and no checkpoint, so the registry
+  invariant `Inv` fails in the result; `ownerAndHook_trivial_breaks_inv`:
+  the same through the shipped stub;
+* `owner_swaps_plugin` / `delegated_pins_plugin`: the plugin is mutable off
+  the delegated path and pinned on it (#100);
+* `refundAll_never_locks`: under `validModify` as shipped no checkpoint is
+  ever funded (#101).
 
-This file has no dependency on anything keri-specific except the shared
-types of `CardanoKeri.Registry`; it is written to be lifted into
-`cardano-mpfs-onchain/lean/MpfsCage` unchanged.
+Nothing here is keri-specific except the shared types of
+`CardanoKeri.Registry`; the file is written to be lifted into
+`cardano-mpfs-onchain/lean/MpfsCage`.
 -/
 
 namespace CardanoKeri.Cage
 
 open CardanoKeri.Registry
 
-/-- How `Modify` is authorized (`validateOwnership`). -/
 inductive AuthMode where
-  /-- `stake_script = None`: the owner's signature. -/
   | ownerKeyed
-  /-- `stake_script = Some`, as shipped: the owner's signature and the hook's
-  withdrawal (#79 as it stands). -/
   | ownerAndHook
-  /-- `stake_script = Some` with replace semantics: the hook's withdrawal only. -/
   | delegated
   deriving DecidableEq, Repr
 
-/-- What the transaction presents for authorization. -/
 structure TxAuth where
-  /-- The cage owner signed. -/
   signedByOwner : Bool
-  /-- The withdrawal under the cage's `stake_script` is present, so the plugin
-  script ran and accepted the transaction. -/
   pluginRan : Bool
   deriving DecidableEq, Repr
 
-/-- `validateOwnership` under each mode. -/
 def authorized : AuthMode → TxAuth → Bool
   | .ownerKeyed, t => t.signedByOwner
   | .ownerAndHook, t => t.signedByOwner && t.pluginRan
   | .delegated, t => t.pluginRan
 
-/-- Where a processed request's value goes. -/
 inductive ValueMode where
-  /-- `validModify` as shipped: every request's value is refunded to its owner. -/
   | refundAll
-  /-- #101: the plugin routes a processed request's value into the checkpoint. -/
   | delegatedRouting
   deriving DecidableEq, Repr
 
-/-- What the hook checks per request beyond the cage's own checks, and
-whether processing mints the checkpoint token. -/
+/-- What the hook does with a request in phase 1, and whether it vetoes a
+rejection. -/
 structure Plugin where
-  /-- Admission of one request under the fold's current accumulator. -/
-  admit : Env → Slot → Acc → Request → FoldAction → Prop
-  /-- The admission is decidable: the hook is a validator. -/
-  dec : ∀ env now acc r fa, Decidable (admit env now acc r fa)
-  /-- Processing mints the token (the plugin couples the insert to a mint). -/
-  mints : Bool
+  body : Params → Env → Acc → Request → Option Acc
+  allowReject : Request → Bool
 
-instance (pl : Plugin) (env : Env) (now : Slot) (acc : Acc) (r : Request) (fa : FoldAction) :
-    Decidable (pl.admit env now acc r fa) := pl.dec env now acc r fa
-
-/-- The mint-coupled registry plugin (#102): a process needs the inception
-evidence and the absence of the AID from the root; a reject needs nothing
-beyond the cage's checks. -/
+/-- The keri plugin (#102). -/
 def Plugin.registry : Plugin :=
-  { admit := fun env _ acc r fa =>
-      match fa with
-      | .process => env.inception r.aid = true ∧ r.aid ∉ acc.root
-      | .reject => True,
-    dec := fun env now acc r fa => by cases fa <;> dsimp only <;> infer_instance,
-    mints := true }
+  { body := processBody, allowReject := fun r => r.op.userPostable }
 
-/-- `staking.ak` as shipped: `withdraw` returns `True`; nothing is minted. -/
+/-- The leaf operation a request declares, applied with no evidence and no
+coupling: what the cage alone does when the hook is `staking.ak`. -/
+def cageOnlyBody (p : Params) (acc : Acc) (r : Request) : Option Acc :=
+  match r.op with
+  | .register =>
+    if lookup acc.leaves r.aid = none then
+      some { acc with leaves := (r.aid, .active acc.nextToken) :: acc.leaves, nextToken := acc.nextToken + 1,
+                      locked := acc.locked ++ [(r.aid, p.D)] }
+    else none
+  | .revive =>
+    match lookup acc.leaves r.aid with
+    | some (.dormant _) => some { acc with leaves := setLeaf acc.leaves r.aid (.active acc.nextToken),
+                                           nextToken := acc.nextToken + 1, locked := acc.locked ++ [(r.aid, p.D)] }
+    | _ => none
+  | .goDormant k =>
+    match lookup acc.leaves r.aid with
+    | some (.active _) => some { acc with leaves := setLeaf acc.leaves r.aid (.dormant k),
+                                          refunds := acc.refunds ++ [(r.owner, p.Mr)] }
+    | _ => none
+  | .goConvicted =>
+    match lookup acc.leaves r.aid with
+    | some (.active _) => some { acc with leaves := setLeaf acc.leaves r.aid .convicted,
+                                          refunds := acc.refunds ++ [(r.owner, p.Mr)] }
+    | _ => none
+  | .convict =>
+    match lookup acc.leaves r.aid with
+    | some (.dormant _) => some { acc with leaves := setLeaf acc.leaves r.aid .convicted,
+                                           refunds := acc.refunds ++ [(r.owner, p.Mr)] }
+    | _ => none
+
+/-- `staking.ak` as shipped. -/
 def Plugin.trivial : Plugin :=
-  { admit := fun _ _ _ _ _ => True, dec := fun _ _ _ _ _ => inferInstance, mints := false }
+  { body := fun p _ acc r => cageOnlyBody p acc r, allowReject := fun _ => true }
 
-/-- The plugin's checks apply only when the hook ran. -/
-def admits (pl : Plugin) (ran : Bool) (env : Env) (now : Slot) (acc : Acc) (r : Request)
-    (fa : FoldAction) : Prop :=
-  ran = true → pl.admit env now acc r fa
+/-- The body that runs: the plugin's when the hook ran, the cage's alone
+otherwise. -/
+def runBody (pl : Plugin) (ran : Bool) (p : Params) (env : Env) (acc : Acc) (r : Request) : Option Acc :=
+  if ran then pl.body p env acc r else cageOnlyBody p acc r
 
-instance (pl : Plugin) (ran : Bool) (env : Env) (now : Slot) (acc : Acc) (r : Request)
-    (fa : FoldAction) : Decidable (admits pl ran env now acc r fa) := by
-  unfold admits; infer_instance
+/-- `validModify` as shipped refunds every request's bond to its owner and
+locks nothing. -/
+def routeValue (vm : ValueMode) (p : Params) (acc : Acc) (r : Request) (acc'' : Acc) : Acc :=
+  match vm with
+  | .delegatedRouting => acc''
+  | .refundAll => { acc'' with locked := acc.locked, refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }
 
-/-- The cage's fold, generic in the plugin and the value mode. The cage's own
-checks are exactly `CardanoKeri.Registry.applyBatch`'s; the plugin's admission
-is added, the mint depends on the plugin having run, and the value goes where
-the mode says. -/
+def rejectAllowed (pl : Plugin) (ran : Bool) (r : Request) : Prop :=
+  ran = true → pl.allowReject r = true
+
+instance (pl : Plugin) (ran : Bool) (r : Request) : Decidable (rejectAllowed pl ran r) := by
+  unfold rejectAllowed; infer_instance
+
 def applyBatch (pl : Plugin) (vm : ValueMode) (ran : Bool) (p : Params) (env : Env) (now : Slot) :
     Acc → List (ReqId × FoldAction) → Option Acc
   | acc, [] => some acc
@@ -129,47 +146,37 @@ def applyBatch (pl : Plugin) (vm : ValueMode) (ran : Bool) (p : Params) (env : E
     match lookup acc.requests id with
     | none => none
     | some r =>
-      match fa with
-      | .process =>
-        if inPhase1 p r now ∧ admits pl ran env now acc r .process then
-          applyBatch pl vm ran p env now
-            { root := r.aid :: acc.root,
-              live := if ran && pl.mints then r.aid :: acc.live else acc.live,
-              requests := remove acc.requests id,
-              locked := match vm with
-                | .delegatedRouting => acc.locked ++ [(r.aid, p.D)]
-                | .refundAll => acc.locked,
-              refunds := match vm with
-                | .delegatedRouting => acc.refunds
-                | .refundAll => acc.refunds ++ [(r.owner, p.D)] } rest
-        else none
-      | .reject =>
-        if rejectable p r now ∧ admits pl ran env now acc r .reject then
-          applyBatch pl vm ran p env now
-            { acc with requests := remove acc.requests id,
-                       refunds := acc.refunds ++ [(r.owner, p.D)] } rest
-        else none
+      let acc' := { acc with requests := remove acc.requests id }
+      match (match fa with
+             | .process =>
+               if inPhase1 p r now then
+                 match runBody pl ran p env acc' r with
+                 | some acc'' => some (routeValue vm p acc' r acc'')
+                 | none => none
+               else none
+             | .reject =>
+               if rejectable p r now ∧ rejectAllowed pl ran r then
+                 some { acc' with refunds := acc'.refunds ++ [(r.owner, r.op.bond p)] }
+               else none) with
+      | none => none
+      | some acc'' => applyBatch pl vm ran p env now acc'' rest
 
-/-- The cage's step. Contribute, retract and convict are the registry's
-(the divergence is in `Modify`). A fold needs `authorized`, the current
-generation, a non-empty batch, and — on the delegated path only (#100) — the
-plugin pinned. -/
 def stepFn (mode : AuthMode) (pl : Plugin) (vm : ValueMode) (tx : TxAuth) (p : Params) (env : Env)
     (a : Action) (now : Slot) (s : Sys) : Option (Flow × Sys) :=
   match a with
   | .fold folder g pl' batch =>
       if authorized mode tx = true ∧ g = s.gen ∧ (mode = .delegated → pl' = s.plugin) ∧ batch ≠ [] then
-        match applyBatch pl vm tx.pluginRan p env now ⟨s.root, s.live, s.requests, [], []⟩ batch with
+        match applyBatch pl vm tx.pluginRan p env now ⟨s.leaves, s.ckpts, s.requests, s.nextToken, [], []⟩ batch with
         | none => none
         | some acc =>
           some ({ locked := acc.locked, refunds := acc.refunds,
                   tips := some (folder, batch.length * p.tip) },
-                { s with gen := s.gen + 1, plugin := pl', root := acc.root, live := acc.live,
-                         requests := acc.requests })
+                { s with gen := s.gen + 1, plugin := pl', leaves := acc.leaves, ckpts := acc.ckpts,
+                         requests := acc.requests, nextToken := acc.nextToken })
       else none
   | a => CardanoKeri.Registry.stepFn p env a now s
 
-/-! ## The delegated cage with the registry plugin is the registry -/
+/-! ## The delegated cage with the keri plugin is the registry -/
 
 theorem applyBatch_delegated_eq (p : Params) (env : Env) (now : Slot) :
     ∀ (acc : Acc) (batch : List (ReqId × FoldAction)),
@@ -184,40 +191,41 @@ theorem applyBatch_delegated_eq (p : Params) (env : Env) (now : Slot) :
     · cases fa <;> simp [applyBatch, CardanoKeri.Registry.applyBatch, hl]
     · cases fa with
       | process =>
-        simp only [applyBatch, CardanoKeri.Registry.applyBatch, hl, admits, Plugin.registry,
-          Bool.and_self, ite_true, forall_const]
-        by_cases hc : inPhase1 p r now ∧ env.inception r.aid = true ∧ r.aid ∉ acc.root
-        · rw [if_pos hc, if_pos hc]; exact ih _
-        · rw [if_neg hc, if_neg hc]
+        simp only [applyBatch, CardanoKeri.Registry.applyBatch, hl, runBody, Plugin.registry, routeValue,
+          ite_true, processOne]
+        by_cases h1 : inPhase1 p r now
+        · simp only [h1, ite_true]
+          rcases processBody p env { acc with requests := remove acc.requests id } r with _ | acc''
+          · rfl
+          · exact ih _
+        · simp only [h1, ite_false]
       | reject =>
-        simp only [applyBatch, CardanoKeri.Registry.applyBatch, hl, admits, Plugin.registry,
-          forall_const, and_true]
-        by_cases hc : rejectable p r now
-        · rw [if_pos hc, if_pos hc]; exact ih _
-        · rw [if_neg hc, if_neg hc]
+        simp only [applyBatch, CardanoKeri.Registry.applyBatch, hl, rejectOne, rejectAllowed, Plugin.registry,
+          forall_const, true_implies]
+        by_cases hc : rejectable p r now ∧ r.op.userPostable = true
+        · simp only [hc, ite_true]; exact ih _
+        · simp only [hc, ite_false]
 
-/-- **The instantiation.** Under replace semantics, with the registry plugin
-and delegated routing, every transaction that ran the plugin steps exactly as
-`CardanoKeri.Registry.stepFn`, whoever signed it. Every theorem of
-`RegistryGoals` therefore holds of this cage. -/
+/-- **The instantiation.** -/
 theorem delegated_is_registry (signed : Bool) (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) :
     stepFn .delegated Plugin.registry .delegatedRouting ⟨signed, true⟩ p env a now s =
       CardanoKeri.Registry.stepFn p env a now s := by
   cases a with
   | fold folder g pl' batch =>
-    simp only [stepFn, CardanoKeri.Registry.stepFn, authorized, applyBatch_delegated_eq]
+    simp only [stepFn, CardanoKeri.Registry.stepFn, authorized, applyBatch_delegated_eq, true_and, true_implies]
     by_cases hc : g = s.gen ∧ pl' = s.plugin ∧ batch ≠ []
     · obtain ⟨hg, hpl, hb⟩ := hc
       subst hg; subst hpl
-      simp [hb] <;> rfl
-    · simp only [true_and, true_implies]
-      rw [if_neg hc, if_neg hc]
-  | contribute _ _ _ => rfl
+      simp [hb]
+      try rfl
+    · simp only [hc, ite_false]
+  | contribute _ _ _ _ => rfl
   | retract _ => rfl
-  | convict _ => rfl
+  | reap _ _ => rfl
+  | pause _ => rfl
+  | resume _ => rfl
+  | convictCkpt _ => rfl
 
-/-- **Permissionless.** On the delegated path the owner's signature is
-irrelevant: the fold steps the same with or without it. -/
 theorem delegated_permissionless (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) :
     stepFn .delegated Plugin.registry .delegatedRouting ⟨false, true⟩ p env a now s =
       stepFn .delegated Plugin.registry .delegatedRouting ⟨true, true⟩ p env a now s := by
@@ -225,74 +233,70 @@ theorem delegated_permissionless (p : Params) (env : Env) (a : Action) (now : Sl
 
 /-! ## The divergence: the cage as shipped -/
 
-/-- **Owner-and-hook is not permissionless.** Under #79 as shipped, a fold
-without the owner's signature is refused whatever the plugin says. -/
 theorem ownerAndHook_needs_owner (pl : Plugin) (vm : ValueMode) (ran : Bool) (p : Params) (env : Env)
     (now : Slot) (s : Sys) (folder : Addr) (g : Gen) (pl' : Script) (batch : List (ReqId × FoldAction)) :
     stepFn .ownerAndHook pl vm ⟨false, ran⟩ p env (.fold folder g pl' batch) now s = none := by
   simp [stepFn, authorized]
 
-/-- **Owner-keyed is not permissionless either.** -/
 theorem ownerKeyed_needs_owner (pl : Plugin) (vm : ValueMode) (ran : Bool) (p : Params) (env : Env)
     (now : Slot) (s : Sys) (folder : Addr) (g : Gen) (pl' : Script) (batch : List (ReqId × FoldAction)) :
     stepFn .ownerKeyed pl vm ⟨false, ran⟩ p env (.fold folder g pl' batch) now s = none := by
   simp [stepFn, authorized]
 
 /-- The deployment of the witnesses below. -/
-def wp : Params := { D := 1000, tip := 2, process := 10, retract := 10,
-                     hD := by decide, hProcess := by decide, hRetract := by decide }
+def wp : Params := { D := 1000, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10, W := 5,
+                     far := 1000000000, hD := by decide, hProcess := by decide, hRetract := by decide,
+                     hFund := by decide }
 
-/-- Evidence that verifies nothing: no inception, no proof. -/
-def noEvidence : Env := { inception := fun _ => false, duplicity := fun _ => false }
+/-- Evidence that verifies nothing. -/
+def noEvidence : Env :=
+  { inception := fun _ => false, rotationFrom := fun _ _ => false, duplicity := fun _ _ => false,
+    quorum := fun _ => false }
 
-/-- A registry with one pending request for AID 11 whose inception does not
-verify. -/
-def pending : Sys := { gen := 0, plugin := 7, root := [], live := [], tomb := [],
-                       requests := [(0, ⟨11, 1, 0⟩)], nextReq := 1 }
+/-- A registry with one pending registration for AID 11 whose inception does
+not verify. -/
+def pending : Sys := { gen := 0, plugin := 7, leaves := [], ckpts := [], requests := [(0, ⟨11, 1, 0, .register⟩)],
+                       nextReq := 1, nextToken := 0 }
 
-/-- **The owner bypass.** Under the owner-keyed cage (`stake_script = None`),
-the owner folds the request without the plugin: the row is inserted with no
-inception evidence and no token — `Inv.rowIffToken` is false in the result.
-The registry invariant therefore does not hold of the cage as shipped. -/
-theorem owner_bypass_breaks_row_iff_token :
+/-- The result of the owner's bypass: a leaf with no checkpoint and no
+go-request. -/
+def bypassed : Sys := { gen := 1, plugin := 7, leaves := [(11, .active 0)], ckpts := [], requests := [],
+                        nextReq := 1, nextToken := 1 }
+
+theorem bypassed_breaks_inv : ¬ Inv wp bypassed := by
+  intro h
+  rcases h.activeCkpt 11 0 (by decide) with ⟨c, hc⟩ | ⟨x, hx, _⟩
+  · simp [bypassed, lookup] at hc
+  · simp [bypassed] at hx
+
+/-- **The owner bypass.** Under the owner-keyed cage the owner folds the
+registration without the plugin: no inception evidence, no checkpoint; the
+registry invariant fails in the result. -/
+theorem owner_bypass_breaks_inv :
     stepFn .ownerKeyed Plugin.registry .delegatedRouting ⟨true, false⟩ wp noEvidence
         (.fold 1 0 7 [(0, .process)]) 1 pending =
-      some ({ locked := [(11, 1000)], tips := some (1, 2) },
-            { gen := 1, plugin := 7, root := [11], live := [], tomb := [], requests := [], nextReq := 1 }) ∧
-    ¬ Inv { gen := 1, plugin := 7, root := [11], live := [], tomb := [], requests := [], nextReq := 1 } := by
-  refine ⟨by decide, fun h => ?_⟩
-  have := (h.rowIffToken 11).1 (by decide)
-  simp at this
+      some ({ locked := [(11, 1000)], tips := some (1, 2) }, bypassed) ∧ ¬ Inv wp bypassed :=
+  ⟨by decide, bypassed_breaks_inv⟩
 
-/-- **The same bypass under owner-and-hook with the shipped stub.** The
-withdrawal ran, but `staking.ak` admits everything and mints nothing. -/
-theorem ownerAndHook_trivial_breaks_row_iff_token :
+/-- **The same bypass under owner-and-hook with the shipped stub.** -/
+theorem ownerAndHook_trivial_breaks_inv :
     stepFn .ownerAndHook Plugin.trivial .delegatedRouting ⟨true, true⟩ wp noEvidence
         (.fold 1 0 7 [(0, .process)]) 1 pending =
-      some ({ locked := [(11, 1000)], tips := some (1, 2) },
-            { gen := 1, plugin := 7, root := [11], live := [], tomb := [], requests := [], nextReq := 1 }) := by
-  decide
+      some ({ locked := [(11, 1000)], tips := some (1, 2) }, bypassed) ∧ ¬ Inv wp bypassed :=
+  ⟨by decide, bypassed_breaks_inv⟩
 
-/-- **The owner swaps the plugin.** Off the delegated path the plugin is not
-pinned: the owner re-creates the cage with plugin 8 (#100). -/
 theorem owner_swaps_plugin :
     stepFn .ownerKeyed Plugin.registry .delegatedRouting ⟨true, false⟩ wp noEvidence
         (.fold 1 0 8 [(0, .process)]) 1 pending =
-      some ({ locked := [(11, 1000)], tips := some (1, 2) },
-            { gen := 1, plugin := 8, root := [11], live := [], tomb := [], requests := [], nextReq := 1 }) := by
+      some ({ locked := [(11, 1000)], tips := some (1, 2) }, { bypassed with plugin := 8 }) := by
   decide
 
-/-- **Delegated pins the plugin.** The same swap is refused on the delegated
-path, whoever built the transaction. -/
 theorem delegated_pins_plugin (signed ran : Bool) (p : Params) (env : Env) (now : Slot) (s : Sys)
     (folder : Addr) (g : Gen) {pl' : Script} (batch : List (ReqId × FoldAction)) (hpl : pl' ≠ s.plugin) :
     stepFn .delegated Plugin.registry .delegatedRouting ⟨signed, ran⟩ p env
       (.fold folder g pl' batch) now s = none := by
   simp [stepFn, hpl]
 
-/-- **`refundAll` never funds a checkpoint.** Under `validModify` as shipped
-a fold locks nothing: every processed request's bond goes back to its owner,
-so the registration cannot fund the checkpoint (#101). -/
 theorem refundAll_never_locks (pl : Plugin) (ran : Bool) (p : Params) (env : Env) (now : Slot) :
     ∀ (acc : Acc) (batch : List (ReqId × FoldAction)) (acc' : Acc),
       applyBatch pl .refundAll ran p env now acc batch = some acc' → acc'.locked = acc.locked := by
@@ -305,11 +309,24 @@ theorem refundAll_never_locks (pl : Plugin) (ran : Bool) (p : Params) (env : Env
   | cons x rest ih =>
     intro acc' h
     obtain ⟨id, fa⟩ := x
-    cases fa <;> simp only [applyBatch] at h <;> split at h <;> try cases h
-    all_goals split at h
-    all_goals try cases h
-    · have e := ih _ _ h; exact e
-    · have e := ih _ _ h; exact e
+    rcases hl : lookup acc.requests id with _ | r
+    · cases fa <;> simp [applyBatch, hl] at h
+    · cases fa with
+      | process =>
+        by_cases h1 : inPhase1 p r now
+        · rcases hb : runBody pl ran p env { acc with requests := remove acc.requests id } r with _ | acc''
+          · simp [applyBatch, hl, h1, hb] at h
+          · simp only [applyBatch, hl, h1, hb, ite_true] at h
+            have e := ih _ _ h
+            simp only [routeValue] at e
+            exact e
+        · simp [applyBatch, hl, h1] at h
+      | reject =>
+        by_cases hc : rejectable p r now ∧ rejectAllowed pl ran r
+        · simp only [applyBatch, hl, hc, ite_true] at h
+          have e := ih _ _ h
+          exact e
+        · simp [applyBatch, hl, hc] at h
 
 theorem refundAll_fold_locks_nothing (mode : AuthMode) (pl : Plugin) (tx : TxAuth) (p : Params) (env : Env)
     {now : Slot} {s : Sys} {f : Flow} {s' : Sys} {folder : Addr} {g : Gen} {pl' : Script}

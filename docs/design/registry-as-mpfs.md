@@ -1,119 +1,180 @@
 # The registry as an MPFS instance
 
-The AID registry ruled by D-024 — one UTxO holding the MPF root of every AID
-ever registered, with registration inserting under an absence proof and
-minting the checkpoint token in the same transaction — built as a cage of
+The AID registry ruled by D-024 — one UTxO holding the MPF root over every
+AID ever registered — built as a cage of
 [cardano-mpfs-onchain](https://github.com/cardano-foundation/cardano-mpfs-onchain)
-on its plugin path. This page names the Lean predicates behind every claim.
-The model is `lean/CardanoKeri/Registry.lean`; the theorems are
-`lean/CardanoKeri/RegistryGoals.lean`; the simulator is
+on its plugin path, after the rulings of 2026-09-02/03. This page names the
+Lean declaration behind every claim. The machine is
+`lean/CardanoKeri/Registry.lean`; the theorems are
+`lean/CardanoKeri/RegistryGoals.lean`; the generic cage and the divergence
+from mpfs as shipped are `lean/CardanoKeri/Cage.lean`; the reaper's
+economics are `lean/CardanoKeri/Samaritan.lean`; the simulator is
 [Registry Simulator](../simulator/registry/index.html).
 
-## Why a cage
+## Why a cage, and why the leaf carries state
 
 D-024 as first stated has every registration spend the registry UTxO
 directly: "inceptions queue on the registry UTxO." Cardano has no queue for
-conflicting spends. Each node's mempool keeps the first spend it hears and
-never switches (the consensus layer's *linear consistency*, IOG technical
-report, §13.1); the slot leader includes its own first arrival; losers fail
-phase 1 on the spent input and pay nothing, but must rebuild the absence
-proof against the new root. A burst of N registrants clears in about N
-blocks with O(N²) rebuilds, and the latency-advantaged ones go first.
+conflicting spends: each node keeps the first spend it hears and never
+switches (the consensus layer's *linear consistency*, IOG technical report
+§13.1), the slot leader includes its own first arrival, losers fail phase 1
+at no cost but must rebuild against the new root. A burst of N registrants
+clears in about N blocks with O(N²) rebuilds. The cage shape moves the race
+away from the users: a registration is a **request**, an inbox UTxO that
+contends with nothing, and a **fold** spends the registry with many at once.
+Folders race; requesters are served by whichever fold lands, or fold their
+own request.
 
-The cage shape moves the race away from the users. A registration is a
-**request** — an inbox UTxO that contends with nothing — and a
-**fold** spends the registry with many requests at once. Folders race;
-requesters are served by whichever fold lands, and can fold their own
-request. The rebuild cost of a lost race falls on folders. The mpfs changes
-this needs are the plugin-cage epic
+Checkpoints come and go — an owner parks, a thief is convicted, a min-ADA
+is worth reclaiming — so the registry tracks their "go" state. The cage never
+interprets a leaf; the value is the protocol's:
+
+| leaf | meaning |
+|---|---|
+| `active token` | a checkpoint carries that token; consumers resolve the token, never the leaf, so rotations never write the registry |
+| `dormant k` | the checkpoint has left the chain; `k` is the key state a revival must rotate from |
+| `convicted` | for ever |
+
+The mpfs changes this needs are the plugin-cage epic
 [cardano-foundation/cardano-mpfs-onchain#99](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/99):
 replace semantics for the `stake_script` hook (#79), the hook and the owner
 pinned and empty folds refused (#100), processed-request value routed by the
 plugin (#101), and the plugin contract with a mint-coupled reference plugin
 (#102).
 
-## The machine
+## The machine (`Registry.lean`)
 
-`Sys` is the registry UTxO (`gen`, `plugin`, `root`), the tokens (`live`,
-`tomb`), and the inbox (`requests`, `nextReq`). The root is the set of
-registered AIDs; the MPF absence proof is membership. Tokens are lists so
-that uniqueness is a theorem about counts.
+`Sys` is the registry UTxO (`gen`, `plugin`, `leaves`), the checkpoint
+UTxOs (`ckpts`: `live`, `parked since`, `tomb`, each with its token and key
+state), and the inbox (`requests`, `nextReq`), plus the next token the
+checkpoint policy mints. `Action` is the cage's redeemers, the reap, and the
+checkpoint edges the registry must never see:
 
-`Action` is exactly the redeemers of the cage family and the checkpoint
-edges that touch a token:
-
-| action | actor | guard (`stepFn`) | effect |
+| action | actor | guard | effect |
 |---|---|---|---|
-| `contribute aid owner submittedAt` | anyone | none | a request; `D + tip` deposited |
-| `fold folder gen plugin batch` | anyone | `gen = s.gen`, `plugin = s.plugin`, `batch ≠ []`, then per entry | registry spent (`gen + 1`); processed: row inserted, token minted, `D` locked; rejected: `D` refunded to the owner; `tip` per request to the folder |
-| `retract req` | the owner | `inPhase2` | `D + tip` back to the owner; registry untouched |
-| `close aid` | current quorum | `aid ∈ live`, `env.quorum aid` | token burned, row deleted, registry spent |
-| `convict aid` | a proof | `aid ∈ live`, `env.duplicity aid` | token becomes a tombstone; the row stays; registry not spent |
+| `contribute aid owner submittedAt op` | anyone | `op.userPostable` (register, revive, convict) | a request; `op.bond + tip` deposited |
+| `fold folder gen plugin batch` | anyone | `gen = s.gen`, `plugin = s.plugin`, `batch ≠ []`, then per entry | registry spent; per request `processOne` or `rejectOne`; `tip` per request to the folder |
+| `retract req` | the owner | `inPhase2` | bond and tip back; registry untouched |
+| `reap reaper aid` | anyone | `reapable`: a tombstone; a parked checkpoint after `since + W`, or with `quorum` | token burned; go-request posted with `submittedAt := far`; premium `Mc − Mr − tip` to the reaper, `Mr + tip` into the request |
+| `pause aid` | next keys | live, `rotationFrom aid k` | parked at `now`, key state `k + 1`; registry untouched |
+| `resume aid` | next keys | parked, `rotationFrom aid k` | live, `k + 1`; registry untouched |
+| `convictCkpt aid` | a proof | not a tombstone, `duplicity aid k` | tombstone; registry untouched |
 
-Per batch entry (`applyBatch`): `process` needs `inPhase1`,
-`env.inception r.aid`, and `r.aid ∉ acc.root`; `reject` needs `rejectable`.
-An entry naming a request the inbox does not hold — including one the same
-batch already consumed — refuses the whole fold.
+Per request in a fold, after the cage's `inPhase1` (`processOne`), the
+plugin's body `processBody`:
 
-The phases are the cage's, at a point: `inPhase1 p r now :=
-now < submittedAt + process`, `inPhase2` the next `retract` slots,
-`rejectable := submittedAt + process + retract ≤ now ∨ now < submittedAt`.
-A future `submitted_at` is in phase 1 and rejectable at once, as on chain.
+| op | admission | leaf | coupling |
+|---|---|---|---|
+| `register` | `inception aid`, no leaf | `active nextToken` | live checkpoint minted, `D` locked |
+| `revive` | leaf `dormant k`, `rotationFrom aid k`, no checkpoint | `active nextToken` | live checkpoint at `k + 1`, `D` locked |
+| `goDormant k` | leaf `active _` | `dormant k` | `Mr` back to the reaper |
+| `goConvicted` | leaf `active _` | `convicted` | `Mr` back to the reaper |
+| `convict` | leaf `dormant k`, `duplicity aid k` | `convicted` | `Mr` back to the requester |
 
-The evidence is an `Env` of three predicates the plugin and the checkpoint
-policy verify: `inception` (the #114 rule), `quorum`, `duplicity`.
+`rejectOne` needs `rejectable` and `op.userPostable`: the plugin refuses
+`Rejected` on a go-request. The phases are the cage's at a point:
+`inPhase1 := now < submittedAt + process`, `inPhase2` the next `retract`
+slots, `rejectable := submittedAt + process + retract ≤ now ∨ now < submittedAt`.
 
-## Row if and only if token
+The evidence `Env` is four predicates the plugin, the checkpoint policy and
+the observers verify: `inception` (#114), `rotationFrom` (the advance
+predicate: pause, resume, revive), `duplicity` (D-030), `quorum` (the owner
+reaping early).
 
-The design under test: an AID is in the root exactly when it has a live
-token or a tombstone (`Inv.rowIffToken`). Two consequences fall out:
+## The invariant and the theorems
 
-- **a closed AID may return.** Close deletes the row with the burn
-  (`R4_close_deletes_row`); the absence proof then succeeds for a fresh
-  request (`R4_reregistrable`).
-- **a convicted AID never can.** Conviction keeps the token as a tombstone
-  and the row with it (`R3_tomb_permanent`); no fold can process that AID
-  again (`R3_convicted_never_processed`) and the tombstone cannot be closed
-  (`R3_convicted_not_closable`).
-
-This differs from D-028 as first stated ("the registry row stays" after
-close). The token-tied invariant keeps mint-once *while a token exists*, which
-is what consumers need, and makes the difference between close and
-conviction a difference in what the checkpoint validator allows, not a
-registry flag.
-
-## The theorems
+`Inv` (`Registry.lean`), proved reachable-preserved before the end of time
+(`inv_init`, `inv_step`, `reach_inv` over `ReachFar`): a checkpoint exists only
+for an active leaf; an active leaf has its checkpoint or a pending
+go-request; while a go-request is pending there is no checkpoint and the
+leaf is active; at most one go-request per AID; a go-request is dated `far`;
+one checkpoint, one leaf per AID; unique request identifiers.
 
 | id | claim | Lean |
 |---|---|---|
-| R1 | row iff token; an AID absent from the root has no token; a registered AID cannot be processed again | `R1_row_iff_token`, `R1_absent_no_token`, `R1_registered_refused` |
-| R2 | at most one live checkpoint per AID; a tombstone is never live | `R2_one_live_checkpoint`, `R2_tomb_not_live` |
-| R3 | conviction is permanent | `R3_tomb_permanent`, `R3_convicted_never_processed`, `R3_convicted_not_closable` |
-| R4 | a closed AID may return | `R4_close_deletes_row`, `R4_reregistrable` |
+| R1 | leaf and checkpoint: a checkpoint implies an active leaf; an active leaf has its checkpoint or a go-request; dormant and convicted leaves have none; a registered AID cannot be registered again, ever | `R1_ckpt_implies_active`, `R1_active_ckpt_or_go`, `R1_not_active_no_ckpt`, `R1_registered_refused` |
+| R2 | at most one checkpoint, one leaf, one go-request per AID | `R2_one_ckpt_per_aid`, `R2_one_leaf_per_aid`, `R2_one_go_per_aid` |
+| R3 | a convicted leaf never changes; a convicted AID is never registered again | `R3_convicted_permanent`, `R3_convicted_never_registered` |
+| R4 | a leaf never leaves the root | `R4_leaf_permanent` |
 | R5 | the plugin is pinned | `R5_plugin_pinned` |
-| R6 | the generation moves exactly on registry spends; requests and retracts never contend | `R6_gen_step`, `R6_requests_never_contend`, `R6_spend_is_fold_or_close`, `R6_fold_advances` |
+| R6 | the generation moves exactly on the fold; contribute, retract, reap, pause, resume and a checkpoint conviction never write the registry | `R6_gen_step`, `R6_registry_untouched`, `R6_fold_advances` |
 | R7 | a stale fold is refused with no state change; one fold per generation | `R7_stale_fold_refused`, `R7_one_fold_per_generation` |
 | R8 | an empty fold and a plugin swap are refused | `R8_empty_fold_refused`, `R8_plugin_swap_refused` |
-| R9 | requester exit: retract in phase 2, rejection by anyone when rejectable, neither elsewhere | `R9_retract_enabled`, `R9_retract_needs_phase2`, `R9_reject_enabled`, `R9_reject_needs_rejectable`, `R9_process_needs_phase1` |
+| R9 | requester exit and no bricking: a posted request retracts in phase 2 and is rejected when rejectable; a go-request is never retracted before the end of time and never rejected | `R9_retract_enabled`, `R9_retract_needs_phase2`, `R9_reject_enabled`, `R9_reject_needs_rejectable`, `R9_go_never_retracted`, `R9_go_never_rejected` |
 | R10 | the phases are exclusive | `R10_phase1_phase2_exclusive`, `R10_phase2_reject_exclusive`, `R10_honest_phase1_reject_exclusive` |
-| R11 | value: `D` locked per process, `D` refunded per reject to a request owner, `tip` per request to the folder, every request accounted for | `R11_fold_value`, `R11_retract_value`, `R11_contribute_value`, `R11_token_edges_move_no_value` |
-| R12 | a row leaves the root only by close and enters only by fold | `R12_row_leaves_only_by_close`, `R12_row_enters_only_by_fold` |
+| R11 | value: a processed go-request refunds `Mr` to the reaper; a reap splits exactly `Mc`; the reap is a `Samaritan.Reap`; requests deposit and retracts return bond plus tip; the checkpoint edges move no request value | `R11_go_refunds_reaper`, `R11_reap_flow`, `R11_reap_is_samaritan`, `R11_samaritan_never_loses`, `R11_contribute_value`, `R11_retract_value`, `R11_ckpt_edges_move_no_value` |
+| R12 | a leaf enters and changes only by a fold | `R12_leaf_enters_only_by_fold`, `R12_leaf_changes_only_by_fold` |
+| R13 | the reap: never a bonded checkpoint; a tombstone at once; a parked checkpoint by a stranger only after the grace window, by the owner at any time | `R13_live_never_reaped`, `R13_tomb_reaped`, `R13_parked_needs_grace`, `R13_parked_after_grace`, `R13_owner_reaps_early` |
+| R14 | every conviction needs a duplicity proof | `R14_convictCkpt_needs_proof`, `R14_convict_dormant_needs_proof` |
 
-The invariant is proved reachable-preserved (`inv_init`, `inv_step`,
-`reach_inv`); the batch lemmas (`applyBatch_inv`, `applyBatch_root_mono`,
-`applyBatch_value`, `applyBatch_process_registered`) carry the fold. Forty-nine
-declarations, no `sorry`, standard axioms only. Eleven guard mutants, eleven
-reds for the right reason: `lean/REGISTRY-MUTANTS.md`.
+All theorems build with no `sorry` on `propext` and `Quot.sound` only. The
+mutation campaign is `lean/REGISTRY-MUTANTS.md`.
 
-## What the model does not say
+## The good samaritan (`Samaritan.lean`)
 
-- **Cryptography.** Evidence is a table; the inception rule, the quorum and
-  the duplicity proof are decided outside the machine.
-- **The checkpoint's life.** Rotations, bonds, poison and the consumer's
-  predicate are `CardanoKeri.Checkpoint`; here a checkpoint is its token.
-- **Fees.** Under #101 the folder funds the transaction fee; the model moves
-  bonds and tips only.
-- **Ordering among folders.** Which fold lands is first arrival at the slot
-  leader. The model says a stale fold is refused; it does not say who wins.
-- **Censorship.** A folder may omit a request; the remedy is folding it
-  oneself. Under capacity this is economic deterrence, not a proof.
+A parked or convicted checkpoint holds only its min-ADA `Mc`. The reap
+splits it into the go-request (`Mr + tip`) and the reaper's premium; the fold
+returns `Mr` to the reaper and the tip to the folder. `reap_conserves`,
+`reaper_recovers`, `samaritan_never_loses` (`tip + fReap ≤ Mc` suffices),
+`self_folding_reaper_never_loses`, `fold_conserves`, and the converse
+`unprofitable_when_tip_too_high`. `R11_reap_is_samaritan` binds the machine's
+reap to that model. Consequence for deployment: the registry cage's tip must
+sit below a checkpoint's min-ADA minus a fee, or nobody reaps.
+
+## Pluggability and the permissioning divergence (`Cage.lean`)
+
+The cage as mpfs ships it is parameterised by what the epic changes:
+`AuthMode` (owner-keyed; owner and hook, #79 as shipped; delegated, the
+hook alone), `Plugin` (`Plugin.registry` with body `processBody`;
+`Plugin.trivial`, the shipped `staking.ak` that applies the leaf operation
+with no evidence and no checkpoint), and `ValueMode` (`refundAll` as
+`validModify` does today; `delegatedRouting`, #101).
+
+- `delegated_is_registry`: under replace semantics with the keri plugin and
+  delegated routing, the cage *is* `Registry.stepFn` for every transaction
+  that ran the plugin, whoever signed it, so every theorem above holds of
+  it; `delegated_permissionless`.
+- `ownerKeyed_needs_owner`, `ownerAndHook_needs_owner`: on the shipped paths
+  nobody but the owner folds.
+- `owner_bypass_breaks_inv`, `ownerAndHook_trivial_breaks_inv`: the owner
+  registers an AID with no inception evidence and no checkpoint, and `Inv`
+  fails in the result — the argument for replace semantics.
+- `owner_swaps_plugin` / `delegated_pins_plugin`: #100.
+- `refundAll_never_locks`: under `validModify` as shipped no checkpoint is
+  ever funded — #101.
+
+The generic cage is written to be lifted into `cardano-mpfs-onchain/lean`;
+today that repository is on Lean 4.16 and has no cage machine, so the reuse
+runs upstream from here, not downstream.
+
+## The plugin's contract, derived
+
+For each action of a fold the keri plugin requires, in the same transaction:
+a mint of `{aid: +1}` under the checkpoint policy and a bonded checkpoint
+output for a registration or a revival (the policy verifies the inception; the
+advance observer's withdrawal bound to `k` verifies the rotation); the receipt
+token minted by the checkpoint's reap for a go-request, burned here; the
+enforcement observer's withdrawal bound to `k` for a conviction of a dormant
+AID. It refuses `Delete`, `Rejected` on a receipt-carrying request, `End`, and
+any mint or burn under the checkpoint or receipt policies no action accounts
+for. Pinning the plugin and refusing empty batches are cage-level (#100); the
+grace window and the min-ADA split are the checkpoint validator's reap edge.
+
+## What the model decides that the Lean did not, and what it does not say
+
+- **The end of time.** A go-request is dated `far`; the theorems about it
+  hold for steps at `now < far` (`ReachFar`). On chain `far` is a
+  `submitted_at` far beyond any slot the chain will reach.
+- **The receipt token** that carries the reap's evidence into the go-request
+  is not modelled: in the model the reap creates the request itself.
+- **Fees** are outside the machine; `Samaritan.lean` carries them as
+  parameters.
+- **Two guards are defence in depth** and unreachable from genesis by `Inv`:
+  a revive while a checkpoint exists (`checkpoint-exists`), a go-request on a
+  leaf that is not active (`not-active`). The scenario gate exempts them by
+  name.
+- **Cryptography**: evidence is a table. **The checkpoint's rotations that
+  keep it live, its bonds beyond one abstract `D`, poison**: the checkpoint
+  machine. **Ordering among folders**: first arrival at the slot leader; the
+  model says a stale fold is refused, not who wins. **Censorship**: a folder
+  may omit a request; the remedy is folding it oneself.

@@ -71,39 +71,52 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
   row('exactly the fifteen stories', ids.length === N_STORIES && [...Array(N_STORIES).keys()].every(i => ids.includes(i + 1)), `ids ${ids.join(',')}`);
   const missingT = core.THEOREMS.map(t => t.id).filter(id => !exhibited.has(id));
   row('every theorem exhibited by some story', missingT.length === 0, missingT.length ? 'missing ' + missingT.join(', ') : `${core.THEOREMS.length} theorems`);
-  const missingR = Object.values(core.REASONS).filter(r => !r.startsWith('invalid') && !asserted.has(r));
-  row('every refusal reason asserted by some story', missingR.length === 0, missingR.length ? 'missing ' + missingR.join(', ') : `${asserted.size} reasons`);
+  // Two guards are defence in depth: the invariant makes them unreachable
+  // from genesis (a go-request exists only while its leaf is active; a
+  // dormant leaf never has a checkpoint). No story can assert them.
+  const UNREACHABLE = ['checkpoint-exists', 'not-active'];
+  const missingR = Object.values(core.REASONS).filter(r => !r.startsWith('invalid') && !UNREACHABLE.includes(r) && !asserted.has(r));
+  row('every reachable refusal reason asserted by some story', missingR.length === 0, missingR.length ? 'missing ' + missingR.join(', ') : `${asserted.size} reasons; ${UNREACHABLE.join(', ')} unreachable by Inv`);
   row('the corpus is the fifteen stories, six traces and the grid', Array.isArray(corpus.stories) && corpus.stories.length === N_STORIES && corpus.traces.length === 6 && corpus.grid.cells.length > 0, `${(corpus.stories || []).length} stories, ${(corpus.traces || []).length} traces, ${corpus.grid ? corpus.grid.cells.length : 0} grid cells`);
   const cc = core.checkCorpus(corpus);
   row('the Lean corpus replays through the core', cc.ok, cc.ok ? `${cc.cells} cells, ${cc.applied} applied, ${cc.refused} refused` : cc.reasons.slice(0, 3).join(' | '));
 
   // 3. exact Nat and shapes at every entry point
   {
-    const P = { D: 10, tip: 1, process: 5, retract: 5 };
+    const P = { D: 10, tip: 1, Mc: 4, Mr: 1, process: 5, retract: 5, W: 3, far: 1000 };
     const S0 = core.initSys(7);
     const bads = [2 ** 53, -1, 1.5, '5', NaN, Infinity, null, undefined, true];
     const errs = [];
     for (const v of bads) {
       const tagv = typeof v === 'string' ? JSON.stringify(v) : String(v);
       if (core.isNat(v)) errs.push(`isNat accepts ${tagv}`);
-      for (const k of ['D', 'tip', 'process', 'retract']) if (core.validateParams({ ...P, [k]: v }) === null) errs.push(`params accept ${k}=${tagv}`);
-      for (const k of ['gen', 'plugin', 'nextReq']) { const r = core.step(P, core.emptyEnv(), { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, 0, { ...S0, [k]: v }); if (r.ok || r.reason !== 'invalid-nat' || r.field !== k) errs.push(`state ${k}=${tagv} not refused invalid-nat/${k}`); }
-      for (const k of ['root', 'live', 'tomb']) { const r = core.step(P, core.emptyEnv(), { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, 0, { ...S0, [k]: [v] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`state ${k}=[${tagv}] not refused`); }
-      const r1 = core.step(P, core.emptyEnv(), { contribute: { aid: v, owner: 1, submittedAt: 0 } }, 0, S0); if (r1.ok || r1.reason !== 'invalid-nat') errs.push(`action aid=${tagv} not refused`);
-      const r2 = core.step(P, core.emptyEnv(), { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, v, S0); if (r2.ok || r2.reason !== 'invalid-nat' || r2.field !== 'now') errs.push(`now=${tagv} not refused`);
-      const r3 = core.step(P, { ...core.emptyEnv(), inception: [v] }, { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, 0, S0); if (r3.ok || r3.reason !== 'invalid-nat') errs.push(`evidence inception=[${tagv}] not refused`);
+      for (const k of ['D', 'tip', 'Mc', 'Mr', 'process', 'retract', 'W', 'far']) if (core.validateParams({ ...P, [k]: v }) === null) errs.push(`params accept ${k}=${tagv}`);
+      const REG = { contribute: { aid: 1, owner: 1, submittedAt: 0, op: 'register' } };
+      for (const k of ['gen', 'plugin', 'nextReq', 'nextToken']) { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, [k]: v }); if (r.ok || r.reason !== 'invalid-nat' || r.field !== k) errs.push(`state ${k}=${tagv} not refused invalid-nat/${k}`); }
+      { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, leaves: [{ aid: v, status: 'convicted' }] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`leaf aid=${tagv} not refused`); }
+      { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, leaves: [{ aid: 1, status: { active: v } }] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`leaf token=${tagv} not refused`); }
+      { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, ckpts: [{ aid: 1, ckpt: { token: 0, k: v, st: 'live' } }] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`ckpt k=${tagv} not refused`); }
+      { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, ckpts: [{ aid: 1, ckpt: { token: 0, k: 0, st: { parked: v } } }] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`ckpt parked=${tagv} not refused`); }
+      { const r = core.step(P, core.emptyEnv(), REG, 0, { ...S0, requests: [{ id: 0, aid: 1, owner: 1, submittedAt: 0, op: { goDormant: v } }] }); if (r.ok || r.reason !== 'invalid-nat') errs.push(`request goDormant=${tagv} not refused`); }
+      const r1 = core.step(P, core.emptyEnv(), { contribute: { aid: v, owner: 1, submittedAt: 0, op: 'register' } }, 0, S0); if (r1.ok || r1.reason !== 'invalid-nat') errs.push(`action aid=${tagv} not refused`);
+      const r2 = core.step(P, core.emptyEnv(), REG, v, S0); if (r2.ok || r2.reason !== 'invalid-nat' || r2.field !== 'now') errs.push(`now=${tagv} not refused`);
+      const r3 = core.step(P, { ...core.emptyEnv(), inception: [v] }, REG, 0, S0); if (r3.ok || r3.reason !== 'invalid-nat') errs.push(`evidence inception=[${tagv}] not refused`);
+      { const r = core.step(P, { ...core.emptyEnv(), rotationFrom: [[1, v]] }, REG, 0, S0); if (r.ok || r.reason !== 'invalid-nat') errs.push(`evidence rotationFrom=[[1,${tagv}]] not refused`); }
       const r4 = core.step(P, core.emptyEnv(), { fold: { folder: 3, gen: 0, plugin: 7, batch: [{ id: v, do: 'process' }] } }, 0, S0); if (r4.ok || r4.reason !== 'invalid-nat') errs.push(`batch id=${tagv} not refused`);
       const r5 = core.replay(P, core.emptyEnv(), v, S0, []); if (r5.ok || r5.reason !== 'invalid-nat') errs.push(`replay t0=${tagv} not refused`);
     }
-    const shapes = [[{ bogus: 1 }, 'invalid-state'], [null, 'invalid-state'], [{ ...S0, extra: 1 }, 'invalid-state'], [{ ...S0, requests: [{ id: 0, aid: 1, owner: 1 }] }, 'invalid-nat']];
-    for (const [st, want] of shapes) { const r = core.step(P, core.emptyEnv(), { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, 0, st); if (r.ok || r.reason !== want) errs.push(`shape ${JSON.stringify(st)} gave ${r.reason}, expected ${want}`); }
-    for (const [a, want] of [[null, 'invalid-action'], [{ contribute: { aid: 1 } }, 'invalid-nat'], [{ fold: { folder: 3, gen: 0, plugin: 7, batch: [{ id: 0, do: 'burn' }] } }, 'invalid-action'], [{ rotate: {} }, 'invalid-action'], [{ close: { aid: 1 }, convict: { aid: 1 } }, 'invalid-action']]) {
+    const REG0 = { contribute: { aid: 1, owner: 1, submittedAt: 0, op: 'register' } };
+    const shapes = [[{ bogus: 1 }, 'invalid-state'], [null, 'invalid-state'], [{ ...S0, extra: 1 }, 'invalid-state'], [{ ...S0, requests: [{ id: 0, aid: 1, owner: 1 }] }, 'invalid-nat'],
+      [{ ...S0, leaves: [{ aid: 1, status: 'gone' }] }, 'invalid-state'], [{ ...S0, ckpts: [{ aid: 1, ckpt: { token: 0, k: 0, st: 'frozen' } }] }, 'invalid-state'], [{ ...S0, requests: [{ id: 0, aid: 1, owner: 1, submittedAt: 0, op: 'close' }] }, 'invalid-state']];
+    for (const [st, want] of shapes) { const r = core.step(P, core.emptyEnv(), REG0, 0, st); if (r.ok || r.reason !== want) errs.push(`shape ${JSON.stringify(st)} gave ${r.reason}, expected ${want}`); }
+    for (const [a, want] of [[null, 'invalid-action'], [{ contribute: { aid: 1 } }, 'invalid-nat'], [{ contribute: { aid: 1, owner: 1, submittedAt: 0, op: 'close' } }, 'invalid-action'], [{ fold: { folder: 3, gen: 0, plugin: 7, batch: [{ id: 0, do: 'burn' }] } }, 'invalid-action'], [{ rotate: {} }, 'invalid-action'], [{ pause: { aid: 1 }, resume: { aid: 1 } }, 'invalid-action']]) {
       const r = core.step(P, core.emptyEnv(), a, 0, S0); if (r.ok || r.reason !== want) errs.push(`action ${JSON.stringify(a)} gave ${r.reason}, expected ${want}`);
     }
-    for (const [e, want] of [[null, 'invalid-evidence'], [{ inception: 'x' }, 'invalid-evidence'], [{ ...core.emptyEnv(), bogus: [] }, 'invalid-evidence']]) {
-      const r = core.step(P, e, { contribute: { aid: 1, owner: 1, submittedAt: 0 } }, 0, S0); if (r.ok || r.reason !== want) errs.push(`evidence ${JSON.stringify(e)} gave ${r.reason}, expected ${want}`);
+    for (const [e, want] of [[null, 'invalid-evidence'], [{ inception: 'x' }, 'invalid-evidence'], [{ ...core.emptyEnv(), bogus: [] }, 'invalid-evidence'], [{ ...core.emptyEnv(), rotationFrom: [[1]] }, 'invalid-evidence']]) {
+      const r = core.step(P, e, REG0, 0, S0); if (r.ok || r.reason !== want) errs.push(`evidence ${JSON.stringify(e)} gave ${r.reason}, expected ${want}`);
     }
     if (core.validateParams({ ...P, D: 0 }) === null || core.validateParams({ ...P, D: 0 }).reason !== 'invalid-params') errs.push('zero bond accepted');
+    if (core.validateParams({ ...P, Mc: 1 }) === null || core.validateParams({ ...P, Mc: 1 }).reason !== 'invalid-params') errs.push('a checkpoint that cannot fund its go-request accepted');
     row('exact Nat and shapes refused by name at every entry point', errs.length === 0, errs.length ? errs.slice(0, 4).join(' | ') : `${bads.length} bad numbers × every field`);
   }
 
@@ -144,7 +157,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       // free play: evidence, request, fold, stale fold, slot, history, theme
       $('ev-aid').value = '11'; $('ev-add').click();
       const cb = d.querySelector('input[data-ev="inception"][data-aid="11"]'); if (!cb) errs.push('no evidence row for AID 11'); else if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new w.Event('change')); }
-      $('a-c-aid').value = '11'; $('a-c-owner').value = '1'; $('a-c-t').value = '0';
+      $('a-c-op').value = 'register'; $('a-c-aid').value = '11'; $('a-c-owner').value = '1'; $('a-c-t').value = '0';
       d.querySelector('button[data-go="contribute"]').click();
       let s = w.__registrySim.session;
       if (s.state.requests.length !== 1) errs.push('free play: request not posted');
@@ -153,13 +166,22 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       s = w.__registrySim.session;
       const last = s.history[s.history.length - 1];
       if (!last.result.ok) errs.push(`free play: fold refused (${last.result.reason})`);
-      if (!s.state.root.includes(11) || !s.state.live.includes(11)) errs.push('free play: AID 11 not registered after the fold');
+      if (core.lookupLeaf(s.state.leaves, 11) === null || core.lookupCkpt(s.state.ckpts, 11) === null) errs.push('free play: AID 11 not registered after the fold');
+      const rot = d.querySelector('input[data-ev="rotationFrom"][data-aid="11"][data-k="0"]'); if (!rot) errs.push('free play: no rotation evidence control'); else { rot.checked = true; rot.dispatchEvent(new w.Event('change')); }
+      $('a-p-aid').value = '11'; d.querySelector('button[data-go="pause"]').click();
+      s = w.__registrySim.session;
+      if (!s.history[s.history.length - 1].result.ok) errs.push(`free play: pause refused (${s.history[s.history.length - 1].result.reason})`);
+      $('slot-10').click(); $('a-rp-aid').value = '11'; d.querySelector('button[data-go="reap"]').click();
+      s = w.__registrySim.session;
+      const rp = s.history[s.history.length - 1].result;
+      if (!rp.ok || !rp.flow.premium) errs.push(`free play: reap refused after the grace window (${rp.reason})`);
+      if (!s.state.requests.some(r => !core.userPostable(r.op))) errs.push('free play: no go-request after the reap');
       $('a-f-gen').value = '0'; d.querySelector('button[data-go="fold"]').click();
       s = w.__registrySim.session;
       const st = s.history[s.history.length - 1];
       if (st.result.ok || st.result.reason !== 'stale-generation') errs.push(`free play: stale fold not refused (${st.result.ok ? 'applied' : st.result.reason})`);
       if ($('whyline').hidden || !/stale-generation/.test($('whyline').textContent)) errs.push('free play: refusal not shown');
-      $('slot-10').click(); if (Number($('slot').textContent) !== 10) errs.push('slot control');
+      if (Number($('slot').textContent) !== 10) errs.push('slot control');
       $('h-first').click(); if (w.__registrySim.session.cursor !== 0) errs.push('history first');
       $('h-next').click(); $('h-last').click(); $('h-prev').click(); $('h-clear').click();
       if (w.__registrySim.session.history.length) errs.push('clear history');
@@ -168,7 +190,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       if (!/R1/.test($('ledger').innerHTML)) errs.push('ledger not rendered');
       if (w.__errors.length) errs.push('page threw: ' + w.__errors.map(e => e.message).join(' | '));
     } catch (e) { errs.push('page smoke: ' + e.message); }
-    row('the page plays every story, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories, free play, evidence, slot, history, theme');
+    row('the page plays every story, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories, free play (register, pause, reap), evidence, slot, history, theme');
   }
 
   if (!quiet) {
@@ -194,7 +216,7 @@ async function selftest() {
   const edit = (f, from, to) => { const t = readFileSync(f, 'utf8'); if (!t.includes(from)) throw new Error(`control edit: ${from} not found in ${f}`); writeFileSync(f, t.replace(from, to)); };
   await control('flipped-expectation', dir => edit(join(dir, 'scenarios', '04-duplicate-registration.json'), '"reason": "already-registered"', '"reason": "not-in-phase-1"'), /story 4 .*refused already-registered, expected not-in-phase-1/);
   await control('forked-embedded-slice', dir => edit(join(dir, 'registry-simulator.html'), "if (!(batch.length > 0)) return refuse(REASONS.EMPTY_FOLD);", "if (!(batch.length > 0)) return refuse(REASONS.EMPTY_FOLD); /* forked */"), /stale or forked/);
-  await control('flipped-guard-absence-proof', dir => { edit(join(dir, 'registry-simulator-core.mjs'), 'if (acc.root.includes(r.aid)) return { ok: false, reason: REASONS.ALREADY_REGISTERED, at: i };', '/* mutant: absence proof removed */'); }, /story 4 .*|story 10 .*|Lean corpus replays/);
+  await control('flipped-guard-absence-proof', dir => { edit(join(dir, 'registry-simulator-core.mjs'), 'if (leaf !== null) return { ok: false, reason: REASONS.ALREADY_REGISTERED };', '/* mutant: absence proof removed */'); }, /story 4 .*|story 12 .*|Lean corpus replays/);
   await control('lying-theorem-never-fires', dir => edit(join(dir, 'registry-simulator-core.mjs'), "const f = foldOf(action); if (!f || f.gen === before.gen) return { v: 'n/a' };", "const f = foldOf(action); return { v: 'n/a' };"), /claims to exhibit R7 but it is n\/a/);
   await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('sc-all').addEventListener('click', () => { while (storyStep()) {} });", "$('sc-all').addEventListener('click', () => {});"), /play all did not finish/);
   rmSync(tmp, { recursive: true, force: true });

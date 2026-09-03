@@ -62,7 +62,7 @@ async function check({ fresh, corePath = CORE, html = HTML, corpusPath = CORPUS,
   let doc = null;
   try { doc = JSON.parse(fresh); row('fresh Lean output is JSON', true, `${fresh.length} bytes`); } catch (e) { row('fresh Lean output is JSON', false, e.message); }
   if (doc) {
-    row('schema and version', doc.schema === 'cardano-keri.registry.trace' && doc.version === 1, `${doc.schema} v${doc.version}`);
+    row('schema and version', doc.schema === 'cardano-keri.registry.trace' && doc.version === 2, `${doc.schema} v${doc.version}`);
     row('six traces, a grid, fifteen stories', Array.isArray(doc.traces) && doc.traces.length === 6 && doc.grid && doc.grid.cells.length > 0 && Array.isArray(doc.stories) && doc.stories.length === 15, `${(doc.traces || []).length} traces, ${doc.grid ? doc.grid.cells.length : 0} grid cells, ${(doc.stories || []).length} stories`);
     for (const t of doc.traces || []) if (!t.steps || !t.steps.length) row(`trace ${t.name} has steps`, false, 'empty');
   }

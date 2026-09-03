@@ -1,7 +1,11 @@
 # The registry machine — clarity record
 
 Every point where `lean/CardanoKeri/Registry.lean` did not decide and the
-simulator had to, with the source of the decision; every place a story, a doc
+simulator had to, with the source of the decision — with one caveat first:
+this was a single-seat slice (the same seat wrote the Lean and the
+simulator; the other family, Codex, audited after the proofs), so the record
+measures nothing about what the Lean carries to a fresh reader; it records
+the decisions and the disagreements only; every place a story, a doc
 comment and a definition disagreed; every audit finding that was not folded
 into the Lean, with what it waits for. The Lean is the law; this file is the
 list of what the law left open. Dates are 2026 unless said.
@@ -24,9 +28,9 @@ list of what the law left open. Dates are 2026 unless said.
 
 | id | fact in the Lean | what it means | proposed | status |
 |---|---|---|---|---|
-| Q-R1 | `Checkpoint.lean:305–312` (base branch, PR 315): `.close` takes a present checkpoint to `.gone` under quorum; `Registry.lean` has no edge for it | after a registration, an owner who closes leaves an active leaf with neither checkpoint nor go-request: `Inv.activeCkpt` (`Registry.lean:459`) does not hold of the pair of machines | under the ruling "the permissionless version cannot be closed" (2026-09-03), `close` leaves the checkpoint machine and becomes park + reap; a checkpoint's only exits are reap and tombstone | audit blocker 1; the change is on the base branch, not in this PR |
+| Q-R1 | `Checkpoint.lean:305–312` (base branch, PR 315): `.close` takes a present checkpoint to `.gone` under quorum; `Registry.lean` has no edge for it | the constraint: ruling 4, "the permissionless version can't be closed", reached the registry and not the checkpoint machine. The attack: after a registration the owner closes, and the registry keeps an active leaf with neither checkpoint nor go-request — `Inv.activeCkpt` does not hold of the pair, and the AID can never be revived or convicted | a ruling on the checkpoint machine's exits (the base branch's slice) | audit blocker 1; open |
 | Q-R2 | `Inv` bound an active leaf to *some* checkpoint, not to the checkpoint carrying *that* token | an `Inv`-satisfying state could have leaf `active 0` and checkpoint token 1 | `activeCkpt` strengthened to name the token — see "Token binding" below | audit major 2; **closed** |
-| Q-R3 | `stepFn .retract` checks the request id and the phase; no signer | anyone may retract another's request in phase 2; the refund still goes to the recorded owner, so it is a cancellation, not a theft; `validators/request.ak:91` on cardano-mpfs-onchain main requires the owner's signature | add a `signer` to `.retract` and the guard `signer = r.owner`, or keep the machine signer-free and record the omission (the stories mark it as an omission today) | audit major 3; a design ruling: the machine has no signer anywhere else |
+| Q-R3 | `stepFn .retract` checks the request id and the phase; no signer | the constraint: the machine has no signer on any edge (ruling 1: permissionless), and `validators/request.ak:91` on cardano-mpfs-onchain main requires the owner among the signatories for a retract. The attack: in phase 2 a stranger retracts another's request; the refund reaches the recorded owner, so the owner loses the registration attempt and the fee, not the bond | a ruling: is the retract the one signed edge of the registry cage, as the Aiken has it, or is it permissionless like every other edge | audit major 3; open (story 5 marks it an omission) |
 | Q-R4 | `rejectable` holds when `now < submittedAt`; a go-request dated `far` is therefore rejectable by the cage; safety is the plugin veto `r.op.userPostable = true` in `rejectOne` | on cardano-mpfs-onchain main (`state.ak:113–121`) `Rejected` has no plugin veto: a go-request would be rejectable and its key state lost; the model depends on #102 | keep; the design note now says so | audit major 4 |
 | Q-R5 | `Sys` has `plugin` but no owner / stake-script field | R5 proves the plugin pinned, not the owner pin #100 asks for; `types.ak:197–201` on main lets the owner change | add the fields when #100 lands upstream; until then the design note lists it | audit major 7 |
 

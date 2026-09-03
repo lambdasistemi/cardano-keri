@@ -42,6 +42,56 @@ pinned and empty folds refused (#100), processed-request value routed by the
 plugin (#101), and the plugin contract with a mint-coupled reference plugin
 (#102).
 
+## The rulings, verbatim (2026-09-02/03)
+
+The operator's words in the design conversation, in order, with the precision
+added when asked. The machine's doc comments and the theorems cite them; a
+ruling that lived only in the transcript would not exist.
+
+1. "no 69 is wrong, I just want permissionless to remove censorship in
+   cardano-keri aid registry (inception registration and aid convition or
+   sunsetting)" — the purpose: permissionless registration, conviction and
+   sunsetting, against censorship by an oracle.
+2. "normal operation consume the leaves indirection (a UTxO). The problem is
+   registry snapshotting" — the leaf is an indirection; readers consume the
+   UTxO it points at.
+3. "the registry provide aid utxo uniqueness. Can we prove that a checkpoint
+   for an id is unique ? Can a mint policy depend on the registry and mint
+   only unique assetName based on that ?" — uniqueness is the registry's
+   job; the mint couples to the absence proof (R1d, R2).
+4. "Yes permissionless version can't be closed" — no close edge in the
+   registry; a checkpoint leaves only by reap (and the checkpoint machine
+   must follow: clarity Q-R1).
+5. "Now we nned to model the pluggability in lean or we cannot reuse the
+   mpfs theorems. What about the permissioning divergence ? Is lean
+   accounting for that ?" and "convicting an aid needs special code on-chain,
+   so aiken contract has to admit staking withdrawals based plugins" —
+   `Cage.lean`: `AuthMode`, `Plugin`, `ValueMode`, the divergence theorems.
+6. "checkpoints come and go, the registry should track their "go" state.
+   When an aid is active the registry store it's indirection (UTxO), when
+   the aid is inactive the registry tell us what it's checkpoint can be if
+   revived: to be rotated or convicted for ever" — the leaf
+   `active token | dormant k | convicted`; the indirection is **the
+   checkpoint token** (asked and answered); a dormant AID is **revived by a
+   witnessed rotation from the recorded key state, or convicted forever**
+   (asked and answered).
+7. "this is why the cage update is pluggable" — the leaf operation is the
+   cage's; its admission and its coupling are the plugin's (`processBody`).
+8. "there is a problem with incentives, who pays to move a "go" in the
+   registry , when the bond was already taken ?" then "So the premium is the
+   min-ada recovered from the checkpoint ? I want to be sure that there is a
+   permissionless incentive to burn checkpoints closed and convicted" and
+   "but checkpoints also have freeze bond and advance premium, I bet those
+   are returned to the return addrss" — the reap: the go-request is funded
+   from the checkpoint's min-ADA, the rest is the reaper's premium; bonds
+   and pool went back to the refund address before (the parked checkpoint
+   holds only `Mc`).
+9. "can you prove the good samaritan recovering abandoned checkpoints will
+   not lose ada in requesting their un-referencing ?" — `Samaritan.lean`,
+   `R11_reap_is_samaritan`, with the condition the theorem carries
+   (`tip + fee ≤ Mc`, after the go-request is folded).
+10. "for the rest we are good togo" — the slice's scope closed there.
+
 ## The machine (`Registry.lean`)
 
 `Sys` is the registry UTxO (`gen`, `plugin`, `leaves`), the checkpoint

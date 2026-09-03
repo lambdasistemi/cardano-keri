@@ -756,7 +756,7 @@ function pageSmoke(core, html) {
   if (scrub && Number(scrub.max) < 6) problems.push('the scrubber does not span the branch: max ' + scrub.max);
   const treeNodes = doc.querySelectorAll('#tree .node');
   if (treeNodes.length !== win.CK.app.nodes.length) problems.push(`the tree draws ${treeNodes.length} nodes for ${win.CK.app.nodes.length}`);
-  const forkNode = treeNodes.find(g => g.querySelector('.fork'));
+  const forkNode = treeNodes.filter(g => g.querySelector('.fork')).pop();   // the parked state's fork, the last one on story 5
   if (!forkNode) problems.push('the tree marks no fork on story 5'); else forkNode.dispatchEvent(win.makeEvent('click'));
   if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('clicking the fork node of the tree does not land on the parked state');
   let bchips = doc.querySelectorAll('#branches .branch');

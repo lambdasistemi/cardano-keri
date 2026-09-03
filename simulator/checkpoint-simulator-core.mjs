@@ -565,7 +565,7 @@ const CAST = {
   treasury: { name: 'The treasury', role: 'a consumer', addr: 5, blurb: 'A Cardano validator that authorizes payments against Alice’s current keys by reading her checkpoint as a reference input.' },
   cora: { name: 'Cora', role: 'a convictor', addr: 3, blurb: 'She holds two of Alice’s rotations at the same sequence, both receipted by Alice’s witnesses.' },
   mallory: { name: 'Mallory', role: 'a thief', addr: 4, blurb: 'Sometimes she has Alice’s current keys; sometimes the next ones too.' },
-  anyone: { name: 'Anyone', role: 'a relayer, a friend, a stranger', addr: 6, blurb: 'Whoever relays a public event, tops up a pool, or registers a public inception.' },
+  anyone: { name: 'A sponsor', role: 'pays for her presence', addr: 6, blurb: 'Someone who wants Alice served on Cardano — a service, a friend, a DAO. Registers her public inception and tops up her pool; the machine asks no signature of him. If he names his own refund address, his bonds go back to Alice at her first rotation: a stale registration is a donation.' },
 };
 const whoAddr = addr => Object.values(CAST).find(c => c.addr === addr) || { name: 'address ' + addr };
 const STATE_WORDS = {

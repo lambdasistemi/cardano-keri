@@ -153,5 +153,70 @@
         ]
       }
     }
+  ],
+  "forks": [
+    {
+      "id": "stranger-deposit",
+      "at": 4,
+      "title": "A stranger lands her rotation as a deposit and resets her age",
+      "steps": [
+        {
+          "slot": 20,
+          "who": "rival",
+          "say": "Ten slots later, past juvenility, Alice rotates again on KERI.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              }
+            ]
+          },
+          "expect": {
+            "verdict": "consumable"
+          }
+        },
+        {
+          "slot": 20,
+          "who": "rival",
+          "say": "A stranger lands it with deposit on a checkpoint whose bonds are already full: it brings nothing (dregIn = bIn = 0) and still sets bornAt to now, so Alice is juvenile again for W slots, for the price of a fee — the Lean allows this today; escalated as Q-001, ruling pending.",
+          "action": {
+            "rotate": {
+              "sn'": 2,
+              "op": "deposit",
+              "payee": 7,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "dreg": 1000,
+              "b": 5,
+              "epoch": 2,
+              "bornAt": 20
+            },
+            "flow": {
+              "dregIn": 0,
+              "bIn": 0
+            },
+            "verdict": "juvenile",
+            "exhibits": [
+              "T1",
+              "T2",
+              "T3",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        }
+      ]
+    }
   ]
 }

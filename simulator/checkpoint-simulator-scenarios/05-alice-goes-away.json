@@ -302,6 +302,57 @@
           }
         }
       ]
+    },
+    {
+      "id": "stranger-withdraw",
+      "at": 1,
+      "title": "A stranger lands her public rotation as a withdrawal",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "rival",
+          "say": "Alice's rotation is public on her witnesses. A stranger lands it with withdraw: the bond option carries no signature, so the chain parks her — every lovelace to her refund address (T16), nothing to the stranger, and Alice is unconsumable until she re-deposits D + B and waits W slots again — the Lean allows this today; escalated as Q-001, ruling pending.",
+          "action": {
+            "rotate": {
+              "sn'": 1,
+              "op": "withdraw",
+              "payee": 7,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "dreg": 0,
+              "b": 0,
+              "pool": 0,
+              "epoch": 1
+            },
+            "flow": {
+              "refund": {
+                "addr": 1,
+                "dreg": 1000,
+                "b": 5,
+                "pool": 10
+              }
+            },
+            "verdict": "dreg-missing",
+            "exhibits": [
+              "T1",
+              "T14",
+              "T15",
+              "T16",
+              "T2",
+              "T3",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

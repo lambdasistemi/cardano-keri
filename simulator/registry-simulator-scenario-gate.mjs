@@ -505,7 +505,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       let mismatches = 0, applied = 0;
       for (const o of opts) {
         $('story-picker').value = o.value; $('story-picker').dispatchEvent(new w.Event('change'));
-        while (!$('hist-next').disabled) $('hist-next').click();
+        for (let k = 0; k < 200 && !$('hist-next').disabled; k++) $('hist-next').click();
         const nodes = RS.app.nodes;
         mismatches += nodes.filter(n => n.mismatch).length; applied += nodes.filter(n => n.record && n.record.result.ok).length;
         for (const n of nodes) if (n.record) { for (const [id, t] of Object.entries(n.record.theorems)) if (t.v === 'fails') errs.push(`story ${o.value}: lamp ${id} fails on the page — ${t.why}`); if (!n.record.lean || !n.record.lean.found) errs.push(`story ${o.value}: a story step has no Lean cell on the page`); else if (!n.record.lean.agrees) errs.push(`story ${o.value}: the page disagrees with its Lean cell — ${n.record.lean.why}`); }
@@ -524,7 +524,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
         if (!btn) errs.push('tree: no continuation button for the fork departing here');
         else {
           btn.click();
-          while (!$('hist-next').disabled) $('hist-next').click();
+          for (let k = 0; k < 200 && !$('hist-next').disabled; k++) $('hist-next').click();
           const leaf = RS.node(RS.app.cursor);
           if (!leaf.record || leaf.record.result.ok || leaf.record.result.reason !== fk.steps[fk.steps.length - 1].expect.reason) errs.push('tree: the fork did not play to its refusal');
           if (!d.querySelector('#tree .node.no.here')) errs.push('tree: the refused fork step is not the ringed ✗ node');

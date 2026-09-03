@@ -1621,7 +1621,7 @@ function drawScene() {
   const acting = actorOfNode(here);
   const parts = [];
   parts.push(s('rect', { class: 'region', x: 10, y: 10, width: 250, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 24, y: 34 }, 'KERI · the identities'));
-  parts.push(s('rect', { class: 'region chain', x: 275, y: 10, width: 450, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 289, y: 34 }, 'Cardano · the registry, the inbox, the checkpoints'));
+  parts.push(s('rect', { class: 'region chain', x: 275, y: 10, width: 450, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 289, y: 34 }, 'Cardano · the registry'));
   parts.push(s('rect', { class: 'region readers', x: 740, y: 10, width: 250, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 754, y: 34 }, 'folders, reapers & payees'));
   const actor = (key, id, name, role, badge) => {
     const q = layout[key];
@@ -1859,6 +1859,7 @@ const shortWho = w => (w || '').split(/ — | · /)[0].split(' ')[0].slice(0, 8)
 function nodeVerb(n) {
   if (n.record) { const a = n.record.action, t = actionTag(a); return t === 'contribute' ? 'request·' + (typeof a.contribute.op === 'string' ? a.contribute.op : 'go') : t === 'convictCkpt' ? 'convict' : t; }
   if (n.kind === 'time') return 'slot ' + n.session.now;
+  if (n.world) return 'evidence';
   if (n.evRow) { const k = Object.keys(n.evRow)[0]; return (n.removed ? '− ' : '') + { inception: 'inception', rotationFrom: 'rotation', duplicity: 'proof', quorum: 'quorum' }[k]; }
   return n.kind === 'origin' ? 'start' : 'note';
 }
@@ -2213,7 +2214,7 @@ function playStory(n) {
   for (const st of sc.steps) { pid = play(pid, st, {}); trunkIds.push(pid); }
   for (const fk of sc.forks || []) {
     let fid = trunkIds[fk.at];
-    if (fk.env) { const sess = node(fid).session; fid = addChild(fid, { session: { ...sess, env: { ...emptyEnv(), ...fk.env } }, record: null, who: 'The world', say: 'Another world: ' + fk.title + '.', kind: 'evidence', evRow: null, branch: { id: fk.id, title: fk.title } }); }
+    if (fk.env) { const sess = node(fid).session; fid = addChild(fid, { session: { ...sess, env: { ...emptyEnv(), ...fk.env } }, record: null, who: 'world', say: 'Another world: ' + fk.title + '.', kind: 'evidence', evRow: null, world: true, branch: { id: fk.id, title: fk.title } }); }
     fk.steps.forEach((st, i) => { fid = play(fid, st, i === 0 && !fk.env ? { branch: { id: fk.id, title: fk.title } } : {}); });
   }
   for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
@@ -2245,14 +2246,14 @@ function runSelftest() {
   // drive the visible controls: story 13 through the picker, its branch without the proof
   try {
     playStory(13);
-    while (!$('hist-next').disabled) $('hist-next').click();
+    for (let g = 0; g < 200 && !$('hist-next').disabled; g++) $('hist-next').click();
     const trunkEnd = node(app.cursor);
     const forkNode = [...$('tree').querySelectorAll('.node')].filter(g => g.querySelector('.fork')).pop();
     forkNode.dispatchEvent(new Event('click'));
     const chips = $('branches').querySelectorAll('.branch');
     const chip = [...chips].find(b => b.dataset.fork === 'convict-without-proof');
     chip.click();
-    while (!$('hist-next').disabled) $('hist-next').click();
+    for (let g = 0; g < 200 && !$('hist-next').disabled; g++) $('hist-next').click();
     const leaf = node(app.cursor);
     const lamps = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
     const scene = $('scene').querySelectorAll('[data-obj]').length;

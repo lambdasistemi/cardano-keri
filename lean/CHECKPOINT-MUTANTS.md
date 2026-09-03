@@ -93,5 +93,5 @@ M30-dreg-not-positive: RED for the right reason (failing: T10_withdraw_is_observ
 M31-empty-message-needs-signature: RED for the right reason (failing: T5_keep_needs_no_intent)
 ```
 
-Axioms (`#print axioms` over all 62 theorems): 43 use propext only, 18 use propext and Quot.sound; sorryAx: 0.
+Axioms (`#print axioms` over all 62 theorems, taken on a clean build — a fresh `.lake`, never a worktree's cache after a mutant campaign, which the shipped-slice audit found reporting stale axioms): 43 use propext only, 18 use propext and Quot.sound, 1 use none (T8_reopen_actor_is_proof); total 62; sorryAx: 0; Classical.choice: 0.
 Instrument: the campaign script applies each mutant by exact text replacement (it refuses a needle that does not apply), builds `CardanoKeri.Checkpoint` then `CardanoKeri.CheckpointGoals`, and reads the failing theorem names off the error lines.

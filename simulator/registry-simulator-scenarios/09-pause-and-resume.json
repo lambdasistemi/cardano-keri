@@ -10,6 +10,6 @@
     { "now": 6, "actor": "next-keys", "as": "Alice — pausing a parked checkpoint", "action": { "pause": { "aid": 11 } }, "expect": { "ok": false, "reason": "not-live" } },
     { "now": 7, "actor": "next-keys", "as": "Alice", "action": { "resume": { "aid": 11 } }, "expect": { "ok": true }, "exhibits": ["R6", "R1"] },
     { "now": 8, "actor": "next-keys", "as": "Alice — pausing again without a rotation from k=2", "action": { "pause": { "aid": 11 } }, "expect": { "ok": false, "reason": "no-rotation" } },
-    { "now": 8, "actor": "proof", "as": "Cora — convicting Alice without a proof", "action": { "convictCkpt": { "aid": 11 } }, "expect": { "ok": false, "reason": "no-duplicity-proof" } }
+    { "now": 8, "actor": "proof", "as": "Cora — convicting Alice without a proof", "action": { "convictCkpt": { "aid": 11 } }, "expect": { "ok": false, "reason": "no-duplicity-proof" }, "exhibits": ["R14"] }
   ],
   "expectFinal": { "gen": 1, "plugin": 7, "leaves": [{ "aid": 11, "status": { "active": 0 } }], "ckpts": [{ "aid": 11, "ckpt": { "token": 0, "k": 2, "st": "live" } }], "requests": [], "nextReq": 1, "nextToken": 1 } }

@@ -2,7 +2,7 @@
  * registry-simulator-core.mjs — THE machine core of the registry simulator:
  * the single transcription of `CardanoKeri.Registry` (the AID registry as an
  * MPFS instance: `stepFn`, `processOne`, `rejectOne`, `applyBatch`,
- * `reapable`, `replay`, `Action.actor`, the phases), the theorems R1–R13 of
+ * `reapable`, `replay`, `Action.actor`, the phases), the theorems R1–R14 of
  * `CardanoKeri.RegistryGoals` as executable properties over steps, and the
  * scenario / corpus checkers.
  *
@@ -437,7 +437,7 @@ function goPending(s, aid) { return s.requests.some(r => r.aid === aid && !userP
 /* @@CORE:machine:END@@ */
 
 /* @@CORE:theorems@@ */
-/* --- R1–R13 as executable properties over one step record ---------------- */
+/* --- R1–R14 as executable properties over one step record ---------------- */
 const nodup = l => new Set(l).size === l.length;
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const foldOf = a => (a && a.fold) || null;
@@ -589,6 +589,22 @@ const THEOREMS = [
       const want = t === 'tomb' || (t === 'parked' && (c.st.parked + params.W <= now || (env && Array.isArray(env.quorum) && env.quorum.includes(action.reap.aid))));
       if (want !== result.ok) return { v: 'fails', why: want ? `reap refused (${result.reason})` : 'reap applied on a bonded or graced checkpoint' };
       return { v: 'holds' };
+    } },
+  { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof',
+    check: ({ before, action, result, env }) => {
+      const has = (aid, k) => !!(env && Array.isArray(env.duplicity) && env.duplicity.some(r => r[0] === aid && r[1] === k));
+      if (action.convictCkpt) {
+        const c = lookupCkpt(before.ckpts, action.convictCkpt.aid); if (!c || ckTag(c.st) === 'tomb') return { v: 'n/a' };
+        if (!has(action.convictCkpt.aid, c.k)) return result.ok ? { v: 'fails', why: 'a checkpoint was convicted without a proof' } : { v: 'holds' };
+        return { v: 'n/a' };
+      }
+      const f = foldOf(action); if (!isFoldNow(f, before)) return { v: 'n/a' };
+      for (const x of f.batch) {
+        const r = reqOf(before, x.id); if (!r || x.do !== 'process' || opTag(r.op) !== 'convict') continue;
+        const leaf = lookupLeaf(before.leaves, r.aid); if (!leaf || statusTag(leaf) !== 'dormant') continue;
+        if (!has(r.aid, leaf.dormant)) return result.ok ? { v: 'fails', why: 'a dormant AID was convicted without a proof' } : { v: 'holds' };
+      }
+      return { v: 'n/a' };
     } },
 ];
 

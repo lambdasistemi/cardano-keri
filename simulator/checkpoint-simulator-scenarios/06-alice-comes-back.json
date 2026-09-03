@@ -1,0 +1,275 @@
+{
+  "story": 6,
+  "title": "Alice comes back",
+  "goal": "As Alice, I want my parked identity live again.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered, bonded.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice rotates on KERI and parks (story 5).",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          },
+          {
+            "intentAuthorized": [
+              1,
+              "withdraw",
+              null
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "withdraw",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "epoch": 1,
+          "dreg": 0,
+          "b": 0,
+          "pool": 0
+        },
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T10_withdraw_is_observable",
+          "T14_pool_decreases_only_by_premium",
+          "T15_b_leaves_only_by_freeze_or_withdraw",
+          "T16_withdraw_destination",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 40,
+      "who": "alice",
+      "say": "Much later Alice rotates again on KERI.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "dreg-missing"
+      }
+    },
+    {
+      "slot": 40,
+      "who": "alice",
+      "say": "She lands it with deposit, bringing both bonds back. Born again at slot 40, juvenile for W slots. There is no replay: the state never left the chain.",
+      "action": {
+        "rotate": {
+          "sn'": 2,
+          "op": "deposit",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 2,
+          "epoch": 2,
+          "poisoned": false,
+          "bornAt": 40,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 0
+        },
+        "flow": {
+          "dregIn": 1000,
+          "bIn": 5
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T10_only_deposit_restores",
+          "T15_b_returns_only_by_deposit",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_increases_only_by_deposit",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      },
+      "evidence": {
+        "add": [
+          {
+            "intentAuthorized": [
+              2,
+              "deposit",
+              null
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "slot": 50,
+      "who": "treasury",
+      "say": "Consumable again.",
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 50,
+      "who": "alice",
+      "say": "Seeded, unreachable on chain: a datum claiming more than the conviction bond. The depositing rotation refuses it. No story reaches this state; the boundary grid does.",
+      "seed": {
+        "present": {
+          "l": {
+            "sn": 2,
+            "epoch": 2,
+            "poisoned": false,
+            "bornAt": 40,
+            "refundTo": 1,
+            "dreg": 1001,
+            "b": 5,
+            "pool": 0
+          }
+        }
+      },
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              2,
+              2,
+              3
+            ]
+          },
+          {
+            "intentAuthorized": [
+              3,
+              "deposit",
+              null
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 3,
+          "op": "deposit",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "bond-over-full",
+        "verdict": "dreg-missing",
+        "exhibits": [
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
+        ]
+      }
+    }
+  ],
+  "atoms": [
+    "6.the-advance-predicate",
+    "6.both-bonds-full-on-the"
+  ]
+}

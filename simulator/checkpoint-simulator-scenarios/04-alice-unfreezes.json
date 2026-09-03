@@ -1,0 +1,369 @@
+{
+  "story": 4,
+  "title": "Alice unfreezes",
+  "goal": "As Alice, I want my checkpoint back in service, so I land my rotation myself, put the freeze bond back, and top up the pool.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "alice",
+      "say": "Registered with a short pool.",
+      "action": {
+        "register": {
+          "refund": 1,
+          "pool0": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "juvenile",
+        "exhibits": [
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "Alice rotates on KERI.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hal freezes her (story 3).",
+      "action": {
+        "freeze": {
+          "sn'": 1,
+          "payee": 2
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "b": 0,
+          "pool": 1
+        },
+        "verdict": "b-missing",
+        "exhibits": [
+          "T15_b_leaves_only_by_freeze_or_withdraw",
+          "T15_freeze_makes_inert",
+          "T16_payments_are_named",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T5_freeze_enabled",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "Keep is enabled from a frozen state too: the rotation lands, unpaid because the pool is short, and the checkpoint stays frozen. The datum moves; the missing bond does not return.",
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "poisoned": false,
+          "bornAt": 0,
+          "dreg": 1000,
+          "b": 0,
+          "pool": 1
+        },
+        "flow": {},
+        "verdict": "b-missing",
+        "exhibits": [
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T5_keep_needs_no_intent",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_relayer_cannot_park_age_or_close",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "Alice rotates again and lands it herself with deposit, bringing the freeze bond back. Both bonds are full on the output; she is born again at slot 20.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          },
+          {
+            "intentAuthorized": [
+              2,
+              "deposit",
+              null
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 2,
+          "op": "deposit",
+          "payee": 1,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 2,
+          "epoch": 2,
+          "poisoned": false,
+          "bornAt": 20,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 1
+        },
+        "flow": {
+          "dregIn": 0,
+          "bIn": 5
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T10_only_deposit_restores",
+          "T15_b_returns_only_by_deposit",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 20,
+      "who": "alice",
+      "say": "The pool is separate: Alice adds 20 to it. Adding to the pool does not restart juvenility.",
+      "action": {
+        "topUp": {
+          "x": 20
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "bornAt": 20,
+          "pool": 21
+        },
+        "flow": {
+          "poolIn": 20
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T14_pool_increases_only_by_topup",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 30,
+      "who": "hal",
+      "say": "Ten slots later the checkpoint is consumable again, and Hal sees a pool worth landing rotations for.",
+      "expect": {
+        "verdict": "consumable"
+      }
+    }
+  ],
+  "forks": [
+    {
+      "id": "withdraw",
+      "at": 2,
+      "title": "Alice withdraws instead of unfreezing",
+      "steps": [
+        {
+          "slot": 20,
+          "who": "alice",
+          "say": "Withdraw is enabled from a frozen state as well: Alice lands the same rotation with withdraw. The conviction bond and the pool she still holds go to her refund address; the freeze bond is already gone. Parked.",
+          "action": {
+            "rotate": {
+              "sn'": 1,
+              "op": "withdraw",
+              "payee": 1,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "dreg": 0,
+              "b": 0,
+              "pool": 0,
+              "epoch": 1,
+              "sn": 1
+            },
+            "flow": {
+              "refund": {
+                "addr": 1,
+                "dreg": 1000,
+                "b": 0,
+                "pool": 1
+              }
+            },
+            "verdict": "dreg-missing",
+            "exhibits": [
+              "T10_withdraw_is_observable",
+              "T14_pool_decreases_only_by_premium",
+              "T16_withdraw_destination",
+              "T1_rotate_strict",
+              "T1_sn_monotone",
+              "T1_sn_monotone_all",
+              "T2_epoch_only_by_rotation",
+              "T3_epoch_local",
+              "T3_rotation_clears",
+              "T5_every_bond_option",
+              "T6_bonds_move_only_by_rotation_or_freeze",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_intent_requires_new_keys",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_only_convicted_is_terminal",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
+            ]
+          },
+          "evidence": {
+            "add": [
+              {
+                "intentAuthorized": [
+                  1,
+                  "withdraw",
+                  null
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "atoms": [
+    "4.the-advance-predicate",
+    "4.that-both-bonds-are-full"
+  ]
+}

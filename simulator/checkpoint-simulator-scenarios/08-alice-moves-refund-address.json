@@ -1,0 +1,407 @@
+{
+  "story": 8,
+  "title": "Alice moves her refund address",
+  "goal": "As Alice, I want the money to come back to me and not to whoever registered my checkpoint.",
+  "params": {
+    "D": 1000,
+    "B": 5,
+    "P": 2,
+    "W": 10
+  },
+  "steps": [
+    {
+      "slot": 0,
+      "who": "friend",
+      "say": "A stranger registered Alice’s checkpoint with his own refund address (6).",
+      "action": {
+        "register": {
+          "refund": 6,
+          "pool0": 10
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "refundTo": 6
+        },
+        "verdict": "juvenile",
+        "exhibits": [
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Alice rotates on KERI. A relayer submits her public rotation asking to move the refund address to Alice’s: the new keys did not sign the address, so the rotation is refused as submitted.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "intent-not-authorized",
+        "verdict": "consumable",
+        "exhibits": [
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "The same relayer submits the rotation with no address at all: it lands, and the refund address stays the stranger’s.",
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "refundTo": 6,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 8
+        },
+        "flow": {
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T14_pool_decreases_only_by_premium",
+          "T16_payments_are_named",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T5_keep_needs_no_intent",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_relayer_cannot_park_age_or_close",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "At her next rotation Alice’s new keys (epoch 2) sign her address along with the rotation. The address moves.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              1,
+              1,
+              2
+            ]
+          },
+          {
+            "intentAuthorized": [
+              2,
+              "keep",
+              1
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 2,
+          "op": "keep",
+          "payee": 1,
+          "refund'": 1
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 2,
+          "epoch": 2,
+          "refundTo": 1,
+          "dreg": 1000,
+          "b": 5,
+          "pool": 6
+        },
+        "flow": {
+          "hunter": {
+            "addr": 1,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "consumable",
+        "exhibits": [
+          "T14_pool_decreases_only_by_premium",
+          "T16_payments_are_named",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T6_refund_change_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 12,
+      "who": "alice",
+      "say": "At close the stranger’s bonds go to Alice: a stale registration is a donation.",
+      "evidence": {
+        "add": [
+          {
+            "quorum": [
+              2
+            ]
+          },
+          {
+            "rotationTo": [
+              2,
+              2,
+              3
+            ]
+          },
+          {
+            "intentAuthorized": [
+              3,
+              "close",
+              null
+            ]
+          }
+        ]
+      },
+      "action": {
+        "close": {
+          "sn'": 3,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "closed": {
+            "epoch": 3,
+            "sn": 3
+          }
+        },
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 1000,
+            "b": 5,
+            "pool": 6
+          }
+        },
+        "verdict": "not-present",
+        "exhibits": [
+          "T16_close_destination",
+          "T16_close_needs_rotation",
+          "T1_sn_monotone_all",
+          "T2_close_and_reopen_open_epochs",
+          "T5_close_enabled",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
+        ]
+      }
+    }
+  ],
+  "forks": [
+    {
+      "id": "unrelated-intent",
+      "at": 2,
+      "title": "a signed withdrawal is not a signed address",
+      "steps": [
+        {
+          "who": "alice",
+          "slot": 12,
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              },
+              {
+                "intentAuthorized": [
+                  2,
+                  "withdraw",
+                  null
+                ]
+              }
+            ]
+          },
+          "say": "Alice rotates again and her new keys (epoch 2) sign a withdrawal, no address named."
+        },
+        {
+          "who": "hal",
+          "slot": 12,
+          "action": {
+            "rotate": {
+              "sn'": 2,
+              "op": "keep",
+              "payee": 2,
+              "refund'": 1
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "exhibits": [
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          },
+          "say": "A relayer lands the rotation as a keep asking to move the refund address to Alice. The message her keys signed is a withdrawal without an address, not this rotation’s option with this address: refused (T6_refund_change_requires_new_keys, D-038)."
+        },
+        {
+          "who": "hal",
+          "slot": 12,
+          "action": {
+            "rotate": {
+              "sn'": 2,
+              "op": "withdraw",
+              "payee": 2,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "refundTo": 6
+            },
+            "exhibits": [
+              "T10_withdraw_is_observable",
+              "T14_pool_decreases_only_by_premium",
+              "T15_b_leaves_only_by_freeze_or_withdraw",
+              "T16_withdraw_destination",
+              "T1_rotate_strict",
+              "T1_sn_monotone",
+              "T1_sn_monotone_all",
+              "T2_epoch_only_by_rotation",
+              "T3_epoch_local",
+              "T3_rotation_clears",
+              "T5_every_bond_option",
+              "T6_bonds_move_only_by_rotation_or_freeze",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_intent_requires_new_keys",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_only_convicted_is_terminal",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
+            ]
+          },
+          "say": "The signed message itself lands: the withdrawal, and the address stays the stranger’s."
+        }
+      ]
+    }
+  ],
+  "atoms": [
+    "8.the-signature-over-the-new",
+    "8.a-relayer-submitting-her-public"
+  ]
+}

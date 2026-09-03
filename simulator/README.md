@@ -17,7 +17,18 @@ transcription honest against the Lean itself.
   theorem on every replayed step; it prints PASS/FAIL per item and puts the
   verdict in the tab title.
 
-The page is one scene: KERI on the left (Alice with the epoch of her keys,
+The page reads top-down as where we are and what can happen next. First the
+play: the tree of it, drawn (every step a node — ✓ accepted, ✗ refused, ⏱ a
+slot move, ≡ evidence — every branch a line, ⋔ at a fork, the ring on the
+current step; click a node to jump there), the play bar, one strip with the
+state word, the keys, the treasury's verdict and the three sums, and the
+narration of the current step. Then the main panel, what can happen next:
+the story's continuations from here (the one › will take marked, the other
+branches with their titles) and every move the machine would accept from
+here grouped by actor, the evidence each can bring, the time moves, and the
+refused moves folded with their reasons. Then the scene, collapsible.
+
+The scene: KERI on the left (Alice with the epoch of her keys,
 her witnesses, Cora, Mallory, anyone), the Cardano UTxO in the middle (the
 token, the datum, the three coin piles D / B / pool, the juvenility bar, the
 registry, the validator and the tray of evidence presented), the readers and

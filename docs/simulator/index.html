@@ -245,6 +245,50 @@
   .flow { display: flex; gap: 8px; flex-wrap: wrap; }
   .flow .i { font-family: var(--mono); color: var(--muted); min-width: 3ch; }
   .about p { font-size: .84rem; margin: 4px 0; }
+  /* the tree of the play */
+  #tree-wrap { overflow-x: auto; margin: 4px 0 2px; }
+  #tree { display: block; min-width: 100%; }
+  #tree text { font-family: var(--mono); font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #tree .edge { stroke: var(--line); stroke-width: 2; fill: none; }
+  #tree .edge.taken { stroke: var(--accent); }
+  #tree .node { cursor: pointer; }
+  #tree .node circle { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
+  #tree .node.ok circle { stroke: var(--ok); fill: var(--ok-bg); }
+  #tree .node.no circle { stroke: var(--bad); fill: var(--bad-bg); }
+  #tree .node.time circle, #tree .node.evidence circle { stroke: var(--line); stroke-dasharray: 2 2; }
+  #tree .node.here circle { stroke: var(--accent); stroke-width: 3.5; }
+  #tree .node.here text { fill: var(--accent); font-weight: 700; }
+  #tree .node .who { font-size: 9px; }
+  #tree .fork { fill: var(--warn); font-size: 12px; }
+  /* where we are */
+  #where { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--accent-bg); font-size: .9rem; }
+  #where .state { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; }
+  #where .state.poisoned { color: var(--poison); }
+  #where .lamp { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  #where .lamp.ok { background: var(--ok); } #where .lamp.no { background: var(--bad); }
+  #where .sum { font-family: var(--mono); font-size: .82rem; }
+  #where .sum.dreg { color: var(--dreg); } #where .sum.b { color: var(--b); } #where .sum.pool { color: var(--pool); }
+  #where .step { margin-left: auto; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+  /* what can happen next */
+  #branches { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .branch { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 12px; text-align: left; display: flex; gap: 10px; align-items: baseline; font-size: .9rem; }
+  .branch:hover { border-color: var(--accent); }
+  .branch.on { border-color: var(--accent); background: var(--accent-bg); }
+  .branch .go { font-family: var(--mono); color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .branch .who { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); white-space: nowrap; }
+  .branch .fork-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+  .branch .txt { flex: 1; min-width: 0; color: var(--ink); }
+  .branch .res { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
+  .branch .res.ok { color: var(--ok); } .branch .res.no { color: var(--bad); }
+  #next-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+  .mover { border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; background: var(--card); }
+  .mover .actor { margin-bottom: 6px; }
+  .mover .acts { margin: 0; }
+  .mover .none { color: var(--muted); font-size: .8rem; font-style: italic; }
+  #refused-moves { margin-top: 8px; }
+  #refused-moves summary { cursor: pointer; }
+  #refused-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  #scene-drawer[open] > summary { margin-bottom: 8px; }
   #selftest-out { white-space: pre-wrap; font-family: var(--mono); font-size: .78rem; background: var(--card); border: 1px solid var(--line); margin: 14px; padding: 10px; border-radius: 8px; }
 </style>
 </head>
@@ -269,7 +313,7 @@
       <select id="story-picker" aria-label="pick a story"></select>
       <span class="goal" id="story-goal"></span>
     </div>
-    <svg id="scene" viewBox="0 0 1000 560" role="group" aria-label="the scene: KERI, the Cardano checkpoint, the readers and payees"></svg>
+    <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
     <div id="playbar">
       <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
       <button type="button" class="nav" id="hist-prev" title="one step back (plays in reverse)">‹</button>
@@ -279,10 +323,27 @@
       <input type="range" id="scrub" min="0" max="0" value="0" aria-label="scrub the play">
       <span id="pos">0 / 0</span>
     </div>
-    <div id="branches"></div>
-    <div id="history-strip"></div>
+    <div id="where"></div>
     <div id="narration"></div>
   </section>
+
+  <section class="card" id="next-card">
+    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · a move from a visited step opens a branch</small></h2>
+    <div id="branches"></div>
+    <div id="next-moves"></div>
+    <div id="act-form" hidden>
+      <div class="fields" id="act-fields"></div>
+      <div id="act-why"></div>
+      <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
+        <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
+    </div>
+    <details id="refused-moves"><summary class="tiny" id="refused-summary">what the machine refuses now</summary><div id="refused-list"></div></details>
+  </section>
+
+  <details class="card" id="scene-drawer" open>
+    <summary>The scene <small>KERI, the Cardano UTxO, the readers and payees · every step plays on it; click an actor to act as them</small></summary>
+    <svg id="scene" viewBox="0 0 1000 560" role="group" aria-label="the scene: KERI, the Cardano checkpoint, the readers and payees"></svg>
+  </details>
 
   <section class="card" id="lamps">
     <h2>The theorems <small>T1–T16 of CheckpointGoals.lean · a lamp lights when this step shows it; every one is checked on every step · click to read</small></h2>
@@ -290,22 +351,13 @@
   </section>
 
   <section class="drawers">
-    <details class="card" id="act-drawer" open>
-      <summary>Act <small>pick who you are; KERI events are evidence, Cardano actions are transactions; a new action from a visited step opens a branch</small></summary>
+    <details class="card" id="act-drawer">
+      <summary>Evidence by hand <small>the Env: what the validator would verify over the bytes, decided by you</small></summary>
       <div class="actors" id="actors"></div>
       <div class="blurb" id="actor-blurb"></div>
       <div class="lbl" id="keri-lbl">On KERI (evidence, not a transaction)</div>
       <div class="acts" id="keri-acts"></div>
-      <div class="lbl">On Cardano</div>
-      <div class="acts" id="chain-acts"></div>
-      <div id="act-form" hidden>
-        <div class="fields" id="act-fields"></div>
-        <div id="act-why"></div>
-        <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
-          <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
-      </div>
       <div class="ev-form">
-        <span class="lbl" style="width:100%">Evidence by hand — the Env: what the validator would verify over the bytes, decided by you</span>
         <label>kind <select id="ev-kind">
           <option value="rotationTo">witnessed rotation</option>
           <option value="refundAuthorized">refund address signed by the new keys</option>
@@ -343,7 +395,7 @@
 
     <details class="card about" id="about-drawer">
       <summary>What this is <small>and is not</small></summary>
-      <p>A transcription of <code>lean/CardanoKeri/Checkpoint.lean</code>: the states, the actions (exactly the redeemers), the evidence as a table of decisions, value as three components that never mix, the consumer's state-side check. The theorems of <code>CheckpointGoals.lean</code> run as properties on every step. Each story is a tree: the trunk and the branches the story implies; ‹ and › walk it as an editor walks its history, ⋔ chips switch branch.</p>
+      <p>A transcription of <code>lean/CardanoKeri/Checkpoint.lean</code>: the states, the actions (exactly the redeemers), the evidence as a table of decisions, value as three components that never mix, the consumer's state-side check. The theorems of <code>CheckpointGoals.lean</code> run as properties on every step. Each story is a tree: the trunk and the branches the story implies; ‹ and › walk it as an editor walks its history; click any node of the tree to jump there.</p>
       <p>Not here: cryptography (keys are an epoch counter; evidence is a row you decide), validity (D-027, reserved), the consumer's own threshold check, UTxO mechanics, delegation, record trees, hunter bounties. A Lean <code>Nat</code> is unbounded; this page represents it exactly up to 2^53 − 1 and refuses anything else by name.</p>
     </details>
   </section>
@@ -1571,7 +1623,7 @@ function drawScene() {
   const actor = (key, id, name, role, badge) => {
     const q = layout[key];
     const g = s('g', { class: 'actor' + (id === app.actor ? ' on' : '') + (id === acting ? ' acting' : ''), dataset: { obj: 'actor', id, key }, transform: `translate(${q.x},${q.y})`, role: 'button', tabindex: 0,
-      onclick: () => { if (ACTOR_ORDER.includes(id)) { app.actor = id; app.pending = null; $('act-drawer').open = true; render(); } } },
+      onclick: () => { if (ACTOR_ORDER.includes(id)) { app.actor = id; app.pending = null; render(); } } },
       s('circle', { class: 'avatar', r: id === 'rival' ? 22 : 30 }),
       s('text', { class: 'nm', y: 4 }, name),
       s('text', { class: 'role', y: id === 'rival' ? 36 : 44 }, role));
@@ -1790,7 +1842,7 @@ function playEdges(edges) {
 
 /* ---- rendering ---------------------------------------------------------------- */
 function render() {
-  renderHeader(); renderStoryBar(); drawScene(); renderPlaybar(); renderNarration(); renderLedger();
+  renderHeader(); renderStoryBar(); renderTree(); renderPlaybar(); renderWhere(); renderNarration(); renderNext(); drawScene(); renderLedger();
   renderCast(); renderEvidence(); renderCheckpoint(); renderChart(); renderMoney();
 }
 function renderHeader() {
@@ -1806,8 +1858,52 @@ function renderStoryBar() {
     for (const sc of SCENARIOS) sel.append(h('option', { value: String(sc.story) }, sc.story + '. ' + sc.title + (sc.forks && sc.forks.length ? ' ⋔' : '')));
   }
   sel.value = app.story ? String(app.story.story) : '';
-  $('story-goal').textContent = app.story ? app.story.goal : 'Free play: pick who you are below, present evidence, move the slot, submit actions. Every accepted step is a node; a second action from the same node opens a branch.';
+  $('story-goal').textContent = app.story ? app.story.goal : 'Free play: every accepted move is a node of the tree below; a second move from the same node opens a branch.';
 }
+/* the tree: columns by depth, the branch taken by default keeps its row, every
+   other branch takes the next free row; click a node to jump there */
+function treeLayout() {
+  const col = {}, row = {};
+  let rows = 0;
+  const place = (id, r) => {
+    row[id] = r;
+    const n = node(id);
+    const kids = n.children.slice();
+    const first = n.last !== null ? n.last : kids[0];
+    kids.sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
+    kids.forEach((c, i) => { col[c] = col[id] + 1; if (i === 0) place(c, r); else { rows++; place(c, rows); } });
+  };
+  col[0] = 0; place(0, 0);
+  return { col, row, rows: rows + 1, cols: Math.max(...Object.values(col)) + 1 };
+}
+function renderTree() {
+  const svg = $('tree');
+  const { col, row, rows, cols } = treeLayout();
+  const dx = 46, dy = 34, x0 = 24, y0 = 22;
+  const W = x0 * 2 + (cols - 1) * dx, H = y0 * 2 + (rows - 1) * dy + 12;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const X = id => x0 + col[id] * dx, Y = id => y0 + row[id] * dy;
+  const onPath = new Set(currentPath());
+  const parts = [];
+  for (const n of app.nodes) {
+    if (n.parent === null) continue;
+    const px = X(n.parent), py = Y(n.parent), x = X(n.id), y = Y(n.id);
+    const d = py === y ? `M ${px} ${py} L ${x} ${y}` : `M ${px} ${py} L ${px + dx * .45} ${py} Q ${px + dx * .6} ${py} ${px + dx * .6} ${py + (y - py) * .35} L ${px + dx * .6} ${y - 8} Q ${px + dx * .6} ${y} ${px + dx * .75} ${y} L ${x} ${y}`;
+    parts.push(s('path', { class: 'edge' + (onPath.has(n.id) && onPath.has(n.parent) ? ' taken' : ''), d }));
+  }
+  for (const n of app.nodes) {
+    const cls = ['node', n.record ? (n.record.ok ? 'ok' : 'no') : n.kind, n.id === app.cursor ? 'here' : ''].join(' ');
+    const g = s('g', { class: cls, dataset: { node: n.id }, transform: `translate(${X(n.id)},${Y(n.id)})`, role: 'button', tabindex: 0, onclick: () => goTo(n.id) });
+    g.append(s('title', {}, (n.who ? n.who + ': ' : '') + (n.say || '')));
+    g.append(s('circle', { r: 8 }));
+    g.append(s('text', { y: 3.5 }, n.id === 0 ? '·' : (n.record ? (n.record.ok ? '✓' : '✗') : (n.kind === 'time' ? '⏱' : '≡'))));
+    g.append(s('text', { class: 'who', y: 20 }, n.id === 0 ? 'start' : shortWho(n.who)));
+    if (n.children.length > 1) g.append(s('text', { class: 'fork', x: 12, y: -8 }, '⋔'));
+    parts.push(g);
+  }
+  clear(svg).append(...parts);
+}
+const shortWho = w => ({ 'A friend': 'friend', 'A rival hunter': 'rival', 'The treasury': 'treasury', Anyone: 'anyone', Time: 'time', You: 'you' }[w] || (w || '').split(' ')[0].slice(0, 8));
 function renderPlaybar() {
   const path = currentPath();
   const idx = path.indexOf(app.cursor);
@@ -1820,25 +1916,18 @@ function renderPlaybar() {
   $('pos').textContent = idx + ' / ' + (path.length - 1);
   $('btn-play').classList.toggle('on', !!app.playing);
   $('btn-play').textContent = app.playing ? '❚❚' : '▶';
-  // branches: at a fork node, one chip per branch; otherwise the nearest fork above
-  const br = clear($('branches'));
-  let forkAt = app.cursor;
-  while (forkAt !== null && node(forkAt).children.length < 2) forkAt = node(forkAt).parent;
-  if (forkAt !== null) {
-    const fn = node(forkAt);
-    const onPath = new Set(path);
-    br.append(h('span', { class: 'lbl' }, forkAt === app.cursor ? '⋔ branches from here' : '⋔ branches at step ' + path.indexOf(forkAt)));
-    for (const cid of fn.children) br.append(h('button', { type: 'button', class: 'branch' + (onPath.has(cid) ? ' on' : ''), dataset: { branch: cid }, title: 'follow this branch',
-      onclick: () => { goTo(cid); } }, branchLabel(cid)));
-  }
-  // the history strip: the current path, chips
-  const strip = clear($('history-strip'));
-  path.forEach((id, i) => {
-    const n = node(id);
-    const cls = ['hist-chip', id === app.cursor ? 'here' : '', n.record ? (n.record.ok ? 'ok' : 'no') : '', n.children.length > 1 ? 'fork' : ''].join(' ').trim();
-    const markTxt = n.record ? (n.record.ok ? ' ✓' : ' ✗') : (i === 0 ? '' : ' ·');
-    strip.append(h('button', { type: 'button', class: cls, title: n.say || '', onclick: () => goTo(id) }, i === 0 ? 'start' : i + markTxt));
-  });
+}
+function renderWhere() {
+  const sess = cur(), p = sess.params, st = sess.state, l = liveOf(st);
+  const word = stateWord(p, st);
+  const v = consumable(p, sess.now, st);
+  const hd = held(st);
+  const w = clear($('where'));
+  w.append(h('span', { class: 'state' + (word === 'poisoned' ? ' poisoned' : '') }, STATE_WORDS[word]));
+  if (l) w.append(h('span', { class: 'tiny' }, `keys of epoch ${l.epoch} · sn ${l.sn} · refund → ${nameOf(l.refundTo)}`));
+  w.append(h('span', {}, h('span', { class: 'lamp ' + (v.ok ? 'ok' : 'no') }), v.ok ? 'consumable' : VERDICT_WORDS[v.verdict].replace(/^Not consumable( yet)?: /, 'not consumable: ')));
+  w.append(h('span', { class: 'sum dreg' }, `D ${hd.dreg}/${p.D}`), h('span', { class: 'sum b' }, `B ${hd.b}/${p.B}`), h('span', { class: 'sum pool' }, `pool ${hd.pool}`));
+  w.append(h('span', { class: 'step' }, `slot ${sess.now} · step ${pathTo(app.cursor).length - 1}`));
 }
 function renderNarration() {
   const n = clear($('narration'));
@@ -1857,6 +1946,61 @@ function renderNarration() {
     n.append(box);
   }
 }
+/* what can happen next: the continuations already in the tree, then every
+   move the machine would accept from here, by actor; the refused ones with
+   their reasons, folded */
+function renderNext() {
+  const sess = cur();
+  const here = node(app.cursor);
+  const br = clear($('branches'));
+  const nextId = nextOf(app.cursor);
+  for (const cid of here.children) {
+    const c = node(cid);
+    const b = h('button', { type: 'button', class: 'branch' + (cid === nextId ? ' on' : ''), dataset: { branch: cid }, title: 'go there', onclick: () => goTo(cid) },
+      h('span', { class: 'go' }, cid === nextId ? '› next' : '⋔'),
+      c.branch ? h('span', { class: 'fork-t' }, c.branch.title) : null,
+      c.who ? h('span', { class: 'who' }, c.who) : null,
+      h('span', { class: 'txt' }, c.say || ''),
+      c.record ? h('span', { class: 'res ' + (c.record.ok ? 'ok' : 'no') }, c.record.ok ? '✓ accepted' : '✗ ' + c.record.reason) : null);
+    br.append(b);
+  }
+  if (!here.children.length) br.append(h('div', { class: 'tiny' }, app.story ? 'The story ends here on this branch. Any move below opens a new one.' : 'Nothing has happened after this step yet.'));
+  const moves = clear($('next-moves')), refused = clear($('refused-list'));
+  let nRefused = 0, nEnabled = 0;
+  const terminal = stateKind(sess.state) === 'gone' || stateKind(sess.state) === 'convicted';
+  for (const id of ACTOR_ORDER) {
+    const c = CAST[id];
+    const off = offersFor(id, sess);
+    const card = h('div', { class: 'mover' });
+    card.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, title: c.blurb, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
+    const acts = h('div', { class: 'acts' });
+    for (const o of off.chain) {
+      const d = dryRun(sess, o.action);
+      const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
+        title: d.ok ? 'the machine would accept this now' : d.why,
+        onclick: () => { app.actor = id; app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderNext(); } }, o.label);
+      if (d.ok) { acts.append(btn); nEnabled++; } else { refused.append(btn); nRefused++; }
+    }
+    for (const k of off.keri) {
+      const have = envHas(sess.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
+      if (have || terminal) continue;
+      acts.append(h('button', { type: 'button', class: 'ev-quick', dataset: { actor: id }, title: k.hint,
+        onclick: () => { app.actor = id; pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[id] || id, say: k.label + '.', kind: 'evidence', evRow: k.row }); } }, '+ ' + k.label));
+    }
+    if (id === 'treasury') acts.append(h('span', { class: 'none' }, 'reads, never spends: its verdict is the lamp above'));
+    else if (!acts.children.length) acts.append(h('span', { class: 'none' }, 'nothing the machine accepts from here'));
+    card.append(acts);
+    moves.append(card);
+  }
+  const time = h('div', { class: 'mover' }, h('div', { class: 'lbl' }, 'Time'), h('div', { class: 'acts' },
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + 1) }, '+1 slot'),
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + sess.params.W) }, `+W (${sess.params.W}) slots`)));
+  moves.append(time);
+  $('refused-summary').textContent = nRefused ? `${nRefused} move${nRefused > 1 ? 's' : ''} the machine refuses now — hover for the reason` : 'nothing is refused now';
+  $('refused-moves').hidden = !nRefused;
+  renderActForm();
+}
+
 function renderCheckpoint() {
   const sess = cur(), p = sess.params, l = liveOf(sess.state);
   const word = stateWord(p, sess.state);
@@ -1901,15 +2045,6 @@ function renderCast() {
     ka.append(h('button', { type: 'button', class: 'ev-quick', title: k.hint, disabled: have || stateKind(sess.state) === 'gone' || stateKind(sess.state) === 'convicted',
       onclick: () => pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[app.actor] || app.actor, say: k.label + '.', kind: 'evidence', evRow: k.row }) }, (have ? '✓ ' : '+ ') + k.label));
   }
-  const ca = clear($('chain-acts'));
-  if (!off.chain.length) ca.append(h('div', { class: 'empty' }, 'The treasury never spends the checkpoint; it reads it. Its verdict is the lamp on the scene and in the numbers.'));
-  for (const o of off.chain) {
-    const d = dryRun(sess, o.action);
-    ca.append(h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : ''), dataset: { kind: o.kind }, disabled: !d.ok,
-      title: d.ok ? 'the machine would accept this now' : d.why,
-      onclick: () => { app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderCast(); } }, o.label));
-  }
-  renderActForm();
 }
 const FIELDS = {
   register: [['refund', 'refund address'], ['pool0', 'initial pool']],
@@ -2136,21 +2271,25 @@ function runSelftest() {
     playStory(3);
     while (!$('hist-next').disabled) $('hist-next').click();
     const frozen = /frozen/i.test($('state-name').textContent);
-    const okChips = $('history-strip').querySelectorAll('.hist-chip.ok');
-    okChips[okChips.length - 1].click();
+    const okChips = $('tree').querySelectorAll('.node.ok');
+    okChips[okChips.length - 1].dispatchEvent(new Event('click'));
     const lit = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
     let ok = frozen && lit.includes('T15') && /frozen/i.test($('state-name').textContent);
     out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}); on its last accepted step the lamps light ${lit.join(' ')}`);
     if (!ok) fails++;
     playStory(5);
     while (!$('hist-next').disabled) $('hist-next').click();
+    const forkNode = [...$('tree').querySelectorAll('.node')].find(g => g.querySelector('.fork'));
+    forkNode.dispatchEvent(new Event('click'));
     const chips = $('branches').querySelectorAll('.branch');
     const trunkLeaf = $('state-name').textContent;
     chips[chips.length - 1].click();
+    while (!$('hist-next').disabled) $('hist-next').click();
     const branchState = $('state-name').textContent;
     const scene = $('scene').querySelectorAll('[data-obj]').length;
-    ok = chips.length >= 3 && /paused/i.test(trunkLeaf) && /gone/i.test(branchState) && scene > 12;
-    out.push(`${ok ? 'PASS' : 'FAIL'}  tree: story 5 offers ${chips.length} branches from the parked state; trunk ends ${trunkLeaf}, the close branch ends ${branchState}; the scene draws ${scene} entities`);
+    const treeNodes = $('tree').querySelectorAll('.node').length;
+    ok = chips.length >= 3 && /paused/i.test(trunkLeaf) && /gone/i.test(branchState) && scene > 12 && treeNodes === app.nodes.length;
+    out.push(`${ok ? 'PASS' : 'FAIL'}  tree: ${treeNodes} nodes drawn; story 5 offers ${chips.length} continuations at its fork; the parked state is ${trunkLeaf}, the close branch ends ${branchState}; the scene draws ${scene} entities`);
     if (!ok) fails++;
     startFresh(); render();
   } catch (e) { fails++; out.push('FAIL  controls: ' + (e && e.message)); }
@@ -2185,7 +2324,7 @@ function wire() {
   $('btn-reset').addEventListener('click', () => { startFresh(); render(); });
   $('btn-theme').addEventListener('click', toggleTheme);
   $('act-submit').addEventListener('click', submitPending);
-  $('act-cancel').addEventListener('click', () => { app.pending = null; renderCast(); });
+  $('act-cancel').addEventListener('click', () => { app.pending = null; renderNext(); });
   $('ev-kind').addEventListener('change', renderEvidence);
   $('ev-add').addEventListener('click', addEvidenceFromForm);
   $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); return; } moveSlot(n); });

@@ -664,15 +664,14 @@ function pageSmoke(core, html) {
   if (!next) problems.push('no #hist-next control');
   let guard = 0;
   while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
-  const strip = $('#history-strip');
-  const chips = strip ? strip.querySelectorAll('.hist-chip') : [];
-  if (chips.length < 3) problems.push(`story 3 played ${chips.length} chips, expected the story's steps`);
+  const chips = doc.querySelectorAll('#tree .node');
+  if (chips.length < 4) problems.push(`story 3 drew ${chips.length} tree nodes, expected the story's steps`);
   const stateName = ($('#state-name') || {}).textContent || '';
   if (!/frozen/i.test(stateName)) problems.push(`after story 3 the ladder shows «${stateName}», expected Frozen`);
   const verdictText = ($('#verdict') || {}).textContent || '';
   if (!/freeze bond/i.test(verdictText)) problems.push(`after story 3 the verdict says «${verdictText.slice(0, 80)}», expected the freeze bond conjunct`);
-  const okChips = doc.querySelectorAll('#history-strip .hist-chip.ok');
-  if (!okChips.length) problems.push('no accepted chip in the history strip');
+  const okChips = doc.querySelectorAll('#tree .node.ok');
+  if (!okChips.length) problems.push('no accepted node in the tree');
   else okChips[okChips.length - 1].dispatchEvent(win.makeEvent('click'));
   const lit = doc.querySelectorAll('#ledger .thm.lit').map(e => e.dataset.id).sort();
   if (!lit.includes('T15')) problems.push(`ledger on the freeze step lights [${lit}], expected T15 among them`);
@@ -744,6 +743,8 @@ function pageSmoke(core, html) {
     }
   }
   // the scene: every entity drawn, the fx layer present; the tree: story 5's fork offers three branches, a chip switches to one
+  if (!$('#where') || !(($('#where') || {}).textContent || '').includes(($('#state-name') || {}).textContent || '?')) problems.push('the where-we-are strip does not carry the state word');
+  if (!$('#next-moves') || !doc.querySelectorAll('#next-moves .act').length) problems.push('the next panel offers no move on a fresh page');
   const entities = doc.querySelectorAll('#scene [data-obj]');
   if (entities.length < 14) problems.push(`the scene draws ${entities.length} entities, expected the cast, the checkpoint, the validator, the tray, the registry, the treasury and the clock`);
   if (!$('#scene #fx')) problems.push('the scene has no fx layer');
@@ -753,15 +754,21 @@ function pageSmoke(core, html) {
   if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('story 5 played to its trunk leaf does not end Paused');
   const scrub = $('#scrub');
   if (scrub && Number(scrub.max) < 6) problems.push('the scrubber does not span the branch: max ' + scrub.max);
+  const treeNodes = doc.querySelectorAll('#tree .node');
+  if (treeNodes.length !== win.CK.app.nodes.length) problems.push(`the tree draws ${treeNodes.length} nodes for ${win.CK.app.nodes.length}`);
+  const forkNode = treeNodes.find(g => g.querySelector('.fork'));
+  if (!forkNode) problems.push('the tree marks no fork on story 5'); else forkNode.dispatchEvent(win.makeEvent('click'));
+  if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('clicking the fork node of the tree does not land on the parked state');
   let bchips = doc.querySelectorAll('#branches .branch');
-  if (bchips.length < 3) problems.push(`story 5 at its leaf shows ${bchips.length} branch chips, expected the fork's three (found above the leaf)`);
+  if (bchips.length < 3) problems.push(`story 5 at its fork offers ${bchips.length} continuations, expected three`);
   else {
     bchips[bchips.length - 1].dispatchEvent(win.makeEvent('click'));
+    while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
     if (!/gone/i.test(($('#state-name') || {}).textContent || '')) problems.push('switching to the close branch does not end Gone: ' + (($('#state-name') || {}).textContent || ''));
-    bchips = doc.querySelectorAll('#branches .branch');
-    if (!bchips.some(c => c.classList.contains('on'))) problems.push('no branch chip is marked as the one taken');
     prev.dispatchEvent(win.makeEvent('click'));
     if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('one step back from the close branch is not the parked state');
+    bchips = doc.querySelectorAll('#branches .branch');
+    if (!bchips.some(c => c.classList.contains('on'))) problems.push('no continuation is marked as the one › will take');
     next.dispatchEvent(win.makeEvent('click'));
     if (!/gone/i.test(($('#state-name') || {}).textContent || '')) problems.push('› after ‹ does not follow the branch last taken');
   }
@@ -856,7 +863,7 @@ async function runSuite(opts) {
   try { html = readFileSync(opts.html || HTML, 'utf8'); } catch (e) { problems.push('page unreadable: ' + e.message); }
   if (html) {
     const s = pageSmoke(core, html);
-    rows.push({ item: 'page smoke (minimal DOM: picker, play, scene, branches, scrubber, evidence, slot, lamps, theme, chart, ?selftest=1)', ok: !s.problems.length });
+    rows.push({ item: 'page smoke (minimal DOM: picker, tree, where, next moves, play, scene, scrubber, evidence, slot, lamps, theme, chart, ?selftest=1)', ok: !s.problems.length });
     problems.push(...s.problems);
   }
   return { rows, problems, steps };
@@ -889,6 +896,8 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-close', [["if (state.present.l.poisoned) return refuse('poisoned');\n      return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');", "return some({ refund: payment(l.refundTo, l.dreg, l.b, l.pool) }, 'gone');"]]), skipBuild: true }) },
     { name: 'theorem property seeded to lie: T6 conservation on the pool', expect: /theorem VIOLATED: .*T6/,
       make: () => ({ core: mutant('m-t6', [['const poolOk = big(held(pre).pool) + big(f.poolIn) ===', 'const poolOk = big(held(pre).pool) + big(f.poolIn) + 1n ===']]), skipBuild: true }) },
+    { name: 'page with its tree removed', expect: /page raised on load|the tree draws/,
+      make: () => { const p = join(work, 'page-m3.html'); writeFileSync(p, htmlText.replace('<svg id="tree"', '<svg id="tre"')); return { html: p, skipBuild: true }; } },
     { name: 'page with its scene removed', expect: /the scene draws 0 entities|page raised on load|no fx layer/,
       make: () => { const p = join(work, 'page-m2.html'); writeFileSync(p, htmlText.replace('<svg id="scene"', '<svg id="scen"')); return { html: p, skipBuild: true }; } },
     { name: 'page with the story picker removed', expect: /no #story-picker|picker lists|page raised on load/,

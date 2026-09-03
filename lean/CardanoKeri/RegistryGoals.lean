@@ -179,7 +179,7 @@ theorem nodup_map_remove {rs : List (Nat × α)} {id : Nat}
 
 theorem lookup_remove_self {rs : List (Nat × α)} {id : Nat} :
     lookup (remove rs id) id = none :=
-  lookup_none_of_not_mem (fun x hx => fst_ne_of_mem_remove hx)
+  lookup_none_of_not_mem (fun _ hx => fst_ne_of_mem_remove hx)
 
 theorem lookup_remove_ne {rs : List (Nat × α)} {id id' : Nat} (h : id ≠ id') :
     lookup (remove rs id') id = lookup rs id := by

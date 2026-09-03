@@ -207,7 +207,7 @@
     {
       "slot": 5,
       "who": "mallory",
-      "say": "A redeemer the validator does not know is refused by name.",
+      "say": "Gate control, not part of the play: A redeemer the validator does not know is refused by name.",
       "action": {
         "steal": {
           "everything": true
@@ -220,7 +220,8 @@
         "exhibits": [
           "T9"
         ]
-      }
+      },
+      "hidden": true
     }
   ],
   "forks": [

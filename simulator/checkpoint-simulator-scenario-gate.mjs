@@ -668,7 +668,7 @@ function pageSmoke(core, html) {
   if (net) problems.push('page references the network: ' + net.slice(0, 3).join(', '));
   const picker = $('#story-picker');
   if (!picker) { problems.push('no #story-picker'); return { problems }; }
-  const opts = picker.querySelectorAll('option').filter(o => o.value !== '');
+  const opts = picker.querySelectorAll('option').filter(o => o.value !== '' && !/^c:/.test(o.value));
   if (opts.length !== 15) problems.push(`picker lists ${opts.length} stories, expected 15`);
   const pick = n => { picker.value = String(n); picker.dispatchEvent(win.makeEvent('change')); };
   pick(3);

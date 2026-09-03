@@ -17,7 +17,14 @@ transcription honest against the Lean itself.
   theorem on every replayed step; it prints PASS/FAIL per item and puts the
   verdict in the tab title.
 
-The page reads top-down as where we are and what can happen next. First the
+The page reads top-down as where we are and what can happen next; it is
+played like a game: ▶ stops on each story's punchline (★ on the tree; the
+last accepted move of the trunk unless the story names one) with a recap
+toast, *what fails after ›* walks the coda, forks are offered as attacks to
+try, the story's next move glows while the other cards fold, refusals are
+grouped by reason, a fixed HUD keeps the state and the three pots on screen,
+the theorems shown in a run count as discovered, and *★ Challenge: steal the
+1000* is free play as Mallory with a goal and the theorems' answer. First the
 play: the tree of it, drawn (every step a node — ✓ accepted, ✗ refused, ⏱ a
 slot move, ≡ evidence — labelled with the actor and what they did: `Alice
 register`, `Mallory close`, `Alice rotate·withdraw`, `treasury slot 40` — every

@@ -225,7 +225,32 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       }
       if (mismatches) errs.push(`${mismatches} story steps disagreed with the page`);
       if (!applied) errs.push('no story step applied');
-      $('sc-exit').click();
+      // the tree of the play: a branch taken from a continuation, a node of the trunk taken back
+      {
+        const sc13 = JSON.parse(readFileSync(join(scenDir, '13-convict-dormant.json'), 'utf8'));
+        $('sc-pick').value = '13'; $('sc-pick').dispatchEvent(new w.Event('change'));
+        if ($('play').hidden) errs.push('tree: #play hidden inside a story');
+        const fk = sc13.forks.find(f => f.id === 'convict-without-proof');
+        for (let k = 0; k < fk.at; k++) $('sc-step').click();
+        const btn = d.querySelector(`#branches .branch[data-branch="${fk.id}"]`);
+        if (!btn) errs.push('tree: no continuation button for the fork departing here');
+        else {
+          btn.click();
+          const st = w.__registrySim.story, ses = w.__registrySim.session;
+          if (!st || st.branch !== fk.id) errs.push('tree: the continuation did not switch to the fork');
+          $('sc-all').click();
+          const last = w.__registrySim.session.history[w.__registrySim.session.history.length - 1];
+          if (!last || last.result.ok || last.result.reason !== fk.steps[fk.steps.length - 1].expect.reason) errs.push('tree: the fork did not play to its refusal');
+          if (w.__registrySim.session.history.some(h => h.mismatch)) errs.push('tree: a fork step disagreed with the page');
+          if (!d.querySelector(`#tree .node[data-branch="${fk.id}"].bad`)) errs.push('tree: the refused fork step is not drawn ✗');
+          const node = d.querySelector('#tree .node[data-branch=""][data-i="2"]');
+          if (!node) errs.push('tree: no trunk node'); else { node.click(); const s2 = w.__registrySim; if (s2.story.branch !== null || s2.session.history.length !== 3) errs.push('tree: clicking a trunk node did not go there'); }
+          if (!d.querySelector('#branches .branch.on')) errs.push('tree: no default continuation marked');
+        }
+        $('sc-exit').click();
+        if (!$('play').hidden) errs.push('tree: #play shown outside a story');
+      }
+      $('sc-pick').value = '1'; $('sc-pick').dispatchEvent(new w.Event('change')); $('sc-exit').click();
       if (!$('storybox').hidden) errs.push('leave story did not hide the story box');
       // free play: evidence, request, fold, stale fold, slot, history, theme
       $('ev-aid').value = '11'; $('ev-add').click();
@@ -263,7 +288,7 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
       if (!/R1/.test($('ledger').innerHTML)) errs.push('ledger not rendered');
       if (w.__errors.length) errs.push('page threw: ' + w.__errors.map(e => e.message).join(' | '));
     } catch (e) { errs.push('page smoke: ' + e.message); }
-    row('the page plays every story, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories, free play (register, pause, reap), evidence, slot, history, theme');
+    row('the page plays every story, switches a branch through the tree, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories, a fork taken and a trunk node taken back, free play (register, pause, reap), evidence, slot, history, theme');
   }
 
   if (!quiet) {
@@ -295,6 +320,7 @@ async function selftest() {
   await control('overflow-unchecked', dir => edit(join(dir, 'registry-simulator-core.mjs'), 'const r = a + b; if (r > MAX_NAT) throw new NatOverflow(field); return r;', 'return a + b;'), /nextReq at the bound, contribute: got applied/);
   await control('lamp-that-cannot-go-red', dir => edit(join(dir, 'registry-simulator-core.mjs'), "      if (result.ok) {\n        const s = result.state;\n        if (lookupCkpt(s.ckpts, aid) !== null)", "      if (false) {\n        const s = result.state;\n        if (lookupCkpt(s.ckpts, aid) !== null)"), /R13 says holds on a fabricated violation/);
   await control('phases-overlap', dir => edit(join(dir, 'registry-simulator-core.mjs'), 'function inPhase2(p, r, now) { return phase1End(p, r) <= now && now < phase2End(p, r); }', 'function inPhase2(p, r, now) { return now < phase2End(p, r); }'), /theorem R10 fails/);
+  await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "b.addEventListener('click', () => goTo(it.branch, it.to));", "b.addEventListener('click', () => {});"), /tree: the continuation did not switch to the fork/);
   await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('sc-all').addEventListener('click', () => { while (storyStep()) {} });", "$('sc-all').addEventListener('click', () => {});"), /play all did not finish/);
   rmSync(tmp, { recursive: true, force: true });
   for (const c of controls) console.log(`${c.red ? 'RED (intended)' : 'CONTROL FAILED'}  ${c.name} — ${c.why}`);

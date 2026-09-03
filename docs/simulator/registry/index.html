@@ -59,6 +59,18 @@ table.t th { color:var(--mut); font-weight:600; }
 #storybox { padding:.3rem 1rem .5rem; background:var(--card); border-bottom:1px solid var(--line);
   font-size:.88rem; color:var(--mut); }
 #storybox b { color:var(--ink); }
+#play { padding:.4rem 1rem .6rem; background:var(--card); border-bottom:1px solid var(--line); display:grid; gap:.5rem; }
+#play h2 { font-size:.8rem; margin:0; color:var(--mut); font-weight:600; }
+.tree { display:grid; gap:.3rem; overflow-x:auto; }
+.tree .trow { display:grid; grid-auto-flow:column; grid-auto-columns:2.1rem; gap:.25rem; align-items:center; }
+.tree .node { width:1.9rem; height:1.9rem; border-radius:50%; border:2px solid var(--line); background:var(--panel); font-size:.72rem; cursor:pointer; padding:0; color:var(--ink); }
+.tree .node.ok { border-color:var(--ok); } .tree .node.bad { border-color:var(--bad); }
+.tree .node.cur { box-shadow:0 0 0 3px var(--accent); }
+.tree .fork { color:var(--mut); font-size:.72rem; white-space:nowrap; grid-column:span 6; }
+.branches { display:grid; gap:.35rem; }
+.branch { text-align:left; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:.4rem .6rem; font-size:.82rem; cursor:pointer; color:var(--ink); }
+.branch.on { border-color:var(--accent); }
+.branch b { color:var(--ink); } .branch .sub { color:var(--mut); }
 .cast { display:grid; gap:.4rem; }
 .cast .who { border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem;
   background:var(--card); font-size:.82rem; }
@@ -125,6 +137,12 @@ footer li { margin-bottom:.3rem; }
   <span class="sub" id="sc-count"></span>
 </div>
 <div id="storybox" hidden></div>
+<div id="play" hidden>
+  <h2>The play <span class="sub">every node a step — ✓ applied, ✗ refused; the trunk on the first row, a ⋔ branch departs where it starts; click a node to go there</span></h2>
+  <div class="tree" id="tree"></div>
+  <h2>What can happen next</h2>
+  <div class="branches" id="branches"></div>
+</div>
 <main id="main">
   <section>
     <div class="card" id="card-registry">
@@ -979,7 +997,7 @@ function newSession(params, plugin, actors, env) {
            history: [], cursor: -1, ledger: {}, flows: [] };
 }
 let S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
-let story = null; // { sc, i }
+let story = null; // { sc, branch: null | fork id, i: steps played along the branch's path }
 
 function attempt(action, as) {
   const r = step(S.params, S.env, action, S.now, S.state);
@@ -1082,6 +1100,7 @@ function render() {
   renderActions(st, now);
   renderHistory();
   renderLedger();
+  renderTree();
 }
 
 function renderValue(st, p) {
@@ -1212,19 +1231,31 @@ function renderLedger() {
 }
 
 /* --- stories -------------------------------------------------------------------- */
-function loadStory(sc) {
-  story = { sc, i: 0 };
+/* A story is a tree: the trunk and its forks, each departing after `at` trunk
+   steps (and bringing its own evidence when it is another world). A branch's
+   path is the trunk prefix then the fork's steps. */
+function forkOf(sc, id) { return id ? (sc.forks || []).find(f => f.id === id) || null : null; }
+function storyPath(sc, branch) {
+  const fk = forkOf(sc, branch);
+  if (!fk) return sc.steps.map((st, i) => ({ st, branch: null, i }));
+  return [...sc.steps.slice(0, fk.at).map((st, i) => ({ st, branch: null, i })), ...fk.steps.map((st, j) => ({ st, branch: fk.id, i: fk.at + j }))];
+}
+function loadStory(sc, branch = null) {
+  story = { sc, branch, i: 0 };
   S = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || DEFAULT_ACTORS, { ...emptyEnv(), ...(sc.env || {}) });
   $('storybox').hidden = false;
   $('storybox').innerHTML = `<b>${sc.id}. ${esc(sc.story)}</b> — ${esc(sc.narrative || '')}`;
-  $('sc-exit').hidden = false;
+  $('sc-exit').hidden = false; $('play').hidden = false;
   updateStoryButtons();
   $('whyline').hidden = $('okline').hidden = true;
   render();
 }
+function goTo(branch, i) { if (!story) return; loadStory(story.sc, branch); while (story.i < i && storyStep()) {} }
 function storyStep() {
   if (!story) return false;
-  const st = story.sc.steps[story.i]; if (!st) return false;
+  const e = storyPath(story.sc, story.branch)[story.i]; if (!e) return false;
+  const st = e.st, fk = forkOf(story.sc, story.branch);
+  if (fk && fk.env && story.i === fk.at) S.env = { ...emptyEnv(), ...fk.env }; // another world from here
   S.now = st.now;
   const rec = attempt(st.action, st.as || st.actor);
   const exp = st.expect || { ok: true };
@@ -1240,13 +1271,58 @@ function storyStep() {
   return true;
 }
 function updateStoryButtons() {
-  const done = !story || story.i >= story.sc.steps.length;
+  const n = story ? storyPath(story.sc, story.branch).length : 0;
+  const done = !story || story.i >= n;
   $('sc-step').disabled = done; $('sc-all').disabled = done; $('sc-reset').disabled = !story;
-  $('sc-count').textContent = story ? `step ${Math.min(story.i, story.sc.steps.length)} of ${story.sc.steps.length}${done ? ' — done' : ''}` : '';
+  const fk = story ? forkOf(story.sc, story.branch) : null;
+  $('sc-count').textContent = story ? `step ${Math.min(story.i, n)} of ${n}${fk ? ' on ⋔ ' + fk.title : ''}${done ? ' — done' : ''}` : '';
+}
+function renderTree() {
+  const tree = $('tree'), box = $('branches');
+  tree.textContent = ''; box.textContent = '';
+  if (!story) return;
+  const sc = story.sc, forks = sc.forks || [];
+  const mk = (tagName, cls, text) => { const el = document.createElement(tagName); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
+  const played = (branch, i) => { // the record of step i along branch, if played in the current play
+    if (branch !== story.branch && !(branch === null && (forkOf(sc, story.branch) || { at: -1 }).at > i)) return null;
+    return i < story.i ? S.history[i] || null : null;
+  };
+  const rowOf = (branch, steps, at, title) => {
+    const row = mk('div', 'trow');
+    for (let c = 0; c < at; c++) row.appendChild(mk('span'));
+    steps.forEach((st, j) => {
+      const i = at + j, rec = played(branch, i);
+      const b = mk('button', 'node' + (rec ? (rec.result.ok ? ' ok' : ' bad') : '') + (branch === story.branch && i === story.i - 1 ? ' cur' : ''), rec ? (rec.result.ok ? '✓' : '✗') : String(i + 1));
+      b.type = 'button'; b.dataset.branch = branch || ''; b.dataset.i = String(i);
+      b.title = `${i + 1}. ${st.as || st.actor || ''} — ${describeAction(st.action)}${st.expect && st.expect.ok === false ? ' (refused: ' + (st.expect.reason || '') + ')' : ''}`;
+      b.addEventListener('click', () => goTo(branch, i + 1));
+      row.appendChild(b);
+    });
+    if (title) row.appendChild(mk('span', 'fork', '⋔ ' + title));
+    tree.appendChild(row);
+  };
+  rowOf(null, sc.steps, 0, null);
+  for (const fk of forks) rowOf(fk.id, fk.steps, fk.at, fk.title);
+  // continuations from here: the next step of this branch, and every fork departing here
+  const path = storyPath(sc, story.branch), i = story.i;
+  const items = [];
+  if (path[i]) items.push({ on: true, label: '› next', branch: story.branch, to: i + 1, st: path[i].st });
+  if (!story.branch) for (const fk of forks) if (fk.at === i) items.push({ on: false, label: '⋔ ' + fk.title, branch: fk.id, to: i + 1, st: fk.steps[0] });
+  if (!items.length) { box.appendChild(mk('span', 'sub', 'the branch is played out — pick a node above, restart, or leave the story for free play')); return; }
+  for (const it of items) {
+    const exp = it.st.expect || { ok: true };
+    const b = mk('button', 'branch' + (it.on ? ' on' : ''));
+    b.type = 'button'; b.dataset.branch = it.branch || ''; b.dataset.to = String(it.to);
+    const head = mk('b', '', it.label + ' — ' + (it.st.as || it.st.actor || 'anyone'));
+    const what = mk('span', 'sub', ` at slot ${it.st.now}: ${describeAction(it.st.action)} → ${exp.ok === false ? '✗ ' + (exp.reason || 'refused') : '✓ applies'}`);
+    b.appendChild(head); b.appendChild(what);
+    b.addEventListener('click', () => goTo(it.branch, it.to));
+    box.appendChild(b);
+  }
 }
 function leaveStory() {
   story = null;
-  $('storybox').hidden = true; $('sc-exit').hidden = true; $('sc-pick').value = '';
+  $('storybox').hidden = true; $('sc-exit').hidden = true; $('play').hidden = true; $('sc-pick').value = '';
   S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
   updateStoryButtons(); render();
 }
@@ -1300,7 +1376,7 @@ function selftest() {
 }
 
 if (new URLSearchParams(window.location.search).get('selftest')) { selftest(); } else { init(); }
-window.__registrySim = { get session() { return S; }, attempt, loadStory, storyStep, leaveStory, selftest, render };
+window.__registrySim = { get session() { return S; }, get story() { return story; }, attempt, loadStory, storyStep, goTo, leaveStory, selftest, render };
 </script>
 </body>
 </html>

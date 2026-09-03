@@ -7,6 +7,13 @@ they do not yet ship an application that authorizes value writes from it.
 This page states the current integration boundary so later application
 validators do not reintroduce the retired shared-registry model.
 
+!!! abstract "Where this page stands"
+    The resolution rules, the indexer boundary, the authorization modes and
+    the rotation race are **shipped on `main` today** and survive the M1
+    return. What changes is the **predicate** an application applies to the
+    checkpoint it resolved: role addresses go, and a bit plus the checkpoint's
+    own value take their place. Both are given below.
+
 ## Resolve current authority
 
 Given a KERI AID, an application derives the expected checkpoint asset:
@@ -29,29 +36,45 @@ The application validator must require:
 7. the operation's controller authorization against the current weighted key
    state.
 
-Every other case fails closed:
-
-- no checkpoint;
-- multiple ACTIVE candidates;
-- stale or already spent outref;
-- wrong policy or asset;
-- malformed or mismatched datum;
-- ARMED; or
-- FROZEN.
+Every other case fails closed: no checkpoint; multiple ACTIVE candidates; a
+stale or already spent outref; a wrong policy or asset; a malformed or
+mismatched datum; ARMED; or FROZEN.
 
 A convicted identity is not a further role to reject. Conviction burns the AID
-token, so it leaves nothing to resolve and the application meets the first case
-above — no checkpoint.
+token, so it leaves nothing to resolve and the application meets the
+no-checkpoint case. There is no identity-root inclusion proof and no separate
+Freeze-registry absence proof: Freeze changes the sovereign checkpoint's own
+role address.
 
-Conviction is a penalty and a permanent record, not the end of the identity.
-The protocol keeps no global "convicted forever" flag, so a genuine inception
-proof may register the same AID again and present a fresh ACTIVE checkpoint. An
-application must not cache "convicted once, absent forever": it should resolve
-the current candidate each time and apply its own history policy to the earlier
-conviction transaction, which stays an immutable fact on chain.
+### After the M1 return — accepted design
 
-There is no identity-root inclusion proof and no separate Freeze-registry
-absence proof. Freeze changes the sovereign checkpoint's own role address.
+Steps 1 to 5 are unchanged. Steps 6 and 7 become the consumer predicate, which
+reads only the datum and the checkpoint's value:
+
+```text
+authorize iff  present
+            ∧ D_reg full ∧ B full          — bonded: not paused, not frozen
+            ∧ ¬poisoned                    — the controller has not disowned this epoch
+            ∧ now − born_at ≥ W            — past the juvenility window
+            ∧ the operation's own signature satisfies the current threshold
+```
+
+and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
+closed: absent, unbonded, frozen, poisoned, juvenile, convicted, closed.
+
+Three consequences an integrator should plan for:
+
+- **Paused and frozen are not flags.** A paused checkpoint holds no bonds; a
+  frozen one is missing `B`. An application that looks for a status field will
+  find none, and must compare against the deployment's `D_reg` and `B`.
+- **Step 1 becomes a guarantee rather than a hope.** The registry admits one
+  incarnation per AID, ever, so "exactly one candidate" is enforced on chain
+  instead of being a residual the consumer carries.
+- **Conviction becomes terminal, and a closed identity can come back.** The
+  chain follows KERI: no key event un-duplicates an identifier, so
+  `Convicted` has no exit, while a `closed` identity reopens on a witnessed
+  rotation later than its tombstone. An application must not cache "absent
+  forever" for a closed AID, and must not expect a convicted one to return.
 
 ## Indexer boundary
 
@@ -146,19 +169,33 @@ This is the desired safety property: pending authorization does not silently
 survive a key rotation. It is also an operational race that builders must
 handle.
 
-## Freeze behavior
+## Refusal behavior
 
-As soon as Freeze settles, the checkpoint token moves from ACTIVE to ARMED.
-A value transaction referring to the old ACTIVE input is stale, and a new
-transaction resolving ARMED must reject by role.
+**Shipped today.** As soon as Freeze settles, the checkpoint token moves from
+ACTIVE to ARMED. A value transaction referring to the old ACTIVE input is
+stale, and a new transaction resolving ARMED must reject by role. A timely
+response Advance creates a new ACTIVE checkpoint at the next sequence, so the
+application must obtain fresh authorization against that input. Conviction
+produces no output to resolve at all.
 
-A timely response Advance creates a new ACTIVE checkpoint at the next
-sequence, so the application must obtain fresh authorization against that
-input.
+**After the M1 return.** Every refusal is a spend of the checkpoint that
+changes what the datum or the value says, so the mechanics are the same: the
+referring transaction is stale and a rebuild against the successor applies the
+predicate afresh. The refusals differ in who caused them and in how they clear:
 
-A future FROZEN output follows the same fail-closed rule. Conviction produces
-no output to resolve at all: the token is burned, so the application meets the
-no-checkpoint case rather than a role it must recognise.
+| Refusal | Caused by | Clears when |
+|---|---|---|
+| Poisoned | the owner's current quorum | any witnessed rotation |
+| Frozen | a hunter, because the pool was short | a rotation with `deposit` |
+| Paused | the owner, by a withdrawing rotation | a rotation with `deposit` |
+| Juvenile | time, after a register, reopen or resurrecting rotation | `W` slots elapse |
+| Convicted | anyone, with a duplicity proof | never |
+| Closed | the owner, by a rotation that burns | a reopen |
+
+An application should not treat any of these as an error condition to retry.
+Each is a statement that the identity is currently unfit to authorize, and each
+has a party who can make it fit again — except the last two rows, where the
+answer is respectively "never" and "not by anyone but the owner".
 
 ## Compromised controller keys
 
@@ -175,6 +212,13 @@ consequences an integrator must plan for:
   a transaction that already settled under the old ACTIVE checkpoint stands.
 - **Freshness policy is load-bearing.** The narrower the accepted checkpoint
   age, the smaller the window a stolen key can be used in.
+
+Under the M1 return the owner gains one instrument here, and the application
+must honour it: the **poison**. A quorum of the current keys can declare their
+own epoch compromised, and a consumer that checks `¬poisoned` shuts the stolen
+keys out immediately, before the owner has assembled a rotation. An application
+that skips that conjunct discards the only signal the owner can send on her
+worst day.
 
 [Compromise of the current keys](../design/key-compromise.md) states the full
 case, including why an interaction event is an off-chain instrument and never

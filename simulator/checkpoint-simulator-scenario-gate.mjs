@@ -217,7 +217,7 @@ function checkExactNat(core, corpus) {
   const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1 } }, 0).record;
   const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
   if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
-  if (Object.keys(brec.theorems).some(id => id !== 'T9' && brec.theorems[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.theorems).filter(id => brec.theorems[id].exhibited).join(','));
+  if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
   // arithmetic at the bound: refused by name, never rounded
   const M = core.MAX_NAT;
   const hp = { D: 1, B: 1, P: 0, W: 0 };
@@ -236,7 +236,7 @@ function checkExactNat(core, corpus) {
   const fr = core.attempt(forced, { topUp: { x: 1 } }, 0).record;
   if (fr.ok) {
     problems.push(`a pool of 2^53 accepted a top-up (pool after: ${fr.state.present.l.pool})` +
-      (fr.theorems.T6.holds && fr.theorems.T14.holds ? ' and T6/T14 did not notice the precision loss' : ' — T6/T14 flagged it: ' + [...fr.theorems.T6.notes, ...fr.theorems.T14.notes].join('; ')));
+      (fr.lamps.T6.holds && fr.lamps.T14.holds ? ' and T6/T14 did not notice the precision loss' : ' — T6/T14 flagged it: ' + [...fr.lamps.T6.notes, ...fr.lamps.T14.notes].join('; ')));
   } else if (fr.reason !== 'invalid-nat') problems.push('a pool of 2^53 was refused for a reason other than invalid-nat: ' + fr.reason);
   // JSON and UI parsing
   if (!core.lossyJsonNumbers('[9007199254740993, {"a": 18014398509481985}]').length) problems.push('lossyJsonNumbers misses integers beyond 2^53');
@@ -285,7 +285,7 @@ function checkSystem(core, corpus) {
       const rec = out.record;
       transitions++;
       if (rec.ok) accepted++; else { refused++; asserted.add(rec.reason); }
-      const th = rec.theorems;
+      const th = rec.lamps;
       const failing = Object.keys(th).filter(id => !th[id].holds);
       if (failing.length) problems.push(`system run ${run} step ${i} (aid ${aid}, ${core.canon(action)}): theorem VIOLATED: ` + failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · '));
       if (rec.ok) {
@@ -305,7 +305,7 @@ function checkSystem(core, corpus) {
     const cr = core.attempt(corrupted, { register: { refund: 1, pool0: 1 } }, slot, 9).record;
     if (cr.ok || cr.reason !== 'aid-already-registered') problems.push(`system run ${run}: registration of an AID with a live leaf but no state not refused aid-already-registered (got ${cr.ok ? 'ok' : cr.reason})`);
     asserted.add('aid-already-registered');
-    if (!cr.theorems.T8.exhibited || !cr.theorems.T8.notes.some(n => /disagrees/.test(n))) problems.push(`system run ${run}: the refused re-registration does not exhibit T8 seeing the leaf that disagrees with its state`);
+    if (!cr.lamps.T8.exhibited || !cr.lamps.T8.notes.some(n => /disagrees/.test(n))) problems.push(`system run ${run}: the refused re-registration does not exhibit T8 seeing the leaf that disagrees with its state`);
     const corrupted2 = { ...s, others: { ...s.others, 9: { closed: { epoch: 1, sn: 1 } } }, leaves: { ...s.leaves, 9: 'live' }, env: core.addEvidence(s, { rotationTo: [1, 1, 2] }).env };
     const cr2 = core.attempt(corrupted2, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, slot, 9).record;
     if (cr2.ok || cr2.reason !== 'leaf-not-closed') problems.push(`system run ${run}: reopen of a closed state under a live leaf not refused leaf-not-closed (got ${cr2.ok ? 'ok' : cr2.reason})`);
@@ -507,6 +507,35 @@ function checkGuardTable(core, spans) {
   return { problems, hyps, claimed };
 }
 
+// checkTheoremRows(core, leanRoot) → {problems, rows}: every `theorem` of
+// CheckpointGoals.lean has a checker row keyed by its exact name in every
+// step record, every row is a declaration, and the fourteen lamps list each
+// declaration exactly once. A row without a checker, a checker without a
+// declaration, a name missing from the lamps or listed twice: red.
+function checkTheoremRows(core, leanRoot) {
+  const problems = [];
+  let goals = '';
+  try { goals = readFileSync(join(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean'), 'utf8'); } catch (e) { return { problems: ['cannot read CheckpointGoals.lean: ' + e.message], rows: 0 }; }
+  const declared = [...goals.matchAll(/^theorem\s+([A-Za-z0-9_']+)/gm)].map(m => m[1]);
+  if (new Set(declared).size !== declared.length) problems.push('CheckpointGoals.lean declares a theorem twice');
+  const P = { D: 10, B: 5, P: 2, W: 3 };
+  const samples = [
+    core.attempt(core.newSession(P), { register: { refund: 7, pool0: 4 } }, 1).record,
+    core.attempt(core.seed(core.newSession(P), { closed: { epoch: 1, sn: 1 } }), { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 1).record,
+  ];
+  const rowNames = [...new Set(samples.flatMap(r => Object.keys(r.theorems)))];
+  const listed = core.THEOREMS.flatMap(g => g.lean);
+  for (const n of declared) if (!rowNames.includes(n)) problems.push(`theorem ${n} is declared in the Lean but has no checker row in the step record`);
+  for (const n of rowNames) if (!declared.includes(n)) problems.push(`checker row ${n} names no theorem of CheckpointGoals.lean`);
+  for (const n of declared) { const k = listed.filter(x => x === n).length; if (k !== 1) problems.push(`theorem ${n} is listed by ${k} lamps, expected exactly one`); }
+  for (const n of listed) if (!declared.includes(n)) problems.push(`lamp lists ${n}, which is not a theorem of CheckpointGoals.lean`);
+  for (const r of samples) for (const n of Object.keys(r.theorems)) {
+    const x = r.theorems[n];
+    if (!x || typeof x.exhibited !== 'boolean' || typeof x.holds !== 'boolean' || !Array.isArray(x.notes) || !Array.isArray(x.by) || x.by[0] !== n) problems.push(`checker row ${n} is not a row {exhibited, holds, notes, by: [${n}]}`);
+    if (!r.lamps || !Object.keys(r.lamps).length) problems.push('a record carries no lamps');
+  }
+  return { problems, rows: declared.length };
+}
 function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) {
   const problems = [];
   const clauses = clausesDoc.clauses || [];
@@ -598,8 +627,8 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
         const sys = rec.ok && rec.kind === 'register' ? 'SysStep.register' : rec.ok ? 'SysStep.other' : null;
         if (sys !== c.decl) { fail(`${hit.file} step ${hit.step} is ${sys || 'no system step'}, not ${c.decl}`); continue; }
       } else {
-        const th = rec.theorems[grp.id];
-        if (!th || !th.exhibited || !th.holds) { fail(`${hit.file} step ${hit.step} does not exhibit ${grp.id} (${c.decl})`); continue; }
+        const th = rec.theorems[c.decl];
+        if (!th || !th.exhibited || !th.holds) { fail(`${hit.file} step ${hit.step} does not exhibit ${c.decl} (${grp.id})`); continue; }
       }
       if (c.kind === 'payment') {
         const v = (rec.flow || {})[flowField]; const paid = typeof v === 'number' ? v > 0 : !!v;
@@ -633,6 +662,22 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
     if (!cs.length) problems.push(`story ${n}: no clauses in the reconciliation table`);
   }
   for (const c of clauses) if (!seen.has(c.story + ' ' + c.clause)) problems.push(`story ${c.story} clause «${c.clause}» does not occur in the story's checked bullets`);
+  // every atom has its own identity (its id, not its phrase): unique in the table, and exactly the set its story declares
+  const ids = new Map();
+  for (const c of clauses) {
+    if (typeof c.id !== 'string' || !c.id) { problems.push(`story ${c.story} clause «${c.clause}»: atom without an id`); continue; }
+    if (ids.has(c.id)) problems.push(`atom ${c.id} appears twice in the reconciliation table`);
+    ids.set(c.id, c);
+  }
+  const atomsByStory = {};
+  try { for (const f of readdirSync(SCENARIOS).filter(f => f.endsWith('.json')).sort()) { const sc = JSON.parse(readFileSync(join(SCENARIOS, f), 'utf8')); atomsByStory[sc.story] = sc.atoms; } } catch (e) { problems.push('cannot read the scenarios for their atoms: ' + e.message); }
+  for (let n = 1; n <= 15; n++) {
+    const declaredAtoms = atomsByStory[n];
+    if (!Array.isArray(declaredAtoms)) { problems.push(`story ${n}: the scenario declares no atoms`); continue; }
+    const have = new Set((byStory[n] || []).map(c => c.id));
+    for (const id of declaredAtoms) if (!have.has(id)) problems.push(`story ${n}: atom ${id} is declared by the story but absent from the reconciliation table`);
+    for (const id of have) if (id && !declaredAtoms.includes(id)) problems.push(`story ${n}: atom ${id} is in the table but not declared by the story`);
+  }
   // distinctive clauses: each names a scenario step that exercises it
   const matrix = [];
   for (const d of clausesDoc.distinctive || []) {
@@ -858,6 +903,9 @@ async function runSuite(opts) {
   let clausesDoc = null;
   try { clausesDoc = core.parseJsonExact(readFileSync(opts.clauses || CLAUSES, 'utf8')); } catch (e) { problems.push('clauses table unreadable: ' + e.message); }
   if (clausesDoc) {
+    const tr = checkTheoremRows(core, opts.leanRoot || LEAN_ROOT);
+    problems.push(...tr.problems);
+    rows.push({ item: `theorem rows: one checker per Lean declaration (${tr.rows} declarations of CheckpointGoals.lean, each a row of every step record, each listed by exactly one lamp)`, ok: !tr.problems.length });
     const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines, opts.leanRoot || LEAN_ROOT);
     rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.anchored} atomic claims anchored in the part of a Lean declaration their kind names, with a semantic tie, ${cl.fragments} story fragments classified; ${cl.hyps} Step guard hypotheses all claimed by a refusal name; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
     problems.push(...cl.problems);
@@ -912,8 +960,20 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-t6d', [["      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, op, r) && !INTENTS.some(i => intentOk(env, epoch2, i, r) || intentOk(env, epoch2, i, null))) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
     { name: 'core effect dropped: a close leaves the leaf live (T8_edges_leave_the_leaf is a partition)', expect: /theorem VIOLATED: .*T8/,
       make: () => ({ core: mutant('m-t8b', [["  const leaves = res.ok ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;", "  const leaves = res.ok && kind !== 'close' ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;"]]), skipBuild: true }) },
+    { name: 'a theorem row deleted from the core (T1_rotate_strict has no checker)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row/,
+      make: () => ({ core: mutant('m-row-deleted', [["  row('T1_rotate_strict', ok && pp && rot, () => [[lp.sn < lq.sn, 'a rotation did not increase the sequence']]);\n", ""]]), skipBuild: true }) },
+    { name: 'a theorem row renamed in the core (T1_rotate_strict → T1_rotate_strictly)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row|checker row T1_rotate_strictly names no theorem/,
+      make: () => ({ core: mutant('m-row-renamed', [["  row('T1_rotate_strict', ok && pp && rot,", "  row('T1_rotate_strictly', ok && pp && rot,"]]), skipBuild: true }) },
+    { name: 'a declaration dropped from its lamp (the auditor’s delete_mapping)', expect: /theorem T1_rotate_strict is listed by 0 lamps/,
+      make: () => ({ core: mutant('m-lamp-drop', [["    lean: ['T1_sn_monotone', 'T1_rotate_strict', 'T1_sn_monotone_all',", "    lean: ['T1_sn_monotone', 'T1_sn_monotone_all',"]]), skipBuild: true }) },
+    { name: 'story 15’s first atom deleted (the pair shares a phrase; identity is the id)', expect: /story 15: atom 15\.consumable-dreg is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-deleted.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-dreg'); j.clauses.splice(i, 1); }) },
+    { name: 'story 15’s second atom deleted', expect: /story 15: atom 15\.consumable-b is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-deleted-2.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-b'); j.clauses.splice(i, 1); }) },
+    { name: 'story 15’s first atom duplicated in place of the second', expect: /atom 15\.consumable-dreg appears twice|atom 15\.consumable-b is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-duplicated.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-b'); j.clauses[i] = JSON.parse(JSON.stringify(j.clauses.find(c => c.id === '15.consumable-dreg'))); }) },
     { name: 'theorem property seeded to lie: T6 conservation on the pool', expect: /theorem VIOLATED: .*T6/,
-      make: () => ({ core: mutant('m-t6', [['const poolOk = big(held(pre).pool) + big(f.poolIn) ===', 'const poolOk = big(held(pre).pool) + big(f.poolIn) + 1n ===']]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-t6', [['[big(hi.pool) + big(f.poolIn) === big(ho.pool)', '[big(hi.pool) + big(f.poolIn) + 1n === big(ho.pool)']]), skipBuild: true }) },
     { name: 'page with its tree removed', expect: /page raised on load|the tree draws/,
       make: () => { const p = join(work, 'page-m3.html'); writeFileSync(p, htmlText.replace('<svg id="tree"', '<svg id="tre"')); return { html: p, skipBuild: true }; } },
     { name: 'page with its scene removed', expect: /the scene draws 0 entities|page raised on load|no fx layer/,
@@ -935,11 +995,11 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-corpus-results', [["  const badResult = (where, r) => { if (r === null) return false;", "  const badResult = (where, r) => { if (true) return false;"]]), skipBuild: true }) },
     { name: 'the trace verifier replays a corrupted corpus cell without refusing it by name', expect: /checkCorpus on a corpus with grid state \d+ pool=9007199254740992(: no invalid-nat\/pool reason| threw instead of refusing)/,
       make: () => ({ core: mutant('m-corpus-boundary', [["  if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };\n", "  reasons.length = 0;\n"]]), skipBuild: true }) },
-    { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7 \(.*differs from Lean/,
+    { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7\w* \(.*differs from Lean/,
       make: () => ({ core: mutant('m-t7', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + 1); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
-    { name: 'the leaf map drops another AID’s leaf (T8 must red on the system generator)', expect: /theorem VIOLATED: .*T8 \(.*(another AID’s leaf changed|leaf disagrees|leaf returned to absent)/,
+    { name: 'the leaf map drops another AID’s leaf (T8 must red on the system generator)', expect: /theorem VIOLATED: .*T8\w* \(.*(another AID’s leaf changed|leaf disagrees|leaf returned to absent)/,
       make: () => ({ core: mutant('m-t8', [["const leaves = res.ok ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;", "const leaves = res.ok ? { [aid]: leafOf(record.state) } : s.leaves;"]]), skipBuild: true }) },
-    { name: 'transition that reads W (differs at W = 2; T9 must red)', expect: /theorem VIOLATED: .*T9 \(the transition read W/,
+    { name: 'transition that reads W (differs at W = 2; T9 must red)', expect: /theorem VIOLATED: .*T9\w* \(the transition read W/,
       make: () => ({ core: mutant('m-t9', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + (p.W === 2 ? 1 : 0)); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
     { name: 'a story clause dropped from the reconciliation table', expect: /unclassified fragment/,
       make: () => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); j.clauses = j.clauses.filter(c => !(c.story === 1 && /inception parses/.test(c.clause))); const p = join(work, 'clauses-m.json'); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; } },

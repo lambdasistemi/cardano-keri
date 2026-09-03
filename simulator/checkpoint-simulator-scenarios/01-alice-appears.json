@@ -23,9 +23,13 @@
         "reason": "absent-needs-register",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -50,8 +54,7 @@
         "reason": "invalid-params",
         "verdict": "not-present",
         "exhibits": [
-          "T8",
-          "T9"
+          "T9_juvenility_is_consumer_only"
         ]
       }
     },
@@ -84,11 +87,21 @@
         },
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -123,11 +136,22 @@
         "reason": "already-present",
         "verdict": "consumable",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     }
+  ],
+  "atoms": [
+    "1.the-inception-parses-and-self",
+    "1.the-aid-is-absent-from",
+    "1.and-is-inserted",
+    "1.this-is-the-only-way",
+    "1.both-bonds-are-present"
   ]
 }

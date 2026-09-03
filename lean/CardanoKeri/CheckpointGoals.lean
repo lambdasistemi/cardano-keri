@@ -280,6 +280,16 @@ theorem T5_reopen_enabled (p : Params) (env : Env) (t : Slot) (e : Epoch) (n : S
     ∃ f l', Step p env (.reopen sn' refund pool0) t (.closed e n) f (.present l') := by
   exact ⟨_, _, Step.reopen t sn' refund pool0 hev hsn⟩
 
+/-- **T5g.** D-038's empty message: a keep that names no new address needs no
+signature at all — given the witnessed rotation it is enabled under every
+environment, whatever the new keys did or did not sign. -/
+theorem T5_keep_needs_no_intent (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)
+    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :
+    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee none) t (.present l) f (.present l') := by
+  by_cases hpay : p.P ≤ l.pool
+  · exact ⟨_, _, Step.rotateKeepPaid t sn' payee none hev hsn rfl hpay⟩
+  · exact ⟨_, _, Step.rotateKeepUnpaid t sn' payee none hev hsn rfl (Nat.lt_of_not_le hpay)⟩
+
 /-! ## T6 — value: three components that never mix -/
 
 /-- **T6a.** Component-wise conservation: for each of the conviction bond,
@@ -676,6 +686,29 @@ theorem T8_mint_once (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (
     cases hstep
     exact ⟨_, _, by simpa [State.leaf] using hag⟩
 
+/-- **T8j.** A reopen is proof-bearing: its actor is the evidence class, the
+same as a freeze and a conviction — never `anyone` (D-036, D-037). -/
+theorem T8_reopen_actor_is_proof (sn' : Seq) (refund : Addr) (pool0 : Value) :
+    (Action.reopen sn' refund pool0).actor = .proof ∧ (Action.freeze sn' refund).actor = .proof ∧
+    (Action.convict refund).actor = .proof := ⟨rfl, rfl, rfl⟩
+
+/-- **T8k.** The system step is exactly the partition its constructors name:
+every system step is one `Step` on one AID whose leaf follows; a
+registration only under an absent leaf, a reopen only under a closed leaf
+(the tombstone the step reads), and every other action neither. -/
+theorem T8_sysstep_partition (p : Params) (env : Env) {s s' : Sys} (h : SysStep p env s s') :
+    ∃ aid a now f st', s' = s.set aid st' ∧ Step p env a now (s.states aid) f st' ∧
+      ((∃ refund pool0, a = .register refund pool0) → s.leaves aid = .absent) ∧
+      ((∃ sn' refund pool0, a = .reopen sn' refund pool0) → ∃ e n, s.leaves aid = .closed e n) := by
+  cases h with
+  | register habs hstep =>
+    exact ⟨_, _, _, _, _, ⟨rfl, ⟨hstep, ⟨fun _ => habs, (fun h => by obtain ⟨_, _, _, hc⟩ := h; cases hc)⟩⟩⟩⟩
+  | reopen hclosed hstep =>
+    exact ⟨_, _, _, _, _, ⟨rfl, ⟨hstep, ⟨(fun h => by obtain ⟨_, _, hc⟩ := h; cases hc), fun _ => ⟨_, _, hclosed⟩⟩⟩⟩⟩
+  | other hnotreg hnotreopen hstep =>
+    exact ⟨_, _, _, _, _, ⟨rfl, ⟨hstep, ⟨(fun h => by obtain ⟨r, q, hc⟩ := h; exact absurd hc (hnotreg r q)),
+      (fun h => by obtain ⟨x, r, q, hc⟩ := h; exact absurd hc (hnotreopen x r q))⟩⟩⟩⟩
+
 /-! ## T9 — juvenility is consumer policy -/
 
 /-- **T9.0.** The consumer's program is the consumer's predicate: the
@@ -753,6 +786,17 @@ theorem T10_reopen_is_juvenile (p : Params) (env : Env) {t t' : Slot} {e : Epoch
     refine ⟨rfl, rfl, rfl, fun hlt hc => ?_⟩
     simp only [consumableState] at hc
     omega'
+
+/-- **T10e.** Both bonds are positive, so a withdrawn checkpoint is
+observably unbonded: neither bond it holds equals the full one. -/
+theorem T10_withdraw_is_observable (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}
+    {sn' : Seq} {payee : Addr} {r' : Option Addr}
+    (h : Step p env (.rotate sn' .withdraw payee r') t (.present l) f (.present l')) :
+    l'.dreg ≠ p.D ∧ l'.b ≠ p.B := by
+  have hD := p.hD
+  have hB := p.hB
+  cases h with
+  | rotateWithdraw => exact ⟨by simp; omega', by simp; omega'⟩
 
 /-! ## T12 — conviction needs a proof and is exact -/
 

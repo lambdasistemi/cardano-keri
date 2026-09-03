@@ -23,11 +23,21 @@
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -79,18 +89,43 @@
         },
         "verdict": "consumable",
         "exhibits": [
-          "T1",
-          "T2",
-          "T3",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T14",
-          "T16"
+          "T14_pool_decreases_only_by_premium",
+          "T16_payments_are_named",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T5_keep_needs_no_intent",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_relayer_cannot_park_age_or_close",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     }
+  ],
+  "atoms": [
+    "15.consumable-dreg",
+    "15.consumable-b",
+    "15.and-no-rotation-is-missing",
+    "15.nothing-on-chain-says-she",
+    "15.a-validity-alice-renews-by",
+    "15.no-next-key-reveal",
+    "15.if-it-lapses-only-a",
+    "15.the-fields-are-reserved-in"
   ]
 }

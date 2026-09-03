@@ -1,4 +1,4 @@
-# Checkpoint machine — mutation campaign, 2026-09-03 (second slice: D-036, D-037, D-038)
+# Checkpoint machine — mutation campaign, 2026-09-03 (second slice: D-036, D-037, D-038; re-run after the shipped-slice audit)
 
 The lean4 rule: a passing build proves nothing about whether a theorem
 constrains the definition it names. So each guard or effect below was
@@ -6,12 +6,12 @@ broken in a scratch copy of `CardanoKeri/Checkpoint.lean`, the model
 rebuilt (it must still compile, or the red is for the wrong reason), and
 `CardanoKeri/CheckpointGoals.lean` rebuilt, requiring red. `stepFn` is left
 intact, so `T7_step_iff_stepFn` reds on every `Step` mutant; a mutant counts
-as caught only when a theorem other than T7 reds as well. 26 mutants:
-24 red for the right reason, 2 survivors, both expected and
+as caught only when a theorem other than T7 reds as well. 31 mutants:
+31 red for the right reason, 0 survivors, both expected and
 recorded below with the reason. The campaign ended at its set point (one
 mutant per guard or effect the slice added or amended, the six legacy guards
 of the first campaign re-run on the new model, the auditor's four rows as a
-floor); it does not claim there are no other survivors.
+floor; the auditor's five surviving rows of the shipped-slice audit added, each caught by one of the four theorems that audit asked for); it does not claim there are no other survivors.
 
 | Mutant | What it breaks | Theorems that caught it (T7 aside) |
 |---|---|---|
@@ -39,19 +39,23 @@ floor); it does not claim there are no other survivors.
 | M22-closed-leaf-reads-live | the leaf of a closed state reads live | T8_closed_leaf_is_the_tombstone, T8_edges_leave_the_leaf, T8_mint_once |
 | M23-poisonAfter-reopen-keeps | the poison fold does not clear at a reopen | trace_poison_fold |
 | M24-consumableStateB-drops-poison | the consumer’s program ignores the poison bit (the auditor’s dropPoisonConjunct) | consumableStateB_iff |
+| M25-register-without-absence-proof | SysStep.register needs no absence proof (expected survivor: implied by leaf agreement, T8a) | T8_sysstep_partition |
+| M26-reopen-actor-anyone | Action.actor classifies a reopen as anyone (the auditor’s reopenAnyone; expected survivor: no statement names the actor of a reopen) | T8_reopen_actor_is_proof |
+| M27-reopen-without-closed-leaf | SysStep.reopen needs no closed leaf (the auditor’s A21) | T8_sysstep_partition |
+| M28-other-admits-register | SysStep.other admits a registration (the auditor’s A22) | T8_sysstep_partition |
+| M29-other-admits-reopen | SysStep.other admits a reopen (the auditor’s A23) | T8_sysstep_partition |
+| M30-dreg-not-positive | the conviction bond may be zero (the auditor’s A25) | T10_withdraw_is_observable |
+| M31-empty-message-needs-signature | a keep with no address needs the new keys’ signature too (the auditor’s A30) | T5_keep_needs_no_intent |
 
-## Survivors, named
+## No survivor in this campaign
 
-- **M25-register-without-absence-proof** — SysStep.register needs no absence proof (expected survivor: implied by leaf agreement, T8a).
-- **M26-reopen-actor-anyone** — Action.actor classifies a reopen as anyone (the auditor’s reopenAnyone; expected survivor: no statement names the actor of a reopen).
-
-The absence proof `habs` of `SysStep.register` is implied by leaf agreement
-(`T8_leaf_agrees_with_state`): a registration is a `Step` from `absent`,
-and an absent state has an absent leaf, so no theorem needs the guard — it
-is the registry's own check (the MPFS absence proof), not a fact the machine
-adds. No statement names the actor of a reopen; the auditor probed the
-`Action.actor` boundary outside the 58 rows and the simulator's tags read
-it. Both are recorded in `LEAN-CLARITY.md`.
+The two survivors of the first campaign are caught now: the absence proof of
+`SysStep.register` and the closed leaf of `SysStep.reopen` by
+`T8_sysstep_partition` (the auditor's A21–A23 as well), the reopen actor by
+`T8_reopen_actor_is_proof`; the auditor's A25 (a zero conviction bond) by
+`T10_withdraw_is_observable` and A30 (a signature on the empty message) by
+`T5_keep_needs_no_intent`. That the campaign has no survivor left says the
+mutants listed are caught, not that no other survives.
 
 ## Raw log
 
@@ -80,9 +84,14 @@ M21-leaf-stale-on-set: RED for the right reason (failing: T8_edges_leave_the_lea
 M22-closed-leaf-reads-live: RED for the right reason (failing: T8_closed_leaf_is_the_tombstone T8_edges_leave_the_leaf T8_mint_once)
 M23-poisonAfter-reopen-keeps: RED for the right reason (failing: trace_poison_fold)
 M24-consumableStateB-drops-poison: RED for the right reason (failing: consumableStateB_iff)
-M25-register-without-absence-proof: SURVIVED (goals still green)
-M26-reopen-actor-anyone: SURVIVED (goals still green)
+M25-register-without-absence-proof: RED for the right reason (failing: T8_sysstep_partition)
+M26-reopen-actor-anyone: RED for the right reason (failing: T8_reopen_actor_is_proof)
+M27-reopen-without-closed-leaf: RED for the right reason (failing: T8_sysstep_partition)
+M28-other-admits-register: RED for the right reason (failing: T8_sysstep_partition)
+M29-other-admits-reopen: RED for the right reason (failing: T8_sysstep_partition)
+M30-dreg-not-positive: RED for the right reason (failing: T10_withdraw_is_observable)
+M31-empty-message-needs-signature: RED for the right reason (failing: T5_keep_needs_no_intent)
 ```
 
-Axioms (`#print axioms` over all 58 theorems): 41 use propext only, 17 use propext and Quot.sound; sorryAx: 0.
+Axioms (`#print axioms` over all 62 theorems): 43 use propext only, 18 use propext and Quot.sound; sorryAx: 0.
 Instrument: the campaign script applies each mutant by exact text replacement (it refuses a needle that does not apply), builds `CardanoKeri.Checkpoint` then `CardanoKeri.CheckpointGoals`, and reads the failing theorem names off the error lines.

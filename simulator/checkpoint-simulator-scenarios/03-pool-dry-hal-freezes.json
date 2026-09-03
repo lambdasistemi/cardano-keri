@@ -23,11 +23,21 @@
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -82,14 +92,29 @@
         },
         "verdict": "b-missing",
         "exhibits": [
-          "T1",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T15",
-          "T16"
+          "T15_b_leaves_only_by_freeze_or_withdraw",
+          "T15_freeze_makes_inert",
+          "T16_payments_are_named",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T5_freeze_enabled",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -108,8 +133,14 @@
         "reason": "freeze-bond-missing",
         "verdict": "b-missing",
         "exhibits": [
-          "T7",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -121,5 +152,14 @@
         "verdict": "b-missing"
       }
     }
+  ],
+  "atoms": [
+    "3.exactly-the-advance-predicate-on",
+    "3.that-the-pool-is-below",
+    "3.that-the-checkpoint-is-not",
+    "3.already-unconsumable",
+    "3.nothing-to-freeze",
+    "3.then-it-pays-b-to",
+    "3.and-leaves-the-datum-untouched"
   ]
 }

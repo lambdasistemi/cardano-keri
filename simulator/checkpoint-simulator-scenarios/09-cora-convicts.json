@@ -1,7 +1,7 @@
 {
   "story": 9,
   "title": "Cora convicts",
-  "goal": "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by at least toad of her witnesses, I want to end this identity on chain and take its conviction bond.",
+  "goal": "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by a threshold of her witnesses (KERI’s toad), I want to end this identity on chain and take its conviction bond.",
   "params": {
     "D": 1000,
     "B": 5,
@@ -23,11 +23,21 @@
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -52,15 +62,27 @@
         },
         "verdict": "poisoned",
         "exhibits": [
-          "T1",
-          "T10",
-          "T3",
-          "T4",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T10_current_quorum_never_restores",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T3_only_poison_sets",
+          "T4_current_quorum_only_poisons",
+          "T5_poison_enabled",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -108,15 +130,26 @@
         },
         "verdict": "not-present",
         "exhibits": [
-          "T1",
-          "T12",
-          "T16",
-          "T4",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T12_convict_exact",
+          "T16_payments_are_named",
+          "T1_sn_monotone_all",
+          "T4_poisoned_blocks_quorum_and_freeze",
+          "T4_poisoned_nonrotation_inert",
+          "T5_convict_enabled",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -148,10 +181,15 @@
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9",
-          "T12"
+          "T12_convicted_terminal",
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_from_convicted"
         ]
       }
     },
@@ -170,10 +208,15 @@
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9",
-          "T12"
+          "T12_convicted_terminal",
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_from_convicted"
         ]
       },
       "evidence": {
@@ -194,10 +237,15 @@
         "reason": "convicted-terminal",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9",
-          "T12"
+          "T12_convicted_terminal",
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_from_convicted"
         ]
       }
     }
@@ -222,13 +270,27 @@
             "reason": "no-duplicity-proof",
             "verdict": "poisoned",
             "exhibits": [
-              "T7",
-              "T9",
-              "T12"
+              "T12_convict_exact",
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         }
       ]
     }
+  ],
+  "atoms": [
+    "9.the-second-rotation-is-at",
+    "9.reveals-the-same-keys-the",
+    "9.is-signed-at-the-current",
+    "9.carries-receipts-from-at-least",
+    "9.and-differs-from-the-accepted",
+    "9.no-history-needed-the-revealed"
   ]
 }

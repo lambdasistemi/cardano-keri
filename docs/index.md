@@ -3,6 +3,18 @@
 cardano-keri projects a rotating KERI identity into a stable Cardano
 checkpoint.
 
+!!! tip "Play the design before you read it"
+    The M1 design is a proved Lean machine, and the two simulations below are
+    transcriptions of it, checked against the Lean by replay on every step.
+    Pick a story and play it; every refusal names the rule that refused.
+
+    - **[The checkpoint simulator](simulator/index.html)** — one identity, its
+      keys, its three sums of money, the hunters, the treasury: fifteen
+      stories with their forks, the theorems lighting up as you play.
+    - **[The registry simulator](simulator/registry/index.html)** — one incarnation per
+      identity: requests, batches, the gating plugin, the leaf every
+      identity has.
+
 !!! success "The transaction path does not require cardano-cli"
     The packaged `ckeri` can deploy the reference scripts, register an
     identity, advance a rotation, post/update/retire endpoint-board records,

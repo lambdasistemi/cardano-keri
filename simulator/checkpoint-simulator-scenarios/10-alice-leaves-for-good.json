@@ -23,11 +23,21 @@
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -52,15 +62,27 @@
         },
         "verdict": "poisoned",
         "exhibits": [
-          "T1",
-          "T10",
-          "T3",
-          "T4",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T10_current_quorum_never_restores",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T3_only_poison_sets",
+          "T4_current_quorum_only_poisons",
+          "T5_poison_enabled",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -79,8 +101,14 @@
         "reason": "no-witnessed-rotation",
         "verdict": "poisoned",
         "exhibits": [
-          "T7",
-          "T9"
+          "T16_close_needs_rotation",
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       },
       "evidence": {
@@ -119,17 +147,33 @@
         },
         "verdict": "consumable",
         "exhibits": [
-          "T1",
-          "T2",
-          "T3",
-          "T4",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T14",
-          "T16"
+          "T14_pool_decreases_only_by_premium",
+          "T16_payments_are_named",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_only_rotation_clears",
+          "T3_rotation_clears",
+          "T4_poisoned_blocks_quorum_and_freeze",
+          "T5_every_bond_option",
+          "T5_keep_needs_no_intent",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_relayer_cannot_park_age_or_close",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -184,14 +228,25 @@
         },
         "verdict": "not-present",
         "exhibits": [
-          "T1",
-          "T16",
-          "T2",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T16_close_destination",
+          "T16_close_needs_rotation",
+          "T1_sn_monotone_all",
+          "T2_close_and_reopen_open_epochs",
+          "T5_close_enabled",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     },
@@ -210,9 +265,14 @@
         "reason": "closed-needs-reopen",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_closed_only_reopens",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -230,9 +290,14 @@
         "reason": "closed-needs-reopen",
         "verdict": "not-present",
         "exhibits": [
-          "T7",
-          "T8",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_closed_only_reopens",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     }
@@ -294,14 +359,25 @@
             },
             "verdict": "not-present",
             "exhibits": [
-              "T1",
-              "T16",
-              "T2",
-              "T5",
-              "T6",
-              "T7",
-              "T8",
-              "T9"
+              "T16_close_destination",
+              "T16_close_needs_rotation",
+              "T1_sn_monotone_all",
+              "T2_close_and_reopen_open_epochs",
+              "T5_close_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_intent_requires_new_keys",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
             ]
           }
         },
@@ -320,9 +396,14 @@
             "reason": "closed-needs-reopen",
             "verdict": "not-present",
             "exhibits": [
-              "T7",
-              "T8",
-              "T9"
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_closed_only_reopens",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         }
@@ -359,8 +440,14 @@
             "reason": "intent-not-authorized",
             "verdict": "consumable",
             "exhibits": [
-              "T7",
-              "T9"
+              "T16_close_needs_rotation",
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         },
@@ -380,9 +467,14 @@
             "reason": "reopen-needs-closed",
             "verdict": "consumable",
             "exhibits": [
-              "T7",
-              "T8",
-              "T9"
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         }
@@ -408,9 +500,14 @@
             "reason": "closed-needs-reopen",
             "verdict": "not-present",
             "exhibits": [
-              "T7",
-              "T8",
-              "T9"
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_closed_only_reopens",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         },
@@ -441,9 +538,15 @@
             "reason": "sequence-not-later",
             "verdict": "not-present",
             "exhibits": [
-              "T7",
-              "T8",
-              "T9"
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_closed_only_reopens",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         },
@@ -487,15 +590,29 @@
             },
             "verdict": "juvenile",
             "exhibits": [
-              "T1",
-              "T10",
-              "T2",
-              "T3",
-              "T5",
-              "T6",
-              "T7",
-              "T8",
-              "T9"
+              "T10_reopen_is_juvenile",
+              "T1_reopen_strict",
+              "T1_sn_monotone_all",
+              "T2_close_and_reopen_open_epochs",
+              "T3_epoch_local",
+              "T5_reopen_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_closed_only_reopens",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_mint_once",
+              "T8_only_convicted_is_terminal",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
             ]
           }
         },
@@ -509,5 +626,11 @@
         }
       ]
     }
+  ],
+  "atoms": [
+    "10.signatures-at-the-current-threshold",
+    "10.not-poisoned",
+    "10.then-it-pays-everything-to",
+    "10.and-burns-the-token"
   ]
 }

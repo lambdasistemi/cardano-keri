@@ -23,11 +23,21 @@
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_absent_only_registers",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_mint_once",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -84,17 +94,33 @@
         },
         "verdict": "dreg-missing",
         "exhibits": [
-          "T1",
-          "T14",
-          "T15",
-          "T16",
-          "T2",
-          "T3",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9"
+          "T10_withdraw_is_observable",
+          "T14_pool_decreases_only_by_premium",
+          "T15_b_leaves_only_by_freeze_or_withdraw",
+          "T16_withdraw_destination",
+          "T1_rotate_strict",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T2_epoch_only_by_rotation",
+          "T3_epoch_local",
+          "T3_rotation_clears",
+          "T5_every_bond_option",
+          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_intent_requires_new_keys",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       },
       "evidence": {
@@ -133,8 +159,14 @@
         "reason": "no-witnessed-rotation",
         "verdict": "dreg-missing",
         "exhibits": [
-          "T7",
-          "T9"
+          "T16_close_needs_rotation",
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -148,8 +180,13 @@
         "reason": "no-quorum",
         "verdict": "dreg-missing",
         "exhibits": [
-          "T7",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -179,8 +216,14 @@
         "reason": "freeze-bond-missing",
         "verdict": "dreg-missing",
         "exhibits": [
-          "T7",
-          "T9"
+          "T7_step_iff_stepFn",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff"
         ]
       }
     },
@@ -202,14 +245,25 @@
         },
         "verdict": "dreg-missing",
         "exhibits": [
-          "T1",
-          "T5",
-          "T6",
-          "T7",
-          "T8",
-          "T9",
-          "T10",
-          "T14"
+          "T10_inert_without_next_keys",
+          "T14_pool_increases_only_by_topup",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_closed_leaf_is_the_tombstone",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_sn_monotone_all"
         ]
       }
     }
@@ -246,15 +300,28 @@
             "flow": {},
             "verdict": "dreg-missing",
             "exhibits": [
-              "T1",
-              "T10",
-              "T3",
-              "T4",
-              "T5",
-              "T6",
-              "T7",
-              "T8",
-              "T9"
+              "T10_current_quorum_never_restores",
+              "T10_inert_without_next_keys",
+              "T1_sn_monotone",
+              "T1_sn_monotone_all",
+              "T3_epoch_local",
+              "T3_only_poison_sets",
+              "T4_current_quorum_only_poisons",
+              "T5_poison_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_only_convicted_is_terminal",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
             ]
           }
         },
@@ -273,8 +340,14 @@
             "reason": "no-witnessed-rotation",
             "verdict": "dreg-missing",
             "exhibits": [
-              "T7",
-              "T9"
+              "T16_close_needs_rotation",
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           },
           "evidence": {
@@ -339,15 +412,25 @@
             },
             "verdict": "not-present",
             "exhibits": [
-              "T1",
-              "T10",
-              "T16",
-              "T2",
-              "T5",
-              "T6",
-              "T7",
-              "T8",
-              "T9"
+              "T16_close_destination",
+              "T16_close_needs_rotation",
+              "T1_sn_monotone_all",
+              "T2_close_and_reopen_open_epochs",
+              "T5_close_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_intent_requires_new_keys",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
             ]
           }
         }
@@ -375,12 +458,21 @@
             "verdict": "consumable",
             "reason": "intent-not-authorized",
             "exhibits": [
-              "T7",
-              "T9"
+              "T7_step_iff_stepFn",
+              "T8_closed_leaf_is_the_tombstone",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_present_implies_registered",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
             ]
           }
         }
       ]
     }
+  ],
+  "atoms": [
+    "5.the-advance-predicate",
+    "5.then-it-pays-d-reg"
   ]
 }

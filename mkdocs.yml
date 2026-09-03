@@ -46,8 +46,9 @@ nav:
   - Home: index.md
   - Why Cardano: why-cardano.md
   - Story Ladder: story-ladder.md
-  - Checkpoint Simulator: simulator/index.html
-  - Registry Simulator: simulator/registry/index.html
+  - Simulations:
+      - The checkpoint: simulator/index.html
+      - The registry: simulator/registry/index.html
   - Roadmap: roadmap.md
   - Identity on Cardano:
       - Presentation: identity-on-cardano/index.html

@@ -2,12 +2,14 @@
   "about": "Every 'chain checks' clause of every story in M1-STORIES.md, split into atomic claims and reconciled with the Lean. class: guard (the Lean decides it), omission (the Lean does not model it; the simulator says so), overrule (the Lean decides differently; the simulator follows the Lean). A guard or overrule row is one claim of one kind — guard (a hypothesis the transition requires), refusal (the clause states a refusal), payment (a flow field pays it), post-state (the resulting state, optionally 'updates': the only datum fields the post-state sets), no-guard (the constructor has no hypothesis), verdict (a conjunct of consumableState) — and names the Lean declaration (decl: a Step constructor, consumableState, SysStep.register, Trace.cons or a theorem), the hypothesis for a guard or refusal (hyp), the exact text that entails the claim (text), and exactly one semantic tie: reason (a refusal name, which the core's LEAN_GUARDS binds to the constructor and binder that refuse it; a refusal claim also needs a step of its story refused for it), verdict (bound to its conjunct), or match (a step of the story's own scenario, whose constructor is derived from the record; a payment claim's step must pay through the named field; an untouched-except claim's step must change only the listed fields). The scenario gate parses each constructor into its hypotheses, flow record and post-state and requires the text inside the part the kind names; it fails on an unclassified fragment, a clause absent from its story, a text outside its part, a tie the declaration does not decide, and a Step guard hypothesis no refusal name claims.",
   "clauses": [
     {
+      "id": "1.the-inception-parses-and-self",
       "story": 1,
       "clause": "the inception parses and self-addresses",
       "class": "omission",
       "note": "Step.register carries no inception and no validation predicate; the registrant's bytes are not modelled. The Env has no predicate for it either."
     },
     {
+      "id": "1.the-aid-is-absent-from",
       "story": 1,
       "clause": "the AID is absent from the registry",
       "class": "guard",
@@ -18,6 +20,7 @@
       "reason": "aid-already-registered"
     },
     {
+      "id": "1.and-is-inserted",
       "story": 1,
       "clause": "and is inserted",
       "class": "guard",
@@ -31,6 +34,7 @@
       "note": "Sys.set moves the leaf with the state (State.leaf); SysStep.other leaves the registry alone for rotate, poison, freeze and top-up (T8_edges_leave_the_leaf)."
     },
     {
+      "id": "1.this-is-the-only-way",
       "story": 1,
       "clause": "this is the only way the token can ever be minted",
       "class": "guard",
@@ -42,6 +46,7 @@
       "note": "registration is the only SysStep that touches the registry, and it needs the AID absent from it; every non-absent AID is registered (T8_present_implies_registered), so a second minting is refused for the rest of the AID's life."
     },
     {
+      "id": "1.both-bonds-are-present",
       "story": 1,
       "clause": "both bonds are present",
       "class": "guard",
@@ -55,6 +60,7 @@
       "note": "the registration flow brings exactly D and B; a transaction bringing less is not a Step at all."
     },
     {
+      "id": "2.signatures-at-the-current-threshold",
       "story": 2,
       "clause": "signatures at the current threshold over the rotation bytes",
       "class": "guard",
@@ -66,6 +72,7 @@
       "note": "one predicate stands for the three cryptographic checks of the advance (Env.rotationTo doc); the same hev guards every rotate constructor and the freeze."
     },
     {
+      "id": "2.revealed-keys-match-the-pre",
       "story": 2,
       "clause": "revealed keys match the pre-committed digests at the next threshold",
       "class": "guard",
@@ -76,6 +83,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "2.receipts-from-at-least-toad",
       "story": 2,
       "clause": "receipts from at least `toad` of the new witness set",
       "class": "guard",
@@ -86,6 +94,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "2.sequence-strictly-greater",
       "story": 2,
       "clause": "sequence strictly greater",
       "class": "guard",
@@ -96,6 +105,7 @@
       "reason": "sequence-not-later"
     },
     {
+      "id": "2.then-it-pays-p-from",
       "story": 2,
       "clause": "Then it pays `P` from the pool to Hal",
       "class": "guard",
@@ -111,6 +121,7 @@
       "note": "paid when the pool covers P (hpay : p.P ≤ l.pool); otherwise the rotation lands unpaid (Step.rotateKeepUnpaid, hnopay): payment is never a gate."
     },
     {
+      "id": "3.exactly-the-advance-predicate-on",
       "story": 3,
       "clause": "exactly the advance predicate on the presented rotation",
       "class": "guard",
@@ -121,6 +132,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "3.that-the-pool-is-below",
       "story": 3,
       "clause": "that the pool is below `P`",
       "class": "guard",
@@ -131,6 +143,7 @@
       "reason": "pool-covers-premium"
     },
     {
+      "id": "3.that-the-checkpoint-is-not",
       "story": 3,
       "clause": "that the checkpoint is not poisoned",
       "class": "guard",
@@ -141,6 +154,7 @@
       "reason": "poisoned"
     },
     {
+      "id": "3.already-unconsumable",
       "story": 3,
       "clause": "already unconsumable",
       "class": "guard",
@@ -150,12 +164,14 @@
       "verdict": "poisoned"
     },
     {
+      "id": "3.nothing-to-freeze",
       "story": 3,
       "clause": "nothing to freeze",
       "class": "omission",
       "note": "the rationale of the modelling assumption stated on Step.freeze's doc comment (no freeze from a poisoned state); the Lean has the guard hclean, not the reason for it."
     },
     {
+      "id": "3.then-it-pays-b-to",
       "story": 3,
       "clause": "Then it pays `B` to Hal",
       "class": "guard",
@@ -169,6 +185,7 @@
       "note": "the freeze also needs the bond present (hb : l.b = p.B; refusal freeze-bond-missing), which the story states only as its 'after'."
     },
     {
+      "id": "3.and-leaves-the-datum-untouched",
       "story": 3,
       "clause": "and leaves the datum untouched",
       "class": "guard",
@@ -185,6 +202,7 @@
       "note": "Live is the datum plus the value held; the freeze sets only b (the freeze bond, value) and leaves sn, epoch, poisoned, bornAt, refundTo, dreg and pool as they were — the old keys stay."
     },
     {
+      "id": "4.the-advance-predicate",
       "story": 4,
       "clause": "the advance predicate",
       "class": "guard",
@@ -195,6 +213,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "4.that-both-bonds-are-full",
       "story": 4,
       "clause": "that both bonds are full on the output",
       "class": "guard",
@@ -210,6 +229,7 @@
       "note": "the depositing rotation's output holds exactly D and B; the guards hd / hb refuse a datum already above full (bond-over-full)."
     },
     {
+      "id": "5.the-advance-predicate",
       "story": 5,
       "clause": "the advance predicate",
       "class": "guard",
@@ -220,6 +240,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "5.then-it-pays-d-reg",
       "story": 5,
       "clause": "then it pays `D_reg + B + pool` to the refund address",
       "class": "guard",
@@ -234,6 +255,7 @@
       }
     },
     {
+      "id": "6.the-advance-predicate",
       "story": 6,
       "clause": "the advance predicate",
       "class": "guard",
@@ -244,6 +266,7 @@
       "reason": "no-witnessed-rotation"
     },
     {
+      "id": "6.both-bonds-full-on-the",
       "story": 6,
       "clause": "both bonds full on the output",
       "class": "guard",
@@ -258,6 +281,7 @@
       }
     },
     {
+      "id": "7.signatures-at-the-current-threshold",
       "story": 7,
       "clause": "signatures at the current threshold",
       "class": "guard",
@@ -268,12 +292,14 @@
       "reason": "no-quorum"
     },
     {
+      "id": "7.one-stolen-member-key-of",
       "story": 7,
       "clause": "one stolen member key of a multisig cannot poison",
       "class": "omission",
       "note": "the threshold itself is inside Env.quorum; a single member key is not modelled."
     },
     {
+      "id": "7.that-the-epoch-is-not",
       "story": 7,
       "clause": "that the epoch is not already poisoned",
       "class": "guard",
@@ -284,6 +310,7 @@
       "reason": "already-poisoned"
     },
     {
+      "id": "8.the-signature-over-the-new",
       "story": 8,
       "clause": "the signature over the new address at the new threshold by the keys the rotation reveals",
       "class": "guard",
@@ -294,6 +321,7 @@
       "reason": "intent-not-authorized"
     },
     {
+      "id": "8.a-relayer-submitting-her-public",
       "story": 8,
       "clause": "A relayer submitting her public rotation without that signature leaves the address unchanged",
       "class": "overrule",
@@ -305,6 +333,7 @@
       "note": "a rotation that names an address the new keys did not sign in the intent message is refused whole (hauth fails), not landed with the old address; a rotation naming no address needs no signature and keeps it. Story 8's scenario plays both (D-032, D-038)."
     },
     {
+      "id": "9.the-second-rotation-is-at",
       "story": 9,
       "clause": "the second rotation is at the tip's sequence",
       "class": "guard",
@@ -315,6 +344,7 @@
       "reason": "no-duplicity-proof"
     },
     {
+      "id": "9.reveals-the-same-keys-the",
       "story": 9,
       "clause": "reveals the same keys the tip holds",
       "class": "guard",
@@ -326,6 +356,7 @@
       "note": "one predicate stands for the whole duplicity check (Env.duplicityAt doc)."
     },
     {
+      "id": "9.is-signed-at-the-current",
       "story": 9,
       "clause": "is signed at the current threshold",
       "class": "guard",
@@ -336,6 +367,7 @@
       "reason": "no-duplicity-proof"
     },
     {
+      "id": "9.carries-receipts-from-at-least",
       "story": 9,
       "clause": "carries receipts from at least `toad` of the tip's witnesses",
       "class": "guard",
@@ -346,6 +378,7 @@
       "reason": "no-duplicity-proof"
     },
     {
+      "id": "9.and-differs-from-the-accepted",
       "story": 9,
       "clause": "and differs from the accepted one",
       "class": "guard",
@@ -356,12 +389,14 @@
       "reason": "no-duplicity-proof"
     },
     {
+      "id": "9.no-history-needed-the-revealed",
       "story": 9,
       "clause": "No history needed: the revealed keys are the current keys",
       "class": "omission",
       "note": "the model has no key material; the epoch counter stands for the current keys, and duplicityAt is asked at (epoch, sn) only."
     },
     {
+      "id": "10.signatures-at-the-current-threshold",
       "story": 10,
       "clause": "signatures at the current threshold",
       "class": "overrule",
@@ -373,6 +408,7 @@
       "note": "D-036: a close is a witnessed rotation by the next keys, not a signature by the current ones; Mallory with the current keys is refused no-witnessed-rotation."
     },
     {
+      "id": "10.not-poisoned",
       "story": 10,
       "clause": "not poisoned",
       "class": "overrule",
@@ -384,6 +420,7 @@
       "note": "D-036: a close lands poisoned or not; what it needs is the new keys' signed close intent (D-038), which a relayer with the public rotation does not have."
     },
     {
+      "id": "10.then-it-pays-everything-to",
       "story": 10,
       "clause": "Then it pays everything to the refund address",
       "class": "guard",
@@ -397,6 +434,7 @@
       }
     },
     {
+      "id": "10.and-burns-the-token",
       "story": 10,
       "clause": "and burns the token",
       "class": "guard",
@@ -411,6 +449,7 @@
       "note": "the tombstone keeps the epoch the closing rotation opened and its sequence; not terminal (D-036): a later witnessed rotation reopens it."
     },
     {
+      "id": "11.present",
       "story": 11,
       "clause": "present",
       "class": "guard",
@@ -420,6 +459,7 @@
       "verdict": "not-present"
     },
     {
+      "id": "11.d-reg-full",
       "story": 11,
       "clause": "`D_reg` full",
       "class": "guard",
@@ -429,6 +469,7 @@
       "verdict": "dreg-missing"
     },
     {
+      "id": "11.b-full",
       "story": 11,
       "clause": "`B` full",
       "class": "guard",
@@ -438,6 +479,7 @@
       "verdict": "b-missing"
     },
     {
+      "id": "11.not-poisoned",
       "story": 11,
       "clause": "not poisoned",
       "class": "guard",
@@ -447,6 +489,7 @@
       "verdict": "poisoned"
     },
     {
+      "id": "11.born-at-least-w-slots",
       "story": 11,
       "clause": "born at least `W` slots ago",
       "class": "guard",
@@ -456,18 +499,21 @@
       "verdict": "juvenile"
     },
     {
+      "id": "11.the-signature-on-the-payment",
       "story": 11,
       "clause": "the signature on the payment satisfies the current threshold",
       "class": "omission",
       "note": "the consumer's own threshold check on its transaction is outside this machine (consumableState doc)."
     },
     {
+      "id": "11.later-when-validity-ships-within",
       "story": 11,
       "clause": "Later, when validity ships: within `valid_until`",
       "class": "omission",
       "note": "validity (D-027, A11) is reserved in the datum and not modelled (Checkpoint.lean module doc)."
     },
     {
+      "id": "11.on-absent",
       "story": 11,
       "clause": "on: absent",
       "class": "guard",
@@ -478,6 +524,7 @@
       "note": "every non-present state is False; each present failure names its conjunct (story 11's scenario walks all seven)."
     },
     {
+      "id": "11.unbonded",
       "story": 11,
       "clause": "unbonded",
       "class": "guard",
@@ -487,6 +534,7 @@
       "verdict": "dreg-missing"
     },
     {
+      "id": "11.frozen",
       "story": 11,
       "clause": "frozen",
       "class": "guard",
@@ -496,6 +544,7 @@
       "verdict": "b-missing"
     },
     {
+      "id": "11.poisoned",
       "story": 11,
       "clause": "poisoned",
       "class": "guard",
@@ -505,6 +554,7 @@
       "verdict": "poisoned"
     },
     {
+      "id": "11.juvenile",
       "story": 11,
       "clause": "juvenile",
       "class": "guard",
@@ -514,6 +564,7 @@
       "verdict": "juvenile"
     },
     {
+      "id": "11.convicted",
       "story": 11,
       "clause": "convicted",
       "class": "guard",
@@ -523,6 +574,7 @@
       "verdict": "not-present"
     },
     {
+      "id": "11.gone",
       "story": 11,
       "clause": "gone",
       "class": "guard",
@@ -532,6 +584,7 @@
       "verdict": "not-present"
     },
     {
+      "id": "12.the-checkpoint-is-juvenile-for",
       "story": 12,
       "clause": "the checkpoint is juvenile for `W` slots",
       "class": "guard",
@@ -541,12 +594,14 @@
       "verdict": "juvenile"
     },
     {
+      "id": "12.anyone-can-advance-it-onward",
       "story": 12,
       "clause": "anyone can advance it onward with Alice's later public rotations",
       "class": "omission",
       "note": "the submitter is not modelled. Action.actor derives the authorizer from the action and a rotation's is nextKeys — Alice's rotation authorizes itself; nothing in Step or SysStep names who carries the transaction. Scenario 12 plays Hal landing Alice's later rotation, which the Lean admits because the evidence (hev) holds, not because 'anyone' is a rule of the machine. Campaign 1 anchored this to `| .register .. => .anyone`, the actor of a registration: an over-attribution."
     },
     {
+      "id": "12.the-moment-that-happens-mallory",
       "story": 12,
       "clause": "the moment that happens, Mallory's bonds answer to Alice's keys (story 8)",
       "class": "guard",
@@ -562,6 +617,7 @@
       "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can sign a new one in the intent message (hauth, D-038), and close and withdrawal pay there (Step.close, Step.rotateWithdraw)."
     },
     {
+      "id": "12.it-can-happen-once-per",
       "story": 12,
       "clause": "It can happen once per AID, ever",
       "class": "guard",
@@ -573,6 +629,7 @@
       "note": "for one AID the state guard (present / closed / convicted) refuses first (already-present, as scenario 12 plays it); the leaf guard is the system-level reason, exercised by the gate's multi-AID generator."
     },
     {
+      "id": "13.add-value-to-the-pool",
       "story": 13,
       "clause": "add value to the pool",
       "class": "guard",
@@ -585,6 +642,7 @@
       }
     },
     {
+      "id": "13.the-datum-is-untouched",
       "story": 13,
       "clause": "the datum is untouched",
       "class": "guard",
@@ -601,6 +659,7 @@
       "note": "only the pool (value) moves; sn, epoch, poisoned, bornAt, refundTo, dreg and b stay — juvenility is not restarted."
     },
     {
+      "id": "13.no-signature",
       "story": 13,
       "clause": "no signature",
       "class": "guard",
@@ -614,12 +673,14 @@
       "note": "the constructor has no guard hypothesis: no evidence, no signature."
     },
     {
+      "id": "14.both-see-the-rotation",
       "story": 14,
       "clause": "Both see the rotation",
       "class": "omission",
       "note": "hunters, watchers and timing are not modelled; evidence is a table."
     },
     {
+      "id": "14.if-the-pool-covers-p",
       "story": 14,
       "clause": "If the pool covers `P`",
       "class": "guard",
@@ -635,6 +696,7 @@
       }
     },
     {
+      "id": "14.the-first-advance-wins-and",
       "story": 14,
       "clause": "the first advance wins and is paid",
       "class": "overrule",
@@ -650,6 +712,7 @@
       "note": "no UTxO in the model: 'first' is whichever rotation the machine sees first; it lands paid."
     },
     {
+      "id": "14.the-second-fails-on-the",
       "story": 14,
       "clause": "the second fails on the spent input",
       "class": "overrule",
@@ -661,6 +724,7 @@
       "note": "no UTxO in the model: the second advance fails because the state moved and its evidence no longer matches (no-witnessed-rotation)."
     },
     {
+      "id": "14.if-it-does-not",
       "story": 14,
       "clause": "If it does not",
       "class": "guard",
@@ -674,6 +738,7 @@
       }
     },
     {
+      "id": "14.the-first-freeze-wins-b",
       "story": 14,
       "clause": "the first freeze wins `B`",
       "class": "guard",
@@ -686,6 +751,7 @@
       }
     },
     {
+      "id": "14.the-second-finds-nothing-to",
       "story": 14,
       "clause": "the second finds nothing to take",
       "class": "guard",
@@ -696,6 +762,7 @@
       "reason": "freeze-bond-missing"
     },
     {
+      "id": "15.consumable-dreg",
       "story": 15,
       "clause": "her checkpoint stays consumable as long as it is bonded",
       "class": "guard",
@@ -706,6 +773,7 @@
       "note": "consumableState has no upper bound on age; bonded means both conjuncts l.dreg = p.D and l.b = p.B (next row)."
     },
     {
+      "id": "15.consumable-b",
       "story": 15,
       "clause": "her checkpoint stays consumable as long as it is bonded",
       "class": "guard",
@@ -715,36 +783,42 @@
       "verdict": "b-missing"
     },
     {
+      "id": "15.and-no-rotation-is-missing",
       "story": 15,
       "clause": "and no rotation is missing",
       "class": "omission",
       "note": "consumableState has no predicate over rotations the checkpoint has not seen: the state-side conjuncts read the datum only. A missing rotation is what a freeze (story 3) makes visible, not what the consumer sees. Campaign 1 anchored this to the juvenility conjunct: an over-attribution."
     },
     {
+      "id": "15.nothing-on-chain-says-she",
       "story": 15,
       "clause": "Nothing on chain says she is gone",
       "class": "omission",
       "note": "no age, no liveness signal in the datum; consumableState reads bornAt only for juvenility."
     },
     {
+      "id": "15.a-validity-alice-renews-by",
       "story": 15,
       "clause": "a validity Alice renews by re-signing with her current keys",
       "class": "omission",
       "note": "D-027 direction, not ruled; the fields are reserved in the datum and absent from the model (Checkpoint.lean module doc)."
     },
     {
+      "id": "15.no-next-key-reveal",
       "story": 15,
       "clause": "no next-key reveal",
       "class": "omission",
       "note": "D-027 direction; not in the model."
     },
     {
+      "id": "15.if-it-lapses-only-a",
       "story": 15,
       "clause": "if it lapses, only a rotation brings the checkpoint back",
       "class": "omission",
       "note": "D-027 direction; not in the model."
     },
     {
+      "id": "15.the-fields-are-reserved-in",
       "story": 15,
       "clause": "The fields are reserved in the datum now",
       "class": "omission",

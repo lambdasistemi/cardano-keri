@@ -152,9 +152,9 @@ Branches: ⋔ Alice resumes inside the grace window.
 
 ## 11. Alice comes back from dormant
 
-Her leaf says dormant(1). She posts a revive request with the bond and a witnessed rotation from key state 1; Hal folds it: a new token is minted (token 2 — Bob took token 1), a live checkpoint at key state 2 is funded from her bond, the leaf is active(2). A revive of an AID that is not dormant is refused; a revive without the rotation is refused on the branch where Mallory tries it.
+Her leaf says dormant(1). She posts a revive request with the bond and a witnessed rotation from key state 1; Hal folds it: a new token is minted (token 2 — Bob took token 1), a live checkpoint at key state 2 is funded from her bond, the leaf is active(2). A revive of an AID that is not dormant is refused; a revive without the rotation is refused on the branch where Mallory tries it. On a branch the block producer copies her early reap with itself as the reaper: admitted today, and it costs her the checkpoint’s min-ADA.
 
-Branches: ⋔ Mallory's revive carries no rotation from key state 1.
+Branches: ⋔ Mallory's revive carries no rotation from key state 1; ⋔ The block producer copies Alice’s early reap.
 
 - **The chain checks**: the owner reaps her parked checkpoint at any time; a revive needs a dormant leaf; a witnessed rotation from the recorded key state; and no checkpoint on chain; a new token is minted into a live checkpoint at the next key state; the leaf is active with the new token.
 - **Money**: the bond is locked into the checkpoint.

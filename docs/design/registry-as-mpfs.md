@@ -91,6 +91,15 @@ ruling that lived only in the transcript would not exist.
    `R11_reap_is_samaritan`, with the condition the theorem carries
    (`tip + fee ≤ Mc`, after the go-request is folded).
 10. "for the rest we are good togo" — the slice's scope closed there.
+11. (2026-09-03, evening) "aren't SPOs the only obvious beneficiaries of
+    paid permissionless liveness systems ? MPFS permissionless version style
+    i.e. and in particular the current block producer", "it's even worse, as
+    the block producer can just observe the mempool and steal the value", and
+    the ruling: "whenever a user needs a reaper, it should try to be one
+    obliging the leader to steal or lose the premium" — the tip and the
+    premium are the block producer's when it wants them; the requester and
+    the owner post their own folds and reaps, and the leader serves them
+    either way. See "Who is paid" below and Q-R6.
 
 ## The machine (`Registry.lean`)
 
@@ -275,6 +284,35 @@ grace window and the min-ADA split are the checkpoint validator's reap edge.
   signer anywhere else).
 - **Cryptography**: evidence is a table. **The checkpoint's rotations that
   keep it live, its bonds beyond one abstract `D`, poison**: the checkpoint
-  machine. **Ordering among folders**: first arrival at the slot leader; the
-  model says a stale fold is refused, not who wins. **Censorship**: a folder
+  machine. **Ordering among folders, and who is paid** (ruling 11): the slot leader
+  chooses the block's contents; Praos guarantees nothing about transaction
+  order, and every fold and reap is public in the mempool with a free payee
+  field (`folder`, `reaper` carry no signature). A producer copies the
+  transaction, rewrites the payee, includes its copy; the original is stale
+  at no cost. What it can take is exactly the tip and the reap's split of
+  `Mc` — never a bond, which goes where `R11` says, position by position.
+  So the requester folds their own request and the owner reaps their own
+  checkpoint: the leader then serves them and takes the fee, or lets them
+  through and takes nothing. Liveness never depends on a third party; the
+  exposure per action is `tip` for a fold and `Mc` for a reap. The model
+  says a stale fold is refused, not who wins; no CIP or CPS addresses the
+  copy (CIP-0183 makes the race a fee auction the producer still wins for
+  free; CPS-0031 records that SPOs are not committed to any order).
+  **Starving the queue** (the operator, same evening: "the bad part is that
+  now the leader can starve the queue, but that will favor next leader
+  economically"): a leader that folds nothing in its block forfeits every
+  tip in the inbox to the next leader, who folds the accumulated batch and
+  is paid `n × tip` for it (`R11`); starvation buys one block of censorship
+  at the price of the whole batch's tips, and repeating it only enriches
+  whoever comes next. What it can achieve is pushing a request past phase 1
+  into the phases where it can only be retracted or rejected — so
+  `process_time` is the censorship budget and must span many blocks, not
+  the ten slots the stories play (a mainnet block is about twenty slots):
+  a request survives phase 1 as long as one of the leaders in that window
+  is not the censor.
+  **Open (Q-R6):** the owner's quorum evidence is `env.quorum aid`, bound to
+  the AID and not to the reaper, so a copy of her early reap inside the grace
+  window is admitted with another payee (story 11's branch "the block
+  producer copies Alice's early reap"); binding the payee into the signed
+  quorum message would close it, as D-038 did for the refund address. **Censorship**: a folder
   may omit a request; the remedy is folding it oneself.

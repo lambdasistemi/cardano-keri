@@ -15,44 +15,163 @@ checkpoint.
       identity: requests, batches, the gating plugin, the leaf every
       identity has. Lands under `simulator/registry/` with its pull request.
 
-!!! success "The transaction path does not require cardano-cli"
-    The packaged `ckeri` can deploy the reference scripts, register an
-    identity, advance a rotation, post/update/retire endpoint-board records,
-    and close a checkpoint on a machine with no `cardano-cli` installed at
-    all. Its runtime closure does not include `cardano-cli`; a closure check
-    enforces that boundary and has been demonstrated to fail when the retired
-    dependency is reintroduced.
-
 **KERI** is Key Event Receipt Infrastructure, the identity protocol used by
 the Global Legal Entity Identifier Foundation's verifiable LEI ecosystem. A
 KERI **AID** (Autonomic Identifier) keeps its identity while its controller
 keys rotate. Cardano applications can refer to the AID-derived checkpoint
 token instead of permanently binding themselves to one key.
 
-!!! success "Current evidence"
-    A genuine two-key identity has registered, closed, rotated, and completed
-    two Freeze/response rounds on a protocol-11 development network running
-    production transaction limits. The detailed transaction IDs and limits
-    are on the [story ladder](story-ladder.md). Separately, a witnessed
-    2-of-5 KLI identity has registered and advanced its live V1 checkpoint on
-    preprod; see [Rotate your identity](user/rotate-preprod-identity.md).
+## How to read these pages
+
+The project is mid-way through the **M1 return**: a design settled in
+September 2026 that keeps the checkpoint, adds a poison and a registry, and
+removes the enforcement economy that `main` still carries. So every claim in
+these docs is in one of three states, and each page says which one it is
+making:
+
+| State | What it means | Where it lives |
+|---|---|---|
+| **Shipped on `main` today** | Code you can run, or a program published on preprod | `onchain/`, `offchain/`, `deploy/preprod/m1-manifest.json` |
+| **Accepted design** | Proved in Lean and playable in the simulator; no on-chain code yet | `lean/CardanoKeri/Checkpoint.lean`, 62 theorems, no `sorry` |
+| **Planned** | An epic with an issue number and an acceptance criterion | the [roadmap](roadmap.md) |
+
+Nothing here that is only designed is described as if it were deployed.
+
+---
+
+## Shipped on `main` today
+
+Five applied programs are published as reference scripts on Cardano preprod
+(`deploy/preprod/m1-manifest.json`, published 2026-07-28 from commit
+`50a5820`):
+
+| Program | Role | Size |
+|---|---|---|
+| `hash-proof` | minting policy | 9,233 B |
+| `observer-lifecycle` | withdrawal observer | 6,523 B |
+| `observer-advance` | withdrawal observer | 16,130 B |
+| `observer-enforcement` | withdrawal observer | 14,417 B |
+| `checkpoint-register` | validator and minting policy | 11,512 B |
+
+Deployment parameters: registration bond 1,000 tADA, freeze bond 5 tADA,
+freeze window 10,000 slots.
+
+The checkpoint datum is **pure key state** — nine fields, no lifecycle flag:
+the AID, current keys and threshold, next-key commitments and next threshold,
+witnesses and `toad`, the Cardano sequence, and the native KERI sequence
+(`onchain/lib/cardano_keri/checkpoint/datum.ak`). Enforcement state is carried
+by role addresses around the same token.
+
+The packaged `ckeri` exposes `deploy`, `manifest verify`, `register`,
+`advance`, `close`, `status`, `list`, `checkpoint`, `payer`, and the five
+`board` verbs. It does **not** expose freeze, claim, or convict: those
+transactions exist only in the end-to-end harness. Its runtime closure does
+not include `cardano-cli`, and a closure check enforces that boundary.
+
+Settled on preprod on 2026-08-06 with a genuine KLI identity: registration
+`6ecc2e07…`, advance `f0f3a18f…`, close `446f0d83…`. Earlier, on a
+protocol-11 development network running production transaction limits, a
+two-key identity settled Register, Close, Advance, and two Freeze/response
+rounds. Dates, transaction IDs and their sources are on the
+[story ladder](story-ladder.md).
 
 !!! warning "Not a production deployment"
-    Settled development-network transactions prove the vertical path through
-    the production validators and node boundary. They do not make this a
-    mainnet service. Claim/thaw, conviction, real three-of-seven scale, full
-    vLEI credentials, and wallet integration still have open stories.
+    Settled development-network and preprod transactions prove the vertical
+    path through the production validators and the node boundary. They do not
+    make this a mainnet service.
+
+---
+
+## The accepted design: the M1 return
+
+The design settled between 2026-09-02 and 2026-09-03 (project rulings D-022 to
+D-038). It is proved in `lean/CardanoKeri/Checkpoint.lean` — 62 theorems, no
+`sorry`, standard axioms only — and the simulator above is a transcription of
+that Lean, checked by replay.
+
+**One UTxO per identity**, holding the current key state, a token minted once
+and never again, and three sums of money that never mix:
+
+- `D_reg`, the **conviction bond** — the stake a duplicity proof seizes. Never
+  a fee source.
+- `B`, the **freeze bond** — what a hunter takes when the pool cannot pay for a
+  rotation.
+- the **pool** — advance funds; pays the premium `P` to whoever lands a
+  rotation.
+
+**Two edges and four boundary transitions.** A rotation is the only thing that
+moves the keys; it carries a bond option (`keep`, `withdraw`, `deposit`) and
+optionally a new refund address, and every option other than `keep` is signed
+by the keys of the epoch the rotation opens (D-038) — so a relayer landing a
+public rotation can never park, age, or close the owner.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Absent
+    Absent --> Present : register — registry insert, once ever
+    Present --> Present : rotate — next keys + toad receipts, clears the poison
+    Present --> Present : poison — current quorum, once per epoch
+    Present --> Present : freeze — anyone, when the pool is short
+    Present --> Present : top-up — anyone
+    Present --> Convicted : convict — a duplicity proof; D_reg to the convictor
+    Present --> Closed : close — a rotation that withdraws everything and burns
+    Convicted --> [*]
+    Closed --> Present : reopen — a later witnessed rotation
+```
+
+**The poison** is the piece that is genuinely new: a declaration signed by the
+current keys at their own threshold, over a short preimage bound to the
+policy, the AID and the sequence. Anyone may relay it; it is never witnessed.
+It makes the checkpoint unconsumable, and any witnessed rotation clears it —
+it belongs to the epoch of the keys that signed it, because in KERI possession
+of the next keys *is* control. It buys the owner the window between noticing a
+theft and rotating.
+
+**The registry** is one leaf per AID — absent, live, `closed(epoch, sn)`, or
+`convicted` — so an AID has at most one incarnation ever. Only `convicted` is
+terminal; a closed identity returns by a witnessed rotation later than its
+tombstone, with fresh bonds. The registry is upstream work: MPFS made
+permissionless (D-037).
+
+**The consumer's rule**, and the only thing outside the machine: authorize iff
+the checkpoint is present, both bonds are full, it is not poisoned, it is
+older than the juvenility window `W`, and the payment's own signature
+satisfies the current threshold. Everything else fails closed.
+
+### What the return removes
+
+The record tree and its cursor, occupancy maps, the MPF fork and its upstream
+proposal, `ever_duplicitous`, and the whole ARMED/FROZEN enforcement economy —
+freeze-for-lag, the bounty, the entitlement, the reap. Interaction events
+(`ixn`) never touch the chain. Delegated identities are a later milestone.
+
+The freeze that survives is a different thing: it is what a hunter takes when
+the owner's pool has run dry, not a punishment for lag.
+
+---
+
+## What is planned
+
+The M1 return is one milestone across two repositories, thirteen epics. The
+[roadmap](roadmap.md) carries the ordering, the dependencies and the
+measurements that size the numbers still open. The short version: slim `main`
+(K1), measure it (K3), build the owner's edges (K4) and the hunter's (K5),
+integrate the registry (K6), put every role behind a `ckeri` command (K7),
+replay the fifteen stories as the acceptance suite (K8), and cut over preprod
+(K10).
+
+---
 
 ## Start here
 
-- [Why Cardano](why-cardano.md) — how this differs from anchoring or "rooting"
-  a KEL on a ledger, and the two properties a validated checkpoint adds.
-- [Story ladder](story-ladder.md) — what is settled, in flight, planned, and
-  deliberately fail-closed.
+- [Why Cardano](why-cardano.md) — how this differs from anchoring a KEL on a
+  ledger, and what non-oracular trust buys.
+- [Story ladder](story-ladder.md) — what has actually settled, dated.
+- [Roadmap](roadmap.md) — the M1 plan and its thirteen epics.
 - [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,
   and Veridian.
-- [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) —
-  ACTIVE, ARMED, FROZEN, conviction, the delay bond, and the divergence bond.
+- [Identity operations](architecture/identity-ops.md) — the operations, one by
+  one, shipped and designed.
 - [Observer architecture](architecture/observer-architecture.md) — thin
   checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3
   premint fact token.
@@ -63,107 +182,28 @@ token instead of permanently binding themselves to one key.
 For the financial and institutional concepts behind the later use cases, see
 the [Finance primer](finance-primer.md).
 
-## Implementation status
+## The engineering constraint
 
-The settled small-identity ladder covers:
+`observer-advance` measures 16,130 bytes against a 16,133-byte applied-script
+limit — three bytes of headroom. The M1 return's datum change lands on exactly
+that script, which is why epic K1 ends with a size table and epic K4's datum
+decisions are taken from it rather than from taste. Two things move in the
+plan's favour: the advance observer's ARMED-response branch goes, and the
+three enforcement role addresses go from `checkpoint_register`. The net effect
+is unmeasured until K1.
 
-1. **Register.** Prove the BLAKE3 inception/AID binding in a premint
-   transaction, then mint one AID-derived checkpoint token into an ACTIVE
-   output holding `minimum ADA + D_reg + B`.
-2. **Close.** Have the current controller threshold authorize the exact input
-   and refund address, burn the token, and return the complete escrow.
-3. **Advance.** Relay a genuine KERI rotation with the required controller
-   signatures and witness receipts; consume the old checkpoint and create its
-   unique sequence-plus-one ACTIVE successor.
-4. **Freeze.** Let any hunter submit a witnessed conflicting event that is
-   ahead of the checkpoint; preserve the escrow but move the token to ARMED,
-   which consumers reject.
-5. **Respond.** Before the deadline, use the same ordinary Advance path to
-   return ARMED to ACTIVE and keep the delay bond.
-6. **Reject stale replay.** After advancing, reject the exact old Freeze proof;
-   a new round needs fresh evidence at the new sequence.
-
-The current small-story wire does **not** expose `ClaimFreeze` or `Convict`.
-Issue [#138](https://github.com/lambdasistemi/cardano-keri/issues/138)
-must open timeout claim and thaw. Issue
-[#151](https://github.com/lambdasistemi/cardano-keri/issues/151) must open
-conviction and the terminal tombstone.
-
-## The core architecture
-
-Every identity has its own sovereign checkpoint **UTxO** (unspent transaction
-output):
-
-```mermaid
-flowchart LR
-    ICP["KERI inception"]
-    HASH["BLAKE3 premint<br/>fact token"]
-    ROT["KERI rotation<br/>controller signatures + witness receipts"]
-    TX["Thin checkpoint transaction"]
-    OBS["Heavy observer<br/>reference script"]
-    CK["Checkpoint UTxO<br/>AID token · key state · escrow"]
-    APP["Future Cardano application<br/>requires exactly one ACTIVE checkpoint"]
-
-    ICP --> HASH --> TX
-    ICP --> OBS
-    ROT --> OBS
-    OBS -->|"zero-lovelace withdrawal"| TX
-    TX --> CK
-    CK -->|"reference input"| APP
-```
-
-The checkpoint script protects the exact state input, token, role address,
-value, and successor. Large KERI evidence runs in an operation-specific
-observer reference script in the same transaction. The two scripts bind to
-the same policy, action, input, and output.
-
-There is no global identity-registry UTxO and no separate shared Freeze
-registry in this story. Lifecycle state is carried by the sovereign
-checkpoint's role address.
-
-## Two bonds
-
-The ACTIVE escrow has three parts:
-
-```text
-checkpoint minimum ADA + divergence bond D_reg + delay bond B
-```
-
-- `B` is about 5 ADA in the reference deployment. It rewards a hunter only
-  when an ARMED challenge goes unanswered through its deadline. A response
-  keeps it; a later thaw must re-post it.
-- `D_reg` is about 1000 ADA in the reference deployment. It backs the much
-  narrower claim that the identity published a fully witnessed
-  irreconcilable fork.
-
-The values are deployment parameters. Keeping them separate stops ordinary
-lag from being treated as dishonesty.
-
-## Measured engineering boundary
-
-The latest settled Freeze story measured:
-
-- thin checkpoint: 9,155 bytes;
-- enforcement observer: 13,548 bytes; and
-- Advance observer: 16,130 bytes against a 16,133-byte applied-script limit.
-
-The Advance observer therefore has only 3 bytes of headroom.
-[#149](https://github.com/lambdasistemi/cardano-keri/issues/149) must create
-maintainable space before the real seven-key rotation.
-
-Register used about 1.9 million memory units. The two-key Advance observer used
-4,110,025 memory units. Full measurements and sources are in
+Full measurements are in
 [Observer architecture](architecture/observer-architecture.md#measured-sizes-and-costs).
 
 ## Real-world direction: vLEI
 
 The longer-term goal is to let Cardano applications combine:
 
-- a current ACTIVE AID checkpoint;
+- a current, consumable AID checkpoint;
 - an ACDC credential chain proving a legal or organizational role; and
 - current TEL non-revocation evidence.
 
-Registering an AID answers “which keys control this identifier?” It does not
-answer “which legal entity is this?” The latter is a credential claim and
+Registering an AID answers "which keys control this identifier?" It does not
+answer "which legal entity is this?" The latter is a credential claim and
 remains a later roadmap layer. See the [vLEI design](design/vlei.md) and the
 [roadmap](roadmap.md).

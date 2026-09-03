@@ -285,6 +285,11 @@
   .mover .actor { margin-bottom: 6px; }
   .mover .acts { margin: 0; }
   .mover .none { color: var(--muted); font-size: .8rem; font-style: italic; }
+  .needs { display: inline-block; margin-left: 8px; font-size: .68rem; font-family: var(--mono); border-radius: 4px; padding: 0 5px; background: var(--chip); color: var(--muted); }
+  .needs.anyone { background: var(--ok-bg); color: var(--ok); }
+  .needs.nextKeys { background: var(--accent-bg); color: var(--accent); }
+  .needs.currentQuorum { background: var(--warn-bg); color: var(--warn); }
+  .needs.proof { background: var(--bad-bg); color: var(--bad); }
   #refused-moves { margin-top: 8px; }
   #refused-moves summary { cursor: pointer; }
   #refused-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -328,7 +333,7 @@
   </section>
 
   <section class="card" id="next-card">
-    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · a move from a visited step opens a branch</small></h2>
+    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · the machine knows who <em>authorizes</em> a move (anyone, the next keys, the current quorum, a proof), never who submits it — so a permissionless move is offered under everyone · a move from a visited step opens a branch</small></h2>
     <div id="branches"></div>
     <div id="next-moves"></div>
     <div id="act-form" hidden>
@@ -1538,14 +1543,19 @@ function offersFor(actor, sess) {
       act('poison', 'poison this epoch', 'poison');
       act('close', 'close for good', 'close');
       act('topUp', 'add to my pool', { topUp: { x: 5 } });
+      act('register', 'register my own inception (refund to me)', { register: { refund: 1, pool0: 10 } });
       break;
     case 'hal':
       act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
+      act('register', 'register Alice’s public inception (refund to Hal)', { register: { refund: 2, pool0: 10 } });
+      act('topUp', 'top up her pool', { topUp: { x: 5 } });
       break;
     case 'cora':
       ev('obtain a second receipted rotation at sequence ' + sn, { duplicityAt: [e, sn] }, 'two rotations at the tip’s sequence, both receipted');
       act('convict', 'convict, D to Cora', { convict: { payee: 3 } });
+      act('register', 'register Alice’s public inception (refund to Cora)', { register: { refund: 3, pool0: 10 } });
+      act('topUp', 'top up her pool', { topUp: { x: 5 } });
       break;
     case 'mallory':
       ev('steal the current keys (sign as quorum, epoch ' + e + ')', { quorum: [e] }, 'with the current keys she signs at threshold');
@@ -1553,7 +1563,8 @@ function offersFor(actor, sess) {
       act('poison', 'poison with the stolen keys', 'poison');
       act('close', 'close and take the bonds?', 'close');
       act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
-      act('register', 'register Alice’s inception myself', { register: { refund: 4, pool0: 10 } });
+      act('register', 'register Alice’s inception myself (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
+      act('topUp', 'top up her pool', { topUp: { x: 5 } });
       break;
     case 'anyone':
       act('register', 'register Alice’s public inception', { register: { refund: 6, pool0: 10 } });
@@ -1903,6 +1914,7 @@ function renderTree() {
   }
   clear(svg).append(...parts);
 }
+const ACTOR_WORDS = { anyone: 'anyone', nextKeys: 'next keys', currentQuorum: 'current quorum', proof: 'a proof' };
 const shortWho = w => ({ 'A friend': 'friend', 'A rival hunter': 'rival', 'The treasury': 'treasury', Anyone: 'anyone', Time: 'time', You: 'you' }[w] || (w || '').split(' ')[0].slice(0, 8));
 function renderPlaybar() {
   const path = currentPath();
@@ -1976,9 +1988,10 @@ function renderNext() {
     const acts = h('div', { class: 'acts' });
     for (const o of off.chain) {
       const d = dryRun(sess, o.action);
+      const needs = ACTOR_WORDS[actorOf(o.action)];
       const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
-        title: d.ok ? 'the machine would accept this now' : d.why,
-        onclick: () => { app.actor = id; app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderNext(); } }, o.label);
+        title: (d.ok ? 'the machine would accept this now' : d.why) + ' · authorized by: ' + needs,
+        onclick: () => { app.actor = id; app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderNext(); } }, o.label, h('span', { class: 'needs ' + actorOf(o.action) }, needs));
       if (d.ok) { acts.append(btn); nEnabled++; } else { refused.append(btn); nRefused++; }
     }
     for (const k of off.keri) {

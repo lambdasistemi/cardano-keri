@@ -1,45 +1,84 @@
-# Story ladder: what works now
+# Story ladder: what has actually settled
 
-This page separates transactions that have settled from work that is still in
-flight or planned.
+This page is **history**. It records the transactions that reached a real
+ledger, with their dates, and nothing else. What is designed but not built is
+on the [home page](index.md#the-accepted-design-the-m1-return); what is
+scheduled is on the [roadmap](roadmap.md).
 
 **KERI** is Key Event Receipt Infrastructure, the off-chain protocol that
 maintains an identity's signed key history. A KERI **AID** (Autonomic
 Identifier) names the identity, and its **KEL** (Key Event Log) contains the
 inception and rotation events for that AID. cardano-keri projects the current
-KERI key state into a Cardano **checkpoint UTxO**: an unspent transaction output
-that carries one identity-specific token and an inline datum with the current
-keys, thresholds, witnesses, and sequence number.
+KERI key state into a Cardano **checkpoint UTxO**: an unspent transaction
+output that carries one identity-specific token and an inline datum with the
+current keys, thresholds, witnesses, and sequence number.
 
 !!! note "What “settled” means"
-    The transaction reached a private protocol-11 development network
-    configured with Cardano's production transaction limits. This is stronger
-    evidence than an emulator or unit test, but it is **not** a mainnet
-    deployment or a production-readiness claim.
+    The transaction reached a real ledger — either a private protocol-11
+    development network configured with Cardano's production transaction
+    limits, or Cardano preprod. This is stronger evidence than an emulator or
+    a unit test. It is **not** a mainnet deployment or a production-readiness
+    claim.
 
-## The ladder at a glance
+!!! warning "The machine these stories exercised is being replaced"
+    The devnet ladder below settled the ACTIVE/ARMED/FROZEN enforcement
+    economy — freeze for lag, the claimed delay bond, the burn-only
+    conviction. The M1 return removes that economy: the freeze becomes a
+    hunter's payment when the owner's pool has run dry, and conviction becomes
+    a terminal state reached only by a proven duplicity. These rungs are kept
+    as the record of what the vertical path proved, not as a description of
+    where the design is going. Epic
+    [K1](https://github.com/lambdasistemi/cardano-keri/issues/319) removes the
+    code they exercised.
 
-The settled small fixture has two controller keys and genuine
-`keripy`-produced events and witness receipts. `keripy` is the reference KERI
-implementation used to produce and verify the test history.
+---
 
-| Rung | What the user can do | Evidence | State |
+## On preprod — 2026-08-06
+
+The M1 V1 programs were published on preprod on **2026-07-28** from source
+commit `50a5820` (five reference scripts, registration bond 1,000 tADA, freeze
+bond 5 tADA, freeze window 10,000 slots). See
+[the M1 preprod deployment](user/m1-preprod-deployment.md).
+
+A genuine KLI identity then completed the register → advance → close journey
+through the packaged `ckeri`, in process, on **2026-08-06**:
+
+| Step | AID | Transaction | Capture |
 |---|---|---|---|
-| Register small | Prove a KERI inception in a premint transaction, then create a bonded ACTIVE checkpoint | [PR #146](https://github.com/lambdasistemi/cardano-keri/pull/146) | Settled |
-| Close small | Have the current controllers authorize retirement, burn the checkpoint token, and refund the escrow | [PR #147](https://github.com/lambdasistemi/cardano-keri/pull/147) | Settled |
-| Rotate small | Relay a genuine witnessed rotation and advance the checkpoint by one event | [PR #148](https://github.com/lambdasistemi/cardano-keri/pull/148) | Settled |
-| Freeze and respond, small | Let a hunter present a witnessed conflicting rotation, move ACTIVE to ARMED, then let the honest history advance back to ACTIVE without losing the bond | [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) | Settled, including two rounds |
-| Seize the delay bond | After an unanswered deadline, pay the recorded hunter and enter FROZEN; later thaw by advancing and re-posting the bond | [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) | Settled |
-| Convict a fork, small | Prove a fully witnessed irreconcilable conflict, pay the protected rewards, burn the AID token, and create no checkpoint successor | [Issue #151](https://github.com/lambdasistemi/cardano-keri/issues/151) | Settled by this story |
+| BLAKE3 premint | `EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P` | `167220b32479b2ae91eb4e754460b71bf51d44b331660ab31cf4e2264fb30b68` | `deploy/preprod/m1-register-acceptance.txt` |
+| Register | same | `6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2` | `deploy/preprod/m1-register-acceptance.txt` |
+| Advance | same | `f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a` | `deploy/preprod/m1-advance-acceptance.txt` |
+| Close | same | `446f0d831ee69aa067516ec6cb6d696a8dee64bf7be00694030cfe061de9010f` | `deploy/preprod/m1-close-acceptance.txt` |
 
-The settled rungs are independently useful. Together they establish a
-vertical path through the production validators, transaction builder, node
-submission, and settlement boundary.
+Separate historical-negative captures record the failures that must also hold
+against the deployed programs: an already-registered AID, an ambiguous
+checkpoint set, an unlisted witness, and — for advance — under-signed,
+under-witnessed and stale attempts, each reaching the deployed Plutus
+evaluator and failing there.
 
-## Settlement evidence
+No enforcement transaction has ever settled on preprod. `ckeri` exposes no
+freeze, claim or convict command; those paths exist only in the end-to-end
+harness.
 
-A **transaction ID** (txid) is the hash that identifies one settled Cardano
-transaction. The IDs below are copied from the merged pull-request records.
+---
+
+## On the protocol-11 development network — 2026-07-27 and 2026-07-28
+
+The fixture has two controller keys and genuine `keripy`-produced events and
+witness receipts. `keripy` is the reference KERI implementation used to produce
+and verify the test history.
+
+| Date | Rung | What settled | Record |
+|---|---|---|---|
+| 2026-07-27 | Register small | BLAKE3 premint and a bonded ACTIVE checkpoint | [PR #146](https://github.com/lambdasistemi/cardano-keri/pull/146) |
+| 2026-07-27 | Close small | Controller-authorized burn and full refund | [PR #147](https://github.com/lambdasistemi/cardano-keri/pull/147) |
+| 2026-07-27 | Rotate small | A genuine witnessed Advance | [PR #148](https://github.com/lambdasistemi/cardano-keri/pull/148) |
+| 2026-07-27 | Freeze and respond | Freeze, response, stale-replay rejection, and a fresh second round | [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
+| 2026-07-28 | Seize the delay bond | An unanswered deadline paying the recorded hunter, then thaw by an Advance re-posting `B` | [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) |
+| 2026-07-28 | Convict a fork | A fully witnessed irreconcilable conflict, protected payouts, token burned, no successor | [PR #155](https://github.com/lambdasistemi/cardano-keri/pull/155) |
+
+Together these establish a vertical path through the production validators,
+the transaction builder, node submission, and the settlement boundary.
 
 ### Register — PR #146
 
@@ -65,7 +104,7 @@ authorized a refund to output zero.
 ### Rotate — PR #148
 
 The Advance transaction consumed the registered checkpoint and created its
-single ACTIVE successor. The same live run also settled a Close regression.
+single successor. The same live run also settled a Close regression.
 
 | Transaction | Txid |
 |---|---|
@@ -91,61 +130,39 @@ sequence then opened and resolved a second challenge normally.
 
 Both responses preserved the checkpoint's complete value, including the delay
 bond. The old evidence failed because it no longer described a rotation ahead
-of the new ACTIVE tip. Freeze is therefore tied to the exact state it
-challenges: every round needs fresh evidence.
+of the new tip. That binding — evidence to the exact state it challenges — is
+the part of the drill that survives the M1 return: the freeze of the new design
+also runs the advance predicate on the rotation it presents.
 
-## What is deliberately unavailable
+The transaction IDs for the seize and convict rungs are in the merged records
+of [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) and
+[PR #155](https://github.com/lambdasistemi/cardano-keri/pull/155).
 
-The current small-story checkpoint accepts `Register`, `Close`, `Advance`,
-`Freeze`, `ClaimFreeze`, and `Convict`. It accepts an `Advance` from ARMED
-before the recorded deadline as the honest response, and an `Advance` from
-FROZEN that re-posts the delay bond as a thaw.
+---
 
-The following boundaries still fail closed:
+## What the ladder did not reach
 
-- **Non-ACTIVE roles are unusable by consumers.** ARMED and FROZEN checkpoint
-  outputs remain fail-closed as current authority. Convict creates no terminal
-  checkpoint output at all; its spent input, evidence, burn, and payouts are
-  the historical record.
-- **The real GLEIF-scale identity has not been demonstrated.** The settled
-  fixture proves the small two-key rung only.
-
-Failing closed means rejecting the transaction or refusing the identity as
-current authority when the required proof or transition is unavailable. It
-does not mean guessing a result off chain.
-
-## The GLEIF-scale ladder
-
-The next scale is a genuine Global Legal Entity Identifier Foundation
-shape: weighted three-of-seven controller thresholds, the real witness set,
-and a real `keripy` lineage. It is deliberately not represented by a smaller
-synthetic substitute.
-
-The planned order is:
-
-1. [Register the biggest real identity that fits — #139](https://github.com/lambdasistemi/cardano-keri/issues/139).
-   Its 1083-byte-class inception exceeds the present single-chunk BLAKE3 proof,
-   so it also needs a production multi-transaction proof.
-2. [Close the real identity — #145](https://github.com/lambdasistemi/cardano-keri/issues/145).
-3. [Create observer headroom — #149](https://github.com/lambdasistemi/cardano-keri/issues/149),
-   before spending more of the Advance reference-script budget.
-4. [Rotate the real identity — #144](https://github.com/lambdasistemi/cardano-keri/issues/144).
-5. [Freeze and respond at real scale — #140](https://github.com/lambdasistemi/cardano-keri/issues/140).
-6. [Seize and thaw at real scale — #141](https://github.com/lambdasistemi/cardano-keri/issues/141).
-7. [Convict at real scale — #152](https://github.com/lambdasistemi/cardano-keri/issues/152).
-
-These stories are expected to need a development network with raised execution
-units so the project can measure the gap to current mainnet limits without
-changing the production validators. “Runs on a pumped devnet” will quantify
-cost; it will not mean “fits mainnet.”
+- **GLEIF scale.** The settled fixtures are two-key and 1-of-1. The genuine
+  three-of-seven shape with a real witness set has never completed the vertical
+  ladder, and the cost of doing so is what epic
+  [K3](https://github.com/lambdasistemi/cardano-keri/issues/321) exists to
+  measure.
+- **The engineering ceiling.** `observer-advance` measures 16,130 bytes against
+  a 16,133-byte limit. Every rung above was settled inside three bytes of
+  headroom.
+- **Enforcement on a public network.** Freeze, claim and convict settled on the
+  development network only, and never through `ckeri`.
+- **Uniqueness.** Nothing in the ladder prevents two checkpoints for one AID.
+  The ledger has no AID-unicity rule today; `ckeri register` refuses an
+  already-live AID as a convenience, not as a guarantee. The registry of the M1
+  return is what turns that into a rule.
 
 ## Where to read next
 
-- [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) explains
-  ACTIVE, ARMED, FROZEN, the burn-only conviction edge, and why the two
-  deposits have different jobs.
-- [Observer architecture](architecture/observer-architecture.md) explains the
-  thin checkpoint, reference scripts, zero-lovelace withdrawal, and BLAKE3
-  fact token.
-- [Identity operations](architecture/identity-ops.md) gives the current
-  operation-by-operation view.
+- [The M1 preprod deployment](user/m1-preprod-deployment.md) — the published
+  release, its manifest, and how to verify it.
+- [Observer architecture](architecture/observer-architecture.md) — the thin
+  checkpoint, reference scripts, zero-lovelace withdrawal, and BLAKE3 fact
+  token, with measured sizes and costs.
+- [Identity operations](architecture/identity-ops.md) — the operation-by-
+  operation view of what ships and what replaces it.

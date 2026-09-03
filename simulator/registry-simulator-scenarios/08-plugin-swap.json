@@ -1,10 +1,19 @@
 { "id": 8, "slug": "plugin-swap", "story": "A fold that swaps the plugin is refused",
   "narrative": "Mallory folds Alice's request correctly but re-creates the cage with plugin 8, an always-true script she controls. The plugin is pinned: refused. A request whose inception does not verify is refused by the plugin.",
-  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7, "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)", "4": "Mallory", "5": "Cora (convictor)", "6": "Sam (reaper)" }, "env": { "inception": [11] },
+  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7,
+  "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
+  "env": {"inception":[11]},
   "steps": [
-    { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0, "op": "register" } }, "expect": { "ok": true } },
-    { "now": 0, "actor": "anyone", "as": "Carol", "action": { "contribute": { "aid": 13, "owner": 1, "submittedAt": 0, "op": "register" } }, "expect": { "ok": true } },
-    { "now": 1, "actor": "anyone", "as": "Mallory", "action": { "fold": { "folder": 4, "gen": 0, "plugin": 8, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": false, "reason": "plugin-not-pinned" }, "exhibits": ["R5"] },
-    { "now": 1, "actor": "anyone", "as": "Hal — Carol's inception does not verify", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 1, "do": "process" }] } }, "expect": { "ok": false, "reason": "bad-inception" } }
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
+    {"now":0,"actor":"anyone","as":"Carol","action":{"contribute":{"aid":13,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
+    {"now":1,"actor":"anyone","as":"Mallory","action":{"fold":{"folder":4,"gen":0,"plugin":8,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":false,"reason":"plugin-not-pinned"},"exhibits":["R5"]},
+    {"now":1,"actor":"anyone","as":"Hal — Carol's inception does not verify","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":false,"reason":"bad-inception"}}
   ],
-  "expectFinal": { "gen": 0, "plugin": 7, "leaves": [], "ckpts": [], "requests": [{ "id": 1, "aid": 13, "owner": 1, "submittedAt": 0, "op": "register" }, { "id": 0, "aid": 11, "owner": 1, "submittedAt": 0, "op": "register" }], "nextReq": 2, "nextToken": 0 } }
+  "forks": [
+    { "id": "mallory-plays-fair", "at": 2, "title": "Mallory keeps the plugin: a stranger's fold is as good as Hal's",
+      "steps": [
+        {"now":1,"actor":"anyone","as":"Mallory — plugin 7","action":{"fold":{"folder":4,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true,"flow":{"locked":[{"aid":11,"value":1000}],"tips":{"addr":4,"value":2}}},"exhibits":["R1","R11","R12"]}
+      ] }
+  ],
+  "expectFinal": {"gen":0,"plugin":7,"leaves":[],"ckpts":[],"requests":[{"id":1,"aid":13,"owner":1,"submittedAt":0,"op":"register"},{"id":0,"aid":11,"owner":1,"submittedAt":0,"op":"register"}],"nextReq":2,"nextToken":0}
+}

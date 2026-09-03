@@ -317,22 +317,51 @@ def gridJson (p : Params) : Json :=
 
 /-! ## Story cells -/
 
+/-- Fold a list of story steps from a state; the cells and the states after
+each step (the trunk prefix a fork departs from). -/
+def foldSteps (p : Params) (env : Env) (steps : Array Json) (s0 : Sys) :
+    Except String (List Json × Array Sys) := do
+  let mut s := s0
+  let mut cells : List Json := []
+  let mut states : Array Sys := #[s0]
+  for st in steps do
+    let now ← st.getObjValAs? Nat "now"
+    let a ← actionOfJson (← st.getObjVal? "action")
+    let (j, s') := cellJson p env now s a
+    s := s'
+    cells := cells ++ [j]
+    states := states.push s'
+  pure (cells, states)
+
+/-- A story is a tree: the trunk, then every fork from the trunk state after
+`at` steps (its own env when it brings one — another world). Fork cells are
+labelled `f<id>.<i>` by the readers. -/
 def storyJson (sc : Json) : Except String Json := do
   let id ← sc.getObjValAs? Nat "id"
   let p ← paramsOfJson (← sc.getObjVal? "params")
   let plugin ← sc.getObjValAs? Nat "plugin"
   let env ← envOfJson ((sc.getObjVal? "env").toOption.getD (Json.mkObj []))
   let steps ← (← sc.getObjVal? "steps").getArr?
-  let mut s := Sys.init plugin
-  let mut cells : List Json := []
-  for st in steps do
-    let now ← st.getObjValAs? Nat "now"
-    let a ← actionOfJson (← st.getObjVal? "action")
-    let (j, s') := cellJson p env.toEnv now s a
-    s := s'
-    cells := cells ++ [j]
+  let (cells, states) ← foldSteps p env.toEnv steps (Sys.init plugin)
+  let forksJ : Array Json := match sc.getObjVal? "forks" with
+    | .ok j => j.getArr?.toOption.getD #[]
+    | .error _ => #[]
+  let mut forks : List Json := []
+  for fk in forksJ do
+    let fid ← fk.getObjValAs? String "id"
+    let atN ← fk.getObjValAs? Nat "at"
+    let fenv ← match fk.getObjVal? "env" with
+      | .ok e => envOfJson e
+      | .error _ => pure env
+    let fsteps ← (← fk.getObjVal? "steps").getArr?
+    match states[atN]? with
+    | none => throw s!"fork {fid}: departs after {atN} steps, the trunk has {states.size - 1}"
+    | some s0 =>
+      let (fcells, _) ← foldSteps p fenv.toEnv fsteps s0
+      forks := forks ++ [Json.mkObj [("id", toJson fid), ("at", toJson atN), ("env", toJson fenv),
+        ("steps", Json.arr fcells.toArray)]]
   pure (Json.mkObj [("id", toJson id), ("params", toJson p), ("env", toJson env),
-    ("steps", Json.arr cells.toArray)])
+    ("steps", Json.arr cells.toArray), ("forks", Json.arr forks.toArray)])
 
 def readScenarios : IO (List Json) := do
   let dir : System.FilePath := "../simulator/registry-simulator-scenarios"

@@ -106,6 +106,13 @@ const LEAN_GUARDS = {
 const MAX_NAT = Number.MAX_SAFE_INTEGER;
 function isNat(x) { return typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= MAX_NAT; }
 const refuse = (reason, field) => ({ ok: false, reason, field });
+/* A Lean Nat is unbounded; the transcription is exact to MAX_NAT. A successor,
+   a sum or a product that would leave the bound is refused by the field it
+   would have written, never rounded (NatOverflow is caught by `step`). */
+class NatOverflow extends Error { constructor(field) { super('invalid-nat/' + field); this.field = field; } }
+const add = (a, b, field) => { const r = a + b; if (r > MAX_NAT) throw new NatOverflow(field); return r; };
+const succ = (a, field) => add(a, 1, field);
+const mul = (a, b, field) => { const r = a * b; if (r > MAX_NAT || !Number.isSafeInteger(r)) throw new NatOverflow(field); return r; };
 
 function validateParams(p) {
   if (!p || typeof p !== 'object') return refuse(REASONS.INVALID_PARAMS, 'params');
@@ -248,9 +255,11 @@ function actionActor(a) {
 function actionTag(a) { return a && typeof a === 'object' ? Object.keys(a)[0] : null; }
 
 /* --- phases ---------------------------------------------------------------- */
-function inPhase1(p, r, now) { return now < r.submittedAt + p.process; }
-function inPhase2(p, r, now) { return r.submittedAt + p.process <= now && now < r.submittedAt + p.process + p.retract; }
-function rejectable(p, r, now) { return r.submittedAt + p.process + p.retract <= now || now < r.submittedAt; }
+const phase1End = (p, r) => add(r.submittedAt, p.process, 'submittedAt+process');
+const phase2End = (p, r) => add(phase1End(p, r), p.retract, 'submittedAt+process+retract');
+function inPhase1(p, r, now) { return now < phase1End(p, r); }
+function inPhase2(p, r, now) { return phase1End(p, r) <= now && now < phase2End(p, r); }
+function rejectable(p, r, now) { return phase2End(p, r) <= now || now < r.submittedAt; }
 function phaseOf(p, r, now) {
   if (now < r.submittedAt) return 'future';
   if (inPhase1(p, r, now)) return 'phase-1';
@@ -275,7 +284,7 @@ function processBody(p, env, acc, r) {
     if (leaf !== null) return { ok: false, reason: REASONS.ALREADY_REGISTERED };
     return { ok: true, acc: { ...acc, leaves: [{ aid: r.aid, status: { active: acc.nextToken } }, ...acc.leaves],
       ckpts: [{ aid: r.aid, ckpt: { token: acc.nextToken, k: 0, st: 'live' } }, ...acc.ckpts],
-      nextToken: acc.nextToken + 1, locked: [...acc.locked, { aid: r.aid, value: p.D }] } };
+      nextToken: succ(acc.nextToken, 'nextToken'), locked: [...acc.locked, { aid: r.aid, value: p.D }] } };
   }
   if (op === 'revive') {
     if (leaf === null || statusTag(leaf) !== 'dormant') return { ok: false, reason: REASONS.NOT_DORMANT };
@@ -283,8 +292,8 @@ function processBody(p, env, acc, r) {
     if (env.rotationFrom(r.aid, k) !== true) return { ok: false, reason: REASONS.NO_ROTATION };
     if (lookupCkpt(acc.ckpts, r.aid) !== null) return { ok: false, reason: REASONS.CKPT_EXISTS };
     return { ok: true, acc: { ...acc, leaves: setLeaf(acc.leaves, r.aid, { active: acc.nextToken }),
-      ckpts: [{ aid: r.aid, ckpt: { token: acc.nextToken, k: k + 1, st: 'live' } }, ...acc.ckpts],
-      nextToken: acc.nextToken + 1, locked: [...acc.locked, { aid: r.aid, value: p.D }] } };
+      ckpts: [{ aid: r.aid, ckpt: { token: acc.nextToken, k: succ(k, 'k'), st: 'live' } }, ...acc.ckpts],
+      nextToken: succ(acc.nextToken, 'nextToken'), locked: [...acc.locked, { aid: r.aid, value: p.D }] } };
   }
   if (op === 'goDormant') {
     if (leaf === null || statusTag(leaf) !== 'active') return { ok: false, reason: REASONS.NOT_ACTIVE };
@@ -328,6 +337,29 @@ function applyBatch(p, env, now, acc0, batch) {
   return { ok: true, acc };
 }
 
+/* The accumulator trajectory of a batch: element i sees accs[i] (its own
+   request already taken out, as applyBatch does), so a property about an
+   element reads the accumulator, never the pre-state. Stops after the first
+   failure. */
+function batchView(p, envTable, now, before, batch) {
+  const env = envFromTables(envTable);
+  let acc = { leaves: before.leaves.slice(), ckpts: before.ckpts.slice(), requests: before.requests.slice(), nextToken: before.nextToken, locked: [], refunds: [] };
+  const view = [];
+  for (let i = 0; i < batch.length; i++) {
+    const { id, do: fa } = batch[i];
+    const r = lookupReq(acc.requests, id);
+    if (!r) { view.push({ i, r: null, acc, res: { ok: false, reason: REASONS.UNKNOWN_REQUEST } }); break; }
+    const acc1 = { ...acc, requests: removeReq(acc.requests, id) };
+    let res;
+    try { res = fa === 'process' ? processOne(p, env, now, acc1, r) : rejectOne(p, now, acc1, r); }
+    catch (e) { if (e instanceof NatOverflow) res = { ok: false, reason: REASONS.INVALID_NAT, field: e.field }; else throw e; }
+    view.push({ i, r, fa, acc: acc1, res });
+    if (!res.ok) break;
+    acc = res.acc;
+  }
+  return view;
+}
+
 function flow(o) { return { deposited: 0, locked: [], refunds: [], tips: null, premium: null, intoRequest: 0, ...o }; }
 
 /* --- reapable, goOp ---------------------------------------------------- */
@@ -335,12 +367,16 @@ function reapableReason(p, env, now, aid, c) {
   const t = ckTag(c.st);
   if (t === 'live') return REASONS.NOT_REAPABLE;
   if (t === 'tomb') return null;
-  return (c.st.parked + p.W <= now || env.quorum(aid) === true) ? null : REASONS.NOT_REAPABLE;
+  return (add(c.st.parked, p.W, 'parked+W') <= now || env.quorum(aid) === true) ? null : REASONS.NOT_REAPABLE;
 }
 function goOp(c) { return ckTag(c.st) === 'tomb' ? 'goConvicted' : { goDormant: c.k }; }
 
 /* --- step: the transcription of `stepFn` --------------------------------- */
 function step(params, envTable, action, now, state) {
+  try { return stepBody(params, envTable, action, now, state); }
+  catch (e) { if (e instanceof NatOverflow) return refuse(REASONS.INVALID_NAT, e.field); throw e; }
+}
+function stepBody(params, envTable, action, now, state) {
   const ep = validateParams(params); if (ep) return ep;
   if (!isNat(now)) return refuse(REASONS.INVALID_NAT, 'now');
   const ea = validateAction(action); if (ea) return ea;
@@ -351,14 +387,14 @@ function step(params, envTable, action, now, state) {
   if ('contribute' in a) {
     const { aid, owner, submittedAt, op } = a.contribute;
     if (!userPostable(op)) return refuse(REASONS.NOT_POSTABLE);
-    return { ok: true, flow: flow({ deposited: opBond(p, op) + p.tip }),
-             state: { ...s, requests: [{ id: s.nextReq, aid, owner, submittedAt, op }, ...s.requests], nextReq: s.nextReq + 1 } };
+    return { ok: true, flow: flow({ deposited: add(opBond(p, op), p.tip, 'deposited') }),
+             state: { ...s, requests: [{ id: s.nextReq, aid, owner, submittedAt, op }, ...s.requests], nextReq: succ(s.nextReq, 'nextReq') } };
   }
   if ('retract' in a) {
     const r = lookupReq(s.requests, a.retract.req);
     if (!r) return refuse(REASONS.UNKNOWN_REQUEST);
     if (!inPhase2(p, r, now)) return refuse(REASONS.NOT_IN_PHASE_2);
-    return { ok: true, flow: flow({ refunds: [{ addr: r.owner, value: opBond(p, r.op) + p.tip }] }),
+    return { ok: true, flow: flow({ refunds: [{ addr: r.owner, value: add(opBond(p, r.op), p.tip, 'refunds') }] }),
              state: { ...s, requests: removeReq(s.requests, a.retract.req) } };
   }
   if ('fold' in a) {
@@ -369,8 +405,8 @@ function step(params, envTable, action, now, state) {
     const r = applyBatch(p, env, now, { leaves: s.leaves, ckpts: s.ckpts, requests: s.requests, nextToken: s.nextToken, locked: [], refunds: [] }, batch);
     if (!r.ok) return { ok: false, reason: r.reason, at: r.at };
     return { ok: true,
-             flow: flow({ locked: r.acc.locked, refunds: r.acc.refunds, tips: { addr: folder, value: batch.length * p.tip } }),
-             state: { ...s, gen: s.gen + 1, leaves: r.acc.leaves, ckpts: r.acc.ckpts, requests: r.acc.requests, nextToken: r.acc.nextToken } };
+             flow: flow({ locked: r.acc.locked, refunds: r.acc.refunds, tips: { addr: folder, value: mul(batch.length, p.tip, 'tips') } }),
+             state: { ...s, gen: succ(s.gen, 'gen'), leaves: r.acc.leaves, ckpts: r.acc.ckpts, requests: r.acc.requests, nextToken: r.acc.nextToken } };
   }
   if ('reap' in a) {
     const { reaper, aid } = a.reap;
@@ -382,7 +418,7 @@ function step(params, envTable, action, now, state) {
              flow: flow({ premium: { addr: reaper, value: p.Mc - p.Mr - p.tip }, intoRequest: p.Mr + p.tip }),
              state: { ...s, ckpts: removeCkpt(s.ckpts, aid),
                       requests: [{ id: s.nextReq, aid, owner: reaper, submittedAt: p.far, op: goOp(c) }, ...s.requests],
-                      nextReq: s.nextReq + 1 } };
+                      nextReq: succ(s.nextReq, 'nextReq') } };
   }
   if ('pause' in a) {
     const { aid } = a.pause;
@@ -391,7 +427,7 @@ function step(params, envTable, action, now, state) {
     if (ckTag(c.st) !== 'live') return refuse(REASONS.NOT_LIVE);
     if (env.rotationFrom(aid, c.k) !== true) return refuse(REASONS.NO_ROTATION);
     return { ok: true, flow: flow({}),
-             state: { ...s, ckpts: [{ aid, ckpt: { token: c.token, k: c.k + 1, st: { parked: now } } }, ...removeCkpt(s.ckpts, aid)] } };
+             state: { ...s, ckpts: [{ aid, ckpt: { token: c.token, k: succ(c.k, 'k'), st: { parked: now } } }, ...removeCkpt(s.ckpts, aid)] } };
   }
   if ('resume' in a) {
     const { aid } = a.resume;
@@ -400,7 +436,7 @@ function step(params, envTable, action, now, state) {
     if (ckTag(c.st) !== 'parked') return refuse(REASONS.NOT_PARKED);
     if (env.rotationFrom(aid, c.k) !== true) return refuse(REASONS.NO_ROTATION);
     return { ok: true, flow: flow({}),
-             state: { ...s, ckpts: [{ aid, ckpt: { token: c.token, k: c.k + 1, st: 'live' } }, ...removeCkpt(s.ckpts, aid)] } };
+             state: { ...s, ckpts: [{ aid, ckpt: { token: c.token, k: succ(c.k, 'k'), st: 'live' } }, ...removeCkpt(s.ckpts, aid)] } };
   }
   if ('convictCkpt' in a) {
     const { aid } = a.convictCkpt;
@@ -456,10 +492,10 @@ const THEOREMS = [
       }
       return s.leaves.length ? { v: 'holds' } : { v: 'n/a' };
     } },
-  { id: 'R1d', title: 'a registered AID cannot be registered again (mint-once, ever)', lean: 'R1_registered_refused',
-    check: ({ before, action, result }) => {
+  { id: 'R1d', title: 'a registered AID cannot be registered again (mint-once, ever) — at any position of a batch', lean: 'R1_registered_refused',
+    check: ({ before, action, now, result, params, env }) => {
       const f = foldOf(action); if (!isFoldNow(f, before)) return { v: 'n/a' };
-      const hit = f.batch.find(x => x.do === 'process' && reqOf(before, x.id) && opTag(reqOf(before, x.id).op) === 'register' && lookupLeaf(before.leaves, reqOf(before, x.id).aid) !== null);
+      const hit = batchView(params, env, now, before, f.batch).find(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) !== null);
       if (!hit) return { v: 'n/a' };
       return result.ok ? { v: 'fails', why: 'registered an AID that has a leaf' } : { v: 'holds' };
     } },
@@ -473,14 +509,14 @@ const THEOREMS = [
       return s.leaves.length ? { v: 'holds' } : { v: 'n/a' };
     } },
   { id: 'R3', title: 'conviction is permanent: a convicted leaf never changes and the AID is never registered again', lean: 'R3_convicted_permanent, R3_convicted_never_registered',
-    check: ({ before, action, result }) => {
+    check: ({ before, action, now, result, params, env }) => {
       const conv = before.leaves.filter(l => l.status === 'convicted').map(l => l.aid);
       if (result.ok) {
         for (const aid of conv) if (lookupLeaf(result.state.leaves, aid) !== 'convicted') return { v: 'fails', why: `convicted leaf ${aid} changed` };
         return conv.length ? { v: 'holds' } : { v: 'n/a' };
       }
       const f = foldOf(action);
-      if (isFoldNow(f, before) && f.batch.some(x => x.do === 'process' && reqOf(before, x.id) && conv.includes(reqOf(before, x.id).aid) && opTag(reqOf(before, x.id).op) === 'register')) return { v: 'holds' };
+      if (isFoldNow(f, before) && batchView(params, env, now, before, f.batch).some(v => v.r && v.fa === 'process' && opTag(v.r.op) === 'register' && lookupLeaf(v.acc.leaves, v.r.aid) === 'convicted')) return { v: 'holds' };
       return { v: 'n/a' };
     } },
   { id: 'R4', title: 'leaves are permanent: a leaf never leaves the root', lean: 'R4_leaf_permanent',
@@ -509,9 +545,11 @@ const THEOREMS = [
       const f = foldOf(action); if (!f || f.gen === before.gen) return { v: 'n/a' };
       return !result.ok && result.reason === REASONS.STALE_GENERATION ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'stale fold applied' : `refused for ${result.reason}` };
     } },
-  { id: 'R8', title: 'an empty fold is refused', lean: 'R8_empty_fold_refused, R8_plugin_swap_refused',
+  { id: 'R8', title: 'an empty fold is refused; a fold that re-creates the cage with another plugin is refused', lean: 'R8_empty_fold_refused, R8_plugin_swap_refused',
     check: ({ before, action, result }) => {
-      const f = foldOf(action); if (!isFoldNow(f, before) || f.batch.length) return { v: 'n/a' };
+      const f = foldOf(action); if (!f || f.gen !== before.gen) return { v: 'n/a' };
+      if (f.plugin !== before.plugin) return !result.ok && result.reason === REASONS.PLUGIN_NOT_PINNED ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'plugin swap applied' : `refused for ${result.reason}` };
+      if (f.batch.length) return { v: 'n/a' };
       return !result.ok && result.reason === REASONS.EMPTY_FOLD ? { v: 'holds' } : { v: 'fails', why: result.ok ? 'empty fold applied' : `refused for ${result.reason}` };
     } },
   { id: 'R9', title: 'requester exit: a posted request retracts in phase 2 and is rejected when rejectable; a go-request is never retracted and never rejected, so k is never lost', lean: 'R9_retract_enabled, R9_retract_needs_phase2, R9_reject_enabled, R9_reject_needs_rejectable, R9_go_never_retracted, R9_go_never_rejected',
@@ -548,23 +586,30 @@ const THEOREMS = [
       return { v: 'holds' };
     } },
   { id: 'R11', title: 'value: D locked per registration or revival; bonds refunded to request owners; tips per request; a go-request refunds its min-ADA to the reaper; a reap moves exactly the checkpoint min-ADA', lean: 'R11_go_refunds_reaper, R11_reap_flow, R11_reap_is_samaritan, R11_samaritan_never_loses, R11_contribute_value, R11_retract_value, R11_ckpt_edges_move_no_value',
-    check: ({ before, action, result, params }) => {
+    check: ({ before, action, now, result, params, env }) => {
       if (!result.ok) return { v: 'n/a' };
       const fl = result.flow, tag = actionTag(action);
+      const B = x => BigInt(x);
       if (tag === 'fold') {
         const f = action.fold;
-        if (fl.locked.some(x => x.value !== params.D)) return { v: 'fails', why: 'a lock is not D' };
-        for (const x of fl.refunds) {
-          if (!before.requests.some(r => r.owner === x.addr)) return { v: 'fails', why: `refund to ${x.addr}, not a request owner` };
-          if (x.value !== params.D && x.value !== params.Mr) return { v: 'fails', why: 'a refund is neither D nor Mr' };
+        // the exact flow every position of the batch owes, from the accumulator it saw
+        const locked = [], refunds = [];
+        for (const v of batchView(params, env, now, before, f.batch)) {
+          if (!v.r || !v.res.ok) return { v: 'fails', why: 'an applied fold has a failing position' };
+          const op = opTag(v.r.op);
+          if (v.fa === 'reject') refunds.push({ addr: v.r.owner, value: opBond(params, v.r.op) });
+          else if (op === 'register' || op === 'revive') locked.push({ aid: v.r.aid, value: params.D });
+          else refunds.push({ addr: v.r.owner, value: params.Mr });
         }
-        for (const x of f.batch) { const r = reqOf(before, x.id); if (r && x.do === 'process' && !userPostable(r.op) && !fl.refunds.some(y => y.addr === r.owner && y.value === params.Mr)) return { v: 'fails', why: 'a processed go-request did not refund Mr to the reaper' }; }
-        if (!fl.tips || fl.tips.addr !== f.folder || fl.tips.value !== f.batch.length * params.tip) return { v: 'fails', why: 'tips are not tip per request to the folder' };
-        if (fl.locked.length + fl.refunds.length !== f.batch.length) return { v: 'fails', why: 'a request unaccounted for' };
+        if (!same(fl.locked, locked)) return { v: 'fails', why: `locked ${JSON.stringify(fl.locked)}, owed ${JSON.stringify(locked)}` };
+        if (!same(fl.refunds, refunds)) return { v: 'fails', why: `refunds ${JSON.stringify(fl.refunds)}, owed ${JSON.stringify(refunds)}` };
+        if (!fl.tips || fl.tips.addr !== f.folder || B(fl.tips.value) !== B(f.batch.length) * B(params.tip)) return { v: 'fails', why: 'tips are not tip per request to the folder' };
+        if (fl.deposited !== 0 || fl.premium !== null || fl.intoRequest !== 0) return { v: 'fails', why: 'a fold moved value it does not own' };
         return { v: 'holds' };
       }
       if (tag === 'reap') {
-        const ok = fl.premium && fl.premium.addr === action.reap.reaper && fl.premium.value === params.Mc - params.Mr - params.tip && fl.intoRequest === params.Mr + params.tip && fl.premium.value + fl.intoRequest === params.Mc;
+        const ok = fl.premium && fl.premium.addr === action.reap.reaper && B(fl.premium.value) === B(params.Mc) - B(params.Mr) - B(params.tip) && B(fl.intoRequest) === B(params.Mr) + B(params.tip) && B(fl.premium.value) + B(fl.intoRequest) === B(params.Mc)
+          && fl.deposited === 0 && fl.locked.length === 0 && fl.refunds.length === 0 && fl.tips === null;
         return ok ? { v: 'holds' } : { v: 'fails', why: 'the reap does not split exactly Mc' };
       }
       if (tag === 'retract') {
@@ -584,14 +629,22 @@ const THEOREMS = [
   { id: 'R13', title: 'the reap: never a bonded checkpoint; a tombstone at once; a parked checkpoint by a stranger only after the grace window, by the owner at any time', lean: 'R13_live_never_reaped, R13_tomb_reaped, R13_parked_needs_grace, R13_parked_after_grace, R13_owner_reaps_early',
     check: ({ before, action, now, result, params, env }) => {
       if (!action.reap) return { v: 'n/a' };
-      const c = lookupCkpt(before.ckpts, action.reap.aid); if (!c) return { v: 'n/a' };
+      const { aid, reaper } = action.reap;
+      const c = lookupCkpt(before.ckpts, aid); if (!c) return { v: 'n/a' };
       const t = ckTag(c.st);
-      const want = t === 'tomb' || (t === 'parked' && (c.st.parked + params.W <= now || (env && Array.isArray(env.quorum) && env.quorum.includes(action.reap.aid))));
+      const want = t === 'tomb' || (t === 'parked' && (BigInt(c.st.parked) + BigInt(params.W) <= BigInt(now) || (env && Array.isArray(env.quorum) && env.quorum.includes(aid))));
       if (want !== result.ok) return { v: 'fails', why: want ? `reap refused (${result.reason})` : 'reap applied on a bonded or graced checkpoint' };
+      if (result.ok) {
+        const s = result.state;
+        if (lookupCkpt(s.ckpts, aid) !== null) return { v: 'fails', why: 'the reaped checkpoint is still there' };
+        const go = s.requests.find(r => r.aid === aid && !userPostable(r.op));
+        if (!go || go.owner !== reaper || go.submittedAt !== params.far || !same(go.op, goOp(c))) return { v: 'fails', why: 'the reap did not post the go-request it owes (owner reaper, dated far, go → ' + JSON.stringify(goOp(c)) + ')' };
+        if (!same(s.leaves, before.leaves) || s.gen !== before.gen) return { v: 'fails', why: 'a reap wrote the registry' };
+      }
       return { v: 'holds' };
     } },
-  { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof',
-    check: ({ before, action, result, env }) => {
+  { id: 'R14', title: 'every conviction needs a duplicity proof against the recorded key state — a checkpoint, or a dormant AID at any position of a batch', lean: 'R14_convictCkpt_needs_proof, R14_convict_dormant_needs_proof, R14_convict_in_batch_needs_proof',
+    check: ({ before, action, now, result, params, env }) => {
       const has = (aid, k) => !!(env && Array.isArray(env.duplicity) && env.duplicity.some(r => r[0] === aid && r[1] === k));
       if (action.convictCkpt) {
         const c = lookupCkpt(before.ckpts, action.convictCkpt.aid); if (!c || ckTag(c.st) === 'tomb') return { v: 'n/a' };
@@ -599,10 +652,10 @@ const THEOREMS = [
         return { v: 'n/a' };
       }
       const f = foldOf(action); if (!isFoldNow(f, before)) return { v: 'n/a' };
-      for (const x of f.batch) {
-        const r = reqOf(before, x.id); if (!r || x.do !== 'process' || opTag(r.op) !== 'convict') continue;
-        const leaf = lookupLeaf(before.leaves, r.aid); if (!leaf || statusTag(leaf) !== 'dormant') continue;
-        if (!has(r.aid, leaf.dormant)) return result.ok ? { v: 'fails', why: 'a dormant AID was convicted without a proof' } : { v: 'holds' };
+      for (const v of batchView(params, env, now, before, f.batch)) {
+        if (!v.r || v.fa !== 'process' || opTag(v.r.op) !== 'convict') continue;
+        const leaf = lookupLeaf(v.acc.leaves, v.r.aid); if (!leaf || statusTag(leaf) !== 'dormant') continue;
+        if (!has(v.r.aid, leaf.dormant)) return result.ok ? { v: 'fails', why: 'a dormant AID was convicted without a proof' } : { v: 'holds' };
       }
       return { v: 'n/a' };
     } },
@@ -630,54 +683,82 @@ const sameJson = (a, b) => canonicalJson(a) === canonicalJson(b);
 function normFlow(f) { return flow(f || {}); }
 
 /* --- the scenario checker --------------------------------------------------- */
+/* A scenario is a tree: a trunk and forks, each departing after `at` trunk
+   steps (state and slot of the trunk prefix; a fork may bring its own env —
+   another world). Every step carries expectations (ok/reason, flow, state,
+   exhibits). The corpus, when given, is the Lean oracle per cell: trunk cells
+   `steps[i]`, fork cells `forks[id].steps[i]` (label f<id>.<i>). */
 function checkScenario(sc, file, corpus) {
-  const problems = [], asserted = [], exhibited = [], timeline = [];
+  const problems = [], asserted = [], exhibited = [], timeline = [], forkTimelines = {};
   const fail = m => problems.push(`${sc && sc.slug ? sc.slug : file}: ${m}`);
-  if (!sc || typeof sc.id !== 'number' || !sc.slug || !sc.story) { fail('bad header'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
-  if (validateParams(sc.params)) { fail('bad params'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
-  if (!Array.isArray(sc.steps) || !sc.steps.length) { fail('no steps'); return { problems, asserted, exhibited, stepsRun: 0, timeline }; }
-  const env = { ...emptyEnv(), ...(sc.env || {}) };
-  let s = sc.initial || initSys(isNat(sc.plugin) ? sc.plugin : 7);
-  let t = 0;
-  const cells = corpus && corpus.stories ? (corpus.stories.find(x => x.id === sc.id) || {}).steps : null;
-  for (let i = 0; i < sc.steps.length; i++) {
-    const st = sc.steps[i];
-    if (!isNat(st.now) || !(t <= st.now)) { fail(`step ${i}: slot not non-decreasing`); break; }
-    t = st.now;
-    if (st.actor !== undefined && actionActor(st.action) !== st.actor) fail(`step ${i}: actor «${st.actor}» ≠ ${actionActor(st.action)}`);
-    const r = step(sc.params, env, st.action, st.now, s);
-    const exp = st.expect || { ok: true };
-    const rec = { before: s, action: st.action, now: st.now, result: r, params: sc.params, env };
-    const th = checkTheorems(rec);
-    for (const id of Object.keys(th)) if (th[id].v === 'fails') fail(`step ${i}: theorem ${id} fails — ${th[id].why}`);
-    for (const id of st.exhibits || []) {
-      if (!THEOREMS.some(x => x.id === id)) { fail(`step ${i}: unknown theorem ${id}`); continue; }
-      if (th[id].v !== 'holds') fail(`step ${i}: claims to exhibit ${id} but it is ${th[id].v}`);
-      else exhibited.push(id);
-    }
-    if (cells) {
-      const c = cells[i];
-      if (!c) fail(`step ${i}: no Lean cell`);
-      else {
-        if ((c.result !== null) !== r.ok) fail(`step ${i}: Lean ${c.result ? 'applied' : 'refused'}, core ${r.ok ? 'applied' : 'refused'}`);
-        else if (r.ok && (!sameJson(normFlow(c.result.flow), normFlow(r.flow)) || !sameJson(c.result.state, r.state))) fail(`step ${i}: Lean and core disagree on the result`);
-        if (!sameJson(c.input, s) || !sameJson(c.action, st.action) || c.now !== st.now) fail(`step ${i}: Lean cell input differs from the story's`);
+  const done = (extra = {}) => ({ problems, asserted, exhibited, stepsRun: timeline.length + Object.values(forkTimelines).reduce((n, t) => n + t.length, 0), timeline, forkTimelines, ...extra });
+  if (!sc || typeof sc.id !== 'number' || !sc.slug || !sc.story) { fail('bad header'); return done(); }
+  if (validateParams(sc.params)) { fail('bad params'); return done(); }
+  if (!Array.isArray(sc.steps) || !sc.steps.length) { fail('no steps'); return done(); }
+  const storyCells = corpus && corpus.stories ? (corpus.stories.find(x => x.id === sc.id) || null) : null;
+  const runBranch = (label, steps, s0, t0, env, cells, tl) => {
+    let s = s0, t = t0;
+    const states = [s0];
+    for (let i = 0; i < steps.length; i++) {
+      const st = steps[i], tag = `${label}step ${i}`;
+      if (!isNat(st.now) || !(t <= st.now)) { fail(`${tag}: slot not non-decreasing`); break; }
+      t = st.now;
+      if (st.actor !== undefined && actionActor(st.action) !== st.actor) fail(`${tag}: actor «${st.actor}» ≠ ${actionActor(st.action)}`);
+      const r = step(sc.params, env, st.action, st.now, s);
+      const exp = st.expect || { ok: true };
+      const rec = { before: s, action: st.action, now: st.now, result: r, params: sc.params, env };
+      const th = (!r.ok && String(r.reason).startsWith('invalid')) ? {} : checkTheorems(rec);
+      for (const id of Object.keys(th)) if (th[id].v === 'fails') fail(`${tag}: theorem ${id} fails — ${th[id].why}`);
+      for (const id of st.exhibits || []) {
+        if (!THEOREMS.some(x => x.id === id)) { fail(`${tag}: unknown theorem ${id}`); continue; }
+        if (!th[id] || th[id].v !== 'holds') fail(`${tag}: claims to exhibit ${id} but it is ${th[id] ? th[id].v : 'a boundary refusal'}`);
+        else exhibited.push(id);
       }
+      if (cells) {
+        const c = cells[i];
+        if (!c) fail(`${tag}: no Lean cell`);
+        else {
+          if ((c.result !== null) !== r.ok) fail(`${tag}: Lean ${c.result ? 'applied' : 'refused'}, core ${r.ok ? 'applied' : 'refused'}`);
+          else if (r.ok && (!sameJson(normFlow(c.result.flow), normFlow(r.flow)) || !sameJson(c.result.state, r.state))) fail(`${tag}: Lean and core disagree on the result`);
+          if (!sameJson(c.input, s) || !sameJson(c.action, st.action) || c.now !== st.now) fail(`${tag}: Lean cell input differs from the story's`);
+        }
+      }
+      tl.push({ i, now: st.now, action: st.action, result: r, theorems: th, branch: label ? label.replace(/\W+$/, '') : 'trunk' });
+      if (!r.ok && exp.ok !== false) { fail(`${tag}: refused (${r.reason}${r.field ? '/' + r.field : ''}), expected applied`); break; }
+      if (r.ok && exp.ok === false) { fail(`${tag}: applied, expected refusal ${exp.reason || ''}`); break; }
+      if (!r.ok) {
+        if (exp.reason && exp.reason !== r.reason) { fail(`${tag}: refused ${r.reason}, expected ${exp.reason}`); break; }
+        if (exp.reason) asserted.push(exp.reason);
+        states.push(s);
+        continue;
+      }
+      if (exp.flow !== undefined && !sameJson(normFlow(exp.flow), normFlow(r.flow))) { fail(`${tag}: flow ${canonicalJson(normFlow(r.flow))} ≠ expected ${canonicalJson(normFlow(exp.flow))}`); break; }
+      if (exp.state !== undefined && !sameJson(exp.state, r.state)) { fail(`${tag}: state ${canonicalJson(r.state)} ≠ expected ${canonicalJson(exp.state)}`); break; }
+      s = r.state;
+      states.push(s);
     }
-    timeline.push({ i, now: st.now, action: st.action, result: r, theorems: th });
-    if (!r.ok && exp.ok !== false) { fail(`step ${i}: refused (${r.reason}${r.field ? '/' + r.field : ''}), expected applied`); break; }
-    if (r.ok && exp.ok === false) { fail(`step ${i}: applied, expected refusal ${exp.reason || ''}`); break; }
-    if (!r.ok) {
-      if (exp.reason && exp.reason !== r.reason) { fail(`step ${i}: refused ${r.reason}, expected ${exp.reason}`); break; }
-      if (exp.reason) asserted.push(exp.reason);
-      continue;
-    }
-    if (exp.flow !== undefined && !sameJson(normFlow(exp.flow), normFlow(r.flow))) { fail(`step ${i}: flow ${canonicalJson(normFlow(r.flow))} ≠ expected ${canonicalJson(normFlow(exp.flow))}`); break; }
-    if (exp.state !== undefined && !sameJson(exp.state, r.state)) { fail(`step ${i}: state ${canonicalJson(r.state)} ≠ expected ${canonicalJson(exp.state)}`); break; }
-    s = r.state;
+    return { final: s, states, t };
+  };
+  const env = { ...emptyEnv(), ...(sc.env || {}) };
+  const s0 = sc.initial || initSys(isNat(sc.plugin) ? sc.plugin : 7);
+  const trunk = runBranch('', sc.steps, s0, 0, env, storyCells ? storyCells.steps : null, timeline);
+  if (!problems.length && sc.expectFinal !== undefined && !sameJson(sc.expectFinal, trunk.final)) fail(`final state ${canonicalJson(trunk.final)} ≠ expected ${canonicalJson(sc.expectFinal)}`);
+  const forks = Array.isArray(sc.forks) ? sc.forks : [];
+  const ids = new Set();
+  for (const fk of forks) {
+    if (!fk || typeof fk.id !== 'string' || !fk.id || ids.has(fk.id)) { fail(`fork ${fk && fk.id}: needs a unique string id`); continue; }
+    ids.add(fk.id);
+    if (!isNat(fk.at) || fk.at > sc.steps.length || fk.at >= trunk.states.length) { fail(`fork ${fk.id}: departs after ${fk.at}, the trunk has ${trunk.states.length - 1} played steps`); continue; }
+    if (!Array.isArray(fk.steps) || !fk.steps.length) { fail(`fork ${fk.id}: no steps`); continue; }
+    const fenv = fk.env ? { ...emptyEnv(), ...fk.env } : env;
+    const t0 = fk.at === 0 ? 0 : sc.steps[fk.at - 1].now;
+    const cells = storyCells ? ((storyCells.forks || []).find(x => x.id === fk.id) || {}).steps || null : null;
+    if (storyCells && !cells) fail(`fork ${fk.id}: no Lean cells`);
+    const tl = forkTimelines[fk.id] = [];
+    const fr = runBranch(`f${fk.id}.`, fk.steps, trunk.states[fk.at], t0, fenv, cells, tl);
+    if (!problems.length && fk.expectFinal !== undefined && !sameJson(fk.expectFinal, fr.final)) fail(`fork ${fk.id}: final state ${canonicalJson(fr.final)} ≠ expected ${canonicalJson(fk.expectFinal)}`);
   }
-  if (!problems.length && sc.expectFinal !== undefined && !sameJson(sc.expectFinal, s)) fail(`final state ${canonicalJson(s)} ≠ expected ${canonicalJson(sc.expectFinal)}`);
-  return { problems, asserted, exhibited, stepsRun: timeline.length, timeline, final: s };
+  return done({ final: trunk.final });
 }
 
 /* --- the corpus checker ------------------------------------------------------- */
@@ -717,7 +798,10 @@ function checkCorpus(doc) {
   if (!g || !Array.isArray(g.cells) || !g.cells.length) reasons.push('grid: none');
   else for (const c of g.cells) one(`grid s${c.s} a${c.a} e${c.e}`, P, g.envs[c.e], g.now, g.states[c.s], g.actions[c.a], c.result);
   if (!Array.isArray(doc.stories) || !doc.stories.length) reasons.push('stories: none');
-  for (const sc of doc.stories || []) (sc.steps || []).forEach((st, i) => one(`story ${sc.id} step ${i}`, sc.params || P, st.env || sc.env, st.now, st.input, st.action, st.result));
+  for (const sc of doc.stories || []) {
+    (sc.steps || []).forEach((st, i) => one(`story ${sc.id} step ${i}`, sc.params || P, sc.env, st.now, st.input, st.action, st.result));
+    for (const fk of sc.forks || []) (fk.steps || []).forEach((st, i) => one(`story ${sc.id} f${fk.id}.${i}`, sc.params || P, fk.env || sc.env, st.now, st.input, st.action, st.result));
+  }
   return { ok: reasons.length === 0, reasons, cells, applied, refused };
 }
 /* @@CORE:verify:END@@ */
@@ -725,6 +809,6 @@ function checkCorpus(doc) {
 export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, MAX_NAT, isNat, validateParams, validateState, validateEnv,
          validateAction, emptyEnv, envFromTables, userPostable, opBond, opTag, statusTag, ckTag, actionActor,
          actionTag, inPhase1, inPhase2, rejectable, phaseOf, lookupReq, lookupLeaf, lookupCkpt, removeReq,
-         removeCkpt, setLeaf, processBody, processOne, rejectOne, applyBatch, flow, reapableReason, goOp, step,
+         removeCkpt, setLeaf, processBody, processOne, rejectOne, applyBatch, batchView, flow, reapableReason, goOp, step,
          replay, initSys, goPending, THEOREMS, checkTheorems, canonicalJson, sameJson, normFlow, checkScenario,
          checkCorpus };

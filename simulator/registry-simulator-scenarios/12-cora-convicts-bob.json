@@ -1,19 +1,26 @@
 { "id": 12, "slug": "cora-convicts-bob", "story": "Cora convicts Bob; the tombstone is reaped; Bob never returns",
   "narrative": "Cora presents a duplicity proof against Bob's live checkpoint: it becomes a tombstone and the registry is not spent. Sam reaps the tombstone at once — no grace for a convicted identity — and Hal folds the go-request: the leaf is convicted, for ever. A second conviction, a registration and a revival of Bob's AID are all refused.",
-  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7, "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)", "4": "Mallory", "5": "Cora (convictor)", "6": "Sam (reaper)" }, "env": { "inception": [12], "duplicity": [[12, 0]] },
+  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7,
+  "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
+  "env": {"inception":[12],"duplicity":[[12,0]]},
   "steps": [
-    { "now": 0, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 0, "op": "register" } }, "expect": { "ok": true } },
-    { "now": 1, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 0, "plugin": 7, "batch": [{ "id": 0, "do": "process" }] } }, "expect": { "ok": true } },
-    { "now": 5, "actor": "proof", "as": "Cora", "action": { "convictCkpt": { "aid": 12 } },
-      "expect": { "ok": true, "state": { "gen": 1, "plugin": 7, "leaves": [{ "aid": 12, "status": { "active": 0 } }], "ckpts": [{ "aid": 12, "ckpt": { "token": 0, "k": 0, "st": "tomb" } }], "requests": [], "nextReq": 1, "nextToken": 1 } }, "exhibits": ["R6", "R11", "R1"] },
-    { "now": 5, "actor": "proof", "as": "Cora — convicting a tombstone", "action": { "convictCkpt": { "aid": 12 } }, "expect": { "ok": false, "reason": "already-tombstone" } },
-    { "now": 5, "actor": "anyone", "as": "Sam", "action": { "reap": { "reaper": 6, "aid": 12 } }, "expect": { "ok": true, "flow": { "premium": { "addr": 6, "value": 1 }, "intoRequest": 3 } }, "exhibits": ["R13", "R11"] },
-    { "now": 6, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 1, "plugin": 7, "batch": [{ "id": 1, "do": "process" }] } }, "expect": { "ok": true, "flow": { "refunds": [{ "addr": 6, "value": 1 }], "tips": { "addr": 3, "value": 2 } } }, "exhibits": ["R11", "R12"] },
-    { "now": 7, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 7, "op": "register" } }, "expect": { "ok": true } },
-    { "now": 8, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 2, "plugin": 7, "batch": [{ "id": 2, "do": "process" }] } }, "expect": { "ok": false, "reason": "already-registered" }, "exhibits": ["R3", "R1d"] },
-    { "now": 8, "actor": "anyone", "as": "Bob", "action": { "contribute": { "aid": 12, "owner": 2, "submittedAt": 8, "op": "revive" } }, "expect": { "ok": true } },
-    { "now": 9, "actor": "anyone", "as": "Hal", "action": { "fold": { "folder": 3, "gen": 2, "plugin": 7, "batch": [{ "id": 3, "do": "process" }] } }, "expect": { "ok": false, "reason": "not-dormant" } },
-    { "now": 28, "actor": "anyone", "as": "Sam", "action": { "fold": { "folder": 6, "gen": 2, "plugin": 7, "batch": [{ "id": 2, "do": "reject" }, { "id": 3, "do": "reject" }] } },
-      "expect": { "ok": true, "flow": { "refunds": [{ "addr": 2, "value": 1000 }, { "addr": 2, "value": 1000 }], "tips": { "addr": 6, "value": 4 } } }, "exhibits": ["R3", "R4", "R11"] }
+    {"now":0,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
+    {"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true}},
+    {"now":5,"actor":"proof","as":"Cora","action":{"convictCkpt":{"aid":12}},"expect":{"ok":true,"state":{"gen":1,"plugin":7,"leaves":[{"aid":12,"status":{"active":0}}],"ckpts":[{"aid":12,"ckpt":{"token":0,"k":0,"st":"tomb"}}],"requests":[],"nextReq":1,"nextToken":1}},"exhibits":["R6","R11","R1"]},
+    {"now":5,"actor":"proof","as":"Cora — convicting a tombstone","action":{"convictCkpt":{"aid":12}},"expect":{"ok":false,"reason":"already-tombstone"}},
+    {"now":5,"actor":"anyone","as":"Sam","action":{"reap":{"reaper":6,"aid":12}},"expect":{"ok":true,"flow":{"premium":{"addr":6,"value":1},"intoRequest":3}},"exhibits":["R13","R11"]},
+    {"now":6,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":1,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":6,"value":1}],"tips":{"addr":3,"value":2}}},"exhibits":["R11","R12"]},
+    {"now":7,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":7,"op":"register"}},"expect":{"ok":true}},
+    {"now":8,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":2,"plugin":7,"batch":[{"id":2,"do":"process"}]}},"expect":{"ok":false,"reason":"already-registered"},"exhibits":["R3","R1d"]},
+    {"now":8,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":8,"op":"revive"}},"expect":{"ok":true}},
+    {"now":9,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":2,"plugin":7,"batch":[{"id":3,"do":"process"}]}},"expect":{"ok":false,"reason":"not-dormant"}},
+    {"now":28,"actor":"anyone","as":"Sam","action":{"fold":{"folder":6,"gen":2,"plugin":7,"batch":[{"id":2,"do":"reject"},{"id":3,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":2,"value":1000},{"addr":2,"value":1000}],"tips":{"addr":6,"value":4}}},"exhibits":["R3","R4","R11"]}
   ],
-  "expectFinal": { "gen": 3, "plugin": 7, "leaves": [{ "aid": 12, "status": "convicted" }], "ckpts": [], "requests": [], "nextReq": 4, "nextToken": 1 } }
+  "forks": [
+    { "id": "cora-without-proof", "at": 2, "title": "Cora has no proof", "env": {"inception":[12]},
+      "steps": [
+        {"now":5,"actor":"proof","as":"Cora — without a proof","action":{"convictCkpt":{"aid":12}},"expect":{"ok":false,"reason":"no-duplicity-proof"},"exhibits":["R14"]}
+      ] }
+  ],
+  "expectFinal": {"gen":3,"plugin":7,"leaves":[{"aid":12,"status":"convicted"}],"ckpts":[],"requests":[],"nextReq":4,"nextToken":1}
+}

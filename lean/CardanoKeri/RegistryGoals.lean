@@ -1617,4 +1617,79 @@ theorem R14_convict_dormant_needs_proof (p : Params) (env : Env) (now : Slot) (s
     simp [applyBatch, hl, hnone]
   · rfl
 
+/-! ## R14c: the proof is required at every position of every batch
+
+`R14_convict_dormant_needs_proof` speaks of a singleton batch from the registry's
+own leaves. A batch processes its elements on a running accumulator, so the leaf
+a later element sees may have been written by an earlier one (a go-request that
+makes the AID dormant, then a conviction of it in the same fold). The theorem
+below quantifies over the accumulator, hence over every position of every batch:
+`applyBatch` runs `processBody` at each position on the accumulator it reached,
+and `R14_convict_at_position` says so of the batch itself. -/
+
+/-- The plugin's body convicts a dormant AID only with a duplicity proof against
+the key state the accumulator records — for every accumulator. -/
+theorem R14_convict_in_batch_needs_proof (p : Params) (env : Env) {acc acc' : Acc} {r : Request}
+    (hop : r.op = .convict) (h : processBody p env acc r = some acc') :
+    ∃ k, lookup acc.leaves r.aid = some (.dormant k) ∧ env.duplicity r.aid k = true := by
+  simp only [processBody, hop] at h
+  split at h
+  · rename_i k hk
+    refine ⟨k, hk, ?_⟩
+    by_cases hd : env.duplicity r.aid k = true
+    · exact hd
+    · simp [hd] at h
+  · cases h
+
+/-- `applyBatch` folds an appended batch prefix first. -/
+theorem applyBatch_append (p : Params) (env : Env) (now : Slot) :
+    ∀ (l₁ l₂ : List (ReqId × FoldAction)) (acc : Acc),
+      applyBatch p env now acc (l₁ ++ l₂) =
+        match applyBatch p env now acc l₁ with
+        | none => none
+        | some a => applyBatch p env now a l₂ := by
+  intro l₁
+  induction l₁ with
+  | nil => intro l₂ acc; simp [applyBatch]
+  | cons y rest ih =>
+    intro l₂ acc
+    obtain ⟨i, fa⟩ := y
+    rcases hl : lookup acc.requests i with _ | r
+    · simp [applyBatch, hl]
+    · cases fa with
+      | process =>
+        rcases hres : processOne p env now { acc with requests := remove acc.requests i } r with _ | acc''
+        · simp [applyBatch, hl, hres]
+        · simp only [List.cons_append, applyBatch, hl, hres]; exact ih l₂ acc''
+      | reject =>
+        rcases hres : rejectOne p now { acc with requests := remove acc.requests i } r with _ | acc''
+        · simp [applyBatch, hl, hres]
+        · simp only [List.cons_append, applyBatch, hl, hres]; exact ih l₂ acc''
+
+/-- **R14 at any position.** In an applied batch, the processed element at any
+position was looked up in, and (if a conviction) proved against, the
+accumulator the prefix folded to. -/
+theorem R14_convict_at_position (p : Params) (env : Env) (now : Slot) {acc acc' : Acc}
+    (pre rest : List (ReqId × FoldAction)) (id : ReqId)
+    (h : applyBatch p env now acc (pre ++ (id, .process) :: rest) = some acc') :
+    ∃ accᵢ r, applyBatch p env now acc pre = some accᵢ ∧ lookup accᵢ.requests id = some r ∧
+      (r.op = .convict →
+        ∃ k, lookup accᵢ.leaves r.aid = some (.dormant k) ∧ env.duplicity r.aid k = true) := by
+  rw [applyBatch_append] at h
+  rcases hpre : applyBatch p env now acc pre with _ | accᵢ
+  · simp [hpre] at h
+  · simp only [hpre] at h
+    rcases hl : lookup accᵢ.requests id with _ | r
+    · simp [applyBatch, hl] at h
+    · refine ⟨accᵢ, r, by first | rfl | exact hpre, hl, fun hop => ?_⟩
+      rcases hres : processOne p env now { accᵢ with requests := remove accᵢ.requests id } r with _ | acc''
+      · simp [applyBatch, hl, hres] at h
+      · have hb : processBody p env { accᵢ with requests := remove accᵢ.requests id } r = some acc'' := by
+          simp only [processOne] at hres
+          split at hres
+          · exact hres
+          · cases hres
+        obtain ⟨k, hk, hd⟩ := R14_convict_in_batch_needs_proof p env hop hb
+        exact ⟨k, hk, hd⟩
+
 end CardanoKeri.Registry

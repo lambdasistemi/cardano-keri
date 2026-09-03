@@ -1,10 +1,19 @@
 { "id": 5, "slug": "alice-retracts", "story": "Nobody folds; Alice retracts in phase 2",
   "narrative": "Phase 1 passes with no fold. In phase 2 Alice spends her own request back: bond and tip return to her, and the registry is never touched. Before phase 2 the retract is refused; after it the request is gone.",
-  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7, "actors": { "1": "Alice", "2": "Bob", "3": "Hal (folder)", "4": "Mallory", "5": "Cora (convictor)", "6": "Sam (reaper)" }, "env": { "inception": [11] },
+  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7,
+  "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
+  "env": {"inception":[11]},
   "steps": [
-    { "now": 0, "actor": "anyone", "as": "Alice", "action": { "contribute": { "aid": 11, "owner": 1, "submittedAt": 0, "op": "register" } }, "expect": { "ok": true } },
-    { "now": 3, "actor": "owner", "as": "Alice — too early", "action": { "retract": { "req": 0 } }, "expect": { "ok": false, "reason": "not-in-phase-2" }, "exhibits": ["R9", "R10"] },
-    { "now": 12, "actor": "owner", "as": "Alice", "action": { "retract": { "req": 0 } }, "expect": { "ok": true, "flow": { "refunds": [{ "addr": 1, "value": 1002 }] } }, "exhibits": ["R6", "R9", "R11"] },
-    { "now": 12, "actor": "owner", "as": "Alice — again", "action": { "retract": { "req": 0 } }, "expect": { "ok": false, "reason": "unknown-request" } }
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true}},
+    {"now":3,"actor":"owner","as":"Alice — too early","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"not-in-phase-2"},"exhibits":["R9","R10"]},
+    {"now":12,"actor":"owner","as":"Alice","action":{"retract":{"req":0}},"expect":{"ok":true,"flow":{"refunds":[{"addr":1,"value":1002}]}},"exhibits":["R6","R9","R11"]},
+    {"now":12,"actor":"owner","as":"Alice — again","action":{"retract":{"req":0}},"expect":{"ok":false,"reason":"unknown-request"}}
   ],
-  "expectFinal": { "gen": 0, "plugin": 7, "leaves": [], "ckpts": [], "requests": [], "nextReq": 1, "nextToken": 0 } }
+  "forks": [
+    { "id": "sam-in-phase-2", "at": 2, "title": "Sam tries to reject in phase 2",
+      "steps": [
+        {"now":12,"actor":"anyone","as":"Sam — rejecting in phase 2","action":{"fold":{"folder":6,"gen":0,"plugin":7,"batch":[{"id":0,"do":"reject"}]}},"expect":{"ok":false,"reason":"not-rejectable"},"note":"Phase 2 belongs to the owner: nobody rejects.","exhibits":["R9","R10"]}
+      ] }
+  ],
+  "expectFinal": {"gen":0,"plugin":7,"leaves":[],"ckpts":[],"requests":[],"nextReq":1,"nextToken":0}
+}

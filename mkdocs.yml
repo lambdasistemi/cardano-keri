@@ -58,8 +58,6 @@ nav:
   - Finance Primer: finance-primer.md
   - User guide:
       - The follower: user/follower.md
-      - Freeze lifecycle: user/freeze-lifecycle.md
-      - Conviction: user/conviction.md
       - The preprod witness pool: user/preprod-witness-pool.md
       - "Discovery — the endpoint board": user/discovery-endpoint-board.md
       - Releases: user/releases.md
@@ -72,8 +70,6 @@ nav:
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md
-      - Lifecycle and Two Bonds: architecture/lifecycle-and-bonds.md
-      - "Freeze Lifecycle (story #138)": https://github.com/lambdasistemi/cardano-keri/issues/138
       - Observer Architecture: architecture/observer-architecture.md
       - System Architecture: architecture/system.md
       - Value Authorization: architecture/value-auth.md

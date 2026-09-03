@@ -1,0 +1,24 @@
+{ "id": 10, "slug": "sam-reaps", "story": "Alice leaves; after the grace window Sam reaps her parked checkpoint",
+  "narrative": "Alice parks and never comes back. Inside the grace window a stranger cannot reap. After it Sam spends the parked checkpoint, burns the token, keeps min-ADA less the go-request as premium, and posts the go-request dated at the end of time. Hal folds it: the leaf becomes dormant(1), the key state a revival must rotate from; Sam gets the request's min-ADA back.",
+  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7,
+  "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
+  "env": {"inception":[11],"rotationFrom":[[11,0]]},
+  "steps": [
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2},"premium":null,"intoRequest":0}}},
+    {"now":4,"actor":"anyone","as":"Sam — reaping a live checkpoint","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":false,"reason":"not-reapable"},"exhibits":["R13"]},
+    {"now":5,"actor":"next-keys","as":"Alice","action":{"pause":{"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":8,"actor":"anyone","as":"Sam — inside the grace window","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":false,"reason":"not-reapable"},"exhibits":["R13"]},
+    {"now":10,"actor":"anyone","as":"Sam","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":true,"flow":{"premium":{"addr":6,"value":1},"intoRequest":3},"state":{"gen":1,"plugin":7,"leaves":[{"aid":11,"status":{"active":0}}],"ckpts":[],"requests":[{"id":1,"aid":11,"owner":6,"submittedAt":1000000000,"op":{"goDormant":1}}],"nextReq":2,"nextToken":1}},"exhibits":["R13","R11","R1","R4","R6"]},
+    {"now":11,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":1,"plugin":7,"batch":[{"id":1,"do":"process"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":6,"value":1}],"tips":{"addr":3,"value":2}}},"exhibits":["R11","R12","R1"]},
+    {"now":12,"actor":"anyone","as":"Sam — reaping nothing","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":false,"reason":"no-checkpoint"}}
+  ],
+  "forks": [
+    { "id": "alice-comes-back", "at": 4, "title": "Alice resumes inside the grace window", "env": {"inception":[11],"rotationFrom":[[11,0],[11,1]]}, "expectFinal": {"gen":1,"plugin":7,"leaves":[{"aid":11,"status":{"active":0}}],"ckpts":[{"aid":11,"ckpt":{"token":0,"k":2,"st":"live"}}],"requests":[],"nextReq":1,"nextToken":1},
+      "steps": [
+        {"now":7,"actor":"next-keys","as":"Alice — a depositing rotation from key state 1","action":{"resume":{"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}},"exhibits":["R6","R1"]},
+        {"now":10,"actor":"anyone","as":"Sam — reaping a live checkpoint","action":{"reap":{"reaper":6,"aid":11}},"expect":{"ok":false,"reason":"not-reapable"},"exhibits":["R13"]}
+      ] }
+  ],
+  "expectFinal": {"gen":2,"plugin":7,"leaves":[{"aid":11,"status":{"dormant":1}}],"ckpts":[],"requests":[],"nextReq":2,"nextToken":1}
+}

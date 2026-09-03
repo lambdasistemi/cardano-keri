@@ -1,0 +1,17 @@
+{ "id": 14, "slug": "go-request-cannot-be-bricked", "story": "A go-request can neither be retracted nor rejected",
+  "narrative": "Mallory reaps Alice's parked checkpoint and then tries to make the key state disappear: retracting her own go-request is refused, because it is dated at the end of time and phase 2 never comes; rejecting it is refused by the plugin, wherever it sits in a batch. The only way out of the inbox is to be processed, and anyone can do that.",
+  "params": { "D": 1000, "tip": 2, "Mc": 4, "Mr": 1, "process": 10, "retract": 10, "W": 5, "far": 1000000000 }, "plugin": 7,
+  "actors": {"1":"Alice","2":"Bob","3":"Hal (folder)","4":"Mallory","5":"Cora (convictor)","6":"Sam (reaper)"},
+  "env": {"inception":[11],"rotationFrom":[[11,0]]},
+  "steps": [
+    {"now":0,"actor":"anyone","as":"Alice","action":{"contribute":{"aid":11,"owner":1,"submittedAt":0,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":1,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":0,"plugin":7,"batch":[{"id":0,"do":"process"}]}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[{"aid":11,"value":1000}],"refunds":[],"tips":{"addr":3,"value":2},"premium":null,"intoRequest":0}}},
+    {"now":2,"actor":"next-keys","as":"Alice","action":{"pause":{"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":7,"actor":"anyone","as":"Mallory","action":{"reap":{"reaper":4,"aid":11}},"expect":{"ok":true,"flow":{"deposited":0,"locked":[],"refunds":[],"tips":null,"premium":{"addr":4,"value":1},"intoRequest":3}}},
+    {"now":8,"actor":"owner","as":"Mallory — retracting the go-request","action":{"retract":{"req":1}},"expect":{"ok":false,"reason":"not-in-phase-2"},"exhibits":["R9"]},
+    {"now":8,"actor":"anyone","as":"Bob","action":{"contribute":{"aid":12,"owner":2,"submittedAt":8,"op":"register"}},"expect":{"ok":true,"flow":{"deposited":1002,"locked":[],"refunds":[],"tips":null,"premium":null,"intoRequest":0}}},
+    {"now":30,"actor":"anyone","as":"Mallory — rejecting it inside a batch","action":{"fold":{"folder":4,"gen":1,"plugin":7,"batch":[{"id":2,"do":"reject"},{"id":1,"do":"reject"}]}},"expect":{"ok":false,"reason":"go-not-rejectable"},"exhibits":["R9"]},
+    {"now":31,"actor":"anyone","as":"Hal","action":{"fold":{"folder":3,"gen":1,"plugin":7,"batch":[{"id":1,"do":"process"},{"id":2,"do":"reject"}]}},"expect":{"ok":true,"flow":{"refunds":[{"addr":4,"value":1},{"addr":2,"value":1000}],"tips":{"addr":3,"value":4}}},"exhibits":["R11","R1","R12"]}
+  ],
+  "expectFinal": {"gen":2,"plugin":7,"leaves":[{"aid":11,"status":{"dormant":1}}],"ckpts":[],"requests":[],"nextReq":3,"nextToken":1}
+}

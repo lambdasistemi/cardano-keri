@@ -11,9 +11,9 @@ checkpoint.
     - **[The checkpoint simulator](simulator/index.html)** — one identity, its
       keys, its three sums of money, the hunters, the treasury: fifteen
       stories with their forks, the theorems lighting up as you play.
-    - **[The registry simulator](https://preview.dev.plutimus.com/lambdasistemi/cardano-keri/pr-317/simulator/registry/)** — one incarnation per
+    - **[The registry simulator](simulator/registry/index.html)** — one incarnation per
       identity: requests, batches, the gating plugin, the leaf every
-      identity has. Lands under `simulator/registry/` with its pull request.
+      identity has.
 
 !!! success "The transaction path does not require cardano-cli"
     The packaged `ckeri` can deploy the reference scripts, register an

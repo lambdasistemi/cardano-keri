@@ -730,26 +730,33 @@ const THEOREMS = [
    step or a grid cell with the same params, evidence, slot, input state and
    action — and compare the verdict, the flow and the post-state. No cell,
    no parity claim: the caller says so. */
+const cellKey = (params, envT, now, state, action) => canonicalJson([params, { ...emptyEnv(), ...(envT || {}) }, now, state, action]);
+const corpusIndexes = typeof WeakMap === 'function' ? new WeakMap() : null;
+/* the corpus indexed once by (params, evidence, slot, input, action) */
+function corpusIndex(doc) {
+  if (corpusIndexes && corpusIndexes.has(doc)) return corpusIndexes.get(doc);
+  const idx = new Map();
+  const put = (params, envT, now, input, action, cell) => { const k = cellKey(params, envT, now, input, action); if (!idx.has(k)) idx.set(k, cell); };
+  for (const sc of doc.stories || []) {
+    for (const c of sc.steps || []) put(sc.params || doc.params, sc.env, c.now, c.input, c.action, c);
+    for (const fk of sc.forks || []) for (const c of fk.steps || []) put(sc.params || doc.params, fk.env || sc.env, c.now, c.input, c.action, c);
+  }
+  for (const tr of doc.traces || []) for (const c of tr.steps || []) put(doc.params, tr.env, c.now, c.input, c.action, c);
+  const g = doc.grid;
+  if (g) for (const c of g.cells || []) put(doc.params, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a], c);
+  if (corpusIndexes) corpusIndexes.set(doc, idx);
+  return idx;
+}
 function findLeanCell(doc, params, envTable, now, state, action) {
   if (!doc) return { found: false };
   const E = { ...emptyEnv(), ...(envTable || {}) };
-  const hit = (cellParams, cellEnv, cellNow, cellInput, cellAction) =>
-    sameJson(cellParams, params) && sameJson({ ...emptyEnv(), ...(cellEnv || {}) }, E) && cellNow === now && sameJson(cellInput, state) && sameJson(cellAction, action);
-  const agree = (cell, r) => {
-    const found = { found: true, cell };
-    if ((cell.result !== null) !== r.ok) return { ...found, agrees: false, why: `Lean ${cell.result ? 'applied' : 'refused'}, the page ${r.ok ? 'applied' : 'refused'}` };
-    if (r.ok && (!sameJson(cell.result.flow, r.flow) || !sameJson(cell.result.state, r.state))) return { ...found, agrees: false, why: 'the flow or the post-state differs' };
-    return { ...found, agrees: true };
-  };
+  const cell = corpusIndex(doc).get(cellKey(params, E, now, state, action));
+  if (!cell) return { found: false };
   const r = step(params, E, action, now, state);
-  for (const sc of doc.stories || []) {
-    for (const c of sc.steps || []) if (hit(sc.params || doc.params, sc.env, c.now, c.input, c.action)) return agree(c, r);
-    for (const fk of sc.forks || []) for (const c of fk.steps || []) if (hit(sc.params || doc.params, fk.env || sc.env, c.now, c.input, c.action)) return agree(c, r);
-  }
-  for (const tr of doc.traces || []) for (const c of tr.steps || []) if (hit(doc.params, tr.env, c.now, c.input, c.action)) return agree(c, r);
-  const g = doc.grid;
-  if (g) for (const c of g.cells || []) if (hit(doc.params, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a])) return agree(c, r);
-  return { found: false };
+  const found = { found: true, cell };
+  if ((cell.result !== null) !== r.ok) return { ...found, agrees: false, why: `Lean ${cell.result ? 'applied' : 'refused'}, the page ${r.ok ? 'applied' : 'refused'}` };
+  if (r.ok && (!sameJson(cell.result.flow, r.flow) || !sameJson(cell.result.state, r.state))) return { ...found, agrees: false, why: 'the flow or the post-state differs' };
+  return { ...found, agrees: true };
 }
 
 function checkTheorems(rec) {
@@ -760,6 +767,60 @@ function checkTheorems(rec) {
   return out;
 }
 /* @@CORE:theorems:END@@ */
+
+/* @@CORE:session@@ */
+/* --- sessions: immutable; every operation returns a new one ------------------
+   A session is the params, the plugin, the cast, the evidence table, the slot,
+   the state, and the records so far; the page keeps a tree of them. */
+function newSession(params, plugin, actors, env, corpus) {
+  return { params, plugin, actors: actors || {}, env: { ...emptyEnv(), ...(env || {}) }, now: 0, state: initSys(plugin), records: [], corpus: corpus || null };
+}
+const EV_KINDS = ['inception', 'rotationFrom', 'duplicity', 'quorum'];
+const EV_ARITY = { inception: 1, rotationFrom: 2, duplicity: 2, quorum: 1 };
+function evHas(env, kind, args) { return (env[kind] || []).some(r => EV_ARITY[kind] === 1 ? r === args[0] : (r[0] === args[0] && r[1] === args[1])); }
+function addEvidence(s, row) {
+  const kind = Object.keys(row)[0], args = row[kind];
+  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(isNat)) throw new Error('bad evidence row ' + JSON.stringify(row));
+  if (evHas(s.env, kind, args)) return s;
+  return { ...s, env: { ...s.env, [kind]: [...s.env[kind], EV_ARITY[kind] === 1 ? args[0] : [args[0], args[1]]] } };
+}
+function removeEvidence(s, row) {
+  const kind = Object.keys(row)[0], args = row[kind];
+  return { ...s, env: { ...s.env, [kind]: (s.env[kind] || []).filter(r => EV_ARITY[kind] === 1 ? r !== args[0] : !(r[0] === args[0] && r[1] === args[1])) } };
+}
+function setSlot(s, slot) {
+  if (!isNat(slot)) return { ok: false, reason: REASONS.INVALID_NAT };
+  if (slot < s.now) return { ok: false, reason: REASONS.SLOT_DECREASED };
+  return { ok: true, session: { ...s, now: slot } };
+}
+/* attempt(session, action, slot) → {session, record}: one stepFn at `slot`
+   (never before the session's slot); the record carries what the gate's does
+   (params, evidence, before, result, the lamps, the Lean's cell). */
+function attempt(s, action, slot) {
+  if (slot === undefined) slot = s.now;
+  const record = { now: slot, action, before: s.state, params: s.params, env: s.env };
+  let r;
+  if (!isNat(slot)) r = refuse(REASONS.INVALID_NAT, 'slot');
+  else if (slot < s.now) r = refuse(REASONS.SLOT_DECREASED, 'slot');
+  else r = step(s.params, s.env, action, slot, s.state);
+  record.result = r;
+  const boundary = !r.ok && (String(r.reason).startsWith('invalid') || r.reason === REASONS.SLOT_DECREASED);
+  record.theorems = boundary ? {} : checkTheorems(record);
+  record.lean = boundary ? { found: false } : findLeanCell(s.corpus, s.params, s.env, slot, s.state, action);
+  const next = { ...s, now: boundary ? s.now : slot, state: r.ok ? r.state : s.state, records: [...s.records, record] };
+  return { session: next, record };
+}
+/* per lamp: how many records exhibited it and how many broke it, along a session */
+function heldSoFar(s) {
+  const out = { T7: { exhibited: 0, held: 0, broken: 0 } };
+  for (const t of THEOREMS) out[t.id] = { exhibited: 0, held: 0, broken: 0 };
+  for (const r of s.records) {
+    for (const id of Object.keys(r.theorems)) { const x = r.theorems[id]; if (x.v === 'holds') { out[id].exhibited++; out[id].held++; } else if (x.v === 'fails') out[id].broken++; }
+    if (r.lean && r.lean.found) { out.T7.exhibited++; if (r.lean.agrees) out.T7.held++; else out.T7.broken++; }
+  }
+  return out;
+}
+/* @@CORE:session:END@@ */
 
 /* @@CORE:verify@@ */
 function canonicalJson(x) {
@@ -904,4 +965,4 @@ export { SCHEMA, VERSION, REASONS, LEAN_GUARDS, LEAN_SHARED_SITES, LEAN_PASSTHRO
          actionTag, inPhase1, inPhase2, rejectable, phaseOf, lookupReq, lookupLeaf, lookupCkpt, removeReq,
          removeCkpt, setLeaf, processBody, processOne, rejectOne, applyBatch, batchView, flow, reapableReason, goOp, step,
          replay, initSys, goPending, THEOREMS, checkTheorems, canonicalJson, sameJson, normFlow, checkScenario,
-         checkCorpus };
+         checkCorpus, newSession, EV_KINDS, EV_ARITY, evHas, addEvidence, removeEvidence, setSlot, attempt, heldSoFar };

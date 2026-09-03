@@ -496,88 +496,84 @@ async function run({ core: corePath = CORE, html = HTML, scenDir = SCEN_DIR, cor
     } catch (e) { errs.push('selftest mode: ' + e.message); }
     try {
       const w = createWindow(doc, {});
-      const d = w.document, $ = id => d.getElementById(id);
+      const d = w.document, $ = id => d.getElementById(id), RS = w.RS;
       if (w.__errors.length) errs.push('init threw: ' + w.__errors.map(e => e.message).join(' | '));
-      const opts = [...$('sc-pick').options].slice(1);
+      const opts = [...$('story-picker').options].slice(1);
       if (opts.length !== N_STORIES) errs.push(`picker has ${opts.length} stories`);
+      if (!RS.app.story || RS.app.story.id !== 1) errs.push('the first screen is not story 1');
+      if (!$('pots-dl').children.length || !$('ladder').querySelector('.rung.on')) errs.push('glossary: no rows or no lit rung');
       let mismatches = 0, applied = 0;
       for (const o of opts) {
-        $('sc-pick').value = o.value; $('sc-pick').dispatchEvent(new w.Event('change'));
-        $('sc-step').click(); $('sc-all').click();
-        const s = w.__registrySim.session;
-        mismatches += s.history.filter(h => h.mismatch).length; applied += s.history.filter(h => h.result.ok).length;
-        for (const h of s.history) { for (const [id, t] of Object.entries(h.theorems)) if (t.v === 'fails') errs.push(`story ${o.value}: lamp ${id} fails on the page — ${t.why}`); if (!h.lean || !h.lean.found) errs.push(`story ${o.value}: a story step has no Lean cell on the page`); else if (!h.lean.agrees) errs.push(`story ${o.value}: the page disagrees with its Lean cell — ${h.lean.why}`); }
-        if (!$('sc-step').disabled) errs.push(`story ${o.value}: play all did not finish`);
-        $('sc-reset').click();
-        if (w.__registrySim.session.history.length) errs.push(`story ${o.value}: restart kept history`);
+        $('story-picker').value = o.value; $('story-picker').dispatchEvent(new w.Event('change'));
+        while (!$('hist-next').disabled) $('hist-next').click();
+        const nodes = RS.app.nodes;
+        mismatches += nodes.filter(n => n.mismatch).length; applied += nodes.filter(n => n.record && n.record.result.ok).length;
+        for (const n of nodes) if (n.record) { for (const [id, t] of Object.entries(n.record.theorems)) if (t.v === 'fails') errs.push(`story ${o.value}: lamp ${id} fails on the page — ${t.why}`); if (!n.record.lean || !n.record.lean.found) errs.push(`story ${o.value}: a story step has no Lean cell on the page`); else if (!n.record.lean.agrees) errs.push(`story ${o.value}: the page disagrees with its Lean cell — ${n.record.lean.why}`); }
+        if ($('tree').querySelectorAll('.node').length !== nodes.length) errs.push(`story ${o.value}: ${nodes.length} nodes, ${$('tree').querySelectorAll('.node').length} drawn`);
+        if (RS.app.cursor !== RS.node(RS.app.cursor).id || RS.node(RS.app.cursor).children.length) errs.push(`story ${o.value}: › did not reach the end of the trunk`);
       }
       if (mismatches) errs.push(`${mismatches} story steps disagreed with the page`);
       if (!applied) errs.push('no story step applied');
       // the tree of the play: a branch taken from a continuation, a node of the trunk taken back
       {
         const sc13 = JSON.parse(readFileSync(join(scenDir, '13-convict-dormant.json'), 'utf8'));
-        $('sc-pick').value = '13'; $('sc-pick').dispatchEvent(new w.Event('change'));
-        if ($('play').hidden) errs.push('tree: #play hidden inside a story');
+        $('story-picker').value = '13'; $('story-picker').dispatchEvent(new w.Event('change'));
         const fk = sc13.forks.find(f => f.id === 'convict-without-proof');
-        for (let k = 0; k < fk.at; k++) $('sc-step').click();
-        const btn = d.querySelector(`#branches .branch[data-branch="${fk.id}"]`);
+        for (let k = 0; k < fk.at; k++) $('hist-next').click();
+        const btn = d.querySelector(`#branches .branch[data-fork="${fk.id}"]`);
         if (!btn) errs.push('tree: no continuation button for the fork departing here');
         else {
           btn.click();
-          const st = w.__registrySim.story, ses = w.__registrySim.session;
-          if (!st || st.branch !== fk.id) errs.push('tree: the continuation did not switch to the fork');
-          $('sc-all').click();
-          const last = w.__registrySim.session.history[w.__registrySim.session.history.length - 1];
-          if (!last || last.result.ok || last.result.reason !== fk.steps[fk.steps.length - 1].expect.reason) errs.push('tree: the fork did not play to its refusal');
-          if (w.__registrySim.session.history.some(h => h.mismatch)) errs.push('tree: a fork step disagreed with the page');
-          if (!d.querySelector(`#tree .node[data-branch="${fk.id}"].bad`)) errs.push('tree: the refused fork step is not drawn ✗');
-          const node = d.querySelector('#tree .node[data-branch=""][data-i="2"]');
-          if (!node) errs.push('tree: no trunk node'); else { node.click(); const s2 = w.__registrySim; if (s2.story.branch !== null || s2.session.history.length !== 3) errs.push('tree: clicking a trunk node did not go there'); }
+          while (!$('hist-next').disabled) $('hist-next').click();
+          const leaf = RS.node(RS.app.cursor);
+          if (!leaf.record || leaf.record.result.ok || leaf.record.result.reason !== fk.steps[fk.steps.length - 1].expect.reason) errs.push('tree: the fork did not play to its refusal');
+          if (!d.querySelector('#tree .node.no.here')) errs.push('tree: the refused fork step is not the ringed ✗ node');
+          const trunkNode = d.querySelector('#tree .node[data-node="3"]');
+          if (!trunkNode) errs.push('tree: no trunk node'); else { trunkNode.dispatchEvent(new w.Event('click')); if (RS.app.cursor !== 3) errs.push('tree: clicking a trunk node did not go there'); }
           if (!d.querySelector('#branches .branch.on')) errs.push('tree: no default continuation marked');
+          if (!/R14/.test([...$('ledger').querySelectorAll('.thm')].map(e => e.dataset.id).join(' '))) errs.push('ledger: no R14 lamp');
         }
-        $('sc-exit').click();
-        if (!$('play').hidden) errs.push('tree: #play shown outside a story');
       }
-      $('sc-pick').value = '1'; $('sc-pick').dispatchEvent(new w.Event('change')); $('sc-exit').click();
-      if (!$('storybox').hidden) errs.push('leave story did not hide the story box');
-      // free play: evidence, request, fold, stale fold, slot, history, theme
-      $('ev-aid').value = '11'; $('ev-add').click();
-      const cb = d.querySelector('input[data-ev="inception"][data-aid="11"]'); if (!cb) errs.push('no evidence row for AID 11'); else if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new w.Event('change')); }
-      $('a-c-op').value = 'register'; $('a-c-aid').value = '11'; $('a-c-owner').value = '1'; $('a-c-t').value = '0';
-      d.querySelector('button[data-go="contribute"]').click();
-      let s = w.__registrySim.session;
-      if (s.state.requests.length !== 1) errs.push('free play: request not posted');
-      const sel = d.querySelector('select[data-batch="0"]'); if (!sel) errs.push('free play: no batch selector'); else sel.value = 'process';
-      d.querySelector('button[data-go="fold"]').click();
-      s = w.__registrySim.session;
-      const last = s.history[s.history.length - 1];
-      if (!last.result.ok) errs.push(`free play: fold refused (${last.result.reason})`);
-      if (core.lookupLeaf(s.state.leaves, 11) === null || core.lookupCkpt(s.state.ckpts, 11) === null) errs.push('free play: AID 11 not registered after the fold');
-      const rot = d.querySelector('input[data-ev="rotationFrom"][data-aid="11"][data-k="0"]'); if (!rot) errs.push('free play: no rotation evidence control'); else { rot.checked = true; rot.dispatchEvent(new w.Event('change')); }
-      $('a-p-aid').value = '11'; d.querySelector('button[data-go="pause"]').click();
-      s = w.__registrySim.session;
-      if (!s.history[s.history.length - 1].result.ok) errs.push(`free play: pause refused (${s.history[s.history.length - 1].result.reason})`);
-      $('slot-10').click(); $('a-rp-aid').value = '11'; d.querySelector('button[data-go="reap"]').click();
-      s = w.__registrySim.session;
-      const rp = s.history[s.history.length - 1].result;
-      if (!rp.ok || !rp.flow.premium) errs.push(`free play: reap refused after the grace window (${rp.reason})`);
-      if (!s.state.requests.some(r => !core.userPostable(r.op))) errs.push('free play: no go-request after the reap');
-      $('a-f-gen').value = '0'; d.querySelector('button[data-go="fold"]').click();
-      s = w.__registrySim.session;
-      const st = s.history[s.history.length - 1];
-      if (st.result.ok || st.result.reason !== 'stale-generation') errs.push(`free play: stale fold not refused (${st.result.ok ? 'applied' : st.result.reason})`);
-      if ($('whyline').hidden || !/stale-generation/.test($('whyline').textContent)) errs.push('free play: refusal not shown');
-      if (!/T7/.test($('ledger').innerHTML) || !/no Lean cell for this step|the Lean.s cell for this step agrees/.test($('detail').innerHTML)) errs.push('free play: the step does not say whether the Lean has a cell for it');
-      if (Number($('slot').textContent) !== 10) errs.push('slot control');
-      $('h-first').click(); if (w.__registrySim.session.cursor !== 0) errs.push('history first');
-      $('h-next').click(); $('h-last').click(); $('h-prev').click(); $('h-clear').click();
-      if (w.__registrySim.session.history.length) errs.push('clear history');
+      // free play: a request by Alice, a fold by Hal, a pause, a reap after the grace window, a stale fold refused
+      $('btn-reset').click();
+      if (RS.app.nodes.length !== 1) errs.push('reset did not start a fresh tree');
+      const move = (actor, kind, labelRe) => { const b = [...d.querySelectorAll(`#next-moves .act[data-actor="${actor}"][data-kind="${kind}"]`)].find(x => !labelRe || labelRe.test(x.textContent)); if (!b) { errs.push(`free play: no enabled ${kind} move for ${actor}`); return false; } b.click(); $('act-submit').click(); return true; };
+      const ev = (actor, kind) => { const b = d.querySelector(`#next-moves .ev-quick[data-actor="${actor}"][data-ev="${kind}"]`); if (!b) { errs.push(`free play: no ${kind} evidence offer for ${actor}`); return false; } b.click(); return true; };
+      ev('alice', 'inception');
+      move('alice', 'contribute', /registration/);
+      let last = RS.node(RS.app.cursor);
+      if (!last.record || !last.record.result.ok) errs.push('free play: request not posted (' + (last.record ? last.record.result.reason : 'no record') + ')');
+      move('hal', 'fold', /fold the inbox/);
+      last = RS.node(RS.app.cursor);
+      if (!last.record || !last.record.result.ok) errs.push(`free play: fold refused (${last.record ? last.record.result.reason : 'no record'})`);
+      if (core.lookupLeaf(RS.cur().state.leaves, 11) === null || core.lookupCkpt(RS.cur().state.ckpts, 11) === null) errs.push('free play: AID 11 not registered after the fold');
+      ev('alice', 'rotationFrom');
+      move('alice', 'pause');
+      last = RS.node(RS.app.cursor);
+      if (!last.record || !last.record.result.ok) errs.push(`free play: pause refused (${last.record ? last.record.result.reason : 'no record'})`);
+      $('slot-plusw').click(); $('slot-plus1').click();
+      move('sam', 'reap');
+      last = RS.node(RS.app.cursor);
+      if (!last.record || !last.record.result.ok || !last.record.result.flow.premium) errs.push(`free play: reap refused after the grace window (${last.record ? last.record.result.reason : 'no record'})`);
+      if (!RS.cur().state.requests.some(r => !core.userPostable(r.op))) errs.push('free play: no go-request after the reap');
+      if (!/The Lean was not asked about this exact step|the Lean.s own verdict on this exact state and move agrees/.test($('narration').textContent)) errs.push('free play: the step does not say whether the Lean has a cell for it');
+      const staleBtn = d.querySelector('#refused-list .act[data-actor="mallory"][data-kind="fold"]');
+      if (!d.querySelector('#refused-list .refused-row .why')) errs.push('refused moves: the reasons are not written out');
+      if (!staleBtn || !/stale-generation|refused/.test(staleBtn.title)) errs.push('free play: Mallory’s stale fold is not among the refused moves with its reason');
+      if (!d.querySelector('#where .state') || !/generation 1/.test($('where').textContent)) errs.push('where: the strip does not show generation 1');
+      // the evidence drawer: a checkbox row adds evidence as a node
+      const cb = d.querySelector('input[data-ev="duplicity"][data-aid="11"][data-k="1"]'); if (!cb) errs.push('evidence drawer: no duplicity checkbox for AID 11 at k 1'); else { const before = RS.app.nodes.length; cb.checked = true; cb.dispatchEvent(new w.Event('change')); if (RS.app.nodes.length !== before + 1 || !core.evHas(RS.cur().env, 'duplicity', [11, 1])) errs.push('evidence drawer: the checkbox did not add a row'); }
+      // play controls, scrubber, theme
+      $('hist-first').click(); if (RS.app.cursor !== 0) errs.push('hist-first');
+      $('hist-last').click(); if (RS.node(RS.app.cursor).children.length) errs.push('hist-last');
+      $('hist-prev').click(); $('hist-next').click();
+      $('scrub').value = '0'; $('scrub').dispatchEvent(new w.Event('input')); if (RS.app.cursor !== 0) errs.push('scrub');
       const before = d.documentElement.getAttribute('data-theme'); $('btn-theme').click();
       if (d.documentElement.getAttribute('data-theme') === before) errs.push('theme toggle');
-      if (!/R1/.test($('ledger').innerHTML)) errs.push('ledger not rendered');
+      if ($('scene').querySelectorAll('[data-obj]').length < 12) errs.push('scene: fewer than 12 entities drawn');
       if (w.__errors.length) errs.push('page threw: ' + w.__errors.map(e => e.message).join(' | '));
     } catch (e) { errs.push('page smoke: ' + e.message); }
-    row('the page plays every story, switches a branch through the tree, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories, a fork taken and a trunk node taken back, free play (register, pause, reap), evidence, slot, history, theme');
+    row('the page plays every story, switches a branch through the tree, self-tests, and free play works under the minimal DOM', errs.length === 0, errs.length ? errs.slice(0, 5).join(' | ') : 'selftest PASS, 15 stories through the picker with every lamp and Lean cell, a fork taken and a trunk node taken back, free play by stakeholder (request, fold, pause, reap, a stale fold refused), the evidence drawer, the play bar, the scene, theme');
   }
 
   if (!quiet) {
@@ -623,9 +619,10 @@ async function selftest() {
   await control('refusal-never-asserted', dir => edit(join(dir, 'scenarios', '12-cora-convicts-bob.json'), '"expect":{"ok":false,"reason":"already-tombstone"}', '"expect":{"ok":false}'), /every reachable refusal reason asserted.*missing already-tombstone/);
   await control('verdict-retied-within-the-group', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"decl":"R3_convicted_permanent","text":"lookup s\'.leaves aid = some .convicted"', '"decl":"R3_convicted_never_registered","text":"stepFn p env (.fold folder s.gen s.plugin batch) now s = none"'), /exhibits R3 through R3_convicted_permanent, not R3_convicted_never_registered/);
   await control('payment-text-truncated', dir => edit(join(dir, 'registry-simulator-clauses.json'), '"text":"locked := acc.locked ++ [(r.aid, p.D)]","match":{"step":1}', '"text":"locked","match":{"step":1}'), /a payment row names the full assignment/);
-  await control('page-record-without-evidence', dir => edit(join(dir, 'registry-simulator.html'), "as: as || '', params: S.params, env: S.env };", "as: as || '', params: S.params };"), /lamp R1d fails on the page — threw/);
-  await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "b.addEventListener('click', () => goTo(it.branch, it.to));", "b.addEventListener('click', () => {});"), /tree: the continuation did not switch to the fork/);
-  await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('sc-all').addEventListener('click', () => { while (storyStep()) {} });", "$('sc-all').addEventListener('click', () => {});"), /play all did not finish/);
+  await control('page-record-without-evidence', dir => edit(join(dir, 'registry-simulator.html'), "const record = { now: slot, action, before: s.state, params: s.params, env: s.env };", "const record = { now: slot, action, before: s.state, params: s.params, env: undefined };"), /lamp R1d fails on the page — threw|core slice\(s\) stale or forked: session/);
+  await control('dead-branch-button', dir => edit(join(dir, 'registry-simulator.html'), "title: 'go there', onclick: () => goTo(cid) },", "title: 'go there', onclick: () => {} },"), /tree: the fork did not play to its refusal/);
+  await control('dead-scene', dir => edit(join(dir, 'registry-simulator.html'), "  clear(svg).append(...parts);\n}\n\n/* ---- the fx layer", "  clear(svg);\n}\n\n/* ---- the fx layer"), /scene: fewer than 12 entities drawn|the scene draws/);
+  await control('broken-page-control', dir => edit(join(dir, 'registry-simulator.html'), "$('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) goTo(nx); });", "$('hist-next').addEventListener('click', () => {});"), /did not reach the end of the trunk|no story step applied/);
   rmSync(tmp, { recursive: true, force: true });
   for (const c of controls) console.log(`${c.red ? 'RED (intended)' : 'CONTROL FAILED'}  ${c.name} — ${c.why}`);
   const all = controls.every(c => c.red);

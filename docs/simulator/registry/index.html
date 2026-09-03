@@ -3,214 +3,440 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The registry — an MPFS instance, played against the Lean</title>
+<title>The Registry</title>
+<meta name="description" content="Play the AID registry of cardano-keri as an MPFS instance: fifteen stories as trees, the theorems R1–R14 checked on every step, transcribed from the Lean.">
 <style>
-:root {
-  --bg:#f3f4f1; --panel:#fffefa; --ink:#1f2320; --mut:#6b7268; --line:#d9dcd3;
-  --ok:#1f7a45; --okbg:#e3f2e8; --bad:#b03a2c; --badbg:#f8e6e2; --accent:#3d5c6b;
-  --chip:#e9ece5; --card:#f9faf5; --bar:#e4e7de; --barfill:#5f7f8f; --warn:#8a5f0f; --warnbg:#f7ecd4;
-}
-html[data-theme="dark"] {
-  --bg:#161917; --panel:#1e2320; --ink:#e6e9e2; --mut:#9aa295; --line:#363d38;
-  --ok:#5bcb8c; --okbg:#1c3325; --bad:#e67a6b; --badbg:#3a221e; --accent:#8fb6c8;
-  --chip:#2a302c; --card:#22282425; --bar:#30372f; --barfill:#8fb6c8; --warn:#d9b25c; --warnbg:#332a12;
-}
-* { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink);
-  font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-header { display:flex; flex-wrap:wrap; gap:.6rem; align-items:baseline;
-  padding:.7rem 1rem; border-bottom:1px solid var(--line); }
-header h1 { font-size:1.05rem; margin:0; }
-header .sub { color:var(--mut); font-size:.8rem; }
-header .spacer { flex:1; }
-button, select, input { font:inherit; color:inherit; }
-button { cursor:pointer; border:1px solid var(--line); background:var(--panel);
-  border-radius:7px; padding:.28rem .6rem; }
-button:hover { border-color:var(--accent); }
-button:disabled { opacity:.45; cursor:not-allowed; }
-button.primary { background:var(--accent); border-color:var(--accent); color:var(--bg); }
-button.ghost { background:transparent; }
-main { display:grid; grid-template-columns: minmax(360px,1.15fr) minmax(300px,.85fr);
-  gap:.8rem; padding:.8rem; align-items:start; }
-@media (max-width: 920px){ main { grid-template-columns:1fr; } }
-main > section, .card { min-width:0; }
-.card, #strip, #play, #scenariobar { overflow-x:auto; }
-#scenariobar select { max-width:100%; }
-.card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:.7rem .8rem; margin-bottom:.8rem; }
-.card h2 { font-size:.85rem; margin:.1rem 0 .5rem; color:var(--mut);
-  text-transform:uppercase; letter-spacing:.06em; }
-.badge { display:inline-block; padding:.12rem .5rem; border-radius:6px;
-  font-weight:700; font-size:.76rem; letter-spacing:.04em; }
-.badge.live { background:var(--okbg); color:var(--ok); }
-.badge.tomb { background:var(--badbg); color:var(--bad); }
-.badge.p1 { background:var(--okbg); color:var(--ok); }
-.badge.p2 { background:var(--warnbg); color:var(--warn); }
-.badge.p3, .badge.future { background:var(--badbg); color:var(--bad); }
-.kv { display:grid; grid-template-columns:auto 1fr; gap:.15rem .8rem; font-size:.85rem; }
-.kv dt { color:var(--mut); } .kv dd { margin:0; font-family:ui-monospace,monospace; }
-table.t { border-collapse:collapse; width:100%; font-size:.82rem; }
-table.t td, table.t th { border-bottom:1px solid var(--line); padding:.2rem .4rem; text-align:left; vertical-align:top; }
-table.t th { color:var(--mut); font-weight:600; }
-.mono { font-family:ui-monospace,monospace; }
-.verdict { border-radius:9px; padding:.5rem .7rem; margin-top:.5rem; font-size:.88rem; }
-.verdict.yes { background:var(--okbg); color:var(--ok); }
-.verdict.no { background:var(--badbg); color:var(--bad); }
-#scenariobar { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center;
-  padding:.6rem 1rem; border-bottom:1px solid var(--line); background:var(--card); }
-#scenariobar select { max-width:26rem; }
-#storybox { padding:.3rem 1rem .5rem; background:var(--card); border-bottom:1px solid var(--line);
-  font-size:.88rem; color:var(--mut); }
-#storybox b { color:var(--ink); }
-#play { padding:.4rem 1rem .6rem; background:var(--card); border-bottom:1px solid var(--line); display:grid; gap:.5rem; }
-#play h2 { font-size:.8rem; margin:0; color:var(--mut); font-weight:600; }
-.tree { display:grid; gap:.3rem; overflow-x:auto; }
-.tree .trow { display:grid; grid-auto-flow:column; grid-auto-columns:2.1rem; gap:.25rem; align-items:center; }
-.tree .node { width:1.9rem; height:1.9rem; border-radius:50%; border:2px solid var(--line); background:var(--panel); font-size:.72rem; cursor:pointer; padding:0; color:var(--ink); }
-.tree .node.ok { border-color:var(--ok); } .tree .node.bad { border-color:var(--bad); }
-.tree .node.cur { box-shadow:0 0 0 3px var(--accent); }
-.tree .fork { color:var(--mut); font-size:.72rem; white-space:nowrap; grid-column:span 6; }
-.branches { display:grid; gap:.35rem; }
-.branch { text-align:left; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:.4rem .6rem; font-size:.82rem; cursor:pointer; color:var(--ink); }
-.branch.on { border-color:var(--accent); }
-.branch b { color:var(--ink); } .branch .sub { color:var(--mut); }
-.cast { display:grid; gap:.4rem; }
-.cast .who { border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem;
-  background:var(--card); font-size:.82rem; }
-.cast .who b { display:block; }
-.acts { display:grid; gap:.5rem; }
-.act { border:1px solid var(--line); border-radius:8px; padding:.45rem .55rem; background:var(--card); }
-.act h3 { margin:0 0 .3rem; font-size:.85rem; }
-.act .auth { color:var(--mut); font-size:.75rem; display:block; }
-.act .row { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin-top:.3rem; }
-.act input, .act select { border:1px solid var(--line); background:var(--panel);
-  border-radius:6px; padding:.2rem .35rem; }
-.act input[type="number"] { width:5.5rem; }
-.whyline { font-size:.82rem; color:var(--bad); margin-top:.3rem; }
-.okline { font-size:.82rem; color:var(--ok); margin-top:.3rem; }
-.hint { color:var(--mut); font-size:.78rem; margin-top:.25rem; }
-#evidence table { border-collapse:collapse; font-size:.8rem; width:100%; }
-#evidence td, #evidence th { border:1px solid var(--line); padding:.12rem .35rem; text-align:left; }
-#evidence th { color:var(--mut); font-weight:600; }
-#evidence .add { display:flex; gap:.35rem; margin-top:.3rem; align-items:center; flex-wrap:wrap; }
-#evidence input { width:5rem; border:1px solid var(--line); background:var(--panel); border-radius:6px; padding:.15rem .3rem; }
-#strip { border-top:1px solid var(--line); background:var(--card); padding:.5rem 1rem; }
-#strip .nav { display:flex; gap:.4rem; align-items:center; margin-bottom:.35rem; }
-#strip .rail { display:flex; gap:.35rem; overflow-x:auto; padding-bottom:.25rem; }
-#strip .chip2 { border:1px solid var(--line); background:var(--panel); border-radius:7px;
-  padding:.15rem .5rem; font-size:.78rem; white-space:nowrap; cursor:pointer; }
-#strip .chip2.ok { border-color:var(--ok); } #strip .chip2.bad { border-color:var(--bad); }
-#strip .chip2.cur { box-shadow:0 0 0 2px var(--accent); }
-#detail { font-size:.85rem; margin-top:.35rem; }
-#ledger td.lit { color:var(--ok); font-weight:700; }
-#ledger td.na { color:var(--mut); }
-#ledger td.red { color:var(--bad); font-weight:700; }
-.bars { display:grid; gap:.35rem; margin-top:.4rem; }
-.bar-row { display:grid; grid-template-columns: 11rem 1fr 7rem; gap:.5rem; align-items:center; font-size:.8rem; }
-.bar { background:var(--bar); border-radius:5px; height:.8rem; position:relative; overflow:hidden; }
-.bar > i { position:absolute; inset:0 auto 0 0; background:var(--barfill); display:block; }
-footer { padding:.8rem 1rem; color:var(--mut); font-size:.8rem; }
-footer h2 { font-size:.8rem; color:var(--ink); text-transform:uppercase; letter-spacing:.06em; }
-footer li { margin-bottom:.3rem; }
-.selftest table { border-collapse:collapse; width:100%; font-size:.85rem; }
-.selftest td, .selftest th { border:1px solid var(--line); padding:.2rem .45rem; text-align:left; }
-.pass { color:var(--ok); font-weight:700; } .fail { color:var(--bad); font-weight:700; }
-.batch { display:grid; gap:.25rem; margin-top:.3rem; font-size:.82rem; }
-.batch label { display:flex; gap:.4rem; align-items:center; }
+  :root {
+    --bg: #f2f3ef; --card: #ffffff; --ink: #1d2528; --muted: #5c6a6e; --line: #d8ddd5; --line-2: #eceee8;
+    --accent: #0f6e8c; --on-accent: #ffffff; --accent-bg: #e3f0f4;
+    --ok: #1f7a4d; --ok-bg: #e6f4ec; --bad: #b3261e; --bad-bg: #fbeae8; --warn: #8a5a00; --warn-bg: #fff3d6;
+    --dreg: #6a4c93; --b: #2a9d8f; --pool: #d98c1f; --chip: #e9eeee; --lit: #fff1bf; --lit-ink: #5a4300;
+    --keri: #f7f1e6; --chain: #e9f1f4; --readers: #eef3ea; --scene-ink: #2b3438; --paper: #fffdf7; --poison: #7b2cbf;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15191b; --card: #1d2327; --ink: #e4e8e3; --muted: #97a4a0; --line: #2c3539; --line-2: #242c30;
+      --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
+      --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
+      --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+      --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15191b; --card: #1d2327; --ink: #e4e8e3; --muted: #97a4a0; --line: #2c3539; --line-2: #242c30;
+    --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
+    --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
+    --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+    --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 15px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.4; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .92em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input, select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+  input[type=number] { width: 6.5em; font-family: var(--mono); }
+  a { color: var(--accent); }
+
+  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); padding: 7px 14px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 1.2rem; letter-spacing: .01em; }
+  header h1 small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: .7rem; letter-spacing: .02em; }
+  .slotbar { display: flex; align-items: center; gap: 6px; font-size: .86rem; }
+  .slotbar b { font-family: var(--mono); font-size: 1.05rem; min-width: 2ch; }
+  .hbtns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .ghost { border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 4px 10px; font-size: .82rem; }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .tiny { font-size: .74rem; color: var(--muted); }
+  .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+  main { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 1240px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+  .card h2 { margin: 0 0 8px; font-size: .95rem; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card h2 small, summary small { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 400; font-size: .72rem; }
+  .empty { color: var(--muted); font-style: italic; font-size: .84rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* the stage */
+  .stagebar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  #story-picker { max-width: 100%; font-size: .9rem; }
+  .goal { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: .9rem; }
+  #scene { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 560; border-radius: 8px; background: var(--paper); border: 1px solid var(--line-2); }
+  #scene text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--scene-ink); font-size: 12px; }
+  #scene .region { fill: var(--keri); stroke: none; }
+  #scene .region.chain { fill: var(--chain); }
+  #scene .region.readers { fill: var(--readers); }
+  #scene .rlbl { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; fill: var(--muted); }
+  #scene .avatar { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .actor.on .avatar { stroke: var(--accent); stroke-width: 3; }
+  #scene .actor.acting .avatar { stroke: var(--warn); stroke-width: 3; }
+  #scene .actor { cursor: pointer; }
+  #scene .nm { font-weight: 700; font-size: 13px; text-anchor: middle; }
+  #scene .role { font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #scene .badge { font-family: var(--mono); font-size: 10px; text-anchor: middle; fill: var(--accent); }
+  #scene .wit { fill: var(--card); stroke: var(--line); }
+  #scene .witlbl { font-size: 9px; text-anchor: middle; fill: var(--muted); }
+  #scene .utxo { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .utxo.poisoned { stroke: var(--poison); }
+  #scene .utxo.absent { stroke-dasharray: 6 4; fill: none; }
+  #scene .utxo.closed { stroke-dasharray: 2 4; opacity: .6; }
+  #scene .token { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
+  #scene .token.absent { fill: none; stroke: var(--line); stroke-dasharray: 5 3; }
+  #scene .token.closed { fill: none; stroke: var(--warn); stroke-dasharray: 5 3; }
+  #scene .token.convicted { fill: var(--bad-bg); stroke: var(--bad); }
+  #scene .tk { font-family: var(--mono); font-size: 11px; text-anchor: middle; }
+  #scene .datum-k { font-size: 10px; fill: var(--muted); }
+  #scene .datum-v { font-family: var(--mono); font-size: 12px; }
+  #scene .state-word { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  #scene .state-word.poisoned { fill: var(--poison); }
+  #scene .coin { stroke: var(--card); stroke-width: 1; }
+  #scene .coin.dreg { fill: var(--dreg); } #scene .coin.b { fill: var(--b); } #scene .coin.pool { fill: var(--pool); }
+  #scene .pile-lbl { font-size: 10px; text-anchor: middle; fill: var(--muted); }
+  #scene .pile-amt { font-family: var(--mono); font-size: 12px; text-anchor: middle; font-weight: 700; }
+  #scene .pile-amt.dreg { fill: var(--dreg); } #scene .pile-amt.b { fill: var(--b); } #scene .pile-amt.pool { fill: var(--pool); }
+  #scene .track { fill: var(--line-2); }
+  #scene .fill { fill: var(--accent); }
+  #scene .fill.done { fill: var(--ok); }
+  #scene .validator { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .tray { fill: var(--card); stroke: var(--line); stroke-dasharray: 4 3; }
+  #scene .receipt { fill: var(--chip); stroke: var(--b); }
+  #scene .receipt-t { font-family: var(--mono); font-size: 9.5px; }
+  #scene .registry { fill: var(--card); stroke: var(--line); }
+  #scene .bank { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .lamp.ok { fill: var(--ok); } #scene .lamp.no { fill: var(--bad); }
+  #scene .beam { stroke: var(--muted); stroke-dasharray: 3 5; stroke-width: 1.5; fill: none; }
+  #scene .beam.ok { stroke: var(--ok); } #scene .beam.no { stroke: var(--bad); }
+  #scene .wallet { fill: var(--card); stroke: var(--line); }
+  #scene .wallet.refund { stroke: var(--accent); stroke-width: 2; }
+  #scene .wallet-t { font-size: 10px; }
+  #scene .wallet-n { font-family: var(--mono); font-size: 10px; text-anchor: end; }
+  #scene .clock { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .clock-t { font-family: var(--mono); font-size: 13px; text-anchor: middle; font-weight: 700; }
+  #scene .hint { font-size: 10px; fill: var(--muted); }
+  /* fx */
+  #scene .fx-card { fill: var(--paper); stroke: var(--scene-ink); stroke-width: 1.2; }
+  #scene .fx-card.rewind { opacity: .55; }
+  #scene .fx-t { font-family: var(--mono); font-size: 10px; text-anchor: middle; }
+  #scene .fx-coin { stroke: var(--card); stroke-width: 1; }
+  #scene .fx-coin.rewind { opacity: .55; }
+  #scene .fx-mark { font-size: 26px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-mark.ok { fill: var(--ok); } #scene .fx-mark.no { fill: var(--bad); }
+  #scene .fx-float { font-size: 12px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-scroll { fill: var(--keri); stroke: var(--warn); stroke-width: 1.2; }
+  #scene .fx-skull { font-size: 22px; text-anchor: middle; }
+  #scene .pulse { animation: pulse .7s ease-out 1; }
+  #scene .pulse-bad { animation: pulseBad .7s ease-out 1; }
+  @keyframes pulse { 0% { filter: drop-shadow(0 0 0 var(--accent)); } 50% { filter: drop-shadow(0 0 10px var(--accent)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @keyframes pulseBad { 0% { filter: drop-shadow(0 0 0 var(--bad)); } 50% { filter: drop-shadow(0 0 10px var(--bad)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @media (prefers-reduced-motion: reduce) { #scene .pulse, #scene .pulse-bad { animation: none; } }
+
+  /* the play bar */
+  #playbar { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  #playbar .nav { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 3px 9px; font-size: .95rem; min-width: 2.2em; }
+  #playbar .nav:disabled { color: var(--muted); opacity: .5; cursor: default; }
+  #playbar .nav.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  #scrub { flex: 1; min-width: 160px; accent-color: var(--accent); }
+  #pos { font-family: var(--mono); font-size: .8rem; color: var(--muted); min-width: 5ch; text-align: right; }
+  #branches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  #branches .lbl { margin-right: 4px; }
+  .branch { border: 1px solid var(--warn); background: var(--warn-bg); color: var(--warn); border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
+  .branch.on { background: var(--warn); color: var(--card); }
+  #history-strip { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .hist-chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: .72rem; font-family: var(--mono); }
+  .hist-chip.ok { border-color: var(--ok); }
+  .hist-chip.no { border-color: var(--bad); color: var(--bad); }
+  .hist-chip.here { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .hist-chip.fork::after { content: ' ⋔'; color: var(--warn); }
+  #narration { margin-top: 8px; }
+  .say { border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--accent-bg); border-radius: 0 8px 8px 0; font-size: .9rem; }
+  .say .who { font-weight: 700; font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .result { margin-top: 6px; padding: 6px 10px; border-radius: 8px; font-size: .86rem; }
+  .result.ok { background: var(--ok-bg); color: var(--ok); }
+  .result.no { background: var(--bad-bg); color: var(--bad); }
+  .result b { font-family: var(--mono); }
+  .exh { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .tchip { font-family: var(--mono); font-size: .72rem; background: var(--lit); color: var(--lit-ink); border-radius: 5px; padding: 0 5px; }
+
+  /* the lamps */
+  #ledger { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .thm { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem; background: var(--card); }
+  .thm summary { display: flex; gap: 6px; align-items: center; cursor: pointer; list-style: none; }
+  .thm summary::-webkit-details-marker { display: none; }
+  .thm .id { font-family: var(--mono); font-weight: 700; min-width: 3ch; }
+  .thm .ttl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thm .st { font-size: .68rem; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .thm.lit { background: var(--lit); border-color: var(--warn); }
+  .thm.lit .st { color: var(--lit-ink); }
+  .thm.broken { background: var(--bad-bg); border-color: var(--bad); }
+  .thm .body { margin-top: 6px; color: var(--ink); font-size: .8rem; white-space: normal; }
+  .thm .lean { font-family: var(--mono); font-size: .7rem; color: var(--muted); margin-top: 4px; word-break: break-word; }
+  .thm[open] { grid-column: 1 / -1; }
+
+  /* drawers */
+  .drawers { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+  details.card > summary { cursor: pointer; font-family: var(--serif); font-weight: 600; font-size: .95rem; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: '▸'; color: var(--muted); font-family: system-ui; }
+  details.card[open] > summary::before { content: '▾'; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  details.card.wide { grid-column: 1 / -1; }
+
+  /* actions */
+  .actors { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .actor { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 4px 12px; font-size: .84rem; }
+  .actor.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .blurb { font-size: .84rem; color: var(--muted); margin: 4px 0 8px; }
+  .acts { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+  .act, .ev-quick { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 10px; font-size: .84rem; text-align: left; }
+  .act:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+  .act:disabled { color: var(--muted); background: var(--bg); cursor: help; text-decoration: line-through; text-decoration-color: var(--line); }
+  .act.on { border-color: var(--accent); background: var(--accent-bg); }
+  .ev-quick { border-style: dashed; }
+  .ev-quick:hover { border-color: var(--b); color: var(--b); }
+  #act-form { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 8px; }
+  #act-form .fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  #act-form label { display: flex; flex-direction: column; gap: 2px; font-size: .74rem; color: var(--muted); }
+  #act-why { margin-top: 6px; font-size: .84rem; }
+  #act-why.no { color: var(--bad); } #act-why.ok { color: var(--ok); }
+  .primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; font-weight: 600; }
+  .primary:disabled { opacity: .45; cursor: default; }
+  .ev-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .ev-form label { display: flex; flex-direction: column; font-size: .72rem; color: var(--muted); gap: 2px; }
+  #ev-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .ev-row { display: flex; gap: 8px; align-items: center; font-size: .84rem; border: 1px solid var(--line); border-radius: 7px; padding: 3px 8px; }
+  .ev-row .k { font-family: var(--mono); font-size: .76rem; color: var(--b); }
+  .ev-rm { margin-left: auto; border: none; background: none; color: var(--muted); font-size: .9rem; }
+  .ev-rm:hover { color: var(--bad); }
+
+  /* the numbers */
+  .ladder { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+  .rung { border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; font-size: .78rem; color: var(--muted); background: var(--card); }
+  .rung.term { border-style: dashed; }
+  .rung.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .arrow { color: var(--muted); font-size: .8rem; }
+  #state-name { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+  .datum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin: 8px 0; }
+  .datum div { border-top: 1px solid var(--line-2); padding-top: 3px; }
+  .datum .v { font-family: var(--mono); font-size: 1rem; }
+  .bars { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+  .bar { display: grid; grid-template-columns: 9.5em 1fr 5.5em; gap: 8px; align-items: center; font-size: .84rem; }
+  .bar .track { height: 12px; background: var(--line-2); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar .fill { height: 100%; border-radius: 6px; }
+  .bar.dreg .fill { background: var(--dreg); } .bar.b .fill { background: var(--b); } .bar.pool .fill { background: var(--pool); }
+  .bar .n { text-align: right; font-family: var(--mono); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  .sw.dreg { background: var(--dreg); } .sw.b { background: var(--b); } .sw.pool { background: var(--pool); }
+  #verdict { padding: 8px 10px; border-radius: 8px; font-size: .9rem; margin-top: 6px; }
+  #verdict.ok { background: var(--ok-bg); color: var(--ok); } #verdict.no { background: var(--bad-bg); color: var(--bad); }
+  .conj { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .conj span { font-size: .72rem; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; }
+  .conj span.yes { border-color: var(--ok); color: var(--ok); } .conj span.nope { border-color: var(--bad); color: var(--bad); }
+  #value-chart { display: block; width: 100%; height: 240px; }
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line-2); }
+  td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .flows { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: .8rem; }
+  .flow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .flow .i { font-family: var(--mono); color: var(--muted); min-width: 3ch; }
+  .about p { font-size: .84rem; margin: 4px 0; }
+  /* the tree of the play */
+  #tree-wrap { overflow-x: auto; margin: 4px 0 2px; }
+  #tree { display: block; min-width: 100%; }
+  #tree text { font-family: var(--mono); font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #tree .edge { stroke: var(--line); stroke-width: 2; fill: none; }
+  #tree .edge.taken { stroke: var(--accent); }
+  #tree .node { cursor: pointer; }
+  #tree .node circle { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
+  #tree .node.ok circle { stroke: var(--ok); fill: var(--ok-bg); }
+  #tree .node.no circle { stroke: var(--bad); fill: var(--bad-bg); }
+  #tree .node.time circle, #tree .node.evidence circle { stroke: var(--line); stroke-dasharray: 2 2; }
+  #tree .node.here circle { stroke: var(--accent); stroke-width: 3.5; }
+  #tree .node.here text { fill: var(--accent); font-weight: 700; }
+  #tree .node .who { font-size: 9px; }
+  #tree .node .verb { font-size: 9.5px; fill: var(--ink); }
+  #tree .node.no .verb { fill: var(--bad); }
+  #tree .fork { fill: var(--warn); font-size: 12px; }
+  /* where we are */
+  #where { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--accent-bg); font-size: .9rem; }
+  #where .state { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; }
+  #where .state.poisoned { color: var(--poison); }
+  #where .lamp { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  #where .lamp.ok { background: var(--ok); } #where .lamp.no { background: var(--bad); }
+  #where .sum { font-family: var(--mono); font-size: .82rem; }
+  #where .sum.dreg { color: var(--dreg); } #where .sum.b { color: var(--b); } #where .sum.pool { color: var(--pool); }
+  #where .step { margin-left: auto; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+  /* what can happen next */
+  #branches { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .branch { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 12px; text-align: left; display: flex; gap: 10px; align-items: baseline; font-size: .9rem; }
+  .branch:hover { border-color: var(--accent); }
+  .branch.on { border-color: var(--accent); background: var(--accent-bg); }
+  .branch .go { font-family: var(--mono); color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .branch .who { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); white-space: nowrap; }
+  .branch .fork-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+  .branch .txt { flex: 1; min-width: 0; color: var(--ink); }
+  .branch .res { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
+  .branch .res.ok { color: var(--ok); } .branch .res.no { color: var(--bad); }
+  #next-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+  .mover { border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; background: var(--card); }
+  .mover .actor { margin-bottom: 6px; }
+  .mover .acts { margin: 0; }
+  .mover .none { color: var(--muted); font-size: .8rem; font-style: italic; }
+  .needs { display: inline-block; margin-left: 8px; font-size: .68rem; font-family: var(--mono); border-radius: 4px; padding: 0 5px; background: var(--chip); color: var(--muted); }
+  .needs.public { background: var(--ok-bg); color: var(--ok); }
+  .needs.keys { background: var(--warn-bg); color: var(--warn); }
+  .mover .interest { font-size: .78rem; color: var(--muted); margin: 0 0 6px; font-style: italic; }
+  #refused-moves { margin-top: 8px; }
+  #refused-moves summary { cursor: pointer; }
+  #refused-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .refused-row { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .refused-row .why { font-size: .82rem; color: var(--muted); max-width: 60ch; }
+  #pots { margin-top: 8px; font-size: .88rem; }
+  #pots summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+  #pots dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 4px; }
+  #pots dt { font-weight: 700; white-space: nowrap; }
+  #pots dd { margin: 0; color: var(--ink); }
+  #scene-drawer[open] > summary { margin-bottom: 8px; }
+  #selftest-out { white-space: pre-wrap; font-family: var(--mono); font-size: .78rem; background: var(--card); border: 1px solid var(--line); margin: 14px; padding: 10px; border-radius: 8px; }
+</style>
+<style>
+  /* the registry's own entities (the checkpoint's colours: D = the bond, B = min-ADA, pool = tips and premiums) */
+  .badge { display: inline-block; padding: 0 6px; border-radius: 5px; font-size: .72rem; font-family: var(--mono); }
+  .badge.live, .badge.p1 { background: var(--ok-bg); color: var(--ok); }
+  .badge.parked, .badge.p2 { background: var(--warn-bg); color: var(--warn); }
+  .badge.tomb, .badge.p3, .badge.future { background: var(--bad-bg); color: var(--bad); }
+  .badge.go { background: var(--accent-bg); color: var(--accent); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: .84rem; margin: 6px 0; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); }
+  .batch { display: grid; gap: 4px; margin-top: 4px; font-size: .82rem; }
+  .batch label { display: flex; gap: 8px; align-items: center; }
+  .evtable { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .evtable th, .evtable td { border-bottom: 1px solid var(--line-2); padding: 3px 6px; text-align: left; }
+  .evtable th { color: var(--muted); font-weight: 600; }
+  #where .sum.gen { color: var(--accent); }
+  #scene .leafcard { fill: var(--card); stroke: var(--line); }
+  #scene .leafcard.active { stroke: var(--ok); } #scene .leafcard.dormant { stroke: var(--warn); } #scene .leafcard.convicted { stroke: var(--bad); }
+  #scene .reqcard { fill: var(--paper); stroke: var(--line); }
+  #scene .reqcard.go { stroke: var(--accent); stroke-dasharray: 3 2; }
+  #scene .reqcard.p2 { stroke: var(--warn); } #scene .reqcard.p3 { stroke: var(--bad); }
+  #scene .req-t { font-family: var(--mono); font-size: 9.5px; }
+  #scene .ck { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .ck.parked { stroke: var(--warn); stroke-dasharray: 5 3; } #scene .ck.tomb { stroke: var(--bad); }
+  #scene .ck-t { font-size: 10px; text-anchor: middle; }
+  #scene .ck-w { font-family: var(--serif); font-size: 14px; font-weight: 600; text-anchor: middle; }
+  #scene .ck-w.parked { fill: var(--warn); } #scene .ck-w.tomb { fill: var(--bad); }
+  #scene .gen { font-family: var(--mono); font-size: 11px; fill: var(--accent); }
+  #scene { aspect-ratio: 1000 / 600; }
 </style>
 </head>
 <body>
 <header>
-  <h1>The registry</h1>
-  <span class="sub">one UTxO holding a leaf per AID — active, dormant, convicted — checkpoints that come and go, requests that never contend, folds that race, reaps that pay for themselves — played against the machine of <span class="mono">Registry.lean</span></span>
-  <span class="spacer"></span>
-  <span class="sub mono" id="paramchip"></span>
-  <span class="sub">slot <b class="mono" id="slot">0</b></span>
-  <button type="button" id="slot-1" title="one slot forward">+1</button>
-  <button type="button" id="slot-10" title="ten slots forward">+10</button>
-  <button type="button" id="btn-theme" class="ghost" title="light / dark">◐</button>
+  <h1>The registry <small>cardano-keri · the AID registry as an MPFS instance · Registry.lean, R1–R14 (R1d is the absence proof, a second lamp under R1) · Alice, Bob, Hal, Sam, Cora and Mallory</small></h1>
+  <div class="slotbar">
+    <span class="lbl">slot</span> <b id="slot-now">0</b>
+    <input id="slot-input" type="number" min="0" step="1" value="0" aria-label="move to slot">
+    <button type="button" class="ghost" id="slot-plus1" title="advance one slot">+1</button>
+    <button type="button" class="ghost" id="slot-plusw" title="advance by the grace window W">+W</button>
+    <span class="tiny" id="slot-msg"></span>
+  </div>
+  <div class="hbtns">
+    <button type="button" class="ghost" id="btn-theme" title="light / dark">☾ theme</button>
+    <button type="button" class="ghost danger" id="btn-reset" title="new session: an empty registry">Reset</button>
+  </div>
 </header>
-<div id="scenariobar">
-  <label for="sc-pick">story</label>
-  <select id="sc-pick"><option value="">— free play —</option></select>
-  <button type="button" id="sc-step" class="primary" disabled>next step ▸</button>
-  <button type="button" id="sc-all" disabled>play all ▸▸</button>
-  <button type="button" id="sc-reset" disabled>⟲ restart story</button>
-  <button type="button" id="sc-exit" class="ghost" hidden>leave story</button>
-  <span class="sub" id="sc-count"></span>
-</div>
-<div id="storybox" hidden></div>
-<div id="play" hidden>
-  <h2>The play <span class="sub">every node a step — ✓ applied, ✗ refused; the trunk on the first row, a ⋔ branch departs where it starts; click a node to go there</span></h2>
-  <div class="tree" id="tree"></div>
-  <h2>What can happen next</h2>
-  <div class="branches" id="branches"></div>
-</div>
-<main id="main">
-  <section>
-    <div class="card" id="card-registry">
-      <h2>The registry UTxO</h2>
-      <dl class="kv" id="registry"></dl>
-      <div class="hint">A fold spends this UTxO at its current generation; a stale generation is the transaction failing on a spent input, at no cost. Requests, retracts, reaps, pauses, resumes and checkpoint convictions never touch it. A leaf, once inserted, is permanent.</div>
+<main>
+  <section class="card" id="stage">
+    <div class="stagebar">
+      <select id="story-picker" aria-label="pick a story"></select>
+      <span class="goal" id="story-goal"></span>
     </div>
-    <div class="card" id="card-checkpoints">
-      <h2>Checkpoints <span class="sub" id="ck-count"></span></h2>
-      <div id="checkpoints"></div>
+    <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
+    <div id="playbar">
+      <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
+      <button type="button" class="nav" id="hist-prev" title="one step back (plays in reverse)">‹</button>
+      <button type="button" class="nav" id="btn-play" title="play the current branch">▶</button>
+      <button type="button" class="nav" id="hist-next" title="one step forward along the branch last taken">›</button>
+      <button type="button" class="nav" id="hist-last" title="the end of this branch">⇥</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="scrub the play">
+      <span id="pos">0 / 0</span>
     </div>
-    <div class="card" id="card-inbox">
-      <h2>The inbox <span class="sub" id="inbox-count"></span></h2>
-      <div id="inbox"></div>
-      <div class="hint">Phase 1: a fold may process. Phase 2: only the owner may retract. Phase 3 (or a future timestamp): anyone may reject a posted request. A go-request is dated at the end of time: never phase 2; the cage would reject it (a future timestamp is rejectable) but the plugin refuses — only processed.</div>
-    </div>
-    <div class="card" id="card-value">
-      <h2>Value <span class="sub">who holds what, by component</span></h2>
-      <div class="bars" id="bars"></div>
-    </div>
+    <div id="where"></div>
+    <details id="pots"><summary>What the words mean: the bond, the tip, the two min-ADAs, the phases, and the states a leaf and a checkpoint move through</summary>
+      <div class="ladder" id="ladder"></div>
+      <dl id="pots-dl"></dl>
+    </details>
+    <div id="narration"></div>
   </section>
-  <section>
-    <div class="card">
-      <h2>Cast</h2>
-      <div class="cast" id="cast"></div>
+
+  <section class="card" id="next-card">
+    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · everyone here is <em>anyone</em> with an interest; every move is a public transaction, and the tag says what it must carry: only public KERI data, a duplicity proof, or the keys · a move from a visited step opens a branch</small></h2>
+    <div id="branches"></div>
+    <div id="next-moves"></div>
+    <div id="act-form" hidden>
+      <div class="fields" id="act-fields"></div>
+      <div id="act-why"></div>
+      <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
+        <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
     </div>
-    <div class="card" id="evidence">
-      <h2>Evidence <span class="sub">what the plugin and the policy would verify — you decide</span></h2>
+    <details id="refused-moves"><summary class="tiny" id="refused-summary">what the machine refuses now</summary><div id="refused-list"></div></details>
+  </section>
+
+  <details class="card" id="scene-drawer" open>
+    <summary>The scene <small>KERI, the registry and its checkpoints, the inbox, the readers and payees · every step plays on it; click an actor to act as them</small></summary>
+    <svg id="scene" viewBox="0 0 1000 600" role="group" aria-label="the scene: KERI, the registry UTxO, the inbox, the checkpoints, the readers and payees"></svg>
+  </details>
+
+  <section class="card" id="lamps">
+    <h2>The theorems <small>T7 parity with the Lean's cell, then R1–R14 of RegistryGoals.lean · a lamp lights when this step shows it and names the theorem it instantiated; every one is checked on every step · click to read</small></h2>
+    <div id="ledger"></div>
+  </section>
+
+  <section class="drawers">
+    <details class="card" id="act-drawer">
+      <summary>Evidence by hand <small>the Env: what the plugin and the policy would verify over the bytes, decided by you</small></summary>
+      <div class="blurb">Tick what the world holds: an inception that verifies, a witnessed rotation from a key state, a duplicity proof against a key state, the owner's quorum. A row is enabled exactly when the machine can read it.</div>
       <div id="evbody"></div>
-    </div>
-    <div class="card">
-      <h2>Actions</h2>
-      <div class="acts" id="actions"></div>
-      <div class="whyline" id="whyline" hidden></div>
-      <div class="okline" id="okline" hidden></div>
-    </div>
+      <div class="ev-form"><label>AID <input id="ev-aid" type="number" min="0" step="1" value="11"></label><button type="button" class="ghost" id="ev-add">Add an AID row</button></div>
+    </details>
+
+    <details class="card" id="numbers-drawer">
+      <summary>The registry in numbers <small>the UTxO, the leaves, the checkpoints, the inbox and its phases</small></summary>
+      <dl class="kv" id="registry"></dl>
+      <div class="lbl">Checkpoints <span id="ck-count" class="tiny"></span></div>
+      <div id="checkpoints"></div>
+      <div class="lbl" style="margin-top:8px">The inbox <span id="inbox-count" class="tiny"></span></div>
+      <div id="inbox"></div>
+      <div class="tiny" style="margin-top:6px">Phase 1: a fold may process. Phase 2: only the owner may retract. Phase 3 (or a future timestamp): anyone may reject a posted request. A go-request is dated at the end of time: never phase 2; the cage would reject it but the plugin refuses — only processed.</div>
+    </details>
+
+    <details class="card wide" id="chart-drawer">
+      <summary>Value over the play <small><span class="sw dreg"></span>bonds locked in checkpoints <span class="sw b"></span>held by the inbox <span class="sw pool"></span>paid out (refunds, tips, premiums) · the current branch</small></summary>
+      <canvas id="value-chart" width="640" height="240" role="img" aria-label="value held by the checkpoints and the inbox, and paid out, step by step"></canvas>
+    </details>
+
+    <details class="card" id="money-drawer">
+      <summary>Who holds what <small>by component; every payment named by the flow</small></summary>
+      <div id="balances"></div>
+      <div class="flows" id="flows"></div>
+    </details>
+
+    <details class="card about" id="about-drawer">
+      <summary>What this is <small>and is not</small></summary>
+      <p>A transcription of <code>lean/CardanoKeri/Registry.lean</code>: one registry UTxO holding a leaf per AID (<code>active token</code>, <code>dormant k</code>, <code>convicted</code>), the requests of an inbox that never contend, the permissionless fold at a named generation with the plugin's body, the checkpoints that come and go outside the registry, the reap of a bondless checkpoint into a go-request dated at the end of time. The theorems of <code>RegistryGoals.lean</code> run as properties on every step; every step is looked up in the Lean's own corpus (T7). Each story is a tree: the trunk and the branches where an attempt is refused or the world differs; ‹ and › walk it; click any node of the tree to jump there.</p>
+      <p>Not here: cryptography (evidence is a row you decide), the rotations that keep a checkpoint live and its bonds beyond one abstract <code>D</code>, the ledger's fee (the samaritan theorems carry it as a parameter), the receipt token that couples a reap to its go-request. A Lean <code>Nat</code> is unbounded; this page represents it exactly up to 2^53 − 1 and refuses anything else by name. <a href="?selftest=1">Run the self-test</a>.</p>
+      <p id="pf-params" class="tiny"></p>
+    </details>
   </section>
 </main>
-<div id="strip">
-  <div class="nav">
-    <button type="button" id="h-first" title="first attempt">⏮</button>
-    <button type="button" id="h-prev" title="one attempt back">‹</button>
-    <button type="button" id="h-next" title="one attempt forward">›</button>
-    <button type="button" id="h-last" title="latest">⏭</button>
-    <span class="sub" id="h-pos"></span>
-    <span class="spacer"></span>
-    <button type="button" id="h-clear" class="ghost">clear history</button>
-  </div>
-  <div class="rail" id="rail"></div>
-  <div id="detail"><span class="sub">nothing attempted yet — pick a story, or act in free play</span></div>
-</div>
-<section class="card" style="margin:0 .8rem .8rem" id="card-ledger">
-  <h2>Ledger theorems <span class="sub">T7 parity with the Lean's cell when the corpus has one; R1–R14 of RegistryGoals.lean as executable properties, checked on every step — a row lights when the step exhibits it and names the Lean theorem it instantiated</span></h2>
-  <table class="t" id="ledger"></table>
-</section>
-<footer>
-  <h2>What this page is</h2>
-  <ul>
-    <li>A JavaScript transcription of <span class="mono">stepFn</span> and <span class="mono">replay</span> from <span class="mono">lean/CardanoKeri/Registry.lean</span>, embedded byte-for-byte from <span class="mono">simulator/registry-simulator-core.mjs</span>. The fifteen stories and the Lean corpus below are embedded too; <span class="mono">?selftest=1</span> replays all of it through this page's own core.</li>
-    <li>The embedded corpus is emitted by <span class="mono">lean/RegistryTraceDriver.lean</span> from <span class="mono">stepFn</span> itself via <span class="mono">ToJson</span>; <span class="mono">registry-simulator-trace-gate.mjs</span> re-runs Lean, compares by sha256 and replays every cell here: <span class="mono" id="proof-sha"></span>.</li>
-    <li>Modelled: leaves active(token) / dormant(k) / convicted; checkpoints live / parked / tombstone; requests as inbox UTxOs for registration, revival and conviction of a dormant AID; go-requests created only by a reap, dated at the end of time; a permissionless fold at a named generation with process and reject; retract in phase 2; pause and resume by the next keys; conviction of a live or parked checkpoint by a proof; the reap after the grace window (or by the owner, or at once for a tombstone) and its value split; the plugin pinned. Not modelled: cryptography (evidence is a table), rotations that keep a checkpoint live, the checkpoint's bonds beyond one abstract D, the ledger's fee (the samaritan theorems carry it as a parameter).</li>
-    <li id="pf-params"></li>
-  </ul>
-</footer>
+<pre id="selftest-out" hidden></pre>
 <script>
+'use strict';
+/* ===== the core, inlined verbatim from registry-simulator-core.mjs ===== */
 /* @@CORE:constants@@ */
 const SCHEMA = 'cardano-keri.registry.trace';
 const VERSION = 2;
@@ -901,26 +1127,33 @@ const THEOREMS = [
    step or a grid cell with the same params, evidence, slot, input state and
    action — and compare the verdict, the flow and the post-state. No cell,
    no parity claim: the caller says so. */
+const cellKey = (params, envT, now, state, action) => canonicalJson([params, { ...emptyEnv(), ...(envT || {}) }, now, state, action]);
+const corpusIndexes = typeof WeakMap === 'function' ? new WeakMap() : null;
+/* the corpus indexed once by (params, evidence, slot, input, action) */
+function corpusIndex(doc) {
+  if (corpusIndexes && corpusIndexes.has(doc)) return corpusIndexes.get(doc);
+  const idx = new Map();
+  const put = (params, envT, now, input, action, cell) => { const k = cellKey(params, envT, now, input, action); if (!idx.has(k)) idx.set(k, cell); };
+  for (const sc of doc.stories || []) {
+    for (const c of sc.steps || []) put(sc.params || doc.params, sc.env, c.now, c.input, c.action, c);
+    for (const fk of sc.forks || []) for (const c of fk.steps || []) put(sc.params || doc.params, fk.env || sc.env, c.now, c.input, c.action, c);
+  }
+  for (const tr of doc.traces || []) for (const c of tr.steps || []) put(doc.params, tr.env, c.now, c.input, c.action, c);
+  const g = doc.grid;
+  if (g) for (const c of g.cells || []) put(doc.params, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a], c);
+  if (corpusIndexes) corpusIndexes.set(doc, idx);
+  return idx;
+}
 function findLeanCell(doc, params, envTable, now, state, action) {
   if (!doc) return { found: false };
   const E = { ...emptyEnv(), ...(envTable || {}) };
-  const hit = (cellParams, cellEnv, cellNow, cellInput, cellAction) =>
-    sameJson(cellParams, params) && sameJson({ ...emptyEnv(), ...(cellEnv || {}) }, E) && cellNow === now && sameJson(cellInput, state) && sameJson(cellAction, action);
-  const agree = (cell, r) => {
-    const found = { found: true, cell };
-    if ((cell.result !== null) !== r.ok) return { ...found, agrees: false, why: `Lean ${cell.result ? 'applied' : 'refused'}, the page ${r.ok ? 'applied' : 'refused'}` };
-    if (r.ok && (!sameJson(cell.result.flow, r.flow) || !sameJson(cell.result.state, r.state))) return { ...found, agrees: false, why: 'the flow or the post-state differs' };
-    return { ...found, agrees: true };
-  };
+  const cell = corpusIndex(doc).get(cellKey(params, E, now, state, action));
+  if (!cell) return { found: false };
   const r = step(params, E, action, now, state);
-  for (const sc of doc.stories || []) {
-    for (const c of sc.steps || []) if (hit(sc.params || doc.params, sc.env, c.now, c.input, c.action)) return agree(c, r);
-    for (const fk of sc.forks || []) for (const c of fk.steps || []) if (hit(sc.params || doc.params, fk.env || sc.env, c.now, c.input, c.action)) return agree(c, r);
-  }
-  for (const tr of doc.traces || []) for (const c of tr.steps || []) if (hit(doc.params, tr.env, c.now, c.input, c.action)) return agree(c, r);
-  const g = doc.grid;
-  if (g) for (const c of g.cells || []) if (hit(doc.params, g.envs[c.e], c.now !== undefined ? c.now : g.now, g.states[c.s], g.actions[c.a])) return agree(c, r);
-  return { found: false };
+  const found = { found: true, cell };
+  if ((cell.result !== null) !== r.ok) return { ...found, agrees: false, why: `Lean ${cell.result ? 'applied' : 'refused'}, the page ${r.ok ? 'applied' : 'refused'}` };
+  if (r.ok && (!sameJson(cell.result.flow, r.flow) || !sameJson(cell.result.state, r.state))) return { ...found, agrees: false, why: 'the flow or the post-state differs' };
+  return { ...found, agrees: true };
 }
 
 function checkTheorems(rec) {
@@ -931,6 +1164,60 @@ function checkTheorems(rec) {
   return out;
 }
 /* @@CORE:theorems:END@@ */
+
+/* @@CORE:session@@ */
+/* --- sessions: immutable; every operation returns a new one ------------------
+   A session is the params, the plugin, the cast, the evidence table, the slot,
+   the state, and the records so far; the page keeps a tree of them. */
+function newSession(params, plugin, actors, env, corpus) {
+  return { params, plugin, actors: actors || {}, env: { ...emptyEnv(), ...(env || {}) }, now: 0, state: initSys(plugin), records: [], corpus: corpus || null };
+}
+const EV_KINDS = ['inception', 'rotationFrom', 'duplicity', 'quorum'];
+const EV_ARITY = { inception: 1, rotationFrom: 2, duplicity: 2, quorum: 1 };
+function evHas(env, kind, args) { return (env[kind] || []).some(r => EV_ARITY[kind] === 1 ? r === args[0] : (r[0] === args[0] && r[1] === args[1])); }
+function addEvidence(s, row) {
+  const kind = Object.keys(row)[0], args = row[kind];
+  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(isNat)) throw new Error('bad evidence row ' + JSON.stringify(row));
+  if (evHas(s.env, kind, args)) return s;
+  return { ...s, env: { ...s.env, [kind]: [...s.env[kind], EV_ARITY[kind] === 1 ? args[0] : [args[0], args[1]]] } };
+}
+function removeEvidence(s, row) {
+  const kind = Object.keys(row)[0], args = row[kind];
+  return { ...s, env: { ...s.env, [kind]: (s.env[kind] || []).filter(r => EV_ARITY[kind] === 1 ? r !== args[0] : !(r[0] === args[0] && r[1] === args[1])) } };
+}
+function setSlot(s, slot) {
+  if (!isNat(slot)) return { ok: false, reason: REASONS.INVALID_NAT };
+  if (slot < s.now) return { ok: false, reason: REASONS.SLOT_DECREASED };
+  return { ok: true, session: { ...s, now: slot } };
+}
+/* attempt(session, action, slot) → {session, record}: one stepFn at `slot`
+   (never before the session's slot); the record carries what the gate's does
+   (params, evidence, before, result, the lamps, the Lean's cell). */
+function attempt(s, action, slot) {
+  if (slot === undefined) slot = s.now;
+  const record = { now: slot, action, before: s.state, params: s.params, env: s.env };
+  let r;
+  if (!isNat(slot)) r = refuse(REASONS.INVALID_NAT, 'slot');
+  else if (slot < s.now) r = refuse(REASONS.SLOT_DECREASED, 'slot');
+  else r = step(s.params, s.env, action, slot, s.state);
+  record.result = r;
+  const boundary = !r.ok && (String(r.reason).startsWith('invalid') || r.reason === REASONS.SLOT_DECREASED);
+  record.theorems = boundary ? {} : checkTheorems(record);
+  record.lean = boundary ? { found: false } : findLeanCell(s.corpus, s.params, s.env, slot, s.state, action);
+  const next = { ...s, now: boundary ? s.now : slot, state: r.ok ? r.state : s.state, records: [...s.records, record] };
+  return { session: next, record };
+}
+/* per lamp: how many records exhibited it and how many broke it, along a session */
+function heldSoFar(s) {
+  const out = { T7: { exhibited: 0, held: 0, broken: 0 } };
+  for (const t of THEOREMS) out[t.id] = { exhibited: 0, held: 0, broken: 0 };
+  for (const r of s.records) {
+    for (const id of Object.keys(r.theorems)) { const x = r.theorems[id]; if (x.v === 'holds') { out[id].exhibited++; out[id].held++; } else if (x.v === 'fails') out[id].broken++; }
+    if (r.lean && r.lean.found) { out.T7.exhibited++; if (r.lean.agrees) out.T7.held++; else out.T7.broken++; }
+  }
+  return out;
+}
+/* @@CORE:session:END@@ */
 
 /* @@CORE:verify@@ */
 function canonicalJson(x) {
@@ -1079,60 +1366,126 @@ const REGISTRY_LEAN_TRACES_V1 = {"grid":{"actions":[{"contribute":{"aid":18,"op"
 const REGISTRY_LEAN_TRACES_SHA256 = 'f8579f938170fdb7351b3ef75f42cf3edce862d34ead58bf7978369c54d73bd8';
 /* @@CORPUS:END@@ */
 
-/* ===================== the page (not part of the machine) ===================== */
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ============================================================================
+   The page: a tree of plays over the core's immutable sessions, drawn as one
+   scene whose entities move when a step plays — forward or in reverse.
+   Not part of the machine; the gates run the slices above, not this.
+   ============================================================================ */
 const DEFAULT_PARAMS = { D: 1000, tip: 2, Mc: 4, Mr: 1, process: 10, retract: 10, W: 5, far: 1000000000 };
 const DEFAULT_PLUGIN = 7;
-const DEFAULT_ACTORS = { '1': 'Alice', '2': 'Bob', '3': 'Hal (folder)', '4': 'Mallory', '5': 'Cora (convictor)', '6': 'Sam (reaper)' };
-const AUTHNAME = { 'anyone': 'anyone', 'owner': 'the request owner', 'next-keys': 'the checkpoint’s next keys', 'proof': 'a duplicity proof' };
+const NAMES = { 1: 'Alice', 2: 'Bob', 3: 'Hal', 4: 'Mallory', 5: 'Cora', 6: 'Sam' };
+const nameOf = addr => NAMES[addr] || ('address ' + addr);
+const CAST = {
+  alice: { name: 'Alice', role: 'an owner', addr: 1, aid: 11, blurb: 'She holds the keys of AID 11, current and next. She never touches the registry herself: a request, a fold by anyone, and her checkpoint carries her token.' },
+  bob: { name: 'Bob', role: 'an owner', addr: 2, aid: 12, blurb: 'He holds the keys of AID 12. Same as Alice, one AID over.' },
+  hal: { name: 'Hal', role: 'a folder', addr: 3, blurb: 'He watches the inbox, builds folds at the current generation, and collects the tip per request. Anyone may fold; he is the one who bothers.' },
+  sam: { name: 'Sam', role: 'a reaper', addr: 6, blurb: 'He cleans up: bondless checkpoints after the grace window for their min-ADA, expired requests for the tip. Anyone may; he is the samaritan.' },
+  cora: { name: 'Cora', role: 'a convictor', addr: 5, blurb: 'She holds duplicity proofs: two rotations at one key state, both receipted. A live checkpoint she convicts through its own edge; a dormant AID through a request.' },
+  mallory: { name: 'Mallory', role: 'a stranger', addr: 4, blurb: 'She has a transaction builder and no scruples: stale folds, plugin swaps, other people’s AIDs, go-requests by hand, other people’s retracts.' },
+};
+const ACTOR_ORDER = ['alice', 'bob', 'hal', 'sam', 'cora', 'mallory'];
+const INTEREST = {
+  alice: 'holds the keys of AID 11; wants her AID registered, her checkpoint carrying her token, her bond back when she leaves',
+  bob: 'holds the keys of AID 12; wants the same, and to be left alone',
+  hal: 'holds a view of the inbox; wants the tip per request he folds, at the generation the registry is at',
+  sam: 'holds nothing but a wallet; wants the min-ADA of abandoned checkpoints and the tips of expired requests',
+  cora: 'holds duplicity proofs against a key state; wants the AID convicted, for ever',
+  mallory: 'holds a transaction builder; wants to register what is not hers, to move the registry without the plugin, to brick a go-request',
+};
+const SVGNS = 'http://www.w3.org/2000/svg';
 
-/* --- session: the state, the evidence, the slot, the history ---------------- */
-function newSession(params, plugin, actors, env) {
-  return { params, plugin, actors, env: env || emptyEnv(), now: 0, state: initSys(plugin),
-           history: [], cursor: -1, ledger: {}, flows: [] };
+// tiny DOM helpers: h(tag, attrs, ...children) and its SVG twin
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'hidden' || k === 'disabled' || k === 'selected' || k === 'open' || k === 'checked') { if (v) el.setAttribute(k, ''); el[k] = !!v; }
+    else el.setAttribute(k, String(v));
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? String(c) : c);
+  return el;
 }
-let S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
-let story = null; // { sc, branch: null | fork id, i: steps played along the branch's path }
-
-function attempt(action, as) {
-  const r = step(S.params, S.env, action, S.now, S.state);
-  const rec = { now: S.now, action, result: r, before: S.state, as: as || '', params: S.params, env: S.env };
-  rec.theorems = (!r.ok && String(r.reason).startsWith('invalid')) ? {} : checkTheorems(rec);
-  rec.lean = findLeanCell(REGISTRY_LEAN_TRACES_V1, S.params, S.env, S.now, S.state, action); // T7: the Lean's own verdict on this step, when the corpus has it
-  for (const id of Object.keys(rec.theorems)) if (rec.theorems[id].v === 'holds') S.ledger[id] = (S.ledger[id] || 0) + 1;
-  if (rec.lean.found && rec.lean.agrees) S.ledger.T7 = (S.ledger.T7 || 0) + 1;
-  S.history.push(rec);
-  S.cursor = S.history.length - 1;
-  if (r.ok) { S.state = r.state; S.flows.push({ now: S.now, action, flow: r.flow, before: rec.before }); }
-  return rec;
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.setAttribute('data-' + dk, dv);
+    else el.setAttribute(k, String(v));
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+  return el;
 }
+const $ = id => document.getElementById(id);
+const clear = el => { el.replaceChildren(); return el; };
+const fmt = n => String(n);
+const raf = cb => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : setTimeout(() => cb(Date.now()), 16));
+const nowMs = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+const dataOf = a => { const t = actionTag(a); return t && a && typeof a === 'object' && a[t] && typeof a[t] === 'object' ? a[t] : {}; };
+const parseNat = str => { const t = String(str).trim(); if (!/^\d{1,16}$/.test(t)) return null; const n = Number(t); return isNat(n) ? n : null; };
 
-/* --- rendering ----------------------------------------------------------------- */
-function actorName(a) { return (S.actors && S.actors[String(a)]) || `address ${a}`; }
-function tag(a) { return actionTag(a); }
+/* ---- the tree of plays --------------------------------------------------------
+   A node is a session (immutable) plus the record that produced it. Children
+   are branches; `last` remembers the branch last taken, so › follows it. */
+const app = { nodes: [], cursor: 0, story: null, actor: 'alice', pending: null, playing: null, fx: [] };
+const node = id => app.nodes[id];
+const cur = () => node(app.cursor).session;
+function newTree(session, say) {
+  app.nodes = [{ id: 0, parent: null, children: [], last: null, session, record: null, who: '', say, kind: 'origin', branch: null }];
+  app.cursor = 0; app.pending = null; stopPlay();
+}
+function addChild(parentId, entry) {
+  const n = { id: app.nodes.length, parent: parentId, children: [], last: null, branch: null, ...entry };
+  app.nodes.push(n);
+  const p = node(parentId); p.children.push(n.id); p.last = n.id;
+  return n.id;
+}
+function pathTo(id) { const out = []; for (let n = id; n !== null; n = node(n).parent) out.unshift(n); return out; }
+function forwardPath(id) { const out = []; let n = node(id); while (n.children.length) { const c = n.last !== null ? n.last : n.children[0]; out.push(c); n = node(c); } return out; }
+const currentPath = () => [...pathTo(app.cursor), ...forwardPath(app.cursor)];
+const nextOf = id => { const n = node(id); return n.children.length ? (n.last !== null ? n.last : n.children[0]) : null; };
+const leafNodeOf = id => { let n = id; for (;;) { const c = nextOf(n); if (c === null) return n; n = c; } };
+function goTo(id, opts) {
+  opts = opts || {};
+  if (id === app.cursor || !node(id)) return;
+  const a = pathTo(app.cursor), b = pathTo(id);
+  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const up = a.slice(i).reverse(), down = b.slice(i);
+  for (const n of down) { const p = node(n).parent; if (p !== null) node(p).last = n; }
+  app.cursor = id; app.pending = null;
+  render();
+  const edges = [...up.map(n => ({ node: n, dir: -1 })), ...down.map(n => ({ node: n, dir: 1 }))];
+  if (!opts.silent) playEdges(edges);
+}
+function pushNode(entry) { const id = addChild(app.cursor, entry); goTo(id); }
+
+/* ---- words ----------------------------------------------------------------------- */
 function describeAction(a) {
-  const t = tag(a), b = a[t];
+  const t = actionTag(a), b = dataOf(a);
   switch (t) {
-    case 'contribute': return `request ${opTag(b.op)}: AID ${b.aid}, owner ${actorName(b.owner)}, submitted_at ${b.submittedAt}`;
-    case 'fold': return `fold by ${actorName(b.folder)} at generation ${b.gen}, plugin ${b.plugin}: ` + (b.batch.length ? b.batch.map(x => `${x.do} #${x.id}`).join(', ') : 'empty batch');
+    case 'contribute': return `request ${opWord(b.op)} for AID ${b.aid} (owner ${nameOf(b.owner)}, submitted at ${b.submittedAt})`;
+    case 'fold': return `fold at generation ${b.gen}, plugin ${b.plugin}: ` + (b.batch.length ? b.batch.map(x => `${x.do} #${x.id}`).join(', ') : 'empty batch');
     case 'retract': return `retract request #${b.req}`;
-    case 'reap': return `reap checkpoint ${b.aid} by ${actorName(b.reaper)}`;
-    case 'pause': return `pause checkpoint ${b.aid} (withdrawing rotation)`;
-    case 'resume': return `resume checkpoint ${b.aid} (depositing rotation)`;
-    case 'convictCkpt': return `convict checkpoint ${b.aid}`;
+    case 'reap': return `reap the checkpoint of AID ${b.aid}`;
+    case 'pause': return `pause the checkpoint of AID ${b.aid} (withdrawing rotation)`;
+    case 'resume': return `resume the checkpoint of AID ${b.aid} (depositing rotation)`;
+    case 'convictCkpt': return `convict the checkpoint of AID ${b.aid}`;
   }
   return t;
 }
+const opWord = op => typeof op === 'string' ? (op === 'goConvicted' ? 'go → convicted' : op) : `go → dormant(${op.goDormant})`;
 function describeFlow(f) {
   const parts = [];
-  if (f.deposited) parts.push(`${f.deposited} deposited into the request`);
+  if (f.deposited) parts.push(`${f.deposited} into the request`);
   for (const l of f.locked) parts.push(`${l.value} locked into checkpoint ${l.aid}`);
-  for (const r of f.refunds) parts.push(`${r.value} back to ${actorName(r.addr)}`);
-  if (f.tips) parts.push(`${f.tips.value} in tips to ${actorName(f.tips.addr)}`);
-  if (f.premium) parts.push(`${f.premium.value} premium to ${actorName(f.premium.addr)}`);
+  for (const r of f.refunds) parts.push(`${r.value} → ${nameOf(r.addr)}`);
+  if (f.tips) parts.push(`${f.tips.value} in tips → ${nameOf(f.tips.addr)}`);
+  if (f.premium) parts.push(`${f.premium.value} premium → ${nameOf(f.premium.addr)}`);
   if (f.intoRequest) parts.push(`${f.intoRequest} into the go-request`);
-  return parts.length ? parts.join('; ') : 'no value moves';
+  return parts.length ? 'value: ' + parts.join('; ') : 'no value moved';
 }
 const REASON_WORDS = {
   'not-postable': 'only a reap creates a go-request',
@@ -1156,331 +1509,814 @@ const REASON_WORDS = {
   'not-live': 'that checkpoint is not live',
   'not-parked': 'that checkpoint is not parked',
   'already-tombstone': 'that checkpoint is already a tombstone',
+  'slot-decreased': 'the chain does not go backwards',
 };
-function whyText(r) {
-  const w = REASON_WORDS[r.reason] || r.reason;
-  return `refused — ${r.reason}${r.field ? ' (' + r.field + ')' : ''}${r.at !== undefined ? ' at batch entry ' + r.at : ''}: ${w}`;
+function whyText(r) { return `${r.reason}${r.field ? ' (' + r.field + ')' : ''}${r.at !== undefined ? ' at batch entry ' + r.at : ''}: ${REASON_WORDS[r.reason] || 'refused by the transcription’s boundary'}`; }
+// what a move must carry, read off the Lean: no signer anywhere; a rotation or a proof as evidence
+function needsOf(action) {
+  const t = actionTag(action), who = actionActor(action);
+  if (who === 'next-keys') return { cls: 'keys', text: 'a witnessed rotation from the recorded key state · the next keys' };
+  if (who === 'proof') return { cls: 'public', text: 'a public duplicity proof against the key state' };
+  if (who === 'owner') return { cls: 'keys', text: 'the owner signs on chain (Aiken); the Lean checks the id and the phase' };
+  if (t === 'fold') return { cls: 'public', text: 'no signature · the batch and its evidence' };
+  return { cls: 'public', text: 'no signature' };
 }
 
-function viewState() { // the state shown: the cursor's post-state
-  if (S.cursor < 0) return S.state;
-  const rec = S.history[S.cursor];
-  return rec.result.ok ? rec.result.state : rec.before;
-}
-function viewNow() { return S.cursor < 0 ? S.now : S.history[S.cursor].now; }
-
-function render() {
-  const st = viewState(), now = viewNow(), p = S.params;
-  $('slot').textContent = S.now;
-  $('paramchip').textContent = `D=${p.D} tip=${p.tip} Mc=${p.Mc} Mr=${p.Mr} process=${p.process} retract=${p.retract} W=${p.W} plugin=${S.plugin}`;
-  $('pf-params').textContent = `Parameters: bond D = ${p.D}, tip = ${p.tip}, checkpoint min-ADA Mc = ${p.Mc}, request min-ADA Mr = ${p.Mr}, process_time = ${p.process}, retract_time = ${p.retract}, grace W = ${p.W} slots, far = ${p.far}; plugin ${S.plugin}. In the Lean, 0 < D, 0 < process, 0 < retract and Mr + tip ≤ Mc are structural.`;
-  const leafWords = v => statusTag(v) === 'active' ? `active — token ${v.active}` : statusTag(v) === 'dormant' ? `dormant — revive by a rotation from key state ${v.dormant}` : 'convicted — for ever';
-  $('registry').innerHTML = `<dt>generation</dt><dd>${st.gen}</dd><dt>plugin</dt><dd>${st.plugin}</dd><dt>leaves</dt><dd>${st.leaves.length ? st.leaves.slice().sort((a, b) => a.aid - b.aid).map(l => `AID ${l.aid}: ${leafWords(l.status)}`).join('<br>') : '∅ (empty root)'}</dd><dt>next request id</dt><dd>${st.nextReq}</dd><dt>next token</dt><dd>${st.nextToken}</dd>`;
-  const cks = st.ckpts.slice().sort((x, y) => x.aid - y.aid);
-  $('ck-count').textContent = `${cks.filter(c => ckTag(c.ckpt.st) === 'live').length} live, ${cks.filter(c => ckTag(c.ckpt.st) === 'parked').length} parked, ${cks.filter(c => ckTag(c.ckpt.st) === 'tomb').length} tombstones`;
-  const ckWords = c => { const tg = ckTag(c.st); return tg === 'live' ? '<span class="badge live">LIVE</span>' : tg === 'tomb' ? '<span class="badge tomb">TOMBSTONE</span>' : `<span class="badge p2">PARKED since ${c.st.parked}</span>${c.st.parked + p.W <= now ? ' <span class="sub">reapable by anyone</span>' : ` <span class="sub">grace until ${c.st.parked + p.W}</span>`}`; };
-  $('checkpoints').innerHTML = cks.length
-    ? `<table class="t"><tr><th>AID</th><th>token</th><th>state</th><th>key state</th><th>holds</th></tr>` + cks.map(c => `<tr><td class="mono">${c.aid}</td><td class="mono">${c.ckpt.token}</td><td>${ckWords(c.ckpt)}</td><td class="mono">${c.ckpt.k}</td><td class="mono">${ckTag(c.ckpt.st) === 'live' ? p.D + p.Mc : p.Mc}</td></tr>`).join('') + '</table>'
-    : '<span class="sub">no checkpoint on chain</span>';
-  $('inbox-count').textContent = `${st.requests.length} pending`;
-  $('inbox').innerHTML = st.requests.length
-    ? `<table class="t"><tr><th>#</th><th>op</th><th>AID</th><th>owner</th><th>submitted_at</th><th>at slot ${now}</th><th>holds</th></tr>` + st.requests.slice().sort((a, b) => a.id - b.id).map(r => {
-        const go = !userPostable(r.op);
-        const ph = phaseOf(p, r, now);
-        const cls = go ? 'p1' : ph === 'phase-1' ? 'p1' : ph === 'phase-2' ? 'p2' : ph === 'phase-3' ? 'p3' : 'future';
-        const opw = opTag(r.op) === 'goDormant' ? `go → dormant(${r.op.goDormant})` : opTag(r.op) === 'goConvicted' ? 'go → convicted' : opTag(r.op);
-        return `<tr><td class="mono">${r.id}</td><td>${esc(opw)}</td><td class="mono">${r.aid}</td><td>${esc(actorName(r.owner))}</td><td class="mono">${go ? '∞' : r.submittedAt}</td><td><span class="badge ${cls}">${go ? 'permanent' : ph + (ph === 'future' ? ' (rejectable)' : '')}</span></td><td class="mono">${opBond(p, r.op) + p.tip}</td></tr>`;
-      }).join('') + '</table>'
-    : '<span class="sub">empty</span>';
-  renderValue(st, p);
-  renderCast();
-  renderEvidence();
-  renderActions(st, now);
-  renderHistory();
-  renderLedger();
-  renderTree();
-}
-
-function renderValue(st, p) {
-  const held = {};
-  const add = (who, comp, v) => { held[who] = held[who] || {}; held[who][comp] = (held[who][comp] || 0) + v; };
-  for (const r of st.requests) add(`inbox (request #${r.id}, ${actorName(r.owner)})`, userPostable(r.op) ? 'bond + tip' : 'min-ADA + tip', opBond(p, r.op) + p.tip);
-  for (const c of st.ckpts) { if (ckTag(c.ckpt.st) === 'live') add(`checkpoint ${c.aid}`, 'bond', p.D); add(`checkpoint ${c.aid}`, 'min-ADA', p.Mc); }
-  const upto = S.cursor < 0 ? S.flows.length : S.flows.filter(f => S.history.indexOf(S.history.find(h => h.action === f.action && h.now === f.now)) <= S.cursor).length;
-  for (const f of S.flows.slice(0, upto)) {
-    for (const r of f.flow.refunds) add(actorName(r.addr), 'refunded', r.value);
-    if (f.flow.tips) add(actorName(f.flow.tips.addr), 'tips', f.flow.tips.value);
-    if (f.flow.premium) add(actorName(f.flow.premium.addr), 'reap premium', f.flow.premium.value);
+/* ---- free play: what each stakeholder can do now, dry-run through the core ------ */
+function pendingOf(sess, owner) { return sess.state.requests.filter(r => owner === undefined || r.owner === owner).slice().sort((a, b) => a.id - b.id); }
+function ckptOf(sess, aid) { return lookupCkpt(sess.state.ckpts, aid); }
+function leafKey(sess, aid) { const l = lookupLeaf(sess.state.leaves, aid); return l === null ? 'none' : statusTag(l); }
+function kOf(sess, aid) { const c = ckptOf(sess, aid); if (c) return c.k; const l = lookupLeaf(sess.state.leaves, aid); return l && statusTag(l) === 'dormant' ? l.dormant : 0; }
+function offersFor(actor, sess) {
+  const st = sess.state, now = sess.now, gen = st.gen, pl = st.plugin;
+  const keri = [], chain = [];
+  const ev = (label, row, hint) => keri.push({ label, row, hint });
+  const act = (kind, label, action) => chain.push({ kind, label, action });
+  const contribute = (aid, owner, op) => ({ contribute: { aid, owner, submittedAt: now, op } });
+  const fold = (folder, g, plugin, batch) => ({ fold: { folder, gen: g, plugin, batch } });
+  const all = pendingOf(sess);
+  const processable = all.filter(r => inPhase1(sess.params, r, now) || !userPostable(r.op));
+  const rejectable_ = all.filter(r => rejectable(sess.params, r, now) && userPostable(r.op));
+  const owner = (c) => {
+    const aid = c.aid, a = c.addr, k = kOf(sess, aid), lk = leafKey(sess, aid), ck = ckptOf(sess, aid);
+    ev(`my inception verifies (AID ${aid})`, { inception: [aid] }, 'the plugin verifies the inception over the bytes');
+    ev(`kli rotate from key state ${k}: witnesses receipt`, { rotationFrom: [aid, k] }, 'a witnessed rotation from the key state the checkpoint (or the dormant leaf) records');
+    ev(`my keys sign at threshold (quorum, AID ${aid})`, { quorum: [aid] }, 'the owner reaps her own parked checkpoint early');
+    if (lk === 'none') act('contribute', `post my registration (bond ${sess.params.D} + tip ${sess.params.tip})`, contribute(aid, a, 'register'));
+    if (lk === 'dormant') act('contribute', `post my revival (bond ${sess.params.D} + tip)`, contribute(aid, a, 'revive'));
+    for (const r of pendingOf(sess, a)) act('retract', `retract my request #${r.id} (${opWord(r.op)})`, { retract: { req: r.id } });
+    const mine = all.filter(r => r.owner === a && (inPhase1(sess.params, r, now)));
+    if (mine.length) act('fold', 'fold my own request in (I need no folder)', fold(a, gen, pl, mine.map(r => ({ id: r.id, do: 'process' }))));
+    if (ck && ckTag(ck.st) === 'live') act('pause', 'pause: my next keys withdraw the bonds', { pause: { aid } });
+    if (ck && ckTag(ck.st) === 'parked') act('resume', 'resume: a depositing rotation makes it live again', { resume: { aid } });
+    if (ck) act('reap', 'reap my own parked checkpoint (at any time, with my keys)', { reap: { reaper: a, aid } });
+  };
+  switch (actor) {
+    case 'alice': owner(CAST.alice); break;
+    case 'bob': owner(CAST.bob); break;
+    case 'hal':
+      if (processable.length) act('fold', `fold the inbox at generation ${gen}: process ${processable.length} request${processable.length > 1 ? 's' : ''}`, fold(3, gen, pl, processable.map(r => ({ id: r.id, do: 'process' }))));
+      if (rejectable_.length) act('fold', `sweep: reject ${rejectable_.length} expired request${rejectable_.length > 1 ? 's' : ''}`, fold(3, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
+      for (const r of all) act('fold', `fold #${r.id} alone (${opWord(r.op)}, AID ${r.aid})`, fold(3, gen, pl, [{ id: r.id, do: 'process' }]));
+      break;
+    case 'sam':
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { reap: { reaper: 6, aid: c.aid } });
+      if (rejectable_.length) act('fold', `sweep the inbox: reject ${rejectable_.length} for the tip`, fold(6, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
+      for (const r of all) act('fold', `reject #${r.id} alone`, fold(6, gen, pl, [{ id: r.id, do: 'reject' }]));
+      break;
+    case 'cora':
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) { ev(`obtain a duplicity proof against AID ${c.aid} at key state ${c.ckpt.k}`, { duplicity: [c.aid, c.ckpt.k] }, 'two rotations at that key state, both receipted'); act('convictCkpt', `convict the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { convictCkpt: { aid: c.aid } }); }
+      for (const l of st.leaves.filter(l => statusTag(l.status) === 'dormant')) { ev(`obtain a duplicity proof against AID ${l.aid} at key state ${l.status.dormant}`, { duplicity: [l.aid, l.status.dormant] }, 'against the key state the dormant leaf records'); act('contribute', `post a conviction request for dormant AID ${l.aid}`, contribute(l.aid, 5, 'convict')); }
+      break;
+    case 'mallory':
+      act('contribute', 'register Alice’s AID myself (owner Mallory)', contribute(11, 4, 'register'));
+      act('contribute', 'post a go-request by hand', contribute(11, 4, 'goConvicted'));
+      if (all.length) act('fold', `fold at generation ${gen > 0 ? gen - 1 : gen + 1} (stale)`, fold(4, gen > 0 ? gen - 1 : gen + 1, pl, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
+      if (all.length) act('fold', 'fold with plugin 8, a script I control', fold(4, gen, 8, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
+      act('fold', 'an empty fold, to churn the generation', fold(4, gen, pl, []));
+      for (const r of all.filter(r => r.owner !== 4)) act('retract', `retract ${nameOf(r.owner)}’s request #${r.id}`, { retract: { req: r.id } });
+      for (const r of all.filter(r => !userPostable(r.op))) act('fold', `reject the go-request #${r.id} inside a batch`, fold(4, gen, pl, [{ id: r.id, do: 'reject' }]));
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} as a stranger`, { reap: { reaper: 4, aid: c.aid } });
+      break;
   }
-  const rows = [];
-  for (const who of Object.keys(held)) for (const comp of Object.keys(held[who])) rows.push({ who, comp, v: held[who][comp] });
-  const max = Math.max(1, ...rows.map(r => r.v));
-  $('bars').innerHTML = rows.length ? rows.map(r => `<div class="bar-row"><span>${esc(r.who)}</span><div class="bar"><i style="width:${Math.round(100 * r.v / max)}%"></i></div><span class="mono">${r.v} ${esc(r.comp)}</span></div>`).join('') : '<span class="sub">nothing held yet</span>';
+  return { keri, chain };
 }
-
-function renderCast() {
-  $('cast').innerHTML = Object.keys(S.actors).map(k => `<div class="who"><b>${esc(S.actors[k])}</b><span>address ${k}</span></div>`).join('');
+function dryRun(sess, action) {
+  const r = step(sess.params, sess.env, action, sess.now, sess.state);
+  return r.ok ? { ok: true, res: r } : { ok: false, res: r, why: 'refused now — ' + whyText(r) };
 }
+const actorOfNode = n => n.actorId || null;
 
-function renderEvidence() {
-  const st = viewState();
-  const aids = new Set([...S.env.inception, ...S.env.quorum, ...S.env.rotationFrom.map(r => r[0]), ...S.env.duplicity.map(r => r[0]), ...st.leaves.map(l => l.aid), ...st.requests.map(r => r.aid)]);
-  const list = [...aids].sort((a, b) => a - b);
-  const ks = new Set([0, 1, 2, ...st.ckpts.map(c => c.ckpt.k), ...st.leaves.filter(l => statusTag(l.status) === 'dormant').map(l => l.status.dormant)]);
-  const kl = [...ks].sort((a, b) => a - b);
-  const cell1 = (k, aid) => `<td><label><input type="checkbox" data-ev="${k}" data-aid="${aid}"${S.env[k].includes(aid) ? ' checked' : ''}> ${S.env[k].includes(aid) ? 'yes' : 'no'}</label></td>`;
-  const has2 = (k, aid, kk) => S.env[k].some(r => r[0] === aid && r[1] === kk);
-  const cell2 = (k, aid) => `<td>${kl.map(kk => `<label><input type="checkbox" data-ev="${k}" data-aid="${aid}" data-k="${kk}"${has2(k, aid, kk) ? ' checked' : ''}> k=${kk}</label>`).join(' ')}</td>`;
-  $('evbody').innerHTML =
-    `<table><tr><th>AID</th><th>inception verifies</th><th>witnessed rotation from key state</th><th>duplicity proof against key state</th><th>current keys sign</th></tr>` +
-    list.map(aid => `<tr><td class="mono">${aid}</td>${cell1('inception', aid)}${cell2('rotationFrom', aid)}${cell2('duplicity', aid)}${cell1('quorum', aid)}</tr>`).join('') +
-    `</table><div class="add">AID <input id="ev-aid" type="number" min="0" value="13"> <button type="button" id="ev-add">add a row</button></div>` +
-    `<div class="hint">Each column is one Env predicate of Registry.lean: <span class="mono">inception</span> (the #114 rule), <span class="mono">rotationFrom</span> (the advance predicate: pause, resume, revive), <span class="mono">duplicity</span> (a proof against a key state), <span class="mono">quorum</span> (the owner reaping early). The machine only ever applies them.</div>`;
-  for (const cb of $('evbody').querySelectorAll('input[type="checkbox"]')) cb.addEventListener('change', () => {
-    const k = cb.getAttribute('data-ev'), aid = Number(cb.getAttribute('data-aid'));
-    if (k === 'rotationFrom' || k === 'duplicity') {
-      const kk = Number(cb.getAttribute('data-k'));
-      const l = S.env[k].filter(r => !(r[0] === aid && r[1] === kk)); if (cb.checked) l.push([aid, kk]);
-      S.env = { ...S.env, [k]: l.sort((x, y) => x[0] - y[0] || x[1] - y[1]) };
+/* ---- the scene ----------------------------------------------------------------
+   Every entity is a <g data-obj data-key> placed by `layout`, so the fx layer
+   can fly things between them. Regions: KERI (the owners, their witnesses,
+   the convictor, the stranger) · the chain (the registry UTxO with its leaves,
+   the inbox, the checkpoints, the validator, the tray) · readers & payees
+   (the folder, the reaper, the wallets). */
+const layout = {
+  'actor:alice': { x: 80, y: 110 }, 'actor:bob': { x: 190, y: 110 }, witnesses: { x: 135, y: 200 }, 'actor:cora': { x: 80, y: 330 }, 'actor:mallory': { x: 190, y: 330 }, keri: { x: 135, y: 470 },
+  registry: { x: 400, y: 150 }, inbox: { x: 610, y: 150 }, 'ckpt:11': { x: 360, y: 330 }, 'ckpt:12': { x: 480, y: 330 }, 'ckpt:13': { x: 600, y: 330 }, ckpts: { x: 480, y: 330 },
+  validator: { x: 500, y: 460 }, tray: { x: 500, y: 545 }, clock: { x: 500, y: 40 },
+  'actor:hal': { x: 860, y: 110 }, 'actor:sam': { x: 860, y: 230 }, wallets: { x: 860, y: 360 },
+};
+const walletPos = i => ({ x: 862, y: 330 + i * 40 });
+function hexagon(cx, cy, r) { const pts = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i - Math.PI / 6; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); } return pts.join(' '); }
+function balancesAlong(nodes) {
+  const bal = {};
+  const add = (addr, comp, v) => { if (!v) return; bal[addr] = bal[addr] || { refunds: 0, tips: 0, premium: 0, deposited: 0 }; bal[addr][comp] += v; };
+  for (const n of nodes) if (n.record && n.record.result.ok) {
+    const f = n.record.result.flow, a = n.record.action;
+    for (const r of f.refunds) add(r.addr, 'refunds', r.value);
+    if (f.tips) add(f.tips.addr, 'tips', f.tips.value);
+    if (f.premium) add(f.premium.addr, 'premium', f.premium.value);
+    if (f.deposited && a.contribute) add(a.contribute.owner, 'deposited', f.deposited);
+  }
+  return bal;
+}
+function phaseWord(p, r, now) { return userPostable(r.op) ? phaseOf(p, r, now) : 'go'; }
+function drawScene() {
+  const svg = $('scene');
+  const sess = cur(), p = sess.params, st = sess.state;
+  const here = node(app.cursor);
+  const acting = actorOfNode(here);
+  const parts = [];
+  parts.push(s('rect', { class: 'region', x: 10, y: 10, width: 250, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 24, y: 34 }, 'KERI · the identities'));
+  parts.push(s('rect', { class: 'region chain', x: 275, y: 10, width: 450, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 289, y: 34 }, 'Cardano · the registry, the inbox, the checkpoints'));
+  parts.push(s('rect', { class: 'region readers', x: 740, y: 10, width: 250, height: 580, rx: 14 }), s('text', { class: 'rlbl', x: 754, y: 34 }, 'folders, reapers & payees'));
+  const actor = (key, id, name, role, badge) => {
+    const q = layout[key];
+    const g = s('g', { class: 'actor' + (id === app.actor ? ' on' : '') + (id === acting ? ' acting' : ''), dataset: { obj: 'actor', id, key }, transform: `translate(${q.x},${q.y})`, role: 'button', tabindex: 0,
+      onclick: () => { app.actor = id; app.pending = null; render(); } },
+      s('circle', { class: 'avatar', r: 28 }), s('text', { class: 'nm', y: 4 }, name), s('text', { class: 'role', y: 42 }, role));
+    if (badge) g.append(s('text', { class: 'badge', y: 55 }, badge));
+    return g;
+  };
+  const ownerBadge = aid => { const lk = leafKey(sess, aid); const c = ckptOf(sess, aid); return lk === 'none' ? 'no leaf' : lk === 'active' ? (c ? `token ${c.token} · k ${c.k}` : 'token gone · go pending') : lk === 'dormant' ? `dormant · k ${lookupLeaf(st.leaves, aid).dormant}` : 'convicted'; };
+  parts.push(actor('actor:alice', 'alice', 'Alice', 'AID 11', ownerBadge(11)), actor('actor:bob', 'bob', 'Bob', 'AID 12', ownerBadge(12)));
+  const wg = s('g', { dataset: { obj: 'witnesses', key: 'witnesses' }, transform: `translate(${layout.witnesses.x},${layout.witnesses.y})` });
+  [-56, 0, 56].forEach((dx, i) => wg.append(s('circle', { class: 'wit', cx: dx, cy: 0, r: 13 }), s('text', { class: 'witlbl', x: dx, y: 4 }, 'W' + (i + 1))));
+  wg.append(s('text', { class: 'witlbl', y: 30 }, 'their witnesses · receipts'));
+  parts.push(wg);
+  parts.push(actor('actor:cora', 'cora', 'Cora', 'a convictor', sess.env.duplicity.length ? `${sess.env.duplicity.length} proof${sess.env.duplicity.length > 1 ? 's' : ''}` : ''), actor('actor:mallory', 'mallory', 'Mallory', 'a stranger', ''));
+  // the registry UTxO
+  const rq = layout.registry;
+  const rg = s('g', { dataset: { obj: 'registry', key: 'registry' } });
+  rg.append(s('rect', { class: 'utxo', x: rq.x - 100, y: rq.y - 90, width: 200, height: 190, rx: 12 }), s('text', { class: 'state-word', x: rq.x - 88, y: rq.y - 62 }, 'the registry'), s('text', { class: 'gen', x: rq.x - 88, y: rq.y - 44 }, `generation ${st.gen} · plugin ${st.plugin}`));
+  const leaves = st.leaves.slice().sort((a, b) => a.aid - b.aid).slice(0, 4);
+  leaves.forEach((l, i) => { const y = rq.y - 30 + i * 30, sk = statusTag(l.status); rg.append(s('rect', { class: 'leafcard ' + sk, x: rq.x - 88, y, width: 176, height: 24, rx: 5 }), s('text', { class: 'datum-v', x: rq.x - 82, y: y + 16 }, `AID ${l.aid} · ${sk === 'active' ? 'active · token ' + l.status.active : sk === 'dormant' ? 'dormant · k ' + l.status.dormant : 'convicted'}`)); });
+  if (!leaves.length) rg.append(s('text', { class: 'hint', x: rq.x - 88, y: rq.y - 10 }, 'empty root: no leaf yet'));
+  if (st.leaves.length > 4) rg.append(s('text', { class: 'hint', x: rq.x - 88, y: rq.y + 92 }, `+${st.leaves.length - 4} more`));
+  parts.push(rg);
+  // the inbox
+  const iq = layout.inbox;
+  const ig = s('g', { dataset: { obj: 'inbox', key: 'inbox' } });
+  ig.append(s('rect', { class: 'tray', x: iq.x - 95, y: iq.y - 90, width: 190, height: 190, rx: 12 }), s('text', { class: 'hint', x: iq.x - 86, y: iq.y - 72 }, `the inbox · ${st.requests.length} request${st.requests.length === 1 ? '' : 's'}`));
+  const reqs = st.requests.slice().sort((a, b) => a.id - b.id).slice(0, 5);
+  reqs.forEach((r, i) => { const y = iq.y - 60 + i * 28, ph = phaseWord(p, r, sess.now); ig.append(s('rect', { class: 'reqcard ' + (ph === 'go' ? 'go' : ph === 'phase-2' ? 'p2' : ph === 'phase-3' || ph === 'future' ? 'p3' : ''), x: iq.x - 86, y, width: 172, height: 22, rx: 4 }), s('text', { class: 'req-t', x: iq.x - 80, y: y + 15 }, `#${r.id} ${opWord(r.op)} · ${r.aid} · ${nameOf(r.owner)} · ${ph === 'go' ? 'permanent' : ph}`)); });
+  if (st.requests.length > 5) ig.append(s('text', { class: 'hint', x: iq.x - 86, y: iq.y + 92 }, `+${st.requests.length - 5} more`));
+  if (!reqs.length) ig.append(s('text', { class: 'hint', x: iq.x, y: iq.y + 10, 'text-anchor': 'middle' }, 'empty'));
+  parts.push(ig);
+  // the checkpoints: one UTxO per AID with a leaf, drawn where its token is or is not
+  const aids = [...new Set([...st.leaves.map(l => l.aid), ...st.ckpts.map(c => c.aid)])].sort((a, b) => a - b).slice(0, 3);
+  aids.forEach((aid, i) => {
+    const key = 'ckpt:' + aid; layout[key] = { x: 360 + i * 120, y: 330 };
+    const q = layout[key], c = ckptOf(sess, aid), tg = ckTag(c ? c.st : 'live');
+    const g = s('g', { dataset: { obj: 'ckpt', key }, transform: `translate(${q.x},${q.y})` });
+    g.append(s('rect', { class: 'ck' + (c ? (tg === 'parked' ? ' parked' : tg === 'tomb' ? ' tomb' : '') : ' absent'), x: -52, y: -46, width: 104, height: 96, rx: 10, 'stroke-dasharray': c ? null : '6 4' }));
+    if (c) {
+      g.append(s('polygon', { class: 'token' + (tg === 'tomb' ? ' convicted' : ''), points: hexagon(0, -18, 16) }), s('text', { class: 'tk', y: -14 }, String(c.token)));
+      g.append(s('text', { class: 'ck-w ' + tg, y: 14 }, tg === 'live' ? 'live' : tg === 'parked' ? 'parked' : 'tombstone'));
+      const held = tg === 'live' ? p.D + p.Mc : p.Mc;
+      g.append(s('text', { class: 'ck-t', y: 30 }, `k ${c.k} · holds ${held}`));
+      if (tg === 'parked') { const end = c.st.parked + p.W, frac = Math.max(0, Math.min(1, (sess.now - c.st.parked) / Math.max(1, p.W))); g.append(s('rect', { class: 'track', x: -44, y: 36, width: 88, height: 6, rx: 3 }), s('rect', { class: 'fill' + (frac >= 1 ? ' done' : ''), x: -44, y: 36, width: 88 * frac, height: 6, rx: 3 })); g.title = `grace until slot ${end}`; }
     } else {
-      const l = S.env[k].filter(x => x !== aid); if (cb.checked) l.push(aid); S.env = { ...S.env, [k]: l.sort((a, b) => a - b) };
+      g.append(s('polygon', { class: 'token absent', points: hexagon(0, -18, 16) }), s('text', { class: 'ck-w', y: 14 }, goPending(st, aid) ? 'reaped' : 'none'));
+      g.append(s('text', { class: 'ck-t', y: 30 }, goPending(st, aid) ? 'go-request pending' : leafKey(sess, aid) === 'dormant' ? 'dormant: revive it' : leafKey(sess, aid) === 'convicted' ? 'convicted for ever' : 'no checkpoint'));
     }
-    render();
+    g.append(s('text', { class: 'hint', y: -54, 'text-anchor': 'middle' }, `checkpoint of AID ${aid}`));
+    parts.push(g);
   });
-  $('ev-add').addEventListener('click', () => { const aid = Number($('ev-aid').value); if (isNat(aid)) { S.env = { ...S.env, inception: [...new Set([...S.env.inception, aid])].sort((a, b) => a - b) }; render(); } });
+  if (!aids.length) parts.push(s('text', { class: 'hint', x: 500, y: 330, 'text-anchor': 'middle' }, 'no checkpoint yet: a registration mints the first token'));
+  // validator + tray
+  const v = layout.validator;
+  const vg = s('g', { dataset: { obj: 'validator', key: 'validator' }, transform: `translate(${v.x},${v.y})` });
+  vg.append(s('path', { class: 'validator', d: 'M -34 -26 L 34 -26 L 34 6 Q 34 22 0 30 Q -34 22 -34 6 Z' }), s('text', { x: 0, y: 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700 }, 'the cage'));
+  vg.append(s('text', { class: 'hint', x: 0, y: 46, 'text-anchor': 'middle' }, 'admits exactly stepFn of Registry.lean · the plugin is its body'));
+  parts.push(vg);
+  const tr = layout.tray;
+  const trg = s('g', { dataset: { obj: 'tray', key: 'tray' }, transform: `translate(${tr.x},${tr.y})` });
+  trg.append(s('rect', { class: 'tray', x: -200, y: -22, width: 400, height: 56, rx: 8 }), s('text', { class: 'hint', x: -192, y: -8 }, 'evidence (the Env): what the plugin and the policy verify over the bytes'));
+  const receipts = [];
+  for (const a of sess.env.inception) receipts.push('inception ' + a);
+  for (const r of sess.env.rotationFrom) receipts.push(`rot ${r[0]} k${r[1]}`);
+  for (const r of sess.env.duplicity) receipts.push(`dup ${r[0]} k${r[1]}`);
+  for (const a of sess.env.quorum) receipts.push('quorum ' + a);
+  receipts.slice(0, 5).forEach((txt, i) => { const x = -192 + i * 78; trg.append(s('rect', { class: 'receipt', x, y: 2, width: 72, height: 17, rx: 4 }), s('text', { class: 'receipt-t', x: x + 4, y: 14 }, txt.slice(0, 13))); });
+  if (receipts.length > 5) trg.append(s('text', { class: 'hint', x: 150, y: 14 }, '+' + (receipts.length - 5)));
+  if (!receipts.length) trg.append(s('text', { class: 'hint', x: 0, y: 14, 'text-anchor': 'middle' }, 'nothing presented yet'));
+  parts.push(trg);
+  const c = layout.clock;
+  parts.push(s('g', { dataset: { obj: 'clock', key: 'clock' }, transform: `translate(${c.x},${c.y})` }, s('rect', { class: 'clock', x: -44, y: -16, width: 88, height: 30, rx: 15 }), s('text', { class: 'clock-t', y: 5 }, 'slot ' + sess.now)));
+  // readers & payees
+  parts.push(actor('actor:hal', 'hal', 'Hal', 'a folder', ''), actor('actor:sam', 'sam', 'Sam', 'a reaper', ''));
+  const bal = balancesAlong(pathTo(app.cursor).map(node));
+  const addrs = Object.keys(bal).map(Number).sort((a, b) => a - b).slice(0, 5);
+  addrs.forEach((addr, i) => {
+    const q = walletPos(i); layout['wallet:' + addr] = q;
+    const b = bal[addr];
+    const g = s('g', { dataset: { obj: 'wallet', key: 'wallet:' + addr }, transform: `translate(${q.x},${q.y})` });
+    g.append(s('rect', { class: 'wallet', x: -116, y: -16, width: 232, height: 34, rx: 6 }), s('text', { class: 'wallet-t', x: -110, y: -2 }, nameOf(addr)),
+      s('text', { class: 'wallet-n', x: 110, y: 12 }, `back ${b.refunds} · tips ${b.tips} · premium ${b.premium} · put in ${b.deposited}`));
+    parts.push(g);
+  });
+  if (!addrs.length) parts.push(s('text', { class: 'hint', x: 860, y: 336, 'text-anchor': 'middle' }, 'no payment yet · every payee shows here'));
+  parts.push(s('g', { id: 'fx' }));
+  clear(svg).append(...parts);
 }
 
-function addrOptions(sel) { return Object.keys(S.actors).map(k => `<option value="${k}"${Number(k) === sel ? ' selected' : ''}>${esc(S.actors[k])}</option>`).join(''); }
-
-function renderActions(st, now) {
-  const form = (id, title, auth, body, hint) => `<div class="act" data-act="${id}"><h3>${title}<span class="auth">by ${esc(auth)}</span></h3><div class="row">${body}</div>${hint ? `<div class="hint">${hint}</div>` : ''}<div class="row"><button type="button" class="primary" data-go="${id}">submit</button></div></div>`;
-  const reqLabel = r => `#${r.id} — ${opTag(r.op)} AID ${r.aid}, ${esc(actorName(r.owner))}, ${userPostable(r.op) ? phaseOf(S.params, r, now) : 'permanent'}`;
-  const reqOptions = st.requests.slice().sort((a, b) => a.id - b.id).map(r => `<option value="${r.id}">${reqLabel(r)}</option>`).join('');
-  const ckOptions = st.ckpts.slice().sort((a, b) => a.aid - b.aid).map(c => `<option value="${c.aid}">AID ${c.aid} (${ckTag(c.ckpt.st)}, k=${c.ckpt.k})</option>`).join('') || '<option value="">none</option>';
-  $('actions').innerHTML =
-    form('contribute', 'post a request', AUTHNAME.anyone,
-      `<select id="a-c-op"><option value="register">register</option><option value="revive">revive</option><option value="convict">convict (dormant)</option></select> AID <input id="a-c-aid" type="number" min="0" value="11"> owner <select id="a-c-owner">${addrOptions(1)}</select> submitted_at <input id="a-c-t" type="number" min="0" value="${now}">`,
-      'brings the bond (D for register and revive, the request min-ADA for a conviction) plus the tip into the inbox; the registry is not touched') +
-    form('fold', 'fold the registry', AUTHNAME.anyone,
-      `folder <select id="a-f-folder">${addrOptions(3)}</select> generation <input id="a-f-gen" type="number" min="0" value="${st.gen}"> plugin <input id="a-f-plugin" type="number" min="0" value="${st.plugin}">` +
-      `<div class="batch">${st.requests.length ? st.requests.slice().sort((a, b) => a.id - b.id).map(r => `<label><select data-batch="${r.id}"><option value="">leave</option><option value="process">process</option><option value="reject">reject</option></select> ${reqLabel(r)}</label>`).join('') : '<span class="sub">no request to fold</span>'}</div>`,
-      'spends the registry at the named generation; the plugin admits each leaf transition with its evidence and couples the mint; tips go to the folder') +
-    form('retract', 'retract a request', AUTHNAME.owner, `request <select id="a-r-req">${reqOptions || '<option value="">none</option>'}</select>`, 'phase 2 only, never for a go-request; returns bond + tip') +
-    form('reap', 'reap a checkpoint', AUTHNAME.anyone, `reaper <select id="a-rp-reaper">${addrOptions(6)}</select> <select id="a-rp-aid">${ckOptions}</select>`, 'a parked checkpoint after the grace window (or by the owner with quorum evidence), a tombstone at once: burns the token, posts the go-request funded from the min-ADA, keeps the rest') +
-    form('pause', 'pause a checkpoint', AUTHNAME['next-keys'], `<select id="a-p-aid">${ckOptions}</select>`, 'a withdrawing rotation: the bonds leave, the checkpoint stays parked with its key state; the registry is untouched') +
-    form('resume', 'resume a checkpoint', AUTHNAME['next-keys'], `<select id="a-rs-aid">${ckOptions}</select>`, 'a depositing rotation on a parked checkpoint; the registry is untouched') +
-    form('convictCkpt', 'convict a checkpoint', AUTHNAME.proof, `<select id="a-cv-aid">${ckOptions}</select>`, 'a duplicity proof against the checkpoint’s key state: it becomes a tombstone; the registry is untouched until the tombstone is reaped');
-  for (const b of $('actions').querySelectorAll('button[data-go]')) b.addEventListener('click', () => submitForm(b.getAttribute('data-go')));
+/* ---- the fx layer: things that fly between entities ----------------------- */
+const fxLayer = () => { const sv = $('scene'); return sv ? sv.querySelector('#fx') : null; };
+function cancelFx() { for (const f of app.fx) f.cancel(); app.fx = []; }
+function animate(dur, frame, done) {
+  let cancelled = false, last = null;
+  const start = nowMs();
+  const f = { cancel: () => { cancelled = true; } };
+  app.fx.push(f);
+  const tick = () => {
+    if (cancelled) return;
+    const now = nowMs();
+    const frozen = last !== null && now === last; last = now;
+    const u = frozen ? 1 : Math.min(1, Math.max(0, (now - start) / dur));
+    frame(u);
+    if (u < 1) raf(tick); else { app.fx = app.fx.filter(x => x !== f); if (done) done(); }
+  };
+  raf(tick);
 }
-
-function readForm(id) {
-  const n = x => Number($(x).value);
-  switch (id) {
-    case 'contribute': return { contribute: { aid: n('a-c-aid'), owner: n('a-c-owner'), submittedAt: n('a-c-t'), op: $('a-c-op').value } };
-    case 'fold': {
-      const batch = [];
-      for (const sel of $('actions').querySelectorAll('select[data-batch]')) if (sel.value) batch.push({ id: Number(sel.getAttribute('data-batch')), do: sel.value });
-      return { fold: { folder: n('a-f-folder'), gen: n('a-f-gen'), plugin: n('a-f-plugin'), batch } };
-    }
-    case 'retract': return { retract: { req: n('a-r-req') } };
-    case 'reap': return { reap: { reaper: n('a-rp-reaper'), aid: n('a-rp-aid') } };
-    case 'pause': return { pause: { aid: n('a-p-aid') } };
-    case 'resume': return { resume: { aid: n('a-rs-aid') } };
-    case 'convictCkpt': return { convictCkpt: { aid: n('a-cv-aid') } };
+const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+const posOf = key => layout[key] || layout.validator;
+function fly(el, fromKey, toKey, opts) {
+  opts = opts || {};
+  const layer = fxLayer(); if (!layer) return;
+  const f = posOf(opts.dir < 0 ? toKey : fromKey), t = posOf(opts.dir < 0 ? fromKey : toKey);
+  layer.append(el);
+  animate(opts.dur || 700, u => {
+    const e = ease(u);
+    const x = f.x + (t.x - f.x) * e, y = f.y + (t.y - f.y) * e - (opts.arc === undefined ? 40 : opts.arc) * Math.sin(Math.PI * u);
+    el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+  }, () => { el.remove(); if (opts.done) opts.done(); });
+}
+function coin(cls, txt, rewind) { return s('g', { class: 'fx-coin' + (rewind ? ' rewind' : '') }, s('ellipse', { class: 'coin ' + cls, rx: 14, ry: 6 }), s('text', { class: 'fx-t', y: -10 }, txt)); }
+function card(txt, rewind) { return s('g', { class: 'fx-card' + (rewind ? ' rewind' : '') }, s('rect', { class: 'fx-card', x: -34, y: -12, width: 68, height: 24, rx: 4 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function scroll(txt, rewind) { return s('g', { class: rewind ? 'rewind' : '' }, s('rect', { class: 'fx-scroll', x: -30, y: -10, width: 60, height: 20, rx: 10 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function pulse(key, bad) {
+  const el = $('scene').querySelector(`[data-key="${key}"]`); if (!el) return;
+  el.classList.add(bad ? 'pulse-bad' : 'pulse'); setTimeout(() => el.classList.remove(bad ? 'pulse-bad' : 'pulse'), 800);
+}
+function floatText(key, txt, cls, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  const el = s('text', { class: 'fx-float ' + (cls || ''), x: q.x, y: q.y - 30 });
+  el.textContent = txt;
+  setTimeout(() => { layer.append(el); animate(1000, u => { el.setAttribute('y', q.y - 30 - 26 * u); el.setAttribute('opacity', String(1 - u * u)); }, () => el.remove()); }, delay || 0);
+}
+function mark(key, ok, txt, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  setTimeout(() => {
+    const el = s('text', { class: 'fx-mark ' + (ok ? 'ok' : 'no'), x: q.x, y: q.y - 36 }, ok ? '✓' : '✗');
+    layer.append(el);
+    animate(900, u => { el.setAttribute('transform', `translate(0,${(-18 * Math.sin(Math.PI * Math.min(1, u * 1.4))).toFixed(1)})`); el.setAttribute('opacity', String(u > .7 ? (1 - u) / .3 : 1)); }, () => el.remove());
+    if (txt) floatText(key, txt, ok ? 'ok' : 'no', 80);
+    pulse(key, !ok);
+  }, delay || 0);
+}
+function edgeFx(n, dir, dur) {
+  const rewind = dir < 0;
+  const r = n.record, D = dur;
+  if (n.kind === 'time') { pulse('clock'); floatText('clock', (rewind ? '⟲ ' : '') + 'slot ' + n.session.now, '', 0); return; }
+  if (n.kind === 'evidence') {
+    const row = n.evRow; if (!row) { pulse('tray'); return; }
+    const kind = Object.keys(row)[0];
+    const from = kind === 'duplicity' ? 'actor:cora' : kind === 'quorum' ? 'actor:' + (row[kind][0] === 12 ? 'bob' : 'alice') : 'witnesses';
+    fly(scroll({ inception: 'inception', rotationFrom: 'rotation', duplicity: 'proof', quorum: 'quorum' }[kind], rewind), from, 'tray', { dir, dur: D, done: () => pulse('tray') });
+    if (n.removed) floatText('tray', rewind ? '+ row' : '− row', '', 0);
+    return;
   }
-  return null;
+  if (!r) return;
+  const actorKey = 'actor:' + (actorOfNode(n) || 'mallory');
+  const a = r.action, t = actionTag(a), b = dataOf(a), ok = r.result.ok, f = r.result.flow || flow({});
+  const ck = aid => (layout['ckpt:' + aid] ? 'ckpt:' + aid : 'ckpts');
+  const tx = card({ contribute: 'request', fold: 'fold', retract: 'retract', reap: 'reap', pause: 'pause', resume: 'resume', convictCkpt: 'convict' }[t] || 'tx', rewind);
+  const target = t === 'contribute' || t === 'retract' ? 'inbox' : t === 'fold' ? 'registry' : ck(b.aid);
+  fly(tx, actorKey, 'validator', { dir, dur: D * .5, arc: 30, done: () => { if (!rewind) mark('validator', ok, ok ? null : r.result.reason, 0); } });
+  if (t === 'pause' || t === 'resume') fly(scroll('rotation k' + kOf(n.session, b.aid), rewind), 'witnesses', ck(b.aid), { dir, dur: D * .5, arc: -30 });
+  if (t === 'convictCkpt') fly(scroll('proof', rewind), 'actor:cora', ck(b.aid), { dir, dur: D * .5, arc: -30 });
+  if (!ok) { if (rewind) setTimeout(() => pulse('validator', true), 0); return; }
+  const after = D * .5;
+  const pay = (cls, amount, fromKey, toKey, delay) => { if (!amount) return; setTimeout(() => fly(coin(cls, String(amount), rewind), fromKey, toKey, { dir, dur: D * .5 }), rewind ? 0 : delay); };
+  if (t === 'contribute') pay('dreg', f.deposited, actorKey, 'inbox', after);
+  if (t === 'retract') for (const x of f.refunds) pay('dreg', x.value, 'inbox', 'wallet:' + x.addr, after);
+  if (t === 'fold') {
+    setTimeout(() => { fly(card('leaves', rewind), 'inbox', 'registry', { dir, dur: D * .4, done: () => pulse('registry') }); }, rewind ? 0 : after * .2);
+    for (const l of f.locked) pay('dreg', l.value, 'inbox', ck(l.aid), after);
+    for (const x of f.refunds) pay('b', x.value, 'inbox', 'wallet:' + x.addr, after);
+    if (f.tips) pay('pool', f.tips.value, 'inbox', 'wallet:' + f.tips.addr, after);
+    setTimeout(() => floatText('registry', rewind ? 'generation ⟲' : 'generation ' + n.session.state.gen, 'ok', 0), rewind ? 0 : after);
+  }
+  if (t === 'reap') {
+    if (f.premium) pay('pool', f.premium.value, ck(b.aid), 'wallet:' + f.premium.addr, after);
+    pay('b', f.intoRequest, ck(b.aid), 'inbox', after);
+    setTimeout(() => { pulse(ck(b.aid), true); floatText(ck(b.aid), rewind ? 'token back ⟲' : 'token burned · go-request posted', 'no', 0); }, rewind ? 0 : after);
+  }
+  if (t === 'pause') setTimeout(() => { pulse(ck(b.aid)); floatText(ck(b.aid), rewind ? 'live again ⟲' : 'parked · bonds withdrawn', '', 0); }, rewind ? 0 : after);
+  if (t === 'resume') setTimeout(() => { pulse(ck(b.aid)); floatText(ck(b.aid), rewind ? 'parked ⟲' : 'live · bonds deposited', 'ok', 0); }, rewind ? 0 : after);
+  if (t === 'convictCkpt') setTimeout(() => { pulse(ck(b.aid), true); floatText(ck(b.aid), rewind ? 'tombstone ⟲' : 'tombstone', 'no', 0); }, rewind ? 0 : after);
 }
-function submitForm(id) {
-  if (story) return;
-  const a = readForm(id);
-  const rec = attempt(a, 'you');
-  showOutcome(rec);
-  render();
-}
-function showOutcome(rec) {
-  const r = rec.result;
-  $('whyline').hidden = r.ok; $('okline').hidden = !r.ok;
-  if (r.ok) $('okline').textContent = `applied — ${describeFlow(r.flow)}`;
-  else $('whyline').textContent = whyText(r);
-}
-
-function renderHistory() {
-  $('rail').innerHTML = S.history.map((h, i) => `<span class="chip2 ${h.result.ok ? 'ok' : 'bad'}${i === S.cursor ? ' cur' : ''}" data-i="${i}">${i + 1} · slot ${h.now} · ${tag(h.action)}${h.result.ok ? '' : ' ✗'}</span>`).join('');
-  for (const c of $('rail').querySelectorAll('.chip2')) c.addEventListener('click', () => { S.cursor = Number(c.getAttribute('data-i')); render(); });
-  $('h-pos').textContent = S.history.length ? `${S.cursor + 1} / ${S.history.length}${S.cursor === S.history.length - 1 ? ' (latest)' : ' (time travel)'}` : '';
-  if (S.cursor >= 0) {
-    const h = S.history[S.cursor];
-    const lit = Object.keys(h.theorems).filter(k => h.theorems[k].v === 'holds');
-    $('detail').innerHTML = `<b>${esc(h.as || '')}</b> at slot ${h.now}: ${esc(describeAction(h.action))}<br>` +
-      (h.result.ok ? `<span class="pass">applied</span> — ${esc(describeFlow(h.result.flow))}` : `<span class="fail">${esc(whyText(h.result))}</span>`) +
-      (lit.length ? `<br><span class="sub">exhibits ${lit.join(', ')}</span>` : '') +
-      (h.lean && h.lean.found ? (h.lean.agrees ? '<br><span class="sub">the Lean\'s cell for this step agrees</span>' : `<br><span class="fail">the Lean\'s cell for this step disagrees: ${esc(h.lean.why)}</span>`) : '<br><span class="sub">no Lean cell for this step: parity not shown, the lamps are the transcription\'s own</span>');
-  } else $('detail').innerHTML = '<span class="sub">nothing attempted yet — pick a story, or act in free play</span>';
-  const n = S.history.length;
-  $('h-first').disabled = $('h-prev').disabled = !(S.cursor > 0);
-  $('h-next').disabled = $('h-last').disabled = !(S.cursor >= 0 && S.cursor < n - 1);
-}
-
-function renderLedger() {
-  const cur = S.cursor >= 0 ? S.history[S.cursor].theorems : {};
-  $('ledger').innerHTML = `<tr><th>id</th><th>claim</th><th>Lean</th><th>this step</th><th>exhibited</th></tr>` +
-    (() => { const h = S.cursor >= 0 ? S.history[S.cursor] : null; const L = h && h.lean;
-      const cls = !L ? 'na' : !L.found ? 'na' : L.agrees ? 'lit' : 'red';
-      const txt = !h ? '○ no step' : !L || !L.found ? '○ no Lean cell for this step — parity not shown' : L.agrees ? '● the Lean\'s cell agrees (verdict, flow, post-state)' : '✗ DISAGREES: ' + esc(L.why);
-      return `<tr><td class="mono">T7</td><td>parity with the Lean: this step, looked up in the embedded corpus (stories, traces, the boundary grid)</td><td class="mono">RegistryTraceDriver.lean</td><td class="${cls}">${txt}</td><td class="mono">${S.ledger.T7 || 0}×</td></tr>`; })() +
-    THEOREMS.map(t => { const v = cur[t.id] ? cur[t.id].v : 'n/a';
-      const cls = v === 'holds' ? 'lit' : v === 'fails' ? 'red' : 'na';
-      const by = v === 'holds' && cur[t.id].by ? ' <span class="sub">(' + esc(cur[t.id].by.join(', ')) + ')</span>' : '';
-      return `<tr><td class="mono">${t.id}</td><td>${esc(t.title)}</td><td class="mono">${esc(t.lean)}</td><td class="${cls}">${v === 'holds' ? '● holds' + by : v === 'fails' ? '✗ FAILS: ' + esc(cur[t.id].why) : '○ n/a'}</td><td class="mono">${S.ledger[t.id] || 0}×</td></tr>`; }).join('');
+function playEdges(edges) {
+  cancelFx();
+  if (!edges.length) return;
+  const per = edges.length === 1 ? 800 : Math.max(220, Math.floor(1400 / edges.length));
+  edges.forEach((e, i) => setTimeout(() => { if (app.cursor !== edges[edges.length - 1].node) return; edgeFx(node(e.node), e.dir, per); }, i * per));
 }
 
-/* --- stories -------------------------------------------------------------------- */
-/* A story is a tree: the trunk and its forks, each departing after `at` trunk
-   steps (and bringing its own evidence when it is another world). A branch's
-   path is the trunk prefix then the fork's steps. */
-function forkOf(sc, id) { return id ? (sc.forks || []).find(f => f.id === id) || null : null; }
-function storyPath(sc, branch) {
-  const fk = forkOf(sc, branch);
-  if (!fk) return sc.steps.map((st, i) => ({ st, branch: null, i }));
-  return [...sc.steps.slice(0, fk.at).map((st, i) => ({ st, branch: null, i })), ...fk.steps.map((st, j) => ({ st, branch: fk.id, i: fk.at + j }))];
+/* ---- rendering ---------------------------------------------------------------- */
+function render() {
+  renderHeader(); renderStoryBar(); renderTree(); renderPlaybar(); renderWhere(); renderPots(); renderNarration(); renderNext(); drawScene(); renderLedger();
+  renderEvidence(); renderNumbers(); renderChart(); renderMoney();
 }
-function loadStory(sc, branch = null) {
-  story = { sc, branch, i: 0 };
-  S = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || DEFAULT_ACTORS, { ...emptyEnv(), ...(sc.env || {}) });
-  $('storybox').hidden = false;
-  $('storybox').innerHTML = `<b>${sc.id}. ${esc(sc.story)}</b> — ${esc(sc.narrative || '')}`;
-  $('sc-exit').hidden = false; $('play').hidden = false;
-  updateStoryButtons();
-  $('whyline').hidden = $('okline').hidden = true;
-  render();
+function renderHeader() {
+  const sess = cur();
+  $('slot-now').textContent = fmt(sess.now);
+  $('slot-input').value = fmt(sess.now);
+  $('slot-plusw').textContent = '+W (' + sess.params.W + ')';
+  const p = sess.params;
+  $('pf-params').textContent = `Parameters: bond D = ${p.D}, tip = ${p.tip}, checkpoint min-ADA Mc = ${p.Mc}, request min-ADA Mr = ${p.Mr}, process_time = ${p.process}, retract_time = ${p.retract}, grace W = ${p.W} slots, far = ${p.far}; plugin ${sess.plugin}. In the Lean, 0 < D, 0 < process, 0 < retract and Mr + tip ≤ Mc are structural.`;
 }
-function goTo(branch, i) { if (!story) return; loadStory(story.sc, branch); while (story.i < i && storyStep()) {} }
-function storyStep() {
-  if (!story) return false;
-  const e = storyPath(story.sc, story.branch)[story.i]; if (!e) return false;
-  const st = e.st, fk = forkOf(story.sc, story.branch);
-  if (fk && fk.env && story.i === fk.at) S.env = { ...emptyEnv(), ...fk.env }; // another world from here
-  S.now = st.now;
-  const rec = attempt(st.action, st.as || st.actor);
-  const exp = st.expect || { ok: true };
-  rec.expected = exp;
-  if ((exp.ok !== false) !== rec.result.ok || (exp.ok === false && exp.reason && exp.reason !== rec.result.reason)) rec.mismatch = true;
-  story.i++;
-  showOutcome(rec);
-  if (st.note) $('detail').setAttribute('data-note', st.note);
-  updateStoryButtons();
-  render();
-  if (st.note) $('detail').innerHTML += `<br><span class="sub">${esc(st.note)}</span>`;
-  if (rec.mismatch) $('detail').innerHTML += `<br><span class="fail">the story expected ${exp.ok === false ? 'a refusal ' + (exp.reason || '') : 'the step to apply'} — the machine disagrees</span>`;
-  return true;
+function renderStoryBar() {
+  const sel = $('story-picker');
+  if (!sel.options.length) {
+    sel.append(h('option', { value: '' }, 'free play — pick a story to play its tree'));
+    for (const sc of SCENARIOS) sel.append(h('option', { value: String(sc.id) }, sc.id + '. ' + sc.story + (sc.forks && sc.forks.length ? ' ⋔' : '')));
+  }
+  sel.value = app.story ? String(app.story.id) : '';
+  $('story-goal').textContent = app.story ? app.story.narrative : 'Free play: every accepted move is a node of the tree below; a second move from the same node opens a branch.';
 }
-function updateStoryButtons() {
-  const n = story ? storyPath(story.sc, story.branch).length : 0;
-  const done = !story || story.i >= n;
-  $('sc-step').disabled = done; $('sc-all').disabled = done; $('sc-reset').disabled = !story;
-  const fk = story ? forkOf(story.sc, story.branch) : null;
-  $('sc-count').textContent = story ? `step ${Math.min(story.i, n)} of ${n}${fk ? ' on ⋔ ' + fk.title : ''}${done ? ' — done' : ''}` : '';
+function treeLayout() {
+  const col = {}, row = {};
+  let rows = 0;
+  const place = (id, r) => {
+    row[id] = r;
+    const n = node(id);
+    const kids = n.children.slice();
+    const first = n.last !== null ? n.last : kids[0];
+    kids.sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
+    kids.forEach((c, i) => { col[c] = col[id] + 1; if (i === 0) place(c, r); else { rows++; place(c, rows); } });
+  };
+  col[0] = 0; place(0, 0);
+  return { col, row, rows: rows + 1, cols: Math.max(...Object.values(col)) + 1 };
+}
+const shortWho = w => (w || '').split(/ — | · /)[0].split(' ')[0].slice(0, 8);
+function nodeVerb(n) {
+  if (n.record) { const a = n.record.action, t = actionTag(a); return t === 'contribute' ? 'request·' + (typeof a.contribute.op === 'string' ? a.contribute.op : 'go') : t === 'convictCkpt' ? 'convict' : t; }
+  if (n.kind === 'time') return 'slot ' + n.session.now;
+  if (n.evRow) { const k = Object.keys(n.evRow)[0]; return (n.removed ? '− ' : '') + { inception: 'inception', rotationFrom: 'rotation', duplicity: 'proof', quorum: 'quorum' }[k]; }
+  return n.kind === 'origin' ? 'start' : 'note';
 }
 function renderTree() {
-  const tree = $('tree'), box = $('branches');
-  tree.textContent = ''; box.textContent = '';
-  if (!story) return;
-  const sc = story.sc, forks = sc.forks || [];
-  const mk = (tagName, cls, text) => { const el = document.createElement(tagName); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
-  const played = (branch, i) => { // the record of step i along branch, if played in the current play
-    if (branch !== story.branch && !(branch === null && (forkOf(sc, story.branch) || { at: -1 }).at > i)) return null;
-    return i < story.i ? S.history[i] || null : null;
-  };
-  const rowOf = (branch, steps, at, title) => {
-    const row = mk('div', 'trow');
-    for (let c = 0; c < at; c++) row.appendChild(mk('span'));
-    steps.forEach((st, j) => {
-      const i = at + j, rec = played(branch, i);
-      const b = mk('button', 'node' + (rec ? (rec.result.ok ? ' ok' : ' bad') : '') + (branch === story.branch && i === story.i - 1 ? ' cur' : ''), rec ? (rec.result.ok ? '✓' : '✗') : String(i + 1));
-      b.type = 'button'; b.dataset.branch = branch || ''; b.dataset.i = String(i);
-      b.title = `${i + 1}. ${st.as || st.actor || ''} — ${describeAction(st.action)}${st.expect && st.expect.ok === false ? ' (refused: ' + (st.expect.reason || '') + ')' : ''}`;
-      b.addEventListener('click', () => goTo(branch, i + 1));
-      row.appendChild(b);
-    });
-    if (title) row.appendChild(mk('span', 'fork', '⋔ ' + title));
-    tree.appendChild(row);
-  };
-  rowOf(null, sc.steps, 0, null);
-  for (const fk of forks) rowOf(fk.id, fk.steps, fk.at, fk.title);
-  // continuations from here: the next step of this branch, and every fork departing here
-  const path = storyPath(sc, story.branch), i = story.i;
-  const items = [];
-  if (path[i]) items.push({ on: true, label: '› next', branch: story.branch, to: i + 1, st: path[i].st });
-  if (!story.branch) for (const fk of forks) if (fk.at === i) items.push({ on: false, label: '⋔ ' + fk.title, branch: fk.id, to: i + 1, st: fk.steps[0] });
-  if (!items.length) { box.appendChild(mk('span', 'sub', 'the branch is played out — pick a node above, restart, or leave the story for free play')); return; }
-  for (const it of items) {
-    const exp = it.st.expect || { ok: true };
-    const b = mk('button', 'branch' + (it.on ? ' on' : ''));
-    b.type = 'button'; b.dataset.branch = it.branch || ''; b.dataset.to = String(it.to);
-    const head = mk('b', '', it.label + ' — ' + (it.st.as || it.st.actor || 'anyone'));
-    const what = mk('span', 'sub', ` at slot ${it.st.now}: ${describeAction(it.st.action)} → ${exp.ok === false ? '✗ ' + (exp.reason || 'refused') : '✓ applies'}`);
-    b.appendChild(head); b.appendChild(what);
-    b.addEventListener('click', () => goTo(it.branch, it.to));
-    box.appendChild(b);
+  const svg = $('tree');
+  const { col, row, rows, cols } = treeLayout();
+  const dx = 74, dy = 44, x0 = 36, y0 = 22;
+  const W = x0 * 2 + (cols - 1) * dx, H = y0 * 2 + (rows - 1) * dy + 22;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const X = id => x0 + col[id] * dx, Y = id => y0 + row[id] * dy;
+  const onPath = new Set(currentPath());
+  const parts = [];
+  for (const n of app.nodes) {
+    if (n.parent === null) continue;
+    const px = X(n.parent), py = Y(n.parent), x = X(n.id), y = Y(n.id);
+    const d = py === y ? `M ${px} ${py} L ${x} ${y}` : `M ${px} ${py} L ${px + dx * .45} ${py} Q ${px + dx * .6} ${py} ${px + dx * .6} ${py + (y - py) * .35} L ${px + dx * .6} ${y - 8} Q ${px + dx * .6} ${y} ${px + dx * .75} ${y} L ${x} ${y}`;
+    parts.push(s('path', { class: 'edge' + (onPath.has(n.id) && onPath.has(n.parent) ? ' taken' : ''), d }));
+  }
+  for (const n of app.nodes) {
+    const cls = ['node', n.record ? (n.record.result.ok ? 'ok' : 'no') : n.kind, n.id === app.cursor ? 'here' : ''].join(' ');
+    const g = s('g', { class: cls, dataset: { node: n.id, branch: n.branch ? n.branch.id : '' }, transform: `translate(${X(n.id)},${Y(n.id)})`, role: 'button', tabindex: 0, onclick: () => goTo(n.id) });
+    g.append(s('title', {}, (n.who ? n.who + ' — ' + nodeVerb(n) + '\n' : '') + (n.say || '')));
+    g.append(s('circle', { r: 8 }));
+    g.append(s('text', { y: 3.5 }, n.id === 0 ? '·' : (n.record ? (n.record.result.ok ? '✓' : '✗') : (n.kind === 'time' ? '⏱' : '≡'))));
+    g.append(s('text', { class: 'who', y: 20 }, n.id === 0 ? 'start' : shortWho(n.who)));
+    if (n.id !== 0) g.append(s('text', { class: 'verb', y: 31 }, nodeVerb(n)));
+    if (n.children.length > 1) g.append(s('text', { class: 'fork', x: 12, y: -8 }, '⋔'));
+    parts.push(g);
+  }
+  clear(svg).append(...parts);
+}
+function renderPlaybar() {
+  const path = currentPath();
+  const idx = path.indexOf(app.cursor);
+  const here = node(app.cursor);
+  $('hist-first').disabled = app.cursor === 0;
+  $('hist-prev').disabled = here.parent === null;
+  $('hist-next').disabled = !here.children.length;
+  $('hist-last').disabled = !here.children.length;
+  const scrub = $('scrub'); scrub.max = String(path.length - 1); scrub.value = String(idx);
+  $('pos').textContent = idx + ' / ' + (path.length - 1);
+  $('btn-play').classList.toggle('on', !!app.playing);
+  $('btn-play').textContent = app.playing ? '❚❚' : '▶';
+}
+function renderWhere() {
+  const sess = cur(), p = sess.params, st = sess.state;
+  const w = clear($('where'));
+  const nA = st.leaves.filter(l => statusTag(l.status) === 'active').length, nD = st.leaves.filter(l => statusTag(l.status) === 'dormant').length, nC = st.leaves.filter(l => l.status === 'convicted').length;
+  w.append(h('span', { class: 'state' }, st.leaves.length ? `${st.leaves.length} leaf${st.leaves.length > 1 ? 'ves' : ''}` : 'Empty root'));
+  w.append(h('span', { class: 'sum gen' }, `generation ${st.gen} · plugin ${st.plugin}`));
+  if (st.leaves.length) w.append(h('span', { class: 'tiny' }, `${nA} active · ${nD} dormant · ${nC} convicted`));
+  const live = st.ckpts.filter(c => ckTag(c.ckpt.st) === 'live').length, parked = st.ckpts.filter(c => ckTag(c.ckpt.st) === 'parked').length, tomb = st.ckpts.filter(c => ckTag(c.ckpt.st) === 'tomb').length;
+  w.append(h('span', { class: 'sum dreg' }, `D ${live * p.D} in ${st.ckpts.length} checkpoint${st.ckpts.length === 1 ? '' : 's'}` + (parked || tomb ? ` (${parked} parked, ${tomb} tomb)` : '')));
+  const inboxHeld = st.requests.reduce((n, r) => n + opBond(p, r.op) + p.tip, 0);
+  const oldest = st.requests.filter(r => userPostable(r.op)).sort((a, b) => a.submittedAt - b.submittedAt)[0];
+  w.append(h('span', { class: 'sum b' }, `inbox ${st.requests.length} · holds ${inboxHeld}` + (oldest ? ` · oldest in ${phaseOf(p, oldest, sess.now)}` : '') + (st.requests.some(r => !userPostable(r.op)) ? ' · a go-request pending' : '')));
+  w.append(h('span', { class: 'step' }, `slot ${sess.now} · step ${pathTo(app.cursor).length - 1}`));
+}
+const RUNGS = [['none', 'No leaf'], ['active', 'Active'], ['dormant', 'Dormant'], ['convicted', 'Convicted']];
+function renderPots() {
+  const sess = cur(), p = sess.params, st = sess.state;
+  const lad = clear($('ladder'));
+  const on = new Set(st.leaves.map(l => statusTag(l.status))); if (!st.leaves.length) on.add('none');
+  RUNGS.forEach(([k, label], i) => { if (i) lad.append(h('span', { class: 'arrow' }, '→')); lad.append(h('span', { class: 'rung' + (on.has(k) ? ' on' : '') + (k === 'convicted' ? ' term' : ''), dataset: { state: k } }, label)); });
+  const dl = clear($('pots-dl'));
+  const row = (t, d) => dl.append(h('dt', {}, t), h('dd', {}, d));
+  row('D · the bond (' + p.D + ')', 'what a registration or a revival locks into the checkpoint it mints; it leaves the inbox for the checkpoint when the fold lands, and returns to the owner when the request is retracted or rejected.');
+  row('tip (' + p.tip + ')', 'what every request carries for whoever folds it — process or reject; the incentive to fold, paid per request to the folder.');
+  row('Mc · a checkpoint’s min-ADA (' + p.Mc + ')', 'all a parked or convicted checkpoint still holds; a reap splits it: Mr + tip into the go-request, the rest to the reaper as premium. Mr + tip ≤ Mc is structural.');
+  row('Mr · a request’s min-ADA (' + p.Mr + ')', 'what a go-request holds besides the tip; the fold returns it to the reaper when the go-request is processed.');
+  row('the phases (process ' + p.process + ', retract ' + p.retract + ')', 'from submitted_at: phase 1 for process slots (a fold may process), phase 2 for retract slots (only the owner may retract), phase 3 after (anyone may reject). A future submitted_at is rejectable at once.');
+  row('W · the grace window (' + p.W + ' slots)', 'a parked checkpoint may be reaped by a stranger only W slots after it was parked; by the owner at any time; a tombstone at once.');
+  row('far (' + p.far + ')', 'the submitted_at a reap writes into a go-request: the end of time, so phase 2 never comes and the plugin refuses the rejection — a go-request can only be processed.');
+  row('the leaf', 'No leaf → Active (a checkpoint carries its token, or a go-request is pending) → Dormant (the checkpoint left the chain; the leaf records the key state a revival must rotate from) → Active again by a revival · Convicted (terminal: a proof against the recorded key state).');
+  row('the checkpoint', 'live (bonded) → parked (the bonds withdrawn by a rotation; at min-ADA) → live (deposited again) · tombstone (convicted by a proof) · reaped (burned; its go-request tells the registry what the leaf becomes).');
+}
+function renderNarration() {
+  const n = clear($('narration'));
+  const t = node(app.cursor);
+  if (t.say) n.append(h('div', { class: 'say' }, t.who ? h('div', { class: 'who' }, t.who + (t.branch ? ' · ⋔ ' + t.branch.title : '')) : null, h('div', {}, t.say)));
+  if (t.record) {
+    const r = t.record, res = r.result;
+    const box = h('div', { class: 'result ' + (res.ok ? 'ok' : 'no') });
+    box.append(h('b', {}, describeAction(r.action)), ' — ', res.ok ? 'accepted' : ('refused: ' + res.reason));
+    if (!res.ok) box.append(h('div', {}, whyText(res)));
+    if (res.ok) box.append(h('div', {}, describeFlow(res.flow)));
+    const ex = Object.keys(r.theorems).filter(id => r.theorems[id].v === 'holds');
+    if (ex.length) box.append(h('div', { class: 'exh' }, 'shows: ', ex.map(id => h('span', { class: 'tchip', title: (r.theorems[id].by || []).join(', ') }, id))));
+    const fails = Object.keys(r.theorems).filter(id => r.theorems[id].v === 'fails');
+    if (fails.length) box.append(h('div', { class: 'tiny' }, 'BROKEN: ' + fails.map(id => id + ' — ' + r.theorems[id].why).join('; ')));
+    if (r.lean && r.lean.found) box.append(h('div', { class: 'tiny' }, r.lean.agrees ? 'T7: the Lean’s own verdict on this exact state and move agrees.' : 'T7: the Lean’s own verdict on this exact state and move DISAGREES — ' + r.lean.why));
+    else box.append(h('div', { class: 'tiny' }, 'The Lean was not asked about this exact step, so parity with it (T7) is not shown here; the lamps are the transcription’s own.'));
+    if (t.mismatch) box.append(h('div', { class: 'tiny' }, 'The story expected ' + (t.expect.ok === false ? 'a refusal ' + (t.expect.reason || '') : 'the step to apply') + ' — the machine disagrees.'));
+    n.append(box);
   }
 }
-function leaveStory() {
-  story = null;
-  $('storybox').hidden = true; $('sc-exit').hidden = true; $('play').hidden = true; $('sc-pick').value = '';
-  S = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, DEFAULT_ACTORS);
-  updateStoryButtons(); render();
+function renderNext() {
+  const sess = cur();
+  const here = node(app.cursor);
+  const br = clear($('branches'));
+  const nextId = nextOf(app.cursor);
+  for (const cid of here.children) {
+    const c = node(cid);
+    br.append(h('button', { type: 'button', class: 'branch' + (cid === nextId ? ' on' : ''), dataset: { branch: cid, fork: c.branch ? c.branch.id : '' }, title: 'go there', onclick: () => goTo(cid) },
+      h('span', { class: 'go' }, cid === nextId ? '› next' : '⋔'),
+      c.branch ? h('span', { class: 'fork-t' }, c.branch.title) : null,
+      c.who ? h('span', { class: 'who' }, c.who) : null,
+      h('span', { class: 'txt' }, c.say || ''),
+      c.record ? h('span', { class: 'res ' + (c.record.result.ok ? 'ok' : 'no') }, c.record.result.ok ? '✓ accepted' : '✗ ' + c.record.result.reason) : null));
+  }
+  if (!here.children.length) br.append(h('div', { class: 'tiny' }, app.story ? 'The story ends here on this branch. Any move below opens a new one.' : 'Nothing has happened after this step yet.'));
+  const moves = clear($('next-moves')), refused = clear($('refused-list'));
+  let nRefused = 0;
+  for (const id of ACTOR_ORDER) {
+    const c = CAST[id];
+    const off = offersFor(id, sess);
+    const cardEl = h('div', { class: 'mover' });
+    cardEl.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, title: c.blurb, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
+    cardEl.append(h('div', { class: 'interest' }, INTEREST[id]));
+    const acts = h('div', { class: 'acts' });
+    for (const o of off.chain) {
+      const d = dryRun(sess, o.action);
+      const needs = needsOf(o.action);
+      const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
+        title: (d.ok ? 'the machine would accept this now' : d.why) + ' · needs: ' + needs.text,
+        onclick: () => { app.actor = id; app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderNext(); } }, o.label, h('span', { class: 'needs ' + needs.cls }, needs.text));
+      if (d.ok) acts.append(btn); else { refused.append(h('div', { class: 'refused-row' }, btn, h('span', { class: 'why' }, c.name + ': ' + d.why))); nRefused++; }
+    }
+    for (const k of off.keri) {
+      const kind = Object.keys(k.row)[0];
+      if (evHas(sess.env, kind, k.row[kind])) continue;
+      acts.append(h('button', { type: 'button', class: 'ev-quick', dataset: { actor: id, ev: kind }, title: k.hint,
+        onclick: () => { app.actor = id; pushNode({ session: addEvidence(sess, k.row), record: null, who: c.name, actorId: id, say: k.label + '.', kind: 'evidence', evRow: k.row }); } }, '+ ' + k.label));
+    }
+    if (!acts.children.length) acts.append(h('span', { class: 'none' }, 'nothing the machine accepts from here'));
+    cardEl.append(acts);
+    moves.append(cardEl);
+  }
+  moves.append(h('div', { class: 'mover' }, h('div', { class: 'lbl' }, 'Time'), h('div', { class: 'acts' },
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + 1) }, '+1 slot'),
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + sess.params.W) }, `+W (${sess.params.W}) slots`),
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + sess.params.process) }, `+process (${sess.params.process})`))));
+  $('refused-summary').textContent = nRefused ? `${nRefused} move${nRefused > 1 ? 's' : ''} the machine refuses now — open to read why` : 'nothing is refused now';
+  $('refused-moves').hidden = !nRefused;
+  renderActForm();
+}
+const FIELDS = {
+  contribute: [['aid', 'AID'], ['owner', 'owner (refund address)'], ['submittedAt', 'submitted_at'], ['op', 'op']],
+  fold: [['folder', 'folder (tips to)'], ['gen', 'generation'], ['plugin', 'plugin']],
+  retract: [['req', 'request #']], reap: [['reaper', 'reaper (premium to)'], ['aid', 'AID']], pause: [['aid', 'AID']], resume: [['aid', 'AID']], convictCkpt: [['aid', 'AID']],
+};
+function renderActForm() {
+  const form = $('act-form');
+  form.hidden = !app.pending;
+  if (!app.pending) return;
+  const sess = cur(), t = actionTag(app.pending.action), d = dataOf(app.pending.action);
+  const fields = clear($('act-fields'));
+  for (const [f, label] of FIELDS[t]) {
+    let input;
+    if (f === 'op') input = h('select', { onchange: e => { d.op = e.target.value; renderActForm(); } }, ['register', 'revive', 'convict', 'goConvicted'].map(op => h('option', { value: op, selected: d.op === op }, op)));
+    else input = h('input', { type: 'number', min: 0, step: 1, value: d[f] === undefined ? '' : String(d[f]), onchange: e => { const n = parseNat(e.target.value); d[f] = n === null ? e.target.value : n; renderActForm(); } });
+    fields.append(h('label', {}, label, input));
+  }
+  if (t === 'fold') {
+    const box = h('div', { class: 'batch' }, h('span', { class: 'lbl' }, 'the batch: what to do with each pending request'));
+    for (const r of pendingOf(sess)) {
+      const cur0 = (d.batch.find(x => x.id === r.id) || {}).do || 'leave';
+      box.append(h('label', {}, h('select', { dataset: { batch: r.id }, onchange: e => { d.batch = d.batch.filter(x => x.id !== r.id); if (e.target.value !== 'leave') d.batch.push({ id: r.id, do: e.target.value }); renderActForm(); } },
+        ['leave', 'process', 'reject'].map(v => h('option', { value: v, selected: cur0 === v }, v))), `#${r.id} ${opWord(r.op)} · AID ${r.aid} · ${nameOf(r.owner)} · ${phaseWord(sess.params, r, sess.now)}`));
+    }
+    fields.append(box);
+  }
+  const dr = dryRun(sess, app.pending.action);
+  const why = $('act-why'); why.className = dr.ok ? 'ok' : 'no';
+  why.textContent = dr.ok ? ('Accepted now: ' + describeFlow(dr.res.flow) + '.') : dr.why;
+  $('act-submit').disabled = !dr.ok;
+}
+function submitPending() {
+  if (!app.pending) return;
+  const sess = cur(), action = app.pending.action, id = app.actor;
+  const out = attempt(sess, action, sess.now);
+  app.pending = null;
+  pushNode({ session: out.session, record: out.record, who: CAST[id].name, actorId: id, say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free' });
+}
+function moveSlot(target) {
+  const sess = cur();
+  const mv = setSlot(sess, target);
+  if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-decreased' ? `slot ${target} is before ${sess.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(sess.now); return; }
+  $('slot-msg').textContent = '';
+  if (target === sess.now) return;
+  pushNode({ session: mv.session, record: null, who: 'Time', say: `Slot ${target}.`, kind: 'time' });
 }
 
-/* --- wiring -------------------------------------------------------------------- */
-function setTheme(t) { document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('registry-sim-theme', t); } catch (e) {} }
-function init() {
-  let t = null; try { t = localStorage.getItem('registry-sim-theme'); } catch (e) {}
-  setTheme(t || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  $('btn-theme').addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
-  $('proof-sha').textContent = REGISTRY_LEAN_TRACES_SHA256 ? `sha256 ${REGISTRY_LEAN_TRACES_SHA256}` : 'no corpus embedded';
-  for (const sc of SCENARIOS) { const o = document.createElement('option'); o.value = String(sc.id); o.textContent = `${sc.id}. ${sc.story}`; $('sc-pick').appendChild(o); }
-  $('sc-pick').addEventListener('change', () => { const sc = SCENARIOS.find(x => String(x.id) === $('sc-pick').value); if (sc) loadStory(sc); else leaveStory(); });
-  $('sc-step').addEventListener('click', () => storyStep());
-  $('sc-all').addEventListener('click', () => { while (storyStep()) {} });
-  $('sc-reset').addEventListener('click', () => { if (story) loadStory(story.sc); });
-  $('sc-exit').addEventListener('click', leaveStory);
-  $('slot-1').addEventListener('click', () => { if (story) return; S.now += 1; S.cursor = S.history.length - 1; render(); });
-  $('slot-10').addEventListener('click', () => { if (story) return; S.now += 10; S.cursor = S.history.length - 1; render(); });
-  $('h-first').addEventListener('click', () => { S.cursor = 0; render(); });
-  $('h-prev').addEventListener('click', () => { S.cursor = Math.max(0, S.cursor - 1); render(); });
-  $('h-next').addEventListener('click', () => { S.cursor = Math.min(S.history.length - 1, S.cursor + 1); render(); });
-  $('h-last').addEventListener('click', () => { S.cursor = S.history.length - 1; render(); });
-  $('h-clear').addEventListener('click', () => { S.history = []; S.cursor = -1; S.ledger = {}; S.flows = []; render(); });
+/* ---- the evidence drawer: a table by AID --------------------------------- */
+function renderEvidence() {
+  const sess = cur(), env = sess.env;
+  const aids = [...new Set([11, 12, 13, ...env.inception, ...env.rotationFrom.map(r => r[0]), ...env.duplicity.map(r => r[0]), ...env.quorum, ...sess.state.leaves.map(l => l.aid), ...sess.state.ckpts.map(c => c.aid), ...(app.extraAids || [])])].sort((a, b) => a - b);
+  const KS = [0, 1, 2, 3];
+  const tbl = h('table', { class: 'evtable' }, h('thead', {}, h('tr', {}, h('th', {}, 'AID'), h('th', {}, 'inception'), h('th', {}, 'rotation from k'), h('th', {}, 'duplicity at k'), h('th', {}, 'quorum'))));
+  const tb = h('tbody', {});
+  const cb = (kind, args, label) => h('label', { style: 'display:inline-flex;gap:3px;align-items:center;margin-right:6px' }, h('input', { type: 'checkbox', dataset: { ev: kind, aid: args[0], k: args[1] === undefined ? '' : args[1] }, checked: evHas(env, kind, args),
+    onchange: e => { const row = { [kind]: args }; const on = e.target.checked; pushNode({ session: on ? addEvidence(sess, row) : removeEvidence(sess, row), record: null, who: 'You', say: (on ? 'Evidence added: ' : 'Evidence removed: ') + kind + ' ' + JSON.stringify(args) + '.', kind: 'evidence', evRow: row, removed: !on }); } }), label);
+  for (const aid of aids) {
+    tb.append(h('tr', {}, h('td', { class: 'mono' }, aid), h('td', {}, cb('inception', [aid], 'verifies')),
+      h('td', {}, KS.map(k => cb('rotationFrom', [aid, k], 'k' + k))), h('td', {}, KS.map(k => cb('duplicity', [aid, k], 'k' + k))), h('td', {}, cb('quorum', [aid], 'signs'))));
+  }
+  tbl.append(tb);
+  clear($('evbody')).append(tbl);
+}
+
+/* ---- the numbers drawer -------------------------------------------------------- */
+function renderNumbers() {
+  const sess = cur(), p = sess.params, st = sess.state, now = sess.now;
+  const leafWords = v => statusTag(v) === 'active' ? `active — token ${v.active}` : statusTag(v) === 'dormant' ? `dormant — revive by a rotation from key state ${v.dormant}` : 'convicted — for ever';
+  const kv = clear($('registry'));
+  const row = (k, v) => kv.append(h('dt', {}, k), h('dd', {}, v));
+  row('generation', String(st.gen)); row('plugin', String(st.plugin));
+  row('leaves', st.leaves.length ? h('div', {}, st.leaves.slice().sort((a, b) => a.aid - b.aid).map(l => h('div', {}, `AID ${l.aid}: ${leafWords(l.status)}`))) : '∅ (empty root)');
+  row('next request id', String(st.nextReq)); row('next token', String(st.nextToken));
+  const cks = st.ckpts.slice().sort((x, y) => x.aid - y.aid);
+  $('ck-count').textContent = `${cks.filter(c => ckTag(c.ckpt.st) === 'live').length} live, ${cks.filter(c => ckTag(c.ckpt.st) === 'parked').length} parked, ${cks.filter(c => ckTag(c.ckpt.st) === 'tomb').length} tombstones`;
+  const ckWords = c => { const tg = ckTag(c.st); return tg === 'live' ? h('span', { class: 'badge live' }, 'LIVE') : tg === 'tomb' ? h('span', { class: 'badge tomb' }, 'TOMBSTONE') : h('span', {}, h('span', { class: 'badge parked' }, 'PARKED since ' + c.st.parked), ' ', h('span', { class: 'tiny' }, c.st.parked + p.W <= now ? 'reapable by anyone' : 'grace until ' + (c.st.parked + p.W))); };
+  const ckb = clear($('checkpoints'));
+  if (cks.length) { const t = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'AID'), h('th', {}, 'token'), h('th', {}, 'state'), h('th', {}, 'key state'), h('th', { class: 'n' }, 'holds')))); const tb = h('tbody', {}); for (const c of cks) tb.append(h('tr', {}, h('td', { class: 'mono' }, c.aid), h('td', { class: 'mono' }, c.ckpt.token), h('td', {}, ckWords(c.ckpt)), h('td', { class: 'mono' }, c.ckpt.k), h('td', { class: 'n' }, ckTag(c.ckpt.st) === 'live' ? p.D + p.Mc : p.Mc))); t.append(tb); ckb.append(t); }
+  else ckb.append(h('div', { class: 'empty' }, 'no checkpoint on chain'));
+  $('inbox-count').textContent = `${st.requests.length} pending`;
+  const ib = clear($('inbox'));
+  if (st.requests.length) {
+    const t = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, '#'), h('th', {}, 'op'), h('th', {}, 'AID'), h('th', {}, 'owner'), h('th', {}, 'submitted_at'), h('th', {}, `at slot ${now}`), h('th', { class: 'n' }, 'holds'))));
+    const tb = h('tbody', {});
+    for (const r of st.requests.slice().sort((a, b) => a.id - b.id)) { const go = !userPostable(r.op), ph = phaseOf(p, r, now); tb.append(h('tr', {}, h('td', { class: 'mono' }, r.id), h('td', {}, opWord(r.op)), h('td', { class: 'mono' }, r.aid), h('td', {}, nameOf(r.owner)), h('td', { class: 'mono' }, go ? '∞' : r.submittedAt), h('td', {}, h('span', { class: 'badge ' + (go ? 'go' : ph === 'phase-1' ? 'p1' : ph === 'phase-2' ? 'p2' : ph === 'phase-3' ? 'p3' : 'future') }, go ? 'permanent' : ph + (ph === 'future' ? ' (rejectable)' : ''))), h('td', { class: 'n' }, opBond(p, r.op) + p.tip))); }
+    t.append(tb); ib.append(t);
+  } else ib.append(h('div', { class: 'empty' }, 'empty'));
+}
+
+/* ---- the chart: three lanes over the current branch --------------------------- */
+function heldBy(sess) {
+  const p = sess.params, st = sess.state;
+  return { dreg: st.ckpts.filter(c => ckTag(c.ckpt.st) === 'live').length * p.D, b: st.requests.reduce((n, r) => n + opBond(p, r.op) + p.tip, 0) + st.ckpts.length * p.Mc, pool: 0 };
+}
+function paidOut(f) { return f.refunds.reduce((n, r) => n + r.value, 0) + (f.tips ? f.tips.value : 0) + (f.premium ? f.premium.value : 0); }
+function renderChart() {
+  const canvas = $('value-chart');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(320, canvas.clientWidth || 640), H = 240;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement);
+  const col = v => (css.getPropertyValue(v) || '').trim() || '#888';
+  ctx.clearRect(0, 0, W, H);
+  const path = currentPath(), tl = path.map(node), n = tl.length, cursorI = path.indexOf(app.cursor);
+  const left = 46, right = 10, top = 8, laneGap = 8;
+  const laneH = (H - top - 22 - 2 * laneGap) / 3;
+  const x = i => left + (n > 1 ? (W - left - right) * i / (n - 1) : (W - left - right) / 2);
+  let cum = 0;
+  const paid = tl.map(t => { if (t.record && t.record.result.ok) cum += paidOut(t.record.result.flow); return cum; });
+  const lanes = [['dreg', '--dreg', 'D in checkpoints', tl.map(t => heldBy(t.session).dreg)], ['b', '--b', 'inbox + min-ADA', tl.map(t => heldBy(t.session).b)], ['pool', '--pool', 'paid out', paid]];
+  ctx.font = '10px ' + col('--mono');
+  lanes.forEach(([key, cv, label, vals], li) => {
+    const y0 = top + li * (laneH + laneGap), y1 = y0 + laneH;
+    const max = Math.max(1, ...vals);
+    const y = v => y1 - (laneH - 12) * v / max;
+    ctx.strokeStyle = col('--line-2'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, y1 + .5); ctx.lineTo(W - right, y1 + .5); ctx.stroke();
+    ctx.fillStyle = col('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(max), left - 6, y(max)); ctx.fillText('0', left - 6, y1);
+    ctx.textAlign = 'left'; ctx.fillStyle = col(cv); ctx.fillText(label, left + 4, y0 + 6);
+    const c = col(cv);
+    ctx.beginPath(); ctx.moveTo(x(0), y1);
+    for (let i = 0; i < n; i++) { ctx.lineTo(x(i), y(vals[i])); if (i + 1 < n) ctx.lineTo(x(i + 1), y(vals[i])); }
+    ctx.lineTo(x(n - 1), y1); ctx.closePath();
+    ctx.globalAlpha = .18; ctx.fillStyle = c; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.strokeStyle = c; ctx.lineWidth = 2;
+    for (let i = 0; i < n; i++) { if (i === 0) ctx.moveTo(x(i), y(vals[i])); else ctx.lineTo(x(i), y(vals[i - 1])); ctx.lineTo(x(i), y(vals[i])); }
+    ctx.stroke();
+    ctx.strokeStyle = col('--accent'); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(x(cursorI) + .5, y0); ctx.lineTo(x(cursorI) + .5, y1); ctx.stroke(); ctx.setLineDash([]);
+  });
+  ctx.fillStyle = col('--muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const every = Math.max(1, Math.ceil(n / Math.max(4, Math.floor((W - left - right) / 44))));
+  for (let i = 0; i < n; i += every) ctx.fillText('s' + tl[i].session.now, x(i), H - 16);
+  ctx.textAlign = 'left'; ctx.fillText('step →', left, H - 6);
+}
+
+/* ---- the theorem lamps ----------------------------------------------------- */
+const MUTANTS = { R1: ['M1 register without the absence proof', 'M2 register without the inception', 'M4 revive beside a checkpoint', 'M21 mint another token'], R3: ['M9 process outside phase 1'], R6: ['M13 fold does not advance'], R7: ['M10 fold without the generation check'], R8: ['M11 empty fold', 'M12 plugin swap'], R9: ['M7 reject a go-request', 'M8 reject in phase 1', 'M14 retract in any phase'], R13: ['M15 reap live', 'M16 stranger reaps early', 'M17 dated now', 'M18 keeps the checkpoint'], R14: ['M6 convict dormant without proof', 'M19 convict checkpoint without proof'] };
+const LAMPS = [{ id: 'T7', title: 'parity with the Lean', plain: 'This step, looked up in the embedded corpus the Lean driver emitted (stories, traces, the boundary grid): verdict, flow and post-state must agree. No cell, no claim — the page says so.', lean: 'RegistryTraceDriver.lean' },
+  ...THEOREMS.map(t => ({ id: t.id, title: t.title.split(':')[0].split(';')[0], plain: t.title, lean: t.lean }))];
+function renderLedger() {
+  const sess = cur();
+  let t = null;
+  for (let id = app.cursor; id !== null && !t; id = node(id).parent) if (node(id).record) t = node(id);
+  const counts = heldSoFar(sess);
+  const led = $('ledger');
+  if (!led.children.length) for (const th of LAMPS) {
+    led.append(h('details', { class: 'thm', dataset: { id: th.id } },
+      h('summary', {}, h('span', { class: 'id' }, th.id), h('span', { class: 'ttl' }, th.title), h('span', { class: 'st' })),
+      h('div', { class: 'body' }, th.plain),
+      h('div', { class: 'lean' }, 'Lean: ' + th.lean + (MUTANTS[th.id] ? ' · killed: ' + MUTANTS[th.id].join(', ') : ''))));
+  }
+  for (const el of led.children) {
+    const id = el.dataset.id, c = counts[id] || { exhibited: 0, held: 0, broken: 0 };
+    const now = t ? (id === 'T7' ? (t.record.lean && t.record.lean.found ? { v: t.record.lean.agrees ? 'holds' : 'fails' } : null) : t.record.theorems[id]) : null;
+    el.classList.toggle('lit', !!(now && now.v === 'holds'));
+    el.classList.toggle('broken', c.broken > 0);
+    const st = el.querySelector('.st');
+    st.textContent = c.broken ? `BROKEN ×${c.broken}` : (c.exhibited ? `${c.held}/${c.exhibited}` : '—');
+    el.title = (now && now.v === 'holds' ? 'shown ' + (t.id === app.cursor ? 'now' : 'by the last step') + (now.by ? ' via ' + now.by.join(', ') : '') + ' · ' : '') + (c.exhibited ? `held ${c.held} of ${c.exhibited} times shown on this branch` : 'not shown yet on this branch');
+  }
+}
+
+/* ---- money ---------------------------------------------------------------- */
+function renderMoney() {
+  const tl = pathTo(app.cursor).map(node);
+  const sess = cur(), hd = heldBy(sess);
+  const bal = balancesAlong(tl);
+  const table = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'where'), h('th', { class: 'n' }, 'put in'), h('th', { class: 'n' }, 'back'), h('th', { class: 'n' }, 'tips'), h('th', { class: 'n' }, 'premium'))));
+  const tb = h('tbody', {});
+  tb.append(h('tr', {}, h('td', {}, 'the checkpoints hold (bonds)'), h('td', { class: 'n' }, hd.dreg), h('td', { class: 'n' }, ''), h('td', { class: 'n' }, ''), h('td', { class: 'n' }, '')));
+  tb.append(h('tr', {}, h('td', {}, 'the inbox and the checkpoints hold (min-ADA, bonds, tips)'), h('td', { class: 'n' }, hd.b), h('td', { class: 'n' }, ''), h('td', { class: 'n' }, ''), h('td', { class: 'n' }, '')));
+  for (const addr of Object.keys(bal).sort((a, b) => a - b)) tb.append(h('tr', {}, h('td', {}, nameOf(Number(addr))), h('td', { class: 'n' }, bal[addr].deposited), h('td', { class: 'n' }, bal[addr].refunds), h('td', { class: 'n' }, bal[addr].tips), h('td', { class: 'n' }, bal[addr].premium)));
+  table.append(tb);
+  clear($('balances')).append(table);
+  const fl = clear($('flows'));
+  tl.forEach((t, i) => { if (t.record && t.record.result.ok && describeFlow(t.record.result.flow) !== 'no value moved') fl.append(h('div', { class: 'flow' }, h('span', { class: 'i' }, i), h('span', {}, describeAction(t.record.action)), h('span', { class: 'tiny' }, describeFlow(t.record.result.flow)))); });
+  if (!fl.children.length) fl.append(h('div', { class: 'empty' }, 'No value has moved yet.'));
+}
+
+/* ---- the story player: a scenario becomes a tree ------------------------------ */
+function startFresh() {
+  newTree(newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, NAMES, {}, REGISTRY_LEAN_TRACES_V1), 'An empty registry: no leaf, no checkpoint, an empty inbox.');
+  app.story = null;
+}
+function actorIdOf(st) { const w = (st.as || '').split(/ — /)[0].trim().toLowerCase(); return ACTOR_ORDER.find(id => CAST[id].name.toLowerCase() === w) || null; }
+function playStory(n) {
+  const sc = SCENARIOS.find(x => String(x.id) === String(n));
+  if (!sc) { startFresh(); render(); return; }
+  app.story = sc;
+  const s0 = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || NAMES, sc.env || {}, REGISTRY_LEAN_TRACES_V1);
+  newTree(s0, sc.narrative + ' Step through the story with › ; ⋔ chips switch branch.');
+  const play = (pid, st, extra) => {
+    const sess = node(pid).session;
+    const out = attempt(sess, st.action, st.now);
+    const exp = st.expect || { ok: true };
+    const mismatch = (exp.ok !== false) !== out.record.result.ok || (exp.ok === false && exp.reason && exp.reason !== out.record.result.reason);
+    return addChild(pid, { session: out.session, record: out.record, who: st.as || st.actor || 'anyone', actorId: actorIdOf(st), say: describeAction(st.action) + ' at slot ' + st.now + '.' + (st.note ? ' ' + st.note : ''), kind: 'story', step: st, expect: exp, mismatch, ...extra });
+  };
+  const trunkIds = [0];
+  let pid = 0;
+  for (const st of sc.steps) { pid = play(pid, st, {}); trunkIds.push(pid); }
+  for (const fk of sc.forks || []) {
+    let fid = trunkIds[fk.at];
+    if (fk.env) { const sess = node(fid).session; fid = addChild(fid, { session: { ...sess, env: { ...emptyEnv(), ...fk.env } }, record: null, who: 'The world', say: 'Another world: ' + fk.title + '.', kind: 'evidence', evRow: null, branch: { id: fk.id, title: fk.title } }); }
+    fk.steps.forEach((st, i) => { fid = play(fid, st, i === 0 && !fk.env ? { branch: { id: fk.id, title: fk.title } } : {}); });
+  }
+  for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
+  app.cursor = 0; app.pending = null;
   render();
 }
+function stopPlay() { if (app.playing) { clearInterval(app.playing); app.playing = null; } }
+function togglePlay() {
+  if (app.playing) { stopPlay(); renderPlaybar(); return; }
+  const tickPlay = () => { const nx = nextOf(app.cursor); if (nx === null) { stopPlay(); renderPlaybar(); return; } goTo(nx); };
+  app.playing = setInterval(tickPlay, 1500);
+  tickPlay();
+}
 
-/* --- ?selftest=1: replay everything embedded through this page's own core ----- */
-function selftest() {
+/* ---- self-test ---------------------------------------------------------------- */
+function runSelftest() {
   const rows = [];
   let allOk = true;
+  const rowOf = (what, ok, detail) => { rows.push({ what, ok, detail }); allOk = allOk && ok; };
   for (const sc of SCENARIOS) {
     const r = checkScenario(sc, `story ${sc.id}`, REGISTRY_LEAN_TRACES_V1);
-    const ok = r.problems.length === 0; allOk = allOk && ok;
-    rows.push({ what: `story ${sc.id} — ${sc.story}`, ok, detail: ok ? `${r.stepsRun} steps, exhibits ${[...new Set(r.exhibited)].join(' ')}` : r.problems.join(' | ') });
+    rowOf(`story ${sc.id} — ${sc.story}`, r.problems.length === 0, r.problems.length ? r.problems.join(' | ') : `${r.stepsRun} steps over ${1 + Object.keys(r.forkTimelines).length} branch(es), exhibits ${[...new Set(r.exhibited)].join(' ')}`);
   }
-  if (REGISTRY_LEAN_TRACES_V1) {
-    const c = checkCorpus(REGISTRY_LEAN_TRACES_V1);
-    allOk = allOk && c.ok;
-    rows.push({ what: 'Lean corpus replayed through this page', ok: c.ok, detail: c.ok ? `${c.cells} cells (${c.applied} applied, ${c.refused} refused) agree with stepFn` : c.reasons.slice(0, 5).join(' | ') });
-  } else { allOk = false; rows.push({ what: 'Lean corpus', ok: false, detail: 'none embedded' }); }
-  const exhibited = new Set(); for (const sc of SCENARIOS) for (const st of sc.steps) for (const id of st.exhibits || []) exhibited.add(id);
+  if (REGISTRY_LEAN_TRACES_V1) { const c = checkCorpus(REGISTRY_LEAN_TRACES_V1); rowOf('Lean corpus replayed through this page', c.ok, c.ok ? `${c.cells} cells (${c.applied} applied, ${c.refused} refused) agree with stepFn` : c.reasons.slice(0, 5).join(' | ')); }
+  else rowOf('Lean corpus', false, 'none embedded');
+  const exhibited = new Set(); for (const sc of SCENARIOS) { for (const st of sc.steps) for (const id of st.exhibits || []) exhibited.add(id); for (const fk of sc.forks || []) for (const st of fk.steps) for (const id of st.exhibits || []) exhibited.add(id); }
   const missing = THEOREMS.map(t => t.id).filter(id => !exhibited.has(id));
-  rows.push({ what: 'every theorem exhibited by some story', ok: missing.length === 0, detail: missing.length ? 'missing ' + missing.join(', ') : THEOREMS.map(t => t.id).join(' ') });
-  allOk = allOk && missing.length === 0;
+  rowOf('every executable property exhibited by some story', missing.length === 0, missing.length ? 'missing ' + missing.join(', ') : THEOREMS.map(t => t.id).join(' '));
+  // drive the visible controls: story 13 through the picker, its branch without the proof
+  try {
+    playStory(13);
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const trunkEnd = node(app.cursor);
+    const forkNode = [...$('tree').querySelectorAll('.node')].filter(g => g.querySelector('.fork')).pop();
+    forkNode.dispatchEvent(new Event('click'));
+    const chips = $('branches').querySelectorAll('.branch');
+    const chip = [...chips].find(b => b.dataset.fork === 'convict-without-proof');
+    chip.click();
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const leaf = node(app.cursor);
+    const lamps = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
+    const scene = $('scene').querySelectorAll('[data-obj]').length;
+    const treeNodes = $('tree').querySelectorAll('.node').length;
+    const noThrow = app.nodes.every(n => !n.record || Object.values(n.record.theorems).every(t => t.v !== 'fails'));
+    const allCells = app.nodes.every(n => !n.record || (n.record.lean && n.record.lean.found && n.record.lean.agrees));
+    const ok = chips.length >= 3 && trunkEnd.record && trunkEnd.record.result.ok && leaf.record && !leaf.record.result.ok && leaf.record.result.reason === 'no-duplicity-proof' && lamps.includes('R14') && lamps.includes('T7') && scene > 12 && treeNodes === app.nodes.length && noThrow && allCells;
+    rowOf('controls', ok, `story 13 played through the picker (${treeNodes} nodes drawn); at its fork ${chips.length} continuations; the branch without the proof ends ${leaf.record ? leaf.record.result.reason : '?'} with lamps ${lamps.join(' ')}; the scene draws ${scene} entities; no lamp threw (${noThrow}); every story step has its Lean cell and agrees (${allCells})`);
+    startFresh(); render();
+  } catch (e) { rowOf('controls', false, 'threw: ' + (e && e.message)); }
   document.title = (allOk ? 'PASS' : 'FAIL') + ' — registry simulator selftest';
-  $('main').innerHTML = `<section class="selftest"><div class="card"><h2>Self-test: ${allOk ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}</h2><table><tr><th>item</th><th>result</th><th>detail</th></tr>` +
-    rows.map(r => `<tr><td>${esc(r.what)}</td><td class="${r.ok ? 'pass' : 'fail'}">${r.ok ? 'PASS' : 'FAIL'}</td><td>${esc(r.detail)}</td></tr>`).join('') + '</table></div></section>';
+  const pre = $('selftest-out'); pre.hidden = false;
+  pre.textContent = rows.map(r => `${r.ok ? 'PASS' : 'FAIL'}  ${r.what} — ${r.detail}`).join('\n') + '\n' + (allOk ? `PASS  all ${rows.length} items` : 'FAIL');
   window.__selftest = { ok: allOk, rows };
   return allOk;
 }
 
-if (new URLSearchParams(window.location.search).get('selftest')) { selftest(); } else { init(); }
-window.__registrySim = { get session() { return S; }, get story() { return story; }, attempt, loadStory, storyStep, goTo, leaveStory, selftest, render };
+/* ---- wiring ---------------------------------------------------------------- */
+function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem('registry-sim-theme'); } catch (e) { t = null; }
+  if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+}
+function toggleTheme() {
+  const cur0 = document.documentElement.dataset.theme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur0 === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('registry-sim-theme', next); } catch (e) { /* no storage: fine */ }
+  renderChart();
+}
+function wire() {
+  $('story-picker').addEventListener('change', e => { if (e.target.value === '') { startFresh(); render(); } else playStory(e.target.value); });
+  $('hist-first').addEventListener('click', () => goTo(0));
+  $('hist-prev').addEventListener('click', () => { const p = node(app.cursor).parent; if (p !== null) goTo(p); });
+  $('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) goTo(nx); });
+  $('hist-last').addEventListener('click', () => goTo(leafNodeOf(app.cursor)));
+  $('btn-play').addEventListener('click', togglePlay);
+  $('scrub').addEventListener('input', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
+  $('scrub').addEventListener('change', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
+  $('btn-reset').addEventListener('click', () => { startFresh(); render(); });
+  $('btn-theme').addEventListener('click', toggleTheme);
+  $('act-submit').addEventListener('click', submitPending);
+  $('act-cancel').addEventListener('click', () => { app.pending = null; renderNext(); });
+  $('ev-add').addEventListener('click', () => { const n = parseNat($('ev-aid').value); if (n === null) return; app.extraAids = [...(app.extraAids || []), n]; renderEvidence(); });
+  $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); return; } moveSlot(n); });
+  $('slot-plus1').addEventListener('click', () => moveSlot(cur().now + 1));
+  $('slot-plusw').addEventListener('click', () => moveSlot(cur().now + cur().params.W));
+  $('chart-drawer').addEventListener('toggle', renderChart);
+  window.addEventListener('resize', renderChart);
+  document.addEventListener('keydown', e => {
+    if (e.target && /^(input|select|textarea)$/i.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') { $('hist-next').click(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { $('hist-prev').click(); e.preventDefault(); }
+    else if (e.key === ' ') { togglePlay(); e.preventDefault(); }
+  });
+}
+window.RS = { step, replay, attempt, newSession, addEvidence, removeEvidence, checkScenario, checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, app, node, cur, goTo, playStory, startFresh, render };
+window.__registrySim = { get session() { return cur(); }, get story() { return app.story; }, get app() { return app; } };
+initTheme();
+startFresh();
+wire();
+{ const m = /[?&]story=(\d+)/.exec(location.search); if (!/[?&]selftest=1/.test(location.search)) playStory(m ? m[1] : 1); }
+render();
+if (/[?&]selftest=1/.test(location.search)) runSelftest();
 </script>
 </body>
 </html>

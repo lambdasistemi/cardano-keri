@@ -227,9 +227,17 @@ the reaper's economics are `lean/CardanoKeri/Samaritan.lean`.
   network request; light and dark theme; `?selftest=1` replays the fifteen
   stories and the embedded Lean corpus through the page's own core.
 
-Pick a story: the play is drawn as a tree (✓ applied, ✗ refused; a ⋔ branch
-departs where it starts; click a node to go there) and *what can happen next*
-lists the continuations — the next step, or a branch. Or play freely: post requests (register,
+The page has the checkpoint simulator's shape: the play first (the story
+picker, the tree of the play — ✓ applied, ✗ refused, ⋔ where a branch departs;
+click any node to go there — the play bar with a scrubber, *where we are* as
+one strip, the narration of the step with its result and the lamps it shows),
+then *what can happen next* (the continuations already in the tree, then every
+move the machine would accept from here by stakeholder — each with what the
+transaction must carry — and the refused ones folded with their reasons), the
+scene (KERI, the registry with its leaves, the inbox, the checkpoints, the
+cage, the readers and payees; every step plays on it, forward or in reverse),
+the theorem lamps, and the drawers (evidence by hand, the registry in numbers,
+value over the play, who holds what, what this is). Or play freely: post requests (register,
 revive, convict a dormant AID), decide the evidence (inceptions, witnessed
 rotations from a key state, duplicity proofs against a key state, the owner's
 quorum), move the slot, build a fold by choosing what to do with each pending
@@ -241,7 +249,7 @@ refusal is named after the Lean guard that refused it, in the story's words.
 | file | role |
 |---|---|
 | `registry-simulator-core.mjs` | the pure core: `step` (= `stepFn`), `processBody`, `rejectOne`, `applyBatch`, `batchView` (what each position of a batch saw), `reapableReason`, `replay`, the phases, exact Nat on inputs and results, the guard table (`LEAN_GUARDS`: refusal name → decision sites of the Lean), R1–R14 as executable properties over the accumulator (each names the Lean theorem the step instantiated), `findLeanCell` (T7 for any step: the Lean's cell in the corpus), the scenario (tree) and corpus checkers |
-| `registry-simulator.html` | the page; core slices between `@@CORE:<id>@@`, stories between `@@SCENARIOS@@`, the Lean corpus with its sha256 between `@@CORPUS@@` |
+| `registry-simulator.html` | the page: a tree of plays over the core's immutable sessions, drawn as one scene whose entities move when a step plays; core slices between `@@CORE:<id>@@`, stories between `@@SCENARIOS@@`, the Lean corpus with its sha256 between `@@CORPUS@@` |
 | `registry-simulator-build.mjs` | regenerates the page and `docs/simulator/registry/index.html`; `--check` reds on any drift |
 | `registry-simulator-scenarios/` | one JSON per story (1–15): params, plugin, evidence table, a trunk of steps and `forks` (`id`, `at`, `title`, an optional `env` of its own, steps), expected results per step including refusal reasons and flows, the theorems each step exhibits |
 | `registry-simulator-clauses.json` | the reconciliation table: 103 atomic claims over the stories' labelled bullets, each a Lean declaration, arm, exact text, kind (guard / refusal / payment / post-state / no-guard / verdict) and one tie (a refusal name, or a step of the story); one omission (the retract's signer) |

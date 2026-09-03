@@ -46,7 +46,9 @@ nav:
   - Home: index.md
   - Why Cardano: why-cardano.md
   - Story Ladder: story-ladder.md
-  - Checkpoint Simulator: simulator/index.html
+  - Simulations:
+      - The checkpoint: simulator/index.html
+      - The registry (preview): https://preview.dev.plutimus.com/lambdasistemi/cardano-keri/pr-317/simulator/registry/
   - Roadmap: roadmap.md
   - Identity on Cardano:
       - Presentation: identity-on-cardano/index.html

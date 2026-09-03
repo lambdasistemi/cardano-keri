@@ -178,14 +178,15 @@ theorem T4_current_quorum_only_poisons (p : Params) (env : Env) {a : Action} {t 
 /-! ## T5 — totality: every ruled transition is enabled when its evidence is -/
 
 /-- **T5a.** Given a valid witnessed rotation and the new keys' signature on
-the bond option (D-038), every bond option is enabled — whatever the pool
-holds (payment is never a gate, T14). `keep` with no new address needs no
-signature. -/
+the bond option and the optional new refund address — one message carrying
+both (D-038) — every bond option is enabled at every address choice,
+whatever the pool holds (payment is never a gate, T14). `keep` with no new
+address needs no signature. -/
 theorem T5_every_bond_option (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq)
     (payee : Addr) (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
     (hd : l.dreg ≤ p.D) (hb : l.b ≤ p.B) :
-    ∀ op : BondOp, env.intentOk (l.epoch + 1) op.intent none = true →
-      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee none) t (.present l) f (.present l') := by
+    ∀ (op : BondOp) (r' : Option Addr), env.intentOk (l.epoch + 1) op.intent r' = true →
+      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l') := by
   sorry
 
 /-- **T5b.** Given the quorum, an unpoisoned state can be poisoned. -/
@@ -254,11 +255,13 @@ theorem T6_dreg_increases_only_by_deposit (p : Params) (env : Env) {a : Action} 
     f.dregIn = p.D - l.dreg ∧ f.bIn = p.B - l.b ∧ l'.bornAt = t := by
   sorry
 
-/-- **T6d.** `refundTo` changes only under a rotation whose new keys signed
-the new address, in the intent message (D-032, D-038). -/
+/-- **T6d.** `refundTo` changes only under a rotation that names the new
+address, and the message the new keys signed is that rotation's own option
+with that address (D-032, D-038): no unrelated intent authorizes the move. -/
 theorem T6_refund_change_requires_new_keys (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}
     (h : Step p env a t (.present l) f (.present l')) (hne : l'.refundTo ≠ l.refundTo) :
-    a.actor = .nextKeys ∧ ∃ i, env.intentAuthorized l'.epoch i (some l'.refundTo) = true := by
+    ∃ sn' op payee, a = .rotate sn' op payee (some l'.refundTo) ∧
+      env.intentAuthorized l'.epoch op.intent (some l'.refundTo) = true := by
   sorry
 
 /-- **T6e.** Poison and top-up move no bond; only rotations and freezes do. -/
@@ -314,12 +317,13 @@ theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysRea
     s.leaves aid = (s.states aid).leaf := by
   sorry
 
-/-- **T8b.** Rotate, poison, freeze and top-up never touch the registry: a
-system step by an action that does not touch the leaf leaves every leaf as
-it was. -/
+/-- **T8b.** The partition of D-037, stated as such: a step leaves every
+leaf as it was exactly when its action is a rotate, a poison, a freeze or a
+top-up (`Action.touchesLeaf = false`); a register, a reopen, a close and a
+conviction change the leaf. -/
 theorem T8_edges_leave_the_leaf (p : Params) (env : Env) {s : Sys} {aid : AID} {a : Action} {now : Slot}
-    {f : Flow} {st' : State} (hs : SysReach p env s) (hstep : Step p env a now (s.states aid) f st')
-    (hedge : a.touchesLeaf = false) : (s.set aid st').leaves = s.leaves := by
+    {f : Flow} {st' : State} (hs : SysReach p env s) (hstep : Step p env a now (s.states aid) f st') :
+    (s.set aid st').leaves = s.leaves ↔ a.touchesLeaf = false := by
   sorry
 
 /-- **T8c.** In every reachable system, an AID with a state other than
@@ -358,6 +362,14 @@ theorem T8_mint_once (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (
   sorry
 
 /-! ## T9 — juvenility is consumer policy -/
+
+/-- **T9.0.** The consumer's program is the consumer's predicate: the
+decidable mirror `consumableStateB` decides exactly `consumableState`, so
+what the trace driver and the simulator run is what the theorems below
+speak about. -/
+theorem consumableStateB_iff (p : Params) (now : Slot) (s : State) :
+    consumableStateB p now s = true ↔ consumableState p now s := by
+  sorry
 
 /-- **T9.** No transition depends on `W`. -/
 theorem T9_juvenility_is_consumer_only (p : Params) (env : Env) (W' : Nat) {a : Action} {t : Slot}

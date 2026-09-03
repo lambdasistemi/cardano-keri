@@ -1,7 +1,8 @@
 /*
  * checkpoint-simulator-core.mjs — the pure core of the M1 checkpoint
  * simulator: a JavaScript transcription of `stepFn`, `replay` and
- * `consumableState` from lean/CardanoKeri/Checkpoint.lean, and the
+ * `consumableStateB` (the decidable mirror of `consumableState`) from
+ * lean/CardanoKeri/Checkpoint.lean, and the
  * theorems T1–T16 of lean/CardanoKeri/CheckpointGoals.lean as executable
  * properties over steps and traces.
  *
@@ -226,13 +227,15 @@ function normalizeAction(a) {
   return { ok: false, reason: 'invalid-action', field: 'action' };
 }
 
+// Action.touchesLeaf: the partition of D-037
+const TOUCHES_LEAF = new Set(['register', 'reopen', 'close', 'convict']);
 // Action.actor
 function actorOf(a) {
   switch (actionKind(a)) {
-    case 'register': case 'topUp': case 'reopen': return 'anyone';
+    case 'register': case 'topUp': return 'anyone';
     case 'rotate': case 'close': return 'nextKeys';
     case 'poison': return 'currentQuorum';
-    case 'freeze': case 'convict': return 'proof';
+    case 'freeze': case 'convict': case 'reopen': return 'proof';
   }
   return null;
 }
@@ -713,7 +716,7 @@ const THEOREMS = [
     lean: ['T8_absent_only_registers', 'T8_closed_only_reopens', 'T8_only_convicted_is_terminal', 'T8_leaf_agrees_with_state', 'T8_edges_leave_the_leaf', 'T8_present_implies_registered', 'T8_closed_leaf_is_the_tombstone', 'T8_leaf_never_absent_again', 'T8_mint_once'],
     plain: 'Registration is the only step from Absent and needs an absent leaf; reopen is the only step from Closed and needs the closed leaf; conviction is the only terminal state. The registry leaf (absent, live, closed, convicted) always agrees with the state, never returns to absent, and rotate, poison, freeze and top-up never touch it.' },
   { id: 'T9', title: 'Juvenility is consumer policy',
-    lean: ['T9_juvenility_is_consumer_only'],
+    lean: ['consumableStateB_iff', 'T9_juvenility_is_consumer_only'],
     plain: 'No transition depends on the window W: the same action from the same state is accepted or refused identically under any W.' },
   { id: 'T10', title: 'An unbonded or frozen checkpoint is inert to everyone but the next keys',
     lean: ['T10_inert_without_next_keys', 'T10_only_deposit_restores', 'T10_current_quorum_never_restores', 'T10_reopen_is_juvenile'],
@@ -850,7 +853,7 @@ function theoremReport(before, after, rec) {
       [pr.dreg === 0 || (pr.dreg === hi.dreg && ho.dreg === 0), 'the conviction bond left partially to the refund address'],
       [pc.dreg === 0 || (pc.dreg === hi.dreg && postK === 'convicted'), 'the conviction bond went to a convictor without a conviction'],
       [!pp || !(lp.dreg < lq.dreg) || (kind === 'rotate' && d.op === 'deposit' && lq.dreg === p.D && lq.b === p.B && f.dregIn === p.D - lp.dreg && f.bIn === p.B - lp.b && lq.bornAt === rec.slot), 'the conviction bond increased other than by a full deposit'],
-      [!pp || lq.refundTo === lp.refundTo || (actor === 'nextKeys' && INTENTS.some(i => envIntentAuthorized(env, lq.epoch, i, lq.refundTo))), 'the refund address moved without the new keys’ signature on it'],
+      [!pp || lq.refundTo === lp.refundTo || (kind === 'rotate' && d["refund'"] === lq.refundTo && envIntentAuthorized(env, lq.epoch, d.op, lq.refundTo)), 'the refund address moved other than by a rotation naming it, signed by the new keys as that rotation’s own intent (T6_refund_change_requires_new_keys)'],
       [!pp || (lq.dreg === lp.dreg && lq.b === lp.b) || actor === 'nextKeys' || kind === 'freeze', 'a bond moved under poison or top-up'],
       [kind !== 'rotate' || d.op !== 'withdraw' || signed('withdraw', d["refund'"]), 'a withdrawal landed without the new keys’ signature on it (D-038)'],
       [kind !== 'rotate' || d.op !== 'deposit' || signed('deposit', d["refund'"]), 'a deposit landed without the new keys’ signature on it (D-038)'],
@@ -882,7 +885,7 @@ function theoremReport(before, after, rec) {
     [kind !== 'register' || !ok || (preK === 'absent' && leafPre === 'absent'), 'a registration landed on a non-absent state or leaf'],
     [kind !== 'reopen' || !ok || (preK === 'closed' && leafKind(leafPre) === 'closed'), 'a reopen landed on a state or leaf that is not closed'],
     [allAids(after).every(x => eq(leafOfAid(after, x), leafOf(stateOfAid(after, x)))), 'a leaf disagrees with its state (T8_leaf_agrees_with_state)'],
-    [!ok || kind === 'register' || kind === 'reopen' || kind === 'close' || kind === 'convict' || eq(leafPost, leafPre), 'an edge touched the leaf (T8_edges_leave_the_leaf)'],
+    [!ok || (eq(leafPost, leafPre) === !TOUCHES_LEAF.has(kind)), 'the leaf changed exactly when the action is not a register, reopen, close or conviction — violated (T8_edges_leave_the_leaf)'],
     [leafPre === 'absent' || leafPost !== 'absent', 'a leaf returned to absent (T8_leaf_never_absent_again)'],
     [leafPre !== 'convicted' || leafPost === 'convicted', 'a convicted leaf changed'],
     [allAids(after).filter(x => x !== rec.aid).every(x => eq(leafOfAid(after, x), leafOfAid(before, x))), 'another AID’s leaf changed'],

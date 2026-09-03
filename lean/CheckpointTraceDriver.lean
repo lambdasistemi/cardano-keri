@@ -24,10 +24,10 @@ Lean is a gate and not a reading. The seeded traces continue past a refusal
 
 `Env` is a record of functions; the driver builds it from finite decision
 tables and emits the tables, so the JavaScript core evaluates the same
-oracle. `consumableState` is a `Prop` with no executable form in the model;
-`consumableB` below is the driver's Bool transcription, emitted for the grid
-states at `bornAt + W − 1 / = / + 1` so the two transcriptions (Lean-side
-and JavaScript-side) at least agree by hash.
+oracle. `consumableStateB`, the model's own decidable mirror of
+`consumableState` (tied to it by `consumableStateB_iff`), is emitted for
+the grid states at `bornAt + W − 1 / = / + 1` so the JavaScript consumer
+agrees with the model's by hash.
 -/
 
 open Lean (ToJson toJson Json FromJson fromJson?)
@@ -121,11 +121,6 @@ def EnvTable.applyRow (t : EnvTable) (add : Bool) (row : Json) : Except String E
 
 /-- The deployment used everywhere: `D` = 1000, `B` = 5, `P` = 2, `W` = 10. -/
 def params : Params := { D := 1000, B := 5, P := 2, W := 10, hD := by decide, hB := by decide }
-
-/-- Bool transcription of `consumableState` (a `Prop` in the model). -/
-def consumableB (p : Params) (now : Slot) : State → Bool
-  | .present l => l.dreg == p.D && l.b == p.B && l.poisoned == false && decide (l.bornAt + p.W ≤ now)
-  | _ => false
 
 /-- One step record: the input state, the slot, the action, and the result
 (`null` when `stepFn` refuses). -/
@@ -241,7 +236,7 @@ def gridJson (p : Params) : Json :=
   let cons : List Json :=
     (enumL states).flatMap fun (si, s) =>
       [10 + p.W - 1, 10 + p.W, 10 + p.W + 1].map fun t =>
-        Json.mkObj [("s", toJson si), ("now", toJson t), ("consumable", toJson (consumableB p t s))]
+        Json.mkObj [("s", toJson si), ("now", toJson t), ("consumable", toJson (consumableStateB p t s))]
   Json.mkObj [("now", toJson now), ("states", toJson states), ("actions", toJson gridActions),
     ("envs", toJson (gridEnvs.map (·.2))), ("cells", Json.arr cells.toArray), ("consumable", Json.arr cons.toArray)]
 

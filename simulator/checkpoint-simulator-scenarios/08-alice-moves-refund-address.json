@@ -237,5 +237,90 @@
         ]
       }
     }
+  ],
+  "forks": [
+    {
+      "id": "unrelated-intent",
+      "at": 2,
+      "title": "a signed withdrawal is not a signed address",
+      "steps": [
+        {
+          "who": "alice",
+          "slot": 12,
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              },
+              {
+                "intentAuthorized": [
+                  2,
+                  "withdraw",
+                  null
+                ]
+              }
+            ]
+          },
+          "say": "Alice rotates again and her new keys (epoch 2) sign a withdrawal, no address named."
+        },
+        {
+          "who": "hal",
+          "slot": 12,
+          "action": {
+            "rotate": {
+              "sn'": 2,
+              "op": "keep",
+              "payee": 2,
+              "refund'": 1
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "exhibits": [
+              "T7",
+              "T9"
+            ]
+          },
+          "say": "A relayer lands the rotation as a keep asking to move the refund address to Alice. The message her keys signed is a withdrawal without an address, not this rotation’s option with this address: refused (T6_refund_change_requires_new_keys, D-038)."
+        },
+        {
+          "who": "hal",
+          "slot": 12,
+          "action": {
+            "rotate": {
+              "sn'": 2,
+              "op": "withdraw",
+              "payee": 2,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "live": {
+              "refundTo": 6
+            },
+            "exhibits": [
+              "T1",
+              "T14",
+              "T15",
+              "T16",
+              "T2",
+              "T3",
+              "T5",
+              "T6",
+              "T7",
+              "T8",
+              "T9"
+            ]
+          },
+          "say": "The signed message itself lands: the withdrawal, and the address stays the stranger’s."
+        }
+      ]
+    }
   ]
 }

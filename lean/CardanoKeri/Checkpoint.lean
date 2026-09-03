@@ -177,7 +177,11 @@ inductive Action where
   | reopen (sn' : Seq) (refund : Addr) (pool0 : Value)
   deriving Repr
 
-/-- The actor an action needs. -/
+/-- The actor an action needs: the party whose signature or evidence the
+validator checks. `proof` is a permissionless party presenting witnessed
+evidence — a freeze, a conviction, and a reopen (its rotation path from
+the tombstone, D-036); `anyone` presents nothing but money and a public
+inception. -/
 def Action.actor : Action → Actor
   | .register .. => .anyone
   | .rotate .. => .nextKeys
@@ -186,7 +190,7 @@ def Action.actor : Action → Actor
   | .topUp .. => .anyone
   | .convict .. => .proof
   | .close .. => .nextKeys
-  | .reopen .. => .anyone
+  | .reopen .. => .proof
 
 /-- The datum plus the value of a present checkpoint. -/
 structure Live where
@@ -285,6 +289,12 @@ transaction, and validity once A11 ships, are outside this machine. -/
 def consumableState (p : Params) (now : Slot) : State → Prop
   | .present l => l.dreg = p.D ∧ l.b = p.B ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now
   | _ => False
+
+/-- The decidable mirror of `consumableState`: what a consumer, the trace
+driver and the simulator actually run. `consumableStateB_iff` ties the two. -/
+def consumableStateB (p : Params) (now : Slot) : State → Bool
+  | .present l => l.dreg == p.D && l.b == p.B && l.poisoned == false && decide (l.bornAt + p.W ≤ now)
+  | _ => false
 
 /-- The transition relation: exactly the spends the validator family admits. -/
 inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow → State → Prop

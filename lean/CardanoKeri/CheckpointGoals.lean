@@ -3,7 +3,9 @@ import CardanoKeri.Checkpoint
 /-!
 # The M1 return: theorems T1 … T16, third slice (D-039, D-040)
 
-Statements first, every proof `sorry`, for the statement audit; the proofs
+Statements first, every proof `sorry`, for the statement audit (second
+submission, after the audit of `46595b6`: the close names its payee, and the
+two keep-shaped statements are stated from their own hypothesis); the proofs
 follow it. Every theorem of the second slice stays, restated where D-040
 changed the state or the flow; three are retired with their content carried
 by a named successor (`T6_dreg_increases_only_by_deposit` →
@@ -105,8 +107,8 @@ close presented parks its own sequence, so presenting that same rotation
 again cannot revive — a revival needs a rotation later than the close's. A
 relayer replaying the public close cannot bring the identity back. -/
 theorem T1_close_rotation_cannot_revive (p : Params) (env : Env) {t t' : Slot} {l : Live} {f f' : Flow}
-    {sn' : Seq} {r' : Option Addr} {h : Hash} {refund : Addr} {pool0 : Value} {s' : State}
-    (hc : Step p env (.close sn' r') t (.present l) f (.parked h)) :
+    {sn' : Seq} {payee : Addr} {r' : Option Addr} {h : Hash} {refund : Addr} {pool0 : Value} {s' : State}
+    (hc : Step p env (.close sn' payee r') t (.present l) f (.parked h)) :
     ¬ Step p env (.reopen sn' refund pool0) t' (.parked h) f' s' := by
   sorry
 
@@ -135,8 +137,8 @@ theorem T2_epoch_only_by_rotation (p : Params) (env : Env) {a : Action} {t : Slo
 sequence; a revival opens the one after the parked epoch at the revival's
 sequence. -/
 theorem T2_close_and_reopen_open_epochs (p : Params) (env : Env) {t : Slot} :
-    (∀ {l : Live} {f : Flow} {h : Hash} {sn' : Seq} {r' : Option Addr},
-      Step p env (.close sn' r') t (.present l) f (.parked h) → h.epoch = l.epoch + 1 ∧ h.sn = sn') ∧
+    (∀ {l : Live} {f : Flow} {h : Hash} {sn' : Seq} {payee : Addr} {r' : Option Addr},
+      Step p env (.close sn' payee r') t (.present l) f (.parked h) → h.epoch = l.epoch + 1 ∧ h.sn = sn') ∧
     (∀ {h : Hash} {f : Flow} {l' : Live} {sn' : Seq} {refund : Addr} {pool0 : Value},
       Step p env (.reopen sn' refund pool0) t (.parked h) f (.present l') → l'.epoch = h.epoch + 1 ∧ l'.sn = sn') := by
   sorry
@@ -238,16 +240,31 @@ theorem T5_every_bond_option (p : Params) (env : Env) (t : Slot) (l : Live) (sn'
       ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l') := by
   sorry
 
-/-- **T5h.** D-040: a deposit is a no-op on full bonds. From an unfrozen
-checkpoint a deposit and a keep with the same rotation, payee and address
-produce the same flow and the same state — the deposit brings nothing and
-resets nothing; only its signature differs. -/
-theorem T5_deposit_on_full_is_keep (p : Params) (env : Env) {t : Slot} {l : Live} {f f' : Flow}
-    {s' s'' : State} {sn' : Seq} {payee : Addr} {r' : Option Addr}
+/-- **T5j.** A keep is exactly the rotated datum with the premium: the flow
+is the premium to the payee and nothing else, the state is `Live.rotated`
+— which ties the helper the next two statements use to the constructors'
+field-by-field conclusions. -/
+theorem T5_keep_is_rotated (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}
+    {sn' : Seq} {payee : Addr} {r' : Option Addr}
+    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f s') :
+    f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn' r') := by
+  sorry
+
+/-- **T5h.** D-040: a deposit is a no-op on full bonds. Every licensed
+deposit from an unfrozen checkpoint is keep-shaped — from the deposit step
+alone, whatever else the keys did or did not sign: it brings nothing, pays
+the premium as a keep would, leaves the rotated datum with the freeze bit
+clear, and resets nothing (`bornAt` unchanged). -/
+theorem T5_deposit_on_full_is_keep (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}
+    {s' : State} {sn' : Seq} {payee : Addr} {r' : Option Addr}
     (hfull : l.frozen = false)
-    (hd : Step p env (.rotate sn' .deposit payee r') t (.present l) f s')
-    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f' s'') :
-    f = f' ∧ s' = s'' ∧ f.bIn = 0 := by
+    (hd : Step p env (.rotate sn' .deposit payee r') t (.present l) f s') :
+    f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧
+    s' = .present (l.rotated p sn' r') ∧
+    ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧
+      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = r'.getD l.refundTo ∧
+      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨
+       (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool)) := by
   sorry
 
 /-- **T5b.** Given the quorum, an unpoisoned state can be poisoned. -/
@@ -280,12 +297,14 @@ theorem T5_convict_parked_enabled (p : Params) (env : Env) (t : Slot) (h : Hash)
   sorry
 
 /-- **T5e.** Given a later witnessed rotation and the new keys' signature on
-the close intent, the close is enabled from every present state — poisoned,
-frozen or not (D-036, D-040) — and parks the key state the rotation reached. -/
-theorem T5_close_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (r' : Option Addr)
+the close intent naming the payee, the close is enabled from every present
+state — poisoned, frozen or not, whatever the pool holds (D-036, D-039,
+D-040) — and parks the key state the rotation reached. -/
+theorem T5_close_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)
+    (r' : Option Addr)
     (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-    (hauth : env.intentOk (l.epoch + 1) .close r' = true) :
-    ∃ f, Step p env (.close sn' r') t (.present l) f (.parked ⟨l.epoch + 1, sn'⟩) := by
+    (hauth : env.intentOk (l.epoch + 1) (.close payee) r' = true) :
+    ∃ f, Step p env (.close sn' payee r') t (.present l) f (.parked ⟨l.epoch + 1, sn'⟩) := by
   sorry
 
 /-- **T5f.** Given a witnessed rotation later than the parked key state, the
@@ -365,8 +384,8 @@ address. A relayer with public data alone can land a keep and nothing else. -/
 theorem T6_intent_requires_new_keys (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State} :
     (∀ {sn' payee r'}, Step p env (.rotate sn' .deposit payee r') t (.present l) f s' →
       env.intentAuthorized (l.epoch + 1) .deposit r' = true) ∧
-    (∀ {sn' r'}, Step p env (.close sn' r') t (.present l) f s' →
-      env.intentAuthorized (l.epoch + 1) .close r' = true) ∧
+    (∀ {sn' payee r'}, Step p env (.close sn' payee r') t (.present l) f s' →
+      env.intentAuthorized (l.epoch + 1) (.close payee) r' = true) ∧
     (∀ {sn' payee r}, Step p env (.rotate sn' .keep payee (some r)) t (.present l) f s' →
       env.intentAuthorized (l.epoch + 1) .keep (some r) = true) := by
   sorry
@@ -602,39 +621,57 @@ theorem T15_freeze_makes_inert (p : Params) (env : Env) {t t' : Slot} {l l' : Li
 /-! ## T16 — the closer chooses when, never where; the parked hash is the closed checkpoint's -/
 
 /-- **T16a.** A close is a witnessed rotation by the next keys, poisoned or
-frozen or not: it pays everything the UTxO holds to the refund address it
-results in — the one in the datum, or the one the new keys authorized in the
-same message as the close — parks the epoch it opened with its sequence, and
-needs the rotation and the signed intent (D-036, D-038, D-040). -/
+frozen or not: it pays the premium to the signed payee when the pool covers
+it and everything else the UTxO holds to the refund address it results in
+— the one in the datum, or the one the new keys authorized in the same
+message as the close and the payee — parks the epoch it opened with its
+sequence, and needs the rotation and the signed intent (D-036, D-038,
+D-039, D-040). -/
 theorem T16_close_destination (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow}
     {h : Hash} (hs : Step p env a t (.present l) f (.parked h)) :
-    ∃ sn' r', a = .close sn' r' ∧
-      f = { refund := some { addr := r'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } } ∧
+    ∃ sn' payee r', a = .close sn' payee r' ∧
+      f = { refund := some { addr := r'.getD l.refundTo, dreg := p.D, b := l.bHeld p,
+                             pool := (l.rotated p sn' r').pool },
+            hunter := p.premium l payee } ∧
+      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ Payment?.pool f.refund + p.P = l.pool) ∨
+       (l.pool < p.P ∧ f.hunter = none ∧ Payment?.pool f.refund = l.pool)) ∧
       h = ⟨l.epoch + 1, sn'⟩ ∧ l.sn < sn' ∧ env.rotationTo l.epoch l.sn sn' = true ∧
-      env.intentOk (l.epoch + 1) .close r' = true := by
+      env.intentOk (l.epoch + 1) (.close payee) r' = true := by
   sorry
 
 /-- **T16d.** No close without the rotation: the current quorum cannot
 close, and a close never lands on a state the presented rotation does not
 advance. -/
 theorem T16_close_needs_rotation (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}
-    {sn' : Seq} {r' : Option Addr} (h : Step p env (.close sn' r') t (.present l) f s') :
-    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ (Action.close sn' r').actor = .nextKeys := by
+    {sn' : Seq} {payee : Addr} {r' : Option Addr} (h : Step p env (.close sn' payee r') t (.present l) f s') :
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ (Action.close sn' payee r').actor = .nextKeys := by
   sorry
 
-/-- **T16e.** The parked hash is the closed checkpoint's (D-040): the leaf
-holds the hash of the checkpoint the closing rotation reached — the same
-datum a keep with that rotation would have put on chain — and the parked
-state holds nothing of what the close paid out. -/
+/-- **T16e.** The parked hash is the closed checkpoint's (D-040), from the
+close alone: the leaf holds the hash of the checkpoint the closing rotation
+reached — the rotated datum, the same a keep with that rotation would have
+put on chain (`T5_keep_is_rotated`) — and the parked state holds nothing of
+what the close paid out. -/
 theorem T16_parked_hash_is_the_closed_checkpoints (p : Params) (env : Env) {t : Slot} {l : Live}
-    {f f' : Flow} {sn' : Seq} {r' : Option Addr} {payee : Addr} {h : Hash} {l' : Live}
-    (hc : Step p env (.close sn' r') t (.present l) f (.parked h))
-    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f' (.present l')) :
-    h = l'.hash ∧ h = ⟨l.epoch + 1, sn'⟩ ∧
+    {f : Flow} {sn' : Seq} {payee : Addr} {r' : Option Addr} {h : Hash}
+    (hc : Step p env (.close sn' payee r') t (.present l) f (.parked h)) :
+    h = (l.rotated p sn' r').hash ∧ h = ⟨l.epoch + 1, sn'⟩ ∧
     Payment?.dreg f.refund = (State.present l).dregHeld p ∧
     Payment?.b f.refund = (State.present l).bHeld p ∧
-    Payment?.pool f.refund = (State.present l).poolHeld ∧
+    Payment?.pool f.refund + Payment?.pool f.hunter = (State.present l).poolHeld ∧
     (State.parked h).dregHeld p = 0 ∧ (State.parked h).bHeld p = 0 ∧ (State.parked h).poolHeld = 0 := by
+  sorry
+
+/-- **T16f.** The copied reap is refused (D-039; the registry's Q-R6): when
+the new keys signed exactly one close message — one payee, one address —
+every close that lands from that checkpoint names that payee and that
+address. A block producer copying the reap with itself as payee presents a
+message the keys never signed. -/
+theorem T16_copied_reap_refused (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}
+    {sn' : Seq} {payee payee₀ : Addr} {r' r₀ : Option Addr}
+    (hone : ∀ q r, env.intentAuthorized (l.epoch + 1) (.close q) r = true → q = payee₀ ∧ r = r₀)
+    (h : Step p env (.close sn' payee r') t (.present l) f s') :
+    payee = payee₀ ∧ r' = r₀ ∧ (∀ q, f.hunter = some q → q.addr = payee₀) := by
   sorry
 
 /-- **T16c.** No step pays a hunter anything but the premium or the freeze

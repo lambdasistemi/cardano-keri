@@ -19,8 +19,11 @@ Fourth cut, the third Lean slice (D-039, D-040), after the registry's slice 3:
   bond, taken by a hunter's freeze. Leaving is the **reap** — the close of
   D-036: a witnessed rotation by the next keys with the D-038 signed intent
   naming the refund address, everything paid to that address, the UTxO
-  burned, the leaf parked with the hash. **Deposit survives as the
-  unfreeze**: it refills the freeze bond when it is missing and is a no-op on
+  burned, the leaf parked with the hash. The close message also names the
+  **payee** of the rotation's premium (D-039): the closer chooses when,
+  never where the bonds go and never who is paid, so the copied reap with
+  the payee rewritten (the registry's Q-R6) is refused. **Deposit survives
+  as the unfreeze**: it refills the freeze bond when it is missing and is a no-op on
   full bonds — a keep with a deposit's signature — still signed by the new
   keys (D-038).
 * **The parked hash.** With no cryptography in the model, the hash the leaf
@@ -101,12 +104,13 @@ inductive BondOp where
   deriving DecidableEq, Repr
 
 /-- What the new keys sign along with the refund address (D-038): the bond
-option of a rotation, or the close. `keep` with no new address is the empty
-message and needs no signature. -/
+option of a rotation, or the close naming its payee (D-039: the close message
+names who is paid, so a copied reap with the payee rewritten is refused).
+`keep` with no new address is the empty message and needs no signature. -/
 inductive Intent where
   | keep
   | deposit
-  | close
+  | close (payee : Addr)
   deriving DecidableEq, Repr
 
 /-- The intent of a bond option. -/
@@ -176,9 +180,11 @@ inductive Action where
   /-- Present a duplicity proof; the convictor names a payee. -/
   | convict (payee : Addr)
   /-- Close — the reap (D-036, D-039, D-040): a witnessed rotation to `sn'`
-  that pays everything to the refund address (optionally a new one the new
-  keys authorized), burns the UTxO and parks the leaf with the hash. -/
-  | close (sn' : Seq) (refund' : Option Addr)
+  naming the payee of its premium, that pays everything else to the refund
+  address (optionally a new one the new keys authorized), burns the UTxO
+  and parks the leaf with the hash. The payee and the address are one
+  message the new keys sign (D-038, D-039). -/
+  | close (sn' : Seq) (payee : Addr) (refund' : Option Addr)
   /-- Reopen — the revival (D-036, D-040): from a parked leaf, a witnessed
   rotation later than the parked key state, fresh bonds, a first pool and a
   refund address chosen by whoever pays. -/
@@ -242,6 +248,18 @@ def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
 /-- The freeze bond a present checkpoint holds: `B`, or nothing while frozen. -/
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 
+/-- The datum a rotation to `sn'` leaves before its bond option is applied
+(D-033, D-034, D-032, D-038): next epoch, poison cleared, the refund address
+moved only if the new keys authorized it, the premium taken from the pool
+when the pool covers it; the freeze bit and the juvenility slot untouched.
+The constructors of `Step` spell this out field by field; the theorems use
+this name to say "keep-shaped" (`T5_keep_is_rotated`,
+`T5_deposit_on_full_is_keep`, `T16_parked_hash_is_the_closed_checkpoints`). -/
+def Live.rotated (p : Params) (l : Live) (sn' : Seq) (refund' : Option Addr) : Live :=
+  { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+           refundTo := refund'.getD l.refundTo,
+           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
+
 /-- The lifecycle states — D-040's three registry states and `absent`. -/
 inductive State where
   /-- Never registered. -/
@@ -273,6 +291,11 @@ structure Payment where
   b : Value := 0
   pool : Value := 0
   deriving Repr, DecidableEq
+
+/-- The premium a landed rotation pays its payee: `P` from the pool when the
+pool covers it, nothing otherwise — payment is never a gate (D-034, T14). -/
+def Params.premium (p : Params) (l : Live) (payee : Addr) : Option Payment :=
+  if p.P ≤ l.pool then some { addr := payee, pool := p.P } else none
 
 /-- Value movements of one transition, by component and by destination. -/
 structure Flow where
@@ -416,17 +439,30 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
   | convictParked {h : Hash} (now : Slot) (payee : Addr)
       (hdup : env.duplicityAt h.epoch h.sn = true) :
       Step p env (.convict payee) now (.parked h) {} .convicted
-  /-- Close — the reap (D-036, D-032, D-038, D-039, D-040): a witnessed
-  rotation to `sn'`, poisoned or frozen or not, whose new keys signed the
-  close intent (and the new refund address, if any); everything the UTxO
-  holds goes to the refund address it results in — the closer chooses when,
-  never where — the UTxO is burned and the leaf is parked with the hash of
-  the checkpoint the rotation reached: the epoch it opened and its
-  sequence. -/
-  | close {l : Live} (now : Slot) (sn' : Seq) (refund' : Option Addr)
+  /-- Close — the reap (D-036, D-032, D-038, D-039, D-040), when the pool
+  covers the premium: a witnessed rotation to `sn'`, poisoned or frozen or
+  not, whose new keys signed the close intent naming the payee (and the new
+  refund address, if any); `P` to the signed payee, everything else the UTxO
+  holds to the refund address it results in — the closer chooses when,
+  never where, and never who is paid — the UTxO is burned and the leaf is
+  parked with the hash of the checkpoint the rotation reached: the epoch it
+  opened and its sequence. A copied reap with the payee rewritten presents
+  a message the keys never signed and is refused. -/
+  | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) .close refund' = true) :
-      Step p env (.close sn' refund') now (.present l)
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hpay : p.P ≤ l.pool) :
+      Step p env (.close sn' payee refund') now (.present l)
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
+          hunter := some { addr := payee, pool := p.P } }
+        (.parked ⟨l.epoch + 1, sn'⟩)
+  /-- The same close when the pool does not cover the premium: nothing to
+  the payee, everything to the refund address; payment is never a gate. -/
+  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hnopay : l.pool < p.P) :
+      Step p env (.close sn' payee refund') now (.present l)
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
         (.parked ⟨l.epoch + 1, sn'⟩)
   /-- Reopen — the revival (D-036, D-040): from a parked leaf, a witnessed
@@ -496,11 +532,16 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
       if env.duplicityAt h.epoch h.sn = true then
         some ({}, .convicted)
       else none
-  | .close sn' refund', .present l =>
+  | .close sn' payee refund', .present l =>
       if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-         env.intentOk (l.epoch + 1) .close refund' = true then
-        some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },
-              .parked ⟨l.epoch + 1, sn'⟩)
+         env.intentOk (l.epoch + 1) (.close payee) refund' = true then
+        if p.P ≤ l.pool then
+          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
+                  hunter := some { addr := payee, pool := p.P } },
+                .parked ⟨l.epoch + 1, sn'⟩)
+        else
+          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },
+                .parked ⟨l.epoch + 1, sn'⟩)
       else none
   | .reopen sn' refund pool0, .parked h =>
       if env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn' then

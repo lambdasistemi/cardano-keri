@@ -1,0 +1,336 @@
+grammar: 1
+family: registry
+
+id: 11
+slug: alice-revives
+story: "Alice comes back from dormant"
+narrative: "Her leaf says dormant(1). She posts a revive request with the bond and a witnessed rotation from key state 1; Hal folds it: a new token is minted (token 2 — Bob took token 1), a live checkpoint at key state 2 is funded from her bond, the leaf is active(2). A revive of an AID that is not dormant is refused; a revive without the rotation is refused on the branch where Mallory tries it. On a branch the block producer copies her early reap with itself as the reaper: admitted today, and it costs her the checkpoint’s min-ADA."
+params:
+  D: 1000
+  tip: 2
+  Mc: 4
+  Mr: 1
+  process: 10
+  retract: 10
+  W: 5
+  far: 1000000000
+plugin: 7
+actors:
+  1: Alice
+  2: Bob
+  3: "Hal (folder)"
+  4: Mallory
+  5: "Cora (convictor)"
+  6: "Sam (reaper)"
+env:
+  inception: [11, 12]
+  rotationFrom:
+    - [11, 0]
+    - [11, 1]
+  quorum: [11]
+step:
+  now: 0
+  actor: anyone
+  as: Alice
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 0
+  actor: anyone
+  as: Bob
+  action:
+    contribute:
+      aid: 12
+      owner: 2
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 1
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 0
+      plugin: 7
+      batch: [{"id":0,"do":"process"},{"id":1,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: [{"aid":11,"value":1000},{"aid":12,"value":1000}]
+      refunds: []
+      tips:
+        addr: 3
+        value: 4
+      premium: null
+      intoRequest: 0
+step:
+  now: 5
+  actor: next-keys
+  as: Alice
+  action:
+    pause:
+      aid: 11
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 6
+  actor: anyone
+  as: "Alice — reaping her own checkpoint early"
+  action:
+    reap:
+      reaper: 1
+      aid: 11
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: []
+      tips: null
+      premium:
+        addr: 1
+        value: 1
+      intoRequest: 3
+  exhibits: [R13]
+step:
+  now: 7
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 1
+      plugin: 7
+      batch: [{"id":2,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: [{"addr":1,"value":1}]
+      tips:
+        addr: 3
+        value: 2
+      premium: null
+      intoRequest: 0
+step:
+  now: 8
+  actor: anyone
+  as: "Bob — reviving an AID that is not dormant"
+  action:
+    contribute:
+      aid: 12
+      owner: 2
+      submittedAt: 8
+      op: revive
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 9
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 2
+      plugin: 7
+      batch: [{"id":3,"do":"process"}]
+  expect:
+    ok: false
+    reason: not-dormant
+step:
+  now: 9
+  actor: anyone
+  as: "Mallory — reviving Alice without a rotation from k=1"
+  action:
+    contribute:
+      aid: 11
+      owner: 4
+      submittedAt: 9
+      op: revive
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 10
+  actor: anyone
+  as: Alice
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 10
+      op: revive
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+step:
+  now: 11
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 2
+      plugin: 7
+      batch: [{"id":5,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      locked: [{"aid":11,"value":1000}]
+      tips:
+        addr: 3
+        value: 2
+  exhibits: [R1, R2, R11, R12]
+step:
+  now: 12
+  actor: anyone
+  as: "Hal — Mallory's revive, now that Alice is active again"
+  action:
+    fold:
+      folder: 3
+      gen: 3
+      plugin: 7
+      batch: [{"id":4,"do":"process"}]
+  expect:
+    ok: false
+    reason: not-dormant
+fork:
+  id: mallory-without-rotation
+  at: 6
+  title: "Mallory's revive carries no rotation from key state 1"
+  env:
+    inception: [11, 12]
+    rotationFrom:
+      - [11, 0]
+    quorum: [11]
+  expectFinal:
+    gen: 2
+    plugin: 7
+    leaves: [{"aid":12,"status":{"active":1}},{"aid":11,"status":{"dormant":1}}]
+    ckpts: [{"aid":12,"ckpt":{"token":1,"k":0,"st":"live"}}]
+    requests: [{"id":3,"aid":11,"owner":4,"submittedAt":8,"op":"revive"}]
+    nextReq: 4
+    nextToken: 2
+  step:
+    now: 8
+    actor: anyone
+    as: "Mallory — reviving Alice without her keys"
+    action:
+      contribute:
+        aid: 11
+        owner: 4
+        submittedAt: 8
+        op: revive
+    expect:
+      ok: true
+      flow:
+        deposited: 1002
+    exhibits: [R11]
+  step:
+    now: 9
+    actor: anyone
+    as: Hal
+    action:
+      fold:
+        folder: 3
+        gen: 2
+        plugin: 7
+        batch: [{"id":3,"do":"process"}]
+    expect:
+      ok: false
+      reason: no-rotation
+    note: "The plugin wants a witnessed rotation from the recorded key state; Mallory has none."
+fork:
+  id: leader-copies-the-reap
+  at: 4
+  title: "The block producer copies Alice’s early reap"
+  step:
+    now: 6
+    actor: anyone
+    as: "Mallory — the block producer, copying Alice’s reap with herself as the reaper"
+    action:
+      reap:
+        reaper: 4
+        aid: 11
+    expect:
+      ok: true
+      flow:
+        premium:
+          addr: 4
+          value: 1
+        intoRequest: 3
+    exhibits: [R13, R11]
+    note: "The Lean allows this today: the owner’s quorum evidence names the AID, not the payee, so a copy of her early reap with the reaper rewritten is admitted inside the grace window. Escalated as Q-R6, ruling pending."
+  step:
+    now: 7
+    actor: anyone
+    as: Hal
+    action:
+      fold:
+        folder: 3
+        gen: 1
+        plugin: 7
+        batch: [{"id":2,"do":"process"}]
+    expect:
+      ok: true
+      flow:
+        refunds: [{"addr":4,"value":1}]
+        tips:
+          addr: 3
+          value: 2
+    exhibits: [R11, R12]
+    note: "The go-request’s min-ADA returns to the copier, not to Alice: her exposure is the checkpoint’s min-ADA, Mc."
+expectFinal:
+  gen: 3
+  plugin: 7
+  leaves: [{"aid":12,"status":{"active":1}},{"aid":11,"status":{"active":2}}]
+  ckpts: [{"aid":11,"ckpt":{"token":2,"k":2,"st":"live"}},{"aid":12,"ckpt":{"token":1,"k":0,"st":"live"}}]
+  requests: [{"id":4,"aid":11,"owner":4,"submittedAt":9,"op":"revive"},{"id":3,"aid":12,"owner":2,"submittedAt":8,"op":"revive"}]
+  nextReq: 6
+  nextToken: 3

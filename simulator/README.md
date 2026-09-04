@@ -69,9 +69,13 @@ value chart and the balances live in drawers under the theorem lamps.
 | file | role |
 |---|---|
 | `checkpoint-simulator-core.mjs` | the pure core: `step` (= `stepFn`), `replay`, `consumable` (= `consumableStateB`, the Lean's own decidable mirror of `consumableState`, tied by `consumableStateB_iff`), sessions, the story vocabulary, the theorems as executable properties, the scenario/corpus checkers. No DOM, no storage, no clock. |
-| `checkpoint-simulator.html` | the page; the core's slices are inlined between `@@CORE:<id>@@` markers, the scenarios between `@@SCENARIOS@@`, the Lean corpus (with its sha256) between `@@CORPUS@@`. |
-| `checkpoint-simulator-build.mjs` | regenerates the page from the core, the scenarios and the corpus, and writes `docs/simulator/index.html`; `--check` reds on any drift. |
-| `checkpoint-simulator-scenarios/` | one JSON per story (1–15): params, evidence decisions, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits. |
+| `checkpoint-simulator.html` | the page; the core's slices are inlined between `@@CORE:<id>@@` markers, the scenarios between `@@SCENARIOS@@`, the Lean corpus (with its sha256) between `@@CORPUS@@`, the shared scenario DSL grammar between `@@DSL@@`. Paste or choose a `.dsl` file to play; copy or download the current free-play branch. |
+| `checkpoint-simulator-build.mjs` | regenerates the page from the core, the scenarios, the shared DSL grammar and the corpus, and writes `docs/simulator/index.html`; `--check` reds on any drift. |
+| `checkpoint-simulator-scenarios/` | one JSON per story (1–15) and the matching `.dsl` source: params, evidence decisions, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits. |
+| `scenario-dsl.mjs` | the one grammar: version, parse, validate, JSON conversion and canonical DSL serialization for both families. |
+| `scenario-dsl-cli.mjs` | `to-json` / `from-json` with `--family`. Documented: `node simulator/scenario-dsl-cli.mjs to-json --family checkpoint simulator/checkpoint-simulator-scenarios/01-alice-appears.dsl`. |
+| `scenario-dsl-gate.mjs` | discovers the 30 `.dsl` sources, lossless round-trip, checker denominators 104 and 115, page load/export, and negative controls. |
+| `SCENARIO-DSL.md` | grammar, quoting, comments, forks, copy/paste and file workflows, complete checkpoint and registry examples. |
 | `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core with the Lean corpus as T7's oracle; one checker row per Lean declaration of `CheckpointGoals.lean` on every step (the gate reads the theorem names off the Lean and reds when a row is missing, renamed or unlisted); a fabricated violation per declaration — a record built to violate exactly that row, on which the row must red (four structural rows, whose predicates are pure functions of the core, name the `--selftest` core mutant that reds them instead); `--vacuity` replaces each row's predicates with `true` in turn and requires its fabricated violation to catch it; the page against the stored template (`page-template/`, one identity); every refusal reason asserted; exact Nat at every real entry point; a multi-AID system generator (T8 on every transition); the story reconciliation against the Lean's declaration spans and the distinctive-clause matrix (`--matrix`, `--clauses-md`); build drift; a page smoke under a minimal DOM including `?selftest=1`. `--selftest` proves it can fail twenty ways. |
 | `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim: eight seeded traces, the boundary grid (1380 cells), and the Lean's own verdict on every step of the fifteen scenarios and their forks (the T7 oracle). |
 | `checkpoint-simulator-clauses.json` | every "chain checks" clause of every story reconciled with the Lean (guard or overrule anchored inside a Lean declaration with a semantic tie, omission with its note) and the distinctive clauses each scenario must exercise. |
@@ -86,6 +90,8 @@ value chart and the balances live in drawers under the theorem lamps.
 
 ```sh
 node --check simulator/checkpoint-simulator-core.mjs
+node --check simulator/scenario-dsl.mjs
+node simulator/scenario-dsl-gate.mjs
 node simulator/checkpoint-simulator-build.mjs --check
 node simulator/checkpoint-simulator-scenario-gate.mjs
 node simulator/checkpoint-simulator-trace-gate.mjs      # builds and runs Lean via nix shell nixpkgs#lean4 (see the prerequisite below)
@@ -289,9 +295,9 @@ refusal is named after the Lean guard that refused it, in the story's words.
 | file | role |
 |---|---|
 | `registry-simulator-core.mjs` | the pure core: `step` (= `stepFn`), `processBody`, `rejectOne`, `applyBatch`, `batchView` (what each position of a batch saw), `reapableReason`, `replay`, the phases, exact Nat on inputs and results, the guard table (`LEAN_GUARDS`: refusal name → decision sites of the Lean), R1–R14 as executable properties over the accumulator (each names the Lean theorem the step instantiated), `findLeanCell` (T7 for any step: the Lean's cell in the corpus), the scenario (tree) and corpus checkers |
-| `registry-simulator.html` | the page: a tree of plays over the core's immutable sessions, drawn as one scene whose entities move when a step plays; core slices between `@@CORE:<id>@@`, stories between `@@SCENARIOS@@`, the Lean corpus with its sha256 between `@@CORPUS@@` |
-| `registry-simulator-build.mjs` | regenerates the page and `docs/simulator/registry/index.html`; `--check` reds on any drift |
-| `registry-simulator-scenarios/` | one JSON per story (1–15): params, plugin, evidence table, a trunk of steps and `forks` (`id`, `at`, `title`, an optional `env` of its own, steps), expected results per step including refusal reasons and flows, the theorems each step exhibits |
+| `registry-simulator.html` | the page: a tree of plays over the core's immutable sessions, drawn as one scene whose entities move when a step plays; core slices between `@@CORE:<id>@@`, stories between `@@SCENARIOS@@`, the Lean corpus with its sha256 between `@@CORPUS@@`, the shared scenario DSL grammar between `@@DSL@@`. Paste or choose a `.dsl` file to play; copy or download the current free-play branch. |
+| `registry-simulator-build.mjs` | regenerates the page and `docs/simulator/registry/index.html`; `--check` reds on any drift of core, stories, corpus or the shared DSL grammar |
+| `registry-simulator-scenarios/` | one JSON per story (1–15) and the matching `.dsl` source: params, plugin, evidence table, a trunk of steps and `forks` (`id`, `at`, `title`, an optional `env` of its own, steps), expected results per step including refusal reasons and flows, the theorems each step exhibits |
 | `registry-simulator-clauses.json` | the reconciliation table: 103 atomic claims over the stories' labelled bullets, each a Lean declaration, arm, exact text, kind (guard / refusal / payment / post-state / no-guard / verdict) and one tie (a refusal name, or a step of the story); one omission (the retract's signer) |
 | `REGISTRY-LEAN-CLARITY.md` | what the Lean left open and what was decided (D-R1…), the questions escalated with their evidence (Q-R1…), the prose that disagreed with the definitions and how it was fixed |
 | `registry-simulator-scenario-gate.mjs` | every branch of every story through the core with the Lean corpus as the parity oracle; every property on every step; every reachable refusal reason asserted (two guards are unreachable by `Inv` and exempted by name); exact Nat and shapes at every entry point and every successor, sum and product at the bound; a fabricated violation per lamp; the clauses against the Lean's declaration spans and the guard table both ways (every decision site on the path from `stepFn` claimed); build drift; the page under the minimal DOM (selftest, every story, a branch taken through the tree, free play). `--selftest` proves twenty-three ways it can fail; `--clauses-md` prints the table |
@@ -304,6 +310,7 @@ refusal is named after the Lean guard that refused it, in the story's words.
 
 ```sh
 node --check simulator/registry-simulator-core.mjs
+node simulator/scenario-dsl-gate.mjs
 node simulator/registry-simulator-build.mjs --check
 node simulator/registry-simulator-scenario-gate.mjs
 node simulator/registry-simulator-trace-gate.mjs      # builds and runs Lean via nix shell nixpkgs#lean4

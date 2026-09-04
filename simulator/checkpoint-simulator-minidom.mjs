@@ -146,6 +146,12 @@ class Element extends Node {
   get checked() { return this._checked; }
   set checked(v) { this._checked = !!v; }
   get htmlFor() { return this.getAttribute('for') || ''; }
+  get href() { return this.getAttribute('href') || ''; }
+  set href(v) { this.setAttribute('href', String(v)); }
+  get download() { return this.getAttribute('download') || ''; }
+  set download(v) { this.setAttribute('download', String(v)); }
+  get files() { return this._files || []; }
+  set files(v) { this._files = v || []; }
   // value semantics
   get options() { return this.localName === 'select' ? this.querySelectorAll('option') : []; }
   get selectedIndex() {
@@ -229,7 +235,21 @@ class Element extends Node {
   get offsetWidth() { return 640; }
   get offsetHeight() { return 240; }
   get scrollWidth() { return 640; }
-  focus() {} blur() {} scrollIntoView() {} click() { this.dispatchEvent(new Event('click')); }
+  focus() {} blur() {} scrollIntoView() {}
+  click() {
+    this.dispatchEvent(new Event('click'));
+    if (this.localName === 'a' && this.hasAttribute('download')) {
+      const win = this.ownerDocument.defaultView;
+      const href = this.href;
+      const blob = win.__blobs && win.__blobs.get(href);
+      win.__downloads.push({
+        href,
+        download: this.download,
+        name: this.download,
+        text: blob ? blob._text : '',
+      });
+    }
+  }
   // canvas
   getContext(kind) {
     if (this.localName !== 'canvas') return null;
@@ -412,10 +432,43 @@ export function createWindow(html, opts = {}) {
   }
   if (!doc.head) doc.documentElement.prepend(doc.createElement('head'));
   const store = new Map();
+  const blobs = new Map();
+  let blobN = 0;
+  class Blob {
+    constructor(parts = [], opts = {}) {
+      this.parts = parts;
+      this.type = opts.type || '';
+      this._text = parts.map(p => String(p)).join('');
+      this.size = this._text.length;
+    }
+  }
+  class File extends Blob {
+    constructor(parts, name, opts = {}) { super(parts, opts); this.name = name; }
+  }
+  class FileReader {
+    constructor() { this.result = null; this.onload = null; this.onerror = null; }
+    readAsText(file) {
+      this.result = file && file._text !== undefined ? file._text : String(file || '');
+      if (typeof this.onload === 'function') {
+        try { this.onload({ target: this }); } catch (e) { win.__errors.push(e); }
+      }
+    }
+  }
   Object.assign(win, {
     document: doc,
     location: { search: opts.search || '', hash: '', href: 'file:///checkpoint-simulator.html' + (opts.search || ''), pathname: '/checkpoint-simulator.html', protocol: 'file:' },
-    navigator: { userAgent: 'minidom', language: 'en' },
+    navigator: {
+      userAgent: 'minidom', language: 'en',
+      clipboard: { writeText: async s => { win.__clipboard = String(s); } },
+    },
+    Blob, File, FileReader,
+    URL: {
+      createObjectURL: blob => { const u = 'blob:minidom/' + (++blobN); blobs.set(u, blob); return u; },
+      revokeObjectURL: u => { blobs.delete(u); },
+    },
+    __blobs: blobs,
+    __downloads: [],
+    __clipboard: '',
     localStorage: {
       getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)),
       removeItem: k => store.delete(k), clear: () => store.clear(),

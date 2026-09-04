@@ -33,12 +33,14 @@ const HTML = argPath('--html') || join(HERE, 'registry-simulator.html');
 const CORE = argPath('--core') || join(HERE, 'registry-simulator-core.mjs');
 const SCEN_DIR = argPath('--scenarios') || join(HERE, 'registry-simulator-scenarios');
 const CORPUS = argPath('--corpus') || join(HERE, 'registry-simulator-corpus.json');
+const DSL_SRC = join(HERE, 'scenario-dsl.mjs');
 const DOCS = argPath('--docs') || join(HERE, '..', 'docs', 'simulator', 'registry', 'index.html');
 const N_STORIES = 15;
 
 const sliceRe = id => new RegExp(`/\\* @@CORE:${id}@@ \\*/\\n([\\s\\S]*?)/\\* @@CORE:${id}:END@@ \\*/`);
 const scenRe = /\/\* @@SCENARIOS@@ \*\/\n([\s\S]*?)\/\* @@SCENARIOS:END@@ \*\//;
 const corpusRe = /\/\* @@CORPUS@@ \*\/\n([\s\S]*?)\/\* @@CORPUS:END@@ \*\//;
+const dslRe = /\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//;
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 
 function slicesOf(text, what) {
@@ -88,11 +90,19 @@ const wantCorpus = corpusBlock(CORPUS);
 const corpBlock = html.match(corpusRe);
 if (!corpBlock) { console.error('RED: no @@CORPUS@@ block in the page'); process.exit(1); }
 const corpusStale = corpBlock[1] !== wantCorpus;
+const dslSrc = readFileSync(DSL_SRC, 'utf8');
+const dslMsrc = dslSrc.match(dslRe);
+if (!dslMsrc) { console.error('RED: scenario-dsl.mjs has no @@DSL@@ block'); process.exit(1); }
+const wantDsl = dslMsrc[1];
+const dslBlock = html.match(dslRe);
+if (!dslBlock) { console.error('RED: no @@DSL@@ block in the page'); process.exit(1); }
+const dslStale = dslBlock[1] !== wantDsl;
 
 let out = html;
 for (const id of stale) out = out.replace(sliceRe(id), `/* @@CORE:${id}@@ */\n${coreSlices[id]}/* @@CORE:${id}:END@@ */`);
 if (scenStale) out = out.replace(scenRe, `/* @@SCENARIOS@@ */\n${wantScen}/* @@SCENARIOS:END@@ */`);
 if (corpusStale) out = out.replace(corpusRe, `/* @@CORPUS@@ */\n${wantCorpus}/* @@CORPUS:END@@ */`);
+if (dslStale) out = out.replace(dslRe, `/* @@DSL@@ */\n${wantDsl}/* @@DSL:END@@ */`);
 const docsStale = !existsSync(DOCS) || readFileSync(DOCS, 'utf8') !== out;
 
 if (process.argv.includes('--check')) {
@@ -100,17 +110,19 @@ if (process.argv.includes('--check')) {
   if (stale.length) why.push(`${stale.length} core slice(s) stale or forked: ${stale.join(', ')}`);
   if (scenStale) why.push('the embedded stories have drifted from registry-simulator-scenarios/');
   if (corpusStale) why.push('the embedded corpus has drifted from registry-simulator-corpus.json');
+  if (dslStale) why.push('the embedded DSL grammar has drifted from scenario-dsl.mjs');
   if (docsStale) why.push('docs/simulator/registry/index.html is not the byte-identical page');
   if (why.length) { console.error('RED: generated artifact stale or forked — ' + why.join('; ')); process.exit(1); }
   console.log(`GREEN: ${coreIds.length} core slices identical byte-per-byte, ${N_STORIES} stories and the corpus (sha256 ${sha256(readFileSync(CORPUS, 'utf8').trim()).slice(0, 12)}…) embedded, published copy identical`);
   process.exit(0);
 }
 
-if (stale.length || scenStale || corpusStale) writeFileSync(HTML, out);
+if (stale.length || scenStale || corpusStale || dslStale) writeFileSync(HTML, out);
 if (docsStale) { mkdirSync(dirname(DOCS), { recursive: true }); writeFileSync(DOCS, out); }
 const changed = [];
 if (stale.length) changed.push(`core slices: ${stale.join(', ')}`);
 if (scenStale) changed.push('stories');
 if (corpusStale) changed.push('corpus');
+if (dslStale) changed.push('scenario-dsl');
 if (docsStale) changed.push('published copy');
 console.log(changed.length ? `page regenerated: updated ${changed.join(', ')}` : 'page already up to date');

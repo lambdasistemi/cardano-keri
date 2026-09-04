@@ -1,0 +1,109 @@
+grammar: 1
+family: checkpoint
+
+story: 1
+title: "Alice's identity appears on Cardano"
+goal: "As anyone holding Alice's public inception, I want to register her checkpoint, so that Cardano contracts can read her key state."
+params:
+  D: 1000
+  B: 5
+  P: 2
+  W: 10
+atoms: ["1.the-inception-parses-and-self", "1.the-aid-is-absent-from", "1.and-is-inserted", "1.this-is-the-only-way", "1.both-bonds-are-present"]
+step:
+  slot: 0
+  who: treasury
+  say: "Nothing on chain for this AID: the treasury fails closed, and only a registration can happen first."
+  expect:
+    verdict: not-present
+step:
+  slot: 0
+  who: friend
+  say: "A friend registers Alice's public inception, bringing both bonds and a first pool, and names his own refund address."
+  action:
+    register:
+      refund: 6
+      pool0: 10
+  expect:
+    ok: true
+    live:
+      sn: 0
+      epoch: 0
+      poisoned: false
+      bornAt: 0
+      refundTo: 6
+      pool: 10
+      frozen: false
+    flow:
+      dregIn: 1000
+      bIn: 5
+      poolIn: 10
+    verdict: juvenile
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_states, T8_mint_once, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+step:
+  slot: 9
+  who: treasury
+  say: "Nine slots later the checkpoint is still juvenile: born at slot 0, the window W is 10."
+  expect:
+    verdict: juvenile
+step:
+  slot: 10
+  who: treasury
+  say: "At slot 10 the treasury accepts it: both bonds full, not poisoned, past juvenility."
+  expect:
+    verdict: consumable
+fork:
+  id: nothing-yet
+  at: 0
+  title: "Money for a checkpoint that does not exist"
+  step:
+    slot: 0
+    who: friend
+    say: "Nothing is on chain for this AID. Money cannot be added to a checkpoint that does not exist."
+    action:
+      topUp:
+        x: 3
+    expect:
+      ok: false
+      reason: absent-needs-register
+      verdict: not-present
+      exhibits: [T7_step_iff_stepFn, T8_absent_only_registers, T8_leaf_agrees_with_state, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+fork:
+  id: zero-bond
+  at: 0
+  title: "A deployment with a zero bond"
+  step:
+    slot: 0
+    who: friend
+    say: "A deployment with a zero conviction bond is refused before anything else: 'bond missing' would be indistinguishable from 'bond full'."
+    params:
+      D: 0
+      B: 5
+      P: 2
+      W: 10
+    action:
+      register:
+        refund: 6
+        pool0: 10
+    expect:
+      ok: false
+      reason: invalid-params
+      verdict: not-present
+      exhibits: [T9_juvenility_is_consumer_only]
+fork:
+  id: twice
+  at: 3
+  title: "Registering the same AID again"
+  step:
+    slot: 10
+    who: friend
+    say: "Registering the same AID again is refused: the token is minted once, ever."
+    action:
+      register:
+        refund: 6
+        pool0: 10
+    expect:
+      ok: false
+      reason: already-present
+      verdict: consumable
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]

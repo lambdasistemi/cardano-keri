@@ -41,7 +41,9 @@ outside this artifact.
 
 ## Constraints
 
-All numeric scenario fields accept only non-negative safe integers. All
-conversion functions preserve arrays, explicit `null`, object fields, and
-string contents. No page, CLI, build, or proof caller defines an alternate
-grammar or relaxes validation.
+Numeric scenario literals preserve finite safe JSON numbers, including
+intentionally invalid domain inputs whose refusal a story asserts. Integer
+fields above JavaScript's safe-integer bound are DSL errors rather than
+rounded values. All conversion functions preserve arrays, explicit `null`,
+object fields, and string contents. No page, CLI, build, or proof caller
+defines an alternate grammar or relaxes validation.

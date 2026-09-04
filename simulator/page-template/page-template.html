@@ -54,6 +54,10 @@
   .ghost:hover { border-color: var(--accent); color: var(--accent); }
   .ghost.danger:hover { border-color: var(--bad); color: var(--bad); }
   .tiny { font-size: .74rem; color: var(--muted); }
+  #dsl-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; }
+  #dsl-paste { flex: 1 1 100%; min-height: 3.2em; font-family: var(--mono); font-size: .78rem; }
+  #dsl-diag.no { color: var(--bad); }
+  #dsl-diag.ok { color: var(--ok); }
   .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
   main { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 1240px; margin: 0 auto; }
@@ -371,6 +375,14 @@
       <select id="story-picker" aria-label="pick a story"></select>
       <span class="goal" id="story-goal"></span>
     </div>
+    <div id="dsl-tools">
+      <textarea id="dsl-paste" aria-label="paste scenario DSL" rows="3"></textarea>
+      <input id="dsl-file" type="file" accept=".dsl,text/plain">
+      <button type="button" class="ghost" id="dsl-load">Load DSL</button>
+      <button type="button" class="ghost" id="dsl-copy">Copy branch</button>
+      <button type="button" class="ghost" id="dsl-download">Download branch</button>
+      <span id="dsl-diag" class="tiny"></span>
+    </div>
     <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
     <div id="playbar">
       <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
@@ -483,6 +495,10 @@
 /* @@SCENARIOS:END@@ */
 /* @@CORPUS@@ */
 /* @@CORPUS:END@@ */
+
+/* @@DSL@@ */
+/* @@DSL:END@@ */
+assertGrammarVersion('1');
 
 /* ============================================================================
    The page: a tree of plays over the core's immutable sessions, drawn as one
@@ -1486,6 +1502,9 @@ function renderChallenge() {
 function playStory(n) {
   const sc = SCENARIOS.find(x => String(x.story) === String(n));
   if (!sc) { startFresh(); render(); return; }
+  playLoadedScenario(sc);
+}
+function playLoadedScenario(sc) {
   const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
   app.story = sc;
   newTree(newSession(sc.params, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.');
@@ -1595,6 +1614,88 @@ function toggleTheme() {
   try { localStorage.setItem('ck-theme', next); } catch (e) { /* no storage: fine */ }
   renderChart();
 }
+function dslDiag(ok, msg) {
+  const el = $('dsl-diag'); if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'tiny' + (msg ? (ok ? ' ok' : ' no') : '');
+}
+function loadScenarioDsl(sourceText, sourceName) {
+  const priorNodes = app.nodes, priorCursor = app.cursor, priorStory = app.story, priorPunch = app.punch;
+  try {
+    assertGrammarVersion('1');
+    const doc = parseScenarioDsl(sourceText, sourceName || 'paste');
+    if (doc.family !== 'checkpoint') throw new ScenarioDslError(sourceName || 'paste', 1, 1, 'this page plays checkpoint scenarios');
+    window.playLoadedScenario(doc.scenario);
+    dslDiag(true, 'loaded ' + (sourceName || 'paste'));
+  } catch (e) {
+    app.nodes = priorNodes; app.cursor = priorCursor; app.story = priorStory; app.punch = priorPunch;
+    dslDiag(false, e && e.message ? e.message : String(e));
+  }
+}
+function exportCurrentBranch() {
+  const ids = pathTo(app.cursor);
+  const nodes = [];
+  for (const id of ids.slice(1)) {
+    const n = node(id);
+    if (n.kind === 'time') nodes.push({ kind: 'time', slot: n.session.now, who: 'time', say: n.say });
+    else if (n.kind === 'evidence') {
+      const evidence = n.removed ? { remove: [n.evRow] } : (n.evRow ? { add: [n.evRow] } : undefined);
+      nodes.push({ kind: 'evidence', slot: n.session.now, who: n.who || 'you', say: n.say, evidence });
+    } else if (n.record) {
+      const rec = n.record, expect = { ok: rec.ok };
+      if (rec.reason) expect.reason = rec.reason;
+      if (rec.ok && rec.flow) expect.flow = rec.flow;
+      if (rec.ok && rec.state) {
+        const l = liveOf(rec.state);
+        if (l) expect.live = { sn: l.sn, epoch: l.epoch, poisoned: l.poisoned, frozen: l.frozen, bornAt: l.bornAt, refundTo: l.refundTo, pool: l.pool };
+        else expect.state = rec.state;
+      }
+      if (rec.theorems) {
+        const exhibits = Object.keys(rec.theorems).filter(k => rec.theorems[k] && rec.theorems[k].exhibited).sort();
+        if (exhibits.length) expect.exhibits = exhibits;
+      }
+      try { const v = consumable(n.session.params, n.session.now, n.session.state); if (v && v.verdict) expect.verdict = v.verdict; } catch (e) {}
+      nodes.push({ kind: 'action', slot: rec.slot, who: n.who, say: n.say, action: rec.action, expect });
+    }
+  }
+  return branchToScenario('checkpoint', { params: cur().params, nodes, title: 'exported branch' });
+}
+function exportCurrentBranchDsl() { return scenarioToDsl('checkpoint', exportCurrentBranch()); }
+function copyCurrentBranchDsl() {
+  const text = exportCurrentBranchDsl();
+  if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+    dslDiag(false, 'clipboard unavailable');
+    throw new Error('clipboard unavailable');
+  }
+  const p = navigator.clipboard.writeText(text);
+  Promise.resolve(p).then(() => dslDiag(true, 'copied branch'), err => dslDiag(false, err && err.message));
+  return p;
+}
+function downloadCurrentBranchDsl() {
+  const text = exportCurrentBranchDsl();
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'checkpoint-branch.dsl';
+  a.click();
+  if (typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(url);
+  dslDiag(true, 'downloaded branch');
+}
+function wireDsl() {
+  const loadBtn = $('dsl-load'), paste = $('dsl-paste'), file = $('dsl-file');
+  if (loadBtn && paste) loadBtn.addEventListener('click', () => loadScenarioDsl(paste.value, 'paste'));
+  if (file) file.addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => loadScenarioDsl(String(r.result), f.name);
+    r.readAsText(f);
+  });
+  if ($('dsl-copy')) $('dsl-copy').addEventListener('click', () => {
+    try { Promise.resolve(copyCurrentBranchDsl()).catch(err => dslDiag(false, err && err.message)); }
+    catch (err) { dslDiag(false, err && err.message); }
+  });
+  if ($('dsl-download')) $('dsl-download').addEventListener('click', () => { try { downloadCurrentBranchDsl(); } catch (err) { dslDiag(false, err.message); } });
+}
 function wire() {
   $('story-picker').addEventListener('change', e => { const v = e.target.value; if (v === '') { startFresh(); render(); } else if (/^c:/.test(v)) playChallenge(v.slice(2)); else playStory(v); });
   $('hist-first').addEventListener('click', () => goTo(0));
@@ -1624,9 +1725,11 @@ function wire() {
     else if (e.key === 'ArrowLeft') { $('hist-prev').click(); e.preventDefault(); }
     else if (e.key === ' ') { togglePlay(); e.preventDefault(); }
   });
+  wireDsl();
 }
 window.CK = { step, replay, consumable, attempt, newSession, addEvidence, removeEvidence, checkScenario, checkCorpus,
-  replayCorpus: checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, LEAN_CORPUS, LEAN_CORPUS_SHA256, app, goTo, playStory };
+  replayCorpus: checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, LEAN_CORPUS, LEAN_CORPUS_SHA256, app, goTo, playStory,
+  loadScenarioDsl, exportCurrentBranchDsl, copyCurrentBranchDsl, downloadCurrentBranchDsl, assertGrammarVersion, parseScenarioDsl };
 initTheme();
 startFresh();
 wire();

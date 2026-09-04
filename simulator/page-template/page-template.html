@@ -1,0 +1,1638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Checkpoint</title>
+<meta name="description" content="Play the M1 checkpoint machine of cardano-keri: fifteen stories as trees of plays, every entity drawn, every flow animated, the theorems T1–T16 checked on every step, transcribed from Checkpoint.lean.">
+<style>
+  :root {
+    --bg: #f2f3ef; --card: #ffffff; --ink: #1d2528; --muted: #5c6a6e; --line: #d8ddd5; --line-2: #eceee8;
+    --accent: #0f6e8c; --on-accent: #ffffff; --accent-bg: #e3f0f4;
+    --ok: #1f7a4d; --ok-bg: #e6f4ec; --bad: #b3261e; --bad-bg: #fbeae8; --warn: #8a5a00; --warn-bg: #fff3d6;
+    --dreg: #6a4c93; --b: #2a9d8f; --pool: #d98c1f; --chip: #e9eeee; --lit: #fff1bf; --lit-ink: #5a4300;
+    --keri: #f7f1e6; --chain: #e9f1f4; --readers: #eef3ea; --scene-ink: #2b3438; --paper: #fffdf7; --poison: #7b2cbf;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15191b; --card: #1d2327; --ink: #e4e8e3; --muted: #97a4a0; --line: #2c3539; --line-2: #242c30;
+      --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
+      --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
+      --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+      --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15191b; --card: #1d2327; --ink: #e4e8e3; --muted: #97a4a0; --line: #2c3539; --line-2: #242c30;
+    --accent: #62b7d1; --on-accent: #0f1c22; --accent-bg: #1b3038;
+    --ok: #5fc48b; --ok-bg: #17302a; --bad: #ef8a80; --bad-bg: #3a1f1d; --warn: #e6b04a; --warn-bg: #35290f;
+    --dreg: #a58bd3; --b: #5cc9bc; --pool: #f0b45e; --chip: #262f34; --lit: #4a3c10; --lit-ink: #ffe28a;
+    --keri: #262119; --chain: #1a262c; --readers: #1d261b; --scene-ink: #e4e8e3; --paper: #2a2f26; --poison: #b689e6;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 15px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.4; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .92em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input, select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+  input[type=number] { width: 6.5em; font-family: var(--mono); }
+  a { color: var(--accent); }
+
+  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); padding: 7px 14px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 1.2rem; letter-spacing: .01em; }
+  header h1 small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: .7rem; letter-spacing: .02em; }
+  .slotbar { display: flex; align-items: center; gap: 6px; font-size: .86rem; }
+  .slotbar b { font-family: var(--mono); font-size: 1.05rem; min-width: 2ch; }
+  .hbtns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .ghost { border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 4px 10px; font-size: .82rem; }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .tiny { font-size: .74rem; color: var(--muted); }
+  .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+  main { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 1240px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+  .card h2 { margin: 0 0 8px; font-size: .95rem; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card h2 small, summary small { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 400; font-size: .72rem; }
+  .empty { color: var(--muted); font-style: italic; font-size: .84rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* the stage */
+  .stagebar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  #story-picker { max-width: 100%; font-size: .9rem; }
+  .goal { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: .9rem; }
+  #scene { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 560; border-radius: 8px; background: var(--paper); border: 1px solid var(--line-2); }
+  #scene text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--scene-ink); font-size: 12px; }
+  #scene .region { fill: var(--keri); stroke: none; }
+  #scene .region.chain { fill: var(--chain); }
+  #scene .region.readers { fill: var(--readers); }
+  #scene .rlbl { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; fill: var(--muted); }
+  #scene .avatar { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .actor.on .avatar { stroke: var(--accent); stroke-width: 3; }
+  #scene .actor.acting .avatar { stroke: var(--warn); stroke-width: 3; }
+  #scene .actor { cursor: pointer; }
+  #scene .nm { font-weight: 700; font-size: 13px; text-anchor: middle; }
+  #scene .role { font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #scene .badge { font-family: var(--mono); font-size: 10px; text-anchor: middle; fill: var(--accent); }
+  #scene .wit { fill: var(--card); stroke: var(--line); }
+  #scene .witlbl { font-size: 9px; text-anchor: middle; fill: var(--muted); }
+  #scene .utxo { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #scene .utxo.poisoned { stroke: var(--poison); }
+  #scene .utxo.absent { stroke-dasharray: 6 4; fill: none; }
+  #scene .utxo.parked { stroke-dasharray: 2 4; opacity: .6; }
+  #scene .token { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
+  #scene .token.absent { fill: none; stroke: var(--line); stroke-dasharray: 5 3; }
+  #scene .token.parked { fill: none; stroke: var(--warn); stroke-dasharray: 5 3; }
+  #scene .token.convicted { fill: var(--bad-bg); stroke: var(--bad); }
+  #scene .tk { font-family: var(--mono); font-size: 11px; text-anchor: middle; }
+  #scene .datum-k { font-size: 10px; fill: var(--muted); }
+  #scene .datum-v { font-family: var(--mono); font-size: 12px; }
+  #scene .state-word { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  #scene .state-word.poisoned { fill: var(--poison); }
+  #scene .coin { stroke: var(--card); stroke-width: 1; }
+  #scene .coin.dreg { fill: var(--dreg); } #scene .coin.b { fill: var(--b); } #scene .coin.pool { fill: var(--pool); }
+  #scene .pile-lbl { font-size: 10px; text-anchor: middle; fill: var(--muted); }
+  #scene .pile-amt { font-family: var(--mono); font-size: 12px; text-anchor: middle; font-weight: 700; }
+  #scene .pile-amt.dreg { fill: var(--dreg); } #scene .pile-amt.b { fill: var(--b); } #scene .pile-amt.pool { fill: var(--pool); }
+  #scene .track { fill: var(--line-2); }
+  #scene .fill { fill: var(--accent); }
+  #scene .fill.done { fill: var(--ok); }
+  #scene .validator { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .tray { fill: var(--card); stroke: var(--line); stroke-dasharray: 4 3; }
+  #scene .receipt { fill: var(--chip); stroke: var(--b); }
+  #scene .receipt-t { font-family: var(--mono); font-size: 9.5px; }
+  #scene .registry { fill: var(--card); stroke: var(--line); }
+  #scene .bank { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .lamp.ok { fill: var(--ok); } #scene .lamp.no { fill: var(--bad); }
+  #scene .beam { stroke: var(--muted); stroke-dasharray: 3 5; stroke-width: 1.5; fill: none; }
+  #scene .beam.ok { stroke: var(--ok); } #scene .beam.no { stroke: var(--bad); }
+  #scene .wallet { fill: var(--card); stroke: var(--line); }
+  #scene .wallet.refund { stroke: var(--accent); stroke-width: 2; }
+  #scene .wallet-t { font-size: 10px; }
+  #scene .wallet-n { font-family: var(--mono); font-size: 10px; text-anchor: end; }
+  #scene .clock { fill: var(--card); stroke: var(--scene-ink); stroke-width: 1.5; }
+  #scene .clock-t { font-family: var(--mono); font-size: 13px; text-anchor: middle; font-weight: 700; }
+  #scene .hint { font-size: 10px; fill: var(--muted); }
+  /* fx */
+  #scene .fx-card { fill: var(--paper); stroke: var(--scene-ink); stroke-width: 1.2; }
+  #scene .fx-card.rewind { opacity: .55; }
+  #scene .fx-t { font-family: var(--mono); font-size: 10px; text-anchor: middle; }
+  #scene .fx-coin { stroke: var(--card); stroke-width: 1; }
+  #scene .fx-coin.rewind { opacity: .55; }
+  #scene .fx-mark { font-size: 26px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-mark.ok { fill: var(--ok); } #scene .fx-mark.no { fill: var(--bad); }
+  #scene .fx-float { font-size: 12px; font-weight: 700; text-anchor: middle; }
+  #scene .fx-scroll { fill: var(--keri); stroke: var(--warn); stroke-width: 1.2; }
+  #scene .fx-skull { font-size: 22px; text-anchor: middle; }
+  #scene .pulse { animation: pulse .7s ease-out 1; }
+  #scene .pulse-bad { animation: pulseBad .7s ease-out 1; }
+  @keyframes pulse { 0% { filter: drop-shadow(0 0 0 var(--accent)); } 50% { filter: drop-shadow(0 0 10px var(--accent)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @keyframes pulseBad { 0% { filter: drop-shadow(0 0 0 var(--bad)); } 50% { filter: drop-shadow(0 0 10px var(--bad)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+  @media (prefers-reduced-motion: reduce) { #scene .pulse, #scene .pulse-bad { animation: none; } }
+
+  /* the play bar */
+  #playbar { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  #playbar .nav { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 3px 9px; font-size: .95rem; min-width: 2.2em; }
+  #playbar .nav:disabled { color: var(--muted); opacity: .5; cursor: default; }
+  #playbar .nav.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  #scrub { flex: 1; min-width: 160px; accent-color: var(--accent); }
+  #pos { font-family: var(--mono); font-size: .8rem; color: var(--muted); min-width: 5ch; text-align: right; }
+  #branches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  #branches .lbl { margin-right: 4px; }
+  .branch { border: 1px solid var(--warn); background: var(--warn-bg); color: var(--warn); border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
+  .branch.on { background: var(--warn); color: var(--card); }
+  #history-strip { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .hist-chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: .72rem; font-family: var(--mono); }
+  .hist-chip.ok { border-color: var(--ok); }
+  .hist-chip.no { border-color: var(--bad); color: var(--bad); }
+  .hist-chip.here { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .hist-chip.fork::after { content: ' ⋔'; color: var(--warn); }
+  #narration { margin-top: 8px; }
+  .say { border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--accent-bg); border-radius: 0 8px 8px 0; font-size: .9rem; }
+  .say .who { font-weight: 700; font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .result { margin-top: 6px; padding: 6px 10px; border-radius: 8px; font-size: .86rem; }
+  .result.ok { background: var(--ok-bg); color: var(--ok); }
+  .result.no { background: var(--bad-bg); color: var(--bad); }
+  .result b { font-family: var(--mono); }
+  .exh { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .tchip { font-family: var(--mono); font-size: .72rem; background: var(--lit); color: var(--lit-ink); border-radius: 5px; padding: 0 5px; }
+
+  /* the lamps */
+  #ledger { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .thm { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem; background: var(--card); }
+  .thm summary { display: flex; gap: 6px; align-items: center; cursor: pointer; list-style: none; }
+  .thm summary::-webkit-details-marker { display: none; }
+  .thm .id { font-family: var(--mono); font-weight: 700; min-width: 3ch; }
+  .thm .ttl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thm .st { font-size: .68rem; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .thm.lit { background: var(--lit); border-color: var(--warn); }
+  .thm.lit .st { color: var(--lit-ink); }
+  .thm.broken { background: var(--bad-bg); border-color: var(--bad); }
+  .thm .body { margin-top: 6px; color: var(--ink); font-size: .8rem; white-space: normal; }
+  .thm .lean { font-family: var(--mono); font-size: .7rem; color: var(--muted); margin-top: 4px; word-break: break-word; }
+  .thm[open] { grid-column: 1 / -1; }
+
+  /* drawers */
+  .drawers { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+  details.card > summary { cursor: pointer; font-family: var(--serif); font-weight: 600; font-size: .95rem; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: '▸'; color: var(--muted); font-family: system-ui; }
+  details.card[open] > summary::before { content: '▾'; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  details.card.wide { grid-column: 1 / -1; }
+
+  /* actions */
+  .actors { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .actor { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 4px 12px; font-size: .84rem; }
+  .actor.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .blurb { font-size: .84rem; color: var(--muted); margin: 4px 0 8px; }
+  .acts { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+  .act, .ev-quick { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 10px; font-size: .84rem; text-align: left; }
+  .act:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+  .act:disabled { color: var(--muted); background: var(--bg); cursor: help; text-decoration: line-through; text-decoration-color: var(--line); }
+  .act.on { border-color: var(--accent); background: var(--accent-bg); }
+  .ev-quick { border-style: dashed; }
+  .ev-quick:hover { border-color: var(--b); color: var(--b); }
+  #act-form { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 8px; }
+  #act-form .fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  #act-form label { display: flex; flex-direction: column; gap: 2px; font-size: .74rem; color: var(--muted); }
+  #act-why { margin-top: 6px; font-size: .84rem; }
+  #act-why.no { color: var(--bad); } #act-why.ok { color: var(--ok); }
+  .primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; font-weight: 600; }
+  .primary:disabled { opacity: .45; cursor: default; }
+  .ev-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .ev-form label { display: flex; flex-direction: column; font-size: .72rem; color: var(--muted); gap: 2px; }
+  #ev-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .ev-row { display: flex; gap: 8px; align-items: center; font-size: .84rem; border: 1px solid var(--line); border-radius: 7px; padding: 3px 8px; }
+  .ev-row .k { font-family: var(--mono); font-size: .76rem; color: var(--b); }
+  .ev-rm { margin-left: auto; border: none; background: none; color: var(--muted); font-size: .9rem; }
+  .ev-rm:hover { color: var(--bad); }
+
+  /* the numbers */
+  .ladder { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+  .rung { border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; font-size: .78rem; color: var(--muted); background: var(--card); }
+  .rung.term { border-style: dashed; }
+  .rung.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .arrow { color: var(--muted); font-size: .8rem; }
+  #state-name { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+  .datum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin: 8px 0; }
+  .datum div { border-top: 1px solid var(--line-2); padding-top: 3px; }
+  .datum .v { font-family: var(--mono); font-size: 1rem; }
+  .bars { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+  .bar { display: grid; grid-template-columns: 9.5em 1fr 5.5em; gap: 8px; align-items: center; font-size: .84rem; }
+  .bar .track { height: 12px; background: var(--line-2); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar .fill { height: 100%; border-radius: 6px; }
+  .bar.dreg .fill { background: var(--dreg); } .bar.b .fill { background: var(--b); } .bar.pool .fill { background: var(--pool); }
+  .bar .n { text-align: right; font-family: var(--mono); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  .sw.dreg { background: var(--dreg); } .sw.b { background: var(--b); } .sw.pool { background: var(--pool); }
+  #verdict { padding: 8px 10px; border-radius: 8px; font-size: .9rem; margin-top: 6px; }
+  #verdict.ok { background: var(--ok-bg); color: var(--ok); } #verdict.no { background: var(--bad-bg); color: var(--bad); }
+  .conj { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .conj span { font-size: .72rem; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; }
+  .conj span.yes { border-color: var(--ok); color: var(--ok); } .conj span.nope { border-color: var(--bad); color: var(--bad); }
+  #value-chart { display: block; width: 100%; height: 240px; }
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line-2); }
+  td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .flows { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: .8rem; }
+  .flow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .flow .i { font-family: var(--mono); color: var(--muted); min-width: 3ch; }
+  .about p { font-size: .84rem; margin: 4px 0; }
+  /* the tree of the play */
+  #tree-wrap { overflow-x: auto; margin: 4px 0 2px; }
+  #tree { display: block; min-width: 100%; }
+  #tree text { font-family: var(--mono); font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  #tree .edge { stroke: var(--line); stroke-width: 2; fill: none; }
+  #tree .edge.taken { stroke: var(--accent); }
+  #tree .node { cursor: pointer; }
+  #tree .node circle { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
+  #tree .node.ok circle { stroke: var(--ok); fill: var(--ok-bg); }
+  #tree .node.no circle { stroke: var(--bad); fill: var(--bad-bg); }
+  #tree .node.time circle, #tree .node.evidence circle { stroke: var(--line); stroke-dasharray: 2 2; }
+  #tree .node.here circle { stroke: var(--accent); stroke-width: 3.5; }
+  #tree .node.here text { fill: var(--accent); font-weight: 700; }
+  #tree .node .who { font-size: 9px; }
+  #tree .node .verb { font-size: 9.5px; fill: var(--ink); }
+  #tree .node.no .verb { fill: var(--bad); }
+  #tree .fork { fill: var(--warn); font-size: 12px; }
+  /* where we are */
+  #where { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--accent-bg); font-size: .9rem; }
+  #where .state { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; }
+  #where .state.poisoned { color: var(--poison); }
+  #where .lamp { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  #where .lamp.ok { background: var(--ok); } #where .lamp.no { background: var(--bad); }
+  #where .sum { font-family: var(--mono); font-size: .82rem; }
+  #where .sum.dreg { color: var(--dreg); } #where .sum.b { color: var(--b); } #where .sum.pool { color: var(--pool); }
+  #where .step { margin-left: auto; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+  /* what can happen next */
+  #branches { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .branch { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 12px; text-align: left; display: flex; gap: 10px; align-items: baseline; font-size: .9rem; }
+  .branch:hover { border-color: var(--accent); }
+  .branch.on { border-color: var(--accent); background: var(--accent-bg); }
+  .branch .go { font-family: var(--mono); color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .branch .who { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); white-space: nowrap; }
+  .branch .fork-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+  .branch .txt { flex: 1; min-width: 0; color: var(--ink); }
+  .branch .res { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
+  .branch .res.ok { color: var(--ok); } .branch .res.no { color: var(--bad); }
+  #next-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+  .mover { border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; background: var(--card); }
+  .mover .actor { margin-bottom: 6px; }
+  .mover .acts { margin: 0; }
+  .mover .none { color: var(--muted); font-size: .8rem; font-style: italic; }
+  .needs { display: inline-block; margin-left: 8px; font-size: .68rem; font-family: var(--mono); border-radius: 4px; padding: 0 5px; background: var(--chip); color: var(--muted); }
+  .needs.public { background: var(--ok-bg); color: var(--ok); }
+  .needs.keys { background: var(--warn-bg); color: var(--warn); }
+  .mover .interest { font-size: .78rem; color: var(--muted); margin: 0 0 6px; font-style: italic; }
+  #refused-moves { margin-top: 8px; }
+  #refused-moves summary { cursor: pointer; }
+  #refused-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .refused-row { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .refused-row .why { font-size: .82rem; color: var(--muted); max-width: 60ch; }
+  #pots { margin-top: 8px; font-size: .88rem; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 12; background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 6px 16px; font-size: .88rem; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,.3); opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 92vw; text-align: center; }
+  #toast.on { opacity: 1; }
+  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 11; display: none; gap: 8px 14px; align-items: center; padding: 6px 14px; background: var(--accent-bg); border-bottom: 1px solid var(--line); font-size: .85rem; flex-wrap: wrap; }
+  #hud.on { display: flex; }
+  #hud .state { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; }
+  #hud .lamp { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  #hud .lamp.ok { background: var(--ok); } #hud .lamp.no { background: var(--bad); }
+  #tree .node.punch circle { stroke: var(--warn); stroke-width: 3; }
+  #tree .node .star { fill: var(--warn); font-size: 11px; }
+  .mover.spot { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+  .act.glow { border-color: var(--accent); background: var(--accent-bg); animation: glow 1.1s ease-in-out infinite alternate; }
+  .ev-quick.glow { border-color: var(--accent); animation: glow 1.1s ease-in-out infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 0 var(--accent-bg); } to { box-shadow: 0 0 0 6px var(--accent-bg); } }
+  @media (prefers-reduced-motion: reduce) { .act.glow, .ev-quick.glow { animation: none; } }
+  .mover.folded > :not(.actor) { display: none; }
+  .mover.folded { opacity: .7; }
+  #unfold { font-size: .8rem; margin-top: 6px; }
+  .inv-lbl { display: block; width: 100%; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 6px 0 2px; }
+  .refused-row .who { font-size: .8rem; }
+  #hub { width: 100%; max-width: 640px; display: block; margin: 6px 0; }
+  #hub text { font-size: 11px; fill: var(--ink); text-anchor: middle; pointer-events: none; }
+  #hub .room { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  #hub .room.grave { stroke-dasharray: 4 3; }
+  #hub .room.sealed { stroke-width: 3; }
+  #hub .room.on { fill: var(--accent); stroke: var(--accent); }
+  #hub text.on { fill: var(--on-accent); font-weight: 700; }
+  #hub .edge { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+  #hub .elbl { font-size: 9px; fill: var(--muted); }
+  #hub .hub-hint { font-size: 9.5px; fill: var(--muted); text-anchor: start; }
+  .thm.seen .id::after { content: ' ★'; color: var(--warn); }
+  #found { color: var(--warn); }
+  #btn-coda { display: none; font-size: .78rem; padding: 0 8px; }
+  #btn-coda.on { display: inline-block; }
+  #challenge { margin-top: 6px; font-size: .88rem; }
+  #challenge .won { color: var(--ok); font-weight: 700; }
+  #challenge details { margin-top: 4px; color: var(--muted); font-size: .84rem; }
+  @media (max-width: 640px) {
+    header h1 small { display: none; }
+    #scene-drawer { overflow-x: auto; }
+    #scene { min-width: 720px; max-height: 72vh; }
+    #pots dl { max-height: 42vh; overflow: auto; }
+    #ledger { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  }
+  #pots summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+  #pots dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 4px; }
+  #pots dt { font-weight: 700; white-space: nowrap; }
+  #pots dd { margin: 0; color: var(--ink); }
+  #scene-drawer[open] > summary { margin-bottom: 8px; }
+  #selftest-out { white-space: pre-wrap; font-family: var(--mono); font-size: .78rem; background: var(--card); border: 1px solid var(--line); margin: 14px; padding: 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The checkpoint <small>cardano-keri · the M1 return · one Cardano UTxO per KERI identity: a public current-keys oracle and three pots that never mix · Alice, Hal, Cora, Mallory and the treasury</small></h1>
+  <div class="slotbar">
+    <span class="lbl">slot</span> <b id="slot-now">0</b>
+    <input id="slot-input" type="number" min="0" step="1" value="0" aria-label="move to slot">
+    <button type="button" class="ghost" id="slot-plus1" title="advance one slot">+1</button>
+    <button type="button" class="ghost" id="slot-plusw" title="advance by the juvenility window W">+W</button>
+    <span class="tiny" id="slot-msg"></span>
+  </div>
+  <div class="hbtns">
+    <button type="button" class="ghost" id="btn-theme" title="light / dark">☾ theme</button>
+    <button type="button" class="ghost danger" id="btn-reset" title="new session: nothing on chain">Reset</button>
+  </div>
+</header>
+<div id="hud" aria-live="polite"></div>
+<div id="toast" role="status"></div>
+<main>
+  <section class="card" id="stage">
+    <div class="stagebar">
+      <select id="story-picker" aria-label="pick a story"></select>
+      <span class="goal" id="story-goal"></span>
+    </div>
+    <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
+    <div id="playbar">
+      <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
+      <button type="button" class="nav" id="hist-prev" title="one step back (plays in reverse)">‹</button>
+      <button type="button" class="nav" id="btn-play" title="play the current branch">▶</button>
+      <button type="button" class="nav" id="hist-next" title="one step forward along the branch last taken">›</button>
+      <button type="button" class="nav" id="hist-last" title="the end of this branch">⇥</button>
+      <button type="button" class="nav" id="btn-coda" title="play on past the punchline: what the machine refuses after it">what fails after ›</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="scrub the play">
+      <span id="pos">0 / 0</span>
+    </div>
+    <div id="where"></div>
+    <div id="challenge" hidden></div>
+    <details id="pots"><summary>What the words mean: the three pots, W, and the states a checkpoint moves through</summary>
+      <svg id="hub" role="img" aria-label="the states as rooms: Live in the middle, Poisoned and Frozen beside it and back, Parked a room outside the chain with a way back, Convicted sealed"></svg>
+      <dl id="pots-dl"></dl>
+    </details>
+    <div id="narration"></div>
+  </section>
+
+  <section class="card" id="next-card">
+    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · everyone here is <em>anyone</em> with an interest; every move is a public transaction, and the tag says what it must carry: only public KERI data, or a signature by the key holders · a move from a visited step opens a branch</small></h2>
+    <div id="branches"></div>
+    <div id="next-moves"></div>
+    <div id="act-form" hidden>
+      <div class="fields" id="act-fields"></div>
+      <div id="act-why"></div>
+      <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
+        <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
+    </div>
+    <details id="refused-moves"><summary class="tiny" id="refused-summary">what the machine refuses now</summary><div id="refused-list"></div></details>
+  </section>
+
+  <details class="card" id="scene-drawer" open>
+    <summary>The scene <small>KERI, the Cardano UTxO, the readers and payees · every step plays on it; click an actor to act as them</small></summary>
+    <svg id="scene" viewBox="0 0 1000 560" role="group" aria-label="the scene: KERI, the Cardano checkpoint, the readers and payees"></svg>
+  </details>
+
+  <section class="card" id="lamps">
+    <h2>The theorems <small><span id="found"></span> · T1–T16 of CheckpointGoals.lean: one checker row per theorem, folded into fourteen lamps (T11 and T13 were never stated) · a lamp lights when this step shows one of its theorems; every row is checked on every step · click to read</small></h2>
+    <div id="ledger"></div>
+  </section>
+
+  <section class="drawers">
+    <details class="card" id="act-drawer">
+      <summary>Evidence by hand <small>the Env: what the validator would verify over the bytes, decided by you</small></summary>
+      <div class="actors" id="actors"></div>
+      <div class="blurb" id="actor-blurb"></div>
+      <div class="lbl" id="keri-lbl">On KERI (evidence, not a transaction)</div>
+      <div class="acts" id="keri-acts"></div>
+      <div class="ev-form">
+        <label>kind <select id="ev-kind">
+          <option value="rotationTo">witnessed rotation</option>
+          <option value="intentAuthorized">intent signed by the new keys (option, refund address)</option>
+          <option value="quorum">current quorum signed</option>
+          <option value="duplicityAt">duplicity proof</option>
+        </select></label>
+        <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
+        <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
+        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option><option value="close">close (leave)</option></select></label>
+        <label id="ev-lp" hidden>payee <input id="ev-payee" type="number" min="0" step="1" value="1"></label>
+        <label id="ev-lc">to sn' <input id="ev-c" type="number" min="0" step="1" value="1"></label>
+        <button type="button" class="ghost" id="ev-add">Add row</button>
+      </div>
+      <div id="ev-rows"></div>
+    </details>
+
+    <details class="card" id="numbers-drawer">
+      <summary>The checkpoint in numbers <small>the datum, the three sums, the treasury's verdict and its conjuncts</small></summary>
+      <div id="state-name">Absent</div>
+      <div class="datum" id="datum"></div>
+      <div class="bars" id="bars"></div>
+      <div id="verdict"></div>
+      <div class="conj" id="conjuncts"></div>
+    </details>
+
+    <details class="card wide" id="chart-drawer">
+      <summary>Value over the play <small><span class="sw dreg"></span>conviction bond D <span class="sw b"></span>freeze bond B <span class="sw pool"></span>pool · arrows are flows · the current branch</small></summary>
+      <canvas id="value-chart" width="640" height="240" role="img" aria-label="the three value components held by the checkpoint, step by step, with flows"></canvas>
+    </details>
+
+    <details class="card" id="money-drawer">
+      <summary>Who holds what <small>lovelace, by component; every payment named by the flow</small></summary>
+      <div id="balances"></div>
+      <div class="flows" id="flows"></div>
+    </details>
+
+    <details class="card about" id="about-drawer">
+      <summary>What this is <small>and is not</small></summary>
+      <p>A transcription of <code>lean/CardanoKeri/Checkpoint.lean</code>: the states, the actions (exactly the redeemers), the evidence as a table of decisions, value as three components that never mix, the consumer's state-side check. The theorems of <code>CheckpointGoals.lean</code> run as properties on every step. Each story is a tree: the trunk and the branches the story implies; ‹ and › walk it as an editor walks its history; click any node of the tree to jump there.</p>
+      <p>Not here: cryptography (keys are an epoch counter; evidence is a row you decide), validity (D-027, reserved), the consumer's own threshold check, UTxO mechanics, delegation, record trees, hunter bounties. A Lean <code>Nat</code> is unbounded; this page represents it exactly up to 2^53 − 1 and refuses anything else by name.</p>
+    </details>
+  </section>
+</main>
+<pre id="selftest-out" hidden></pre>
+
+<script>
+/* @@CORE:model@@ */
+/* @@CORE:model:END@@ */
+/* @@CORE:session@@ */
+/* @@CORE:session:END@@ */
+/* @@CORE:words@@ */
+/* @@CORE:words:END@@ */
+/* @@CORE:theorems@@ */
+/* @@CORE:theorems:END@@ */
+/* @@CORE:suite@@ */
+/* @@CORE:suite:END@@ */
+
+/* @@SCENARIOS@@ */
+/* @@SCENARIOS:END@@ */
+/* @@CORPUS@@ */
+/* @@CORPUS:END@@ */
+
+/* ============================================================================
+   The page: a tree of plays over the core's immutable sessions, drawn as one
+   scene whose entities move when a step plays — forward or in reverse.
+   ============================================================================ */
+const DEFAULT_PARAMS = { D: 1000, B: 5, P: 2, W: 10 };
+const NAMES = { 1: 'Alice', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'the treasury', 6: 'the sponsor', 7: 'the rival' };
+const nameOf = addr => NAMES[addr] || ('address ' + addr);
+const WHO = { alice: 'Alice', hal: 'Hal', cora: 'Cora', mallory: 'Mallory', treasury: 'The treasury', friend: 'A sponsor', rival: 'A rival hunter', anyone: 'A sponsor', time: 'Time', you: 'You' };
+const ACTOR_ORDER = ['alice', 'hal', 'treasury', 'cora', 'mallory', 'anyone'];
+const RUNGS = [['absent', 'Absent'], ['live', 'Live'], ['poisoned', 'Poisoned'], ['frozen', 'Frozen'], ['parked', 'Parked'], ['convicted', 'Convicted']];
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+// tiny DOM helpers: h(tag, attrs, ...children) and its SVG twin
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'hidden' || k === 'disabled' || k === 'selected' || k === 'open') { if (v) el.setAttribute(k, ''); el[k] = !!v; }
+    else el.setAttribute(k, String(v));
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? String(c) : c);
+  return el;
+}
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') for (const [dk, dv] of Object.entries(v)) el.setAttribute('data-' + dk, dv);
+    else el.setAttribute(k, String(v));
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+  return el;
+}
+const $ = id => document.getElementById(id);
+const clear = el => { el.replaceChildren(); return el; };
+const fmt = n => String(n);
+const raf = cb => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : setTimeout(() => cb(Date.now()), 16));
+const nowMs = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+
+/* ---- the tree of plays --------------------------------------------------------
+   A node is a session (immutable) plus the record that produced it. Children
+   are branches; `last` remembers the branch last taken, so › follows it. */
+const app = {
+  nodes: [],      // [{id, parent, children, last, session, record, who, say, kind, branch}]
+  cursor: 0,
+  story: null,    // the scenario being played, or null
+  actor: 'alice',
+  pending: null,  // {offer, action}
+  playing: null,  // interval id while ▶ runs
+  fx: [],         // running animations (cancelled on the next move)
+};
+const node = id => app.nodes[id];
+const cur = () => node(app.cursor).session;
+function newTree(session, say) {
+  app.nodes = [{ id: 0, parent: null, children: [], last: null, session, record: null, who: '', say, kind: 'origin', branch: null }];
+  app.cursor = 0; app.pending = null; stopPlay();
+}
+function addChild(parentId, entry) {
+  const n = { id: app.nodes.length, parent: parentId, children: [], last: null, branch: null, ...entry };
+  app.nodes.push(n);
+  const p = node(parentId); p.children.push(n.id); p.last = n.id;
+  return n.id;
+}
+function pathTo(id) { const out = []; for (let n = id; n !== null; n = node(n).parent) out.unshift(n); return out; }
+function forwardPath(id) { const out = []; let n = id; for (;;) { const c = nextOf(n); if (c === null) break; out.push(c); n = c; } return out; }
+const currentPath = () => [...pathTo(app.cursor), ...forwardPath(app.cursor)];
+// the next node along the branch last taken; a trunk's end has no next of its
+// own — its forks are entered through their chips, never by › or ⇥
+const nextOf = id => { const n = node(id); if (!n.children.length) return null; if (n.last !== null) return n.last; return n.trunkEnd ? null : n.children[0]; };
+const leafNodeOf = id => { let n = id; for (;;) { const c = nextOf(n); if (c === null) return n; n = c; } };
+function branchLabel(id) {
+  const n = node(id);
+  if (n.branch) return n.branch.title;
+  if (n.record) return describeAction(n.record.action) + (n.record.ok ? '' : ' (refused)');
+  return n.say ? n.say.slice(0, 40) : 'step';
+}
+// go to a node: the path from the cursor up to the common ancestor plays in
+// reverse, the path down to the target plays forward; the branches taken are
+// remembered
+function goTo(id, opts) {
+  opts = opts || {};
+  if (id === app.cursor || !node(id)) return;
+  const a = pathTo(app.cursor), b = pathTo(id);
+  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const up = a.slice(i).reverse(), down = b.slice(i);
+  for (const n of down) { const p = node(n).parent; if (p !== null) node(p).last = n; }
+  app.cursor = id; app.pending = null; app.unfold = false;
+  render();
+  if (!up.length && down.length === 1) { const line = hitLine(node(id)); if (line && /\+/.test(line)) toast(line, 2600); }
+  const edges = [...up.map(n => ({ node: n, dir: -1 })), ...down.map(n => ({ node: n, dir: 1 }))];
+  if (!opts.silent) playEdges(edges);
+}
+function pushNode(entry) { const id = addChild(app.cursor, entry); goTo(id); }
+
+/* ---- free play: what each actor can do now, dry-run through the core ------- */
+// a revival presents a rotation from the parked key state, later than its sequence
+function reopenSn(sess) { const c = hashOf(sess.state); if (!c) return 1; const cands = sess.env.rotationTo.filter(r => r[0] === c.epoch && r[1] === c.sn && r[2] > c.sn).map(r => r[2]).sort((a, b) => a - b); return cands.length ? cands[0] : c.sn + 1; }
+function nextSn(sn0) {
+  const l = liveOf(sn0.state);
+  if (!l) return 1;
+  const cands = sn0.env.rotationTo.filter(r => r[0] === l.epoch && r[1] === l.sn && r[2] > l.sn).map(r => r[2]).sort((a, b) => a - b);
+  return cands.length ? cands[0] : l.sn + 1;
+}
+function offersFor(actor, sess) {
+  const l = liveOf(sess.state);
+  const e = l ? l.epoch : 0, sn = l ? l.sn : 0, sn2 = nextSn(sess);
+  const keri = [], chain = [];
+  const ev = (label, row, hint) => keri.push({ label, row, hint });
+  const act = (kind, label, action) => chain.push({ kind, label, action });
+  const hs = hashOf(sess.state);           // the parked key state, when parked
+  const ke = hs ? hs.epoch : e, ksn = hs ? hs.sn : sn;   // the key state a rotation or a proof is about
+  switch (actor) {
+    case 'alice':
+      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the leaf holds, later than its sequence');
+      else ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
+      ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
+      ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
+      ev('my next keys sign: leave, premium to me', { intentAuthorized: [e + 1, closeIntent(1), null] }, 'the keys the rotation reveals sign the close, its payee and the address (D-036, D-038, D-039)');
+      ev('my next keys sign: leave, premium to Hal', { intentAuthorized: [e + 1, closeIntent(2), null] }, 'the reap can be landed by a hunter: the message names who is paid');
+      ev('key holders sign at threshold (quorum, epoch ' + e + ')', { quorum: [e] }, 'the current quorum signs a Cardano-side preimage');
+      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
+      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
+      act('poison', 'poison this epoch', 'poison');
+      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the token burned, the leaf parked with the hash', { close: { "sn'": sn2, payee: 1, "refund'": null } });
+      act('topUp', 'add to my pool', { topUp: { x: 5 } });
+      act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
+      act('reopen', 'revive my parked identity with a rotation from its key state (refund to me)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+    case 'hal':
+      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
+      act('close', 'land her reap, paid P to Hal (needs her signed message naming me)', { close: { "sn'": sn2, payee: 2, "refund'": null } });
+      act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
+      act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+    case 'cora':
+      ev('obtain a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'two rotations at the key state’s sequence, both receipted');
+      act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
+      break;
+    case 'mallory':
+      ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
+      ev('steal the next keys too (rotate ' + ksn + ' → ' + (ksn + 1) + ')', { rotationTo: [ke, ksn, ksn + 1] }, 'control by KERI’s own rule');
+      act('poison', 'poison with the stolen keys', 'poison');
+      act('close', 'reap with the stolen keys, premium to Mallory: the bonds still go to Alice’s refund address', { close: { "sn'": sn2, payee: 4, "refund'": null } });
+      act('close', 'copy Hal’s reap with myself as payee', { close: { "sn'": sn2, payee: 4, "refund'": null } });
+      ev('forge the close message with the stolen next keys (payee Mallory)', { intentAuthorized: [ke + 1, closeIntent(4), null] }, 'with the next keys she can sign the message too');
+      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
+      act('register', 'register Alice’s inception myself, at an epoch whose keys I hold (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
+      act('reopen', 'revive her parked identity to myself (needs a rotation from the parked key state)', { reopen: { "sn'": reopenSn(sess), refund: 4, pool0: 10 } });
+      break;
+    case 'anyone':
+      act('register', 'register her inception for her (refund to Alice)', { register: { refund: 1, pool0: 10 } });
+      act('register', 'register her inception, refund to myself (a donation at her first rotation)', { register: { refund: 6, pool0: 10 } });
+      act('topUp', 'top up her pool', { topUp: { x: 5 } });
+      act('reopen', 'revive her parked identity for her (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+  }
+  return { keri, chain };
+}
+function dryRun(sess, action) {
+  const r = step(sess.params, sess.env, action, sess.now, sess.state);
+  if (r.ok) return { ok: true, res: r };
+  const rec = { ok: false, reason: r.reason, field: r.field, kind: actionKind(action), action, pre: sess.state, slot: sess.now, now: sess.now };
+  return { ok: false, res: r, why: explain(rec, sess) };
+}
+// the data record of an action; {} for an action that is not a Lean action
+const dataOf = a => { const k = actionKind(a); return (a && typeof a === 'object' && a[k] && typeof a[k] === 'object') ? a[k] : {}; };
+function describeAction(a) {
+  const k = actionKind(a); const d = dataOf(a);
+  switch (k) {
+    case 'register': return `register (refund → ${nameOf(d.refund)}, pool ${d.pool0})`;
+    case 'rotate': return `rotate to sn ${d["sn'"]}, ${d.op}, payee ${nameOf(d.payee)}` + (d["refund'"] !== null && d["refund'"] !== undefined ? `, refund → ${nameOf(d["refund'"])}` : '');
+    case 'poison': return 'poison';
+    case 'close': return `leave (the reap) with the rotation to sn ${d["sn'"]}, payee ${nameOf(d.payee)}` + (d["refund'"] !== null && d["refund'"] !== undefined ? `, refund → ${nameOf(d["refund'"])}` : '');
+    case 'reopen': return `revive with the rotation to sn ${d["sn'"]} (refund → ${nameOf(d.refund)}, pool ${d.pool0})`;
+    case 'freeze': return `freeze (presenting sn ${d["sn'"]}), payee ${nameOf(d.payee)}`;
+    case 'topUp': return `top-up ${d.x}`; case 'convict': return `convict, payee ${nameOf(d.payee)}`;
+  }
+  return JSON.stringify(a);
+}
+function describeFlow(f) {
+  const parts = [];
+  if (f.dregIn) parts.push(`D ${f.dregIn} in`); if (f.bIn) parts.push(`B ${f.bIn} in`); if (f.poolIn) parts.push(`pool ${f.poolIn} in`);
+  const pay = (q, who) => { if (!q) return; const bits = []; if (q.dreg) bits.push(`D ${q.dreg}`); if (q.b) bits.push(`B ${q.b}`); if (q.pool) bits.push(`pool ${q.pool}`); parts.push(`${bits.length ? bits.join(' + ') : 'nothing'} → ${nameOf(q.addr)} (${who})`); };
+  pay(f.refund, 'refund address'); pay(f.hunter, 'hunter'); pay(f.convictor, 'convictor');
+  return parts.length ? 'value: ' + parts.join('; ') : 'no value moved';
+}
+const actorOfNode = n => {
+  const w = n.who || '';
+  const key = Object.keys(WHO).find(k => WHO[k] === w) || (n.kind === 'free' || n.kind === 'evidence' ? app.actor : null);
+  return { friend: 'anyone', you: app.actor, time: null }[key] === undefined ? key : { friend: 'anyone', you: app.actor, time: null }[key];
+};
+
+/* ---- the scene ----------------------------------------------------------------
+   Every entity is a <g data-obj> placed by `layout`, so the fx layer can fly
+   things between them. */
+const layout = {
+  'actor:alice': { x: 130, y: 118 }, witnesses: { x: 130, y: 218 }, 'actor:cora': { x: 72, y: 340 }, 'actor:mallory': { x: 188, y: 340 }, 'actor:anyone': { x: 130, y: 462 },
+  token: { x: 372, y: 128 }, datum: { x: 540, y: 128 }, 'pile:dreg': { x: 372, y: 300 }, 'pile:b': { x: 470, y: 300 }, 'pile:pool': { x: 568, y: 300 },
+  validator: { x: 500, y: 412 }, tray: { x: 500, y: 500 }, registry: { x: 640, y: 300 }, clock: { x: 500, y: 40 },
+  'actor:hal': { x: 860, y: 118 }, 'actor:rival': { x: 940, y: 200 }, treasury: { x: 860, y: 268 }, wallets: { x: 860, y: 400 },
+};
+const walletPos = i => ({ x: 862, y: 372 + i * 44 });
+function hexagon(cx, cy, r) { const pts = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i - Math.PI / 6; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); } return pts.join(' '); }
+function balancesAlong(nodes) {
+  const bal = {};
+  for (const n of nodes) if (n.record && n.record.ok) for (const q of [n.record.flow.refund, n.record.flow.hunter, n.record.flow.convictor]) if (q) { bal[q.addr] = bal[q.addr] || { dreg: 0, b: 0, pool: 0 }; bal[q.addr].dreg += q.dreg; bal[q.addr].b += q.b; bal[q.addr].pool += q.pool; }
+  return bal;
+}
+function drawScene() {
+  const svg = $('scene');
+  const sess = cur(), p = sess.params, st = sess.state, l = liveOf(st), k = stateKind(st);
+  const here = node(app.cursor);
+  const acting = actorOfNode(here);
+  const parts = [];
+  // regions
+  parts.push(s('rect', { class: 'region', x: 10, y: 10, width: 250, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 24, y: 34 }, 'KERI · Alice’s identity'));
+  parts.push(s('rect', { class: 'region chain', x: 275, y: 10, width: 450, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 289, y: 34 }, 'Cardano · one UTxO'));
+  parts.push(s('rect', { class: 'region readers', x: 740, y: 10, width: 250, height: 540, rx: 14 }), s('text', { class: 'rlbl', x: 754, y: 34 }, 'readers & payees'));
+  // actors
+  const actor = (key, id, name, role, badge) => {
+    const q = layout[key];
+    const g = s('g', { class: 'actor' + (id === app.actor ? ' on' : '') + (id === acting ? ' acting' : ''), dataset: { obj: 'actor', id, key }, transform: `translate(${q.x},${q.y})`, role: 'button', tabindex: 0,
+      onclick: () => { if (ACTOR_ORDER.includes(id)) { app.actor = id; app.pending = null; render(); } } },
+      s('circle', { class: 'avatar', r: id === 'rival' ? 22 : 30 }),
+      s('text', { class: 'nm', y: 4 }, name),
+      s('text', { class: 'role', y: id === 'rival' ? 36 : 44 }, role));
+    if (badge) g.append(s('text', { class: 'badge', y: id === 'rival' ? 48 : 57 }, badge));
+    return g;
+  };
+  const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
+  parts.push(actor('actor:alice', 'alice', 'Alice', 'the owner', l ? `keys of epoch ${e} · sn ${sn}` : 'keys, no checkpoint'));
+  // witnesses
+  const wg = s('g', { dataset: { obj: 'witnesses', key: 'witnesses' }, transform: `translate(${layout.witnesses.x},${layout.witnesses.y})` });
+  [-56, 0, 56].forEach((dx, i) => { wg.append(s('circle', { class: 'wit', cx: dx, cy: 0, r: 13 }), s('text', { class: 'witlbl', x: dx, y: 4 }, 'W' + (i + 1))); });
+  wg.append(s('text', { class: 'witlbl', y: 30 }, 'her witnesses · receipts'));
+  parts.push(wg);
+  parts.push(actor('actor:cora', 'cora', 'Cora', 'a convictor', envHas(sess.env, 'duplicityAt', [e, sn]) ? 'holds two rotations' : ''));
+  const stole = envHas(sess.env, 'quorum', [e]);
+  parts.push(actor('actor:mallory', 'mallory', 'Mallory', 'a thief', stole && l ? `has the epoch-${e} keys` : ''));
+  parts.push(actor('actor:anyone', 'anyone', 'Sponsor', 'pays for her presence', ''));
+  // the checkpoint UTxO
+  parts.push(s('rect', { class: 'utxo ' + (k === 'absent' ? 'absent' : k === 'parked' ? 'parked' : (l && l.poisoned ? 'poisoned' : '')), x: 320, y: 70, width: 360, height: 280, rx: 12 }));
+  const t = layout.token;
+  const tg = s('g', { dataset: { obj: 'token', key: 'token' } });
+  if (k === 'convicted') tg.append(s('rect', { class: 'token convicted', x: t.x - 26, y: t.y - 34, width: 52, height: 62, rx: 20 }), s('text', { class: 'tk', x: t.x, y: t.y - 4 }, '✝'), s('text', { class: 'tk', x: t.x, y: t.y + 14 }, 'AID ' + sess.aid));
+  else tg.append(s('polygon', { class: 'token ' + (k === 'absent' ? 'absent' : k === 'parked' ? 'parked' : ''), points: hexagon(t.x, t.y, 34) }), s('text', { class: 'tk', x: t.x, y: t.y + 4 }, k === 'absent' ? 'no token' : k === 'parked' ? 'burned' : 'AID ' + sess.aid));
+  tg.append(s('text', { class: 'hint', x: t.x, y: t.y + 52, 'text-anchor': 'middle' }, k === 'absent' ? 'minted once' : k === 'parked' ? 'revives from the parked key state' : k === 'convicted' ? 'terminal: the mark' : 'the token'));
+  parts.push(tg);
+  // datum card
+  const dg = s('g', { dataset: { obj: 'datum', key: 'datum' } });
+  const word = stateWord(p, st);
+  dg.append(s('text', { class: 'state-word' + (word === 'poisoned' ? ' poisoned' : ''), x: 430, y: 108 }, STATE_WORDS[word] + (l && l.poisoned && word !== 'poisoned' ? ' · poisoned' : '')));
+  const kv = (x, y, key, val) => { dg.append(s('text', { class: 'datum-k', x, y }, key), s('text', { class: 'datum-v', x, y: y + 15 }, val)); };
+  if (l) {
+    kv(430, 128, 'sequence', l.sn); kv(500, 128, 'epoch (keys)', l.epoch); kv(580, 128, 'poisoned', l.poisoned ? '☠ yes' : 'no');
+    kv(430, 166, 'born at slot', l.bornAt); kv(500, 166, 'refund to', nameOf(l.refundTo));
+    // juvenility
+    const mature = l.bornAt + p.W <= sess.now;
+    const frac = Math.max(0, Math.min(1, (sess.now - l.bornAt) / Math.max(1, p.W)));
+    dg.append(s('rect', { class: 'track', x: 430, y: 200, width: 230, height: 8, rx: 4 }), s('rect', { class: 'fill' + (mature ? ' done' : ''), x: 430, y: 200, width: 230 * frac, height: 8, rx: 4 }),
+      s('text', { class: 'hint', x: 430, y: 222 }, mature ? `past juvenility (born ${l.bornAt}, W = ${p.W})` : `juvenile until slot ${l.bornAt + p.W} (born ${l.bornAt}, W = ${p.W})`));
+  } else if (k === 'convicted') {
+    dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'the leaf holds nothing but the mark: convicted'));
+    dg.append(s('text', { class: 'hint', x: 430, y: 156 }, 'no rotation, no poison, no reap, no revival, ever'));
+  } else if (k === 'parked') { const c = st.parked.h; kv(430, 128, 'the leaf holds the hash of', 'key state'); kv(560, 128, 'epoch', c.epoch); kv(620, 128, 'sn', c.sn); dg.append(s('text', { class: 'hint', x: 430, y: 165 }, 'no UTxO: everything paid out, the token burned; not terminal'), s('text', { class: 'hint', x: 430, y: 180 }, `a witnessed rotation from epoch ${c.epoch}, sn ${c.sn} to a later sn revives it with fresh bonds`)); }
+  else dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'nothing on chain for this AID: only a registration can happen'));
+  parts.push(dg);
+  // piles
+  const hd = held(p, st);
+  const pile = (key, cls, label, amount, full) => {
+    const q = layout[key];
+    const g = s('g', { dataset: { obj: 'pile', key }, transform: `translate(${q.x},${q.y})` });
+    const n = full ? (amount >= full ? 6 : amount > 0 ? 3 : 0) : Math.min(8, Math.ceil(amount / 2));
+    for (let i = 0; i < n; i++) g.append(s('ellipse', { class: 'coin ' + cls, cx: 0, cy: -i * 6, rx: 22, ry: 8 }));
+    if (!n) g.append(s('ellipse', { class: 'coin', cx: 0, cy: 0, rx: 22, ry: 8, fill: 'none', stroke: 'var(--line)', 'stroke-dasharray': '3 3' }));
+    g.append(s('text', { class: 'pile-amt ' + cls, y: 26 }, fmt(amount) + (full ? ' / ' + full : '')), s('text', { class: 'pile-lbl', y: 40 }, label));
+    return g;
+  };
+  parts.push(pile('pile:dreg', 'dreg', 'conviction bond D', hd.dreg, p.D), pile('pile:b', 'b', 'freeze bond B', hd.b, p.B), pile('pile:pool', 'pool', 'pool (premium P = ' + p.P + ')', hd.pool, 0));
+  // registry
+  const rg = s('g', { dataset: { obj: 'registry', key: 'registry' }, transform: `translate(${layout.registry.x},${layout.registry.y})` });
+  rg.append(s('rect', { class: 'registry', x: -28, y: -34, width: 62, height: 60, rx: 5 }), s('text', { class: 'hint', x: 3, y: -20, 'text-anchor': 'middle' }, 'registry'));
+  const regs = Object.keys(sess.leaves).length ? Object.keys(sess.leaves).map(a => { const lf = sess.leaves[a]; const kk = leafKind(lf); return 'AID ' + a + ' · ' + (kk === 'parked' ? `parked · hash e${lf.parked.h.epoch} sn${lf.parked.h.sn}` : kk); }) : ['no leaf'];
+  regs.slice(0, 3).forEach((r, i) => rg.append(s('text', { class: 'datum-v', x: 3, y: -2 + i * 14, 'text-anchor': 'middle', 'font-size': 10 }, r)));
+  parts.push(rg);
+  // validator + tray
+  const v = layout.validator;
+  const vg = s('g', { dataset: { obj: 'validator', key: 'validator' }, transform: `translate(${v.x},${v.y})` });
+  vg.append(s('path', { class: 'validator', d: 'M -34 -26 L 34 -26 L 34 6 Q 34 22 0 30 Q -34 22 -34 6 Z' }), s('text', { x: 0, y: 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700 }, 'validator'));
+  vg.append(s('text', { class: 'hint', x: 0, y: 46, 'text-anchor': 'middle' }, 'admits exactly these moves, nothing else'));
+  parts.push(vg);
+  const tr = layout.tray;
+  const trg = s('g', { dataset: { obj: 'tray', key: 'tray' }, transform: `translate(${tr.x},${tr.y})` });
+  trg.append(s('rect', { class: 'tray', x: -170, y: -34, width: 340, height: 74, rx: 8 }), s('text', { class: 'hint', x: -162, y: -20 }, 'evidence presented (the Env): what the validator verifies over the bytes'));
+  const receipts = [];
+  const rw = { rotationTo: r => `rot e${r[0]} sn${r[1]}→${r[2]}`, intentAuthorized: r => `e${r[0]} signs ${r[1]}${r[2] === null ? '' : ' →' + nameOf(r[2])}`, quorum: r => `quorum e${r[0]}`, duplicityAt: r => `dup e${r[0]} sn${r[1]}` };
+  trg.append(s('text', { class: 'hint', x: -162, y: 36 }, 'rot = witnessed rotation · dup = duplicity proof · e = key epoch · sn = sequence number of the KERI event'));
+  for (const kd of EV_KINDS) for (const r of sess.env[kd]) receipts.push(rw[kd](r));
+  receipts.slice(0, 8).forEach((txt, i) => { const x = -162 + (i % 4) * 84, y = -8 + Math.floor(i / 4) * 22; trg.append(s('rect', { class: 'receipt', x, y, width: 78, height: 17, rx: 4 }), s('text', { class: 'receipt-t', x: x + 4, y: y + 12 }, txt.slice(0, 15))); });
+  if (receipts.length > 8) trg.append(s('text', { class: 'hint', x: 100, y: 34 }, '+' + (receipts.length - 8) + ' more'));
+  if (!receipts.length) trg.append(s('text', { class: 'hint', x: 0, y: 12, 'text-anchor': 'middle' }, 'nothing presented yet'));
+  parts.push(trg);
+  // clock
+  const c = layout.clock;
+  parts.push(s('g', { dataset: { obj: 'clock', key: 'clock' }, transform: `translate(${c.x},${c.y})` }, s('rect', { class: 'clock', x: -44, y: -16, width: 88, height: 30, rx: 15 }), s('text', { class: 'clock-t', y: 5 }, 'slot ' + sess.now)));
+  // readers & payees
+  parts.push(actor('actor:hal', 'hal', 'Hal', 'a hunter', ''));
+  parts.push(actor('actor:rival', 'rival', 'rival', 'another hunter', ''));
+  const verdict = consumable(p, sess.now, st);
+  const tg2 = s('g', { class: 'actor', dataset: { obj: 'treasury', id: 'treasury', key: 'treasury' }, transform: `translate(${layout.treasury.x},${layout.treasury.y})`, role: 'button', tabindex: 0,
+    onclick: () => { app.actor = 'treasury'; app.pending = null; $('numbers-drawer').open = true; render(); } });
+  tg2.append(s('rect', { class: 'bank', x: -60, y: -26, width: 120, height: 52, rx: 8 }), s('text', { class: 'nm', y: -4 }, 'The treasury'), s('text', { class: 'role', y: 12 }, 'reads the checkpoint'),
+    s('circle', { class: 'lamp ' + (verdict.ok ? 'ok' : 'no'), cx: 48, cy: -14, r: 6 }), s('text', { class: 'hint', y: 42, 'text-anchor': 'middle' }, verdict.ok ? 'consumable' : 'not consumable: ' + verdict.verdict));
+  parts.push(s('path', { class: 'beam ' + (verdict.ok ? 'ok' : 'no'), d: `M 680 200 C 740 200, 760 ${layout.treasury.y}, ${layout.treasury.x - 60} ${layout.treasury.y}` }));
+  parts.push(tg2);
+  // wallets: the refund address and every address paid so far
+  const bal = balancesAlong(pathTo(app.cursor).map(node));
+  const addrs = [...new Set([...(l ? [l.refundTo] : []), ...Object.keys(bal).map(Number)])].sort((a, b) => a - b).slice(0, 4);
+  addrs.forEach((addr, i) => {
+    const q = walletPos(i); layout['wallet:' + addr] = q;
+    const b = bal[addr] || { dreg: 0, b: 0, pool: 0 };
+    const g = s('g', { dataset: { obj: 'wallet', key: 'wallet:' + addr }, transform: `translate(${q.x},${q.y})` });
+    g.append(s('rect', { class: 'wallet' + (l && l.refundTo === addr ? ' refund' : ''), x: -116, y: -16, width: 232, height: 34, rx: 6 }),
+      s('text', { class: 'wallet-t', x: -110, y: -2 }, nameOf(addr) + (l && l.refundTo === addr ? ' · the refund address' : '')),
+      s('text', { class: 'wallet-n', x: 110, y: 12 }, `received D ${b.dreg} · B ${b.b} · pool ${b.pool}`));
+    parts.push(g);
+  });
+  if (!addrs.length) parts.push(s('text', { class: 'hint', x: 860, y: 376, 'text-anchor': 'middle' }, 'no payment yet · the refund address shows here'));
+  parts.push(s('g', { id: 'fx' }));
+  clear(svg).append(...parts);
+}
+
+/* ---- the fx layer: things that fly between entities ----------------------- */
+const fxLayer = () => { const sv = $('scene'); return sv ? sv.querySelector('#fx') : null; };
+function cancelFx() { for (const f of app.fx) f.cancel(); app.fx = []; }
+// animate(dur, frame, done): a frame gets u in [0,1]; a frozen clock ends it at once
+function animate(dur, frame, done) {
+  let cancelled = false, last = null;
+  const start = nowMs();
+  const f = { cancel: () => { cancelled = true; } };
+  app.fx.push(f);
+  const tick = () => {
+    if (cancelled) return;
+    const now = nowMs();
+    const frozen = last !== null && now === last; last = now;
+    const u = frozen ? 1 : Math.min(1, Math.max(0, (now - start) / dur));
+    frame(u);
+    if (u < 1) raf(tick); else { app.fx = app.fx.filter(x => x !== f); if (done) done(); }
+  };
+  raf(tick);
+}
+const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+const posOf = key => layout[key] || layout.validator;
+function fly(el, fromKey, toKey, opts) {
+  opts = opts || {};
+  const layer = fxLayer(); if (!layer) return;
+  const f = posOf(opts.dir < 0 ? toKey : fromKey), t = posOf(opts.dir < 0 ? fromKey : toKey);
+  layer.append(el);
+  animate(opts.dur || 700, u => {
+    const e = ease(u);
+    const x = f.x + (t.x - f.x) * e, y = f.y + (t.y - f.y) * e - (opts.arc === undefined ? 40 : opts.arc) * Math.sin(Math.PI * u);
+    el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+  }, () => { el.remove(); if (opts.done) opts.done(); });
+}
+function coin(cls, txt, rewind) { return s('g', { class: 'fx-coin' + (rewind ? ' rewind' : '') }, s('ellipse', { class: 'coin ' + cls, rx: 14, ry: 6 }), s('text', { class: 'fx-t', y: -10 }, txt)); }
+function card(txt, rewind) { return s('g', { class: 'fx-card' + (rewind ? ' rewind' : '') }, s('rect', { class: 'fx-card', x: -34, y: -12, width: 68, height: 24, rx: 4 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function scroll(txt, rewind) { return s('g', { class: rewind ? 'rewind' : '' }, s('rect', { class: 'fx-scroll', x: -30, y: -10, width: 60, height: 20, rx: 10 }), s('text', { class: 'fx-t', y: 4 }, txt)); }
+function pulse(key, bad) {
+  const el = $('scene').querySelector(`[data-key="${key}"]`); if (!el) return;
+  el.classList.add(bad ? 'pulse-bad' : 'pulse'); setTimeout(() => el.classList.remove(bad ? 'pulse-bad' : 'pulse'), 800);
+}
+function floatText(key, txt, cls, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  const el = s('text', { class: 'fx-float ' + (cls || ''), x: q.x, y: q.y - 30 });
+  el.textContent = txt;
+  setTimeout(() => { layer.append(el); animate(1000, u => { el.setAttribute('y', q.y - 30 - 26 * u); el.setAttribute('opacity', String(1 - u * u)); }, () => el.remove()); }, delay || 0);
+}
+function mark(key, ok, txt, delay) {
+  const layer = fxLayer(); if (!layer) return;
+  const q = posOf(key);
+  setTimeout(() => {
+    const el = s('text', { class: 'fx-mark ' + (ok ? 'ok' : 'no'), x: q.x, y: q.y - 36 }, ok ? '✓' : '✗');
+    layer.append(el);
+    animate(900, u => { el.setAttribute('transform', `translate(0,${(-18 * Math.sin(Math.PI * Math.min(1, u * 1.4))).toFixed(1)})`); el.setAttribute('opacity', String(u > .7 ? (1 - u) / .3 : 1)); }, () => el.remove());
+    if (txt) floatText(key, txt, ok ? 'ok' : 'no', 80);
+    pulse(key, !ok);
+  }, delay || 0);
+}
+// the fx of one edge: the node entered (dir 1) or left (dir −1)
+function edgeFx(n, dir, dur) {
+  const rewind = dir < 0;
+  const r = n.record;
+  const D = dur;
+  const parent = n.parent !== null ? node(n.parent) : null;
+  if (n.kind === 'time') { pulse('clock'); floatText('clock', (rewind ? '⟲ ' : '') + 'slot ' + n.session.now, '', 0); if (liveOf(n.session.state)) pulse('datum'); return; }
+  if (n.kind === 'evidence') {
+    const row = n.evRow; if (!row) { pulse('tray'); return; }
+    const kind = Object.keys(row)[0];
+    const from = kind === 'duplicityAt' ? 'actor:cora' : (kind === 'quorum' && n.who === WHO.mallory) ? 'actor:mallory' : 'witnesses';
+    const el = scroll({ rotationTo: 'rotation', intentAuthorized: 'signed intent', quorum: 'quorum', duplicityAt: 'proof' }[kind], rewind);
+    fly(el, from, 'tray', { dir, dur: D, done: () => pulse('tray') });
+    if (n.removed) floatText('tray', rewind ? '+ row' : '− row', '', 0);
+    return;
+  }
+  if (!r) return;
+  const actorKey = 'actor:' + (actorOfNode(n) || 'anyone');
+  const kind = r.kind;
+  const d = dataOf(r.action);
+  const pre = liveOf(r.pre), post = liveOf(r.state);
+  const f = r.flow || {};
+  const tx = card({ register: 'register', rotate: 'rotate ' + (d.op || ''), poison: 'poison', freeze: 'freeze', topUp: 'top-up ' + (d.x !== undefined ? d.x : ''), convict: 'convict', close: 'close', reopen: 'reopen' }[kind] || 'tx', rewind);
+  // 1. the transaction reaches the validator; the rotation / proof it carries arrives from KERI
+  fly(tx, actorKey, 'validator', { dir, dur: D * .55, arc: 30, done: () => { if (!rewind) mark('validator', r.ok, r.ok ? null : r.reason, 0); } });
+  if (kind === 'rotate' || kind === 'freeze' || kind === 'close' || kind === 'reopen') fly(scroll('rotation → sn ' + d["sn'"], rewind), 'witnesses', kind === 'freeze' ? 'validator' : 'datum', { dir, dur: D * .55, arc: -30 });
+  if (kind === 'convict') fly(scroll('2nd rotation', rewind), 'actor:cora', 'validator', { dir, dur: D * .55, arc: -30 });
+  if (!r.ok) { if (rewind) setTimeout(() => pulse('validator', true), 0); return; }
+  const after = D * .5;
+  const pay = (cls, amount, fromKey, toKey, delay) => { if (!amount) return; setTimeout(() => fly(coin(cls, cls === 'dreg' ? 'D ' + amount : cls === 'b' ? 'B ' + amount : '+' + amount, rewind), fromKey, toKey, { dir, dur: D * .5 }), rewind ? 0 : delay); };
+  const payment = (q, delay) => { if (!q) return; pay('dreg', q.dreg, 'pile:dreg', 'wallet:' + q.addr, delay); pay('b', q.b, 'pile:b', 'wallet:' + q.addr, delay); pay('pool', q.pool, 'pile:pool', 'wallet:' + q.addr, delay); };
+  pay('dreg', f.dregIn, actorKey, 'pile:dreg', after); pay('b', f.bIn, actorKey, 'pile:b', after); pay('pool', f.poolIn, actorKey, 'pile:pool', after);
+  payment(f.refund, after); payment(f.hunter, after); payment(f.convictor, after);
+  setTimeout(() => {
+    if (kind === 'register') { pulse('token'); pulse('registry'); floatText('registry', rewind ? '− AID' : '+ AID ' + n.session.aid, 'ok', 0); }
+    if (kind === 'rotate') { pulse('datum'); floatText('datum', rewind ? 'keys back to epoch ' + (pre ? pre.epoch : '') : 'keys of epoch ' + (post ? post.epoch : ''), '', 0); if (pre && pre.poisoned && post && !post.poisoned) floatText('datum', rewind ? '☠ poison back' : 'poison cleared', 'ok', 300); }
+    if (kind === 'poison') { pulse('datum', true); const layer = fxLayer(); if (layer) { const q = layout.datum; const sk = s('text', { class: 'fx-skull', x: q.x, y: q.y + 8 }, rewind ? '☠ ⟲' : '☠'); layer.append(sk); animate(1200, u => sk.setAttribute('opacity', String(1 - u)), () => sk.remove()); } }
+    if (kind === 'freeze') { pulse('datum'); floatText('datum', rewind ? 'unfrozen ⟲' : 'frozen on the old keys', 'no', 0); }
+    if (kind === 'convict') { pulse('token', true); floatText('token', rewind ? 'tombstone ⟲' : 'convicted · terminal', 'no', 0); }
+    if (kind === 'close') { pulse('token', true); pulse('registry'); floatText('token', rewind ? 'token back ⟲' : 'burned · parked with the hash', 'no', 0); }
+    if (kind === 'reopen') { pulse('token'); pulse('registry'); floatText('token', rewind ? 'parked again ⟲' : 'revived · born again', 'ok', 0); }
+    if (kind === 'topUp') pulse('pile:pool');
+    if (kind === 'rotate' && d.op === 'deposit' && pre && pre.frozen) floatText('datum', rewind ? 'frozen ⟲' : 'unfrozen: the freeze bond is back', 'ok', 300);
+  }, rewind ? 0 : after);
+}
+function playEdges(edges) {
+  cancelFx();
+  if (!edges.length) return;
+  const per = edges.length === 1 ? 800 : Math.max(220, Math.floor(1400 / edges.length));
+  edges.forEach((e, i) => setTimeout(() => { if (app.cursor !== edges[edges.length - 1].node) return; edgeFx(node(e.node), e.dir, per); }, i * per));
+}
+
+/* ---- rendering ---------------------------------------------------------------- */
+function render() {
+  renderHeader(); renderStoryBar(); renderTree(); renderPlaybar(); renderWhere(); renderPots(); renderNarration(); renderNext(); drawScene(); renderLedger();
+  renderCast(); renderEvidence(); renderCheckpoint(); renderChart(); renderMoney();
+}
+function renderHeader() {
+  const sess = cur();
+  $('slot-now').textContent = fmt(sess.now);
+  $('slot-input').value = fmt(sess.now);
+  $('slot-plusw').textContent = '+W (' + sess.params.W + ')';
+}
+function renderStoryBar() {
+  const sel = $('story-picker');
+  if (!sel.options.length) {
+    sel.append(h('option', { value: '' }, 'free play — pick a story to play its tree'));
+    for (const sc of SCENARIOS) sel.append(h('option', { value: String(sc.story) }, sc.story + '. ' + sc.title + (sc.forks && sc.forks.length ? ' ⋔' : '')));
+    for (const id of Object.keys(CHALLENGES)) sel.append(h('option', { value: 'c:' + id }, '★ Challenge: ' + CHALLENGES[id].title));
+  }
+  sel.value = app.story ? String(app.story.story) : (app.challenge ? 'c:' + Object.keys(CHALLENGES).find(k => CHALLENGES[k] === app.challenge) : '');
+  $('story-goal').textContent = app.story ? app.story.goal : 'Free play: every accepted move is a node of the tree below; a second move from the same node opens a branch.';
+}
+/* the tree: columns by depth, the branch taken by default keeps its row, every
+   other branch takes the next free row; click a node to jump there */
+function treeLayout() {
+  const col = {}, row = {};
+  let rows = 0;
+  const place = (id, r) => {
+    row[id] = r;
+    const n = node(id);
+    const kids = n.children.slice();
+    const first = n.last !== null ? n.last : kids[0];
+    kids.sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
+    kids.forEach((c, i) => { col[c] = col[id] + 1; if (i === 0) place(c, r); else { rows++; place(c, rows); } });
+  };
+  col[0] = 0; place(0, 0);
+  return { col, row, rows: rows + 1, cols: Math.max(...Object.values(col)) + 1 };
+}
+function renderTree() {
+  const svg = $('tree');
+  const { col, row, rows, cols } = treeLayout();
+  const dx = 74, dy = 44, x0 = 36, y0 = 22;
+  const W = x0 * 2 + (cols - 1) * dx, H = y0 * 2 + (rows - 1) * dy + 22;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const X = id => x0 + col[id] * dx, Y = id => y0 + row[id] * dy;
+  const onPath = new Set(currentPath());
+  const parts = [];
+  for (const n of app.nodes) {
+    if (n.parent === null) continue;
+    const px = X(n.parent), py = Y(n.parent), x = X(n.id), y = Y(n.id);
+    const d = py === y ? `M ${px} ${py} L ${x} ${y}` : `M ${px} ${py} L ${px + dx * .45} ${py} Q ${px + dx * .6} ${py} ${px + dx * .6} ${py + (y - py) * .35} L ${px + dx * .6} ${y - 8} Q ${px + dx * .6} ${y} ${px + dx * .75} ${y} L ${x} ${y}`;
+    parts.push(s('path', { class: 'edge' + (onPath.has(n.id) && onPath.has(n.parent) ? ' taken' : ''), d }));
+  }
+  for (const n of app.nodes) {
+    const cls = ['node', n.record ? (n.record.ok ? 'ok' : 'no') : n.kind, n.id === app.cursor ? 'here' : ''].join(' ');
+    const g = s('g', { class: cls, dataset: { node: n.id }, transform: `translate(${X(n.id)},${Y(n.id)})`, role: 'button', tabindex: 0, onclick: () => goTo(n.id) });
+    g.append(s('title', {}, (n.id === app.punch ? '★ the punchline of this story\n' : '') + (n.who ? n.who + ' — ' + nodeVerb(n) + '\n' : '') + (n.say || '')));
+    g.append(s('circle', { r: 8 }));
+    g.append(s('text', { y: 3.5 }, n.id === 0 ? '·' : (n.record ? (n.record.ok ? '✓' : '✗') : (n.kind === 'time' ? '⏱' : '≡'))));
+    g.append(s('text', { class: 'who', y: 20 }, n.id === 0 ? 'start' : shortWho(n.who)));
+    if (n.id !== 0) g.append(s('text', { class: 'verb', y: 31 }, nodeVerb(n)));
+    if (n.children.length > 1) g.append(s('text', { class: 'fork', x: 12, y: -8 }, '⋔'));
+    if (n.id === app.punch) { g.classList.add('punch'); g.append(s('text', { class: 'star', x: -14, y: -8 }, '★')); }
+    parts.push(g);
+  }
+  clear(svg).append(...parts);
+}
+const INTEREST = {
+  alice: 'holds the keys, current and next; wants her checkpoint live and her money hers',
+  hal: 'holds a watcher on her witnesses; wants the premium for landing her rotations, or the freeze bond when the pool cannot pay',
+  treasury: 'holds a payment to authorize; wants to pay only against keys that are current',
+  cora: 'holds two of Alice’s rotations at one sequence, both receipted; wants the conviction bond',
+  mallory: 'holds keys she should not — the current ones, sometimes the next; wants Alice’s bonds',
+  anyone: 'holds money and Alice’s public inception; wants her served — registers, revives, tops up — gaining nothing but her presence',
+};
+// what a move needs, read off the Lean: the current keys' signature (poison, close), the new keys'
+// signature on a named refund address, or only public KERI data / nothing
+function needsOf(action) {
+  const k = actionKind(action), d = dataOf(action);
+  if (actorOf(action) === 'currentQuorum') return { cls: 'keys', text: 'the current keys sign' };
+  if (k === 'close') return { cls: 'keys', text: 'public rotation · the new keys sign the close, its payee and the address' };
+  if (k === 'rotate' && (d.op !== 'keep' || (d["refund'"] !== null && d["refund'"] !== undefined))) return { cls: 'keys', text: 'public rotation · the new keys sign the intent' };
+  if (k === 'rotate' || k === 'freeze' || k === 'reopen') return { cls: 'public', text: k === 'reopen' ? 'a public rotation from the parked key state, later than it' : 'a public witnessed rotation' };
+  if (k === 'convict') return { cls: 'public', text: 'a public duplicity proof' };
+  return { cls: 'public', text: 'no signature' };
+}
+// what happened on the edge into a node, in one or two words: the action (with
+// the bond option of a rotation), the slot time moved to, the evidence presented
+const EV_VERB = { rotationTo: 'rotation', intentAuthorized: 'intent', quorum: 'quorum', duplicityAt: 'duplicity' };
+function nodeVerb(n) {
+  if (n.record) {
+    const a = n.record.action, k = actionKind(a), d = dataOf(a);
+    const v = k === 'rotate' ? (d.op === 'keep' ? 'rotate' : 'rotate·' + d.op) : k === 'topUp' ? 'top-up' : (k || 'unknown tx');
+    return v;
+  }
+  if (n.kind === 'time') return 'slot ' + n.session.now;
+  if (n.evRow) { const k = Object.keys(n.evRow)[0]; return (n.removed ? '− ' : '') + (EV_VERB[k] || k); }
+  if (n.step && n.step.seed !== undefined) return 'seed';
+  if (n.step && n.step.params) return 'params';
+  return n.kind === 'origin' ? 'start' : 'note';
+}
+const shortWho = w => ({ 'A sponsor': 'sponsor', 'A rival hunter': 'rival', 'The treasury': 'treasury', Anyone: 'anyone', Time: 'time', You: 'you' }[w] || (w || '').split(' ')[0].slice(0, 8));
+function renderPlaybar() {
+  const path = currentPath();
+  const idx = path.indexOf(app.cursor);
+  const here = node(app.cursor);
+  $('hist-first').disabled = app.cursor === 0;
+  $('hist-prev').disabled = here.parent === null;
+  $('hist-next').disabled = nextOf(app.cursor) === null;
+  $('hist-last').disabled = nextOf(app.cursor) === null;
+  const scrub = $('scrub'); scrub.max = String(path.length - 1); scrub.value = String(idx);
+  $('pos').textContent = idx + ' / ' + (path.length - 1);
+  $('btn-play').classList.toggle('on', !!app.playing);
+  $('btn-play').textContent = app.playing ? '❚❚' : '▶';
+  const coda = $('btn-coda'); if (coda) coda.classList.toggle('on', app.punch !== null && app.cursor === app.punch && nextOf(app.cursor) !== null && !app.playing);
+}
+let toastTimer = null;
+function toast(text, ms) {
+  const el = $('toast'); if (!el || !text) return;
+  el.textContent = text; el.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms || 2600);
+}
+// the one-line recap of an accepted step: who got what, the state, the treasury's answer
+function hitLine(n) {
+  const r = n.record; if (!r || !r.ok) return '';
+  const bits = [];
+  const pay = (q, tag) => { if (!q) return; const parts = []; if (q.dreg) parts.push('D ' + fmt(q.dreg)); if (q.b) parts.push('B ' + fmt(q.b)); if (q.pool) parts.push('pool ' + fmt(q.pool)); if (parts.length) bits.push(nameOf(q.addr) + ' +' + parts.join(' +') + (tag ? ' ' + tag : '')); };
+  pay(r.flow.hunter, ''); pay(r.flow.refund, '(home)'); pay(r.flow.convictor, '');
+  const sess = n.session, hd = held(sess.params, sess.state), v = consumable(sess.params, sess.now, sess.state);
+  bits.push(STATE_WORDS[stateWord(sess.params, sess.state)] + ' · D ' + fmt(hd.dreg) + ' · B ' + fmt(hd.b) + ' · pool ' + fmt(hd.pool));
+  bits.push(v.ok ? 'treasury pays' : 'treasury refuses');
+  return bits.join(' · ');
+}
+function followScene() {
+  try {
+    const drawer = $('scene-drawer'), sc = $('scene');
+    if (!drawer || !drawer.open || !sc.getBoundingClientRect || !sc.scrollIntoView) return;
+    const r = sc.getBoundingClientRect();
+    if (r.top < 40 || r.bottom > window.innerHeight) sc.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } catch (e) { /* the minimal DOM has no viewport */ }
+}
+function renderHud() {
+  const hud = $('hud'), w = $('where'); if (!hud || !w) return;
+  clear(hud);
+  try { for (const c of w.children) hud.append(c.cloneNode(true)); } catch (e) { /* no cloneNode under the minimal DOM */ }
+}
+function renderWhere() {
+  const sess = cur(), p = sess.params, st = sess.state, l = liveOf(st);
+  const word = stateWord(p, st);
+  const v = consumable(p, sess.now, st);
+  const hd = held(p, st);
+  const w = clear($('where'));
+  w.append(h('span', { class: 'state' + (word === 'poisoned' ? ' poisoned' : '') }, STATE_WORDS[word]));
+  if (l) w.append(h('span', { class: 'tiny' }, `keys of epoch ${l.epoch} · sn ${l.sn} · refund → ${nameOf(l.refundTo)}`));
+  const hs = hashOf(st);
+  if (hs) w.append(h('span', { class: 'tiny' }, `the leaf holds the hash of key state epoch ${hs.epoch} · sn ${hs.sn}`));
+  w.append(h('span', {}, h('span', { class: 'lamp ' + (v.ok ? 'ok' : 'no') }), v.ok ? 'consumable' : VERDICT_WORDS[v.verdict].replace(/^Not consumable( yet)?: /, 'not consumable: ')));
+  w.append(h('span', { class: 'sum dreg' }, `D ${hd.dreg}/${p.D}`), h('span', { class: 'sum b' }, `B ${hd.b}/${p.B}`), h('span', { class: 'sum pool' }, `pool ${hd.pool}`));
+  w.append(h('span', { class: 'step' }, `slot ${sess.now} · step ${pathTo(app.cursor).length - 1}`));
+  renderHud();
+  renderChallenge();
+}
+function renderPots() {
+  const p = cur().params;
+  const dl = clear($('pots-dl'));
+  const row = (t, d) => dl.append(h('dt', {}, t), h('dd', {}, d));
+  row('D · conviction bond (' + p.D + ')', 'Alice’s stake against duplicity: two receipted rotations at one sequence. Whoever proves it takes D; the rest goes back to her refund address.');
+  row('B · freeze bond (' + p.B + ')', 'the bounty for freezing a checkpoint whose pool can no longer pay for its own rotation: a hunter presents the later rotation, takes B, and the checkpoint stays on stale keys until the owner deposits again.');
+  row('pool', 'the premium fund: whoever lands a rotation is paid P (' + p.P + ') from it. Anyone can top it up; it never mixes with D or B.');
+  row('W · juvenility (' + p.W + ' slots)', 'a freshly bonded checkpoint — registered, or revived from the registry — is not consumable for W slots, so a stolen registration cannot be spent at once. A deposit (the unfreeze) does not restart it. The treasury alone reads W; no transition does. The registry’s grace window, if any, is not this W.');
+  row('who set the numbers', 'the deployment’s parameters, not the machine; the stories play D ' + p.D + ', B ' + p.B + ', P ' + p.P + ', W ' + p.W + '.');
+  row('the states', 'Three registry states, one UTxO. Active is the room with the UTxO: Live (consumable once adult, the freeze bond held, no poison), Poisoned (the current keys are compromised; a rotation clears it) and Frozen (B taken, stale keys; a deposit restores), each with a door back. Parked is outside the chain: no UTxO, the leaf holds the hash of the last checkpoint — its key state — and only a witnessed rotation from exactly that key state, with fresh bonds, brings it back. Convicted is sealed: no KERI event un-duplicates an identifier.');
+}
+function renderNarration() {
+  const n = clear($('narration'));
+  const t = node(app.cursor);
+  if (t.say) n.append(h('div', { class: 'say' }, t.who ? h('div', { class: 'who' }, t.who + (t.branch ? ' · ⋔ ' + t.branch.title : '')) : null, h('div', {}, t.say)));
+  if (t.record) {
+    const r = t.record;
+    const box = h('div', { class: 'result ' + (r.ok ? 'ok' : 'no') });
+    box.append(h('b', {}, describeAction(r.action)), ' — ', r.ok ? 'accepted' : ('refused: ' + r.reason));
+    if (!r.ok) box.append(h('div', {}, explain(r, t.session)));
+    if (r.ok) box.append(h('div', {}, describeFlow(r.flow)));
+    const ex = Object.keys(r.lamps).filter(id => r.lamps[id].exhibited);
+    if (ex.length) box.append(h('div', { class: 'exh' }, 'shows: ', ex.map(id => h('span', { class: 'tchip' }, id))));
+    n.append(box);
+  }
+}
+/* what can happen next: the continuations already in the tree, then every
+   move the machine would accept from here, by actor; the refused ones with
+   their reasons, folded */
+function renderNext() {
+  const sess = cur();
+  const here = node(app.cursor);
+  const br = clear($('branches'));
+  const nextId = nextOf(app.cursor);
+  for (const cid of here.children) {
+    const c = node(cid);
+    const b = h('button', { type: 'button', class: 'branch' + (cid === nextId ? ' on' : ''), dataset: { branch: cid }, title: 'go there', onclick: () => goTo(cid) },
+      h('span', { class: 'go' }, cid === nextId ? '› next' : (c.branch ? '⋔ try' : '⋔')),
+      c.branch ? h('span', { class: 'fork-t' }, c.branch.title) : null,
+      c.who ? h('span', { class: 'who' }, c.who) : null,
+      h('span', { class: 'txt' }, c.say || ''),
+      c.record ? h('span', { class: 'res ' + (c.record.ok ? 'ok' : 'no') }, c.record.ok ? '✓ accepted' : '✗ ' + c.record.reason) : null);
+    br.append(b);
+  }
+  if (!here.children.length) br.append(h('div', { class: 'tiny' }, app.story ? 'The story ends here on this branch. Any move below opens a new one.' : 'Nothing has happened after this step yet.'));
+  const moves = clear($('next-moves')), refused = clear($('refused-list'));
+  let nRefused = 0, nEnabled = 0;
+  const terminal = stateKind(sess.state) === 'convicted';
+  // story mode: one actor and one move glow — the story's next step; the other cards fold
+  const nn = app.story && nextId !== null ? node(nextId) : null;
+  const spotActor = nn && (nn.record || nn.evRow) ? actorOfNode(nn) : null;
+  const spotKind = nn && nn.record ? nn.record.kind : null;
+  const spotOp = nn && nn.record && nn.record.action && nn.record.action.rotate ? nn.record.action.rotate.op : null;
+  const spotEv = nn && nn.evRow ? canon(nn.evRow) : null;
+  const refusedRows = [];
+  let folded = 0;
+  for (const id of ACTOR_ORDER) {
+    const c = CAST[id];
+    const off = offersFor(id, sess);
+    const isSpot = spotActor === id;
+    const fold = !!spotActor && !isSpot && !app.unfold;
+    if (fold) folded++;
+    const card = h('div', { class: 'mover' + (isSpot ? ' spot' : '') + (fold ? ' folded' : '') });
+    card.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, title: c.blurb, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
+    card.append(h('div', { class: 'interest' }, INTEREST[id]));
+    const acts = h('div', { class: 'acts' });
+    for (const o of off.chain) {
+      const d = dryRun(sess, o.action);
+      const needs = needsOf(o.action);
+      const glow = isSpot && d.ok && o.kind === spotKind && (spotOp === null || (o.action.rotate && o.action.rotate.op === spotOp));
+      const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : '') + (glow ? ' glow' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
+        title: (d.ok ? 'the machine would accept this now' : d.why) + ' · needs: ' + needs.text,
+        onclick: () => { app.actor = id; app.pending = { offer: o, action: JSON.parse(JSON.stringify(o.action)) }; renderNext(); } }, o.label, h('span', { class: 'needs ' + needs.cls }, needs.text));
+      if (d.ok) { if (!acts.children.length) acts.append(h('span', { class: 'inv-lbl' }, 'moves · each is a transaction')); acts.append(btn); nEnabled++; } else { refusedRows.push({ who: c.name, label: o.label, why: d.why }); nRefused++; }
+    }
+    let invLabelled = false;
+    for (const k of off.keri) {
+      const have = envHas(sess.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
+      if (have || terminal) continue;
+      if (!invLabelled) { acts.append(h('span', { class: 'inv-lbl' }, 'inventory · off-chain, not a transaction: what ' + c.name + ' can bring')); invLabelled = true; }
+      const glowEv = isSpot && spotEv !== null && canon(k.row) === spotEv;
+      acts.append(h('button', { type: 'button', class: 'ev-quick' + (glowEv ? ' glow' : ''), dataset: { actor: id }, title: k.hint,
+        onclick: () => { app.actor = id; pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[id] || id, say: k.label + '.', kind: 'evidence', evRow: k.row }); } }, '+ ' + k.label));
+    }
+    if (id === 'treasury') acts.append(h('span', { class: 'none' }, 'reads, never spends: its verdict is the lamp above'));
+    else if (!acts.children.length) acts.append(h('span', { class: 'none' }, 'nothing the machine accepts from here'));
+    card.append(acts);
+    moves.append(card);
+  }
+  const time = h('div', { class: 'mover' }, h('div', { class: 'lbl' }, 'Time'), h('div', { class: 'acts' },
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + 1) }, '+1 slot'),
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(sess.now + sess.params.W) }, `+W (${sess.params.W}) slots`)));
+  moves.append(time);
+  if (folded) moves.append(h('button', { type: 'button', class: 'ghost', id: 'unfold', onclick: () => { app.unfold = true; renderNext(); } }, folded + ' other ' + (folded > 1 ? 'people' : 'person') + ' could also move · show all'));
+  // the refused moves, grouped by reason: one line per reason, who and what after it
+  const groups = new Map();
+  for (const r of refusedRows) { if (!groups.has(r.why)) groups.set(r.why, []); groups.get(r.why).push(r.who + ': ' + r.label); }
+  for (const [why, whos] of groups) refused.append(h('div', { class: 'refused-row' }, h('span', { class: 'why' }, why), h('span', { class: 'who' }, whos.join(' · '))));
+  $('refused-summary').textContent = nRefused ? `${nRefused} move${nRefused > 1 ? 's' : ''} the machine refuses now, for ${groups.size} reason${groups.size > 1 ? 's' : ''} — open to read why` : 'nothing is refused now';
+  $('refused-moves').hidden = !nRefused;
+  renderActForm();
+}
+
+// the states as rooms, not a path: Live in the middle, three side-rooms you can leave, a grave with a way out, a sealed grave
+const HUB = { absent: [56, 116], live: [236, 116], poisoned: [236, 30], frozen: [236, 200], parked: [426, 116], convicted: [576, 116] };
+const HUB_EDGES = [['absent', 'live', 'register'], ['live', 'poisoned', 'poison'], ['poisoned', 'live', 'rotate'], ['live', 'frozen', 'freeze'], ['frozen', 'live', 'deposit'],
+  ['live', 'parked', 'leave (the reap)'], ['parked', 'live', 'revive'], ['live', 'convicted', 'convict'], ['parked', 'convicted', 'convict']];
+function renderHub(word) {
+  const svg = $('hub'); if (!svg) return;
+  clear(svg); svg.setAttribute('viewBox', '0 0 640 236');
+  const W = 104, Hh = 28;
+  const pt = k => ({ x: HUB[k][0], y: HUB[k][1] });
+  for (const [a, b, lbl] of HUB_EDGES) {
+    const A = pt(a), B = pt(b), back = HUB_EDGES.some(([x, y]) => x === b && y === a);
+    const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, off = back ? 7 : 0;
+    // where the line leaves a room: the rectangle's boundary along the line
+    const k = Math.min((W / 2 + 2) / Math.max(Math.abs(dx), 1e-9), (Hh / 2 + 2) / Math.max(Math.abs(dy), 1e-9));
+    const ax = A.x + dx * k + nx * off, ay = A.y + dy * k + ny * off;
+    const bx = B.x - dx * k + nx * off, by = B.y - dy * k + ny * off;
+    svg.append(s('path', { class: 'edge', d: `M ${ax} ${ay} L ${bx} ${by}`, 'marker-end': 'url(#hub-arrow)' }));
+    svg.append(s('text', { class: 'elbl', x: (ax + bx) / 2 + nx * 8, y: (ay + by) / 2 + ny * 8 + 3 }, lbl));
+  }
+  const defs = s('defs', {}); const m = s('marker', { id: 'hub-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
+  m.append(s('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'var(--muted)' })); defs.append(m); svg.append(defs);
+  for (const k of Object.keys(HUB)) {
+    const { x, y } = pt(k), on = k === word;
+    svg.append(s('rect', { class: 'room' + (on ? ' on' : '') + (k === 'parked' ? ' grave' : '') + (k === 'convicted' ? ' sealed' : ''), x: x - W / 2, y: y - Hh / 2, width: W, height: Hh, rx: 9, dataset: { state: k } }));
+    svg.append(s('text', { class: on ? 'on' : '', x, y: y + 4 }, STATE_WORDS[k] + (k === 'convicted' ? ' · sealed' : k === 'parked' ? ' · no UTxO' : '')));
+  }
+  svg.append(s('text', { class: 'hub-hint', x: 10, y: 228 }, 'Live, Poisoned, Frozen: the active room (one UTxO), each with a door back; leaving is possible from any of them · Parked: no UTxO, the leaf holds the hash; a rotation from that key state revives · Convicted: sealed.'));
+}
+function renderCheckpoint() {
+  const sess = cur(), p = sess.params, l = liveOf(sess.state);
+  const word = stateWord(p, sess.state);
+  renderHub(word);
+  $('state-name').textContent = STATE_WORDS[word];
+  const dat = clear($('datum'));
+  const cell = (k, v) => h('div', {}, h('div', { class: 'lbl' }, k), h('div', { class: 'v' }, v));
+  if (l) dat.append(cell('sequence', l.sn), cell('epoch', l.epoch), cell('poisoned', l.poisoned ? 'yes' : 'no'), cell('born at', l.bornAt), cell('refund to', nameOf(l.refundTo) + ' (' + l.refundTo + ')'));
+  else if (stateKind(sess.state) === 'convicted') dat.append(cell('the mark', 'convicted, forever'), cell('held', 'nothing'));
+  else if (stateKind(sess.state) === 'parked') { const c = sess.state.parked.h; dat.append(cell('the leaf holds', 'the hash of the last checkpoint'), cell('key state epoch', c.epoch), cell('sn', c.sn), cell('revives by', 'a witnessed rotation from epoch ' + c.epoch + ', sn ' + c.sn + ', to a later sn')); }
+  else dat.append(cell('datum', 'none'));
+  const bars = clear($('bars'));
+  const bar = (cls, label, v, full) => bars.append(h('div', { class: 'bar ' + cls },
+    h('span', {}, h('span', { class: 'sw ' + cls }), label),
+    h('div', { class: 'track' }, h('div', { class: 'fill', style: 'width:' + (full ? Math.min(100, 100 * v / full) : (v ? 100 : 0)) + '%' })),
+    h('span', { class: 'n' }, fmt(v) + (full ? ' / ' + full : ''))));
+  const hd = held(p, sess.state);
+  bar('dreg', 'conviction bond', hd.dreg, p.D); bar('b', 'freeze bond', hd.b, p.B); bar('pool', 'pool', hd.pool, 0);
+  const v = consumable(p, sess.now, sess.state);
+  const vd = $('verdict'); vd.className = v.ok ? 'ok' : 'no';
+  vd.textContent = 'The treasury reads: ' + VERDICT_WORDS[v.verdict] + (v.verdict === 'juvenile' && l ? ` Consumable from slot ${l.bornAt + p.W}.` : '');
+  const cj = clear($('conjuncts'));
+  const names = { present: 'present (a UTxO)', b: 'B held (not frozen)', unpoisoned: 'not poisoned', mature: 'born ≥ W slots ago' };
+  for (const k of Object.keys(v.conjuncts)) cj.append(h('span', { class: v.conjuncts[k] ? 'yes' : 'nope' }, (v.conjuncts[k] ? '✓ ' : '✗ ') + names[k]));
+}
+function renderCast() {
+  const sess = cur();
+  const act = clear($('actors'));
+  for (const id of ACTOR_ORDER) {
+    const c = CAST[id];
+    act.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
+  }
+  $('actor-blurb').textContent = CAST[app.actor].blurb + (CAST[app.actor].addr ? ` Address ${CAST[app.actor].addr}.` : '');
+  const off = offersFor(app.actor, sess);
+  const ka = clear($('keri-acts'));
+  $('keri-lbl').hidden = !off.keri.length;
+  for (const k of off.keri) {
+    const have = envHas(sess.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
+    ka.append(h('button', { type: 'button', class: 'ev-quick', title: k.hint, disabled: have || stateKind(sess.state) === 'convicted',
+      onclick: () => pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[app.actor] || app.actor, say: k.label + '.', kind: 'evidence', evRow: k.row }) }, (have ? '✓ ' : '+ ') + k.label));
+  }
+}
+const FIELDS = {
+  register: [['refund', 'refund address'], ['pool0', 'initial pool']],
+  rotate: [["sn'", 'to sequence'], ['op', 'bond option'], ['payee', 'payee address'], ["refund'", 'new refund address (blank = keep)']],
+  freeze: [["sn'", 'presenting sequence'], ['payee', 'payee address']],
+  topUp: [['x', 'amount']], convict: [['payee', 'payee address']], poison: [],
+  close: [["sn'", 'to sequence'], ['payee', 'payee address (the premium; must be the one the new keys signed)'], ["refund'", 'new refund address (blank = keep)']],
+  reopen: [["sn'", 'to sequence (later than the parked one)'], ['refund', 'refund address'], ['pool0', 'first pool']],
+};
+function renderActForm() {
+  const form = $('act-form');
+  form.hidden = !app.pending;
+  if (!app.pending) return;
+  const sess = cur(), kind = app.pending.offer.kind, a = app.pending.action;
+  const d = typeof a === 'object' ? a[kind] : {};
+  const fields = clear($('act-fields'));
+  for (const [f, label] of FIELDS[kind]) {
+    let input;
+    if (f === 'op') input = h('select', { onchange: e => { d.op = e.target.value; renderActForm(); } }, BOND_OPS.map(op => h('option', { value: op, selected: d.op === op }, op)));
+    else input = h('input', { type: 'number', min: 0, step: 1, value: d[f] === null || d[f] === undefined ? '' : String(d[f]),
+      onchange: e => { const v = e.target.value.trim(); const n = parseNat(v); d[f] = v === '' ? (f === "refund'" ? null : '') : (n === null ? v : n); renderActForm(); } });
+    fields.append(h('label', {}, label, input));
+  }
+  const dr = dryRun(sess, a);
+  const why = $('act-why'); why.className = dr.ok ? 'ok' : 'no';
+  why.textContent = dr.ok ? ('Accepted now: ' + describeFlow(dr.res.flow) + '.') : dr.why;
+  $('act-submit').disabled = !dr.ok;
+}
+function submitPending() {
+  if (!app.pending) return;
+  const sess = cur();
+  const out = attempt(sess, app.pending.action, sess.now);
+  const action = app.pending.action;
+  app.pending = null;
+  pushNode({ session: out.session, record: out.record, who: WHO[app.actor] || app.actor, say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free' });
+}
+const EV_LABELS = { rotationTo: ['epoch', 'from sn', "to sn'"], intentAuthorized: ['epoch', null, 'refund address (blank = unchanged)'], quorum: ['epoch', null, null], duplicityAt: ['epoch', 'sn', null] };
+function renderEvidence() {
+  const sess = cur();
+  const kind = $('ev-kind').value;
+  const labels = EV_LABELS[kind];
+  [['ev-la', 'ev-a'], ['ev-lb', 'ev-b'], ['ev-lc', 'ev-c']].forEach(([lid], i) => { const lab = $(lid); lab.hidden = !labels[i]; if (labels[i]) lab.firstChild.textContent = labels[i] + ' '; });
+  $('ev-li').hidden = kind !== 'intentAuthorized';
+  $('ev-lp').hidden = kind !== 'intentAuthorized' || $('ev-intent').value !== 'close';
+  const rows = clear($('ev-rows'));
+  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, intentAuthorized: r => `keys of epoch ${r[0]} signed the intent «${intentWord(r[1])}»${r[2] === null ? ', refund address unchanged' : ', refund address ' + r[2] + ' (' + nameOf(r[2]) + ')'}`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `duplicity at epoch ${r[0]}, sn ${r[1]}` };
+  let n = 0;
+  for (const k of EV_KINDS) for (const r of sess.env[k]) {
+    n++;
+    rows.append(h('div', { class: 'ev-row' }, h('span', { class: 'k' }, k), h('span', {}, words[k](r)),
+      h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => pushNode({ session: removeEvidence(sess, { [k]: r }), record: null, who: 'You', say: 'Evidence removed: ' + words[k](r) + '.', kind: 'evidence', evRow: { [k]: r }, removed: true }) }, '✕')));
+  }
+  if (!n) rows.append(h('div', { class: 'empty' }, 'No evidence presented. Rotations, quorum signatures and duplicity proofs are rows here; the machine is enabled exactly when its row is present.'));
+}
+function addEvidenceFromForm() {
+  const kind = $('ev-kind').value;
+  let args;
+  if (kind === 'intentAuthorized') {
+    const e = parseNat($('ev-a').value); const r = $('ev-c').value.trim() === '' ? null : parseNat($('ev-c').value);
+    if (e === null || (r === null && $('ev-c').value.trim() !== '')) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
+    let intent = $('ev-intent').value;
+    if (intent === 'close') { const payee = parseNat($('ev-payee').value); if (payee === null) { $('slot-msg').textContent = 'the payee must be a whole number from 0 to 2^53 − 1'; return; } intent = closeIntent(payee); }
+    args = [e, intent, r];
+  } else {
+    const vals = ['ev-a', 'ev-b', 'ev-c'].map(id => parseNat($(id).value));
+    const n = EV_LABELS[kind].filter(Boolean).length;
+    args = vals.slice(0, n);
+    if (!args.every(isNat)) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
+  }
+  const sess = cur();
+  pushNode({ session: addEvidence(sess, { [kind]: args }), record: null, who: 'You', say: `Evidence added: ${kind} ${JSON.stringify(args)}.`, kind: 'evidence', evRow: { [kind]: args } });
+}
+function moveSlot(target) {
+  const sess = cur();
+  const mv = setSlot(sess, target);
+  if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-regression' ? `slot ${target} is before ${sess.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(sess.now); return; }
+  $('slot-msg').textContent = '';
+  if (target === sess.now) return;
+  pushNode({ session: mv.session, record: null, who: 'Time', say: `Slot ${target}.`, kind: 'time' });
+}
+
+/* ---- the chart: three lanes over the current branch --------------------------- */
+function renderChart() {
+  const canvas = $('value-chart');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(320, canvas.clientWidth || 640), H = 240;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement);
+  const col = v => (css.getPropertyValue(v) || '').trim() || '#888';
+  ctx.clearRect(0, 0, W, H);
+  const path = currentPath(), tl = path.map(node), n = tl.length, cursorI = path.indexOf(app.cursor);
+  const left = 46, right = 10, top = 8, laneGap = 8;
+  const laneH = (H - top - 22 - 2 * laneGap) / 3;
+  const x = i => left + (n > 1 ? (W - left - right) * i / (n - 1) : (W - left - right) / 2);
+  const lanes = [['dreg', '--dreg', 'D'], ['b', '--b', 'B'], ['pool', '--pool', 'pool']];
+  ctx.font = '10px ' + col('--mono');
+  lanes.forEach(([key, cv, label], li) => {
+    const y0 = top + li * (laneH + laneGap), y1 = y0 + laneH;
+    const vals = tl.map(t => held(t.session.params, t.session.state)[key]);
+    const ins = tl.map(t => t.record && t.record.ok ? t.record.flow[key + 'In'] : 0);
+    const outs = tl.map(t => { if (!(t.record && t.record.ok)) return 0; const f = t.record.flow; return paid(f.refund)[key] + paid(f.hunter)[key] + paid(f.convictor)[key]; });
+    const max = Math.max(1, ...vals, ...ins, ...outs);
+    const y = v => y1 - (laneH - 12) * v / max;
+    ctx.strokeStyle = col('--line-2'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, y1 + .5); ctx.lineTo(W - right, y1 + .5); ctx.stroke();
+    ctx.fillStyle = col('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(max), left - 6, y(max)); ctx.fillText('0', left - 6, y1);
+    ctx.textAlign = 'left'; ctx.fillStyle = col(cv); ctx.fillText(label, left + 4, y0 + 6);
+    const c = col(cv);
+    ctx.beginPath(); ctx.moveTo(x(0), y1);
+    for (let i = 0; i < n; i++) { ctx.lineTo(x(i), y(vals[i])); if (i + 1 < n) ctx.lineTo(x(i + 1), y(vals[i])); }
+    ctx.lineTo(x(n - 1), y1); ctx.closePath();
+    ctx.globalAlpha = .18; ctx.fillStyle = c; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.strokeStyle = c; ctx.lineWidth = 2;
+    for (let i = 0; i < n; i++) { if (i === 0) ctx.moveTo(x(i), y(vals[i])); else ctx.lineTo(x(i), y(vals[i - 1])); ctx.lineTo(x(i), y(vals[i])); }
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    for (let i = 0; i < n; i++) {
+      if (ins[i]) { arrow(ctx, x(i), y1 - 2, y(ins[i]) - 2, col('--ok')); ctx.fillStyle = col('--ok'); ctx.fillText('+' + ins[i], x(i), y0 + 6); }
+      if (outs[i]) { arrow(ctx, x(i), y(vals[i - 1] !== undefined ? vals[i - 1] : 0) + 2, y1 - 2, col('--warn')); ctx.fillStyle = col('--warn'); ctx.fillText('−' + outs[i], x(i), y0 + 6 + (ins[i] ? 10 : 0)); }
+    }
+    ctx.strokeStyle = col('--accent'); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(x(cursorI) + .5, y0); ctx.lineTo(x(cursorI) + .5, y1); ctx.stroke(); ctx.setLineDash([]);
+  });
+  ctx.fillStyle = col('--muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const every = Math.max(1, Math.ceil(n / Math.max(4, Math.floor((W - left - right) / 44))));
+  for (let i = 0; i < n; i += every) ctx.fillText('s' + tl[i].session.now, x(i), H - 16);
+  ctx.textAlign = 'left'; ctx.fillText('step →', left, H - 6);
+}
+function arrow(ctx, x, yFrom, yTo, color) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, yFrom); ctx.lineTo(x, yTo); ctx.stroke();
+  const dir = yTo < yFrom ? -1 : 1;
+  ctx.beginPath(); ctx.moveTo(x, yTo); ctx.lineTo(x - 3, yTo - 5 * dir); ctx.lineTo(x + 3, yTo - 5 * dir); ctx.closePath(); ctx.fill();
+}
+
+/* ---- the theorem lamps ----------------------------------------------------- */
+const MUTANTS = {"T1":["M15 reopen stale","M22 close wrong hash"],"T2":["M17 reopen same epoch","M21 close old epoch","M22 close wrong hash"],"T3":["M40 poisonAfter reopen keeps"],"T4":["M3 second poison allowed","M16 reopen wrong key state","M28 close without rotation","M39 thief parks"],"T5":["M1 freeze without short pool","M2 second freeze","M3 second poison allowed","M5 convict without proof","M6 convictParked without proof","M7 convictParked pays","M9 deposit no refill","M10 deposit resets juvenility","M11 deposit brings B always","M12 deposit unsigned","M13 new address unsigned paid","M15 reopen stale","M16 reopen wrong key state","M21 close old epoch","M22 close wrong hash","M23 close payee bypass","M24 close intent weakened","M28 close without rotation","M29 close drops unpaid","M30 rotated ages","M31 premium always","M36 bHeld inverted","M39 thief parks"],"T6":["M2 second freeze","M7 convictParked pays","M8 convict drops freeze bond","M9 deposit no refill","M11 deposit brings B always","M12 deposit unsigned","M13 new address unsigned paid","M14 intentOk any none free","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M23 close payee bypass","M24 close intent weakened","M27 close premium not deducted","M28 close without rotation","M36 bHeld inverted","M38 parked holds dreg","M39 thief parks"],"T8":["M6 convictParked without proof","M7 convictParked pays","M15 reopen stale","M16 reopen wrong key state","M17 reopen same epoch","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M32 leaf parked reads active","M33 leaf convicted reads parked","M34 sysstep reopen without parked leaf","M35 close does not touch leaf"],"T9":["M37 consumableB drops frozen"],"T10":["M10 deposit resets juvenility","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M36 bHeld inverted","M38 parked holds dreg"],"T12":["M5 convict without proof","M6 convictParked without proof","M7 convictParked pays","M8 convict drops freeze bond"],"T14":["M4 topup resets juvenility"],"T15":["M1 freeze without short pool","M36 bHeld inverted"],"T16":["M7 convictParked pays","M14 intentOk any none free","M21 close old epoch","M22 close wrong hash","M23 close payee bypass","M24 close intent weakened","M25 close premium to refund address","M26 close pays old address","M27 close premium not deducted","M28 close without rotation","M31 premium always","M38 parked holds dreg","M39 thief parks"]};
+function renderLedger() {
+  const sess = cur();
+  // the latest transition at or before the cursor: its theorems stay lit while the slot moves
+  let t = null;
+  for (let id = app.cursor; id !== null && !t; id = node(id).parent) if (node(id).record) t = node(id);
+  const counts = heldSoFar(sess);
+  const led = $('ledger');
+  if (!led.children.length) for (const th of THEOREMS) {
+    led.append(h('details', { class: 'thm', dataset: { id: th.id } },
+      h('summary', {}, h('span', { class: 'id' }, th.id), h('span', { class: 'ttl' }, th.title), h('span', { class: 'st' })),
+      h('div', { class: 'body' }, th.plain),
+      h('div', { class: 'lean' }, 'Lean: ' + th.lean.join(', ') + (MUTANTS[th.id] ? ' · killed: ' + MUTANTS[th.id].join(', ') : '')),
+      th.id === 'T7' ? h('div', { class: 'lean t7note' }) : null));
+  }
+  const found = THEOREMS.filter(th => counts[th.id].exhibited > 0).length;
+  if ($('found')) $('found').textContent = `discovered in this run: ${found} of ${THEOREMS.length}`;
+  for (const el of led.children) {
+    const id = el.dataset.id, c = counts[id];
+    const now = t ? t.record.lamps[id] : null;
+    el.classList.toggle('lit', !!(now && now.exhibited));
+    el.classList.toggle('seen', c.exhibited > 0);
+    el.classList.toggle('broken', c.broken > 0);
+    if (id === 'T7') { const note = el.querySelector('.t7note'); if (note) note.textContent = now && now.exhibited ? 'this step: the Lean’s own verdict on this exact state and move agrees' : (t && t.record && t.record.stepped ? 'this step: the Lean was not asked about this exact state and move' : ''); }
+    const st = el.querySelector('.st');
+    st.textContent = c.broken ? `BROKEN ×${c.broken}` : (c.exhibited ? `${c.held}/${c.exhibited}` : '—');
+    el.title = (now && now.exhibited ? 'shown ' + (t.id === app.cursor ? 'now' : 'by the last step') + ' · ' : '') + (c.exhibited ? `held ${c.held} of ${c.exhibited} times shown on this branch` : 'not shown yet on this branch · held') + (id === 'T7' && now && now.cell ? ' · Lean cell: ' + now.cell : '');
+  }
+}
+
+/* ---- money ---------------------------------------------------------------- */
+function renderMoney() {
+  const tl = pathTo(app.cursor).map(node);
+  const sess = cur();
+  const bal = balancesAlong(tl);
+  const brought = { dreg: 0, b: 0, pool: 0 };
+  for (const t of tl) if (t.record && t.record.ok) { const f = t.record.flow; brought.dreg += f.dregIn; brought.b += f.bIn; brought.pool += f.poolIn; }
+  const hd = held(sess.params, sess.state);
+  const table = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'where'), h('th', { class: 'n' }, 'D'), h('th', { class: 'n' }, 'B'), h('th', { class: 'n' }, 'pool'))));
+  const tb = h('tbody', {});
+  tb.append(h('tr', {}, h('td', {}, 'the checkpoint holds'), h('td', { class: 'n' }, hd.dreg), h('td', { class: 'n' }, hd.b), h('td', { class: 'n' }, hd.pool)));
+  for (const addr of Object.keys(bal).sort((a, b) => a - b)) tb.append(h('tr', {}, h('td', {}, nameOf(Number(addr)) + ' received'), h('td', { class: 'n' }, bal[addr].dreg), h('td', { class: 'n' }, bal[addr].b), h('td', { class: 'n' }, bal[addr].pool)));
+  tb.append(h('tr', {}, h('td', {}, 'brought in, total'), h('td', { class: 'n' }, brought.dreg), h('td', { class: 'n' }, brought.b), h('td', { class: 'n' }, brought.pool)));
+  table.append(tb);
+  clear($('balances')).append(table);
+  const fl = clear($('flows'));
+  tl.forEach((t, i) => { if (t.record && t.record.ok && describeFlow(t.record.flow) !== 'no value moved') fl.append(h('div', { class: 'flow' }, h('span', { class: 'i' }, i), h('span', {}, describeAction(t.record.action)), h('span', { class: 'tiny' }, describeFlow(t.record.flow)))); });
+  if (!fl.children.length) fl.append(h('div', { class: 'empty' }, 'No value has moved yet.'));
+}
+
+/* ---- the story player: a scenario becomes a tree ------------------------------ */
+function startFresh(params) {
+  newTree(newSession(params || DEFAULT_PARAMS, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID.');
+  app.story = null; app.punch = null; app.challenge = null; app.pastPunch = false;
+}
+/* ---- a challenge: the same machine, a goal, a win to read ----------------- */
+const CHALLENGES = {
+  steal: { title: 'Steal the 1000', actor: 'mallory',
+    goal: 'You are Mallory. Get D — Alice’s 1000 — into your wallet. Register her to yourself, try to close, freeze, wait out W, land her rotations: her later public rotations are on her witnesses already.',
+    env: [{ rotationTo: [0, 0, 1] }, { rotationTo: [1, 1, 2] }, { rotationTo: [2, 2, 3] }],
+    won: () => { const b = balancesAlong(pathTo(app.cursor).map(node))[CAST.mallory.addr]; return !!(b && b.dreg > 0); },
+    why: 'D leaves the checkpoint only whole: to the refund address at the reap — which the keys the rotation reveals must sign, naming the payee of the premium and the address, so a copied reap gets you the 2 at most, and only if Alice named you — or to a convictor holding a duplicity proof: two rotations Alice’s own keys signed at one sequence. Without her keys there is no road to the 1000. With her current keys the one road is to make her duplicitous — and that seals the identity for good (T6b, T12, T16).' } };
+function playChallenge(id) {
+  const c = CHALLENGES[id]; if (!c) { startFresh(); render(); return; }
+  let sess = newSession(DEFAULT_PARAMS, { corpus: LEAN_CORPUS });
+  for (const r of c.env) sess = addEvidence(sess, r);
+  newTree(sess, 'Nothing on chain for this AID. ★ ' + c.title + ': every move below is yours to try.');
+  app.story = null; app.punch = null; app.challenge = c; app.pastPunch = false; app.actor = c.actor; app.wonShown = false;
+  if ($('pots')) $('pots').open = false;
+  render();
+}
+function renderChallenge() {
+  const box = $('challenge'); if (!box) return;
+  const c = app.challenge; box.hidden = !c; if (!c) return;
+  clear(box);
+  const won = c.won();
+  box.append(h('div', {}, h('b', {}, '★ ' + c.title + ' — '), c.goal, ' ', h('span', { class: 'tiny' }, 'moves so far: ' + pathTo(app.cursor).filter(id => node(id).record).length)));
+  box.append(won ? h('div', { class: 'won' }, 'You have the 1000. Read how — and what it cost.') : h('div', { class: 'tiny' }, 'not yet'));
+  box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'how it was possible' : 'give up: why the 1000 will not move'), h('div', {}, c.why)));
+  if (won && !app.wonShown) { app.wonShown = true; toast('★ The 1000 is in Mallory’s wallet — read how, and what it cost.', 5000); }
+}
+function playStory(n) {
+  const sc = SCENARIOS.find(x => String(x.story) === String(n));
+  if (!sc) { startFresh(); render(); return; }
+  const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
+  app.story = sc;
+  newTree(newSession(sc.params, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.');
+  const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who, say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''),
+    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'), step: t.step, evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
+  const trunkIds = [0];
+  let pid = 0;
+  for (const t of r.timeline) { if (t.step.hidden) { trunkIds.push(pid); continue; } pid = addChild(pid, entry(t)); trunkIds.push(pid); }
+  // the punchline: the story's own choice, else the last accepted move of the trunk
+  app.punch = Number.isInteger(sc.punchline) && trunkIds[sc.punchline + 1] !== undefined ? trunkIds[sc.punchline + 1] : null;
+  if (app.punch === null) for (const id of trunkIds) if (node(id).record && node(id).record.ok) app.punch = id;
+  app.challenge = null; app.pastPunch = false;
+  if ($('pots')) $('pots').open = false;
+  for (const fk of r.forks) {
+    let fid = trunkIds[fk.at + 1];
+    fk.timeline.forEach((t, i) => { fid = addChild(fid, entry(t, i === 0 ? { branch: { id: fk.id, title: fk.title } } : {})); });
+  }
+  // the trunk is the branch taken by default; its end is an ending (NOTE-003):
+  // › and ⇥ stop there, and a fork off the end is entered through its chip
+  for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
+  { const end = node(trunkIds[trunkIds.length - 1]); end.trunkEnd = true; end.last = null; }
+  app.cursor = 0; app.pending = null;
+  if (r.problems.length) node(0).say = 'This story does not play as written: ' + r.problems.join(' · ');
+  render();
+}
+function stopPlay() { if (app.playing) { clearInterval(app.playing); app.playing = null; } }
+function togglePlay() {
+  if (app.playing) { stopPlay(); renderPlaybar(); return; }
+  // ▶ stops on the punchline and holds; from the punchline on, it plays the coda
+  app.pastPunch = app.punch === null || pathTo(app.cursor).includes(app.punch);
+  const tickPlay = () => {
+    const nx = nextOf(app.cursor);
+    if (nx === null) { stopPlay(); renderPlaybar(); return; }
+    goTo(nx); followScene();
+    const atPunch = nx === app.punch && !app.pastPunch;
+    if (atPunch || nextOf(nx) === null) {
+      stopPlay(); renderPlaybar();
+      const r = node(nx).record;
+      // the recap: at the end of a trunk what was achieved; at the end of a fork what was prevented
+      if (atPunch) toast('★ ' + (hitLine(node(nx)) || node(nx).say), 5000);
+      else if (r && !r.ok) toast('✗ prevented: ' + describeAction(r.action) + ' — ' + r.reason, 5000);
+      else toast(hitLine(node(nx)) ? '★ ' + hitLine(node(nx)) : node(nx).say, 5000);
+    }
+  };
+  app.playing = setInterval(tickPlay, 1500);
+  tickPlay();
+}
+
+/* ---- self-test ---------------------------------------------------------------- */
+function runSelftest() {
+  const out = [];
+  let fails = 0;
+  for (const sc of SCENARIOS) {
+    const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
+    const ok = !r.problems.length;
+    if (!ok) fails++;
+    out.push(`${ok ? 'PASS' : 'FAIL'}  story ${String(sc.story).padStart(2)} ${sc.title} — ${r.stepsRun} steps over ${1 + r.forks.length} branch(es), theorems shown: ${r.exhibited.join(' ')}` + (ok ? '' : '\n      ' + r.problems.join('\n      ')));
+  }
+  if (SCENARIOS.length !== 15) { fails++; out.push(`FAIL  ${SCENARIOS.length} stories embedded, expected 15`); }
+  const c = checkCorpus(LEAN_CORPUS);
+  const cok = !c.reasons.length && c.applied > 0 && c.refused > 0;
+  if (!cok) fails++;
+  out.push(`${cok ? 'PASS' : 'FAIL'}  Lean corpus (sha256 ${LEAN_CORPUS_SHA256.slice(0, 12)}…): ${c.applied} applied, ${c.refused} refused, ${c.cons} consumability probes, ${c.theoremChecks} theorem reports` + (cok ? '' : '\n      ' + c.reasons.slice(0, 10).join('\n      ')));
+  // drive the visible controls: story 3 to its end shows Frozen and lights T15; story 5's branches switch
+  try {
+    playStory(3);
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const frozen = /frozen/i.test($('state-name').textContent);
+    const okChips = $('tree').querySelectorAll('.node.ok');
+    okChips[okChips.length - 1].dispatchEvent(new Event('click'));
+    const lit = [...$('ledger').querySelectorAll('.thm.lit')].map(e => e.dataset.id);
+    let ok = frozen && lit.includes('T15') && /frozen/i.test($('state-name').textContent);
+    out.push(`${ok ? 'PASS' : 'FAIL'}  controls: story 3 played through the picker ends Frozen (${frozen}); on its last accepted step the lamps light ${lit.join(' ')}`);
+    if (!ok) fails++;
+    playStory(5);
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const forkNode = [...$('tree').querySelectorAll('.node')].filter(g => g.querySelector('.fork')).pop();
+    forkNode.dispatchEvent(new Event('click'));
+    const chips = $('branches').querySelectorAll('.branch');
+    const trunkLeaf = $('state-name').textContent;
+    chips[chips.length - 1].click();
+    while (!$('hist-next').disabled) $('hist-next').click();
+    const branchState = $('state-name').textContent;
+    const scene = $('scene').querySelectorAll('[data-obj]').length;
+    const treeNodes = $('tree').querySelectorAll('.node').length;
+    ok = chips.length >= 2 && /parked/i.test(trunkLeaf) && /parked/i.test(branchState) && scene > 12 && treeNodes === app.nodes.length;
+    out.push(`${ok ? 'PASS' : 'FAIL'}  tree: ${treeNodes} nodes drawn; story 5 offers ${chips.length} continuations at its parked fork; the parked state is ${trunkLeaf}, the thief branch ends ${branchState}; the scene draws ${scene} entities`);
+    if (!ok) fails++;
+    startFresh(); render();
+  } catch (e) { fails++; out.push('FAIL  controls: ' + (e && e.message)); }
+  out.push(fails ? `FAIL  ${fails} item(s) failed` : `PASS  all ${SCENARIOS.length + 3} items`);
+  document.title = (fails ? 'FAIL' : 'PASS') + ' · The Checkpoint self-test';
+  const pre = $('selftest-out'); pre.hidden = false; pre.textContent = out.join('\n');
+  return { fails, out };
+}
+
+/* ---- wiring ---------------------------------------------------------------- */
+function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem('ck-theme'); } catch (e) { t = null; }
+  if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+}
+function toggleTheme() {
+  const cur0 = document.documentElement.dataset.theme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur0 === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('ck-theme', next); } catch (e) { /* no storage: fine */ }
+  renderChart();
+}
+function wire() {
+  $('story-picker').addEventListener('change', e => { const v = e.target.value; if (v === '') { startFresh(); render(); } else if (/^c:/.test(v)) playChallenge(v.slice(2)); else playStory(v); });
+  $('hist-first').addEventListener('click', () => goTo(0));
+  $('hist-prev').addEventListener('click', () => { const p = node(app.cursor).parent; if (p !== null) goTo(p); });
+  $('hist-next').addEventListener('click', () => { const nx = nextOf(app.cursor); if (nx !== null) { goTo(nx); followScene(); } });
+  $('hist-last').addEventListener('click', () => goTo(leafNodeOf(app.cursor)));
+  $('btn-play').addEventListener('click', togglePlay);
+  $('btn-coda').addEventListener('click', () => { app.pastPunch = true; if (!app.playing) togglePlay(); });
+  try { if (typeof IntersectionObserver !== 'undefined') new IntersectionObserver(es => { for (const e of es) $('hud').classList.toggle('on', !e.isIntersecting && window.scrollY > 120); }).observe($('where')); } catch (e) { /* no observer under the minimal DOM */ }
+  $('scrub').addEventListener('input', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
+  $('scrub').addEventListener('change', e => { const path = currentPath(); const id = path[Number(e.target.value)]; if (id !== undefined) goTo(id); });
+  $('btn-reset').addEventListener('click', () => { startFresh(); render(); });
+  $('btn-theme').addEventListener('click', toggleTheme);
+  $('act-submit').addEventListener('click', submitPending);
+  $('act-cancel').addEventListener('click', () => { app.pending = null; renderNext(); });
+  $('ev-kind').addEventListener('change', renderEvidence);
+  $('ev-intent').addEventListener('change', renderEvidence);
+  $('ev-add').addEventListener('click', addEvidenceFromForm);
+  $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); return; } moveSlot(n); });
+  $('slot-plus1').addEventListener('click', () => moveSlot(cur().now + 1));
+  $('slot-plusw').addEventListener('click', () => moveSlot(cur().now + cur().params.W));
+  $('chart-drawer').addEventListener('toggle', renderChart);
+  window.addEventListener('resize', renderChart);
+  document.addEventListener('keydown', e => {
+    if (e.target && /^(input|select|textarea)$/i.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') { $('hist-next').click(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { $('hist-prev').click(); e.preventDefault(); }
+    else if (e.key === ' ') { togglePlay(); e.preventDefault(); }
+  });
+}
+window.CK = { step, replay, consumable, attempt, newSession, addEvidence, removeEvidence, checkScenario, checkCorpus,
+  replayCorpus: checkCorpus, runSelftest, THEOREMS, REASONS, SCENARIOS, LEAN_CORPUS, LEAN_CORPUS_SHA256, app, goTo, playStory };
+initTheme();
+startFresh();
+wire();
+{ const m = /[?&]story=(\d+)/.exec(location.search); if (!/[?&]selftest=1/.test(location.search)) playStory(m ? m[1] : 1); }
+render();
+if (/[?&]selftest=1/.test(location.search)) runSelftest();
+</script>
+</body>
+</html>

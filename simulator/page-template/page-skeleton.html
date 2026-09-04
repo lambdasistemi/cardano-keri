@@ -1,0 +1,118 @@
+<header>
+  <h1>The checkpoint <small>cardano-keri · the M1 return · one Cardano UTxO per KERI identity: a public current-keys oracle and three pots that never mix · Alice, Hal, Cora, Mallory and the treasury</small></h1>
+  <div class="slotbar">
+    <span class="lbl">slot</span> <b id="slot-now">0</b>
+    <input id="slot-input" type="number" min="0" step="1" value="0" aria-label="move to slot">
+    <button type="button" class="ghost" id="slot-plus1" title="advance one slot">+1</button>
+    <button type="button" class="ghost" id="slot-plusw" title="advance by the juvenility window W">+W</button>
+    <span class="tiny" id="slot-msg"></span>
+  </div>
+  <div class="hbtns">
+    <button type="button" class="ghost" id="btn-theme" title="light / dark">☾ theme</button>
+    <button type="button" class="ghost danger" id="btn-reset" title="new session: nothing on chain">Reset</button>
+  </div>
+</header>
+<div id="hud" aria-live="polite"></div>
+<div id="toast" role="status"></div>
+<main>
+  <section class="card" id="stage">
+    <div class="stagebar">
+      <select id="story-picker" aria-label="pick a story"></select>
+      <span class="goal" id="story-goal"></span>
+    </div>
+    <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
+    <div id="playbar">
+      <button type="button" class="nav" id="hist-first" title="the start">⇤</button>
+      <button type="button" class="nav" id="hist-prev" title="one step back (plays in reverse)">‹</button>
+      <button type="button" class="nav" id="btn-play" title="play the current branch">▶</button>
+      <button type="button" class="nav" id="hist-next" title="one step forward along the branch last taken">›</button>
+      <button type="button" class="nav" id="hist-last" title="the end of this branch">⇥</button>
+      <button type="button" class="nav" id="btn-coda" title="play on past the punchline: what the machine refuses after it">what fails after ›</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="scrub the play">
+      <span id="pos">0 / 0</span>
+    </div>
+    <div id="where"></div>
+    <div id="challenge" hidden></div>
+    <details id="pots"><summary>What the words mean: the three pots, W, and the states a checkpoint moves through</summary>
+      <svg id="hub" role="img" aria-label="the states as rooms: Live in the middle, Poisoned and Frozen beside it and back, Parked a room outside the chain with a way back, Convicted sealed"></svg>
+      <dl id="pots-dl"></dl>
+    </details>
+    <div id="narration"></div>
+  </section>
+
+  <section class="card" id="next-card">
+    <h2>What can happen next <small>the story's continuations, and every move the machine would accept from here · everyone here is <em>anyone</em> with an interest; every move is a public transaction, and the tag says what it must carry: only public KERI data, or a signature by the key holders · a move from a visited step opens a branch</small></h2>
+    <div id="branches"></div>
+    <div id="next-moves"></div>
+    <div id="act-form" hidden>
+      <div class="fields" id="act-fields"></div>
+      <div id="act-why"></div>
+      <div class="row" style="margin-top:6px"><button type="button" class="primary" id="act-submit">Submit at this slot</button>
+        <button type="button" class="ghost" id="act-cancel">Cancel</button></div>
+    </div>
+    <details id="refused-moves"><summary class="tiny" id="refused-summary">what the machine refuses now</summary><div id="refused-list"></div></details>
+  </section>
+
+  <details class="card" id="scene-drawer" open>
+    <summary>The scene <small>KERI, the Cardano UTxO, the readers and payees · every step plays on it; click an actor to act as them</small></summary>
+    <svg id="scene" viewBox="0 0 1000 560" role="group" aria-label="the scene: KERI, the Cardano checkpoint, the readers and payees"></svg>
+  </details>
+
+  <section class="card" id="lamps">
+    <h2>The theorems <small><span id="found"></span> · T1–T16 of CheckpointGoals.lean: one checker row per theorem, folded into fourteen lamps (T11 and T13 were never stated) · a lamp lights when this step shows one of its theorems; every row is checked on every step · click to read</small></h2>
+    <div id="ledger"></div>
+  </section>
+
+  <section class="drawers">
+    <details class="card" id="act-drawer">
+      <summary>Evidence by hand <small>the Env: what the validator would verify over the bytes, decided by you</small></summary>
+      <div class="actors" id="actors"></div>
+      <div class="blurb" id="actor-blurb"></div>
+      <div class="lbl" id="keri-lbl">On KERI (evidence, not a transaction)</div>
+      <div class="acts" id="keri-acts"></div>
+      <div class="ev-form">
+        <label>kind <select id="ev-kind">
+          <option value="rotationTo">witnessed rotation</option>
+          <option value="intentAuthorized">intent signed by the new keys (option, refund address)</option>
+          <option value="quorum">current quorum signed</option>
+          <option value="duplicityAt">duplicity proof</option>
+        </select></label>
+        <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
+        <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
+        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option><option value="close">close (leave)</option></select></label>
+        <label id="ev-lp" hidden>payee <input id="ev-payee" type="number" min="0" step="1" value="1"></label>
+        <label id="ev-lc">to sn' <input id="ev-c" type="number" min="0" step="1" value="1"></label>
+        <button type="button" class="ghost" id="ev-add">Add row</button>
+      </div>
+      <div id="ev-rows"></div>
+    </details>
+
+    <details class="card" id="numbers-drawer">
+      <summary>The checkpoint in numbers <small>the datum, the three sums, the treasury's verdict and its conjuncts</small></summary>
+      <div id="state-name">Absent</div>
+      <div class="datum" id="datum"></div>
+      <div class="bars" id="bars"></div>
+      <div id="verdict"></div>
+      <div class="conj" id="conjuncts"></div>
+    </details>
+
+    <details class="card wide" id="chart-drawer">
+      <summary>Value over the play <small><span class="sw dreg"></span>conviction bond D <span class="sw b"></span>freeze bond B <span class="sw pool"></span>pool · arrows are flows · the current branch</small></summary>
+      <canvas id="value-chart" width="640" height="240" role="img" aria-label="the three value components held by the checkpoint, step by step, with flows"></canvas>
+    </details>
+
+    <details class="card" id="money-drawer">
+      <summary>Who holds what <small>lovelace, by component; every payment named by the flow</small></summary>
+      <div id="balances"></div>
+      <div class="flows" id="flows"></div>
+    </details>
+
+    <details class="card about" id="about-drawer">
+      <summary>What this is <small>and is not</small></summary>
+      <p>A transcription of <code>lean/CardanoKeri/Checkpoint.lean</code>: the states, the actions (exactly the redeemers), the evidence as a table of decisions, value as three components that never mix, the consumer's state-side check. The theorems of <code>CheckpointGoals.lean</code> run as properties on every step. Each story is a tree: the trunk and the branches the story implies; ‹ and › walk it as an editor walks its history; click any node of the tree to jump there.</p>
+      <p>Not here: cryptography (keys are an epoch counter; evidence is a row you decide), validity (D-027, reserved), the consumer's own threshold check, UTxO mechanics, delegation, record trees, hunter bounties. A Lean <code>Nat</code> is unbounded; this page represents it exactly up to 2^53 − 1 and refuses anything else by name.</p>
+    </details>
+  </section>
+</main>
+<pre id="selftest-out" hidden></pre>
+

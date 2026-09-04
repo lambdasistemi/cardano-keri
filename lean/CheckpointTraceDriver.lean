@@ -28,6 +28,10 @@ oracle. `consumableStateB`, the model's own decidable mirror of
 `consumableState` (tied to it by `consumableStateB_iff`), is emitted for
 the grid states at `bornAt + W − 1 / = / + 1` so the JavaScript consumer
 agrees with the model's by hash.
+
+Third slice (D-039, D-040): the states are absent, present (live, poisoned,
+frozen), parked with the hash (a key state) and convicted; the close names
+its payee; the intent `close` carries it.
 -/
 
 open Lean (ToJson toJson Json FromJson fromJson?)
@@ -36,6 +40,7 @@ open CardanoKeri.Checkpoint
 deriving instance Lean.ToJson for BondOp
 deriving instance Lean.ToJson for Intent
 deriving instance Lean.ToJson for Action
+deriving instance Lean.ToJson for KeyState
 deriving instance Lean.ToJson for Live
 deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
@@ -43,6 +48,7 @@ deriving instance Lean.ToJson for Flow
 deriving instance Lean.FromJson for BondOp
 deriving instance Lean.FromJson for Intent
 deriving instance Lean.FromJson for Action
+deriving instance Lean.FromJson for KeyState
 deriving instance Lean.FromJson for Live
 deriving instance Lean.FromJson for State
 
@@ -65,7 +71,7 @@ def paramsOfJson (j : Json) : Except String Params := do
 /-- Finite decision tables standing for the four evidence predicates. -/
 structure EnvTable where
   rotationTo : List (Nat × Nat × Nat)
-  /-- `(e, intent, refund address or none)`: the keys of epoch `e` signed that intent message (D-038). -/
+  /-- `(e, intent, refund address or none)`: the keys of epoch `e` signed that intent message (D-038, D-039). -/
   intentAuthorized : List (Nat × Intent × Option Nat)
   quorum : List Nat
   duplicityAt : List (Nat × Nat)
@@ -144,37 +150,39 @@ structure Seed where
   env : EnvTable
   steps : List (Slot × Action)
 
-/-- Alice = 1, Hal = 2, Cora = 3, Mallory = 4, the treasury = 5, the sponsor = 6. -/
+/-- Alice = 1, Hal = 2, Cora = 3, Mallory = 4, the treasury = 5, the sponsor = 6, a rival = 7. -/
 def seeds : List Seed := [
   { name := "happy-path",
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .keep, some 1)], quorum := [], duplicityAt := [] },
     steps := [(0, .register 6 10), (12, .rotate 1 .keep 2 (some 1)), (12, .rotate 1 .keep 2 none),
               (20, .topUp 5), (25, .rotate 2 .keep 2 none)] },
   { name := "freeze-then-unfreeze",
-    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [(1, .deposit, none)], quorum := [], duplicityAt := [] },
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .deposit, none), (2, .deposit, none)], quorum := [], duplicityAt := [] },
     steps := [(0, .register 1 1), (12, .freeze 1 2), (12, .freeze 1 2), (20, .rotate 1 .deposit 1 none),
-              (20, .topUp 20)] },
-  { name := "pause-then-resurrect",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .withdraw, none), (2, .deposit, none)], quorum := [0], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .rotate 1 .withdraw 1 none), (12, .close 2 none), (12, .poison),
-              (12, .freeze 2 2), (12, .topUp 3), (40, .rotate 2 .deposit 1 none)] },
+              (20, .topUp 20), (25, .rotate 2 .deposit 1 none)] },
+  { name := "close-then-revive",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 1, none)], quorum := [0, 1], duplicityAt := [] },
+    steps := [(0, .register 1 10), (12, .close 1 1 none), (12, .close 2 1 none), (12, .poison),
+              (12, .freeze 2 2), (12, .topUp 3), (12, .register 1 10), (40, .reopen 1 1 5), (40, .reopen 2 1 5), (40, .topUp 3)] },
   { name := "poison-then-close-then-reopen",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close, none)], quorum := [0], duplicityAt := [] },
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 2, none)], quorum := [0], duplicityAt := [] },
     steps := [(0, .register 1 1), (12, .poison), (12, .poison), (12, .freeze 1 2), (12, .topUp 5),
-              (12, .close 1 none), (12, .topUp 1), (12, .rotate 2 .keep 2 none), (12, .reopen 1 1 5), (30, .reopen 2 1 5),
+              (12, .close 1 2 none), (12, .topUp 1), (12, .rotate 2 .keep 2 none), (12, .reopen 1 1 5), (30, .reopen 2 1 5),
               (30, .topUp 1)] },
   { name := "convict",
     env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0], duplicityAt := [(0, 0)] },
-    steps := [(0, .register 1 10), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 none),
+    steps := [(0, .register 1 10), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 1 none),
               (12, .topUp 1), (12, .register 1 10), (12, .reopen 1 1 10)] },
+  { name := "convict-parked",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 1, none)], quorum := [], duplicityAt := [(1, 1)] },
+    steps := [(0, .register 1 10), (12, .close 1 1 none), (12, .convict 3), (12, .reopen 2 1 10), (12, .convict 3)] },
   { name := "relayer-on-public-data",
     env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0, 1], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .rotate 1 .withdraw 2 none), (12, .rotate 1 .deposit 2 none), (12, .close 1 none),
-              (12, .rotate 1 .keep 2 (some 9)), (12, .rotate 1 .keep 2 none), (12, .close 1 none)] },
-  { name := "close-then-reopen",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2), (2, 2, 3)], intentAuthorized := [(1, .close, some 1), (1, .keep, some 1)], quorum := [0, 1], duplicityAt := [] },
-    steps := [(0, .register 6 10), (12, .poison), (12, .close 1 (some 1)), (20, .reopen 1 1 10), (20, .reopen 2 1 10),
-              (20, .register 1 10), (20, .topUp 1), (20, .rotate 3 .keep 2 none)] }
+    steps := [(0, .register 1 10), (12, .rotate 1 .deposit 2 none), (12, .close 1 2 none),
+              (12, .rotate 1 .keep 2 (some 9)), (12, .rotate 1 .keep 2 none), (12, .close 1 2 none)] },
+  { name := "copied-reap",
+    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [(1, .close 2, none)], quorum := [], duplicityAt := [] },
+    steps := [(0, .register 1 10), (12, .close 1 9 none), (12, .close 1 2 (some 9)), (12, .close 1 2 none), (12, .reopen 2 1 10)] }
 ]
 
 def traceJson (p : Params) (sd : Seed) : Json :=
@@ -186,37 +194,36 @@ def enumL (l : List α) : List (Nat × α) := (List.range l.length).zip l
 
 /-! ## The boundary grid: every guarded comparison at −1 / = / +1, every action, every state -/
 
-/-- Present states around the guards: `poisoned` both ways; `dreg`, `b`,
-`pool` at one below, exactly, one above the parameter. The base datum is at
+/-- Present states around the guards: `poisoned` and `frozen` both ways;
+`pool` at one below, exactly, one above the premium. The base datum is at
 epoch 1, sequence 1, born at 10, refund address 1. -/
 def gridPresent (p : Params) : List State :=
   let vals := fun (x : Nat) => [x - 1, x, x + 1]
   [false, true].flatMap fun poisoned =>
-    (vals p.D).flatMap fun dreg =>
-      (vals p.B).flatMap fun b =>
-        (vals p.P).map fun pool =>
-          State.present ⟨1, 1, poisoned, 10, 1, dreg, b, pool⟩
+    [false, true].flatMap fun frozen =>
+      (vals p.P).map fun pool =>
+        State.present ⟨1, 1, poisoned, frozen, 10, 1, pool⟩
 
 def gridStates (p : Params) : List State :=
-  [.absent, .closed 1 1, .convicted 1 1 10] ++ gridPresent p
+  [.absent, .parked ⟨1, 1⟩, .convicted] ++ gridPresent p
 
-/-- Actions with their sequence at −1 / = / +1 of the datum's (1), every bond
-option, the refund option none / authorized (1) / unauthorized (9); the close
-with the same sequences and refund options; the reopen at −1 / = / +1 of the
-tombstone's sequence (1). -/
+/-- Actions with their sequence at −1 / = / +1 of the datum's (1), both bond
+options, the refund option none / authorized (1) / unauthorized (9); the close
+with the same sequences, the signed payee (2) and a copied payee (9), and the
+same refund options; the reopen at −1 / = / +1 of the parked sequence (1). -/
 def gridActions : List Action :=
   [.register 6 7, .poison, .topUp 5, .convict 3] ++
   ([0, 1, 2].map fun sn' => Action.freeze sn' 2) ++
   ([0, 1, 2].flatMap fun sn' =>
-    [BondOp.keep, .withdraw, .deposit].flatMap fun op =>
+    [BondOp.keep, .deposit].flatMap fun op =>
       [none, some 1, some 9].map fun r => Action.rotate sn' op 2 r) ++
-  ([0, 1, 2].flatMap fun sn' => [none, some 1, some 9].map fun r => Action.close sn' r) ++
+  ([0, 1, 2].flatMap fun sn' => [2, 9].flatMap fun payee => [none, some 1, some 9].map fun r => Action.close sn' payee r) ++
   ([0, 1, 2].map fun sn' => Action.reopen sn' 1 7)
 
-/-- Two oracles: everything the grid can ask for, and nothing. -/
+/-- Two oracles: everything the grid can ask for (one close message: payee 2), and nothing. -/
 def gridEnvs : List (String × EnvTable) :=
   [("full", { rotationTo := [(1, 1, 0), (1, 1, 1), (1, 1, 2)],
-              intentAuthorized := [(2, .keep, some 1), (2, .withdraw, none), (2, .withdraw, some 1), (2, .deposit, none), (2, .deposit, some 1), (2, .close, none), (2, .close, some 1)],
+              intentAuthorized := [(2, .keep, some 1), (2, .deposit, none), (2, .deposit, some 1), (2, .close 2, none), (2, .close 2, some 1)],
               quorum := [1], duplicityAt := [(1, 1)] }),
    ("none", { rotationTo := [], intentAuthorized := [], quorum := [], duplicityAt := [] })]
 

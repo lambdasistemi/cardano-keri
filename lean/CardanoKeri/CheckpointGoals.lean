@@ -1,4 +1,5 @@
 import CardanoKeri.Checkpoint
+import Lean.Elab.Command
 
 /-!
 # The M1 return: theorems T1 … T16, third slice (D-039, D-040)
@@ -1104,3 +1105,327 @@ theorem T16_payments_are_named (p : Params) (env : Env) {a : Action} {t : Slot} 
   cases h <;> simp_all [State.dregHeld]
 
 end CardanoKeri.Checkpoint
+
+namespace CardanoKeri.Checkpoint
+
+/-- Inversion for `register`: no guards. -/
+theorem Step.register_iff {p : Params} {env : Env} (now : Slot) (refund : Addr) (pool0 : Value) :
+    Step p env (.register refund pool0) now .absent
+      { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+      (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True := by
+  constructor
+  · intro _; trivial
+  · intro _; exact Step.register now refund pool0
+
+/-- Inversion for `rotateKeepPaid`. -/
+theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.rotate sn' .keep payee refund') now (.present l)
+      { hunter := some { addr := payee, pool := p.P } }
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                         refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool := by
+  constructor
+  · intro h
+    cases h with
+    | rotateKeepPaid _ _ _ _ hev hsn hauth hpay => exact ⟨hev, hsn, hauth, hpay⟩
+  · rintro ⟨hev, hsn, hauth, hpay⟩
+    exact Step.rotateKeepPaid now sn' payee refund' hev hsn hauth hpay
+
+/-- Inversion for `rotateKeepUnpaid`. -/
+theorem Step.rotateKeepUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.rotate sn' .keep payee refund') now (.present l) {}
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                         refundTo := refund'.getD l.refundTo }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P := by
+  constructor
+  · intro h
+    cases h with
+    | rotateKeepUnpaid _ _ _ _ hev hsn hauth hnopay => exact ⟨hev, hsn, hauth, hnopay⟩
+  · rintro ⟨hev, hsn, hauth, hnopay⟩
+    exact Step.rotateKeepUnpaid now sn' payee refund' hev hsn hauth hnopay
+
+/-- Inversion for `rotateDepositPaid`. -/
+theorem Step.rotateDepositPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.rotate sn' .deposit payee refund') now (.present l)
+      { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                         frozen := false, refundTo := refund'.getD l.refundTo,
+                         pool := l.pool - p.P }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool := by
+  constructor
+  · intro h
+    cases h with
+    | rotateDepositPaid _ _ _ _ hev hsn hauth hpay => exact ⟨hev, hsn, hauth, hpay⟩
+  · rintro ⟨hev, hsn, hauth, hpay⟩
+    exact Step.rotateDepositPaid now sn' payee refund' hev hsn hauth hpay
+
+/-- Inversion for `rotateDepositUnpaid`. -/
+theorem Step.rotateDepositUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.rotate sn' .deposit payee refund') now (.present l)
+      { bIn := p.B - l.bHeld p }
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                         frozen := false, refundTo := refund'.getD l.refundTo }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P := by
+  constructor
+  · intro h
+    cases h with
+    | rotateDepositUnpaid _ _ _ _ hev hsn hauth hnopay => exact ⟨hev, hsn, hauth, hnopay⟩
+  · rintro ⟨hev, hsn, hauth, hnopay⟩
+    exact Step.rotateDepositUnpaid now sn' payee refund' hev hsn hauth hnopay
+
+/-- Inversion for `poison`. -/
+theorem Step.poison_iff {p : Params} {env : Env} (l : Live) (now : Slot) :
+    Step p env .poison now (.present l) {} (.present { l with poisoned := true }) ↔
+    env.quorum l.epoch = true ∧ l.poisoned = false := by
+  constructor
+  · intro h
+    cases h with
+    | poison _ hq hclean => exact ⟨hq, hclean⟩
+  · rintro ⟨hq, hclean⟩
+    exact Step.poison now hq hclean
+
+/-- Inversion for `freeze`. -/
+theorem Step.freeze_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq) (payee : Addr) :
+    Step p env (.freeze sn' payee) now (.present l)
+      { hunter := some { addr := payee, b := p.B } }
+      (.present { l with frozen := true }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
+    l.frozen = false ∧ l.poisoned = false := by
+  constructor
+  · intro h
+    cases h with
+    | freeze _ _ _ hev hsn hpool hb hclean => exact ⟨hev, hsn, hpool, hb, hclean⟩
+  · rintro ⟨hev, hsn, hpool, hb, hclean⟩
+    exact Step.freeze now sn' payee hev hsn hpool hb hclean
+
+/-- Inversion for `topUp`: no guards. -/
+theorem Step.topUp_iff {p : Params} {env : Env} (l : Live) (now : Slot) (x : Value) :
+    Step p env (.topUp x) now (.present l) { poolIn := x }
+      (.present { l with pool := l.pool + x }) ↔ True := by
+  constructor
+  · intro _; trivial
+  · intro _; exact Step.topUp now x
+
+/-- Inversion for `convict`. -/
+theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) :
+    Step p env (.convict payee) now (.present l)
+      { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
+        convictor := some { addr := payee, dreg := p.D } } .convicted ↔
+    env.duplicityAt l.epoch l.sn = true := by
+  constructor
+  · intro h
+    cases h with
+    | convict _ _ hdup => exact hdup
+  · intro hdup
+    exact Step.convict now payee hdup
+
+/-- Inversion for `convictParked`. -/
+theorem Step.convictParked_iff {p : Params} {env : Env} (h : Hash) (now : Slot) (payee : Addr) :
+    Step p env (.convict payee) now (.parked h) {} .convicted ↔
+    env.duplicityAt h.epoch h.sn = true := by
+  constructor
+  · intro hStep
+    cases hStep with
+    | convictParked _ _ hdup => exact hdup
+  · intro hdup
+    exact Step.convictParked now payee hdup
+
+/-- Inversion for `closePaid`. -/
+theorem Step.closePaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.close sn' payee refund') now (.present l)
+      { refund := some { addr := refund'.getD l.refundTo, dreg := p.D,
+                         b := l.bHeld p, pool := l.pool - p.P },
+        hunter := some { addr := payee, pool := p.P } }
+      (.parked ⟨l.epoch + 1, sn'⟩) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) (.close payee) refund' = true ∧ p.P ≤ l.pool := by
+  constructor
+  · intro h
+    have hc := T16_close_destination p env h
+    obtain ⟨sn0, pay0, r0, ha, _, hdisj, _, hlt, hev0, hauth0⟩ := hc
+    cases ha
+    cases hdisj with
+    | inl hpaid =>
+      obtain ⟨hpay, _, _⟩ := hpaid
+      exact ⟨hev0, hlt, hauth0, hpay⟩
+    | inr hunpaid =>
+      obtain ⟨_, hnone, _⟩ := hunpaid
+      cases hnone
+  · rintro ⟨hev, hsn, hauth, hpay⟩
+    exact Step.closePaid now sn' payee refund' hev hsn hauth hpay
+
+/-- Inversion for `closeUnpaid`. -/
+theorem Step.closeUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr) :
+    Step p env (.close sn' payee refund') now (.present l)
+      { refund := some { addr := refund'.getD l.refundTo, dreg := p.D,
+                         b := l.bHeld p, pool := l.pool } }
+      (.parked ⟨l.epoch + 1, sn'⟩) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+    env.intentOk (l.epoch + 1) (.close payee) refund' = true ∧ l.pool < p.P := by
+  constructor
+  · intro h
+    have hc := T16_close_destination p env h
+    obtain ⟨sn0, pay0, r0, ha, _, hdisj, _, hlt, hev0, hauth0⟩ := hc
+    cases ha
+    cases hdisj with
+    | inl hpaid =>
+      obtain ⟨_, hsome, _⟩ := hpaid
+      cases hsome
+    | inr hunpaid =>
+      obtain ⟨hnopay, _, _⟩ := hunpaid
+      exact ⟨hev0, hlt, hauth0, hnopay⟩
+  · rintro ⟨hev, hsn, hauth, hnopay⟩
+    exact Step.closeUnpaid now sn' payee refund' hev hsn hauth hnopay
+
+/-- Inversion for `reopen`. -/
+theorem Step.reopen_iff {p : Params} {env : Env} (h : Hash) (now : Slot) (sn' : Seq)
+    (refund : Addr) (pool0 : Value) :
+    Step p env (.reopen sn' refund pool0) now (.parked h)
+      { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+      (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩) ↔
+    env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn' := by
+  constructor
+  · intro hStep
+    cases hStep with
+    | reopen _ _ _ _ hev hsn => exact ⟨hev, hsn⟩
+  · rintro ⟨hev, hsn⟩
+    exact Step.reopen now sn' refund pool0 hev hsn
+
+end CardanoKeri.Checkpoint
+
+open Lean Elab Command
+open CardanoKeri.Checkpoint
+
+/- Coverage (S363-1 RED): denominator from the compiled `Step` inductive;
+   one public `Step.<ctor>_iff` per constructor. Exact-type `#check`s below
+   validate binding, premises, and effects; they fail with the missing
+   inversions until T363-003 lands. -/
+run_cmd do
+  let env ← getEnv
+  let some (.inductInfo info) := env.find? ``CardanoKeri.Checkpoint.Step
+    | throwError "checkpoint-inversions: compiled Step inductive missing"
+  if info.ctors.isEmpty then
+    throwError "checkpoint-inversions: empty Step constructor denominator"
+  let mut numerator := 0
+  for ctor in info.ctors do
+    match ctor with
+    | .str pre short =>
+      let inv := Name.str pre (short ++ "_iff")
+      match env.find? inv with
+      | some (.thmInfo _) =>
+          numerator := numerator + 1
+          logInfo m!"checkpoint-inversion-row constructor={ctor} inversion={inv}"
+      | some _ => throwError m!"checkpoint-inversions: expected theorem is not a theorem: {inv}"
+      | none => throwError m!"checkpoint-inversions: missing public inversion {inv} for {ctor}"
+    | _ => throwError m!"checkpoint-inversions: constructor has no string component: {ctor}"
+  if numerator != info.ctors.length then
+    throwError m!"checkpoint-inversions: numerator={numerator} denominator={info.ctors.length}"
+  logInfo m!"checkpoint-inversions: coverage={numerator}/{info.ctors.length}"
+
+section CheckpointInversionExactTypes
+
+variable (p : Params) (env : Env)
+
+#check (Step.register_iff : ∀ (now : Slot) (refund : Addr) (pool0 : Value),
+  Step p env (.register refund pool0) now .absent
+    { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+    (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True)
+
+#check (Step.rotateKeepPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.rotate sn' .keep payee refund') now (.present l)
+    { hunter := some { addr := payee, pool := p.P } }
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                       refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool)
+
+#check (Step.rotateKeepUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.rotate sn' .keep payee refund') now (.present l) {}
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                       refundTo := refund'.getD l.refundTo }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P)
+
+#check (Step.rotateDepositPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.rotate sn' .deposit payee refund') now (.present l)
+    { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                       frozen := false, refundTo := refund'.getD l.refundTo,
+                       pool := l.pool - p.P }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool)
+
+#check (Step.rotateDepositUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.rotate sn' .deposit payee refund') now (.present l)
+    { bIn := p.B - l.bHeld p }
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                       frozen := false, refundTo := refund'.getD l.refundTo }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P)
+
+#check (Step.poison_iff : ∀ (l : Live) (now : Slot),
+  Step p env .poison now (.present l) {} (.present { l with poisoned := true }) ↔
+  env.quorum l.epoch = true ∧ l.poisoned = false)
+
+#check (Step.freeze_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
+  Step p env (.freeze sn' payee) now (.present l)
+    { hunter := some { addr := payee, b := p.B } }
+    (.present { l with frozen := true }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
+  l.frozen = false ∧ l.poisoned = false)
+
+#check (Step.topUp_iff : ∀ (l : Live) (now : Slot) (x : Value),
+  Step p env (.topUp x) now (.present l) { poolIn := x }
+    (.present { l with pool := l.pool + x }) ↔ True)
+
+#check (Step.convict_iff : ∀ (l : Live) (now : Slot) (payee : Addr),
+  Step p env (.convict payee) now (.present l)
+    { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
+      convictor := some { addr := payee, dreg := p.D } } .convicted ↔
+  env.duplicityAt l.epoch l.sn = true)
+
+#check (Step.convictParked_iff : ∀ (h : Hash) (now : Slot) (payee : Addr),
+  Step p env (.convict payee) now (.parked h) {} .convicted ↔
+  env.duplicityAt h.epoch h.sn = true)
+
+#check (Step.closePaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.close sn' payee refund') now (.present l)
+    { refund := some { addr := refund'.getD l.refundTo, dreg := p.D,
+                       b := l.bHeld p, pool := l.pool - p.P },
+      hunter := some { addr := payee, pool := p.P } }
+    (.parked ⟨l.epoch + 1, sn'⟩) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) (.close payee) refund' = true ∧ p.P ≤ l.pool)
+
+#check (Step.closeUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
+    (payee : Addr) (refund' : Option Addr),
+  Step p env (.close sn' payee refund') now (.present l)
+    { refund := some { addr := refund'.getD l.refundTo, dreg := p.D,
+                       b := l.bHeld p, pool := l.pool } }
+    (.parked ⟨l.epoch + 1, sn'⟩) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
+  env.intentOk (l.epoch + 1) (.close payee) refund' = true ∧ l.pool < p.P)
+
+#check (Step.reopen_iff : ∀ (h : Hash) (now : Slot) (sn' : Seq)
+    (refund : Addr) (pool0 : Value),
+  Step p env (.reopen sn' refund pool0) now (.parked h)
+    { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+    (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩) ↔
+  env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn')
+
+end CheckpointInversionExactTypes

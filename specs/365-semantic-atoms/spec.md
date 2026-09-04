@@ -64,8 +64,9 @@ denominators are reported separately.
 
 ## Acceptance
 
-All blocking atom rows are killed for the right reason, all 18 Cage/Samaritan
-theorem rows have witnesses and kills, the identity control survives, excluded
+All blocking atom rows are killed for the right reason, all 20 Cage/Samaritan
+theorem rows (18 frozen plus the exactly-two A-001 additive Mutants assertions)
+have witnesses and kills, the identity control survives, excluded
 failures are zero, clean-`.lake` axioms are acceptable, `lake build` is green,
 and tracked receipts are byte-identical to output regenerated on the final
 merged C1+C2 base. No merge is authorized.

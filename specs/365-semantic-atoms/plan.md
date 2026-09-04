@@ -29,7 +29,11 @@ machine-readable results.
 
 - `Cage.lean`, `Samaritan.lean`, `Checkpoint.lean`, `Registry.lean`, and ratified
   theorem statements are read-only campaign subjects.
-- New guarantee theorems are out of scope; executable witnesses may be added
+- New guarantee theorems are out of scope, with the sole exception of the
+exactly-two owned additive assertions
+(`Mutants.CG03_ownerAndHook_requires_hook`,
+`Mutants.CG09_refundAll_returns_exact_bond`, both under `lean/mutants/`)
+authorized by A-001; executable witnesses may be added
   only inside the mutation harness.
 - Lifecycle deletion belongs to C4.
 - The runner's finite operator set is: guard relax/delete, liveness force-false,

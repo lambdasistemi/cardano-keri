@@ -149,7 +149,7 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
   lean:
-    name: Lean (21 theorems + traceability gate)
+    name: Lean (Checkpoint sole spec + retirement ledger)
     needs: build-gate
     runs-on: nixos
     steps:
@@ -158,21 +158,20 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # The 21 proved theorems ARE the design (epic #24 / #124). `lake build`
-      # elaborates every proof; a `sorry` only WARNS, so the grep turns the
-      # warning into a failure ("breaks CI, not trust" — A-C04).
-      - name: Build the lifecycle model and theorems (no sorry)
+      # The Checkpoint machine is the sole compiled lifecycle spec (DISP-366-DELETE,
+      # #366 ruling). `lake build` elaborates every proof; a `sorry` only WARNS,
+      # so the grep turns the warning into a failure ("breaks CI, not trust" — A-C04).
+      - name: Build the Checkpoint sole spec and theorems (no sorry)
         working-directory: lean
         run: |
           set -o pipefail
           nix shell --no-write-lock-file ../offchain#lean --command lake build 2>&1 | tee build.log
           ! grep -q "uses 'sorry'" build.log
-      # Map completeness + name existence + Haskell-regenerated verdict-vector
-      # drift (the script ends in `just check-lifecycle-trace-vectors`, which
-      # regenerates the Aiken vectors from the Haskell mirror in the dev shell
-      # and diffs them against the committed module).
-      - name: Traceability drift gate
-        run: nix shell nixpkgs#just nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils --command bash scripts/check-lean-traceability.sh
+      # Retirement-ledger + clean-build/compiled-absence/proof-trust enforcement.
+      # Validates the 21-row RETIRED ledger against the frozen base, rejects
+      # retired imports as unknown modules, and checks live axioms.
+      - name: Retirement ledger gate
+        run: nix shell nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils nixpkgs#diffutils --command bash scripts/check-lean-traceability.sh
 
   blake3-spike:
     name: BLAKE3 spike (Aiken 1.1.23)

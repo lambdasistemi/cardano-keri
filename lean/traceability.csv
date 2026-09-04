@@ -1,26 +1,22 @@
-# Lean proves universal claims over the abstract lifecycle model.
-# QuickCheck samples the pure Haskell lifecycle mirror.
-# Generated parity vectors bind Haskell verdicts to Aiken verdicts.
-# Full-context Aiken tests cover abstracted ledger details (address, datum, and real Value arithmetic); no refinement proof is claimed.
-lean_theorem,quickcheck_property,aiken_test
-advance_totality,prop_advance_totality,t116_r4_advance_totality
-no_absorbing_busy_state,prop_no_absorbing_busy_state,t116_r4_no_absorbing_busy_state
-adversarial_advance_is_progress,prop_adversarial_advance_is_progress,t116_r4_adversarial_advance_is_progress
-bounded_churn,PENDING(#127-pipeline),PENDING(#127-pipeline)
-armed_exclusive_window,prop_armed_exclusive_window,t116_r4_armed_exclusive_window
-bond_transfer_only_via_elapsed_window,prop_bond_transfer_only_via_elapsed_window,t116_r4_bond_transfer_only_via_elapsed_window
-abandonment_pays_exactly_B,prop_abandonment_pays_exactly_B,t116_r4_abandonment_pays_exactly_B
-frozen_implies_true_silence,prop_frozen_implies_true_silence,t116_r4_frozen_implies_true_silence
-close_lie_always_voidable,prop_close_lie_always_voidable,t116_r4_close_lie_always_voidable
-close_at_tip_unchallengeable,prop_close_at_tip_unchallengeable,t116_r4_close_at_tip_unchallengeable
-current_state_is_quiet,prop_current_state_is_quiet,t116_r4_current_state_is_quiet
-value_conservation,PENDING(#127-pipeline),PENDING(#127-pipeline)
-value_conservation_trace,PENDING(#127-pipeline),PENDING(#127-pipeline)
-convict_dominance,PENDING(#127-pipeline),PENDING(#127-pipeline)
-convict_burns_and_no_aid_bar,PENDING(#127-pipeline),PENDING(#127-pipeline)
-replay_convergence,prop_replay_convergence,t116_r4_replay_convergence
-close_cycle_requires_elapsed_window,prop_close_cycle_requires_elapsed_window,t116_r4_close_cycle_requires_elapsed_window
-dead_end_freedom,PENDING(#127-pipeline),PENDING(#127-pipeline)
-reap_voidable,PENDING(#127-pipeline),PENDING(#127-pipeline)
-reap_requires_untouched_window,PENDING(#127-pipeline),PENDING(#127-pipeline)
-frozen_reap_requires_two_windows,PENDING(#127-pipeline),PENDING(#127-pipeline)
+lean_theorem,disposition,owner_decision
+advance_totality,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+no_absorbing_busy_state,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+adversarial_advance_is_progress,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+bounded_churn,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+armed_exclusive_window,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+bond_transfer_only_via_elapsed_window,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+abandonment_pays_exactly_B,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+frozen_implies_true_silence,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+close_lie_always_voidable,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+close_at_tip_unchallengeable,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+current_state_is_quiet,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+value_conservation,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+value_conservation_trace,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+convict_dominance,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+convict_burns_and_no_aid_bar,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+replay_convergence,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+close_cycle_requires_elapsed_window,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+dead_end_freedom,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+reap_voidable,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+reap_requires_untouched_window,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+frozen_reap_requires_two_windows,RETIRED,https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547

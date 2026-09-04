@@ -71,7 +71,10 @@ The settled small-identity ladder covers:
    transaction, then mint one AID-derived checkpoint token into an ACTIVE
    output holding `minimum ADA + D_reg + B`.
 2. **Close.** Have the current controller threshold authorize the exact input
-   and refund address, burn the token, and return the complete escrow.
+   and refund address, burn the token, and return the complete escrow. (The
+   accepted design of 2026-09-03, D-036 to D-040, replaces this with the reap
+   by the next keys and a parked registry leaf holding the hash; play it in
+   the [checkpoint simulation](simulator/index.html).)
 3. **Advance.** Relay a genuine KERI rotation with the required controller
    signatures and witness receipts; consume the old checkpoint and create its
    unique sequence-plus-one ACTIVE successor.

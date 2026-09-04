@@ -147,6 +147,9 @@ redirect escrow.
 Close is different: it is a voluntary action authorized by the checkpoint's
 current controller threshold, and its signed message binds the refund address.
 
+!!! note "The accepted design changes this"
+    Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is `lean/CardanoKeri/Checkpoint.lean`, the play is the [checkpoint simulation](../simulator/index.html)) leaving is the reap: a witnessed rotation by the *next* keys whose signed message names the payee of the premium and the refund address. The current keys keep exactly one Cardano power, the poison. An identity is active (one UTxO), parked (no UTxO; the registry leaf holds the hash of the last checkpoint) or convicted; a parked identity is revived by a witnessed rotation from exactly that key state, with fresh bonds. What ships today is the close described above.
+
 The four settled small-identity stories and their transaction IDs are listed
 on the [story ladder](../story-ladder.md).
 

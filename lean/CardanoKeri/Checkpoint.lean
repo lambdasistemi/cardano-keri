@@ -4,9 +4,9 @@
 Abstract model of what the on-chain validator family admits under the design
 ruled on 2026-09-02 and 2026-09-03 (project decisions D-022 … D-040; plan
 `AUDIT-M1-RETURN`, Phase 0.2 and 0.4, 2.15–2.17 with the D-040 addendum). It
-replaces the freeze/bond/convict/reap machine of `Lifecycle.lean`, which is
-retired with the enforcement economy in Phase 1; both coexist on this branch
-so the retirement is a reviewed deletion.
+replaced the freeze/bond/convict/reap machine of `Lifecycle.lean`, retired
+with the enforcement economy in Phase 1 and removed in #366; Checkpoint is
+now the sole compiled lifecycle specification.
 
 Fourth cut, the third Lean slice (D-039, D-040), after the registry's slice 3:
 

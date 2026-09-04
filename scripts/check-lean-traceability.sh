@@ -1,110 +1,127 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root=$(cd "$(dirname "$0")/.." && pwd)
-csv="$repo_root/lean/traceability.csv"
-goals="$repo_root/lean/CardanoKeri/Goals.lean"
-haskell_spec="$repo_root/offchain/test/Cardano/KERI/AID/Checkpoint/LifecycleModelSpec.hs"
-aiken_tests="$repo_root/onchain/lib/cardano_keri/checkpoint/lifecycle_model_tests.ak"
+# Retirement ledger + sole-spec + proof-trust enforcement for DISP-366-DELETE.
+# Usage: check-lean-traceability.sh [repo_root] [base_sha]
+# Defaults cover CI/just callers (no args). The compiler remains the authority
+# for dependency closure; source-text scans locate references but never close
+# compiled absence alone.
+repo_root="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
+base_sha="${2:-9b2e6b88937707cc2c571ae1e9e5f112dc248a30}"
+ruling_url=https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
+lean_root="$repo_root/lean"
 
-expected_comments=(
-  '# Lean proves universal claims over the abstract lifecycle model.'
-  '# QuickCheck samples the pure Haskell lifecycle mirror.'
-  '# Generated parity vectors bind Haskell verdicts to Aiken verdicts.'
-  '# Full-context Aiken tests cover abstracted ledger details (address, datum, and real Value arithmetic); no refinement proof is claimed.'
-)
-
-mapfile -t actual_comments < <(sed -n '1,4p' "$csv")
-[[ ${#actual_comments[@]} -eq 4 ]] || {
-  printf 'traceability: expected exactly four leading comment statements\n' >&2
-  exit 1
-}
-for index in 0 1 2 3; do
-  [[ ${actual_comments[$index]} == "${expected_comments[$index]}" ]] || {
-    printf 'traceability: malformed comment %s\n' "$((index + 1))" >&2
+retired_modules=(Lifecycle Goals Invariants)
+for module in "${retired_modules[@]}"; do
+  test ! -e "$lean_root/CardanoKeri/$module.lean" || {
+    echo "retirement: retired source still exists: CardanoKeri/$module.lean" >&2
     exit 1
   }
 done
 
-header=$(sed -n '5p' "$csv")
-[[ $header == 'lean_theorem,quickcheck_property,aiken_test' ]] || {
-  printf 'traceability: malformed CSV header\n' >&2
+tmp_root=$(mktemp -d)
+trap 'rm -rf -- "$tmp_root"' EXIT
+
+git -C "$repo_root" show "$base_sha:lean/CardanoKeri/Goals.lean" \
+  | awk '/^theorem[[:space:]]+/ { print $2 }' >"$tmp_root/historical-theorems"
+historical_count=$(wc -l <"$tmp_root/historical-theorems")
+test "$historical_count" -gt 0 || {
+  echo 'retirement: empty historical denominator (base source missing or unparsable)' >&2
+  exit 1
+}
+test "$historical_count" -eq 21 || {
+  echo "retirement: historical denominator is $historical_count, expected 21" >&2
   exit 1
 }
 
-mapfile -t source_theorems < <(
-  awk '/^theorem[[:space:]]+/ { print $2 }' "$goals"
-)
-[[ ${#source_theorems[@]} -eq 21 ]] || {
-  printf 'traceability: Goals.lean declares %s theorems, expected 21\n' "${#source_theorems[@]}" >&2
+csv="$lean_root/traceability.csv"
+test "$(sed -n '1p' "$csv")" = 'lean_theorem,disposition,owner_decision' || {
+  echo 'retirement: malformed CSV header (expected lean_theorem,disposition,owner_decision)' >&2
   exit 1
 }
-
-mapfile -t rows < <(sed -n '6,$p' "$csv")
-[[ ${#rows[@]} -eq 21 ]] || {
-  printf 'traceability: map has %s data rows, expected 21\n' "${#rows[@]}" >&2
+sed -n '2,$p' "$csv" >"$tmp_root/retirement-rows"
+test "$(wc -l <"$tmp_root/retirement-rows")" -eq "$historical_count" || {
+  echo "retirement: CSV row count $(wc -l <"$tmp_root/retirement-rows"), expected $historical_count" >&2
   exit 1
 }
+if rg -n 'PENDING|WITHDRAWN' "$csv"; then
+  echo 'retirement: stale or non-retirement sentinel remains' >&2
+  exit 1
+fi
+awk -F, -v ruling="$ruling_url" '
+  NF != 3 || $1 == "" || $2 != "RETIRED" || $3 != ruling { exit 1 }
+' "$tmp_root/retirement-rows" || {
+  echo 'retirement: ledger row must be exactly {theorem,RETIRED,owner URL}' >&2
+  exit 1
+}
+cut -d, -f1 "$tmp_root/retirement-rows" >"$tmp_root/retired-theorems"
+test -z "$(sort "$tmp_root/retired-theorems" | uniq -d)" || {
+  echo 'retirement: duplicate theorem identifier in ledger' >&2
+  exit 1
+}
+diff -u "$tmp_root/historical-theorems" "$tmp_root/retired-theorems"
 
-for row in "${rows[@]}"; do
-  [[ -n $row ]] || {
-    printf 'traceability: blank row\n' >&2
+cd "$lean_root"
+nix shell --no-write-lock-file ../offchain#lean --command lake clean
+nix shell --no-write-lock-file ../offchain#lean --command lake build \
+  >"$tmp_root/build.log" 2>&1
+if rg -n "uses 'sorry'" "$tmp_root/build.log"; then
+  echo 'retirement: clean build contains a sorry proof' >&2
+  exit 1
+fi
+
+for module in "${retired_modules[@]}"; do
+  printf 'import CardanoKeri.%s\n' "$module" >"$tmp_root/RetiredImport.lean"
+  if nix shell --no-write-lock-file ../offchain#lean --command lake env lean \
+      "$tmp_root/RetiredImport.lean" >"$tmp_root/retired-import.log" 2>&1; then
+    echo "retirement: retired module remains importable: CardanoKeri.$module" >&2
     exit 1
-  }
-  awk -F, '
-    NF != 3 || $1 == "" || $2 == "" || $3 == "" { exit 1 }
-  ' <<<"$row" || {
-    printf 'traceability: malformed or incomplete row: %s\n' "$row" >&2
-    exit 1
-  }
-done
-
-mapfile -t mapped_theorems < <(printf '%s\n' "${rows[@]}" | awk -F, '{ print $1 }')
-mapfile -t mapped_properties < <(printf '%s\n' "${rows[@]}" | awk -F, '{ print $2 }')
-mapfile -t mapped_tests < <(printf '%s\n' "${rows[@]}" | awk -F, '{ print $3 }')
-
-for index in "${!source_theorems[@]}"; do
-  [[ ${mapped_theorems[$index]} == "${source_theorems[$index]}" ]] || {
-    printf 'traceability: source-order drift at row %s: expected %s, found %s\n' \
-      "$((index + 1))" "${source_theorems[$index]}" "${mapped_theorems[$index]}" >&2
-    exit 1
-  }
-done
-
-for column_name in theorem property test; do
-  case $column_name in
-    theorem) values=("${mapped_theorems[@]}") ;;
-    property) values=("${mapped_properties[@]}") ;;
-    test) values=("${mapped_tests[@]}") ;;
-  esac
-  # PENDING(#N) sentinels stand in for tests the paused #114/#115/#117 pipeline
-  # will deliver; they legitimately repeat across rows, so exempt them.
-  duplicate=$(printf '%s\n' "${values[@]}" | grep -v '^PENDING(' | sort | uniq -d | sed -n '1p')
-  [[ -z $duplicate ]] || {
-    printf 'traceability: duplicate %s identifier: %s\n' "$column_name" "$duplicate" >&2
-    exit 1
-  }
-done
-
-for index in "${!mapped_theorems[@]}"; do
-  property_name=${mapped_properties[$index]}
-  test_name=${mapped_tests[$index]}
-  # PENDING(#N): the paused pipeline owns the test; skip the existence check but
-  # keep the theorem mapped (still hard-fails on an unmapped Goals.lean theorem).
-  if [[ $property_name != PENDING\(*\) ]]; then
-    rg -q "^${property_name} :: Property$" "$haskell_spec" || {
-      printf 'traceability: missing Haskell property %s\n' "$property_name" >&2
-      exit 1
-    }
   fi
-  if [[ $test_name != PENDING\(*\) ]]; then
-    rg -q "^test ${test_name}\\(\\)" "$aiken_tests" || {
-      printf 'traceability: missing Aiken test %s\n' "$test_name" >&2
-      exit 1
-    }
-  fi
+  rg -q "unknown module prefix|object file .*CardanoKeri/$module\\.olean.* does not exist" \
+      "$tmp_root/retired-import.log" || {
+    echo "retirement: retired import failed for the wrong reason: CardanoKeri.$module" >&2
+    exit 1
+  }
 done
 
-cd "$repo_root"
-just check-lifecycle-trace-vectors
-printf 'traceability: 21 Lean theorems mapped to executable Haskell/Aiken identifiers (PENDING(#127-pipeline) rows await the paused #114/#115/#117 tests)\n'
+cat >"$tmp_root/Axioms.lean" <<'EOF'
+import CardanoKeri.CheckpointGoals
+import CardanoKeri.RegistryGoals
+import CardanoKeri.Cage
+import CardanoKeri.Samaritan
+EOF
+theorem_count=0
+while IFS=: read -r source prefix; do
+  while read -r theorem_name; do
+    printf '#print axioms %s.%s\n' "$prefix" "$theorem_name" >>"$tmp_root/Axioms.lean"
+    theorem_count=$((theorem_count + 1))
+  done < <(awk '/^theorem[[:space:]]+/ { print $2 }' "$lean_root/CardanoKeri/$source.lean")
+done <<'EOF'
+CheckpointGoals:CardanoKeri.Checkpoint
+RegistryGoals:CardanoKeri.Registry
+Cage:CardanoKeri.Cage
+Samaritan:CardanoKeri.Samaritan
+EOF
+test "$theorem_count" -gt 0 || {
+  echo 'retirement: empty live theorem inventory' >&2
+  exit 1
+}
+nix shell --no-write-lock-file ../offchain#lean --command lake env lean \
+  "$tmp_root/Axioms.lean" >"$tmp_root/axioms.log" 2>&1
+test "$(rg -c "depends on axioms|does not depend on any axioms" "$tmp_root/axioms.log")" \
+  -eq "$theorem_count" || {
+  echo 'retirement: truncated axiom inventory (receipt count differs from theorem count)' >&2
+  exit 1
+}
+if rg -n 'sorryAx|Classical.choice' "$tmp_root/axioms.log"; then
+  echo 'retirement: live proof surface contains an unapproved axiom' >&2
+  exit 1
+fi
+if rg 'depends on axioms:' "$tmp_root/axioms.log" \
+    | rg -v 'depends on axioms: \[propext\]$|depends on axioms: \[Quot.sound\]$|depends on axioms: \[propext, Quot.sound\]$'; then
+  echo 'retirement: live proof surface contains an unknown axiom set' >&2
+  exit 1
+fi
+
+git -C "$repo_root" diff --check
+echo "retirement: retired=3 ledger=$historical_count live-theorems=$theorem_count build=pass axioms=pass"

@@ -6,8 +6,8 @@
 - [x] **T368-P02** Compile the compact six-file mandate and invariant ledger.
 - [x] **T368-P03** Add a verdict-free `lean/AUDIT-REPORT.md` skeleton.
 - [x] **T368-P04** Create ignored planning gate v1 and runtime backup.
-- [ ] **T368-P05** Open and record the draft PR.
-- [ ] **T368-P06** Record hashes, `BLOCKED awaiting-merged-base`, and park.
+- [x] **T368-P05** Open and record the draft PR.
+- [x] **T368-P06** Record hashes, `BLOCKED awaiting-merged-base`, and park.
 
 ## P1 — admit release and freeze
 

@@ -97,13 +97,13 @@ to the verbatim list and R1…R14 guarantees in `registry-as-mpfs.md`.
 |---|---|---|---|---|
 | CG-01 | 5,#79 | `authorized.ownerKeyed` requires owner signature | `ownerKeyed_needs_owner`, `owner_bypass_breaks_inv` | blocking |
 | CG-02 | 5,#79 | `authorized.ownerAndHook` requires owner signature | `ownerAndHook_needs_owner` | blocking |
-| CG-03 | 5,#79 | `authorized.ownerAndHook` requires plugin withdrawal | `ownerAndHook_trivial_breaks_inv` | blocking |
+| CG-03 | 5,#79 | `authorized.ownerAndHook` requires plugin withdrawal | `ownerAndHook_trivial_breaks_inv`, `Mutants.CG03_ownerAndHook_requires_hook` | blocking |
 | CG-04 | 1,5,#79 | `authorized.delegated` requires plugin withdrawal, not owner | `delegated_permissionless`, `delegated_is_registry` | blocking |
 | CG-05 | 5,7,#102 | `runBody true` executes `pl.body` | `applyBatch_delegated_eq`, `delegated_is_registry` | blocking |
 | CG-06 | 5,7,#102 | `runBody false` executes `cageOnlyBody` | `owner_bypass_breaks_inv` | blocking |
 | CG-07 | 5,#101 | `routeValue.delegatedRouting` preserves plugin result | `applyBatch_delegated_eq`, `delegated_is_registry` | blocking |
 | CG-08 | 5,#101 | `routeValue.refundAll` restores pre-body locked value | `refundAll_never_locks`, `refundAll_fold_locks_nothing` | blocking |
-| CG-09 | 5,#101 | `routeValue.refundAll` returns exact bond to request owner | `refundAll_never_locks` | blocking |
+| CG-09 | 5,#101 | `routeValue.refundAll` returns exact bond to request owner | `refundAll_never_locks`, `Mutants.CG09_refundAll_returns_exact_bond` | blocking |
 | CG-10 | 5,#100 | delegated plugin pin is `mode = delegated → pl' = s.plugin` | `delegated_pins_plugin`, `owner_swaps_plugin`, `delegated_is_registry` | blocking |
 | CG-11 | 5,7,#79,#101,#102 | delegated Cage/Registry execution correspondence | `applyBatch_delegated_eq`, `delegated_is_registry` | blocking |
 
@@ -147,7 +147,9 @@ mutant may settle multiple rows, but the evidence remains per row.
 | TH-16 | `Samaritan.self_folding_reaper_never_loses` | profitable self-fold with both fees non-zero |
 | TH-17 | `Samaritan.fold_conserves` | non-zero request and tip split |
 | TH-18 | `Samaritan.unprofitable_when_tip_too_high` | funded but fee makes recovery unprofitable |
+| TH-19 | `Mutants.CG03_ownerAndHook_requires_hook` | owner-signed without hook refuses |
+| TH-20 | `Mutants.CG09_refundAll_returns_exact_bond` | refundAll returns exact bond to request owner |
 
-Theorem-row denominator: **18**. Structural failures (including broad
+Theorem-row denominator: **20**. Structural failures (including broad
 correspondence mirrors) are named once by the generated receipt and repeated on
 each affected result; they never count as the owning semantic kill.

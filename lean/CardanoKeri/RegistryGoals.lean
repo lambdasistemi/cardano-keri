@@ -1696,4 +1696,382 @@ theorem R14_convict_at_position (p : Params) (env : Env) (now : Slot) {acc acc' 
         obtain ⟨k, hk, hd⟩ := R14_convict_in_batch_needs_proof p env hop hb
         exact ⟨k, hk, hd⟩
 
+/-! ## S364-INV — Registry transition inversions (DEC-364-STEPFN)
+
+The twelve bidirectional `*_iff` theorems below are the complete public
+backward interface over the seven `Action` branches of `stepFn` and the five
+`Op` branches of `processBody` (see DEC-364-STEPFN in `CardanoKeri.Registry`).
+Each left side is successful evaluation of one live branch to explicit result
+arguments; each right side is the exact input bindings, every executable
+guard, and every observable result field. Refusal follows by negation:
+a branch succeeds exactly when its guards hold. `ReachFar` is unchanged. -/
+
+
+theorem stepFn_contribute_iff (p : Params) (env : Env) (aid : AID) (owner : Addr)
+    (submittedAt now : Slot) (op : Op) (s : Sys) (f : Flow) (s' : Sys) :
+    stepFn p env (.contribute aid owner submittedAt op) now s = some (f, s') ↔
+      op.userPostable = true ∧
+      f = { deposited := op.bond p + p.tip } ∧
+      s' = { s with requests := (s.nextReq, ⟨aid, owner, submittedAt, op⟩) :: s.requests,
+                    nextReq := s.nextReq + 1 } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    by_cases hg : op.userPostable = true
+    · rw [if_pos hg] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨hg, rfl, rfl⟩
+    · rw [if_neg hg] at h
+      cases h
+  · rintro ⟨hg, rfl, rfl⟩
+    simp [stepFn, hg]
+
+theorem stepFn_fold_iff (p : Params) (env : Env) (folder : Addr) (g : Gen) (plugin : Script)
+    (batch : List (ReqId × FoldAction)) (now : Slot) (s : Sys) (f : Flow) (s' : Sys) :
+    stepFn p env (.fold folder g plugin batch) now s = some (f, s') ↔
+      g = s.gen ∧ plugin = s.plugin ∧ batch ≠ [] ∧
+      ∃ acc, applyBatch p env now ⟨s.leaves, s.ckpts, s.requests, s.nextToken, [], []⟩ batch = some acc ∧
+        f = { locked := acc.locked, refunds := acc.refunds,
+              tips := some (folder, batch.length * p.tip) } ∧
+        s' = { s with gen := s.gen + 1, leaves := acc.leaves, ckpts := acc.ckpts,
+                      requests := acc.requests, nextToken := acc.nextToken } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    by_cases hg : g = s.gen ∧ plugin = s.plugin ∧ batch ≠ []
+    · rw [if_pos hg] at h
+      obtain ⟨ab, hab⟩ : ∃ ab, (applyBatch p env now ⟨s.leaves, s.ckpts, s.requests, s.nextToken, [], []⟩ batch) = ab := ⟨_, rfl⟩
+      rw [hab] at h
+      cases ab with
+      | none =>
+        dsimp only at h
+        cases h
+      | some acc =>
+        dsimp only at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨hg.1, hg.2.1, hg.2.2, acc, hab, rfl, rfl⟩
+    · rw [if_neg hg] at h
+      cases h
+  · rintro ⟨rfl, rfl, hne, acc, hab, rfl, rfl⟩
+    have hc : s.gen = s.gen ∧ s.plugin = s.plugin ∧ batch ≠ [] := ⟨rfl, rfl, hne⟩
+    simp [stepFn, hc, hab]
+
+theorem stepFn_retract_iff (p : Params) (env : Env) (id : ReqId) (now : Slot) (s : Sys)
+    (f : Flow) (s' : Sys) :
+    stepFn p env (.retract id) now s = some (f, s') ↔
+      ∃ r, lookup s.requests id = some r ∧ inPhase2 p r now ∧
+        f = { refunds := [(r.owner, r.op.bond p + p.tip)] } ∧
+        s' = { s with requests := remove s.requests id } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup s.requests id) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some r =>
+      dsimp only at h
+      by_cases hg : inPhase2 p r now
+      · rw [if_pos hg] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨r, hL, hg, rfl, rfl⟩
+      · rw [if_neg hg] at h
+        cases h
+  · rintro ⟨r, hlookup, hg, rfl, rfl⟩
+    simp [stepFn, hlookup, hg]
+
+theorem stepFn_reap_iff (p : Params) (env : Env) (reaper : Addr) (aid : AID) (now : Slot)
+    (s : Sys) (f : Flow) (s' : Sys) :
+    stepFn p env (.reap reaper aid) now s = some (f, s') ↔
+      ∃ c, lookup s.ckpts aid = some c ∧ reapable p env now aid c ∧
+        f = { premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip } ∧
+        s' = { s with ckpts := remove s.ckpts aid,
+                      requests := (s.nextReq, ⟨aid, reaper, p.far, goOp c⟩) :: s.requests,
+                      nextReq := s.nextReq + 1 } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some c =>
+      dsimp only at h
+      by_cases hg : reapable p env now aid c
+      · rw [if_pos hg] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨c, hL, hg, rfl, rfl⟩
+      · rw [if_neg hg] at h
+        cases h
+  · rintro ⟨c, hck, hg, rfl, rfl⟩
+    simp [stepFn, hck, hg]
+
+theorem stepFn_pause_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)
+    (f : Flow) (s' : Sys) :
+    stepFn p env (.pause aid) now s = some (f, s') ↔
+      ∃ tok k, lookup s.ckpts aid = some ⟨tok, k, .live⟩ ∧
+        env.rotationFrom aid k = true ∧ f = {} ∧
+        s' = { s with ckpts := (aid, ⟨tok, k + 1, .parked now⟩) :: remove s.ckpts aid } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some c =>
+      obtain ⟨tok, k, st⟩ := c
+      cases st with
+      | live =>
+        dsimp only at h
+        by_cases hg : env.rotationFrom aid k = true
+        · rw [if_pos hg] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact ⟨tok, k, hL, hg, rfl, rfl⟩
+        · rw [if_neg hg] at h
+          cases h
+      | parked since =>
+        dsimp only at h
+        cases h
+      | tomb =>
+        dsimp only at h
+        cases h
+  · rintro ⟨tok, k, hck, hg, rfl, rfl⟩
+    simp [stepFn, hck, hg]
+
+theorem stepFn_resume_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)
+    (f : Flow) (s' : Sys) :
+    stepFn p env (.resume aid) now s = some (f, s') ↔
+      ∃ tok k since, lookup s.ckpts aid = some ⟨tok, k, .parked since⟩ ∧
+        env.rotationFrom aid k = true ∧ f = {} ∧
+        s' = { s with ckpts := (aid, ⟨tok, k + 1, .live⟩) :: remove s.ckpts aid } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some c =>
+      obtain ⟨tok, k, st⟩ := c
+      cases st with
+      | live =>
+        dsimp only at h
+        cases h
+      | parked since =>
+        dsimp only at h
+        by_cases hg : env.rotationFrom aid k = true
+        · rw [if_pos hg] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact ⟨tok, k, since, hL, hg, rfl, rfl⟩
+        · rw [if_neg hg] at h
+          cases h
+      | tomb =>
+        dsimp only at h
+        cases h
+  · rintro ⟨tok, k, since, hck, hg, rfl, rfl⟩
+    simp [stepFn, hck, hg]
+
+theorem stepFn_convictCkpt_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)
+    (f : Flow) (s' : Sys) :
+    stepFn p env (.convictCkpt aid) now s = some (f, s') ↔
+      ∃ tok k st, lookup s.ckpts aid = some ⟨tok, k, st⟩ ∧ st ≠ .tomb ∧
+        env.duplicity aid k = true ∧ f = {} ∧
+        s' = { s with ckpts := (aid, ⟨tok, k, .tomb⟩) :: remove s.ckpts aid } := by
+  constructor
+  · intro h
+    simp only [stepFn] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some c =>
+      obtain ⟨tok, k, st⟩ := c
+      dsimp only at h
+      by_cases hg : st ≠ .tomb ∧ env.duplicity aid k = true
+      · rw [if_pos hg] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨tok, k, st, hL, hg.1, hg.2, rfl, rfl⟩
+      · rw [if_neg hg] at h
+        cases h
+  · rintro ⟨tok, k, st, hck, hne, hd, rfl, rfl⟩
+    have hg : st ≠ .tomb ∧ env.duplicity aid k = true := ⟨hne, hd⟩
+    simp [stepFn, hck, hg]
+
+theorem processBody_register_iff (p : Params) (env : Env) (acc : Acc) (aid : AID) (owner : Addr)
+    (submittedAt : Slot) (acc' : Acc) :
+    processBody p env acc ⟨aid, owner, submittedAt, .register⟩ = some acc' ↔
+      env.inception aid = true ∧ lookup acc.leaves aid = none ∧
+      acc' = { acc with leaves := (aid, .active acc.nextToken) :: acc.leaves,
+                        ckpts := (aid, ⟨acc.nextToken, 0, .live⟩) :: acc.ckpts,
+                        nextToken := acc.nextToken + 1,
+                        locked := acc.locked ++ [(aid, p.D)] } := by
+  constructor
+  · intro h
+    simp only [processBody] at h
+    by_cases hg : env.inception aid = true ∧ lookup acc.leaves aid = none
+    · rw [if_pos hg] at h
+      simp only [Option.some.injEq] at h
+      obtain rfl := h
+      exact ⟨hg.1, hg.2, rfl⟩
+    · rw [if_neg hg] at h
+      cases h
+  · rintro ⟨hi, hnone, rfl⟩
+    have hg : env.inception aid = true ∧ lookup acc.leaves aid = none := ⟨hi, hnone⟩
+    simp [processBody, hg]
+
+theorem processBody_revive_iff (p : Params) (env : Env) (acc : Acc) (aid : AID) (owner : Addr)
+    (submittedAt : Slot) (acc' : Acc) :
+    processBody p env acc ⟨aid, owner, submittedAt, .revive⟩ = some acc' ↔
+      ∃ k, lookup acc.leaves aid = some (.dormant k) ∧ env.rotationFrom aid k = true ∧
+        lookup acc.ckpts aid = none ∧
+        acc' = { acc with leaves := setLeaf acc.leaves aid (.active acc.nextToken),
+                          ckpts := (aid, ⟨acc.nextToken, k + 1, .live⟩) :: acc.ckpts,
+                          nextToken := acc.nextToken + 1,
+                          locked := acc.locked ++ [(aid, p.D)] } := by
+  constructor
+  · intro h
+    simp only [processBody] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup acc.leaves aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some v =>
+      cases v with
+      | active tok =>
+        dsimp only at h
+        cases h
+      | dormant k =>
+        dsimp only at h
+        by_cases hg : env.rotationFrom aid k = true ∧ lookup acc.ckpts aid = none
+        · rw [if_pos hg] at h
+          simp only [Option.some.injEq] at h
+          obtain rfl := h
+          exact ⟨k, hL, hg.1, hg.2, rfl⟩
+        · rw [if_neg hg] at h
+          cases h
+      | convicted =>
+        dsimp only at h
+        cases h
+  · rintro ⟨k, hleaf, hr, hnone, rfl⟩
+    have hg : env.rotationFrom aid k = true ∧ lookup acc.ckpts aid = none := ⟨hr, hnone⟩
+    simp [processBody, hleaf, hg]
+
+theorem processBody_goDormant_iff (p : Params) (env : Env) (acc : Acc) (aid : AID) (owner : Addr)
+    (submittedAt : Slot) (k : KeyState) (acc' : Acc) :
+    processBody p env acc ⟨aid, owner, submittedAt, .goDormant k⟩ = some acc' ↔
+      ∃ tok, lookup acc.leaves aid = some (.active tok) ∧
+        acc' = { acc with leaves := setLeaf acc.leaves aid (.dormant k),
+                          refunds := acc.refunds ++ [(owner, p.Mr)] } := by
+  constructor
+  · intro h
+    simp only [processBody] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup acc.leaves aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some v =>
+      cases v with
+      | active tok =>
+        dsimp only at h
+        simp only [Option.some.injEq] at h
+        obtain rfl := h
+        exact ⟨tok, hL, rfl⟩
+      | dormant k' =>
+        dsimp only at h
+        cases h
+      | convicted =>
+        dsimp only at h
+        cases h
+  · rintro ⟨tok, hleaf, rfl⟩
+    simp [processBody, hleaf]
+
+theorem processBody_goConvicted_iff (p : Params) (env : Env) (acc : Acc) (aid : AID) (owner : Addr)
+    (submittedAt : Slot) (acc' : Acc) :
+    processBody p env acc ⟨aid, owner, submittedAt, .goConvicted⟩ = some acc' ↔
+      ∃ tok, lookup acc.leaves aid = some (.active tok) ∧
+        acc' = { acc with leaves := setLeaf acc.leaves aid .convicted,
+                          refunds := acc.refunds ++ [(owner, p.Mr)] } := by
+  constructor
+  · intro h
+    simp only [processBody] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup acc.leaves aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some v =>
+      cases v with
+      | active tok =>
+        dsimp only at h
+        simp only [Option.some.injEq] at h
+        obtain rfl := h
+        exact ⟨tok, hL, rfl⟩
+      | dormant k' =>
+        dsimp only at h
+        cases h
+      | convicted =>
+        dsimp only at h
+        cases h
+  · rintro ⟨tok, hleaf, rfl⟩
+    simp [processBody, hleaf]
+
+theorem processBody_convict_iff (p : Params) (env : Env) (acc : Acc) (aid : AID) (owner : Addr)
+    (submittedAt : Slot) (acc' : Acc) :
+    processBody p env acc ⟨aid, owner, submittedAt, .convict⟩ = some acc' ↔
+      ∃ k, lookup acc.leaves aid = some (.dormant k) ∧ env.duplicity aid k = true ∧
+        acc' = { acc with leaves := setLeaf acc.leaves aid .convicted,
+                          refunds := acc.refunds ++ [(owner, p.Mr)] } := by
+  constructor
+  · intro h
+    simp only [processBody] at h
+    obtain ⟨x, hL⟩ : ∃ x, (lookup acc.leaves aid) = x := ⟨_, rfl⟩
+    rw [hL] at h
+    cases x with
+    | none =>
+      dsimp only at h
+      cases h
+    | some v =>
+      cases v with
+      | active tok =>
+        dsimp only at h
+        cases h
+      | dormant k =>
+        dsimp only at h
+        by_cases hg : env.duplicity aid k = true
+        · rw [if_pos hg] at h
+          simp only [Option.some.injEq] at h
+          obtain rfl := h
+          exact ⟨k, hL, hg, rfl⟩
+        · rw [if_neg hg] at h
+          cases h
+      | convicted =>
+        dsimp only at h
+        cases h
+  · rintro ⟨k, hleaf, hd, rfl⟩
+    simp [processBody, hleaf, hd]
+
+
 end CardanoKeri.Registry

@@ -27,10 +27,10 @@ the theorems shown in a run count as discovered, and *★ Challenge: steal the
 1000* is free play as Mallory with a goal and the theorems' answer. First the
 play: the tree of it, drawn (every step a node — ✓ accepted, ✗ refused, ⏱ a
 slot move, ≡ evidence — labelled with the actor and what they did: `Alice
-register`, `Mallory close`, `Alice rotate·withdraw`, `treasury slot 40` — every
+register`, `Mallory close`, `Alice rotate·deposit`, `treasury slot 40` — every
 branch a line, ⋔ at a fork, the ring on the current step; click a node to jump
 there), the play bar, one strip with the
-state word, the keys, the treasury's verdict and the three sums, and the
+state word, the keys (or, when parked, the hash the leaf holds), the treasury's verdict and the three sums, and the
 narration of the current step. Then the main panel, what can happen next:
 the story's continuations from here (the one › will take marked, the other
 branches with their titles) and every move the machine would accept from
@@ -46,8 +46,9 @@ with its verdict lamp, the wallets that receive payments). Every step plays
 on it: the transaction flies from the actor to the validator and gets its
 ✓ or ✗ with the reason, the rotation arrives from the witnesses, coins move
 from piles to wallets exactly as the flow record says, the datum pulses, a
-poison drops its ☠, a freeze lifts the freeze bond out, a conviction turns
-the token into a tombstone, a close burns it, a slot move turns the clock.
+poison drops its ☠, a freeze lifts the freeze bond out, a conviction marks
+the token, a close (the reap) burns it and parks the leaf with the hash, a
+revival mints it again, a slot move turns the clock.
 
 A story is a tree: its trunk and the branches it implies (`forks` in the
 scenario file). ‹ goes back one step and plays the step in reverse; › goes
@@ -72,12 +73,12 @@ value chart and the balances live in drawers under the theorem lamps.
 | `checkpoint-simulator-build.mjs` | regenerates the page from the core, the scenarios and the corpus, and writes `docs/simulator/index.html`; `--check` reds on any drift. |
 | `checkpoint-simulator-scenarios/` | one JSON per story (1–15): params, evidence decisions, actions with slots and actors, expected results per step including refusal reasons, the theorems each step exhibits. |
 | `checkpoint-simulator-scenario-gate.mjs` | replays every scenario through the core with the Lean corpus as T7's oracle; one checker row per Lean declaration of `CheckpointGoals.lean` on every step (the gate reads the theorem names off the Lean and reds when a row is missing, renamed or unlisted); every refusal reason asserted; exact Nat at every real entry point; a multi-AID system generator (T8 on every transition); the story reconciliation against the Lean's declaration spans and the distinctive-clause matrix (`--matrix`, `--clauses-md`); build drift; a page smoke under a minimal DOM including `?selftest=1`. `--selftest` proves it can fail twenty ways. |
-| `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim: seeded traces, the boundary grid, and the Lean's own verdict on every step of the fifteen scenarios (the T7 oracle). |
+| `checkpoint-simulator-corpus.json` | the output of `lean/CheckpointTraceDriver.lean`, verbatim: eight seeded traces, the boundary grid (1380 cells), and the Lean's own verdict on every step of the fifteen scenarios and their forks (the T7 oracle). |
 | `checkpoint-simulator-clauses.json` | every "chain checks" clause of every story reconciled with the Lean (guard or overrule anchored inside a Lean declaration with a semantic tie, omission with its note) and the distinctive clauses each scenario must exercise. |
 | `M1-STORIES.md` | the fifteen stories, verbatim, which the gate reads to extract the clauses. |
 | `checkpoint-simulator-trace-gate.mjs` | builds the driver's Lean imports (`lake build`), runs the Lean driver fresh, compares by sha256 with the corpus embedded in the page, replays every step (applied and refused) through the core and the page's inlined core, checks every theorem on every applied step. `--selftest` proves it can fail, cold included. |
 | `checkpoint-simulator-minidom.mjs` | the minimal DOM the gates drive the page with (parser, selectors, events, values, a recording canvas). Not jsdom: what the page uses and it lacks throws. |
-| `../lean/CheckpointTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over seeded traces, a boundary grid (every guarded comparison at −1 / = / +1, every action from every state, two evidence oracles) and every step of the scenario files, and prints JSON via `ToJson` instances. |
+| `../lean/CheckpointTraceDriver.lean` | a program, imported by nothing: runs `stepFn` over eight seeded traces, a boundary grid (the poison and freeze bits both ways, the pool at −1 / = / +1 of the premium, every action from every state — the close with the signed payee and a copied one — under two evidence oracles) and every step of the scenario files, and prints JSON via `ToJson` instances. |
 
 ## Run the gates
 
@@ -99,7 +100,7 @@ node simulator/checkpoint-simulator-build.mjs
 Negative controls, each RED for its intended reason, then GREEN:
 
 ```sh
-node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation, flipped guard, lying property, broken control, rounding at 2^53, step / replay / consumable / corpus verifier with its boundary removed, wrong transition (T7), registry drop (T8), W read (T9), dropped clause, the auditor's unrelated-declaration survivor, same text on another constructor, text outside the declaration, step through another constructor, clause absent from the story, a Lean guard hypothesis renamed, dropped distinctive step
+node simulator/checkpoint-simulator-scenario-gate.mjs --selftest   # flipped expectation; flipped guards (close without the signed intent, the copied reap landing, a revival at the parked sequence, a parked conviction without a proof, a revival under a leaf that is not parked); changed effects (the premium to the refund address, a deposit that restarts juvenility); lying property; broken controls (tree, scene, picker); rounding at 2^53; step / replay / consumable / corpus verifier with its boundary removed; wrong transition (T7); registry drop (T8); W read (T9); dropped clause; the auditor's unrelated-declaration survivor; same text on another constructor; text outside the declaration; step through another constructor; clause absent from the story; a Lean guard hypothesis renamed; dropped distinctive step; atom identities
 node simulator/checkpoint-simulator-trace-gate.mjs --selftest      # mutated post-state, emptied corpus, mutated sha, flipped guard, then the cold control (a copy of lean/ without .lake fails with the build step removed and is byte-identical with it)
 ```
 
@@ -113,6 +114,16 @@ few seconds from a fresh clone or worktree), through `nix shell
 nixpkgs#lean4`. Nothing has to be built by hand; if the build fails the gate
 prints the exact command to run from `lean/` to see why.
 
+## Stories are trees that end where their meaning lands
+
+A trunk ends on the state the story wanted to show — the owner registered,
+rotated, unfrozen, parked with her bonds back, alive again; or an attacker
+plainly stopped where the stopping is the point. A refusal that is merely a
+step of the machine (a wrong sequence, an unsigned intent, a copied reap)
+is a fork, named for what it teaches, played from the step in the middle it
+departs from; ▶ stops on the trunk's punchline with what was achieved, and a
+fork ends with what was prevented.
+
 ## Numbers
 
 A Lean `Nat` is unbounded; this simulator represents it exactly up to
@@ -123,8 +134,9 @@ anything else at every entry point that takes a state or an evidence table —
 evaluated: the complete state (every datum or tombstone field) and the
 complete table (every row of every predicate, consulted or not) are checked
 first, in the order params, slot, action, state, evidence. A shape that is
-not one of the four Lean states is `invalid-state`; a table that is not the
-four predicates with their arities is `invalid-evidence`; the consumer's
+not one of the four Lean states is `invalid-state` (a parked state carries exactly its hash, epoch and
+sequence); a table that is not the four predicates with their arities is
+`invalid-evidence` (an intent is `keep`, `deposit` or `close` with its payee); the consumer's
 verdict on such input is the refusal itself. An arithmetic result beyond the
 bound is refused too. Nothing is ever rounded.
 
@@ -139,7 +151,7 @@ refusal), `payment` (a flow field pays it), `post-state` (the resulting
 state, optionally `updates`: the only datum fields it sets), `no-guard` (the
 constructor has no hypothesis), `verdict` (a conjunct of `consumableState`)
 — and names a Lean declaration (a `Step` constructor, `consumableState`,
-`SysStep.register`, `Trace.cons` or a theorem), the hypothesis for a guard or
+`SysStep.register`, `SysStep.reopen`, `Trace.cons` or a theorem), the hypothesis for a guard or
 refusal, the exact text that entails the claim, and one semantic tie: a
 refusal name (the core's `LEAN_GUARDS` table binds every refusal name to the
 constructor and binder that refuse it; a refusal claim's story must also be
@@ -167,28 +179,38 @@ shown and the row says so.
 From the Lean's own statements (`Checkpoint.lean`, module comment and
 constructors):
 
-- states Absent, Present (live / poisoned / frozen / paused, read off the
-  datum), Closed (the tombstone: epoch and sequence of the closing rotation;
-  not terminal, D-036), Convicted (the only terminal state);
-- actions register, rotate (keep / withdraw / deposit, payee, optional new
-  refund address), poison, freeze, top-up, convict, close (a witnessed
-  rotation that withdraws everything and burns, poisoned or not, D-036),
-  reopen (a witnessed rotation later than the tombstone, fresh bonds, born
-  again) — exactly the redeemers of the validator family;
+- D-040's three registry states and Absent: Present — active, one UTxO —
+  read off the datum as live / poisoned / frozen (the conviction bond is
+  always held; only the freeze bond can be missing), Parked (no UTxO; the
+  leaf holds the hash of the last checkpoint, its key state: the epoch and
+  sequence the closing rotation reached; not terminal), Convicted (the mark;
+  the only terminal state);
+- actions register, rotate (keep / deposit — the unfreeze, a keep in all but
+  its signature on full bonds — payee, optional new refund address), poison,
+  freeze, top-up, convict (of a present checkpoint, or of a parked identity
+  by a proof against its key state), close — the reap: a witnessed rotation
+  whose new keys signed the close naming the payee of the premium and the
+  refund address; the premium to the payee, everything else to the refund
+  address, the token burned, the leaf parked with the hash (D-036, D-039,
+  D-040) — and reopen — the revival: a witnessed rotation from exactly the
+  parked key state, fresh bonds, born now — exactly the redeemers of the
+  validator family;
 - evidence as decidable predicates: a witnessed rotation, the intent the
-  new keys signed — a bond option other than keep, a close, or a new refund
-  address, in one message (D-038: a relayer with public data lands a keep
-  and nothing else), the current quorum, a duplicity proof;
+  new keys signed — a deposit, a close with its payee, or a new refund
+  address, in one message (D-038, D-039: a relayer with public data lands a
+  keep and nothing else; a copied reap with the payee rewritten is a message
+  nobody signed), the current quorum, a duplicity proof;
 - value as three addressed components — conviction bond `D`, freeze bond `B`,
   pool — that never mix; payments to the refund address, a hunter, a convictor;
-- the consumer's state-side check: both bonds full, not poisoned, born at
-  least `W` slots ago;
+- the consumer's state-side check: the freeze bond held, not poisoned, born
+  at least `W` slots ago;
 - the fold: the state is the replay of the accepted actions; a trace needs
   non-decreasing slots;
 - one incarnation per AID: the registry as a map from AID to a leaf —
-  absent, live, closed, convicted — that follows the state; register needs
-  an absent leaf, reopen a closed one; rotate, poison, freeze and top-up
-  never touch it (D-037; the MPFS mechanics are outside the machine).
+  absent, active, parked with the hash, convicted — that follows the state
+  (a UTxO exists exactly when the leaf is active); register needs an absent
+  leaf, a revival a parked one; rotate, poison, freeze and top-up never
+  touch it (D-037, D-040; the MPFS mechanics are outside the machine).
 
 ## What is not modelled
 
@@ -197,7 +219,10 @@ table); validity (D-027, A11) is reserved in the datum and not modelled; the
 consumer's own threshold check is the consumer's; no UTxO mechanics (story 14's
 "spent input" appears as evidence that no longer matches); delegated
 identities, record trees, interactions, hunter bounties, conviction that
-clears — none, by design. Two open details of D-034 are fixed as modelling
+clears — none, by design. No pause, no withdraw, no unbonded checkpoint on
+chain (D-040); the hash is the key state itself (no cryptography), and a
+revival does not carry its pre-image. No grace window: the registry's is
+not the checkpoint's. Two open details of D-034 are fixed as modelling
 assumptions in the Lean and therefore here: no freeze from a poisoned state;
 conviction sends the freeze bond and the pool to the refund address.
 

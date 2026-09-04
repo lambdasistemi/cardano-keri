@@ -11,51 +11,10 @@
   "steps": [
     {
       "slot": 0,
-      "who": "friend",
-      "say": "Nothing is on chain for this AID. Money cannot be added to a checkpoint that does not exist.",
-      "action": {
-        "topUp": {
-          "x": 3
-        }
-      },
+      "who": "treasury",
+      "say": "Nothing on chain for this AID: the treasury fails closed, and only a registration can happen first.",
       "expect": {
-        "ok": false,
-        "reason": "absent-needs-register",
-        "verdict": "not-present",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
-        ]
-      }
-    },
-    {
-      "slot": 0,
-      "who": "friend",
-      "say": "A deployment with a zero conviction bond is refused before anything else: 'bond missing' would be indistinguishable from 'bond full'.",
-      "params": {
-        "D": 0,
-        "B": 5,
-        "P": 2,
-        "W": 10
-      },
-      "action": {
-        "register": {
-          "refund": 6,
-          "pool0": 10
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "invalid-params",
-        "verdict": "not-present",
-        "exhibits": [
-          "T9_juvenility_is_consumer_only"
-        ]
+        "verdict": "not-present"
       }
     },
     {
@@ -76,9 +35,8 @@
           "poisoned": false,
           "bornAt": 0,
           "refundTo": 6,
-          "dreg": 1000,
-          "b": 5,
-          "pool": 10
+          "pool": 10,
+          "frozen": false
         },
         "flow": {
           "dregIn": 1000,
@@ -89,17 +47,19 @@
         "exhibits": [
           "T3_epoch_local",
           "T6_component_conservation",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
+          "T8_leaf_states",
           "T8_mint_once",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff"
         ]
@@ -120,31 +80,6 @@
       "expect": {
         "verdict": "consumable"
       }
-    },
-    {
-      "slot": 10,
-      "who": "friend",
-      "say": "Registering the same AID again is refused: the token is minted once, ever.",
-      "action": {
-        "register": {
-          "refund": 6,
-          "pool0": 10
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "already-present",
-        "verdict": "consumable",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
-        ]
-      }
     }
   ],
   "atoms": [
@@ -153,5 +88,105 @@
     "1.and-is-inserted",
     "1.this-is-the-only-way",
     "1.both-bonds-are-present"
+  ],
+  "forks": [
+    {
+      "id": "nothing-yet",
+      "at": 0,
+      "title": "Money for a checkpoint that does not exist",
+      "steps": [
+        {
+          "slot": 0,
+          "who": "friend",
+          "say": "Nothing is on chain for this AID. Money cannot be added to a checkpoint that does not exist.",
+          "action": {
+            "topUp": {
+              "x": 3
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "absent-needs-register",
+            "verdict": "not-present",
+            "exhibits": [
+              "T7_step_iff_stepFn",
+              "T8_absent_only_registers",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "zero-bond",
+      "at": 0,
+      "title": "A deployment with a zero bond",
+      "steps": [
+        {
+          "slot": 0,
+          "who": "friend",
+          "say": "A deployment with a zero conviction bond is refused before anything else: 'bond missing' would be indistinguishable from 'bond full'.",
+          "params": {
+            "D": 0,
+            "B": 5,
+            "P": 2,
+            "W": 10
+          },
+          "action": {
+            "register": {
+              "refund": 6,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "invalid-params",
+            "verdict": "not-present",
+            "exhibits": [
+              "T9_juvenility_is_consumer_only"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "twice",
+      "at": 3,
+      "title": "Registering the same AID again",
+      "steps": [
+        {
+          "slot": 10,
+          "who": "friend",
+          "say": "Registering the same AID again is refused: the token is minted once, ever.",
+          "action": {
+            "register": {
+              "refund": 6,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "already-present",
+            "verdict": "consumable",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    }
   ]
 }

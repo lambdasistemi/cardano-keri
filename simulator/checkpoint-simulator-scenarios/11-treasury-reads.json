@@ -33,17 +33,19 @@
         "exhibits": [
           "T3_epoch_local",
           "T6_component_conservation",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
+          "T8_leaf_states",
           "T8_mint_once",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff"
         ]
@@ -80,30 +82,75 @@
       },
       "expect": {
         "ok": true,
-        "verdict": "b-missing",
+        "verdict": "frozen",
         "exhibits": [
-          "T15_b_leaves_only_by_freeze_or_withdraw",
+          "T10_bonds_are_observable",
+          "T15_b_leaves_only_by_freeze",
           "T15_freeze_makes_inert",
           "T16_payments_are_named",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T3_epoch_local",
           "T5_freeze_enabled",
-          "T6_bonds_move_only_by_rotation_or_freeze",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
+          "T6_frozen_flips_only_by_rotation_or_freeze",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_reopen_actor_is_proof",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
+          "trace_sn_monotone_all"
+        ]
+      }
+    },
+    {
+      "slot": 15,
+      "who": "friend",
+      "say": "A sponsor tops up the frozen checkpoint: the pool grows, the checkpoint stays frozen. Nothing but Alice’s next keys can make it consumable again.",
+      "action": {
+        "topUp": {
+          "x": 5
+        }
+      },
+      "expect": {
+        "ok": true,
+        "verdict": "frozen",
+        "exhibits": [
+          "T10_bonds_are_observable",
+          "T10_inert_without_next_keys",
+          "T14_pool_increases_only_by_topup",
+          "T1_sn_monotone",
+          "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
+          "T3_epoch_local",
+          "T6_component_conservation",
+          "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
+          "T7_step_iff_stepFn",
+          "T7_trace_iff_replay",
+          "T8_edges_leave_the_leaf",
+          "T8_leaf_agrees_with_state",
+          "T8_leaf_never_absent_again",
+          "T8_leaf_states",
+          "T8_only_convicted_is_terminal",
+          "T8_present_implies_registered",
+          "T8_sysstep_partition",
+          "T8_utxo_iff_active",
+          "T9_juvenility_is_consumer_only",
+          "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       }
@@ -111,7 +158,7 @@
     {
       "slot": 20,
       "who": "alice",
-      "say": "Unfrozen by a depositing rotation: juvenile again.",
+      "say": "Unfrozen by a depositing rotation: consumable at once (juvenility is untouched by a deposit).",
       "action": {
         "rotate": {
           "sn'": 1,
@@ -122,32 +169,39 @@
       },
       "expect": {
         "ok": true,
-        "verdict": "juvenile",
+        "verdict": "consumable",
         "exhibits": [
+          "T10_bonds_are_observable",
           "T10_only_deposit_restores",
+          "T14_pool_decreases_only_by_premium",
           "T15_b_returns_only_by_deposit",
+          "T16_payments_are_named",
           "T1_rotate_strict",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T2_epoch_only_by_rotation",
           "T3_epoch_local",
           "T3_rotation_clears",
           "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
+          "T6_frozen_flips_only_by_rotation_or_freeze",
           "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       },
@@ -166,7 +220,7 @@
     {
       "slot": 30,
       "who": "treasury",
-      "say": "Consumable.",
+      "say": "Still consumable.",
       "expect": {
         "verdict": "consumable"
       }
@@ -189,26 +243,32 @@
         "ok": true,
         "verdict": "poisoned",
         "exhibits": [
+          "T10_bonds_are_observable",
           "T10_current_quorum_never_restores",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T3_epoch_local",
           "T3_only_poison_sets",
+          "T4_current_key_thief_cannot_park",
           "T4_current_quorum_only_poisons",
           "T5_poison_enabled",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       }
@@ -216,7 +276,7 @@
     {
       "slot": 30,
       "who": "alice",
-      "say": "Unbonded by a withdrawing rotation: the conviction bond is missing.",
+      "say": "Parked by the reap: no checkpoint to read.",
       "evidence": {
         "add": [
           {
@@ -229,50 +289,50 @@
           {
             "intentAuthorized": [
               2,
-              "withdraw",
+              {
+                "close": {
+                  "payee": 1
+                }
+              },
               null
             ]
           }
         ]
       },
       "action": {
-        "rotate": {
+        "close": {
           "sn'": 2,
-          "op": "withdraw",
           "payee": 1,
           "refund'": null
         }
       },
       "expect": {
         "ok": true,
-        "verdict": "dreg-missing",
+        "verdict": "not-present",
         "exhibits": [
-          "T10_withdraw_is_observable",
-          "T14_pool_decreases_only_by_premium",
-          "T15_b_leaves_only_by_freeze_or_withdraw",
-          "T16_withdraw_destination",
-          "T1_rotate_strict",
-          "T1_sn_monotone",
+          "T10_bonds_are_observable",
+          "T10_parked_holds_nothing",
+          "T16_close_destination",
+          "T16_close_needs_rotation",
+          "T16_copied_reap_refused",
+          "T16_parked_hash_is_the_closed_checkpoints",
+          "T16_payments_are_named",
           "T1_sn_monotone_all",
-          "T2_epoch_only_by_rotation",
-          "T3_epoch_local",
-          "T3_only_rotation_clears",
-          "T3_rotation_clears",
+          "T2_close_and_reopen_open_epochs",
           "T4_poisoned_blocks_quorum_and_freeze",
-          "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T5_close_enabled",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
           "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
-          "T8_only_convicted_is_terminal",
+          "T8_leaf_states",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
           "trace_sn_monotone_all"
@@ -282,7 +342,7 @@
     {
       "slot": 40,
       "who": "alice",
-      "say": "Bonded again: juvenile.",
+      "say": "Revived through the registry with a witnessed rotation from the parked key state: juvenile.",
       "evidence": {
         "add": [
           {
@@ -291,53 +351,48 @@
               2,
               3
             ]
-          },
-          {
-            "intentAuthorized": [
-              3,
-              "deposit",
-              null
-            ]
           }
         ]
       },
       "action": {
-        "rotate": {
+        "reopen": {
           "sn'": 3,
-          "op": "deposit",
-          "payee": 1,
-          "refund'": null
+          "refund": 1,
+          "pool0": 10
         }
       },
       "expect": {
         "ok": true,
         "verdict": "juvenile",
         "exhibits": [
-          "T10_only_deposit_restores",
-          "T15_b_returns_only_by_deposit",
-          "T1_rotate_strict",
-          "T1_sn_monotone",
+          "T10_parked_holds_nothing",
+          "T10_reopen_is_juvenile",
+          "T1_reopen_strict",
           "T1_sn_monotone_all",
-          "T2_epoch_only_by_rotation",
+          "T1_trace_sn_monotone",
+          "T2_close_and_reopen_open_epochs",
           "T3_epoch_local",
-          "T3_rotation_clears",
-          "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T5_reopen_enabled",
           "T6_component_conservation",
-          "T6_dreg_increases_only_by_deposit",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
-          "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
+          "T8_mint_once",
           "T8_only_convicted_is_terminal",
+          "T8_parked_only_revives_or_convicts",
+          "T8_parked_returns_only_by_revival",
           "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       }
@@ -373,42 +428,42 @@
         "ok": true,
         "verdict": "not-present",
         "exhibits": [
+          "T10_bonds_are_observable",
+          "T10_parked_holds_nothing",
           "T12_convict_exact",
           "T16_payments_are_named",
-          "T1_sn_monotone_all",
+          "T4_current_key_thief_cannot_park",
           "T5_convict_enabled",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_present_implies_registered",
           "T8_reopen_actor_is_proof",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff",
-          "trace_sn_monotone_all"
+          "consumableStateB_iff"
         ]
       }
     }
   ],
   "atoms": [
     "11.present",
-    "11.d-reg-full",
-    "11.b-full",
+    "11.the-freeze-bond-held",
     "11.not-poisoned",
     "11.born-at-least-w-slots",
     "11.the-signature-on-the-payment",
     "11.later-when-validity-ships-within",
     "11.on-absent",
-    "11.unbonded",
     "11.frozen",
     "11.poisoned",
     "11.juvenile",
-    "11.convicted",
-    "11.gone"
+    "11.parked",
+    "11.convicted"
   ]
 }

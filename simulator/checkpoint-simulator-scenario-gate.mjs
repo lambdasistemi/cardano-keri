@@ -69,6 +69,8 @@ const CORPUS = join(HERE, 'checkpoint-simulator-corpus.json');
 const STORIES = join(HERE, 'M1-STORIES.md');
 const LEAN_ROOT = argPath('--lean-root') || join(HERE, '..');
 const BUILD = join(HERE, 'checkpoint-simulator-build.mjs');
+const TEMPLATE_TOOL = join(HERE, 'page-template.mjs');
+const TEMPLATE_DIR = join(HERE, 'page-template');
 
 /* --- one scenario: the core's own checker (shared with the page's selftest) --- */
 
@@ -85,8 +87,9 @@ function checkExactNat(core, corpus) {
   const problems = [], asserted = new Set();
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const bads = [2 ** 53, 2 ** 53 + 2, 2 ** 60, -1, 1.5, '5', NaN, Infinity, null, undefined, true];
-  const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, bornAt: 0, refundTo: 7, dreg: 10, b: 5, pool: 4, ...over } } });
-  const LIVE = ['sn', 'epoch', 'bornAt', 'refundTo', 'dreg', 'b', 'pool'];
+  const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 7, pool: 4, ...over } } });
+  const LIVE = ['sn', 'epoch', 'bornAt', 'refundTo', 'pool'];
+  const parkedSt = (over = {}) => ({ parked: { h: { epoch: 1, sn: 1, ...over } } });
   const EV_SHAPES = { rotationTo: [1, 1, 2], intentAuthorized: [2, 'keep', 7], quorum: [1], duplicityAt: [1, 1] };
   const EV_NAT = { rotationTo: [0, 1, 2], intentAuthorized: [0, 2], quorum: [0], duplicityAt: [0, 1] };   // the Nat entries of each row
   // an action that consults each predicate from live(), and one that consults none
@@ -112,12 +115,12 @@ function checkExactNat(core, corpus) {
     for (const k of ['D', 'B', 'P', 'W']) if (core.validateParams({ ...P, [k]: v }) === null) problems.push(`params accept ${k}=${tag}`);
     const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1, "refund'": null } },
       { rotate: { "sn'": 2, op: 'keep', payee: v, "refund'": null } }, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": v } }, { freeze: { "sn'": v, payee: 1 } },
-      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }];
+      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }, { close: { "sn'": v, payee: 1, "refund'": null } }, { close: { "sn'": 2, payee: v, "refund'": null } }, { reopen: { "sn'": v, refund: 1, pool0: 1 } }];
     for (const a of actions) {
       if (a.rotate && a.rotate["sn'"] === 2 && a.rotate.payee === 1 && (v === null || v === undefined)) continue; // refund' null / absent means none
       const n = core.normalizeAction(a);
       if (n.ok || n.reason !== 'invalid-nat') problems.push(`action ${JSON.stringify(a)} not refused invalid-nat (got ${n.ok ? 'ok' : n.reason})`);
-      const r = core.step(P, core.emptyEnv(), a, 1, a.register ? 'absent' : live());
+      const r = core.step(P, core.emptyEnv(), a, 1, a.register ? 'absent' : a.reopen ? parkedSt() : live());
       if (r.ok || r.reason !== 'invalid-nat') problems.push(`step ${JSON.stringify(a)} not refused invalid-nat`);
     }
     let threw = false; try { core.envAdd(core.emptyEnv(), { rotationTo: [1, 1, v] }); } catch (e) { threw = true; }
@@ -142,14 +145,14 @@ function checkExactNat(core, corpus) {
       refusal(`attempt topUp 0 on the played AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'live' } }, NOP, 0).record, 'invalid-nat', f);
       refusal(`attempt topUp 0 on AID 2 with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), others: { 2: st }, leaves: { 2: 'live' } }, NOP, 0, 2).record, 'invalid-nat', f);
     }
-    for (const f of ['epoch', 'sn', 'convictedAt']) {
-      const conv = { convicted: { epoch: 1, sn: 1, convictedAt: 1, [f]: v } };
-      refusal(`step close on a convicted state with ${f}=${tag} (before convicted-terminal)`, () => core.step(P, okEnv, { close: { "sn'": 2, "refund'": null } }, 1, conv), 'invalid-nat', f);
-      refusal(`replay with no steps from a convicted state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, conv, []), 'invalid-nat', f);
-      verdict(`consumable on a convicted state with ${f}=${tag}`, () => core.consumable(P, 5, conv), 'invalid-nat', f);
-      refusal(`attempt close on a convicted AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: conv, leaves: { 1: 'convicted' } }, { close: { "sn'": 2, "refund'": null } }, 0).record, 'invalid-nat', f);
-      const cl = { closed: { epoch: 1, sn: 1, [f === 'convictedAt' ? 'sn' : f]: v } };
-      if (f !== 'convictedAt') refusal(`step reopen on a closed state with ${f}=${tag}`, () => core.step(P, okEnv, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 1, cl), 'invalid-nat', f);
+    for (const f of ['epoch', 'sn']) {
+      const pk = parkedSt({ [f]: v });
+      refusal(`step reopen on a parked state with ${f}=${tag} (before any guard)`, () => core.step(P, okEnv, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 1, pk), 'invalid-nat', f);
+      refusal(`step convict on a parked state with ${f}=${tag}`, () => core.step(P, okEnv, { convict: { payee: 3 } }, 1, pk), 'invalid-nat', f);
+      refusal(`step topUp on a parked state with ${f}=${tag} (before parked-inert)`, () => core.step(P, okEnv, NOP, 1, pk), 'invalid-nat', f);
+      refusal(`replay with no steps from a parked state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, pk, []), 'invalid-nat', f);
+      verdict(`consumable on a parked state with ${f}=${tag}`, () => core.consumable(P, 5, pk), 'invalid-nat', f);
+      refusal(`attempt reopen on a parked AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: pk, leaves: { 1: parkedSt() } }, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 0).record, 'invalid-nat', f);
     }
     // ---- every entry point that takes an evidence table refuses a corrupted
     // entry of any predicate, whether or not the action consults it
@@ -184,23 +187,24 @@ function checkExactNat(core, corpus) {
       const applied = corpus.grid.cells.find(c => c.result && core.stateKind(c.result.state) === 'present');
       mutate(c => { c.grid.cells.find(x => x.s === applied.s && x.a === applied.a && x.e === applied.e).result.state.present.l.pool = v; }, 'grid cell result state pool', 'pool');
       mutate(c => { c.grid.cells.find(x => x.s === applied.s && x.a === applied.a && x.e === applied.e).result.flow.poolIn = v; }, 'grid cell result flow poolIn', 'poolIn');
-      mutate(c => { const st = c.traces[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.b = v; }, 'trace result state b', 'b');
-      mutate(c => { const st = c.stories[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.dreg = v; }, 'story cell result state dreg', 'dreg');
+      mutate(c => { const st = c.traces[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.pool = v; }, 'trace result state pool', 'pool');
+      mutate(c => { const st = c.stories[0].steps.find(s => s.result && core.stateKind(s.result.state) === 'present'); st.result.state.present.l.bornAt = v; }, 'story cell result state bornAt', 'bornAt');
+      mutate(c => { const st = c.grid.states.find(s => core.stateKind(s) === 'parked'); st.parked.h.sn = v; }, 'grid parked state sn', 'sn');
       mutate(c => { c.grid.actions[0] = { topUp: { x: v } }; }, 'grid action x', 'x');
       mutate(c => { c.grid.now = v; }, 'grid now', 'now');
     }
   }
   // ---- shapes that are not a state / not a table are refused by name too
   // exactly one Lean constructor, nothing beside it, nothing extra inside its wrapper
-  const shapes = [[{ bogus: 1 }, 'bogus'], [null, 'state'], ['absentt', 'state'], [{}, 'state'], [{ present: { l: null } }, 'l'], [{ present: { l: { ...live().present.l, poisoned: 'no' } } }, 'poisoned'],
-    [{ ...live(), extra: true }, 'extra'], [{ ...live(), convicted: { epoch: 1, sn: 1, convictedAt: 1 } }, 'convicted'], [{ present: { l: live().present.l, extra: true } }, 'present.extra'],
-    [{ convicted: { epoch: 1, sn: 1, convictedAt: 1 }, present: { l: live().present.l } }, 'present'], [{ present: 'l' }, 'present'], [{ convicted: [1, 1, 1] }, 'convicted'],
-    [{ present: { l: { ...live().present.l, extra: 1 } } }, 'extra'], [{ convicted: { epoch: 1, sn: 1, convictedAt: 1, extra: 0 } }, 'extra']];
+  const shapes = [[{ bogus: 1 }, 'bogus'], [null, 'state'], ['absentt', 'state'], ['convictedd', 'state'], [{}, 'state'], [{ present: { l: null } }, 'l'], [{ present: { l: { ...live().present.l, poisoned: 'no' } } }, 'poisoned'], [{ present: { l: { ...live().present.l, frozen: 0 } } }, 'frozen'],
+    [{ ...live(), extra: true }, 'extra'], [{ ...live(), parked: { h: { epoch: 1, sn: 1 } } }, 'parked'], [{ present: { l: live().present.l, extra: true } }, 'present.extra'],
+    [{ parked: { h: { epoch: 1, sn: 1 } }, present: { l: live().present.l } }, 'present'], [{ present: 'l' }, 'present'], [{ parked: [1, 1] }, 'parked'], [{ parked: { h: null } }, 'h'], [{ parked: { h: { epoch: 1, sn: 1 }, extra: true } }, 'parked.extra'],
+    [{ present: { l: { ...live().present.l, extra: 1 } } }, 'extra'], [{ parked: { h: { epoch: 1, sn: 1, extra: 0 } } }, 'extra'], [{ convicted: {} }, 'convicted']];
   for (const [st, field] of shapes) {
     refusal(`step on non-state ${core.canon(st)}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-state', field);
     refusal(`replay from non-state ${core.canon(st)}`, () => core.replay(P, okEnv, 0, st, []), 'invalid-state', field);
     verdict(`consumable on non-state ${core.canon(st)}`, () => core.consumable(P, 5, st), 'invalid-state', field);
-    refusal(`attempt on non-state ${core.canon(st)}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'live' } }, NOP, 0).record, 'invalid-state', field);
+    refusal(`attempt on non-state ${core.canon(st)}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'active' } }, NOP, 0).record, 'invalid-state', field);
   }
   const tables = [[null, 'env'], [[], 'env'], [{ ...core.emptyEnv(), bogus: [] }, 'bogus'], [{ ...core.emptyEnv(), quorum: 'x' }, 'quorum'], [{ ...core.emptyEnv(), intentAuthorized: [[1, 'burn', null]] }, 'intentAuthorized[0][1]'],
     [{ ...core.emptyEnv(), quorum: [[1, 2]] }, 'quorum[0]'], [{ ...core.emptyEnv(), rotationTo: [[1, 1]] }, 'rotationTo[0]'], [{ ...core.emptyEnv(), duplicityAt: [1] }, 'duplicityAt[0]']];
@@ -221,18 +225,23 @@ function checkExactNat(core, corpus) {
   // arithmetic at the bound: refused by name, never rounded
   const M = core.MAX_NAT;
   const hp = { D: 1, B: 1, P: 0, W: 0 };
-  const top = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ dreg: 1, b: 1, pool: M }));
+  const top = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ pool: M }));
   if (top.ok || top.reason !== 'invalid-nat' || top.field !== 'pool') problems.push('topUp 1 on a pool of 2^53 − 1 was not refused invalid-nat/pool: ' + JSON.stringify(top));
-  const top2 = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ dreg: 1, b: 1, pool: M - 1 }));
+  const top2 = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ pool: M - 1 }));
   if (!top2.ok || top2.state.present.l.pool !== M) problems.push('topUp 1 on a pool of 2^53 − 2 did not give 2^53 − 1 exactly');
   const env = core.envAdd(core.emptyEnv(), { rotationTo: [M, 1, 2] });
-  const rot = core.step(hp, env, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, 0, live({ dreg: 1, b: 1, epoch: M }));
+  const rot = core.step(hp, env, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, 0, live({ epoch: M }));
   if (rot.ok || rot.reason !== 'invalid-nat' || rot.field !== 'epoch') problems.push('rotation from epoch 2^53 − 1 was not refused invalid-nat/epoch: ' + JSON.stringify(rot));
+  const clo = core.step(hp, env, { close: { "sn'": 2, payee: 1, "refund'": null } }, 0, live({ epoch: M }));
+  if (clo.ok || clo.reason !== 'invalid-nat' || clo.field !== 'epoch') problems.push('close from epoch 2^53 − 1 was not refused invalid-nat/epoch: ' + JSON.stringify(clo));
+  const envR = core.envAdd(core.emptyEnv(), { rotationTo: [M, 1, 2] });
+  const rev = core.step(hp, envR, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 0, parkedSt({ epoch: M }));
+  if (rev.ok || rev.reason !== 'invalid-nat' || rev.field !== 'epoch') problems.push('revival from parked epoch 2^53 − 1 was not refused invalid-nat/epoch: ' + JSON.stringify(rev));
   if (core.natAdd(M, 1) !== null || core.natAdd(M - 1, 1) !== M || core.natAdd(2 ** 52, 2 ** 52) !== null) problems.push('natAdd is not exact at the bound');
   // a state beyond the bound forced past validation: the step must refuse, and if a
   // core ever applied it the theorem checkers must see the lost increment
   const huge = 2 ** 53;
-  const forced = { ...core.newSession(hp), state: live({ dreg: 1, b: 1, pool: huge }) };
+  const forced = { ...core.newSession(hp), state: live({ pool: huge }) };
   const fr = core.attempt(forced, { topUp: { x: 1 } }, 0).record;
   if (fr.ok) {
     problems.push(`a pool of 2^53 accepted a top-up (pool after: ${fr.state.present.l.pool})` +
@@ -268,14 +277,14 @@ function checkSystem(core, corpus) {
       const l = core.liveOf(st);
       const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
       // evidence arrives at random, for this AID's current epoch and sequence
-      const cl = core.stateKind(st) === 'closed' ? st.closed : null;
-      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { intentAuthorized: [e + 1, 'keep', 1] }, { intentAuthorized: [e + 1, pick(['withdraw', 'deposit', 'close']), null] }, { rotationTo: [e, sn, sn + 2] }, ...(cl ? [{ rotationTo: [cl.epoch, cl.sn, cl.sn + 1] }] : [])]));
+      const cl = core.hashOf(st);
+      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { intentAuthorized: [e + 1, 'keep', 1] }, { intentAuthorized: [e + 1, pick(['deposit', core.closeIntent(pick([1, 2, 4]))]), null] }, { rotationTo: [e, sn, sn + 2] }, ...(cl ? [{ rotationTo: [cl.epoch, cl.sn, cl.sn + 1] }, { duplicityAt: [cl.epoch, cl.sn] }] : [])]));
       if (rnd() < 0.1) for (const k of core.EV_KINDS) for (const row of s.env[k].slice()) if (rnd() < 0.3) s = core.removeEvidence(s, { [k]: row });
       let action;
       if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
       else action = pick([
         { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]), "refund'": pick([null, null, 1, 9]) } },
-        'poison', { close: { "sn'": sn + 1, "refund'": pick([null, 1]) } }, { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
+        'poison', { close: { "sn'": sn + 1, payee: pick([1, 2, 4]), "refund'": pick([null, 1]) } }, { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
         { reopen: { "sn'": (cl ? cl.sn : sn) + pick([0, 1]), refund: pick([1, 4]), pool0: 3 } },
         { register: { refund: 6, pool0: 1 } },
       ]);
@@ -300,16 +309,16 @@ function checkSystem(core, corpus) {
     if (leafed.length !== everRegistered.size || ![...everRegistered].every(a => leafed.includes(a))) problems.push(`system run ${run}: leaves ${JSON.stringify(leafed)} ≠ AIDs registered ${JSON.stringify([...everRegistered])}`);
     for (const a of leafed) if (core.canon(s.leaves[a]) !== core.canon(core.leafOf(core.stateOfAid(s, a)))) problems.push(`system run ${run}: leaf of AID ${a} disagrees with its state`);
     distinctRegistered += everRegistered.size;
-    // a corrupted registry (a live leaf on an absent AID) refuses that AID's registration by name; a leaf that is not closed refuses a reopen
-    const corrupted = { ...s, leaves: { ...s.leaves, 9: 'live' } };
+    // a corrupted registry (an active leaf on an absent AID) refuses that AID's registration by name; a leaf that is not parked refuses a revival
+    const corrupted = { ...s, leaves: { ...s.leaves, 9: 'active' } };
     const cr = core.attempt(corrupted, { register: { refund: 1, pool0: 1 } }, slot, 9).record;
-    if (cr.ok || cr.reason !== 'aid-already-registered') problems.push(`system run ${run}: registration of an AID with a live leaf but no state not refused aid-already-registered (got ${cr.ok ? 'ok' : cr.reason})`);
+    if (cr.ok || cr.reason !== 'aid-already-registered') problems.push(`system run ${run}: registration of an AID with an active leaf but no state not refused aid-already-registered (got ${cr.ok ? 'ok' : cr.reason})`);
     asserted.add('aid-already-registered');
     if (!cr.lamps.T8.exhibited || !cr.lamps.T8.notes.some(n => /disagrees/.test(n))) problems.push(`system run ${run}: the refused re-registration does not exhibit T8 seeing the leaf that disagrees with its state`);
-    const corrupted2 = { ...s, others: { ...s.others, 9: { closed: { epoch: 1, sn: 1 } } }, leaves: { ...s.leaves, 9: 'live' }, env: core.addEvidence(s, { rotationTo: [1, 1, 2] }).env };
+    const corrupted2 = { ...s, others: { ...s.others, 9: { parked: { h: { epoch: 1, sn: 1 } } } }, leaves: { ...s.leaves, 9: 'active' }, env: core.addEvidence(s, { rotationTo: [1, 1, 2] }).env };
     const cr2 = core.attempt(corrupted2, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, slot, 9).record;
-    if (cr2.ok || cr2.reason !== 'leaf-not-closed') problems.push(`system run ${run}: reopen of a closed state under a live leaf not refused leaf-not-closed (got ${cr2.ok ? 'ok' : cr2.reason})`);
-    asserted.add('leaf-not-closed');
+    if (cr2.ok || cr2.reason !== 'leaf-not-parked') problems.push(`system run ${run}: revival of a parked state under an active leaf not refused leaf-not-parked (got ${cr2.ok ? 'ok' : cr2.reason})`);
+    asserted.add('leaf-not-parked');
   }
   if (accepted < 180) problems.push(`system generator accepted only ${accepted} transitions`);
   if (nonRegisterShown < 100) problems.push(`system generator exhibited T8 on only ${nonRegisterShown} non-registration transitions`);
@@ -453,6 +462,10 @@ function recordMatches(core, m, t) {
     !m.noFlow || (r.ok && core.canon(fl) === core.canon(core.flow({}))),
     !m.refundToAlice || (r.ok && fl.refund && fl.refund.addr === 1),
     !m.bornAtUnchanged || (lp && lq && lp.bornAt === lq.bornAt),
+    !m.reopenAtParkedSn || (core.hashOf(r.pre) && dd["sn'"] === core.hashOf(r.pre).sn),
+    m.hunterAddr === undefined || (r.ok && fl.hunter && fl.hunter.addr === m.hunterAddr),
+    !m.closeSigned || (lp && t.session.env.intentAuthorized.some(rw => rw[0] === lp.epoch + 1 && core.intentKind(rw[1]) === 'close')),
+    !m.quorumPresent || (core.hashOf(r.pre) && t.session.env.quorum.some(rw => rw[0] === core.hashOf(r.pre).epoch)),
   ].every(Boolean);
 }
 function findStep(core, story, m, scenarioTimelines) {
@@ -521,7 +534,7 @@ function checkTheoremRows(core, leanRoot) {
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const samples = [
     core.attempt(core.newSession(P), { register: { refund: 7, pool0: 4 } }, 1).record,
-    core.attempt(core.seed(core.newSession(P), { closed: { epoch: 1, sn: 1 } }), { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 1).record,
+    core.attempt(core.seed(core.newSession(P), { parked: { h: { epoch: 1, sn: 1 } } }), { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, 1).record,
   ];
   const rowNames = [...new Set(samples.flatMap(r => Object.keys(r.theorems)))];
   const listed = core.THEOREMS.flatMap(g => g.lean);
@@ -624,7 +637,7 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
         const decided = rec.ok ? [core.constructorOf(rec)] : ((core.LEAN_GUARDS[rec.reason] || {}).decls || []);
         if (!decided.includes(c.decl)) { fail(`${hit.file} step ${hit.step} goes through ${decided.join(' / ') || 'no constructor'}, not ${c.decl}`); continue; }
       } else if (c.decl.startsWith('SysStep.')) {
-        const sys = rec.ok && rec.kind === 'register' ? 'SysStep.register' : rec.ok ? 'SysStep.other' : null;
+        const sys = rec.ok && rec.kind === 'register' ? 'SysStep.register' : rec.ok && rec.kind === 'reopen' ? 'SysStep.reopen' : rec.ok ? 'SysStep.other' : null;
         if (sys !== c.decl) { fail(`${hit.file} step ${hit.step} is ${sys || 'no system step'}, not ${c.decl}`); continue; }
       } else {
         const th = rec.theorems[c.decl];
@@ -637,7 +650,7 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
       if (c.kind === 'post-state' && c.updates !== undefined) {
         const lp = core.liveOf(rec.pre), lq = core.liveOf(rec.state);
         if (!lp || !lq) { fail(`${hit.file} step ${hit.step} is not a present → present step; an untouched-except claim needs one`); continue; }
-        const outside = [...core.LIVE_NATS, 'poisoned'].filter(k => lp[k] !== lq[k] && !c.updates.includes(k));
+        const outside = [...core.LIVE_NATS, ...core.LIVE_BOOLS].filter(k => lp[k] !== lq[k] && !c.updates.includes(k));
         if (outside.length) { fail(`${hit.file} step ${hit.step} changes ${outside.join(', ')}, outside the claimed updates ${c.updates.join(', ')}`); continue; }
       }
     }
@@ -808,27 +821,34 @@ function pageSmoke(core, html) {
   for (const id of ['btn-play', 'scrub', 'branches']) if (!$('#' + id)) problems.push('no #' + id);
   pick(5);
   guard = 0; while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
-  if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('story 5 played to its trunk leaf does not end Paused');
+  if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('story 5 played to its trunk leaf does not end Parked');
   const scrub = $('#scrub');
-  if (scrub && Number(scrub.max) < 6) problems.push('the scrubber does not span the branch: max ' + scrub.max);
+  if (scrub && Number(scrub.max) < 4) problems.push('the scrubber does not span the trunk (story 5: register, the rotation, the signed close, the reap): max ' + scrub.max);
   const treeNodes = doc.querySelectorAll('#tree .node');
   if (treeNodes.length !== win.CK.app.nodes.length) problems.push(`the tree draws ${treeNodes.length} nodes for ${win.CK.app.nodes.length}`);
-  const forkNode = treeNodes.filter(g => g.querySelector('.fork')).pop();   // the parked state's fork, the last one on story 5
+  const forkNode = treeNodes.filter(g => g.querySelector('.fork')).pop();   // the parked state's fork (Mallory with the keys of the parked key state), the last one on story 5
   if (!forkNode) problems.push('the tree marks no fork on story 5'); else forkNode.dispatchEvent(win.makeEvent('click'));
-  if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('clicking the fork node of the tree does not land on the parked state');
+  if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('clicking the fork node of the tree does not land on the parked state');
   let bchips = doc.querySelectorAll('#branches .branch');
-  if (bchips.length < 3) problems.push(`story 5 at its fork offers ${bchips.length} continuations, expected three`);
+  if (bchips.length < 2) problems.push(`story 5 at its parked fork offers ${bchips.length} continuations, expected two`);
   else {
     bchips[bchips.length - 1].dispatchEvent(win.makeEvent('click'));
     while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
-    if (!/closed/i.test(($('#state-name') || {}).textContent || '')) problems.push('switching to the close branch does not end Closed: ' + (($('#state-name') || {}).textContent || ''));
+    if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('the thief branch of a parked identity does not stay Parked: ' + (($('#state-name') || {}).textContent || ''));
+    if (!doc.querySelectorAll('#tree .node.no').length) problems.push('the thief branch draws no refused node');
     prev.dispatchEvent(win.makeEvent('click'));
-    if (!/paused/i.test(($('#state-name') || {}).textContent || '')) problems.push('one step back from the close branch is not the parked state');
+    if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('one step back on the thief branch is not the parked state');
     bchips = doc.querySelectorAll('#branches .branch');
     if (!bchips.some(c => c.classList.contains('on'))) problems.push('no continuation is marked as the one › will take');
     next.dispatchEvent(win.makeEvent('click'));
-    if (!/closed/i.test(($('#state-name') || {}).textContent || '')) problems.push('› after ‹ does not follow the branch last taken');
+    if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('› after ‹ does not follow the branch last taken');
   }
+  // the parked page state shows the hash the leaf holds, and offers no move that needs a UTxO and no withdraw
+  const datumText = (($('#datum') || {}).textContent || '') + ' ' + (($('#where') || {}).textContent || '');
+  if (!/hash/i.test(datumText) || !/epoch 1/i.test(datumText) || !/sn 1/i.test(datumText)) problems.push('the parked page state does not show the hash the leaf holds (key state epoch 1, sn 1): ' + datumText.slice(0, 200));
+  const offered = doc.querySelectorAll('#next-moves .act[data-kind]').map(b => b.dataset.kind);
+  if (offered.some(k => k === 'rotate' || k === 'freeze' || k === 'poison' || k === 'topUp')) problems.push('a parked identity offers a move that needs a UTxO: ' + offered.join(','));
+  if (/withdraw/i.test(html)) problems.push('the page still names a withdraw');
   const theme = $('#btn-theme');
   if (!theme) problems.push('no #btn-theme');
   else {
@@ -849,6 +869,163 @@ function pageSmoke(core, html) {
     if (!/Lean corpus/.test(pre)) problems.push('the page selftest did not replay the Lean corpus');
   } catch (e) { problems.push('selftest page failed to load: ' + (e && e.message)); }
   return { problems };
+}
+
+/* --- every checker row is itself falsifiable: a fabricated violation per declaration ---- */
+
+// Rows whose predicate is a pure function of the core (two functions of the
+// same state, or a projection that cannot be fabricated): no record can make
+// them red; each names the --selftest control that mutates the core and reds it.
+const STRUCTURAL_ROWS = {
+  consumableStateB_iff: 'the consumer’s Bool mirror drops the freeze bit (m-consumableB)',
+  T9_juvenility_is_consumer_only: 'transition that reads W (m-t9)',
+  T10_bonds_are_observable: 'held() returns no conviction bond for a present checkpoint (m-held-dreg)',
+  T10_parked_holds_nothing: 'held() returns a pool for a parked identity (m-held-parked)',
+};
+// fabricatedViolations(core) → [{name, make: () => {before, after, rec}}]: one record per
+// non-structural declaration on which that exact row must report a violation
+function fabricatedViolations(core) {
+  const P = { D: 1000, B: 5, P: 2, W: 10 };
+  const L = (o = {}) => ({ sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 10, ...o });
+  const pr = l => ({ present: { l } }), pk = (epoch, sn) => ({ parked: { h: { epoch, sn } } });
+  const env0 = core.emptyEnv();
+  const rows = rs => rs.reduce((e, r) => core.envAdd(e, { [Object.keys(r)[0]]: r[Object.keys(r)[0]] }), core.emptyEnv());
+  const pay = (addr, dreg = 0, b = 0, pool = 0) => ({ addr, dreg, b, pool });
+  const TOP = { topUp: { x: 1 } };
+  const ROT = (sn2, op, payee = 2, r = null) => ({ rotate: { "sn'": sn2, op, payee, "refund'": r } });
+  const CLOSE = (payee = 1, r = null) => ({ close: { "sn'": 2, payee, "refund'": r } });
+  const REOPEN = (sn2 = 2) => ({ reopen: { "sn'": sn2, refund: 1, pool0: 10 } });
+  const rotEnv = rows([{ rotationTo: [1, 1, 2] }]);
+  const closeEnv = rows([{ rotationTo: [1, 1, 2] }, { intentAuthorized: [2, core.closeIntent(1), null] }]);
+  const dupEnv = rows([{ duplicityAt: [1, 1] }]);
+  // one fabricated step: `before` and `after` are sessions, `rec` the record theoremReport reads
+  const mk = o => {
+    const slot = o.slot === undefined ? 12 : o.slot, pre = o.pre, post = o.post === undefined ? pre : o.post, action = o.action;
+    const kind = o.kind === undefined ? core.actionKind(action) : o.kind, env = o.env || env0, ok = o.ok === undefined ? true : o.ok;
+    const before = { params: P, env, envAll: env, now: slot, state: pre, aid: 1, others: {}, leaves: o.leavesBefore || { 1: core.leafOf(pre) }, history: o.historyBefore || [], origin: o.origin === undefined ? 'absent' : o.origin, originSlot: 0, records: o.records || [], corpus: o.corpus || null };
+    const st = ok ? post : pre;
+    const after = { ...before, state: st, leaves: o.leavesAfter || { 1: core.leafOf(st) }, history: o.history || (ok ? [[slot, action]] : []) };
+    const rec = { slot, action, kind, actor: o.actor === undefined ? core.actorOf(action) : o.actor, pre, now: slot, aid: 1, ok, stepped: true, state: st };
+    if (ok) rec.flow = core.flow(o.flow || {}); else rec.reason = o.reason || 'fabricated';
+    return { before, after, rec };
+  };
+  const live = pr(L()), poisoned = pr(L({ poisoned: true })), frozen = pr(L({ frozen: true })), parked = pk(1, 1);
+  const rotated = (o = {}) => pr(L({ sn: 2, epoch: 2, pool: 8, ...o }));
+  const cases = {
+    T1_sn_monotone: () => mk({ pre: pr(L({ sn: 5 })), post: pr(L({ sn: 3, pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T1_rotate_strict: () => mk({ pre: live, post: pr(L({ sn: 1, epoch: 2, pool: 8 })), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T1_sn_monotone_all: () => mk({ pre: pr(L({ sn: 5 })), post: pk(2, 3), action: { close: { "sn'": 6, payee: 1, "refund'": null } }, flow: { refund: pay(1, 1000, 5, 8), hunter: pay(1, 0, 0, 2) } }),
+    T1_reopen_strict: () => mk({ pre: pk(1, 5), post: pr(L({ sn: 3, epoch: 2, bornAt: 12 })), action: REOPEN(3), flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    T1_close_rotation_cannot_revive: () => mk({ pre: parked, post: pr(L({ sn: 1, epoch: 2, bornAt: 12 })), action: REOPEN(1), flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    trace_sn_monotone_all: () => mk({ pre: pr(L({ sn: 9 })), post: pr(L({ sn: 3, pool: 11 })), action: TOP, flow: { poolIn: 1 }, records: [{ ok: true, aid: 1, state: pr(L({ sn: 9 })) }] }),
+    T1_trace_sn_monotone: () => mk({ pre: pr(L({ sn: 9 })), post: pr(L({ sn: 3, pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: pr(L({ sn: 9 })) }),
+    T2_epoch_only_by_rotation: () => mk({ pre: live, post: pr(L({ epoch: 2, pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T2_close_and_reopen_open_epochs: () => mk({ pre: live, post: pk(1, 2), action: CLOSE(), env: closeEnv, flow: { refund: pay(1, 1000, 5, 8), hunter: pay(1, 0, 0, 2) } }),
+    T3_rotation_clears: () => mk({ pre: live, post: rotated({ poisoned: true }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T3_only_rotation_clears: () => mk({ pre: poisoned, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T3_only_poison_sets: () => mk({ pre: live, post: pr(L({ poisoned: true, pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    trace_poison_fold: () => mk({ pre: live, post: live, action: 'poison', env: rows([{ quorum: [1] }]), origin: live, history: [[12, 'poison']] }),
+    T3_epoch_local: () => mk({ pre: live, post: live, action: 'poison', env: rows([{ quorum: [1] }]), history: [[0, { register: { refund: 1, pool0: 10 } }], [12, 'poison']] }),
+    T4_poisoned_blocks_quorum_and_freeze: () => mk({ pre: poisoned, post: poisoned, action: 'poison', env: rows([{ quorum: [1] }]) }),
+    T4_poisoned_nonrotation_inert: () => mk({ pre: poisoned, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T4_current_quorum_only_poisons: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, actor: 'currentQuorum', flow: { poolIn: 1 } }),
+    T4_current_key_thief_cannot_park: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), flow: { hunter: pay(2, 0, 0, 2) } }),
+    T4_current_key_thief_cannot_revive: () => mk({ pre: parked, post: pr(L({ sn: 2, epoch: 2, bornAt: 12 })), action: REOPEN(), flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    T5_every_bond_option: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
+    T5_keep_is_rotated: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 3) } }),
+    T5_deposit_on_full_is_keep: () => mk({ pre: live, post: rotated({ bornAt: 99 }), action: ROT(2, 'deposit'), env: rows([{ rotationTo: [1, 1, 2] }, { intentAuthorized: [2, 'deposit', null] }]), flow: { hunter: pay(2, 0, 0, 2) } }),
+    T5_keep_needs_no_intent: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
+    T5_poison_enabled: () => mk({ pre: live, action: 'poison', env: rows([{ quorum: [1] }]), ok: false, reason: 'no-quorum' }),
+    T5_freeze_enabled: () => mk({ pre: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, ok: false, reason: 'poisoned' }),
+    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3 } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    T5_convict_parked_enabled: () => mk({ pre: parked, action: { convict: { payee: 3 } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    T5_close_enabled: () => mk({ pre: live, action: CLOSE(), env: closeEnv, ok: false, reason: 'no-quorum' }),
+    T5_reopen_enabled: () => mk({ pre: parked, action: REOPEN(), env: rotEnv, ok: false, reason: 'no-quorum' }),
+    T6_component_conservation: () => mk({ pre: live, post: pr(L({ pool: 17 })), action: TOP, flow: { poolIn: 1 } }),
+    T6_dreg_never_a_fee: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 1, 0, 2) } }),
+    T6_dreg_never_moves_between_present_states: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1 } }),
+    T6_dreg_enters_only_at_birth: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1000 } }),
+    T6_refund_change_requires_new_keys: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
+    T6_frozen_flips_only_by_rotation_or_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
+    T6_intent_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T6_relayer_cannot_park_age_or_close: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T7_step_iff_stepFn: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, corpus: { params: P, traces: [{ name: 'fab', env: env0, steps: [{ now: 12, input: live, action: TOP, result: null }] }] } }),
+    T7_trace_iff_replay: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, corpus: { params: P, traces: [{ name: 'fab', env: env0, steps: [{ now: 12, input: live, action: TOP, result: { flow: core.flow({ poolIn: 1 }), state: pr(L({ pool: 11 })) } }] }] } }),
+    T8_absent_only_registers: () => mk({ pre: 'absent', post: live, action: TOP, flow: { poolIn: 1 } }),
+    T8_parked_only_revives_or_convicts: () => mk({ pre: parked, post: parked, action: TOP, flow: { poolIn: 1 } }),
+    T8_parked_returns_only_by_revival: () => mk({ pre: parked, post: live, action: TOP, flow: { poolIn: 1 } }),
+    T8_only_convicted_is_terminal: () => mk({ pre: live, post: pr(L({ pool: 2 ** 53 })), action: TOP, flow: { poolIn: 1 } }),
+    T8_leaf_agrees_with_state: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: { 1: 'convicted' } }),
+    T8_edges_leave_the_leaf: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: { 1: 'convicted' } }),
+    T8_present_implies_registered: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: {} }),
+    T8_leaf_states: () => mk({ pre: parked, action: TOP, ok: false, reason: 'parked-inert', leavesBefore: { 1: 'active' }, leavesAfter: { 1: 'active' } }),
+    T8_utxo_iff_active: () => mk({ pre: parked, action: TOP, ok: false, reason: 'parked-inert', leavesBefore: { 1: 'active' }, leavesAfter: { 1: 'active' } }),
+    T8_leaf_never_absent_again: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesBefore: { 1: 'active' }, leavesAfter: {} }),
+    T8_mint_once: () => mk({ pre: live, post: live, action: { register: { refund: 1, pool0: 10 } }, flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    T8_reopen_actor_is_proof: () => mk({ pre: live, action: 'poison', kind: 'reopen', ok: false, reason: 'no-quorum' }),
+    T8_sysstep_partition: () => mk({ pre: parked, post: pr(L({ sn: 2, epoch: 2, bornAt: 12 })), action: REOPEN(), env: rotEnv, flow: { dregIn: 1000, bIn: 5, poolIn: 10 }, leavesBefore: { 1: 'active' } }),
+    T10_inert_without_next_keys: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T10_only_deposit_restores: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T10_current_quorum_never_restores: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, actor: 'currentQuorum', flow: { poolIn: 1 } }),
+    T10_reopen_is_juvenile: () => mk({ pre: parked, post: pr(L({ sn: 2, epoch: 2, bornAt: 0 })), action: REOPEN(), env: rotEnv, flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    T12_convicted_terminal: () => mk({ pre: 'convicted', post: live, action: TOP, flow: { poolIn: 1 } }),
+    trace_from_convicted: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: 'convicted' }),
+    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3 } }, env: dupEnv, flow: {} }),
+    T12_convict_parked_exact: () => mk({ pre: parked, post: 'convicted', action: { convict: { payee: 3 } }, env: dupEnv, flow: { convictor: pay(3, 1000) } }),
+    T14_pool_decreases_only_by_premium: () => mk({ pre: live, post: pr(L({ pool: 9 })), action: TOP, flow: { poolIn: 1 } }),
+    T14_pool_increases_only_by_topup: () => mk({ pre: live, post: rotated({ pool: 20 }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T15_b_leaves_only_by_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
+    T15_b_returns_only_by_deposit: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
+    T15_freeze_makes_inert: () => mk({ pre: pr(L({ pool: 1 })), post: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, flow: { hunter: pay(2, 0, 5, 0) } }),
+    T16_close_destination: () => mk({ pre: live, post: pk(2, 2), action: TOP, flow: { poolIn: 1 } }),
+    T16_close_needs_rotation: () => mk({ pre: live, post: pk(2, 2), action: CLOSE(), flow: { refund: pay(1, 1000, 5, 8), hunter: pay(1, 0, 0, 2) } }),
+    T16_parked_hash_is_the_closed_checkpoints: () => mk({ pre: live, post: pk(5, 2), action: CLOSE(), env: closeEnv, flow: { refund: pay(1, 1000, 5, 8), hunter: pay(1, 0, 0, 2) } }),
+    T16_copied_reap_refused: () => mk({ pre: live, post: pk(2, 2), action: CLOSE(4), env: closeEnv, flow: { refund: pay(1, 1000, 5, 8), hunter: pay(4, 0, 0, 2) } }),
+    T16_payments_are_named: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, hunter: pay(2, 0, 0, 3) } }),
+  };
+  return Object.keys(cases).map(name => ({ name, make: cases[name] }));
+}
+// checkFabricated(core, leanRoot) → {problems, rows, structural}: every declaration of the goals file is
+// either a fabricated-violation row that its exact checker reds on, or a structural row naming its falsifier
+function checkFabricated(core, leanRoot, skip) {
+  const problems = [];
+  let goals = '';
+  try { goals = readFileSync(join(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean'), 'utf8'); } catch (e) { return { problems: ['cannot read CheckpointGoals.lean: ' + e.message], rows: 0, structural: 0 }; }
+  const declared = [...goals.matchAll(/^theorem\s+([A-Za-z0-9_']+)/gm)].map(m => m[1]);
+  const fab = fabricatedViolations(core).filter(f => f.name !== skip);   // `skip`: the removed-thing control
+  const have = new Set(fab.map(f => f.name));
+  for (const n of declared) if (!have.has(n) && !STRUCTURAL_ROWS[n]) problems.push(`declaration ${n} has neither a fabricated violation nor a structural falsifier: its checker can go vacuous unnoticed`);
+  for (const n of Object.keys(STRUCTURAL_ROWS)) { if (!declared.includes(n)) problems.push(`structural row ${n} is not a declaration`); if (have.has(n)) problems.push(`${n} is listed both as structural and as fabricated`); }
+  for (const f of fab) {
+    if (!declared.includes(f.name)) { problems.push(`fabricated violation ${f.name} names no declaration`); continue; }
+    let row;
+    try { const { before, after, rec } = f.make(); row = core.theoremReport(before, after, rec)[f.name]; }
+    catch (e) { problems.push(`fabricated violation ${f.name}: the checker threw (${e && e.message})`); continue; }
+    if (!row) { problems.push(`fabricated violation ${f.name}: no row`); continue; }
+    if (!row.exhibited) problems.push(`fabricated violation ${f.name}: the row is not exhibited on its fabricated record (the antecedent did not hold)`);
+    else if (row.holds) problems.push(`fabricated violation ${f.name}: the row holds on a record built to violate it (a vacuous checker)`);
+  }
+  return { problems, rows: fab.length, structural: Object.keys(STRUCTURAL_ROWS).length };
+}
+// vacuityPass(coreText, work, leanRoot) → {problems, rows}: each non-structural row's predicates replaced
+// with `true` in a scratch core, one at a time; the fabricated table must red on exactly that row
+const ROW_NEEDLE = '  const row = (name, exhibited, checks) => {\n';
+async function vacuityPass(coreText, work, leanRoot) {
+  const problems = [];
+  if (!coreText.includes(ROW_NEEDLE)) return { problems: ['vacuity pass: the row() needle is not in the core'], rows: 0 };
+  const base = await import(pathToFileURL(CORE).href + '?v=' + Date.now());
+  const names = fabricatedViolations(base).map(f => f.name);
+  for (const name of names) {
+    const t = coreText.replace(ROW_NEEDLE, () => `${ROW_NEEDLE}    if (name === '${name}') { const c0 = checks; checks = () => c0().map(x => [true, x[1]]); }\n`);
+    const p = join(work, 'vac-' + name + '.mjs'); writeFileSync(p, t);
+    const core = await import(pathToFileURL(p).href);
+    const r = checkFabricated(core, leanRoot);
+    const hit = r.problems.find(x => x.startsWith(`fabricated violation ${name}:`) && /holds on a record built to violate it/.test(x));
+    if (!hit) problems.push(`vacuity: ${name} made unconditionally true was not caught by its fabricated violation (${r.problems.length ? r.problems.slice(0, 2).join(' | ') : 'no problem reported'})`);
+    const others = r.problems.filter(x => !x.startsWith(`fabricated violation ${name}:`));
+    if (others.length) problems.push(`vacuity: making ${name} true reddened other rows: ${others.slice(0, 2).join(' | ')}`);
+  }
+  return { problems, rows: names.length };
 }
 
 /* --- the suite ------------------------------------------------------------ */
@@ -911,12 +1088,23 @@ async function runSuite(opts) {
     problems.push(...cl.problems);
     if (opts.printMatrix) for (const m of cl.matrix) console.log(`  ${m.hit ? '✓' : '✗'}  ${m.id.padEnd(32)} story ${String(m.story).padStart(2)}  ${m.hit ? m.hit.file + ' step ' + m.hit.step : '—'}  ${m.clause}`);
   }
+  // every checker row is falsifiable: the fabricated violations (structural rows name their falsifier)
+  const fb = checkFabricated(core, opts.leanRoot || LEAN_ROOT, opts.fabricatedSkip);
+  rows.push({ item: `fabricated violations: ${fb.rows} declarations each red on a record built to violate its exact checker row; ${fb.structural} structural rows (${Object.keys(STRUCTURAL_ROWS).join(', ')}) name the --selftest control that reds them`, ok: !fb.problems.length });
+  problems.push(...fb.problems);
   // build --check
   if (!opts.skipBuild) {
     try {
       execFileSync(process.execPath, [BUILD, '--check', ...(opts.html ? ['--html', opts.html] : []), ...(opts.core ? ['--core', opts.core] : [])], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
       rows.push({ item: 'build --check (core slices, scenarios, corpus, docs copy)', ok: true });
     } catch (e) { rows.push({ item: 'build --check', ok: false }); problems.push('build --check RED: ' + String(e.stdout || '').trim() + ' ' + String(e.stderr || '').trim()); }
+  }
+  // the reference template: the page and the stored assets are one identity
+  if (!opts.skipTemplate) {
+    try {
+      execFileSync(process.execPath, [TEMPLATE_TOOL, 'check', opts.html || HTML, opts.templateDir || TEMPLATE_DIR], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      rows.push({ item: 'page template check (page.css, page-skeleton.html, page-ids.txt, page-template.html identical to the page)', ok: true });
+    } catch (e) { rows.push({ item: 'page template check', ok: false }); problems.push('page template check RED: ' + (String(e.stdout || '') + String(e.stderr || '')).trim().split('\n').slice(0, 5).join(' | ')); }
   }
   // page smoke
   let html;
@@ -953,11 +1141,21 @@ async function selftest(work) {
     { name: 'scenario with a flipped expectation', expect: /expected ok=false, got ok=true/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[2].expect.ok = false; sc.steps[2].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
     { name: 'core guard flipped: close without the new keys’ signed intent (D-038)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(16|6|7)/,
-      make: () => ({ core: mutant('m-close', [["      if (!intentOk(env, epoch2, 'close', r)) return refuse('intent-not-authorized');\n      const r2 = r === null ? l.refundTo : r;\n      return some({ refund: payment(r2, l.dreg, l.b, l.pool) }, { closed: { epoch: epoch2, sn: sn2 } });", "      const r2 = r === null ? l.refundTo : r;\n      return some({ refund: payment(r2, l.dreg, l.b, l.pool) }, { closed: { epoch: epoch2, sn: sn2 } });"]]), skipBuild: true }) },
-    { name: 'core guard flipped: a reopen at the tombstone’s own sequence (stale resurrection)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(1|7|8)/,
-      make: () => ({ core: mutant('m-reopen', [["    if (!(sn < sn2)) return refuse('sequence-not-later');\n    const epoch2 = natAdd(e, 1);", "    const epoch2 = natAdd(e, 1);"]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-close', [["      if (!intentOk(env, epoch2, closeIntent(payee), r)) return refuse('intent-not-authorized');\n", ""]]), skipBuild: true }) },
+    { name: 'core guard weakened: the close’s signature is checked against a fixed payee, so the copied reap lands (D-039)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(16|6|7)/,
+      make: () => ({ core: mutant('m-copied-reap', [["      if (!intentOk(env, epoch2, closeIntent(payee), r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, closeIntent(2), r)) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
+    { name: 'core effect changed: the close pays the premium to the refund address, not to the signed payee', expect: /flow mismatch|theorem VIOLATED: .*T(16|7)/,
+      make: () => ({ core: mutant('m-close-payee', [["      if (p.P <= l.pool) return some({ refund: payment(r2, p.D, bHeldOf(p, l), l.pool - p.P), hunter: payment(payee, 0, 0, p.P) }, parked({ epoch: epoch2, sn: sn2 }));", "      if (p.P <= l.pool) return some({ refund: payment(r2, p.D, bHeldOf(p, l), l.pool - p.P), hunter: payment(r2, 0, 0, p.P) }, parked({ epoch: epoch2, sn: sn2 }));"]]), skipBuild: true }) },
+    { name: 'core guard flipped: a revival at the parked sequence (stale resurrection; the close’s own rotation)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(1|7|8)/,
+      make: () => ({ core: mutant('m-reopen', [["    if (!(hh.sn < sn2)) return refuse('sequence-not-later');\n    const epoch2 = natAdd(hh.epoch, 1);", "    const epoch2 = natAdd(hh.epoch, 1);"]]), skipBuild: true }) },
+    { name: 'core guard flipped: a parked identity is convicted without a proof against its key state', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(12|5|7|8)/,
+      make: () => ({ core: mutant('m-convict-parked', [["      if (!envDuplicityAt(env, hh.epoch, hh.sn)) return refuse('no-duplicity-proof');\n      return some({}, 'convicted');", "      return some({}, 'convicted');"]]), skipBuild: true }) },
+    { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
+      make: () => ({ core: mutant('m-deposit-ages', [["      if (op === 'deposit') next.frozen = false;", "      if (op === 'deposit') { next.frozen = false; next.bornAt = now; }"]]), skipBuild: true }) },
+    { name: 'system guard dropped: a revival lands under a leaf that is not parked (SysStep.reopen’s hparked)', expect: /not refused leaf-not-parked|theorem VIOLATED: .*T8/,
+      make: () => ({ core: mutant('m-hparked', [["    if (res.ok && kind === 'reopen' && leafKind(leafOfAid(s, aid)) !== 'parked') res = { ok: false, reason: 'leaf-not-parked' };\n", ""]]), skipBuild: true }) },
     { name: 'core guard weakened: any signed intent authorizes a new refund address (T6_refund_change_requires_new_keys)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(6|7)/,
-      make: () => ({ core: mutant('m-t6d', [["      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, op, r) && !INTENTS.some(i => intentOk(env, epoch2, i, r) || intentOk(env, epoch2, i, null))) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-t6d', [["      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, op, r) && !['keep', 'deposit'].some(i => intentOk(env, epoch2, i, r) || intentOk(env, epoch2, i, null))) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
     { name: 'core effect dropped: a close leaves the leaf live (T8_edges_leave_the_leaf is a partition)', expect: /theorem VIOLATED: .*T8/,
       make: () => ({ core: mutant('m-t8b', [["  const leaves = res.ok ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;", "  const leaves = res.ok && kind !== 'close' ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;"]]), skipBuild: true }) },
     { name: 'a theorem row deleted from the core (T1_rotate_strict has no checker)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row/,
@@ -966,14 +1164,26 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-row-renamed', [["  row('T1_rotate_strict', ok && pp && rot,", "  row('T1_rotate_strictly', ok && pp && rot,"]]), skipBuild: true }) },
     { name: 'a declaration dropped from its lamp (the auditor’s delete_mapping)', expect: /theorem T1_rotate_strict is listed by 0 lamps/,
       make: () => ({ core: mutant('m-lamp-drop', [["    lean: ['T1_sn_monotone', 'T1_rotate_strict', 'T1_sn_monotone_all',", "    lean: ['T1_sn_monotone', 'T1_sn_monotone_all',"]]), skipBuild: true }) },
-    { name: 'story 15’s first atom deleted (the pair shares a phrase; identity is the id)', expect: /story 15: atom 15\.consumable-dreg is declared by the story but absent/,
-      make: () => withClauses('clauses-atom-deleted.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-dreg'); j.clauses.splice(i, 1); }) },
-    { name: 'story 15’s second atom deleted', expect: /story 15: atom 15\.consumable-b is declared by the story but absent/,
-      make: () => withClauses('clauses-atom-deleted-2.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-b'); j.clauses.splice(i, 1); }) },
-    { name: 'story 15’s first atom duplicated in place of the second', expect: /atom 15\.consumable-dreg appears twice|atom 15\.consumable-b is declared by the story but absent/,
-      make: () => withClauses('clauses-atom-duplicated.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-b'); j.clauses[i] = JSON.parse(JSON.stringify(j.clauses.find(c => c.id === '15.consumable-dreg'))); }) },
+    { name: 'story 15’s first atom deleted (the pair shares a phrase; identity is the id)', expect: /story 15: atom 15\.consumable-present is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-deleted.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-present'); j.clauses.splice(i, 1); }) },
+    { name: 'story 15’s second atom deleted', expect: /story 15: atom 15\.consumable-frozen is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-deleted-2.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-frozen'); j.clauses.splice(i, 1); }) },
+    { name: 'story 15’s first atom duplicated in place of the second', expect: /atom 15\.consumable-present appears twice|atom 15\.consumable-frozen is declared by the story but absent/,
+      make: () => withClauses('clauses-atom-duplicated.json', j => { const i = j.clauses.findIndex(c => c.id === '15.consumable-frozen'); j.clauses[i] = JSON.parse(JSON.stringify(j.clauses.find(c => c.id === '15.consumable-present'))); }) },
     { name: 'theorem property seeded to lie: T6 conservation on the pool', expect: /theorem VIOLATED: .*T6/,
-      make: () => ({ core: mutant('m-t6', [['[big(hi.pool) + big(f.poolIn) === big(ho.pool)', '[big(hi.pool) + big(f.poolIn) + 1n === big(ho.pool)']]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-t6', [['[big(hi.pool) + big(f.poolIn) === big(ho.pool)', '[big(hi.pool) + big(f.poolIn) + 1n === big(ho.pool)']]), skipBuild: true, skipTemplate: true }) },
+    { name: 'a checker made vacuous: T1_sn_monotone’s predicate replaced by true (the auditor’s survivor)', expect: /fabricated violation T1_sn_monotone: the row holds on a record built to violate it/,
+      make: () => ({ core: mutant('m-vacuous-t1', [[ROW_NEEDLE, ROW_NEEDLE + "    if (name === 'T1_sn_monotone') { const c0 = checks; checks = () => c0().map(x => [true, x[1]]); }\n"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'a fabricated violation dropped from the table (T14_pool_decreases_only_by_premium has no falsifier)', expect: /declaration T14_pool_decreases_only_by_premium has neither a fabricated violation nor a structural falsifier/,
+      make: () => ({ fabricatedSkip: 'T14_pool_decreases_only_by_premium', skipBuild: true, skipTemplate: true }) },
+    { name: 'structural row m-consumableB: the consumer’s Bool mirror drops the freeze bit (consumableStateB_iff must red)', expect: /theorem VIOLATED: .*consumableStateB_iff/,
+      make: () => ({ core: mutant('m-consumableB', [["const consumableB = (p, now, s) => { const l = liveOf(s); return !!l && l.frozen === false && l.poisoned === false", "const consumableB = (p, now, s) => { const l = liveOf(s); return !!l && l.poisoned === false"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'structural row m-held-dreg: held() returns no conviction bond for a present checkpoint (T10_bonds_are_observable must red)', expect: /theorem VIOLATED: .*T10_bonds_are_observable/,
+      make: () => ({ core: mutant('m-held-dreg', [["return l ? { dreg: p.D, b: bHeldOf(p, l), pool: l.pool }", "return l ? { dreg: 0, b: bHeldOf(p, l), pool: l.pool }"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'structural row m-held-parked: held() returns a pool for a parked identity (T10_parked_holds_nothing must red)', expect: /theorem VIOLATED: .*T10_parked_holds_nothing/,
+      make: () => ({ core: mutant('m-held-parked', [["pool: l.pool } : { dreg: 0, b: 0, pool: 0 }; };", "pool: l.pool } : { dreg: 0, b: 0, pool: 1 }; };"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'the stored template drifts from the page (page.css with one rule changed)', expect: /page template check RED: .*DRIFT/,
+      make: () => { const d = join(work, 'tpl-' + Math.random().toString(36).slice(2)); cpSync(TEMPLATE_DIR, d, { recursive: true }); const css = join(d, 'page.css'); writeFileSync(css, readFileSync(css, 'utf8').replace('#scene .utxo.parked', '#scene .utxo.closed')); return { templateDir: d, skipBuild: true }; } },
     { name: 'page with its tree removed', expect: /page raised on load|the tree draws/,
       make: () => { const p = join(work, 'page-m3.html'); writeFileSync(p, htmlText.replace('<svg id="tree"', '<svg id="tre"')); return { html: p, skipBuild: true }; } },
     { name: 'page with its scene removed', expect: /the scene draws 0 entities|page raised on load|no fx layer/,
@@ -989,7 +1199,7 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-replay-boundary', [["  const sv = validateState(state); if (sv) return refuse(null, sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(null, ev.reason, ev.field);\n", ""]]), skipBuild: true }) },
     { name: 'consumable reads a non-state (verdict on a 2^53 bornAt)', expect: /consumable on a live state with bornAt=9007199254740992: expected verdict invalid-nat\/bornAt, got/,
       make: () => ({ core: mutant('m-consumable-boundary', [["  const sv = validateState(state); if (sv) return refused(sv.reason, sv.field);\n  const l = liveOf(state);", "  const l = liveOf(state);"]]), skipBuild: true }) },
-    { name: 'the state boundary accepts two constructors at once and strangers beside one', expect: /step on non-state .*"convicted".*"present".*: expected invalid-state\/convicted, got ok/,
+    { name: 'the state boundary accepts two constructors at once and strangers beside one', expect: /step on non-state .*"parked".*"present".*: expected invalid-state\/present, got ok/,
       make: () => ({ core: mutant('m-state-ctor', [["  const stranger = keys.find(x => !STATE_CTORS.includes(x));\n  if (stranger !== undefined) return bad('invalid-state', stranger, `${stranger} is not a constructor of State`);\n  if (keys.length !== 1) return bad('invalid-state', keys.length ? keys[1] : 'state', keys.length ? `${keys[0]} and ${keys[1]} at once: a state is one constructor` : 'unknown state shape');\n  const k = keys[0];", "  const k = keys.find(x => STATE_CTORS.includes(x)) || 'state';"]]), skipBuild: true }) },
     { name: 'the trace verifier validates inputs only, so a Lean-side result beyond the bound is a parity difference', expect: /checkCorpus on a corpus with grid cell result state pool=9007199254740992: no invalid-nat\/pool reason/,
       make: () => ({ core: mutant('m-corpus-results', [["  const badResult = (where, r) => { if (r === null) return false;", "  const badResult = (where, r) => { if (true) return false;"]]), skipBuild: true }) },
@@ -1013,7 +1223,7 @@ async function selftest(work) {
       make: () => withClauses('clauses-survivor-2.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.text = '(.present { l with b := 0 })'; }) },
     { name: 'a payment claim whose text is in the flow but does not start at a paying field', expect: /a payment claim's text starts at the flow field that pays it/,
       make: () => withClauses('clauses-payfield.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.text = 'b := p.B'; }) },
-    { name: 'an untouched-except claim naming the wrong field (story 3: the freeze updates b, the claim says pool)', expect: /the post-state of Step\.freeze updates b, the claim says pool/,
+    { name: 'an untouched-except claim naming the wrong field (story 3: the freeze updates frozen, the claim says pool)', expect: /the post-state of Step\.freeze updates frozen, the claim says pool/,
       make: () => withClauses('clauses-updates.json', j => { const c = j.clauses.find(c => c.story === 3 && /leaves the datum untouched/.test(c.clause)); c.updates = ['pool']; }) },
     { name: 'a guard claim moved out of its hypothesis into the flow', expect: /a guard claim names the hypothesis \(hyp\) it lives in/,
       make: () => withClauses('clauses-guard-flow.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); delete c.hyp; c.text = 'hunter := some { addr := payee, b := p.B }'; }) },
@@ -1038,10 +1248,14 @@ async function selftest(work) {
     if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 900)}`); return 1; }
     console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n').find(l => c.expect.test(l)).slice(0, 160)}`);
   }
+  // the vacuity pass: every non-structural row made unconditionally true, one at a time, is caught by its fabricated violation
+  const vac = await vacuityPass(coreText, work, LEAN_ROOT);
+  if (vac.problems.length) { console.error('SELFTEST RED: the vacuity pass found a checker nobody can falsify:\n' + vac.problems.join('\n')); return 1; }
+  console.log(`vacuity pass GREEN: ${vac.rows} checker rows each made unconditionally true in turn, each caught by its own fabricated violation`);
   const green = await runSuite({});
   printTable(green);
   if (green.problems.length) { console.error('SELFTEST RED: production does not return GREEN'); return 1; }
-  console.log(`selftest GREEN: ${controls.length} negative controls RED for the expected reason, then production GREEN`);
+  console.log(`selftest GREEN: ${controls.length} negative controls RED for the expected reason, the vacuity pass over ${vac.rows} rows, then production GREEN`);
   return 0;
 }
 
@@ -1050,6 +1264,11 @@ let code = 1;
 try {
   if (process.argv.includes('--clauses-md')) {
     console.log(clausesMarkdown(JSON.parse(readFileSync(CLAUSES, 'utf8')))); code = 0;
+  } else if (process.argv.includes('--vacuity')) {
+    const vac = await vacuityPass(readFileSync(CORE, 'utf8'), work, LEAN_ROOT);
+    vac.problems.forEach(p => console.error(' - ' + p));
+    console.log(`${vac.problems.length ? 'RED' : 'GREEN'}: vacuity pass over ${vac.rows} checker rows` + (vac.problems.length ? `, ${vac.problems.length} problems` : ''));
+    code = vac.problems.length ? 1 : 0;
   } else if (process.argv.includes('--selftest')) code = await selftest(work);
   else {
     const r = await runSuite({ core: argPath('--core'), html: argPath('--html'), scenarios: argPath('--scenarios'), clauses: argPath('--clauses'),

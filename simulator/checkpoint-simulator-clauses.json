@@ -182,7 +182,7 @@
         "ok": true,
         "kind": "freeze"
       },
-      "note": "the freeze also needs the bond present (hb : l.b = p.B; refusal freeze-bond-missing), which the story states only as its 'after'."
+      "note": "the freeze also needs the bond present (hb : l.frozen = false; refusal freeze-bond-missing), which the story states only as its 'after'."
     },
     {
       "id": "3.and-leaves-the-datum-untouched",
@@ -191,15 +191,15 @@
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.freeze",
-      "text": "{ l with b := 0 }",
+      "text": "{ l with frozen := true }",
       "updates": [
-        "b"
+        "frozen"
       ],
       "match": {
         "ok": true,
         "kind": "freeze"
       },
-      "note": "Live is the datum plus the value held; the freeze sets only b (the freeze bond, value) and leaves sn, epoch, poisoned, bornAt, refundTo, dreg and pool as they were — the old keys stay."
+      "note": "Live is the datum plus the value held; the freeze sets only the frozen bit (the freeze bond leaves as value) and leaves sn, epoch, poisoned, bornAt, refundTo and pool as they were — the old keys stay."
     },
     {
       "id": "4.the-advance-predicate",
@@ -207,26 +207,62 @@
       "clause": "the advance predicate",
       "class": "guard",
       "kind": "guard",
-      "decl": "Step.rotateDeposit",
+      "decl": "Step.rotateDepositUnpaid",
       "hyp": "hev",
       "text": "env.rotationTo l.epoch l.sn sn' = true",
-      "reason": "no-witnessed-rotation"
+      "reason": "no-witnessed-rotation",
+      "note": "story 4's deposit lands with the pool short (hnopay), the unpaid constructor; Step.rotateDepositPaid carries the same guards."
     },
     {
-      "id": "4.that-both-bonds-are-full",
+      "id": "4.the-new-keys-signature-on",
       "story": 4,
-      "clause": "that both bonds are full on the output",
+      "clause": "the new keys' signature on the deposit",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.rotateDepositUnpaid",
+      "hyp": "hauth",
+      "text": "env.intentOk (l.epoch + 1) .deposit refund' = true",
+      "reason": "intent-not-authorized"
+    },
+    {
+      "id": "4.then-the-freeze-bond-is",
+      "story": 4,
+      "clause": "then the freeze bond is back on the output",
       "class": "guard",
       "kind": "post-state",
-      "decl": "Step.rotateDeposit",
-      "text": "dreg := p.D, b := p.B",
+      "decl": "Step.rotateDepositUnpaid",
+      "text": "frozen := false",
       "match": {
         "ok": true,
         "kind": "rotate",
         "op": "deposit",
         "preWord": "frozen"
       },
-      "note": "the depositing rotation's output holds exactly D and B; the guards hd / hb refuse a datum already above full (bond-over-full)."
+      "note": "the flow brings p.B − bHeld: B when frozen, nothing when the bond is held (a deposit on full bonds is a keep, T5_deposit_on_full_is_keep)."
+    },
+    {
+      "id": "4.nothing-else-changes-and-juvenility",
+      "story": 4,
+      "clause": "nothing else changes and juvenility is not restarted",
+      "class": "guard",
+      "kind": "post-state",
+      "decl": "Step.rotateDepositUnpaid",
+      "text": "poisoned := false, frozen := false",
+      "updates": [
+        "sn",
+        "epoch",
+        "poisoned",
+        "frozen",
+        "refundTo"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "frozen",
+        "bornAtUnchanged": true
+      },
+      "note": "D-040: the deposit is the unfreeze, not a bonding; bornAt is untouched (slice 2 reset it)."
     },
     {
       "id": "5.the-advance-predicate",
@@ -234,51 +270,156 @@
       "clause": "the advance predicate",
       "class": "guard",
       "kind": "guard",
-      "decl": "Step.rotateWithdraw",
+      "decl": "Step.closePaid",
       "hyp": "hev",
       "text": "env.rotationTo l.epoch l.sn sn' = true",
-      "reason": "no-witnessed-rotation"
+      "reason": "no-witnessed-rotation",
+      "note": "a close is a witnessed rotation (D-036); Step.closeUnpaid carries the same guards."
     },
     {
-      "id": "5.then-it-pays-d-reg",
+      "id": "5.the-new-keys-signature-on",
       "story": 5,
-      "clause": "then it pays `D_reg + B + pool` to the refund address",
+      "clause": "the new keys' signature on the close naming the payee and the refund address",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.closePaid",
+      "hyp": "hauth",
+      "text": "env.intentOk (l.epoch + 1) (.close payee) refund' = true",
+      "reason": "intent-not-authorized",
+      "note": "one message carries the close, its payee and the optional new address (D-038, D-039)."
+    },
+    {
+      "id": "5.a-copied-reap-with-another",
+      "story": 5,
+      "clause": "a copied reap with another payee or address is refused",
+      "class": "guard",
+      "kind": "refusal",
+      "decl": "Step.closePaid",
+      "hyp": "hauth",
+      "text": "(.close payee)",
+      "reason": "intent-not-authorized",
+      "note": "D-039, the registry's Q-R6: the payee is inside the signed message, so a copy with the payee rewritten presents a message the keys never signed (T16_copied_reap_refused)."
+    },
+    {
+      "id": "5.then-it-pays-the-premium",
+      "story": 5,
+      "clause": "then it pays the premium to the payee",
       "class": "guard",
       "kind": "payment",
-      "decl": "Step.rotateWithdraw",
-      "text": "refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
+      "decl": "Step.closePaid",
+      "text": "hunter := some { addr := payee, pool := p.P }",
       "match": {
         "ok": true,
-        "kind": "rotate",
-        "op": "withdraw",
+        "kind": "close",
+        "hunterPool": true
+      },
+      "note": "paid when the pool covers P (hpay); otherwise the reap lands unpaid (Step.closeUnpaid, hnopay): payment is never a gate."
+    },
+    {
+      "id": "5.and-everything-else-to-the",
+      "story": 5,
+      "clause": "and everything else to the refund address",
+      "class": "guard",
+      "kind": "payment",
+      "decl": "Step.closePaid",
+      "text": "refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P }",
+      "match": {
+        "ok": true,
+        "kind": "close",
         "preWord": "live"
       }
     },
     {
-      "id": "6.the-advance-predicate",
-      "story": 6,
-      "clause": "the advance predicate",
-      "class": "guard",
-      "kind": "guard",
-      "decl": "Step.rotateDeposit",
-      "hyp": "hev",
-      "text": "env.rotationTo l.epoch l.sn sn' = true",
-      "reason": "no-witnessed-rotation"
-    },
-    {
-      "id": "6.both-bonds-full-on-the",
-      "story": 6,
-      "clause": "both bonds full on the output",
+      "id": "5.burns-the-token",
+      "story": 5,
+      "clause": "burns the token",
       "class": "guard",
       "kind": "post-state",
-      "decl": "Step.rotateDeposit",
-      "text": "dreg := p.D, b := p.B",
+      "decl": "Step.closePaid",
+      "text": ".parked ⟨l.epoch + 1, sn'⟩",
       "match": {
         "ok": true,
-        "kind": "rotate",
-        "op": "deposit",
-        "preWord": "paused"
+        "kind": "close",
+        "preWord": "live"
+      },
+      "note": "the post-state is not a present checkpoint: no UTxO (T8_utxo_iff_active)."
+    },
+    {
+      "id": "5.and-parks-the-leaf-with",
+      "story": 5,
+      "clause": "and parks the leaf with the hash of the checkpoint the rotation reached",
+      "class": "guard",
+      "kind": "post-state",
+      "decl": "Step.closePaid",
+      "text": "⟨l.epoch + 1, sn'⟩",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live"
+      },
+      "note": "the hash is the key state the closing rotation reached (T16_parked_hash_is_the_closed_checkpoints), not the datum it spent: a revival must rotate from it, so the close's own rotation cannot revive (T1_close_rotation_cannot_revive)."
+    },
+    {
+      "id": "6.the-leaf-is-parked",
+      "story": 6,
+      "clause": "the leaf is parked",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "SysStep.reopen",
+      "hyp": "hparked",
+      "text": "s.leaves aid = .parked h",
+      "reason": "leaf-not-parked",
+      "note": "the registry's presence proof; for one AID the state guard refuses first (reopen-needs-parked), the leaf guard is the system-level reason the gate's generator exercises."
+    },
+    {
+      "id": "6.a-witnessed-rotation-from-exactly",
+      "story": 6,
+      "clause": "a witnessed rotation from exactly the parked key state",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.reopen",
+      "hyp": "hev",
+      "text": "env.rotationTo h.epoch h.sn sn' = true",
+      "reason": "no-witnessed-rotation",
+      "note": "only the holder of the next keys of the parked key state can produce it: a thief of the current keys cannot revive (T4_current_key_thief_cannot_revive)."
+    },
+    {
+      "id": "6.strictly-later-than-the-parked",
+      "story": 6,
+      "clause": "strictly later than the parked sequence",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.reopen",
+      "hyp": "hsn",
+      "text": "h.sn < sn'",
+      "reason": "sequence-not-later"
+    },
+    {
+      "id": "6.fresh-bonds-and-a-first",
+      "story": 6,
+      "clause": "fresh bonds and a first pool come in",
+      "class": "guard",
+      "kind": "payment",
+      "decl": "Step.reopen",
+      "text": "dregIn := p.D, bIn := p.B, poolIn := pool0",
+      "match": {
+        "ok": true,
+        "kind": "reopen"
       }
+    },
+    {
+      "id": "6.the-checkpoint-is-born-now",
+      "story": 6,
+      "clause": "the checkpoint is born now at the next epoch",
+      "class": "guard",
+      "kind": "post-state",
+      "decl": "Step.reopen",
+      "text": "⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩",
+      "match": {
+        "ok": true,
+        "kind": "reopen"
+      },
+      "note": "juvenile for W slots (T10_reopen_is_juvenile), unfrozen, unpoisoned, with the refund address whoever pays chose."
     },
     {
       "id": "7.signatures-at-the-current-threshold",
@@ -396,57 +537,71 @@
       "note": "the model has no key material; the epoch counter stands for the current keys, and duplicityAt is asked at (epoch, sn) only."
     },
     {
-      "id": "10.signatures-at-the-current-threshold",
+      "id": "10.a-witnessed-rotation-by-the",
       "story": 10,
-      "clause": "signatures at the current threshold",
-      "class": "overrule",
+      "clause": "a witnessed rotation by the next keys, poisoned or not",
+      "class": "guard",
       "kind": "guard",
-      "decl": "Step.close",
+      "decl": "Step.closePaid",
       "hyp": "hev",
       "text": "env.rotationTo l.epoch l.sn sn' = true",
       "reason": "no-witnessed-rotation",
-      "note": "D-036: a close is a witnessed rotation by the next keys, not a signature by the current ones; Mallory with the current keys is refused no-witnessed-rotation."
+      "note": "no poison guard on either close constructor (D-036): Mallory with the current keys is refused for the missing rotation, and Alice's reap lands from the poisoned state."
     },
     {
-      "id": "10.not-poisoned",
+      "id": "10.the-signed-close-naming-the",
       "story": 10,
-      "clause": "not poisoned",
-      "class": "overrule",
-      "kind": "refusal",
-      "decl": "Step.close",
+      "clause": "the signed close naming the payee",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.closePaid",
       "hyp": "hauth",
-      "text": "env.intentOk (l.epoch + 1) .close refund' = true",
-      "reason": "intent-not-authorized",
-      "note": "D-036: a close lands poisoned or not; what it needs is the new keys' signed close intent (D-038), which a relayer with the public rotation does not have."
+      "text": "(.close payee)",
+      "reason": "intent-not-authorized"
     },
     {
-      "id": "10.then-it-pays-everything-to",
+      "id": "10.then-it-pays-the-premium",
       "story": 10,
-      "clause": "Then it pays everything to the refund address",
+      "clause": "then it pays the premium to the payee",
       "class": "guard",
       "kind": "payment",
-      "decl": "Step.close",
-      "text": "refund := some { addr := refund'.getD l.refundTo, dreg := l.dreg, b := l.b, pool := l.pool }",
+      "decl": "Step.closePaid",
+      "text": "hunter := some { addr := payee, pool := p.P }",
       "match": {
         "ok": true,
         "kind": "close",
-        "preWord": "live"
+        "hunterPool": true
       }
     },
     {
-      "id": "10.and-burns-the-token",
+      "id": "10.and-everything-else-to-the",
       "story": 10,
-      "clause": "and burns the token",
+      "clause": "and everything else to the refund address",
       "class": "guard",
-      "kind": "post-state",
-      "decl": "Step.close",
-      "text": ".closed (l.epoch + 1) sn'",
+      "kind": "payment",
+      "decl": "Step.closePaid",
+      "text": "refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P }",
       "match": {
         "ok": true,
         "kind": "close",
-        "preWord": "live"
+        "refundToAlice": true
+      }
+    },
+    {
+      "id": "10.the-closer-never-chooses-where",
+      "story": 10,
+      "clause": "the closer never chooses where the bonds go",
+      "class": "guard",
+      "kind": "guard",
+      "decl": "Step.closePaid",
+      "hyp": "hauth",
+      "text": "env.intentOk (l.epoch + 1) (.close payee) refund'",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "refundToAlice": true
       },
-      "note": "the tombstone keeps the epoch the closing rotation opened and its sequence; not terminal (D-036): a later witnessed rotation reopens it."
+      "note": "the refund address is the datum's unless the new keys signed a new one in the same message (D-032, D-038); a thief with the next keys who reaps still pays Alice's address (story 10's fork)."
     },
     {
       "id": "11.present",
@@ -459,24 +614,15 @@
       "verdict": "not-present"
     },
     {
-      "id": "11.d-reg-full",
+      "id": "11.the-freeze-bond-held",
       "story": 11,
-      "clause": "`D_reg` full",
+      "clause": "the freeze bond held",
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
-      "text": "l.dreg = p.D",
-      "verdict": "dreg-missing"
-    },
-    {
-      "id": "11.b-full",
-      "story": 11,
-      "clause": "`B` full",
-      "class": "guard",
-      "kind": "verdict",
-      "decl": "consumableState",
-      "text": "l.b = p.B",
-      "verdict": "b-missing"
+      "text": "l.frozen = false",
+      "verdict": "frozen",
+      "note": "the conviction bond is always held by a present checkpoint (D-040), so it is no conjunct."
     },
     {
       "id": "11.not-poisoned",
@@ -521,17 +667,7 @@
       "decl": "consumableState",
       "text": "| _ => False",
       "verdict": "not-present",
-      "note": "every non-present state is False; each present failure names its conjunct (story 11's scenario walks all seven)."
-    },
-    {
-      "id": "11.unbonded",
-      "story": 11,
-      "clause": "unbonded",
-      "class": "guard",
-      "kind": "verdict",
-      "decl": "consumableState",
-      "text": "l.dreg = p.D",
-      "verdict": "dreg-missing"
+      "note": "every non-present state is False; each present failure names its conjunct (story 11's scenario walks all six)."
     },
     {
       "id": "11.frozen",
@@ -540,8 +676,8 @@
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
-      "text": "l.b = p.B",
-      "verdict": "b-missing"
+      "text": "l.frozen = false",
+      "verdict": "frozen"
     },
     {
       "id": "11.poisoned",
@@ -564,19 +700,20 @@
       "verdict": "juvenile"
     },
     {
-      "id": "11.convicted",
+      "id": "11.parked",
       "story": 11,
-      "clause": "convicted",
+      "clause": "parked",
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
       "text": "| _ => False",
-      "verdict": "not-present"
+      "verdict": "not-present",
+      "note": "no UTxO to read: the leaf holds the hash and nothing else (D-040)."
     },
     {
-      "id": "11.gone",
+      "id": "11.convicted",
       "story": 11,
-      "clause": "gone",
+      "clause": "convicted",
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
@@ -614,7 +751,7 @@
         "kind": "rotate",
         "refundChanged": true
       },
-      "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can sign a new one in the intent message (hauth, D-038), and close and withdrawal pay there (Step.close, Step.rotateWithdraw)."
+      "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can sign a new one in the intent message (hauth, D-038), and the reap pays there (Step.closePaid / Step.closeUnpaid), never to the closer."
     },
     {
       "id": "12.it-can-happen-once-per",
@@ -626,7 +763,7 @@
       "hyp": "habs",
       "text": "s.leaves aid = .absent",
       "reason": "aid-already-registered",
-      "note": "for one AID the state guard (present / closed / convicted) refuses first (already-present, as scenario 12 plays it); the leaf guard is the system-level reason, exercised by the gate's multi-AID generator."
+      "note": "for one AID the state guard (present / parked / convicted) refuses first (already-present, as scenario 12 plays it); the leaf guard is the system-level reason, exercised by the gate's multi-AID generator."
     },
     {
       "id": "13.add-value-to-the-pool",
@@ -656,7 +793,7 @@
         "ok": true,
         "kind": "topUp"
       },
-      "note": "only the pool (value) moves; sn, epoch, poisoned, bornAt, refundTo, dreg and b stay — juvenility is not restarted."
+      "note": "only the pool (value) moves; sn, epoch, poisoned, frozen, bornAt and refundTo stay — juvenility is not restarted."
     },
     {
       "id": "13.no-signature",
@@ -758,29 +895,8 @@
       "kind": "refusal",
       "decl": "Step.freeze",
       "hyp": "hb",
-      "text": "l.b = p.B",
+      "text": "l.frozen = false",
       "reason": "freeze-bond-missing"
-    },
-    {
-      "id": "15.consumable-dreg",
-      "story": 15,
-      "clause": "her checkpoint stays consumable as long as it is bonded",
-      "class": "guard",
-      "kind": "verdict",
-      "decl": "consumableState",
-      "text": "l.dreg = p.D",
-      "verdict": "dreg-missing",
-      "note": "consumableState has no upper bound on age; bonded means both conjuncts l.dreg = p.D and l.b = p.B (next row)."
-    },
-    {
-      "id": "15.consumable-b",
-      "story": 15,
-      "clause": "her checkpoint stays consumable as long as it is bonded",
-      "class": "guard",
-      "kind": "verdict",
-      "decl": "consumableState",
-      "text": "l.b = p.B",
-      "verdict": "b-missing"
     },
     {
       "id": "15.and-no-rotation-is-missing",
@@ -823,6 +939,27 @@
       "clause": "The fields are reserved in the datum now",
       "class": "omission",
       "note": "reserved fields are not in Live."
+    },
+    {
+      "id": "15.consumable-present",
+      "story": 15,
+      "clause": "her checkpoint stays consumable as long as it is bonded",
+      "class": "guard",
+      "kind": "verdict",
+      "decl": "consumableState",
+      "text": "| .present l =>",
+      "verdict": "not-present",
+      "note": "consumableState has no upper bound on age; bonded means a present checkpoint (the conviction bond is always held) with the freeze bond held (next row)."
+    },
+    {
+      "id": "15.consumable-frozen",
+      "story": 15,
+      "clause": "her checkpoint stays consumable as long as it is bonded",
+      "class": "guard",
+      "kind": "verdict",
+      "decl": "consumableState",
+      "text": "l.frozen = false",
+      "verdict": "frozen"
     }
   ],
   "distinctive": [
@@ -875,91 +1012,6 @@
         "kind": "rotate",
         "op": "keep",
         "preWord": "frozen"
-      }
-    },
-    {
-      "id": "frozen-withdraw",
-      "story": 4,
-      "clause": "a withdraw rotation from a frozen state pays what is held and parks",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "op": "withdraw",
-        "preWord": "frozen"
-      }
-    },
-    {
-      "id": "unfreeze-by-deposit",
-      "story": 4,
-      "clause": "a depositing rotation from a frozen state restores both bonds and restarts juvenility",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "op": "deposit",
-        "preWord": "frozen"
-      }
-    },
-    {
-      "id": "pause-by-withdraw",
-      "story": 5,
-      "clause": "a withdraw rotation from a live state pays D + B + pool to the refund address",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "op": "withdraw",
-        "preWord": "live"
-      }
-    },
-    {
-      "id": "paused-poison-accepted",
-      "story": 5,
-      "clause": "the current-epoch quorum can poison a paused checkpoint (accepted; gains nothing)",
-      "match": {
-        "ok": true,
-        "kind": "poison",
-        "preWord": "paused"
-      }
-    },
-    {
-      "id": "paused-close-accepted",
-      "story": 5,
-      "clause": "the next keys can close a paused checkpoint: zero paid, token burned",
-      "match": {
-        "ok": true,
-        "kind": "close",
-        "preWord": "paused"
-      }
-    },
-    {
-      "id": "paused-retired-quorum-refused",
-      "story": 5,
-      "clause": "keys of a retired epoch cannot close or poison a paused checkpoint",
-      "match": {
-        "ok": false,
-        "reason": "no-quorum",
-        "preWord": "paused"
-      }
-    },
-    {
-      "id": "paused-freeze-refused",
-      "story": 5,
-      "clause": "a paused checkpoint cannot be frozen: no freeze bond to take",
-      "match": {
-        "ok": false,
-        "kind": "freeze",
-        "reason": "freeze-bond-missing",
-        "preWord": "paused"
-      }
-    },
-    {
-      "id": "resurrect-by-deposit",
-      "story": 6,
-      "clause": "a depositing rotation from a paused state brings both bonds back",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "op": "deposit",
-        "preWord": "paused"
       }
     },
     {
@@ -1063,25 +1115,6 @@
       }
     },
     {
-      "id": "close-pays-refund-address",
-      "story": 10,
-      "clause": "a close by the next keys pays everything to the refund address in the datum, poisoned or not",
-      "match": {
-        "ok": true,
-        "kind": "close",
-        "preWord": "live"
-      }
-    },
-    {
-      "id": "closed-needs-reopen",
-      "story": 10,
-      "clause": "nothing but a reopen leaves Closed",
-      "match": {
-        "ok": false,
-        "reason": "closed-needs-reopen"
-      }
-    },
-    {
       "id": "stale-registration-donation",
       "story": 8,
       "clause": "a stranger's registration ends up paying Alice",
@@ -1180,27 +1213,226 @@
       }
     },
     {
-      "id": "bond-over-full-seeded",
-      "story": 6,
-      "clause": "a datum above full is refused by the depositing rotation (seeded, unreachable)",
+      "id": "stranger-deposit-refused",
+      "story": 13,
+      "clause": "a stranger cannot land Alice’s rotation as a deposit: the deposit is signed by the keys the rotation reveals (D-038)",
       "match": {
         "ok": false,
-        "reason": "bond-over-full"
+        "kind": "rotate",
+        "op": "deposit",
+        "reason": "intent-not-authorized"
       }
     },
     {
-      "id": "reopen-later-rotation",
-      "story": 10,
-      "clause": "a witnessed rotation later than the tombstone reopens it with fresh bonds, juvenile",
+      "id": "unfreeze-by-deposit",
+      "story": 4,
+      "clause": "a depositing rotation from a frozen state restores the freeze bond and leaves juvenility untouched",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "frozen",
+        "bornAtUnchanged": true
+      }
+    },
+    {
+      "id": "frozen-leave",
+      "story": 4,
+      "clause": "a reap from a frozen state pays what is held (D and the pool) and parks",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "frozen"
+      }
+    },
+    {
+      "id": "leave-by-reap",
+      "story": 5,
+      "clause": "a reap from a live state pays P to the signed payee and D + B + the rest of the pool to the refund address",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "preWord": "live",
+        "hunterPool": true
+      }
+    },
+    {
+      "id": "relayer-reap-refused",
+      "story": 5,
+      "clause": "a relayer with the public rotation but no signed close cannot reap",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "intent-not-authorized",
+        "preWord": "live"
+      }
+    },
+    {
+      "id": "copied-reap-refused",
+      "story": 5,
+      "clause": "a copied reap with the payee or the address rewritten is refused (D-039)",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "intent-not-authorized",
+        "closeSigned": true
+      }
+    },
+    {
+      "id": "parked-inert-quorum",
+      "story": 5,
+      "clause": "no quorum signs anything on a parked identity",
+      "match": {
+        "ok": false,
+        "kind": "poison",
+        "reason": "parked-inert",
+        "preWord": "parked"
+      }
+    },
+    {
+      "id": "parked-inert-freeze",
+      "story": 5,
+      "clause": "a parked identity cannot be frozen: no bond, no UTxO",
+      "match": {
+        "ok": false,
+        "kind": "freeze",
+        "reason": "parked-inert",
+        "preWord": "parked"
+      }
+    },
+    {
+      "id": "parked-inert-register",
+      "story": 5,
+      "clause": "a parked identity cannot be registered again: the leaf is not absent",
+      "match": {
+        "ok": false,
+        "kind": "register",
+        "reason": "parked-inert",
+        "preWord": "parked"
+      }
+    },
+    {
+      "id": "parked-convict-without-proof",
+      "story": 5,
+      "clause": "no proof against the parked key state, no conviction of a parked identity",
+      "match": {
+        "ok": false,
+        "kind": "convict",
+        "reason": "no-duplicity-proof",
+        "preWord": "parked"
+      }
+    },
+    {
+      "id": "leave-from-poisoned",
+      "story": 5,
+      "clause": "the reap lands from a poisoned state: a close is a rotation",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "thief-cannot-revive",
+      "story": 6,
+      "clause": "the current keys of the parked key state cannot revive it",
+      "match": {
+        "ok": false,
+        "kind": "reopen",
+        "reason": "no-witnessed-rotation",
+        "preWord": "parked",
+        "quorumPresent": true
+      }
+    },
+    {
+      "id": "close-own-rotation-cannot-revive",
+      "story": 6,
+      "clause": "replaying the close's own rotation cannot revive: a revival rotates from the parked key state",
+      "match": {
+        "ok": false,
+        "kind": "reopen",
+        "preWord": "parked",
+        "reopenAtParkedSn": true
+      }
+    },
+    {
+      "id": "revive-by-reopen",
+      "story": 6,
+      "clause": "a witnessed rotation later than the parked key state revives it with fresh bonds, juvenile",
       "match": {
         "ok": true,
         "kind": "reopen"
       }
     },
     {
-      "id": "stale-reopen-refused",
+      "id": "reopen-needs-parked",
+      "story": 6,
+      "clause": "a revival of a checkpoint that is on chain is refused",
+      "match": {
+        "ok": false,
+        "kind": "reopen",
+        "reason": "reopen-needs-parked"
+      }
+    },
+    {
+      "id": "convict-parked",
+      "story": 6,
+      "clause": "a duplicity proof against the parked key state convicts a parked identity, moving nothing",
+      "match": {
+        "ok": true,
+        "kind": "convict",
+        "preWord": "parked",
+        "noFlow": true
+      }
+    },
+    {
+      "id": "deposit-on-full-is-keep",
+      "story": 8,
+      "clause": "a signed deposit on full bonds is a keep: nothing brought, the premium paid, juvenility untouched",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "preWord": "live",
+        "bornAtUnchanged": true,
+        "hunterPool": true
+      }
+    },
+    {
+      "id": "thief-cannot-park",
       "story": 10,
-      "clause": "a reopen at the tombstone’s sequence or earlier is refused",
+      "clause": "a thief of the current keys cannot reap: no witnessed rotation",
+      "match": {
+        "ok": false,
+        "kind": "close",
+        "reason": "no-witnessed-rotation",
+        "prePoisoned": true
+      }
+    },
+    {
+      "id": "thief-reap-pays-alice",
+      "story": 10,
+      "clause": "a thief with the next keys who reaps takes the premium but pays the bonds to Alice's refund address",
+      "match": {
+        "ok": true,
+        "kind": "close",
+        "refundToAlice": true,
+        "hunterAddr": 4
+      }
+    },
+    {
+      "id": "parked-inert",
+      "story": 10,
+      "clause": "nothing but a revival or a conviction moves a parked identity",
+      "match": {
+        "ok": false,
+        "reason": "parked-inert"
+      }
+    },
+    {
+      "id": "stale-revival-refused",
+      "story": 10,
+      "clause": "a revival at the parked sequence or earlier is refused",
       "match": {
         "ok": false,
         "kind": "reopen",
@@ -1210,7 +1442,7 @@
     {
       "id": "relayer-close-refused",
       "story": 10,
-      "clause": "a relayer with the public rotation but no signed intent cannot close",
+      "clause": "a relayer with the public rotation but no signed close cannot reap",
       "match": {
         "ok": false,
         "kind": "close",
@@ -1218,25 +1450,13 @@
       }
     },
     {
-      "id": "stranger-withdraw-refused",
-      "story": 5,
-      "clause": "a stranger cannot park Alice with her public rotation (D-038)",
+      "id": "frozen-topup-inert",
+      "story": 11,
+      "clause": "a top-up on a frozen checkpoint buys no consumability",
       "match": {
-        "ok": false,
-        "kind": "rotate",
-        "op": "withdraw",
-        "reason": "intent-not-authorized"
-      }
-    },
-    {
-      "id": "stranger-deposit-refused",
-      "story": 13,
-      "clause": "a stranger cannot reset Alice’s age with a zero-value deposit (D-038)",
-      "match": {
-        "ok": false,
-        "kind": "rotate",
-        "op": "deposit",
-        "reason": "intent-not-authorized"
+        "ok": true,
+        "kind": "topUp",
+        "preWord": "frozen"
       }
     }
   ]

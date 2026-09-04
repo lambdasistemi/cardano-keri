@@ -1,7 +1,7 @@
 {
   "story": 5,
-  "title": "Alice goes away",
-  "goal": "As Alice, I want to park my identity and take my money out, so that nobody consumes it while I am gone and nobody can wake it but me.",
+  "title": "Alice leaves",
+  "goal": "As Alice, I want to leave Cardano with my money back, so that nobody consumes my identity while I am gone and nobody but me can bring it back.",
   "params": {
     "D": 1000,
     "B": 5,
@@ -25,17 +25,19 @@
         "exhibits": [
           "T3_epoch_local",
           "T6_component_conservation",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
+          "T8_leaf_states",
           "T8_mint_once",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff"
         ]
@@ -44,7 +46,7 @@
     {
       "slot": 12,
       "who": "alice",
-      "say": "Alice rotates on KERI with her next keys; her witnesses receipt it.",
+      "say": "Alice rotates on KERI with her next keys; her witnesses receipt it. Leaving is a rotation like any other: the reap.",
       "evidence": {
         "add": [
           {
@@ -63,204 +65,85 @@
     {
       "slot": 12,
       "who": "alice",
-      "say": "She lands the rotation with withdraw. The chain pays the conviction bond, the freeze bond and the pool to her refund address; the state stays on chain, unbonded.",
+      "say": "Her new keys (epoch 1) sign the close message: leave, pay the premium to Hal, refund address unchanged.",
+      "evidence": {
+        "add": [
+          {
+            "intentAuthorized": [
+              1,
+              {
+                "close": {
+                  "payee": 2
+                }
+              },
+              null
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "verdict": "consumable"
+      }
+    },
+    {
+      "slot": 12,
+      "who": "hal",
+      "say": "Hal lands the reap as signed. The chain pays the premium to Hal, the conviction bond, the freeze bond and the rest of the pool to Alice’s refund address, burns the token, and parks the registry leaf with the hash of the checkpoint the rotation reached: key state epoch 1, sequence 1. Nothing is left on chain. Alice is gone with her money: parked.",
       "action": {
-        "rotate": {
+        "close": {
           "sn'": 1,
-          "op": "withdraw",
-          "payee": 1,
+          "payee": 2,
           "refund'": null
         }
       },
       "expect": {
         "ok": true,
-        "live": {
-          "sn": 1,
-          "epoch": 1,
-          "poisoned": false,
-          "bornAt": 0,
-          "refundTo": 1,
-          "dreg": 0,
-          "b": 0,
-          "pool": 0
+        "state": {
+          "parked": {
+            "h": {
+              "epoch": 1,
+              "sn": 1
+            }
+          }
         },
         "flow": {
           "refund": {
             "addr": 1,
             "dreg": 1000,
             "b": 5,
-            "pool": 10
+            "pool": 8
+          },
+          "hunter": {
+            "addr": 2,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
           }
         },
-        "verdict": "dreg-missing",
+        "verdict": "not-present",
         "exhibits": [
-          "T10_withdraw_is_observable",
-          "T14_pool_decreases_only_by_premium",
-          "T15_b_leaves_only_by_freeze_or_withdraw",
-          "T16_withdraw_destination",
-          "T1_rotate_strict",
-          "T1_sn_monotone",
+          "T10_bonds_are_observable",
+          "T10_parked_holds_nothing",
+          "T16_close_destination",
+          "T16_close_needs_rotation",
+          "T16_copied_reap_refused",
+          "T16_parked_hash_is_the_closed_checkpoints",
+          "T16_payments_are_named",
           "T1_sn_monotone_all",
-          "T2_epoch_only_by_rotation",
-          "T3_epoch_local",
-          "T3_rotation_clears",
-          "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T2_close_and_reopen_open_epochs",
+          "T5_close_enabled",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
           "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
-          "T8_only_convicted_is_terminal",
+          "T8_leaf_states",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff",
-          "trace_sn_monotone_all"
-        ]
-      },
-      "evidence": {
-        "add": [
-          {
-            "intentAuthorized": [
-              1,
-              "withdraw",
-              null
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "mallory",
-      "say": "Mallory holds the keys Alice just retired. Under D-036 a close is a witnessed rotation by the next keys, with the close intent signed by them; the retired keys cannot present one. Refused.",
-      "evidence": {
-        "add": [
-          {
-            "quorum": [
-              0
-            ]
-          }
-        ]
-      },
-      "action": {
-        "close": {
-          "sn'": 2,
-          "refund'": null
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "no-witnessed-rotation",
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T16_close_needs_rotation",
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "mallory",
-      "say": "So is poisoning.",
-      "action": "poison",
-      "expect": {
-        "ok": false,
-        "reason": "no-quorum",
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "hal",
-      "say": "Hal, holding a later witnessed rotation, cannot freeze a parked checkpoint: there is no freeze bond to take.",
-      "evidence": {
-        "add": [
-          {
-            "rotationTo": [
-              1,
-              1,
-              2
-            ]
-          }
-        ]
-      },
-      "action": {
-        "freeze": {
-          "sn'": 2,
-          "payee": 2
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "freeze-bond-missing",
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T8_reopen_actor_is_proof",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
-        ]
-      }
-    },
-    {
-      "slot": 12,
-      "who": "friend",
-      "say": "The pool is still open to anyone, but a pool on an unbonded checkpoint buys no consumability.",
-      "action": {
-        "topUp": {
-          "x": 3
-        }
-      },
-      "expect": {
-        "ok": true,
-        "live": {
-          "dreg": 0,
-          "b": 0,
-          "pool": 3
-        },
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T10_inert_without_next_keys",
-          "T14_pool_increases_only_by_topup",
-          "T1_sn_monotone",
-          "T1_sn_monotone_all",
-          "T3_epoch_local",
-          "T6_component_conservation",
-          "T6_dreg_never_a_fee",
-          "T7_step_iff_stepFn",
-          "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_edges_leave_the_leaf",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_only_convicted_is_terminal",
-          "T8_present_implies_registered",
-          "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
           "trace_sn_monotone_all"
@@ -270,14 +153,407 @@
   ],
   "forks": [
     {
-      "id": "newkeys",
+      "id": "relayer",
+      "at": 1,
+      "title": "A relayer tries the reap without her signature",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "hal",
+          "say": "Hal holds her public rotation and tries to land it as the reap, naming himself payee. Public data lands a rotation that keeps the bonds; leaving needs her new keys’ signature on the close, the payee and the refund address. Refused.",
+          "action": {
+            "close": {
+              "sn'": 1,
+              "payee": 2,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "verdict": "consumable",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T16_close_needs_rotation",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "copied-reap",
       "at": 2,
-      "title": "Mallory also holds the keys of the new epoch: she poisons",
+      "title": "Mallory copies Hal’s reap — refused",
       "steps": [
         {
           "slot": 12,
           "who": "mallory",
-          "say": "Suppose Mallory also holds the keys the rotation just installed (epoch 1). She can poison the parked checkpoint: it was already unconsumable, and Alice’s next rotation clears it. She gains nothing.",
+          "say": "Mallory copies Hal’s reap transaction and rewrites the payee to herself. The message Alice’s keys signed names Hal; hers is a message nobody signed. Refused: the copied reap.",
+          "action": {
+            "close": {
+              "sn'": 1,
+              "payee": 4,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "verdict": "consumable",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T16_close_needs_rotation",
+              "T16_copied_reap_refused",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "mallory",
+          "say": "She copies it again, keeping Hal as payee but sending the refund to herself. The address is part of the same message. Refused.",
+          "action": {
+            "close": {
+              "sn'": 1,
+              "payee": 2,
+              "refund'": 4
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "intent-not-authorized",
+            "verdict": "consumable",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T16_close_needs_rotation",
+              "T16_copied_reap_refused",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "poisoned",
+      "at": 1,
+      "title": "Alice leaves while poisoned",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "alice",
+          "say": "Mallory has her current keys; Alice’s key holders poison the epoch first.",
+          "evidence": {
+            "add": [
+              {
+                "quorum": [
+                  0
+                ]
+              }
+            ]
+          },
+          "action": "poison",
+          "expect": {
+            "ok": true,
+            "live": {
+              "poisoned": true
+            },
+            "verdict": "poisoned",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T10_current_quorum_never_restores",
+              "T1_sn_monotone",
+              "T1_sn_monotone_all",
+              "T1_trace_sn_monotone",
+              "T3_epoch_local",
+              "T3_only_poison_sets",
+              "T4_current_quorum_only_poisons",
+              "T5_poison_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_dreg_never_moves_between_present_states",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_only_convicted_is_terminal",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_poison_fold",
+              "trace_sn_monotone_all"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "alice",
+          "say": "The reap lands from the poisoned state: a close is a rotation, and poisoned keys can be rotated. She lands it herself, naming herself payee. Everything goes home.",
+          "evidence": {
+            "add": [
+              {
+                "intentAuthorized": [
+                  1,
+                  {
+                    "close": {
+                      "payee": 1
+                    }
+                  },
+                  null
+                ]
+              }
+            ]
+          },
+          "action": {
+            "close": {
+              "sn'": 1,
+              "payee": 1,
+              "refund'": null
+            }
+          },
+          "expect": {
+            "ok": true,
+            "state": {
+              "parked": {
+                "h": {
+                  "epoch": 1,
+                  "sn": 1
+                }
+              }
+            },
+            "flow": {
+              "refund": {
+                "addr": 1,
+                "dreg": 1000,
+                "b": 5,
+                "pool": 8
+              },
+              "hunter": {
+                "addr": 1,
+                "dreg": 0,
+                "b": 0,
+                "pool": 2
+              }
+            },
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T10_parked_holds_nothing",
+              "T16_close_destination",
+              "T16_close_needs_rotation",
+              "T16_copied_reap_refused",
+              "T16_parked_hash_is_the_closed_checkpoints",
+              "T16_payments_are_named",
+              "T1_sn_monotone_all",
+              "T2_close_and_reopen_open_epochs",
+              "T4_poisoned_blocks_quorum_and_freeze",
+              "T5_close_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T6_intent_requires_new_keys",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_sysstep_partition",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_sn_monotone_all"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "parked",
+      "at": 3,
+      "title": "What a parked identity refuses",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "mallory",
+          "say": "Mallory holds the keys Alice just retired (epoch 0). A parked identity holds nothing and answers to nothing she can sign: her poison is refused.",
+          "evidence": {
+            "add": [
+              {
+                "quorum": [
+                  0
+                ]
+              }
+            ]
+          },
+          "action": "poison",
+          "expect": {
+            "ok": false,
+            "reason": "parked-inert",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "friend",
+          "say": "There is no pool to top up: the UTxO is gone.",
+          "action": {
+            "topUp": {
+              "x": 3
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "parked-inert",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "hal",
+          "say": "Nothing to freeze either: no freeze bond, no UTxO.",
+          "action": {
+            "freeze": {
+              "sn'": 2,
+              "payee": 2
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "parked-inert",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "friend",
+          "say": "A registration is refused: the leaf is parked, not absent. The only way back is a witnessed rotation from exactly the parked key state (story 6).",
+          "action": {
+            "register": {
+              "refund": 1,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "parked-inert",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 12,
+          "who": "cora",
+          "say": "Cora holds no second rotation at the parked key state: nothing to convict. A parked identity is convicted only by a duplicity proof against exactly that key state.",
+          "action": {
+            "convict": {
+              "payee": 3
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "no-duplicity-proof",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T12_convict_parked_exact",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "newkeys",
+      "at": 3,
+      "title": "Mallory holds the keys of the parked key state — refused",
+      "steps": [
+        {
+          "slot": 12,
+          "who": "mallory",
+          "say": "Suppose Mallory also holds the keys of epoch 1 — the current keys of the parked key state. She can sign as their quorum; a parked identity has no poison to declare. Refused.",
           "evidence": {
             "add": [
               {
@@ -289,180 +565,48 @@
           },
           "action": "poison",
           "expect": {
-            "ok": true,
-            "live": {
-              "epoch": 1,
-              "poisoned": true,
-              "dreg": 0,
-              "b": 0,
-              "pool": 0
-            },
-            "flow": {},
-            "verdict": "dreg-missing",
+            "ok": false,
+            "reason": "parked-inert",
+            "verdict": "not-present",
             "exhibits": [
-              "T10_current_quorum_never_restores",
-              "T10_inert_without_next_keys",
-              "T1_sn_monotone",
-              "T1_sn_monotone_all",
-              "T3_epoch_local",
-              "T3_only_poison_sets",
-              "T4_current_quorum_only_poisons",
-              "T5_poison_enabled",
-              "T6_component_conservation",
-              "T6_dreg_never_a_fee",
+              "T10_parked_holds_nothing",
               "T7_step_iff_stepFn",
-              "T7_trace_iff_replay",
-              "T8_closed_leaf_is_the_tombstone",
-              "T8_edges_leave_the_leaf",
               "T8_leaf_agrees_with_state",
               "T8_leaf_never_absent_again",
-              "T8_only_convicted_is_terminal",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
               "T8_present_implies_registered",
-              "T8_sysstep_partition",
+              "T8_utxo_iff_active",
               "T9_juvenility_is_consumer_only",
-              "consumableStateB_iff",
-              "trace_sn_monotone_all"
+              "consumableStateB_iff"
             ]
           }
         },
         {
           "slot": 12,
           "who": "mallory",
-          "say": "Her close is refused — not for the poison (D-036: a close is allowed poisoned, it is a rotation) but because a close is a witnessed rotation to a later sequence, which stolen current keys cannot produce.",
+          "say": "She tries to revive it to herself. A revival is a witnessed rotation from the parked key state — signed by the next keys, receipted by the witnesses. The current keys cannot produce one. Refused: a thief of the current keys can neither park nor revive.",
           "action": {
-            "close": {
+            "reopen": {
               "sn'": 2,
-              "refund'": null
+              "refund": 4,
+              "pool0": 10
             }
           },
           "expect": {
             "ok": false,
             "reason": "no-witnessed-rotation",
-            "verdict": "dreg-missing",
-            "exhibits": [
-              "T16_close_needs_rotation",
-              "T7_step_iff_stepFn",
-              "T8_closed_leaf_is_the_tombstone",
-              "T8_leaf_agrees_with_state",
-              "T8_leaf_never_absent_again",
-              "T8_present_implies_registered",
-              "T9_juvenility_is_consumer_only",
-              "consumableStateB_iff"
-            ]
-          },
-          "evidence": {
-            "add": []
-          }
-        }
-      ]
-    },
-    {
-      "id": "close",
-      "at": 2,
-      "title": "Mallory holds the new keys and closes first",
-      "steps": [
-        {
-          "slot": 12,
-          "who": "mallory",
-          "say": "Had she closed first, with the keys of the epoch the withdrawing rotation installed: the current quorum, unpoisoned. The chain pays zero to the refund address and burns the token; the AID is gone for good — the case story 5 did not consider.",
-          "evidence": {
-            "add": [
-              {
-                "quorum": [
-                  1
-                ]
-              },
-              {
-                "rotationTo": [
-                  1,
-                  1,
-                  2
-                ]
-              },
-              {
-                "intentAuthorized": [
-                  2,
-                  "close",
-                  null
-                ]
-              }
-            ]
-          },
-          "action": {
-            "close": {
-              "sn'": 2,
-              "refund'": null
-            }
-          },
-          "expect": {
-            "ok": true,
-            "state": {
-              "closed": {
-                "epoch": 2,
-                "sn": 2
-              }
-            },
-            "flow": {
-              "refund": {
-                "addr": 1,
-                "dreg": 0,
-                "b": 0,
-                "pool": 0
-              }
-            },
             "verdict": "not-present",
             "exhibits": [
-              "T16_close_destination",
-              "T16_close_needs_rotation",
-              "T1_sn_monotone_all",
-              "T2_close_and_reopen_open_epochs",
-              "T5_close_enabled",
-              "T6_component_conservation",
-              "T6_dreg_never_a_fee",
-              "T6_intent_requires_new_keys",
+              "T10_parked_holds_nothing",
               "T7_step_iff_stepFn",
-              "T7_trace_iff_replay",
-              "T8_closed_leaf_is_the_tombstone",
-              "T8_edges_leave_the_leaf",
               "T8_leaf_agrees_with_state",
               "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
               "T8_present_implies_registered",
-              "T8_sysstep_partition",
-              "T9_juvenility_is_consumer_only",
-              "consumableStateB_iff",
-              "trace_sn_monotone_all"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "stranger-withdraw",
-      "at": 1,
-      "title": "A stranger lands her public rotation as a withdrawal",
-      "steps": [
-        {
-          "slot": 12,
-          "who": "rival",
-          "say": "Alice's rotation is public on her witnesses. A stranger lands it with withdraw: the bond option carries no signature, so the chain parks her — every lovelace to her refund address (T16), nothing to the stranger, and Alice is unconsumable until she re-deposits D + B and waits W slots again — the Lean allows this today; ruled out by D-038 on 2026-09-03 (every bond option other than keep is signed by the keys the rotation reveals), the Lean follows.",
-          "action": {
-            "rotate": {
-              "sn'": 1,
-              "op": "withdraw",
-              "payee": 7,
-              "refund'": null
-            }
-          },
-          "expect": {
-            "ok": false,
-            "verdict": "consumable",
-            "reason": "intent-not-authorized",
-            "exhibits": [
-              "T7_step_iff_stepFn",
-              "T8_closed_leaf_is_the_tombstone",
-              "T8_leaf_agrees_with_state",
-              "T8_leaf_never_absent_again",
-              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
               "T9_juvenility_is_consumer_only",
               "consumableStateB_iff"
             ]
@@ -473,6 +617,11 @@
   ],
   "atoms": [
     "5.the-advance-predicate",
-    "5.then-it-pays-d-reg"
+    "5.the-new-keys-signature-on",
+    "5.a-copied-reap-with-another",
+    "5.then-it-pays-the-premium",
+    "5.and-everything-else-to-the",
+    "5.burns-the-token",
+    "5.and-parks-the-leaf-with"
   ]
 }

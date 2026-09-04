@@ -1,0 +1,306 @@
+### M1-freeze-without-short-pool | a freeze lands while the pool still covers the premium
+@@@ Checkpoint
+<<<
+      (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
+      Step p env (.freeze sn' payee) now (.present l)
+>>>
+      (hb : l.frozen = false) (hclean : l.poisoned = false) :
+      Step p env (.freeze sn' payee) now (.present l)
+### M2-second-freeze | a freeze lands on a frozen checkpoint, paying the bond twice
+@@@ Checkpoint
+<<<
+      (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
+      Step p env (.freeze sn' payee) now (.present l)
+>>>
+      (hpool : l.pool < p.P) (hclean : l.poisoned = false) :
+      Step p env (.freeze sn' payee) now (.present l)
+### M3-second-poison-allowed | a second poison in one epoch lands
+@@@ Checkpoint
+<<<
+      (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :
+>>>
+      (hq : env.quorum l.epoch = true) :
+### M4-topup-resets-juvenility | a top-up restarts juvenility
+@@@ Checkpoint
+<<<
+      Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x })
+>>>
+      Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x, bornAt := now })
+### M5-convict-without-proof | a conviction of a present checkpoint needs no duplicity proof
+@@@ Checkpoint
+<<<
+  | convict {l : Live} (now : Slot) (payee : Addr)
+      (hdup : env.duplicityAt l.epoch l.sn = true) :
+>>>
+  | convict {l : Live} (now : Slot) (payee : Addr) :
+### M6-convictParked-without-proof | a conviction of a parked identity needs no duplicity proof
+@@@ Checkpoint
+<<<
+  | convictParked {h : Hash} (now : Slot) (payee : Addr)
+      (hdup : env.duplicityAt h.epoch h.sn = true) :
+>>>
+  | convictParked {h : Hash} (now : Slot) (payee : Addr) :
+### M7-convictParked-pays | a conviction of a parked identity pays the convictor a conviction bond nothing holds
+@@@ Checkpoint
+<<<
+      Step p env (.convict payee) now (.parked h) {} .convicted
+>>>
+      Step p env (.convict payee) now (.parked h) { convictor := some { addr := payee, dreg := p.D } } .convicted
+### M8-convict-drops-freeze-bond | a conviction returns the pool but not the freeze bond to the refund address
+@@@ Checkpoint
+<<<
+        { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
+          convictor := some { addr := payee, dreg := p.D } }
+>>>
+        { refund := some { addr := l.refundTo, pool := l.pool },
+          convictor := some { addr := payee, dreg := p.D } }
+### M9-deposit-no-refill | a deposit leaves the freeze bit as it was
+@@@ Checkpoint
+<<<
+        { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+>>>
+        { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := l.frozen,
+### M10-deposit-resets-juvenility | a deposit restarts juvenility (the auditor's depositFullAges)
+@@@ Checkpoint
+<<<
+        { bIn := p.B - l.bHeld p }
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                           refundTo := refund'.getD l.refundTo })
+>>>
+        { bIn := p.B - l.bHeld p }
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                           refundTo := refund'.getD l.refundTo, bornAt := now })
+### M11-deposit-brings-B-always | a deposit brings the whole freeze bond even when it is held
+@@@ Checkpoint
+<<<
+        { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
+>>>
+        { bIn := p.B, hunter := some { addr := payee, pool := p.P } }
+### M12-deposit-unsigned | a deposit signed as a keep (or nothing, with no address) lands
+@@@ Checkpoint
+<<<
+      (hauth : env.intentOk (l.epoch + 1) .deposit refund' = true)
+      (hpay : p.P ≤ l.pool) :
+      Step p env (.rotate sn' .deposit payee refund') now (.present l)
+>>>
+      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
+      (hpay : p.P ≤ l.pool) :
+      Step p env (.rotate sn' .deposit payee refund') now (.present l)
+### M13-new-address-unsigned-paid | a paid keep moves the refund address with no signature on it
+@@@ Checkpoint
+<<<
+      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
+      (hpay : p.P ≤ l.pool) :
+      Step p env (.rotate sn' .keep payee refund') now (.present l)
+>>>
+      (hpay : p.P ≤ l.pool) :
+      Step p env (.rotate sn' .keep payee refund') now (.present l)
+### M14-intentOk-any-none-free | every intent without an address is the empty message
+@@@ Checkpoint
+<<<
+  | .keep, none => true
+  | i, r => env.intentAuthorized e i r
+>>>
+  | _, none => true
+  | i, r => env.intentAuthorized e i r
+### M15-reopen-stale | a revival at the parked sequence lands (the auditor's reopenSame)
+@@@ Checkpoint
+<<<
+      (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn < sn') :
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+>>>
+      (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn ≤ sn') :
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+### M16-reopen-wrong-key-state | a revival presents a rotation from the epoch after the parked one
+@@@ Checkpoint
+<<<
+      (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn < sn') :
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+>>>
+      (hev : env.rotationTo (h.epoch + 1) h.sn sn' = true) (hsn : h.sn < sn') :
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+### M17-reopen-same-epoch | a revival keeps the parked epoch
+@@@ Checkpoint
+<<<
+        (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
+>>>
+        (.present ⟨sn', h.epoch, false, false, now, refund, pool0⟩)
+### M18-reopen-not-juvenile | a revival does not restart juvenility
+@@@ Checkpoint
+<<<
+        (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
+>>>
+        (.present ⟨sn', h.epoch + 1, false, false, 0, refund, pool0⟩)
+### M19-reopen-frozen | a revival brings the freeze bond and marks the checkpoint frozen
+@@@ Checkpoint
+<<<
+        (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
+>>>
+        (.present ⟨sn', h.epoch + 1, false, true, now, refund, pool0⟩)
+### M20-reopen-without-bond | a revival brings no conviction bond
+@@@ Checkpoint
+<<<
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+        { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+>>>
+      Step p env (.reopen sn' refund pool0) now (.parked h)
+        { bIn := p.B, poolIn := pool0 }
+### M21-close-old-epoch | the parked hash records the epoch the close left, not the one it opened (the auditor's closeOldEpoch)
+@@@ Checkpoint
+<<<
+          hunter := some { addr := payee, pool := p.P } }
+        (.parked ⟨l.epoch + 1, sn'⟩)
+>>>
+          hunter := some { addr := payee, pool := p.P } }
+        (.parked ⟨l.epoch, sn'⟩)
+### M22-close-wrong-hash | the parked hash records the sequence the close left, not the one it reached (the auditor's closeWrongHash)
+@@@ Checkpoint
+<<<
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
+        (.parked ⟨l.epoch + 1, sn'⟩)
+>>>
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
+        (.parked ⟨l.epoch + 1, l.sn⟩)
+### M23-close-payee-bypass | the close's signature is checked against a fixed payee, so a copied reap with the payee rewritten lands (the auditor's closePayeeBypass)
+@@@ Checkpoint
+<<<
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hpay : p.P ≤ l.pool) :
+>>>
+      (hauth : env.intentOk (l.epoch + 1) (.close 0) refund' = true)
+      (hpay : p.P ≤ l.pool) :
+### M24-close-intent-weakened | a close signed as a keep counts as the close intent
+@@@ Checkpoint
+<<<
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hnopay : l.pool < p.P) :
+>>>
+      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
+      (hnopay : l.pool < p.P) :
+### M25-close-premium-to-refund-address | the close pays the premium to the refund address, ignoring the signed payee (the auditor's closeWrongHunter)
+@@@ Checkpoint
+<<<
+          hunter := some { addr := payee, pool := p.P } }
+        (.parked ⟨l.epoch + 1, sn'⟩)
+>>>
+          hunter := some { addr := refund'.getD l.refundTo, pool := p.P } }
+        (.parked ⟨l.epoch + 1, sn'⟩)
+### M26-close-pays-old-address | a close pays the datum address, ignoring the signed new one
+@@@ Checkpoint
+<<<
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
+>>>
+        { refund := some { addr := l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
+### M27-close-premium-not-deducted | a paid close pays the premium and still refunds the whole pool
+@@@ Checkpoint
+<<<
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
+>>>
+        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool },
+### M28-close-without-rotation | a close needs no witnessed rotation (the auditor's closeNoRotation)
+@@@ Checkpoint
+<<<
+  | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+>>>
+  | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hsn : l.sn < sn')
+### M29-close-drops-unpaid | the unpaid close is gone: a close with a short pool is refused (the auditor's dropCloseUnpaid)
+@@@ Checkpoint
+<<<
+  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hnopay : l.pool < p.P) :
+>>>
+  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hnopay : l.pool < p.P) (hpay : p.P ≤ l.pool) :
+### M30-rotated-ages | the keep-shaped helper restarts juvenility (the auditor's rotatedAges)
+@@@ Checkpoint
+<<<
+           refundTo := refund'.getD l.refundTo,
+           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
+>>>
+           refundTo := refund'.getD l.refundTo, bornAt := 0,
+           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
+### M31-premium-always | the premium helper pays even when the pool does not cover it
+@@@ Checkpoint
+<<<
+  if p.P ≤ l.pool then some { addr := payee, pool := p.P } else none
+>>>
+  some { addr := payee, pool := p.P }
+### M32-leaf-parked-reads-active | the leaf of a parked state reads active
+@@@ Checkpoint
+<<<
+  | .parked h => .parked h
+  | .convicted => .convicted
+>>>
+  | .parked _ => .active
+  | .convicted => .convicted
+### M33-leaf-convicted-reads-parked | the leaf of a convicted state reads parked
+@@@ Checkpoint
+<<<
+  | .parked h => .parked h
+  | .convicted => .convicted
+>>>
+  | .parked h => .parked h
+  | .convicted => .parked ⟨0, 0⟩
+### M34-sysstep-reopen-without-parked-leaf | SysStep.reopen needs no parked leaf
+@@@ Checkpoint
+<<<
+      (hparked : s.leaves aid = .parked h)
+      (hstep : Step p env (.reopen sn' refund pool0) now (s.states aid) f st') :
+>>>
+      (hstep : Step p env (.reopen sn' refund pool0) now (s.states aid) f st') :
+### M35-close-does-not-touch-leaf | the partition says a close leaves the leaf
+@@@ Checkpoint
+<<<
+  | .close .. => true
+  | .convict .. => true
+>>>
+  | .close .. => false
+  | .convict .. => true
+### M36-bHeld-inverted | the freeze bond is held exactly when frozen
+@@@ Checkpoint
+<<<
+def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
+>>>
+def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then p.B else 0
+### M37-consumableB-drops-frozen | the consumer's program ignores the freeze bit
+@@@ Checkpoint
+<<<
+  | .present l => l.frozen == false && l.poisoned == false && decide (l.bornAt + p.W ≤ now)
+>>>
+  | .present l => l.poisoned == false && decide (l.bornAt + p.W ≤ now)
+### M38-parked-holds-dreg | a parked identity holds the conviction bond
+@@@ Checkpoint
+<<<
+def State.dregHeld (p : Params) : State → Value
+  | .present _ => p.D
+  | _ => 0
+>>>
+def State.dregHeld (p : Params) : State → Value
+  | .present _ => p.D
+  | .parked _ => p.D
+  | _ => 0
+### M39-thief-parks | a close needs no rotation and no intent: the current keys alone burn the UTxO
+@@@ Checkpoint
+<<<
+  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
+      (hnopay : l.pool < p.P) :
+>>>
+  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+      (hq : env.quorum l.epoch = true) (hsn : l.sn < sn')
+      (hnopay : l.pool < p.P) :
+### M40-poisonAfter-reopen-keeps | the poison fold does not clear at a revival
+@@@ Checkpoint
+<<<
+  | _, (_, .reopen ..) :: rest => poisonAfter false rest
+>>>
+  | b, (_, .reopen ..) :: rest => poisonAfter b rest

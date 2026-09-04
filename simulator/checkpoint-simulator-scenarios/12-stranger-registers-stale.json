@@ -28,17 +28,19 @@
         "exhibits": [
           "T3_epoch_local",
           "T6_component_conservation",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
+          "T8_leaf_states",
           "T8_mint_once",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff"
         ]
@@ -76,56 +78,37 @@
         },
         "verdict": "juvenile",
         "exhibits": [
+          "T10_bonds_are_observable",
           "T14_pool_decreases_only_by_premium",
           "T16_payments_are_named",
           "T1_rotate_strict",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T2_epoch_only_by_rotation",
           "T3_epoch_local",
           "T3_rotation_clears",
           "T5_every_bond_option",
+          "T5_keep_is_rotated",
           "T5_keep_needs_no_intent",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
           "T6_relayer_cannot_park_age_or_close",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
-        ]
-      }
-    },
-    {
-      "slot": 0,
-      "who": "mallory",
-      "say": "It can happen once per AID, ever.",
-      "action": {
-        "register": {
-          "refund": 4,
-          "pool0": 10
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "already-present",
-        "verdict": "juvenile",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
         ]
       }
     },
@@ -168,30 +151,36 @@
         },
         "verdict": "juvenile",
         "exhibits": [
+          "T10_bonds_are_observable",
           "T14_pool_decreases_only_by_premium",
           "T16_payments_are_named",
           "T1_rotate_strict",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T2_epoch_only_by_rotation",
           "T3_epoch_local",
           "T3_rotation_clears",
           "T5_every_bond_option",
+          "T5_keep_is_rotated",
           "T5_keep_needs_no_intent",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
           "T6_relayer_cannot_park_age_or_close",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       }
@@ -235,30 +224,36 @@
         },
         "verdict": "juvenile",
         "exhibits": [
+          "T10_bonds_are_observable",
           "T14_pool_decreases_only_by_premium",
           "T16_payments_are_named",
           "T1_rotate_strict",
           "T1_sn_monotone",
           "T1_sn_monotone_all",
+          "T1_trace_sn_monotone",
           "T2_epoch_only_by_rotation",
           "T3_epoch_local",
           "T3_rotation_clears",
           "T5_every_bond_option",
+          "T5_keep_is_rotated",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
+          "T6_dreg_never_moves_between_present_states",
           "T6_intent_requires_new_keys",
           "T6_refund_change_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
         ]
       }
@@ -285,8 +280,42 @@
   ],
   "forks": [
     {
+      "id": "once",
+      "at": 1,
+      "title": "Registering her again — refused: once per AID",
+      "steps": [
+        {
+          "slot": 0,
+          "who": "mallory",
+          "say": "It can happen once per AID, ever.",
+          "action": {
+            "register": {
+              "refund": 4,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "already-present",
+            "verdict": "juvenile",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "residual",
-      "at": 2,
+      "at": 1,
       "title": "Nobody lands her later rotations",
       "steps": [
         {

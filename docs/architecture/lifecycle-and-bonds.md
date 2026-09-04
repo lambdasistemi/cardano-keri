@@ -1,5 +1,8 @@
 # Lifecycle and the two bonds
 
+!!! note "What ships, and the accepted design"
+    This page describes the M1 code as deployed on preprod. The accepted design of 2026-09-02/03 (decisions D-036 to D-040, modelled in `lean/CardanoKeri/Checkpoint.lean` and playable in the [checkpoint simulation](../simulator/index.html)) changes the lifecycle it describes: an identity is **active** (one checkpoint UTxO: live, poisoned or frozen), **parked** (no UTxO; the registry leaf holds the hash of the last checkpoint, its key state) or **convicted** (the mark, terminal). There is no pause, no withdraw and no unbonded checkpoint on chain. Leaving is the **reap**: a witnessed rotation by the *next* keys whose signed message names the payee of the premium and the refund address; the premium goes to that payee, everything else to the refund address, the token burns, and the leaf is parked with the hash. Coming back is a **revival**: a witnessed rotation from exactly the parked key state, with fresh bonds, born juvenile. A close authorized by the current keys alone, as below, is what ships today, not the accepted design.
+
 One KERI identity is represented on Cardano by a **checkpoint UTxO** (unspent
 transaction output). The UTxO carries one token derived from the KERI AID
 (Autonomic Identifier), an inline datum with the current key state, and an ADA

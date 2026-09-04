@@ -2,7 +2,9 @@
 
 The M1 return, written for the people who will use it and for the simulator
 that will let them try it. Everything here follows the rulings of 2026-09-02
-(D-022 to D-034) and the plan `AUDIT-M1-RETURN`. Where a detail is still open
+and 2026-09-03 (D-022 to D-040) and the plan `AUDIT-M1-RETURN`: an identity is
+active (one UTxO: live, poisoned or frozen), parked (no UTxO; the registry leaf
+holds the hash of the last checkpoint) or convicted (the mark). Where a detail is still open
 it says so. Nothing here is built yet.
 
 ## The cast
@@ -35,8 +37,14 @@ it says so. Nothing here is built yet.
 - **Refund address**: where the money goes when Alice leaves. Set when the
   checkpoint is registered, moved only at a rotation and only by the new
   keys.
-- **Consumable**: what the treasury accepts — both bonds full, not poisoned,
-  older than the juvenility window `W`.
+- **The reap**: how Alice leaves — a rotation whose new keys sign the close,
+  naming who is paid the premium and where the bonds go. Everything else
+  goes home, the token burns, and the registry leaf is parked with the hash
+  of the checkpoint the rotation reached: its key state.
+- **Parked**: no UTxO; the leaf holds the hash. The only way back is a
+  witnessed rotation from exactly that key state, with fresh bonds, born now.
+- **Consumable**: what the treasury accepts — bonded (the freeze bond held),
+  not poisoned, older than the juvenility window `W`.
 - **Epoch**: the life of one set of current keys, from one rotation to the
   next.
 
@@ -111,37 +119,49 @@ myself, put the freeze bond back, and top up the pool.*
   unapplied on chain.
 - **Action**: Alice, or anyone she funds, submits the rotation with
   `deposit`, bringing `B`, and adds to the pool.
-- **The chain checks**: the advance predicate; that both bonds are full on
-  the output.
-- **After**: next epoch, bonds full, born now (juvenile again for `W`
-  slots), consumable after that.
+- **The chain checks**: the advance predicate; the new keys' signature on
+  the deposit; then the freeze bond is back on the output; nothing else
+  changes and juvenility is not restarted.
+- **After**: next epoch, bonds full, consumable at once if it was before the
+  freeze. A deposit on full bonds is a keep in all but its signature.
 - **Hal sees** a pool worth landing rotations for again.
 
-## 5. Alice goes away
+## 5. Alice leaves
 
-*As Alice, I want to park my identity and take my money out, so that nobody
-consumes it while I am gone and nobody can wake it but me.*
+*As Alice, I want to leave Cardano with my money back, so that nobody
+consumes my identity while I am gone and nobody but me can bring it back.*
 
-- **Before**: `Present`, bonded.
-- **Action**: a rotation with `withdraw`. It needs her next keys and her
-  witnesses' receipts like any rotation.
-- **The chain checks**: the advance predicate; then it pays `D_reg + B +
-  pool` to the refund address.
-- **After**: the state stays on chain, unbonded — that is what paused means;
-  unconsumable.
-- **Mallory, holding Alice's current keys, sees** nothing she can do: the
-  parked checkpoint answers only to a rotation.
+- **Before**: active (live, poisoned or frozen).
+- **Action**: the reap — a rotation like any other, landed by whoever holds
+  it, whose new keys signed the close message: leave, pay the premium to
+  this payee, keep (or move) the refund address.
+- **The chain checks**: the advance predicate; the new keys' signature on
+  the close naming the payee and the refund address; a copied reap with
+  another payee or address is refused; then it pays the premium to the
+  payee; and everything else to the refund address; burns the token; and
+  parks the leaf with the hash of the checkpoint the rotation reached.
+- **After**: parked. No UTxO; the registry leaf holds the hash — the key
+  state the closing rotation reached. Unconsumable.
+- **Mallory, holding Alice's current keys, sees** nothing she can do: a
+  reap needs the next keys, and a parked identity answers to nothing but a
+  rotation from its key state or a duplicity proof.
 
-## 6. Alice comes back
+## 6. Alice comes back through the registry
 
-*As Alice, I want my parked identity live again.*
+*As Alice, I want my parked identity live again, and I want nobody else to
+be able to do it in my place.*
 
-- **Before**: unbonded.
-- **Action**: a rotation with `deposit`, bringing `D_reg` and `B` back.
-- **The chain checks**: the advance predicate; both bonds full on the
-  output.
-- **After**: bonded, born now, juvenile for `W` slots, then consumable.
-- **Note**: there is no replay. The state never left the chain.
+- **Before**: parked; the leaf holds the hash of key state `(e, sn)`.
+- **Action**: a revival — anyone presents a witnessed rotation from that key
+  state to a later sequence, brings fresh bonds and a first pool, and names
+  a refund address.
+- **The chain checks**: the leaf is parked; a witnessed rotation from exactly
+  the parked key state; strictly later than the parked sequence; fresh bonds
+  and a first pool come in; the checkpoint is born now at the next epoch.
+- **After**: active, juvenile for `W` slots, then consumable. The close's own
+  rotation cannot revive it; the current keys of the parked key state cannot
+  either. A duplicity proof against the parked key state convicts it instead:
+  the mark, forever.
 
 ## 7. Mallory steals the current keys; Alice poisons, then rotates
 
@@ -154,8 +174,9 @@ trusting this epoch now, before I have managed to rotate.*
 - **The chain checks**: signatures at the current threshold — one stolen
   member key of a multisig cannot poison; that the epoch is not already
   poisoned.
-- **After**: poisoned; unconsumable; **close is disabled**, so Mallory
-  cannot take the bonds; the only way out is a rotation.
+- **After**: poisoned; unconsumable; a reap is a rotation by the next keys,
+  which Mallory does not hold, so she cannot take the bonds; the only way
+  out is a rotation.
 - **Then** Alice rotates with her next keys (story 2 or 4): the poison
   clears, because it was local to the keys she just retired.
 - **Mallory sees** her stolen keys good for nothing on chain.
@@ -175,8 +196,8 @@ registered my checkpoint.*
   threshold by the keys the rotation reveals. A relayer submitting her
   public rotation without that signature leaves the address unchanged.
 - **After**: the refund address is Alice's. If a stranger had registered
-  her, the stranger's bonds now go to Alice at close: a stale registration
-  is a donation.
+  her, the stranger's bonds now go to Alice when she leaves: a stale
+  registration is a donation.
 
 ## 9. Cora convicts
 
@@ -192,38 +213,45 @@ on chain and take its conviction bond.*
   carries receipts from at least `toad` of the tip's witnesses, and differs
   from the accepted one. No history needed: the revealed keys are the
   current keys.
-- **After**: `Convicted` — terminal. No rotation, no poison, no close, ever.
-  `D_reg` to Cora.
+- **After**: `Convicted` — terminal. No rotation, no poison, no reap, no
+  revival, ever. `D_reg` to Cora. A parked identity is convicted the same
+  way, by a proof against the parked key state; nothing is held, so nothing
+  moves: the mark is the whole conviction.
 - **Why final**: no KERI event un-duplicates an identifier, so the chain
   invents no recovery. Only a holder of the pre-committed keys could have
   signed the second rotation, and only colluding witnesses could have
   receipted both.
 - **Open**: `B` and the pool — recommended back to the refund address.
 
-## 10. Alice leaves for good
+## 10. Alice leaves under attack
 
-*As Alice, I want my identity off Cardano and my money back.*
+*As Alice, I want to leave even while my current keys are stolen, and I want
+the thief to gain nothing by leaving in my place.*
 
-- **Before**: `Present`, not poisoned.
-- **Action**: her current key holders sign the close.
-- **The chain checks**: signatures at the current threshold; not poisoned.
-  Then it pays everything to the refund address and burns the token.
-- **After**: `Gone`. The registry row stays, so this AID can never be
-  registered on Cardano again. Terminal.
-- **Mallory, with stolen current keys, sees** that closing gets her nothing:
-  the money goes to Alice's refund address, and Alice can block the close
-  itself by poisoning first.
+- **Before**: active, poisoned because Mallory holds the current keys.
+- **Action**: Alice rotates to fresh keys and leaves in the same move; her
+  new keys sign the close naming herself payee.
+- **The chain checks**: a witnessed rotation by the next keys, poisoned or
+  not; the signed close naming the payee; then it pays the premium to the
+  payee; and everything else to the refund address; the closer never chooses
+  where the bonds go.
+- **After**: parked; the registry leaf holds the hash. Not terminal: a
+  witnessed rotation from the parked key state brings the identity back.
+- **Mallory, with stolen current keys, sees** that she cannot reap at all;
+  with the next keys too she could, and would take the premium — but every
+  bond goes to Alice's refund address, which only a rotation signed by the
+  new keys naming a new address can move.
 
 ## 11. The treasury reads Alice's checkpoint
 
 *As the treasury validator, I want to authorize a payment only if Alice's
 keys really are current, so I read her checkpoint as a reference input.*
 
-- **The predicate**: present; `D_reg` full; `B` full; not poisoned; born at
+- **The predicate**: present; the freeze bond held; not poisoned; born at
   least `W` slots ago; the signature on the payment satisfies the current
   threshold. Later, when validity ships: within `valid_until`.
-- **Fails closed** on: absent, unbonded, frozen, poisoned, juvenile,
-  convicted, gone.
+- **Fails closed** on: absent, frozen, poisoned, juvenile, parked,
+  convicted.
 - **What it cannot know**: whether Alice rotated on KERI an hour ago and no
   hunter has landed it yet. That is why the pool exists.
 
@@ -272,15 +300,15 @@ myself and stop advancing at my epoch.*
 | State | Bonds | Poisoned | Who can act | Consumable |
 |---|---|---|---|---|
 | Absent | — | — | anyone: register | no |
-| Live | `D_reg` full, `B` full | no | next keys: rotate (keep / withdraw / deposit); current quorum: poison, close; anyone: top-up; proof: freeze if pool < `P`, convict | after `W` slots |
-| Poisoned | full | yes | next keys: rotate; anyone: top-up; proof: convict | no |
-| Paused | withdrawn | either | next keys: rotate with deposit; anyone: top-up | no |
-| Frozen | `B` missing | no | next keys: rotate with deposit; current quorum: poison, close; anyone: top-up; proof: convict | no |
-| Convicted | `D_reg` seized | — | nobody | never |
-| Gone | paid out | — | nobody; the AID cannot return | never |
+| Live (active) | `D_reg`, `B` held | no | next keys: rotate (keep / deposit), leave (the reap, with the signed payee and address); current quorum: poison; anyone: top-up; proof: freeze if pool < `P`, convict | after `W` slots |
+| Poisoned (active) | held | yes | next keys: rotate, leave; anyone: top-up; proof: convict | no |
+| Frozen (active) | `B` missing | no | next keys: rotate with deposit (unfreeze), leave; current quorum: poison; anyone: top-up; proof: convict | no |
+| Parked | nothing; the leaf holds the hash of the last checkpoint | — | proof: revive with a witnessed rotation from the parked key state, fresh bonds; proof: convict | no |
+| Convicted | `D_reg` seized (nothing, from parked) | — | nobody | never |
 
 ## What is deliberately not here
 
 No record tree, no cursor, no occupancy maps; no interactions (`ixn`) on
 chain; no freeze for lag; no hunter bounty; no conviction that clears; no
-oracle anywhere. Delegated identities are a later milestone.
+oracle anywhere. No pause, no withdraw, no unbonded checkpoint on chain
+(D-040); no grace window — the registry's is not the checkpoint's. Delegated identities are a later milestone.

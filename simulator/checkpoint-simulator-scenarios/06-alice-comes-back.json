@@ -1,7 +1,7 @@
 {
   "story": 6,
-  "title": "Alice comes back",
-  "goal": "As Alice, I want my parked identity live again.",
+  "title": "Alice comes back through the registry",
+  "goal": "As Alice, I want my parked identity live again, and I want nobody else to be able to do it in my place.",
   "params": {
     "D": 1000,
     "B": 5,
@@ -25,17 +25,19 @@
         "exhibits": [
           "T3_epoch_local",
           "T6_component_conservation",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
+          "T8_leaf_states",
           "T8_mint_once",
           "T8_only_convicted_is_terminal",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff"
         ]
@@ -44,7 +46,7 @@
     {
       "slot": 12,
       "who": "alice",
-      "say": "Alice rotates on KERI and parks (story 5).",
+      "say": "Alice leaves (story 5), landing her own reap: her money comes home, the token burns, the leaf holds the hash of the checkpoint the rotation reached — key state epoch 1, sequence 1.",
       "evidence": {
         "add": [
           {
@@ -57,54 +59,71 @@
           {
             "intentAuthorized": [
               1,
-              "withdraw",
+              {
+                "close": {
+                  "payee": 1
+                }
+              },
               null
             ]
           }
         ]
       },
       "action": {
-        "rotate": {
+        "close": {
           "sn'": 1,
-          "op": "withdraw",
           "payee": 1,
           "refund'": null
         }
       },
       "expect": {
         "ok": true,
-        "live": {
-          "epoch": 1,
-          "dreg": 0,
-          "b": 0,
-          "pool": 0
+        "state": {
+          "parked": {
+            "h": {
+              "epoch": 1,
+              "sn": 1
+            }
+          }
         },
-        "verdict": "dreg-missing",
+        "flow": {
+          "refund": {
+            "addr": 1,
+            "dreg": 1000,
+            "b": 5,
+            "pool": 8
+          },
+          "hunter": {
+            "addr": 1,
+            "dreg": 0,
+            "b": 0,
+            "pool": 2
+          }
+        },
+        "verdict": "not-present",
         "exhibits": [
-          "T10_withdraw_is_observable",
-          "T14_pool_decreases_only_by_premium",
-          "T15_b_leaves_only_by_freeze_or_withdraw",
-          "T16_withdraw_destination",
-          "T1_rotate_strict",
-          "T1_sn_monotone",
+          "T10_bonds_are_observable",
+          "T10_parked_holds_nothing",
+          "T16_close_destination",
+          "T16_close_needs_rotation",
+          "T16_copied_reap_refused",
+          "T16_parked_hash_is_the_closed_checkpoints",
+          "T16_payments_are_named",
           "T1_sn_monotone_all",
-          "T2_epoch_only_by_rotation",
-          "T3_epoch_local",
-          "T3_rotation_clears",
-          "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T2_close_and_reopen_open_epochs",
+          "T5_close_enabled",
           "T6_component_conservation",
           "T6_dreg_never_a_fee",
           "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
-          "T8_only_convicted_is_terminal",
+          "T8_leaf_states",
           "T8_present_implies_registered",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
           "trace_sn_monotone_all"
@@ -114,7 +133,7 @@
     {
       "slot": 40,
       "who": "alice",
-      "say": "Much later Alice rotates again on KERI.",
+      "say": "Alice rotates again on KERI, from exactly the key state the leaf holds; her witnesses receipt sequence 2.",
       "evidence": {
         "add": [
           {
@@ -127,19 +146,18 @@
         ]
       },
       "expect": {
-        "verdict": "dreg-missing"
+        "verdict": "not-present"
       }
     },
     {
       "slot": 40,
-      "who": "alice",
-      "say": "She lands it with deposit, bringing both bonds back. Born again at slot 40, juvenile for W slots. There is no replay: the state never left the chain.",
+      "who": "friend",
+      "say": "Anyone with that public rotation and the bonds can revive her — a sponsor does, naming Alice’s refund address. Fresh bonds, a first pool, born now, at the next epoch: juvenile for W slots.",
       "action": {
-        "rotate": {
+        "reopen": {
           "sn'": 2,
-          "op": "deposit",
-          "payee": 1,
-          "refund'": null
+          "refund": 1,
+          "pool0": 10
         }
       },
       "expect": {
@@ -148,128 +166,282 @@
           "sn": 2,
           "epoch": 2,
           "poisoned": false,
+          "frozen": false,
           "bornAt": 40,
           "refundTo": 1,
-          "dreg": 1000,
-          "b": 5,
-          "pool": 0
+          "pool": 10
         },
         "flow": {
           "dregIn": 1000,
-          "bIn": 5
+          "bIn": 5,
+          "poolIn": 10
         },
         "verdict": "juvenile",
         "exhibits": [
-          "T10_only_deposit_restores",
-          "T15_b_returns_only_by_deposit",
-          "T1_rotate_strict",
-          "T1_sn_monotone",
+          "T10_parked_holds_nothing",
+          "T10_reopen_is_juvenile",
+          "T1_reopen_strict",
           "T1_sn_monotone_all",
-          "T2_epoch_only_by_rotation",
+          "T1_trace_sn_monotone",
+          "T2_close_and_reopen_open_epochs",
           "T3_epoch_local",
-          "T3_rotation_clears",
-          "T5_every_bond_option",
-          "T6_bonds_move_only_by_rotation_or_freeze",
+          "T5_reopen_enabled",
           "T6_component_conservation",
-          "T6_dreg_increases_only_by_deposit",
+          "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
-          "T6_intent_requires_new_keys",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
-          "T8_closed_leaf_is_the_tombstone",
           "T8_edges_leave_the_leaf",
           "T8_leaf_agrees_with_state",
           "T8_leaf_never_absent_again",
+          "T8_leaf_states",
+          "T8_mint_once",
           "T8_only_convicted_is_terminal",
+          "T8_parked_only_revives_or_convicts",
+          "T8_parked_returns_only_by_revival",
           "T8_present_implies_registered",
+          "T8_reopen_actor_is_proof",
           "T8_sysstep_partition",
+          "T8_utxo_iff_active",
           "T9_juvenility_is_consumer_only",
           "consumableStateB_iff",
+          "trace_poison_fold",
           "trace_sn_monotone_all"
-        ]
-      },
-      "evidence": {
-        "add": [
-          {
-            "intentAuthorized": [
-              2,
-              "deposit",
-              null
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "slot": 50,
-      "who": "treasury",
-      "say": "Consumable again.",
-      "expect": {
-        "verdict": "consumable"
-      }
-    },
-    {
-      "slot": 50,
-      "who": "alice",
-      "say": "Seeded, unreachable on chain: a datum claiming more than the conviction bond. The depositing rotation refuses it. No story reaches this state; the boundary grid does.",
-      "seed": {
-        "present": {
-          "l": {
-            "sn": 2,
-            "epoch": 2,
-            "poisoned": false,
-            "bornAt": 40,
-            "refundTo": 1,
-            "dreg": 1001,
-            "b": 5,
-            "pool": 0
-          }
-        }
-      },
-      "evidence": {
-        "add": [
-          {
-            "rotationTo": [
-              2,
-              2,
-              3
-            ]
-          },
-          {
-            "intentAuthorized": [
-              3,
-              "deposit",
-              null
-            ]
-          }
-        ]
-      },
-      "action": {
-        "rotate": {
-          "sn'": 3,
-          "op": "deposit",
-          "payee": 1,
-          "refund'": null
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "bond-over-full",
-        "verdict": "dreg-missing",
-        "exhibits": [
-          "T7_step_iff_stepFn",
-          "T8_closed_leaf_is_the_tombstone",
-          "T8_leaf_agrees_with_state",
-          "T8_leaf_never_absent_again",
-          "T8_present_implies_registered",
-          "T9_juvenility_is_consumer_only",
-          "consumableStateB_iff"
         ]
       }
     }
   ],
+  "forks": [
+    {
+      "id": "replay",
+      "at": 1,
+      "title": "A stranger replays the close’s own rotation — refused",
+      "steps": [
+        {
+          "slot": 40,
+          "who": "mallory",
+          "say": "Much later a stranger replays the public rotation the close presented, to revive her to himself. The leaf holds key state (1, 1); a rotation to sequence 1 is not a rotation from it. Refused: the close’s own rotation cannot revive.",
+          "action": {
+            "reopen": {
+              "sn'": 1,
+              "refund": 4,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "no-witnessed-rotation",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T1_close_rotation_cannot_revive",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "thief",
+      "at": 1,
+      "title": "Mallory holds the current keys of the parked key state — refused",
+      "steps": [
+        {
+          "slot": 40,
+          "who": "mallory",
+          "say": "Mallory holds the keys of epoch 1. Signing as their quorum buys nothing on a parked identity, and she cannot produce a witnessed rotation from that key state: that takes the next keys. Her revival is refused.",
+          "evidence": {
+            "add": [
+              {
+                "quorum": [
+                  1
+                ]
+              }
+            ]
+          },
+          "action": {
+            "reopen": {
+              "sn'": 2,
+              "refund": 4,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "no-witnessed-rotation",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "convicted",
+      "at": 1,
+      "title": "Cora proves her duplicitous while parked",
+      "steps": [
+        {
+          "slot": 40,
+          "who": "cora",
+          "say": "Cora holds two of Alice’s rotations at sequence 1, both revealing the epoch-1 keys and receipted: a duplicity proof against the parked key state. The leaf is marked convicted; nothing was held, so nothing moves.",
+          "evidence": {
+            "add": [
+              {
+                "duplicityAt": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          },
+          "action": {
+            "convict": {
+              "payee": 3
+            }
+          },
+          "expect": {
+            "ok": true,
+            "state": "convicted",
+            "flow": {},
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T12_convict_parked_exact",
+              "T4_current_key_thief_cannot_revive",
+              "T5_convict_parked_enabled",
+              "T6_component_conservation",
+              "T6_dreg_never_a_fee",
+              "T7_step_iff_stepFn",
+              "T7_trace_iff_replay",
+              "T8_edges_leave_the_leaf",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_parked_only_revives_or_convicts",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_sysstep_partition",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        },
+        {
+          "slot": 40,
+          "who": "alice",
+          "say": "Alice rotates again; her revival is refused. Convicted is terminal: no KERI event un-duplicates an identifier.",
+          "evidence": {
+            "add": [
+              {
+                "rotationTo": [
+                  1,
+                  1,
+                  2
+                ]
+              }
+            ]
+          },
+          "action": {
+            "reopen": {
+              "sn'": 2,
+              "refund": 1,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "convicted-terminal",
+            "verdict": "not-present",
+            "exhibits": [
+              "T10_parked_holds_nothing",
+              "T12_convicted_terminal",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff",
+              "trace_from_convicted"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "twice",
+      "at": 3,
+      "title": "Consumable again; a revival of a live checkpoint — refused",
+      "steps": [
+        {
+          "slot": 50,
+          "who": "treasury",
+          "say": "Ten slots later: consumable again.",
+          "expect": {
+            "verdict": "consumable"
+          }
+        },
+        {
+          "slot": 50,
+          "who": "friend",
+          "say": "A revival of a live checkpoint is refused: only a parked leaf revives.",
+          "action": {
+            "reopen": {
+              "sn'": 3,
+              "refund": 6,
+              "pool0": 10
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "reopen-needs-parked",
+            "verdict": "consumable",
+            "exhibits": [
+              "T10_bonds_are_observable",
+              "T7_step_iff_stepFn",
+              "T8_leaf_agrees_with_state",
+              "T8_leaf_never_absent_again",
+              "T8_leaf_states",
+              "T8_present_implies_registered",
+              "T8_reopen_actor_is_proof",
+              "T8_utxo_iff_active",
+              "T9_juvenility_is_consumer_only",
+              "consumableStateB_iff"
+            ]
+          }
+        }
+      ]
+    }
+  ],
   "atoms": [
-    "6.the-advance-predicate",
-    "6.both-bonds-full-on-the"
+    "6.the-leaf-is-parked",
+    "6.a-witnessed-rotation-from-exactly",
+    "6.strictly-later-than-the-parked",
+    "6.fresh-bonds-and-a-first",
+    "6.the-checkpoint-is-born-now"
   ]
 }

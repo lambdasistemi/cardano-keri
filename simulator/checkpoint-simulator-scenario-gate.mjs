@@ -821,7 +821,7 @@ function pageSmoke(core, html) {
   guard = 0; while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
   if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('story 5 played to its trunk leaf does not end Parked');
   const scrub = $('#scrub');
-  if (scrub && Number(scrub.max) < 6) problems.push('the scrubber does not span the branch: max ' + scrub.max);
+  if (scrub && Number(scrub.max) < 4) problems.push('the scrubber does not span the trunk (story 5: register, the rotation, the signed close, the reap): max ' + scrub.max);
   const treeNodes = doc.querySelectorAll('#tree .node');
   if (treeNodes.length !== win.CK.app.nodes.length) problems.push(`the tree draws ${treeNodes.length} nodes for ${win.CK.app.nodes.length}`);
   const forkNode = treeNodes.filter(g => g.querySelector('.fork')).pop();   // the parked state's fork (Mallory with the keys of the parked key state), the last one on story 5

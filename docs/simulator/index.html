@@ -1706,9 +1706,11 @@ function addChild(parentId, entry) {
   return n.id;
 }
 function pathTo(id) { const out = []; for (let n = id; n !== null; n = node(n).parent) out.unshift(n); return out; }
-function forwardPath(id) { const out = []; let n = node(id); while (n.children.length) { const c = n.last !== null ? n.last : n.children[0]; out.push(c); n = node(c); } return out; }
+function forwardPath(id) { const out = []; let n = id; for (;;) { const c = nextOf(n); if (c === null) break; out.push(c); n = c; } return out; }
 const currentPath = () => [...pathTo(app.cursor), ...forwardPath(app.cursor)];
-const nextOf = id => { const n = node(id); return n.children.length ? (n.last !== null ? n.last : n.children[0]) : null; };
+// the next node along the branch last taken; a trunk's end has no next of its
+// own — its forks are entered through their chips, never by › or ⇥
+const nextOf = id => { const n = node(id); if (!n.children.length) return null; if (n.last !== null) return n.last; return n.trunkEnd ? null : n.children[0]; };
 const leafNodeOf = id => { let n = id; for (;;) { const c = nextOf(n); if (c === null) return n; n = c; } };
 function branchLabel(id) {
   const n = node(id);
@@ -2188,13 +2190,13 @@ function renderPlaybar() {
   const here = node(app.cursor);
   $('hist-first').disabled = app.cursor === 0;
   $('hist-prev').disabled = here.parent === null;
-  $('hist-next').disabled = !here.children.length;
-  $('hist-last').disabled = !here.children.length;
+  $('hist-next').disabled = nextOf(app.cursor) === null;
+  $('hist-last').disabled = nextOf(app.cursor) === null;
   const scrub = $('scrub'); scrub.max = String(path.length - 1); scrub.value = String(idx);
   $('pos').textContent = idx + ' / ' + (path.length - 1);
   $('btn-play').classList.toggle('on', !!app.playing);
   $('btn-play').textContent = app.playing ? '❚❚' : '▶';
-  const coda = $('btn-coda'); if (coda) coda.classList.toggle('on', app.punch !== null && app.cursor === app.punch && here.children.length > 0 && !app.playing);
+  const coda = $('btn-coda'); if (coda) coda.classList.toggle('on', app.punch !== null && app.cursor === app.punch && nextOf(app.cursor) !== null && !app.playing);
 }
 let toastTimer = null;
 function toast(text, ms) {
@@ -2655,8 +2657,10 @@ function playStory(n) {
     let fid = trunkIds[fk.at + 1];
     fk.timeline.forEach((t, i) => { fid = addChild(fid, entry(t, i === 0 ? { branch: { id: fk.id, title: fk.title } } : {})); });
   }
-  // the trunk is the branch taken by default
+  // the trunk is the branch taken by default; its end is an ending (NOTE-003):
+  // › and ⇥ stop there, and a fork off the end is entered through its chip
   for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
+  { const end = node(trunkIds[trunkIds.length - 1]); end.trunkEnd = true; end.last = null; }
   app.cursor = 0; app.pending = null;
   if (r.problems.length) node(0).say = 'This story does not play as written: ' + r.problems.join(' · ');
   render();

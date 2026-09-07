@@ -1,0 +1,750 @@
+theorem	proof_outcome	axioms	evidence
+CardanoKeri.Cage.AuthMode.delegated.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.AuthMode.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Cage.AuthMode.ownerAndHook.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.AuthMode.ownerKeyed.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.Plugin.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Cage.Plugin.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Cage.Plugin.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.Plugin.registry.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.TxAuth.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Cage.TxAuth.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Cage.TxAuth.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.ValueMode.delegatedRouting.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.ValueMode.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Cage.ValueMode.refundAll.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Cage.applyBatch.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.applyBatch.eq_2	PROVED	none	axioms.log
+CardanoKeri.Cage.applyBatch_delegated_eq	PROVED	propext	axioms.log
+CardanoKeri.Cage.applyBatch_delegated_eq._simp_1_13	PROVED	propext	axioms.log
+CardanoKeri.Cage.authorized.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.authorized.eq_2	PROVED	none	axioms.log
+CardanoKeri.Cage.authorized.eq_3	PROVED	none	axioms.log
+CardanoKeri.Cage.bypassed.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.bypassed_breaks_inv	PROVED	propext	axioms.log
+CardanoKeri.Cage.delegated_is_registry	PROVED	propext	axioms.log
+CardanoKeri.Cage.delegated_permissionless	PROVED	propext	axioms.log
+CardanoKeri.Cage.delegated_pins_plugin	PROVED	propext	axioms.log
+CardanoKeri.Cage.instDecidableEqAuthMode._proof_1	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqAuthMode._proof_2	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqValueMode._proof_1	PROVED	none	axioms.log
+CardanoKeri.Cage.instDecidableEqValueMode._proof_2	PROVED	none	axioms.log
+CardanoKeri.Cage.ownerAndHook_needs_owner	PROVED	propext	axioms.log
+CardanoKeri.Cage.ownerAndHook_trivial_breaks_inv	PROVED	propext	axioms.log
+CardanoKeri.Cage.ownerKeyed_needs_owner	PROVED	propext	axioms.log
+CardanoKeri.Cage.owner_bypass_breaks_inv	PROVED	propext	axioms.log
+CardanoKeri.Cage.owner_swaps_plugin	PROVED	none	axioms.log
+CardanoKeri.Cage.refundAll_fold_locks_nothing	PROVED	propext	axioms.log
+CardanoKeri.Cage.refundAll_never_locks	PROVED	propext	axioms.log
+CardanoKeri.Cage.rejectAllowed.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.routeValue.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.routeValue.eq_2	PROVED	none	axioms.log
+CardanoKeri.Cage.runBody.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.stepFn.eq_1	PROVED	none	axioms.log
+CardanoKeri.Cage.stepFn.eq_2	PROVED	none	axioms.log
+CardanoKeri.Cage.wp._proof_1	PROVED	none	axioms.log
+CardanoKeri.Cage.wp._proof_2	PROVED	none	axioms.log
+CardanoKeri.Cage.wp._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.actor.eq_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.close.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.close.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.close.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.convict.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.convict.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.convict.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.freeze.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.freeze.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.freeze.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.poison.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.register.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.register.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.register.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.reopen.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.reopen.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.reopen.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.rotate.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.rotate.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.rotate.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.topUp.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.topUp.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Action.topUp.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.touchesLeaf.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.touchesLeaf.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.touchesLeaf.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.touchesLeaf.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Action.touchesLeaf.eq_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Actor.anyone.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Actor.currentQuorum.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Actor.nextKeys.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Actor.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Actor.proof.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.BondOp.deposit.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.BondOp.intent.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.BondOp.intent.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.BondOp.keep.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.BondOp.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Env.intentOk.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Env.intentOk.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Env.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Env.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Env.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Flow.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Flow.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Flow.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Intent.close.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Intent.close.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Intent.close.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Intent.deposit.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Intent.keep.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.KeyState.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.KeyState.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.KeyState.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Leaf.absent.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Leaf.active.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Leaf.convicted.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Leaf.parked.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Leaf.parked.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Leaf.parked.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Live.bHeld.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Live.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Live.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Live.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Live.rotated.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Params.hB	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Params.hD	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Params.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Params.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Params.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Params.premium.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Payment.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.b.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.b.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.dreg.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.dreg.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.pool.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Payment?.pool.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.absent.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.bHeld.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.bHeld.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.convicted.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.dregHeld.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.dregHeld.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.leaf.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.leaf.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.leaf.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.leaf.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.parked.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.parked.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.State.parked.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.poolHeld.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.poolHeld.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.present.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.present.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.State.present.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.sn?.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.sn?.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.sn?.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.State.sn?.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.closePaid_iff	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.Step.closeUnpaid_iff	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.Step.convictParked_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.convict_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.freeze_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.poison_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.register_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.reopen_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Step.topUp_iff	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Sys.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Sys.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.Sys.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Sys.set.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.SysReach.brecOn	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T10_bonds_are_observable	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T10_bonds_are_observable._proof_1_4	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T10_bonds_are_observable._proof_1_8	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T10_current_quorum_never_restores	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T10_inert_without_next_keys	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T10_only_deposit_restores	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T10_parked_holds_nothing	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T10_reopen_is_juvenile	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T10_reopen_is_juvenile._proof_1_4	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T12_convict_exact	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T12_convict_parked_exact	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T12_convicted_terminal	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium._proof_1_13	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_1	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_2	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_3	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T15_b_leaves_only_by_freeze	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T15_b_returns_only_by_deposit	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T15_freeze_makes_inert	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T16_close_destination	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T16_close_destination._proof_1_6	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T16_close_needs_rotation	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T16_copied_reap_refused	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T16_parked_hash_is_the_closed_checkpoints	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T16_parked_hash_is_the_closed_checkpoints._proof_1_7	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T16_payments_are_named	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T1_close_rotation_cannot_revive	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T1_reopen_strict	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T1_rotate_strict	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T1_sn_monotone	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T1_sn_monotone_all	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T1_sn_monotone_all._proof_1_6	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T1_sn_monotone_all._proof_1_7	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T1_trace_sn_monotone	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T2_close_and_reopen_open_epochs	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T2_epoch_only_by_rotation	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T3_epoch_local	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T3_only_poison_sets	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T3_only_rotation_clears	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T3_rotation_clears	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T4_current_key_thief_cannot_park	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T4_current_key_thief_cannot_revive	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T4_current_quorum_only_poisons	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T4_poisoned_blocks_quorum_and_freeze	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T4_poisoned_nonrotation_inert	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T5_close_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_convict_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_convict_parked_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep._proof_1_4	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T5_every_bond_option	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_freeze_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_keep_is_rotated	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T5_keep_needs_no_intent	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_poison_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T5_reopen_enabled	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T6_component_conservation	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T6_dreg_enters_only_at_birth	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T6_dreg_never_a_fee	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T6_dreg_never_moves_between_present_states	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T6_frozen_flips_only_by_rotation_or_freeze	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T6_intent_requires_new_keys	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T6_refund_change_requires_new_keys	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T7_step_iff_stepFn	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T7_trace_iff_replay	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T8_absent_only_registers	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_edges_leave_the_leaf	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T8_leaf_agrees_with_state	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T8_leaf_never_absent_again	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T8_leaf_states	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T8_mint_once	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T8_only_convicted_is_terminal	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_parked_only_revives_or_convicts	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_parked_returns_only_by_revival	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_present_implies_registered	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.T8_reopen_actor_is_proof	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_sysstep_partition	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.T8_utxo_iff_active	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Checkpoint.T9_juvenility_is_consumer_only	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.Trace.brecOn	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.consumableState.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.consumableState.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.consumableStateB.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.consumableStateB.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.consumableStateB_iff	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.consumableStateB_iff._simp_1_6	PROVED	propext	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqActor._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqActor._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqBondOp._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqBondOp._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_10	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_11	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_12	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_13	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_14	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_9	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_10	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_11	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_12	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_13	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_14	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_15	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_16	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_9	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonAfter.eq_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.poisonSinceLastRotation.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.replay.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.replay.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_1	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_10	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_2	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_3	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_4	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_5	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_6	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_7	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_8	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.stepFn.eq_9	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.trace_from_convicted	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.trace_poison_fold	PROVED	none	axioms.log
+CardanoKeri.Checkpoint.trace_sn_monotone_all	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.Acc.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Acc.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Acc.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.activeCkpt	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.ckptActive	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.ckptNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.goActive	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.goFar	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.goNoCkpt	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.goUnique	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.leafNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.reqBelowNext	PROVED	none	axioms.log
+CardanoKeri.Registry.AccInv.reqNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.contribute.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.contribute.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.contribute.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.convictCkpt.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.convictCkpt.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.convictCkpt.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.fold.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.fold.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.fold.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.pause.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.pause.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.pause.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.reap.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.reap.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.reap.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.resume.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.resume.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.resume.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.retract.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Action.retract.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Action.retract.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Actor.anyone.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Actor.nextKeys.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Actor.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Registry.Actor.owner.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Actor.proof.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.CkState.live.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.CkState.parked.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.CkState.parked.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.CkState.parked.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.CkState.tomb.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Ckpt.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Ckpt.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Ckpt.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Env.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Env.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Env.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Flow.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Flow.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Flow.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.FoldAction.ofNat_ctorIdx	PROVED	none	axioms.log
+CardanoKeri.Registry.FoldAction.process.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.FoldAction.reject.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.activeCkpt	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.ckptActive	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.ckptNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.goActive	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.goFar	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.goNoCkpt	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.goUnique	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.leafNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.reqBelowNext	PROVED	none	axioms.log
+CardanoKeri.Registry.Inv.reqNodup	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.convict.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.goConvicted.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.goDormant.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.goDormant.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Op.goDormant.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.register.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.revive.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.userPostable.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.userPostable.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.userPostable.eq_3	PROVED	none	axioms.log
+CardanoKeri.Registry.Op.userPostable.eq_4	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.hD	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.hFund	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.hProcess	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.hRetract	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Params.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Params.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.R10_honest_phase1_reject_exclusive	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R10_honest_phase1_reject_exclusive._proof_1_1	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R10_phase1_phase2_exclusive	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R10_phase1_phase2_exclusive._proof_1_1	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R10_phase2_reject_exclusive	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R10_phase2_reject_exclusive._proof_1_1	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R11_ckpt_edges_move_no_value	PROVED	none	axioms.log
+CardanoKeri.Registry.R11_contribute_value	PROVED	none	axioms.log
+CardanoKeri.Registry.R11_go_refunds_reaper	PROVED	propext	axioms.log
+CardanoKeri.Registry.R11_reap_flow	PROVED	propext	axioms.log
+CardanoKeri.Registry.R11_reap_is_samaritan	PROVED	propext	axioms.log
+CardanoKeri.Registry.R11_retract_value	PROVED	propext	axioms.log
+CardanoKeri.Registry.R11_samaritan_never_loses	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R12_leaf_changes_only_by_fold	PROVED	none	axioms.log
+CardanoKeri.Registry.R12_leaf_enters_only_by_fold	PROVED	none	axioms.log
+CardanoKeri.Registry.R13_live_never_reaped	PROVED	propext	axioms.log
+CardanoKeri.Registry.R13_owner_reaps_early	PROVED	propext	axioms.log
+CardanoKeri.Registry.R13_parked_after_grace	PROVED	propext	axioms.log
+CardanoKeri.Registry.R13_parked_needs_grace	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R13_parked_needs_grace._proof_1_2	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R13_tomb_reaped	PROVED	propext	axioms.log
+CardanoKeri.Registry.R14_convictCkpt_needs_proof	PROVED	propext	axioms.log
+CardanoKeri.Registry.R14_convict_at_position	PROVED	propext	axioms.log
+CardanoKeri.Registry.R14_convict_dormant_needs_proof	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R14_convict_in_batch_needs_proof	PROVED	propext	axioms.log
+CardanoKeri.Registry.R1_active_ckpt_or_go	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R1_ckpt_implies_active	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R1_not_active_no_ckpt	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R1_registered_refused	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R2_one_ckpt_per_aid	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R2_one_go_per_aid	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R2_one_leaf_per_aid	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R3_convicted_never_registered	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R3_convicted_permanent	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R4_leaf_permanent	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R5_plugin_pinned	PROVED	none	axioms.log
+CardanoKeri.Registry.R6_fold_advances	PROVED	propext	axioms.log
+CardanoKeri.Registry.R6_gen_step	PROVED	none	axioms.log
+CardanoKeri.Registry.R6_registry_untouched	PROVED	none	axioms.log
+CardanoKeri.Registry.R7_one_fold_per_generation	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R7_one_fold_per_generation._proof_1_10	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R7_stale_fold_refused	PROVED	propext	axioms.log
+CardanoKeri.Registry.R8_empty_fold_refused	PROVED	propext	axioms.log
+CardanoKeri.Registry.R8_plugin_swap_refused	PROVED	propext	axioms.log
+CardanoKeri.Registry.R9_go_never_rejected	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R9_go_never_retracted	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.R9_reject_enabled	PROVED	propext	axioms.log
+CardanoKeri.Registry.R9_reject_needs_rejectable	PROVED	propext	axioms.log
+CardanoKeri.Registry.R9_retract_enabled	PROVED	propext	axioms.log
+CardanoKeri.Registry.R9_retract_needs_phase2	PROVED	propext	axioms.log
+CardanoKeri.Registry.Reach.brecOn	PROVED	none	axioms.log
+CardanoKeri.Registry.ReachFar.brecOn	PROVED	none	axioms.log
+CardanoKeri.Registry.Request.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Request.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Request.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Status.active.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Status.active.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Status.active.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Status.convicted.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Status.dormant.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Status.dormant.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Status.dormant.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.Sys.init.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.Sys.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Registry.Sys.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Registry.Sys.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Registry.accInv_of_inv	PROVED	none	axioms.log
+CardanoKeri.Registry.accInv_remove_postable	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.applyBatch.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.applyBatch.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.applyBatch_append	PROVED	propext	axioms.log
+CardanoKeri.Registry.applyBatch_inv	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.applyBatch_leaf_mono	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.applyBatch_register_registered	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.applyBatch_reject_go	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.applyBatch_unknown	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.eq_of_mem_of_fst_eq	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.fst_ne_of_mem_remove	PROVED	propext	axioms.log
+CardanoKeri.Registry.goIn_cons_go	PROVED	propext	axioms.log
+CardanoKeri.Registry.goIn_cons_postable	PROVED	propext	axioms.log
+CardanoKeri.Registry.goIn_remove_other	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.goIn_remove_postable	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.goInv_after_go	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.goOp.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.goOp_not_postable	PROVED	none	axioms.log
+CardanoKeri.Registry.goPending_iff	PROVED	none	axioms.log
+CardanoKeri.Registry.go_not_phase2	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.go_not_phase2._proof_1_1	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_10	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_11	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_12	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_13	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_14	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_15	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_16	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_17	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_18	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_19	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_20	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_21	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_22	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_23	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_24	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_25	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_26	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_27	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_28	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_29	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_30	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_31	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_32	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_33	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_34	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_35	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_36	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_37	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_38	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_39	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_40	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_41	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_42	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_43	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_44	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_45	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_46	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_47	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_48	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_49	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_50	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_51	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_52	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_53	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_54	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_55	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_56	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_57	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_58	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_59	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_60	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_61	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_62	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_63	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqAction.decEq._proof_9	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqActor._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqActor._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFoldAction._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqFoldAction._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_10	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_11	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_12	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_13	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_14	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_15	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_16	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_17	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_18	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_19	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_20	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_21	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_22	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqOp.decEq._proof_9	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_10	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_9	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_5	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_6	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_7	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableEqSys.decEq._proof_8	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableReapable._proof_1	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableReapable._proof_2	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableReapable._proof_3	PROVED	none	axioms.log
+CardanoKeri.Registry.instDecidableReapable._proof_4	PROVED	none	axioms.log
+CardanoKeri.Registry.inv_init	PROVED	propext	axioms.log
+CardanoKeri.Registry.inv_of_accInv	PROVED	none	axioms.log
+CardanoKeri.Registry.inv_replace_ckpt	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.inv_step	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.inv_step._proof_1_9	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.key_not_mem_map_fst_remove_self	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.key_not_mem_of_lookup_none	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.lookup.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.lookup.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.lookup_cons_ne	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_cons_self	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_none_of_not_mem	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_remove_ne	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_remove_self	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_setLeaf_ne	PROVED	none	axioms.log
+CardanoKeri.Registry.lookup_setLeaf_self	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_some_mem	PROVED	propext	axioms.log
+CardanoKeri.Registry.lookup_some_of_mem	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.mem_remove	PROVED	propext	axioms.log
+CardanoKeri.Registry.mem_remove_of_mem	PROVED	propext	axioms.log
+CardanoKeri.Registry.no_ckpt_of_no_leaf	PROVED	none	axioms.log
+CardanoKeri.Registry.no_ckpt_of_not_active	PROVED	none	axioms.log
+CardanoKeri.Registry.nodup_map_remove	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.not_mem_of_lookup_none	PROVED	propext	axioms.log
+CardanoKeri.Registry.processBody.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.processBody_convict_iff	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.processBody_goConvicted_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.processBody_goDormant_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.processBody_register_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.processBody_revive_iff	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.processOne.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.processOne_inv	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.processOne_leaf_mono	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.processOne_register_registered	PROVED	none	axioms.log
+CardanoKeri.Registry.processOne_requests	PROVED	Quot.sound	axioms.log
+CardanoKeri.Registry.reach_inv	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.reapable.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.rejectOne.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.rejectOne_go	PROVED	none	axioms.log
+CardanoKeri.Registry.rejectOne_inv	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Registry.rejectOne_leaves	PROVED	propext	axioms.log
+CardanoKeri.Registry.remove.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.remove.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.setLeaf.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.setLeaf.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.setLeaf_map_fst	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn.eq_1	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_2	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_3	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_4	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_5	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_6	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn.eq_7	PROVED	none	axioms.log
+CardanoKeri.Registry.stepFn_contribute_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_convictCkpt_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_fold_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_pause_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_reap_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_resume_iff	PROVED	propext	axioms.log
+CardanoKeri.Registry.stepFn_retract_iff	PROVED	propext	axioms.log
+CardanoKeri.Samaritan.FoldFlow.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Samaritan.FoldFlow.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Samaritan.FoldFlow.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Samaritan.Reap.hFund	PROVED	none	axioms.log
+CardanoKeri.Samaritan.Reap.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Samaritan.Reap.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Samaritan.Reap.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Samaritan.ReapFlow.mk.inj	PROVED	none	axioms.log
+CardanoKeri.Samaritan.ReapFlow.mk.injEq	PROVED	propext	axioms.log
+CardanoKeri.Samaritan.ReapFlow.mk.sizeOf_spec	PROVED	none	axioms.log
+CardanoKeri.Samaritan.fold.eq_1	PROVED	none	axioms.log
+CardanoKeri.Samaritan.fold_conserves	PROVED	propext	axioms.log
+CardanoKeri.Samaritan.reap.eq_1	PROVED	none	axioms.log
+CardanoKeri.Samaritan.reap_conserves	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.reap_conserves._proof_1_2	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.reaper_recovers	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.reaper_recovers._proof_1_3	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.samaritan_never_loses	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.samaritan_never_loses._proof_1_3	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.self_folding_reaper_never_loses	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.self_folding_reaper_never_loses._proof_1_3	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.unprofitable_when_tip_too_high	PROVED	propext, Quot.sound	axioms.log
+CardanoKeri.Samaritan.unprofitable_when_tip_too_high._proof_1_3	PROVED	propext, Quot.sound	axioms.log

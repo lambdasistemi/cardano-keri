@@ -1,0 +1,9 @@
+REJECTED duplicate verdict
+REJECTED pass promotion
+REJECTED missing section
+REJECTED wrong report digest
+REJECTED changed input
+REJECTED empty theorem inventory
+REJECTED truncated axiom receipt
+REJECTED escape axiom
+mechanical controls 8/8; positive report/axiom cases pass; no semantic mutant claim

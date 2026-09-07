@@ -32,7 +32,7 @@ making:
 | State | What it means | Where it lives |
 |---|---|---|
 | **Shipped on `main` today** | Code you can run, or a program published on preprod | `onchain/`, `offchain/`, `deploy/preprod/m1-manifest.json` |
-| **Accepted design** | Proved in Lean and playable in the simulator; no on-chain code yet | `lean/CardanoKeri/Checkpoint.lean`, 62 theorems, no `sorry` |
+| **Accepted design** | Proved in Lean and playable in the simulator; no on-chain code yet | `lean/CardanoKeri/Checkpoint.lean`, 87 theorems in `CheckpointGoals.lean`, no `sorry` |
 | **Planned** | An epic with an issue number and an acceptance criterion | the [roadmap](roadmap.md) |
 
 Nothing here that is only designed is described as if it were deployed.
@@ -98,9 +98,9 @@ transactions exist only in the end-to-end harness.
 ## The accepted design: the M1 return
 
 The design settled between 2026-09-02 and 2026-09-03 (project rulings D-022 to
-D-038). It is proved in `lean/CardanoKeri/Checkpoint.lean` — 62 theorems, no
-`sorry`, standard axioms only — and the simulator above is a transcription of
-that Lean, checked by replay.
+D-040). It is proved in `lean/CardanoKeri/Checkpoint.lean` — 87 theorems in
+`CheckpointGoals.lean`, no `sorry`, standard axioms only — and the
+simulator above is a transcription of that Lean, checked by replay.
 
 **One UTxO per identity**, holding the current key state, a token minted once
 and never again, and three sums of money that never mix:
@@ -112,24 +112,30 @@ and never again, and three sums of money that never mix:
 - the **pool** — advance funds; pays the premium `P` to whoever lands a
   rotation.
 
-**Two edges and four boundary transitions.** A rotation is the only thing that
-moves the keys; it carries a bond option (`keep`, `withdraw`, `deposit`) and
-optionally a new refund address, and every option other than `keep` is signed
-by the keys of the epoch the rotation opens (D-038) — so a relayer landing a
-public rotation can never park, age, or close the owner.
+**Three states, no withdraw.** An identity is **active** (the checkpoint UTxO
+exists: live, poisoned or frozen), **parked** (no UTxO; the registry leaf
+holds the hash of the last checkpoint) or **convicted** (terminal). A
+rotation is the only thing that moves the keys; it carries a bond option
+(`keep` or `deposit`) and optionally a new refund address. `deposit` is
+the unfreeze: it refills `B` when a hunter has taken it. Every option
+other than `keep`, and every new refund address, is signed by the keys of
+the epoch the rotation opens (D-038) — so a relayer landing a public
+rotation can never park, age, or close the owner.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Absent
-    Absent --> Present : register — registry insert, once ever
-    Present --> Present : rotate — next keys + toad receipts, clears the poison
-    Present --> Present : poison — current quorum, once per epoch
-    Present --> Present : freeze — anyone, when the pool is short
-    Present --> Present : top-up — anyone
-    Present --> Convicted : convict — a duplicity proof; D_reg to the convictor
-    Present --> Closed : close — a rotation that withdraws everything and burns
+    Absent --> Active : register — registry insert, once ever
+    Active --> Active : rotate — next keys + toad receipts, clears the poison
+    Active --> Active : poison — current quorum, once per epoch
+    Active --> Active : freeze — anyone, when the pool is short
+    Active --> Active : deposit — next keys refill B (the unfreeze)
+    Active --> Active : top-up — anyone
+    Active --> Convicted : convict — a duplicity proof; D_reg to the convictor
+    Active --> Parked : close — reap by the next keys; leaf holds the hash
+    Parked --> Active : reopen — witnessed rotation from that key state
+    Parked --> Convicted : convict parked — a duplicity proof against the hash
     Convicted --> [*]
-    Closed --> Present : reopen — a later witnessed rotation
 ```
 
 **The poison** is the piece that is genuinely new: a declaration signed by the
@@ -140,11 +146,16 @@ it belongs to the epoch of the keys that signed it, because in KERI possession
 of the next keys *is* control. It buys the owner the window between noticing a
 theft and rotating.
 
-**The registry** is one leaf per AID — absent, live, `closed(epoch, sn)`, or
-`convicted` — so an AID has at most one incarnation ever. Only `convicted` is
-terminal; a closed identity returns by a witnessed rotation later than its
-tombstone, with fresh bonds. The registry is upstream work: MPFS made
-permissionless (D-037).
+**The registry** is one leaf per AID — absent, live (the token is on chain),
+parked with the hash, or convicted — so an AID has at most one incarnation
+ever. Only **convicted** is terminal; a parked identity returns by a
+witnessed rotation later than the parked key state, with fresh bonds. The
+registry is upstream work: MPFS made permissionless (D-037).
+
+**Leaving** is the reap: a witnessed rotation by the *next* keys whose
+signed message names the payee of the premium and the refund address. The
+current keys keep exactly one Cardano power, the poison. Close answers to
+the next keys, never the current ones.
 
 **The consumer's rule**, and the only thing outside the machine: authorize iff
 the checkpoint is present, both bonds are full, it is not poisoned, it is
@@ -168,10 +179,10 @@ the owner's pool has run dry, not a punishment for lag.
 The M1 return is one milestone across two repositories, thirteen epics. The
 [roadmap](roadmap.md) carries the ordering, the dependencies and the
 measurements that size the numbers still open. The short version: slim `main`
-(K1), measure it (K3), build the owner's edges (K4) and the hunter's (K5),
-integrate the registry (K6), put every role behind a `ckeri` command (K7),
-replay the fifteen stories as the acceptance suite (K8), and cut over preprod
-(K10).
+(#319), measure it (#321), build the owner's edges (#322) and the hunter's (#323),
+integrate the registry (#324), put every role behind a `ckeri` command (#325),
+replay the fifteen stories as the acceptance suite (#326), and cut over preprod
+(#328).
 
 ---
 
@@ -188,8 +199,15 @@ replay the fifteen stories as the acceptance suite (K8), and cut over preprod
 - [Observer architecture](architecture/observer-architecture.md) — thin
   checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3
   premint fact token.
-- [Rotate your preprod identity](user/rotate-preprod-identity.md) — export a
-  witnessed KLI rotation, sign its binary Cardano package, and settle Advance.
+- [Register](user/register-preprod-identity.md) — Alice's identity appears
+  on Cardano.
+- [Rotate](user/rotate-preprod-identity.md) — Alice rotates, Hal lands it.
+- [Poison](user/poison.md) — Mallory steals the current keys.
+- [Close, reopen, revival](user/reopen-revival.md) — Alice leaves and
+  comes back.
+- [Hunters](user/hunters.md) — the pool, the freeze, two hunters racing.
+- [Consumer checklist](user/consumer-checklist.md) — the treasury reads
+  the checkpoint.
 - [ACDC primer](acdc-primer.md) — the separate credential layer.
 
 For the financial and institutional concepts behind the later use cases, see
@@ -199,11 +217,11 @@ the [Finance primer](finance-primer.md).
 
 `observer-advance` measures 16,130 bytes against a 16,133-byte applied-script
 limit — three bytes of headroom. The M1 return's datum change lands on exactly
-that script, which is why epic K1 ends with a size table and epic K4's datum
+that script, which is why epic #319 ends with a size table and epic #322's datum
 decisions are taken from it rather than from taste. Two things move in the
 plan's favour: the advance observer's ARMED-response branch goes, and the
 three enforcement role addresses go from `checkpoint_register`. The net effect
-is unmeasured until K1.
+is unmeasured until #319.
 
 Full measurements are in
 [Observer architecture](architecture/observer-architecture.md#measured-sizes-and-costs).

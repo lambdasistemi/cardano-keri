@@ -1,5 +1,10 @@
 > **Historical document.** This was the original cryptographic spec used as vetting input. It has been superseded by `docs/architecture/identity-ops.md`, `docs/architecture/value-auth.md`, and `docs/design/aid-model.md`. It contains known inconsistencies with the current design.
 
+!!! note "What ships, and the accepted design"
+    Historical vetting input. Nothing here ships. The current machine is
+    the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
 # AID Operations — Cryptographic Specification
 
 This document describes the three on-chain AID operations and their

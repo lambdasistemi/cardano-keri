@@ -45,16 +45,15 @@ a checkpoint or an old key:
 | Consumable checkpoint | Current key state is available and answerable | designed |
 | Poisoned | The controller has declared this epoch compromised; do not authorize | designed |
 | Juvenile | Registered or resurrected less than `W` slots ago; too fresh to trust | designed |
-| Paused | The owner withdrew her bonds and parked the identity | designed |
 | Frozen | A hunter took the freeze bond because the pool ran dry | designed |
 | Convicted | Proven duplicity; terminal, and it will never come back | designed |
-| Closed | The owner left. It can return by a later witnessed rotation | designed |
+| Parked | The owner left. The leaf holds the hash; it can return by a later witnessed rotation | designed |
 | No candidate | Nothing on chain for this AID | shipped |
 | Multiple candidates | Ambiguous registration; fail closed | shipped — the registry removes it |
 | Stale outref | The checkpoint changed; refresh and rebuild | shipped |
 
-"Fail closed" should be visible. Note that **paused** and **frozen** are not
-flags: they are what the checkpoint's value shows. A UI should read them from
+"Fail closed" should be visible. Note that **frozen** is not a flag: it is
+what the checkpoint's value shows (`B` absent). A UI should read it from
 the bonds rather than looking for a status field that does not exist.
 
 ## Register
@@ -92,7 +91,7 @@ under the M1 return, whether it settles promptly depends on whether Alice's
 pool can pay a hunter.
 
 A rotation is also where Alice exercises every other choice she has: the bond
-option (`keep`, `withdraw` to pause, `deposit` to come back or unfreeze) and a
+option (`keep`, or `deposit` to unfreeze) and a
 new refund address. All of them travel in **one message her new keys sign**, so
 a UI must display the intent and the address together, before signing, exactly
 as the chain will read them.
@@ -114,16 +113,20 @@ The UI must be honest about the one case this does not cover: if the thief also
 holds the **next** keys, her rotation is control by KERI's own rule, and the
 poison lasts until that rotation and no longer.
 
-## Pause, return, and leaving
+## Leaving and coming back
 
-- **Pause** is a rotation that withdraws everything to the refund address. The
-  state stays on chain, unbonded and unconsumable, and answers only to another
-  rotation — so a current-key thief can do nothing with a parked identity.
-- **Return** is a rotation that deposits the bonds again. There is no replay;
-  the state never left the chain. The checkpoint is juvenile again.
-- **Close** is a rotation that withdraws everything and burns the UTxO. It
-  needs the next keys, poisoned or not. It is not the end: a witnessed rotation
-  later than the tombstone reopens the identity with fresh bonds.
+There is no pause and no withdraw. An identity is active, parked, or
+convicted.
+
+- **Close** is the reap: a witnessed rotation by the *next* keys whose
+  signed message names the payee of the premium and the refund address.
+  The token burns, the leaf is parked with the hash of that key state.
+  The current keys cannot close.
+- **Reopen** is the revival: a witnessed rotation later than the parked
+  key state, with fresh bonds, born juvenile. A parked identity is not
+  terminal; only conviction is.
+- **Deposit** is the unfreeze: a rotation that refills `B` after a hunter
+  took it. It is a no-op on full bonds, still signed by the new keys.
 
 Before signing any of these the UI must display the exact checkpoint input, the
 AID and sequence, the destination address, the amounts of all three components,
@@ -154,7 +157,7 @@ harness, not an end-user product. A production experience still needs:
 - transaction fee and funding UX;
 - Cardano settlement and rollback monitoring;
 - KERI freshness monitoring;
-- the poison, bond and registry paths built at all (epics K4–K7 on the
+- the poison, bond and registry paths built at all (epics #322–#325 on the
   [roadmap](../roadmap.md));
 - real-scale measurements; and
 - credential display and revocation checks.

@@ -103,11 +103,10 @@ checkpoint a consumer already resolves:
 | Condition | How it is represented | Consumer result |
 |---|---|---|
 | poisoned | one bit in the datum, set by the current quorum | reject |
-| paused | `D_reg` and `B` absent — the owner withdrew | reject |
 | frozen | `B` absent — a hunter took it | reject |
 | juvenile | `now − born_at < W` | reject |
-| convicted | a tombstone state, terminal | reject |
-| closed | the UTxO is burned; the registry leaf is `closed(epoch, sn)` | no candidate |
+| parked | no UTxO; the registry leaf holds the hash of the last checkpoint | no candidate |
+| convicted | the mark, terminal | no candidate |
 
 Nothing there is a flag a caller can set. The poison is signed at the current
 threshold; the rest are facts about what the UTxO holds and when it was bonded.
@@ -123,7 +122,7 @@ otherwise.
 
 The M1 return adds exactly one shared structure, and confines it to the
 narrowest possible job: a **registry** mapping each AID to a leaf — absent,
-`live`, `closed(epoch, sn)`, or `convicted`. A registration must prove absence
+live, parked with the hash, or convicted. A registration must prove absence
 before inserting, which makes the token mint-once by construction. Register,
 reopen, close and convict change the leaf; rotate, poison, freeze and top-up
 never touch it, and consumers never read it.

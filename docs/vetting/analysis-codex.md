@@ -1,5 +1,11 @@
 # MPFS KERI-AID-owned leaves design analysis
 
+!!! note "What ships, and the accepted design"
+    Historical vetting of an archived specification. Nothing here ships.
+    The current machine is the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
+
 ## Executive summary
 1. The current validator authorizes `Modify` with only the cage `State.owner` Cardano key hash; per-leaf ownership is not represented in the datum, request datum, or redeemer.
 2. Aiken/Plutus V3 gives usable hashes plus single-signature checks such as `verify_ed25519_signature`, but the validator cannot replay a KERI KEL or enforce KERI threshold/recovery semantics.

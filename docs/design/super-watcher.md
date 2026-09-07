@@ -12,7 +12,7 @@ name.
     hunter's economics (the premium, the freeze, the conviction payout) are the
     **accepted design**, proved in the Lean and playable in the checkpoint
     simulator. No hunter daemon is shipped; it is epic
-    [K7](https://github.com/lambdasistemi/cardano-keri/issues/325).
+    [#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
 
 ## The cross-plane problem
 
@@ -134,7 +134,7 @@ moves forward — the checkpoint cannot roll back (ruling D-022).
     receipts against the **new** witness set and the **new** `toad`. Whether
     `keripy` applies the same rule, or tallies against the parent's set, is not
     yet established. Epic
-    [K2](https://github.com/lambdasistemi/cardano-keri/issues/320) builds the
+    [#320](https://github.com/lambdasistemi/cardano-keri/issues/320) builds the
     parity oracle that settles it. It matters most on exactly the rotations
     that matter: witness replacement after a compromise.
 
@@ -198,7 +198,7 @@ The **juvenility window** `W` exists for that reason: a consumer refuses a
 checkpoint younger than `W` slots after a registration, a reopen or a
 resurrecting rotation, and `W` is calibrated above measured relayer latency
 rather than guessed. Its value is set from the measurement taken in epic
-[K7](https://github.com/lambdasistemi/cardano-keri/issues/325).
+[#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
 
 ## Credential-plane extension
 

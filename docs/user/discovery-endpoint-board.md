@@ -1,5 +1,14 @@
 # Discovery — the endpoint board
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 The endpoint board is a public, current OOBI catalog on Cardano preprod. A
 witness publishes its own KERI-signed `/loc/scheme` reply. Anyone can then find
 the record from the chain, verify its KERI SAID and Ed25519 signature, and dial

@@ -1,5 +1,14 @@
 # Case C — KYC-Gated Security Tokens
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 Transfers only between identified holders: the tokenized-securities case,
 where transfer restriction is a legal requirement of the asset class, not a
 policy preference.

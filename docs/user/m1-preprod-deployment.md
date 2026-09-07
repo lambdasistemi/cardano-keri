@@ -1,5 +1,14 @@
 # The M1 preprod deployment
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 The M1 V1 checkpoint programs are published as reference scripts on Cardano
 preprod. The committed release manifest binds the exact applied programs to
 source commit `50a582064ddfde15ebfa3649c6b6fea8d39fc697`, the immutable

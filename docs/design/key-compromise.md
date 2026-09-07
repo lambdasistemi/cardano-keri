@@ -25,13 +25,14 @@ stops them from using it *now*.
 | A consuming application | Satisfy any authorization the application resolves against the ACTIVE checkpoint's current weighted key state | Change which keys the checkpoint publishes |
 
 !!! success "After the M1 return, the `Close` row goes empty"
-    Close becomes a **witnessed rotation** that withdraws everything and burns
-    the UTxO (ruling D-036), so it needs the next keys exactly like any other
-    rotation. Pause, resurrection and a change of refund address are the same
-    rotation with a different signed intent, and that intent is signed by the
-    keys of the epoch the rotation opens (ruling D-038). A thief holding only
-    the current keys is left with exactly one Cardano move — the poison — and
-    that is the owner's instrument, not hers.
+    Close becomes the **reap**: a witnessed rotation by the next keys
+    whose signed message names the payee and the refund address
+    (ruling D-036), so it needs the next keys exactly like any other
+    rotation. An identity is active, parked holding the hash, or
+    convicted. Deposit is the unfreeze. That intent is signed by the
+    keys of the epoch the rotation opens (ruling D-038). A thief
+    holding only the current keys is left with exactly one Cardano
+    move — the poison — and that is the owner's instrument, not hers.
 
 The last row is the one that matters most and is easiest to miss. An
 application built on [Value authorization](../architecture/value-auth.md) asks

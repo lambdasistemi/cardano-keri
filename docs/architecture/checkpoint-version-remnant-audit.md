@@ -1,6 +1,6 @@
 # Checkpoint version-remnant audit
 
-**Slice:** #254 S254-R / T254-109 — register deployment arity and version-remnant repair.
+**Scope:** issue #254 — the register-deployment-arity and version-remnant repair.
 **Standing check:** `just check-version-remnant-sweep`
 (`scripts/check-version-remnant-sweep.sh`, plus
 `s254_r_version_remnant_sweep_is_complete` in `ScriptAritySpec.hs`).
@@ -80,9 +80,9 @@ Three cuts, verified absent on every run:
 
 | Cut | Where | By |
 |---|---|---|
-| `register-applied-version-argument` | `applyCheckpointParams`' plan | S254-R |
-| `register-derivation-version-argument` | the `appliedCheckpoint` call in `deriveV1Scripts` | S254-R |
-| `register-declared-version-parameter` | `onchain/validators/checkpoint_register.ak` | T254-104, held absent here |
+| `register-applied-version-argument` | `applyCheckpointParams`' plan | the register-deployment-arity repair |
+| `register-derivation-version-argument` | the `appliedCheckpoint` call in `deriveV1Scripts` | the register-deployment-arity repair |
+| `register-declared-version-parameter` | `onchain/validators/checkpoint_register.ak` | held absent here by the same repair |
 
 Nine retained references, each with a consumer the script checks still exists:
 
@@ -102,7 +102,7 @@ Fourteen files under `deploy/preprod` carry a version reference. They are
 settled history, reported as **ADVISORY** and never rewritten: the immutable M1
 fixture and its acceptance transcripts are read-only evidence about what was
 deployed, not a description of what the derivation now produces. The branch
-already diverged from the deployed family when S254-1 added `observer-migration`
+already diverged from the deployed family when the register-deployment-arity repair added `observer-migration`
 as a sixth artifact.
 
 ## Retained is not "legacy"

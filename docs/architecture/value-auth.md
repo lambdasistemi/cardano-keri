@@ -53,28 +53,29 @@ reads only the datum and the checkpoint's value:
 
 ```text
 authorize iff  present
-            ∧ D_reg full ∧ B full          — bonded: not paused, not frozen
+            ∧ D_reg full ∧ B full          — bonded: not frozen
             ∧ ¬poisoned                    — the controller has not disowned this epoch
             ∧ now − born_at ≥ W            — past the juvenility window
             ∧ the operation's own signature satisfies the current threshold
 ```
 
 and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
-closed: absent, unbonded, frozen, poisoned, juvenile, convicted, closed.
+closed: absent, frozen, poisoned, juvenile, convicted, parked.
 
 Three consequences an integrator should plan for:
 
-- **Paused and frozen are not flags.** A paused checkpoint holds no bonds; a
-  frozen one is missing `B`. An application that looks for a status field will
-  find none, and must compare against the deployment's `D_reg` and `B`.
+- **Frozen is not a flag.** A frozen checkpoint is missing `B`. An
+  application that looks for a status field will find none, and must
+  compare against the deployment's `D_reg` and `B`.
 - **Step 1 becomes a guarantee rather than a hope.** The registry admits one
   incarnation per AID, ever, so "exactly one candidate" is enforced on chain
   instead of being a residual the consumer carries.
-- **Conviction becomes terminal, and a closed identity can come back.** The
+- **Conviction becomes terminal, and a parked identity can come back.** The
   chain follows KERI: no key event un-duplicates an identifier, so
-  `Convicted` has no exit, while a `closed` identity reopens on a witnessed
-  rotation later than its tombstone. An application must not cache "absent
-  forever" for a closed AID, and must not expect a convicted one to return.
+  `Convicted` has no exit, while a parked identity reopens on a witnessed
+  rotation later than the parked key state. An application must not cache
+  "absent forever" for a parked AID, and must not expect a convicted one
+  to return.
 
 ## Indexer boundary
 
@@ -186,8 +187,7 @@ predicate afresh. The refusals differ in who caused them and in how they clear:
 | Refusal | Caused by | Clears when |
 |---|---|---|
 | Poisoned | the owner's current quorum | any witnessed rotation |
-| Frozen | a hunter, because the pool was short | a rotation with `deposit` |
-| Paused | the owner, by a withdrawing rotation | a rotation with `deposit` |
+| Frozen | a hunter, because the pool was short | a rotation with `deposit` (the unfreeze) |
 | Juvenile | time, after a register, reopen or resurrecting rotation | `W` slots elapse |
 | Convicted | anyone, with a duplicity proof | never |
 | Closed | the owner, by a rotation that burns | a reopen |

@@ -1,5 +1,14 @@
 # vLEI Bridge: Legal Entity Identity on Cardano
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 ## What is vLEI?
 
 The [verifiable Legal Entity Identifier (vLEI)](https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei) is [GLEIF's](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) extension of the traditional [Legal Entity Identifier (LEI)](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei) into the world of cryptographic, self-certifying credentials. Where a classic LEI is a 20-character code assigned by a Local Operating Unit (LOU), a vLEI is a chain of [ACDC (Authentic Chained Data Containers)](https://github.com/WebOfTrust/ietf-acdc) credentials anchored to [KERI](https://github.com/WebOfTrust/ietf-keri) AIDs. Each credential in the chain is cryptographically signed and verifiable without consulting any central registry.

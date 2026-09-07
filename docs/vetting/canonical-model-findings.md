@@ -1,5 +1,11 @@
 # Canonical Permissionless Model — Vetting Round 2
 
+!!! note "What ships, and the accepted design"
+    Historical vetting (2026-07 permissionless model). Nothing here ships.
+    The current machine is the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
+
 Independent re-vet of the **current** canonical permissionless model (2026-07),
 replacing the archived `aid-ops.md` vetting. Two independent cold passes over the
 normative docs (`architecture/`, `design/`, `design/business-cases/`, `roadmap.md`),
@@ -10,7 +16,7 @@ different primary lenses, then cross-examination and deduplication.
 
 Findings that both passes reached independently are marked **⋈ cross-confirmed** and
 carry the highest confidence. Two Criticals (F1, F2) were additionally verified by the
-orchestrator directly against the doc text.
+commissioning reviewer directly against the doc text.
 
 !!! danger "Gates M1 implementation"
     Findings tagged **blocks #24** touch the `trie_key` / `KeyState` shape that #24

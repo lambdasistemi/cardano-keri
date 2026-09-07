@@ -91,10 +91,11 @@ refund address. The transaction burns the checkpoint token and refunds the
 complete checkpoint value only to that address.
 
 !!! warning "Close changes in the M1 return"
-    Under ruling D-036, close is a **witnessed rotation** that withdraws
-    everything and burns the UTxO — it needs the **next** keys, exactly like any
-    rotation. That is what stops a thief holding only the current keys from
-    erasing the owner's Cardano presence. See
+    Under ruling D-036, close is the **reap**: a witnessed rotation by
+    the *next* keys whose signed message names the payee and the refund
+    address; the leaf is parked with the hash. That is what stops a
+    thief holding only the current keys from erasing the owner's
+    Cardano presence. See
     [Compromise of the current keys](key-compromise.md).
 
 ## Residuals of what ships today
@@ -150,7 +151,7 @@ mechanisms: the pool that pays a hunter to be prompt, and the juvenility window
 The two-key fixture fits production protocol limits. The real three-of-seven
 GLEIF shape has not completed the vertical ladder and is expected to exceed
 current mainnet execution limits in later operations. Epic
-[K3](https://github.com/lambdasistemi/cardano-keri/issues/321) measures that
+[#321](https://github.com/lambdasistemi/cardano-keri/issues/321) measures that
 gap; it is not assumed away.
 
 ---
@@ -167,8 +168,8 @@ the checkpoint simulator, and unbuilt on chain.
 | A poisoned checkpoint answers only to a rotation | no close, no second poison, no consumer authorization |
 | No present state is absorbing | the next-key holder can always rotate, with any bond option |
 | One incarnation per AID, ever | the registry insert needs an absence proof; the token mints once |
-| Only conviction is terminal | a closed AID reopens on a rotation later than its tombstone |
-| `D_reg` is never a fee source | it leaves only at close, withdraw, or a conviction |
+| Only conviction is terminal | a parked AID reopens on a rotation later than the parked key state |
+| `D_reg` is never a fee source | it leaves only at close or a conviction |
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
 | A relayer cannot park, age or close the owner | every intent other than `keep` is signed by the new epoch's keys |
 | The refund address moves only by the owner's signature | at register, and at a rotation the new keys authorized |
@@ -183,9 +184,8 @@ present ∧ D_reg full ∧ B full ∧ ¬poisoned ∧ now − born_at ≥ W
 ```
 
 and, once validity ships, `now ≤ valid_until`. It fails closed on absent,
-unbonded, frozen, poisoned, juvenile, convicted and closed. **Unbonded** and
-**frozen** are value-level facts, not flags: a paused checkpoint holds no
-bonds, a frozen one is missing `B`.
+frozen, poisoned, juvenile, convicted and parked. **Frozen** is a
+value-level fact, not a flag: a frozen checkpoint is missing `B`.
 
 What the predicate cannot know is whether the owner rotated on KERI an hour ago
 and no hunter has landed it yet. That is what the pool is for.

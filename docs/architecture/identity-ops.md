@@ -35,8 +35,8 @@ Datum V2, in the M1 return, adds what the new machine needs: `poisoned`,
 reserved for a future validity edge. The three sums of money — `D_reg`, `B`
 and the pool — are value, not fields. That change lands on `observer_advance`,
 which has three bytes of headroom, so epic
-[K1](https://github.com/lambdasistemi/cardano-keri/issues/319) measures before
-epic [K4](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
+[#319](https://github.com/lambdasistemi/cardano-keri/issues/319) measures before
+epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 
 ## Operation status
 
@@ -44,13 +44,13 @@ epic [K4](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert, mint — once ever per AID |
 | Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` to whoever landed it |
-| Close | Current controllers burn the token and take the refund | A **rotation** that withdraws everything and burns; needs the **next** keys; reopenable |
+| Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the leaf is parked with the hash |
 | Freeze | Moves a lagging checkpoint to ARMED for the response window | A hunter's payment when the pool is short. The datum is untouched; `B` leaves |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
 | Poison | — | New: the current quorum declares the epoch compromised |
 | Top-up | — | New: anyone adds to the pool. No signature, no datum change |
-| Reopen | — | New: a closed identity returns on a rotation later than its tombstone |
+| Reopen | — | New: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds |
 
 ## Register
 
@@ -138,7 +138,7 @@ afterwards.
     The validator tallies receipts against the **new** witness set and the
     **new** `toad`. Whether `keripy` does the same, or tallies against the
     parent's set, is not established. Epic
-    [K2](https://github.com/lambdasistemi/cardano-keri/issues/320) builds the
+    [#320](https://github.com/lambdasistemi/cardano-keri/issues/320) builds the
     oracle that settles it. The two rules disagree exactly on rotations that
     cut or add witnesses — that is, on witness replacement after a compromise.
 
@@ -146,8 +146,8 @@ afterwards.
 
 The predicate is unchanged. What is added is everything around it:
 
-- a **bond option** — `keep`, `withdraw` (pause), or `deposit` (return, or
-  unfreeze) — which restores or releases `D_reg` and `B`;
+- a **bond option** — `keep`, or `deposit` (the unfreeze: refill `B` when
+  a hunter has taken it). There is no withdraw;
 - an optional **new refund address**;
 - the **premium** `P` paid from the pool to the payee the transaction names,
   when the pool covers it. An unpaid rotation is still a valid rotation: no
@@ -179,15 +179,16 @@ address limits where the money goes but not whether the identity dies.
 
 ### After the M1 return
 
-Close is a **witnessed rotation** that withdraws everything and burns the UTxO
-(ruling D-036). It needs the next keys exactly like any other rotation, so the
-current-key thief loses this move entirely — the only Cardano power the current
-keys retain is the poison, and a rotation clears that.
+Close is the **reap**: a witnessed rotation by the next keys whose signed
+message names the payee of the premium and the refund address (ruling
+D-036). The token burns; the registry leaf is parked with the hash of
+that key state. It needs the next keys exactly like any other rotation,
+so the current-key thief loses this move entirely — the only Cardano
+power the current keys retain is the poison, and a rotation clears that.
 
-Close and pause differ only by the burn. And close is **not terminal**: the
-registry leaf becomes `closed(epoch, sn)`, a tombstone, and a witnessed
-rotation later than that sequence reopens the identity with fresh bonds and a
-fresh juvenility window. Only a conviction is final.
+There is no pause. Close is **not terminal**: a parked identity returns
+on a witnessed rotation later than the parked key state, with fresh
+bonds and a fresh juvenility window. Only a conviction is final.
 
 ## Freeze
 
@@ -231,9 +232,12 @@ register policy, the AID and the current sequence — producible with stock
 witnessed, because it is a Cardano-side declaration and not a projected KERI
 event.
 
-Its effect is one bit. The checkpoint becomes unconsumable, and from a poisoned
-state the only enabled edge is a rotation: no close, no second poison, no
-consumer authorization. The rotation clears it.
+Its effect is one bit. The checkpoint becomes unconsumable. From a
+poisoned present checkpoint the machine still enables rotation, top-up,
+conviction, and close (the reap by the next keys). Only a second poison
+and a freeze are refused — those two require the epoch still clean.
+Consumer authorization fails because the checkpoint is unconsumable. A
+rotation clears the poison.
 
 Two properties are worth stating precisely:
 
@@ -261,7 +265,7 @@ exposes no command for it.
 
 The same proof, a different effect. The convictor names a payee and takes
 `D_reg` in full; `B` and the pool go to the refund address; the checkpoint
-becomes `Convicted`, a tombstone the token stays with, and there is **no
+becomes `Convicted`, terminal; the token stays, and there is **no
 transition out** — no rotate, no poison, no close (rulings D-030, D-031).
 
 Terminality is not severity. KERI has no event that un-duplicates an
@@ -282,10 +286,10 @@ already controls under KERI and take `D_reg` on the way out. Exposure is
 **Top-up** adds value to the pool. No signature, no datum change, anyone. It is
 how a friend, an employer or a consortium pays for an identity's maintenance.
 
-**Reopen** brings a closed identity back: a witnessed rotation later than the
-tombstone's sequence, fresh bonds, a first pool, and a refund address chosen by
-whoever pays. A rotation at or below the closed sequence cannot reopen — that
-is what stops a stale resurrection.
+**Reopen** brings a parked identity back: a witnessed rotation later than
+the parked key state, fresh bonds, a first pool, and a refund address
+chosen by whoever pays. A rotation at or below the parked sequence
+cannot reopen — that is what stops a stale resurrection.
 
 ## What is off chain
 

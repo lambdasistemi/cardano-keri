@@ -1,5 +1,11 @@
 # Design analysis: KERI-AID-owned MPFS leaves (claude)
 
+!!! note "What ships, and the accepted design"
+    Historical vetting of an archived specification. Nothing here ships.
+    The current machine is the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
+
 > Read-only analysis. Repos inspected: `cardano-mpfs-onchain`
 > (`validators/cage.ak`, `types.ak`, `lib.ak`, `docs/architecture/proofs.md`),
 > `cardano-mpfs-offchain` (`cardano-mpfs-cage-tx`, `cardano-mpfs-client`,

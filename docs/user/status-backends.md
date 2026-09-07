@@ -1,5 +1,14 @@
 # Query identity status through three backends
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 The production `ckeri status` command can read one AID from a local follower
 store, the hosted ckeri.dev endpoint, or Koios. Backend selection is part of
 the next release: the installed v0.1.1 binary predates this interface. The
@@ -103,7 +112,7 @@ commit `0a8ed57`. All three returned success:
 
 The concise, CI-validated provenance record is
 `deploy/preprod/m1-backend-status-acceptance.txt`. It records UTC time,
-operator, host/pane, `/tmp` working directory, exact
+operator, host, `/tmp` working directory, exact
 binary and SHA-256, exact commands, source-store/copy hashes, raw filenames,
 raw hashes, exit status, and result. Ticket-runtime raw files remain direct
 stdout-and-stderr capture bytes and are reconciled separately by the Slice 2

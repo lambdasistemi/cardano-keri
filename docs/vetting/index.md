@@ -1,5 +1,12 @@
 # Vetting Summary
 
+!!! note "What ships, and the accepted design"
+    Nothing under Vetting ships. The pages are a design-history record of
+    an archived specification. The current machine is
+    `lean/CardanoKeri/Checkpoint.lean` and the two simulations on the
+    [home page](../index.md).
+
+
 !!! danger "Current vetting — round 2 (canonical permissionless model)"
     The independent re-vet of the **current** design lives in
     [Canonical Permissionless Model — Vetting Round 2](canonical-model-findings.md),

@@ -1,5 +1,14 @@
 # Case A — Regulated DeFi Gate
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 Gate protocol entry and actions on a valid Legal Entity vLEI. This deepens
 [The Regulated DeFi Gate](../defi-gate.md) primer into a design analysis — and
 corrects it on one load-bearing point (the batcher model, §2).

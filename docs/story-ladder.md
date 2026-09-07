@@ -1,5 +1,13 @@
 # Story ladder: what has actually settled
 
+!!! note "What ships, and the accepted design"
+    This page is the ledger of settled V1 transactions. The accepted design
+    is on the [home page](index.md#the-accepted-design-the-m1-return) and in
+    the [checkpoint simulation](simulator/index.html). The ARMED/FROZEN
+    stories below are what shipped; they are not the hunter freeze of the
+    M1 return.
+
+
 This page is **history**. It records the transactions that reached a real
 ledger, with their dates, and nothing else. What is designed but not built is
 on the [home page](index.md#the-accepted-design-the-m1-return); what is
@@ -28,7 +36,7 @@ current keys, thresholds, witnesses, and sequence number.
     a terminal state reached only by a proven duplicity. These rungs are kept
     as the record of what the vertical path proved, not as a description of
     where the design is going. Epic
-    [K1](https://github.com/lambdasistemi/cardano-keri/issues/319) removes the
+    [#319](https://github.com/lambdasistemi/cardano-keri/issues/319) removes the
     code they exercised.
 
 ---
@@ -145,7 +153,7 @@ of [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) and
 - **GLEIF scale.** The settled fixtures are two-key and 1-of-1. The genuine
   three-of-seven shape with a real witness set has never completed the vertical
   ladder, and the cost of doing so is what epic
-  [K3](https://github.com/lambdasistemi/cardano-keri/issues/321) exists to
+  [#321](https://github.com/lambdasistemi/cardano-keri/issues/321) exists to
   measure.
 - **The engineering ceiling.** `observer-advance` measures 16,130 bytes against
   a 16,133-byte limit. Every rung above was settled inside three bytes of

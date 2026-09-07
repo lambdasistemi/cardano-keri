@@ -80,6 +80,14 @@ cmd_list() {
     echo "run.sh --list: ledger theorems drift from compiled Cage/Samaritan+Mutants declarations" >&2
     exit 1
   fi
+  # Cold-worktree acceptance (audit-1 PROVENANCE finding): establish the
+  # compiled modules this list needs before the #check inventory. Never rely
+  # on owner-warmed oleans; the compiled-declaration check below is retained.
+  if ! (cd "$LEAN" && nix shell --no-write-lock-file "$ROOT/offchain#lean" --command lake build CardanoKeri.CheckpointGoals CardanoKeri.RegistryGoals CardanoKeri.Cage CardanoKeri.Samaritan > "$tmp/list-build.log" 2>&1); then
+    echo "run.sh --list: build of compiled modules failed (a cold worktree builds its own oleans first)" >&2
+    cat "$tmp/list-build.log" >&2
+    exit 1
+  fi
   # Compiled-declaration reconciliation: every Cage/Samaritan theorem must #check.
   # A spelling-only row (grep match in a comment, stale name) may not close this.
   {
@@ -275,6 +283,22 @@ cmd_run() {
   say "DISCOUNT structural theorems, never counted as a kill: $STRUCTURAL"
   say "STOPPING frozen-ledger: one right-reason kill per 79 atom rows + one witness/kill per 20 theorem rows"
 
+  # Frozen-gate provenance (audit-1 PROVENANCE finding): the invoking frozen
+  # gate identifies itself via MUTATION_GATE_FILE; direct owner runs fall back
+  # to the ignored root gate.sh (documented). A missing resolved gate fails
+  # fast here; drift across the run is caught by the pre/post identity check.
+  if [ -n "${MUTATION_GATE_FILE:-}" ]; then
+    gate_file="$MUTATION_GATE_FILE"
+  else
+    gate_file="$ROOT/gate.sh"
+  fi
+  if [ ! -f "$gate_file" ]; then
+    say "GATE-MISSING resolved gate not found: $gate_file (invoke via a frozen gate exporting MUTATION_GATE_FILE, or provide ignored $ROOT/gate.sh for direct owner runs)"
+    return 1
+  fi
+  gate_hash=$(sha256sum "$gate_file" | cut -d' ' -f1)
+  say "GATE resolved=$gate_file sha256=$gate_hash"
+
   # Work copy with build cache for incremental mutant builds.
   local wlean="$campaign/work-lean"
   rm -rf "$wlean"
@@ -314,7 +338,7 @@ cmd_run() {
   # Pre-run hashes of authoritative inputs (CLEAN proof; Fix6). No wall time/HEAD (deterministic file hashes only).
   {
     sha256sum "$LEDGER"
-    sha256sum "$ROOT/gate.sh"
+    sha256sum "$gate_file"
     sha256sum "$LEAN/CardanoKeri/Checkpoint.lean"
     sha256sum "$LEAN/CardanoKeri/CheckpointGoals.lean"
     sha256sum "$LEAN/CardanoKeri/Registry.lean"
@@ -862,7 +886,7 @@ EOF
   # No wall time/HEAD here (deterministic file hashes only).
   {
     sha256sum "$LEDGER"
-    sha256sum "$ROOT/gate.sh"
+    sha256sum "$gate_file"
     sha256sum "$LEAN/CardanoKeri/Checkpoint.lean"
     sha256sum "$LEAN/CardanoKeri/CheckpointGoals.lean"
     sha256sum "$LEAN/CardanoKeri/Registry.lean"
@@ -948,7 +972,7 @@ and the raw log are the same run, so tables can only say what the run did.
 - Runner \`lean/mutants/run.sh\` SHA-256: \`$runner_hash\`
 - Spec \`lean/mutants/mutants.txt\` SHA-256: \`$spec_hash\`
 - Pre-slice base: e03b678a827077c05399421a40a7507d52db6ac5
-- Terminal merged base: pending-premerge (rerun mechanically on epic-owner C1+C2 SHA per S365-P4)
+- Terminal merged base: 370a23b64a581c7ad80681700a459372b8005ba9 (epic-owner C1+C2 release per S365-P4; this run binds the merged commit)
 - Operator set (finite, frozen): \`$OPERATORS\`
 - Build budget/use: \`builds_spent=$builds_spent / budget=210\` Lean command invocations per full run (one identity control + at most one canonical mutant per 79 atom rows + 20 theorem witness evaluations + clean axiom/build closeout). Stop before invocation 211.
 - Stopping reason: \`frozen-ledger\` (one right-reason killed mutant per row + one witness/kill per theorem row; equivalent/shadowed mutants replaced or BLOCKED, never counted).

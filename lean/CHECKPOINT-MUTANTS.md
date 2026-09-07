@@ -5,10 +5,10 @@ and the raw log are the same run, so tables can only say what the run did.
 
 - Model base (frozen): 9b2e6b88937707cc2c571ae1e9e5f112dc248a30
 - Ledger `lean/SEMANTIC-ATOMS.md` SHA-256: `3c1d0c229d1d46fba6388919d95fc48467f0b7e6a517f767bea7c7bff6906c5a`
-- Runner `lean/mutants/run.sh` SHA-256: `bb465537d5aa1f97265670d934d988ef1edd21b4cf168264698cc45869f84520`
+- Runner `lean/mutants/run.sh` SHA-256: `4e9ee740d01bad45335be1c914865517472d11c8ff0b3c2d3332067e9b063c7e`
 - Spec `lean/mutants/mutants.txt` SHA-256: `8e9d636c7a92455a6c69e6599f6df5658c18893dc0442ff71e3b82599cbd5a67`
 - Pre-slice base: e03b678a827077c05399421a40a7507d52db6ac5
-- Terminal merged base: pending-premerge (rerun mechanically on epic-owner C1+C2 SHA per S365-P4)
+- Terminal merged base: 370a23b64a581c7ad80681700a459372b8005ba9 (epic-owner C1+C2 release per S365-P4; this run binds the merged commit)
 - Operator set (finite, frozen): `guard-relax/delete liveness-force-false evidence-swap effect-omit/retain/stale/swap/misdirect refusal/terminal/composition-edge-remove/invent one-sided-correspondence-break`
 - Build budget/use: `builds_spent=197 / budget=210` Lean command invocations per full run (one identity control + at most one canonical mutant per 79 atom rows + 20 theorem witness evaluations + clean axiom/build closeout). Stop before invocation 211.
 - Stopping reason: `frozen-ledger` (one right-reason killed mutant per row + one witness/kill per theorem row; equivalent/shadowed mutants replaced or BLOCKED, never counted).

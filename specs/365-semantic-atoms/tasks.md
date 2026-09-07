@@ -36,9 +36,11 @@ Artifact ceiling: 3,000 bytes / 80 lines.
 
 ## S365-P4 — merged-base rerun and delivery
 
-- [ ] **T365-07** Consume the epic-owner C1+C2 merged-base release, rebase via
+- [x] **T365-07** Consume the epic-owner C1+C2 merged-base release, rebase via
   the git workflow, and mechanically rerun the entire campaign and axiom/build
   checks so receipts bind the merged commit.
+  (base `370a23b…`, HEAD `16f7a5b3…`, campaign-029 GREEN 79/79 + 20/20,
+  receipts name the base, 197/210 builds.)
 - [ ] **T365-08** Accept the final audited tree, create the final commit, push
   the exact SHA, wait for green CI, pass finalization audit, and mark the draft
   PR ready for review without merging.

@@ -131,3 +131,108 @@ PREPOST clean, `builds_spent=197 / budget=210`, PROVENANCE source
 copied byte-for-byte to `lean/CHECKPOINT-MUTANTS.md` and
 `lean/REGISTRY-MUTANTS.md` (`cmp` clean); no runner input (ledger, runner,
 spec, sensors, witnesses, gate) was modified — receipts only.
+
+## v4 cold-acceptance repair (audit-1 PROVENANCE FINDINGS)
+
+Submission-1 candidate `3568e9f` replayed 99/99 semantic rows but the frozen
+acceptance boundary failed in a cold detached worktree: `--list` invoked
+compiled imports it never builds (exit 1 `unknown module prefix`), and
+`--run` hashed the absent ignored root `gate.sh` ( auditor evidence
+`audit-1/evidence/focused-list.log`, `full-gate.log`, `missing-root-gate.log`).
+Per AUDIT-REPAIR-028, ledger denominator, atom mappings, witnesses, sensors,
+theorem statements, and `lean/CardanoKeri/*` are untouched; only the
+cold-worktree boundary is repaired:
+
+- `--list` builds
+  `CardanoKeri.CheckpointGoals/RegistryGoals/Cage/Samaritan` before the
+  `#check` inventory (own oleans, never owner-warmed); the
+  compiled-declaration check is retained.
+- `--run` resolves the invoking frozen gate via `MUTATION_GATE_FILE` with a
+  documented fallback to ignored root `gate.sh` for direct owner runs;
+  a missing resolved gate fails fast (`GATE-MISSING`, zero builds spent);
+  the resolved file is hashed in both pre/post manifests (drift still
+  rejected by the prepost identity check; provenance row kept).
+- Gate v4 exports `MUTATION_GATE_FILE` (its own path) and raises only the
+  `--list` timeout 30→300 (measured 15s end-to-end cold `--list`: ~8s module
+  build + toolchain startup; ~20x margin).
+- Ledger SHA-256 (unchanged):
+  `3c1d0c229d1d46fba6388919d95fc48467f0b7e6a517f767bea7c7bff6906c5a`
+- Spec SHA-256 (unchanged):
+  `8e9d636c7a92455a6c69e6599f6df5658c18893dc0442ff71e3b82599cbd5a67`
+- Runner v4 SHA-256:
+  `932e34da034cf34678bc126af9fa198c05cb95cf4c67e1c982c763868c1dee95`
+- Gate v4 SHA-256:
+  `86b949d3c0f8a4084e5493ce3c1abc5939bdf6c857c8fbc4fdc03fc4368b42d4`
+  (`/tmp/epic-367/to-365/gates/gate-v4.sh`, byte-identical to ignored root
+  `gate.sh`; gates v1–v3 preserved byte-identical).
+- Full-run budget unchanged: 158 atoms + 20 witnesses + 2 TH-06 AUX +
+  12 sensor AUX + 5 closeout = 197 (ceiling 210); the `--list` build leg
+  spends no campaign budget.
+- Cold controls in `handoffs/v4freeze/` (`RESULTS.tsv`, all PASS): finding
+  reproductions (no-build inventory rc1, absent-gate hash crash rc1),
+  offline cold module build rc0, v4 `--list` genuinely-cold rc0 79/20,
+  verbatim gate list leg fresh-cold rc0 79/20, missing/var-missing gate
+  fast `GATE-MISSING` rc1 with zero builds, var-set BUDGET_MAX=0 honest RED
+  with resolved gate-v4 path+hash in pre-hashes, synthetic pre/post gate-row
+  drift rejected.
+- Exactly one full v4 owner campaign follows (campaign-028, BUDGET_MAX=210).
+
+## campaign-028 pause/supersession disposition (NOTE-029 terminal transition)
+
+Campaign-028 started from pre-base v4 inputs but was SIGSTOP-suspended at
+RG-phase per milestone pause, then terminated as a superseded pre-base
+partial on the NOTE-029 terminal transition (base
+`370a23b64a581c7ad80681700a459372b8005ba9`, rebased HEAD `16f7a5b3`). It is
+not evidence and never resumes. Its 74-line stdout log is preserved at
+`handoffs/campaign-028-stdout.log` (SHA-256
+`04bc438fb089cf04317047323c88f165cc0ca0620e9983c3a444c0da3c7fba70`).
+The stale watcher pgid was left dead. The single terminal campaign runs
+fresh as campaign-029 from the rebased tree.
+
+## v5 terminal-base freeze (NOTE-029)
+
+Rebased HEAD `16f7a5b33e1514395acde2ebe84faa13f3973a04` descends from the
+exact epic-owner C1+C2 base `370a23b64a581c7ad80681700a459372b8005ba9`
+(`git merge-base --is-ancestor` rc0; reversed/bogus controls rc1/rc128).
+Four ticket commits sit above the base; rebase had no conflicts; the v4
+repair edits were verified restored byte-for-byte
+(`git diff --binary | git hash-object --stdin` =
+`a42c306edf10a0cf833c0a547b64e4c08c1646f3`). Changes since v4:
+
+- Runner: receipt template `Terminal merged base: pending-premerge` now names
+  the exact base (historical `Model base`/`Pre-slice base` preserved). No
+  logic change. Runner v5 SHA-256:
+  `4e9ee740d01bad45335be1c914865517472d11c8ff0b3c2d3332067e9b063c7e`
+- Gate v5 SHA-256:
+  `10f06795bb5bb279a585466f4245ec0c10a28a4cc7c9ea07b0454a6d5e82719b`
+  (`/tmp/epic-367/to-365/gates/gate-v5.sh`, byte-identical to ignored root
+  `gate.sh`; gates v1–v4 preserved byte-identical). Adds: ancestry proof
+  (fail-fast pre-build), generated-receipt exact-base assertions, all v4
+  repairs retained (MUTATION_GATE_FILE export, list timeout 300).
+- Ledger `3c1d0c22…`, spec `8e9d636c…`, sensors+witnesses `6fdeab7a…`:
+  all unchanged and re-verified (per-file sensors/witnesses match v2).
+- Controls in `handoffs/v5freeze/` (all PASS): receipt-base NEG/POS per file,
+  ancestry POS/NEG-reversed/NEG-bogus, fresh-cold `--list` rc0 79/20 (15s),
+  missing/var-missing gate fast `GATE-MISSING` rc1 zero-build, var-set
+  BUDGET_MAX=0 honest RED with gate-v5 path+hash in pre-hashes, synthetic
+  pre/post gate-row drift rejected.
+- Full-run budget still 197 (ceiling 210). Exactly one terminal campaign
+  follows (campaign-029, BUDGET_MAX=210).
+
+## campaign-029 terminal GREEN (submission-2 evidence)
+
+Campaign-029 ran once from the frozen v5 inputs (BUDGET_MAX=210) at
+`/tmp/epic-367/to-365/owner-1/campaign-029`, stdout
+`handoffs/campaign-029-stdout.log`, rc=0: atoms 79/79 KILLED right-reason
+(CG-03/CG-09 via additive Mutants tokens; merged-base inversion theorems
+such as `Step.reopen_iff`/`processBody_register_iff` appear only as extra
+counted context inside exact owning intersections), theorem rows 20/20
+(REACHED+KILLED: 13 shared + TH-06 AUX + 4 sensor AUX + TH-19/20 via
+additive atom kills), BLOCKED 0, wrong-reason exclusions 0, identity control
+SURVIVED, clean axiom account 210 theorems / 0 sorryAx (merged base adds
+C1+C2 inversion theorems to the pre-merge 185; exact 210/210 account
+enforced by the runner predicate), PREPOST clean, `builds_spent=197 /
+budget=210`, GATE resolved to root `gate.sh` == gate-v5
+`10f06795…`, receipts name terminal base `370a23b…`. Generated receipts
+copied byte-for-byte to `lean/CHECKPOINT-MUTANTS.md` and
+`lean/REGISTRY-MUTANTS.md` (`cmp` clean); `lean/CardanoKeri/` diff empty.

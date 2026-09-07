@@ -10,6 +10,13 @@ toast
 stage
 story-picker
 story-goal
+dsl-tools
+dsl-paste
+dsl-file
+dsl-load
+dsl-copy
+dsl-download
+dsl-diag
 tree-wrap
 tree
 playbar

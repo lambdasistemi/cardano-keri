@@ -20,6 +20,14 @@
       <select id="story-picker" aria-label="pick a story"></select>
       <span class="goal" id="story-goal"></span>
     </div>
+    <div id="dsl-tools">
+      <textarea id="dsl-paste" aria-label="paste scenario DSL" rows="3"></textarea>
+      <input id="dsl-file" type="file" accept=".dsl,text/plain">
+      <button type="button" class="ghost" id="dsl-load">Load DSL</button>
+      <button type="button" class="ghost" id="dsl-copy">Copy branch</button>
+      <button type="button" class="ghost" id="dsl-download">Download branch</button>
+      <span id="dsl-diag" class="tiny"></span>
+    </div>
     <div id="tree-wrap"><svg id="tree" role="group" aria-label="the tree of this play: every step a node, every branch a line; the ring is where we are"></svg></div>
     <div id="playbar">
       <button type="button" class="nav" id="hist-first" title="the start">⇤</button>

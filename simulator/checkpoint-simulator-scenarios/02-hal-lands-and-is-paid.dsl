@@ -1,0 +1,113 @@
+grammar: 1
+family: checkpoint
+
+story: 2
+title: "Alice rotates, Hal lands it, Hal is paid"
+goal: "As Hal, I want to land Alice's rotation the moment her witnesses receipt it, so that her checkpoint stays current and I earn the premium."
+params:
+  D: 1000
+  B: 5
+  P: 2
+  W: 10
+atoms: ["2.signatures-at-the-current-threshold", "2.revealed-keys-match-the-pre", "2.receipts-from-at-least-toad", "2.sequence-strictly-greater", "2.then-it-pays-p-from"]
+step:
+  slot: 0
+  who: alice
+  say: "Alice's checkpoint is registered with her own refund address and a pool of 10."
+  action:
+    register:
+      refund: 1
+      pool0: 10
+  expect:
+    ok: true
+    verdict: juvenile
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_states, T8_mint_once, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+step:
+  slot: 12
+  who: alice
+  say: "Alice runs kli rotate; her witnesses receipt the rotation to sequence 1. That is evidence, not a transaction."
+  evidence:
+    add: [{"rotationTo":[0,0,1]}]
+  expect:
+    verdict: consumable
+step:
+  slot: 12
+  who: hal
+  say: "Hal submits the rotation as an advance with keep, naming himself payee. The chain pays P from the pool to Hal."
+  action:
+    rotate:
+      sn': 1
+      op: keep
+      payee: 2
+      refund': null
+  expect:
+    ok: true
+    live:
+      sn: 1
+      epoch: 1
+      poisoned: false
+      bornAt: 0
+      refundTo: 1
+      pool: 8
+      frozen: false
+    flow:
+      hunter:
+        addr: 2
+        dreg: 0
+        b: 0
+        pool: 2
+    verdict: consumable
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_poison_fold, trace_sn_monotone_all]
+fork:
+  id: freeze
+  at: 1
+  title: "Hal tries to freeze her instead"
+  step:
+    slot: 12
+    who: hal
+    say: "Hal cannot freeze her: the pool covers the premium."
+    action:
+      freeze:
+        sn': 1
+        payee: 2
+    expect:
+      ok: false
+      reason: pool-covers-premium
+      verdict: consumable
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+fork:
+  id: twice
+  at: 2
+  title: "Landing the rotation twice, and a rotation that goes nowhere"
+  step:
+    slot: 12
+    who: hal
+    say: "Landing it twice does nothing: the evidence names epoch 0 at sequence 0; the checkpoint is at epoch 1."
+    action:
+      rotate:
+        sn': 1
+        op: keep
+        payee: 2
+        refund': null
+    expect:
+      ok: false
+      reason: no-witnessed-rotation
+      verdict: consumable
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+  step:
+    slot: 12
+    who: hal
+    say: "Suppose the witnesses even receipted a rotation from epoch 1, sequence 1, to sequence 1 (the same event again). It is not later: a checkpoint never rolls back or stands still on a rotation."
+    evidence:
+      add: [{"rotationTo":[1,1,1]}]
+    action:
+      rotate:
+        sn': 1
+        op: keep
+        payee: 2
+        refund': null
+    expect:
+      ok: false
+      reason: sequence-not-later
+      verdict: consumable
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]

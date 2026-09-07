@@ -46,6 +46,10 @@
   .ghost:hover { border-color: var(--accent); color: var(--accent); }
   .ghost.danger:hover { border-color: var(--bad); color: var(--bad); }
   .tiny { font-size: .74rem; color: var(--muted); }
+  #dsl-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; }
+  #dsl-paste { flex: 1 1 100%; min-height: 3.2em; font-family: var(--mono); font-size: .78rem; }
+  #dsl-diag.no { color: var(--bad); }
+  #dsl-diag.ok { color: var(--ok); }
   .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
   main { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 1240px; margin: 0 auto; }

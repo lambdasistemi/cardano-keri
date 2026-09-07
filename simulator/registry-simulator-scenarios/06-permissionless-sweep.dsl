@@ -1,0 +1,133 @@
+grammar: 1
+family: registry
+
+id: 6
+slug: permissionless-sweep
+story: "Alice missed phase 2; Sam sweeps"
+narrative: "The request passed phase 2 unretracted. Under an owner-keyed cage it would now be stranded; here anyone rejects it: Sam spends the registry with a batch of one reject, Alice's bond goes back to her, Sam takes the tip. Before phase 3 the same reject is refused."
+params:
+  D: 1000
+  tip: 2
+  Mc: 4
+  Mr: 1
+  process: 10
+  retract: 10
+  W: 5
+  far: 1000000000
+plugin: 7
+actors:
+  1: Alice
+  2: Bob
+  3: "Hal (folder)"
+  4: Mallory
+  5: "Cora (convictor)"
+  6: "Sam (reaper)"
+env:
+  inception: [11]
+step:
+  now: 0
+  actor: anyone
+  as: Alice
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 5
+  actor: anyone
+  as: "Sam — rejecting in phase 1"
+  action:
+    fold:
+      folder: 6
+      gen: 0
+      plugin: 7
+      batch: [{"id":0,"do":"reject"}]
+  expect:
+    ok: false
+    reason: not-rejectable
+  exhibits: [R9, R10]
+step:
+  now: 25
+  actor: owner
+  as: "Alice — too late to retract"
+  action:
+    retract:
+      req: 0
+  expect:
+    ok: false
+    reason: not-in-phase-2
+  exhibits: [R9]
+step:
+  now: 25
+  actor: anyone
+  as: Sam
+  action:
+    fold:
+      folder: 6
+      gen: 0
+      plugin: 7
+      batch: [{"id":0,"do":"reject"}]
+  expect:
+    ok: true
+    flow:
+      refunds: [{"addr":1,"value":1000}]
+      tips:
+        addr: 6
+        value: 2
+  exhibits: [R9, R11, R6]
+fork:
+  id: alice-in-time
+  at: 2
+  title: "Alice retracts in phase 2 after all"
+  expectFinal:
+    gen: 0
+    plugin: 7
+    leaves: []
+    ckpts: []
+    requests: []
+    nextReq: 1
+    nextToken: 0
+  step:
+    now: 12
+    actor: owner
+    as: Alice
+    action:
+      retract:
+        req: 0
+    expect:
+      ok: true
+      flow:
+        refunds: [{"addr":1,"value":1002}]
+    exhibits: [R9, R11]
+  step:
+    now: 25
+    actor: anyone
+    as: "Sam — nothing left to sweep"
+    action:
+      fold:
+        folder: 6
+        gen: 0
+        plugin: 7
+        batch: [{"id":0,"do":"reject"}]
+    expect:
+      ok: false
+      reason: unknown-request
+expectFinal:
+  gen: 1
+  plugin: 7
+  leaves: []
+  ckpts: []
+  requests: []
+  nextReq: 1
+  nextToken: 0

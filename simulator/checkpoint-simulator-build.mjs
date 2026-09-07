@@ -34,6 +34,7 @@ const HTML = argPath('--html') || join(HERE, 'checkpoint-simulator.html');
 const CORE = argPath('--core') || join(HERE, 'checkpoint-simulator-core.mjs');
 const SCENARIOS = join(HERE, 'checkpoint-simulator-scenarios');
 const CORPUS = join(HERE, 'checkpoint-simulator-corpus.json');
+const DSL_SRC = join(HERE, 'scenario-dsl.mjs');
 const DOCS = argPath('--docs') || join(HERE, '..', 'docs', 'simulator', 'index.html');
 const CHECK = process.argv.includes('--check');
 const sha256 = b => createHash('sha256').update(b).digest('hex');
@@ -70,13 +71,20 @@ const scenarioBlock = `const SCENARIOS = ${JSON.stringify(scenarios)};\n`;
 const corpusText = readFileSync(CORPUS, 'utf8');
 const corpusSha = sha256(corpusText);
 const corpusBlock = `const LEAN_CORPUS = ${corpusText.trim()};\nconst LEAN_CORPUS_SHA256 = '${corpusSha}';\n`;
+const dslSrc = readFileSync(DSL_SRC, 'utf8');
+const dslMsrc = dslSrc.match(/\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//);
+if (!dslMsrc) problems.push('scenario-dsl.mjs has no @@DSL@@ block');
+const dslBlock = dslMsrc ? dslMsrc[1] : '';
 
 const scM = html.match(blockRe('SCENARIOS'));
 const coM = html.match(blockRe('CORPUS'));
+const dslM = html.match(blockRe('DSL'));
 if (!scM) problems.push('page has no @@SCENARIOS@@ block');
 if (!coM) problems.push('page has no @@CORPUS@@ block');
+if (!dslM) problems.push('page has no @@DSL@@ block');
 const scenariosStale = scM && scM[1] !== scenarioBlock;
 const corpusStale = coM && coM[1] !== corpusBlock;
+const dslStale = dslM && dslM[1] !== dslBlock;
 
 if (problems.length) {
   console.error('RED: ' + problems.join('; '));
@@ -88,6 +96,7 @@ for (const id of stale)
   out = out.replace(sliceRe(id), () => `/* @@CORE:${id}@@ */\n${coreSlices[id]}/* @@CORE:${id}:END@@ */`);
 if (scenariosStale) out = out.replace(blockRe('SCENARIOS'), () => `/* @@SCENARIOS@@ */\n${scenarioBlock}/* @@SCENARIOS:END@@ */`);
 if (corpusStale) out = out.replace(blockRe('CORPUS'), () => `/* @@CORPUS@@ */\n${corpusBlock}/* @@CORPUS:END@@ */`);
+if (dslStale) out = out.replace(blockRe('DSL'), () => `/* @@DSL@@ */\n${dslBlock}/* @@DSL:END@@ */`);
 
 const docsCurrent = existsSync(DOCS) ? readFileSync(DOCS, 'utf8') : null;
 const docsStale = docsCurrent !== out;
@@ -95,6 +104,7 @@ const changes = [
   ...stale.map(id => `slice ${id}`),
   ...(scenariosStale ? ['scenarios'] : []),
   ...(corpusStale ? ['corpus'] : []),
+  ...(dslStale ? ['scenario-dsl'] : []),
   ...(docsStale ? ['docs/simulator/index.html'] : []),
 ];
 
@@ -103,7 +113,7 @@ if (CHECK) {
     console.error(`RED: generated artifact stale or forked — ${changes.join(', ')}`);
     process.exit(1);
   }
-  console.log(`GREEN: ${coreIds.length} core slices, ${scenarios.length} scenarios and the Lean corpus ` +
+  console.log(`GREEN: ${coreIds.length} core slices, ${scenarios.length} scenarios, the shared DSL grammar and the Lean corpus ` +
     `(sha256 ${corpusSha.slice(0, 12)}…) identical between sources, the page and docs/simulator/index.html`);
   process.exit(0);
 }

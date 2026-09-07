@@ -1,0 +1,336 @@
+grammar: 1
+family: registry
+
+id: 13
+slug: convict-dormant
+story: "A dormant AID is convicted by a proof against its recorded key state"
+narrative: "Bob parked and was reaped: dormant(1). Cora posts a conviction request with a duplicity proof against key state 1; Hal folds it and the leaf is convicted. A conviction request for an active AID is refused: a live checkpoint is convicted through its own edge. On the branches the go-request and the conviction share one fold, with and without the proof."
+params:
+  D: 1000
+  tip: 2
+  Mc: 4
+  Mr: 1
+  process: 10
+  retract: 10
+  W: 5
+  far: 1000000000
+plugin: 7
+actors:
+  1: Alice
+  2: Bob
+  3: "Hal (folder)"
+  4: Mallory
+  5: "Cora (convictor)"
+  6: "Sam (reaper)"
+env:
+  inception: [11, 12]
+  rotationFrom:
+    - [12, 0]
+  duplicity:
+    - [12, 1]
+  quorum: [12]
+step:
+  now: 0
+  actor: anyone
+  as: Bob
+  action:
+    contribute:
+      aid: 12
+      owner: 2
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 0
+  actor: anyone
+  as: Alice
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 1
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 0
+      plugin: 7
+      batch: [{"id":0,"do":"process"},{"id":1,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: [{"aid":12,"value":1000},{"aid":11,"value":1000}]
+      refunds: []
+      tips:
+        addr: 3
+        value: 4
+      premium: null
+      intoRequest: 0
+step:
+  now: 2
+  actor: next-keys
+  as: Bob
+  action:
+    pause:
+      aid: 12
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 3
+  actor: anyone
+  as: "Bob — reaping his own checkpoint"
+  action:
+    reap:
+      reaper: 2
+      aid: 12
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: []
+      tips: null
+      premium:
+        addr: 2
+        value: 1
+      intoRequest: 3
+step:
+  now: 4
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 1
+      plugin: 7
+      batch: [{"id":2,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds: [{"addr":2,"value":1}]
+      tips:
+        addr: 3
+        value: 2
+      premium: null
+      intoRequest: 0
+step:
+  now: 5
+  actor: anyone
+  as: "Cora — convicting Alice, who is active"
+  action:
+    contribute:
+      aid: 11
+      owner: 5
+      submittedAt: 5
+      op: convict
+  expect:
+    ok: true
+    flow:
+      deposited: 3
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 5
+  actor: anyone
+  as: Cora
+  action:
+    contribute:
+      aid: 12
+      owner: 5
+      submittedAt: 5
+      op: convict
+  expect:
+    ok: true
+    flow:
+      deposited: 3
+step:
+  now: 6
+  actor: anyone
+  as: "Hal — Alice's"
+  action:
+    fold:
+      folder: 3
+      gen: 2
+      plugin: 7
+      batch: [{"id":3,"do":"process"}]
+  expect:
+    ok: false
+    reason: not-dormant
+step:
+  now: 6
+  actor: anyone
+  as: "Hal — Bob's"
+  action:
+    fold:
+      folder: 3
+      gen: 2
+      plugin: 7
+      batch: [{"id":4,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      refunds: [{"addr":5,"value":1}]
+      tips:
+        addr: 3
+        value: 2
+  exhibits: [R11, R12]
+step:
+  now: 26
+  actor: anyone
+  as: Sam
+  action:
+    fold:
+      folder: 6
+      gen: 3
+      plugin: 7
+      batch: [{"id":3,"do":"reject"}]
+  expect:
+    ok: true
+    flow:
+      refunds: [{"addr":5,"value":1}]
+      tips:
+        addr: 6
+        value: 2
+  exhibits: [R9]
+fork:
+  id: convict-in-the-same-fold
+  at: 5
+  title: "The go-request and the conviction in one fold"
+  expectFinal:
+    gen: 2
+    plugin: 7
+    leaves: [{"aid":11,"status":{"active":1}},{"aid":12,"status":"convicted"}]
+    ckpts: [{"aid":11,"ckpt":{"token":1,"k":0,"st":"live"}}]
+    requests: []
+    nextReq: 4
+    nextToken: 2
+  step:
+    now: 4
+    actor: anyone
+    as: Cora
+    action:
+      contribute:
+        aid: 12
+        owner: 5
+        submittedAt: 4
+        op: convict
+    expect:
+      ok: true
+      flow:
+        deposited: 3
+        locked: []
+        refunds: []
+        tips: null
+        premium: null
+        intoRequest: 0
+  step:
+    now: 4
+    actor: anyone
+    as: "Hal — dormant at position 0, convicted at position 1"
+    action:
+      fold:
+        folder: 3
+        gen: 1
+        plugin: 7
+        batch: [{"id":2,"do":"process"},{"id":3,"do":"process"}]
+    expect:
+      ok: true
+      flow:
+        refunds: [{"addr":2,"value":1},{"addr":5,"value":1}]
+        tips:
+          addr: 3
+          value: 4
+    exhibits: [R11, R12, R1]
+    note: "The conviction sees the leaf the go-request just wrote: the proof is checked against key state 1, not against the registry as it was."
+fork:
+  id: convict-without-proof
+  at: 5
+  title: "The same fold without the proof"
+  env:
+    inception: [11, 12]
+    rotationFrom:
+      - [12, 0]
+    quorum: [12]
+  expectFinal:
+    gen: 1
+    plugin: 7
+    leaves: [{"aid":11,"status":{"active":1}},{"aid":12,"status":{"active":0}}]
+    ckpts: [{"aid":11,"ckpt":{"token":1,"k":0,"st":"live"}}]
+    requests: [{"id":3,"aid":12,"owner":5,"submittedAt":4,"op":"convict"},{"id":2,"aid":12,"owner":2,"submittedAt":1000000000,"op":{"goDormant":1}}]
+    nextReq: 4
+    nextToken: 2
+  step:
+    now: 4
+    actor: anyone
+    as: Cora
+    action:
+      contribute:
+        aid: 12
+        owner: 5
+        submittedAt: 4
+        op: convict
+    expect:
+      ok: true
+      flow:
+        deposited: 3
+        locked: []
+        refunds: []
+        tips: null
+        premium: null
+        intoRequest: 0
+  step:
+    now: 4
+    actor: anyone
+    as: "Hal — position 1 has no proof against key state 1"
+    action:
+      fold:
+        folder: 3
+        gen: 1
+        plugin: 7
+        batch: [{"id":2,"do":"process"},{"id":3,"do":"process"}]
+    expect:
+      ok: false
+      reason: no-duplicity-proof
+    exhibits: [R14]
+expectFinal:
+  gen: 4
+  plugin: 7
+  leaves: [{"aid":11,"status":{"active":1}},{"aid":12,"status":"convicted"}]
+  ckpts: [{"aid":11,"ckpt":{"token":1,"k":0,"st":"live"}}]
+  requests: []
+  nextReq: 5
+  nextToken: 2

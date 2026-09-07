@@ -1,0 +1,71 @@
+grammar: 1
+family: registry
+
+id: 2
+slug: hal-folds
+story: "Hal folds it: a leaf, a checkpoint, a tip"
+narrative: "Hal spends the registry at generation 0. Alice's request is in phase 1, her inception verifies, her AID has no leaf: the leaf active(token 0) is inserted, the checkpoint token minted, her bond locked into the checkpoint, the tip paid to Hal."
+params:
+  D: 1000
+  tip: 2
+  Mc: 4
+  Mr: 1
+  process: 10
+  retract: 10
+  W: 5
+  far: 1000000000
+plugin: 7
+actors:
+  1: Alice
+  2: Bob
+  3: "Hal (folder)"
+  4: Mallory
+  5: "Cora (convictor)"
+  6: "Sam (reaper)"
+env:
+  inception: [11]
+step:
+  now: 0
+  actor: anyone
+  as: Alice
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 0
+      op: register
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+step:
+  now: 3
+  actor: anyone
+  as: Hal
+  action:
+    fold:
+      folder: 3
+      gen: 0
+      plugin: 7
+      batch: [{"id":0,"do":"process"}]
+  expect:
+    ok: true
+    flow:
+      locked: [{"aid":11,"value":1000}]
+      tips:
+        addr: 3
+        value: 2
+  exhibits: [R1, R2, R6, R11, R12]
+expectFinal:
+  gen: 1
+  plugin: 7
+  leaves: [{"aid":11,"status":{"active":0}}]
+  ckpts: [{"aid":11,"ckpt":{"token":0,"k":0,"st":"live"}}]
+  requests: []
+  nextReq: 1
+  nextToken: 1

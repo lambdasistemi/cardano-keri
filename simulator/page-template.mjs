@@ -44,7 +44,7 @@ function templateOf(page) {
     if (!re.test(out)) throw new Error(`slice ${id} has no closing marker`);
     out = out.replace(re, () => `/* @@CORE:${id}@@ */\n/* @@CORE:${id}:END@@ */`);
   }
-  for (const blk of ['SCENARIOS', 'CORPUS']) {
+  for (const blk of ['SCENARIOS', 'CORPUS', 'DSL']) {
     const re = new RegExp(`/\\* @@${blk}@@ \\*/\\n[\\s\\S]*?/\\* @@${blk}:END@@ \\*/`);
     if (!re.test(out)) throw new Error(`no @@${blk}@@ block`);
     out = out.replace(re, () => `/* @@${blk}@@ */\n/* @@${blk}:END@@ */`);

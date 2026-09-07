@@ -1992,12 +1992,7 @@ const scenarioFromDsl = ScenarioDslAPI.scenarioFromDsl;
 const branchToScenario = ScenarioDslAPI.branchToScenario;
 /* @@DSL:END@@ */
 assertGrammarVersion('1');
-
-/* ============================================================================
-   The page: a tree of plays over the core's immutable sessions, drawn as one
-   scene whose entities move when a step plays — forward or in reverse.
-   Not part of the machine; the gates run the slices above, not this.
-   ============================================================================ */
+/* @@BACKEND@@ */
 const DEFAULT_PARAMS = { D: 1000, tip: 2, Mc: 4, Mr: 1, process: 10, retract: 10, W: 5, far: 1000000000 };
 const DEFAULT_PLUGIN = 7;
 const NAMES = { 1: 'Alice', 2: 'Bob', 3: 'Hal', 4: 'Mallory', 5: 'Cora', 6: 'Sam' };
@@ -2011,6 +2006,341 @@ const CAST = {
   mallory: { name: 'Mallory', role: 'a stranger', addr: 4, blurb: 'She has a transaction builder and no scruples: stale folds, plugin swaps, other people’s AIDs, go-requests by hand, other people’s retracts.' },
 };
 const ACTOR_ORDER = ['alice', 'bob', 'hal', 'sam', 'cora', 'mallory'];
+const CHALLENGE_SPECS = {
+  register: { title: 'Register Alice’s AID as yours', actor: 'mallory', env: { inception: [11, 12] } },
+};
+const dataOf = a => { const t = actionTag(a); return t && a && typeof a === 'object' && a[t] && typeof a[t] === 'object' ? a[t] : {}; };
+const opWord = op => typeof op === 'string' ? (op === 'goConvicted' ? 'go → convicted' : op) : `go → dormant(${op.goDormant})`;
+function describeAction(a) {
+  const t = actionTag(a), b = dataOf(a);
+  switch (t) {
+    case 'contribute': return `request ${opWord(b.op)} for AID ${b.aid} (owner ${nameOf(b.owner)}, submitted at ${b.submittedAt})`;
+    case 'fold': return `fold at generation ${b.gen}, plugin ${b.plugin}: ` + (b.batch.length ? b.batch.map(x => `${x.do} #${x.id}`).join(', ') : 'empty batch');
+    case 'retract': return `retract request #${b.req}`;
+    case 'reap': return `reap the checkpoint of AID ${b.aid}`;
+    case 'pause': return `pause the checkpoint of AID ${b.aid} (withdrawing rotation)`;
+    case 'resume': return `resume the checkpoint of AID ${b.aid} (depositing rotation)`;
+    case 'convictCkpt': return `convict the checkpoint of AID ${b.aid}`;
+  }
+  return t;
+}
+function recordWithOk(rec) {
+  if (!rec) return rec;
+  const result = rec.result;
+  const out = { ...rec };
+  if (out.ok === undefined) out.ok = !!(result && result.ok);
+  if (out.reason === undefined && result && result.reason !== undefined) out.reason = result.reason;
+  if (out.field === undefined && result && result.field !== undefined) out.field = result.field;
+  return out;
+}
+function copyTree(tree) {
+  return {
+    family: tree.family, story: tree.story, challenge: tree.challenge, actor: tree.actor,
+    cursor: tree.cursor, punch: tree.punch, trunkLeaf: tree.trunkLeaf,
+    nodes: tree.nodes.map(n => ({ ...n, children: n.children.slice(), branch: n.branch ? { ...n.branch } : n.branch })),
+  };
+}
+function originTree(session, say, extra) {
+  const node0 = { id: 0, parent: null, children: [], last: null, session, record: null, who: '', say, kind: 'origin', branch: null };
+  return { family: 'registry', story: null, challenge: null, actor: 'alice', cursor: 0, punch: null, nodes: [node0], ...extra };
+}
+function treeAddChild(tree, parentId, entry) {
+  const nodes = tree.nodes.map(n => ({ ...n, children: n.children.slice(), branch: n.branch ? { ...n.branch } : n.branch }));
+  const parent = nodes[parentId];
+  if (!parent) throw new Error('unknown node ' + parentId);
+  const id = nodes.length;
+  const n = { id, parent: parentId, children: [], last: null, branch: null, ...entry };
+  if (n.record) n.record = recordWithOk(n.record);
+  nodes.push(n);
+  parent.children.push(id);
+  parent.last = id;
+  return { ...tree, nodes, cursor: id };
+}
+function sessionAt(tree, nodeId) {
+  const id = nodeId === undefined || nodeId === null ? tree.cursor : nodeId;
+  const n = tree.nodes[id];
+  if (!n || !n.session) throw new Error('unknown node ' + id);
+  return n.session;
+}
+function storyIdOf(sc) { return sc.id !== undefined && sc.id !== null ? sc.id : sc.story; }
+function findScenario(storyId) {
+  const want = String(storyId);
+  return SCENARIOS.find(s => String(storyIdOf(s)) === want) || null;
+}
+function storyActorId(st) {
+  const w = (st.as || '').split(/ — /)[0].trim().toLowerCase();
+  return ACTOR_ORDER.find(id => CAST[id].name.toLowerCase() === w) || null;
+}
+function buildStoryTree(sc) {
+  const s0 = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || NAMES, sc.env || {}, REGISTRY_LEAN_TRACES_V1);
+  let tree = originTree(s0, (sc.narrative || '') + ' Step through the story with › ; ⋔ chips switch branch.',
+    { story: storyIdOf(sc), actor: 'alice' });
+  const play = (pid, st, extra) => {
+    const sess = tree.nodes[pid].session;
+    const out = attempt(sess, st.action, st.now);
+    const exp = st.expect || { ok: true };
+    const rec = recordWithOk(out.record);
+    const mismatch = (exp.ok !== false) !== rec.ok || (exp.ok === false && exp.reason && exp.reason !== (rec.result && rec.result.reason));
+    tree = treeAddChild(tree, pid, {
+      session: out.session, record: rec, who: st.as || st.actor || 'anyone', actorId: storyActorId(st),
+      say: describeAction(st.action) + ' at slot ' + st.now + '.' + (st.note ? ' ' + st.note : ''),
+      kind: 'story', step: st, expect: exp, mismatch, ...extra,
+    });
+    return tree.cursor;
+  };
+  const trunkIds = [0];
+  let pid = 0;
+  for (const st of sc.steps) {
+    if (st.hidden) { trunkIds.push(pid); continue; }
+    pid = play(pid, st, {});
+    trunkIds.push(pid);
+  }
+  for (const fk of sc.forks || []) {
+    let fid = trunkIds[fk.at];
+    if (fk.env) {
+      const sess = tree.nodes[fid].session;
+      tree = treeAddChild(tree, fid, {
+        session: { ...sess, env: { ...emptyEnv(), ...fk.env } }, record: null, who: 'world',
+        say: 'Another world: ' + fk.title + '.', kind: 'evidence', evRow: null, world: true,
+        branch: { id: fk.id, title: fk.title },
+      });
+      fid = tree.cursor;
+    }
+    fk.steps.forEach((st, i) => { fid = play(fid, st, i === 0 && !fk.env ? { branch: { id: fk.id, title: fk.title } } : {}); });
+  }
+  for (let i = 0; i + 1 < trunkIds.length; i++) if (trunkIds[i] !== trunkIds[i + 1]) tree.nodes[trunkIds[i]].last = trunkIds[i + 1];
+  const end = tree.nodes[trunkIds[trunkIds.length - 1]];
+  end.trunkEnd = true;
+  end.last = null;
+  let punch = Number.isInteger(sc.punchline) && trunkIds[sc.punchline + 1] !== undefined ? trunkIds[sc.punchline + 1] : null;
+  if (punch === null) for (const id of trunkIds) { const n = tree.nodes[id]; if (n.record && n.record.ok) punch = id; }
+  tree.cursor = 0;
+  tree.punch = punch;
+  tree.trunkLeaf = trunkIds[trunkIds.length - 1];
+  tree.storySc = sc;
+  return tree;
+}
+function playLoadedScenario(sc) { return buildStoryTree(sc); }
+function playStory(storyId) {
+  const sc = findScenario(storyId);
+  if (!sc) throw new Error('unknown story ' + storyId);
+  return buildStoryTree(sc);
+}
+function playChallenge(challengeId) {
+  const c = CHALLENGE_SPECS[challengeId];
+  if (!c) throw new Error('unknown challenge ' + challengeId);
+  const sess = newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, NAMES, c.env, REGISTRY_LEAN_TRACES_V1);
+  return originTree(sess, 'An empty registry. ★ ' + c.title + ': every move below is yours to try.',
+    { challenge: challengeId, actor: c.actor });
+}
+function pendingOf(sess, owner) { return sess.state.requests.filter(r => owner === undefined || r.owner === owner).slice().sort((a, b) => a.id - b.id); }
+function ckptOf(sess, aid) { return lookupCkpt(sess.state.ckpts, aid); }
+function leafKey(sess, aid) { const l = lookupLeaf(sess.state.leaves, aid); return l === null ? 'none' : statusTag(l); }
+function kOf(sess, aid) { const c = ckptOf(sess, aid); if (c) return c.k; const l = lookupLeaf(sess.state.leaves, aid); return l && statusTag(l) === 'dormant' ? l.dormant : 0; }
+function offersFor(actorId, tree, nodeId) {
+  const sess = sessionAt(tree, nodeId);
+  const st = sess.state, now = sess.now, gen = st.gen, pl = st.plugin;
+  const keri = [], chain = [];
+  const ev = (label, row, hint) => keri.push({ label, row, hint });
+  const act = (kind, label, action) => chain.push({ kind, label, action });
+  const contribute = (aid, owner, op) => ({ contribute: { aid, owner, submittedAt: now, op } });
+  const fold = (folder, g, plugin, batch) => ({ fold: { folder, gen: g, plugin, batch } });
+  const all = pendingOf(sess);
+  const processable = all.filter(r => inPhase1(sess.params, r, now) || !userPostable(r.op));
+  const rejectable_ = all.filter(r => rejectable(sess.params, r, now) && userPostable(r.op));
+  const owner = (c) => {
+    const aid = c.aid, a = c.addr, k = kOf(sess, aid), lk = leafKey(sess, aid), ck = ckptOf(sess, aid);
+    ev(`my inception verifies (AID ${aid})`, { inception: [aid] }, 'the plugin verifies the inception over the bytes');
+    ev(`kli rotate from key state ${k}: witnesses receipt`, { rotationFrom: [aid, k] }, 'a witnessed rotation from the key state the checkpoint (or the dormant leaf) records');
+    ev(`my keys sign at threshold (quorum, AID ${aid})`, { quorum: [aid] }, 'the owner reaps her own parked checkpoint early');
+    if (lk === 'none') act('contribute', `post my registration (bond ${sess.params.D} + tip ${sess.params.tip})`, contribute(aid, a, 'register'));
+    if (lk === 'dormant') act('contribute', `post my revival (bond ${sess.params.D} + tip)`, contribute(aid, a, 'revive'));
+    for (const r of pendingOf(sess, a)) act('retract', `retract my request #${r.id} (${opWord(r.op)})`, { retract: { req: r.id } });
+    const mine = all.filter(r => r.owner === a && (inPhase1(sess.params, r, now)));
+    if (mine.length) act('fold', 'fold my own request in (I need no folder)', fold(a, gen, pl, mine.map(r => ({ id: r.id, do: 'process' }))));
+    if (ck && ckTag(ck.st) === 'live') act('pause', 'pause: my next keys withdraw the bonds', { pause: { aid } });
+    if (ck && ckTag(ck.st) === 'parked') act('resume', 'resume: a depositing rotation makes it live again', { resume: { aid } });
+    if (ck) act('reap', 'reap my own parked checkpoint (at any time, with my keys)', { reap: { reaper: a, aid } });
+  };
+  switch (actorId) {
+    case 'alice': owner(CAST.alice); break;
+    case 'bob': owner(CAST.bob); break;
+    case 'hal':
+      if (processable.length) act('fold', `fold the inbox at generation ${gen}: process ${processable.length} request${processable.length > 1 ? 's' : ''}`, fold(3, gen, pl, processable.map(r => ({ id: r.id, do: 'process' }))));
+      if (rejectable_.length) act('fold', `sweep: reject ${rejectable_.length} expired request${rejectable_.length > 1 ? 's' : ''}`, fold(3, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
+      for (const r of all) act('fold', `fold #${r.id} alone (${opWord(r.op)}, AID ${r.aid})`, fold(3, gen, pl, [{ id: r.id, do: 'process' }]));
+      break;
+    case 'sam':
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { reap: { reaper: 6, aid: c.aid } });
+      if (rejectable_.length) act('fold', `sweep the inbox: reject ${rejectable_.length} for the tip`, fold(6, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
+      for (const r of all) act('fold', `reject #${r.id} alone`, fold(6, gen, pl, [{ id: r.id, do: 'reject' }]));
+      break;
+    case 'cora':
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) { ev(`obtain a duplicity proof against AID ${c.aid} at key state ${c.ckpt.k}`, { duplicity: [c.aid, c.ckpt.k] }, 'two rotations at that key state, both receipted'); act('convictCkpt', `convict the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { convictCkpt: { aid: c.aid } }); }
+      for (const l of st.leaves.filter(l => statusTag(l.status) === 'dormant')) { ev(`obtain a duplicity proof against AID ${l.aid} at key state ${l.status.dormant}`, { duplicity: [l.aid, l.status.dormant] }, 'against the key state the dormant leaf records'); act('contribute', `post a conviction request for dormant AID ${l.aid}`, contribute(l.aid, 5, 'convict')); }
+      break;
+    case 'mallory':
+      act('contribute', 'register Alice’s AID myself (owner Mallory)', contribute(11, 4, 'register'));
+      act('contribute', 'post a go-request by hand', contribute(11, 4, 'goConvicted'));
+      if (all.length) act('fold', `fold at generation ${gen > 0 ? gen - 1 : gen + 1} (stale)`, fold(4, gen > 0 ? gen - 1 : gen + 1, pl, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
+      if (all.length) act('fold', 'fold with plugin 8, a script I control', fold(4, gen, 8, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
+      act('fold', 'an empty fold, to churn the generation', fold(4, gen, pl, []));
+      for (const r of all.filter(r => r.owner !== 4)) act('retract', `retract ${nameOf(r.owner)}’s request #${r.id}`, { retract: { req: r.id } });
+      for (const r of all.filter(r => !userPostable(r.op))) act('fold', `reject the go-request #${r.id} inside a batch`, fold(4, gen, pl, [{ id: r.id, do: 'reject' }]));
+      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} as a stranger`, { reap: { reaper: 4, aid: c.aid } });
+      break;
+  }
+  return { keri, chain };
+}
+function refusalWhy(r) {
+  return `${r.reason}${r.field ? ' (' + r.field + ')' : ''}${r.at !== undefined ? ' at batch entry ' + r.at : ''}`;
+}
+function dryRun(tree, action, nodeId) {
+  const sess = sessionAt(tree, nodeId);
+  const r = step(sess.params, sess.env, action, sess.now, sess.state);
+  return r.ok ? { ok: true, res: r } : { ok: false, res: r, why: 'refused now — ' + refusalWhy(r) };
+}
+function opResult(tree, ok, extra) {
+  return { tree, ok, cursor: tree.cursor, ...extra };
+}
+function submit(tree, actorId, action, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  t.cursor = at;
+  const sess = t.nodes[at].session;
+  const out = attempt(sess, action, sess.now);
+  const rec = recordWithOk(out.record);
+  const who = (CAST[actorId] && CAST[actorId].name) || actorId;
+  const next = treeAddChild(t, at, {
+    session: out.session, record: rec, who, actorId,
+    say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free',
+  });
+  next.actor = actorId || t.actor;
+  return opResult(next, !!rec.ok, { record: rec, node: next.nodes[next.cursor] });
+}
+function moveSlot(tree, targetSlot, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  const mv = setSlot(sess, targetSlot);
+  if (!mv.ok) return opResult(t, false, { reason: mv.reason });
+  if (targetSlot === sess.now) return opResult(t, true);
+  const next = treeAddChild(t, at, { session: mv.session, record: null, who: 'Time', say: `Slot ${targetSlot}.`, kind: 'time' });
+  return opResult(next, true);
+}
+function treeAddEvidence(tree, evidenceRow, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  let nextSess;
+  try { nextSess = addEvidence(sess, evidenceRow); }
+  catch (e) { return opResult(t, false, { reason: 'invalid-evidence' }); }
+  const next = treeAddChild(t, at, {
+    session: nextSess, record: null, who: 'You',
+    say: (nextSess === sess ? 'Evidence added: ' : 'Evidence added: ') + JSON.stringify(evidenceRow) + '.',
+    kind: 'evidence', evRow: evidenceRow,
+  });
+  return opResult(next, true);
+}
+function treeRemoveEvidence(tree, evidenceRow, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  let nextSess;
+  try { nextSess = removeEvidence(sess, evidenceRow); }
+  catch (e) { return opResult(t, false, { reason: 'invalid-evidence' }); }
+  const next = treeAddChild(t, at, {
+    session: nextSess, record: null, who: 'You',
+    say: 'Evidence removed: ' + JSON.stringify(evidenceRow) + '.', kind: 'evidence', evRow: evidenceRow, removed: true,
+  });
+  return opResult(next, true);
+}
+function selectPath(tree, forkId, toEnd) {
+  const t = copyTree(tree);
+  if (forkId !== undefined && forkId !== null && forkId !== '') {
+    const start = t.nodes.find(n => n.branch && String(n.branch.id) === String(forkId));
+    if (!start) throw new Error('unknown fork ' + forkId);
+    let id = start.id;
+    if (toEnd) {
+      while (t.nodes[id].children.length) {
+        const n = t.nodes[id];
+        const nx = n.last !== null ? n.last : n.children[0];
+        n.last = nx;
+        id = nx;
+      }
+    }
+    for (let n = id; t.nodes[n].parent !== null; n = t.nodes[n].parent) t.nodes[t.nodes[n].parent].last = n;
+    t.cursor = id;
+    return t;
+  }
+  let id = 0;
+  if (toEnd) {
+    if (t.trunkLeaf !== undefined && t.trunkLeaf !== null) id = t.trunkLeaf;
+    else {
+      for (;;) {
+        const n = t.nodes[id];
+        if (!n.children.length || n.trunkEnd) break;
+        const nx = n.last !== null ? n.last : n.children[0];
+        if (nx === null || nx === undefined) break;
+        id = nx;
+      }
+    }
+  }
+  t.cursor = id;
+  return t;
+}
+function selectedFork(tree) {
+  for (let id = tree.cursor; id !== null && tree.nodes[id]; id = tree.nodes[id].parent) {
+    if (tree.nodes[id].branch && tree.nodes[id].branch.id) return tree.nodes[id].branch.id;
+  }
+  return null;
+}
+function branchAt(tree, id) {
+  for (let n = id; n !== null && tree.nodes[n]; n = tree.nodes[n].parent) {
+    if (tree.nodes[n].branch) return tree.nodes[n].branch;
+  }
+  return null;
+}
+function compactLamps(rec) {
+  if (!rec || !rec.theorems) return null;
+  const out = {};
+  for (const id of Object.keys(rec.theorems)) {
+    const x = rec.theorems[id];
+    if (x && (x.v === 'holds' || x.v === 'fails')) out[id] = { exhibited: true, holds: x.v === 'holds' };
+  }
+  return Object.keys(out).length ? out : null;
+}
+function projectJson(tree) {
+  const t = copyTree(tree);
+  const ids = [];
+  for (let n = t.cursor; n !== null && t.nodes[n]; n = t.nodes[n].parent) ids.unshift(n);
+  const path = ids.map(id => {
+    const n = t.nodes[id], rec = n.record, sess = n.session;
+    const result = rec && rec.result;
+    return {
+      id: n.id, parent: n.parent, kind: n.kind, branch: branchAt(t, n.id), slot: sess ? sess.now : null,
+      who: n.who, say: n.say, action: rec ? rec.action : undefined, ok: rec ? rec.ok : null,
+      reason: result && result.reason ? result.reason : undefined,
+      flow: result && result.flow, state: sess ? sess.state : null, verdict: null,
+      lamps: compactLamps(rec),
+    };
+  });
+  return {
+    family: t.family, story: t.story, challenge: t.challenge, fork: selectedFork(t),
+    cursor: t.cursor, path,
+  };
+}
+/* @@BACKEND:END@@ */
+
+/* ============================================================================
+   The page: a tree of plays over the core's immutable sessions, drawn as one
+   scene whose entities move when a step plays — forward or in reverse.
+   Not part of the machine; the gates run the slices above, not this.
+   ============================================================================ */
 const INTEREST = {
   alice: 'holds the keys of AID 11; wants her AID registered, her checkpoint carrying her token, her bond back when she leaves',
   bob: 'holds the keys of AID 12; wants the same, and to be left alone',
@@ -2051,7 +2381,6 @@ const clear = el => { el.replaceChildren(); return el; };
 const fmt = n => String(n);
 const raf = cb => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : setTimeout(() => cb(Date.now()), 16));
 const nowMs = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
-const dataOf = a => { const t = actionTag(a); return t && a && typeof a === 'object' && a[t] && typeof a[t] === 'object' ? a[t] : {}; };
 const parseNat = str => { const t = String(str).trim(); if (!/^\d{1,16}$/.test(t)) return null; const n = Number(t); return isNat(n) ? n : null; };
 
 /* ---- the tree of plays --------------------------------------------------------
@@ -2120,22 +2449,20 @@ function goTo(id, opts) {
   if (!up.length && down.length === 1) { const line = hitLine(node(id)); if (line && /\+/.test(line)) toast(line, 2600); }
 }
 function pushNode(entry) { const id = addChild(app.cursor, entry); goTo(id); }
+function currentTree() {
+  return { family: 'registry', story: app.story ? app.story.id : null,
+    challenge: app.challenge ? Object.keys(CHALLENGES).find(k => CHALLENGES[k] === app.challenge) || null : null,
+    nodes: app.nodes, cursor: app.cursor, actor: app.actor, punch: app.punch };
+}
+function adoptTree(tree, animate) {
+  const dest = tree.cursor, from = app.nodes.length ? app.cursor : 0;
+  app.nodes = tree.nodes; app.actor = tree.actor; app.punch = tree.punch; app.pending = null;
+  if (tree.storySc) app.story = tree.storySc;
+  if (animate && dest !== from && app.nodes[from]) { app.cursor = from; goTo(dest); }
+  else { app.cursor = dest; stopPlay(); }
+}
 
 /* ---- words ----------------------------------------------------------------------- */
-function describeAction(a) {
-  const t = actionTag(a), b = dataOf(a);
-  switch (t) {
-    case 'contribute': return `request ${opWord(b.op)} for AID ${b.aid} (owner ${nameOf(b.owner)}, submitted at ${b.submittedAt})`;
-    case 'fold': return `fold at generation ${b.gen}, plugin ${b.plugin}: ` + (b.batch.length ? b.batch.map(x => `${x.do} #${x.id}`).join(', ') : 'empty batch');
-    case 'retract': return `retract request #${b.req}`;
-    case 'reap': return `reap the checkpoint of AID ${b.aid}`;
-    case 'pause': return `pause the checkpoint of AID ${b.aid} (withdrawing rotation)`;
-    case 'resume': return `resume the checkpoint of AID ${b.aid} (depositing rotation)`;
-    case 'convictCkpt': return `convict the checkpoint of AID ${b.aid}`;
-  }
-  return t;
-}
-const opWord = op => typeof op === 'string' ? (op === 'goConvicted' ? 'go → convicted' : op) : `go → dormant(${op.goDormant})`;
 function describeFlow(f) {
   const parts = [];
   if (f.deposited) parts.push(`${f.deposited} into the request`);
@@ -2181,69 +2508,7 @@ function needsOf(action) {
   return { cls: 'public', text: 'no signature' };
 }
 
-/* ---- free play: what each stakeholder can do now, dry-run through the core ------ */
-function pendingOf(sess, owner) { return sess.state.requests.filter(r => owner === undefined || r.owner === owner).slice().sort((a, b) => a.id - b.id); }
-function ckptOf(sess, aid) { return lookupCkpt(sess.state.ckpts, aid); }
-function leafKey(sess, aid) { const l = lookupLeaf(sess.state.leaves, aid); return l === null ? 'none' : statusTag(l); }
-function kOf(sess, aid) { const c = ckptOf(sess, aid); if (c) return c.k; const l = lookupLeaf(sess.state.leaves, aid); return l && statusTag(l) === 'dormant' ? l.dormant : 0; }
-function offersFor(actor, sess) {
-  const st = sess.state, now = sess.now, gen = st.gen, pl = st.plugin;
-  const keri = [], chain = [];
-  const ev = (label, row, hint) => keri.push({ label, row, hint });
-  const act = (kind, label, action) => chain.push({ kind, label, action });
-  const contribute = (aid, owner, op) => ({ contribute: { aid, owner, submittedAt: now, op } });
-  const fold = (folder, g, plugin, batch) => ({ fold: { folder, gen: g, plugin, batch } });
-  const all = pendingOf(sess);
-  const processable = all.filter(r => inPhase1(sess.params, r, now) || !userPostable(r.op));
-  const rejectable_ = all.filter(r => rejectable(sess.params, r, now) && userPostable(r.op));
-  const owner = (c) => {
-    const aid = c.aid, a = c.addr, k = kOf(sess, aid), lk = leafKey(sess, aid), ck = ckptOf(sess, aid);
-    ev(`my inception verifies (AID ${aid})`, { inception: [aid] }, 'the plugin verifies the inception over the bytes');
-    ev(`kli rotate from key state ${k}: witnesses receipt`, { rotationFrom: [aid, k] }, 'a witnessed rotation from the key state the checkpoint (or the dormant leaf) records');
-    ev(`my keys sign at threshold (quorum, AID ${aid})`, { quorum: [aid] }, 'the owner reaps her own parked checkpoint early');
-    if (lk === 'none') act('contribute', `post my registration (bond ${sess.params.D} + tip ${sess.params.tip})`, contribute(aid, a, 'register'));
-    if (lk === 'dormant') act('contribute', `post my revival (bond ${sess.params.D} + tip)`, contribute(aid, a, 'revive'));
-    for (const r of pendingOf(sess, a)) act('retract', `retract my request #${r.id} (${opWord(r.op)})`, { retract: { req: r.id } });
-    const mine = all.filter(r => r.owner === a && (inPhase1(sess.params, r, now)));
-    if (mine.length) act('fold', 'fold my own request in (I need no folder)', fold(a, gen, pl, mine.map(r => ({ id: r.id, do: 'process' }))));
-    if (ck && ckTag(ck.st) === 'live') act('pause', 'pause: my next keys withdraw the bonds', { pause: { aid } });
-    if (ck && ckTag(ck.st) === 'parked') act('resume', 'resume: a depositing rotation makes it live again', { resume: { aid } });
-    if (ck) act('reap', 'reap my own parked checkpoint (at any time, with my keys)', { reap: { reaper: a, aid } });
-  };
-  switch (actor) {
-    case 'alice': owner(CAST.alice); break;
-    case 'bob': owner(CAST.bob); break;
-    case 'hal':
-      if (processable.length) act('fold', `fold the inbox at generation ${gen}: process ${processable.length} request${processable.length > 1 ? 's' : ''}`, fold(3, gen, pl, processable.map(r => ({ id: r.id, do: 'process' }))));
-      if (rejectable_.length) act('fold', `sweep: reject ${rejectable_.length} expired request${rejectable_.length > 1 ? 's' : ''}`, fold(3, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
-      for (const r of all) act('fold', `fold #${r.id} alone (${opWord(r.op)}, AID ${r.aid})`, fold(3, gen, pl, [{ id: r.id, do: 'process' }]));
-      break;
-    case 'sam':
-      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { reap: { reaper: 6, aid: c.aid } });
-      if (rejectable_.length) act('fold', `sweep the inbox: reject ${rejectable_.length} for the tip`, fold(6, gen, pl, rejectable_.map(r => ({ id: r.id, do: 'reject' }))));
-      for (const r of all) act('fold', `reject #${r.id} alone`, fold(6, gen, pl, [{ id: r.id, do: 'reject' }]));
-      break;
-    case 'cora':
-      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) { ev(`obtain a duplicity proof against AID ${c.aid} at key state ${c.ckpt.k}`, { duplicity: [c.aid, c.ckpt.k] }, 'two rotations at that key state, both receipted'); act('convictCkpt', `convict the checkpoint of AID ${c.aid} (${ckTag(c.ckpt.st)})`, { convictCkpt: { aid: c.aid } }); }
-      for (const l of st.leaves.filter(l => statusTag(l.status) === 'dormant')) { ev(`obtain a duplicity proof against AID ${l.aid} at key state ${l.status.dormant}`, { duplicity: [l.aid, l.status.dormant] }, 'against the key state the dormant leaf records'); act('contribute', `post a conviction request for dormant AID ${l.aid}`, contribute(l.aid, 5, 'convict')); }
-      break;
-    case 'mallory':
-      act('contribute', 'register Alice’s AID myself (owner Mallory)', contribute(11, 4, 'register'));
-      act('contribute', 'post a go-request by hand', contribute(11, 4, 'goConvicted'));
-      if (all.length) act('fold', `fold at generation ${gen > 0 ? gen - 1 : gen + 1} (stale)`, fold(4, gen > 0 ? gen - 1 : gen + 1, pl, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
-      if (all.length) act('fold', 'fold with plugin 8, a script I control', fold(4, gen, 8, all.slice(0, 1).map(r => ({ id: r.id, do: 'process' }))));
-      act('fold', 'an empty fold, to churn the generation', fold(4, gen, pl, []));
-      for (const r of all.filter(r => r.owner !== 4)) act('retract', `retract ${nameOf(r.owner)}’s request #${r.id}`, { retract: { req: r.id } });
-      for (const r of all.filter(r => !userPostable(r.op))) act('fold', `reject the go-request #${r.id} inside a batch`, fold(4, gen, pl, [{ id: r.id, do: 'reject' }]));
-      for (const c of st.ckpts.slice().sort((x, y) => x.aid - y.aid)) act('reap', `reap the checkpoint of AID ${c.aid} as a stranger`, { reap: { reaper: 4, aid: c.aid } });
-      break;
-  }
-  return { keri, chain };
-}
-function dryRun(sess, action) {
-  const r = step(sess.params, sess.env, action, sess.now, sess.state);
-  return r.ok ? { ok: true, res: r } : { ok: false, res: r, why: 'refused now — ' + whyText(r) };
-}
+/* ---- free play: offers and dry-run come from the generated backend slice ---- */
 const actorOfNode = n => n.actorId || null;
 
 /* ---- the scene ----------------------------------------------------------------
@@ -2674,7 +2939,7 @@ function renderNext() {
   let folded = 0;
   for (const id of ACTOR_ORDER) {
     const c = CAST[id];
-    const off = offersFor(id, sess);
+    const off = offersFor(id, currentTree());
     const isSpot = spotActor === id;
     const fold = !!spotActor && !isSpot && !app.unfold;
     if (fold) folded++;
@@ -2683,7 +2948,7 @@ function renderNext() {
     cardEl.append(h('div', { class: 'interest' }, INTEREST[id]));
     const acts = h('div', { class: 'acts' });
     for (const o of off.chain) {
-      const d = dryRun(sess, o.action);
+      const d = dryRun(currentTree(), o.action);
       const needs = needsOf(o.action);
       const glow = isSpot && d.ok && o.kind === spotKind && (spotOp === null || (o.action.contribute && opWord(o.action.contribute.op) === spotOp));
       const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : '') + (glow ? ' glow' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
@@ -2698,7 +2963,7 @@ function renderNext() {
       if (!invLabelled) { acts.append(h('span', { class: 'inv-lbl' }, 'inventory · off-chain, not a transaction: what ' + c.name + ' can bring')); invLabelled = true; }
       const glowEv = isSpot && spotEv !== null && canonicalJson(k.row) === spotEv;
       acts.append(h('button', { type: 'button', class: 'ev-quick' + (glowEv ? ' glow' : ''), dataset: { actor: id, ev: kind }, title: k.hint,
-        onclick: () => { app.actor = id; pushNode({ session: addEvidence(sess, k.row), record: null, who: c.name, actorId: id, say: k.label + '.', kind: 'evidence', evRow: k.row }); } }, '+ ' + k.label));
+        onclick: () => { app.actor = id; adoptTree(treeAddEvidence(currentTree(), k.row).tree, true); render(); } }, '+ ' + k.label));
     }
     if (!acts.children.length) acts.append(h('span', { class: 'none' }, 'nothing the machine accepts from here'));
     cardEl.append(acts);
@@ -2742,26 +3007,28 @@ function renderActForm() {
     }
     fields.append(box);
   }
-  const dr = dryRun(sess, app.pending.action);
+  const dr = dryRun(currentTree(), app.pending.action);
   const why = $('act-why'); why.className = dr.ok ? 'ok' : 'no';
   why.textContent = dr.ok ? ('Accepted now: ' + describeFlow(dr.res.flow) + '.') : dr.why;
   $('act-submit').disabled = !dr.ok;
 }
 function submitPending() {
   if (!app.pending) return;
-  const sess = cur(), action = app.pending.action, id = app.actor;
-  const out = attempt(sess, action, sess.now);
+  const action = app.pending.action;
   app.pending = null;
-  pushNode({ session: out.session, record: out.record, who: CAST[id].name, actorId: id, say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free' });
+  adoptTree(submit(currentTree(), app.actor, action).tree, true);
+  render();
 }
-function moveSlot(target) {
+const _moveSlot = moveSlot;
+moveSlot = function(target) {
   const sess = cur();
-  const mv = setSlot(sess, target);
+  const mv = _moveSlot(currentTree(), target);
   if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-decreased' ? `slot ${target} is before ${sess.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(sess.now); return; }
   $('slot-msg').textContent = '';
-  if (target === sess.now) return;
-  pushNode({ session: mv.session, record: null, who: 'Time', say: `Slot ${target}.`, kind: 'time' });
-}
+  if (mv.tree.nodes.length === app.nodes.length) return;
+  adoptTree(mv.tree, true);
+  render();
+};
 
 /* ---- the evidence drawer: a table by AID --------------------------------- */
 function renderEvidence() {
@@ -2771,7 +3038,7 @@ function renderEvidence() {
   const tbl = h('table', { class: 'evtable' }, h('thead', {}, h('tr', {}, h('th', {}, 'AID'), h('th', {}, 'inception'), h('th', {}, 'rotation from k'), h('th', {}, 'duplicity at k'), h('th', {}, 'quorum'))));
   const tb = h('tbody', {});
   const cb = (kind, args, label) => h('label', { style: 'display:inline-flex;gap:3px;align-items:center;margin-right:6px' }, h('input', { type: 'checkbox', dataset: { ev: kind, aid: args[0], k: args[1] === undefined ? '' : args[1] }, checked: evHas(env, kind, args),
-    onchange: e => { const row = { [kind]: args }; const on = e.target.checked; pushNode({ session: on ? addEvidence(sess, row) : removeEvidence(sess, row), record: null, who: 'You', say: (on ? 'Evidence added: ' : 'Evidence removed: ') + kind + ' ' + JSON.stringify(args) + '.', kind: 'evidence', evRow: row, removed: !on }); } }), label);
+    onchange: e => { const row = { [kind]: args }; const on = e.target.checked; adoptTree((on ? treeAddEvidence : treeRemoveEvidence)(currentTree(), row).tree, true); render(); } }), label);
   for (const aid of aids) {
     tb.append(h('tr', {}, h('td', { class: 'mono' }, aid), h('td', {}, cb('inception', [aid], 'verifies')),
       h('td', {}, KS.map(k => cb('rotationFrom', [aid, k], 'k' + k))), h('td', {}, KS.map(k => cb('duplicity', [aid, k], 'k' + k))), h('td', {}, cb('quorum', [aid], 'signs'))));
@@ -2915,13 +3182,14 @@ const CHALLENGES = {
     env: { inception: [11, 12] },
     won: () => pathTo(app.cursor).map(node).some(n => n.record && n.record.result.ok && n.record.action.fold && batchView(n.record.params, n.record.env, n.record.now, n.record.before, n.record.action.fold.batch).some(v => v.r && v.fa === 'process' && v.r.owner === CAST.mallory.addr && v.r.aid === 11 && opTag(v.r.op) === 'register')),
     why: 'Registration is permissionless: anyone may post a request for a public inception and anyone may fold it (R1, R6). The registry records no owner — only that AID 11 has a leaf and which token its checkpoint carries. Your bond (D) is locked into a checkpoint only Alice’s keys can move; the refund address of the request is yours, but a registration is never refunded once folded. You paid D + tip to give Alice her leaf, and the absence proof (R1d) now refuses everyone, you included, a second one.' } };
-function playChallenge(id) {
+const _playChallenge = playChallenge;
+playChallenge = function(id) {
   const c = CHALLENGES[id]; if (!c) { startFresh(); render(); return; }
-  newTree(newSession(DEFAULT_PARAMS, DEFAULT_PLUGIN, NAMES, c.env, REGISTRY_LEAN_TRACES_V1), 'An empty registry. ★ ' + c.title + ': every move below is yours to try.');
-  app.story = null; app.punch = null; app.challenge = c; app.pastPunch = false; app.actor = c.actor; app.wonShown = false;
+  adoptTree(_playChallenge(id));
+  app.story = null; app.challenge = c; app.pastPunch = false; app.actor = c.actor; app.wonShown = false;
   if ($('pots')) $('pots').open = false;
   render();
-}
+};
 function renderChallenge() {
   const box = $('challenge'); if (!box) return;
   const c = app.challenge; box.hidden = !c; if (!c) return;
@@ -2932,40 +3200,22 @@ function renderChallenge() {
   box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'what it bought you' : 'give up: what registration can and cannot do'), h('div', {}, c.why)));
   if (won && !app.wonShown) { app.wonShown = true; toast('★ AID 11 is registered by your request — read what it bought you.', 5000); }
 }
-function actorIdOf(st) { const w = (st.as || '').split(/ — /)[0].trim().toLowerCase(); return ACTOR_ORDER.find(id => CAST[id].name.toLowerCase() === w) || null; }
-function playStory(n) {
-  const sc = SCENARIOS.find(x => String(x.id) === String(n));
-  if (!sc) { startFresh(); render(); return; }
-  playLoadedScenario(sc);
-}
-function playLoadedScenario(sc) {
-  app.story = sc;
-  const s0 = newSession(sc.params, isNat(sc.plugin) ? sc.plugin : DEFAULT_PLUGIN, sc.actors || NAMES, sc.env || {}, REGISTRY_LEAN_TRACES_V1);
-  newTree(s0, sc.narrative + ' Step through the story with › ; ⋔ chips switch branch.');
-  const play = (pid, st, extra) => {
-    const sess = node(pid).session;
-    const out = attempt(sess, st.action, st.now);
-    const exp = st.expect || { ok: true };
-    const mismatch = (exp.ok !== false) !== out.record.result.ok || (exp.ok === false && exp.reason && exp.reason !== out.record.result.reason);
-    return addChild(pid, { session: out.session, record: out.record, who: st.as || st.actor || 'anyone', actorId: actorIdOf(st), say: describeAction(st.action) + ' at slot ' + st.now + '.' + (st.note ? ' ' + st.note : ''), kind: 'story', step: st, expect: exp, mismatch, ...extra });
-  };
-  const trunkIds = [0];
-  let pid = 0;
-  for (const st of sc.steps) { if (st.hidden) { trunkIds.push(pid); continue; } pid = play(pid, st, {}); trunkIds.push(pid); }
-  for (const fk of sc.forks || []) {
-    let fid = trunkIds[fk.at];
-    if (fk.env) { const sess = node(fid).session; fid = addChild(fid, { session: { ...sess, env: { ...emptyEnv(), ...fk.env } }, record: null, who: 'world', say: 'Another world: ' + fk.title + '.', kind: 'evidence', evRow: null, world: true, branch: { id: fk.id, title: fk.title } }); }
-    fk.steps.forEach((st, i) => { fid = play(fid, st, i === 0 && !fk.env ? { branch: { id: fk.id, title: fk.title } } : {}); });
-  }
-  for (let i = 0; i + 1 < trunkIds.length; i++) if (trunkIds[i] !== trunkIds[i + 1]) node(trunkIds[i]).last = trunkIds[i + 1];
-  // the punchline: the story's own choice, else the last accepted move of the trunk
-  app.punch = Number.isInteger(sc.punchline) && trunkIds[sc.punchline + 1] !== undefined ? trunkIds[sc.punchline + 1] : null;
-  if (app.punch === null) for (const id of trunkIds) if (node(id).record && node(id).record.result.ok) app.punch = id;
+const _playStory = playStory;
+const _playLoadedScenario = playLoadedScenario;
+playStory = function(n) {
+  adoptTree(_playStory(n));
+  app.story = SCENARIOS.find(x => String(x.id) === String(n)) || app.story;
   app.challenge = null; app.pastPunch = false;
   if ($('pots')) $('pots').open = false;
-  app.cursor = 0; app.pending = null;
   render();
-}
+};
+playLoadedScenario = function(sc) {
+  adoptTree(_playLoadedScenario(sc));
+  app.story = sc; app.challenge = null; app.pastPunch = false;
+  if ($('pots')) $('pots').open = false;
+  render();
+};
+window.playLoadedScenario = playLoadedScenario;
 function stopPlay() { if (app.playing) { clearInterval(app.playing); app.playing = null; } }
 function togglePlay() {
   if (app.playing) { stopPlay(); renderPlaybar(); return; }

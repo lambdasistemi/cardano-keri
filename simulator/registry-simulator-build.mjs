@@ -31,6 +31,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const argPath = flag => { const i = process.argv.indexOf(flag); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null; };
 const HTML = argPath('--html') || join(HERE, 'registry-simulator.html');
 const CORE = argPath('--core') || join(HERE, 'registry-simulator-core.mjs');
+const BACKEND = argPath('--backend') || join(HERE, 'registry-simulator-backend.mjs');
 const SCEN_DIR = argPath('--scenarios') || join(HERE, 'registry-simulator-scenarios');
 const CORPUS = argPath('--corpus') || join(HERE, 'registry-simulator-corpus.json');
 const DSL_SRC = join(HERE, 'scenario-dsl.mjs');
@@ -41,6 +42,7 @@ const sliceRe = id => new RegExp(`/\\* @@CORE:${id}@@ \\*/\\n([\\s\\S]*?)/\\* @@
 const scenRe = /\/\* @@SCENARIOS@@ \*\/\n([\s\S]*?)\/\* @@SCENARIOS:END@@ \*\//;
 const corpusRe = /\/\* @@CORPUS@@ \*\/\n([\s\S]*?)\/\* @@CORPUS:END@@ \*\//;
 const dslRe = /\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//;
+const backendRe = /\/\* @@BACKEND@@ \*\/\n([\s\S]*?)\/\* @@BACKEND:END@@ \*\//;
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 
 function slicesOf(text, what) {
@@ -97,12 +99,20 @@ const wantDsl = dslMsrc[1];
 const dslBlock = html.match(dslRe);
 if (!dslBlock) { console.error('RED: no @@DSL@@ block in the page'); process.exit(1); }
 const dslStale = dslBlock[1] !== wantDsl;
+const backendSrc = readFileSync(BACKEND, 'utf8');
+const backendMsrc = backendSrc.match(backendRe);
+if (!backendMsrc) { console.error('RED: registry-simulator-backend.mjs has no @@BACKEND@@ block'); process.exit(1); }
+const wantBackend = backendMsrc[1];
+const backendBlock = html.match(backendRe);
+if (!backendBlock) { console.error('RED: no @@BACKEND@@ block in the page'); process.exit(1); }
+const backendStale = backendBlock[1] !== wantBackend;
 
 let out = html;
 for (const id of stale) out = out.replace(sliceRe(id), `/* @@CORE:${id}@@ */\n${coreSlices[id]}/* @@CORE:${id}:END@@ */`);
 if (scenStale) out = out.replace(scenRe, `/* @@SCENARIOS@@ */\n${wantScen}/* @@SCENARIOS:END@@ */`);
 if (corpusStale) out = out.replace(corpusRe, `/* @@CORPUS@@ */\n${wantCorpus}/* @@CORPUS:END@@ */`);
 if (dslStale) out = out.replace(dslRe, `/* @@DSL@@ */\n${wantDsl}/* @@DSL:END@@ */`);
+if (backendStale) out = out.replace(backendRe, `/* @@BACKEND@@ */\n${wantBackend}/* @@BACKEND:END@@ */`);
 const docsStale = !existsSync(DOCS) || readFileSync(DOCS, 'utf8') !== out;
 
 if (process.argv.includes('--check')) {
@@ -111,18 +121,20 @@ if (process.argv.includes('--check')) {
   if (scenStale) why.push('the embedded stories have drifted from registry-simulator-scenarios/');
   if (corpusStale) why.push('the embedded corpus has drifted from registry-simulator-corpus.json');
   if (dslStale) why.push('the embedded DSL grammar has drifted from scenario-dsl.mjs');
+  if (backendStale) why.push('backend slice stale or forked');
   if (docsStale) why.push('docs/simulator/registry/index.html is not the byte-identical page');
   if (why.length) { console.error('RED: generated artifact stale or forked — ' + why.join('; ')); process.exit(1); }
   console.log(`GREEN: ${coreIds.length} core slices identical byte-per-byte, ${N_STORIES} stories and the corpus (sha256 ${sha256(readFileSync(CORPUS, 'utf8').trim()).slice(0, 12)}…) embedded, published copy identical`);
   process.exit(0);
 }
 
-if (stale.length || scenStale || corpusStale || dslStale) writeFileSync(HTML, out);
+if (stale.length || scenStale || corpusStale || dslStale || backendStale) writeFileSync(HTML, out);
 if (docsStale) { mkdirSync(dirname(DOCS), { recursive: true }); writeFileSync(DOCS, out); }
 const changed = [];
 if (stale.length) changed.push(`core slices: ${stale.join(', ')}`);
 if (scenStale) changed.push('stories');
 if (corpusStale) changed.push('corpus');
 if (dslStale) changed.push('scenario-dsl');
+if (backendStale) changed.push('backend');
 if (docsStale) changed.push('published copy');
 console.log(changed.length ? `page regenerated: updated ${changed.join(', ')}` : 'page already up to date');

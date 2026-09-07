@@ -1,4 +1,4 @@
-### M1-freeze-without-short-pool | a freeze lands while the pool still covers the premium
+### M1-freeze-without-short-pool | a freeze lands while the pool still covers the premium | atom=CP-01
 @@@ Checkpoint
 <<<
       (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
@@ -6,7 +6,7 @@
 >>>
       (hb : l.frozen = false) (hclean : l.poisoned = false) :
       Step p env (.freeze sn' payee) now (.present l)
-### M2-second-freeze | a freeze lands on a frozen checkpoint, paying the bond twice
+### M2-second-freeze | a freeze lands on a frozen checkpoint, paying the bond twice | atom=CP-02
 @@@ Checkpoint
 <<<
       (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
@@ -14,39 +14,39 @@
 >>>
       (hpool : l.pool < p.P) (hclean : l.poisoned = false) :
       Step p env (.freeze sn' payee) now (.present l)
-### M3-second-poison-allowed | a second poison in one epoch lands
+### M3-second-poison-allowed | a second poison in one epoch lands | atom=CP-03
 @@@ Checkpoint
 <<<
       (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :
 >>>
       (hq : env.quorum l.epoch = true) :
-### M4-topup-resets-juvenility | a top-up restarts juvenility
+### M4-topup-resets-juvenility | a top-up restarts juvenility | atom=CP-04
 @@@ Checkpoint
 <<<
       Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x })
 >>>
       Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x, bornAt := now })
-### M5-convict-without-proof | a conviction of a present checkpoint needs no duplicity proof
+### M5-convict-without-proof | a conviction of a present checkpoint needs no duplicity proof | atom=CP-05
 @@@ Checkpoint
 <<<
   | convict {l : Live} (now : Slot) (payee : Addr)
       (hdup : env.duplicityAt l.epoch l.sn = true) :
 >>>
   | convict {l : Live} (now : Slot) (payee : Addr) :
-### M6-convictParked-without-proof | a conviction of a parked identity needs no duplicity proof
+### M6-convictParked-without-proof | a conviction of a parked identity needs no duplicity proof | atom=CP-06
 @@@ Checkpoint
 <<<
   | convictParked {h : Hash} (now : Slot) (payee : Addr)
       (hdup : env.duplicityAt h.epoch h.sn = true) :
 >>>
   | convictParked {h : Hash} (now : Slot) (payee : Addr) :
-### M7-convictParked-pays | a conviction of a parked identity pays the convictor a conviction bond nothing holds
+### M7-convictParked-pays | a conviction of a parked identity pays the convictor a conviction bond nothing holds | atom=CP-07
 @@@ Checkpoint
 <<<
       Step p env (.convict payee) now (.parked h) {} .convicted
 >>>
       Step p env (.convict payee) now (.parked h) { convictor := some { addr := payee, dreg := p.D } } .convicted
-### M8-convict-drops-freeze-bond | a conviction returns the pool but not the freeze bond to the refund address
+### M8-convict-drops-freeze-bond | a conviction returns the pool but not the freeze bond to the refund address | atom=CP-08
 @@@ Checkpoint
 <<<
         { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
@@ -54,7 +54,7 @@
 >>>
         { refund := some { addr := l.refundTo, pool := l.pool },
           convictor := some { addr := payee, dreg := p.D } }
-### M9-deposit-no-refill | a deposit leaves the freeze bit as it was
+### M9-deposit-no-refill | a deposit leaves the freeze bit as it was | atom=CP-09
 @@@ Checkpoint
 <<<
         { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
@@ -62,7 +62,7 @@
 >>>
         { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := l.frozen,
-### M10-deposit-resets-juvenility | a deposit restarts juvenility (the auditor's depositFullAges)
+### M10-deposit-resets-juvenility | a deposit restarts juvenility (the auditor's depositFullAges) | atom=CP-10
 @@@ Checkpoint
 <<<
         { bIn := p.B - l.bHeld p }
@@ -72,13 +72,13 @@
         { bIn := p.B - l.bHeld p }
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
                            refundTo := refund'.getD l.refundTo, bornAt := now })
-### M11-deposit-brings-B-always | a deposit brings the whole freeze bond even when it is held
+### M11-deposit-brings-B-always | a deposit brings the whole freeze bond even when it is held | atom=CP-11
 @@@ Checkpoint
 <<<
         { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
 >>>
         { bIn := p.B, hunter := some { addr := payee, pool := p.P } }
-### M12-deposit-unsigned | a deposit signed as a keep (or nothing, with no address) lands
+### M12-deposit-unsigned | a deposit signed as a keep (or nothing, with no address) lands | atom=CP-12
 @@@ Checkpoint
 <<<
       (hauth : env.intentOk (l.epoch + 1) .deposit refund' = true)
@@ -88,7 +88,7 @@
       (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hpay : p.P ≤ l.pool) :
       Step p env (.rotate sn' .deposit payee refund') now (.present l)
-### M13-new-address-unsigned-paid | a paid keep moves the refund address with no signature on it
+### M13-new-address-unsigned-paid | a paid keep moves the refund address with no signature on it | atom=CP-13
 @@@ Checkpoint
 <<<
       (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
@@ -97,7 +97,7 @@
 >>>
       (hpay : p.P ≤ l.pool) :
       Step p env (.rotate sn' .keep payee refund') now (.present l)
-### M14-intentOk-any-none-free | every intent without an address is the empty message
+### M14-intentOk-any-none-free | every intent without an address is the empty message | atom=CP-14
 @@@ Checkpoint
 <<<
   | .keep, none => true
@@ -105,7 +105,7 @@
 >>>
   | _, none => true
   | i, r => env.intentAuthorized e i r
-### M15-reopen-stale | a revival at the parked sequence lands (the auditor's reopenSame)
+### M15-reopen-stale | a revival at the parked sequence lands (the auditor's reopenSame) | atom=CP-15
 @@@ Checkpoint
 <<<
       (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn < sn') :
@@ -113,7 +113,7 @@
 >>>
       (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn ≤ sn') :
       Step p env (.reopen sn' refund pool0) now (.parked h)
-### M16-reopen-wrong-key-state | a revival presents a rotation from the epoch after the parked one
+### M16-reopen-wrong-key-state | a revival presents a rotation from the epoch after the parked one | atom=CP-16
 @@@ Checkpoint
 <<<
       (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn < sn') :
@@ -121,25 +121,25 @@
 >>>
       (hev : env.rotationTo (h.epoch + 1) h.sn sn' = true) (hsn : h.sn < sn') :
       Step p env (.reopen sn' refund pool0) now (.parked h)
-### M17-reopen-same-epoch | a revival keeps the parked epoch
+### M17-reopen-same-epoch | a revival keeps the parked epoch | atom=CP-17
 @@@ Checkpoint
 <<<
         (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
 >>>
         (.present ⟨sn', h.epoch, false, false, now, refund, pool0⟩)
-### M18-reopen-not-juvenile | a revival does not restart juvenility
+### M18-reopen-not-juvenile | a revival does not restart juvenility | atom=CP-18
 @@@ Checkpoint
 <<<
         (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
 >>>
         (.present ⟨sn', h.epoch + 1, false, false, 0, refund, pool0⟩)
-### M19-reopen-frozen | a revival brings the freeze bond and marks the checkpoint frozen
+### M19-reopen-frozen | a revival brings the freeze bond and marks the checkpoint frozen | atom=CP-19
 @@@ Checkpoint
 <<<
         (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
 >>>
         (.present ⟨sn', h.epoch + 1, false, true, now, refund, pool0⟩)
-### M20-reopen-without-bond | a revival brings no conviction bond
+### M20-reopen-without-bond | a revival brings no conviction bond | atom=CP-20
 @@@ Checkpoint
 <<<
       Step p env (.reopen sn' refund pool0) now (.parked h)
@@ -147,7 +147,7 @@
 >>>
       Step p env (.reopen sn' refund pool0) now (.parked h)
         { bIn := p.B, poolIn := pool0 }
-### M21-close-old-epoch | the parked hash records the epoch the close left, not the one it opened (the auditor's closeOldEpoch)
+### M21-close-old-epoch | the parked hash records the epoch the close left, not the one it opened (the auditor's closeOldEpoch) | atom=CP-21
 @@@ Checkpoint
 <<<
           hunter := some { addr := payee, pool := p.P } }
@@ -155,7 +155,7 @@
 >>>
           hunter := some { addr := payee, pool := p.P } }
         (.parked ⟨l.epoch, sn'⟩)
-### M22-close-wrong-hash | the parked hash records the sequence the close left, not the one it reached (the auditor's closeWrongHash)
+### M22-close-wrong-hash | the parked hash records the sequence the close left, not the one it reached (the auditor's closeWrongHash) | atom=CP-22
 @@@ Checkpoint
 <<<
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
@@ -163,7 +163,7 @@
 >>>
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
         (.parked ⟨l.epoch + 1, l.sn⟩)
-### M23-close-payee-bypass | the close's signature is checked against a fixed payee, so a copied reap with the payee rewritten lands (the auditor's closePayeeBypass)
+### M23-close-payee-bypass | the close's signature is checked against a fixed payee, so a copied reap with the payee rewritten lands (the auditor's closePayeeBypass) | atom=CP-23
 @@@ Checkpoint
 <<<
       (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
@@ -171,7 +171,7 @@
 >>>
       (hauth : env.intentOk (l.epoch + 1) (.close 0) refund' = true)
       (hpay : p.P ≤ l.pool) :
-### M24-close-intent-weakened | a close signed as a keep counts as the close intent
+### M24-close-intent-weakened | a close signed as a keep counts as the close intent | atom=CP-24
 @@@ Checkpoint
 <<<
       (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
@@ -179,7 +179,7 @@
 >>>
       (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hnopay : l.pool < p.P) :
-### M25-close-premium-to-refund-address | the close pays the premium to the refund address, ignoring the signed payee (the auditor's closeWrongHunter)
+### M25-close-premium-to-refund-address | the close pays the premium to the refund address, ignoring the signed payee (the auditor's closeWrongHunter) | atom=CP-25
 @@@ Checkpoint
 <<<
           hunter := some { addr := payee, pool := p.P } }
@@ -187,19 +187,19 @@
 >>>
           hunter := some { addr := refund'.getD l.refundTo, pool := p.P } }
         (.parked ⟨l.epoch + 1, sn'⟩)
-### M26-close-pays-old-address | a close pays the datum address, ignoring the signed new one
+### M26-close-pays-old-address | a close pays the datum address, ignoring the signed new one | atom=CP-26
 @@@ Checkpoint
 <<<
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
 >>>
         { refund := some { addr := l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
-### M27-close-premium-not-deducted | a paid close pays the premium and still refunds the whole pool
+### M27-close-premium-not-deducted | a paid close pays the premium and still refunds the whole pool | atom=CP-27
 @@@ Checkpoint
 <<<
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
 >>>
         { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool },
-### M28-close-without-rotation | a close needs no witnessed rotation (the auditor's closeNoRotation)
+### M28-close-without-rotation | a close needs no witnessed rotation (the auditor's closeNoRotation) | atom=CP-28
 @@@ Checkpoint
 <<<
   | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
@@ -207,7 +207,7 @@
 >>>
   | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hsn : l.sn < sn')
-### M29-close-drops-unpaid | the unpaid close is gone: a close with a short pool is refused (the auditor's dropCloseUnpaid)
+### M29-close-drops-unpaid | the unpaid close is gone: a close with a short pool is refused (the auditor's dropCloseUnpaid) | atom=CP-29
 @@@ Checkpoint
 <<<
   | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
@@ -219,7 +219,7 @@
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
       (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
       (hnopay : l.pool < p.P) (hpay : p.P ≤ l.pool) :
-### M30-rotated-ages | the keep-shaped helper restarts juvenility (the auditor's rotatedAges)
+### M30-rotated-ages | the keep-shaped helper restarts juvenility (the auditor's rotatedAges) | atom=CP-30
 @@@ Checkpoint
 <<<
            refundTo := refund'.getD l.refundTo,
@@ -227,13 +227,13 @@
 >>>
            refundTo := refund'.getD l.refundTo, bornAt := 0,
            pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
-### M31-premium-always | the premium helper pays even when the pool does not cover it
+### M31-premium-always | the premium helper pays even when the pool does not cover it | atom=CP-31
 @@@ Checkpoint
 <<<
   if p.P ≤ l.pool then some { addr := payee, pool := p.P } else none
 >>>
   some { addr := payee, pool := p.P }
-### M32-leaf-parked-reads-active | the leaf of a parked state reads active
+### M32-leaf-parked-reads-active | the leaf of a parked state reads active | atom=CP-32
 @@@ Checkpoint
 <<<
   | .parked h => .parked h
@@ -241,7 +241,7 @@
 >>>
   | .parked _ => .active
   | .convicted => .convicted
-### M33-leaf-convicted-reads-parked | the leaf of a convicted state reads parked
+### M33-leaf-convicted-reads-parked | the leaf of a convicted state reads parked | atom=CP-33
 @@@ Checkpoint
 <<<
   | .parked h => .parked h
@@ -249,14 +249,14 @@
 >>>
   | .parked h => .parked h
   | .convicted => .parked ⟨0, 0⟩
-### M34-sysstep-reopen-without-parked-leaf | SysStep.reopen needs no parked leaf
+### M34-sysstep-reopen-without-parked-leaf | SysStep.reopen needs no parked leaf | atom=CP-34
 @@@ Checkpoint
 <<<
       (hparked : s.leaves aid = .parked h)
       (hstep : Step p env (.reopen sn' refund pool0) now (s.states aid) f st') :
 >>>
       (hstep : Step p env (.reopen sn' refund pool0) now (s.states aid) f st') :
-### M35-close-does-not-touch-leaf | the partition says a close leaves the leaf
+### M35-close-does-not-touch-leaf | the partition says a close leaves the leaf | atom=CP-35
 @@@ Checkpoint
 <<<
   | .close .. => true
@@ -264,19 +264,19 @@
 >>>
   | .close .. => false
   | .convict .. => true
-### M36-bHeld-inverted | the freeze bond is held exactly when frozen
+### M36-bHeld-inverted | the freeze bond is held exactly when frozen | atom=CP-36
 @@@ Checkpoint
 <<<
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 >>>
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then p.B else 0
-### M37-consumableB-drops-frozen | the consumer's program ignores the freeze bit
+### M37-consumableB-drops-frozen | the consumer's program ignores the freeze bit | atom=CP-37
 @@@ Checkpoint
 <<<
   | .present l => l.frozen == false && l.poisoned == false && decide (l.bornAt + p.W ≤ now)
 >>>
   | .present l => l.poisoned == false && decide (l.bornAt + p.W ≤ now)
-### M38-parked-holds-dreg | a parked identity holds the conviction bond
+### M38-parked-holds-dreg | a parked identity holds the conviction bond | atom=CP-38
 @@@ Checkpoint
 <<<
 def State.dregHeld (p : Params) : State → Value
@@ -287,7 +287,7 @@ def State.dregHeld (p : Params) : State → Value
   | .present _ => p.D
   | .parked _ => p.D
   | _ => 0
-### M39-thief-parks | a close needs no rotation and no intent: the current keys alone burn the UTxO
+### M39-thief-parks | a close needs no rotation and no intent: the current keys alone burn the UTxO | atom=CP-39
 @@@ Checkpoint
 <<<
   | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
@@ -298,9 +298,299 @@ def State.dregHeld (p : Params) : State → Value
   | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
       (hq : env.quorum l.epoch = true) (hsn : l.sn < sn')
       (hnopay : l.pool < p.P) :
-### M40-poisonAfter-reopen-keeps | the poison fold does not clear at a revival
+### M40-poisonAfter-reopen-keeps | the poison fold does not clear at a revival | atom=CP-40
 @@@ Checkpoint
 <<<
   | _, (_, .reopen ..) :: rest => poisonAfter false rest
 >>>
   | b, (_, .reopen ..) :: rest => poisonAfter b rest
+### RG-M1-register-without-absence | register without the absence proof (absence guard relaxed) | atom=RG-01
+@@@ Registry
+<<<
+      if env.inception r.aid = true ∧ lookup acc.leaves r.aid = none then
+>>>
+      if env.inception r.aid = true then
+### RG-M2-register-without-inception | register without the inception evidence (evidence swapped) | atom=RG-02
+@@@ Registry
+<<<
+      if env.inception r.aid = true ∧ lookup acc.leaves r.aid = none then
+>>>
+      if lookup acc.leaves r.aid = none then
+### RG-M3-revive-without-rotation | revive without a rotation from k (evidence swapped) | atom=RG-03
+@@@ Registry
+<<<
+        if env.rotationFrom r.aid k = true ∧ lookup acc.ckpts r.aid = none then
+>>>
+        if lookup acc.ckpts r.aid = none then
+### RG-M4-revive-mints-beside-checkpoint | revive minting beside an existing checkpoint (coupling removed) | atom=RG-04
+@@@ Registry
+<<<
+        if env.rotationFrom r.aid k = true ∧ lookup acc.ckpts r.aid = none then
+>>>
+        if env.rotationFrom r.aid k = true then
+### RG-M5-go-on-dormant | go-request applied to dormant leaf (active guard relaxed) | atom=RG-05
+@@@ Registry
+<<<
+    | .goDormant k =>
+      match lookup acc.leaves r.aid with
+      | some (.active _) =>
+        some { acc with leaves := setLeaf acc.leaves r.aid (.dormant k),
+>>>
+    | .goDormant k =>
+      match lookup acc.leaves r.aid with
+      | some _ =>
+        some { acc with leaves := setLeaf acc.leaves r.aid (.dormant k),
+### RG-M6-convict-dormant-without-proof | convict dormant without duplicity proof (guard relaxed to True) | atom=RG-06
+@@@ Registry
+<<<
+      match lookup acc.leaves r.aid with
+      | some (.dormant k) =>
+        if env.duplicity r.aid k = true then
+>>>
+      match lookup acc.leaves r.aid with
+      | some (.dormant k) =>
+        if True then
+### RG-M7-reject-go-request | reject a go-request (veto removed, refusal edge removed) | atom=RG-07
+@@@ Registry
+<<<
+  if rejectable p r now ∧ r.op.userPostable = true then
+>>>
+  if rejectable p r now then
+### RG-M8-reject-in-phase1 | reject in phase1 (rejectable guard relaxed) | atom=RG-08
+@@@ Registry
+<<<
+  if rejectable p r now ∧ r.op.userPostable = true then
+>>>
+  if r.op.userPostable = true then
+### RG-M9-process-outside-phase1 | process outside phase1 (liveness guard relaxed) | atom=RG-09
+@@@ Registry
+<<<
+  if inPhase1 p r now then processBody p env acc r else none
+>>>
+  processBody p env acc r
+### RG-M10-fold-without-generation | fold without generation check (stale generation accepted) | atom=RG-10
+@@@ Registry
+<<<
+      if g = s.gen ∧ pl = s.plugin ∧ batch ≠ [] then
+>>>
+      if pl = s.plugin ∧ batch ≠ [] then
+### RG-M11-empty-fold | empty fold accepted (nonempty guard relaxed) | atom=RG-11
+@@@ Registry
+<<<
+      if g = s.gen ∧ pl = s.plugin ∧ batch ≠ [] then
+>>>
+      if g = s.gen ∧ pl = s.plugin then
+### RG-M12-plugin-swap | plugin swap accepted (pin relaxed) | atom=RG-12
+@@@ Registry
+<<<
+      if g = s.gen ∧ pl = s.plugin ∧ batch ≠ [] then
+>>>
+      if g = s.gen ∧ batch ≠ [] then
+### RG-M13-fold-no-advance | fold does not advance generation (liveness stalled) | atom=RG-13
+@@@ Registry
+<<<
+                { s with gen := s.gen + 1, leaves := acc.leaves, ckpts := acc.ckpts,
+>>>
+                { s with gen := s.gen, leaves := acc.leaves, ckpts := acc.ckpts,
+### RG-M14-retract-any-phase | retract in any phase (phase2 guard relaxed to True) | atom=RG-14
+@@@ Registry
+<<<
+        if inPhase2 p r now then
+>>>
+        if True then
+### RG-M15-reap-live | reap a live checkpoint (live guard relaxed) | atom=RG-15
+@@@ Registry
+<<<
+  | .live => False
+>>>
+  | .live => True
+### RG-M16-parked-early-stranger | stranger reaps before grace (grace+quorum relaxed) | atom=RG-16
+@@@ Registry
+<<<
+  | .parked since => since + p.W ≤ now ∨ env.quorum aid = true
+>>>
+  | .parked since => True
+### RG-M17-go-dated-now | go-request dated now not far (far edge removed) | atom=RG-17
+@@@ Registry
+<<<
+                         requests := (s.nextReq, ⟨aid, reaper, p.far, goOp c⟩) :: s.requests,
+>>>
+                         requests := (s.nextReq, ⟨aid, reaper, now, goOp c⟩) :: s.requests,
+### RG-M18-reap-keeps-checkpoint | reap keeps checkpoint (effect retained) | atom=RG-18
+@@@ Registry
+<<<
+                { s with ckpts := remove s.ckpts aid,
+>>>
+                { s with ckpts := s.ckpts,
+### RG-M19-convictCkpt-without-proof | convict checkpoint without proof (evidence swapped) | atom=RG-19
+@@@ Registry
+<<<
+        if st ≠ .tomb ∧ env.duplicity aid k = true then
+>>>
+        if st ≠ .tomb then
+### RG-M20-handpost-go | go-request hand-posted (postable guard relaxed) | atom=RG-20
+@@@ Registry
+<<<
+      if op.userPostable = true then
+>>>
+      if True then
+### RG-M21-register-another-token | registration mints another token (binding swapped) | atom=RG-21
+@@@ Registry
+<<<
+                        ckpts := (r.aid, ⟨acc.nextToken, 0, .live⟩) :: acc.ckpts,
+>>>
+                        ckpts := (r.aid, ⟨acc.nextToken + 1, 0, .live⟩) :: acc.ckpts,
+### RG-M22-pause-changes-token | pause changes token (binding swapped) | atom=RG-22
+@@@ Registry
+<<<
+          some ({}, { s with ckpts := (aid, ⟨tok, k + 1, .parked now⟩) :: remove s.ckpts aid })
+>>>
+          some ({}, { s with ckpts := (aid, ⟨tok + 1, k + 1, .parked now⟩) :: remove s.ckpts aid })
+### CG-M07-delegatedRouting-drop | delegatedRouting drops plugin result (effect omitted) | atom=CG-07
+@@@ Cage
+<<<
+  | .delegatedRouting => acc''
+>>>
+  | .delegatedRouting => acc
+### CG-M01-ownerKeyed-plugin | ownerKeyed requires plugin not owner (conjunct swapped) | atom=CG-01
+@@@ Cage
+<<<
+  | .ownerKeyed, t => t.signedByOwner
+>>>
+  | .ownerKeyed, t => t.pluginRan
+### CG-M02-ownerAndHook-no-owner | ownerAndHook requires plugin only (owner relaxed) | atom=CG-02
+@@@ Cage
+<<<
+  | .ownerAndHook, t => t.signedByOwner && t.pluginRan
+>>>
+  | .ownerAndHook, t => t.pluginRan
+### CG-M03-ownerAndHook-no-plugin | ownerAndHook requires owner only (plugin relaxed) | atom=CG-03
+@@@ Cage
+<<<
+  | .ownerAndHook, t => t.signedByOwner && t.pluginRan
+>>>
+  | .ownerAndHook, t => t.signedByOwner
+### CG-M04-delegated-owner | delegated requires owner not plugin (permission swapped) | atom=CG-04
+@@@ Cage
+<<<
+  | .delegated, t => t.pluginRan
+>>>
+  | .delegated, t => t.signedByOwner
+### CG-M05-runBody-true-cage | runBody true executes cage not plugin (branch swapped) | atom=CG-05
+@@@ Cage
+<<<
+  if ran then pl.body p env acc r else cageOnlyBody p acc r
+>>>
+  if ran then cageOnlyBody p acc r else cageOnlyBody p acc r
+### CG-M06-runBody-false-plugin | runBody false executes plugin not cage (branch swapped) | atom=CG-06
+@@@ Cage
+<<<
+  if ran then pl.body p env acc r else cageOnlyBody p acc r
+>>>
+  if ran then pl.body p env acc r else pl.body p env acc r
+### CG-M08-refundAll-keep-locked | refundAll keeps plugin locked (restore omitted) | atom=CG-08
+@@@ Cage
+<<<
+  | .refundAll => { acc'' with locked := acc.locked, refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }
+>>>
+  | .refundAll => { acc'' with refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }
+### CG-M09-refundAll-zero-bond | refundAll returns zero not exact bond (effect swapped) | atom=CG-09
+@@@ Cage
+<<<
+  | .refundAll => { acc'' with locked := acc.locked, refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }
+>>>
+  | .refundAll => { acc'' with locked := acc.locked, refunds := acc.refunds ++ [(r.owner, 0)] }
+### CG-M10-delegated-no-pin | delegated pin removed (guard deleted, stale plugin accepted) | atom=CG-10
+@@@ Cage
+<<<
+      if authorized mode tx = true ∧ g = s.gen ∧ (mode = .delegated → pl' = s.plugin) ∧ batch ≠ [] then
+>>>
+      if authorized mode tx = true ∧ g = s.gen ∧ batch ≠ [] then
+### SM-M01-hfund-weak | hFund weakened to Mr alone (bound relaxed) | atom=SM-01
+@@@ Samaritan
+<<<
+  /-- The ledger fee of the reap transaction, paid by the reaper. -/
+  fReap : Nat
+  /-- The reap validator's value guard: the checkpoint funds the request. -/
+  hFund : Mr + tip ≤ Mc
+>>>
+  /-- The ledger fee of the reap transaction, paid by the reaper. -/
+  fReap : Nat
+  /-- The reap validator's value guard: the checkpoint funds the request. -/
+  hFund : Mr ≤ Mc
+### SM-M02-intoRequest-no-tip | intoRequest omits tip (effect omitted) | atom=SM-02
+@@@ Samaritan
+<<<
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr + r.tip, premium := r.Mc - r.Mr - r.tip, reaperPays := r.fReap }
+>>>
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr, premium := r.Mc - r.Mr - r.tip, reaperPays := r.fReap }
+### SM-M03-premium-no-tip | premium omits tip (effect omitted) | atom=SM-03
+@@@ Samaritan
+<<<
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr + r.tip, premium := r.Mc - r.Mr - r.tip, reaperPays := r.fReap }
+>>>
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr + r.tip, premium := r.Mc - r.Mr, reaperPays := r.fReap }
+### SM-M04-reaperPays-zero | reaperPays zero not fee (fee omitted) | atom=SM-04
+@@@ Samaritan
+<<<
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr + r.tip, premium := r.Mc - r.Mr - r.tip, reaperPays := r.fReap }
+>>>
+def reap (r : Reap) : ReapFlow :=
+  { intoRequest := r.Mr + r.tip, premium := r.Mc - r.Mr - r.tip, reaperPays := 0 }
+### SM-M05-toOwner-zero | toOwner zero not Mr (destination misdirected) | atom=SM-05
+@@@ Samaritan
+<<<
+def fold (r : Reap) : FoldFlow := { toOwner := r.Mr, toFolder := r.tip }
+>>>
+def fold (r : Reap) : FoldFlow := { toOwner := 0, toFolder := r.tip }
+### SM-M06-toFolder-zero | toFolder zero not tip (destination misdirected) | atom=SM-06
+@@@ Samaritan
+<<<
+def fold (r : Reap) : FoldFlow := { toOwner := r.Mr, toFolder := r.tip }
+>>>
+def fold (r : Reap) : FoldFlow := { toOwner := r.Mr, toFolder := 0 }
+### CG-M11-registry-body-some | registry plugin body always succeeds no effects (correspondence broken one-sided, earlier-name-safe) | atom=CG-11
+@@@ Cage
+<<<
+def Plugin.registry : Plugin :=
+  { body := processBody, allowReject := fun r => r.op.userPostable }
+>>>
+def Plugin.registry : Plugin :=
+  { body := fun _ _ acc _ => some acc, allowReject := fun r => r.op.userPostable }
+### AUX-TH06-bypassed-holds | bypassed holds Inv (concrete witness state changed) | theorem=TH-06
+@@@ Cage
+<<<
+def bypassed : Sys := { gen := 1, plugin := 7, leaves := [(11, .active 0)], ckpts := [], requests := [],
+                        nextReq := 1, nextToken := 1 }
+>>>
+def bypassed : Sys := { gen := 1, plugin := 7, leaves := [(11, .active 0)], ckpts := [(11, ⟨0, 0, .live⟩)], requests := [],
+                        nextReq := 1, nextToken := 1 }
+### AUX-TH03-delegated-needs-owner | delegated auth depends on owner (false/true equality becomes false) | theorem=TH-03
+@@@ Cage
+<<<
+  | .delegated, t => t.pluginRan
+>>>
+  | .delegated, t => t.signedByOwner
+### AUX-TH08-delegatedRouting-drops | delegatedRouting drops plugin result (shipped stub locked lost) | theorem=TH-08
+@@@ Cage
+<<<
+  | .delegatedRouting => acc''
+>>>
+  | .delegatedRouting => acc
+### AUX-TH09-plugin-stale | stepFn keeps stale plugin (7-to-8 witness fails) | theorem=TH-09
+@@@ Cage
+<<<
+                { s with gen := s.gen + 1, plugin := pl', leaves := acc.leaves, ckpts := acc.ckpts,
+>>>
+                { s with gen := s.gen + 1, plugin := s.plugin, leaves := acc.leaves, ckpts := acc.ckpts,
+### AUX-TH12-refundAll-keeps-locked | refundAll retains plugin locked (concrete process locked) | theorem=TH-12
+@@@ Cage
+<<<
+  | .refundAll => { acc'' with locked := acc.locked, refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }
+>>>
+  | .refundAll => { acc'' with refunds := acc.refunds ++ [(r.owner, r.op.bond p)] }

@@ -236,3 +236,23 @@ budget=210`, GATE resolved to root `gate.sh` == gate-v5
 `10f06795…`, receipts name terminal base `370a23b…`. Generated receipts
 copied byte-for-byte to `lean/CHECKPOINT-MUTANTS.md` and
 `lean/REGISTRY-MUTANTS.md` (`cmp` clean); `lean/CardanoKeri/` diff empty.
+
+# Gate-v6 freeze and supersession
+
+
+- Ticket: `#383`
+- Authority: `/tmp/ms-keri-1/ticket-383/answers/A-001-v6-retained-campaign-binding.md`
+- Authority SHA-256: `111aa4ac8f940a5f6f312884012456229afe7fd6aa21092486290a3822bc796d`
+- Superseded gate-v5: `/tmp/epic-367/to-365/gates/gate-v5.sh`
+- Gate-v5 SHA-256: `10f06795bb5bb279a585466f4245ec0c10a28a4cc7c9ea07b0454a6d5e82719b`
+- Authoritative gate-v6: `/tmp/ms-keri-1/ticket-383/gates/gate-v6.sh`
+- Gate-v6 SHA-256: `2a1449f3053205cad14595349843132dd3d536457f4103e026852bbe28e0741c`
+- Exact delta: gate-v6 is gate-v5 plus one `#` byte at the start of line 23; removing that byte reproduces gate-v5 byte-for-byte.
+- Defect closed: `F-365-001`; gate-v5 executed line 23 as a command and exited 127 before the mutation runner.
+- Control driver SHA-256: `d53936f50406a0786d99550bc2c166515c3336d709c44b6b463397eedbeaf65e`
+- Control results SHA-256: `7e280d62f0ed23c19bd75b9d0e65a333c08bb7c7f133fdef39788e6f9585d16a`
+- Control receipt SHA-256: `2079cc96ca22c050888d28d35af027d40a8c676ff6ffedfd10d0d73ce3861181`
+- Falsification result: `44/44` gate and setup legs failed for their intended reason; the line-66 control bound gate-v6 and reached `run.sh --run` before the zero-build budget refused any Lean invocation.
+- Frozen subject manifest SHA-256: `13a25e8894dba812c5b3270b6161e50af389ff35c9087e7130dcc8f8c0d70a74` at both the issue-365 candidate and the issue-383 planning tree.
+- Historical campaign-030 manifest SHA-256: `3af7009d06ccbdcd3466cf07c3eece8b1b5231960c864c82acf592f80f7a2856`; campaign-030 remains historical evidence only and was not relabelled as gate-v6 execution.
+- New-campaign authority: exactly one full mutation campaign may be executed through gate-v6.

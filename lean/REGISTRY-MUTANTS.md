@@ -5,7 +5,7 @@ and the raw log are the same run, so tables can only say what the run did.
 
 - Model base (frozen): 9b2e6b88937707cc2c571ae1e9e5f112dc248a30
 - Ledger `lean/SEMANTIC-ATOMS.md` SHA-256: `3c1d0c229d1d46fba6388919d95fc48467f0b7e6a517f767bea7c7bff6906c5a`
-- Runner `lean/mutants/run.sh` SHA-256: `4e9ee740d01bad45335be1c914865517472d11c8ff0b3c2d3332067e9b063c7e`
+- Runner `lean/mutants/run.sh` SHA-256: `2c5b4b768196ec5d4cc0af0462b8c49c767849d8a89cd5ca74dbd2ab070f2519`
 - Spec `lean/mutants/mutants.txt` SHA-256: `8e9d636c7a92455a6c69e6599f6df5658c18893dc0442ff71e3b82599cbd5a67`
 - Pre-slice base: e03b678a827077c05399421a40a7507d52db6ac5
 - Terminal merged base: 370a23b64a581c7ad80681700a459372b8005ba9 (epic-owner C1+C2 release per S365-P4; this run binds the merged commit)
@@ -18,7 +18,7 @@ and the raw log are the same run, so tables can only say what the run did.
 - Structural discounts (global, never counted as owning kills): `T7_step_iff_stepFn T9_juvenility_is_consumer_only` plus broad correspondence mirrors (`Cage.applyBatch_delegated_eq`, `Cage.delegated_is_registry`) named per affected row; each affected row repeats its discounted set.
 - Denominators (independent): semantic atoms `79/79`, theorem rows `20/20`.
 - Honest limits: this finite declared fault model has no blocking survivors; it does not claim zero possible survivors.
-- Witnesses+sensors SHA-256 (deterministic, sorted file list): 854aab52bcbc1b4140a494ec5f2c76a3f435f6a59cd747eb400a8df357ca4be7
+- Witnesses+sensors SHA-256 (deterministic, sorted file list): 62c515af94dc1ddd15d39bc4c3d658effc8075bc225deab3d351c62ef0e92600
 - Summary digest (deterministic atom+theorem results): e8da8c2734064ae3e6a8981c8e6e854df6e0a0a9d0bc390b49e8f7e27b668b8d
 
 ## Registry atoms (22) — source/model `CardanoKeri/Registry.lean`

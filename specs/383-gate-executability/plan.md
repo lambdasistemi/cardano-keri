@@ -6,10 +6,11 @@ Artifact ceiling: 4,000 bytes / 100 lines.
 
 Treat F-365-001 as an acceptance-instrument defect. Freeze v6 from retained v5
 with the exact one-byte comment insertion and prove each v6 predicate can fail.
-Campaign-031 exposed a second executability defect: receipt hashing included an
-absolute worktree path. Under A-002, repair that construction minimally, prove
-both relocation acceptance and content-change rejection, regenerate receipts,
-then spend one additional full campaign through unchanged v6.
+Campaign-031 exposed absolute-path receipt hashing. Submission-1 audit then
+showed the repair still depended on a direct checkout path and the axiom account
+counted substituted declarations. Under A-003, derive relative names by
+construction, enforce exact unique dotted axiom identities, regenerate
+receipts, then spend only campaign-033 through unchanged v6.
 
 ## Ordered slices
 
@@ -20,24 +21,24 @@ then spend one additional full campaign through unchanged v6.
    controls including line-66 reachability with zero mutation builds.
 3. **S383-P3 First execution.** Retain campaign-031's GREEN body and terminal
    receipt-comparator failure; it is evidence, not an accepted gate run.
-4. **S383-P4 Portable receipts.** A fresh alternate-family owner changes only
-   the runner digest construction and generated receipts, proves both control
-   directions, and runs the sole A-002 full campaign through unchanged v6.
-5. **S383-P5 Audit.** Fresh family-eligible auditors check the exact candidate
-   and all invariant rows without rerunning the full campaign.
+4. **S383-P4 Acceptance machinery.** The alternate-family owner repairs both
+   adjudicated findings, ships direct/two-symlink/content and exact-identity/
+   same-count-substitution controls, regenerates receipts, and runs only
+   campaign-033 through unchanged v6.
+5. **S383-P5 Audit.** Two fresh blind family-eligible inspectors check the exact
+   submission-2 candidate and all invariant rows without a build or campaign.
 6. **S383-P6 Finalization.** Stamp accepted tasks, create the final commit,
    mechanically verify subject/tree identity and compact receipts, push, wait
    for green remote CI, pass finalization audit, and mark the draft ready.
 
 ## Execution accounting
 
-- Full post-ruling v6 campaigns: campaign-031 is spent and terminal; A-002
-  authorizes exactly one additional full campaign.
+- Full post-ruling v6 campaigns: 031 and 032 are spent; A-003 authorizes only
+  campaign-033.
 - Per-leg controls: finite ledger established before execution; zero controls
   may perform a mutation build except the single authorized GREEN campaign.
-- Audit launches: one initial fresh seat plus one aggregate corrected redispatch
-  only for a demonstrated commissioning defect; no findings repair bounce is
-  authorized because #365 already exhausted submission 2.
+- Audit submission 2: exactly two initial fresh blind inspectors plus at most
+  one aggregate corrected redispatch for a demonstrated commissioning defect.
 - Auditor full-campaign executions: 0.
 
 ## Failure visibility
@@ -49,9 +50,11 @@ wrong-reason, blocked, build, axiom, pre/post, receipt, and final GREEN signals.
 
 ## Constraints
 
-The ticket owner owns the mandate, v6 and control contract. The A-002 commit
-owner owns the minimal runner/receipt repair and sole additional full run. The
-auditor is read-only.
+The ticket owner owns the mandate, v6 and control contract. The A-003 commit
+owner owns the two-property runner/receipt repair and campaign-033. Auditors
+are read-only.
 No role may edit the production/model subject or witness/sensor content named by
-R383-01. A-002 permits only the runner digest and two generated receipts.
-Campaigns 030 and 031 remain retained with their distinct historical outcomes.
+R383-01. A-003 permits only the runner digest, axiom-account logic and two
+generated receipts. Campaigns 030, 031 and 032 remain retained with distinct
+outcomes. A same-class submission-2 finding stops this repair and requires a
+separate redesign ticket; it never earns another patch here.

@@ -6,6 +6,12 @@
 #   lean/mutants/run.sh --run <campaign-dir>
 #     emits <campaign-dir>/summary.tsv, <campaign-dir>/axioms.log,
 #           <campaign-dir>/receipts/{CHECKPOINT-MUTANTS.md,REGISTRY-MUTANTS.md}
+#   lean/mutants/run.sh --hash-file-set
+#     emits the portable witness+sensor digest (no Lean build)
+#   lean/mutants/run.sh --axiom-identities
+#     emits the 210 qualified theorem names (no Lean build)
+#   lean/mutants/run.sh --check-axiom-identities <axioms.log>
+#     require exact unique requested/observed identity agreement
 #
 # Inventory is derived from the frozen ledger `lean/SEMANTIC-ATOMS.md` and
 # dynamically from compiled Cage/Samaritan theorem declarations. Refuses
@@ -120,6 +126,93 @@ cmd_list() {
 }
 
 # --- helpers for --run ---
+# Sorted repository-relative sha256 lines of tracked witness+sensor files.
+# Names come from git ls-files (relative by construction), never prefix strip.
+file_set_hash_lines() {
+  git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { echo "run.sh: file-set digest requires a git worktree at $ROOT" >&2; return 1; }
+  (
+    cd "$ROOT" || exit 1
+    git ls-files -z -- lean/mutants/witnesses lean/mutants/sensors \
+      | sort -z | xargs -0 -r sha256sum
+  )
+}
+
+file_set_digest() {
+  file_set_hash_lines | sha256sum | cut -d' ' -f1
+}
+
+cmd_hash_file_set() {
+  file_set_digest
+}
+
+# Complete dotted theorem identifiers, qualified in their declaring namespace.
+theorem_qualified_names() {
+  {
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Checkpoint." n}' \
+      "$LEAN/CardanoKeri/CheckpointGoals.lean"
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Registry." n}' \
+      "$LEAN/CardanoKeri/RegistryGoals.lean"
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Cage." n}' \
+      "$LEAN/CardanoKeri/Cage.lean"
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Samaritan." n}' \
+      "$LEAN/CardanoKeri/Samaritan.lean"
+  } | sort
+}
+
+# Exact unique requested/observed qualified-name agreement. Cardinality is not
+# acceptance; a same-count substitution must fail here.
+verify_axiom_identities() {
+  local requested=$1 observed_log=$2
+  local obs req_n obs_n req_u obs_u step
+  obs=$(mktemp)
+  sed -n "s/^'\\([^']*\\)' .*/\\1/p" "$observed_log" | sort > "$obs"
+  req_n=$(wc -l < "$requested")
+  obs_n=$(wc -l < "$obs")
+  req_u=$(sort -u "$requested" | wc -l)
+  obs_u=$(sort -u "$obs" | wc -l)
+  if [ "$req_u" -ne "$req_n" ]; then
+    echo "AXIOM-IDENTITY-DUPLICATE requested unique=$req_u n=$req_n" >&2
+    rm -f "$obs"; return 1
+  fi
+  if [ "$obs_u" -ne "$obs_n" ]; then
+    echo "AXIOM-IDENTITY-DUPLICATE observed unique=$obs_u n=$obs_n" >&2
+    rm -f "$obs"; return 1
+  fi
+  if [ "$req_n" -ne 210 ] || [ "$obs_n" -ne 210 ]; then
+    echo "AXIOM-IDENTITY-COUNT requested=$req_n observed=$obs_n (requires 210 unique identities)" >&2
+    rm -f "$obs"; return 1
+  fi
+  step=$(grep -c '\.Step\.' "$requested" || true)
+  if [ "$step" -ne 13 ]; then
+    echo "AXIOM-IDENTITY-STEP requested Step.*_iff=$step (requires 13)" >&2
+    rm -f "$obs"; return 1
+  fi
+  if ! diff -q "$requested" "$obs" >/dev/null; then
+    echo "AXIOM-IDENTITY-MISMATCH requested and observed qualified names differ" >&2
+    diff -u "$requested" "$obs" >&2 || true
+    rm -f "$obs"; return 1
+  fi
+  rm -f "$obs"
+  return 0
+}
+
+cmd_axiom_identities() {
+  theorem_qualified_names
+}
+
+cmd_check_axiom_identities() {
+  local log=$1 req
+  req=$(mktemp)
+  theorem_qualified_names > "$req"
+  if verify_axiom_identities "$req" "$log"; then
+    rm -f "$req"
+    return 0
+  fi
+  rm -f "$req"
+  return 1
+}
+
 count_needle() { # needle-file target-file -> count
   perl -0777 -e 'local $/; open(N,"<",$ARGV[0]); my $n=<N>; open(F,"<",$ARGV[1]); my $s=<F>; my $c=()=$s=~/\Q$n\E/g; print $c' "$1" "$2"
 }
@@ -348,8 +441,7 @@ cmd_run() {
     sha256sum "$HERE/run.sh"
     sha256sum "$SPEC"
   } > "$campaign/pre-hashes.tsv"
-  if [ -d "$WITDIR" ]; then find "$WITDIR" -type f | sort | xargs sha256sum >> "$campaign/pre-hashes.tsv"; fi
-  if [ -d "$HERE/sensors" ]; then find "$HERE/sensors" -type f | sort | xargs sha256sum >> "$campaign/pre-hashes.tsv"; fi
+  file_set_hash_lines >> "$campaign/pre-hashes.tsv"
 
   # Ledger inventories (sorted).
   ledger_atoms | cut -f2 > "$campaign/ledger-atom-ids.txt"
@@ -849,27 +941,28 @@ EOF
   local clean="$campaign/clean"
   rm -rf "$clean"; mkdir -p "$clean"
   (cd "$LEAN" && tar --exclude=.lake -cf - .) | (cd "$clean" && tar -xf -)
+  theorem_qualified_names > "$campaign/axiom-requested.txt"
   {
     echo "import CardanoKeri.CheckpointGoals"
     echo "import CardanoKeri.RegistryGoals"
     echo "import CardanoKeri.Cage"
     echo "import CardanoKeri.Samaritan"
-    grep -hoE '^theorem\s+[A-Za-z0-9_]+' "$LEAN/CardanoKeri/CheckpointGoals.lean" | awk '{print "#print axioms CardanoKeri.Checkpoint." $2}'
-    grep -hoE '^theorem\s+[A-Za-z0-9_]+' "$LEAN/CardanoKeri/RegistryGoals.lean" | awk '{print "#print axioms CardanoKeri.Registry." $2}'
-    grep -hoE '^theorem\s+[A-Za-z0-9_]+' "$LEAN/CardanoKeri/Cage.lean" | awk '{print "#print axioms CardanoKeri.Cage." $2}'
-    grep -hoE '^theorem\s+[A-Za-z0-9_]+' "$LEAN/CardanoKeri/Samaritan.lean" | awk '{print "#print axioms CardanoKeri.Samaritan." $2}'
+    awk '{print "#print axioms " $0}' "$campaign/axiom-requested.txt"
   } > "$campaign/Axioms.lean"
   if lean_run "$clean" "$campaign/clean-build.log" build CardanoKeri.CheckpointGoals CardanoKeri.RegistryGoals CardanoKeri.Cage CardanoKeri.Samaritan; then
     if lean_run "$clean" "$campaign/axioms.log" env lean "$campaign/Axioms.lean"; then
     ax_count=$(grep -c "depends on axioms\|does not depend" "$campaign/axioms.log" || true)
     sorry_count=$(grep -c sorryAx "$campaign/axioms.log" || true)
     say "AXIOMS clean build: $ax_count theorems; sorryAx: $sorry_count"
-    expected_ax=$(($(grep -c '^theorem ' "$LEAN/CardanoKeri/CheckpointGoals.lean" || true) + $(grep -c '^theorem ' "$LEAN/CardanoKeri/RegistryGoals.lean" || true) + $(grep -c '^theorem ' "$LEAN/CardanoKeri/Cage.lean" || true) + $(grep -c '^theorem ' "$LEAN/CardanoKeri/Samaritan.lean" || true)))
-    if ax_diag=$(check_axioms "$expected_ax" "$ax_count" "$sorry_count" 2>&1); then
+    if [ "$sorry_count" != "0" ]; then
+      say "AXIOMS REJECTED sorryAx=$sorry_count (requires zero sorryAx)"
+      blocked=$((blocked+1))
+    elif ax_diag=$(verify_axiom_identities "$campaign/axiom-requested.txt" "$campaign/axioms.log" 2>&1); then
       axioms_ok=1
+      say "AXIOMS IDENTITY 210 unique qualified names including 13 Step.*_iff"
     else
       ax_rc=$?
-      say "AXIOMS REJECTED expected=$expected_ax observed=$ax_count sorryAx=$sorry_count rc=$ax_rc [$ax_diag]"
+      say "AXIOMS REJECTED identity rc=$ax_rc sorryAx=$sorry_count [$ax_diag]"
       blocked=$((blocked+1))
     fi
     else
@@ -896,8 +989,7 @@ EOF
     sha256sum "$HERE/run.sh"
     sha256sum "$SPEC"
   } > "$campaign/post-hashes.tsv"
-  if [ -d "$WITDIR" ]; then find "$WITDIR" -type f | sort | xargs sha256sum >> "$campaign/post-hashes.tsv"; fi
-  if [ -d "$HERE/sensors" ]; then find "$HERE/sensors" -type f | sort | xargs sha256sum >> "$campaign/post-hashes.tsv"; fi
+  file_set_hash_lines >> "$campaign/post-hashes.tsv"
   if diff -u "$campaign/pre-hashes.tsv" "$campaign/post-hashes.tsv" > "$campaign/prepost.diff" 2>&1; then
     say "PREPOST clean (authoritative inputs unchanged during run)"
   else
@@ -933,7 +1025,7 @@ EOF
   say "SUMMARY atoms=$atoms_killed/79 theorems=$th_killed/20 blocked=$blocked excluded_wrong=$excluded_wrong builds_spent=$builds_spent"
 
   # Deterministic receipts (pure rendering; no wall time/HEAD; frozen bases + content hashes + digest).
-  wit_hash="none"; if [ -d "$WITDIR" ]; then wit_hash=$( { find "$WITDIR" -type f | sort | xargs sha256sum 2>/dev/null; if [ -d "$HERE/sensors" ]; then find "$HERE/sensors" -type f | sort | xargs sha256sum 2>/dev/null; fi; } | sha256sum | cut -d" " -f1); fi
+  wit_hash="none"; if [ -d "$WITDIR" ]; then wit_hash=$(file_set_digest); fi
   summary_digest=$(cat "$campaign/atom-results.tsv" "$campaign/theorem-results.tsv" 2>/dev/null | sha256sum | cut -d" " -f1)
   render_receipts "$campaign" "$head_sha" "$ledger_hash" "$runner_hash" "$spec_hash" "$wit_hash" "$summary_digest" "$atoms_killed" "$th_killed" "$blocked" "$excluded_wrong" "$builds_spent" "$control_result" "$started"
 
@@ -1093,7 +1185,7 @@ HDR
 }
 
 usage() {
-  echo "usage: run.sh --list | --run <campaign-dir> | --check-witness <ledger-name> <file> | --check-axioms <expected> <observed> <sorry>" >&2
+  echo "usage: run.sh --list | --run <campaign-dir> | --check-witness <ledger-name> <file> | --check-axioms <expected> <observed> <sorry> | --hash-file-set | --axiom-identities | --check-axiom-identities <axioms.log>" >&2
   exit 2
 }
 
@@ -1110,6 +1202,18 @@ case "${1:-}" in
   --run)
     test $# -eq 2 || usage
     cmd_run "$2"
+    ;;
+  --hash-file-set)
+    test $# -eq 1 || usage
+    cmd_hash_file_set
+    ;;
+  --axiom-identities)
+    test $# -eq 1 || usage
+    cmd_axiom_identities
+    ;;
+  --check-axiom-identities)
+    test $# -eq 2 || usage
+    cmd_check_axiom_identities "$2"
     ;;
   *) usage ;;
 esac

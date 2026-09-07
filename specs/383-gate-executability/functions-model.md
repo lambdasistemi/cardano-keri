@@ -11,7 +11,8 @@ Artifact ceiling: 2,500 bytes / 70 lines.
 | F383-05 | `verifyCampaign` | `(CampaignEvidence, expectedIdentity, expectedTotals) -> ExitStatus`; require all conjunctive R383-05 outcomes and exact v6 path/hash |
 | F383-06 | `verifyRetention` | `(campaign030, frozenHashes) -> ExitStatus`; prove historical bytes unchanged without promoting them to the new run |
 | F383-07 | `auditSubmission` | `(candidate, gateV6, controls, historicalEvidence, newEvidence) -> AuditResult`; independently settle every invariant without another full campaign |
-| F383-08 | `digestWitnessesAndSensors` | `(repositoryRoot, frozenFileSet) -> Digest`; hash sorted repository-relative identities and contents so relocation preserves the digest and a content mutation changes it |
+| F383-08 | `digestWitnessesAndSensors` | `(repositoryRoot, frozenFileSet) -> Digest`; derive sorted repository-relative identities and hash identities plus contents so direct/symlink relocation preserves the digest and a content mutation changes it |
+| F383-09 | `verifyAxiomIdentities` | `(requestedQualifiedNames, observedQualifiedNames) -> ExitStatus`; require exact unique set equality and reject same-count substitution |
 
 Names may follow existing shell conventions. No function may rewrite a frozen
 campaign-subject path or convert a missing execution into PASS.

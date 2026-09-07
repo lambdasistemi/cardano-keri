@@ -1,16 +1,17 @@
 # Lean FULL audit report — issue #368
 
-Status: PENDING-MERGED-BASE
+Status: PENDING-FINAL-TREE
 
 This is a verdict-free planning skeleton. It is not audit evidence and records
-no terminal audit verdict. The seven sections below are populated only after
-the epic owner publishes the exact merged #363+#364+#365+#366 commit in
-`/tmp/epic-367/to-368/answers/`, the ticket branch is rebased to that commit,
-and the complete tracked Lean input is re-frozen.
+no terminal audit verdict. NOTE-006 released planning at
+`370a23b64a581c7ad80681700a459372b8005ba9`; that commit is not a frozen
+audit input. The seven sections below are populated only after #373 lands, the
+project desk settles PR #372's repository disposition, the epic owner releases
+the exact final tree, and the complete tracked Lean input is frozen there.
 
 ## Mode and frozen inputs
 
-Pending the authoritative release. The completed section will bind FULL mode,
+Pending the authoritative final-tree release. The completed section will bind FULL mode,
 release commit, audited-input manifest and digest, decision/model/goals hashes,
 toolchain identity, exact commands, budgets, and hashed receipts.
 
@@ -45,3 +46,6 @@ will be settled separately, including explicit absent/not-applicable surfaces.
 
 Pending. The completed section will distinguish proved model properties from
 external fidelity and bound every mutation claim to its finite operator set.
+It will carry OD-366-001 as an uninvestigated textual-only follow-up limit:
+`onchain/lib/cardano_keri/checkpoint/lifecycle_model.ak:1` describes itself as
+mirroring the retired Lifecycle machine; epic #367 retains follow-up ownership.

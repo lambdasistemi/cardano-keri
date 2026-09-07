@@ -9,14 +9,25 @@
 - [x] **T368-P05** Open and record the draft PR.
 - [x] **T368-P06** Record hashes, `BLOCKED awaiting-merged-base`, and park.
 
+## P0b — partial planning release
+
+- [x] **T368-P07** Acknowledge NOTE-006 and retain the no-freeze/no-verdict
+  boundary.
+- [x] **T368-P08** Rebase planning commits onto the verified non-final base
+  `370a23b64a581c7ad80681700a459372b8005ba9`.
+- [x] **T368-P09** Record #373 as a required predecessor and the project-owned
+  #372 inclusion decision as unresolved; update the verdict-free skeleton and
+  non-accepting planning gate.
+
 ## P1 — admit release and freeze
 
-- [ ] **T368-R01** Read and acknowledge the epic owner's durable merged-base
-  release; verify exact commit and #363+#364+#365+#366 ancestry.
+- [ ] **T368-R01** Read and acknowledge the epic owner's durable final-tree
+  release; verify exact commit, #363+#364+#373 results, and the ruled #372
+  disposition.
 - [ ] **T368-R02** Rebase onto the released commit and prove clean allowed scope.
 - [ ] **T368-R03** Freeze the complete audited-input manifest and create the
   uniquely digest-named evidence directory.
-- [ ] **T368-R04** Freeze release gate v2 with exact commands and budgets; prove
+- [ ] **T368-R04** Freeze the release gate with exact commands and budgets; prove
   each mechanical/semantic failure class can turn it red.
 
 ## P2 — OWNER campaign

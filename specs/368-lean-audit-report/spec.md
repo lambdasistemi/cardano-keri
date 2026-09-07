@@ -7,14 +7,20 @@ FULL-audit verdict for the complete tracked `lean/` surface released by epic
 #367 after #363, #364, #365, and #366 have merged.
 
 The planning artifact ceiling is 180 lines. The report and evidence are not
-filled or verified until the epic owner publishes the merged commit in this
-ticket's durable `answers/` directory.
+filled or verified until the epic owner publishes the final audit-tree commit
+through this ticket's durable control channel.
 
 ## Authority and frozen input
 
 - **REQ-368-AUTH:** The only admissible release is the commit named by the
-  epic owner's durable answer. Branch tips, sibling STATUS claims, and local
-  merge simulations are not authority.
+  epic owner's durable release. Branch tips, sibling STATUS claims, and local
+  merge simulations are not authority. Partial planning releases do not grant
+  authority to freeze inputs or file a verdict.
+- **REQ-368-PLAN:** `370a23b64a581c7ad80681700a459372b8005ba9` is the
+  verified planning base released by NOTE-006. It contains merged #363 and
+  #364, but is not the final audit tree: #373 must land and the project desk
+  must settle whether #372 is included before the epic owner releases the
+  final tree.
 - **REQ-368-BASE:** The released commit must contain the merged results of
   #363, #364, #365, and #366. The ticket branch is rebased onto that exact
   commit before inputs are frozen.
@@ -55,8 +61,9 @@ ticket's durable `answers/` directory.
 
 ## Acceptance invariants
 
-- **INV-368-01 RELEASE:** No verdict or Lean verification precedes the durable
-  merged-base release; the reported release commit equals that release.
+- **INV-368-01 RELEASE:** No input freeze, verdict, or Lean audit verification
+  precedes the durable final-tree release; the reported commit equals that
+  release.
 - **INV-368-02 IDENTITY:** Evidence manifest, evidence directory, report input
   digest, and recomputed final audited-input digest are identical.
 - **INV-368-03 SINGULARITY:** Exactly one terminal verdict and exactly seven
@@ -89,6 +96,7 @@ not accept its own report.
 ## Non-goals
 
 - Fixing a discovered defect or adding a missing guarantee.
-- Choosing Lifecycle disposition, which is predecessor #366's decision.
+- Choosing whether PR #372 supplies the Lifecycle disposition in the audited
+  repository tree; that open decision belongs to the project desk.
 - Changing ratified Lean statements, adding axioms, or changing product code.
 - Claiming exhaustive mutation coverage beyond the frozen finite ledgers.

@@ -6,6 +6,11 @@ Artifact ceiling: 180 lines. This ticket is the serial tail of epic #367. Its
 current phase is planning only; the release-dependent phase cannot begin from
 a sibling branch, local synthetic merge, or unmerged PR.
 
+NOTE-006 releases planning at
+`370a23b64a581c7ad80681700a459372b8005ba9`. This is not a frozen audit
+input. PR #373 must land before the verdict, and the project desk owns the open
+decision whether the final tree includes PR #372. No local choice closes it.
+
 ## Phase P0 — planning and park
 
 1. Record the ticket-owner identity and pane in durable STATUS.
@@ -15,19 +20,20 @@ a sibling branch, local synthetic merge, or unmerged PR.
 4. Record gate and mandate hashes and `BLOCKED awaiting-merged-base`, then park
    without running Lean, mutation, axiom, or report-verification commands.
 
-## Phase P1 — release admission and re-freeze
+## Phase P1 — final release admission and freeze
 
-1. Read the epic owner's release from `answers/`; acknowledge it with
-   `RESUMED` before acting.
+1. Read and acknowledge the epic owner's final-tree release from the durable
+   control channel before acting.
 2. Confirm the release names an exact commit containing the merged #363,
-   #364, #365, and #366 ancestry. Stop through the epic owner on discrepancy.
+   #364 and #373 results plus the project desk's explicit #372 disposition.
+   Stop through the epic owner on discrepancy.
 3. Rebase the issue branch onto that exact commit using the governed Git
    workflow. Recheck branch, HEAD, status, and allowed paths.
 4. Enumerate every tracked `lean/` input other than the report/evidence
    outputs. Freeze its path, Git mode, and blob hash in sorted order. Hash the
    manifest with SHA-256 and create only
    `lean/audit-evidence/<digest>/`.
-5. Replace planning gate v1 with release gate v2, binding the released commit,
+5. Replace the non-accepting planning gate with a release gate, binding the released commit,
    input manifest, digest, commands, budgets, and expected receipts. Prove each
    gate failure class with frozen negative-control receipts before dispatch.
 
@@ -38,7 +44,7 @@ judgment. Seat allocation is binding: ticket owner `codex` medium; commit owner
 `muse` with exact non-Codex identity recorded at launch; fresh auditor `codex`
 high for each submission; `draft=NONE`; maximum two audited submissions.
 
-1. Compile the commit-owner brief from the released mandate and v2 gate. The
+1. Compile the commit-owner brief from the released mandate and release gate. The
    owner may write only the report and digest-named evidence directory, plus
    its own runtime evidence; every other `lean/` path is read-only. No push.
 2. Launch the owner in its own tmux pane and require a pane-bound post-cursor
@@ -62,7 +68,7 @@ high for each submission; `draft=NONE`; maximum two audited submissions.
 2. Stamp the task file only after acceptance; have the commit owner create the
    final local commit. Mechanically prove it equals the audited candidate plus
    only the task stamp.
-3. Run the v2 gate and repository-required checks through quiet hashed receipt
+3. Run the release gate and repository-required checks through quiet hashed receipt
    recording on the exact final SHA. Recompute the audited-input digest and
    verify the report/evidence identity again.
 4. Push the exact SHA, refresh the draft PR, wait for green remote CI, run the

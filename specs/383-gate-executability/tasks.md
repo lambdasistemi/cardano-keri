@@ -25,5 +25,5 @@ Artifact ceiling: 2,500 bytes / 70 lines.
 - [x] **T383-06** Obtain two fresh blind submission-2 audit PASSes of the exact
   tracked candidate, v6, controls, retained evidence and campaign-033, with
   zero blocking findings and zero residuals; a same-class finding stops repair.
-- [ ] **T383-07** Create the exact final commit, push, require green remote CI,
+- [x] **T383-07** Create the exact final commit, push, require green remote CI,
   pass finalization audit, mark the draft PR ready, and stop without merging.

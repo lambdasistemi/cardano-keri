@@ -1,5 +1,14 @@
 # The follower — indexed chain state from a node socket
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 Asking a Cardano node "what UTxOs sit at this address?" over its local socket
 walks the whole UTxO set: it stalls the node and does not scale. The follower
 library is what every watcher process (relayer, hunter, and the future hosted

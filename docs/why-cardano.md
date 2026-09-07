@@ -9,6 +9,12 @@ So the first question anyone familiar with the space asks is a fair one:
 Both things put KERI data on Cardano. They answer different questions, and only
 one of them needs a blockchain at all.
 
+!!! abstract "Where this page stands"
+    The comparison with anchoring is about **what ships on `main` today**: the
+    validators verify KERI cryptography now. The list of what a checkpoint
+    buys under **leg 1** describes the [accepted design](index.md#the-accepted-design-the-m1-return)
+    — the Lean machine of the M1 return — and says so item by item.
+
 ## What rooting does
 
 A backer takes a key event, verifies it off-chain in its own process, and
@@ -61,34 +67,54 @@ worth separating, because the first is available today and the second is not.
 ## Leg 1 — trust without an intermediary
 
 This is the property most people miss, and it does not require anyone to build
-anything further.
+a credential layer or a wallet bridge first.
 
 Every move in the lifecycle may be submitted by anyone, and the submitter has
-**no discretion whatsoever**. From
-[Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md):
-
-> "Anyone" in this machine does not mean "anyone may choose the next state." It
-> means anyone may pay the fee to relay public evidence whose result is
-> **already determined**.
-
-Registration, rotation, challenge, response, timeout claim, thaw and conviction
+**no discretion whatsoever**. "Anyone" does not mean "anyone may choose the
+next state"; it means anyone may pay the fee to relay public evidence whose
+result is **already determined**. Registration, rotation, the poison
+declaration, the freeze, the top-up, the conviction, the close and the reopen
 are each open to any submitter, and in each case the evidence decides the
-outcome — not the relayer, and not any operator. The
-[trust model](design/trust-model.md) states the boundary directly:
+outcome — not the relayer, and not any operator. If one relayer refuses,
+anyone else may.
 
-> Relayers and hunters are untrusted submitters. They may censor their own
-> service, delay submission, or pay fees strategically. They **cannot fabricate**
-> valid signatures, receipts, preimages, or conflicts, and they **cannot choose
-> a different valid successor**.
+### What that is worth, item by item
 
-And no operator owns the right to relay: if one refuses, anyone else may.
+Each line below is a property of the [accepted design](index.md#the-accepted-design-the-m1-return),
+proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
+`main` yet; the epics that build them are on the [roadmap](roadmap.md).
 
-Contradiction also has a **consequence** rather than merely a record. Any party
-holding witnessed evidence that an identity has published a conflicting history
-can prove it on-chain; the checkpoint moves to a state consumers reject, and
-posted bonds settle the outcome. See
-[the freeze lifecycle](user/freeze-lifecycle.md) and
-[conviction](user/conviction.md).
+- **A key compromise is visible.** The owner's current keys can sign one short
+  declaration — the **poison** — and every consumer stops trusting the epoch
+  immediately, before the rotation is ready. There is nobody to ask and nobody
+  to convince. It covers the two cases KERI itself cannot signal: the window
+  between noticing a theft and rotating, and the loss of the next keys, where
+  no rotation will ever come.
+- **Proven duplicity is permanent.** Two witnessed rotations at one sequence
+  are a KERI verdict, not an opinion, so the chain makes it terminal: the
+  identity is `convicted`, has no way out, and its conviction bond goes to
+  whoever proved it. KERI has no event that un-duplicates an identifier, so
+  the chain invents no recovery.
+- **One incarnation, ever.** The registry holds one leaf per AID and a
+  registration must prove absence before it inserts. There is no second
+  candidate checkpoint for a consumer to disambiguate, and no stale-key holder
+  can mint a rival one.
+- **Freshness is visible.** The checkpoint says when it was last bonded and
+  what its pool holds; a consumer refuses anything younger than the juvenility
+  window `W`, and an identity whose pool has run dry gets frozen by a hunter
+  rather than quietly drifting behind its KEL.
+- **It is consumable without an oracle.** The key state is in an inline datum.
+  A validator reads it as a reference input and decides for itself. There is
+  no service to be up, no writer to be honest, and no completeness claim for
+  anyone to assert.
+- **Every move of value answers to the owner.** The bonds and the pool leave
+  only to the refund address the owner controls, and that address moves only
+  when the keys of the epoch a rotation opens sign for it. A relayer landing
+  the owner's public rotation cannot park her, age her, or close her.
+- **Exit and return are the owner's.** Close needs the next keys, exactly like
+  any rotation, so a thief holding only the current keys cannot erase the
+  identity and take the money. And close is not the end: a witnessed rotation
+  later than the tombstone reopens it.
 
 !!! info "This was not the first design"
     An earlier design put a privileged oracle writer in front of a shared
@@ -97,10 +123,11 @@ posted bonds settle the outcome. See
     key economically live — *"'cannot forge' holds; 'cannot keep alive' does
     not"* ([finding F7](vetting/canonical-model-findings.md)).
 
-    That shared-registry model is retired. The current pages are written to
-    keep it retired: [value authorization](architecture/value-auth.md) exists
-    partly so that "later application validators do not reintroduce the retired
-    shared-registry model."
+    That shared-registry model is retired, and the M1 return keeps it retired
+    for a structural reason rather than an economic one: the checkpoint carries
+    no evidence set, so there is nothing for anyone to be complete about, and
+    the oracle has no job to return to. See
+    [value authorization](architecture/value-auth.md).
 
 **Why this matters even with no on-chain value at stake.** A credential meant
 to outlive the organisation that issued it cannot rest on that organisation
@@ -113,7 +140,7 @@ artifact, and it is available without any further layer.
 
 The second property is composability: because the key state is script-readable,
 a validator can require that a spend be authorized by whoever controls a given
-AID *right now*, and reject it after a rotation, a challenge, or a revocation.
+AID *right now*, and reject it after a rotation, a poison, or a revocation.
 That is the thing an anchor structurally cannot do.
 
 !!! warning "Not available yet"
@@ -154,18 +181,23 @@ which remain:
 - **Service-level censorship.** A relayer can still refuse to serve you. The
   guarantee is that anyone else may relay instead, not that any particular
   party will.
+- **Next-key theft is control.** If a thief holds the next keys, her rotation
+  is legitimate by KERI's own rule and the chain follows KERI. The poison lasts
+  until that rotation and no longer.
+- **The tip never moves backward.** The checkpoint cannot roll back, so KERI's
+  superseding-recovery rule is not projected in the one scenario that would
+  need it. Stated as a limit, not hidden (ruling D-022).
 - **Settlement evidence is not mainnet.** "Settled" means a transaction reached
-  a development network running production transaction limits, and the M1
-  programs are published on preprod. Neither is a mainnet deployment or a
-  production service-level commitment. The exact transaction IDs are on the
-  [story ladder](story-ladder.md).
+  a development network running production transaction limits, or preprod.
+  Neither is a mainnet deployment or a production service-level commitment. The
+  exact transaction IDs and dates are on the [story ladder](story-ladder.md).
 
 ## Where to read next
 
 - [Anchor versus verify](architecture/amaru-integration.md#anchor-versus-verify-the-decisive-difference)
   — the detailed comparison, with references into the backer's source.
-- [Lifecycle and the two bonds](architecture/lifecycle-and-bonds.md) — who may
-  submit what, and what determines each result.
+- [Identity operations](architecture/identity-ops.md) — who may submit what,
+  and what determines each result.
 - [Trust model](design/trust-model.md) — the full boundary list.
 - [Story ladder](story-ladder.md) — what has actually settled.
 - [KERI primer](keri-primer.md) — AIDs, pre-rotation, witnesses and backers.

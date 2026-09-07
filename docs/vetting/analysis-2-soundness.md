@@ -1,5 +1,11 @@
 # Analysis 2 — Cryptographic Soundness & Permissionless Attack Surface
 
+!!! note "What ships, and the accepted design"
+    Historical vetting of an archived specification. Nothing here ships.
+    The current machine is the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
+
 Cold, adversarial vet of the canonical permissionless model. Primary lens:
 cryptographic soundness and permissionless attack surface. Vetted against the
 normative docs listed in the brief; background primers were not vetted.

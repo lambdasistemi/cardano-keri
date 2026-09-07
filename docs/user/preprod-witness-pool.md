@@ -1,5 +1,14 @@
 # The preprod witness pool
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 The project operates three public
 [KERI](../keri-primer.md) witnesses for preprod integration. A controller can
 resolve their out-of-band introductions (OOBIs), use the three witness AIDs in

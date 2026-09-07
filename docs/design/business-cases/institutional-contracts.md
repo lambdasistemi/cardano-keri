@@ -1,5 +1,14 @@
 # Case D — Institutional Contracts
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 Bilateral or few-party on-chain contracts — escrow, DvP settlement, repo,
 consortium disbursement — with counterparty identity enforced by the
 validator, not an oracle.
@@ -190,7 +199,7 @@ On top of L1–L4:
       checkpoint/role read — identity cannot drift, standing is re-proven each
       transition.
 - **Ceremony tooling**: institutional contract UX is a *ceremony
-  orchestrator* that gathers OOR-backed witnesses from each entity's signers
+  coordinator* that gathers OOR-backed witnesses from each entity's signers
   and assembles the transition transaction — witness collection across
   organizations, encrypted key vaults, wizard-driven build→sign→submit with
   resumable client state. This operational shape already exists in practice in

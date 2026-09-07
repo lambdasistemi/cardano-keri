@@ -1,5 +1,13 @@
 # Rotate your preprod identity
 
+!!! note "What ships, and the accepted design"
+    This page is the V1 `ckeri advance` that ships on preprod. The
+    accepted design pays a hunter the premium `P` from the pool, and
+    a rotation carries `keep` or `deposit` (the unfreeze), signed by
+    the next keys. Play
+    [Alice rotates, Hal lands it, Hal is paid](../simulator/index.html).
+    There is no withdraw.
+
 `ckeri advance` projects a witnessed KLI rotation into an existing V1
 checkpoint. It consumes the ACTIVE output, preserves its complete
 1,007-tADA value and singleton AID token, and writes the rotated keys and

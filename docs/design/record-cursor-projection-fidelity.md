@@ -1,9 +1,18 @@
 # DESIGN NOTE 001 — record/cursor data model and projection fidelity
 
-**Source:** operator design session with the (parked) M1.2 milestone owner, 2026-08-19.
-**Status: CAPTURED EVIDENCE, NOT A RULING.** Nothing here is decided. It is written by a desk with
-no product authority, for the successor owner `%6656` and the project owner `%6429` to accept,
-amend or discard. Where the session reached a conclusion it is marked **[settled in discussion]**;
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
+**Source:** operator design session for the parked M1.2 milestone, 2026-08-19.
+**Status: CAPTURED EVIDENCE, NOT A RULING.** Nothing here is decided. This
+note has no product authority; the next maintainer of this repository may
+accept, amend or discard it. Where the session reached a conclusion it is marked **[settled in discussion]**;
 where it did not, **[OPEN]**.
 
 ---
@@ -210,11 +219,12 @@ unfalsifiable claim.
 **Affected S2 scope:** key derivation (§2), leaf schema sufficiency (§2), whole-record cursor
 derivation (§4), and the parity-and-abstention oracle (§7).
 
-**Candidate registry contracts** for the milestone owner to accept or reject:
+**Candidate registry contracts** to accept or reject:
 
-- *cursor fidelity* — `cursor(E)` matches `keripy` on derivable rules; **enforced: NONE** until the
-  oracle in §7 exists;
-- *first-seen non-replication* — the cursor never resolves by settlement slot; **enforced: NONE**,
+- *cursor fidelity* — `cursor(E)` matches `keripy` on derivable rules; **not
+  enforced** until the oracle in §7 exists;
+- *first-seen non-replication* — the cursor never resolves by settlement slot; **not
+  enforced**,
   and it needs the resolve-by-slot mutant to be enforceable at all;
 - *leaf sufficiency* — the snapshot must make the cursor computable without off-chain re-reads;
-  **enforced: NONE**, and today's skeleton violates it.
+  **not enforced**, and today's skeleton violates it.

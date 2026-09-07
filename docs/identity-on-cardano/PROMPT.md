@@ -1,5 +1,14 @@
 # Identity on Cardano — narrative slide-deck brief
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 Create a 13-slide, 16:9 (1920×1080) presentation titled **“Keep the identity you
 already trust.”** It explains what cardano-keri's first milestone—the identity
 core—enables by following one composite pilot organization through a complete

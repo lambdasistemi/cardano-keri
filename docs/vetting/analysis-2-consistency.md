@@ -1,5 +1,11 @@
 # Consistency & Completeness Vetting — Canonical Permissionless Model
 
+!!! note "What ships, and the accepted design"
+    Historical vetting of an archived specification. Nothing here ships.
+    The current machine is the Lean checkpoint and the simulations on the
+    [home page](../index.md).
+
+
 Cold vet of the current "canonical permissionless model" design docs. Primary
 lens: internal consistency and completeness. Severity = impact on
 implementability/correctness.

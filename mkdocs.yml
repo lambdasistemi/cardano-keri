@@ -58,22 +58,22 @@ nav:
   - Finance Primer: finance-primer.md
   - User guide:
       - The follower: user/follower.md
-      - Freeze lifecycle: user/freeze-lifecycle.md
-      - Conviction: user/conviction.md
       - The preprod witness pool: user/preprod-witness-pool.md
       - "Discovery — the endpoint board": user/discovery-endpoint-board.md
       - Releases: user/releases.md
       - The M1 preprod deployment: user/m1-preprod-deployment.md
       - Register your identity: user/register-preprod-identity.md
       - Rotate your identity: user/rotate-preprod-identity.md
+      - Poison: user/poison.md
       - Close your identity checkpoint: user/close.md
+      - Close, reopen, revival: user/reopen-revival.md
+      - Hunters: user/hunters.md
+      - Consumer checklist: user/consumer-checklist.md
       - Query status through local, endpoint, or Koios: user/status-backends.md
       - The query endpoint — checkpoint answers without a node: user/query-endpoint.md
   - Architecture:
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md
-      - Lifecycle and Two Bonds: architecture/lifecycle-and-bonds.md
-      - "Freeze Lifecycle (story #138)": https://github.com/lambdasistemi/cardano-keri/issues/138
       - Observer Architecture: architecture/observer-architecture.md
       - System Architecture: architecture/system.md
       - Value Authorization: architecture/value-auth.md

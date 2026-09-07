@@ -1,5 +1,14 @@
 # The registry as an MPFS instance
 
+!!! note "What ships, and the accepted design"
+    Unless a paragraph below is marked as preprod or `main` today, it
+    describes the accepted design (D-036 to D-040): active, parked holding
+    the hash, or convicted; no withdraw; the reap by the next keys; deposit
+    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    [checkpoint simulation](../simulator/index.html).
+    What ships today is the V1 checkpoint with role addresses.
+
+
 The AID registry ruled by D-024 — one UTxO holding the MPF root over every
 AID ever registered — built as a cage of
 [cardano-mpfs-onchain](https://github.com/cardano-foundation/cardano-mpfs-onchain)

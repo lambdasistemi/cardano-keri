@@ -1,5 +1,14 @@
 # Register your identity on preprod
 
+!!! note "What ships, and the accepted design"
+    This page is the V1 `ckeri register` that ships on preprod: no
+    uniqueness rule, no registry. The accepted design registers once
+    through the registry (absence proof, insert, mint). Play
+    [Alice's identity appears on Cardano](../simulator/index.html) and
+    the [registry simulation](../simulator/registry/index.html). An
+    identity is active, parked with the hash, or convicted. There is
+    no withdraw.
+
 `ckeri register` turns a standard keripy inception export into a funded V1
 checkpoint on Cardano preprod. It does not create, rotate, or store KERI keys:
 the controller remains sovereign and `ckeri` consumes only the CESR bytes from

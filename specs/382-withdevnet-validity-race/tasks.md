@@ -6,8 +6,10 @@ Artifact ceiling: 2,000 bytes / 60 lines.
 
 - [x] **T382-01** Freeze the compact requirements, invariant, module, data,
   function, scope, and numerical timing policy on the baselined lane base.
-- [ ] **T382-02** Freeze and falsify the ignored runtime gate with a real
-  `OutsideValidityIntervalUTxO` control.
+- [x] **T382-02** Freeze and falsify the ignored runtime gate with a real
+  `OutsideValidityIntervalUTxO` control. (`S382-P2-v1` `805b1eed…`;
+  one-slot control `2ed13baf…`; 6 examples / 2 intended expiry failures in
+  `gate-red-live.log` `7234623c…`.)
 
 ## S382-P2 — harness repair
 

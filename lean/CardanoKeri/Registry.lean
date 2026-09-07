@@ -38,6 +38,16 @@ policy and the observers perform. Key states are abstracted to a counter
 advanced by every rotation. A functional `stepFn` is the one executable
 source: the theorems are stated over it, the simulator transcribes it, and
 the trace driver runs it.
+
+DEC-364-STEPFN (frozen): `stepFn` and `processBody` are the sole executable
+transition semantics; no inductive `Step` is added. The public
+admission/refusal inversion surface is the twelve bidirectional `*_iff`
+theorems (`stepFn_contribute_iff`, `stepFn_fold_iff`, `stepFn_retract_iff`,
+`stepFn_reap_iff`, `stepFn_pause_iff`, `stepFn_resume_iff`,
+`stepFn_convictCkpt_iff`, `processBody_register_iff`,
+`processBody_revive_iff`, `processBody_goDormant_iff`,
+`processBody_goConvicted_iff`, `processBody_convict_iff`). `ReachFar`
+(stated over `stepFn` in `CardanoKeri.RegistryGoals`) is unchanged.
 -/
 
 namespace CardanoKeri.Registry
